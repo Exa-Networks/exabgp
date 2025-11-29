@@ -22,14 +22,24 @@ from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import extract_neighbors, match_neighbors
 
 if TYPE_CHECKING:
+    from exabgp.reactor.api import API
     from exabgp.reactor.loop import Reactor
 
 
-def register_rib():
+def register_rib() -> None:
     pass
 
 
-def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_name, extensive, use_json):
+def _show_adjrib_callback(
+    reactor: 'Reactor',
+    service: str,
+    last: str,
+    route_type: tuple[type[NLRI], ...],
+    advertised: bool,
+    rib_name: str,
+    extensive: bool,
+    use_json: bool,
+) -> Any:
     def to_text(key: str, changes: list[Any]) -> None:
         for change in changes:
             if not isinstance(change.nlri, route_type):
@@ -48,17 +58,20 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
         neighbor_ip = reactor.neighbor_ip(key)
         routes = jason.setdefault(neighbor_ip, {'routes': []})['routes']
 
-        if extensive:
-            jason[neighbor_ip].update(NeighborTemplate.formated_dict(neighbor))
+        if extensive and neighbor is not None:
+            jason[neighbor_ip].update(NeighborTemplate.formated_dict(reactor.neighbor_cli_data(key)))
 
         for change in changes:
             if not isinstance(change.nlri, route_type):
                 # log something about this drop?
                 continue
 
+            # After isinstance check, change.nlri is one of the route_type(s)
+            # which have a cidr attribute (INET, Flow, etc.)
+            nlri: Any = change.nlri
             routes.append(
                 {
-                    'prefix': str(change.nlri.cidr.prefix()),
+                    'prefix': str(nlri.cidr.prefix()),
                     'family': str(change.nlri.family()).strip('()').replace(',', ''),
                 },
             )
@@ -66,7 +79,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
             for line in json.dumps(jason).split('\n'):
                 reactor.processes.write(service, line)
 
-    async def callback():
+    async def callback() -> None:
         lines_per_yield = getenv().api.chunk
         if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
             peers = reactor.peers()
@@ -146,8 +159,8 @@ def show_adj_rib(self: Command, reactor: Reactor, service: str, line: str, use_j
 
 
 @Command.register('flush adj-rib out', json_support=True)
-def flush_adj_rib_out(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
-    async def callback(self, peers):
+def flush_adj_rib_out(self: 'API', reactor: 'Reactor', service: str, line: str, use_json: bool) -> bool:
+    async def callback(self: 'API', peers: list[str]) -> None:
         peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
         self.log_message(f'flushing adjb-rib out for {peer_list}')
         for peer_name in peers:
@@ -176,8 +189,8 @@ def flush_adj_rib_out(self: Command, reactor: Reactor, service: str, line: str, 
 
 
 @Command.register('clear adj-rib', json_support=True)
-def clear_adj_rib(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
-    async def callback(self, peers, direction):
+def clear_adj_rib(self: 'API', reactor: 'Reactor', service: str, line: str, use_json: bool) -> bool:
+    async def callback(self: 'API', peers: list[str], direction: str) -> None:
         peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
         self.log_message(f'clearing adjb-rib-{direction} for {peer_list}')
         for peer_name in peers:

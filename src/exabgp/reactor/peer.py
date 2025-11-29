@@ -22,6 +22,7 @@ from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message import _NOP, _AWAKE, _DONE, Message, Notification, Notify, Open, Update
 from exabgp.bgp.message.open.capability import REFRESH, Capability
 from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.debug.report import format_exception
 from exabgp.environment import getenv
@@ -294,6 +295,7 @@ class Peer:
             # it does not matter as the open message will be the same anyway
             assert self.proto is not None  # Must exist in OPENCONFIRM state
             assert self.proto.negotiated.received_open is not None  # Must exist in OPENCONFIRM
+            assert self.neighbor.router_id is not None  # Must exist at this point
             local_id = self.neighbor.router_id.pack_ip()
             remote_id = self.proto.negotiated.received_open.router_id.pack_ip()
 
@@ -412,13 +414,14 @@ class Peer:
         wait = getenv().bgp.openwait
         opentimer = ReceiveTimer(
             self.proto.connection.session,
-            wait,
+            HoldTime(wait),
             1,
             1,
             'waited for open too long, we do not like stuck in active',
         )
         # Only yield if we have not the open, otherwise the reactor can run the other connection
         # which would be bad as we need to do the collission check without going to the other peer
+        assert self.neighbor.peer_address is not None
         for message in self.proto.read_open(self.neighbor.peer_address.top()):
             opentimer.check_ka(message)
             yield message
@@ -426,6 +429,7 @@ class Peer:
     async def _read_open_async(self) -> Open:
         """Async version of _read_open() - reads OPEN message using async I/O"""
         assert self.proto is not None
+        assert self.neighbor.peer_address is not None
         wait = getenv().bgp.openwait
         try:
             # Use asyncio timeout instead of ReceiveTimer
@@ -653,7 +657,7 @@ class Peer:
                     for nlri in update.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
                         log.debug(
-                            lazyformat('update.nlri number=%d nlri=' % number, nlri, str),  # type: ignore[arg-type]
+                            lazyformat('update.nlri number=%d nlri=' % number, nlri, str),
                             self.id(),
                         )
 
@@ -668,7 +672,7 @@ class Peer:
                     if not operational:
                         new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
                         if new_operational:
-                            operational = self.proto.new_operational(new_operational, self.proto.negotiated)  # type: ignore[arg-type]
+                            operational = self.proto.new_operational(new_operational, self.proto.negotiated)
 
                     if operational:
                         try:
@@ -685,7 +689,7 @@ class Peer:
                     if not refresh:
                         new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
                         if new_refresh:
-                            refresh = self.proto.new_refresh(new_refresh)  # type: ignore[arg-type]
+                            refresh = self.proto.new_refresh(new_refresh)
 
                     if refresh:
                         try:
@@ -849,7 +853,7 @@ class Peer:
                     for nlri in update.nlris:
                         self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
                         log.debug(
-                            lazyformat('update.nlri number=%d nlri=' % number, nlri, str),  # type: ignore[arg-type]
+                            lazyformat('update.nlri number=%d nlri=' % number, nlri, str),
                             self.id(),
                         )
 
@@ -865,7 +869,7 @@ class Peer:
                         new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
                         if new_operational:
                             # Use async version
-                            await self.proto.new_operational_async(new_operational, self.proto.negotiated)  # type: ignore[arg-type]
+                            await self.proto.new_operational_async(new_operational, self.proto.negotiated)
                             operational = None  # Mark as sent
                 # make sure that if some operational message are received via the API
                 # that we do not eat memory for nothing
@@ -878,7 +882,7 @@ class Peer:
                         new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
                         if new_refresh:
                             # Use async version
-                            await self.proto.new_refresh_async(new_refresh)  # type: ignore[arg-type]
+                            await self.proto.new_refresh_async(new_refresh)
                             refresh = None  # Mark as sent
 
                 # Need to send update
@@ -1292,8 +1296,8 @@ class Peer:
             'duration': (int(time.time() - self.stats['complete']) if self.stats['complete'] else 0),
             'local-address': str(self.neighbor.local_address),
             'peer-address': str(self.neighbor.peer_address),
-            'local-as': int(self.neighbor.local_as),
-            'peer-as': int(self.neighbor.peer_as),
+            'local-as': int(self.neighbor.local_as) if self.neighbor.local_as else 0,
+            'peer-as': int(self.neighbor.peer_as) if self.neighbor.peer_as else 0,
             'local-id': str(self.neighbor.router_id),
             'peer-id': None if peer['peer-id'] is None else str(peer['router-id']),
             'local-hold': int(self.neighbor.hold_time),

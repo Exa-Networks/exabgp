@@ -1,0 +1,68 @@
+{
+  "google_routes": [
+    {
+      "prefix": "8.8.8.0/24",
+      "next_hop": "10.0.0.1",
+      "as_path": [15169, 65001],
+      "description": "Google Public DNS"
+    },
+    {
+      "prefix": "8.8.4.0/24",
+      "next_hop": "10.0.0.1",
+      "as_path": [15169, 65001],
+      "description": "Google Public DNS secondary"
+    },
+    {
+      "prefix": "142.250.0.0/16",
+      "next_hop": "10.0.0.1",
+      "as_path": [15169, 15169, 65001],
+      "description": "Google services (AS prepended)"
+    },
+    {
+      "prefix": "172.217.0.0/16",
+      "next_hop": "10.0.0.1",
+      "as_path": [15169, 65001],
+      "description": "Google Cloud Platform"
+    }
+  ],
+  "microsoft_routes": [
+    {
+      "prefix": "13.64.0.0/11",
+      "next_hop": "10.0.0.2",
+      "as_path": [8075, 65001],
+      "description": "Microsoft Azure US East"
+    },
+    {
+      "prefix": "40.74.0.0/15",
+      "next_hop": "10.0.0.2",
+      "as_path": [8075, 65001],
+      "description": "Microsoft Azure global"
+    },
+    {
+      "prefix": "52.96.0.0/12",
+      "next_hop": "10.0.0.2",
+      "as_path": [8075, 8075, 65001],
+      "description": "Microsoft O365 services (AS prepended)"
+    },
+    {
+      "prefix": "104.40.0.0/13",
+      "next_hop": "10.0.0.2",
+      "as_path": [8075, 65001],
+      "description": "Microsoft Azure West US"
+    }
+  ],
+  "other_routes": [
+    {
+      "prefix": "1.1.1.0/24",
+      "next_hop": "10.0.0.3",
+      "as_path": [13335, 65001],
+      "description": "Cloudflare DNS (should be filtered out)"
+    },
+    {
+      "prefix": "9.9.9.0/24",
+      "next_hop": "10.0.0.3",
+      "as_path": [19281, 65001],
+      "description": "Quad9 DNS (should be filtered out)"
+    }
+  ]
+}

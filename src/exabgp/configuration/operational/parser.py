@@ -7,6 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from exabgp.configuration.core.parser import Tokeniser
+
 from exabgp.util.ip import isipv4
 
 from exabgp.protocol.family import AFI
@@ -138,5 +143,5 @@ def lpcp(tokeniser):
     return _operational(Response.LPCP, ['afi', 'safi', 'sequence', 'counter'], tokeniser)
 
 
-def operational(what, tokeniser):
+def operational(what: str, tokeniser: 'Tokeniser') -> Any:
     return _dispatch.get(what, lambda _: None)(tokeniser)

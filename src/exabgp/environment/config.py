@@ -41,8 +41,9 @@ class ConfigOption(Generic[T]):
 
     def __get__(self, obj: Any, owner: type) -> T:
         if obj is None:
-            return self  # type: ignore
-        return obj._values.get(self.name, self.default)
+            return self  # type: ignore[return-value]
+        result: T = obj._values.get(self.name, self.default)
+        return result
 
     def __set__(self, obj: Any, value: T) -> None:
         obj._values[self.name] = value
@@ -387,7 +388,7 @@ class Environment:
                     conf = os.environ.get(rep_name)
                 else:
                     try:
-                        conf = parsing.unquote(ini.get(proxy_section, option_name, vars=nonedict))
+                        conf = parsing.unquote(ini.get(proxy_section, option_name, vars=nonedict))  # type: ignore[arg-type]
                     except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
                         conf = None
 
@@ -426,7 +427,8 @@ class Environment:
     def __getitem__(self, key: str) -> ConfigSection:
         """Support dict-style access: env['api']"""
         key = key.replace('-', '_')
-        return getattr(self, key)
+        result: ConfigSection = getattr(self, key)
+        return result
 
     def __contains__(self, key: str) -> bool:
         """Support 'in' operator."""

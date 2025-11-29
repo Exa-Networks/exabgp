@@ -22,7 +22,10 @@ from threading import Thread
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.reactor.peer import Peer
-    from exabgp.bgp.message import Open, Update, Notify
+    from exabgp.bgp.message import Open, Update
+    from exabgp.bgp.message.notification import Notification
+    from exabgp.bgp.message.refresh import RouteRefresh
+    from exabgp.bgp.message.operational import OperationalFamily
     from exabgp.bgp.fsm import FSM
 
 from exabgp.util.errstr import errstr
@@ -971,13 +974,10 @@ class Processes:
         """Get sync mode for a specific service/process (default: False)"""
         return self._sync.get(service, False)
 
-    def _notify(self, peer_or_neighbor: 'Neighbor' | 'Peer', event: str) -> Generator[str, None, None]:
-        # Accept both Peer and Neighbor - Peer has .neighbor attribute
-        # Use getattr with default to handle both types safely
-        neighbor: 'Neighbor' = getattr(peer_or_neighbor, 'neighbor', peer_or_neighbor)  # type: ignore[arg-type,assignment]
-        if neighbor.api is None:
+    def _notify(self, neighbor: 'Neighbor', event: str) -> Generator[str, None, None]:
+        if not neighbor.api:
             return
-        for process in neighbor.api[event]:
+        for process in neighbor.api.get(event, []):
             yield process
 
     # do not do anything if silenced
@@ -1019,7 +1019,7 @@ class Processes:
             self.write(process, self._encoder[process].fsm(neighbor, fsm), neighbor)
 
     @silenced
-    def signal(self, neighbor: 'Neighbor', signal: str) -> None:
+    def signal(self, neighbor: 'Neighbor', signal: int) -> None:
         for process in self._notify(neighbor, 'signal'):
             self.write(process, self._encoder[process].signal(neighbor, signal), neighbor)
 
@@ -1029,14 +1029,14 @@ class Processes:
         neighbor: 'Neighbor',
         direction: str,
         category: int,
-        header: bytes | str,
-        body: bytes | str,
-        negotiated: Negotiated | None = None,
+        header: bytes,
+        body: bytes,
+        negotiated: Negotiated,
     ) -> None:
         for process in self._notify(neighbor, '{}-packets'.format(direction)):
             self.write(
                 process,
-                self._encoder[process].packets(neighbor, direction, category, negotiated, header, body),
+                self._encoder[process].packets(neighbor, direction, category, header, body, negotiated),
                 neighbor,
             )
 
@@ -1045,10 +1045,10 @@ class Processes:
         self,
         neighbor: 'Neighbor',
         direction: str,
-        message: 'Notify',
-        header: bytes | str,
-        body: bytes | str,
-        negotiated: Negotiated | None = None,
+        message: 'Notification',
+        header: bytes,
+        body: bytes,
+        negotiated: Negotiated,
     ) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(
@@ -1061,14 +1061,14 @@ class Processes:
     def message(
         self,
         message_id: int,
-        neighbor: 'Neighbor',
+        peer: 'Peer',
         direction: str,
         message: Message,
-        header: bytes | str,
-        *body: bytes | str,
-        negotiated: Negotiated | None = None,
+        header: bytes,
+        body: bytes,
+        negotiated: Negotiated,
     ) -> None:
-        self._dispatch[message_id](self, neighbor, direction, message, negotiated, header, *body)
+        self._dispatch[message_id](self, peer, direction, message, negotiated, header, body)
 
     # registering message functions
     # no-self-argument
@@ -1090,63 +1090,75 @@ class Processes:
 
     @register_process(Message.CODE.OPEN)
     def _open(
-        self, peer: 'Peer', direction: str, message: 'Open', negotiated: Negotiated, header: str, body: str
+        self, peer: 'Peer', direction: str, message: 'Open', negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
-        for process in self._notify(peer, f'{direction}-{Message.CODE.OPEN.SHORT}'):
-            self.write(process, self._encoder[process].open(peer, direction, message, negotiated, header, body), peer)
+        for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.OPEN.SHORT}'):
+            self.write(
+                process, self._encoder[process].open(peer.neighbor, direction, message, header, body, negotiated), peer
+            )
 
     @register_process(Message.CODE.UPDATE)
     def _update(
-        self, peer: 'Peer', direction: str, update: 'Update', negotiated: Negotiated, header: str, body: str
+        self, peer: 'Peer', direction: str, update: 'Update', negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
-        for process in self._notify(peer, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
-            self.write(process, self._encoder[process].update(peer, direction, update, negotiated, header, body), peer)
+        for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
+            self.write(
+                process, self._encoder[process].update(peer.neighbor, direction, update, header, body, negotiated), peer
+            )
 
     @register_process(Message.CODE.NOTIFICATION)
     def _notification(
-        self, peer: 'Peer', direction: str, message: Any, negotiated: Negotiated, header: str, body: str
+        self, peer: 'Peer', direction: str, message: 'Notification', negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
-        for process in self._notify(peer, f'{direction}-{Message.CODE.NOTIFICATION.SHORT}'):
+        for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.NOTIFICATION.SHORT}'):
             self.write(
                 process,
-                self._encoder[process].notification(peer, direction, message, negotiated, header, body),
+                self._encoder[process].notification(peer.neighbor, direction, message, header, body, negotiated),
                 peer,
             )
 
     # unused-argument, must keep the API
     @register_process(Message.CODE.KEEPALIVE)
     def _keepalive(
-        self, peer: 'Peer', direction: str, keepalive: Any, negotiated: Negotiated, header: str, body: str
+        self, peer: 'Peer', direction: str, keepalive: Any, negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
-        for process in self._notify(peer, f'{direction}-{Message.CODE.KEEPALIVE.SHORT}'):
-            self.write(process, self._encoder[process].keepalive(peer, direction, negotiated, header, body), peer)
+        for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.KEEPALIVE.SHORT}'):
+            self.write(
+                process, self._encoder[process].keepalive(peer.neighbor, direction, header, body, negotiated), peer
+            )
 
     @register_process(Message.CODE.ROUTE_REFRESH)
     def _refresh(
-        self, peer: 'Peer', direction: str, refresh: Any, negotiated: Negotiated, header: str, body: str
+        self, peer: 'Peer', direction: str, refresh: 'RouteRefresh', negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
-        for process in self._notify(peer, f'{direction}-{Message.CODE.ROUTE_REFRESH.SHORT}'):
+        for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.ROUTE_REFRESH.SHORT}'):
             self.write(
                 process,
-                self._encoder[process].refresh(peer, direction, refresh, negotiated, header, body),
+                self._encoder[process].refresh(peer.neighbor, direction, refresh, header, body, negotiated),
                 peer,
             )
 
     @register_process(Message.CODE.OPERATIONAL)
     def _operational(
-        self, peer: 'Peer', direction: str, operational: Any, negotiated: Negotiated, header: str, body: str
+        self,
+        peer: 'Peer',
+        direction: str,
+        operational: 'OperationalFamily',
+        negotiated: Negotiated,
+        header: bytes,
+        body: bytes,
     ) -> None:
-        for process in self._notify(peer, f'{direction}-{Message.CODE.OPERATIONAL.SHORT}'):
+        for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.OPERATIONAL.SHORT}'):
             self.write(
                 process,
                 self._encoder[process].operational(
-                    peer,
+                    peer.neighbor,
                     direction,
                     operational.category,
                     operational,
-                    negotiated,
                     header,
                     body,
+                    negotiated,
                 ),
                 peer,
             )

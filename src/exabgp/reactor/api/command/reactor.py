@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
 
 
-def register_reactor():
+def register_reactor() -> None:
     pass
 
 
@@ -39,8 +39,9 @@ def help_command(self: Command, reactor: Reactor, service: str, line: str, use_j
             }
 
             # Add options if available
-            if self.callback['options'][command]:
-                cmd_info['options'] = list(self.callback['options'][command])
+            opts = self.callback['options'][command]
+            if isinstance(opts, (list, tuple, set)):
+                cmd_info['options'] = list(opts)
 
             commands_list.append(cmd_info)
 
@@ -50,14 +51,15 @@ def help_command(self: Command, reactor: Reactor, service: str, line: str, use_j
             'commands': commands_list,
         }
 
-        reactor.processes.write(service, json.dumps(help_data), True)
+        reactor.processes.write(service, json.dumps(help_data))
     else:
         # Text mode output (original implementation)
         lines = []
         encoding = 'text'
         for command in sorted(self.callback[encoding]):
-            if self.callback['options'][command]:
-                options = ' | '.join(self.callback['options'][command])
+            opts = self.callback['options'][command]
+            if isinstance(opts, (list, tuple, set)):
+                options = ' | '.join(str(o) for o in opts)
                 extended = f'{command} [ {options} ]'
             else:
                 extended = command
@@ -65,22 +67,21 @@ def help_command(self: Command, reactor: Reactor, service: str, line: str, use_j
                 '[neighbor <ip> [filters]] ' + command if self.callback['neighbor'][command] else f'{extended} '
             )
 
-        reactor.processes.write(service, '', True)
-        reactor.processes.write(service, 'available API commands are listed here:', True)
-        reactor.processes.write(service, '=======================================', True)
-        reactor.processes.write(service, '', True)
+        reactor.processes.write(service, '')
+        reactor.processes.write(service, 'available API commands are listed here:')
+        reactor.processes.write(service, '=======================================')
+        reactor.processes.write(service, '')
         reactor.processes.write(
             service,
             'filter can be: [local-ip <ip>][local-as <asn>][peer-as <asn>][router-id <router-id>]',
-            True,
         )
-        reactor.processes.write(service, '', True)
-        reactor.processes.write(service, 'command are:', True)
-        reactor.processes.write(service, '------------', True)
-        reactor.processes.write(service, '', True)
+        reactor.processes.write(service, '')
+        reactor.processes.write(service, 'command are:')
+        reactor.processes.write(service, '------------')
+        reactor.processes.write(service, '')
         for line in sorted(lines):
-            reactor.processes.write(service, line, True)
-        reactor.processes.write(service, '', True)
+            reactor.processes.write(service, line)
+        reactor.processes.write(service, '')
 
     reactor.processes.answer_done(service)
     return True
@@ -151,7 +152,7 @@ def reset(self: Command, reactor: Reactor, service: str, line: str, use_json: bo
 
 @Command.register('crash', json_support=True)
 def crash(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
-    async def callback():
+    async def callback() -> None:
         raise ValueError('crash test of the API')
         await asyncio.sleep(0)  # This line is unreachable but matches original structure
 
@@ -316,7 +317,7 @@ def status(self: Command, reactor: Reactor, service: str, line: str, use_json: b
                 lines.append(f'  - {name}: {state}')
 
         for line_text in lines:
-            reactor.processes.write(service, line_text, True)
+            reactor.processes.write(service, line_text)
 
     reactor.processes.answer_done(service)
     return True

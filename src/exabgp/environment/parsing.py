@@ -64,7 +64,7 @@ def methods(_: str) -> list[str]:
     return _.upper().split()
 
 
-def list(_: list[str]) -> str:
+def format_list(_: list[str]) -> str:
     joined = ' '.join(_)
     return f"'{joined}'"
 

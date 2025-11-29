@@ -16,13 +16,13 @@ if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
 
 
-def register_watchdog():
+def register_watchdog() -> None:
     pass
 
 
 @Command.register('announce watchdog', json_support=True)
 def announce_watchdog(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
-    async def callback(name):
+    async def callback(name: str) -> None:
         # XXX: move into Action
         for neighbor_name in reactor.configuration.neighbors.keys():
             neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
@@ -43,7 +43,7 @@ def announce_watchdog(self: Command, reactor: Reactor, service: str, line: str, 
 
 @Command.register('withdraw watchdog', json_support=True)
 def withdraw_watchdog(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
-    async def callback(name):
+    async def callback(name: str) -> None:
         # XXX: move into Action
         for neighbor_name in reactor.configuration.neighbors.keys():
             neighbor = reactor.configuration.neighbors.get(neighbor_name, None)

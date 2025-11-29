@@ -35,7 +35,7 @@ class Scope(Error):
     def __repr__(self):
         return pprint.pformat(self.__dict__, indent=3)
 
-    def clear(self):
+    def clear(self) -> None:
         self._location = []
         self._added = set()
         self._all = {
@@ -78,12 +78,12 @@ class Scope(Error):
             return ''  # This is signaling an issue to the caller without raising
         return self._location.pop()
 
-    def location(self):
+    def location(self) -> str:
         return '/'.join(self._location)
 
     # context
 
-    def to_context(self, name=''):
+    def to_context(self, name: str = '') -> None:
         self._current = self._all
         for context in self._location:
             if context not in self._current:

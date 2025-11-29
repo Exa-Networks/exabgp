@@ -26,13 +26,13 @@ class Tokeniser:
         self.afi = AFI.undefined
         self.fname: str = ''
 
-    def replenish(self, content):
+    def replenish(self, content: list[str]) -> 'Tokeniser':
         self.next.clear()
         self.tokens = content
         self.generator = iter(content)
         return self
 
-    def clear(self):
+    def clear(self) -> None:
         self.replenish([])
         self.announce = True
 

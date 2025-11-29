@@ -469,7 +469,7 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
             ),
             'parser',
         )
-    json_update = Response.JSON(json_version).update(neighbor, 'in', update, None, '', '')
+    json_update = Response.JSON(json_version).update(neighbor, 'in', update, b'', b'', Negotiated.UNSET)
     log.info(lazymsg('update.json json={json_update}', json_update=json_update), 'parser')
 
     return True
@@ -480,7 +480,7 @@ def display_update(neighbor: Neighbor, raw: bytes) -> bool:
     if not update:
         return False
 
-    sys.stdout.write(Response.JSON(json_version).update(neighbor, 'in', update, None, '', ''))
+    sys.stdout.write(Response.JSON(json_version).update(neighbor, 'in', update, b'', b'', Negotiated.UNSET))
     sys.stdout.write('\n')
     return True
 

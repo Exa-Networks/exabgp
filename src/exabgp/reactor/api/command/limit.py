@@ -8,16 +8,17 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import re
+from typing import Iterable
 
 
-def extract_neighbors(command):
+def extract_neighbors(command: str) -> tuple[list[list[str]], str]:
     """Return a list of neighbor definition : the neighbor definition is a list of string which are in the neighbor indexing string"""
     # This function returns a list and a string
     # The first list contains parsed neighbor to match against our defined peers
     # The string is the command to be run for those peers
     # The parsed neighbor is a list of the element making the neighbor string so each part can be checked against the neighbor name
 
-    returned = []
+    returned: list[list[str]] = []
 
     neiremain = command.split(' ', 1)
     if len(neiremain) == 1:
@@ -31,10 +32,10 @@ def extract_neighbors(command):
     if len(ipcmd) == 1:
         return [], remaining
     ip, command = ipcmd
-    definition = [f'neighbor {ip}']
+    definition: list[str] = [f'neighbor {ip}']
 
     if ' ' not in command:
-        return definition, command
+        return [definition], command
 
     while True:
         try:
@@ -43,8 +44,9 @@ def extract_neighbors(command):
             # single word command
             keyval = command.split(' ', 1)
             if len(keyval) == 1:
-                return definition, command
+                return [definition], command
             key, value = keyval
+            remaining = ''
         # we have further filtering
         if key == ',':
             returned.append(definition)
@@ -61,7 +63,7 @@ def extract_neighbors(command):
     return returned, command
 
 
-def match_neighbor(description, name):
+def match_neighbor(description: list[str], name: str) -> bool:
     for string in description:
         if string.strip() == 'neighbor *':
             return True
@@ -71,12 +73,12 @@ def match_neighbor(description, name):
     return True
 
 
-def match_neighbors(peers, descriptions):
+def match_neighbors(peers: Iterable[str], descriptions: list[list[str]]) -> list[str]:
     """Return the sublist of peers matching the description passed, or None if no description is given"""
     if not descriptions:
-        return peers
+        return list(peers)
 
-    returned = []
+    returned: list[str] = []
     for peer_name in peers:
         for description in descriptions:
             if match_neighbor(description, peer_name):

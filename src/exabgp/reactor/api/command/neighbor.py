@@ -19,15 +19,16 @@ from exabgp.reactor.api.command.limit import extract_neighbors
 from exabgp.reactor.api.command.command import Command
 
 if TYPE_CHECKING:
+    from exabgp.reactor.api import API
     from exabgp.reactor.loop import Reactor
 
 
-def register_neighbor():
+def register_neighbor() -> None:
     pass
 
 
 @Command.register('teardown', neighbor=True, json_support=True)
-def teardown(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def teardown(self: 'API', reactor: 'Reactor', service: str, line: str, use_json: bool) -> bool:
     try:
         descriptions, line = extract_neighbors(line)
         if ' ' not in line:
@@ -76,7 +77,7 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
 
     limit = words[-1] if words[-1] != 'neighbor' else ''
 
-    async def callback_configuration():
+    async def callback_configuration() -> None:
         for neighbor_name in reactor.configuration.neighbors.keys():
             neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
             if not neighbor:
@@ -88,7 +89,7 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
                 await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         await reactor.processes.answer_done_async(service)
 
-    async def callback_json():
+    async def callback_json() -> None:
         p = []
         # Include ALL configured neighbors (not just connected ones)
         # This is useful for tooling/completion even when neighbors are down
@@ -124,7 +125,7 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
             await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         await reactor.processes.answer_done_async(service)
 
-    async def callback_extensive():
+    async def callback_extensive() -> None:
         # Show ALL configured neighbors (both connected and disconnected)
         # This provides visibility into neighbors that are down/not connecting
         try:
@@ -164,7 +165,7 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
             reactor.processes.write(service, f'# Error: {e}')
         await reactor.processes.answer_done_async(service)
 
-    async def callback_summary():
+    async def callback_summary() -> None:
         reactor.processes.write(service, NeighborTemplate.summary_header)
         for peer_name in reactor.peers():
             if limit and limit != str(reactor.neighbor_ip(peer_name)):
@@ -194,3 +195,4 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
     reactor.processes.write(service, 'please specify summary, extensive or configuration')
     reactor.processes.write(service, 'you can filter by peer ip address adding it after the word neighbor')
     reactor.processes.answer_done(service)
+    return True

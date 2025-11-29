@@ -28,6 +28,9 @@ from exabgp.protocol.family import SAFI
 class Negotiated:
     FREE_SIZE: ClassVar[int] = ExtendedMessage.INITIAL_SIZE - 19 - 2 - 2
 
+    # Sentinel instance for when Negotiated is required but not used
+    UNSET: ClassVar['Negotiated']
+
     def __init__(self, neighbor: 'Neighbor', direction: 'Direction') -> None:
         self.neighbor: 'Neighbor' = neighbor
         self.direction: 'Direction' = direction
@@ -39,7 +42,7 @@ class Negotiated:
         self.local_as: ASN = ASN(0)
         self.peer_as: ASN = ASN(0)
         self.families: list[tuple[AFI, SAFI]] = []
-        self.nexthop: list[tuple[AFI, SAFI]] = []
+        self.nexthop: list[tuple[AFI, SAFI, AFI]] = []  # RFC5549 - (nlri_afi, nlri_safi, nexthop_afi)
         self.asn4: bool = False
         self.addpath: RequirePath = RequirePath()
         self.multisession: bool | tuple[int, int, str] = False
@@ -48,6 +51,27 @@ class Negotiated:
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
         self.aigp: bool = neighbor.capability.aigp.is_enabled()
         self.mismatch: list[tuple[str, tuple[AFI, SAFI]]] = []
+
+    @classmethod
+    def _create_unset(cls) -> 'Negotiated':
+        """Create an uninitialized sentinel instance for use when Negotiated is not needed."""
+        instance = object.__new__(cls)
+        instance.holdtime = HoldTime(0)
+        instance.local_as = ASN(0)
+        instance.peer_as = ASN(0)
+        instance.families = []
+        instance.nexthop = []
+        instance.asn4 = False
+        instance.addpath = RequirePath()
+        instance.multisession = False
+        instance.msg_size = ExtendedMessage.INITIAL_SIZE
+        instance.operational = False
+        instance.refresh = REFRESH.ABSENT
+        instance.aigp = False
+        instance.mismatch = []
+        instance.sent_open = None
+        instance.received_open = None
+        return instance
 
     def sent(self, sent_open: Any) -> None:  # Open message
         self.sent_open = sent_open
@@ -247,3 +271,7 @@ class RequirePath:
 
     def receive(self, afi: AFI, safi: SAFI) -> bool:
         return self._receive.get((afi, safi), False)
+
+
+# Initialize the sentinel instance
+Negotiated.UNSET = Negotiated._create_unset()

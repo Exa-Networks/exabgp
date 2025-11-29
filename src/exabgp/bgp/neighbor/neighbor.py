@@ -14,6 +14,8 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.operational import Operational
+from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
@@ -48,8 +50,8 @@ class Neighbor:
     connect: int
     hold_time: HoldTime
     rate_limit: int
-    host_name: str | None
-    domain_name: str | None
+    host_name: str
+    domain_name: str
     group_updates: bool
     auto_flush: bool
     adj_rib_in: bool
@@ -62,7 +64,7 @@ class Neighbor:
     incoming_ttl: int | None
 
     # Other instance attributes
-    api: dict[str, Any, None]
+    api: dict[str, Any]
     capability: NeighborCapability
     auto_discovery: bool
     range_size: int
@@ -74,9 +76,9 @@ class Neighbor:
     changes: list['Change']
     previous: 'Neighbor' | None
     eor: deque[tuple[AFI, SAFI]]
-    asm: dict[tuple[AFI, SAFI], Message]
-    messages: deque[Message]
-    refresh: deque[tuple[AFI, SAFI]]
+    asm: dict[tuple[AFI, SAFI], Operational]
+    messages: deque[Operational]
+    refresh: deque[RouteRefresh]
     counter: Counter[str]
     uid: str
 
@@ -94,8 +96,8 @@ class Neighbor:
         self.connect = 0
         self.hold_time = HoldTime(180)
         self.rate_limit = 0
-        self.host_name = None
-        self.domain_name = None
+        self.host_name = ''
+        self.domain_name = ''
         self.group_updates = True
         self.auto_flush = True
         self.adj_rib_in = True
@@ -108,7 +110,7 @@ class Neighbor:
         self.incoming_ttl = None
 
         # API configuration
-        self.api = None
+        self.api: dict[str, Any] = {}
 
         # Capability configuration (typed dataclass)
         self.capability = NeighborCapability()
@@ -174,7 +176,7 @@ class Neighbor:
         return self.name()
 
     def make_rib(self) -> None:
-        self.rib = RIB(self.name(), self.adj_rib_in, self.adj_rib_out, self._families)
+        self.rib = RIB(self.name(), self.adj_rib_in, self.adj_rib_out, set(self._families))
 
     # will resend all the routes once we reconnect
     def reset_rib(self) -> None:

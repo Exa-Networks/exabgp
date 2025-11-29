@@ -356,7 +356,7 @@ class Update(Message):
             from exabgp.version import json as json_version
 
             return 'json {}'.format(
-                Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, None, '', '')
+                Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, b'', b'', negotiated)
             )
 
         log.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')  # type: ignore[arg-type]
