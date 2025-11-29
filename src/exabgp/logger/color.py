@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict
 
 # 'FATAL CRITICAL ERROR WARNING INFO DEBUG NOTSET'
-_RECORD: Dict[str, str] = {
+_RECORD: dict[str, str] = {
     'FATAL': '\033[00;31m',  # Strong Red
     'CRITICAL': '\033[00;31m',  # Strong Red
     'ERROR': '\033[01;31m',  # Red
@@ -13,7 +12,7 @@ _RECORD: Dict[str, str] = {
     'NOTSET': '\033[01;34m',  # Blue
 }
 
-_MESSAGE: Dict[str, str] = {
+_MESSAGE: dict[str, str] = {
     'FATAL': '\033[1m',
     'CRITICAL': '',
     'ERROR': '\033[1m',

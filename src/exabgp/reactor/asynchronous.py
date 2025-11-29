@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections import deque
-from typing import Any, Deque, Tuple
+from typing import Any, Deque
 
 from exabgp.logger import log, lazymsg
 
@@ -19,7 +19,7 @@ class ASYNC:
     LIMIT: int = 50
 
     def __init__(self) -> None:
-        self._async: Deque[Tuple[str, Any]] = deque()
+        self._async: Deque[tuple[str, Any]] = deque()
 
     def ready(self) -> bool:
         return not self._async

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, List
+from typing import ClassVar
 
 
 class msg(dict):
@@ -8,7 +8,7 @@ class msg(dict):
     help: ClassVar[str] = '[help]'
     validation: ClassVar[str] = '[validation]'
 
-    _keys: ClassVar[List[str]] = [command, help, validation]
+    _keys: ClassVar[list[str]] = [command, help, validation]
 
     def __init__(self) -> None:
         self[self.help] = ''

@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Callable, ClassVar, Dict, List, Type
+from typing import TYPE_CHECKING, Callable, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -25,7 +25,7 @@ class _MessageCode(int):
     DONE: ClassVar[int] = 0xFD  # .          253 - internal - peer finished
     AWAKE: ClassVar[int] = 0xFE  # .         254 - internal - immediate action
 
-    names: ClassVar[Dict[int | None, str]] = {
+    names: ClassVar[dict[int | None, str]] = {
         None: 'INVALID',
         NOP: 'NOP',
         AWAKE: 'AWAKE',
@@ -38,7 +38,7 @@ class _MessageCode(int):
         OPERATIONAL: 'OPERATIONAL',
     }
 
-    short_names: ClassVar[Dict[int | None, str]] = {
+    short_names: ClassVar[dict[int | None, str]] = {
         None: 'invalid',
         NOP: 'nop',
         AWAKE: 'awake',
@@ -51,7 +51,7 @@ class _MessageCode(int):
         OPERATIONAL: 'operational',
     }
 
-    long_names: ClassVar[Dict[int | None, str]] = {
+    long_names: ClassVar[dict[int | None, str]] = {
         None: 'invalid',
         NOP: 'nop',
         AWAKE: 'awake',
@@ -114,7 +114,7 @@ class Message:
     )
     HEADER_LEN: ClassVar[int] = 19
 
-    registered_message: ClassVar[Dict[int, Type[Message]]] = {}
+    registered_message: ClassVar[dict[int, Type[Message]]] = {}
     klass_unknown: ClassVar[Callable[[int, bytes, Negotiated], Message]]
 
     # TYPE attribute set by subclasses
@@ -136,7 +136,7 @@ class Message:
         DONE: ClassVar[_MessageCode] = _MessageCode(_MessageCode.DONE)
         AWAKE: ClassVar[_MessageCode] = _MessageCode(_MessageCode.AWAKE)
 
-        MESSAGES: ClassVar[List[_MessageCode]] = [
+        MESSAGES: ClassVar[list[_MessageCode]] = [
             NOP,
             OPEN,
             UPDATE,
@@ -166,7 +166,7 @@ class Message:
         def __init__(self) -> None:
             raise RuntimeError('This class can not be instantiated')
 
-    Length: ClassVar[Dict[_MessageCode, Callable[[int], bool]]] = {
+    Length: ClassVar[dict[_MessageCode, Callable[[int], bool]]] = {
         CODE.OPEN: lambda _: _ >= 29,  # noqa
         CODE.UPDATE: lambda _: _ >= 23,  # noqa
         CODE.NOTIFICATION: lambda _: _ >= 21,  # noqa

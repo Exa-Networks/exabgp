@@ -16,7 +16,7 @@ import readline
 import sys
 import time
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Tuple
+from typing import Callable
 
 from exabgp.application.shortcuts import CommandShortcuts
 from exabgp.cli.colors import Colors
@@ -36,7 +36,7 @@ class CompletionItem:
 class CommandCompleter:
     """Tab completion for ExaBGP commands using readline with dynamic command discovery"""
 
-    def __init__(self, send_command: Callable[[str], str], get_neighbors: Callable[[], List[str]] | None = None):
+    def __init__(self, send_command: Callable[[str], str], get_neighbors: Callable[[], list[str]] | None = None):
         """
         Initialize completer
 
@@ -68,17 +68,17 @@ class CommandCompleter:
         self.base_commands.extend(['neighbor', 'adj-rib'])
 
         # Cache for neighbor IPs
-        self._neighbor_cache: List[str] | None = None
+        self._neighbor_cache: list[str] | None = None
         self._cache_timeout = 300  # Refresh cache every 5 minutes (avoid repeated socket calls)
         self._cache_timestamp: float = 0
         self._cache_in_progress = False  # Prevent concurrent queries
 
         # Track state for single-TAB display on macOS libedit
-        self.matches: List[str] = []
-        self.match_metadata: Dict[str, CompletionItem] = {}  # Map completion value to metadata
+        self.matches: list[str] = []
+        self.match_metadata: dict[str, CompletionItem] = {}  # Map completion value to metadata
         self.is_libedit = 'libedit' in readline.__doc__
         self.last_line = ''
-        self.last_matches: List[str] = []
+        self.last_matches: list[str] = []
 
         # Try to get access to readline's rl_replace_line for line editing
         self._rl_replace_line = self._get_rl_replace_line()
@@ -213,7 +213,7 @@ class CommandCompleter:
             # Completion is a nice-to-have feature - don't let it crash the CLI.
             return None
 
-    def _try_auto_expand_tokens(self, tokens: List[str]) -> Tuple[List[str], bool]:
+    def _try_auto_expand_tokens(self, tokens: list[str]) -> tuple[list[str], bool]:
         """
         Auto-expand unambiguous partial tokens
 
@@ -247,7 +247,7 @@ class CommandCompleter:
 
         return (expanded_tokens, expansions_made)
 
-    def _display_matches_and_redraw(self, matches: List[str], current_line: str) -> None:
+    def _display_matches_and_redraw(self, matches: list[str], current_line: str) -> None:
         """Display completion matches with descriptions (one per line) and redraw the prompt"""
         if not matches:
             return
@@ -301,7 +301,7 @@ class CommandCompleter:
         """Add metadata for a completion item"""
         self.match_metadata[value] = CompletionItem(value=value, description=description, item_type=item_type)
 
-    def _get_completions(self, tokens: List[str], text: str) -> List[str]:
+    def _get_completions(self, tokens: list[str], text: str) -> list[str]:
         """
         Get list of completions based on current context
 
@@ -668,7 +668,7 @@ class CommandCompleter:
 
         return []
 
-    def _is_neighbor_command(self, tokens: List[str]) -> bool:
+    def _is_neighbor_command(self, tokens: list[str]) -> bool:
         """Check if command targets a specific neighbor using registry metadata"""
         if not tokens:
             return False
@@ -684,7 +684,7 @@ class CommandCompleter:
         # Fallback: check if first token suggests neighbor targeting
         return tokens[0] in ('neighbor', 'teardown')
 
-    def _complete_neighbor_command(self, tokens: List[str], text: str) -> List[str]:
+    def _complete_neighbor_command(self, tokens: list[str], text: str) -> list[str]:
         """Complete neighbor-targeted commands"""
         # Check if we should complete neighbor IP
         last_token = tokens[-1] if tokens else ''
@@ -740,7 +740,7 @@ class CommandCompleter:
 
         return []
 
-    def _complete_neighbor_filters(self, text: str) -> List[str]:
+    def _complete_neighbor_filters(self, text: str) -> list[str]:
         """Complete neighbor filter keywords"""
         filters = self.registry.get_neighbor_filters()
         matches = sorted([f for f in filters if f.startswith(text)])
@@ -750,7 +750,7 @@ class CommandCompleter:
             self._add_completion_metadata(match, desc, 'keyword')
         return matches
 
-    def _complete_afi_safi(self, tokens: List[str], text: str) -> List[str]:
+    def _complete_afi_safi(self, tokens: list[str], text: str) -> list[str]:
         """Complete AFI/SAFI values for eor and route refresh"""
         # Get AFI values first, then SAFI
         afi_values = self.registry.get_afi_values()
@@ -776,7 +776,7 @@ class CommandCompleter:
                 self._add_completion_metadata(match, desc, 'keyword')
             return matches
 
-    def _complete_route_spec(self, tokens: List[str], text: str) -> List[str]:
+    def _complete_route_spec(self, tokens: list[str], text: str) -> list[str]:
         """Complete route specification keywords"""
         keywords = self.registry.get_route_keywords()
         matches = sorted([k for k in keywords if k.startswith(text)])
@@ -801,7 +801,7 @@ class CommandCompleter:
         ipv6_pattern = r'^[0-9a-fA-F:]+(/\d{1,3})?$'
         return bool(re.match(ipv4_pattern, token) or ((':' in token) and re.match(ipv6_pattern, token)))
 
-    def _get_neighbor_ips(self) -> List[str]:
+    def _get_neighbor_ips(self) -> list[str]:
         """
         Get list of neighbor IPs for completion (with caching)
 
@@ -876,14 +876,14 @@ class CommandCompleter:
         finally:
             self._cache_in_progress = False
 
-    def _get_neighbor_data(self) -> Dict[str, str]:
+    def _get_neighbor_data(self) -> dict[str, str]:
         """
         Get neighbor IPs with descriptions (AS, state) for completion
 
         Returns:
             Dict mapping neighbor IP to description string
         """
-        neighbor_data: Dict[str, str] = {}
+        neighbor_data: dict[str, str] = {}
 
         # Try to fetch detailed neighbor information
         try:

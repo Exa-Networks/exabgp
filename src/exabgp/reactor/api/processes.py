@@ -16,7 +16,7 @@ import fcntl
 import asyncio
 import collections
 
-from typing import Any, Callable, Dict, Generator, IO, List, Tuple, TypeVar, cast, TYPE_CHECKING
+from typing import Any, Callable, Generator, IO, TypeVar, cast, TYPE_CHECKING
 from threading import Thread
 
 if TYPE_CHECKING:
@@ -97,14 +97,14 @@ class Processes:
     respawn_timemask: int = 0xFFFFFF - 0b111111
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
-    _dispatch: Dict[int, Any] = {}
+    _dispatch: dict[int, Any] = {}
 
     def __init__(self) -> None:
         self.clean()
         self.silence: bool = False
-        self._buffer: Dict[str, str] = {}
-        self._configuration: Dict[str, Dict[str, Any]] = {}
-        self._restart: Dict[str, bool] = {}
+        self._buffer: dict[str, str] = {}
+        self._configuration: dict[str, dict[str, Any]] = {}
+        self._restart: dict[str, bool] = {}
 
         self.respawn_number: int = 5 if getenv().api.respawn else 0
         self.terminate_on_error: bool = getenv().api.terminate
@@ -114,21 +114,21 @@ class Processes:
         self._async_mode: bool = False
         self._loop: asyncio.AbstractEventLoop | None = None
         # Write queue for async mode (process_name -> deque of strings to write)
-        self._write_queue: Dict[str, collections.deque] = {}
-        self._command_queue: collections.deque[Tuple[str, str]] = collections.deque()
+        self._write_queue: dict[str, collections.deque] = {}
+        self._command_queue: collections.deque[tuple[str, str]] = collections.deque()
 
     def number(self) -> int:
         return len(self._process)
 
     def clean(self) -> None:
-        self.fds: List[int] = []
-        self._process: Dict[str, subprocess.Popen[bytes]] = {}
-        self._encoder: Dict[str, Response.JSON | Response.Text] = {}
-        self._ackjson: Dict[str, bool] = {}
-        self._ack: Dict[str, bool] = {}
-        self._sync: Dict[str, bool] = {}  # Per-service sync mode (default: False)
-        self._broken: List[str] = []
-        self._respawning: Dict[str, Dict[int, int]] = {}
+        self.fds: list[int] = []
+        self._process: dict[str, subprocess.Popen[bytes]] = {}
+        self._encoder: dict[str, Response.JSON | Response.Text] = {}
+        self._ackjson: dict[str, bool] = {}
+        self._ack: dict[str, bool] = {}
+        self._sync: dict[str, bool] = {}  # Per-service sync mode (default: False)
+        self._broken: list[str] = []
+        self._respawning: dict[str, dict[int, int]] = {}
 
     def _handle_problem(self, process: str) -> None:
         if process not in self._process:
@@ -303,7 +303,7 @@ class Processes:
             log.debug(lazymsg('could not start process {p}', p=process), 'processes')
             log.debug(lazymsg('reason: {e}', e=exc), 'processes')
 
-    def start(self, configuration: Dict[str, Dict[str, Any]], restart: bool = False) -> None:
+    def start(self, configuration: dict[str, dict[str, Any]], restart: bool = False) -> None:
         # Terminate processes that are no longer in configuration
         for process in list(self._process):
             if process not in configuration:
@@ -360,7 +360,7 @@ class Processes:
     def _update_fds(self) -> None:
         self.fds = [self._get_stdout(process).fileno() for process in self._process]
 
-    def received(self) -> Generator[Tuple[str, str], None, None]:
+    def received(self) -> Generator[tuple[str, str], None, None]:
         consumed_data = False
 
         for process in list(self._process):
@@ -587,7 +587,7 @@ class Processes:
             log.debug(lazymsg('async.reader.exception process={p} error={e}', p=process_name, e=exc), 'processes')
             self._handle_problem(process_name)
 
-    def received_async(self) -> Generator[Tuple[str, str], None, None]:
+    def received_async(self) -> Generator[tuple[str, str], None, None]:
         """Async-compatible version of received() that yields buffered commands
 
         In async mode, commands are read by callbacks registered with the event
@@ -1075,7 +1075,7 @@ class Processes:
 
     @staticmethod
     def register_process(
-        message_id: int, storage: Dict[int, Any] = _dispatch
+        message_id: int, storage: dict[int, Any] = _dispatch
     ) -> Callable[[Callable[..., None]], Callable[..., None]]:
         def closure(function: Callable[..., None]) -> Callable[..., None]:
             def wrap(*args: Any) -> None:

@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Dict
+from typing import ClassVar
 
 from exabgp.protocol.resource import BitResource
 
@@ -29,7 +29,7 @@ class TCPFlag(BitResource):
     CWR: ClassVar[int] = 0x80
     NS: ClassVar[int] = 0x100
 
-    codes: ClassVar[Dict[str, int]] = dict(
+    codes: ClassVar[dict[str, int]] = dict(
         (k.lower().replace('_', '-'), v)
         for (k, v) in {
             'FIN': FIN,
@@ -44,7 +44,7 @@ class TCPFlag(BitResource):
         }.items()
     )
 
-    names: ClassVar[Dict[int, str]] = dict([(value, name) for (name, value) in codes.items()])
+    names: ClassVar[dict[int, str]] = dict([(value, name) for (name, value) in codes.items()])
 
 
 # Backward compatibility

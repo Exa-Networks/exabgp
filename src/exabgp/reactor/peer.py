@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio  # noqa: F401 - Used by async methods (_send_open_async, _read_open_async, _send_ka_async, _read_ka_async)
 import time
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, Generator, Iterator, Set, Tuple, cast
+from typing import TYPE_CHECKING, Any, Generator, Iterator, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -55,13 +55,13 @@ class Stop(Exception):
 
 
 class Stats(dict):
-    __format: Dict[str, Any] = {
+    __format: dict[str, Any] = {
         'complete': lambda t: 'time {}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(t)))
     }
 
-    def __init__(self, *args: Tuple[Any, ...]) -> None:
+    def __init__(self, *args: tuple[Any, ...]) -> None:
         dict.__init__(self, args)
-        self.__changed: Set[str] = set()
+        self.__changed: set[str] = set()
 
     def __setitem__(self, key: str, val: Any) -> None:
         dict.__setitem__(self, key, val)
@@ -242,7 +242,7 @@ class Peer:
         self._stop('shutting down')
         self.stop()
 
-    def resend(self, enhanced: bool, family: Tuple[AFI, SAFI] | None = None) -> None:
+    def resend(self, enhanced: bool, family: tuple[AFI, SAFI] | None = None) -> None:
         if self.neighbor.rib:
             self.neighbor.rib.outgoing.resend(enhanced, family)
         self._delay.reset()
@@ -1196,7 +1196,7 @@ class Peer:
         if self._async_task and not self._async_task.done():
             self._async_task.cancel()
 
-    def cli_data(self) -> Dict[str, Any]:
+    def cli_data(self) -> dict[str, Any]:
         peer: defaultdict = defaultdict(lambda: None)
 
         have_peer = self.proto is not None
@@ -1232,7 +1232,7 @@ class Peer:
             )
 
         cap = self.neighbor.capability
-        capabilities: Dict[str, Tuple[TriState, TriState]] = {
+        capabilities: dict[str, tuple[TriState, TriState]] = {
             'asn4': (cap.asn4, TriState.from_bool(peer['asn4'])),
             'route-refresh': (
                 TriState.from_bool(bool(cap.route_refresh)),
@@ -1260,7 +1260,7 @@ class Peer:
             ),
         }
 
-        families: Dict[Tuple[AFI, SAFI], Tuple[bool, TriState, TriState, TriState]] = {}
+        families: dict[tuple[AFI, SAFI], tuple[bool, TriState, TriState, TriState]] = {}
         for family in self.neighbor.families():
             common: TriState
             send_addpath: TriState

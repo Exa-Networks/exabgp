@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from copy import deepcopy
-from typing import TYPE_CHECKING, Dict, Iterator, List, Set, Tuple
+from typing import TYPE_CHECKING, Iterator
 
 from exabgp.logger import log, lazymsg
 
@@ -32,14 +32,14 @@ RIBdict = dict
 
 
 class OutgoingRIB(Cache):
-    _watchdog: Dict[str, Dict[str, Dict[bytes, Change]]]
-    _new_nlri: Dict[bytes, Change]
-    _new_attr_af_nlri: Dict[bytes, Dict[Tuple[AFI, SAFI], Dict[bytes, Change]]]
-    _new_attribute: Dict[bytes, Attributes]
-    _refresh_families: Set[Tuple[AFI, SAFI]]
-    _refresh_changes: List[Change]
+    _watchdog: dict[str, dict[str, dict[bytes, Change]]]
+    _new_nlri: dict[bytes, Change]
+    _new_attr_af_nlri: dict[bytes, dict[tuple[AFI, SAFI], dict[bytes, Change]]]
+    _new_attribute: dict[bytes, Attributes]
+    _refresh_families: set[tuple[AFI, SAFI]]
+    _refresh_changes: list[Change]
 
-    def __init__(self, cache: bool, families: Set[Tuple[AFI, SAFI]]) -> None:
+    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]]) -> None:
         Cache.__init__(self, cache, families)
 
         self._watchdog = {}
@@ -65,7 +65,7 @@ class OutgoingRIB(Cache):
         self._refresh_changes = []
 
         # Flush callbacks for sync mode - fire when updates() exhausts
-        self._flush_callbacks: List[asyncio.Event] = []
+        self._flush_callbacks: list[asyncio.Event] = []
 
         self.reset()
 
@@ -111,7 +111,7 @@ class OutgoingRIB(Cache):
                 event.set()
             self._flush_callbacks.clear()
 
-    def resend(self, enhanced_refresh: bool, family: Tuple[AFI, SAFI] | None = None) -> None:
+    def resend(self, enhanced_refresh: bool, family: tuple[AFI, SAFI] | None = None) -> None:
         requested_families = set(self.families)
 
         if family is not None:
@@ -124,7 +124,7 @@ class OutgoingRIB(Cache):
         for change in self.cached_changes(list(requested_families)):
             self._refresh_changes.append(change)
 
-    def withdraw(self, families: Set[Tuple[AFI, SAFI]] | None = None) -> None:
+    def withdraw(self, families: set[tuple[AFI, SAFI]] | None = None) -> None:
         if not families:
             families = self.families
         requested_families = set(families).intersection(self.families)
@@ -137,9 +137,9 @@ class OutgoingRIB(Cache):
         for change in self._new_nlri.values():
             yield change
 
-    def replace_restart(self, previous: List[Change], new: List[Change]) -> None:
+    def replace_restart(self, previous: list[Change], new: list[Change]) -> None:
         # this requires that all changes are announcements
-        indexed: Dict[bytes, Change] = {}
+        indexed: dict[bytes, Change] = {}
 
         for change in previous:
             indexed[change.index()] = change
@@ -153,9 +153,9 @@ class OutgoingRIB(Cache):
         for index in list(indexed):
             self.del_from_rib(indexed.pop(index))
 
-    def replace_reload(self, previous: List[Change], new: List[Change]) -> None:
+    def replace_reload(self, previous: list[Change], new: list[Change]) -> None:
         # this requires that all changes are announcements
-        indexed: Dict[bytes, Change] = {}
+        indexed: dict[bytes, Change] = {}
 
         for change in previous:
             indexed[change.index()] = change

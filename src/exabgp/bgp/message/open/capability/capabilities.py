@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, List, Tuple, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -72,7 +72,7 @@ class Capabilities(dict):
     # RFC 9072 - Extended Optional Parameters Length
     EXTENDED_LENGTH: ClassVar[int] = 0xFF  # IANA Extended Length type code - indicates extended format in use
 
-    _ADD_PATH: ClassVar[List[Tuple[AFI, SAFI]]] = [
+    _ADD_PATH: ClassVar[list[tuple[AFI, SAFI]]] = [
         (AFI.ipv4, SAFI.unicast),
         (AFI.ipv6, SAFI.unicast),
         (AFI.ipv4, SAFI.nlri_mpls),
@@ -83,7 +83,7 @@ class Capabilities(dict):
         (AFI.ipv6, SAFI.mup),
     ]
 
-    _NEXTHOP: ClassVar[List[Tuple[AFI, SAFI, AFI]]] = [
+    _NEXTHOP: ClassVar[list[tuple[AFI, SAFI, AFI]]] = [
         (AFI.ipv4, SAFI.unicast, AFI.ipv6),
         (AFI.ipv4, SAFI.multicast, AFI.ipv6),
         (AFI.ipv4, SAFI.nlri_mpls, AFI.ipv6),
@@ -94,7 +94,7 @@ class Capabilities(dict):
         return capability in self
 
     def __str__(self) -> str:
-        r: List[str] = []
+        r: list[str] = []
         for key in sorted(self.keys()):
             r.append(str(self[key]))
         return ', '.join(r)
@@ -116,7 +116,7 @@ class Capabilities(dict):
             return
 
         nexthops = neighbor.nexthops()
-        nh_pairs: List[Tuple[AFI, SAFI, AFI]] = []
+        nh_pairs: list[tuple[AFI, SAFI, AFI]] = []
         for allowed in self._NEXTHOP:
             if allowed not in nexthops:
                 continue
@@ -128,7 +128,7 @@ class Capabilities(dict):
             return
 
         families = neighbor.addpaths()
-        ap_families: List[Tuple[AFI, SAFI]] = []
+        ap_families: list[tuple[AFI, SAFI]] = []
         for allowed in self._ADD_PATH:
             if allowed in families:
                 ap_families.append(allowed)
@@ -217,7 +217,7 @@ class Capabilities(dict):
 
     @staticmethod
     def unpack(data: bytes) -> Capabilities:
-        def _extended_type_length(name: str, data: bytes) -> Tuple[int, bytes, bytes]:
+        def _extended_type_length(name: str, data: bytes) -> tuple[int, bytes, bytes]:
             if len(data) < MIN_EXTENDED_PARAM_LEN:
                 raise Notify(
                     2,
@@ -240,7 +240,7 @@ class Capabilities(dict):
             rest: bytes = data[boundary:]
             return key, value, rest
 
-        def _key_values(name: str, data: bytes) -> Tuple[int, bytes, bytes]:
+        def _key_values(name: str, data: bytes) -> tuple[int, bytes, bytes]:
             if len(data) < MIN_PARAM_LEN:
                 raise Notify(2, 0, 'Bad length for OPEN {} (<{}) {}'.format(name, MIN_PARAM_LEN, Capability.hex(data)))
             ld: int = data[1]

@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar, List, Tuple
+from typing import ClassVar
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -25,7 +25,7 @@ from exabgp.logger import log, lazymsg
 class NextHop(Capability, list):
     ID: ClassVar[int] = Capability.CODE.NEXTHOP
 
-    def __init__(self, data: Tuple[Tuple[AFI, SAFI, AFI], ...] = ()) -> None:
+    def __init__(self, data: tuple[tuple[AFI, SAFI, AFI], ...] = ()) -> None:
         super().__init__()
         for afi, safi, nhafi in data:
             self.add_nexthop(afi, safi, nhafi)
@@ -44,7 +44,7 @@ class NextHop(Capability, list):
         )
         return f'{{ "name": "nexthop", "conversion": [{conversions} ] }}'
 
-    def extract(self) -> List[bytes]:
+    def extract(self) -> list[bytes]:
         rs = b''
         for afi, safi, nhafi in self:
             rs += afi.pack_afi() + pack('!B', 0) + safi.pack_safi() + nhafi.pack_afi()

@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -39,7 +39,7 @@ class Encapsulation(ExtendedCommunity):
         VXLAN_GPE: ClassVar[int] = 0x0C
         MPLS_UDP: ClassVar[int] = 0x0D
 
-    _string: ClassVar[Dict[int, str]] = {
+    _string: ClassVar[dict[int, str]] = {
         Type.DEFAULT: 'Default',
         Type.L2TPv3: 'L2TPv3',
         Type.GRE: 'GRE',

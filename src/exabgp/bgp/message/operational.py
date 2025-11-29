@@ -10,7 +10,7 @@ from __future__ import annotations
 import sys
 from struct import pack
 from struct import unpack
-from typing import ClassVar, Dict, Tuple, Type as TypingType, TypeVar, TYPE_CHECKING
+from typing import ClassVar, Type as TypingType, TypeVar, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -52,7 +52,7 @@ class Operational(Message):
     ID = Message.CODE.OPERATIONAL
     TYPE = bytes([Message.CODE.OPERATIONAL])
 
-    registered_operational: ClassVar[Dict[int, Tuple[str, TypingType['Operational']]]] = dict()
+    registered_operational: ClassVar[dict[int, tuple[str, TypingType['Operational']]]] = dict()
 
     has_family: ClassVar[bool] = False
     has_routerid: ClassVar[bool] = False
@@ -146,7 +146,7 @@ class OperationalFamily(Operational):
         self.safi: SAFI = SAFI.create(safi)
         self.data: bytes = data
 
-    def family(self) -> Tuple[AFI, SAFI]:
+    def family(self) -> tuple[AFI, SAFI]:
         return (self.afi, self.safi)
 
     def _message(self, data: bytes) -> bytes:
@@ -161,7 +161,7 @@ class OperationalFamily(Operational):
 
 
 class SequencedOperationalFamily(OperationalFamily):
-    __sequence_number: ClassVar[Dict[RouterID | None, int]] = {}
+    __sequence_number: ClassVar[dict[RouterID | None, int]] = {}
     has_routerid: ClassVar[bool] = True
 
     def __init__(

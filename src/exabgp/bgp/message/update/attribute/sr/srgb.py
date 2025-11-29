@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from struct import pack
 from struct import unpack
-from typing import ClassVar, List, Tuple
+from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 
@@ -42,12 +42,12 @@ class SrGb:
     # multiple of 6.
     LENGTH: ClassVar[int] = -1
 
-    def __init__(self, srgbs: List[Tuple[int, int]], packed: bytes | None = None) -> None:
-        self.srgbs: List[Tuple[int, int]] = srgbs
+    def __init__(self, srgbs: list[tuple[int, int]], packed: bytes | None = None) -> None:
+        self.srgbs: list[tuple[int, int]] = srgbs
         self.packed: bytes = self.pack_tlv()
 
     def __repr__(self) -> str:
-        items: List[str] = []
+        items: list[str] = []
         for base, srange in self.srgbs:
             items.append(f'( {base},{srange} )')
         joined: str = ', '.join(items)
@@ -61,7 +61,7 @@ class SrGb:
 
     @classmethod
     def unpack_attribute(cls, data: bytes, length: int) -> SrGb:
-        srgbs: List[Tuple[int, int]] = []
+        srgbs: list[tuple[int, int]] = []
         # Flags: 16 bits of flags.  None is defined by this document.  The
         # flag field MUST be clear on transmission and MUST be ignored at
         # reception.

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Tuple, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -30,7 +30,7 @@ from exabgp.bgp.message.update.nlri import NLRI
 @NLRI.register(AFI.ipv4, SAFI.mcast_vpn)
 @NLRI.register(AFI.ipv6, SAFI.mcast_vpn)
 class MVPN(NLRI):
-    registered_mvpn: ClassVar[Dict[int, Type[MVPN]]] = dict()
+    registered_mvpn: ClassVar[dict[int, Type[MVPN]]] = dict()
 
     # NEED to be defined in the subclasses
     CODE: ClassVar[int] = -1
@@ -96,7 +96,7 @@ class MVPN(NLRI):
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> Tuple[MVPN, bytes]:
+    ) -> tuple[MVPN, bytes]:
         code = bgp[0]
         length = bgp[1]
 

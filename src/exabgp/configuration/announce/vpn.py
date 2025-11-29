@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, cast
+from typing import cast
 
 from exabgp.rib.change import Change
 
@@ -66,7 +66,7 @@ class AnnounceVPN(ParseAnnounce):
         return True
 
 
-def ip_vpn(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
+def ip_vpn(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
@@ -101,10 +101,10 @@ def ip_vpn(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
 
 
 @ParseAnnounce.register('mpls-vpn', 'extend-name', 'ipv4')
-def mpls_vpn_v4(tokeniser: Tokeniser) -> List[Change]:
+def mpls_vpn_v4(tokeniser: Tokeniser) -> list[Change]:
     return ip_vpn(tokeniser, AFI.ipv4, SAFI.unicast)
 
 
 @ParseAnnounce.register('mpls-vpn', 'extend-name', 'ipv6')
-def mpls_vpn_v6(tokeniser: Tokeniser) -> List[Change]:
+def mpls_vpn_v6(tokeniser: Tokeniser) -> list[Change]:
     return ip_vpn(tokeniser, AFI.ipv6, SAFI.unicast)

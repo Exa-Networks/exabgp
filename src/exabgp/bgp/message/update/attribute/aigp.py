@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, Generator, List
+from typing import TYPE_CHECKING, ClassVar, Generator
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -39,7 +39,7 @@ class TLV:
         self.value: bytes = value
 
 
-class TLVS(List[TLV]):
+class TLVS(list[TLV]):
     @staticmethod
     def unpack_attribute(data: bytes) -> TLVS:
         def loop(data: bytes) -> Generator[TLV, None, None]:
@@ -64,7 +64,7 @@ class AIGP(Attribute):
     ID = Attribute.CODE.AIGP
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
-    TYPES: ClassVar[List[int]] = [
+    TYPES: ClassVar[list[int]] = [
         1,
     ]
 

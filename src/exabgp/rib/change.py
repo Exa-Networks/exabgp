@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -21,7 +21,7 @@ class Change:
     _Change__index: bytes
 
     @staticmethod
-    def family_prefix(family: Tuple[AFI, SAFI]) -> bytes:
+    def family_prefix(family: tuple[AFI, SAFI]) -> bytes:
         return b'%02x%02x' % family
 
     def __init__(self, nlri: NLRI, attributes: Attributes) -> None:

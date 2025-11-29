@@ -16,7 +16,7 @@ import thread
 import subprocess
 from collections import deque
 
-from typing import Any, ClassVar, List
+from typing import Any, ClassVar
 
 from exabgp.reactor.api.transcoder import Transcoder
 from exabgp.reactor.api.processes import preexec_helper
@@ -46,7 +46,7 @@ class Application:
         Application.running = False
 
     def process(self) -> subprocess.Popen[bytes]:
-        run: List[str] = sys.argv[1:]
+        run: list[str] = sys.argv[1:]
         if not run:
             sys.stderr.write('no consummer program provided\n')
             sys.exit(1)

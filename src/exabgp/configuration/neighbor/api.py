@@ -10,7 +10,6 @@ from __future__ import annotations
 import time
 import copy
 from typing import Any
-from typing import Dict
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
@@ -134,11 +133,11 @@ class ParseAPI(Section):
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         Section.__init__(self, parser, scope, error)
-        self.api: Dict[str, Any] = {}
+        self.api: dict[str, Any] = {}
         self.named: str = ''
 
     @classmethod
-    def _empty(cls) -> Dict[str, Any]:
+    def _empty(cls) -> dict[str, Any]:
         return copy.deepcopy(cls.DEFAULT_API)
 
     def clear(self) -> None:
@@ -160,7 +159,7 @@ class ParseAPI(Section):
         return True
 
     @classmethod
-    def flatten(cls, apis: Dict[str, Any]) -> Dict[str, Any]:
+    def flatten(cls, apis: dict[str, Any]) -> dict[str, Any]:
         built = cls._empty()
 
         for api in apis.values():

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import ClassVar, Dict, Iterable, List, Tuple
+from typing import ClassVar, Iterable
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -36,14 +36,14 @@ class Graceful(Capability, dict):
     restart_flag: int
     restart_time: int
 
-    def set(self, restart_flag: int, restart_time: int, protos: Iterable[Tuple[AFI, SAFI, int]]) -> Graceful:
+    def set(self, restart_flag: int, restart_time: int, protos: Iterable[tuple[AFI, SAFI, int]]) -> Graceful:
         self.restart_flag = restart_flag
         self.restart_time = restart_time & Graceful.TIME_MASK
         for afi, safi, family_flag in protos:
             self[(afi, safi)] = family_flag & Graceful.FORWARDING_STATE
         return self
 
-    def extract(self) -> List[bytes]:
+    def extract(self) -> list[bytes]:
         restart = pack('!H', ((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
         families = [afi.pack_afi() + safi.pack_safi() + bytes([self[(afi, safi)]]) for (afi, safi) in self.keys()]
         return [restart + b''.join(families)]
@@ -60,7 +60,7 @@ class Graceful(Capability, dict):
             f'"{afi}/{safi}": [{restart_str if family & 0x80 else ""} ] '
             for afi, safi, family in [(str(a), str(s), self[(a, s)]) for (a, s) in self.keys()]
         )
-        d: Dict[str, int | str] = {
+        d: dict[str, int | str] = {
             'name': '"graceful restart"',
             'time': self.restart_time,
             'address-family-flags': f'{{ {families_json}}}',
@@ -69,7 +69,7 @@ class Graceful(Capability, dict):
         items = ', '.join(f'"{k}": {v}' for k, v in d.items())
         return f'{{ {items} }}'
 
-    def families(self) -> Iterable[Tuple[AFI, SAFI]]:
+    def families(self) -> Iterable[tuple[AFI, SAFI]]:
         return self.keys()
 
     @staticmethod
@@ -82,7 +82,7 @@ class Graceful(Capability, dict):
         restart_flag = restart >> 12
         restart_time = restart & Graceful.TIME_MASK
         data = data[2:]
-        families: List[Tuple[AFI, SAFI, int]] = []
+        families: list[tuple[AFI, SAFI, int]] = []
         while data:
             afi = AFI.unpack_afi(data[:2])
             safi = SAFI.unpack_safi(data[2:3])

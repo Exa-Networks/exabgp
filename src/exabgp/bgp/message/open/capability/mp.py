@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar, List
+from typing import ClassVar
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -32,8 +32,8 @@ class MultiProtocol(Capability, list):
         families = ','.join([f' "{afi!s}/{safi!s}"' for (afi, safi) in self])
         return f'{{ "name": "multiprotocol", "families": [{families} ] }}'
 
-    def extract(self) -> List[bytes]:
-        rs: List[bytes] = []
+    def extract(self) -> list[bytes]:
+        rs: list[bytes] = []
         for v in self:
             rs.append(pack('!H', v[0]) + pack('!H', v[1]))
         return rs

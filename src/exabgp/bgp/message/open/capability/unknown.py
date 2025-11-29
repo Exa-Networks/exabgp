@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -43,7 +42,7 @@ class UnknownCapability(Capability):
         raw = ''.join('{:02X}'.format(_) for _ in self.data)
         return '{ "name": "unknown", "iana": "%s", "value": %d, "raw": "%s" }' % (iana, self.capability, raw)
 
-    def extract(self) -> List[bytes]:
+    def extract(self) -> list[bytes]:
         return []
 
     @staticmethod

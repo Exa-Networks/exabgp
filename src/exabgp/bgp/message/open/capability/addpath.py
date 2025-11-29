@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar, Dict, Iterable, List, Tuple
+from typing import ClassVar, Iterable
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -24,14 +24,14 @@ from exabgp.logger import log, lazymsg
 class AddPath(Capability, dict):
     ID: ClassVar[int] = Capability.CODE.ADD_PATH
 
-    string: ClassVar[Dict[int, str]] = {
+    string: ClassVar[dict[int, str]] = {
         0: 'disabled',
         1: 'receive',
         2: 'send',
         3: 'send/receive',
     }
 
-    def __init__(self, families: Iterable[Tuple[AFI, SAFI]] = (), send_receive: int = 0) -> None:
+    def __init__(self, families: Iterable[tuple[AFI, SAFI]] = (), send_receive: int = 0) -> None:
         for afi, safi in families:
             self.add_path(afi, safi, send_receive)
 
@@ -57,7 +57,7 @@ class AddPath(Capability, dict):
         )
         return '{{ "name": "addpath"{}{} }}'.format(', ' if families else '', families)
 
-    def extract(self) -> List[bytes]:
+    def extract(self) -> list[bytes]:
         rs = b''
         for v in self:
             if self[v]:

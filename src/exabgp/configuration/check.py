@@ -12,7 +12,7 @@ from __future__ import annotations
 import sys
 import copy
 import struct
-from typing import Callable, Dict, List, Tuple, TYPE_CHECKING
+from typing import Callable, TYPE_CHECKING
 
 from exabgp.environment import getenv
 
@@ -70,7 +70,7 @@ def _hexa(data: str) -> bytes:
     return bytes([int(_, 16) for _ in hexa])
 
 
-def _negotiated(neighbor: Neighbor) -> Tuple[Negotiated, Negotiated]:
+def _negotiated(neighbor: Neighbor) -> tuple[Negotiated, Negotiated]:
     path = {}
     for f in NLRI.known_families():
         if neighbor.capability.add_path:
@@ -100,7 +100,7 @@ def _negotiated(neighbor: Neighbor) -> Tuple[Negotiated, Negotiated]:
 # ...
 
 
-def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
+def check_generation(neighbors: dict[str, Neighbor]) -> bool:
     option.enabled['parser'] = True
 
     for name in neighbors.keys():
@@ -118,7 +118,7 @@ def check_generation(neighbors: Dict[str, Neighbor]) -> bool:
             packed = list(Update([change1.nlri], change1.attributes).messages(negotiated_out))
             pack1 = packed[0]
 
-            _packed = packed  # type: List[bytes]
+            _packed = packed  # type: list[bytes]
             _pack1 = pack1  # type: bytes
             log.debug(lazymsg('parsed route requires {count} updates', count=len(_packed)), 'parser')
             log.debug(lazymsg('update size is {size}', size=len(_pack1)), 'parser')
@@ -275,7 +275,7 @@ def display_message(neighbor: Neighbor, message: str) -> bool:
 #
 
 
-def _make_nlri(neighbor: Neighbor, routes: str) -> List[NLRI]:
+def _make_nlri(neighbor: Neighbor, routes: str) -> list[NLRI]:
     option.enabled['parser'] = True
 
     announced = _hexa(routes)
@@ -286,7 +286,7 @@ def _make_nlri(neighbor: Neighbor, routes: str) -> List[NLRI]:
     # Is the peer going to send us some Path Information with the route (AddPath)
     addpath = negotiated_out.addpath.send(afi, safi)
 
-    nlris: List[NLRI] = []
+    nlris: list[NLRI] = []
     try:
         while announced:
             _announced = announced  # type: bytes

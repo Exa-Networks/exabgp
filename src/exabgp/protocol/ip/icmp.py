@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Dict
+from typing import ClassVar
 
 from exabgp.protocol.resource import Resource
 
@@ -36,7 +36,7 @@ class ICMPType(Resource):
     EXPERIMENTAL_ONE: ClassVar[int] = 0xFD
     EXPERIMENTAL_TWO: ClassVar[int] = 0xFE
 
-    codes: ClassVar[Dict[str, int]] = dict(
+    codes: ClassVar[dict[str, int]] = dict(
         (k.lower().replace('_', '-'), v)
         for (k, v) in {
             'ECHO_REPLY': ECHO_REPLY,
@@ -58,7 +58,7 @@ class ICMPType(Resource):
         }.items()
     )
 
-    names: ClassVar[Dict[int, str]] = dict([(value, name) for (name, value) in codes.items()])
+    names: ClassVar[dict[int, str]] = dict([(value, name) for (name, value) in codes.items()])
 
 
 # https://www.iana.org/assignments/icmp-parameters
@@ -97,7 +97,7 @@ class ICMPCode(Resource):
     REQUIRED_OPTION_MISSING: ClassVar[int] = 0x1
     IP_HEADER_BAD: ClassVar[int] = 0x2
 
-    codes: ClassVar[Dict[str, int]] = dict(
+    codes: ClassVar[dict[str, int]] = dict(
         (k.lower().replace('_', '-'), v)
         for (k, v) in {
             'NETWORK_UNREACHABLE': NETWORK_UNREACHABLE,

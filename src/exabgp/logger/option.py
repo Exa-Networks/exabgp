@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import time
-from typing import ClassVar, Dict, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 import logging
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ class option:
 
     short: ClassVar[bool] = False
     level: ClassVar[str] = 'WARNING'
-    logit: ClassVar[Dict[str, bool]] = {}
+    logit: ClassVar[dict[str, bool]] = {}
 
     pid: ClassVar[int]  # Set in load()
     cwd: ClassVar[str] = ''
@@ -33,9 +33,9 @@ class option:
     # where the log should go, stdout, stderr, file, syslog, ...
     destination: ClassVar[str] = ''
 
-    option: ClassVar[Dict[str, bool]]  # Set in load()
+    option: ClassVar[dict[str, bool]]  # Set in load()
 
-    enabled: ClassVar[Dict[str, bool]] = {
+    enabled: ClassVar[dict[str, bool]] = {
         'pdb': False,
         'reactor': False,
         'daemon': False,

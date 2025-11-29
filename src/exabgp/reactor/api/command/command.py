@@ -26,7 +26,7 @@ class Command:
         'options': {},
     }
 
-    functions: ClassVar[List[str]] = []
+    functions: ClassVar[list[str]] = []
 
     @classmethod
     def register(

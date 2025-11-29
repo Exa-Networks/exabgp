@@ -7,7 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -35,10 +35,10 @@ class PrefixSid(Attribute):
     TLV: ClassVar[int] = -1
 
     # Registered subclasses we know how to decode
-    registered_srids: ClassVar[Dict[int, Type[Any]]] = dict()
+    registered_srids: ClassVar[dict[int, Type[Any]]] = dict()
 
-    def __init__(self, sr_attrs: List[Any], packed: bytes | None = None) -> None:
-        self.sr_attrs: List[Any] = sr_attrs
+    def __init__(self, sr_attrs: list[Any], packed: bytes | None = None) -> None:
+        self.sr_attrs: list[Any] = sr_attrs
         self._packed: bytes = self._attribute(packed if packed else b''.join(_.pack_tlv() for _ in sr_attrs))
 
     @classmethod
@@ -54,7 +54,7 @@ class PrefixSid(Attribute):
 
     @classmethod
     def unpack_attribute(cls: Type[T], data: bytes, negotiated: Negotiated) -> T:
-        sr_attrs: List[Any] = []
+        sr_attrs: list[Any] = []
         while data:
             # Type = 1 octet
             scode: int = data[0]

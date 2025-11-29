@@ -9,81 +9,81 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List, Tuple, Callable
+from typing import Callable
 
 from exabgp.protocol.ip import IPv4
 
 
 # Type for shortcut matching function - can return bool or a truthy/falsy value
-ShortcutMatcher = Callable[[int, List[str]], bool | List[str]]
+ShortcutMatcher = Callable[[int, list[str]], bool | list[str]]
 
 
-def _announce_context(pos: int, pre: List[str]) -> bool:
+def _announce_context(pos: int, pre: list[str]) -> bool:
     """Match 'a' → 'announce' when at start or after IP address."""
     return pos == 0 or (bool(pre) and (pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]))
 
 
-def _attributes_context(pos: int, pre: List[str]) -> bool:
+def _attributes_context(pos: int, pre: list[str]) -> bool:
     """Match 'a' → 'attributes' after announce/withdraw."""
     return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
 
 
-def _adj_rib_context(pos: int, pre: List[str]) -> bool:
+def _adj_rib_context(pos: int, pre: list[str]) -> bool:
     """Match 'a' → 'adj-rib' after clear/flush/show."""
     return bool(pre) and pre[-1] in ['clear', 'flush', 'show']
 
 
-def _eor_context(pos: int, pre: List[str]) -> bool:
+def _eor_context(pos: int, pre: list[str]) -> bool:
     """Match 'e' → 'eor' after announce."""
     return bool(pre) and pre[-1] == 'announce'
 
 
-def _flow_context(pos: int, pre: List[str]) -> bool:
+def _flow_context(pos: int, pre: list[str]) -> bool:
     """Match 'f' → 'flow' after announce/withdraw."""
     return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
 
 
-def _flush_context(pos: int, pre: List[str]) -> bool:
+def _flush_context(pos: int, pre: list[str]) -> bool:
     """Match 'f' → 'flush' at start or after IP address."""
     return pos == 0 or (bool(pre) and (pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]))
 
 
-def _in_context(pos: int, pre: List[str]) -> bool:
+def _in_context(pos: int, pre: list[str]) -> bool:
     """Match 'i' → 'in' after adj-rib."""
     return bool(pre) and pre[-1] == 'adj-rib'
 
 
-def _operation_context(pos: int, pre: List[str]) -> bool:
+def _operation_context(pos: int, pre: list[str]) -> bool:
     """Match 'o' → 'operation' after announce."""
     return bool(pre) and pre[-1] == 'announce'
 
 
-def _out_context(pos: int, pre: List[str]) -> bool:
+def _out_context(pos: int, pre: list[str]) -> bool:
     """Match 'o' → 'out' after adj-rib."""
     return bool(pre) and pre[-1] == 'adj-rib'
 
 
-def _route_context(pos: int, pre: List[str]) -> bool:
+def _route_context(pos: int, pre: list[str]) -> bool:
     """Match 'r' → 'route' after announce/withdraw."""
     return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
 
 
-def _teardown_context(pos: int, pre: List[str]) -> bool:
+def _teardown_context(pos: int, pre: list[str]) -> bool:
     """Match 't' → 'teardown' at start or after IP address."""
     return pos == 0 or (bool(pre) and (pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]))
 
 
-def _vps_context(pos: int, pre: List[str]) -> bool:
+def _vps_context(pos: int, pre: list[str]) -> bool:
     """Match 'v' → 'vps' after announce/withdraw."""
     return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
 
 
-def _withdraw_context(pos: int, pre: List[str]) -> bool:
+def _withdraw_context(pos: int, pre: list[str]) -> bool:
     """Match 'w' → 'withdraw' at start or after IP address."""
     return pos == 0 or (bool(pre) and (pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]))
 
 
-def _watchdog_context(pos: int, pre: List[str]) -> bool:
+def _watchdog_context(pos: int, pre: list[str]) -> bool:
     """Match 'w' → 'watchdog' after announce/withdraw."""
     return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
 
@@ -93,7 +93,7 @@ class CommandShortcuts:
 
     # Shortcut definitions: (nickname, full_name, match_condition)
     # Match condition is a function: (position: int, previous_tokens: list) -> bool
-    SHORTCUTS: List[Tuple[str, str, ShortcutMatcher]] = [
+    SHORTCUTS: list[tuple[str, str, ShortcutMatcher]] = [
         # 'a' has multiple meanings based on context
         ('a', 'announce', _announce_context),
         ('a', 'attributes', _attributes_context),
@@ -155,7 +155,7 @@ class CommandShortcuts:
         return transformed
 
     @classmethod
-    def expand_token_list(cls, tokens: List[str]) -> List[str]:
+    def expand_token_list(cls, tokens: list[str]) -> list[str]:
         """Expand shortcuts in a list of tokens.
 
         Args:
@@ -168,7 +168,7 @@ class CommandShortcuts:
             >>> CommandShortcuts.expand_token_list(['s', 'n', 'summary'])
             ['show', 'neighbor', 'summary']
         """
-        expanded: List[str] = []
+        expanded: list[str] = []
 
         for pos, token in enumerate(tokens):
             # Try to match against shortcuts
@@ -192,7 +192,7 @@ class CommandShortcuts:
         return expanded
 
     @classmethod
-    def get_expansion(cls, token: str, position: int, previous_tokens: List[str]) -> str:
+    def get_expansion(cls, token: str, position: int, previous_tokens: list[str]) -> str:
         """Get the expansion for a single token in context.
 
         Args:
@@ -218,7 +218,7 @@ class CommandShortcuts:
         return token
 
     @classmethod
-    def get_possible_expansions(cls, token: str, position: int, previous_tokens: List[str]) -> List[str]:
+    def get_possible_expansions(cls, token: str, position: int, previous_tokens: list[str]) -> list[str]:
         """Get all possible expansions for a token in context.
 
         Useful for showing ambiguous shortcuts.

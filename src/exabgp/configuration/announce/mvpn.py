@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import List
 
 from exabgp.rib.change import Change
 
@@ -68,7 +67,7 @@ class AnnounceMVPN(ParseAnnounce):
         return True
 
 
-def mvpn_route(tokeniser: Tokeniser, afi: AFI) -> List[Change]:
+def mvpn_route(tokeniser: Tokeniser, afi: AFI) -> list[Change]:
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     route_type = tokeniser()
     mvpn_nlri: MVPN
@@ -109,10 +108,10 @@ def mvpn_route(tokeniser: Tokeniser, afi: AFI) -> List[Change]:
 
 
 @ParseAnnounce.register('mcast-vpn', 'extend-name', 'ipv4')
-def mcast_vpn_v4(tokeniser: Tokeniser) -> List[Change]:
+def mcast_vpn_v4(tokeniser: Tokeniser) -> list[Change]:
     return mvpn_route(tokeniser, AFI.ipv4)
 
 
 @ParseAnnounce.register('mcast-vpn', 'extend-name', 'ipv6')
-def mcast_vpn_v6(tokeniser: Tokeniser) -> List[Change]:
+def mcast_vpn_v6(tokeniser: Tokeniser) -> list[Change]:
     return mvpn_route(tokeniser, AFI.ipv6)

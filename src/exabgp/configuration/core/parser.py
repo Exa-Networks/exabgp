@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections import deque
-from typing import Iterator, List
+from typing import Iterator
 
 from exabgp.configuration.core.format import tokens
 from exabgp.protocol.family import AFI
@@ -20,7 +20,7 @@ MIN_LINE_LENGTH_FOR_PARAMS = 2  # Minimum line tokens needed to have parameters
 class Tokeniser:
     def __init__(self) -> None:
         self.next: deque[str] = deque()
-        self.tokens: List[str] = []
+        self.tokens: list[str] = []
         self.generator: Iterator[str] = iter([])
         self.announce: bool = True
         self.afi = AFI.undefined
@@ -76,7 +76,7 @@ class Parser:
         self.error = error
         self.finished = False
         self.number = 0
-        self.line: List[str] = []
+        self.line: list[str] = []
         self.tokeniser: Tokeniser = Tokeniser()
         self.end = ''
         self.index_column = 0

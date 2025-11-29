@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List
 
 from exabgp.rib.change import Change
 
@@ -186,7 +185,7 @@ class AnnounceFlow(ParseAnnounce):
         return True
 
 
-def flow(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
+def flow(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
     flow_nlri = Flow(afi, safi, Action.ANNOUNCE)
     change = Change(flow_nlri, Attributes())
 
@@ -216,20 +215,20 @@ def flow(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
 
 
 @ParseAnnounce.register('flow', 'extend-name', 'ipv4')
-def flow_ip_v4(tokeniser: Tokeniser) -> List[Change]:
+def flow_ip_v4(tokeniser: Tokeniser) -> list[Change]:
     return flow(tokeniser, AFI.ipv4, SAFI.flow_ip)
 
 
 @ParseAnnounce.register('flow-vpn', 'extend-name', 'ipv4')
-def flow_vpn_v4(tokeniser: Tokeniser) -> List[Change]:
+def flow_vpn_v4(tokeniser: Tokeniser) -> list[Change]:
     return flow(tokeniser, AFI.ipv4, SAFI.flow_vpn)
 
 
 @ParseAnnounce.register('flow', 'extend-name', 'ipv6')
-def flow_ip_v6(tokeniser: Tokeniser) -> List[Change]:
+def flow_ip_v6(tokeniser: Tokeniser) -> list[Change]:
     return flow(tokeniser, AFI.ipv6, SAFI.flow_ip)
 
 
 @ParseAnnounce.register('flow-vpn', 'extend-name', 'ipv6')
-def flow_vpn_v6(tokeniser: Tokeniser) -> List[Change]:
+def flow_vpn_v6(tokeniser: Tokeniser) -> list[Change]:
     return flow(tokeniser, AFI.ipv6, SAFI.flow_vpn)

@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, List
+from typing import Any, ClassVar
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -23,7 +23,7 @@ class MultiSession(Capability, list):
     ID: ClassVar[int] = Capability.CODE.MULTISESSION
     _seen: bool = False
 
-    def set(self, data: List[Any]) -> MultiSession:
+    def set(self, data: list[Any]) -> MultiSession:
         self.extend(data)
         return self
 
@@ -39,9 +39,9 @@ class MultiSession(Capability, list):
             ','.join(' "{}"'.format(str(capa)) for capa in self),
         )
 
-    def extract(self) -> List[bytes]:
+    def extract(self) -> list[bytes]:
         # can probably be written better
-        rs: List[bytes] = [
+        rs: list[bytes] = [
             bytes([0]),
         ]
         for v in self:

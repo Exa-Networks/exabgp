@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
@@ -33,7 +33,7 @@ from exabgp.configuration.flow.parser import flow_label
 
 
 class ParseFlowMatch(Section):
-    definition: List[str] = [
+    definition: list[str] = [
         'source 10.0.0.0/24',
         'source ::1/128/0',
         'destination 10.0.1.0/24',
@@ -53,7 +53,7 @@ class ParseFlowMatch(Section):
     joined: str = ';\\n  '.join(definition)
     syntax: str = f'match {{\n  {joined};\n}}'
 
-    known: Dict[str | tuple[Any, ...], object] = {
+    known: dict[str | tuple[Any, ...], object] = {
         'source': source,
         'source-ipv4': source,
         'source-ipv6': source,
@@ -77,7 +77,7 @@ class ParseFlowMatch(Section):
 
     # 'source-ipv4','destination-ipv4',
 
-    action: Dict[str | tuple[Any, ...], str] = {
+    action: dict[str | tuple[Any, ...], str] = {
         'source': 'nlri-add',
         'source-ipv4': 'nlri-add',
         'source-ipv6': 'nlri-add',

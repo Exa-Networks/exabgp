@@ -7,11 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, Dict
+from typing import ClassVar
 
 
 class Sequence(int):
-    _instance: ClassVar[Dict[str, int]] = dict()
+    _instance: ClassVar[dict[str, int]] = dict()
 
     def __new__(cls):
         cls._instance['next'] = cls._instance.get('next', 0) + 1

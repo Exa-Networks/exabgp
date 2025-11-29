@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, List, Tuple, TYPE_CHECKING
+from typing import Any, ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message import Open
@@ -38,16 +38,16 @@ class Negotiated:
         self.holdtime: HoldTime = HoldTime(0)
         self.local_as: ASN = ASN(0)
         self.peer_as: ASN = ASN(0)
-        self.families: List[Tuple[AFI, SAFI]] = []
-        self.nexthop: List[Tuple[AFI, SAFI]] = []
+        self.families: list[tuple[AFI, SAFI]] = []
+        self.nexthop: list[tuple[AFI, SAFI]] = []
         self.asn4: bool = False
         self.addpath: RequirePath = RequirePath()
-        self.multisession: bool | Tuple[int, int, str] = False
+        self.multisession: bool | tuple[int, int, str] = False
         self.msg_size: int = ExtendedMessage.INITIAL_SIZE
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
         self.aigp: bool = neighbor.capability.aigp.is_enabled()
-        self.mismatch: List[Tuple[str, Tuple[AFI, SAFI]]] = []
+        self.mismatch: list[tuple[str, tuple[AFI, SAFI]]] = []
 
     def sent(self, sent_open: Any) -> None:  # Open message
         self.sent_open = sent_open
@@ -148,7 +148,7 @@ class Negotiated:
         # 	if self.peer.bgp.received_open_size:
         # 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
-    def validate(self, neighbor: Any) -> Tuple[int, int, str] | None:
+    def validate(self, neighbor: Any) -> tuple[int, int, str] | None:
         # Both opens must be set before validate is called
         assert self.sent_open is not None
         assert self.received_open is not None
@@ -215,8 +215,8 @@ class RequirePath:
     BOTH: ClassVar[int] = SEND | RECEIVE
 
     def __init__(self) -> None:
-        self._send: Dict[Tuple[AFI, SAFI], bool] = {}
-        self._receive: Dict[Tuple[AFI, SAFI], bool] = {}
+        self._send: dict[tuple[AFI, SAFI], bool] = {}
+        self._receive: dict[tuple[AFI, SAFI], bool] = {}
 
     def setup(self, received_open: Any, sent_open: Any) -> None:  # Open messages
         # A Dict always returning False
@@ -228,7 +228,7 @@ class RequirePath:
         send = sent_open.capabilities.get(Capability.CODE.ADD_PATH, FalseDict())
 
         # python 2.4 compatibility mean no simple union but using sets.Set
-        union: List[Tuple[AFI, SAFI]] = []
+        union: list[tuple[AFI, SAFI]] = []
         union.extend(send.keys())
         union.extend([k for k in receive.keys() if k not in send.keys()])
 

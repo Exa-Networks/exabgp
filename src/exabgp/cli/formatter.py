@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
-from typing import Dict, List, Optional, Union
+from typing import Dict, List
 
 from exabgp.cli.colors import Colors
 
@@ -51,7 +51,7 @@ class OutputFormatter:
             return f'{Colors.BOLD}{Colors.CYAN}Info:{Colors.RESET} {message}'
         return f'Info: {message}'
 
-    def _format_json_as_text(self, data: Union[Dict, List, str, int, bool, None]) -> str:
+    def _format_json_as_text(self, data: Dict | List | str | int | bool | None) -> str:
         """Convert JSON data to human-readable text format with tables
 
         Uses only standard library to format data as tables or key-value pairs.
@@ -91,7 +91,7 @@ class OutputFormatter:
 
         return str(data)
 
-    def _format_table_from_list(self, data: List[Dict]) -> str:
+    def _format_table_from_list(self, data: list[Dict]) -> str:
         """Format list of dictionaries as ASCII table or key-value pairs for complex data"""
         if not data:
             return '(empty)'
@@ -162,7 +162,7 @@ class OutputFormatter:
 
         return '\n'.join(lines)
 
-    def _format_list_as_sections(self, data: List[Dict]) -> str:
+    def _format_list_as_sections(self, data: list[Dict]) -> str:
         """Format list of complex dictionaries as separate sections"""
         lines = []
         for i, item in enumerate(data):
@@ -181,7 +181,7 @@ class OutputFormatter:
 
         return '\n'.join(lines)
 
-    def _extract_identifier(self, item: Dict) -> Optional[str]:
+    def _extract_identifier(self, item: Dict) -> str | None:
         """Extract a meaningful identifier from a dictionary
 
         Tries various strategies to find a good identifier:
@@ -230,7 +230,7 @@ class OutputFormatter:
 
         return None
 
-    def _get_nested_value(self, data: Dict, path: List[str]) -> Optional[str]:
+    def _get_nested_value(self, data: Dict, path: list[str]) -> str | None:
         """Get value from nested dictionary using path list
 
         Args:
@@ -308,7 +308,7 @@ class OutputFormatter:
 
         return '\n'.join(lines)
 
-    def _format_value(self, value: Union[str, int, float, bool, None, Dict, List]) -> str:
+    def _format_value(self, value: str | int | float | bool | None | Dict | List) -> str:
         """Format a single value for display"""
         if value is None:
             return 'null'
@@ -420,7 +420,7 @@ class OutputFormatter:
 
         return '\n'.join(formatted)
 
-    def format_table(self, headers: List[str], rows: List[List[str]]) -> str:
+    def format_table(self, headers: list[str], rows: list[list[str]]) -> str:
         """Format data as a table"""
         if not headers or not rows:
             return ''

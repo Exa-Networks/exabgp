@@ -5,7 +5,7 @@ Created by Stephane Litkowski on 2017-02-24.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
@@ -16,18 +16,18 @@ from exabgp.configuration.flow.parser import interface_set
 
 
 class ParseFlowScope(Section):
-    definition: List[str] = ['interface-set transitive:input:1234:1234']
+    definition: list[str] = ['interface-set transitive:input:1234:1234']
 
     joined: str = ';\\n  '.join(definition)
     syntax: str = f'scope {{\n  {joined};\n}}'
 
-    known: Dict[str | tuple[Any, ...], object] = {
+    known: dict[str | tuple[Any, ...], object] = {
         'interface-set': interface_set,
     }
 
     # 'community','extended-community'
 
-    action: Dict[str | tuple[Any, ...], str] = {
+    action: dict[str | tuple[Any, ...], str] = {
         'interface-set': 'attribute-add',
     }
 

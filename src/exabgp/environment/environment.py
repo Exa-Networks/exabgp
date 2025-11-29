@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import os
-from typing import Any, ClassVar, Dict, Iterator, List
+from typing import Any, ClassVar, Iterator
 
 import configparser as ConfigParser
 
@@ -31,7 +31,7 @@ class Env:
     _setup: ClassVar[bool] = False
 
     # the configuration to be set by the program
-    definition: ClassVar[Dict[str, Dict[str, Any]]] = {}
+    definition: ClassVar[dict[str, dict[str, Any]]] = {}
 
     # one copy of the global configuration
     _env: ClassVar[GlobalHashTable] = GlobalHashTable()
@@ -42,7 +42,7 @@ class Env:
             if section in ('internal', 'debug'):
                 continue
             for option in sorted(cls.definition[section]):
-                values: Dict[str, Any] = cls.definition[section][option]
+                values: dict[str, Any] = cls.definition[section][option]
                 default: Any = (
                     "'{}'".format(values['value'])
                     if values['write'] in (parsing.list, parsing.path, parsing.quote, parsing.syslog_name)
@@ -83,7 +83,7 @@ class Env:
                 yield f'{base.APPLICATION}.{section}.{k}={cls.definition[section][k]["write"](v)}'
 
     @classmethod
-    def setup(cls, configuration: Dict[str, Dict[str, Any]]) -> Dict[str, Any] | None:
+    def setup(cls, configuration: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
         if cls._setup:
             return {}
         cls._setup = True
@@ -91,16 +91,16 @@ class Env:
 
         ini: ConfigParser.ConfigParser = ConfigParser.ConfigParser()
 
-        _conf_paths: List[str] = [
+        _conf_paths: list[str] = [
             ENVFILE,
         ]
 
-        ini_files: List[str] = [path for path in _conf_paths if os.path.exists(path)]
+        ini_files: list[str] = [path for path in _conf_paths if os.path.exists(path)]
         if ini_files:
             ini.read(ini_files[0])
 
         for section in cls.definition:
-            default: Dict[str, Any] = cls.definition[section]
+            default: dict[str, Any] = cls.definition[section]
 
             for option in default:
                 convert: Any = default[option]['read']

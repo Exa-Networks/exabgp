@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, Tuple, List, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -101,7 +101,7 @@ class INET(NLRI):
     def extensive(self) -> str:
         return '{}{}'.format(self.prefix(), '' if self.nexthop is IP.NoNextHop else ' next-hop {}'.format(self.nexthop))
 
-    def _internal(self, announced: bool = True) -> List[str]:
+    def _internal(self, announced: bool = True) -> list[str]:
         return [self.path_info.json()]
 
     # The announced feature is not used by ExaBGP, is it by BAGPIPE ?
@@ -115,7 +115,7 @@ class INET(NLRI):
         return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
 
     @classmethod
-    def _pathinfo(cls, data: bytes, addpath: Any) -> Tuple[PathInfo, bytes]:
+    def _pathinfo(cls, data: bytes, addpath: Any) -> tuple[PathInfo, bytes]:
         if addpath:
             return PathInfo(data[:4]), data[4:]
         return PathInfo.DISABLED, data
@@ -130,7 +130,7 @@ class INET(NLRI):
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> Tuple[INET, bytes]:
+    ) -> tuple[INET, bytes]:
         nlri = cls(afi, safi, action)
 
         if addpath:
@@ -148,7 +148,7 @@ class INET(NLRI):
         rd_mask = rd_size * 8
 
         if safi.has_label():
-            labels: List[int] = []
+            labels: list[int] = []
             while mask - rd_mask >= LABEL_SIZE_BITS:
                 label = int(unpack('!L', bytes([0]) + bgp[:3])[0])
                 bgp = bgp[3:]

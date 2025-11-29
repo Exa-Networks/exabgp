@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar, List
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -55,7 +55,7 @@ class PREFIXv6(BGPLS):
         self,
         domain: int,
         proto_id: int,
-        local_node: List[NodeDescriptor],
+        local_node: list[NodeDescriptor],
         packed: bytes | None = None,
         ospf_type: OspfRoute | None = None,
         prefix: IpReach | None = None,
@@ -68,7 +68,7 @@ class PREFIXv6(BGPLS):
         self.domain: int = domain
         self.ospf_type: OspfRoute | None = ospf_type
         self.proto_id: int = proto_id
-        self.local_node: List[NodeDescriptor] = local_node
+        self.local_node: list[NodeDescriptor] = local_node
         self.prefix: IpReach | None = prefix
         self.nexthop = nexthop
         self._pack: bytes | None = packed
@@ -77,7 +77,7 @@ class PREFIXv6(BGPLS):
     @classmethod
     def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> PREFIXv6:
         ospf_type: OspfRoute | None = None
-        local_node: List[NodeDescriptor] = []
+        local_node: list[NodeDescriptor] = []
         prefix: IpReach | None = None
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():

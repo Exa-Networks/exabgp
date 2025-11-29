@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, Dict, Type
+from typing import TYPE_CHECKING, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -44,8 +44,8 @@ class PMSI(Attribute):
 
     # TUNNEL_TYPE MUST NOT BE DEFINED HERE ( it allows to set it up as a self. value)
 
-    _pmsi_known: ClassVar[Dict[int, Type[PMSI]]] = dict()
-    _name: ClassVar[Dict[int, str]] = {
+    _pmsi_known: ClassVar[dict[int, Type[PMSI]]] = dict()
+    _name: ClassVar[dict[int, str]] = {
         0: 'No tunnel',
         1: 'RSVP-TE P2MP LSP',
         2: 'mLDP P2MP LSP',

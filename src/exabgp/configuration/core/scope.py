@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import pprint
 from typing import Any
-from typing import List
 from typing import TYPE_CHECKING
 
 # from copy import deepcopy
@@ -21,11 +20,11 @@ if TYPE_CHECKING:
 
 
 class Scope(Error):
-    _routes: List[Change]
+    _routes: list[Change]
 
     def __init__(self) -> None:
         Error.__init__(self)
-        self._location: List[str] = []
+        self._location: list[str] = []
         self._added: set[str] = set()
         self._all: dict[str, Any] = {
             'template': {},
@@ -47,15 +46,15 @@ class Scope(Error):
 
     # building route list
 
-    def get_routes(self) -> List[Change]:
+    def get_routes(self) -> list[Change]:
         return self._routes
 
-    def pop_routes(self) -> List[Change]:
+    def pop_routes(self) -> list[Change]:
         routes = self._routes
         self._routes = []
         return routes
 
-    def extend_routes(self, value: List[Change]) -> None:
+    def extend_routes(self, value: list[Change]) -> None:
         self._routes.extend(value)
 
     # building nlri

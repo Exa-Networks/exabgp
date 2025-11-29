@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
@@ -30,7 +30,7 @@ from exabgp.configuration.static.parser import extended_community
 
 
 class ParseFlowThen(Section):
-    definition: List[str] = [
+    definition: list[str] = [
         'accept',
         'discard',
         'rate-limit 9600',
@@ -48,7 +48,7 @@ class ParseFlowThen(Section):
 
     # Parser functions for flow 'then' actions
     # Each function takes a Tokeniser and returns various types (None, ExtendedCommunities, etc.)
-    known: Dict[str | tuple[Any, ...], object] = {
+    known: dict[str | tuple[Any, ...], object] = {
         'accept': accept,
         'discard': discard,
         'rate-limit': rate_limit,
@@ -65,7 +65,7 @@ class ParseFlowThen(Section):
 
     # 'community','extended-community'
 
-    action: Dict[str | tuple[Any, ...], str] = {
+    action: dict[str | tuple[Any, ...], str] = {
         'accept': 'nop',
         'discard': 'attribute-add',
         'rate-limit': 'attribute-add',

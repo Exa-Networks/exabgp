@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import string
-from typing import ClassVar, Dict, Tuple, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -39,7 +39,7 @@ class Notification(Message, Exception):
     SHUTDOWN_COMM_MAX_LEGACY: ClassVar[int] = 128  # RFC 8203 - legacy max length
     SHUTDOWN_COMM_MAX_EXTENDED: ClassVar[int] = 255  # RFC 9003 - extended max length
 
-    _str_code: ClassVar[Dict[int, str]] = {
+    _str_code: ClassVar[dict[int, str]] = {
         1: 'Message header error',
         2: 'OPEN message error',
         3: 'UPDATE message error',
@@ -48,7 +48,7 @@ class Notification(Message, Exception):
         6: 'Cease',
     }
 
-    _str_subcode: ClassVar[Dict[Tuple[int, int], str]] = {
+    _str_subcode: ClassVar[dict[tuple[int, int], str]] = {
         (1, 0): 'Unspecific',
         (1, 1): 'Connection Not Synchronized',
         (1, 2): 'Bad Message Length',

@@ -12,12 +12,12 @@ from __future__ import annotations
 
 import json
 import sys
-from typing import ClassVar, Dict
+from typing import ClassVar
 
 from exabgp.protocol.resource import Resource
 
 
-def _load_port_data() -> Dict[int, str]:
+def _load_port_data() -> dict[int, str]:
     """Load port name mappings from JSON data file.
 
     Works with both:
@@ -55,8 +55,8 @@ class Port(Resource):
 
     # Lazily loaded from JSON
     _names_loaded: ClassVar[bool] = False
-    names: ClassVar[Dict[int, str]] = {}
-    codes: ClassVar[Dict[str, int]] = {}
+    names: ClassVar[dict[int, str]] = {}
+    codes: ClassVar[dict[str, int]] = {}
 
     @classmethod
     def _ensure_loaded(cls) -> None:

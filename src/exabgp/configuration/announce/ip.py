@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import List
 
 from exabgp.protocol.ip import IP
 
@@ -148,7 +147,7 @@ class AnnounceIP(ParseAnnounce):
         return True
 
 
-def ip(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
+def ip(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
@@ -182,7 +181,7 @@ def ip(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
     return [change]
 
 
-def ip_multicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
+def ip_multicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
 
@@ -214,10 +213,10 @@ def ip_multicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> List[Change]:
 
 
 @ParseAnnounce.register('multicast', 'extend-name', 'ipv4')
-def multicast_v4(tokeniser: Tokeniser) -> List[Change]:
+def multicast_v4(tokeniser: Tokeniser) -> list[Change]:
     return ip_multicast(tokeniser, AFI.ipv4, SAFI.multicast)
 
 
 @ParseAnnounce.register('multicast', 'extend-name', 'ipv6')
-def multicast_v6(tokeniser: Tokeniser) -> List[Change]:
+def multicast_v6(tokeniser: Tokeniser) -> list[Change]:
     return ip_multicast(tokeniser, AFI.ipv6, SAFI.multicast)

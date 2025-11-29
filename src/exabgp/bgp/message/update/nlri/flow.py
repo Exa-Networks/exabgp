@@ -13,13 +13,8 @@ from typing import (
     Any,
     Callable,
     ClassVar,
-    Dict,
-    List,
-    Optional,
     Protocol as TypingProtocol,
-    Tuple,
     Type,
-    Union,
 )
 
 if TYPE_CHECKING:
@@ -93,13 +88,13 @@ class IComponent:
 
 class CommonOperator:
     # power (2,x) is the same as 1 << x which is what the RFC say the len is
-    power: ClassVar[Dict[int, int]] = {
+    power: ClassVar[dict[int, int]] = {
         0: 1,
         1: 2,
         2: 4,
         3: 8,
     }
-    rewop: ClassVar[Dict[int, int]] = {
+    rewop: ClassVar[dict[int, int]] = {
         1: 0,
         2: 1,
         4: 2,
@@ -203,7 +198,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
         return str(self.cidr)
 
     @classmethod
-    def make(cls, bgp: bytes) -> Tuple[IPrefix4, bytes]:
+    def make(cls, bgp: bytes) -> tuple[IPrefix4, bytes]:
         prefix, mask = CIDR.decode(AFI.ipv4, bgp)
         return cls(prefix, mask), bgp[CIDR.size(mask) + 1 :]
 
@@ -234,7 +229,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
         return '{}/{}'.format(self.cidr, self.offset)
 
     @classmethod
-    def make(cls, bgp: bytes) -> Tuple[IPrefix6, bytes]:
+    def make(cls, bgp: bytes) -> tuple[IPrefix6, bytes]:
         offset = bgp[1]
         prefix, mask = CIDR.decode(AFI.ipv6, bgp[0:1] + bgp[2:])
         return cls(prefix, mask, offset), bgp[CIDR.size(mask) + 2 :]
@@ -243,11 +238,11 @@ class IPrefix6(IPrefix, IComponent, IPv6):
 class IOperation(IComponent):
     # need to implement encode which encode the value of the operator
     operations: int
-    value: Union[int, 'Protocol', 'Port', 'ICMPType', 'ICMPCode', 'TCPFlag', 'Fragment']
-    first: Optional[bool]
+    value: int | 'Protocol' | 'Port' | 'ICMPType' | 'ICMPCode' | 'TCPFlag' | 'Fragment'
+    first: bool | None
 
     def __init__(
-        self, operations: int, value: Union[int, 'Protocol', 'Port', 'ICMPType', 'ICMPCode', 'TCPFlag', 'Fragment']
+        self, operations: int, value: int | 'Protocol' | 'Port' | 'ICMPType' | 'ICMPCode' | 'TCPFlag' | 'Fragment'
     ) -> None:
         self.operations = operations
         self.value = value
@@ -259,8 +254,8 @@ class IOperation(IComponent):
         return bytes([op]) + value
 
     def encode(
-        self, value: Union[int, 'Protocol', 'Port', 'ICMPType', 'ICMPCode', 'TCPFlag', 'Fragment']
-    ) -> Tuple[int, bytes]:
+        self, value: int | 'Protocol' | 'Port' | 'ICMPType' | 'ICMPCode' | 'TCPFlag' | 'Fragment'
+    ) -> tuple[int, bytes]:
         raise NotImplementedError('this method must be implemented by subclasses')
 
     # def decode (self, value):
@@ -273,7 +268,7 @@ class IOperation(IComponent):
 
 
 class IOperationByte(IOperation):
-    def encode(self, value: int) -> Tuple[int, bytes]:
+    def encode(self, value: int) -> tuple[int, bytes]:
         return 1, bytes([value])
 
     # def decode (self, bgp):
@@ -281,14 +276,14 @@ class IOperationByte(IOperation):
 
 
 class IOperationByteShort(IOperation):
-    def encode(self, value: int) -> Tuple[int, bytes]:
+    def encode(self, value: int) -> tuple[int, bytes]:
         if value < (1 << 8):
             return 1, bytes([value])
         return 2, pack('!H', value)
 
 
 class IOperationByteShortLong(IOperation):
-    def encode(self, value: int) -> Tuple[int, bytes]:
+    def encode(self, value: int) -> tuple[int, bytes]:
         if value < (1 << 8):
             return 1, bytes([value])
         if value < (1 << 16):
@@ -303,9 +298,9 @@ class NumericString:
     OPERATION: ClassVar[str] = 'numeric'
     # Set by subclasses - always present when short() is called
     operations: int
-    value: Union[int, 'Protocol', 'ICMPType', 'ICMPCode']
+    value: int | 'Protocol' | 'ICMPType' | 'ICMPCode'
 
-    _string: ClassVar[Dict[int, str]] = {
+    _string: ClassVar[dict[int, str]] = {
         NumericOperator.TRUE: 'true',
         NumericOperator.LT: '<',
         NumericOperator.GT: '>',
@@ -340,9 +335,9 @@ class BinaryString:
     OPERATION: ClassVar[str] = 'binary'
     # Set by subclasses - always present when short() is called
     operations: int
-    value: Union[int, 'TCPFlag', 'Fragment']
+    value: int | 'TCPFlag' | 'Fragment'
 
-    _string: ClassVar[Dict[int, str]] = {
+    _string: ClassVar[dict[int, str]] = {
         BinaryOperator.INCLUDE: '',
         BinaryOperator.NOT: '!',
         BinaryOperator.MATCH: '=',
@@ -365,9 +360,9 @@ class BinaryString:
 
 
 def converter(
-    function: Callable[[str], Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']], klass: Optional[Type] = None
-) -> Callable[[str], Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']]:
-    def _integer(value: str) -> Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']:
+    function: Callable[[str], int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag'], klass: Type | None = None
+) -> Callable[[str], int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag']:
+    def _integer(value: str) -> int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag':
         if klass is None:
             return function(value)
         try:
@@ -380,8 +375,8 @@ def converter(
 
 def decoder(
     function: Callable[[bytes], int], klass: Type = int
-) -> Callable[[bytes], Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']]:
-    def _inner(value: bytes) -> Union[int, 'Protocol', 'ICMPType', 'ICMPCode', 'TCPFlag']:
+) -> Callable[[bytes], int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag']:
+    def _inner(value: bytes) -> int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag':
         return klass(function(value))  # type: ignore[no-any-return]
 
     return _inner
@@ -464,15 +459,15 @@ class Flow6Source(IPrefix6, FlowSource):
 class FlowIPProtocol(IOperationByte, NumericString, IPv4):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'protocol'
-    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = converter(Protocol.from_string, Protocol)
-    decoder: ClassVar[Callable[[bytes], Union[int, Protocol]]] = decoder(ord, Protocol)
+    converter: ClassVar[Callable[[str], int | Protocol]] = converter(Protocol.from_string, Protocol)
+    decoder: ClassVar[Callable[[bytes], int | Protocol]] = decoder(ord, Protocol)
 
 
 class FlowNextHeader(IOperationByte, NumericString, IPv6):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'next-header'
-    converter: ClassVar[Callable[[str], Union[int, Protocol]]] = converter(Protocol.from_string, Protocol)
-    decoder: ClassVar[Callable[[bytes], Union[int, Protocol]]] = decoder(ord, Protocol)
+    converter: ClassVar[Callable[[str], int | Protocol]] = converter(Protocol.from_string, Protocol)
+    decoder: ClassVar[Callable[[bytes], int | Protocol]] = decoder(ord, Protocol)
 
 
 class FlowAnyPort(IOperationByteShort, NumericString, IPv4, IPv6):
@@ -499,23 +494,23 @@ class FlowSourcePort(IOperationByteShort, NumericString, IPv4, IPv6):
 class FlowICMPType(IOperationByte, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x07
     NAME: ClassVar[str] = 'icmp-type'
-    converter: ClassVar[Callable[[str], Union[int, ICMPType]]] = converter(ICMPType.from_string, ICMPType)
-    decoder: ClassVar[Callable[[bytes], Union[int, ICMPType]]] = decoder(_number, ICMPType)
+    converter: ClassVar[Callable[[str], int | ICMPType]] = converter(ICMPType.from_string, ICMPType)
+    decoder: ClassVar[Callable[[bytes], int | ICMPType]] = decoder(_number, ICMPType)
 
 
 class FlowICMPCode(IOperationByte, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x08
     NAME: ClassVar[str] = 'icmp-code'
-    converter: ClassVar[Callable[[str], Union[int, ICMPCode]]] = converter(ICMPCode.from_string, ICMPCode)
-    decoder: ClassVar[Callable[[bytes], Union[int, ICMPCode]]] = decoder(_number, ICMPCode)
+    converter: ClassVar[Callable[[str], int | ICMPCode]] = converter(ICMPCode.from_string, ICMPCode)
+    decoder: ClassVar[Callable[[bytes], int | ICMPCode]] = decoder(_number, ICMPCode)
 
 
 class FlowTCPFlag(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID: ClassVar[int] = 0x09
     NAME: ClassVar[str] = 'tcp-flags'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], Union[int, TCPFlag]]] = converter(TCPFlag.named)
-    decoder: ClassVar[Callable[[bytes], Union[int, TCPFlag]]] = decoder(_number, TCPFlag)
+    converter: ClassVar[Callable[[str], int | TCPFlag]] = converter(TCPFlag.named)
+    decoder: ClassVar[Callable[[bytes], int | TCPFlag]] = decoder(_number, TCPFlag)
 
 
 class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
@@ -546,8 +541,8 @@ class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID: ClassVar[int] = 0x0C
     NAME: ClassVar[str] = 'fragment'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], Union[int, Fragment]]] = converter(Fragment.named)
-    decoder: ClassVar[Callable[[bytes], Union[int, Fragment]]] = decoder(ord, Fragment)
+    converter: ClassVar[Callable[[str], int | Fragment]] = converter(Fragment.named)
+    decoder: ClassVar[Callable[[bytes], int | Fragment]] = decoder(ord, Fragment)
 
 
 # draft-raszuk-idr-flow-spec-v6-01
@@ -568,8 +563,8 @@ FLOW_LENGTH_EXTENDED_SHIFT: int = 16  # Shift for extended length calculation
 FLOW_LENGTH_COMPACT_MAX: int = 0xF0  # Maximum length for compact encoding (240)
 FLOW_LENGTH_EXTENDED_MAX: int = 0x0FFF  # Maximum length for extended encoding (4095)
 
-decode: Dict[AFI, Dict[int, str]] = {AFI.ipv4: {}, AFI.ipv6: {}}
-factory: Dict[AFI, Dict[int, Type[IComponent]]] = {AFI.ipv4: {}, AFI.ipv6: {}}
+decode: dict[AFI, dict[int, str]] = {AFI.ipv4: {}, AFI.ipv6: {}}
+factory: dict[AFI, dict[int, Type[IComponent]]] = {AFI.ipv4: {}, AFI.ipv6: {}}
 
 for content in dir():
     kls = globals().get(content, None)
@@ -613,7 +608,7 @@ for content in dir():
 @NLRI.register(AFI.ipv4, SAFI.flow_vpn)
 @NLRI.register(AFI.ipv6, SAFI.flow_vpn)
 class Flow(NLRI):
-    rules: Dict[int, List[FlowRule]]
+    rules: dict[int, list[FlowRule]]
     nexthop: Any
     rd: RouteDistinguisher
 
@@ -653,7 +648,7 @@ class Flow(NLRI):
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
-        ordered_rules: List[bytes] = []
+        ordered_rules: list[bytes] = []
         # the order is a RFC requirement
         for ID in sorted(self.rules.keys()):
             rules = self.rules[ID]
@@ -689,10 +684,10 @@ class Flow(NLRI):
         return Family.index(self) + self._pack_nlri_simple()
 
     def _rules(self) -> str:
-        string: List[str] = []
+        string: list[str] = []
         for index in sorted(self.rules):
             rules = self.rules[index]
-            r_str: List[str] = []
+            r_str: list[str] = []
             for idx, rule in enumerate(rules):
                 # only add ' ' after the first element
                 if idx and not rule.operations & NumericOperator.AND:
@@ -714,10 +709,10 @@ class Flow(NLRI):
         return self.extensive()
 
     def json(self, compact: bool = False) -> str:
-        string: List[str] = []
+        string: list[str] = []
         for index in sorted(self.rules):
             rules = self.rules[index]
-            s: List[str] = []
+            s: list[str] = []
             for idx, rule in enumerate(rules):
                 # only add ' ' after the first element
                 if idx and not rule.operations & NumericOperator.AND:
@@ -732,7 +727,7 @@ class Flow(NLRI):
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> Tuple[Flow | NLRI, bytes]:
+    ) -> tuple[Flow | NLRI, bytes]:
         length, bgp = bgp[0], bgp[1:]
 
         if length & FLOW_LENGTH_EXTENDED_MASK == FLOW_LENGTH_EXTENDED_VALUE:  # bigger than 240
@@ -752,7 +747,7 @@ class Flow(NLRI):
                 nlri.rd = RouteDistinguisher(bgp[:8])
                 bgp = bgp[8:]
 
-            seen: List[int] = []
+            seen: list[int] = []
 
             while bgp:
                 what, bgp = bgp[0], bgp[1:]

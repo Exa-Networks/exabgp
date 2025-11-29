@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import Dict, ClassVar, List, Tuple
+from typing import ClassVar
 
 
 # ======================================================================== AFI
@@ -32,7 +32,7 @@ class AFI(int):
     bgpls: ClassVar[AFI]
 
     # Lookup tables
-    _names: ClassVar[Dict[int, str]] = {
+    _names: ClassVar[dict[int, str]] = {
         0x00: 'undefined',
         0x01: 'ipv4',
         0x02: 'ipv6',
@@ -40,21 +40,21 @@ class AFI(int):
         0x4004: 'bgp-ls',
     }
 
-    _masks: ClassVar[Dict[int, int]] = {
+    _masks: ClassVar[dict[int, int]] = {
         0x01: 32,  # IPv4
         0x02: 128,  # IPv6
     }
 
-    _address_lengths: ClassVar[Dict[int, int]] = {
+    _address_lengths: ClassVar[dict[int, int]] = {
         0x01: 4,  # IPv4: 4 bytes = 32 bits
         0x02: 16,  # IPv6: 16 bytes = 128 bits
     }
 
     # Caches
-    common: ClassVar[Dict[bytes, AFI]] = {}
-    codes: ClassVar[Dict[str, AFI]] = {}
-    cache: ClassVar[Dict[int, AFI]] = {}
-    inet_names: ClassVar[Dict[int, str]] = {}
+    common: ClassVar[dict[bytes, AFI]] = {}
+    codes: ClassVar[dict[str, AFI]] = {}
+    cache: ClassVar[dict[int, AFI]] = {}
+    inet_names: ClassVar[dict[int, str]] = {}
 
     def pack_afi(self) -> bytes:
         return pack('!H', self)
@@ -90,7 +90,7 @@ class AFI(int):
         return cls.codes.get(name, None)
 
     @staticmethod
-    def implemented_safi(afi: str) -> List[str]:
+    def implemented_safi(afi: str) -> list[str]:
         if afi == 'ipv4':
             return ['unicast', 'multicast', 'nlri-mpls', 'mcast-vpn', 'mpls-vpn', 'flow', 'flow-vpn', 'mup']
         if afi == 'ipv6':
@@ -192,7 +192,7 @@ class SAFI(int):
     flow_vpn: ClassVar[SAFI]
 
     # Lookup tables
-    _names: ClassVar[Dict[int, str]] = {
+    _names: ClassVar[dict[int, str]] = {
         0: 'undefined',
         1: 'unicast',
         2: 'multicast',
@@ -210,9 +210,9 @@ class SAFI(int):
     }
 
     # Caches
-    common: ClassVar[Dict[bytes, SAFI]] = {}
-    codes: ClassVar[Dict[str, SAFI]] = {}
-    cache: ClassVar[Dict[int, SAFI]] = {}
+    common: ClassVar[dict[bytes, SAFI]] = {}
+    codes: ClassVar[dict[str, SAFI]] = {}
+    cache: ClassVar[dict[int, SAFI]] = {}
 
     def pack_safi(self) -> bytes:
         return bytes([self])
@@ -311,7 +311,7 @@ SAFI.cache = dict([(inst, inst) for (_, inst) in SAFI.codes.items()])
 
 
 class Family:
-    size: ClassVar[Dict[Tuple[AFI, SAFI], Tuple[Tuple[int, ...], int]]] = {
+    size: ClassVar[dict[tuple[AFI, SAFI], tuple[tuple[int, ...], int]]] = {
         # family                   next-hop   RD
         (AFI.ipv4, SAFI.unicast): ((4,), 0),
         (AFI.ipv4, SAFI.multicast): ((4,), 0),
@@ -372,7 +372,7 @@ class Family:
     def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing Family for ordering does not make sense')
 
-    def afi_safi(self) -> Tuple[AFI, SAFI]:
+    def afi_safi(self) -> tuple[AFI, SAFI]:
         return (self.afi, self.safi)
 
     def family(self) -> Family:

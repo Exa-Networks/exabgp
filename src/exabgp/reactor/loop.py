@@ -13,7 +13,7 @@ import re
 import select
 import time
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Set
+from typing import TYPE_CHECKING, Any, Generator
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -52,7 +52,7 @@ class Reactor:
     clear: bytes = b''.join(bytes([int(c, 16)]) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
 
     def __init__(self, configuration: Any) -> None:
-        self._ips: List[Any] = getenv().tcp.bind
+        self._ips: list[Any] = getenv().tcp.bind
         self._port: int = getenv().tcp.port
         self._stopping: bool = getenv().tcp.attempts > 0
         self.exit_code: int = self.Exit.unknown
@@ -67,8 +67,8 @@ class Reactor:
 
         self.max_loop_time: float = getenv().reactor.speed
         self._sleep_time: float = self.max_loop_time / 100
-        self._busyspin: Dict[int, int] = {}
-        self._ratelimit: Dict[str, Dict[int, int]] = {}
+        self._busyspin: dict[int, int] = {}
+        self._ratelimit: dict[str, dict[int, int]] = {}
         self.early_drop: bool = getenv().daemon.drop
 
         self.processes: Processes
@@ -80,7 +80,7 @@ class Reactor:
         self.listener: Listener = Listener(self)
         self.api: API = API(self)
 
-        self._peers: Dict[str, Peer] = {}
+        self._peers: dict[str, Peer] = {}
 
         self._saved_pid: bool = False
         self._poller: select.poll = select.poll()
@@ -104,7 +104,7 @@ class Reactor:
         if rate <= 0:
             return False
         second: int = int(time.time())
-        ratelimit: Dict[int, int] = self._ratelimit.get(peer, {})
+        ratelimit: dict[int, int] = self._ratelimit.get(peer, {})
         if second not in ratelimit:
             self._ratelimit[peer] = {second: rate - 1}
             return False
@@ -314,23 +314,23 @@ class Reactor:
 
     # peer related functions
 
-    def active_peers(self) -> Set[str]:
-        peers: Set[str] = set()
+    def active_peers(self) -> set[str]:
+        peers: set[str] = set()
         for key, peer in self._peers.items():
             if peer.neighbor.passive and not peer.proto:
                 continue
             peers.add(key)
         return peers
 
-    def established_peers(self) -> Set[str]:
-        peers: Set[str] = set()
+    def established_peers(self) -> set[str]:
+        peers: set[str] = set()
         for key, peer in self._peers.items():
             if peer.fsm == FSM.ESTABLISHED:
                 peers.add(key)
         return peers
 
-    def peers(self, service: str = '') -> List[str]:
-        matching: List[str] = []
+    def peers(self, service: str = '') -> list[str]:
+        matching: list[str] = []
         for peer_name, peer in self._peers.items():
             if service == '':
                 matching.append(peer_name)
@@ -371,18 +371,18 @@ class Reactor:
             return ''
         return str(peer.neighbor.peer_address)
 
-    def neighbor_cli_data(self, peer_name: str) -> Dict[str, Any] | None:
+    def neighbor_cli_data(self, peer_name: str) -> dict[str, Any] | None:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=cli_data', p=peer_name), 'reactor')
             return None
         return peer.cli_data()
 
-    def neighor_rib(self, peer_name: str, rib_name: str, advertised: bool = False) -> List[Any]:
+    def neighor_rib(self, peer_name: str, rib_name: str, advertised: bool = False) -> list[Any]:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=rib_lookup', p=peer_name), 'reactor')
             return []
         assert peer.neighbor.rib is not None, 'RIB not initialized'
-        families: List[Any] | None = None
+        families: list[Any] | None = None
         if advertised:
             families = peer.proto.negotiated.families if peer.proto else []
         rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming

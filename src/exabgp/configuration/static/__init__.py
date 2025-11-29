@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, List
+from typing import Any, Callable
 
 from exabgp.configuration.static.route import ParseStaticRoute
 from exabgp.configuration.static.parser import prefix
@@ -60,7 +60,7 @@ class ParseStatic(ParseStaticRoute):
 
 
 @ParseStatic.register('route', 'append-route')
-def route(tokeniser: Any) -> List[Change]:
+def route(tokeniser: Any) -> list[Change]:
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
     check: Callable[[Change, AFI], bool] = _check_true
@@ -118,7 +118,7 @@ def route(tokeniser: Any) -> List[Change]:
 
 
 @ParseStatic.register('attributes', 'append-route')
-def attributes(tokeniser: Any) -> List[Change]:
+def attributes(tokeniser: Any) -> list[Change]:
     action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(lambda: tokeniser.tokens[-1])  # type: ignore[arg-type]
     tokeniser.afi = ipmask.afi

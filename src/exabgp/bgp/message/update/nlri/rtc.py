@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -91,7 +91,7 @@ class RTC(NLRI):
     @classmethod
     def unpack_nlri(
         cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> Tuple[T, bytes]:
+    ) -> tuple[T, bytes]:
         length = bgp[0]
 
         if length == 0:

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from struct import pack
-from typing import Any, List, Tuple, Union
+from typing import Any
 
 from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
@@ -36,7 +36,7 @@ TEID_MAX_BITS = 32  # Maximum TEID length in bits
 
 
 def label(tokeniser: Any) -> Labels:
-    labels: List[int] = []
+    labels: list[int] = []
     value = tokeniser()
 
     if value == '[':
@@ -60,7 +60,7 @@ def route_distinguisher(tokeniser: Any) -> RouteDistinguisher:
         suffix = int(data[separator + 1 :])
 
     if '.' in prefix:
-        data_list: List[bytes] = [bytes([0, 1])]
+        data_list: list[bytes] = [bytes([0, 1])]
         data_list.extend([bytes([int(_)]) for _ in prefix.split('.')])
         data_list.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
         rtd = b''.join(data_list)
@@ -78,9 +78,9 @@ def route_distinguisher(tokeniser: Any) -> RouteDistinguisher:
 
 # [ 300, [ ( 800000,100 ), ( 1000000,5000 ) ] ]
 def prefix_sid(tokeniser: Any) -> PrefixSid:  # noqa: C901
-    sr_attrs: List[Union[SrLabelIndex, SrGb]] = []
-    srgbs: List[Tuple[int, int]] = []
-    srgb_data: List[Any] = []
+    sr_attrs: list[SrLabelIndex | SrGb] = []
+    srgbs: list[tuple[int, int]] = []
+    srgb_data: list[Any] = []
     value = tokeniser()
     get_range = False
     consume_extra = False
@@ -146,8 +146,8 @@ def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:  # type: ignore[return]
 
     sid = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
     behavior = 0xFFFF
-    subtlvs: List[Srv6SidInformation] = []
-    subsubtlvs: List[Srv6SidStructure] = []
+    subtlvs: list[Srv6SidInformation] = []
+    subsubtlvs: list[Srv6SidStructure] = []
     value = tokeniser()
     if value != ')':
         base = 10 if not value.startswith('0x') else 16
@@ -198,7 +198,7 @@ def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:  # type: ignore[return]
         return PrefixSid([Srv6L2Service(subtlvs=subtlvs)])  # type: ignore[arg-type]
 
 
-def parse_ip_prefix(tokeninser: str) -> Tuple[Union[IPv4, IPv6], int]:
+def parse_ip_prefix(tokeninser: str) -> tuple[IPv4 | IPv6, int]:
     addrstr, length = tokeninser.split('/')
     if length is None:
         raise Exception(f"unexpect prefix format '{tokeninser}'")
@@ -207,7 +207,7 @@ def parse_ip_prefix(tokeninser: str) -> Tuple[Union[IPv4, IPv6], int]:
         raise Exception(f"unexpect prefix format '{tokeninser}'")
 
     addr = ip_address(addrstr)
-    ip: Union[IPv4, IPv6]
+    ip: IPv4 | IPv6
     if isinstance(addr, IPv4Address):
         ip = IPv4.unpack_ipv4(IPv4.pton(addrstr))
     elif isinstance(addr, IPv6Address):
@@ -219,8 +219,8 @@ def parse_ip_prefix(tokeninser: str) -> Tuple[Union[IPv4, IPv6], int]:
 
 # shared-join rp <ip> group <ip> rd <rd> source-as <source-as>
 def mvpn_sharedjoin(tokeniser: Any, afi: AFI, action: Any) -> SharedJoin:
-    sourceip: Union[IPv4, IPv6]
-    groupip: Union[IPv4, IPv6]
+    sourceip: IPv4 | IPv6
+    groupip: IPv4 | IPv6
     if afi == AFI.ipv4:
         tokeniser.consume('rp')
         sourceip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
@@ -250,8 +250,8 @@ def mvpn_sharedjoin(tokeniser: Any, afi: AFI, action: Any) -> SharedJoin:
 
 # source-join source <ip> group <ip> rd <rd> source-as <source-as>
 def mvpn_sourcejoin(tokeniser: Any, afi: AFI, action: Any) -> SourceJoin:
-    sourceip: Union[IPv4, IPv6]
-    groupip: Union[IPv4, IPv6]
+    sourceip: IPv4 | IPv6
+    groupip: IPv4 | IPv6
     if afi == AFI.ipv4:
         tokeniser.consume('source')
         sourceip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
@@ -281,8 +281,8 @@ def mvpn_sourcejoin(tokeniser: Any, afi: AFI, action: Any) -> SourceJoin:
 
 #'source-ad source <ip address> group <ip address> rd <rd>'
 def mvpn_sourcead(tokeniser: Any, afi: AFI, action: Any) -> SourceAD:
-    sourceip: Union[IPv4, IPv6]
-    groupip: Union[IPv4, IPv6]
+    sourceip: IPv4 | IPv6
+    groupip: IPv4 | IPv6
     if afi == AFI.ipv4:
         tokeniser.consume('source')
         sourceip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
@@ -321,7 +321,7 @@ def srv6_mup_isd(tokeniser: Any, afi: AFI) -> InterworkSegmentDiscoveryRoute:
 
 # 'mup-dsd <ip address> rd <rd>',
 def srv6_mup_dsd(tokeniser: Any, afi: AFI) -> DirectSegmentDiscoveryRoute:
-    ip: Union[IPv4, IPv6]
+    ip: IPv4 | IPv6
     if afi == AFI.ipv4:
         ip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
@@ -361,7 +361,7 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
     qfi = int(value)
 
     tokeniser.consume('endpoint')
-    endpoint_ip: Union[IPv4, IPv6]
+    endpoint_ip: IPv4 | IPv6
     if afi == AFI.ipv4:
         endpoint_ip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:
@@ -370,7 +370,7 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
         raise Exception(f'unexpect afi: {afi}')
 
     source_ip_len = 0
-    source_ip: Union[bytes, IPv4, IPv6] = b''
+    source_ip: bytes | IPv4 | IPv6 = b''
 
     if tokeniser.consume_if_match('source'):
         if afi == AFI.ipv4:
@@ -398,7 +398,7 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
 
 # 'mup-t2st <endpoint address> rd <rd> teid <teid>',
 def srv6_mup_t2st(tokeniser: Any, afi: AFI) -> Type2SessionTransformedRoute:
-    endpoint_ip: Union[IPv4, IPv6]
+    endpoint_ip: IPv4 | IPv6
     if afi == AFI.ipv4:
         endpoint_ip = IPv4.unpack_ipv4(IPv4.pton(tokeniser()))
     elif afi == AFI.ipv6:

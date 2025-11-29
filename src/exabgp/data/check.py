@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, Dict
+from typing import Any, Callable, ClassVar
 
 from exabgp.protocol.ip import IPv4
 from exabgp.protocol.ip import IPv6
@@ -81,7 +81,7 @@ def hashtable(data: Any) -> bool:
 
 # XXX: Not very good to redefine the keyword object, but this class uses no OO ...
 
-CHECK_TYPE: Dict[int, Callable[[Any], bool]] = {
+CHECK_TYPE: dict[int, Callable[[Any], bool]] = {
     TYPE.NULL: null,
     TYPE.BOOLEAN: boolean,
     TYPE.INTEGER: integer,

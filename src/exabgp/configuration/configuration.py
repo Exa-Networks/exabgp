@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, Dict, List, cast, TYPE_CHECKING
+from typing import Any, cast, TYPE_CHECKING
 
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.protocol.family import AFI, SAFI
@@ -67,10 +67,10 @@ from exabgp.configuration.announce.mup import AnnounceMup  # noqa: F401,E261,E50
 
 class _Configuration:
     def __init__(self) -> None:
-        self.processes: Dict[str, Any] = {}
-        self.neighbors: Dict[str, Any] = {}
+        self.processes: dict[str, Any] = {}
+        self.neighbors: dict[str, Any] = {}
 
-    def inject_change(self, peers: List[str], change: 'Change') -> bool:
+    def inject_change(self, peers: list[str], change: 'Change') -> bool:
         result = False
         for neighbor_name in self.neighbors:
             if neighbor_name in peers:
@@ -90,7 +90,7 @@ class _Configuration:
                     )
         return result
 
-    def inject_eor(self, peers: List[str], family: object) -> bool:
+    def inject_eor(self, peers: list[str], family: object) -> bool:
         result = False
         for neighbor in self.neighbors:
             if neighbor in peers:
@@ -98,7 +98,7 @@ class _Configuration:
                 self.neighbors[neighbor].eor.append(family)
         return result
 
-    def inject_operational(self, peers: List[str], operational: 'OperationalFamily') -> bool:
+    def inject_operational(self, peers: list[str], operational: 'OperationalFamily') -> bool:
         result = True
         for neighbor in self.neighbors:
             if neighbor in peers:
@@ -118,7 +118,7 @@ class _Configuration:
                     result = False
         return result
 
-    def inject_refresh(self, peers: List[str], refreshes: List[RouteRefresh]) -> bool:
+    def inject_refresh(self, peers: list[str], refreshes: list[RouteRefresh]) -> bool:
         result = True
         for neighbor in self.neighbors:
             if neighbor in peers:
@@ -141,11 +141,11 @@ class _Configuration:
 
 
 class Configuration(_Configuration):
-    def __init__(self, configurations: List[str], text: bool = False) -> None:
+    def __init__(self, configurations: list[str], text: bool = False) -> None:
         _Configuration.__init__(self)
         self.api_encoder: str = getenv().api.encoder
 
-        self._configurations: List[str] = configurations
+        self._configurations: list[str] = configurations
         self._text: bool = text
 
         self.error: Error = Error()
@@ -183,7 +183,7 @@ class Configuration(_Configuration):
 
         # We should check if name are unique when running Section.__init__
 
-        self._structure: Dict[str, Dict[str, Any]] = {
+        self._structure: dict[str, dict[str, Any]] = {
             'root': {
                 'class': self.section,
                 'commands': [],
@@ -359,8 +359,8 @@ class Configuration(_Configuration):
             },
         }
 
-        self._neighbors: Dict[str, Any] = {}
-        self._previous_neighbors: Dict[str, Any] = {}
+        self._neighbors: dict[str, Any] = {}
+        self._previous_neighbors: dict[str, Any] = {}
 
     @property
     def tokeniser(self) -> Tokeniser:

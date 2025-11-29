@@ -7,7 +7,7 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Callable, ClassVar, Dict, List, Type, TypeVar
+from typing import Callable, ClassVar, Type, TypeVar
 
 from exabgp.protocol.ip import IPv6
 
@@ -44,18 +44,18 @@ class Srv6SidInformation:  # type: ignore[type-var]
     TLV: ClassVar[int] = 1
 
     # Registry maps TLV codes to Sub-Sub-TLV classes
-    registered_subsubtlvs: ClassVar[Dict[int, Type[GenericSrv6ServiceDataSubSubTlv]]] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, Type[GenericSrv6ServiceDataSubSubTlv]]] = dict()
 
     def __init__(
         self,
         sid: IPv6,
         behavior: int,
-        subsubtlvs: List[GenericSrv6ServiceDataSubSubTlv],
+        subsubtlvs: list[GenericSrv6ServiceDataSubSubTlv],
         packed: bytes | None = None,
     ) -> None:
         self.sid: IPv6 = sid
         self.behavior: int = behavior
-        self.subsubtlvs: List[GenericSrv6ServiceDataSubSubTlv] = subsubtlvs
+        self.subsubtlvs: list[GenericSrv6ServiceDataSubSubTlv] = subsubtlvs
         self.packed: bytes = self.pack_tlv()
 
     @classmethod
@@ -73,7 +73,7 @@ class Srv6SidInformation:  # type: ignore[type-var]
     def unpack_attribute(cls, data: bytes, length: int) -> Srv6SidInformation:
         sid: IPv6 = IPv6.unpack_ipv6(data[1:17])
         behavior: int = unpack('!H', data[18:20])[0]
-        subsubtlvs: List[GenericSrv6ServiceDataSubSubTlv] = []
+        subsubtlvs: list[GenericSrv6ServiceDataSubSubTlv] = []
 
         data = data[21:]
         while data:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -58,16 +58,16 @@ class SRv6SID(BGPLS):
         self,
         protocol_id: int,
         domain: int,
-        local_node_descriptors: List[NodeDescriptor],
-        srv6_sid_descriptors: Dict[str, Any],
+        local_node_descriptors: list[NodeDescriptor],
+        srv6_sid_descriptors: dict[str, Any],
         action: Action = Action.UNSET,
         addpath: PathInfo | None = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
         self.proto_id: int = protocol_id
         self.domain: int = domain
-        self.local_node_descriptors: List[NodeDescriptor] = local_node_descriptors
-        self.srv6_sid_descriptors: Dict[str, Any] = srv6_sid_descriptors
+        self.local_node_descriptors: list[NodeDescriptor] = local_node_descriptors
+        self.srv6_sid_descriptors: dict[str, Any] = srv6_sid_descriptors
 
     @classmethod
     def unpack_bgpls_nlri(cls, data: bytes, length: int) -> SRv6SID:
@@ -84,7 +84,7 @@ class SRv6SID(BGPLS):
             )
         tlvs = tlvs[4:]
         local_node_descriptors = tlvs[:node_length]
-        node_ids: List[NodeDescriptor] = []
+        node_ids: list[NodeDescriptor] = []
         while local_node_descriptors:
             node_id, left = NodeDescriptor.unpack_node(local_node_descriptors, proto_id)
             node_ids.append(node_id)
@@ -93,7 +93,7 @@ class SRv6SID(BGPLS):
             local_node_descriptors = left
 
         tlvs = tlvs[node_length:]
-        srv6_sid_descriptors: Dict[str, Any] = {}
+        srv6_sid_descriptors: dict[str, Any] = {}
         srv6_sid_descriptors['multi-topology-ids'] = []
 
         while tlvs:

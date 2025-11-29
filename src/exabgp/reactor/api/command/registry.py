@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, ClassVar
+from typing import Any, ClassVar
 
 from exabgp.reactor.api.command.command import Command
 
@@ -22,12 +22,12 @@ class CommandMetadata:
     name: str
     neighbor_support: bool
     json_support: bool
-    options: List[str] | None = None
+    options: list[str] | None = None
     description: str = ''
     syntax: str = ''
-    parameters: List[str] = field(default_factory=list)
-    examples: List[str] = field(default_factory=list)
-    shortcuts: List[str] = field(default_factory=list)
+    parameters: list[str] = field(default_factory=list)
+    examples: list[str] = field(default_factory=list)
+    shortcuts: list[str] = field(default_factory=list)
     category: str = 'general'
 
     def __post_init__(self):
@@ -50,10 +50,10 @@ class CommandRegistry:
     """Registry for introspecting and querying available commands."""
 
     # AFI values for completion
-    AFI_NAMES: ClassVar[List[str]] = ['ipv4', 'ipv6', 'l2vpn', 'bgp-ls']
+    AFI_NAMES: ClassVar[list[str]] = ['ipv4', 'ipv6', 'l2vpn', 'bgp-ls']
 
     # SAFI values for completion (from exabgp.protocol.family)
-    SAFI_NAMES: ClassVar[List[str]] = [
+    SAFI_NAMES: ClassVar[list[str]] = [
         'unicast',
         'multicast',
         'nlri-mpls',
@@ -70,7 +70,7 @@ class CommandRegistry:
     ]
 
     # AFI-specific SAFI values (from AFI.implemented_safi)
-    AFI_SAFI_MAP: ClassVar[Dict[str, List[str]]] = {
+    AFI_SAFI_MAP: ClassVar[dict[str, list[str]]] = {
         'ipv4': ['unicast', 'multicast', 'nlri-mpls', 'mcast-vpn', 'mpls-vpn', 'flow', 'flow-vpn', 'mup'],
         'ipv6': ['unicast', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
         'l2vpn': ['vpls', 'evpn'],
@@ -80,10 +80,10 @@ class CommandRegistry:
     # Neighbor filter keywords
     # 'id' is the CLI keyword (expands to 'router-id' for API compatibility)
     # 'router-id' removed from autocomplete to avoid clash with 'route' command
-    NEIGHBOR_FILTERS: ClassVar[List[str]] = ['local-ip', 'local-as', 'peer-as', 'id', 'family-allowed']
+    NEIGHBOR_FILTERS: ClassVar[list[str]] = ['local-ip', 'local-as', 'peer-as', 'id', 'family-allowed']
 
     # Route specification keywords
-    ROUTE_KEYWORDS: ClassVar[List[str]] = [
+    ROUTE_KEYWORDS: ClassVar[list[str]] = [
         'next-hop',
         'as-path',
         'community',
@@ -107,7 +107,7 @@ class CommandRegistry:
     ]
 
     # Command categories for organization
-    CATEGORIES: ClassVar[Dict[str, str]] = {
+    CATEGORIES: ClassVar[dict[str, str]] = {
         'show neighbor': 'show',
         'show adj-rib in': 'show',
         'show adj-rib out': 'show',
@@ -146,7 +146,7 @@ class CommandRegistry:
     }
 
     # Option descriptions for auto-completion help
-    OPTION_DESCRIPTIONS: ClassVar[Dict[str, str]] = {
+    OPTION_DESCRIPTIONS: ClassVar[dict[str, str]] = {
         'summary': 'Brief neighbor status',
         'extensive': 'Detailed neighbor information',
         'configuration': 'Show neighbor configuration',
@@ -176,9 +176,9 @@ class CommandRegistry:
 
     def __init__(self):
         """Initialize the command registry."""
-        self._metadata_cache: Dict[str, CommandMetadata] = {}
+        self._metadata_cache: dict[str, CommandMetadata] = {}
 
-    def get_all_commands(self) -> List[str]:
+    def get_all_commands(self) -> list[str]:
         """Return list of all registered command names."""
         return list(Command.functions)
 
@@ -196,7 +196,7 @@ class CommandRegistry:
         neighbor_support = bool(neighbor_val) if not isinstance(neighbor_val, bool) else neighbor_val
 
         options_val = Command.callback['options'].get(command_name)
-        options: List[str] | None = None
+        options: list[str] | None = None
         if isinstance(options_val, list):
             options = [str(opt) for opt in options_val]
         elif isinstance(options_val, dict):
@@ -213,7 +213,7 @@ class CommandRegistry:
         self._metadata_cache[command_name] = metadata
         return metadata
 
-    def get_commands_by_category(self, category: str) -> List[CommandMetadata]:
+    def get_commands_by_category(self, category: str) -> list[CommandMetadata]:
         """Get all commands in a specific category."""
         commands = []
         for cmd_name in self.get_all_commands():
@@ -222,7 +222,7 @@ class CommandRegistry:
                 commands.append(metadata)
         return commands
 
-    def get_base_commands(self) -> List[str]:
+    def get_base_commands(self) -> list[str]:
         """Get base commands (first word of each command)."""
         base_commands = set()
         for cmd in self.get_all_commands():
@@ -230,7 +230,7 @@ class CommandRegistry:
             base_commands.add(base)
         return sorted(base_commands)
 
-    def get_subcommands(self, prefix: str) -> List[str]:
+    def get_subcommands(self, prefix: str) -> list[str]:
         """Get all subcommands that start with the given prefix."""
         subcommands = []
         for cmd in self.get_all_commands():
@@ -243,31 +243,31 @@ class CommandRegistry:
                     subcommands.append(next_word)
         return sorted(subcommands)
 
-    def get_afi_values(self) -> List[str]:
+    def get_afi_values(self) -> list[str]:
         """Get all valid AFI values for completion."""
         return self.AFI_NAMES.copy()
 
-    def get_safi_values(self, afi: str | None = None) -> List[str]:
+    def get_safi_values(self, afi: str | None = None) -> list[str]:
         """Get all valid SAFI values, optionally filtered by AFI."""
         if afi and afi in self.AFI_SAFI_MAP:
             return self.AFI_SAFI_MAP[afi].copy()
         return self.SAFI_NAMES.copy()
 
-    def get_neighbor_filters(self) -> List[str]:
+    def get_neighbor_filters(self) -> list[str]:
         """Get all valid neighbor filter keywords."""
         return self.NEIGHBOR_FILTERS.copy()
 
-    def get_route_keywords(self) -> List[str]:
+    def get_route_keywords(self) -> list[str]:
         """Get all valid route specification keywords."""
         return self.ROUTE_KEYWORDS.copy()
 
-    def build_command_tree(self) -> Dict[str, Any]:
+    def build_command_tree(self) -> dict[str, Any]:
         """Build a hierarchical command tree for auto-completion.
 
         Returns a nested dictionary where keys are command parts and values are
         either dictionaries (for further nesting) or lists (for terminal options).
         """
-        tree: Dict[str, Any] = {}
+        tree: dict[str, Any] = {}
 
         for cmd_name in self.get_all_commands():
             metadata = self.get_command_metadata(cmd_name)
@@ -321,7 +321,7 @@ class CommandRegistry:
 
         return '\n'.join(lines)
 
-    def get_all_metadata(self) -> List[CommandMetadata]:
+    def get_all_metadata(self) -> list[CommandMetadata]:
         """Get metadata for all commands."""
         result = []
         for cmd in self.get_all_commands():
