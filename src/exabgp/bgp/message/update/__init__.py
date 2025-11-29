@@ -359,6 +359,6 @@ class Update(Message):
                 Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, b'', b'', negotiated)
             )
 
-        log.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')  # type: ignore[arg-type]
+        log.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
 
         return update

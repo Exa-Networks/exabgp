@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.ip import IP
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.nlri import NLRI as _NLRI
@@ -65,7 +66,7 @@ class EOR(Message):
                 return 4
             return self.MP_LENGTH
 
-    def __init__(self, afi: AFI, safi: SAFI, action: _NLRI.Action = None) -> None:  # type: ignore[assignment]
+    def __init__(self, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
         Message.__init__(self)
         self.nlris = [
             EOR.NLRI(afi, safi, action),
