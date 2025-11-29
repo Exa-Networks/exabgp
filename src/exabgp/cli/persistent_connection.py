@@ -24,18 +24,18 @@ from exabgp.cli.colors import Colors
 class PersistentSocketConnection:
     """Persistent Unix socket connection with background health monitoring"""
 
-    def __init__(self, socket_path: str):
+    def __init__(self, socket_path: str) -> None:
         self.socket_path = socket_path
-        self.socket = None
+        self.socket: sock.socket | None = None
         self.daemon_uuid: str | None = None
-        self.last_ping_time = 0
-        self.consecutive_failures = 0
-        self.max_failures = 3
-        self.health_interval = 10  # seconds
-        self.running = True
-        self.reconnecting = False
-        self.command_in_progress = False  # Track if user command is being executed
-        self.pending_user_command = False  # Track if waiting for user command response
+        self.last_ping_time: float = 0
+        self.consecutive_failures: int = 0
+        self.max_failures: int = 3
+        self.health_interval: int = 10  # seconds
+        self.running: bool = True
+        self.reconnecting: bool = False
+        self.command_in_progress: bool = False  # Track if user command is being executed
+        self.pending_user_command: bool = False  # Track if waiting for user command response
         self.lock = threading.Lock()
 
         # Client identity for connection tracking
@@ -64,20 +64,20 @@ class PersistentSocketConnection:
         self.health_thread = threading.Thread(target=self._health_monitor, daemon=True)
         self.health_thread.start()
 
-    def _connect(self):
+    def _connect(self) -> None:
         """Establish socket connection"""
         self.socket = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
         full_path = self.socket_path if self.socket_path.endswith('.sock') else self.socket_path + 'exabgp.sock'
         self.socket.connect(full_path)
         self.socket.settimeout(0.5)  # Initial timeout for sync ping
 
-    def _initial_ping(self):
+    def _initial_ping(self) -> None:
         """Send initial synchronous ping to get daemon UUID before starting background threads"""
         try:
             # Send ping
             ping_cmd = f'ping {self.client_uuid} {self.client_start_time}\n'
             try:
-                self.socket.sendall(ping_cmd.encode('utf-8'))
+                self.socket.sendall(ping_cmd.encode('utf-8'))  # type: ignore[union-attr]
             except (BrokenPipeError, ConnectionResetError):
                 # Connection rejected before we could send
                 sys.stderr.write('\n')
@@ -94,7 +94,7 @@ class PersistentSocketConnection:
             # Read response synchronously
             response_buffer = ''
             while True:
-                data = self.socket.recv(4096)
+                data = self.socket.recv(4096)  # type: ignore[union-attr]
                 if not data:
                     # Connection closed - likely another client already connected
                     sys.stderr.write('\n')
@@ -181,7 +181,7 @@ class PersistentSocketConnection:
                 sys.stderr.flush()
 
             # Switch to non-blocking for background threads
-            self.socket.settimeout(0.1)
+            self.socket.settimeout(0.1)  # type: ignore[union-attr]
 
         except sock.timeout:
             sys.stderr.write('\n')
@@ -213,7 +213,7 @@ class PersistentSocketConnection:
     def _setup_signal_handler(self) -> None:
         """Setup signal handler for graceful shutdown from background threads"""
 
-        def signal_handler(signum, frame):
+        def signal_handler(signum: int, frame: object) -> None:
             """Handle SIGUSR1 by setting running flag to False"""
             self.running = False
             # Re-raise KeyboardInterrupt to break out of input()
@@ -230,7 +230,7 @@ class PersistentSocketConnection:
         except OSError:
             pass
 
-    def _reconnect(self, max_attempts=3, retry_delay=2) -> bool:
+    def _reconnect(self, max_attempts: int = 3, retry_delay: int = 2) -> bool:
         """
         Attempt to reconnect to ExaBGP daemon
 
@@ -350,11 +350,11 @@ class PersistentSocketConnection:
         sys.stderr.flush()
         return False
 
-    def _read_loop(self):
+    def _read_loop(self) -> None:
         """Background thread: continuously read from socket"""
         while self.running:
             try:
-                data = self.socket.recv(4096)
+                data = self.socket.recv(4096)  # type: ignore[union-attr]
                 if not data:
                     # Socket closed - attempt reconnection
                     if not self._reconnect():
@@ -443,7 +443,7 @@ class PersistentSocketConnection:
                     self.running = False
                 break
 
-    def _health_monitor(self):
+    def _health_monitor(self) -> None:
         """Background thread: send periodic pings"""
         # Initial sync ping already done in __init__, start periodic monitoring
         while self.running:
@@ -455,7 +455,7 @@ class PersistentSocketConnection:
 
             time.sleep(1)  # Check every second
 
-    def _send_ping(self):
+    def _send_ping(self) -> None:
         """Send ping command (internal, not user-initiated)"""
         # Skip if reconnecting or no socket
         if self.reconnecting or not self.socket:
@@ -476,7 +476,7 @@ class PersistentSocketConnection:
                 # Don't print error or exit here
                 pass
 
-    def _handle_ping_response(self, response: str):
+    def _handle_ping_response(self, response: str) -> None:
         """Handle pong response from health check
 
         Supports both text and JSON formats:
@@ -598,7 +598,7 @@ class PersistentSocketConnection:
                 self.command_in_progress = False
                 self.pending_user_command = False
 
-    def close(self):
+    def close(self) -> None:
         """Close connection and stop threads"""
         try:
             self.running = False

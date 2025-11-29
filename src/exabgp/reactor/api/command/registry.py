@@ -30,7 +30,7 @@ class CommandMetadata:
     shortcuts: list[str] = field(default_factory=list)
     category: str = 'general'
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Generate default syntax if not provided."""
         if not self.syntax:
             self.syntax = self._generate_syntax()
@@ -174,7 +174,7 @@ class CommandRegistry:
         'family-allowed': 'Address family filter',
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the command registry."""
         self._metadata_cache: dict[str, CommandMetadata] = {}
 
