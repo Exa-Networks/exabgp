@@ -37,28 +37,30 @@ class Srv6SIDInformation:
         sid = IPv6.ntop(data)
         return cls(sid, data)
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return '"srv6-sid": "{}"'.format(str(self.sid))
 
-    def __eq__(self, other: 'Srv6SIDInformation') -> bool:  # type: ignore[override]
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Srv6SIDInformation):
+            return NotImplemented
         return self.sid == other.sid
 
-    def __lt__(self, other):
+    def __lt__(self, other: Srv6SIDInformation) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __le__(self, other):
+    def __le__(self, other: Srv6SIDInformation) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __gt__(self, other):
+    def __gt__(self, other: Srv6SIDInformation) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __ge__(self, other):
+    def __ge__(self, other: Srv6SIDInformation) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.sid)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
     def __len__(self) -> int:

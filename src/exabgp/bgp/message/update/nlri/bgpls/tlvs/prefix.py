@@ -37,35 +37,37 @@ class Prefix:
             addr = IP.unpack_ip(data[: IPv6.BYTES])
         return cls(iface_addr=addr, packed=data)
 
-    def json(self):
+    def json(self, compact: bool = False) -> str:
         content = '"interface-address": "{}"'.format(self.iface_address)
         return content
 
-    def __eq__(self, other: 'Prefix') -> bool:  # type: ignore[override]
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Prefix):
+            return NotImplemented
         return self.iface_address == other.iface_address
 
-    def __lt__(self, other):
+    def __lt__(self, other: Prefix) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __le__(self, other):
+    def __le__(self, other: Prefix) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __gt__(self, other):
+    def __gt__(self, other: Prefix) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __ge__(self, other):
+    def __ge__(self, other: Prefix) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ':'.join('{:02X}'.format(_) for _ in self.pack_tlv())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._packed)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
     def pack_tlv(self) -> bytes:

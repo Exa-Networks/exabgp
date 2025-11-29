@@ -11,6 +11,8 @@ from struct import unpack
 from exabgp.protocol.iso import ISO
 from exabgp.util import hexstring
 
+from typing import Callable
+
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.protocol.ip import IP, IPv6
@@ -49,7 +51,7 @@ OSPF = 2
 
 class Srv6(FlagLS):
     @classmethod
-    def _unpack_data(cls, data: bytes, protocol_type: int) -> dict:
+    def _unpack_data(cls, data: bytes, protocol_type: int) -> dict[str, object]:
         behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]
@@ -95,23 +97,28 @@ class Srv6LanEndXISIS(Srv6):
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, content):
-        self.content = [content]
+    def __init__(self, content: dict[str, object]) -> None:
+        self.content: list[dict[str, object]] = [content]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '\n'.join(
             [
                 'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
-                    d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid
+                    d.get('behavior'),
+                    d.get('neighbor-id'),
+                    d.get('flags'),
+                    d.get('algorithm'),
+                    d.get('weight'),
+                    d.get('sid'),
                 )
                 for d in self.content
             ],
         )
 
     @classmethod
-    def register(cls):
-        def register_subsubtlv(klass):
-            code = klass.TLV
+    def register(cls) -> Callable[[type], type]:
+        def register_subsubtlv(klass: type) -> type:
+            code = klass.TLV  # type: ignore[attr-defined]
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 LAN End.X Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass
@@ -123,7 +130,7 @@ class Srv6LanEndXISIS(Srv6):
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXISIS:
         return cls(cls._unpack_data(data, ISIS))
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return '"srv6-lan-endx-isis": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
 
 
@@ -134,23 +141,28 @@ class Srv6LanEndXOSPF(Srv6):
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, content):
-        self.content = [content]
+    def __init__(self, content: dict[str, object]) -> None:
+        self.content: list[dict[str, object]] = [content]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '\n'.join(
             [
                 'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
-                    d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid
+                    d.get('behavior'),
+                    d.get('neighbor-id'),
+                    d.get('flags'),
+                    d.get('algorithm'),
+                    d.get('weight'),
+                    d.get('sid'),
                 )
                 for d in self.content
             ],
         )
 
     @classmethod
-    def register(cls):
-        def register_subsubtlv(klass):
-            code = klass.TLV
+    def register(cls) -> Callable[[type], type]:
+        def register_subsubtlv(klass: type) -> type:
+            code = klass.TLV  # type: ignore[attr-defined]
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 LAN End.X Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass
@@ -162,5 +174,5 @@ class Srv6LanEndXOSPF(Srv6):
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXOSPF:
         return cls(cls._unpack_data(data, OSPF))
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return '"srv6-lan-endx-ospf": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))

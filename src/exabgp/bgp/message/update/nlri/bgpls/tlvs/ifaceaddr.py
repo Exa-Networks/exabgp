@@ -37,35 +37,37 @@ class IfaceAddr:
             addr = IP.unpack_ip(data[: IPv6.BYTES])
         return cls(iface_addr=addr, packed=data)
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return '"{}"'.format(self.iface_address)
 
-    def __eq__(self, other: 'IfaceAddr') -> bool:  # type: ignore[override]
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, IfaceAddr):
+            return NotImplemented
         return self.iface_address == other.iface_address
 
-    def __lt__(self, other):
+    def __lt__(self, other: IfaceAddr) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __le__(self, other):
+    def __le__(self, other: IfaceAddr) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __gt__(self, other):
+    def __gt__(self, other: IfaceAddr) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __ge__(self, other):
+    def __ge__(self, other: IfaceAddr) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ':'.join('{:02X}'.format(_) for _ in self._packed)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._packed)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
-    def pack_tlv(self):
+    def pack_tlv(self) -> bytes:
         return self._packed

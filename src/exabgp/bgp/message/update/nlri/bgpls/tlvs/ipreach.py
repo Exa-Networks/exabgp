@@ -82,7 +82,7 @@ class IpReach:
 
         return cls(prefix=prefix, plength=plength, packed=original_data)
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return ', '.join(
             [
                 '"ip-reachability-tlv": "{}"'.format(str(self.prefix)),
@@ -90,32 +90,34 @@ class IpReach:
             ],
         )
 
-    def __eq__(self, other: 'IpReach') -> bool:  # type: ignore[override]
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, IpReach):
+            return NotImplemented
         return self.prefix == other.prefix
 
-    def __lt__(self, other):
+    def __lt__(self, other: IpReach) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __le__(self, other):
+    def __le__(self, other: IpReach) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __gt__(self, other):
+    def __gt__(self, other: IpReach) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __ge__(self, other):
+    def __ge__(self, other: IpReach) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ':'.join('{:02X}'.format(_) for _ in self._packed)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._packed)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
-    def pack_tlv(self):
+    def pack_tlv(self) -> bytes:
         return self._packed

@@ -63,36 +63,38 @@ class MTID:
         tids = struct.unpack('!H', data[:2])[0]
         return cls(tids, data)
 
-    def json(self):
+    def json(self, compact: bool = False) -> str:
         return str(self.topologies)
         # tids = ', '.join(_ for _ in self.topologies)
         # return f'[{tids}]'
 
-    def __eq__(self, other: 'MTID') -> bool:  # type: ignore[override]
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, MTID):
+            return NotImplemented
         return self.topologies == other.topologies
 
-    def __lt__(self, other):
+    def __lt__(self, other: MTID) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __le__(self, other):
+    def __le__(self, other: MTID) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __gt__(self, other):
+    def __gt__(self, other: MTID) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __ge__(self, other):
+    def __ge__(self, other: MTID) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ':'.join('{:02X}'.format(_) for _ in self.pack_tlv())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._packed)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
     def pack_tlv(self) -> bytes:

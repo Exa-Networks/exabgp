@@ -36,34 +36,36 @@ class LinkIdentifier:
     def json(self) -> str:
         return f'{{ "link-local-id": {self.local_id}, "link-remote-id": {self.remote_id} }}'
 
-    def __eq__(self, other: 'LinkIdentifier') -> bool:  # type: ignore[override]
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, LinkIdentifier):
+            return NotImplemented
         return self.local_id == other.local_id and self.remote_id == other.remote_id
 
-    def __lt__(self, other):
+    def __lt__(self, other: LinkIdentifier) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __le__(self, other):
+    def __le__(self, other: LinkIdentifier) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __gt__(self, other):
+    def __gt__(self, other: LinkIdentifier) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __ge__(self, other):
+    def __ge__(self, other: LinkIdentifier) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ':'.join('{:02X}'.format(_) for _ in self._packed)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         if not self._packed:
             return 0
         return len(self._packed)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
-    def pack_tlv(self):
+    def pack_tlv(self) -> bytes:
         return self._packed

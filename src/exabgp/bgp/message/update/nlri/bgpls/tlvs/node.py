@@ -136,7 +136,7 @@ class NodeDescriptor:
 
         raise Exception(f'unknown node descriptor sub-tlv (node-type: {node_type}, igp: {igp})')
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         node = None
         if self.node_type == NODE_DESC_TLV_AS:
             node = f'"autonomous-system": {self.node_id}'
@@ -155,31 +155,33 @@ class NodeDescriptor:
         content = ', '.join(_ for _ in [node, designated, psn] if _)
         return f'{{ {content} }}'
 
-    def __eq__(self, other: 'NodeDescriptor') -> bool:  # type: ignore[override]
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, NodeDescriptor):
+            return NotImplemented
         return bool(self.node_id == other.node_id)
 
-    def __lt__(self, other):
+    def __lt__(self, other: NodeDescriptor) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __le__(self, other):
+    def __le__(self, other: NodeDescriptor) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __gt__(self, other):
+    def __gt__(self, other: NodeDescriptor) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __ge__(self, other):
+    def __ge__(self, other: NodeDescriptor) -> bool:
         raise RuntimeError('Not implemented')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.json()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._packed)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
     def pack_tlv(self) -> bytes:
