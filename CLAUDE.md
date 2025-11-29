@@ -60,9 +60,26 @@ echo "=== Commits since last backport review ($LAST_HASH) ==="
 git log $LAST_HASH..HEAD --oneline
 ```
 
-**STOP and report:**
-- If modified/staged files: ASK user how to handle
-- If new commits since backport review: Report them, note if any are bug fixes
+**THEN use AskUserQuestion tool to ask about any issues found:**
+
+If modified/staged files exist OR new commits since backport review, use AskUserQuestion with questions like:
+
+```
+Question 1 (if modified files found):
+  header: "Modified files"
+  question: "Found N modified files: [list]. How should I handle them?"
+  options:
+    - label: "Continue work", description: "These are my in-progress changes, continue working on them"
+    - label: "Discard changes", description: "Reset these files to HEAD"
+    - label: "Review first", description: "Show me the diff before deciding"
+
+Question 2 (if new commits since backport review):
+  header: "Backport review"
+  question: "N commits since last backport review. Update reviewed hash?"
+  options:
+    - label: "Yes, update", description: "All commits are typing/refactoring/docs, no bug fixes"
+    - label: "Review commits", description: "Show me the commits to check for bug fixes"
+```
 
 **Self-check after reading:**
 - [ ] Can I state the emoji rule? (Start every line with emoji)
