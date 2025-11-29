@@ -30,10 +30,10 @@ class Srv6EndpointBehavior(BaseLS):
 
     def __init__(
         self,
-        endpoint_behavior,
-        flags,
-        algorithm,
-    ):
+        endpoint_behavior: int,
+        flags: list[str],
+        algorithm: int,
+    ) -> None:
         self.endpoint_behavior = endpoint_behavior
         self.flags = flags
         self.algorithm = algorithm
@@ -46,14 +46,14 @@ class Srv6EndpointBehavior(BaseLS):
 
         return cls(endpoint_behavior=endpoint_behavior, flags=flags, algorithm=algorithm)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'srv6-endpoint-behavior [0x%s, flags: %s, algorithm: %d]' % (
             self.endpoint_behavior,
             self.flags,
             self.algorithm,
         )
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return '"srv6-endpoint-behavior": ' + json.dumps(
             {
                 'endpoint-behavior': self.endpoint_behavior,

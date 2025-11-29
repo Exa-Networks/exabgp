@@ -34,13 +34,13 @@ class Srv6Locator(FlagLS):
     FLAGS = ['D'] + ['RSV' for _ in range(7)]
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, flags, algorithm, metric, subtlvs):
+    def __init__(self, flags: dict[str, int], algorithm: int, metric: int, subtlvs: list[object]) -> None:
         self.flags = flags
         self.algorithm = algorithm
         self.metric = metric
         self.subtlvs = subtlvs
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'flags: {}, algorithm: {}, metric: {}'.format(self.flags, self.algorithm, self.metric)
 
     @classmethod
@@ -48,11 +48,11 @@ class Srv6Locator(FlagLS):
         flags = cls.unpack_flags(bytes(data[0:1]))
         algorithm = data[1]
         metric = unpack('!I', data[4:8])[0]
-        subtlvs: list = []  # No sub-TLVs defined in RFC 9514
+        subtlvs: list[object] = []  # No sub-TLVs defined in RFC 9514
 
         return cls(flags=flags, algorithm=algorithm, metric=metric, subtlvs=subtlvs)
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return '"srv6-locator": ' + json.dumps(
             {
                 'flags': self.flags,

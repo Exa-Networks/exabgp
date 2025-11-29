@@ -25,14 +25,14 @@ from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEn
 #                      Figure 10: SRv6 SID Structure TLV
 
 
-@Srv6EndX.register()
-@Srv6LanEndXISIS.register()
-@Srv6LanEndXOSPF.register()
+@Srv6EndX.register_subsubtlv()
+@Srv6LanEndXISIS.register_subsubtlv()
+@Srv6LanEndXOSPF.register_subsubtlv()
 @LinkState.register_lsid()
 class Srv6SidStructure(BaseLS):
     TLV = 1252
 
-    def __init__(self, loc_block_len, loc_node_len, func_len, arg_len):
+    def __init__(self, loc_block_len: int, loc_node_len: int, func_len: int, arg_len: int) -> None:
         self.loc_block_len = loc_block_len
         self.loc_node_len = loc_node_len
         self.func_len = func_len
@@ -52,7 +52,7 @@ class Srv6SidStructure(BaseLS):
             arg_len=arg_len,
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'sid-structure [%d,%d,%d,%d,]' % (
             self.loc_block_len,
             self.loc_node_len,
@@ -60,7 +60,7 @@ class Srv6SidStructure(BaseLS):
             self.arg_len,
         )
 
-    def json(self, compact: bool = False):
+    def json(self, compact: bool = False) -> str:
         return '"srv6-sid-structure": ' + json.dumps(
             {
                 'loc_block_len': self.loc_block_len,
