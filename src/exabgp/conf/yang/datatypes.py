@@ -91,18 +91,18 @@ ranges = {
 
 
 class Boolean(int):
-    def __new__(cls, value):
+    def __new__(cls, value: object) -> Boolean:
         return int.__new__(cls, value not in ('false', False, 0))
 
-    def __init__(self, boolean):
-        self.string = boolean
+    def __init__(self, boolean: object) -> None:
+        self.string = str(boolean)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.string
 
 
 class Decimal64(decimal.Decimal):
-    def __init__(cls, value, frac=0):
+    def __init__(cls, value: object, frac: int = 0) -> None:
         raise RuntimeError
         # look at https://github.com/CZ-NIC/yangson/blob/master/yangson/datatype.py#L682
         # return super().__init__(decimal.Decimal(value))

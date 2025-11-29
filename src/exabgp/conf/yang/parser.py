@@ -7,6 +7,7 @@ Copyright (c) 2020 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import pprint
+from typing import Any
 
 from pygments.token import Token
 from yanglexer import yanglexer
@@ -20,7 +21,7 @@ import sys
 
 if sys.version_info[:3] < (3, 7):
 
-    def breakpoint():
+    def breakpoint() -> None:
         import pdb  # noqa: T100
 
         pdb.set_trace()  # noqa: T100
@@ -34,7 +35,7 @@ class Tree:
     ignore = (Token.Text, Token.Comment.Singleline)
 
     @staticmethod
-    def formated(string):
+    def formated(string: str) -> str:
         returned = ''
         for line in string.strip().split('\n'):
             line = line.strip()
@@ -50,10 +51,10 @@ class Tree:
             returned += line
         return returned
 
-    def __init__(self, library, models, yang):
+    def __init__(self, library: str, models: str, yang: str) -> None:
         self.model = Model(library, models, yang)
         # the yang file parsed tokens (configuration block according to the syntax)
-        self.tokens = []
+        self.tokens: list[tuple[Any, str]] = []
         # the name of the module being parsed
         self.module = ''
         # module can declare a "prefix" (nickname), which can be used to make the syntax shorter
@@ -65,30 +66,30 @@ class Tree:
         #   * a key for the root of the configuration
         # - a key [loaded] with a list of the module loaded (first is the one parsed)
         # the names of all the configuration sections
-        self.tree = {}
+        self.tree: dict[str, Any] = {}
         # the current namespace (module) we are parsing
-        self.ns = {}
+        self.ns: dict[str, Any] = {}
         # where the grouping for this section are stored
-        self.grouping = {}
+        self.grouping: dict[str, Any] = {}
         # where the typedef for this section are stored
-        self.typedef = {}
+        self.typedef: dict[str, Any] = {}
         # where the configuration parsed is stored
-        self.root = {}
+        self.root: dict[str, Any] = {}
         self.load(yang)
 
-    def tokenise(self, module, ismodel):
+    def tokenise(self, module: str, ismodel: bool) -> list[tuple[Any, str]]:
         lexer = yanglexer.YangLexer()
         tokens = lexer.get_tokens(self.model.load(module, ismodel))
         return [(t, n) for (t, n) in tokens if t not in self.ignore]
 
-    def unexpected(self, string):
+    def unexpected(self, string: str) -> None:
         pprint.pprint(f'unexpected data: {string}')
         for t in self.tokens[:15]:
             sys.stdout.write(f'{t}\n')
         breakpoint()
         pass  # noqa: PIE790
 
-    def pop(self, what=None, expected=None):
+    def pop(self, what: Any = None, expected: str | None = None) -> str:
         token, string = self.tokens[0]
         if what is not None and not str(token).startswith(str(what)):
             self.unexpected(string)
@@ -97,14 +98,14 @@ class Tree:
         self.tokens.pop(0)
         return string
 
-    def peek(self, position, ponctuation=None):
+    def peek(self, position: int, ponctuation: Any = None) -> tuple[Any, str]:
         token, string = self.tokens[position]
         # the self includes a last ' '
         if ponctuation and ponctuation != token:
             self.unexpected(string)
         return token, string.rstrip()
 
-    def skip_keyword_block(self, name):
+    def skip_keyword_block(self, name: Any) -> None:
         count = 0
         while True:
             t, v = self.tokens.pop(0)
@@ -117,7 +118,7 @@ class Tree:
             if not count:
                 break
 
-    def set_subtrees(self):
+    def set_subtrees(self) -> None:
         """To make the core more redeable the tree[module] structure
         is presented as subtrees, this reset all the subtree
         for the current module
@@ -127,7 +128,7 @@ class Tree:
         self.typedef = self.ns[kw['typedef']]
         self.root = self.ns[kw['root']]
 
-    def imports(self, module):
+    def imports(self, module: str) -> None:
         """load, and if missing and defined download, a yang module
 
         module: the name of the yang module to find
@@ -139,7 +140,7 @@ class Tree:
         self.tokens, self.module, self.prefix = backup
         self.set_subtrees()
 
-    def load(self, module, ismodel=False):
+    def load(self, module: str, ismodel: bool = False) -> None:
         """Add a new yang module/namespace to the tree
         this _function is used when initialising the
         root module, as it does not perform backups
@@ -156,11 +157,11 @@ class Tree:
         self.set_subtrees()
         self.parse()
 
-    def parse(self):
+    def parse(self) -> dict[str, Any]:
         self._parse([], self.root)
         return self.tree
 
-    def _parse(self, inside, tree):
+    def _parse(self, inside: list[str], tree: dict[str, Any]) -> None:
         while self.tokens:
             token, string = self.peek(0)
 
@@ -170,7 +171,7 @@ class Tree:
 
             self._parse_one(inside, tree, token, string)
 
-    def _parse_one(self, inside, tree, token, string):
+    def _parse_one(self, inside: list[str], tree: dict[str, Any], token: Any, string: str) -> None:
         if token == Token.Comment.Multiline:
             # ignore multiline comments
             self.pop(Token.Comment.Multiline)
@@ -295,7 +296,7 @@ class Tree:
                         what, name = self.peek(0)
                         name = self.formated(name)
                         if name == 'type':
-                            union_type = {}
+                            union_type: dict[str, Any] = {}
                             self._parse_one(inside + [name], union_type, what, name)
                             sub.append(union_type[kw['type']])
                             continue
@@ -359,7 +360,7 @@ class Tree:
 
         self.unknown(string, name)
 
-    def unknown(self, string, name):
+    def unknown(self, string: str, name: str) -> None:
         # catch unknown keyword so we can implement them
         pprint.pprint(self.ns)
         pprint.pprint('\n')
