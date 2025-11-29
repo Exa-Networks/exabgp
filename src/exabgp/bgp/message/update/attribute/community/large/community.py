@@ -20,7 +20,7 @@ from struct import unpack
 class LargeCommunity(Attribute):
     MAX: ClassVar[int] = 0xFFFFFFFFFFFFFFFFFFFFFFFF
 
-    cache: ClassVar[Dict[bytes, LargeCommunity]] = {}  # type: ignore[assignment]
+    _instance_cache: ClassVar[Dict[bytes, LargeCommunity]] = {}
     caching: ClassVar[bool] = True
 
     def __init__(self, large_community: bytes) -> None:
@@ -77,8 +77,8 @@ class LargeCommunity(Attribute):
     def cached(cls, large_community: bytes) -> LargeCommunity:
         if not cls.caching:
             return cls(large_community)
-        if large_community in cls.cache:
-            return cls.cache[large_community]
+        if large_community in cls._instance_cache:
+            return cls._instance_cache[large_community]
         instance = cls(large_community)
-        cls.cache[large_community] = instance
+        cls._instance_cache[large_community] = instance
         return instance

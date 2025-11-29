@@ -41,7 +41,7 @@ class ExtendedCommunityBase(Attribute):
     def __init__(self, community: bytes) -> None:
         # Two top bits are iana and transitive bits
         self.community: bytes = community
-        self.klass: Type[ExtendedCommunityBase] | None = None  # type: ignore[assignment]
+        self.registered_klass: Type[ExtendedCommunityBase] | None = None
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
@@ -103,12 +103,12 @@ class ExtendedCommunityBase(Attribute):
         for byte in self.community:
             h <<= 8
             h += byte
-        s = self.klass.__repr__(self) if self.klass else ''
+        s = self.registered_klass.__repr__(self) if self.registered_klass else ''
         return '{{ "value": {}, "string": "{}" }}'.format(h, s)
 
     def __repr__(self) -> str:
-        if self.klass:
-            return self.klass.__repr__(self)
+        if self.registered_klass:
+            return self.registered_klass.__repr__(self)
         h = 0x00
         for byte in self.community:
             h <<= 8
@@ -126,7 +126,7 @@ class ExtendedCommunityBase(Attribute):
         if community in cls.registered_extended:
             klass = cls.registered_extended[community]
             instance = klass.unpack_attribute(data, negotiated)
-            instance.klass = klass
+            instance.registered_klass = klass
             return instance
         return cls(data)
 

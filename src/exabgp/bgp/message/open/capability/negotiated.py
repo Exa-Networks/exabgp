@@ -46,7 +46,7 @@ class Negotiated:
         self.msg_size: int = ExtendedMessage.INITIAL_SIZE
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
-        self.aigp: bool = neighbor['capability']['aigp']
+        self.aigp: bool = neighbor.capability.aigp.is_enabled()
         self.mismatch: List[Tuple[str, Tuple[AFI, SAFI]]] = []
 
     def sent(self, sent_open: Any) -> None:  # Open message

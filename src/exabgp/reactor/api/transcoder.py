@@ -40,15 +40,14 @@ def _get_dummy_negotiated() -> Negotiated:
 MAX_SHUTDOWN_COMM_LENGTH = 128  # Maximum length of shutdown communication message
 
 
-class _FakeNeighbor(dict):
-    def __init__(self, local: str, remote: str, asn: int, peer: int) -> None:
-        self['local-address'] = IPv4(local)
-        self['peer_address'] = IPv4(remote)
-        self['peer-as'] = ASN(asn)
-        self['local-as'] = ASN(peer)
-        self['capability'] = {
-            'asn4': True,
-        }
+def _make_transcoder_neighbor(local: str, remote: str, local_asn: int, peer_asn: int) -> Neighbor:
+    """Create a minimal Neighbor for transcoding JSON responses."""
+    neighbor = Neighbor()
+    neighbor['local-address'] = IPv4(local)
+    neighbor['peer-address'] = IPv4(remote)
+    neighbor['local-as'] = ASN(local_asn)
+    neighbor['peer-as'] = ASN(peer_asn)
+    return neighbor
 
 
 class Transcoder:
@@ -104,7 +103,7 @@ class Transcoder:
             sys.stderr.write('invalid json content: ' + json_string + '\n')
             sys.exit(1)
 
-        neighbor = _FakeNeighbor(
+        neighbor = _make_transcoder_neighbor(
             parsed['neighbor']['address']['local'],
             parsed['neighbor']['address']['peer'],
             parsed['neighbor']['asn']['local'],

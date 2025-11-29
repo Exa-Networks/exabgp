@@ -106,13 +106,13 @@ class Capabilities(dict):
         self[Capability.CODE.MULTIPROTOCOL] = mp
 
     def _asn4(self, neighbor: Neighbor) -> None:
-        if not neighbor['capability']['asn4']:
+        if not neighbor.capability.asn4.is_enabled():
             return
 
         self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor['local-as'])
 
     def _nexthop(self, neighbor: Neighbor) -> None:
-        if not neighbor['capability']['nexthop']:
+        if not neighbor.capability.nexthop.is_enabled():
             return
 
         nexthops = neighbor.nexthops()
@@ -124,7 +124,7 @@ class Capabilities(dict):
         self[Capability.CODE.NEXTHOP] = NextHop(tuple(nh_pairs))
 
     def _addpath(self, neighbor: Neighbor) -> None:
-        if not neighbor['capability']['add-path']:
+        if not neighbor.capability.add_path:
             return
 
         families = neighbor.addpaths()
@@ -132,26 +132,26 @@ class Capabilities(dict):
         for allowed in self._ADD_PATH:
             if allowed in families:
                 ap_families.append(allowed)
-        self[Capability.CODE.ADD_PATH] = AddPath(ap_families, neighbor['capability']['add-path'])
+        self[Capability.CODE.ADD_PATH] = AddPath(ap_families, neighbor.capability.add_path)
 
     def _graceful(self, neighbor: Neighbor, restarted: bool) -> None:
-        if not neighbor['capability']['graceful-restart']:
+        if not neighbor.capability.graceful_restart:
             return
 
         self[Capability.CODE.GRACEFUL_RESTART] = Graceful().set(
             Graceful.RESTART_STATE if restarted else 0x0,
-            neighbor['capability']['graceful-restart'],
+            neighbor.capability.graceful_restart.time,
             [(afi, safi, Graceful.FORWARDING_STATE) for (afi, safi) in neighbor.families()],
         )
 
     def _refresh(self, neighbor: Neighbor) -> None:
-        if not neighbor['capability']['route-refresh']:
+        if not neighbor.capability.route_refresh:
             return
         self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
         self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
 
     def _extended_message(self, neighbor: Neighbor) -> None:
-        if not neighbor['capability']['extended-message']:
+        if not neighbor.capability.extended_message.is_enabled():
             return
 
         self[Capability.CODE.EXTENDED_MESSAGE] = ExtendedMessage()
@@ -160,18 +160,18 @@ class Capabilities(dict):
         self[Capability.CODE.HOSTNAME] = HostName(neighbor['host-name'], neighbor['domain-name'])
 
     def _software_version(self, neighbor: Neighbor) -> None:
-        if not neighbor['capability']['software-version']:
+        if not neighbor.capability.software_version:
             return
 
         self[Capability.CODE.SOFTWARE_VERSION] = Software()
 
     def _operational(self, neighbor: Neighbor) -> None:
-        if not neighbor['capability']['operational']:
+        if not neighbor.capability.operational.is_enabled():
             return
         self[Capability.CODE.OPERATIONAL] = Operational()
 
     def _session(self, neighbor: Neighbor) -> None:
-        if not neighbor['capability']['multi-session']:
+        if not neighbor.capability.multi_session.is_enabled():
             return
         # XXX: FIXME: should it not be the RFC version ?
         self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])

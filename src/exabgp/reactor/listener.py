@@ -45,6 +45,18 @@ class Listener:
         socket.AF_INET6: AFI.ipv6,
     }
 
+    # Singleton for stopped listener (initialized after class definition)
+    STOPPED: ClassVar['Listener']
+
+    @classmethod
+    def _create_stopped(cls) -> 'Listener':
+        """Create the STOPPED sentinel. Called once at module load."""
+        instance = object.__new__(cls)
+        instance.serving = False
+        instance._sockets = {}
+        instance._accepted = {}
+        return instance
+
     def __init__(self, reactor: 'Reactor', backlog: int = 200) -> None:
         self.serving: bool = False
 
@@ -288,3 +300,7 @@ class Listener:
 
         self._sockets = {}
         self.serving = False
+
+
+# Initialize the STOPPED singleton
+Listener.STOPPED = Listener._create_stopped()

@@ -94,9 +94,12 @@ class BGPLS(NLRI):
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
 
+    # Type declaration: subclasses may pass packed data or leave as empty
+    _packed: bytes
+
     def __init__(self, action: Action = Action.UNSET, addpath: PathInfo | None = None) -> None:
         NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
-        self._packed: bytes = b''
+        self._packed = b''
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""

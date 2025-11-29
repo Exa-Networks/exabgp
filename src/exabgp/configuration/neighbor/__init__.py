@@ -19,6 +19,8 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.neighbor import Neighbor
+from exabgp.bgp.neighbor.capability import GracefulRestartConfig
+from exabgp.util.enumeration import TriState
 
 from exabgp.bgp.message import Action
 
@@ -185,13 +187,37 @@ class ParseNeighbor(Section):
 
     def _post_capa_default(self, neighbor: Neighbor, local: Dict[str, Any]) -> None:
         capability = local.get('capability', {})
-        for option in neighbor.Capability.defaults:
-            conf = capability.get(option, None)
-            if conf is not None:
-                neighbor['capability'][option] = conf
+        cap = neighbor.capability
+
+        # Map config keys to typed attributes
+        if 'asn4' in capability:
+            cap.asn4 = TriState.from_bool(capability['asn4'])
+        if 'extended-message' in capability:
+            cap.extended_message = TriState.from_bool(capability['extended-message'])
+        if 'multi-session' in capability:
+            cap.multi_session = TriState.from_bool(capability['multi-session'])
+        if 'operational' in capability:
+            cap.operational = TriState.from_bool(capability['operational'])
+        if 'nexthop' in capability:
+            cap.nexthop = TriState.from_bool(capability['nexthop'])
+        if 'aigp' in capability:
+            cap.aigp = TriState.from_bool(capability['aigp'])
+        if 'add-path' in capability:
+            cap.add_path = capability['add-path']
+        if 'route-refresh' in capability:
+            cap.route_refresh = 2 if capability['route-refresh'] else 0  # REFRESH.NORMAL or 0
+        if 'software-version' in capability:
+            cap.software_version = 'exabgp' if capability['software-version'] else None
+        if 'graceful-restart' in capability:
+            gr = capability['graceful-restart']
+            if gr is False:
+                cap.graceful_restart = GracefulRestartConfig.disabled()
+            elif isinstance(gr, int):
+                # gr == 0 means enabled but use hold-time (inferred later)
+                cap.graceful_restart = GracefulRestartConfig.with_time(gr)
 
     def _post_capa_addpath(self, neighbor: Neighbor, local: Dict[str, Any], families: List[Tuple[AFI, SAFI]]) -> None:
-        if not neighbor['capability']['add-path']:
+        if not neighbor.capability.add_path:
             return
 
         add_path = local.get('add-path', {})
@@ -216,10 +242,10 @@ class ParseNeighbor(Section):
         # The default is to auto-detect by the presence of the nexthop block
         # if this is manually set, then we honor it
         nexthop = local.get('nexthop', {})
-        if neighbor['capability']['nexthop'] is None and nexthop:
-            neighbor['capability']['nexthop'] = True
+        if neighbor.capability.nexthop.is_unset() and nexthop:
+            neighbor.capability.nexthop = TriState.TRUE
 
-        if not neighbor['capability']['nexthop']:
+        if not neighbor.capability.nexthop.is_enabled():
             return
 
         nexthops: List[Tuple[AFI, SAFI, AFI]] = []
@@ -245,7 +271,7 @@ class ParseNeighbor(Section):
             neighbor.add_nexthop(afi, safi, nhafi)
 
     def _post_capa_rr(self, neighbor: Neighbor) -> None:
-        if neighbor['capability']['route-refresh']:
+        if neighbor.capability.route_refresh:
             if neighbor['adj-rib-out']:
                 log.debug(lazymsg('neighbor.capability.route_refresh action=enable_adj_rib_out'), 'configuration')
 
@@ -336,7 +362,7 @@ class ParseNeighbor(Section):
                 )
 
         # create one neighbor object per family for multisession
-        if neighbor['capability']['multi-session'] and len(neighbor.families()) > 1:
+        if neighbor.capability.multi_session.is_enabled() and len(neighbor.families()) > 1:
             for family in neighbor.families():
                 # XXX: FIXME: Ok, it works but it takes LOTS of memory ..
                 m_neighbor = deepcopy(neighbor)

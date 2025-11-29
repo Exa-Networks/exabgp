@@ -105,7 +105,8 @@ class LINK(BGPLS):
         self.topology_ids: List[MTID] = topology_ids if topology_ids else []
         self.nexthop = nexthop
         self.route_d: RouteDistinguisher | None = route_d
-        self._packed: bytes | None = packed  # type: ignore[assignment]
+        if packed is not None:
+            self._packed = packed
 
     @classmethod
     def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> LINK:
