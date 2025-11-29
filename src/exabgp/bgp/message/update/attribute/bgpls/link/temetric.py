@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 #    https://tools.ietf.org/html/rfc7752#section-3.3.2.3 TE Metric
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class TeMetric(BaseLS):
     TLV = 1092
     REPR = 'TE Default Metric'

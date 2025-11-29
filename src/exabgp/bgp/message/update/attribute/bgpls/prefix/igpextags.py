@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.3
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class IgpExTags(BaseLS):
     TLV = 1154
     REPR = 'IGP Extended Route Tags'

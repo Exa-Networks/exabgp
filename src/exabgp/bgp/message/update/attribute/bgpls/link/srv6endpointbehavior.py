@@ -24,7 +24,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #                     Figure 7: SRv6 Endpoint Behavior TLV
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class Srv6EndpointBehavior(BaseLS):
     TLV = 1250
 

@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 #  ----------------------------
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class RsvpBw(BaseLS):
     TLV = 1090
     REPR = 'Maximum reservable link bandwidth'

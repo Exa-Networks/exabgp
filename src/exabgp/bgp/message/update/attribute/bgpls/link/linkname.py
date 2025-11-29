@@ -19,7 +19,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkStat
 #     https://tools.ietf.org/html/rfc7752#section-3.3.2.7  Link Name TLV
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class LinkName(BaseLS):
     TLV = 1098
     REPR = 'Link Name'

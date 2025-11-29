@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 # This TLV is added here for completeness but we don't look into the TLV.
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class LinkOpaque:
     TLV = 1097
     REPR = 'Opaque Link attribute'

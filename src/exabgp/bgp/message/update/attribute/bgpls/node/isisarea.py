@@ -19,7 +19,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #     https://tools.ietf.org/html/rfc7752#section-3.3.1.2
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class IsisArea(BaseLS):
     TLV = 1027
     REPR = 'ISIS area id'

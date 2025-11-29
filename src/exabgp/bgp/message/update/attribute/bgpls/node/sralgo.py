@@ -24,7 +24,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 # 						sec 2.1.2.
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class SrAlgorithm(BaseLS):
     TLV = 1035
     REPR = 'SrAlgorithms'

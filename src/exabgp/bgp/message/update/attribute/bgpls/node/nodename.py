@@ -27,7 +27,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 MAX_NODE_NAME_LENGTH = 255  # Maximum length for node name TLV
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class NodeName(BaseLS):
     TLV = 1026
     MERGE = False

@@ -28,7 +28,7 @@ from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEn
 @Srv6EndX.register()
 @Srv6LanEndXISIS.register()
 @Srv6LanEndXOSPF.register()
-@LinkState.register()
+@LinkState.register_lsid()
 class Srv6SidStructure(BaseLS):
     TLV = 1252
 

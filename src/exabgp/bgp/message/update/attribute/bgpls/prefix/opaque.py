@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 #
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class PrefixOpaque(BaseLS):
     TLV = 1157
     REPR = 'Opaque Prefix Attribute'

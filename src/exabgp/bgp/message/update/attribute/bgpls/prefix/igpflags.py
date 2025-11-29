@@ -31,7 +31,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 # 	RFC 7752 3.3.3.1. IGP Flags TLV
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class IgpFlags(FlagLS):
     REPR = 'IGP flags'
     JSON = 'igp-flags'

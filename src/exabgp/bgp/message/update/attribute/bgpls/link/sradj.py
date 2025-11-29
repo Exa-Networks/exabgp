@@ -26,7 +26,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 #
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class SrAdjacency(FlagLS):
     TLV = 1099
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']

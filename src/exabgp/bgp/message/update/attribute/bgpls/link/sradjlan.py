@@ -37,7 +37,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 #  draft-ietf-isis-segment-routing-extensions - Adj-SID IS-IS Flags
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class SrAdjacencyLan(FlagLS):
     TLV = 1100
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']

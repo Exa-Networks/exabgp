@@ -21,8 +21,8 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #   https://tools.ietf.org/html/rfc7752 sec 3.3.1.4  - Traffic Engineering RouterID
 
 
-@LinkState.register(lsid=1028)
-@LinkState.register(lsid=1029)
+@LinkState.register_lsid(lsid=1028)
+@LinkState.register_lsid(lsid=1029)
 class LocalTeRid(BaseLS):
     MERGE = True
     REPR = 'Local TE Router IDs'

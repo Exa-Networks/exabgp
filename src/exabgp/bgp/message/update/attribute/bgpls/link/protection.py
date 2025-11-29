@@ -25,7 +25,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 #      0x80  Reserved
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class LinkProtectionType(FlagLS):
     REPR = 'Link protection mask'
     JSON = 'link-protection-flags'

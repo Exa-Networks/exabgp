@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.5
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class OspfForwardingAddress(BaseLS):
     TLV = 1156
     REPR = 'Ospf forwarding address'

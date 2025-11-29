@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #                    Figure 1: SRv6 Capabilities TLV Format
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class Srv6Capabilities(BaseLS):
     TLV = 1038
     registered_subsubtlvs: dict[int, type] = dict()

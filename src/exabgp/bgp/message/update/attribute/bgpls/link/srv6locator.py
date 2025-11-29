@@ -28,7 +28,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #                      Figure 4: SRv6 Locator TLV Format
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class Srv6Locator(FlagLS):
     TLV = 1162
     FLAGS = ['D'] + ['RSV' for _ in range(7)]

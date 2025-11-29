@@ -12,7 +12,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
-@LinkState.register()
+@LinkState.register_lsid()
 class AdminGroup(BaseLS):
     TLV = 1088
     REPR = 'Admin Group mask'
