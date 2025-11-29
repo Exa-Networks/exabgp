@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.refresh import RouteRefresh
     from exabgp.bgp.message.operational import OperationalFamily
     from exabgp.bgp.fsm import FSM
+    from exabgp.reactor.api.response.text import Text
+    from exabgp.reactor.api.response.json import JSON
 
 
 class ResponseEncoder(Protocol):
@@ -99,5 +101,8 @@ class ResponseEncoder(Protocol):
 
 
 class Response:
+    JSON: type[JSON]
+    Text: type[Text]
+
     from exabgp.reactor.api.response.text import Text
     from exabgp.reactor.api.response.json import JSON
