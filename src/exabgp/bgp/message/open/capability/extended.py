@@ -26,11 +26,9 @@ class ExtendedMessage(Capability):
     def extract(self) -> list[bytes]:
         return [b'']
 
-    @staticmethod
-    def unpack_capability(
-        instance: ExtendedMessage, data: bytes, capability: CapabilityCode | None = None
-    ) -> ExtendedMessage:  # pylint: disable=W0613
-        return ExtendedMessage()
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        return cls()
 
     def json(self) -> str:
         return '{ "name": "extended-message", "size": %d }' % self.EXTENDED_SIZE

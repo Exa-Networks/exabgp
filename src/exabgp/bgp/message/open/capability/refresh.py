@@ -59,10 +59,9 @@ class RouteRefresh(Capability):
     def extract(self) -> list[bytes]:
         return [b'']
 
-    @staticmethod
-    def unpack_capability(
-        instance: RouteRefresh, data: bytes, capability: CapabilityCode | None = None
-    ) -> RouteRefresh:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        assert isinstance(instance, RouteRefresh)
         if instance._seen:
             log.debug(lazymsg('capability.route_refresh.duplicate'), 'parser')
         instance._seen = True
@@ -107,10 +106,9 @@ class EnhancedRouteRefresh(Capability):
     def extract(self) -> list[bytes]:
         return [b'']
 
-    @staticmethod
-    def unpack_capability(
-        instance: EnhancedRouteRefresh, data: bytes, capability: CapabilityCode | None = None
-    ) -> EnhancedRouteRefresh:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        assert isinstance(instance, EnhancedRouteRefresh)
         if instance._seen:
             log.debug(lazymsg('capability.enhanced_route_refresh.duplicate'), 'parser')
         instance._seen = True

@@ -48,8 +48,9 @@ class HostName(Capability):
 
         return [ret]
 
-    @staticmethod
-    def unpack_capability(instance: HostName, data: bytes, capability: CapabilityCode | None = None) -> HostName:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        assert isinstance(instance, HostName)
         l1 = data[0]
         instance.host_name = data[1 : l1 + 1].decode('utf-8')
         l2 = data[l1 + 1]

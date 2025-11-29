@@ -48,10 +48,9 @@ class MultiSession(Capability, list):
             rs.append(bytes([v]))
         return rs
 
-    @staticmethod
-    def unpack_capability(
-        instance: MultiSession, data: bytes, capability: CapabilityCode | None = None
-    ) -> MultiSession:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        assert isinstance(instance, MultiSession)
         if instance._seen:
             log.debug(lazymsg('capability.multisession.duplicate'), 'parser')
         instance._seen = True

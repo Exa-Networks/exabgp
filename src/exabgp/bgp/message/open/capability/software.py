@@ -33,8 +33,9 @@ class Software(Capability):
     def extract(self) -> list[bytes]:
         return [bytes([len(self.software_version)]) + self.software_version.encode('utf-8')]
 
-    @staticmethod
-    def unpack_capability(instance: Software, data: bytes, capability: CapabilityCode | None = None) -> Software:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        assert isinstance(instance, Software)
         l1 = data[0]
         instance.software_version = data[1 : l1 + 1].decode('utf-8')
         return instance

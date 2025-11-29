@@ -72,8 +72,9 @@ class Graceful(Capability, dict):
     def families(self) -> Iterable[tuple[AFI, SAFI]]:
         return self.keys()
 
-    @staticmethod
-    def unpack_capability(instance: Graceful, data: bytes, capability: CapabilityCode | None = None) -> Graceful:  # pylint: disable=W0613
+    @classmethod
+    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+        assert isinstance(instance, Graceful)
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:
             log.debug(lazymsg('capability.graceful_restart.duplicate action=replace'), 'parser')
