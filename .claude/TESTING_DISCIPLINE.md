@@ -4,6 +4,15 @@ NEVER claim success without testing AND regression tests.
 
 ---
 
+## 🚨 BLOCKING RULE: No Tests = Not Done 🚨
+
+**MANDATORY:** Every code change MUST include corresponding tests.
+
+❌ Cannot say "done"/"fixed"/"complete" without listing test files added/updated
+✅ Must explicitly name: `tests/unit/test_X.py` or `qa/encoding/X.ci` etc.
+
+---
+
 ## Forbidden Phrases (Without Testing + Regression Tests)
 
 ❌ "The tests pass" ❌ "All tests pass"
@@ -84,7 +93,10 @@ Before saying "fixed"/"ready"/"complete":
 - [ ] Command run: `<paste command>`
 - [ ] Output: `<paste showing all 6 suites passed>`
 - [ ] Exit code: 0
-- [ ] Regression tests exist: `<list files added>`
+- [ ] Tests added/updated: `<list specific test files>`
+  - If bug fix: test that reproduces the bug
+  - If new feature: unit tests + functional tests if protocol/API
+  - If refactoring: verified existing tests cover changes OR added missing tests
 
 **If ANY unchecked: NOT DONE. STOP.**
 
@@ -101,3 +113,7 @@ Before saying "fixed"/"ready"/"complete":
 - "Working"
 
 **Auto-fix:** Stop. Run `./qa/bin/test_everything`. Paste output. Then claim success.
+
+**If I claim completion without listing test files, I'm violating.**
+
+Auto-fix: STOP. Ask yourself "What test file did I add/update?" If none: NOT DONE.
