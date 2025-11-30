@@ -141,4 +141,13 @@ User: "update the API"
 
 ---
 
-**Updated:** 2025-11-21
+---
+
+## See Also
+
+- EMOJI_GUIDE.md - Status line formatting
+- VERIFICATION_PROTOCOL.md - What to communicate in status lines
+
+---
+
+**Updated:** 2025-11-30

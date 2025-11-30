@@ -10,7 +10,7 @@ Guidance for Claude Code (claude.ai/code) working with this repository.
 
 **Read these files as RULES you will FOLLOW, not just information to absorb:**
 
-1. `.claude/VERIFICATION_DISCIPLINE.md` - Verify before claiming (read FIRST)
+1. `.claude/VERIFICATION_PROTOCOL.md` - Verify before claiming (read FIRST)
    - **Rule:** Never claim success without pasting command output
    - **Apply:** Before ANY claim, run command, paste output
 
@@ -38,7 +38,7 @@ Guidance for Claude Code (claude.ai/code) working with this repository.
    - **Rule:** Union[int, str] NOT int | str, negotiated param required
    - **Apply:** Before writing code, check syntax compatibility
 
-8. `.claude/TESTING_DISCIPLINE.md` - Never claim success without testing
+8. `.claude/TESTING_PROTOCOL.md` - Never claim success without testing
    - **Rule:** ./qa/bin/test_everything before "fixed"/"ready"/"complete"
    - **Apply:** Before claiming done, run all tests, paste output
 

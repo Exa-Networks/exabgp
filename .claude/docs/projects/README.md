@@ -33,12 +33,12 @@ Completed and historical project documentation.
 **Summary:** Testing infrastructure improvements including logging, functional tests, coverage
 
 ### Type Annotations
-**Location:** `type-annotations/`
-**Status:** 🔄 In Progress (see `.claude/wip/type-annotations/`)
+**Location:** *(moved to wip/)*
+**Status:** 🔄 ACTIVE - See `.claude/docs/wip/type-annotations/`
 **Summary:** Adding comprehensive type annotations and MyPy validation
 
-**Historical:** Planning docs from early phases
-**Current:** Active work in `.claude/wip/type-annotations/`
+**Note:** Historical planning docs moved to `.claude/docs/wip/type-annotations/archive/initial-planning/`
+All type annotation work consolidated in WIP directory.
 
 ---
 

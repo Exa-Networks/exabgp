@@ -169,3 +169,15 @@ Before ANY commit:
 - Commit without full test suite passing
 
 **Auto-fix:** Stop. Run verification. Paste output. Wait for pass before next step.
+
+---
+
+## See Also
+
+- TESTING_PROTOCOL.md - Test requirements at each step
+- VERIFICATION_PROTOCOL.md - Verification before proceeding
+- GIT_VERIFICATION_PROTOCOL.md - Git workflow during refactoring
+
+---
+
+**Updated:** 2025-11-30

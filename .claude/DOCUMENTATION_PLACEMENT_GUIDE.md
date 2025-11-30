@@ -43,13 +43,13 @@ Examples:
 - "How do I refactor safely?"
 
 **Files:**
-- `VERIFICATION_DISCIPLINE.md` - Verify before claiming
+- `VERIFICATION_PROTOCOL.md` - Verify before claiming
 - `COMMUNICATION_STYLE.md` - Terse, direct style
 - `GIT_VERIFICATION_PROTOCOL.md` - Git safety rules
 - `MANDATORY_REFACTORING_PROTOCOL.md` - Refactoring steps
 - `ERROR_RECOVERY_PROTOCOL.md` - Slow down after mistakes
 - `CODING_STANDARDS.md` - Python 3.8+, APIs
-- `TESTING_DISCIPLINE.md` - Testing requirements
+- `TESTING_PROTOCOL.md` - Testing requirements
 - `PLANNING_GUIDE.md` - Project planning
 - `CI_TESTING.md` - CI test requirements
 - `FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` - Debug tests
@@ -147,22 +147,27 @@ Examples:
 
 ---
 
-### 6. Is this about REFERENCE INFORMATION (API docs, syntax)?
+### 6. Is this about CODEBASE API/REFERENCE (commands, syntax, protocols)?
 
-**YES** → Goes in `.claude/docs/reference/`
+**YES** → Goes in `.claude/exabgp/`
 
 Examples:
 - "Neighbor selector syntax"
-- "API command reference"
-- "Configuration syntax guide"
+- "CLI command reference"
+- "Unix socket API protocol"
+- "Environment variables"
 
-**Structure:**
-```
-.claude/docs/reference/
-└── {topic}.md          # Reference docs (API, syntax, etc.)
-```
+**Existing files:**
+- `CLI_COMMANDS.md` - Complete CLI command reference
+- `CLI_SHORTCUTS.md` - CLI shortcut reference
+- `CLI_IMPLEMENTATION.md` - CLI internal architecture
+- `UNIX_SOCKET_API.md` - Unix socket API protocol
+- `NEIGHBOR_SELECTOR_SYNTAX.md` - Neighbor selector grammar
+- `ENVIRONMENT_VARIABLES.md` - Environment variables reference
 
-**Update when:** Syntax changes, new APIs added
+**Why `.claude/exabgp/`?** These docs describe how to USE the current codebase APIs.
+
+**Update when:** APIs change, new commands added, syntax modified
 
 ---
 
@@ -190,13 +195,13 @@ plan/                              # Implementation plans (USER PREFERENCE)
 
 .claude/
 ├── # PROTOCOLS (how we work)
-├── VERIFICATION_DISCIPLINE.md
+├── VERIFICATION_PROTOCOL.md
 ├── COMMUNICATION_STYLE.md
 ├── GIT_VERIFICATION_PROTOCOL.md
 ├── MANDATORY_REFACTORING_PROTOCOL.md
 ├── ERROR_RECOVERY_PROTOCOL.md
 ├── CODING_STANDARDS.md
-├── TESTING_DISCIPLINE.md
+├── TESTING_PROTOCOL.md
 ├── PLANNING_GUIDE.md
 ├── CI_TESTING.md
 ├── FUNCTIONAL_TEST_DEBUGGING_GUIDE.md
@@ -209,13 +214,22 @@ plan/                              # Implementation plans (USER PREFERENCE)
 ├── FILE_NAMING_CONVENTIONS.md
 ├── README.md
 ├──
-├── # CODEBASE STRUCTURE (how to use/modify codebase)
+├── # CODEBASE REFERENCE (how to use/modify codebase + API docs)
 ├── exabgp/
+│   ├── # Architecture & patterns
 │   ├── CODEBASE_ARCHITECTURE.md
 │   ├── DATA_FLOW_GUIDE.md
 │   ├── REGISTRY_AND_EXTENSION_PATTERNS.md
 │   ├── BGP_CONCEPTS_TO_CODE_MAP.md
-│   └── CRITICAL_FILES_REFERENCE.md
+│   ├── CRITICAL_FILES_REFERENCE.md
+│   ├──
+│   ├── # API & command reference
+│   ├── CLI_COMMANDS.md
+│   ├── CLI_SHORTCUTS.md
+│   ├── CLI_IMPLEMENTATION.md
+│   ├── UNIX_SOCKET_API.md
+│   ├── NEIGHBOR_SELECTOR_SYNTAX.md
+│   └── ENVIRONMENT_VARIABLES.md
 ├──
 ├── # ALL DOCUMENTATION
 ├── docs/
@@ -229,8 +243,6 @@ plan/                              # Implementation plans (USER PREFERENCE)
 │   ├── wip/                   # Active work in progress
 │   │   ├── README.md
 │   │   └── {project-name}/
-│   ├── reference/             # API & reference docs
-│   │   └── {topic}.md
 │   └── archive/               # Superseded experiments
 │       └── {old-project}/
 ├──
@@ -291,12 +303,13 @@ plan/                              # Implementation plans (USER PREFERENCE)
 - **Location:** `plan/health-monitoring.md`
 - **Why:** Implementation plans go in the `plan/` folder at project root
 
-### Example 6: "I want to explain neighbor selector syntax"
+### Example 6: "I want to document the socket API protocol"
 
 **Decision:**
 - Is it about HOW TO USE/MODIFY the codebase NOW? **YES**
-- **Location:** `.claude/exabgp/NEIGHBOR_SELECTOR_SYNTAX.md` (already exists)
-- **Why:** It's codebase reference (how CLI neighbor selection works)
+- Is it codebase API/reference info? **YES**
+- **Location:** `.claude/exabgp/UNIX_SOCKET_API.md` (already exists)
+- **Why:** It's API reference documentation for the current codebase
 
 ---
 
@@ -360,8 +373,8 @@ Idea
    - YES → `plan/` (project root)
    - NO → Continue
 
-6. **Does this doc provide API/reference info?**
-   - YES → `.claude/docs/reference/`
+6. **Does this doc provide codebase API/reference info (CLI, socket API, syntax)?**
+   - YES → `.claude/exabgp/` (API reference for current codebase)
    - NO → Ask user where it should go
 
 ---

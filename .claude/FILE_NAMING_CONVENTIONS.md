@@ -30,7 +30,7 @@ Files in `.claude/` directory use UPPERCASE because they are critical AI assista
 - `MANDATORY_REFACTORING_PROTOCOL.md`
 - `GIT_VERIFICATION_PROTOCOL.md`
 - `CODING_STANDARDS.md`
-- `TESTING_DISCIPLINE.md`
+- `TESTING_PROTOCOL.md`
 - `CI_TESTING.md`
 - `COMMUNICATION_STYLE.md`
 - `EMOJI_GUIDE.md`

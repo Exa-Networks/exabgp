@@ -28,9 +28,15 @@ All issues identified in these investigation sessions were resolved. The AsyncIO
 
 ## Related Documentation
 
-**Active project:** `.claude/docs/projects/asyncio-migration/`
-**Archive:** `.claude/docs/projects/asyncio-migration/archive/` - Valuable reference docs kept from investigation
+**Main project:** `.claude/docs/projects/asyncio-migration/`
+- `README.md` - Project overview and current status
+- `PHASE2_PRODUCTION_VALIDATION.md` - Current phase documentation
+- `investigation-sessions.md` - Links back to these investigation sessions
+- `archive/` - Historical technical documentation
+
+**This investigation archive** provides detailed debugging context for the issues resolved during development.
 
 ---
 
-**Archived:** 2025-11-30
+**Archived:** 2025-11-19
+**Linked from main project:** 2025-11-30

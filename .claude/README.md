@@ -33,25 +33,60 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 
 ---
 
-## Core Protocols (ALL MANDATORY - READ EVERY SESSION)
+## First Session? Start Here
 
-| File | Purpose | Size |
-|------|---------|------|
-| **VERIFICATION_DISCIPLINE.md** | NEVER claim success without pasting proof | 1.7 KB |
-| **MANDATORY_REFACTORING_PROTOCOL.md** | Step-by-step verification for ALL refactoring | 3.2 KB |
-| **ERROR_RECOVERY_PROTOCOL.md** | NEVER rush after mistakes - slow down and follow protocols | 2.9 KB |
-| **GIT_VERIFICATION_PROTOCOL.md** | NEVER make git claims without fresh verification | 3.1 KB |
-| **CODING_STANDARDS.md** | Python 3.8+ compatibility, type annotations, BGP APIs | 3.9 KB |
-| **TESTING_DISCIPLINE.md** | NEVER claim success without testing ALL | 2.1 KB |
-| **COMMUNICATION_STYLE.md** | Terse, direct communication. Use agents. | 3.9 KB |
-| **EMOJI_GUIDE.md** | Systematic emoji usage for clarity | 1.8 KB |
-| **PLANNING_GUIDE.md** | Standards for project planning docs | 1.6 KB |
-| **CI_TESTING.md** | Complete testing requirements and commands | 1.1 KB |
-| **FUNCTIONAL_TEST_DEBUGGING_GUIDE.md** | Systematic process for debugging encoding test failures | 4.2 KB |
-| **PRE_FLIGHT_CHECKLIST.md** | Session start checklist | 0.9 KB |
-| **DOCUMENTATION_PLACEMENT_GUIDE.md** | Where to put docs (CRITICAL for creating docs) | 7.3 KB |
+**New to this repository?** Read these 4 protocols FIRST:
 
-**Total core protocols: ~37 KB**
+1. `VERIFICATION_PROTOCOL.md` - Never claim without proof
+2. `COMMUNICATION_STYLE.md` - How to communicate
+3. `TESTING_PROTOCOL.md` - When/how to test
+4. `CODING_STANDARDS.md` - Python 3.10+, mypy rules
+
+**Then read these before making changes:**
+
+5. `GIT_VERIFICATION_PROTOCOL.md` - Git safety
+6. `MANDATORY_REFACTORING_PROTOCOL.md` - Safe refactoring
+7. `ERROR_RECOVERY_PROTOCOL.md` - Mistake recovery
+
+**For codebase work, also read:**
+
+- `exabgp/CODEBASE_ARCHITECTURE.md` - Where everything is
+- `exabgp/DATA_FLOW_GUIDE.md` - How data flows
+
+---
+
+## Protocol Files by Category
+
+### Core Work Protocols
+- **VERIFICATION_PROTOCOL.md** - NEVER claim success without pasting proof
+- **MANDATORY_REFACTORING_PROTOCOL.md** - One function at a time with verification
+- **ERROR_RECOVERY_PROTOCOL.md** - NEVER rush after mistakes
+
+### Communication Protocols
+- **COMMUNICATION_STYLE.md** - Terse, direct communication
+- **EMOJI_GUIDE.md** - Systematic emoji usage
+
+### Quality & Standards
+- **CODING_STANDARDS.md** - Python 3.10+, mypy, BGP APIs
+- **TESTING_PROTOCOL.md** - Test requirements before claiming success
+
+### Version Control
+- **GIT_VERIFICATION_PROTOCOL.md** - Git safety rules
+- **BACKPORT.md** - Bug fix tracking for backports
+
+### Testing & Debugging
+- **CI_TESTING.md** - Complete test suite commands
+- **FUNCTIONAL_TEST_DEBUGGING_GUIDE.md** - Systematic debugging process
+- **FUNCTIONAL_TEST_ARCHITECTURE.md** - How functional tests work
+- **FUNCTIONAL_TEST_EDIT.md** - Inspecting test configurations
+
+### Planning & Organization
+- **PLANNING_GUIDE.md** - Project planning standards
+- **DOCUMENTATION_PLACEMENT_GUIDE.md** - Where to put documentation
+- **PRE_FLIGHT_CHECKLIST.md** - Session start checklist
+- **FILE_NAMING_CONVENTIONS.md** - File naming rules
+
+**Total: 18 protocol files (~37 KB)**
 
 ---
 
@@ -60,13 +95,13 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 ```
 .claude/
 ├── # PROTOCOLS (how we work - READ EVERY SESSION)
-├── VERIFICATION_DISCIPLINE.md
+├── VERIFICATION_PROTOCOL.md
 ├── COMMUNICATION_STYLE.md
 ├── GIT_VERIFICATION_PROTOCOL.md
 ├── MANDATORY_REFACTORING_PROTOCOL.md
 ├── ERROR_RECOVERY_PROTOCOL.md
 ├── CODING_STANDARDS.md
-├── TESTING_DISCIPLINE.md
+├── TESTING_PROTOCOL.md
 ├── PLANNING_GUIDE.md
 ├── CI_TESTING.md
 ├── FUNCTIONAL_TEST_DEBUGGING_GUIDE.md
@@ -153,6 +188,21 @@ Major completed projects:
 
 ---
 
+## What Do You Want to Do?
+
+**Task** | **Read These Docs**
+---------|--------------------
+Fix a bug | VERIFICATION_PROTOCOL.md, TESTING_PROTOCOL.md, MANDATORY_REFACTORING_PROTOCOL.md, FUNCTIONAL_TEST_DEBUGGING_GUIDE.md
+Add a feature | exabgp/CODEBASE_ARCHITECTURE.md, exabgp/REGISTRY_AND_EXTENSION_PATTERNS.md, exabgp/DATA_FLOW_GUIDE.md, TESTING_PROTOCOL.md
+Understand codebase | exabgp/CODEBASE_ARCHITECTURE.md, exabgp/DATA_FLOW_GUIDE.md, exabgp/BGP_CONCEPTS_TO_CODE_MAP.md
+Debug test failures | FUNCTIONAL_TEST_DEBUGGING_GUIDE.md, FUNCTIONAL_TEST_ARCHITECTURE.md, CI_TESTING.md
+Work with CLI | exabgp/CLI_COMMANDS.md, exabgp/CLI_SHORTCUTS.md, exabgp/CLI_IMPLEMENTATION.md
+Understand API | exabgp/UNIX_SOCKET_API.md, exabgp/NEIGHBOR_SELECTOR_SYNTAX.md
+Refactor code | MANDATORY_REFACTORING_PROTOCOL.md, CODING_STANDARDS.md, TESTING_PROTOCOL.md
+Review changes | VERIFICATION_PROTOCOL.md, GIT_VERIFICATION_PROTOCOL.md
+
+---
+
 ## Quick Start
 
 **At session start:**
@@ -163,7 +213,7 @@ Major completed projects:
 **For any code changes:**
 1. Make changes following CODING_STANDARDS.md
 2. Follow MANDATORY_REFACTORING_PROTOCOL.md if refactoring
-3. Run ALL tests per TESTING_DISCIPLINE.md
+3. Run ALL tests per TESTING_PROTOCOL.md
 4. Only THEN claim success
 
 **Remember:**

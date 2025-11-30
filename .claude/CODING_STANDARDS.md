@@ -264,3 +264,15 @@ x = value  # type: ignore  # Silences warning without fixing
 - [ ] User explicitly requested commit/push
 - [ ] Bug fix? Added to `.claude/BACKPORT.md`
 - [ ] Module passes mypy strict? Lock it in `pyproject.toml`
+
+---
+
+## See Also
+
+- MANDATORY_REFACTORING_PROTOCOL.md - Refactoring workflow
+- TESTING_PROTOCOL.md - Test requirements for code changes
+- exabgp/REGISTRY_AND_EXTENSION_PATTERNS.md - Extension patterns
+
+---
+
+**Updated:** 2025-11-30

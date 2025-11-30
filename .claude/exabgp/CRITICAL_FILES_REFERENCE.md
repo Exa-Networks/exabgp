@@ -280,7 +280,7 @@ reactor/protocol.py (TCP send)
 | API Command | Required | Optional | Required |
 | Reactor/Protocol | Optional | Required | Required |
 
-**See:** `TESTING_DISCIPLINE.md` for details
+**See:** `TESTING_PROTOCOL.md` for details
 
 ---
 
