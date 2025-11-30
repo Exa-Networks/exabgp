@@ -240,7 +240,7 @@ def system_ips(
         labelre = re.compile(r'.*\s+(?:' + '|'.join(ifnames) + r'):(?P<label>[^\\\s]+).*')
         for ifname in ifnames:
             cmd = subprocess.Popen(
-                f'/sbin/ip -o address show dev {ifname}'.split(), shell=False, stdout=subprocess.PIPE
+                ["ip", "-o", "address", "show", "dev", ifname], shell=False, stdout=subprocess.PIPE
             )
             if cmd.stdout is not None:
                 output += [line for line in cmd.stdout]
@@ -253,7 +253,7 @@ def system_ips(
         )
         labelre = re.compile(r'')
         for ifname in ifnames:
-            cmd = subprocess.Popen(f'/sbin/ifconfig {ifname}'.split(), shell=False, stdout=subprocess.PIPE)
+            cmd = subprocess.Popen(["ifconfig", ifname], shell=False, stdout=subprocess.PIPE)
             if cmd.stdout is not None:
                 output += [line for line in cmd.stdout]
     for line_bytes in output or []:
