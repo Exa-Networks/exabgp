@@ -229,7 +229,7 @@ def as_path(tokeniser: 'Tokeniser') -> ASPath:
 
         elif len(as_path) == 0:
             try:
-                return ASPath(ASN.from_string(value))  # type: ignore[arg-type]
+                return ASPath([SEQUENCE([ASN.from_string(value)])])
             except ValueError:
                 raise ValueError('could not parse as-path') from None
         else:
@@ -250,7 +250,9 @@ def as_path(tokeniser: 'Tokeniser') -> ASPath:
                 if value in ('[', '('):
                     break
 
-                return ASPath(as_path)  # type: ignore[arg-type]
+                # Filter out any ASN that snuck in, only keep segment types
+                segments = [seg for seg in as_path if isinstance(seg, (SEQUENCE, CONFED_SEQUENCE, SET, CONFED_SET))]
+                return ASPath(segments)
 
             try:
                 insert.append(ASN.from_string(value))

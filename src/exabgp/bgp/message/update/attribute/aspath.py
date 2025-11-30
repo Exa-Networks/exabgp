@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from struct import error, unpack
-from typing import TYPE_CHECKING, ClassVar, Type, cast
+from typing import TYPE_CHECKING, ClassVar, Sequence, Type, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -83,9 +83,9 @@ class ASPath(Attribute):
     }
 
     def __init__(
-        self, as_path: tuple[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, ...] = (), data: bytes | None = None
+        self, as_path: Sequence[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET] = (), data: bytes | None = None
     ) -> None:
-        self.aspath: tuple[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, ...] = as_path
+        self.aspath: tuple[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, ...] = tuple(as_path)
         self.segments: bytes = b''
         self.index: bytes | None = data  # the original packed data, use for indexing
         self._str: str = ''
@@ -233,7 +233,7 @@ class ASPath(Attribute):
         return cls._new_aspaths(data, negotiated.asn4, ASPath)
 
 
-ASPath.Empty = ASPath([])  # type: ignore[arg-type]
+ASPath.Empty = ASPath([])
 
 
 # ================================================================= AS4Path (17)
@@ -258,4 +258,4 @@ class AS4Path(ASPath):
         return cast(AS4Path, cls._new_aspaths(data, True, AS4Path))
 
 
-AS4Path.Empty = AS4Path([], [])  # type: ignore[arg-type]
+AS4Path.Empty = AS4Path([])

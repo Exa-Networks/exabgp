@@ -211,7 +211,7 @@ class Attributes(dict):
         default = {
             Attribute.CODE.ORIGIN: lambda left, right: Origin(Origin.IGP),
             Attribute.CODE.AS_PATH: lambda left, right: (
-                ASPath([])  # type: ignore[arg-type]
+                ASPath([])
                 if left == right
                 else ASPath(
                     [  # type: ignore[arg-type]
