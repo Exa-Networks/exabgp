@@ -152,6 +152,15 @@ class Capability:
     # ID attribute set by subclasses
     ID: ClassVar[int]
 
+    def extract(self) -> list[bytes]:
+        """Extract capability data for encoding. Subclasses must implement."""
+        raise NotImplementedError(f'{type(self).__name__}.extract() not implemented')
+
+    @classmethod
+    def unpack_capability(cls, instance: 'Capability', data: bytes, capability: CapabilityCode) -> 'Capability':
+        """Unpack capability from bytes. Subclasses must implement."""
+        raise NotImplementedError(f'{cls.__name__}.unpack_capability() not implemented')
+
     @staticmethod
     def hex(data: bytes) -> str:
         return '0x' + ''.join('{:02x}'.format(_) for _ in data)
