@@ -17,33 +17,14 @@ Project documentation for completed work, historical development, plans, and ref
 
 All completed project documentation organized by project name.
 
-**Major projects:**
-- **asyncio-migration/** - Dual-mode sync/async architecture (✅ complete)
-- **type-annotations/** - Type annotation work (🔄 in progress, active: `../wip/`)
-- **claude-directory-organization/** - Documentation structure (✅ complete)
-
-**Refactorings:**
-- **pack-method-standardization/** - Utility pack() method renaming (✅ complete)
-- **rfc-alignment/** - RFC-compliant method naming (✅ complete)
-- **cli-dual-transport/** - CLI transport improvements (✅ complete)
-
-**Infrastructure:**
-- **testing-improvements/** - Testing infrastructure enhancements (✅ complete)
-
-**Superseded:**
-- **incremental-pack-rename/** - Alternative approach (not used)
-- **extended-community-api-improvements/** - API improvements
+**Active projects:**
+- **asyncio-migration/** - Dual-mode sync/async architecture (Phase 2: Production Validation)
+- **cli-dual-transport/** - CLI Unix socket + stdio dual transport (✅ complete)
+- **type-annotations/** - Type annotation work (🔄 in progress, active work in `../wip/`)
 
 **See:** `projects/README.md` for complete project list and details
 
 ---
-
-### `reference/` - API & Reference Docs
-
-Reference documentation and API guides.
-
-**Contains:**
-- **NEIGHBOR_SELECTOR_SYNTAX.md** - Neighbor selector syntax reference
 
 ---
 
@@ -117,4 +98,4 @@ When completing work from `wip/`:
 
 ---
 
-**Last Updated:** 2025-11-24
+**Last Updated:** 2025-11-30

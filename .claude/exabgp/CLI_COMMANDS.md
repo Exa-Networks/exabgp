@@ -127,7 +127,7 @@ announce route 10.0.0.0/24 neighbor 192.168.1.1 next-hop 1.1.1.1
 teardown neighbor 10.0.0.1 peer-as 65000
 ```
 
-**Full syntax:** `.claude/docs/reference/NEIGHBOR_SELECTOR_SYNTAX.md`
+**Full syntax:** `.claude/exabgp/NEIGHBOR_SELECTOR_SYNTAX.md`
 
 ---
 

@@ -17,6 +17,24 @@ Active development projects. When completed, move to `docs/projects/`.
 
 **Historical docs:** See `docs/projects/type-annotations/` for planning archives
 
+### Type Ignore Elimination
+**Location:** `type-ignore-elimination/`
+**Status:** Active - Systematic removal of type: ignore comments
+**Goal:** Achieve full mypy compliance without suppressions
+
+**Files:**
+- `TYPE_IGNORE_ELIMINATION.md` - Complete inventory and plan
+- `README.md` - Project overview
+
+### XXX Comment Cleanup
+**Location:** `xxx-cleanup/`
+**Status:** Active - Resolution of XXX comments
+**Goal:** Review and resolve all XXX markers in codebase
+
+**Files:**
+- `TODO.md` - XXX inventory and tracking
+- `README.md` - Project overview
+
 ---
 
 ## Adding New WIP Projects

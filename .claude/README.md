@@ -92,8 +92,6 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 │   │   └── ...
 │   ├── wip/                    # Active work in progress
 │   │   └── type-annotations/
-│   ├── reference/              # API reference
-│   │   └── NEIGHBOR_SELECTOR_SYNTAX.md
 │   ├── plans/                  # Future plans
 │   └── archive/                # Superseded experiments
 │
@@ -113,38 +111,6 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 ## Active Work (`docs/wip/`)
 
 Active development projects. Completed work moves to `docs/projects/`.
-
-### CLI Interactive Enhancement (2025-11-20)
-**Status:** ✅ Complete with comprehensive testing
-**Progress:** Implementation + 189 new tests, all passing
-
-**Files:**
-- CLI_WORK_SUMMARY.md - Quick overview (READ THIS FIRST)
-- CLI_INTERACTIVE_ENHANCEMENT_STATUS.md - Complete implementation guide
-- CLI_TESTING_GUIDE.md - Test cases and debugging
-- CLI_TESTING_COMPLETE.md - Test coverage report
-
-**Code changes:**
-- `src/exabgp/reactor/api/command/registry.py` - NEW: Command introspection
-- `src/exabgp/application/shortcuts.py` - NEW: Shared shortcut expansion
-- `sbin/exabgp-doc-generator` - NEW: Wiki documentation generator
-- `src/exabgp/application/cli.py` - MODIFIED: Uses shared shortcuts
-- `src/exabgp/application/cli_interactive.py` - MODIFIED: Enhanced completion
-
-**Test files:**
-- `tests/unit/test_shortcuts.py` - 71 tests for shortcut expansion
-- `tests/unit/test_command_registry.py` - 59 tests for registry introspection
-- `tests/unit/test_completer.py` - 59 tests for completion logic
-
-**Features:**
-- Dynamic command discovery (no hardcoded lists)
-- Neighbor IP completion (queries running ExaBGP)
-- AFI/SAFI completion for eor/route-refresh
-- Route keyword completion (next-hop, community, etc.)
-- Neighbor filter completion (local-ip, local-as, etc.)
-- Refactored shortcuts (eliminated 120 lines duplication)
-
-**Testing:** ✅ 1613/1613 tests pass (1424 existing + 189 new)
 
 ### Type Annotations (`docs/wip/type-annotations/`)
 **Status:** Phase 3 - MyPy error reduction
@@ -242,4 +208,4 @@ env exabgp_log_enable=false pytest ./tests/unit/
 ---
 
 **Current Status:** ✅ CLI enhancement ready for testing with running ExaBGP
-**Last Updated:** 2025-11-20
+**Last Updated:** 2025-11-30
