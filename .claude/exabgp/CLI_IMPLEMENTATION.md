@@ -1122,7 +1122,7 @@ Get completion values for specific contexts.
 - **CLI_COMMANDS.md** - Complete command reference
 - **CLI_SHORTCUTS.md** - Shortcut reference
 - **UNIX_SOCKET_API.md** - Socket API protocol
-- **NEIGHBOR_SELECTOR_SYNTAX.md** - Neighbor selection
+- **`.claude/exabgp/NEIGHBOR_SELECTOR_SYNTAX.md`** - Neighbor selection
 
 ---
 

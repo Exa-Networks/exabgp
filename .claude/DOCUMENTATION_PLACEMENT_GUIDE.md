@@ -249,9 +249,8 @@ plan/                              # Implementation plans (USER PREFERENCE)
 | **Work protocols** | `.claude/` | "How to verify?" | Protocol violations |
 | **Completed projects** | `.claude/docs/projects/` | "AsyncIO migration" | Project completes |
 | **Active work** | `.claude/docs/wip/` | "Type annotation progress" | Work progresses |
-| **API reference** | `.claude/docs/reference/` | "Neighbor selector syntax" | API changes |
 | **Test architecture** | `.claude/` | "Functional test guide" | Test changes |
-| **Archive** | `.claude/archive/` | "Superseded plans" | When obsolete |
+| **Archive** | `.claude/docs/archive/` | "Superseded plans" | When obsolete |
 
 ---
 
@@ -295,9 +294,9 @@ plan/                              # Implementation plans (USER PREFERENCE)
 ### Example 6: "I want to explain neighbor selector syntax"
 
 **Decision:**
-- Is it REFERENCE INFORMATION? **YES**
-- **Location:** `.claude/docs/reference/NEIGHBOR_SELECTOR_SYNTAX.md` (already exists)
-- **Why:** It's API reference documentation
+- Is it about HOW TO USE/MODIFY the codebase NOW? **YES**
+- **Location:** `.claude/exabgp/NEIGHBOR_SELECTOR_SYNTAX.md` (already exists)
+- **Why:** It's codebase reference (how CLI neighbor selection works)
 
 ---
 

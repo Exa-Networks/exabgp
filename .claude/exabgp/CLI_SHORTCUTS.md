@@ -504,7 +504,7 @@ n 192.168.1.1 a route-refresh ipv4 unicast
 - **CLI_COMMANDS.md** - Complete command reference
 - **CLI_IMPLEMENTATION.md** - Tab completion and expansion internals
 - **UNIX_SOCKET_API.md** - Raw API protocol (no shortcuts)
-- **NEIGHBOR_SELECTOR_SYNTAX.md** - Neighbor selection
+- **`.claude/exabgp/NEIGHBOR_SELECTOR_SYNTAX.md`** - Neighbor selection
 
 ---
 
