@@ -21,7 +21,7 @@ import random
 import socket
 import select
 from struct import unpack
-from typing import Callable, ClassVar, Iterator
+from typing import ClassVar, Iterator
 
 from exabgp.environment import getenv
 
@@ -48,6 +48,11 @@ from exabgp.protocol.family import AFI
 
 # BGP message minimum length (RFC 4271)
 MIN_BGP_MESSAGE_LENGTH = 19  # Minimum valid BGP message length (header size)
+
+
+def _default_length_validator(length: int) -> bool:
+    """Default validator for unknown BGP message types"""
+    return length >= MIN_BGP_MESSAGE_LENGTH
 
 
 class Connection:
@@ -366,8 +371,7 @@ class Connection:
             yield length, 0, header, b'', NotifyError(1, 2, report)
             return
 
-        default_validator: Callable[[int], bool] = lambda _: _ >= MIN_BGP_MESSAGE_LENGTH
-        validator = Message.Length.get(msg, default_validator)
+        validator = Message.Length.get(msg, _default_length_validator)
         if not validator(length):
             # MUST send the faulty length back
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
@@ -408,8 +412,7 @@ class Connection:
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
             return length, 0, header, b'', NotifyError(1, 2, report)
 
-        default_validator: Callable[[int], bool] = lambda _: _ >= MIN_BGP_MESSAGE_LENGTH
-        validator = Message.Length.get(msg, default_validator)
+        validator = Message.Length.get(msg, _default_length_validator)
         if not validator(length):
             # MUST send the faulty length back
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
