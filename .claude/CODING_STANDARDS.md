@@ -165,6 +165,24 @@ warn_return_any = true
 
 ---
 
+## Mypy Configuration Changes (PROHIBITED)
+
+**Rule:** DO NOT add code that requires changes to mypy configuration in `pyproject.toml`.
+
+❌ **NEVER:**
+- Add `# type: ignore` comments that could be avoided by better code design
+- Write code requiring new mypy exclusions, suppressions, or relaxed settings
+- Introduce patterns that need mypy configuration changes to pass type checking
+
+✅ **ALWAYS:**
+- Write code that passes mypy with CURRENT configuration
+- If code fails mypy strict, fix the code (not the config)
+- Use proper type annotations that satisfy existing mypy rules
+
+**Why:** Mypy configuration should only become MORE strict over time, never more lenient. Every configuration change is technical debt.
+
+---
+
 ## Class Attribute Type Annotations
 
 **Avoid `| None` in class attributes when possible:**
