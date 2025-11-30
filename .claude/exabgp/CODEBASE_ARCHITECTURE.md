@@ -1,5 +1,11 @@
 # Codebase Architecture
 
+**Quick Summary:** ExaBGP organized into bgp/ (protocol), reactor/ (event loop), rib/ (routing table), configuration/ (parsing). Tests in tests/ (unit) and qa/ (functional).
+
+**Full content:** 15 KB - Read sections on-demand when working in specific modules. Summary included in ESSENTIAL_PROTOCOLS.md.
+
+---
+
 Complete structural map of ExaBGP codebase - what exists where and why.
 
 ---

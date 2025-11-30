@@ -1,10 +1,28 @@
-# GIT VERIFICATION PROTOCOL
+# Git Verification Protocol
 
-**Failures:**
-- Made false claims ("I pushed") without verifying repository state
-- Committed pre-existing changes without asking user (included README.md and qa/requirements.txt changes that were already staged)
+**When to read:** Before ANY git operation (commit, push, pull, branch, merge)
+**Prerequisites:** ESSENTIAL_PROTOCOLS.md (verification basics, git workflow essentials)
+**Size:** 3.7 KB
+
+---
+
+## Quick Summary
+
+- Never run git commands without fresh `git status` pasted first
+- Categorize changes: yours vs. pre-existing (ask user about pre-existing)
+- User must explicitly say "commit" or "push" - never assume
+- One logical change per commit
+- Never `git add -A` without asking which files to include
+
+**See enforcement checklist below for complete workflow.**
+
+---
 
 ## MANDATORY RULES
+
+**Historical failures corrected by this protocol:**
+- Made false claims ("I pushed") without verifying repository state
+- Committed pre-existing changes without asking user (included README.md and qa/requirements.txt changes that were already staged)
 
 **1. At START of session - Check for pre-existing changes**
 

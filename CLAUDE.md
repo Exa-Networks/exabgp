@@ -8,45 +8,33 @@ Guidance for Claude Code (claude.ai/code) working with this repository.
 
 **CRITICAL: These are ACTIVE RULES, not reference docs. You MUST apply them to EVERY response.**
 
-**Read these files as RULES you will FOLLOW, not just information to absorb:**
+### MANDATORY FIRST ACTION
 
-1. `.claude/VERIFICATION_PROTOCOL.md` - Verify before claiming (read FIRST)
-   - **Rule:** Never claim success without pasting command output
-   - **Apply:** Before ANY claim, run command, paste output
+**Read `.claude/ESSENTIAL_PROTOCOLS.md` (~5 KB)**
 
-2. `.claude/COMMUNICATION_STYLE.md` - Terse, direct communication
-   - **Rule:** No politeness, no hedging, no verbosity
-   - **Apply:** Every response - check word count, cut explanations
+This single file contains ALL core rules:
+- Verification before claiming
+- Communication style
+- Testing requirements
+- Coding standards essentials
+- Session start workflow
+- Contextual protocol loading guide
 
-3. `.claude/EMOJI_GUIDE.md` - Emoji usage
-   - **Rule:** Start EVERY line with emoji (✅/❌/📁/🧪/etc)
-   - **Apply:** Before sending response, verify every status line starts with emoji
+**Token savings:** 86% reduction (5 KB vs 37 KB)
 
-4. `.claude/GIT_VERIFICATION_PROTOCOL.md` - Git state verification
-   - **Rule:** Never git operation without fresh `git status` pasted
-   - **Apply:** Before ANY git command, run and paste verification
+### Contextual Loading
 
-5. `.claude/MANDATORY_REFACTORING_PROTOCOL.md` - Refactoring verification
-   - **Rule:** One function at a time, paste proof at every step
-   - **Apply:** When refactoring, stop after each function, paste test output
+**After reading ESSENTIAL_PROTOCOLS.md, load additional protocols based on task:**
 
-6. `.claude/ERROR_RECOVERY_PROTOCOL.md` - Slow down after mistakes
-   - **Rule:** After mistake, SLOW DOWN, re-read protocol
-   - **Apply:** When corrected, stop, identify violated protocol, re-read
+| Task Type | Load Protocol |
+|-----------|---------------|
+| Git work (commit/push) | GIT_VERIFICATION_PROTOCOL.md |
+| Refactoring code | MANDATORY_REFACTORING_PROTOCOL.md |
+| Test failures | FUNCTIONAL_TEST_DEBUGGING_GUIDE.md |
+| Error recovery | ERROR_RECOVERY_PROTOCOL.md |
+| Creating docs | DOCUMENTATION_PLACEMENT_GUIDE.md |
 
-7. `.claude/CODING_STANDARDS.md` - Python 3.10+, BGP APIs
-   - **Rule:** Union[int, str] NOT int | str, negotiated param required
-   - **Apply:** Before writing code, check syntax compatibility
-
-8. `.claude/TESTING_PROTOCOL.md` - Never claim success without testing
-   - **Rule:** ./qa/bin/test_everything before "fixed"/"ready"/"complete"
-   - **Apply:** Before claiming done, run all tests, paste output
-
-9. `.claude/PLANNING_GUIDE.md` - Project planning
-10. `.claude/CI_TESTING.md` - Testing requirements
-11. `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` - Debug test failures
-
-**HOW TO READ: For each protocol, extract the SPECIFIC RULE you will apply to your NEXT response.**
+**Decision tree:** See `.claude/README.md` "What Do You Want to Do?" section
 
 **IMMEDIATELY AFTER reading protocols, EXECUTE these commands (not later - NOW):**
 

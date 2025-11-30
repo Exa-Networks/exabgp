@@ -1,6 +1,19 @@
-# ERROR RECOVERY PROTOCOL
+# Error Recovery Protocol
 
-After mistakes: rushed to fix faster, created more errors.
+**When to read:** After making a mistake, test failure, or user says "wrong"/"broken"
+**Prerequisites:** ESSENTIAL_PROTOCOLS.md
+**Size:** 2.9 KB
+
+---
+
+## Quick Summary
+
+- SLOW DOWN after mistakes (don't rush to fix)
+- Re-read violated protocol before continuing
+- Identify which protocol was violated
+- Apply protocol to fix, not instinct
+
+**Historical pattern:** After mistakes, rushed to fix faster, created more errors.
 
 ---
 

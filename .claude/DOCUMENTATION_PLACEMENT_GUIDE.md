@@ -1,6 +1,25 @@
 # Documentation Placement Guide
 
-**MANDATORY: Read this before creating ANY documentation file.**
+**When to read:** Before creating ANY new .md file
+**Prerequisites:** ESSENTIAL_PROTOCOLS.md
+**Size:** 12 KB
+
+---
+
+## Quick Summary
+
+**Use decision tree below to determine correct location:**
+- Codebase usage/modification → `.claude/exabgp/`
+- Work protocols/rules → `.claude/` (root)
+- Completed project history → `.claude/docs/projects/`
+- Active work → `.claude/docs/wip/`
+- Superseded/obsolete → `.claude/docs/archive/`
+
+**See full decision tree below with examples.**
+
+---
+
+**MANDATORY: Read full guide before creating documentation files.**
 
 This guide tells you EXACTLY where to put documentation based on its purpose.
 
