@@ -21,7 +21,7 @@ import random
 import socket
 import select
 from struct import unpack
-from typing import ClassVar, Iterator
+from typing import Callable, ClassVar, Iterator
 
 from exabgp.environment import getenv
 
@@ -102,11 +102,14 @@ class Connection:
         self.io = None
 
     def reading(self) -> bool:
-        poller = self._rpoller.get(self.io, None)  # type: ignore[arg-type]
+        if self.io is None:
+            return False
+
+        poller = self._rpoller.get(self.io, None)
         if poller is None:
             poller = select.poll()
-            poller.register(self.io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)  # type: ignore[arg-type]
-            self._rpoller = {self.io: poller}  # type: ignore[dict-item]
+            poller.register(self.io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
+            self._rpoller = {self.io: poller}
 
         ready = False
         for _, event in poller.poll(0):
@@ -118,11 +121,14 @@ class Connection:
         return ready
 
     def writing(self) -> bool:
-        poller = self._wpoller.get(self.io, None)  # type: ignore[arg-type]
+        if self.io is None:
+            return False
+
+        poller = self._wpoller.get(self.io, None)
         if poller is None:
             poller = select.poll()
-            poller.register(self.io, select.POLLOUT | select.POLLHUP | select.POLLNVAL | select.POLLERR)  # type: ignore[arg-type]
-            self._wpoller = {self.io: poller}  # type: ignore[dict-item]
+            poller.register(self.io, select.POLLOUT | select.POLLHUP | select.POLLNVAL | select.POLLERR)
+            self._wpoller = {self.io: poller}
 
         ready = False
         for _, event in poller.poll(0):
@@ -360,7 +366,8 @@ class Connection:
             yield length, 0, header, b'', NotifyError(1, 2, report)
             return
 
-        validator = Message.Length.get(msg, lambda _: _ >= MIN_BGP_MESSAGE_LENGTH)  # type: ignore[call-overload]
+        default_validator: Callable[[int], bool] = lambda _: _ >= MIN_BGP_MESSAGE_LENGTH
+        validator = Message.Length.get(msg, default_validator)
         if not validator(length):
             # MUST send the faulty length back
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
@@ -401,7 +408,8 @@ class Connection:
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
             return length, 0, header, b'', NotifyError(1, 2, report)
 
-        validator = Message.Length.get(msg, lambda _: _ >= MIN_BGP_MESSAGE_LENGTH)  # type: ignore[call-overload]
+        default_validator: Callable[[int], bool] = lambda _: _ >= MIN_BGP_MESSAGE_LENGTH
+        validator = Message.Length.get(msg, default_validator)
         if not validator(length):
             # MUST send the faulty length back
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'

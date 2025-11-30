@@ -166,7 +166,7 @@ class Message:
         def __init__(self) -> None:
             raise RuntimeError('This class can not be instantiated')
 
-    Length: ClassVar[dict[_MessageCode, Callable[[int], bool]]] = {
+    Length: ClassVar[dict[int, Callable[[int], bool]]] = {
         CODE.OPEN: lambda _: _ >= 29,  # noqa
         CODE.UPDATE: lambda _: _ >= 23,  # noqa
         CODE.NOTIFICATION: lambda _: _ >= 21,  # noqa

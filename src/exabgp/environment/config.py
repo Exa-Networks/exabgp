@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Callable, Generic, TypeVar, ClassVar, Iterator
+from typing import Any, Callable, Generic, TypeVar, ClassVar, Iterator, cast
 import configparser as ConfigParser
 
 from exabgp.environment import base
@@ -39,9 +39,9 @@ class ConfigOption(Generic[T]):
         # Section name will be set when ConfigSection registers its options
         self.section = getattr(owner, '_section_name', '')
 
-    def __get__(self, obj: Any, owner: type) -> T:
+    def __get__(self, obj: Any, owner: type) -> T | ConfigOption[T]:
         if obj is None:
-            return self  # type: ignore[return-value]
+            return self
         result: T = obj._values.get(self.name, self.default)
         return result
 
@@ -54,16 +54,16 @@ class ConfigOption(Generic[T]):
             return self.reader(value)
         # Infer parser from default type
         if isinstance(self.default, bool):
-            return parsing.boolean(value)  # type: ignore
-        elif isinstance(self.default, int):
-            return parsing.integer(value)  # type: ignore
-        elif isinstance(self.default, float):
-            return parsing.real(value)  # type: ignore
-        elif isinstance(self.default, str):
-            return parsing.unquote(value)  # type: ignore
-        elif isinstance(self.default, list):
-            return parsing.ip_list(value)  # type: ignore
-        return value  # type: ignore
+            return cast(T, parsing.boolean(value))
+        if isinstance(self.default, int):
+            return cast(T, parsing.integer(value))
+        if isinstance(self.default, float):
+            return cast(T, parsing.real(value))
+        if isinstance(self.default, str):
+            return cast(T, parsing.unquote(value))
+        if isinstance(self.default, list):
+            return cast(T, parsing.ip_list(value))
+        raise TypeError(f'Unsupported config type: {type(self.default).__name__}')
 
     def format(self, value: T) -> str:
         """Format typed value to string for output."""
@@ -75,7 +75,7 @@ class ConfigOption(Generic[T]):
         elif isinstance(self.default, str):
             return parsing.quote(value)
         elif isinstance(self.default, list):
-            return parsing.quote_list(value)  # type: ignore
+            return parsing.quote_list(cast(list[Any], value))
         return str(value)
 
 
@@ -86,7 +86,7 @@ def option(
     writer: Callable[[T], str] | None = None,
 ) -> T:
     """Factory for ConfigOption - returns T for type inference."""
-    return ConfigOption(default, help, reader, writer)  # type: ignore
+    return cast(T, ConfigOption(default, help, reader, writer))
 
 
 class ConfigSection:
@@ -298,12 +298,7 @@ class DebugSection(ConfigSection):
 # =============================================================================
 
 
-class NoneDict(dict[str, None]):
-    def __getitem__(self, name: str) -> None:
-        return None
-
-
-nonedict: NoneDict = NoneDict()
+nonedict: dict[str, str] = {}
 
 
 class Environment:
@@ -388,7 +383,7 @@ class Environment:
                     conf = os.environ.get(rep_name)
                 else:
                     try:
-                        conf = parsing.unquote(ini.get(proxy_section, option_name, vars=nonedict))  # type: ignore[arg-type]
+                        conf = parsing.unquote(ini.get(proxy_section, option_name, vars=nonedict))
                     except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
                         conf = None
 
