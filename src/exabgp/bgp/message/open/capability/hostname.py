@@ -29,7 +29,7 @@ class HostName(Capability):
     def json(self) -> str:
         return '{{ "host-name": "{}", "domain-name": "{}" }}'.format(self.host_name, self.domain_name)
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         ret = b''
 
         if self.host_name:

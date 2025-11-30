@@ -57,7 +57,7 @@ class AddPath(Capability, dict[tuple[AFI, SAFI], int]):
         )
         return '{{ "name": "addpath"{}{} }}'.format(', ' if families else '', families)
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         rs = b''
         for v in self:
             if self[v]:

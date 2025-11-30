@@ -43,7 +43,7 @@ class Graceful(Capability, dict[tuple[AFI, SAFI], int]):
             self[(afi, safi)] = family_flag & Graceful.FORWARDING_STATE
         return self
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         restart = pack('!H', ((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
         families = [afi.pack_afi() + safi.pack_safi() + bytes([self[(afi, safi)]]) for (afi, safi) in self.keys()]
         return [restart + b''.join(families)]

@@ -39,7 +39,7 @@ class MultiSession(Capability, list[CapabilityCode]):
             ','.join(' "{}"'.format(str(capa)) for capa in self),
         )
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         # can probably be written better
         rs: list[bytes] = [
             bytes([0]),

@@ -42,7 +42,7 @@ class UnknownCapability(Capability):
         raw = ''.join('{:02X}'.format(_) for _ in self.data)
         return '{ "name": "unknown", "iana": "%s", "value": %d, "raw": "%s" }' % (iana, self.capability, raw)
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         return []
 
     @classmethod

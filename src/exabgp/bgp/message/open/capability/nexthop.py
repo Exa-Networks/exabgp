@@ -44,7 +44,7 @@ class NextHop(Capability, list[tuple[AFI, SAFI, AFI]]):
         )
         return f'{{ "name": "nexthop", "conversion": [{conversions} ] }}'
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         rs = b''
         for afi, safi, nhafi in self:
             rs += afi.pack_afi() + pack('!B', 0) + safi.pack_safi() + nhafi.pack_afi()

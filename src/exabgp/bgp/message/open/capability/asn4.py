@@ -26,10 +26,10 @@ class ASN4(Capability, ASN):
     def __str__(self) -> str:
         return 'ASN4(%d)' % int(self)
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         # ASN4 extends both Capability and ASN
-        # Delegate to ASN.extract() which is later in MRO
-        return ASN.extract(self)
+        # Delegate to ASN.extract_asn_bytes() for 4-byte ASN encoding
+        return ASN.extract_asn_bytes(self)
 
     @classmethod
     def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
