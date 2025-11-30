@@ -91,7 +91,11 @@ Exit code: 0
 - Python 3.10+ syntax: `int | str` NOT `Union[int, str]`
 - NO code requiring mypy config changes
 - BGP APIs: keep `negotiated` parameter (stable API, unused OK)
-- Fix type errors at root cause, never `cast()` or `# type: ignore`
+- Fix type errors at root cause, avoid `# type: ignore`
+- `cast()` is acceptable ONLY when preceded by runtime type check (isinstance/hasattr)
+  - Example: `if isinstance(x, bool): return cast(T, x)` ✅
+  - Example: `return cast(int, value)` without check ❌
+  - Prefer assertions/raises over fallback cast: `raise TypeError(...)` not `return cast(T, value)`
 
 ❌ **Prohibited:**
 - `Union[int, str]` instead of `int | str`

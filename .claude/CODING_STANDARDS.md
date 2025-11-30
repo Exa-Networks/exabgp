@@ -238,7 +238,7 @@ def __eq__(self, other: 'MyClass') -> bool:  # type: ignore[override]
 
 ❌ **NEVER hide problems:**
 ```python
-x = cast(SomeType, problematic_value)  # Hides real issue
+x = cast(SomeType, problematic_value)  # Hides real issue - no runtime check
 x = value  # type: ignore  # Silences warning without fixing
 ```
 
@@ -248,7 +248,26 @@ x = value  # type: ignore  # Silences warning without fixing
 - If a function returns wrong type, fix the function
 - If data structure is wrong, restructure it
 
-**Why:** Casts and ignores hide bugs. Root cause fixes prevent bugs.
+**Exception: `cast()` with runtime type checks:**
+```python
+# ✅ Acceptable - cast() preceded by isinstance check
+if isinstance(self.default, bool):
+    return cast(T, parsing.boolean(value))
+
+# ✅ Acceptable - TypeVar narrowing after hasattr check
+if hasattr(obj, 'value'):
+    return cast(SomeType, obj.value)
+
+# ✅ Best - assert/raise instead of fallback cast
+if isinstance(x, int):
+    return cast(T, x)
+raise TypeError(f'Expected int, got {type(x)}')  # Not: return cast(T, x)
+
+# ❌ Never - blind cast without verification
+return cast(int, untrusted_value)
+```
+
+**Why:** Runtime checks prove safety. Blind casts and ignores hide bugs.
 
 ---
 
@@ -256,7 +275,8 @@ x = value  # type: ignore  # Silences warning without fixing
 
 - [ ] Python 3.10+ syntax (prefer `int | str` over `Union[int, str]`)
 - [ ] Avoid `| None` class attributes when possible
-- [ ] Fix type errors at root cause, never cast/ignore
+- [ ] Fix type errors at root cause, avoid `# type: ignore`
+- [ ] Only use `cast()` when preceded by runtime type check (isinstance/hasattr)
 - [ ] `ruff format src && ruff check src` passes
 - [ ] `./qa/bin/test_everything` passes
 - [ ] No asyncio introduced
