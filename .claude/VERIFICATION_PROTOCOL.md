@@ -66,3 +66,15 @@ Before claiming success:
 - Defending instead of testing
 
 **Auto-fix:** Stop. Run test. Paste output. One line.
+
+---
+
+## See Also
+
+- TESTING_PROTOCOL.md - When to run tests
+- MANDATORY_REFACTORING_PROTOCOL.md - Verification during refactoring
+- ERROR_RECOVERY_PROTOCOL.md - What to do when verification fails
+
+---
+
+**Updated:** 2025-11-30

@@ -91,7 +91,7 @@ Brief description.
 ## Archiving
 
 **When complete:**
-1. Move to `.claude/archive/<project>/`
+1. Move to `.claude/docs/archive/<project>/`
 2. Add notice in main README
 3. Keep 2-line summary in active README
 
@@ -99,7 +99,7 @@ Brief description.
 
 ## Examples
 
-**See:** `.claude/archive/type-annotations/` (archived example)
+**See:** `.claude/docs/archive/` for archived examples
 
 ---
 

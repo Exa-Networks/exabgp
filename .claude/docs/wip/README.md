@@ -6,25 +6,22 @@ Active development projects. When completed, move to `docs/projects/`.
 
 ### Type Annotations
 **Location:** `type-annotations/`
-**Status:** In progress - Phase 3 (MyPy error reduction)
+**Status:** 🔄 ACTIVE - Comprehensive type safety improvements
 **Current:** 605 errors (47% ↓ from 1,149 baseline)
 **Goal:** Full type coverage with MyPy validation
 
-**Files:**
-- `MYPY_STATUS.md` - Current error analysis
-- `PROGRESS.md` - Phase tracking
-- `README.md` - Project overview
+**Organization:**
+- Root: Active plans and progress tracking
+- `type-ignore-elimination/`: Sub-project for removing type: ignore comments
+- `archive/initial-planning/`: Historical planning documents from early phases
 
-**Historical docs:** See `docs/projects/type-annotations/` for planning archives
+**Key files:**
+- `MYPY_STATUS.md` - Current error analysis and progress
+- `PROGRESS.md` - Active task tracking
+- `type-ignore-elimination/TYPE_IGNORE_ELIMINATION.md` - Complete inventory
+- `README.md` - Project overview and navigation
 
-### Type Ignore Elimination
-**Location:** `type-ignore-elimination/`
-**Status:** Active - Systematic removal of type: ignore comments
-**Goal:** Achieve full mypy compliance without suppressions
-
-**Files:**
-- `TYPE_IGNORE_ELIMINATION.md` - Complete inventory and plan
-- `README.md` - Project overview
+**Note:** All type annotation work consolidated in this directory (historical docs moved from `docs/projects/type-annotations/`)
 
 ### XXX Comment Cleanup
 **Location:** `xxx-cleanup/`

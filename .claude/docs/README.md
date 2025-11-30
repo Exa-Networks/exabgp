@@ -11,6 +11,30 @@ Project documentation for completed work, historical development, plans, and ref
 
 ---
 
+## Documentation Structure
+
+```
+docs/
+├── projects/          ✅ Completed Projects
+│   ├── asyncio-migration/    ✅ COMPLETE - Dual async/generator support
+│   ├── cli-dual-transport/   ✅ COMPLETE - CLI socket transport
+│   └── (type-annotations/)   🔄 MOVED TO wip/
+├── wip/              🔄 Active Work
+│   ├── type-annotations/     🔄 ACTIVE - Type safety improvements
+│   │   ├── archive/initial-planning/
+│   │   └── type-ignore-elimination/
+│   └── xxx-cleanup/          🔄 ACTIVE - Code cleanup
+├── archive/          📦 Historical/Superseded
+│   ├── asyncio-investigation-2025-11/
+│   ├── testing-improvements/
+│   ├── cli-enhancement/
+│   ├── api-peer-mgmt/
+│   └── dual-transport/
+└── INDEX.md          📚 Complete file listing (100 files)
+```
+
+---
+
 ## Structure
 
 ### `projects/` - Completed Work

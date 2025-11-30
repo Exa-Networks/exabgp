@@ -1,33 +1,41 @@
 # Type Annotations Project
 
-This directory contains all documentation related to improving type annotations in ExaBGP.
+🔄 **Status:** ACTIVE - Ongoing type safety improvements
+
+This directory consolidates ALL type annotation work for ExaBGP.
 
 ## Directory Structure
 
 ```
-.claude/type-annotations/
-├── README.md                    # This file - overview and navigation
-├── ANY_REPLACEMENT_PLAN.md      # Comprehensive plan to replace all Any types
-├── ANALYSIS.md                  # Detailed analysis of all Any usage in codebase
-├── PROGRESS.md                  # Progress tracking for type annotation work
-├── PYTHON38_COMPATIBILITY.md    # ⚠️  Python 3.8+ compatibility requirements
-└── phases/                      # Phase-specific documentation
-    ├── phase1-core-architecture.md
-    ├── phase2-generators.md
-    ├── phase3-messages.md
-    ├── phase4-configuration.md
-    ├── phase5-registries.md
-    ├── phase6-logging.md
-    ├── phase7-flow-parsers.md
-    └── phase8-miscellaneous.md
+.claude/docs/wip/type-annotations/
+├── README.md                          # This file - overview and navigation
+├── INDEX.md                           # Complete file index
+├── PROGRESS.md                        # Current progress tracking
+│
+├── # Active plans
+├── ANY_REPLACEMENT_PLAN.md            # Plan to replace all Any types
+├── MYPY_ELIMINATION_PLAN.md           # Plan to eliminate type: ignore comments
+├── MYPY_STATUS.md                     # Current mypy error status
+├── PYTHON38_COMPATIBILITY.md          # ⚠️  Python 3.8+ compatibility requirements
+│
+├── type-ignore-elimination/           # Sub-project: eliminate type: ignore
+│   ├── README.md                      # Sub-project overview
+│   └── TYPE_IGNORE_ELIMINATION.md     # Detailed elimination plan
+│
+└── archive/initial-planning/          # Historical planning docs
+    ├── README.md                      # Original project overview
+    ├── analysis.md                    # Initial analysis (historical)
+    ├── plan.md                        # Original plan (historical)
+    └── progress.md                    # Early progress (historical)
 ```
 
 ## Quick Start
 
-1. **Read the analysis**: `ANALYSIS.md` - Comprehensive breakdown of all 150+ Any usages
-2. **Review the plan**: `ANY_REPLACEMENT_PLAN.md` - 8-phase structured approach
-3. **Track progress**: `PROGRESS.md` - Current status and completed work
-4. **⚠️  Check compatibility**: `PYTHON38_COMPATIBILITY.md` - REQUIRED reading before modifying types
+1. **⚠️  Check compatibility FIRST**: `PYTHON38_COMPATIBILITY.md` - REQUIRED reading before ANY changes
+2. **Current status**: `MYPY_STATUS.md` - Latest mypy error counts and progress
+3. **Active work**: `PROGRESS.md` - Current task tracking
+4. **Type: ignore elimination**: `type-ignore-elimination/` - Sub-project to remove type: ignore comments
+5. **Historical context**: `archive/initial-planning/` - Original planning documents
 
 ## Goals
 

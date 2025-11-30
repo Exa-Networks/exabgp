@@ -122,3 +122,15 @@ git status && git log --oneline -3
 - Assuming repo state without verification
 
 **Auto-fix:** Stop. Run `git status`. Paste. Ask user.
+
+---
+
+## See Also
+
+- MANDATORY_REFACTORING_PROTOCOL.md - Git commits during refactoring
+- VERIFICATION_PROTOCOL.md - Verify git state before claiming
+- BACKPORT.md - Bug fix tracking for backports
+
+---
+
+**Updated:** 2025-11-30

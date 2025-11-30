@@ -117,3 +117,20 @@ Before saying "fixed"/"ready"/"complete":
 **If I claim completion without listing test files, I'm violating.**
 
 Auto-fix: STOP. Ask yourself "What test file did I add/update?" If none: NOT DONE.
+
+---
+
+## Testing Documentation Quick Reference
+
+**Question** | **File**
+-------------|----------
+How do I run tests? | CI_TESTING.md
+Why did my test fail? | FUNCTIONAL_TEST_DEBUGGING_GUIDE.md
+Can I claim success? | TESTING_PROTOCOL.md (this file)
+How do tests work? | FUNCTIONAL_TEST_ARCHITECTURE.md
+How do I inspect test configs? | FUNCTIONAL_TEST_EDIT.md
+How do I debug encoding tests? | FUNCTIONAL_TEST_DEBUGGING_GUIDE.md
+
+**See also:**
+- MANDATORY_REFACTORING_PROTOCOL.md - Test after each function
+- VERIFICATION_PROTOCOL.md - Paste test output before claiming

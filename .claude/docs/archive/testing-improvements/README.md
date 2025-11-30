@@ -1,11 +1,20 @@
 # Testing Improvements
 
-**Status:** ✅ Complete
-**Completion Date:** 2025-11
+## ⚠️ SUPERSEDED
+
+**Status:** ✅ Complete - Content consolidated into protocol files
+**Archived:** 2025-11
+**Superseded by:**
+- `.claude/CI_TESTING.md` - Complete test suite reference
+- `.claude/TESTING_PROTOCOL.md` - Testing discipline and requirements
+- `.claude/FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` - Debug methodology
+- `CLAUDE.md` - Testing requirements and commands
 
 ## Summary
 
 Comprehensive improvements to ExaBGP's testing infrastructure including functional tests, unit tests, logging, and coverage reporting.
+
+**This documentation is historical.** Current testing requirements and procedures are in the protocol files listed above.
 
 ## Improvements Made
 
@@ -50,7 +59,7 @@ Comprehensive improvements to ExaBGP's testing infrastructure including function
 **All improvements implemented and documented in:**
 - `CLAUDE.md` - Testing requirements and commands
 - `.claude/CI_TESTING.md` - Complete CI testing guide
-- `.claude/TESTING_DISCIPLINE.md` - Testing discipline protocol
+- `.claude/TESTING_PROTOCOL.md` - Testing discipline protocol
 
 ## Test Commands
 

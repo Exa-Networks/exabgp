@@ -632,7 +632,7 @@ Before declaring new type complete:
 - `CODEBASE_ARCHITECTURE.md` - Where files go
 - `DATA_FLOW_GUIDE.md` - How registration fits into data flow
 - `CODING_STANDARDS.md` - Python version, API requirements
-- `TESTING_DISCIPLINE.md` - Test requirements
+- `TESTING_PROTOCOL.md` - Test requirements
 
 ---
 

@@ -9,11 +9,15 @@ This directory contains superseded experiments and investigation sessions that a
 ### asyncio-investigation-2025-11/
 **Period:** 2025-11-18 to 2025-11-19
 **Status:** ✅ Complete
+**Related:** `docs/projects/asyncio-migration/investigation-sessions.md`
 
 Investigation sessions debugging async implementation issues during AsyncIO migration.
 All issues resolved - migration achieved 100% test parity.
 
-**See:** README.md in subdirectory
+**Relationship:** These investigation sessions document the debugging process that led to
+Phase 2 completion. Main project documentation in `docs/projects/asyncio-migration/`.
+
+**See:** README.md in subdirectory for session details
 
 ### api-peer-mgmt/
 **Period:** Early development
@@ -42,7 +46,7 @@ Final architecture documented in docs/projects/cli-dual-transport/
 
 Comprehensive testing infrastructure improvements. Content superseded by:
 - `.claude/CI_TESTING.md`
-- `.claude/TESTING_DISCIPLINE.md`
+- `.claude/TESTING_PROTOCOL.md`
 - CLAUDE.md testing sections
 
 Kept for historical reference on testing evolution.
