@@ -25,7 +25,6 @@ from exabgp.bgp.message.open import ASN
 from exabgp.bgp.message.open import RouterID
 from exabgp.bgp.message.open import HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
-from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.neighbor import Neighbor
@@ -341,7 +340,7 @@ class TestUpdateDecoding(unittest.TestCase):
             neighbor.capability.asn4 = TriState.TRUE if asn4 else TriState.FALSE
 
             capa = Capabilities().new(neighbor, False)
-            capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
+            # Note: Capabilities().new() already creates proper MultiProtocol capability
 
             # path = {}
             # for f in NLRI.known_families():

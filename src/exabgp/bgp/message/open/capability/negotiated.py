@@ -18,6 +18,9 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.open.asn import AS_TRANS, ASN
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
+from exabgp.bgp.message.open.capability.mp import MultiProtocol
+from exabgp.bgp.message.open.capability.ms import MultiSession
+from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
@@ -104,19 +107,28 @@ class Negotiated:
         self.local_as = self.sent_open.asn
         self.peer_as = self.received_open.asn
         if self.received_open.asn == AS_TRANS and self.asn4:
-            self.peer_as = recv_capa.get(Capability.CODE.FOUR_BYTES_ASN, self.peer_as)
+            asn4_capa = recv_capa.get(Capability.CODE.FOUR_BYTES_ASN, None)
+            # ASN4 extends both Capability and ASN
+            if isinstance(asn4_capa, ASN):
+                self.peer_as = asn4_capa
 
         self.families = []
         if recv_capa.announced(Capability.CODE.MULTIPROTOCOL) and sent_capa.announced(Capability.CODE.MULTIPROTOCOL):
-            for family in recv_capa[Capability.CODE.MULTIPROTOCOL]:
-                if family in sent_capa[Capability.CODE.MULTIPROTOCOL]:
-                    self.families.append(family)
+            recv_mp = recv_capa[Capability.CODE.MULTIPROTOCOL]
+            sent_mp = sent_capa[Capability.CODE.MULTIPROTOCOL]
+            if isinstance(recv_mp, MultiProtocol) and isinstance(sent_mp, MultiProtocol):
+                for family in recv_mp:
+                    if family in sent_mp:
+                        self.families.append(family)
 
         self.nexthop = []
         if recv_capa.announced(Capability.CODE.NEXTHOP) and sent_capa.announced(Capability.CODE.NEXTHOP):
-            for family in recv_capa[Capability.CODE.NEXTHOP]:
-                if family in sent_capa[Capability.CODE.NEXTHOP]:
-                    self.nexthop.append(family)
+            recv_nh = recv_capa[Capability.CODE.NEXTHOP]
+            sent_nh = sent_capa[Capability.CODE.NEXTHOP]
+            if isinstance(recv_nh, NextHop) and isinstance(sent_nh, NextHop):
+                for nh_entry in recv_nh:
+                    if nh_entry in sent_nh:
+                        self.nexthop.append(nh_entry)
 
         if recv_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(
             Capability.CODE.ENHANCED_ROUTE_REFRESH,
@@ -138,12 +150,14 @@ class Negotiated:
         )
 
         if self.multisession:
-            sent_ms_capa = set(sent_capa[Capability.CODE.MULTISESSION])
-            recv_ms_capa = set(recv_capa[Capability.CODE.MULTISESSION])
+            sent_ms = sent_capa[Capability.CODE.MULTISESSION]
+            recv_ms = recv_capa[Capability.CODE.MULTISESSION]
+            sent_ms_capa: set[int] = set(sent_ms) if isinstance(sent_ms, MultiSession) else set()
+            recv_ms_capa: set[int] = set(recv_ms) if isinstance(recv_ms, MultiSession) else set()
 
-            if sent_ms_capa == set([]):
+            if sent_ms_capa == set():
                 sent_ms_capa = set([Capability.CODE.MULTIPROTOCOL])
-            if recv_ms_capa == set([]):
+            if recv_ms_capa == set():
                 recv_ms_capa = set([Capability.CODE.MULTIPROTOCOL])
 
             if sent_ms_capa != recv_ms_capa:
@@ -207,8 +221,10 @@ class Negotiated:
             # multisession is an error tuple (code, subcode, message)
             return self.multisession
 
-        s = set(self.sent_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))
-        r = set(self.received_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, []))
+        sent_mp = self.sent_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, None)
+        recv_mp = self.received_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, None)
+        s: set[tuple[AFI, SAFI]] = set(sent_mp) if isinstance(sent_mp, MultiProtocol) else set()
+        r: set[tuple[AFI, SAFI]] = set(recv_mp) if isinstance(recv_mp, MultiProtocol) else set()
         mismatch = s ^ r
 
         for family in mismatch:
