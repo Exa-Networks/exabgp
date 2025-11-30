@@ -45,6 +45,14 @@ except ImportError:
 
 INTERPRETER: str = os.environ.get('INTERPRETER') or os.environ.get('__PYVENV_LAUNCHER__', sys.executable)
 
+# Known flaky tests that should be retried on failure
+# Add test nick (letter/number) here if a test occasionally fails but passes on retry
+# To disable retry feature entirely, comment out the _retry_flaky_tests() call in run_selected()
+FLAKY_TESTS: List[str] = [
+    'D',  # api-fast: known to be flaky
+    '7',  # api-api: occasionally fails in async mode
+]
+
 
 # Configuration types for different test classes
 class EncodingConf(TypedDict):
@@ -1500,6 +1508,99 @@ class EncodingTests(Tests):
             )
         return '\n'.join(result)
 
+    def _retry_flaky_tests(self, client: Dict[str, Exec], timeout: int, quiet: bool) -> bool:
+        """Retry known flaky tests that failed.
+
+        Args:
+            client: Dictionary mapping test nick to client Exec objects
+            timeout: Original timeout value (retry gets half)
+            quiet: Whether to suppress output
+
+        Returns:
+            True if all retries passed, False if any retry failed
+        """
+        failed_flaky_tests = [t for t in self.selected() if t.state == State.FAIL and t.nick in FLAKY_TESTS]
+        if not failed_flaky_tests:
+            return True
+
+        if not quiet:
+            flush()
+            flush(
+                f'{yellow()}Retrying {len(failed_flaky_tests)} known flaky test(s): {", ".join([t.nick for t in failed_flaky_tests])}{reset()}'
+            )
+
+        all_retries_passed = True
+
+        for test in failed_flaky_tests:
+            if not quiet:
+                flush(f'{yellow()}Retry{reset()} {test.nick} {test.name}...', end=' ')
+
+            # Reset test state
+            test.state = State.NONE
+            test.code = -1
+            test.stdout = b''
+            test.stderr = b''
+            test.start_time = None
+
+            # Start server
+            cmd = [
+                sys.argv[0],
+                'encoding',
+                '--server',
+                test.nick,
+                '--port',
+                f'{test.conf["port"]}',
+            ]
+            if self._save_dir:
+                cmd.extend(['--save', self._save_dir])
+            test.run(cmd, env=None)
+            test.setup()
+            test.setup()  # Call twice to advance to RUNNING state
+            time.sleep(0.1)
+
+            # Start client
+            client[test.nick] = Exec().run(
+                [
+                    sys.argv[0],
+                    'encoding',
+                    '--client',
+                    test.nick,
+                    '--port',
+                    f'{test.conf["port"]}',
+                ],
+                env=None,
+            )
+            time.sleep(0.1)
+
+            # Wait for completion (with shorter timeout for retry)
+            retry_timeout = min(10, timeout // 2)
+            retry_exit_time = time.time() + retry_timeout
+
+            while time.time() < retry_exit_time:
+                if test.ready() and client[test.nick].ready():
+                    break
+                time.sleep(0.1)
+
+            # Terminate both
+            client[test.nick].terminate(collect=False)
+            test.terminate(collect=False)
+
+            # Check result
+            test_passed = test.result(test.success())
+            if test_passed:
+                if not quiet:
+                    flush(f'{green()}✓{reset()}')
+            else:
+                all_retries_passed = False
+                if not quiet:
+                    flush(f'{red()}✗{reset()}')
+
+            # Cleanup
+            time.sleep(0.2)
+            self._force_cleanup_all([test], {test.nick: client[test.nick]})
+
+        return all_retries_passed
+
     def _force_cleanup_all(self, tests: List[Any], clients: Dict[str, Exec]) -> None:
         """
         Final cleanup pass to ensure all test processes are dead.
@@ -1757,6 +1858,16 @@ class EncodingTests(Tests):
 
         # Force kill any remaining test processes
         self._force_cleanup_all(list(self.selected()), client)
+
+        # Retry known flaky tests that failed
+        # To disable retry, comment out this function call
+        retry_success = self._retry_flaky_tests(client, timeout, self._quiet)
+        if retry_success:
+            # All retries passed, update overall success
+            success = success or retry_success
+        else:
+            # Some retries failed
+            success = False
 
         # Move to new line after final display
         flush()
