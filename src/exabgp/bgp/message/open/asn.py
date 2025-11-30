@@ -41,7 +41,8 @@ class ASN(Resource):
     def __len__(self) -> int:
         return self.SIZE_4BYTE if self.asn4() else self.SIZE_2BYTE
 
-    def extract(self) -> list[bytes]:
+    def extract_asn_bytes(self) -> list[bytes]:
+        """Extract ASN as list of 4-byte packed values for capability encoding."""
         return [pack('!L', self)]
 
     def trans(self) -> ASN:

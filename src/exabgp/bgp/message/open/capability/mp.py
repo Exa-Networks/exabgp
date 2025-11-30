@@ -32,7 +32,7 @@ class MultiProtocol(Capability, list[tuple[AFI, SAFI]]):
         families = ','.join([f' "{afi!s}/{safi!s}"' for (afi, safi) in self])
         return f'{{ "name": "multiprotocol", "families": [{families} ] }}'
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         rs: list[bytes] = []
         for v in self:
             rs.append(pack('!H', v[0]) + pack('!H', v[1]))

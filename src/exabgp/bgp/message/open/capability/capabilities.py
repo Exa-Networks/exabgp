@@ -193,7 +193,7 @@ class Capabilities(dict[int, Capability]):
     def pack_capabilities(self) -> bytes:
         parameters = b''
         for k, capabilities in self.items():
-            for capability in capabilities.extract():
+            for capability in capabilities.extract_capability_bytes():
                 if len(capability) == 0:
                     continue
                 encoded = bytes([k, len(capability)]) + capability
@@ -207,7 +207,7 @@ class Capabilities(dict[int, Capability]):
 
         parameters = b''
         for k, capabilities in self.items():
-            for capability in capabilities.extract():
+            for capability in capabilities.extract_capability_bytes():
                 if len(capability) == 0:
                     continue
                 encoded = bytes([k, len(capability)]) + capability

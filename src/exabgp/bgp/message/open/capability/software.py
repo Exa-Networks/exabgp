@@ -30,7 +30,7 @@ class Software(Capability):
     def json(self) -> str:
         return '{{ "software": "{}" }}'.format(self.software_version)
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         return [bytes([len(self.software_version)]) + self.software_version.encode('utf-8')]
 
     @classmethod

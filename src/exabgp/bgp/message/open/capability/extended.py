@@ -23,7 +23,7 @@ class ExtendedMessage(Capability):
     def __str__(self) -> str:
         return 'Extended Message(%d)' % self.EXTENDED_SIZE
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         return [b'']
 
     @classmethod

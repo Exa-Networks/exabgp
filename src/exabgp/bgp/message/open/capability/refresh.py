@@ -56,7 +56,7 @@ class RouteRefresh(Capability):
             'RFC' if self.ID == Capability.CODE.ROUTE_REFRESH else 'Cisco'
         )
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         return [b'']
 
     @classmethod
@@ -103,7 +103,7 @@ class EnhancedRouteRefresh(Capability):
     def json(self) -> str:
         return '{ "name": "enhanced-route-refresh" }'
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         return [b'']
 
     @classmethod

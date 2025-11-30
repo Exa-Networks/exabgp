@@ -30,7 +30,7 @@ class Operational(Capability, list[bytes]):
     def json(self) -> str:
         return '{ "name": "operational" }'
 
-    def extract(self) -> list[bytes]:
+    def extract_capability_bytes(self) -> list[bytes]:
         return [b'']
 
     @classmethod
