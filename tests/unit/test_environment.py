@@ -72,6 +72,20 @@ class TestConfigOption:
         assert 'test-key' in section
         assert 'nonexistent' not in section
 
+    def test_option_class_access(self) -> None:
+        """Test ConfigOption.__get__ when accessed on class returns descriptor"""
+
+        class TestSection(ConfigSection):
+            _section_name = 'test'
+            value: bool = option(True, 'test option')
+
+        # Access on class should return ConfigOption descriptor
+        descriptor = TestSection.value
+        assert descriptor is not None
+        # Descriptor should have the expected attributes
+        assert hasattr(descriptor, 'default')
+        assert hasattr(descriptor, 'help')
+
 
 class TestEnvironment:
     """Test Environment singleton class"""

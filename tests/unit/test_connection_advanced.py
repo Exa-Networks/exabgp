@@ -874,6 +874,24 @@ class TestPollingMechanisms:
             # Poller should be cleared on error
             assert conn._wpoller == {}
 
+    def test_reading_returns_false_when_no_socket(self) -> None:
+        """Test reading() returns False when io is None"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        conn.io = None
+
+        result = conn.reading()
+
+        assert result is False
+
+    def test_writing_returns_false_when_no_socket(self) -> None:
+        """Test writing() returns False when io is None"""
+        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        conn.io = None
+
+        result = conn.writing()
+
+        assert result is False
+
 
 class TestConnectionBasics:
     """Test basic Connection initialization and utility methods"""
