@@ -4,89 +4,99 @@ Documentation and protocols for Claude Code interactions with ExaBGP.
 
 ---
 
-## 🚨 START OF EVERY SESSION - READ ALL PROTOCOLS 🚨
+## 🚨 START OF EVERY SESSION 🚨
 
 **⚠️ CRITICAL: You have NO memory between sessions ⚠️**
 
-**MANDATORY FIRST ACTION: Read ALL Core Protocols listed below using the Read tool.**
+### MANDATORY FIRST ACTION
 
-**DO NOT:**
-- Skip any protocols ("I'll read them later")
-- Assume you remember them from previous sessions
-- Start work before reading ALL protocols
-- Claim you "understand the requirements" without reading
+**Read `ESSENTIAL_PROTOCOLS.md` (~5 KB)**
 
-**DO:**
-- Use the Read tool to read EVERY protocol file below
-- Read them EVERY session (no exceptions)
-- Read them BEFORE doing any other work
-- Read them in parallel for efficiency
+This single file contains core rules that apply to ALL interactions:
+- Verification before claiming success
+- Communication style (terse, emoji-prefixed)
+- Testing requirements (./qa/bin/test_everything)
+- Coding standards essentials (Python 3.10+, mypy)
+- Session start workflow
+- Contextual protocol loading guide
 
-**Then check git state:**
+**Token savings:** 86% reduction vs. reading all protocols (5 KB vs 37 KB)
+
+### Then Check Git State
+
 ```bash
-git status
-git diff
-git diff --staged
+git status && git diff && git diff --staged
 ```
 
 If ANY files modified/staged: ASK user how to handle before starting work.
+
+### Load Contextual Protocols Based on Task
+
+**See decision tree below** to determine which additional protocols to read.
+
+**Most tasks are covered by ESSENTIAL_PROTOCOLS.md alone.** Only load additional protocols when explicitly needed for specialized tasks (git, refactoring, test debugging, etc.).
 
 ---
 
 ## First Session? Start Here
 
-**New to this repository?** Read these 4 protocols FIRST:
+**New to this repository?**
 
-1. `VERIFICATION_PROTOCOL.md` - Never claim without proof
-2. `COMMUNICATION_STYLE.md` - How to communicate
-3. `TESTING_PROTOCOL.md` - When/how to test
-4. `CODING_STANDARDS.md` - Python 3.10+, mypy rules
+1. **Read `ESSENTIAL_PROTOCOLS.md`** - Contains all core rules (~5 KB)
+2. **Check git state** - Run git status checks
+3. **Use decision tree below** - Find docs for your specific task
 
-**Then read these before making changes:**
-
-5. `GIT_VERIFICATION_PROTOCOL.md` - Git safety
-6. `MANDATORY_REFACTORING_PROTOCOL.md` - Safe refactoring
-7. `ERROR_RECOVERY_PROTOCOL.md` - Mistake recovery
-
-**For codebase work, also read:**
-
-- `exabgp/CODEBASE_ARCHITECTURE.md` - Where everything is
-- `exabgp/DATA_FLOW_GUIDE.md` - How data flows
+**That's it!** The essential protocols file covers verification, communication, testing, and coding standards. Additional protocols are loaded contextually based on what you're doing.
 
 ---
 
-## Protocol Files by Category
+## Protocol Files (Tiered System)
 
-### Core Work Protocols
-- **VERIFICATION_PROTOCOL.md** - NEVER claim success without pasting proof
-- **MANDATORY_REFACTORING_PROTOCOL.md** - One function at a time with verification
-- **ERROR_RECOVERY_PROTOCOL.md** - NEVER rush after mistakes
+### Tier 1: Essential Core (Read Every Session)
 
-### Communication Protocols
-- **COMMUNICATION_STYLE.md** - Terse, direct communication
-- **EMOJI_GUIDE.md** - Systematic emoji usage
+- **ESSENTIAL_PROTOCOLS.md** - Core rules for ALL interactions (~5 KB)
+  - Verification before claiming
+  - Communication style
+  - Testing requirements
+  - Coding standards
+  - Git workflow essentials
+  - Contextual loading guide
 
-### Quality & Standards
-- **CODING_STANDARDS.md** - Python 3.10+, mypy, BGP APIs
-- **TESTING_PROTOCOL.md** - Test requirements before claiming success
+**Read this ONE file at session start. Token savings: 86%**
 
-### Version Control
-- **GIT_VERIFICATION_PROTOCOL.md** - Git safety rules
-- **BACKPORT.md** - Bug fix tracking for backports
+### Tier 2: Contextual Protocols (Load When Relevant)
 
-### Testing & Debugging
-- **CI_TESTING.md** - Complete test suite commands
-- **FUNCTIONAL_TEST_DEBUGGING_GUIDE.md** - Systematic debugging process
-- **FUNCTIONAL_TEST_ARCHITECTURE.md** - How functional tests work
-- **FUNCTIONAL_TEST_EDIT.md** - Inspecting test configurations
+**Git & Version Control:**
+- GIT_VERIFICATION_PROTOCOL.md - Complete git safety workflow
+- BACKPORT.md - Bug fix tracking for backports
 
-### Planning & Organization
-- **PLANNING_GUIDE.md** - Project planning standards
-- **DOCUMENTATION_PLACEMENT_GUIDE.md** - Where to put documentation
-- **PRE_FLIGHT_CHECKLIST.md** - Session start checklist
-- **FILE_NAMING_CONVENTIONS.md** - File naming rules
+**Code Quality:**
+- MANDATORY_REFACTORING_PROTOCOL.md - Safe refactoring (one function at a time)
+- ERROR_RECOVERY_PROTOCOL.md - Mistake recovery workflow
 
-**Total: 18 protocol files (~37 KB)**
+**Testing & Debugging:**
+- FUNCTIONAL_TEST_DEBUGGING_GUIDE.md - Debug test failures systematically
+
+**Documentation:**
+- DOCUMENTATION_PLACEMENT_GUIDE.md - Where to put docs
+
+**Full Protocol Details:**
+- VERIFICATION_PROTOCOL.md - Complete verification rules
+- TESTING_PROTOCOL.md - Complete testing requirements
+- CODING_STANDARDS.md - All coding standards
+- COMMUNICATION_STYLE.md - Full communication guidelines
+
+### Tier 3: Reference Materials (Consult When Needed)
+
+- FUNCTIONAL_TEST_ARCHITECTURE.md - How tests work
+- FUNCTIONAL_TEST_EDIT.md - Inspecting test configs
+- FILE_NAMING_CONVENTIONS.md - Naming patterns
+- CI_TESTING.md - Test commands reference
+- PLANNING_GUIDE.md - Project planning standards
+- EMOJI_GUIDE.md - Emoji reference
+- PRE_FLIGHT_CHECKLIST.md - Session checklist
+
+**Total: 1 essential + 10 contextual + 7 reference = 18 files**
 
 ---
 
@@ -190,16 +200,20 @@ Major completed projects:
 
 ## What Do You Want to Do?
 
-**Task** | **Read These Docs**
----------|--------------------
-Fix a bug | VERIFICATION_PROTOCOL.md, TESTING_PROTOCOL.md, MANDATORY_REFACTORING_PROTOCOL.md, FUNCTIONAL_TEST_DEBUGGING_GUIDE.md
-Add a feature | exabgp/CODEBASE_ARCHITECTURE.md, exabgp/REGISTRY_AND_EXTENSION_PATTERNS.md, exabgp/DATA_FLOW_GUIDE.md, TESTING_PROTOCOL.md
-Understand codebase | exabgp/CODEBASE_ARCHITECTURE.md, exabgp/DATA_FLOW_GUIDE.md, exabgp/BGP_CONCEPTS_TO_CODE_MAP.md
-Debug test failures | FUNCTIONAL_TEST_DEBUGGING_GUIDE.md, FUNCTIONAL_TEST_ARCHITECTURE.md, CI_TESTING.md
-Work with CLI | exabgp/CLI_COMMANDS.md, exabgp/CLI_SHORTCUTS.md, exabgp/CLI_IMPLEMENTATION.md
-Understand API | exabgp/UNIX_SOCKET_API.md, exabgp/NEIGHBOR_SELECTOR_SYNTAX.md
-Refactor code | MANDATORY_REFACTORING_PROTOCOL.md, CODING_STANDARDS.md, TESTING_PROTOCOL.md
-Review changes | VERIFICATION_PROTOCOL.md, GIT_VERIFICATION_PROTOCOL.md
+**Task** | **Read These Docs** | **Protocols to Load**
+---------|---------------------|----------------------
+Fix a bug | exabgp/CODEBASE_ARCHITECTURE.md (summary in ESSENTIAL) | *(none - covered in ESSENTIAL)*
+Add a feature | exabgp/REGISTRY_AND_EXTENSION_PATTERNS.md, exabgp/DATA_FLOW_GUIDE.md | *(none - covered in ESSENTIAL)*
+Commit changes | *(none)* | GIT_VERIFICATION_PROTOCOL.md
+Refactor code | exabgp/CODEBASE_ARCHITECTURE.md | MANDATORY_REFACTORING_PROTOCOL.md
+Debug test failures | FUNCTIONAL_TEST_DEBUGGING_GUIDE.md, CI_TESTING.md | FUNCTIONAL_TEST_DEBUGGING_GUIDE.md
+Create documentation | DOCUMENTATION_PLACEMENT_GUIDE.md | DOCUMENTATION_PLACEMENT_GUIDE.md
+Understand codebase | exabgp/CODEBASE_ARCHITECTURE.md, exabgp/DATA_FLOW_GUIDE.md | *(none)*
+Work with CLI | exabgp/CLI_COMMANDS.md, exabgp/CLI_IMPLEMENTATION.md | *(none)*
+Understand API | exabgp/UNIX_SOCKET_API.md, exabgp/NEIGHBOR_SELECTOR_SYNTAX.md | *(none)*
+Recover from error | ERROR_RECOVERY_PROTOCOL.md | ERROR_RECOVERY_PROTOCOL.md
+
+**Note:** ESSENTIAL_PROTOCOLS.md covers most tasks. Only load additional protocols for specialized workflows.
 
 ---
 

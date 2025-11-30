@@ -1,5 +1,11 @@
 # Data Flow Guide
 
+**Quick Summary:** Network → Reactor → Message → NLRI/Attributes → API (inbound). Config → RIB → Update → Protocol → Network (outbound).
+
+**Full content:** 9 KB - Read on-demand when implementing features or debugging message flow.
+
+---
+
 How information flows through ExaBGP - inbound, outbound, and internal routing.
 
 ---

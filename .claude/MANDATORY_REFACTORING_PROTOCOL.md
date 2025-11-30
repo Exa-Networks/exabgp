@@ -1,6 +1,21 @@
-# MANDATORY REFACTORING PROTOCOL
+# Mandatory Refactoring Protocol
 
-**Exists due to:** 95 files refactored, 72 test failures, full revert. No verification between steps.
+**When to read:** Before renaming/restructuring functions, classes, or modules
+**Prerequisites:** ESSENTIAL_PROTOCOLS.md (verification, testing requirements)
+**Size:** 3.2 KB
+
+---
+
+## Quick Summary
+
+- ONE function at a time (never batch refactoring)
+- ALL tests MUST pass at EVERY step (100% pass rate always)
+- Paste proof after each step before proceeding
+- Commit only when passing (one function = one commit)
+
+**See enforcement checklist below for step-by-step workflow.**
+
+**Historical failure:** 95 files refactored, 72 test failures, full revert. No verification between steps.
 
 ---
 
