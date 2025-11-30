@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from struct import error, unpack
-from typing import TYPE_CHECKING, ClassVar, Sequence, Type, cast
+from typing import TYPE_CHECKING, ClassVar, Sequence, Type, TypeVar, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -54,6 +54,10 @@ class CONFED_SET(list[ASN]):
 
     # def __add__(self, other):
     #     return CONFED_SET(list.__add__(self,other))
+
+
+# TypeVar for segment types - allows slicing to preserve type
+SegmentType = TypeVar('SegmentType', SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET)
 
 
 @Attribute.register()
@@ -102,31 +106,30 @@ class ASPath(Attribute):
         return not self.__eq__(other)
 
     @classmethod
-    def _segment(cls, seg_type: int, values: SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, asn4: bool) -> bytes:
+    def _segment(cls, seg_type: int, values: SegmentType, asn4: bool) -> bytes:
         length = len(values)
         if length == 0:
             return b''
         if length > cls.SEGMENT_MAX_LENGTH:
-            return (
-                cls._segment(seg_type, values[: cls.SEGMENT_MAX_LENGTH], asn4)  # type: ignore[arg-type]
-                + cls._segment(
-                    seg_type,
-                    values[cls.SEGMENT_MAX_LENGTH :],  # type: ignore[arg-type]
-                    asn4,
-                )
-            )
+            # Cast slices back to original type for recursive calls
+            first_half = type(values)(values[: cls.SEGMENT_MAX_LENGTH])
+            second_half = type(values)(values[cls.SEGMENT_MAX_LENGTH :])
+            return cls._segment(seg_type, first_half, asn4) + cls._segment(seg_type, second_half, asn4)
+        # asn4 bool used here, but pack_asn expects Negotiated - works at runtime
         return bytes([seg_type, length]) + b''.join(v.pack_asn(asn4) for v in values)  # type: ignore[arg-type]
 
     @classmethod
     def pack_segments(cls, aspath: tuple[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, ...], asn4: bool) -> bytes:
         segments = b''
         for content in aspath:
-            segments += cls._segment(content.ID, content, asn4)
+            # TypeVar can't handle Union in call site - works at runtime
+            segments += cls._segment(content.ID, content, asn4)  # type: ignore[type-var]
         return cls._attribute(segments)
 
     @classmethod
     def _asn_pack(cls, aspath: SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, asn4: bool) -> bytes:
-        return cls._attribute(cls._segment(cls.ID, aspath, asn4))
+        # TypeVar can't handle Union in call site - works at runtime
+        return cls._attribute(cls._segment(cls.ID, aspath, asn4))  # type: ignore[type-var]
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         if negotiated.asn4:
