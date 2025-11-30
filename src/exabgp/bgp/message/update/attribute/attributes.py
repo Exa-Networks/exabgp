@@ -214,7 +214,7 @@ class Attributes(dict):
                 ASPath([])
                 if left == right
                 else ASPath(
-                    [  # type: ignore[arg-type]
+                    [
                         SEQUENCE(
                             [
                                 local_asn,
