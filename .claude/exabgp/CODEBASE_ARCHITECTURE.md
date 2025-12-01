@@ -52,7 +52,14 @@ src/exabgp/
 │
 ├── reactor/                      # Event Loop & Peer Management (Core)
 │   ├── loop.py                  # Main reactor loop (821 lines)
-│   ├── peer.py                  # Peer protocol handler (1292 lines)
+│   ├── peer/                    # Peer protocol handler (package)
+│   │   ├── __init__.py         # Re-exports Peer, Stats, etc.
+│   │   ├── peer.py             # Main Peer class (950 lines, async-only)
+│   │   ├── context.py          # PeerContext dataclass
+│   │   └── handlers/           # Message handlers
+│   │       ├── base.py         # MessageHandler ABC
+│   │       ├── update.py       # UpdateHandler
+│   │       └── route_refresh.py# RouteRefreshHandler
 │   ├── protocol.py              # Network protocol layer
 │   ├── daemon.py                # Daemonization wrapper
 │   ├── listener.py              # Listening socket management
@@ -140,7 +147,7 @@ src/exabgp/
 | File | Lines | Purpose | Modification Frequency |
 |------|-------|---------|----------------------|
 | `application/cli.py` | 2595 | CLI interface | Medium (CLI features only) |
-| `reactor/peer.py` | 1292 | Peer protocol handling | Medium (protocol changes) |
+| `reactor/peer/peer.py` | 950 | Peer protocol handling (async) | Medium (protocol changes) |
 | `reactor/api/processes.py` | 992 | External process API | Low (stable) |
 | `reactor/loop.py` | 821 | Main event loop | Low (stable) |
 | `bgp/message/update/nlri/flow.py` | 764 | FlowSpec NLRI | Low (complex, avoid) |
@@ -162,7 +169,7 @@ Network bytes
   ↓
 reactor/protocol.py (TCP handling)
   ↓
-reactor/peer.py (BGP protocol)
+reactor/peer/peer.py (BGP protocol)
   ↓
 bgp/message/message.py (Message dispatcher)
   ↓
@@ -247,4 +254,4 @@ Network
 
 ---
 
-**Updated:** 2025-11-24
+**Updated:** 2025-12-01

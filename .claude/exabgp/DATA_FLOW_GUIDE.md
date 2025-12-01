@@ -32,7 +32,7 @@ ExaBGP operates on three main data flows:
    - Checks BGP marker (16 bytes of 0xFF)
    - Extracts length (2 bytes) and type (1 byte)
    ↓
-3. reactor/peer.py
+3. reactor/peer/peer.py
    - receive_message() coordinates message handling
    - Validates message in current FSM state
    ↓
@@ -119,7 +119,7 @@ ExaBGP operates on three main data flows:
    - Tracks what each neighbor should receive
    ↓
 4. Reactor Determines What to Send
-   reactor/loop.py + reactor/peer.py
+   reactor/loop.py + reactor/peer/peer.py
    - Check peer FSM state (must be ESTABLISHED)
    - Check if routes pending for this peer
    - Group changes by family
@@ -306,7 +306,7 @@ IDLE → ACTIVE → CONNECT → OPENSENT → OPENCONFIRM → ESTABLISHED
 - `OPENCONFIRM`: Send KEEPALIVE → expect KEEPALIVE
 - `ESTABLISHED`: Send/receive UPDATE, KEEPALIVE, NOTIFICATION, ROUTE-REFRESH
 
-**reactor/peer.py enforces:**
+**reactor/peer/peer.py enforces:**
 - Can only send UPDATE in ESTABLISHED state
 - NOTIFICATION can be sent/received in any state
 - Invalid message for state → send NOTIFICATION, reset connection
