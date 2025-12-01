@@ -1,4 +1,4 @@
-"""peer.py
+"""keepalive.py
 
 Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2017-2017 Exa Networks. All rights reserved.
@@ -6,13 +6,15 @@ Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, Generator
+from typing import TYPE_CHECKING, Any
 
 from exabgp.bgp.timer import SendTimer
-from exabgp.bgp.message import Message
 from exabgp.bgp.message import Notify
 
 from exabgp.reactor.network.error import NetworkError
+
+if TYPE_CHECKING:
+    from exabgp.reactor.protocol import Protocol
 
 
 # =========================================================================== KA
@@ -20,43 +22,29 @@ from exabgp.reactor.network.error import NetworkError
 
 
 class KA:
-    def __init__(self, session: Any, proto: Any) -> None:
-        self._generator: Generator[bool, None, None] = self._keepalive(proto)
+    """Async keepalive handler.
+
+    Tracks when keepalives need to be sent and provides an async method to send them.
+    """
+
+    def __init__(self, session: Any, proto: 'Protocol') -> None:
+        self._proto = proto
         self.send_timer: SendTimer = SendTimer(session, proto.negotiated.holdtime)
 
-    def _keepalive(self, proto: Any) -> Generator[bool, None, None]:
-        need_ka: bool = False
-        generator: Generator[Message, None, None] | None = None
+    async def send_if_needed(self) -> bool:
+        """Send keepalive if the timer indicates one is needed.
 
-        while True:
-            # SEND KEEPALIVES
-            need_ka |= self.send_timer.need_ka()
+        Returns:
+            True if a keepalive was sent, False otherwise.
 
-            if need_ka:
-                if not generator:
-                    generator = proto.new_keepalive()
-                    need_ka = False
+        Raises:
+            Notify: If there was a network error sending the keepalive.
+        """
+        if not self.send_timer.need_ka():
+            return False
 
-            if not generator:
-                yield False
-                continue
-
-            try:
-                # try to close the generator and raise a StopIteration in one call
-                next(generator)
-                next(generator)
-                # still running
-                yield True
-            except NetworkError:
-                raise Notify(4, 0, 'problem with network while trying to send keepalive') from None
-            except StopIteration:
-                generator = None
-                yield False
-
-    def __call__(self) -> bool:
-        #  True  if we need or are trying
-        #  False if we do not need to send one
         try:
-            return next(self._generator)
-        except StopIteration:
-            raise Notify(4, 0, 'could not send keepalive') from None
+            await self._proto.new_keepalive()
+            return True
+        except NetworkError:
+            raise Notify(4, 0, 'problem with network while trying to send keepalive') from None

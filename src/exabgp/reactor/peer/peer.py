@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import asyncio  # noqa: F401 - Used by async methods (_send_open_async, _read_open_async, _send_ka_async, _read_ka_async)
+import asyncio
 import time
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Generator, Iterator, cast
@@ -399,7 +399,7 @@ class Peer:
         proto = Protocol(self)
         try:
             # Use async connect instead of generator
-            connected = await proto.connect_async()
+            connected = await proto.connect()
 
             if not connected:
                 if self.proto:
@@ -421,7 +421,7 @@ class Peer:
     async def _send_open(self) -> Open:
         """Sends OPEN message using async I/O"""
         assert self.proto is not None
-        return await self.proto.new_open_async()
+        return await self.proto.new_open()
 
     async def _read_open(self) -> Open:
         """Reads OPEN message using async I/O"""
@@ -431,7 +431,7 @@ class Peer:
         try:
             # Use asyncio timeout instead of ReceiveTimer
             message = await asyncio.wait_for(
-                self.proto.read_open_async(self.neighbor.session.peer_address.top()), timeout=wait
+                self.proto.read_open(self.neighbor.session.peer_address.top()), timeout=wait
             )
             return message
         except asyncio.TimeoutError:
@@ -440,13 +440,13 @@ class Peer:
     async def _send_ka(self) -> None:
         """Sends KEEPALIVE message using async I/O"""
         assert self.proto is not None
-        await self.proto.new_keepalive_async('OPENCONFIRM')
+        await self.proto.new_keepalive('OPENCONFIRM')
 
     async def _read_ka(self) -> None:
         """Reads KEEPALIVE message using async I/O"""
         assert self.proto is not None
         assert self.recv_timer is not None
-        message = await self.proto.read_keepalive_async()
+        message = await self.proto.read_keepalive()
         self.recv_timer.check_ka_timer(message)
 
     async def _establish(self) -> None:
@@ -507,7 +507,7 @@ class Peer:
         if self.neighbor.capability.operational.is_enabled():
             new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
             if new_operational:
-                await self.proto.new_operational_async(new_operational, self.proto.negotiated)
+                await self.proto.new_operational(new_operational, self.proto.negotiated)
         # Make sure that if some operational message are received via the API
         # that we do not eat memory for nothing
         elif self.neighbor.messages:
@@ -518,7 +518,7 @@ class Peer:
         if self.neighbor.capability.route_refresh:
             new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
             if new_refresh:
-                await self.proto.new_refresh_async(new_refresh)
+                await self.proto.new_refresh(new_refresh)
 
     async def _send_route_updates(
         self,
@@ -533,7 +533,7 @@ class Peer:
         """
         if not new_routes and self.neighbor.rib.outgoing.pending():
             log.debug(lazymsg('peer.update.generator.creating'), self.id())
-            new_routes = self.proto.new_update_async_generator(include_withdraw)
+            new_routes = self.proto.new_update_generator(include_withdraw)
 
         if new_routes:
             try:
@@ -561,13 +561,13 @@ class Peer:
         """
         if not new_routes and send_eor:
             send_eor = False
-            await self.proto.new_eors_async()
+            await self.proto.new_eors()
             log.debug(lazymsg('eor.sent.all'), self.id())
 
         # Manual EOR from API commands
         elif self.neighbor.eor:
             new_eor = cast(Family, self.neighbor.eor.popleft())
-            await self.proto.new_eors_async(new_eor.afi, new_eor.safi)
+            await self.proto.new_eors(new_eor.afi, new_eor.safi)
 
         return send_eor
 
@@ -660,16 +660,14 @@ class Peer:
 
                 # Read message with timeout
                 try:
-                    message = await asyncio.wait_for(self.proto.read_message_async(), timeout=0.1)
+                    message = await asyncio.wait_for(self.proto.read_message(), timeout=0.1)
                 except asyncio.TimeoutError:
                     message = _NOP
                     await asyncio.sleep(0)
 
                 # Keepalive handling
                 self.recv_timer.check_ka(message)
-                if send_ka() is not False:
-                    while send_ka() is None:
-                        await asyncio.sleep(0)
+                await send_ka.send_if_needed()
 
                 # Log statistics changes
                 for counter_line in self.stats.changed_statistics():
@@ -742,14 +740,7 @@ class Peer:
         except Notify as notify:
             if self.proto:
                 try:
-                    # Bridge to generator for notification sending (for now)
-                    generator = self.proto.new_notification(notify)
-                    try:
-                        while True:
-                            next(generator)
-                            await asyncio.sleep(0)  # Yield control
-                    except StopIteration:
-                        pass
+                    await self.proto.new_notification(notify)
                 except (NetworkError, ProcessError):
                     log.error(lazymsg('notification.send.failed'), self.id())
                 self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
