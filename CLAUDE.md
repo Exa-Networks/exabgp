@@ -103,6 +103,23 @@ Question 2 (if new commits since backport review):
 
 ## Development Commands
 
+### Setup
+
+**First time setup:**
+```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv sync
+```
+
+**Update dependencies:**
+```bash
+uv lock                          # Update lock file
+./qa/bin/sync_requirements.sh    # Sync qa/requirements.txt
+```
+
 ### Testing
 
 ```bash
@@ -110,8 +127,8 @@ Question 2 (if new commits since backport review):
 ./qa/bin/test_everything
 
 # Individual (for debugging only)
-ruff format src && ruff check src
-env exabgp_log_enable=false pytest ./tests/unit/
+uv run ruff format src && uv run ruff check src
+env exabgp_log_enable=false uv run pytest ./tests/unit/
 ./qa/bin/functional encoding  # ALL 72 tests
 ./qa/bin/functional decoding
 ./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
@@ -173,8 +190,8 @@ echo "<hex>" | ./sbin/exabgp decode             # From stdin
 ### Linting
 
 ```bash
-ruff format src  # Single quotes, 120 char
-ruff check src   # Must pass
+uv run ruff format src  # Single quotes, 120 char
+uv run ruff check src   # Must pass
 ```
 
 ### Port Conflicts

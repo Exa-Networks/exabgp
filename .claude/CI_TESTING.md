@@ -12,8 +12,8 @@ Run ALL tests before declaring code ready.
 
 **Individual commands (for debugging only):**
 ```bash
-ruff format src && ruff check src
-env exabgp_log_enable=false pytest ./tests/unit/
+uv run ruff format src && uv run ruff check src
+env exabgp_log_enable=false uv run pytest ./tests/unit/
 ./qa/bin/functional encoding
 ./qa/bin/functional decoding
 ./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
@@ -59,5 +59,6 @@ killall -9 Python  # macOS uses capital P
 
 All must pass:
 - Linting (Python 3.12)
-- Unit tests (Python 3.8-3.12)
-- Functional tests (Python 3.8-3.12)
+- Type checking (Python 3.12)
+- Unit tests (Python 3.10-3.13)
+- Functional tests (Python 3.10-3.13)
