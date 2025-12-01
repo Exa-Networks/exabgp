@@ -1006,8 +1006,12 @@ class Tests:
         client: Optional['Exec'],
         num_tests_selected: Optional[int],
     ) -> None:
-        """Print detailed server/client output for single test debugging"""
-        if (not server and not client) or num_tests_selected != 1:
+        """Print detailed server/client output for debugging.
+
+        Called for single test runs or when exactly one non-flaky test fails
+        in a multi-test run.
+        """
+        if not server and not client:
             return
 
         # Find the test that was run (the one that's not skipped)
@@ -1729,6 +1733,11 @@ class EncodingTests(Tests):
         # Remember how many tests we're running for single-test debug mode
         num_tests_selected = len(self.selected())
 
+        # Track first non-flaky failure for debug output in multi-test runs
+        first_failed_test: Optional[EncodingTests.Test] = None
+        first_failed_server: Optional[Exec] = None
+        first_failed_client: Optional[Exec] = None
+
         # Start daemons (servers) - timer shows [0/max] during setup
         daemons_started = 0
         last_daemon_display = -1  # Track last displayed count to avoid duplicates
@@ -1818,6 +1827,13 @@ class EncodingTests(Tests):
                     test.terminate(collect=False)  # Don't block on collect in hot loop
                     client[test.nick].terminate(collect=False)
                     success = False
+                    # Capture first non-flaky failure for debug output
+                    if first_failed_test is None and test.nick not in FLAKY_TESTS:
+                        first_failed_test = test
+                        test.collect()
+                        client[test.nick].collect()
+                        first_failed_server = test
+                        first_failed_client = client[test.nick]
                     # Show per-test output in verbose mode or if test is in debug list
                     if self._verbose or test.nick in self._debug_tests:
                         self._print_test_output(test, client[test.nick])
@@ -1831,7 +1847,18 @@ class EncodingTests(Tests):
                 # Terminate BOTH client and server when test completes
                 client[test.nick].terminate(collect=False)  # Don't block on collect in hot loop
                 test.terminate(collect=False)  # Also terminate server
-                success = test.result(test.success()) and success
+                test_passed = test.result(test.success())
+                success = test_passed and success
+
+                # Capture first non-flaky failure for debug output
+                if not test_passed and first_failed_test is None:
+                    if test.nick not in FLAKY_TESTS:
+                        first_failed_test = test
+                        # Collect output now before it's lost
+                        test.collect()
+                        client[test.nick].collect()
+                        first_failed_server = test
+                        first_failed_client = client[test.nick]
 
                 # Show per-test output in verbose mode or if test is in debug list
                 if self._verbose or test.nick in self._debug_tests:
@@ -1872,13 +1899,13 @@ class EncodingTests(Tests):
         # Move to new line after final display
         flush()
 
-        # For single test mode, collect output and pass server and client debug info
+        # Determine what to show for debug output
         server_exec = None
         client_exec = None
+
         if num_tests_selected == 1:
-            # Get all registered tests (including completed ones)
+            # Single test mode: show debug output for the one test
             all_tests = self.registered()
-            # Find the one test that was selected (not skipped)
             test = None
             for t in all_tests:
                 if t.state != State.SKIP:
@@ -1891,6 +1918,15 @@ class EncodingTests(Tests):
                 # Ensure output is collected for display
                 if client_exec and not client_exec.stdout and not client_exec.stderr:
                     client_exec.collect()
+        else:
+            # Multi-test mode: show debug output if exactly one non-flaky test failed
+            non_flaky_failures = [
+                t for t in self.selected()
+                if t.state in (State.FAIL, State.TIMEOUT) and t.nick not in FLAKY_TESTS
+            ]
+            if len(non_flaky_failures) == 1 and first_failed_server is not None:
+                server_exec = first_failed_server
+                client_exec = first_failed_client
 
         self.summary(
             server=server_exec,
