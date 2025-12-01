@@ -106,7 +106,7 @@ class LINK(BGPLS):
         self.nexthop = nexthop
         self.route_d: RouteDistinguisher | None = route_d
         if packed is not None:
-            self._packed = packed
+            self._packed: bytes = packed
 
     @classmethod
     def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> LINK:
@@ -206,7 +206,7 @@ class LINK(BGPLS):
         return hash((self.CODE, self.domain, self.proto_id, tuple(self.topology_ids), self.route_d))
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
-        if self._packed:
+        if hasattr(self, '_packed') and self._packed:
             return self._packed
         raise RuntimeError('Not implemented')
 

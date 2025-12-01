@@ -167,15 +167,10 @@ class TestNodeNLRI:
 
         node = NODE.unpack_bgpls_nlri(data, rd=None)
 
-        # Note: hash() has a bug in node.py (line 109)
-        # Bug: return hash((self.proto_id, self.node_ids))
-        # self.node_ids is a list, which is not hashable. Should be tuple(self.node_ids)
-        try:
-            hash1 = hash(node)
-            hash2 = hash(node)
-            assert hash1 == hash2
-        except TypeError:
-            pytest.skip('Known bug in NODE.__hash__() - node_ids list is unhashable')
+        # Fixed: node_ids is now properly converted to tuple in __hash__()
+        hash1 = hash(node)
+        hash2 = hash(node)
+        assert hash1 == hash2
 
     def test_node_string_representation(self) -> None:
         """Test Node NLRI string representation"""
@@ -386,15 +381,10 @@ class TestLinkNLRI:
 
         link = LINK.unpack_bgpls_nlri(data, rd=None)
 
-        # Note: hash() has a bug in link.py (line 188) causing RecursionError
-        # This test documents the expected behavior once bug is fixed
-        # Bug: return hash((self)) should be return hash((self.proto_id, ...))
-        try:
-            hash1 = hash(link)
-            hash2 = hash(link)
-            assert hash1 == hash2
-        except RecursionError:
-            pytest.skip('Known bug in LINK.__hash__() causing RecursionError')
+        # Fixed: __hash__() now properly returns hash of attributes instead of recursing
+        hash1 = hash(link)
+        hash2 = hash(link)
+        assert hash1 == hash2
 
     def test_link_string_representation(self) -> None:
         """Test Link NLRI string representation"""
@@ -434,14 +424,10 @@ class TestLinkNLRI:
 
         link = LINK.unpack_bgpls_nlri(data, rd=None)
 
-        # Note: link.py line 191 has typo: checks 'self.packed' instead of 'self._packed'
-        # This test documents expected behavior once bug is fixed
-        try:
-            negotiated = create_negotiated()
-            packed = link.pack_nlri(negotiated)
-            assert packed == data
-        except AttributeError:
-            pytest.skip('Known bug in LINK.pack_nlri() - checks wrong attribute name')
+        # Fixed: _packed attribute is now properly initialized in __init__()
+        negotiated = create_negotiated()
+        packed = link.pack_nlri(negotiated)
+        assert packed == data
 
 
 class TestPrefixV4NLRI:
@@ -535,14 +521,10 @@ class TestPrefixV4NLRI:
 
         prefix = PREFIXv4.unpack_bgpls_nlri(data, rd=None)
 
-        # Note: hash() has a bug in prefixv4.py (line 131) causing RecursionError
-        # Bug: return hash((self)) should be return hash((self.proto_id, ...))
-        try:
-            hash1 = hash(prefix)
-            hash2 = hash(prefix)
-            assert hash1 == hash2
-        except RecursionError:
-            pytest.skip('Known bug in PREFIXv4.__hash__() causing RecursionError')
+        # Fixed: __hash__() now properly returns hash of attributes instead of recursing
+        hash1 = hash(prefix)
+        hash2 = hash(prefix)
+        assert hash1 == hash2
 
     def test_prefix_v4_string_representation(self) -> None:
         """Test IPv4 Prefix NLRI string representation"""
@@ -677,14 +659,10 @@ class TestPrefixV6NLRI:
 
         prefix = PREFIXv6.unpack_bgpls_nlri(data, rd=None)
 
-        # Note: hash() has a bug in prefixv6.py (line 131) causing RecursionError
-        # Bug: return hash((self)) should be return hash((self.proto_id, ...))
-        try:
-            hash1 = hash(prefix)
-            hash2 = hash(prefix)
-            assert hash1 == hash2
-        except RecursionError:
-            pytest.skip('Known bug in PREFIXv6.__hash__() causing RecursionError')
+        # Fixed: __hash__() now properly returns hash of attributes instead of recursing
+        hash1 = hash(prefix)
+        hash2 = hash(prefix)
+        assert hash1 == hash2
 
     def test_prefix_v6_string_representation(self) -> None:
         """Test IPv6 Prefix NLRI string representation"""
