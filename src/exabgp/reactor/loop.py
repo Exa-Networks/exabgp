@@ -7,13 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import asyncio  # noqa: F401 - Used by async event loop wrapper in Step 9
+import asyncio
 import errno
 import re
-import select
 import time
 import uuid
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -28,7 +27,6 @@ from exabgp.reactor.asynchronous import ASYNC
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.listener import Listener
-from exabgp.bgp.message import Scheduling
 from exabgp.reactor.peer import Peer
 from exabgp.version import version
 
@@ -83,7 +81,6 @@ class Reactor:
         self._peers: dict[str, Peer] = {}
 
         self._saved_pid: bool = False
-        self._poller: select.poll = select.poll()
 
     def _termination(self, reason: str, exit_code: int) -> None:
         self.exit_code = exit_code
@@ -113,26 +110,7 @@ class Reactor:
             return False
         return True
 
-    def _wait_for_io(self, sleeptime: int) -> Generator[int, None, None]:
-        spin_prevention = False
-        try:
-            for fd, event in self._poller.poll(sleeptime):
-                if event & select.POLLIN or event & select.POLLPRI:
-                    yield fd
-                    continue
-                elif event & select.POLLHUP or event & select.POLLERR or event & select.POLLNVAL:
-                    spin_prevention = True
-                    continue
-            if spin_prevention:
-                self._prevent_spin()
-        except KeyboardInterrupt:
-            self._termination('^C received', self.Exit.normal)
-            return
-        except OSError:
-            self._prevent_spin()
-            return
-
-    async def _wait_for_io_async(self, sleeptime: int) -> list[int]:
+    async def _wait_for_io(self, sleeptime: int) -> list[int]:
         """Wait for I/O using asyncio (async version)
 
         Async wrapper for event loop integration.
@@ -448,217 +426,8 @@ class Reactor:
         return True
 
     def run(self) -> int:
-        # Check if legacy mode is enabled (default: asyncio)
-        if not getenv().reactor.legacy:
-            # Use asyncio event loop (default)
-            return asyncio.run(self.run_async())
-
-        # Use legacy generator-based event loop
-        self.daemon.daemonise()
-
-        # Make sure we create processes once we have closed file descriptor
-        # unfortunately, this must be done before reading the configuration file
-        # so we can not do it with dropped privileges
-        self.processes = Processes()
-
-        # we have to read the configuration possibly with root privileges
-        # as we need the MD5 information when we bind, and root is needed
-        # to bind to a port < 1024
-
-        # this is undesirable as :
-        # - handling user generated data as root should be avoided
-        # - we may not be able to reload the configuration once the privileges are dropped
-
-        # but I can not see any way to avoid it
-        for ip in self._ips:
-            if not self.listener.listen_on(ip, None, self._port, None, False, None):
-                return self.Exit.listening
-
-        if not self.reload():
-            return self.Exit.configuration
-
-        for neighbor in self.configuration.neighbors.values():
-            if neighbor.session.listen:
-                if not self.listener.listen_on(
-                    neighbor.session.md5_ip,
-                    neighbor.session.peer_address,
-                    neighbor.session.listen,
-                    neighbor.session.md5_password,
-                    neighbor.session.md5_base64,
-                    neighbor.session.incoming_ttl,
-                ):
-                    return self.Exit.listening
-
-        if not self.early_drop:
-            self.processes.start(self.configuration.processes)
-
-        if not self.daemon.drop_privileges():
-            log.critical(lazymsg('daemon.privileges.drop.failed user={u}', u=self.daemon.user), 'reactor')
-            log.critical(lazymsg('daemon.privileges.help env=exabgp.daemon.user'), 'reactor')
-            return self.Exit.privileges
-
-        if self.early_drop:
-            self.processes.start(self.configuration.processes)
-
-        # This is required to make sure we can write in the log location as we now have dropped root privileges
-        log.init(getenv())
-
-        if not self.daemon.savepid():
-            return self.Exit.pid
-
-        wait = getenv().tcp.delay
-        if wait:
-            sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
-            log.debug(lazymsg('reactor.waiting seconds={s}', s=sleeptime), 'reactor')
-            time.sleep(float(sleeptime))
-
-        workers: dict[int, str] = {}
-        peers = set()
-        api_fds: list[int] = []
-        ms_sleep = int(self._sleep_time * 1000)
-
-        while True:
-            try:
-                if self.signal.received:
-                    signaled = self.signal.received
-
-                    # report that we received a signal
-                    for key in self._peers:
-                        peer = self._peers[key]
-                        if peer.neighbor.api and peer.neighbor.api['signal']:
-                            peer.reactor.processes.signal(peer.neighbor, self.signal.number)
-
-                    self.signal.rearm()
-
-                    # we always want to exit
-                    if signaled == Signal.SHUTDOWN:
-                        self.exit_code = self.Exit.normal
-                        self.shutdown()
-                        break
-
-                    # it does mot matter what we did if we are restarting
-                    # as the peers and network stack are replaced by new ones
-                    if signaled == Signal.RESTART:
-                        self.restart()
-                        continue
-
-                    # did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
-                    if self._pending_adjribout():
-                        continue
-
-                    if signaled == Signal.RELOAD:
-                        self.reload()
-                        self.processes.start(self.configuration.processes, False)
-                        continue
-
-                    if signaled == Signal.FULL_RELOAD:
-                        self.reload()
-                        self.processes.start(self.configuration.processes, True)
-                        continue
-
-                if self.listener.incoming():
-                    # check all incoming connection
-                    self.asynchronous.schedule(
-                        str(uuid.uuid1()),
-                        'checking for new connection(s)',
-                        self.listener.new_connections(),
-                    )
-
-                sleep = ms_sleep
-
-                # do not attempt to listen on closed sockets even if the peer is still here
-                for io in list(workers.keys()):
-                    if io == -1:
-                        self._poller.unregister(io)
-                        del workers[io]
-
-                peers = self.active_peers()
-                # give a turn to all the peers
-                for key in list(peers):
-                    peer = self._peers[key]
-
-                    # limit the number of message handling per second
-                    if self._rate_limited(key, peer.neighbor.rate_limit):
-                        peers.discard(key)
-                        continue
-
-                    # handle the peer
-                    action = peer.run()
-
-                    # .run() returns a scheduling Message:
-                    # * NOW/AWAKE if it wants to be called again immediately
-                    # * LATER/NOP if it should be called again but has no work atm
-                    # * CLOSE/DONE if it is finished and is closing down, or restarting
-                    if action.SCHEDULING == Scheduling.CLOSE:
-                        if key in self._peers:
-                            del self._peers[key]
-                        peers.discard(key)
-                    # we are loosing this peer, not point to schedule more process work
-                    elif action.SCHEDULING == Scheduling.LATER:
-                        io = peer.socket()
-                        if io != -1:
-                            self._poller.register(
-                                io,
-                                select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
-                            )
-                            workers[io] = key
-                        # no need to come back to it before a a full cycle
-                        peers.discard(key)
-                    elif action.SCHEDULING == Scheduling.NOW:
-                        sleep = 0
-
-                    if not peers:
-                        break
-
-                # read at least on message per process if there is some and parse it
-                for service, command in self.processes.received():
-                    self.api.process(self, service, command)
-                    sleep = 0
-
-                self.asynchronous.run()
-
-                if api_fds != self.processes.fds:
-                    for fd in api_fds:
-                        if fd == -1:
-                            continue
-                        if fd not in self.processes.fds:
-                            self._poller.unregister(fd)
-                    for fd in self.processes.fds:
-                        if fd == -1:
-                            continue
-                        if fd not in api_fds:
-                            self._poller.register(
-                                fd,
-                                select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
-                            )
-                    api_fds = self.processes.fds
-
-                for io in self._wait_for_io(sleep):
-                    if io not in api_fds:
-                        peers.add(workers[io])
-
-                if self._stopping and not self._peers.keys():
-                    self._termination('exiting on peer termination', self.Exit.normal)
-
-            except KeyboardInterrupt:
-                self._termination('^C received', self.Exit.normal)
-            except SystemExit:
-                self._termination('exiting', self.Exit.normal)
-            except OSError as exc:
-                # Differentiate between different OS error types using errno
-                if exc.errno == errno.EINTR:
-                    # Interrupted system call, most likely ^C during I/O
-                    self._termination('I/O Error received, most likely ^C during IO', self.Exit.io_error)
-                elif exc.errno in (errno.EBADF, errno.EINVAL):
-                    # Bad file descriptor or invalid argument - select() errors
-                    self._termination('problem using select, stopping', self.Exit.select)
-                else:
-                    # Socket/network errors (ECONNRESET, EPIPE, ECONNREFUSED, etc.)
-                    self._termination('socket error received', self.Exit.socket)
-            except ProcessError:
-                self._termination('Problem when sending message(s) to helper program, stopping', self.Exit.process)
-
-        return self.exit_code
+        """Main entry point - runs the asyncio event loop."""
+        return asyncio.run(self.run_async())
 
     async def run_async(self) -> int:
         """Async version of run() - main entry point for asyncio mode

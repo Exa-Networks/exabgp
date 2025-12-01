@@ -276,7 +276,6 @@ class ReactorSection(ConfigSection):
     _section_name: ClassVar[str] = 'reactor'
 
     speed: float = option(1.0, f'reactor loop time\n{_SPACE} use only if you understand the code.')
-    legacy: bool = option(False, 'use legacy generator-based event loop instead of asyncio (default: asyncio)')
 
 
 class DebugSection(ConfigSection):
