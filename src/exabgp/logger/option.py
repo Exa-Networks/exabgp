@@ -9,7 +9,7 @@ import logging
 if TYPE_CHECKING:
     from exabgp.environment.config import Environment
 
-from exabgp.logger.handler import get_logger
+from exabgp.logger.handler import get_logger, _get_syslog_address
 from exabgp.logger.format import formater as get_formater, FormatterFunc
 
 
@@ -146,7 +146,7 @@ class option:
             cls.logger = get_logger(
                 f'ExaBGP syslog {now}',
                 format='%(message)s',
-                address='/var/run/syslog' if sys.platform == 'darwin' else '/dev/log',
+                address=_get_syslog_address(),
                 level=cls.level,
             )
             fmt = get_formater(env.log.short, 'syslog')
