@@ -124,7 +124,7 @@ class NODE(BGPLS):
         return self.json()
 
     def __hash__(self) -> int:
-        return hash((self.proto_id, tuple(self.node_ids)))
+        return hash((self.proto_id, self.domain, tuple(self.node_ids), self.route_d))
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
         if self._pack:
