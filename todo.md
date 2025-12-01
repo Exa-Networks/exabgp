@@ -19,20 +19,19 @@
 
 **Overall Grade: B+ (6.7/10)** | Full audit: `~/.claude/plans/eventual-yawning-fox.md`
 
-- [ ] **1. Add Attribute Cache Size Limit** (1-2 days)
-  - Impact: Security & Performance DoS risk
-  - Files: `src/exabgp/bgp/message/update/attribute/attributes.py:60-65`
-  - Solution: Implement LRU eviction with configurable max size (default 10,000)
+- [x] **1. Attribute Cache Size Limit** ✅
+  - Analyzed: `Attributes.cache` (line 60) was unused dead code - removed
+  - `Attribute.cache` already uses `util/cache.py` with LRU eviction (max 2000/type, 1hr TTL)
+  - No DoS risk - cache was already bounded
 
 - [ ] **2. Fix Blocking Write Deadlock** (2-3 days)
   - Impact: Reactor can deadlock entire system
   - Files: `src/exabgp/reactor/api/processes.py:656-672`
   - Solution: Change default to async mode or make sync writes non-blocking
 
-- [ ] **3. Fix Known Race Conditions** (3-5 days)
-  - Impact: Config reload crashes, RIB cache corruption
-  - Files: Review backport list (086b3ec1, 48e4405c)
-  - Solution: Add proper synchronization or queuing
+- [x] **3. Fix Known Race Conditions** ✅
+  - Fixed: Config reload race (086b3ec1), RIB iterator/cache races (48e4405c)
+  - Both commits merged to main
 
 ---
 
@@ -135,8 +134,7 @@
 - 94.2% of classes lack docstrings
 - Application layer: 0-35% test coverage
 - Giant methods (386-line `_main()`)
-- Memory leaks in caches/dicts
-- Unbounded attribute cache (DoS risk)
+- Memory leaks in respawn tracking dict
 
 **Strengths:**
 - 50% unit test coverage (1,955 tests)
