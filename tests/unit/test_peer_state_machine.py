@@ -480,7 +480,7 @@ class TestPeerConnectionAttempts:
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         reactor = Mock()
 
-        with patch('exabgp.reactor.peer._peer.getenv') as mock_env:
+        with patch('exabgp.reactor.peer.peer.getenv') as mock_env:
             mock_env.return_value.tcp.attempts = 0  # unlimited
             peer = Peer(neighbor, reactor)
 
@@ -495,7 +495,7 @@ class TestPeerConnectionAttempts:
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         reactor = Mock()
 
-        with patch('exabgp.reactor.peer._peer.getenv') as mock_env:
+        with patch('exabgp.reactor.peer.peer.getenv') as mock_env:
             mock_env.return_value.tcp.attempts = 3
             peer = Peer(neighbor, reactor)
 
@@ -514,7 +514,7 @@ class TestPeerConnectionAttempts:
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         reactor = Mock()
 
-        with patch('exabgp.reactor.peer._peer.getenv') as mock_env:
+        with patch('exabgp.reactor.peer.peer.getenv') as mock_env:
             mock_env.return_value.tcp.attempts = 3
             peer = Peer(neighbor, reactor)
 
@@ -747,21 +747,8 @@ class TestSchedulingConstants:
 class TestPeerRun:
     """Test Peer run() method"""
 
-    def test_run_with_generator_false(self) -> None:
-        """Test run() when generator is False (stopped)"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
-        peer.generator = False
-
-        # Should return None or not crash when generator is False
-        # This indicates the peer is stopped
-        assert peer.generator is False
-
-    def test_run_checks_broken_process(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_checks_broken_process(self) -> None:
         """Test run() checks for broken process"""
         neighbor = Mock()
         neighbor.uid = '1'
@@ -775,31 +762,11 @@ class TestPeerRun:
 
         peer = Peer(neighbor, reactor)
 
-        peer.run()
+        await peer.run()
 
         # Should stop peer when process is broken
         assert peer._restart is False
         reactor.processes.broken.assert_called_once_with(neighbor)
-
-    def test_run_generator_none_backoff(self) -> None:
-        """Test run() with None generator respects backoff"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-        reactor.processes = Mock()
-        reactor.processes.broken = Mock(return_value=False)
-
-        peer = Peer(neighbor, reactor)
-        peer.fsm_runner.clear()  # Ensure not running, not terminated
-        peer._restart = True
-        peer.fsm.change(FSM.IDLE)
-
-        # Should check backoff delay
-        result = peer.run()
-
-        # Should return _NOP or _DONE (scheduling messages)
-        assert result.SCHEDULING in [Scheduling.LATER, Scheduling.CLOSE] or result is None
 
 
 class TestPeerRemoveShutdown:

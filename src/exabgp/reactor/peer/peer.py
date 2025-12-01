@@ -19,14 +19,12 @@ if TYPE_CHECKING:
 
 # import traceback
 from exabgp.bgp.fsm import FSM
-from exabgp.bgp.message import _NOP, _AWAKE, _DONE, Message, Notification, Notify, Open, Update
+from exabgp.bgp.message import _NOP, Message, Notification, Notify, Open
 from exabgp.bgp.message.open.capability import REFRESH, Capability
-from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.debug.report import format_exception
 from exabgp.environment import getenv
-from exabgp.logger import lazyformat, lazymsg, log
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.delay import Delay
@@ -34,7 +32,6 @@ from exabgp.util.enumeration import TriState
 from exabgp.reactor.keepalive import KA
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.protocol import Protocol
-from exabgp.rib.change import Change
 
 
 # As we can not know if this is our first start or not, this flag is used to
@@ -390,41 +387,11 @@ class Peer:
 
         return ''
 
-    def _connect(self) -> Generator[Message, None, None]:
-        # Increment connection attempt counter
-        self.connection_attempts += 1
-
-        proto = Protocol(self)
-        connected = False
-        try:
-            for connected in proto.connect():
-                if connected:
-                    break
-                if self._teardown:
-                    raise Stop
-                # we want to come back as soon as possible
-                yield _NOP
-            self.proto = proto
-        except Stop:
-            # Connection failed
-            if not connected and self.proto:
-                self._close(
-                    f'connection to {self.neighbor.session.peer_address}:{self.neighbor.session.connect} failed'
-                )
-
-            # A connection arrived before we could establish !
-            if not connected or self.proto:
-                yield _AWAKE
-                raise Interrupted('connection failed') from None
-
-    async def _connect_async(self) -> None:
-        """Async version of _connect() - establishes connection using asyncio
+    async def _connect(self) -> None:
+        """Establishes connection using asyncio
 
         Raises:
             Interrupted: If connection fails or is interrupted
-
-        Uses Protocol.connect_async() which properly integrates with asyncio
-        instead of generator-based polling.
         """
         # Increment connection attempt counter
         self.connection_attempts += 1
@@ -451,36 +418,13 @@ class Peer:
                 )
             raise Interrupted('connection failed') from None
 
-    def _send_open(self) -> Generator[Message, None, None]:
-        assert self.proto is not None
-        for message in self.proto.new_open():
-            yield message
-
-    async def _send_open_async(self) -> Open:
-        """Async version of _send_open() - sends OPEN message using async I/O"""
+    async def _send_open(self) -> Open:
+        """Sends OPEN message using async I/O"""
         assert self.proto is not None
         return await self.proto.new_open_async()
 
-    def _read_open(self) -> Generator[Message, None, None]:
-        assert self.proto is not None
-        assert self.proto.connection is not None
-        wait = getenv().bgp.openwait
-        opentimer = ReceiveTimer(
-            self.proto.connection.session,
-            HoldTime(wait),
-            1,
-            1,
-            'waited for open too long, we do not like stuck in active',
-        )
-        # Only yield if we have not the open, otherwise the reactor can run the other connection
-        # which would be bad as we need to do the collission check without going to the other peer
-        assert self.neighbor.session.peer_address is not None
-        for message in self.proto.read_open(self.neighbor.session.peer_address.top()):
-            opentimer.check_ka(message)
-            yield message
-
-    async def _read_open_async(self) -> Open:
-        """Async version of _read_open() - reads OPEN message using async I/O"""
+    async def _read_open(self) -> Open:
+        """Reads OPEN message using async I/O"""
         assert self.proto is not None
         assert self.neighbor.session.peer_address is not None
         wait = getenv().bgp.openwait
@@ -493,93 +437,20 @@ class Peer:
         except asyncio.TimeoutError:
             raise Notify(5, 1, 'waited for open too long, we do not like stuck in active') from None
 
-    def _send_ka(self) -> Generator[Message, None, None]:
-        assert self.proto is not None
-        for message in self.proto.new_keepalive('OPENCONFIRM'):
-            yield message
-
-    async def _send_ka_async(self) -> None:
-        """Async version of _send_ka() - sends KEEPALIVE message using async I/O"""
+    async def _send_ka(self) -> None:
+        """Sends KEEPALIVE message using async I/O"""
         assert self.proto is not None
         await self.proto.new_keepalive_async('OPENCONFIRM')
 
-    def _read_ka(self) -> Generator[Message, None, None]:
-        assert self.proto is not None
-        assert self.recv_timer is not None
-        # Start keeping keepalive timer
-        for message in self.proto.read_keepalive():
-            self.recv_timer.check_ka_timer(message)
-            yield message
-
-    async def _read_ka_async(self) -> None:
-        """Async version of _read_ka() - reads KEEPALIVE message using async I/O"""
+    async def _read_ka(self) -> None:
+        """Reads KEEPALIVE message using async I/O"""
         assert self.proto is not None
         assert self.recv_timer is not None
         message = await self.proto.read_keepalive_async()
         self.recv_timer.check_ka_timer(message)
 
-    def _establish(self) -> Generator[Message, None, None]:
-        # try to establish the outgoing connection
-        self.fsm.change(FSM.ACTIVE)
-
-        if getenv().bgp.passive:
-            while not self.proto:
-                yield _NOP
-
-        self.fsm.change(FSM.IDLE)
-
-        if not self.proto:
-            for action in self._connect():
-                yield action
-        self.fsm.change(FSM.CONNECT)
-        assert self.proto is not None  # Set by _connect() or handle_connection()
-        assert self.proto.connection is not None
-
-        # normal sending of OPEN first ...
-        if self.neighbor.session.local_as:
-            for sent_open in self._send_open():
-                if sent_open.SCHEDULING:
-                    yield sent_open
-            self.proto.negotiated.sent(cast(Open, sent_open))
-            self.proto.negotiated.sent(cast(Open, sent_open))
-            self.fsm.change(FSM.OPENSENT)
-
-        # read the peer's open
-        for received_open in self._read_open():
-            if received_open.SCHEDULING:
-                yield received_open
-        self.proto.negotiated.received(cast(Open, received_open))
-        self.proto.negotiated.received(cast(Open, received_open))
-
-        self.proto.connection.msg_size = self.proto.negotiated.msg_size
-
-        # if we mirror the ASN, we need to read first and send second
-        if not self.neighbor.session.local_as:
-            for sent_open in self._send_open():
-                if sent_open.SCHEDULING:
-                    yield sent_open
-            self.proto.negotiated.sent(cast(Open, sent_open))
-            self.proto.negotiated.sent(cast(Open, sent_open))
-            self.fsm.change(FSM.OPENSENT)
-
-        self.proto.validate_open()
-        self.fsm.change(FSM.OPENCONFIRM)
-
-        self.recv_timer = ReceiveTimer(self.proto.connection.session, self.proto.negotiated.holdtime, 4, 0)
-        for message in self._send_ka():
-            if message.SCHEDULING:
-                yield message
-        for message in self._read_ka():
-            if message.SCHEDULING:
-                yield message
-        self.fsm.change(FSM.ESTABLISHED)
-        self.stats['complete'] = time.time()
-
-        # let the caller know that we were sucesfull
-        yield _AWAKE
-
-    async def _establish_async(self) -> None:
-        """Async version of _establish() - establishes BGP connection using async I/O"""
+    async def _establish(self) -> None:
+        """Establishes BGP connection using async I/O"""
         # try to establish the outgoing connection
         self.fsm.change(FSM.ACTIVE)
 
@@ -590,21 +461,20 @@ class Peer:
         self.fsm.change(FSM.IDLE)
 
         if not self.proto:
-            # Use async connect (no generator bridging)
-            await self._connect_async()
+            await self._connect()
         self.fsm.change(FSM.CONNECT)
-        assert self.proto is not None  # Set by _connect_async() or handle_connection()
+        assert self.proto is not None  # Set by _connect() or handle_connection()
         assert self.proto.connection is not None
 
         # normal sending of OPEN first ...
         if self.neighbor.session.local_as:
-            sent_open = await self._send_open_async()
+            sent_open = await self._send_open()
             self.proto.negotiated.sent(sent_open)
             self.proto.negotiated.sent(sent_open)
             self.fsm.change(FSM.OPENSENT)
 
         # read the peer's open
-        received_open = await self._read_open_async()
+        received_open = await self._read_open()
         self.proto.negotiated.received(received_open)
         self.proto.negotiated.received(received_open)
 
@@ -612,7 +482,7 @@ class Peer:
 
         # if we mirror the ASN, we need to read first and send second
         if not self.neighbor.session.local_as:
-            sent_open = await self._send_open_async()
+            sent_open = await self._send_open()
             self.proto.negotiated.sent(sent_open)
             self.proto.negotiated.sent(sent_open)
             self.fsm.change(FSM.OPENSENT)
@@ -621,19 +491,19 @@ class Peer:
         self.fsm.change(FSM.OPENCONFIRM)
 
         self.recv_timer = ReceiveTimer(self.proto.connection.session, self.proto.negotiated.holdtime, 4, 0)
-        await self._send_ka_async()
-        await self._read_ka_async()
+        await self._send_ka()
+        await self._read_ka()
         self.fsm.change(FSM.ESTABLISHED)
         self.stats['complete'] = time.time()
 
         # let the caller know that we were sucesfull (async version doesn't need return value)
 
     # -------------------------------------------------------------------------
-    # Async helper methods for _main_async()
+    # Helper methods for _main()
     # -------------------------------------------------------------------------
 
-    async def _send_operational_messages_async(self) -> None:
-        """Send operational messages from the neighbor's message queue (async version)."""
+    async def _send_operational_messages(self) -> None:
+        """Send operational messages from the neighbor's message queue."""
         if self.neighbor.capability.operational.is_enabled():
             new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
             if new_operational:
@@ -643,20 +513,20 @@ class Peer:
         elif self.neighbor.messages:
             self.neighbor.messages.popleft()
 
-    async def _send_refresh_messages_async(self) -> None:
-        """Send route refresh messages from the neighbor's refresh queue (async version)."""
+    async def _send_refresh_messages(self) -> None:
+        """Send route refresh messages from the neighbor's refresh queue."""
         if self.neighbor.capability.route_refresh:
             new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
             if new_refresh:
                 await self.proto.new_refresh_async(new_refresh)
 
-    async def _send_route_updates_async(
+    async def _send_route_updates(
         self,
         new_routes: Any,  # AsyncGenerator
         include_withdraw: bool,
         routes_per_iteration: int,
     ) -> tuple[Any, bool]:
-        """Send route updates from the outgoing RIB (async version).
+        """Send route updates from the outgoing RIB.
 
         Returns:
             Tuple of (updated new_routes generator, updated include_withdraw flag)
@@ -679,12 +549,12 @@ class Peer:
 
         return (new_routes, include_withdraw)
 
-    async def _send_eor_messages_async(
+    async def _send_eor_messages(
         self,
         send_eor: bool,
         new_routes: Any,
     ) -> bool:
-        """Send End-of-RIB markers (async version).
+        """Send End-of-RIB markers.
 
         Returns:
             Updated send_eor flag
@@ -714,195 +584,9 @@ class Peer:
             or self.neighbor.eor
         )
 
-    def _main(self) -> Generator[Message, None, None]:
-        """Yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
-        assert self.proto is not None  # Set by _establish()
-        assert self.proto.connection is not None
-        assert self.recv_timer is not None  # Set by _establish()
-        assert self.neighbor.rib is not None  # Initialized by neighbor
+    async def _main(self) -> int:
+        """Main BGP message processing loop using async I/O.
 
-        if self._teardown:
-            raise Notify(6, 3)
-
-        self.neighbor.rib.incoming.clear()
-
-        include_withdraw = False
-
-        # Announce to the process BGP is up
-        assert self.proto.connection is not None  # Must exist in established state
-        log.info(
-            lazymsg('peer.connected peer={p} connection={c}', p=self.id(), c=self.proto.connection.name()),
-            'reactor',
-        )
-        self.stats['up'] += 1
-        if self.neighbor.api and self.neighbor.api['neighbor-changes']:
-            try:
-                self.reactor.processes.up(self.neighbor)
-            except ProcessError:
-                # Process error during neighbor-up notification.
-                # Note: broken() check in run() handles persistent process failures.
-                raise Notify(6, 0, 'ExaBGP Internal error, sorry.') from None
-
-        routes_per_iteration = 1 if self.neighbor.rate_limit > 0 else 25
-        send_eor = not self.neighbor.manual_eor
-        new_routes = None
-
-        # Every last asm message should be re-announced on restart
-        for family in self.neighbor.asm:
-            if family in self.neighbor.families():
-                self.neighbor.messages.appendleft(self.neighbor.asm[family])
-
-        operational = None
-        refresh = None
-        command_eor = None
-        number = 0
-        refresh_enhanced = self.proto.negotiated.refresh == REFRESH.ENHANCED
-
-        send_ka = KA(self.proto.connection.session, self.proto)
-
-        # we need to make sure to send what was already issued by the api
-        # from the previous time
-        previous = self.neighbor.previous.changes if self.neighbor.previous else []
-        current = self.neighbor.changes
-        self.neighbor.rib.outgoing.replace_restart(previous, current)
-        self.neighbor.previous = None
-
-        self._delay.reset()
-        while not self._teardown:
-            # we are here following a configuration change
-            if self._neighbor:
-                # see what changed in the configuration
-                previous = self._neighbor.previous.changes if self._neighbor.previous else []
-                current = self._neighbor.changes
-                self.neighbor.rib.outgoing.replace_reload(previous, current)
-                # do not keep the previous routes in memory as they are not useful anymore
-                self._neighbor.previous = None
-                self._neighbor = None
-
-            for message in self.proto.read_message():
-                self.recv_timer.check_ka(message)
-
-                if send_ka() is not False:
-                    # we need and will send a keepalive
-                    while send_ka() is None:
-                        yield _AWAKE
-                for counter_line in self.stats.changed_statistics():
-                    log.info(lazymsg('statistics.changed info={counter_line}', counter_line=counter_line), 'statistics')
-
-                # Received update
-                if message.TYPE == Update.TYPE:
-                    update = cast(Update, message)
-                    number += 1
-                    log.debug(lazymsg('update.received number={number}', number=number), self.id())
-
-                    for nlri in update.nlris:
-                        self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
-                        log.debug(
-                            lazyformat('update.nlri number=%d nlri=' % number, nlri, str),
-                            self.id(),
-                        )
-
-                elif message.TYPE == RouteRefresh.TYPE:
-                    rr = cast(RouteRefresh, message)
-                    enhanced = rr.reserved == RouteRefresh.request
-                    enhanced = enhanced and refresh_enhanced
-                    self.resend(enhanced, (rr.afi, rr.safi))
-
-                # SEND OPERATIONAL
-                if self.neighbor.capability.operational.is_enabled():
-                    if not operational:
-                        new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
-                        if new_operational:
-                            operational = self.proto.new_operational(new_operational, self.proto.negotiated)
-
-                    if operational:
-                        try:
-                            next(operational)
-                        except StopIteration:
-                            operational = None
-                # make sure that if some operational message are received via the API
-                # that we do not eat memory for nothing
-                elif self.neighbor.messages:
-                    self.neighbor.messages.popleft()
-
-                # SEND REFRESH
-                if self.neighbor.capability.route_refresh:
-                    if not refresh:
-                        new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
-                        if new_refresh:
-                            refresh = self.proto.new_refresh(new_refresh)
-
-                    if refresh:
-                        try:
-                            next(refresh)
-                        except StopIteration:
-                            refresh = None
-
-                # Need to send update
-                if not new_routes and self.neighbor.rib.outgoing.pending():
-                    # Note: Peer controls timing (rate limit, priorities); Protocol handles sending
-                    new_routes = self.proto.new_update(include_withdraw)
-
-                if new_routes:
-                    try:
-                        for _ in range(routes_per_iteration):
-                            # This can raise a NetworkError
-                            next(new_routes)
-                    except StopIteration:
-                        new_routes = None
-                        include_withdraw = True
-                        # Fire flush callbacks - routes have been sent to wire
-                        self.neighbor.rib.outgoing.fire_flush_callbacks()
-
-                elif send_eor:
-                    send_eor = False
-                    for eor_msg in self.proto.new_eors():
-                        if eor_msg.SCHEDULING:
-                            yield eor_msg
-                    log.debug(lazymsg('eor.sent.all'), self.id())
-
-                # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
-                elif not command_eor and self.neighbor.eor:
-                    new_eor = cast(Family, self.neighbor.eor.popleft())
-                    command_eor = self.proto.new_eors(new_eor.afi, new_eor.safi)
-
-                if command_eor:
-                    try:
-                        next(command_eor)
-                    except StopIteration:
-                        command_eor = None
-
-                if (
-                    new_routes
-                    or not message.SCHEDULING  # Real message received (not NOP)
-                    or self.neighbor.messages
-                    or operational
-                    or self.neighbor.eor
-                    or command_eor
-                ):
-                    yield _AWAKE
-                else:
-                    yield _NOP
-
-                # read_message will loop until new message arrives with NOP
-                if self._teardown:
-                    break
-
-        # If graceful restart, silent shutdown
-        if self.neighbor.capability.graceful_restart and self.proto.negotiated.sent_open.capabilities.announced(
-            Capability.CODE.GRACEFUL_RESTART,
-        ):
-            log.error(lazymsg('session.closing reason=graceful_restart'), self.id())
-            self._close('graceful restarted negotiated, closing without sending any notification')
-            raise NetworkError('closing')
-
-        # notify our peer of the shutdown
-        raise Notify(6, self._teardown)
-
-    async def _main_async(self) -> int:
-        """Async version of _main() - main BGP message processing loop using async I/O.
-
-        This is the primary implementation. The sync _main() is legacy.
         Uses extracted helper methods for cleaner code structure.
         """
         assert self.proto is not None
@@ -998,12 +682,12 @@ class Peer:
                     await route_refresh_handler.handle_async(ctx, message)
 
                 # Send outbound messages using async helpers
-                await self._send_operational_messages_async()
-                await self._send_refresh_messages_async()
-                new_routes, include_withdraw = await self._send_route_updates_async(
+                await self._send_operational_messages()
+                await self._send_refresh_messages()
+                new_routes, include_withdraw = await self._send_route_updates(
                     new_routes, include_withdraw, routes_per_iteration
                 )
-                send_eor = await self._send_eor_messages_async(send_eor, new_routes)
+                send_eor = await self._send_eor_messages(send_eor, new_routes)
 
                 # Yield control based on pending work
                 if self._has_pending_work(new_routes, message):
@@ -1035,88 +719,11 @@ class Peer:
 
         raise Notify(6, self._teardown)
 
-    def _run(self) -> Generator[Message, None, None]:
-        """Yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"""
+    async def _run(self) -> None:
+        """Main peer loop using async/await"""
         try:
-            for action in self._establish():
-                yield action
-
-            for action in self._main():
-                yield action
-
-        # CONNECTION FAILURE
-        except NetworkError as network:
-            # Check if maximum connection attempts reached
-            if not self.can_reconnect():
-                log.debug(
-                    lazymsg('peer.connection.max_attempts_reached'),
-                    self.id(),
-                )
-                self.stop()
-
-            self._reset('closing connection', network)
-            return
-
-        # NOTIFY THE PEER OF AN ERROR
-        except Notify as notify:
-            if self.proto:
-                try:
-                    for notify_msg in self.proto.new_notification(notify):
-                        if notify_msg.SCHEDULING:
-                            yield notify_msg
-                except (NetworkError, ProcessError):
-                    log.error(lazymsg('notification.send.failed'), self.id())
-                self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
-            else:
-                self._reset()
-
-            if not self.can_reconnect():
-                log.debug(
-                    lazymsg('peer.connection.max_attempts_reached'),
-                    self.id(),
-                )
-                self.stop()
-
-            return
-
-        # THE PEER NOTIFIED US OF AN ERROR
-        except Notification as notification:
-            # Check if maximum connection attempts reached
-            if not self.can_reconnect():
-                log.debug(
-                    lazymsg('peer.connection.max_attempts_reached'),
-                    self.id(),
-                )
-                self.stop()
-
-            self._reset(
-                f'notification received ({notification.code},{notification.subcode})',
-                notification,
-            )
-            return
-
-        # PROBLEM WRITING TO OUR FORKED PROCESSES
-        except ProcessError as process:
-            self._reset('process problem', process)
-            return
-
-        # ....
-        except Interrupted as interruption:
-            self._reset(f'connection received before we could fully establish one ({interruption})')
-            return
-
-        # UNHANDLED PROBLEMS
-        except Exception as exc:
-            # Those messages can not be filtered in purpose
-            log.error(lazymsg('peer.exception.unhandled error={msg}', msg=format_exception(exc)), 'reactor')
-            self._reset()
-            return
-
-    async def _run_async(self) -> None:
-        """Async version of _run() - main peer loop using async/await"""
-        try:
-            await self._establish_async()
-            await self._main_async()
+            await self._establish()
+            await self._main()
 
         # CONNECTION FAILURE
         except NetworkError as network:
@@ -1191,45 +798,8 @@ class Peer:
             self._reset()
             return
 
-    # loop
-
-    def run(self) -> Message:
-        if self.reactor.processes.broken(self.neighbor):
-            # Process respawning handled by Processes._handle_problem().
-            # This branch handles cases where respawning failed or was disabled.
-            log.error(lazymsg('process.lost action=stopping'), 'processes')
-            if self.reactor.processes.terminate_on_error:
-                self.reactor.shutdown()
-            else:
-                self.stop()
-            return _DONE
-
-        if self.fsm_runner.running:
-            try:
-                return self.fsm_runner.advance()
-            except StopIteration:
-                self.fsm_runner.clear()
-                if self._restart:
-                    return _NOP
-                return _DONE
-
-        if self.fsm_runner.terminated:
-            return _DONE
-
-        if self.fsm in [FSM.OPENCONFIRM, FSM.ESTABLISHED]:
-            log.debug(lazymsg('peer.stopping reason=other_connection_established'), self.id())
-            self.fsm_runner.terminate()
-            return _NOP
-        if self._delay.backoff():
-            return _NOP
-        if self._restart:
-            log.debug(lazymsg('peer.connection.initializing peer={p}', p=self.id()), 'reactor')
-            self.fsm_runner.set(self._run())
-            return _NOP
-        return _DONE
-
-    async def run_async(self) -> None:
-        """Async entry point for peer - runs the peer FSM using async/await"""
+    async def run(self) -> None:
+        """Entry point for peer - runs the peer FSM using async/await"""
         if self.reactor.processes.broken(self.neighbor):
             # Process respawning handled by Processes._handle_problem().
             # This branch handles cases where respawning failed or was disabled.
@@ -1253,8 +823,8 @@ class Peer:
 
             if self._restart:
                 log.debug(lazymsg('peer.connection.initializing peer={p}', p=self.id()), 'reactor')
-                await self._run_async()
-                # After _run_async completes, check if we should restart
+                await self._run()
+                # After _run completes, check if we should restart
                 if not self._restart:
                     break
                 await asyncio.sleep(0.1)  # Clean loop delay
@@ -1262,9 +832,9 @@ class Peer:
                 break
 
     def start_async_task(self) -> None:
-        """Start the async peer task (for async mode)"""
+        """Start the async peer task"""
         if self._async_task is None or self._async_task.done():
-            self._async_task = asyncio.create_task(self.run_async())
+            self._async_task = asyncio.create_task(self.run())
 
     def stop_async_task(self) -> None:
         """Stop the async peer task (for async mode)"""
