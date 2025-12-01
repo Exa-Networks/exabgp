@@ -1,114 +1,54 @@
-convert FSM to use IntEnum 
-convert code to use async
+# TODO
 
-  📋 Complete Report: | None Annotations in Application Module
+## Quick Items
 
-  32 Total | None Annotations
+- [ ] Convert FSM.STATE to use `enum.IntEnum` (src/exabgp/bgp/fsm.py)
+  - Current: Custom `class STATE(int)` with ClassVar attributes
+  - Target: Python's built-in `enum.IntEnum`
+  - Effort: 30 min - 1 hour
 
-  ---
-  🟢 EASY FIXES (Can Remove Now)
+- [ ] Make async mode the default reactor
+  - Current: Requires `exabgp_reactor_asyncio=true` flag
+  - Target: Async by default, legacy mode opt-in
+  - Status: AsyncIO Phase 2 complete (100% test parity)
+  - See: CLAUDE.md "AsyncIO Support" section
 
-  | File      | Line | Current              | Fix    | Reason                                |
-  |-----------|------|----------------------|--------|---------------------------------------|
-  | decode.py | 55   | main() -> int | None | -> int | cmdline() always returns int (0 or 1) |
-  | encode.py | 67   | main() -> int | None | -> int | cmdline() always returns int (0)      |
+---
 
-  ---
-  🟡 MEDIUM FIXES (Bug Fix + Type Improvement)
+## Comprehensive Audit & Action Plan
 
-  | File    | Line  | Issue                                                                                    | Fix                                 |
-  |---------|-------|------------------------------------------------------------------------------------------|-------------------------------------|
-  | pipe.py | 66-88 | check_fifo() -> bool | None has 3 duplicate except OSError blocks - only first reachable | Remove dead code, change to -> bool |
+**Full repository audit with 23 prioritized action items:**
 
-  ---
-  🔴 UPSTREAM TYPE ISSUES (Environment/HashTable)
+📄 See: `.claude/plans/eventual-yawning-fox.md`
 
-  | File      | Line          | Code                                     | Root Cause                        |
-  |-----------|---------------|------------------------------------------|-----------------------------------|
-  | server.py | 182, 221, 231 | if env.api.pipename is None              | HashTable.__getattr__ returns Any |
-  | run.py    | 263-264       | pipename, socketname from getenv().api.* | Same - type info lost             |
+**Summary:**
+- Overall Grade: B+ (6.7/10)
+- 3 Critical fixes (Week 1-2)
+- 5 High priority items (Week 3-4)
+- 10 Medium priority items (Next quarter)
+- 5 Low priority items (Technical debt)
 
-  Upstream Fix Options:
-  1. Add typed properties to Env class for known fields
-  2. Use TypedDict for HashTable sections
-  3. Create typed wrapper class for api section
+**Top 3 Critical Items:**
+1. Add attribute cache size limit (DoS risk)
+2. Fix blocking write deadlock in sync mode
+3. Fix known race conditions (config reload, RIB cache)
 
-  ---
-  ⚪ LEGITIMATELY OPTIONAL (Cannot Remove)
+**Key Weaknesses:**
+- 94.2% of classes lack docstrings
+- Application layer: 0-35% test coverage
+- Giant methods (386-line `_main()`)
+- Memory leaks in caches/dicts
 
-  Signal Handlers (Python requires FrameType | None)
+---
 
-  | File          | Line | Annotation              |
-  |---------------|------|-------------------------|
-  | flow.py       | 117  | frame: FrameType | None |
-  | unixsocket.py | 196  | signum: int | None      |
+## Documentation Guides
 
-  Optional Function Parameters (User Choice)
+**Writing documentation:**
+- `.claude/DOCUMENTATION_WRITING_GUIDE.md` - Comprehensive guide for adding docstrings
+- `.claude/commands/review-docs.md` - Slash command: `/review-docs <file>`
 
-  | File           | Line          | Annotation                | Reason                        |
-  |----------------|---------------|---------------------------|-------------------------------|
-  | cli.py         | 33-34         | history_file, daemon_uuid | Optional CLI features         |
-  | healthcheck.py | 191           | name: str | None          | Optional healthcheck name     |
-  | healthcheck.py | 227, 301, 330 | label: str | None         | Optional IP label filter      |
-  | healthcheck.py | 359           | user, group               | Optional privilege drop       |
-  | healthcheck.py | 381           | cmd: str | None           | Optional health check command |
-  | healthcheck.py | 226           | ip_ifnames: dict | None   | Optional interface mapping    |
-  | server.py      | 48            | delay: int | None         | Optional delayed signal       |
-  | run.py         | 328, 392, 421 | pipename, socketname      | Optional transport names      |
-  | tojson.py      | 113           | result: str | None        | Transcoder may return None    |
+**Target:** 80% class docstring coverage (currently 5.8%)
 
-  Argparse with default=None (Semantic - "Not Provided")
+---
 
-  | File           | Lines             | Arguments                                    |
-  |----------------|-------------------|----------------------------------------------|
-  | healthcheck.py | 114, 121-128, 130 | --label, --community, --*-as-path, --path-id |
-  | decode.py      | 48-49             | --configuration, --family                    |
-  | encode.py      | 61                | --configuration                              |
-  | run.py         | 114, 118          | --pipename, --batch                          |
-  | server.py      | 70                | --signal                                     |
-
-  Note: These use None to mean "not provided" and check if value: or if value is not None:. Changing to default='' would require updating all usage sites.
-
-  ---
-  Instance State Variables (Start as None, Set Later)
-
-  | File          | Line    | Variable                                | Pattern          |
-  |---------------|---------|-----------------------------------------|------------------|
-  | pipe.py       | 97      | self.r_pipe: int | None                 | Set in loop()    |
-  | unixsocket.py | 101-103 | server_socket, client_socket, client_fd | Socket lifecycle |
-
-  Fix Option: Initialize in __init__ with sentinel or restructure to avoid None state.
-
-  ---
-  Collections with Optional Elements
-
-  | File          | Line          | Type                                    | Reason                     |
-  |---------------|---------------|-----------------------------------------|----------------------------|
-  | pipe.py       | 133, 248      | list[int | None], dict[int | None, ...] | self.r_pipe can be None    |
-  | unixsocket.py | 204, 295, 299 | Same pattern                            | self.client_fd can be None |
-
-  ---
-  Complex Return Type (Dual Behavior)
-
-  | File    | Line    | Function                            | Issue                                          |
-  |---------|---------|-------------------------------------|------------------------------------------------|
-  | run.py  | 124     | send_command_socket() -> str | None | Returns str when return_output=True, else None |
-  | main.py | 27, 133 | main() -> int | None                | argparse.func is Callable[..., Any]            |
-
-  Fix Option: Use @overload or split into two functions.
-
-  ---
-  📊 Summary
-
-  | Category              | Count   | Fixable?                               |
-  |-----------------------|---------|----------------------------------------|
-  | Easy fixes            | 2       | ✅ Now                                  |
-  | Bug fix (dead code)   | 1       | ✅ Now                                  |
-  | Upstream (HashTable)  | ~5 uses | 🔧 Requires environment module changes |
-  | Legitimately optional | ~20     | ❌ By design                            |
-  | Complex/restructure   | ~4      | 🔧 Would need API changes              |
-
-  Recommended Actions:
-  1. ✅ Fix decode.py and encode.py main() return types
-  2. ✅ Fix pipe.py dead code bug
-  3. 🔧 Consider typed Env properties for api.pipename/api.socketname
+**Last Updated:** 2025-12-01
