@@ -12,7 +12,7 @@ The 20% of files you'll modify 80% of the time - quick navigation guide.
 | 2 | `bgp/message/update/__init__.py` | ~400 | UPDATE encoding/decoding | Message format changes |
 | 3 | `bgp/message/update/attribute/attributes.py` | 532 | Attribute collection handling | New attributes, parsing logic |
 | 4 | `configuration/configuration.py` | 614 | Main config parser | New config syntax |
-| 5 | `reactor/peer.py` | 1292 | BGP peer protocol handler | Protocol changes, FSM |
+| 5 | `reactor/peer/peer.py` | 950 | BGP peer protocol handler (async) | Protocol changes, FSM |
 | 6 | `bgp/message/update/nlri/nlri.py` | ~300 | NLRI base + registry | New NLRI families |
 | 7 | `protocol/family.py` | 442 | AFI/SAFI definitions | New address families |
 | 8 | `reactor/loop.py` | 821 | Main reactor event loop | Event handling changes |
@@ -83,7 +83,7 @@ The 20% of files you'll modify 80% of the time - quick navigation guide.
 | `attribute/*.py` pack/unpack signature | All Attribute subclasses | Uniform API |
 | `protocol/family.py` add AFI/SAFI | NLRI registration, config parser | New family support |
 | `bgp/message/message.py` Message type | FSM validation, peer.py handling | Protocol correctness |
-| `bgp/fsm.py` states/transitions | reactor/peer.py state handling | FSM consistency |
+| `bgp/fsm.py` states/transitions | reactor/peer/peer.py state handling | FSM consistency |
 | `reactor/api/command/*.py` add command | `registry.py` metadata | Command discovery |
 | `bgp/message/open/capability/*.py` | Neighbor negotiation logic | Capability handling |
 | `configuration/configuration.py` syntax | Documentation, examples | User-facing |
@@ -207,7 +207,7 @@ Breaking changes require major version bump and migration guide.
 **Read this** to understand event flow.
 
 ### 7. BGP Protocol Handler
-**File:** `reactor/peer.py` (1292 lines)
+**File:** `reactor/peer/peer.py` (950 lines, async-only)
 
 **Why:** Demonstrates:
 - FSM implementation
@@ -239,7 +239,7 @@ Breaking changes require major version bump and migration guide.
 ```
 reactor/protocol.py (TCP layer)
   ↓
-reactor/peer.py (BGP protocol)
+reactor/peer/peer.py (BGP protocol)
   ↓
 bgp/message/message.py (Dispatcher)
   ↓
@@ -305,7 +305,7 @@ reactor/protocol.py (TCP send)
 → Reference: `configuration.py` (main parser)
 
 **...debugging a protocol issue:**
-→ Start: `reactor/peer.py`
+→ Start: `reactor/peer/peer.py`
 → Tools: Enable debug logging, packet capture
 
 **...debugging message encoding:**
