@@ -51,7 +51,7 @@ pytest-benchmark==5.2.2 ; sys_platform == 'darwin' or sys_platform == 'linux'
 pytest-cov==5.0.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 pytest-timeout==2.4.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 pytest-xdist==3.8.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
-requests==2.32.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
+requests==2.32.5 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via coveralls
 ruff==0.7.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 sortedcontainers==2.4.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
@@ -65,5 +65,5 @@ typing-extensions==4.15.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   mypy
     #   pytest-asyncio
-urllib3==2.2.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
+urllib3==2.5.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests
