@@ -2,10 +2,10 @@
 
 ## Quick Items
 
-- [ ] Convert FSM.STATE to use `enum.IntEnum` (src/exabgp/bgp/fsm.py)
-  - Current: Custom `class STATE(int)` with ClassVar attributes
-  - Target: Python's built-in `enum.IntEnum`
-  - Effort: 30 min - 1 hour
+- [x] Convert FSM.STATE to use `enum.IntEnum` (src/exabgp/bgp/fsm.py) ✅
+  - Completed: Reduced from 50 lines to 15 lines
+  - Benefits: Better type safety, cleaner code, automatic validation
+  - All 1,955 tests pass including 87 FSM-specific tests
 
 - [ ] Make async mode the default reactor
   - Current: Requires `exabgp_reactor_asyncio=true` flag

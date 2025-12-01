@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from enum import IntEnum
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
@@ -19,44 +20,22 @@ if TYPE_CHECKING:
 
 
 class FSM:
-    class STATE(int):
-        IDLE: ClassVar[int] = 0x01
-        ACTIVE: ClassVar[int] = 0x02
-        CONNECT: ClassVar[int] = 0x04
-        OPENSENT: ClassVar[int] = 0x08
-        OPENCONFIRM: ClassVar[int] = 0x10
-        ESTABLISHED: ClassVar[int] = 0x20
+    class STATE(IntEnum):
+        """BGP Finite State Machine states per RFC 4271 Section 8.2.2."""
 
-        names: ClassVar[dict[int, str]] = {
-            IDLE: 'IDLE',
-            ACTIVE: 'ACTIVE',
-            CONNECT: 'CONNECT',
-            OPENSENT: 'OPENSENT',
-            OPENCONFIRM: 'OPENCONFIRM',
-            ESTABLISHED: 'ESTABLISHED',
-        }
+        IDLE = 0x01
+        ACTIVE = 0x02
+        CONNECT = 0x04
+        OPENSENT = 0x08
+        OPENCONFIRM = 0x10
+        ESTABLISHED = 0x20
 
-        codes: ClassVar[dict[str, int]] = dict((name, code) for (code, name) in names.items())
-
-        valid: ClassVar[list[int]] = list(names)
-
-        def __init__(self, code: int) -> None:
-            if code not in self.valid:
-                raise RuntimeError(f'invalid FSM code {code}')
-            int.__init__(code)
-
-        def __repr__(self) -> str:
-            return self.names.get(self, f'INVALID 0x{hex(self)}')
-
-        def __str__(self) -> str:
-            return repr(self)
-
-    IDLE: STATE = STATE(0x01)
-    ACTIVE: STATE = STATE(0x02)
-    CONNECT: STATE = STATE(0x04)
-    OPENSENT: STATE = STATE(0x08)
-    OPENCONFIRM: STATE = STATE(0x10)
-    ESTABLISHED: STATE = STATE(0x20)
+    IDLE: STATE = STATE.IDLE
+    ACTIVE: STATE = STATE.ACTIVE
+    CONNECT: STATE = STATE.CONNECT
+    OPENSENT: STATE = STATE.OPENSENT
+    OPENCONFIRM: STATE = STATE.OPENCONFIRM
+    ESTABLISHED: STATE = STATE.ESTABLISHED
 
     # to: from - transition table mapping destination state to valid source states
     transition: ClassVar[dict[STATE, list[STATE]]] = {
@@ -93,4 +72,4 @@ class FSM:
         return f'FSM state {self.state}'
 
     def name(self) -> str:
-        return self.STATE.names.get(self.state, 'INVALID')
+        return self.state.name
