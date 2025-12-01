@@ -480,7 +480,7 @@ class TestPeerConnectionAttempts:
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         reactor = Mock()
 
-        with patch('exabgp.reactor.peer.getenv') as mock_env:
+        with patch('exabgp.reactor.peer._peer.getenv') as mock_env:
             mock_env.return_value.tcp.attempts = 0  # unlimited
             peer = Peer(neighbor, reactor)
 
@@ -495,7 +495,7 @@ class TestPeerConnectionAttempts:
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         reactor = Mock()
 
-        with patch('exabgp.reactor.peer.getenv') as mock_env:
+        with patch('exabgp.reactor.peer._peer.getenv') as mock_env:
             mock_env.return_value.tcp.attempts = 3
             peer = Peer(neighbor, reactor)
 
@@ -514,7 +514,7 @@ class TestPeerConnectionAttempts:
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         reactor = Mock()
 
-        with patch('exabgp.reactor.peer.getenv') as mock_env:
+        with patch('exabgp.reactor.peer._peer.getenv') as mock_env:
             mock_env.return_value.tcp.attempts = 3
             peer = Peer(neighbor, reactor)
 
