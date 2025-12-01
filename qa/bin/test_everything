@@ -94,7 +94,7 @@ def run_command(cmd: str, env: Optional[dict] = None, shell: bool = True) -> Tup
 
 def test_ruff_format(test_num: int, total: int) -> bool:
     """Ruff format check"""
-    returncode, stdout, stderr = run_command('ruff format src tests')
+    returncode, stdout, stderr = run_command('uv run ruff format src tests')
 
     if returncode != 0:
         print_header(test_num, total, 'Ruff Format')
@@ -110,7 +110,7 @@ def test_ruff_format(test_num: int, total: int) -> bool:
 
 def test_ruff_check(test_num: int, total: int) -> bool:
     """Ruff check"""
-    returncode, stdout, stderr = run_command('ruff check src qa tests')
+    returncode, stdout, stderr = run_command('uv run ruff check src qa tests')
 
     if returncode != 0:
         print_header(test_num, total, 'Ruff Check')
@@ -126,7 +126,7 @@ def test_ruff_check(test_num: int, total: int) -> bool:
 
 def test_unit_tests(test_num: int, total: int) -> bool:
     """Unit tests"""
-    returncode, stdout, stderr = run_command('env exabgp_log_enable=false pytest ./tests/unit/ -q', shell=True)
+    returncode, stdout, stderr = run_command('env exabgp_log_enable=false uv run pytest ./tests/unit/ -q', shell=True)
 
     if returncode != 0:
         print_header(test_num, total, 'Unit Tests')

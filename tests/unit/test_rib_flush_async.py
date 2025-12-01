@@ -159,9 +159,10 @@ class TestRibClearThenAnnounce:
             result = cmd_func()
             execution_log.extend(result)
 
-        assert execution_log == ['clear_exec', 'announce_exec'], (
-            f'Commands must execute sequentially, got: {execution_log}'
-        )
+        assert execution_log == [
+            'clear_exec',
+            'announce_exec',
+        ], f'Commands must execute sequentially, got: {execution_log}'
 
 
 class TestRibMultipleFlushSequence:

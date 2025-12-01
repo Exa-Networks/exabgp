@@ -1,2 +1,2 @@
-#/bin/sh
-env exabgp_log_enable=false pytest --cov --cov-reset --cov-report=html ./tests/*_test.py
+#!/bin/sh
+env exabgp_log_enable=false uv run pytest --cov --cov-reset --cov-report=html ./tests/*_test.py
