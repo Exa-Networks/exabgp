@@ -24,10 +24,9 @@
   - `Attribute.cache` already uses `util/cache.py` with LRU eviction (max 2000/type, 1hr TTL)
   - No DoS risk - cache was already bounded
 
-- [ ] **2. Fix Blocking Write Deadlock** (2-3 days)
-  - Impact: Reactor can deadlock entire system
-  - Files: `src/exabgp/reactor/api/processes.py:656-672`
-  - Solution: Change default to async mode or make sync writes non-blocking
+- [x] **2. Fix Blocking Write Deadlock** ✅
+  - Fixed: c7b2f94d - Resolved sync mode write deadlock and partial write bug
+  - Files: `src/exabgp/reactor/api/processes.py`
 
 - [x] **3. Fix Known Race Conditions** ✅
   - Fixed: Config reload race (086b3ec1), RIB iterator/cache races (48e4405c)
@@ -37,11 +36,10 @@
 
 ## ⚠️ High Priority - Next Sprint (Week 3-4)
 
-- [ ] **4. Add Application Layer Tests** (1 week)
-  - Impact: Critical paths completely untested (0-35% coverage, 1,879 lines)
-  - Files: Create `tests/unit/application/` directory
-  - Tests needed: test_application_main.py, test_application_healthcheck.py, test_application_server.py
-  - Target: 0% → 60% coverage
+- [x] **4. Add Application Layer Tests** ✅
+  - Completed: c97702b9 - Added 112 new tests in 7 test files
+  - Files: `tests/unit/application/` (test_healthcheck.py, test_validate.py, test_version.py, test_environ.py, test_decode_app.py, test_encode_app.py, test_main.py)
+  - Coverage: FSM states, CLI argument parsing, encode/decode, subcommand dispatch
 
 - [ ] **5. Refactor Giant Methods** (1 week)
   - Impact: Code comprehension and maintainability
@@ -98,31 +96,36 @@
 - [ ] **16. Improve Error Path Cleanup** (3-5 days)
   - Files: Review all resource acquisition points
 
-- [ ] **17. Resolve Type Safety Issues** (2 weeks)
-  - Target: 76 files with `# type: ignore` → 0
-  - Focus: flow.py (8 instances), attributes.py
+- [x] **17. Resolve Type Safety Issues** ✅
+  - Fixed: 159db1cd - Removed all `type: ignore` comments
+  - All 76 files cleaned up
 
 - [ ] **18. Cache Compiled Regexes** (1 day)
   - Files: `src/exabgp/configuration/neighbor/parser.py:187`
+
+- [ ] **19. Use logging.dictConfig for Logging**
+  - Impact: Cleaner logging configuration, standard Python pattern
+  - Files: `src/exabgp/logger.py`, logging setup code
+  - Solution: Replace current logging setup with `logging.config.dictConfig()`
 
 ---
 
 ## 🔧 Low Priority - Technical Debt
 
-- [ ] **19. Refactor NLRI Duplication** (1 week)
+- [ ] **20. Refactor NLRI Duplication** (1 week)
   - Impact: Reduce 186+ lines of duplication
   - Files: 44 NLRI pack/unpack implementations
 
-- [ ] **20. Consolidate Test Fixtures** (4 hours)
+- [ ] **21. Consolidate Test Fixtures** (4 hours)
   - Files: `tests/unit/conftest.py`
 
-- [ ] **21. Clean Up Legacy Files** (2 days)
+- [ ] **22. Clean Up Legacy Files** (2 days)
   - Audit: `netlink/old.py`, 20 files with "deprecated"
 
-- [ ] **22. Add Performance Regression Testing** (2 days)
+- [ ] **23. Add Performance Regression Testing** (2 days)
   - Solution: pytest-benchmark in CI
 
-- [ ] **23. Address TODO/FIXME Comments** (1 day triage)
+- [ ] **24. Address TODO/FIXME Comments** (1 day triage)
   - Count: 48 comments (0.09% of codebase)
   - Create GitHub issues for each
 
@@ -132,12 +135,11 @@
 
 **Key Weaknesses:**
 - 94.2% of classes lack docstrings
-- Application layer: 0-35% test coverage
 - Giant methods (386-line `_main()`)
 - Memory leaks in respawn tracking dict
 
 **Strengths:**
-- 50% unit test coverage (1,955 tests)
+- 50%+ unit test coverage (2,067 tests)
 - Zero runtime dependencies (100% stdlib)
 - Excellent CI/CD (8 GitHub Actions workflows)
 - Active maintenance (recent type safety improvements)
