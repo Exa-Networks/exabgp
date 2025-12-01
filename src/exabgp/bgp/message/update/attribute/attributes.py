@@ -56,9 +56,6 @@ class Attributes(dict):
         Attribute.CODE.INTERNAL_WITHDRAW,
     )
 
-    # A cache of parsed attributes
-    cache: ClassVar[dict[str, Attributes]] = {}
-
     # The previously parsed Attributes
     cached: ClassVar[Attributes | None] = None
     # previously parsed attribute, from which cached was made of
