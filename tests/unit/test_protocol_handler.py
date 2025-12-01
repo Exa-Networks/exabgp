@@ -15,7 +15,7 @@ Test Coverage:
 
 import pytest
 from typing import Any, Generator
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, patch, AsyncMock
 
 
 @pytest.fixture(autouse=True)
@@ -273,11 +273,12 @@ def test_protocol_close_with_connection(mock_peer: Any) -> None:
 
 
 # ==============================================================================
-# Phase 2: Message Writing and Statistics
+# Phase 2: Message Writing and Statistics (Async)
 # ==============================================================================
 
 
-def test_protocol_write_keepalive(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_write_keepalive(mock_peer: Any) -> None:
     """Test writing a KEEPALIVE message updates statistics."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.keepalive import KeepAlive
@@ -285,19 +286,19 @@ def test_protocol_write_keepalive(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     keepalive = KeepAlive()
-    result = list(protocol.write(keepalive, protocol.negotiated))
+    await protocol.write(keepalive, protocol.negotiated)
 
-    assert mock_connection.writer.called
+    assert mock_connection.writer_async.called
     assert mock_peer.stats['send-keepalive'] == 1
-    assert result == [True]
 
 
-def test_protocol_write_with_api_callback(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_write_with_api_callback(mock_peer: Any) -> None:
     """Test writing a message with API callback enabled."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.keepalive import KeepAlive
@@ -308,22 +309,23 @@ def test_protocol_write_with_api_callback(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     keepalive = KeepAlive()
-    list(protocol.write(keepalive, protocol.negotiated))
+    await protocol.write(keepalive, protocol.negotiated)
 
     mock_peer.reactor.processes.message.assert_called_once()
 
 
 # ==============================================================================
-# Phase 3: Message Reading - Basic
+# Phase 3: Message Reading - Basic (Async)
 # ==============================================================================
 
 
-def test_protocol_read_message_keepalive(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_message_keepalive(mock_peer: Any) -> None:
     """Test reading a KEEPALIVE message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -331,24 +333,19 @@ def test_protocol_read_message_keepalive(mock_peer: Any) -> None:
 
     protocol = Protocol(mock_peer)
 
-    # Mock connection reader that yields KEEPALIVE
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    messages = list(protocol.read_message())
+    message = await protocol.read_message()
 
-    assert len(messages) == 1
-    assert messages[0].TYPE == KeepAlive.TYPE
+    assert message.TYPE == KeepAlive.TYPE
     assert mock_peer.stats['receive-keepalive'] == 1
 
 
-def test_protocol_read_message_nop(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_message_nop(mock_peer: Any) -> None:
     """Test reading when no data is available (NOP)."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, NOP
@@ -356,21 +353,17 @@ def test_protocol_read_message_nop(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (0, Message.CODE.KEEPALIVE, b'', b'', None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(0, Message.CODE.KEEPALIVE, b'', b'', None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    messages = list(protocol.read_message())
+    message = await protocol.read_message()
 
-    assert len(messages) == 1
-    assert messages[0].TYPE == NOP.TYPE
+    assert message.TYPE == NOP.TYPE
 
 
-def test_protocol_read_message_invalid_type(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_message_invalid_type(mock_peer: Any) -> None:
     """Test reading a message with invalid type."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Notify
@@ -378,26 +371,23 @@ def test_protocol_read_message_invalid_type(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (19, 99, b'\xff' * 19, b'', None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(19, 99, b'\xff' * 19, b'', None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     with pytest.raises(Notify) as exc_info:
-        list(protocol.read_message())
+        await protocol.read_message()
 
     assert exc_info.value.code == 1  # Message Header Error
 
 
 # ==============================================================================
-# Phase 4: EOR (End-of-RIB) Support
+# Phase 4: EOR (End-of-RIB) Support (Async)
 # ==============================================================================
 
 
-def test_protocol_new_eor_single_family(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_eor_single_family(mock_peer: Any) -> None:
     """Test creating and sending EOR for a single address family."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.protocol.family import AFI, SAFI
@@ -407,16 +397,18 @@ def test_protocol_new_eor_single_family(mock_peer: Any) -> None:
     protocol.negotiated.families = [(AFI.ipv4, SAFI.unicast)]
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    messages = list(protocol.new_eor(AFI.ipv4, SAFI.unicast))
+    eor = await protocol.new_eor(AFI.ipv4, SAFI.unicast)
 
-    assert any(hasattr(msg, 'TYPE') and msg.TYPE == EOR.TYPE for msg in messages if hasattr(msg, 'TYPE'))
+    assert eor.TYPE == EOR.TYPE
+    assert mock_connection.writer_async.called
 
 
-def test_protocol_new_eors_all_families(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_eors_all_families(mock_peer: Any) -> None:
     """Test creating and sending EOR markers for all negotiated families."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.protocol.family import AFI, SAFI
@@ -428,17 +420,18 @@ def test_protocol_new_eors_all_families(mock_peer: Any) -> None:
     ]
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    list(protocol.new_eors())
+    await protocol.new_eors()
 
     # Verify writer was called multiple times (once per EOR)
-    assert mock_connection.writer.call_count >= 2
+    assert mock_connection.writer_async.call_count >= 2
 
 
-def test_protocol_new_eors_no_families(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_eors_no_families(mock_peer: Any) -> None:
     """Test new_eors() when no families are negotiated sends KEEPALIVE."""
     from exabgp.reactor.protocol import Protocol
 
@@ -446,21 +439,22 @@ def test_protocol_new_eors_no_families(mock_peer: Any) -> None:
     protocol.negotiated.families = []
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    list(protocol.new_eors())
+    await protocol.new_eors()
 
-    assert mock_connection.writer.called
+    assert mock_connection.writer_async.called
 
 
 # ==============================================================================
-# Phase 5: Advanced Features
+# Phase 5: Advanced Features (Async)
 # ==============================================================================
 
 
-def test_protocol_read_update_basic(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_update_basic(mock_peer: Any) -> None:
     """Test reading a basic UPDATE message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -473,20 +467,16 @@ def test_protocol_read_update_basic(mock_peer: Any) -> None:
     update_body = struct.pack('!HH', 0, 0)  # withdrawn_len=0, attr_len=0
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    messages = list(protocol.read_message())
+    message = await protocol.read_message()
+    assert message is not None
 
-    assert len(messages) > 0
 
-
-def test_protocol_api_callbacks_with_packets(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_api_callbacks_with_packets(mock_peer: Any) -> None:
     """Test API callbacks with packet data enabled."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -497,15 +487,11 @@ def test_protocol_api_callbacks_with_packets(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    list(protocol.read_message())
+    await protocol.read_message()
 
     mock_peer.reactor.processes.packets.assert_called()
 
@@ -532,7 +518,8 @@ def test_protocol_port_from_environment_legacy(mock_peer: Any, monkeypatch: Any)
     assert protocol.port == 3179
 
 
-def test_protocol_new_keepalive(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_keepalive(mock_peer: Any) -> None:
     """Test creating and sending a KEEPALIVE message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.keepalive import KeepAlive
@@ -540,32 +527,35 @@ def test_protocol_new_keepalive(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    messages = list(protocol.new_keepalive())
+    result = await protocol.new_keepalive()
 
-    assert any(hasattr(msg, 'TYPE') and msg.TYPE == KeepAlive.TYPE for msg in messages if hasattr(msg, 'TYPE'))
+    assert result.TYPE == KeepAlive.TYPE
+    assert mock_connection.writer_async.called
 
 
-def test_protocol_new_keepalive_with_comment(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_keepalive_with_comment(mock_peer: Any) -> None:
     """Test creating KEEPALIVE with comment for logging."""
     from exabgp.reactor.protocol import Protocol
 
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    list(protocol.new_keepalive('test comment'))
+    await protocol.new_keepalive('test comment')
 
-    assert mock_connection.writer.called
+    assert mock_connection.writer_async.called
 
 
-def test_protocol_read_open_wrong_message(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_open_wrong_message(mock_peer: Any) -> None:
     """Test read_open() when first message is not OPEN."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
@@ -573,22 +563,19 @@ def test_protocol_read_open_wrong_message(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     with pytest.raises(Notify) as exc_info:
-        list(protocol.read_open('192.0.2.1'))
+        await protocol.read_open('192.0.2.1')
 
     assert exc_info.value.code == 5  # FSM Error
     assert exc_info.value.subcode == 1
 
 
-def test_protocol_read_keepalive_wrong_message(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_keepalive_wrong_message(mock_peer: Any) -> None:
     """Test read_keepalive() when message is not KEEPALIVE."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
@@ -598,27 +585,26 @@ def test_protocol_read_keepalive_wrong_message(mock_peer: Any) -> None:
 
     # Mock connection that returns UPDATE instead of KEEPALIVE
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (23, Message.CODE.UPDATE, b'\xff' * 19, struct.pack('!HH', 0, 0), None),
-        ]
+    mock_connection.reader_async = AsyncMock(
+        return_value=(23, Message.CODE.UPDATE, b'\xff' * 19, struct.pack('!HH', 0, 0), None)
     )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     with pytest.raises(Notify) as exc_info:
-        list(protocol.read_keepalive())
+        await protocol.read_keepalive()
 
     assert exc_info.value.code == 5  # FSM Error
     assert exc_info.value.subcode == 2
 
 
 # ==============================================================================
-# Phase 6: UPDATE Message Routing and Special Attributes
+# Phase 6: UPDATE Message Routing and Special Attributes (Async)
 # ==============================================================================
 
 
-def test_protocol_read_update_with_internal_treat_as_withdraw(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_update_with_internal_treat_as_withdraw(mock_peer: Any) -> None:
     """Test UPDATE message with INTERNAL_TREAT_AS_WITHDRAW attribute."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -631,20 +617,17 @@ def test_protocol_read_update_with_internal_treat_as_withdraw(mock_peer: Any) ->
     update_body = struct.pack('!HH', 0, 0)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     # Test that UPDATE message can be read successfully
-    messages = list(protocol.read_message())
-    assert len(messages) > 0
+    message = await protocol.read_message()
+    assert message is not None
 
 
-def test_protocol_read_update_with_internal_discard(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_update_with_internal_discard(mock_peer: Any) -> None:
     """Test UPDATE message can be read without errors."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -656,20 +639,17 @@ def test_protocol_read_update_with_internal_discard(mock_peer: Any) -> None:
     update_body = struct.pack('!HH', 0, 0)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     # Test that UPDATE message can be read successfully
-    messages = list(protocol.read_message())
-    assert len(messages) >= 1
+    message = await protocol.read_message()
+    assert message is not None
 
 
-def test_protocol_read_update_decode_error(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_update_decode_error(mock_peer: Any) -> None:
     """Test UPDATE message decode error handling."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
@@ -680,17 +660,13 @@ def test_protocol_read_update_decode_error(mock_peer: Any) -> None:
     update_body = b'\x00\x00'  # Missing path attributes length
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (21, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(21, Message.CODE.UPDATE, b'\xff' * 19, update_body, None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     # Reading malformed UPDATE should raise Notify
     try:
-        list(protocol.read_message())
+        await protocol.read_message()
         # If it doesn't raise, that's also acceptable as error handling may vary
     except Notify:
         # Expected - decode error was caught
@@ -698,11 +674,12 @@ def test_protocol_read_update_decode_error(mock_peer: Any) -> None:
 
 
 # ==============================================================================
-# Phase 7: NOTIFICATION Handling During Read
+# Phase 7: NOTIFICATION Handling During Read (Async)
 # ==============================================================================
 
 
-def test_protocol_read_notification_from_peer(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_notification_from_peer(mock_peer: Any) -> None:
     """Test reading a NOTIFICATION message from peer raises it."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notification
@@ -714,25 +691,19 @@ def test_protocol_read_notification_from_peer(mock_peer: Any) -> None:
     notify_body = struct.pack('!BB', 2, 4) + b'test'
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (23, Message.CODE.NOTIFICATION, b'\xff' * 19, notify_body, None),
-        ]
+    mock_connection.reader_async = AsyncMock(
+        return_value=(23, Message.CODE.NOTIFICATION, b'\xff' * 19, notify_body, None)
     )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     # Reading NOTIFICATION should raise the notification
-    try:
-        messages = list(protocol.read_message())
-        # If not raised, at least check we got a notification
-        assert any(hasattr(m, 'TYPE') and m.TYPE == Notification.TYPE for m in messages if hasattr(m, 'TYPE'))
-    except Notification:
-        # This is expected - notification was raised
-        pass
+    with pytest.raises(Notification):
+        await protocol.read_message()
 
 
-def test_protocol_read_internal_notification(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_internal_notification(mock_peer: Any) -> None:
     """Test reading when connection reader detects internal error."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
@@ -746,22 +717,19 @@ def test_protocol_read_internal_notification(mock_peer: Any) -> None:
     mock_notify.__str__ = Mock(return_value='test error')
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (0, Message.CODE.KEEPALIVE, b'', b'', mock_notify),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(0, Message.CODE.KEEPALIVE, b'', b'', mock_notify))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     with pytest.raises(Notify) as exc_info:
-        list(protocol.read_message())
+        await protocol.read_message()
 
     assert exc_info.value.code == 1
     assert exc_info.value.subcode == 3
 
 
-def test_protocol_read_notification_with_api_consolidated(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_notification_with_api_consolidated(mock_peer: Any) -> None:
     """Test NOTIFICATION with API consolidate mode calls processes.notification."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Notify
@@ -779,19 +747,16 @@ def test_protocol_read_notification_with_api_consolidated(mock_peer: Any) -> Non
     mock_connection = Mock()
     header = b'\xff' * 19
     body = b'\x02\x01test'
-    mock_connection.reader = Mock(
-        return_value=[
-            (len(body), Message.CODE.NOTIFICATION, header, body, mock_notify),
-        ]
+    mock_connection.reader_async = AsyncMock(
+        return_value=(len(body), Message.CODE.NOTIFICATION, header, body, mock_notify)
     )
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     with pytest.raises(Notify):
-        list(protocol.read_message())
+        await protocol.read_message()
 
     # Verify API callback was made with Notify message object
-    # New signature: notification(neighbor, direction, message, header, body, negotiated=None)
     mock_peer.reactor.processes.notification.assert_called_once()
     args = mock_peer.reactor.processes.notification.call_args[0]
     assert args[1] == 'receive'
@@ -803,18 +768,19 @@ def test_protocol_read_notification_with_api_consolidated(mock_peer: Any) -> Non
 
 
 # ==============================================================================
-# Phase 8: OPERATIONAL and REFRESH Messages
+# Phase 8: OPERATIONAL and REFRESH Messages (Async)
 # ==============================================================================
 
 
-def test_protocol_new_operational(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_operational(mock_peer: Any) -> None:
     """Test creating and sending an OPERATIONAL message."""
     from exabgp.reactor.protocol import Protocol
 
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -824,19 +790,20 @@ def test_protocol_new_operational(mock_peer: Any) -> None:
     mock_operational.ID = 4  # OPERATIONAL
     mock_operational.__str__ = Mock(return_value='OPERATIONAL')
 
-    list(protocol.new_operational(mock_operational, protocol.negotiated))
+    await protocol.new_operational(mock_operational, protocol.negotiated)
 
-    assert mock_connection.writer.called
+    assert mock_connection.writer_async.called
 
 
-def test_protocol_new_refresh(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_refresh(mock_peer: Any) -> None:
     """Test creating and sending a ROUTE-REFRESH message."""
     from exabgp.reactor.protocol import Protocol
 
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -845,9 +812,9 @@ def test_protocol_new_refresh(mock_peer: Any) -> None:
     mock_refresh.message = Mock(return_value=b'\xff' * 16 + b'\x00\x17\x05' + b'\x00\x01\x00\x01')
     mock_refresh.ID = 5  # ROUTE_REFRESH
 
-    list(protocol.new_refresh(mock_refresh))
+    await protocol.new_refresh(mock_refresh)
 
-    assert mock_connection.writer.called
+    assert mock_connection.writer_async.called
 
 
 # ==============================================================================
@@ -924,11 +891,12 @@ def test_protocol_validate_open_with_family_mismatch(mock_peer: Any) -> None:
 
 
 # ==============================================================================
-# Phase 10: send() Method for Raw BGP Messages
+# Phase 10: send() Method for Raw BGP Messages (Async)
 # ==============================================================================
 
 
-def test_protocol_send_raw_update(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_send_raw_update(mock_peer: Any) -> None:
     """Test send() method with raw UPDATE message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -937,7 +905,7 @@ def test_protocol_send_raw_update(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -949,13 +917,14 @@ def test_protocol_send_raw_update(mock_peer: Any) -> None:
     length = struct.pack('!H', 19 + len(body))
     raw = marker + length + msg_type + body
 
-    list(protocol.send(raw))
+    await protocol.send(raw)
 
-    assert mock_connection.writer.called
+    assert mock_connection.writer_async.called
     assert mock_peer.stats['send-update'] == 1
 
 
-def test_protocol_send_with_api_callback(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_send_with_api_callback(mock_peer: Any) -> None:
     """Test send() with API callback enabled."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -967,7 +936,7 @@ def test_protocol_send_with_api_callback(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -983,24 +952,25 @@ def test_protocol_send_with_api_callback(mock_peer: Any) -> None:
         mock_update.ID = Message.CODE.UPDATE
         mock_unpack.return_value = mock_update
 
-        list(protocol.send(raw))
+        await protocol.send(raw)
 
         mock_peer.reactor.processes.message.assert_called()
 
 
 # ==============================================================================
-# Phase 11: new_update() Method for Outgoing Updates
+# Phase 11: new_update() Method for Outgoing Updates (Async)
 # ==============================================================================
 
 
-def test_protocol_new_update(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_update(mock_peer: Any) -> None:
     """Test new_update() method sends updates from RIB."""
     from exabgp.reactor.protocol import Protocol
 
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -1013,19 +983,21 @@ def test_protocol_new_update(mock_peer: Any) -> None:
     mock_peer.neighbor.rib.outgoing = Mock()
     mock_peer.neighbor.rib.outgoing.updates = Mock(return_value=[mock_update_obj])
 
-    list(protocol.new_update(include_withdraw=True))
+    await protocol.new_update(include_withdraw=True)
 
-    assert mock_connection.writer.called
+    assert mock_connection.writer_async.called
 
 
-def test_protocol_new_update_no_updates(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_update_no_updates(mock_peer: Any) -> None:
     """Test new_update() with empty RIB."""
     from exabgp.reactor.protocol import Protocol
+    from exabgp.bgp.message import Update
 
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -1034,18 +1006,19 @@ def test_protocol_new_update_no_updates(mock_peer: Any) -> None:
     mock_peer.neighbor.rib.outgoing = Mock()
     mock_peer.neighbor.rib.outgoing.updates = Mock(return_value=[])
 
-    messages = list(protocol.new_update(include_withdraw=False))
+    result = await protocol.new_update(include_withdraw=False)
 
-    # Should still yield _UPDATE at the end
-    assert len(messages) > 0
+    # Should still return _UPDATE at the end
+    assert result.TYPE == Update.TYPE
 
 
 # ==============================================================================
-# Phase 12: API Callback Variations
+# Phase 12: API Callback Variations (Async)
 # ==============================================================================
 
 
-def test_protocol_api_send_packets_mode(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_api_send_packets_mode(mock_peer: Any) -> None:
     """Test API callback with send-packets mode."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.keepalive import KeepAlive
@@ -1057,18 +1030,19 @@ def test_protocol_api_send_packets_mode(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     keepalive = KeepAlive()
-    list(protocol.write(keepalive, protocol.negotiated))
+    await protocol.write(keepalive, protocol.negotiated)
 
     # Should call message API when consolidate is True
     mock_peer.reactor.processes.message.assert_called()
 
 
-def test_protocol_api_receive_parsed_mode(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_api_receive_parsed_mode(mock_peer: Any) -> None:
     """Test API callback with receive-parsed mode."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -1080,25 +1054,21 @@ def test_protocol_api_receive_parsed_mode(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(19, Message.CODE.KEEPALIVE, b'\xff' * 19, b'', None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    list(protocol.read_message())
+    await protocol.read_message()
 
     # Should call message API with empty header/body
-    # New signature: message(id, neighbor, direction, msg, header, *body, negotiated=None)
     mock_peer.reactor.processes.message.assert_called()
     args = mock_peer.reactor.processes.message.call_args[0]
     assert args[4] == b''  # empty header
     assert args[5] == b''  # empty body
 
 
-def test_protocol_api_receive_consolidate_mode(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_api_receive_consolidate_mode(mock_peer: Any) -> None:
     """Test API callback with receive-consolidate mode."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -1111,18 +1081,13 @@ def test_protocol_api_receive_consolidate_mode(mock_peer: Any) -> None:
     mock_connection = Mock()
     header = b'\xff' * 19
     body = b''
-    mock_connection.reader = Mock(
-        return_value=[
-            (19, Message.CODE.KEEPALIVE, header, body, None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(19, Message.CODE.KEEPALIVE, header, body, None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    list(protocol.read_message())
+    await protocol.read_message()
 
     # Should call message API with actual header/body
-    # New signature: message(id, neighbor, direction, msg, header, *body, negotiated=None)
     mock_peer.reactor.processes.message.assert_called()
     args = mock_peer.reactor.processes.message.call_args[0]
     assert args[4] == header
@@ -1130,11 +1095,12 @@ def test_protocol_api_receive_consolidate_mode(mock_peer: Any) -> None:
 
 
 # ==============================================================================
-# Phase 13: connect() Method and Connection Establishment
+# Phase 13: connect() Method and Connection Establishment (Async)
 # ==============================================================================
 
 
-def test_protocol_connect_establishes_outgoing(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_connect_establishes_outgoing(mock_peer: Any) -> None:
     """Test connect() establishes outgoing connection."""
     from exabgp.reactor.protocol import Protocol
 
@@ -1142,19 +1108,18 @@ def test_protocol_connect_establishes_outgoing(mock_peer: Any) -> None:
 
     with patch('exabgp.reactor.protocol.Outgoing') as MockOutgoing:
         mock_outgoing = Mock()
-        mock_outgoing.establish = Mock(return_value=[False, False, True])
+        mock_outgoing.establish_async = AsyncMock(return_value=True)
         mock_outgoing.local = '192.0.2.100'
         MockOutgoing.return_value = mock_outgoing
 
-        result = list(protocol.connect())
+        result = await protocol.connect()
 
-        # Should yield False while establishing, then True
-        assert False in result
-        assert True in result
+        assert result is True
         assert protocol.connection == mock_outgoing
 
 
-def test_protocol_connect_sets_local_address(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_connect_sets_local_address(mock_peer: Any) -> None:
     """Test connect() basic flow with Outgoing."""
     from exabgp.reactor.protocol import Protocol
 
@@ -1162,18 +1127,19 @@ def test_protocol_connect_sets_local_address(mock_peer: Any) -> None:
 
     with patch('exabgp.reactor.protocol.Outgoing') as MockOutgoing:
         mock_outgoing = Mock()
-        mock_outgoing.establish = Mock(return_value=[True])
+        mock_outgoing.establish_async = AsyncMock(return_value=True)
         mock_outgoing.local = '192.0.2.100'
         MockOutgoing.return_value = mock_outgoing
 
-        list(protocol.connect())
+        await protocol.connect()
 
         # Verify connection was established
         assert protocol.connection == mock_outgoing
         MockOutgoing.assert_called_once()
 
 
-def test_protocol_connect_with_api_notification(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_connect_with_api_notification(mock_peer: Any) -> None:
     """Test connect() triggers API notification."""
     from exabgp.reactor.protocol import Protocol
 
@@ -1182,25 +1148,26 @@ def test_protocol_connect_with_api_notification(mock_peer: Any) -> None:
 
     with patch('exabgp.reactor.protocol.Outgoing') as MockOutgoing:
         mock_outgoing = Mock()
-        mock_outgoing.establish = Mock(return_value=[True])
+        mock_outgoing.establish_async = AsyncMock(return_value=True)
         mock_outgoing.local = '192.0.2.100'
         MockOutgoing.return_value = mock_outgoing
 
-        list(protocol.connect())
+        await protocol.connect()
 
         mock_peer.reactor.processes.connected.assert_called()
 
 
-def test_protocol_connect_already_connected(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_connect_already_connected(mock_peer: Any) -> None:
     """Test connect() when already connected does nothing."""
     from exabgp.reactor.protocol import Protocol
 
     protocol = Protocol(mock_peer)
     protocol.connection = Mock()
 
-    # Should return immediately without establishing new connection
-    result = list(protocol.connect())
-    assert result == []
+    # Should return True immediately without establishing new connection
+    result = await protocol.connect()
+    assert result is True
 
 
 # ==============================================================================
@@ -1227,7 +1194,8 @@ def test_protocol_with_addpath_negotiated(mock_peer: Any) -> None:
     assert protocol.negotiated.addpath is not None
 
 
-def test_protocol_read_update_with_addpath(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_update_with_addpath(mock_peer: Any) -> None:
     """Test reading UPDATE message when ADD-PATH is enabled."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message
@@ -1246,28 +1214,24 @@ def test_protocol_read_update_with_addpath(mock_peer: Any) -> None:
     update_body = struct.pack('!HH', 0, 0)
 
     mock_connection = Mock()
-    mock_connection.reader = Mock(
-        return_value=[
-            (23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None),
-        ]
-    )
+    mock_connection.reader_async = AsyncMock(return_value=(23, Message.CODE.UPDATE, b'\xff' * 19, update_body, None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    messages = list(protocol.read_message())
-    assert len(messages) > 0
+    message = await protocol.read_message()
+    assert message is not None
 
 
 # ==============================================================================
-# Phase 15: EOR (End-of-RIB) Extended Coverage
+# Phase 15: EOR (End-of-RIB) Extended Coverage (Async)
 # ==============================================================================
 
 
-def test_protocol_new_eor_specific_family(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_eor_specific_family(mock_peer: Any) -> None:
     """Test new_eors() for a specific address family."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message import EOR
 
     protocol = Protocol(mock_peer)
     protocol.negotiated.families = [
@@ -1276,26 +1240,26 @@ def test_protocol_new_eor_specific_family(mock_peer: Any) -> None:
     ]
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     # Request EOR for specific family
-    messages = list(protocol.new_eors(AFI.ipv4, SAFI.unicast))
+    await protocol.new_eors(AFI.ipv4, SAFI.unicast)
 
     # Should only send one EOR
-    eor_count = sum(1 for msg in messages if hasattr(msg, 'TYPE') and msg.TYPE == EOR.TYPE)
-    assert eor_count == 1
+    assert mock_connection.writer_async.call_count == 1
 
 
-def test_protocol_new_notification_message(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_notification_message(mock_peer: Any) -> None:
     """Test new_notification() method."""
     from exabgp.reactor.protocol import Protocol
 
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -1307,33 +1271,34 @@ def test_protocol_new_notification_message(mock_peer: Any) -> None:
     mock_notification.data = b'test error'
     mock_notification.ID = 3  # NOTIFICATION
 
-    list(protocol.new_notification(mock_notification))
+    await protocol.new_notification(mock_notification)
 
-    assert mock_connection.writer.called
+    assert mock_connection.writer_async.called
 
 
 # ==============================================================================
-# Phase 16: new_open() Method
+# Phase 16: new_open() Method (Async)
 # ==============================================================================
 
 
-def test_protocol_new_open_flow(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_new_open_flow(mock_peer: Any) -> None:
     """Test new_open() basic flow (simplified)."""
     from exabgp.reactor.protocol import Protocol
 
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
+    mock_connection.writer_async = AsyncMock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
     # Test the basic flow - may encounter errors due to complex mocking requirements
     # This verifies the code path exists
     try:
-        list(protocol.new_open())
+        await protocol.new_open()
         # If it succeeds, check that writer was called
-        assert mock_connection.writer.called
+        assert mock_connection.writer_async.called
     except (KeyError, AttributeError, RuntimeError):
         # Expected due to complex neighbor configuration requirements
         # The main protocol handler functionality is tested in other tests
@@ -1341,11 +1306,12 @@ def test_protocol_new_open_flow(mock_peer: Any) -> None:
 
 
 # ==============================================================================
-# Phase 17: read_open() Method
+# Phase 17: read_open() Method (Async)
 # ==============================================================================
 
 
-def test_protocol_read_open_success(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_open_success(mock_peer: Any) -> None:
     """Test read_open() successfully reads OPEN message."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Open
@@ -1356,21 +1322,21 @@ def test_protocol_read_open_success(mock_peer: Any) -> None:
     mock_open = Mock()
     mock_open.TYPE = Open.TYPE
     mock_open.ID = Message.CODE.OPEN
+    mock_open.SCHEDULING = 0  # Real message
     mock_open.__str__ = Mock(return_value='OPEN')
 
     mock_connection = Mock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    with patch.object(protocol, 'read_message', return_value=iter([mock_open])):
-        messages = list(protocol.read_open('192.0.2.1'))
+    with patch.object(protocol, 'read_message', new=AsyncMock(return_value=mock_open)):
+        result = await protocol.read_open('192.0.2.1')
 
-        # Should yield the OPEN message
-        assert len(messages) >= 1
-        assert messages[-1].TYPE == Open.TYPE
+        assert result.TYPE == Open.TYPE
 
 
-def test_protocol_read_open_with_nop(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_open_with_nop(mock_peer: Any) -> None:
     """Test read_open() skips NOP messages."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import Message, Open, NOP, Scheduling
@@ -1392,19 +1358,19 @@ def test_protocol_read_open_with_nop(mock_peer: Any) -> None:
     protocol.connection = mock_connection
 
     # Return NOP then OPEN
-    with patch.object(protocol, 'read_message', return_value=iter([mock_nop, mock_open])):
-        messages = list(protocol.read_open('192.0.2.1'))
+    with patch.object(protocol, 'read_message', new=AsyncMock(side_effect=[mock_nop, mock_open])):
+        result = await protocol.read_open('192.0.2.1')
 
-        # Should yield NOP and then OPEN
-        assert len(messages) >= 2
+        assert result.TYPE == Open.TYPE
 
 
 # ==============================================================================
-# Phase 18: read_keepalive() Method
+# Phase 18: read_keepalive() Method (Async)
 # ==============================================================================
 
 
-def test_protocol_read_keepalive_success(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_keepalive_success(mock_peer: Any) -> None:
     """Test read_keepalive() successfully reads KEEPALIVE."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message.keepalive import KeepAlive
@@ -1413,19 +1379,20 @@ def test_protocol_read_keepalive_success(mock_peer: Any) -> None:
 
     mock_keepalive = Mock()
     mock_keepalive.TYPE = KeepAlive.TYPE
+    mock_keepalive.SCHEDULING = 0  # Real message
 
     mock_connection = Mock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    with patch.object(protocol, 'read_message', return_value=iter([mock_keepalive])):
-        messages = list(protocol.read_keepalive())
+    with patch.object(protocol, 'read_message', new=AsyncMock(return_value=mock_keepalive)):
+        result = await protocol.read_keepalive()
 
-        assert len(messages) >= 1
-        assert messages[-1].TYPE == KeepAlive.TYPE
+        assert result.TYPE == KeepAlive.TYPE
 
 
-def test_protocol_read_keepalive_with_nop(mock_peer: Any) -> None:
+@pytest.mark.asyncio
+async def test_protocol_read_keepalive_with_nop(mock_peer: Any) -> None:
     """Test read_keepalive() skips NOP messages."""
     from exabgp.reactor.protocol import Protocol
     from exabgp.bgp.message import NOP, Scheduling
@@ -1445,7 +1412,7 @@ def test_protocol_read_keepalive_with_nop(mock_peer: Any) -> None:
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    with patch.object(protocol, 'read_message', return_value=iter([mock_nop, mock_keepalive])):
-        messages = list(protocol.read_keepalive())
+    with patch.object(protocol, 'read_message', new=AsyncMock(side_effect=[mock_nop, mock_keepalive])):
+        result = await protocol.read_keepalive()
 
-        assert len(messages) >= 2
+        assert result.TYPE == KeepAlive.TYPE
