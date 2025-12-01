@@ -103,10 +103,10 @@
 - [ ] **18. Cache Compiled Regexes** (1 day)
   - Files: `src/exabgp/configuration/neighbor/parser.py:187`
 
-- [ ] **19. Use logging.dictConfig for Logging**
-  - Impact: Cleaner logging configuration, standard Python pattern
-  - Files: `src/exabgp/logger.py`, logging setup code
-  - Solution: Replace current logging setup with `logging.config.dictConfig()`
+- [x] **19. Use logging.dictConfig for Logging** ✅
+  - Fixed: b389975b - Refactored to use `logging.config.dictConfig()`
+  - Added `_get_syslog_address()` with FreeBSD support and socket check
+  - Files: `src/exabgp/logger/handler.py`, `src/exabgp/logger/option.py`
 
 ---
 
