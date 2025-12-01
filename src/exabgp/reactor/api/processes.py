@@ -648,37 +648,75 @@ class Processes:
             log.debug(lazymsg('async.write.queued process={p} bytes={b}', p=process, b=len(data)), 'processes')
             return True
 
-        # Sync mode - blocking write to subprocess stdin
-        # Note: This can block if the pipe buffer is full and the subprocess isn't reading.
-        # This is inherent to sync mode. Use async mode (exabgp_reactor_asyncio=true) for
-        # non-blocking writes via the write queue mechanism above.
-        stdin = self._get_stdin(process)
-        while True:
+        # Sync mode - non-blocking write with poll() for writability
+        # Uses os.write() directly to handle partial writes correctly.
+        # When buffer is full (EAGAIN), polls for writability with timeout.
+        stdin_fd = self._get_stdin(process).fileno()
+        total_written = 0
+        total_len = len(data)
+
+        # Maximum time to wait for writes (prevents indefinite blocking)
+        max_wait_ms = 5000  # 5 seconds total
+        poll_timeout_ms = 100  # 100ms per poll attempt
+        elapsed_ms = 0
+
+        while total_written < total_len:
             try:
-                stdin.write(data)
-            except OSError as exc:
-                self._broken.append(process)
-                if exc.errno == errno.EPIPE:
-                    self._broken.append(process)
-                    log.debug(lazymsg('process.write.failed reason=broken_pipe'), 'processes')
-                    raise ProcessError from None
-                else:
-                    # Could it have been caused by a signal ? What to do.
+                written = os.write(stdin_fd, data[total_written:])
+                if written > 0:
+                    total_written += written
                     log.debug(
-                        lazymsg('process.write.error error={e} action=retry', e=errstr(exc)),
+                        lazymsg(
+                            'process.write.progress process={p} written={w} total={t}',
+                            p=process,
+                            w=total_written,
+                            t=total_len,
+                        ),
                         'processes',
                     )
-                    continue
-            break
+            except OSError as exc:
+                if exc.errno == errno.EPIPE:
+                    self._broken.append(process)
+                    log.debug(lazymsg('process.write.failed process={p} reason=broken_pipe', p=process), 'processes')
+                    raise ProcessError from None
+                elif exc.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                    # Buffer full - wait for writability with timeout
+                    if elapsed_ms >= max_wait_ms:
+                        log.warning(
+                            lazymsg(
+                                'process.write.timeout process={p} written={w} total={t}',
+                                p=process,
+                                w=total_written,
+                                t=total_len,
+                            ),
+                            'processes',
+                        )
+                        # Return False to indicate incomplete write
+                        # The reactor can retry later or handle the failure
+                        return False
 
-        try:
-            stdin.flush()
-        except OSError as exc:
-            # AFAIK, the buffer should be flushed at the next attempt.
-            log.debug(
-                lazymsg('process.flush.error error={e} action=retry', e=errstr(exc)),
-                'processes',
-            )
+                    poller = select.poll()
+                    poller.register(stdin_fd, select.POLLOUT)
+                    ready = poller.poll(poll_timeout_ms)
+                    elapsed_ms += poll_timeout_ms
+
+                    if not ready:
+                        log.debug(
+                            lazymsg('process.write.waiting process={p} elapsed={e}ms', p=process, e=elapsed_ms),
+                            'processes',
+                        )
+                    continue
+                elif exc.errno == errno.EINTR:
+                    # Interrupted by signal, retry immediately
+                    continue
+                else:
+                    # Unexpected error
+                    self._broken.append(process)
+                    log.debug(
+                        lazymsg('process.write.error process={p} error={e}', p=process, e=errstr(exc)),
+                        'processes',
+                    )
+                    raise ProcessError from None
 
         return True
 
