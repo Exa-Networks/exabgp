@@ -628,6 +628,92 @@ class Peer:
 
         # let the caller know that we were sucesfull (async version doesn't need return value)
 
+    # -------------------------------------------------------------------------
+    # Async helper methods for _main_async()
+    # -------------------------------------------------------------------------
+
+    async def _send_operational_messages_async(self) -> None:
+        """Send operational messages from the neighbor's message queue (async version)."""
+        if self.neighbor.capability.operational.is_enabled():
+            new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
+            if new_operational:
+                await self.proto.new_operational_async(new_operational, self.proto.negotiated)
+        # Make sure that if some operational message are received via the API
+        # that we do not eat memory for nothing
+        elif self.neighbor.messages:
+            self.neighbor.messages.popleft()
+
+    async def _send_refresh_messages_async(self) -> None:
+        """Send route refresh messages from the neighbor's refresh queue (async version)."""
+        if self.neighbor.capability.route_refresh:
+            new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
+            if new_refresh:
+                await self.proto.new_refresh_async(new_refresh)
+
+    async def _send_route_updates_async(
+        self,
+        new_routes: Any,  # AsyncGenerator
+        include_withdraw: bool,
+        routes_per_iteration: int,
+    ) -> tuple[Any, bool]:
+        """Send route updates from the outgoing RIB (async version).
+
+        Returns:
+            Tuple of (updated new_routes generator, updated include_withdraw flag)
+        """
+        if not new_routes and self.neighbor.rib.outgoing.pending():
+            log.debug(lazymsg('peer.update.generator.creating'), self.id())
+            new_routes = self.proto.new_update_async_generator(include_withdraw)
+
+        if new_routes:
+            try:
+                for _ in range(routes_per_iteration):
+                    await new_routes.__anext__()
+                    # Yield control to allow async API readers to process commands
+                    await asyncio.sleep(0)
+            except StopAsyncIteration:
+                log.debug(lazymsg('peer.update.generator.exhausted'), self.id())
+                new_routes = None
+                include_withdraw = True
+                self.neighbor.rib.outgoing.fire_flush_callbacks()
+
+        return (new_routes, include_withdraw)
+
+    async def _send_eor_messages_async(
+        self,
+        send_eor: bool,
+        new_routes: Any,
+    ) -> bool:
+        """Send End-of-RIB markers (async version).
+
+        Returns:
+            Updated send_eor flag
+        """
+        if not new_routes and send_eor:
+            send_eor = False
+            await self.proto.new_eors_async()
+            log.debug(lazymsg('eor.sent.all'), self.id())
+
+        # Manual EOR from API commands
+        elif self.neighbor.eor:
+            new_eor = cast(Family, self.neighbor.eor.popleft())
+            await self.proto.new_eors_async(new_eor.afi, new_eor.safi)
+
+        return send_eor
+
+    def _has_pending_work(
+        self,
+        new_routes: Any,
+        message: Message,
+    ) -> bool:
+        """Check if there's pending work that requires immediate attention."""
+        return bool(
+            new_routes
+            or not message.SCHEDULING  # Real message received (not NOP)
+            or self.neighbor.messages
+            or self.neighbor.eor
+        )
+
     def _main(self) -> Generator[Message, None, None]:
         """Yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
         assert self.proto is not None  # Set by _establish()
@@ -814,18 +900,41 @@ class Peer:
         raise Notify(6, self._teardown)
 
     async def _main_async(self) -> int:
-        """Async version of _main() - main BGP message processing loop using async I/O"""
-        assert self.proto is not None  # Set by _establish_async()
-        assert self.proto.connection is not None  # Must exist in established state
-        assert self.recv_timer is not None  # Set by _establish_async()
-        assert self.neighbor.rib is not None  # Initialized by neighbor
+        """Async version of _main() - main BGP message processing loop using async I/O.
+
+        This is the primary implementation. The sync _main() is legacy.
+        Uses extracted helper methods for cleaner code structure.
+        """
+        assert self.proto is not None
+        assert self.proto.connection is not None
+        assert self.recv_timer is not None
+        assert self.neighbor.rib is not None
 
         if self._teardown:
             raise Notify(6, 3)
 
+        # Initialize session state
         self.neighbor.rib.incoming.clear()
-
         include_withdraw = False
+        send_eor = not self.neighbor.manual_eor
+        new_routes = None
+        routes_per_iteration = 1 if self.neighbor.rate_limit > 0 else 25
+        refresh_enhanced = self.proto.negotiated.refresh == REFRESH.ENHANCED
+
+        # Create context for handlers
+        from exabgp.reactor.peer.context import PeerContext
+        from exabgp.reactor.peer.handlers import UpdateHandler, RouteRefreshHandler
+
+        ctx = PeerContext(
+            proto=self.proto,
+            neighbor=self.neighbor,
+            negotiated=self.proto.negotiated,
+            refresh_enhanced=refresh_enhanced,
+            routes_per_iteration=routes_per_iteration,
+            peer_id=self.id(),
+        )
+        update_handler = UpdateHandler()
+        route_refresh_handler = RouteRefreshHandler(self.resend)
 
         # Announce to the process BGP is up
         log.info(
@@ -839,167 +948,80 @@ class Peer:
             except ProcessError:
                 raise Notify(6, 0, 'ExaBGP Internal error, sorry.') from None
 
-        send_eor = not self.neighbor.manual_eor
-        new_routes = None
-
-        # Every last asm message should be re-announced on restart
+        # Re-announce ASM messages on restart
         for family in self.neighbor.asm:
             if family in self.neighbor.families():
                 self.neighbor.messages.appendleft(self.neighbor.asm[family])
 
-        operational = None
-        refresh = None
-        command_eor = None
-        number = 0
-        refresh_enhanced = self.proto.negotiated.refresh == REFRESH.ENHANCED
-
         send_ka = KA(self.proto.connection.session, self.proto)
 
-        # we need to make sure to send what was already issued by the api
-        # from the previous time
+        # Initialize RIB with previous routes
         previous = self.neighbor.previous.changes if self.neighbor.previous else []
         current = self.neighbor.changes
-        routes_per_iteration = 1 if self.neighbor.rate_limit > 0 else 25
         self.neighbor.rib.outgoing.replace_restart(previous, current)
         self.neighbor.previous = None
 
         self._delay.reset()
         log.debug(lazymsg('async.mainloop.started'), self.id())
+
         try:
             while not self._teardown:
-                # we are here following a configuration change
+                # Handle configuration reload
                 if self._neighbor:
-                    # see what changed in the configuration
                     previous = self._neighbor.previous.changes if self._neighbor.previous else []
                     current = self._neighbor.changes
                     self.neighbor.rib.outgoing.replace_reload(previous, current)
-                    # do not keep the previous routes in memory as they are not useful anymore
                     self._neighbor.previous = None
                     self._neighbor = None
 
-                # Read message using async I/O with timeout to yield control periodically
-                # This matches generator mode's behavior where read_message() yields NOP when blocked
+                # Read message with timeout
                 try:
                     message = await asyncio.wait_for(self.proto.read_message_async(), timeout=0.1)
                 except asyncio.TimeoutError:
-                    # No message within timeout - set to NOP and continue to outbound checks
-                    # This matches generator mode where loop body executes even for NOP
                     message = _NOP
                     await asyncio.sleep(0)
 
-                # NOP means no data - continue to outbound checks (matches generator mode)
-                # Generator mode executes loop body for NOP, so we must too
-
+                # Keepalive handling
                 self.recv_timer.check_ka(message)
-
                 if send_ka() is not False:
-                    # we need and will send a keepalive
                     while send_ka() is None:
-                        await asyncio.sleep(0)  # Yield control like _AWAKE
+                        await asyncio.sleep(0)
+
+                # Log statistics changes
                 for counter_line in self.stats.changed_statistics():
                     log.info(lazymsg('statistics.changed info={counter_line}', counter_line=counter_line), 'statistics')
 
-                # Received update
-                if message.TYPE == Update.TYPE:
-                    update = cast(Update, message)
-                    number += 1
-                    log.debug(lazymsg('update.received number={number}', number=number), self.id())
+                # Process inbound messages using handlers
+                if update_handler.can_handle(message):
+                    await update_handler.handle_async(ctx, message)
+                elif route_refresh_handler.can_handle(message):
+                    await route_refresh_handler.handle_async(ctx, message)
 
-                    for nlri in update.nlris:
-                        self.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
-                        log.debug(
-                            lazyformat('update.nlri number=%d nlri=' % number, nlri, str),
-                            self.id(),
-                        )
+                # Send outbound messages using async helpers
+                await self._send_operational_messages_async()
+                await self._send_refresh_messages_async()
+                new_routes, include_withdraw = await self._send_route_updates_async(
+                    new_routes, include_withdraw, routes_per_iteration
+                )
+                send_eor = await self._send_eor_messages_async(send_eor, new_routes)
 
-                elif message.TYPE == RouteRefresh.TYPE:
-                    rr = cast(RouteRefresh, message)
-                    enhanced = rr.reserved == RouteRefresh.request
-                    enhanced = enhanced and refresh_enhanced
-                    self.resend(enhanced, (rr.afi, rr.safi))
-
-                # SEND OPERATIONAL
-                if self.neighbor.capability.operational.is_enabled():
-                    if not operational:
-                        new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
-                        if new_operational:
-                            # Use async version
-                            await self.proto.new_operational_async(new_operational, self.proto.negotiated)
-                            operational = None  # Mark as sent
-                # make sure that if some operational message are received via the API
-                # that we do not eat memory for nothing
-                elif self.neighbor.messages:
-                    self.neighbor.messages.popleft()
-
-                # SEND REFRESH
-                if self.neighbor.capability.route_refresh:
-                    if not refresh:
-                        new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
-                        if new_refresh:
-                            # Use async version
-                            await self.proto.new_refresh_async(new_refresh)
-                            refresh = None  # Mark as sent
-
-                # Need to send update
-                if not new_routes and self.neighbor.rib.outgoing.pending():
-                    # Create the updates generator ONCE (matches sync version behavior)
-                    log.debug(lazymsg('peer.update.generator.creating'), self.id())
-                    new_routes = self.proto.new_update_async_generator(include_withdraw)
-
-                if new_routes:
-                    try:
-                        # Process routes_per_iteration messages from the generator (matches sync version)
-                        for _ in range(routes_per_iteration):
-                            await new_routes.__anext__()
-                            # Yield control to allow async API readers to process commands
-                            # This is critical - without this, all API commands get buffered
-                            # and processed together, causing wrong RIB state
-                            await asyncio.sleep(0)
-                    except StopAsyncIteration:
-                        log.debug(lazymsg('peer.update.generator.exhausted'), self.id())
-                        new_routes = None
-                        include_withdraw = True
-                        # Fire flush callbacks - routes have been sent to wire
-                        self.neighbor.rib.outgoing.fire_flush_callbacks()
-
-                elif send_eor:
-                    send_eor = False
-                    await self.proto.new_eors_async()
-                    log.debug(lazymsg('eor.sent.all'), self.id())
-
-                # SEND MANUAL KEEPALIVE (only if we have no more routes to send)
-                elif not command_eor and self.neighbor.eor:
-                    new_eor = cast(Family, self.neighbor.eor.popleft())
-                    await self.proto.new_eors_async(new_eor.afi, new_eor.safi)
-                    command_eor = None  # Mark as sent
-
-                if (
-                    new_routes
-                    or not message.SCHEDULING  # Real message received (not NOP)
-                    or self.neighbor.messages
-                    or operational
-                    or self.neighbor.eor
-                    or command_eor
-                ):
-                    await asyncio.sleep(0)  # Yield control like _AWAKE
+                # Yield control based on pending work
+                if self._has_pending_work(new_routes, message):
+                    await asyncio.sleep(0)
                 else:
-                    await asyncio.sleep(0.001)  # Slightly longer sleep for _NOP
-
-                    # read_message will loop until new message arrives with NOP
+                    await asyncio.sleep(0.001)
                     if self._teardown:
                         log.debug(lazymsg('async.mainloop.exiting teardown={td}', td=self._teardown), self.id())
                         break
 
         except NetworkError as exc:
-            # Normal network errors (connection closed, etc.) - log message only, no traceback
             log.debug(lazymsg('async.network.error error={exc}', exc=exc), self.id())
             raise
         except Exception as exc:
-            # Unexpected exceptions - log message only
             log.error(lazymsg('async.mainloop.exception error={exc}', exc=exc), self.id())
             raise
 
-        # If graceful restart, silent shutdown
+        # Graceful restart handling
         log.debug(
             lazymsg('async.mainloop.ended graceful_restart={gr}', gr=bool(self.neighbor.capability.graceful_restart)),
             self.id(),
@@ -1011,7 +1033,6 @@ class Peer:
             self._close('graceful restarted negotiated, closing without sending any notification')
             raise NetworkError('closing')
 
-        # notify our peer of the shutdown
         raise Notify(6, self._teardown)
 
     def _run(self) -> Generator[Message, None, None]:
