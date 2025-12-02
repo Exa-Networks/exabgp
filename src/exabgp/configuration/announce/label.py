@@ -18,31 +18,38 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import Labels
-from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.path import AnnouncePath
+from exabgp.configuration.announce.ip import _build_route
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import RouteBuilder, Leaf, ValueType
+from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.mpls import label
 
 
 class AnnounceLabel(AnnouncePath):
-    # Schema extends AnnouncePath with label
-    schema = Container(
+    # Schema extends AnnouncePath with label using RouteBuilder
+    schema = RouteBuilder(
         description='MPLS labeled route announcement',
+        nlri_factory=Label,
+        prefix_parser=prefix,
+        assign={
+            **AnnouncePath.schema.assign,
+            'label': 'labels',
+        },
         children={
             **AnnouncePath.schema.children,
             'label': Leaf(
                 type=ValueType.LABEL,
                 description='MPLS label stack',
                 action='nlri-set',
+                validator=LegacyParserValidator(parser_func=label, name='label'),
             ),
         },
     )
@@ -79,45 +86,11 @@ class AnnounceLabel(AnnouncePath):
         return True
 
 
-def ip_label(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
-    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
-    ipmask = prefix(tokeniser)
-
-    nlri = Label(afi, safi, nlri_action)
-    nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
-
-    change = Change(nlri, Attributes())
-
-    while True:
-        command = tokeniser()
-
-        if not command:
-            break
-
-        command_action = AnnounceLabel.action.get(command, '')
-
-        if command_action == 'attribute-add':
-            change.attributes.add(AnnounceLabel.known[command](tokeniser))
-        elif command_action == 'nlri-set':
-            change.nlri.assign(AnnounceLabel.assign[command], AnnounceLabel.known[command](tokeniser))
-        elif command_action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceLabel.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
-            change.attributes.add(attribute)
-        else:
-            raise ValueError('unknown command "{}"'.format(command))
-
-    if not AnnounceLabel.check(change, afi):
-        raise ValueError('invalid announcement (missing next-hop or label ?)')
-
-    return [change]
-
-
 @ParseAnnounce.register('nlri-mpls', 'extend-name', 'ipv4')
 def nlri_mpls_v4(tokeniser: Tokeniser) -> list[Change]:
-    return ip_label(tokeniser, AFI.ipv4, SAFI.nlri_mpls)
+    return _build_route(tokeniser, AnnounceLabel.schema, AFI.ipv4, SAFI.nlri_mpls, AnnounceLabel.check)
 
 
 @ParseAnnounce.register('nlri-mpls', 'extend-name', 'ipv6')
 def nlri_mpls_v6(tokeniser: Tokeniser) -> list[Change]:
-    return ip_label(tokeniser, AFI.ipv6, SAFI.nlri_mpls)
+    return _build_route(tokeniser, AnnounceLabel.schema, AFI.ipv6, SAFI.nlri_mpls, AnnounceLabel.check)

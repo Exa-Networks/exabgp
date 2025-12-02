@@ -17,32 +17,39 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri import IPVPN
-from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.label import AnnounceLabel
+from exabgp.configuration.announce.ip import _build_route
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import RouteBuilder, Leaf, ValueType
+from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.mpls import route_distinguisher
 
 
 class AnnounceVPN(ParseAnnounce):
-    # Schema extends AnnounceLabel with route-distinguisher
-    schema = Container(
+    # Schema extends AnnounceLabel with route-distinguisher using RouteBuilder
+    schema = RouteBuilder(
         description='VPN route announcement',
+        nlri_factory=IPVPN,
+        prefix_parser=prefix,
+        assign={
+            **AnnounceLabel.schema.assign,
+            'rd': 'rd',
+        },
         children={
             **AnnounceLabel.schema.children,
             'rd': Leaf(
                 type=ValueType.RD,
                 description='Route distinguisher',
                 action='nlri-set',
+                validator=LegacyParserValidator(parser_func=route_distinguisher, name='rd'),
             ),
         },
     )
@@ -79,45 +86,11 @@ class AnnounceVPN(ParseAnnounce):
         return True
 
 
-def ip_vpn(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
-    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
-    ipmask = prefix(tokeniser)
-
-    nlri = IPVPN(afi, safi, nlri_action)
-    nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
-
-    change = Change(nlri, Attributes())
-
-    while True:
-        command = tokeniser()
-
-        if not command:
-            break
-
-        command_action = AnnounceVPN.action.get(command, '')
-
-        if command_action == 'attribute-add':
-            change.attributes.add(AnnounceVPN.known[command](tokeniser))
-        elif command_action == 'nlri-set':
-            change.nlri.assign(AnnounceVPN.assign[command], AnnounceVPN.known[command](tokeniser))
-        elif command_action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceVPN.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
-            change.attributes.add(attribute)
-        else:
-            raise ValueError('unknown command "{}"'.format(command))
-
-    if not AnnounceVPN.check(change, afi):
-        raise ValueError('invalid announcement (missing next-hop, label or rd ?)')
-
-    return [change]
-
-
 @ParseAnnounce.register('mpls-vpn', 'extend-name', 'ipv4')
 def mpls_vpn_v4(tokeniser: Tokeniser) -> list[Change]:
-    return ip_vpn(tokeniser, AFI.ipv4, SAFI.unicast)
+    return _build_route(tokeniser, AnnounceVPN.schema, AFI.ipv4, SAFI.mpls_vpn, AnnounceVPN.check)
 
 
 @ParseAnnounce.register('mpls-vpn', 'extend-name', 'ipv6')
 def mpls_vpn_v6(tokeniser: Tokeniser) -> list[Change]:
-    return ip_vpn(tokeniser, AFI.ipv6, SAFI.unicast)
+    return _build_route(tokeniser, AnnounceVPN.schema, AFI.ipv6, SAFI.mpls_vpn, AnnounceVPN.check)

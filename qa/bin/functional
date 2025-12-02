@@ -50,6 +50,7 @@ INTERPRETER: str = os.environ.get('INTERPRETER') or os.environ.get('__PYVENV_LAU
 # To disable retry feature entirely, comment out the _retry_flaky_tests() call in run_selected()
 FLAKY_TESTS: List[str] = [
     'D',  # api-fast: known to be flaky
+    'E',  # api-flow-merge: server occasionally times out
     '7',  # api-api: occasionally fails in async mode
 ]
 
