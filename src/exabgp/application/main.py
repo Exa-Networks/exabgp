@@ -22,6 +22,7 @@ from exabgp.application import version
 from exabgp.application import validate
 from exabgp.application import healthcheck
 from exabgp.application import shell
+from exabgp.application import schema
 
 
 def main() -> int | None:
@@ -56,6 +57,7 @@ def main() -> int | None:
             'env',
             'validate',
             'shell',
+            'schema',
         ):
             sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
 
@@ -121,6 +123,10 @@ def main() -> int | None:
     )
     sub.set_defaults(func=shell.cmdline)
     shell.setargs(sub)
+
+    sub = subparsers.add_parser('schema', help='export configuration schema', description=schema.__doc__)
+    sub.set_defaults(func=schema.cmdline)
+    schema.setargs(sub)
 
     try:
         cmdarg = parser.parse_args()
