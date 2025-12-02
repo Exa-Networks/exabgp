@@ -18,7 +18,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable
+from typing import Any, Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from exabgp.configuration.validator import Validator
 
 
 class ValueType(Enum):
@@ -94,11 +97,47 @@ class Leaf:
     description: str = ''
     default: Any = None
     mandatory: bool = False
-    parser: Callable | None = None
+    parser: Callable | None = None  # Deprecated - use validator
     action: str = 'set-command'
     choices: list[str] | None = None
     min_value: int | None = None
     max_value: int | None = None
+    validator: 'Validator[Any] | None' = None  # Explicit validator override
+
+    def get_validator(self) -> 'Validator[Any] | None':
+        """Get or create validator from type + constraints.
+
+        Priority:
+        1. Explicit self.validator if set
+        2. Auto-generated from ValueType + constraints
+        3. None if no validator available
+
+        Returns:
+            Configured Validator instance, or None
+        """
+        # Priority 1: Explicit validator
+        if self.validator is not None:
+            return self.validator
+
+        # Priority 2: Auto-generate from type
+        from exabgp.configuration.validator import get_validator, IntegerValidator, EnumerationValidator
+
+        v = get_validator(self.type)
+        if v is None:
+            return None
+
+        # Auto-apply constraints based on validator type
+        if isinstance(v, IntegerValidator):
+            if self.min_value is not None or self.max_value is not None:
+                v = v.in_range(
+                    self.min_value if self.min_value is not None else -(2**31),
+                    self.max_value if self.max_value is not None else 2**31 - 1,
+                )
+        elif isinstance(v, EnumerationValidator):
+            if self.choices:
+                v = v.with_choices(self.choices)
+
+        return v
 
 
 @dataclass
@@ -118,16 +157,46 @@ class LeafList:
     Attributes:
         type: The semantic type of list elements
         description: Human-readable description for documentation
-        parser: Validation/parsing callback function
+        parser: Validation/parsing callback function (deprecated - use validator)
         action: How to handle parsed values (typically 'append-command')
         choices: Valid values for ENUMERATION type elements
+        validator: Explicit validator override
     """
 
     type: ValueType
     description: str = ''
-    parser: Callable | None = None
+    parser: Callable | None = None  # Deprecated - use validator
     action: str = 'append-command'
     choices: list[str] | None = None
+    validator: 'Validator[Any] | None' = None  # Explicit validator override
+
+    def get_validator(self) -> 'Validator[Any] | None':
+        """Get or create validator from type + constraints.
+
+        Priority:
+        1. Explicit self.validator if set
+        2. Auto-generated from ValueType + constraints
+        3. None if no validator available
+
+        Returns:
+            Configured Validator instance, or None
+        """
+        # Priority 1: Explicit validator
+        if self.validator is not None:
+            return self.validator
+
+        # Priority 2: Auto-generate from type
+        from exabgp.configuration.validator import get_validator, EnumerationValidator
+
+        v = get_validator(self.type)
+        if v is None:
+            return None
+
+        # Auto-apply constraints
+        if isinstance(v, EnumerationValidator) and self.choices:
+            v = v.with_choices(self.choices)
+
+        return v
 
 
 @dataclass
@@ -344,5 +413,83 @@ def schema_to_dict(element: SchemaElement) -> dict[str, Any]:
             'children': {name: schema_to_dict(child) for name, child in element.children.items()},
         }
         return result
+
+    return {}
+
+
+def schema_to_json_schema(element: SchemaElement) -> dict[str, Any]:
+    """Convert schema element to JSON Schema format.
+
+    Generates a JSON Schema (draft-07 compatible) representation of the
+    configuration schema. This can be used for:
+    - IDE autocomplete integration
+    - Configuration file validation
+    - External tooling and documentation
+
+    Args:
+        element: Schema element to convert
+
+    Returns:
+        JSON Schema representation
+
+    Example:
+        >>> leaf = Leaf(type=ValueType.INTEGER, min_value=0, max_value=100)
+        >>> schema_to_json_schema(leaf)
+        {'type': 'integer', 'minimum': 0, 'maximum': 100}
+    """
+    if isinstance(element, Leaf):
+        # Get JSON Schema from validator if available
+        validator = element.get_validator()
+        if validator is not None:
+            schema = validator.to_schema()
+        else:
+            schema = {'type': 'string'}
+
+        # Add description and default
+        if element.description:
+            schema['description'] = element.description
+        if element.default is not None:
+            schema['default'] = element.default
+
+        return schema
+
+    if isinstance(element, LeafList):
+        # Get item schema from validator if available
+        validator = element.get_validator()
+        if validator is not None:
+            item_schema = validator.to_schema()
+        else:
+            item_schema = {'type': 'string'}
+
+        leaf_list_schema: dict[str, Any] = {
+            'type': 'array',
+            'items': item_schema,
+        }
+        if element.description:
+            leaf_list_schema['description'] = element.description
+
+        return leaf_list_schema
+
+    if isinstance(element, Container):
+        properties: dict[str, Any] = {}
+        required: list[str] = []
+
+        for name, child in element.children.items():
+            properties[name] = schema_to_json_schema(child)
+            # Check if child is mandatory
+            if isinstance(child, Leaf) and child.mandatory:
+                required.append(name)
+
+        container_schema: dict[str, Any] = {
+            'type': 'object',
+            'properties': properties,
+            'additionalProperties': False,
+        }
+        if element.description:
+            container_schema['description'] = element.description
+        if required:
+            container_schema['required'] = required
+
+        return container_schema
 
     return {}

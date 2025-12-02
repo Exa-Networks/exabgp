@@ -17,6 +17,7 @@ from exabgp.configuration.core.parser import Parser
 
 if TYPE_CHECKING:
     from exabgp.configuration.schema import Container, Completion
+    from exabgp.configuration.validator import Validator
 
 F = TypeVar('F', bound=Callable[..., Any])
 
@@ -119,30 +120,41 @@ class Section(Error):
         return True
 
     def parse(self, name: str, command: str) -> bool:  # noqa: C901
+        """Parse a command and apply its action.
+
+        Parser lookup priority:
+        1. self.known dict (explicit registration) - backwards compatible
+        2. Schema validator (auto-generated from Leaf/LeafList)
+        3. Error if neither found
+        """
         identifier = command if command in self.known else (self.name, command)
-        if identifier not in self.known:
-            # Get simple string options (filter out tuple identifiers like ('ipv4', 'unicast'))
-            simple_options = sorted([k for k in self.known if isinstance(k, str)])
-
-            # Find similar commands for "did you mean?" suggestions
-            suggestions = _find_similar(command, simple_options)
-
-            # Build error message
-            msg = f"unknown command '{command}'"
-            if suggestions:
-                msg += f'\n  Did you mean: {", ".join(suggestions)}?'
-            if simple_options:
-                msg += f'\n  Valid options: {", ".join(simple_options)}'
-
-            return self.error.set(msg)
 
         try:
-            if command in self.default:
-                insert = self.known[identifier](self.parser.tokeniser, self.default[command])
+            # Priority 1: Try known dict first (backwards compatible)
+            if identifier in self.known:
+                if command in self.default:
+                    insert = self.known[identifier](self.parser.tokeniser, self.default[command])
+                else:
+                    insert = self.known[identifier](self.parser.tokeniser)
             else:
-                insert = self.known[identifier](self.parser.tokeniser)
+                # Priority 2: Try schema validator
+                validator = self._validator_from_schema(command)
+                if validator is not None:
+                    insert = validator.validate(self.parser.tokeniser)
+                else:
+                    # Priority 3: Unknown command - show suggestions
+                    simple_options = sorted([k for k in self.known if isinstance(k, str)])
+                    suggestions = _find_similar(command, simple_options)
 
-            # Try schema-derived action first, fall back to explicit action dict
+                    msg = f"unknown command '{command}'"
+                    if suggestions:
+                        msg += f'\n  Did you mean: {", ".join(suggestions)}?'
+                    if simple_options:
+                        msg += f'\n  Valid options: {", ".join(simple_options)}'
+
+                    return self.error.set(msg)
+
+            # Get action (from schema or dict)
             action = self._action_from_schema(command) or self.action.get(identifier, '')
 
             if action == 'set-command':
@@ -180,8 +192,6 @@ class Section(Error):
         except ValueError as exc:
             return self.error.set(str(exc))
 
-        return True
-
     # Schema-based methods
 
     schema: 'Container | None' = None  # Override in subclasses with schema definitions
@@ -205,6 +215,26 @@ class Section(Error):
         child = cls.schema.children.get(command)
         if isinstance(child, (Leaf, LeafList)):
             return child.action
+        return None
+
+    @classmethod
+    def _validator_from_schema(cls, command: str) -> 'Validator[Any] | None':
+        """Get validator for command from schema.
+
+        Args:
+            command: The command name to look up
+
+        Returns:
+            Validator from schema Leaf/LeafList, or None if not found
+        """
+        if cls.schema is None:
+            return None
+
+        from exabgp.configuration.schema import Leaf, LeafList
+
+        child = cls.schema.children.get(command)
+        if isinstance(child, (Leaf, LeafList)):
+            return child.get_validator()
         return None
 
     @classmethod
