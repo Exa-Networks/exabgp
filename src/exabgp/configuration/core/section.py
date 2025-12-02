@@ -245,3 +245,18 @@ class Section(Error):
     def has_schema(cls) -> bool:
         """Check if this section has a schema defined."""
         return cls.schema is not None
+
+    @classmethod
+    def get_subsection_keywords(cls) -> list[str]:
+        """Get subsection keywords from schema Container children.
+
+        Returns:
+            List of keywords that represent subsections (Container children).
+            Empty list if no schema defined.
+        """
+        if cls.schema is None:
+            return []
+
+        from exabgp.configuration.schema import Container
+
+        return [name for name, child in cls.schema.children.items() if isinstance(child, Container)]
