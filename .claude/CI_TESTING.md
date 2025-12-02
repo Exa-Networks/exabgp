@@ -16,7 +16,7 @@ uv run ruff format src && uv run ruff check src
 env exabgp_log_enable=false uv run pytest ./tests/unit/
 ./qa/bin/functional encoding
 ./qa/bin/functional decoding
-./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
+./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf
 ```
 
 ---

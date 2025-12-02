@@ -64,7 +64,7 @@ Async mode: 72/72 (100.0% passed)
 
 ### Configuration Validation
 ```
-✅ ./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
+✅ ./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf
 Parser validation: PASS
 Encoding/decoding: PASS
 ```

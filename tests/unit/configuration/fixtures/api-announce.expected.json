@@ -1,0 +1,128 @@
+{
+  "neighbors": {
+    "neighbor 127.0.0.1 local-ip 127.0.0.1 local-as 1 peer-as 1 router-id 1.2.3.4 family-allowed in-open": {
+      "addpaths": [],
+      "adj_rib_in": true,
+      "adj_rib_out": true,
+      "api": {
+        "fsm": [],
+        "negotiated": [],
+        "neighbor-changes": [],
+        "processes": [
+          "add-remove"
+        ],
+        "processes-match": [],
+        "receive-consolidate": [],
+        "receive-keepalive": [],
+        "receive-notification": [],
+        "receive-open": [],
+        "receive-operational": [],
+        "receive-packets": [],
+        "receive-parsed": [],
+        "receive-refresh": [],
+        "receive-update": [],
+        "send-consolidate": [],
+        "send-keepalive": [],
+        "send-notification": [],
+        "send-open": [],
+        "send-operational": [],
+        "send-packets": [],
+        "send-parsed": [],
+        "send-refresh": [],
+        "send-update": [],
+        "signal": []
+      },
+      "auto_flush": true,
+      "capability": {
+        "_type": "NeighborCapability",
+        "add_path": 0,
+        "aigp": "UNSET",
+        "asn4": "TRUE",
+        "extended_message": "TRUE",
+        "graceful_restart": {
+          "_type": "GracefulRestartConfig",
+          "state": "TRUE",
+          "time": 180
+        },
+        "multi_session": "FALSE",
+        "nexthop": "UNSET",
+        "operational": "FALSE",
+        "route_refresh": 0,
+        "software_version": null
+      },
+      "changes": [],
+      "description": "",
+      "domain_name": "",
+      "families": [
+        [
+          {
+            "_type": "AFI",
+            "value": "ipv4"
+          },
+          {
+            "_type": "SAFI",
+            "value": "unicast"
+          }
+        ]
+      ],
+      "group_updates": false,
+      "hold_time": {
+        "_type": "HoldTime",
+        "value": 180
+      },
+      "host_name": "",
+      "manual_eor": false,
+      "nexthops": [],
+      "rate_limit": 0,
+      "session": {
+        "_type": "Session",
+        "connect": 0,
+        "incoming_ttl": null,
+        "listen": 0,
+        "local_address": {
+          "_type": "IP",
+          "value": "127.0.0.1"
+        },
+        "local_as": {
+          "_type": "ASN",
+          "value": 1
+        },
+        "md5_base64": false,
+        "md5_ip": {
+          "_type": "IP",
+          "value": "127.0.0.1"
+        },
+        "md5_password": null,
+        "outgoing_ttl": null,
+        "passive": false,
+        "peer_address": {
+          "_type": "IPRange",
+          "ip": "127.0.0.1",
+          "mask": 32
+        },
+        "peer_as": {
+          "_type": "ASN",
+          "value": 1
+        },
+        "router_id": {
+          "_type": "IP",
+          "value": "1.2.3.4"
+        },
+        "source_interface": null
+      }
+    }
+  },
+  "processes": {
+    "add-remove": {
+      "encoder": "json",
+      "fsm": [],
+      "negotiated": [],
+      "neighbor-changes": [],
+      "respawn": true,
+      "run": [
+        "/Users/thomas/Code/github.com/exa-networks/exabgp/main/etc/exabgp/run/api-announce.run"
+      ],
+      "signal": []
+    }
+  }
+}

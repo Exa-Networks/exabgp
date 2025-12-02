@@ -141,7 +141,7 @@ def test_unit_tests(test_num: int, total: int) -> bool:
 
 def test_config_validation(test_num: int, total: int) -> bool:
     """Configuration validation"""
-    returncode, stdout, stderr = run_command('./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf')
+    returncode, stdout, stderr = run_command('./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf')
 
     if returncode != 0:
         print_header(test_num, total, 'Configuration Validation')

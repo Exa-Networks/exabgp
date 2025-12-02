@@ -577,3 +577,46 @@ class Configuration(_Configuration):
             return self.error.set('invalid keyword "{}"'.format(command))
 
         return cast(bool | str, self._structure[name]['class'].parse(name, command))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Export parsed configuration as a serializable dict.
+
+        Returns a dictionary containing:
+        - neighbors: dict mapping peer addresses to neighbor configuration
+        - processes: dict of configured processes
+
+        The returned dict can be serialized to JSON using ConfigEncoder.
+        """
+        return {
+            'neighbors': {name: self._neighbor_to_dict(neighbor) for name, neighbor in self.neighbors.items()},
+            'processes': self.processes,
+        }
+
+    def _neighbor_to_dict(self, neighbor: Any) -> dict[str, Any]:
+        """Convert Neighbor object to serializable dict.
+
+        Args:
+            neighbor: Neighbor instance to convert
+
+        Returns:
+            Dictionary with all neighbor configuration fields
+        """
+        return {
+            'description': neighbor.description,
+            'hold_time': neighbor.hold_time,
+            'rate_limit': neighbor.rate_limit,
+            'host_name': neighbor.host_name,
+            'domain_name': neighbor.domain_name,
+            'group_updates': neighbor.group_updates,
+            'auto_flush': neighbor.auto_flush,
+            'adj_rib_in': neighbor.adj_rib_in,
+            'adj_rib_out': neighbor.adj_rib_out,
+            'manual_eor': neighbor.manual_eor,
+            'session': neighbor.session,
+            'capability': neighbor.capability,
+            'api': neighbor.api,
+            'families': [(afi, safi) for afi, safi in neighbor.families()],
+            'nexthops': [(afi, safi, nhafi) for afi, safi, nhafi in neighbor.nexthops()],
+            'addpaths': [(afi, safi) for afi, safi in neighbor.addpaths()],
+            'changes': [change for change in neighbor.changes],
+        }

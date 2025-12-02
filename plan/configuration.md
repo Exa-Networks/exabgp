@@ -274,10 +274,10 @@ def generate_example(cls, minimal: bool = True) -> str:
 **Modify:** `src/exabgp/application/validate.py`
 
 ```bash
-./sbin/exabgp validate --help-config              # List all sections
-./sbin/exabgp validate --help-config neighbor     # Show neighbor help
-./sbin/exabgp validate --help-config neighbor.hold-time  # Specific command
-./sbin/exabgp validate --example neighbor         # Generate example
+./sbin/exabgp configuration validate --help-config              # List all sections
+./sbin/exabgp configuration validate --help-config neighbor     # Show neighbor help
+./sbin/exabgp configuration validate --help-config neighbor.hold-time  # Specific command
+./sbin/exabgp configuration validate --example neighbor         # Generate example
 ```
 
 ---

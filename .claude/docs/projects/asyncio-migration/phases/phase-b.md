@@ -87,7 +87,7 @@ Files: N/A (testing only)
 Verification:
   - ruff format src && ruff check src
   - env exabgp_log_enable=false pytest ./tests/unit/ -q
-  - ./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
+  - ./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf
   - ./qa/bin/functional encoding
 Expected:
   - Linting: All checks passed

@@ -23,6 +23,7 @@ from exabgp.application import validate
 from exabgp.application import healthcheck
 from exabgp.application import shell
 from exabgp.application import schema
+from exabgp.application import export
 
 
 def main() -> int | None:
@@ -53,9 +54,9 @@ def main() -> int | None:
             'healthcheck',
             'decode',
             'encode',
+            'configuration',
             'server',
             'env',
-            'validate',
             'shell',
             'schema',
         ):
@@ -114,10 +115,6 @@ def main() -> int | None:
     sub.set_defaults(func=server.cmdline)
     server.setargs(sub)
 
-    sub = subparsers.add_parser('validate', help='validate configuration', description=validate.__doc__)
-    sub.set_defaults(func=validate.cmdline)
-    validate.setargs(sub)
-
     sub = subparsers.add_parser(
         'shell', help='manage shell completion', description='Install or uninstall shell completion scripts'
     )
@@ -127,6 +124,24 @@ def main() -> int | None:
     sub = subparsers.add_parser('schema', help='export configuration schema', description=schema.__doc__)
     sub.set_defaults(func=schema.cmdline)
     schema.setargs(sub)
+
+    # Configuration subcommand group
+    config_parser = subparsers.add_parser(
+        'configuration', help='configuration tools (validate, export)', description='Configuration management tools'
+    )
+    config_subparsers = config_parser.add_subparsers(dest='config_command')
+
+    config_validate = config_subparsers.add_parser(
+        'validate', help='validate configuration file', description=validate.__doc__
+    )
+    config_validate.set_defaults(func=validate.cmdline)
+    validate.setargs(config_validate)
+
+    config_export = config_subparsers.add_parser(
+        'export', help='export parsed configuration to JSON', description=export.__doc__
+    )
+    config_export.set_defaults(func=export.cmdline)
+    export.setargs(config_export)
 
     try:
         cmdarg = parser.parse_args()

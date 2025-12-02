@@ -120,7 +120,7 @@ export EXABGP_DAEMON_USER=$(whoami)
 
 **1. Parsing Tests:**
 - Validates configuration files in `etc/exabgp/*.conf`
-- Uses: `exabgp validate -nrv <config_file>`
+- Uses: `exabgp configuration validate -nrv <config_file>`
 - All config files must parse without errors
 
 **2. Encoding Tests:**
@@ -217,7 +217,7 @@ If decoding tests fail:
 ### Parsing Test Failures
 If parsing tests fail:
 1. Check configuration syntax in `etc/exabgp/*.conf`
-2. Run manually: `./sbin/exabgp validate -nrv etc/exabgp/<config>.conf`
+2. Run manually: `./sbin/exabgp configuration validate -nrv etc/exabgp/<config>.conf`
 
 ---
 
