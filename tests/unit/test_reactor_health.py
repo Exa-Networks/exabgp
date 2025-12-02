@@ -21,9 +21,8 @@ class MockReactor:
         self._peers = {}
         self.processes = MockProcesses()
 
-        # Active CLI client tracking
-        self.active_client_uuid = None
-        self.active_client_last_ping = 0.0
+        # Active CLI client tracking (multi-client support)
+        self.active_clients = {}  # uuid -> last_ping_time
 
 
 class MockProcesses:
@@ -172,7 +171,7 @@ class TestCommandIntegration:
         assert ping_uuid == status_data['uuid']
 
     def test_ping_client_replacement(self):
-        """Test that first client stays active when second client connects"""
+        """Test that multiple clients can be active simultaneously (multi-client support)"""
         from exabgp.reactor.api.command.reactor import ping
 
         reactor = MockReactor()
@@ -182,13 +181,17 @@ class TestCommandIntegration:
         ping(None, reactor, service, 'ping client-1 1000.0 text', use_json=False)
         client1_output = reactor.processes.written_data[0]
         assert 'active=true' in client1_output
-        assert reactor.active_client_uuid == 'client-1'
+        assert 'client-1' in reactor.active_clients
 
-        # Client 2 tries to connect - should get active=false (first client keeps connection)
+        # Client 2 connects - should also be active (multi-client support)
         reactor.processes.written_data = []
         ping(None, reactor, service, 'ping client-2 2000.0 text', use_json=False)
         client2_output = reactor.processes.written_data[0]
-        assert 'active=false' in client2_output
+        assert 'active=true' in client2_output
+
+        # Both clients are tracked
+        assert 'client-1' in reactor.active_clients
+        assert 'client-2' in reactor.active_clients
 
         # Client 1 still active
         reactor.processes.written_data = []
@@ -196,14 +199,14 @@ class TestCommandIntegration:
         client1_still_active = reactor.processes.written_data[0]
         assert 'active=true' in client1_still_active
 
-        # Client 2 still gets rejected
+        # Client 2 also still active
         reactor.processes.written_data = []
         ping(None, reactor, service, 'ping client-2 2000.0 text', use_json=False)
-        client2_still_rejected = reactor.processes.written_data[0]
-        assert 'active=false' in client2_still_rejected
+        client2_still_active = reactor.processes.written_data[0]
+        assert 'active=true' in client2_still_active
 
     def test_ping_client_timeout_replacement(self):
-        """Test that new client can become active if current client times out"""
+        """Test that timed-out clients are automatically cleaned up"""
         from exabgp.reactor.api.command.reactor import ping
 
         reactor = MockReactor()
@@ -212,14 +215,16 @@ class TestCommandIntegration:
         # Client 1 connects first (using text mode for easier assertion)
         ping(None, reactor, service, 'ping client-1 1000.0 text', use_json=False)
         assert 'active=true' in reactor.processes.written_data[0]
-        assert reactor.active_client_uuid == 'client-1'
+        assert 'client-1' in reactor.active_clients
 
-        # Simulate 20 seconds passing (client-1 timed out - no ping for >15s)
-        reactor.active_client_last_ping = time.time() - 20
+        # Simulate 20 seconds passing for client-1 (timed out - no ping for >15s)
+        reactor.active_clients['client-1'] = time.time() - 20
 
-        # Client 2 tries to connect - should succeed since active client timed out
+        # Client 2 connects - should be active, and client-1 should be cleaned up
         reactor.processes.written_data = []
         ping(None, reactor, service, 'ping client-2 2000.0 text', use_json=False)
         output = reactor.processes.written_data[0]
         assert 'active=true' in output
-        assert reactor.active_client_uuid == 'client-2'
+        assert 'client-2' in reactor.active_clients
+        # Client 1 should have been removed due to timeout
+        assert 'client-1' not in reactor.active_clients
