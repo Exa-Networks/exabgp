@@ -591,12 +591,16 @@ class LegacyParserValidator(Validator[Any]):
     Example:
         >>> from exabgp.configuration.static.parser import community
         >>> v = LegacyParserValidator(parser_func=community, name='community')
+
+    For parsers that need AFI (like next_hop):
+        >>> v = LegacyParserValidator(parser_func=next_hop, name='next-hop', accepts_afi=True)
     """
 
     parser_func: Callable[..., Any] | None = None
     name: str = 'legacy'
     accepts_default: bool = False
     default_value: Any = None
+    accepts_afi: bool = False  # If True, validate_with_afi passes AFI to parser
 
     def _parse(self, value: str) -> Any:
         """Not used directly - legacy parsers work with tokeniser."""
@@ -608,6 +612,18 @@ class LegacyParserValidator(Validator[Any]):
             raise ValueError('No parser function configured')
         if self.accepts_default and self.default_value is not None:
             return self.parser_func(tokeniser, self.default_value)
+        return self.parser_func(tokeniser)
+
+    def validate_with_afi(self, tokeniser: 'Tokeniser', afi: Any) -> Any:
+        """Call the wrapped parser function with tokeniser and AFI.
+
+        Used for parsers like next_hop that need AFI context for proper handling
+        (e.g., converting IPv4 to IPv4-mapped IPv6 for IPv6 AFI).
+        """
+        if self.parser_func is None:
+            raise ValueError('No parser function configured')
+        if self.accepts_afi:
+            return self.parser_func(tokeniser, afi)
         return self.parser_func(tokeniser)
 
     def validate_string(self, value: str) -> Any:
@@ -946,6 +962,123 @@ class RouteBuilderValidator(Validator[list[Any]]):
         elif action == 'set-command':
             # Store as attribute on change for later processing
             setattr(change, command.replace('-', '_'), value)
+        else:
+            raise ValueError(f"Unknown action '{action}' for command '{command}'")
+
+    def to_schema(self) -> dict[str, Any]:
+        return {'type': 'array', 'items': {'type': 'object'}}
+
+
+@dataclass
+class TypeSelectorValidator(Validator[list[Any]]):
+    """Builds Change objects from type-selector route syntax.
+
+    Used by TypeSelectorBuilder for MUP and MVPN routes where the first token
+    selects the NLRI type/factory, which parses NLRI-specific fields,
+    then common attributes follow.
+
+    Example token stream:
+        mup-isd <nlri fields parsed by factory> next-hop 1.2.3.4 extended-community ...
+
+    The factory function creates the NLRI and parses its specific fields.
+    Then this validator processes remaining tokens as attributes.
+    """
+
+    name: str = 'type-selector'
+    schema: Any = None  # TypeSelectorBuilder instance
+    afi: Any = None  # AFI enum
+    safi: Any = None  # SAFI enum
+    action_type: Any = None  # Action.ANNOUNCE or Action.WITHDRAW
+
+    def _parse(self, value: str) -> list[Any]:
+        """Not used directly - uses validate() with tokeniser."""
+        raise NotImplementedError('TypeSelectorValidator uses validate() directly')
+
+    def validate(self, tokeniser: 'Tokeniser') -> list[Any]:
+        """Build Change objects from type-selector route syntax."""
+        if self.schema is None:
+            raise ValueError('No schema configured')
+
+        from exabgp.rib.change import Change
+        from exabgp.bgp.message.update.attribute import Attributes
+
+        # First token selects the type/factory
+        route_type = tokeniser()
+        if not route_type:
+            valid = ', '.join(sorted(self.schema.type_factories.keys()))
+            raise ValueError(f'Missing route type. Valid options: {valid}')
+
+        factory = self.schema.type_factories.get(route_type)
+        if factory is None:
+            valid = ', '.join(sorted(self.schema.type_factories.keys()))
+            raise ValueError(f"Unknown route type '{route_type}'\n  Valid options: {valid}")
+
+        # Call factory to create NLRI (factory parses NLRI-specific fields)
+        if self.schema.factory_needs_action:
+            nlri = factory(tokeniser, self.afi, self.action_type)
+        else:
+            nlri = factory(tokeniser, self.afi)
+
+        change = Change(nlri, Attributes())
+
+        # Process remaining tokens as attributes
+        from exabgp.configuration.schema import Leaf, LeafList
+
+        while True:
+            command = tokeniser()
+            if not command:
+                break
+
+            child = self.schema.children.get(command)
+            if child is None:
+                valid = ', '.join(sorted(self.schema.children.keys()))
+                raise ValueError(f"Unknown command '{command}'\n  Valid options: {valid}")
+
+            # Get validator and parse value
+            if isinstance(child, (Leaf, LeafList)):
+                validator = child.get_validator()
+                if validator is None:
+                    raise ValueError(f"No validator for '{command}'")
+
+                action = child.action
+
+                # For nexthop-and-attribute, use validate_with_afi if validator wants AFI
+                used_afi = False
+                if action == 'nexthop-and-attribute' and hasattr(validator, 'accepts_afi') and validator.accepts_afi:
+                    value = validator.validate_with_afi(tokeniser, self.afi)
+                    used_afi = True
+                else:
+                    value = validator.validate(tokeniser)
+
+                # Apply action
+                self._apply_action(change, command, action, value, used_afi)
+
+        return [change]
+
+    def _apply_action(self, change: Any, command: str, action: str, value: Any, used_afi: bool = False) -> None:
+        """Apply parsed value to Change object based on action."""
+        from exabgp.protocol.family import AFI
+
+        if action == 'attribute-add':
+            change.attributes.add(value)
+        elif action == 'nexthop-and-attribute':
+            ip, attribute = value
+            if ip:
+                change.nlri.nexthop = ip
+            # Only skip NextHop attribute when:
+            # 1. The validator used AFI (accepts_afi=True), AND
+            # 2. The AFI is IPv6 (next-hop goes in MP_REACH_NLRI only)
+            # For validators that don't use AFI (e.g., MVPN), always add the attribute
+            if attribute:
+                if used_afi and self.afi == AFI.ipv6:
+                    pass  # Skip NextHop attr for AFI-aware validators with IPv6
+                else:
+                    change.attributes.add(attribute)
+        elif action == 'nlri-set':
+            field_name = self.schema.assign.get(command, command) if hasattr(self.schema, 'assign') else command
+            change.nlri.assign(field_name, value)
+        elif action == 'nop':
+            pass
         else:
             raise ValueError(f"Unknown action '{action}' for command '{command}'")
 

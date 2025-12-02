@@ -13,14 +13,14 @@ from exabgp.rib.change import Change
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message.update.attribute import Attributes
-from exabgp.bgp.message.update.nlri.mup import MUP
-
 from exabgp.configuration.announce import ParseAnnounce
+from exabgp.configuration.announce.route_builder import _build_type_selector_route
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import TypeSelectorBuilder, Leaf, LeafList, ValueType
+from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.static.parser import next_hop
 from exabgp.configuration.static.mpls import label
@@ -33,6 +33,45 @@ from exabgp.configuration.static.parser import extended_community
 
 
 class AnnounceMup(ParseAnnounce):
+    # Schema for MUP routes using TypeSelectorBuilder
+    # First token selects type (mup-isd, mup-dsd, etc.), factory parses NLRI fields
+    schema = TypeSelectorBuilder(
+        description='MUP route announcement',
+        type_factories={
+            'mup-isd': srv6_mup_isd,
+            'mup-dsd': srv6_mup_dsd,
+            'mup-t1st': srv6_mup_t1st,
+            'mup-t2st': srv6_mup_t2st,
+        },
+        factory_needs_action=False,  # MUP factories: factory(tokeniser, afi)
+        children={
+            'next-hop': Leaf(
+                type=ValueType.NEXT_HOP,
+                description='Next hop IP address',
+                action='nexthop-and-attribute',
+                validator=LegacyParserValidator(parser_func=next_hop, name='next-hop', accepts_afi=True),
+            ),
+            'label': Leaf(
+                type=ValueType.LABEL,
+                description='MPLS label',
+                action='nlri-set',
+                validator=LegacyParserValidator(parser_func=label, name='label'),
+            ),
+            'bgp-prefix-sid-srv6': Leaf(
+                type=ValueType.STRING,
+                description='SRv6 BGP Prefix SID',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=prefix_sid_srv6, name='bgp-prefix-sid-srv6'),
+            ),
+            'extended-community': LeafList(
+                type=ValueType.EXTENDED_COMMUNITY,
+                description='Extended communities',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=extended_community, name='extended-community'),
+            ),
+        },
+    )
+
     definition = [
         'mup-isd <ip prefix> rd <rd>',
         'mup-dsd <ip address> rd <rd>',
@@ -81,50 +120,11 @@ class AnnounceMup(ParseAnnounce):
         return True
 
 
-def mup(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
-    muptype = tokeniser()
-    mup_nlri: MUP
-    if muptype == 'mup-isd':
-        mup_nlri = srv6_mup_isd(tokeniser, afi)
-    elif muptype == 'mup-dsd':
-        mup_nlri = srv6_mup_dsd(tokeniser, afi)
-    elif muptype == 'mup-t1st':
-        mup_nlri = srv6_mup_t1st(tokeniser, afi)
-    elif muptype == 'mup-t2st':
-        mup_nlri = srv6_mup_t2st(tokeniser, afi)
-    else:
-        raise ValueError('mup: unknown mup type: {}'.format(muptype))
-
-    change = Change(mup_nlri, Attributes())
-    while True:
-        command = tokeniser()
-
-        if not command:
-            break
-
-        command_action = AnnounceMup.action[command]
-        if command_action == 'nlri-add':
-            for adding in AnnounceMup.known[command](tokeniser):
-                change.nlri.add(adding)
-        elif command_action == 'attribute-add':
-            change.attributes.add(AnnounceMup.known[command](tokeniser))
-        elif command_action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceMup.known[command](tokeniser, afi)
-            change.nlri.nexthop = nexthop
-            change.attributes.add(attribute)
-        elif command_action == 'nop':
-            pass  # yes nothing to do !
-        else:
-            raise ValueError('mup: unknown command "{}"'.format(command))
-
-    return [change]
-
-
 @ParseAnnounce.register('mup', 'extend-name', 'ipv4')
 def mup_ip_v4(tokeniser: Tokeniser) -> list[Change]:
-    return mup(tokeniser, AFI.ipv4, SAFI.mup)
+    return _build_type_selector_route(tokeniser, AnnounceMup.schema, AFI.ipv4, SAFI.mup, AnnounceMup.check)
 
 
 @ParseAnnounce.register('mup', 'extend-name', 'ipv6')
 def mup_ip_v6(tokeniser: Tokeniser) -> list[Change]:
-    return mup(tokeniser, AFI.ipv6, SAFI.mup)
+    return _build_type_selector_route(tokeniser, AnnounceMup.schema, AFI.ipv6, SAFI.mup, AnnounceMup.check)

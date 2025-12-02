@@ -325,8 +325,38 @@ class RouteBuilder(Container):
     factory_with_afi: bool = False
 
 
+@dataclass
+class TypeSelectorBuilder(Container):
+    """Container that selects NLRI type from first token, then builds route.
+
+    Used for MUP and MVPN routes where first token selects the NLRI constructor,
+    which parses NLRI-specific fields, then common attributes follow.
+
+    Example:
+        TypeSelectorBuilder(
+            type_factories={
+                'mup-isd': srv6_mup_isd,
+                'mup-dsd': srv6_mup_dsd,
+            },
+            factory_needs_action=False,  # MUP: factory(tokeniser, afi)
+            children={
+                'next-hop': Leaf(type=ValueType.NEXT_HOP, action='nexthop-and-attribute'),
+                ...
+            },
+        )
+
+    Attributes:
+        type_factories: Dict mapping type name to factory function
+        factory_needs_action: If True, factory is called with (tokeniser, afi, action)
+                              If False, factory is called with (tokeniser, afi)
+    """
+
+    type_factories: dict[str, Callable[..., Any]] = field(default_factory=dict)
+    factory_needs_action: bool = False
+
+
 # Type alias for schema elements
-SchemaElement = Leaf | LeafList | Container | TupleLeaf | CompositeLeaf | RouteBuilder
+SchemaElement = Leaf | LeafList | Container | TupleLeaf | CompositeLeaf | RouteBuilder | TypeSelectorBuilder
 
 
 @dataclass
