@@ -884,6 +884,9 @@ class RouteBuilderValidator(Validator[list[Any]]):
             ipmask = self.schema.prefix_parser(tokeniser)
             nlri = self.schema.nlri_factory(self.afi, self.safi, self.action_type)
             nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
+        elif self.schema.factory_with_afi:
+            # Non-prefix route with AFI (FlowSpec): factory needs AFI/SAFI/action but no CIDR
+            nlri = self.schema.nlri_factory(self.afi, self.safi, self.action_type)
         else:
             # Non-prefix route (VPLS): factory returns pre-constructed NLRI
             nlri = self.schema.nlri_factory()
@@ -929,8 +932,17 @@ class RouteBuilderValidator(Validator[list[Any]]):
         elif action == 'nlri-set':
             field_name = self.schema.assign.get(command, command)
             change.nlri.assign(field_name, value)
+        elif action == 'nlri-add':
+            # For FlowSpec: value is a list of components to add
+            if isinstance(value, (list, tuple)):
+                for item in value:
+                    change.nlri.add(item)
+            else:
+                change.nlri.add(value)
         elif action == 'nlri-nexthop':
             change.nlri.nexthop = value
+        elif action == 'nop':
+            pass  # Intentionally do nothing (e.g., FlowSpec 'accept')
         elif action == 'set-command':
             # Store as attribute on change for later processing
             setattr(change, command.replace('-', '_'), value)

@@ -21,7 +21,7 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.label import AnnounceLabel
-from exabgp.configuration.announce.ip import _build_route
+from exabgp.configuration.announce.route_builder import _build_route
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
