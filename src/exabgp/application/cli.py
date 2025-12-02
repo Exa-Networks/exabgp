@@ -17,6 +17,7 @@ from typing import Callable
 from exabgp.cli.colors import Colors
 from exabgp.cli.completer import CommandCompleter
 from exabgp.cli.formatter import OutputFormatter
+from exabgp.cli.history import HistoryTracker
 from exabgp.cli.persistent_connection import PersistentSocketConnection
 from exabgp.application.shortcuts import CommandShortcuts
 from exabgp.application.pipe import named_pipe
@@ -43,12 +44,17 @@ class InteractiveCLI:
         """
         self.send_command = send_command
         self.formatter = OutputFormatter()
-        self.completer = CommandCompleter(send_command)
         self.running = True
         self.daemon_uuid = daemon_uuid
         self.output_encoding = 'json'  # API encoding format ('json' or 'text')
         self.display_mode = 'text'  # Display mode ('json' or 'text')
         self.sync_mode = False  # Sync mode: wait for routes on wire before ACK (default: off)
+
+        # Initialize command history tracker (for smart completion ranking)
+        self.history_tracker = HistoryTracker()
+
+        # Initialize completer with history tracker
+        self.completer = CommandCompleter(send_command, history_tracker=self.history_tracker)
 
         # Setup history file
         if history_file is None:
@@ -401,6 +407,8 @@ Display Format (optional prefix):
             if result and result.startswith('Error: '):
                 # Socket write failed or timeout - show error without "Command sent"
                 sys.stdout.write(f'{self.formatter.format_error(result[7:])}\n')  # Strip "Error: " prefix
+                # Record command failure
+                self.history_tracker.record_command(command, success=False)
                 return
 
             # Socket write succeeded - show immediate feedback
@@ -414,6 +422,8 @@ Display Format (optional prefix):
             if not result_stripped or result_stripped in ('done', 'done\nerror\n'):
                 # Command succeeded but no output - show success confirmation
                 sys.stdout.write(f'{self.formatter.format_success("Command accepted")}\n')
+                # Record command success
+                self.history_tracker.record_command(command, success=True)
                 return
 
             # Check if response ends with API error marker
@@ -444,6 +454,8 @@ Display Format (optional prefix):
                 else:
                     # Just "error" with no details
                     sys.stdout.write(f'{self.formatter.format_error("Command failed")}\n')
+                # Record command failure
+                self.history_tracker.record_command(command, success=False)
                 return
 
             # Not an error - format normally
@@ -470,8 +482,13 @@ Display Format (optional prefix):
             if formatted:
                 # Regular output - display as-is
                 sys.stdout.write(f'{formatted}\n')
+
+            # Record command success (got valid response)
+            self.history_tracker.record_command(command, success=True)
         except Exception as exc:
             sys.stdout.write(f'{self.formatter.format_error(str(exc))}\n')
+            # Record command failure (exception during execution)
+            self.history_tracker.record_command(command, success=False)
 
     def _quit(self) -> None:
         """Exit the REPL"""

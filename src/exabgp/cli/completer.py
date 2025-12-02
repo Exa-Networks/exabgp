@@ -20,7 +20,10 @@ from typing import Callable
 
 from exabgp.application.shortcuts import CommandShortcuts
 from exabgp.cli.colors import Colors
+from exabgp.cli.command_schema import get_command_spec
 from exabgp.cli.formatter import OutputFormatter
+from exabgp.cli.fuzzy import FuzzyMatcher
+from exabgp.cli.schema_bridge import ValueTypeCompletionEngine, ValidationState
 from exabgp.reactor.api.command.registry import CommandRegistry
 
 
@@ -31,21 +34,30 @@ class CompletionItem:
     value: str  # The actual completion text
     description: str | None = None  # Human-readable description
     item_type: str = 'option'  # Type: 'option', 'neighbor', 'command', 'keyword'
+    syntax_hint: str | None = None  # Syntax hint (e.g., '<ip>', 'IGP|EGP|INCOMPLETE')
+    example: str | None = None  # Example value (e.g., '192.0.2.1')
 
 
 class CommandCompleter:
     """Tab completion for ExaBGP commands using readline with dynamic command discovery"""
 
-    def __init__(self, send_command: Callable[[str], str], get_neighbors: Callable[[], list[str]] | None = None):
+    def __init__(
+        self,
+        send_command: Callable[[str], str],
+        get_neighbors: Callable[[], list[str]] | None = None,
+        history_tracker: Any | None = None,
+    ):
         """
         Initialize completer
 
         Args:
             send_command: Function to send commands to ExaBGP
             get_neighbors: Optional function to fetch neighbor IPs for completion
+            history_tracker: Optional HistoryTracker for smart completion ranking
         """
         self.send_command = send_command
         self.get_neighbors = get_neighbors
+        self.history_tracker = history_tracker
         self.use_color = Colors.supports_color()
 
         # Initialize command registry
@@ -84,6 +96,24 @@ class CommandCompleter:
         self._rl_replace_line = self._get_rl_replace_line()
         self._rl_forced_update_display = self._get_rl_forced_update_display()
 
+        # Initialize new completion engines
+        # Create frequency provider dict-like wrapper for fuzzy matcher
+        class FrequencyProvider:
+            """Dict-like wrapper for history tracker"""
+
+            def __init__(self, tracker):
+                self.tracker = tracker
+
+            def get(self, command: str, default: int = 0) -> int:
+                if self.tracker:
+                    # Convert total bonus (0-100) to frequency count (0-10) for scoring
+                    return self.tracker.get_total_bonus(command) // 10
+                return default
+
+        freq_provider = FrequencyProvider(self.history_tracker) if self.history_tracker else {}
+        self.fuzzy_matcher = FuzzyMatcher(frequency_provider=freq_provider)
+        self.schema_engine = ValueTypeCompletionEngine()
+
     def _get_rl_replace_line(self) -> Callable | None:
         """Try to get rl_replace_line function from readline library via ctypes"""
         try:
@@ -120,6 +150,21 @@ class CommandCompleter:
         except (OSError, AttributeError):
             return None
 
+    def _is_help_mode(self, line: str, text: str) -> bool:
+        """Detect if user is requesting help (line ends with '?').
+
+        Args:
+            line: Full line buffer
+            text: Current word being completed
+
+        Returns:
+            True if help mode requested
+        """
+        # Check if line ends with '?' (user typed '?' to trigger help)
+        # The '?' won't be in the line buffer since it's bound to rl_complete,
+        # so we check if text is '?' or line ends with ' ?'
+        return text == '?' or line.rstrip().endswith('?')
+
     def complete(self, text: str, state: int) -> str | None:
         """
         Readline completion function with auto-expansion of unambiguous tokens
@@ -136,6 +181,13 @@ class CommandCompleter:
             line = readline.get_line_buffer()
             begin = readline.get_begidx()
             end = readline.get_endidx()
+
+            # Check if user is requesting help
+            show_help = self._is_help_mode(line, text)
+
+            # Remove '?' from text if present for completion matching
+            if text == '?':
+                text = ''
 
             # Parse the line into tokens
             # Note: "?" key is bound to rl_complete (same as TAB) so it triggers
@@ -193,8 +245,8 @@ class CommandCompleter:
                     # Check if this is a new completion (avoid repeating on subsequent TABs)
                     current_line = readline.get_line_buffer()
                     if current_line != self.last_line or self.matches != self.last_matches:
-                        # Display matches with descriptions
-                        self._display_matches_and_redraw(self.matches, line)
+                        # Display matches with descriptions (and help if requested)
+                        self._display_matches_and_redraw(self.matches, line, show_help=show_help)
                         self.last_line = current_line
                         self.last_matches = self.matches.copy()
 
@@ -217,6 +269,10 @@ class CommandCompleter:
         """
         Auto-expand unambiguous partial tokens
 
+        IMPORTANT: Uses ONLY exact prefix matching, not fuzzy matching.
+        Fuzzy matches are not suitable for auto-expansion because they
+        can be ambiguous or unexpected.
+
         Args:
             tokens: List of tokens to potentially expand
 
@@ -233,12 +289,18 @@ class CommandCompleter:
 
         for token in tokens:
             # Get completions for this token in the current context
+            # IMPORTANT: _get_completions will try fuzzy if no exact matches,
+            # but we only want to auto-expand on exact prefix matches.
+            # So we need to check if there's exactly one exact prefix match.
             completions = self._get_completions(current_context, token)
 
-            # If exactly one completion and it's different from the token, expand it
-            if len(completions) == 1 and completions[0] != token:
-                expanded_tokens.append(completions[0])
-                current_context.append(completions[0])
+            # Filter to only exact prefix matches
+            exact_matches = [c for c in completions if c.lower().startswith(token.lower())]
+
+            # If exactly one exact match and it's different from the token, expand it
+            if len(exact_matches) == 1 and exact_matches[0] != token:
+                expanded_tokens.append(exact_matches[0])
+                current_context.append(exact_matches[0])
                 expansions_made = True
             else:
                 # Multiple completions or exact match - keep as is
@@ -247,8 +309,14 @@ class CommandCompleter:
 
         return (expanded_tokens, expansions_made)
 
-    def _display_matches_and_redraw(self, matches: list[str], current_line: str) -> None:
-        """Display completion matches with descriptions (one per line) and redraw the prompt"""
+    def _display_matches_and_redraw(self, matches: list[str], current_line: str, show_help: bool = False) -> None:
+        """Display completion matches with descriptions (one per line) and redraw the prompt.
+
+        Args:
+            matches: List of completion matches
+            current_line: Current input line
+            show_help: If True, show extended syntax hints and examples
+        """
         if not matches:
             return
 
@@ -283,12 +351,29 @@ class CommandCompleter:
                     sys.stdout.write(f'{Colors.DIM}{desc_str}{Colors.RESET}\n')
                 else:
                     sys.stdout.write('\n')
+
+                # Show extended help if requested
+                if show_help and metadata and hasattr(metadata, 'syntax_hint'):
+                    if metadata.syntax_hint:
+                        sys.stdout.write(f'           {Colors.DIM}Syntax: {Colors.RESET}')
+                        sys.stdout.write(f'{Colors.CYAN}{metadata.syntax_hint}{Colors.RESET}\n')
+                if show_help and metadata and hasattr(metadata, 'example'):
+                    if metadata.example:
+                        sys.stdout.write(f'           {Colors.DIM}Example: {Colors.RESET}')
+                        sys.stdout.write(f'{Colors.CYAN}{metadata.example}{Colors.RESET}\n')
             else:
                 # No color
                 if desc_str:
                     sys.stdout.write(f'{value_str}{desc_str}\n')
                 else:
                     sys.stdout.write(f'{match}\n')
+
+                # Show extended help if requested (no color)
+                if show_help and metadata:
+                    if hasattr(metadata, 'syntax_hint') and metadata.syntax_hint:
+                        sys.stdout.write(f'           Syntax: {metadata.syntax_hint}\n')
+                    if hasattr(metadata, 'example') and metadata.example:
+                        sys.stdout.write(f'           Example: {metadata.example}\n')
 
         # Redraw the prompt and current input
         formatter = OutputFormatter()
@@ -297,9 +382,73 @@ class CommandCompleter:
         sys.stdout.write(prompt + current_line)
         sys.stdout.flush()
 
-    def _add_completion_metadata(self, value: str, description: str | None = None, item_type: str = 'option') -> None:
-        """Add metadata for a completion item"""
-        self.match_metadata[value] = CompletionItem(value=value, description=description, item_type=item_type)
+    def _add_completion_metadata(
+        self,
+        value: str,
+        description: str | None = None,
+        item_type: str = 'option',
+        syntax_hint: str | None = None,
+        example: str | None = None,
+    ) -> None:
+        """Add metadata for a completion item.
+
+        Args:
+            value: Completion value
+            description: Human-readable description
+            item_type: Type of completion (option/neighbor/command/keyword)
+            syntax_hint: Syntax hint (e.g., '<ip>', 'IGP|EGP|INCOMPLETE')
+            example: Example value (e.g., '192.0.2.1')
+        """
+        self.match_metadata[value] = CompletionItem(
+            value=value,
+            description=description,
+            item_type=item_type,
+            syntax_hint=syntax_hint,
+            example=example,
+        )
+
+    def _filter_candidates(self, candidates: list[str], text: str, use_fuzzy: bool = True) -> list[str]:
+        """Filter candidates using exact prefix or fuzzy matching.
+
+        Args:
+            candidates: List of candidate strings to filter
+            text: Partial text to match against
+            use_fuzzy: If True, use fuzzy matching when no exact matches found
+
+        Returns:
+            List of matching candidates, sorted by relevance
+
+        Strategy:
+            1. Try exact prefix matches first (highest priority)
+            2. If no exact matches and fuzzy enabled, try fuzzy matching
+            3. Sort results by score (exact prefix matches automatically score highest)
+        """
+        if not text:
+            # Empty query returns all candidates (alphabetical)
+            return sorted(candidates)
+
+        # Phase 1: Try exact prefix matches
+        exact_matches = [c for c in candidates if c.lower().startswith(text.lower())]
+
+        if exact_matches:
+            # Return exact matches sorted alphabetically
+            return sorted(exact_matches)
+
+        # Phase 2: Fuzzy matching (if enabled and no exact matches)
+        if use_fuzzy:
+            # Check environment variable for fuzzy matching control
+            import os
+
+            fuzzy_enabled = os.environ.get('exabgp_cli_fuzzy_matching', 'true').lower()
+            if fuzzy_enabled in ('false', '0', 'no'):
+                return []
+
+            # Use fuzzy matcher
+            matches = self.fuzzy_matcher.get_matches(text, candidates, limit=10)
+            return [m.candidate for m in matches]
+
+        # No matches
+        return []
 
     def _get_completions(self, tokens: list[str], text: str) -> list[str]:
         """
@@ -317,38 +466,36 @@ class CommandCompleter:
 
         # If no tokens yet, complete base commands + display format prefix
         if not tokens:
-            matches = []
+            # Collect all candidates
+            display_formats = ['json', 'text']
+            all_candidates = display_formats + self.base_commands
 
-            # Add display format prefixes (json/text) first
-            if 'json'.startswith(text):
-                matches.append('json')
-                self._add_completion_metadata('json', 'Display output as JSON', 'option')
-            if 'text'.startswith(text):
-                matches.append('text')
-                self._add_completion_metadata('text', 'Display output as text tables', 'option')
+            # Use fuzzy filtering
+            matches = self._filter_candidates(all_candidates, text)
 
-            # Add base commands
-            for cmd in self.base_commands:
-                if cmd.startswith(text):
-                    matches.append(cmd)
-                    desc = self.registry.get_command_description(cmd)
-                    self._add_completion_metadata(cmd, desc, 'command')
+            # Add metadata for matches
+            for match in matches:
+                if match == 'json':
+                    self._add_completion_metadata('json', 'Display output as JSON', 'option')
+                elif match == 'text':
+                    self._add_completion_metadata('text', 'Display output as text tables', 'option')
+                else:
+                    desc = self.registry.get_command_description(match)
+                    self._add_completion_metadata(match, desc, 'command')
 
-            return sorted(matches)
+            return matches  # Already sorted by _filter_candidates
 
         # Check if first token is display format prefix - if so, strip it for completion
         # Example: "json show" → complete as if tokens = ["show"]
         if tokens and tokens[0].lower() in ('json', 'text'):
             # Strip display prefix and complete normally
             if len(tokens) == 1:
-                # Just "json " or "text " - suggest all base commands
-                matches = []
-                for cmd in self.base_commands:
-                    if cmd.startswith(text):
-                        matches.append(cmd)
-                        desc = self.registry.get_command_description(cmd)
-                        self._add_completion_metadata(cmd, desc, 'command')
-                return sorted(matches)
+                # Just "json " or "text " - suggest all base commands with fuzzy matching
+                matches = self._filter_candidates(self.base_commands, text)
+                for match in matches:
+                    desc = self.registry.get_command_description(match)
+                    self._add_completion_metadata(match, desc, 'command')
+                return matches
             else:
                 # "json show ..." - strip prefix and continue with rest
                 tokens = tokens[1:]
@@ -394,14 +541,14 @@ class CommandCompleter:
 
             # If exactly "adj-rib" or "neighbor <ip> adj-rib", suggest "in" and "out"
             if len(tokens_after_adjrib) == 0:
-                matches = []
-                if 'in'.startswith(text):
-                    matches.append('in')
-                    self._add_completion_metadata('in', 'Adj-RIB-In (received routes)', 'option')
-                if 'out'.startswith(text):
-                    matches.append('out')
-                    self._add_completion_metadata('out', 'Adj-RIB-Out (advertised routes)', 'option')
-                return sorted(matches)
+                candidates = ['in', 'out']
+                matches = self._filter_candidates(candidates, text)
+                for match in matches:
+                    if match == 'in':
+                        self._add_completion_metadata('in', 'Adj-RIB-In (received routes)', 'option')
+                    elif match == 'out':
+                        self._add_completion_metadata('out', 'Adj-RIB-Out (advertised routes)', 'option')
+                return matches
 
             # If "adj-rib <in|out>" or "neighbor <ip> adj-rib <in|out>", suggest "show"
             if len(tokens_after_adjrib) == 1 and tokens_after_adjrib[0] in ('in', 'out'):
@@ -472,40 +619,39 @@ class CommandCompleter:
             if expanded_tokens[0] == 'set':
                 if len(expanded_tokens) == 1:
                     # After 'set', suggest 'encoding', 'display', or 'sync'
-                    matches = []
-                    if 'encoding'.startswith(text):
-                        matches.append('encoding')
-                        self._add_completion_metadata('encoding', 'Set API output encoding', 'option')
-                    if 'display'.startswith(text):
-                        matches.append('display')
-                        self._add_completion_metadata('display', 'Set display format', 'option')
-                    if 'sync'.startswith(text):
-                        matches.append('sync')
-                        self._add_completion_metadata('sync', 'Set sync mode for announce/withdraw', 'option')
+                    candidates = ['encoding', 'display', 'sync']
+                    matches = self._filter_candidates(candidates, text)
+                    for match in matches:
+                        if match == 'encoding':
+                            self._add_completion_metadata('encoding', 'Set API output encoding', 'option')
+                        elif match == 'display':
+                            self._add_completion_metadata('display', 'Set display format', 'option')
+                        elif match == 'sync':
+                            self._add_completion_metadata('sync', 'Set sync mode for announce/withdraw', 'option')
                     return matches
                 elif len(expanded_tokens) == 2:
                     setting = expanded_tokens[1]
                     if setting in ('encoding', 'display'):
                         # After 'set encoding' or 'set display', suggest 'json' or 'text'
-                        matches = []
-                        if 'json'.startswith(text):
-                            matches.append('json')
-                            desc = 'JSON encoding' if setting == 'encoding' else 'Show raw JSON'
-                            self._add_completion_metadata('json', desc, 'option')
-                        if 'text'.startswith(text):
-                            matches.append('text')
-                            desc = 'Text encoding' if setting == 'encoding' else 'Format as tables'
-                            self._add_completion_metadata('text', desc, 'option')
+                        candidates = ['json', 'text']
+                        matches = self._filter_candidates(candidates, text)
+                        for match in matches:
+                            if match == 'json':
+                                desc = 'JSON encoding' if setting == 'encoding' else 'Show raw JSON'
+                                self._add_completion_metadata('json', desc, 'option')
+                            elif match == 'text':
+                                desc = 'Text encoding' if setting == 'encoding' else 'Format as tables'
+                                self._add_completion_metadata('text', desc, 'option')
                         return matches
                     elif setting == 'sync':
                         # After 'set sync', suggest 'on' or 'off'
-                        matches = []
-                        if 'on'.startswith(text):
-                            matches.append('on')
-                            self._add_completion_metadata('on', 'Wait for routes on wire before ACK', 'option')
-                        if 'off'.startswith(text):
-                            matches.append('off')
-                            self._add_completion_metadata('off', 'Return ACK immediately (default)', 'option')
+                        candidates = ['on', 'off']
+                        matches = self._filter_candidates(candidates, text)
+                        for match in matches:
+                            if match == 'on':
+                                self._add_completion_metadata('on', 'Wait for routes on wire before ACK', 'option')
+                            elif match == 'off':
+                                self._add_completion_metadata('off', 'Return ACK immediately (default)', 'option')
                         return matches
                 # 'set' with other tokens - no more completions
                 return []
@@ -524,26 +670,27 @@ class CommandCompleter:
                 if metadata and metadata.json_support and 'json' not in options:
                     options.append('json')
 
-                # Add options with descriptions
-                matches = []
-                for opt in options:
-                    if opt.startswith(text):
-                        matches.append(opt)
-                        desc = self.registry.get_option_description(opt)
-                        self._add_completion_metadata(opt, desc, 'option')
+                # Filter options with fuzzy matching
+                option_matches = self._filter_candidates(options, text)
+                for opt in option_matches:
+                    desc = self.registry.get_option_description(opt)
+                    self._add_completion_metadata(opt, desc, 'option')
 
                 # Only add neighbor IPs if one isn't already specified
                 # Example: "show neighbor" → suggest IPs, but "show neighbor 127.0.0.1" → don't suggest IPs again
                 ip_already_specified = len(expanded_tokens) >= 3 and self._is_ip_address(expanded_tokens[2])
 
                 if not ip_already_specified:
-                    # Add neighbor IPs with descriptions
-                    for ip, info in neighbor_data.items():
-                        if ip.startswith(text):
-                            matches.append(ip)
-                            self._add_completion_metadata(ip, info, 'neighbor')
+                    # Filter neighbor IPs with fuzzy matching
+                    neighbor_ips = list(neighbor_data.keys())
+                    ip_matches = self._filter_candidates(neighbor_ips, text)
+                    for ip in ip_matches:
+                        info = neighbor_data[ip]
+                        self._add_completion_metadata(ip, info, 'neighbor')
 
-                return sorted(matches)
+                # Combine options and IPs (both already sorted by _filter_candidates)
+                all_matches = option_matches + ip_matches if not ip_already_specified else option_matches
+                return all_matches
 
             # AFI/SAFI completion for eor and route refresh
             if expanded_tokens[-1] in ('eor', 'refresh'):
@@ -751,7 +898,10 @@ class CommandCompleter:
         return matches
 
     def _complete_afi_safi(self, tokens: list[str], text: str) -> list[str]:
-        """Complete AFI/SAFI values for eor and route refresh"""
+        """Complete AFI/SAFI values for eor and route refresh with schema support.
+
+        Uses schema validation to provide accurate choices for enumeration types.
+        """
         # Get AFI values first, then SAFI
         afi_values = self.registry.get_afi_values()
 
@@ -759,28 +909,119 @@ class CommandCompleter:
         potential_afi = tokens[-2] if len(tokens) >= 2 and tokens[-2] in afi_values else None
 
         if potential_afi:
-            # Complete SAFI for the given AFI
+            # Complete SAFI for the given AFI - use fuzzy matching
             safi_values = self.registry.get_safi_values(potential_afi)
-            matches = sorted([s for s in safi_values if s.startswith(text)])
+            matches = self._filter_candidates(safi_values, text)
+
             # Add descriptions for SAFI values
             for match in matches:
+                # Try to get better description from schema
                 desc = f'SAFI for {potential_afi}'
+
+                # Check if this is part of announce eor/route-refresh
+                if 'eor' in tokens or 'refresh' in tokens:
+                    cmd_name = 'announce eor' if 'eor' in tokens else 'announce route-refresh'
+                    cmd_spec = get_command_spec(cmd_name)
+                    if cmd_spec and 'safi' in cmd_spec.arguments:
+                        safi_spec = cmd_spec.arguments['safi']
+                        if safi_spec.description:
+                            desc = safi_spec.description
+
                 self._add_completion_metadata(match, desc, 'keyword')
             return matches
         else:
-            # Complete AFI
-            matches = sorted([a for a in afi_values if a.startswith(text)])
+            # Complete AFI - use fuzzy matching
+            matches = self._filter_candidates(afi_values, text)
+
             # Add descriptions for AFI values
             for match in matches:
+                # Try to get better description from schema
                 desc = 'Address Family Identifier'
+
+                # Check if this is part of announce eor/route-refresh
+                if 'eor' in tokens or 'refresh' in tokens:
+                    cmd_name = 'announce eor' if 'eor' in tokens else 'announce route-refresh'
+                    cmd_spec = get_command_spec(cmd_name)
+                    if cmd_spec and 'afi' in cmd_spec.arguments:
+                        afi_spec = cmd_spec.arguments['afi']
+                        if afi_spec.description:
+                            desc = afi_spec.description
+                            # Add examples if available
+                            if afi_spec.examples and match in afi_spec.examples:
+                                desc += f' (e.g., {match})'
+
                 self._add_completion_metadata(match, desc, 'keyword')
             return matches
 
     def _complete_route_spec(self, tokens: list[str], text: str) -> list[str]:
-        """Complete route specification keywords"""
+        """Complete route specification keywords with schema-based validation.
+
+        Validates the route prefix if present and provides attribute suggestions
+        based on the command schema.
+        """
+        # Get route keywords from registry (legacy approach)
         keywords = self.registry.get_route_keywords()
-        matches = sorted([k for k in keywords if k.startswith(text)])
-        # Add descriptions for route keywords
+
+        # Try to get command spec for enhanced metadata
+        command_name = None
+        if 'announce' in tokens and 'route' in tokens:
+            command_name = 'announce route'
+        elif 'withdraw' in tokens and 'route' in tokens:
+            command_name = 'withdraw route'
+
+        # If we have a command spec, use it to provide better descriptions
+        if command_name:
+            cmd_spec = get_command_spec(command_name)
+            if cmd_spec:
+                # Find the route prefix (token after 'route')
+                try:
+                    route_idx = tokens.index('route')
+                    if route_idx < len(tokens) - 1:
+                        prefix = tokens[route_idx + 1]
+
+                        # Validate the prefix using schema engine
+                        from exabgp.configuration.schema import ValueType
+
+                        result = self.schema_engine.validate_value(ValueType.IP_PREFIX, prefix, allow_partial=False)
+
+                        # If prefix is invalid, show error (but continue with completion)
+                        if result.state == ValidationState.INVALID:
+                            # Still provide completions, but user will see error if they try to execute
+                            pass
+                except (ValueError, IndexError):
+                    pass
+
+                # Use fuzzy filtering for keywords
+                matches = self._filter_candidates(keywords, text)
+
+                # Add descriptions from schema where available
+                for match in matches:
+                    if match in cmd_spec.options:
+                        value_spec = cmd_spec.options[match]
+                        desc = value_spec.description
+
+                        # Get syntax hint from schema engine
+                        syntax_hint = self.schema_engine.get_syntax_help(
+                            value_spec.value_type, include_description=False
+                        )
+
+                        # Get example (prefer from spec, fallback to schema engine)
+                        example = None
+                        if value_spec.examples:
+                            example = value_spec.examples[0]
+                        else:
+                            example = self.schema_engine.get_example_value(value_spec.value_type)
+
+                        self._add_completion_metadata(match, desc, 'keyword', syntax_hint=syntax_hint, example=example)
+                    else:
+                        # Fallback to generic description
+                        desc = 'Route specification parameter'
+                        self._add_completion_metadata(match, desc, 'keyword')
+
+                return matches
+
+        # Fallback: no schema available, use legacy approach with fuzzy matching
+        matches = self._filter_candidates(keywords, text)
         for match in matches:
             desc = 'Route specification parameter'
             self._add_completion_metadata(match, desc, 'keyword')
