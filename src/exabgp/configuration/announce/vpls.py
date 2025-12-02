@@ -200,33 +200,14 @@ class AnnounceVPLS(ParseAnnounce):
         },
     )
 
-    definition = [
-        'endpoint <vpls endpoint id; integer>',
-        'base <label base; integer>',
-        'offset <block offet; interger>',
-        'size <block size; integer>',
-        'next-hop <ip>',
-        'med <16 bits number>',
-        'rd <ipv4>:<port>|<16bits number>:<32bits number>|<32bits number>:<16bits number>',
-        'origin IGP|EGP|INCOMPLETE',
-        'as-path [ <asn>.. ]',
-        'local-preference <16 bits number>',
-        'atomic-aggregate',
-        'community <16 bits number>',
-        'extended-community target:<16 bits number>:<ipv4 formated number>',
-        'originator-id <ipv4>',
-        'cluster-list <ipv4>',
-        'label <15 bits number>',
-        'attribute [ generic attribute format ]name <mnemonic>',
-        'split /<mask>',
-        'watchdog <watchdog-name>',
-        'withdraw',
-    ]
-
-    syntax = 'vpls {}\n'.format('  '.join(definition))
-
     name = 'vpls'
     afi: AFI | None = None
+
+    @property
+    def syntax(self) -> str:
+        """Syntax generated from schema (VPLS format without prefix)."""
+        defn = '  '.join(self.schema.definition)
+        return f'vpls {defn}\n'
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, parser, scope, error)

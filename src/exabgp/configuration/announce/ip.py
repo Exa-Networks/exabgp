@@ -133,32 +133,13 @@ class AnnounceIP(ParseAnnounce):
             ),
         },
     )
-    # put next-hop first as it is a requirement atm
-    definition = [
-        'next-hop <ip>',
-        'origin IGP|EGP|INCOMPLETE',
-        'as-path [ <asn>.. ]',
-        'med <16 bits number>',
-        'local-preference <16 bits number>',
-        'atomic-aggregate',
-        'community <16 bits number>',
-        'large-community <96 bits number>',
-        'extended-community target:<16 bits number>:<ipv4 formated number>',
-        'originator-id <ipv4>',
-        'cluster-list <ipv4>',
-        'label <15 bits number>',
-        'bgp-prefix-sid [ 32 bits number> ] | [ <32 bits number>, [ ( <24 bits number>,<24 bits number> ) ]]',
-        'aggregator ( <asn16>:<ipv4> )',
-        'aigp <40 bits number>',
-        'attribute [ generic attribute format ]name <mnemonic>',
-        'split /<mask>',
-        'watchdog <watchdog-name>',
-        'withdraw',
-    ]
-
-    syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
     name = 'ip'
+
+    @property
+    def syntax(self) -> str:
+        """Syntax generated from schema."""
+        return self.schema.syntax
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, parser, scope, error)

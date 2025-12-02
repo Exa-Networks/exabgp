@@ -72,19 +72,21 @@ class AnnounceMup(ParseAnnounce):
         },
     )
 
-    definition = [
+    # Type-specific NLRI syntaxes (not modeled in schema children)
+    _type_definitions = [
         'mup-isd <ip prefix> rd <rd>',
         'mup-dsd <ip address> rd <rd>',
         'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint> [source <source_addr>]',
         'mup-t2st <endpoint address> rd <rd> teid <teid>',
-        'next-hop <ip>',
-        'extended-community [ mup:<16 bits number>:<ipv4 formated number> target:<16 bits number>:<ipv4 formated number> ]',
-        'bgp-prefix-sid-srv6 ( l3-service <ipv6> <behavior> [<LBL>,<LNL>,<FL>,<AL>,<Tpose-Len>,<Tpose-Offset>])',
     ]
 
-    syntax = 'mup {{\n  <safi> {};\n}}'.format(';\n  '.join(definition))
-
     name = 'mup'
+
+    @property
+    def syntax(self) -> str:
+        """Syntax combining type-specific NLRI syntax with schema-generated attributes."""
+        defn = ';\n  '.join(self._type_definitions + self.schema.definition)
+        return f'mup {{\n  <safi> {defn};\n}}'
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, parser, scope, error)

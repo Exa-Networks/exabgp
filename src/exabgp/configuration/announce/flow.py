@@ -262,36 +262,13 @@ class AnnounceFlow(ParseAnnounce):
         },
     )
 
-    definition = [
-        'source 10.0.0.0/24',
-        'source ::1/128/0',
-        'destination 10.0.1.0/24',
-        'port 25',
-        'source-port >1024',
-        'destination-port [ =80 =3128 >8080&<8088 ]',
-        'packet-length [ >200&<300 >400&<500 ]',
-        'tcp-flags [ 0x20+0x8+0x1 #name-here ]  # to check',
-        '(ipv4 only) protocol [ udp tcp ]',
-        '(ipv4 only) fragment [ dont-fragment is-fragment first-fragment last-fragment ]',
-        '(ipv6 only) next-header [ udp tcp ]',
-        '(ipv6 only) flow-label >100&<2000',
-        '(ipv6 only) icmp-type 35  # to check',
-        '(ipv6 only) icmp-code 55  # to check',
-        'accept',
-        'discard',
-        'rate-limit 9600',
-        'redirect 30740:12345',
-        'redirect 1.2.3.4:5678',
-        'redirect 1.2.3.4',
-        'redirect-next-hop',
-        'copy 1.2.3.4',
-        'mark 123',
-        'action sample|terminal|sample-terminal',
-    ]
-
-    syntax = 'flow {{\n  <safi> {};\n}}'.format(';\n  '.join(definition))
-
     name = 'flow'
+
+    @property
+    def syntax(self) -> str:
+        """Syntax generated from schema (FlowSpec format without prefix)."""
+        defn = ';\n  '.join(self.schema.definition)
+        return f'flow {{\n  <safi> {defn};\n}}'
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, parser, scope, error)
