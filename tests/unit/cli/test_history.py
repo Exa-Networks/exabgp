@@ -14,6 +14,8 @@ Tests:
 
 import json
 import os
+import shutil
+import tempfile
 import time
 from pathlib import Path
 
@@ -77,9 +79,17 @@ class TestHistoryTracker:
     """Test HistoryTracker class."""
 
     @pytest.fixture
-    def temp_history_file(self, tmp_path):
-        """Create a temporary history file path."""
-        return tmp_path / 'test_cli_history.json'
+    def temp_history_file(self):
+        """Create a temporary history file path (uses tempfile to avoid pytest tmp_path issues)."""
+        # Use Python's tempfile directly to avoid pytest tmp_path lock contention
+        tmp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
+        history_file = tmp_dir / 'test_cli_history.json'
+        yield history_file
+        # Cleanup after test
+        try:
+            shutil.rmtree(tmp_dir)
+        except (OSError, PermissionError):
+            pass
 
     @pytest.fixture
     def tracker_disabled(self):
