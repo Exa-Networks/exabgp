@@ -16,13 +16,95 @@ import signal
 import select
 import socket
 import traceback
+import re
+import time
 from collections import deque
+from dataclasses import dataclass
+from enum import Enum
 from typing import Callable
 
 from exabgp.reactor.network.error import error
 
 kb = 1024
 mb = kb * 1024
+
+
+class ResponseType(Enum):
+    """Type of response from ExaBGP reactor."""
+
+    UNICAST = 'unicast'  # Response to specific client command
+    BROADCAST = 'broadcast'  # Event broadcast to all clients
+
+
+@dataclass
+class ClientConnection:
+    """Track individual CLI client connection."""
+
+    socket: socket.socket
+    fd: int
+    uuid: str | None = None  # From initial ping command
+    last_ping: float = 0.0
+    write_queue: deque[bytes] = None  # type: ignore
+    connected_at: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.write_queue is None:
+            self.write_queue = deque()
+        if self.connected_at == 0.0:
+            self.connected_at = time.time()
+
+
+class ResponseRouter:
+    """Route responses to appropriate client(s)."""
+
+    def __init__(self) -> None:
+        self.active_command_client: int | None = None  # fd of client executing command
+
+    def classify_response(self, line: str) -> ResponseType:
+        """Determine if response is unicast or broadcast."""
+        stripped = line.strip()
+
+        # Terminators always unicast to requesting client
+        if stripped in ('done', 'error'):
+            return ResponseType.UNICAST
+
+        # Broadcast patterns (events from reactor)
+        broadcast_patterns = [
+            r'^neighbor \S+ state ',
+            r'^neighbor \S+ up$',
+            r'^neighbor \S+ down$',
+            r'^neighbor \S+ connected$',
+            r'^neighbor \S+ closing$',
+            r'^neighbor \S+ announced ',
+            r'^neighbor \S+ withdrawn ',
+            r'^neighbor \S+ received ',
+            r'^neighbor \S+ operational ',
+        ]
+
+        for pattern in broadcast_patterns:
+            if re.match(pattern, line):
+                return ResponseType.BROADCAST
+
+        # Default: unicast (command response)
+        return ResponseType.UNICAST
+
+    def route_response(self, line: bytes, clients: dict[int, ClientConnection]) -> None:
+        """Route response to appropriate client(s)."""
+        response_type = self.classify_response(line.decode('utf-8', errors='replace'))
+
+        if response_type == ResponseType.BROADCAST:
+            # Send to ALL clients
+            for client in clients.values():
+                client.write_queue.append(line)
+        else:
+            # Send only to active command client
+            if self.active_command_client and self.active_command_client in clients:
+                clients[self.active_command_client].write_queue.append(line)
+
+                # Clear active client after done/error
+                stripped = line.decode('utf-8', errors='replace').strip()
+                if stripped in ('done', 'error'):
+                    self.active_command_client = None
 
 
 def unix_socket(root: str, socketname: str = 'exabgp') -> list[str]:
@@ -99,6 +181,17 @@ class Control:
             self.socket_path = location + socketname + '.sock'
 
         self.server_socket: socket.socket | None = None
+
+        # Multi-client support configuration
+        multi_client_str = env('exabgp', 'api', 'multi_client', 'false').lower()
+        self.multi_client_mode = multi_client_str in ('true', '1', 'yes')
+        self.max_clients = int(env('exabgp', 'api', 'max_clients', '10'))
+
+        # Multi-client tracking
+        self.clients: dict[int, ClientConnection] = {}  # fd -> ClientConnection
+        self.response_router = ResponseRouter()
+
+        # Legacy single-client tracking (for backward compatibility)
         self.client_socket: socket.socket | None = None
         self.client_fd: int | None = None
 
@@ -149,7 +242,9 @@ class Control:
         try:
             self.server_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.server_socket.bind(self.socket_path)
-            self.server_socket.listen(1)  # Single connection at a time
+            # Use higher backlog for multi-client mode
+            backlog = self.max_clients if self.multi_client_mode else 1
+            self.server_socket.listen(backlog)
             self.server_socket.setblocking(False)
         except OSError as exc:
             sys.stdout.write(f'error: could not create socket {os.path.abspath(self.socket_path)}: {exc}\n')
@@ -159,6 +254,33 @@ class Control:
         signal.signal(signal.SIGINT, self.terminate)
         signal.signal(signal.SIGTERM, self.terminate)
         return True
+
+    def _disconnect_client(self, fd: int, standard_out: int | None = None) -> None:
+        """Disconnect a specific client (multi-client mode)."""
+        if fd not in self.clients:
+            return
+
+        client = self.clients[fd]
+
+        # Notify reactor that client disconnected
+        if standard_out is not None and client.uuid:
+            try:
+                os.write(standard_out, f'bye {client.uuid}\n'.encode())
+            except OSError:
+                pass
+
+        # Close socket
+        try:
+            client.socket.close()
+        except OSError:
+            pass
+
+        # Remove from tracking
+        del self.clients[fd]
+
+        # Clear active command client if it was this client
+        if self.response_router.active_command_client == fd:
+            self.response_router.active_command_client = None
 
     def cleanup_client(self) -> None:
         """Clean up client connection only (keep server listening).
@@ -176,6 +298,11 @@ class Control:
 
     def cleanup(self) -> None:
         """Clean up all resources (server shutdown)."""
+        # Disconnect all clients
+        for fd in list(self.clients.keys()):
+            self._disconnect_client(fd)
+
+        # Legacy cleanup
         self.cleanup_client()
         self.client_fd = None  # Full cleanup includes clearing fd
 
@@ -315,7 +442,13 @@ class Control:
 
         while True:
             # Update reading list based on connection state
-            if self.client_fd:
+            if self.multi_client_mode:
+                # Multi-client mode: monitor all client FDs
+                reading = [standard_in] + list(self.clients.keys())
+                if self.server_socket:
+                    reading.append(self.server_socket.fileno())
+            elif self.client_fd:
+                # Legacy single-client mode
                 reading = [standard_in, self.client_fd]
             elif self.server_socket:
                 reading = [standard_in, self.server_socket.fileno()]
@@ -325,7 +458,7 @@ class Control:
 
             ready = self.read_on(reading)
 
-            if not ready and not self.client_socket:
+            if not ready and not self.client_socket and not self.clients:
                 # Timeout, no client - continue waiting
                 continue
 
@@ -334,89 +467,237 @@ class Control:
                 try:
                     new_socket, _ = self.server_socket.accept()
 
-                    if self.client_socket:
-                        # Already have a client - reject immediately
-                        try:
-                            new_socket.setblocking(True)
-                            new_socket.sendall(b'error: another CLI client is already connected\ndone\n')
+                    if self.multi_client_mode:
+                        # Multi-client mode
+                        if len(self.clients) >= self.max_clients:
+                            # Max clients reached - reject
                             try:
-                                new_socket.shutdown(socket.SHUT_WR)
-                            except OSError:
-                                pass  # Ignore shutdown errors
-                            new_socket.close()
-                        except OSError:
-                            try:
+                                new_socket.setblocking(True)
+                                new_socket.sendall(b'error: maximum concurrent clients reached\ndone\n')
+                                try:
+                                    new_socket.shutdown(socket.SHUT_WR)
+                                except OSError:
+                                    pass
                                 new_socket.close()
                             except OSError:
-                                pass
+                                try:
+                                    new_socket.close()
+                                except OSError:
+                                    pass
+                        else:
+                            # Accept new client
+                            new_socket.setblocking(False)
+                            new_fd = new_socket.fileno()
+
+                            # Create client connection
+                            client = ClientConnection(socket=new_socket, fd=new_fd)
+                            self.clients[new_fd] = client
+
+                            # Create per-client socket reader/writer with client-specific fd
+                            def make_socket_reader(client_fd: int) -> Callable[[int], bytes]:
+                                def reader(number: int) -> bytes:
+                                    if client_fd not in self.clients:
+                                        return b''
+                                    try:
+                                        data = self.clients[client_fd].socket.recv(number)
+                                        if not data:
+                                            # EOF - client closed
+                                            self._disconnect_client(client_fd, standard_out)
+                                        return data
+                                    except OSError as exc:
+                                        if exc.errno in error.block:
+                                            return b''
+                                        self._disconnect_client(client_fd, standard_out)
+                                        return b''
+
+                                return reader
+
+                            def make_std_writer_for_client(client_fd: int) -> Callable[[bytes], int]:
+                                def writer(line: bytes) -> int:
+                                    # Mark this client as active when sending command
+                                    self.response_router.active_command_client = client_fd
+                                    try:
+                                        return os.write(standard_out, line)
+                                    except OSError as exc:
+                                        if exc.errno in error.block:
+                                            return 0
+                                        sys.exit(1)
+
+                                return writer
+
+                            # Initialize data structures for client
+                            read[new_fd] = make_socket_reader(new_fd)
+                            write[new_fd] = make_std_writer_for_client(new_fd)
+                            backlog[new_fd] = deque()
+                            store[new_fd] = b''
                     else:
-                        # No client - accept this connection
-                        self.client_socket = new_socket
-                        self.client_socket.setblocking(False)
-                        self.client_fd = self.client_socket.fileno()
+                        # Single-client mode (legacy)
+                        if self.client_socket:
+                            # Already have a client - reject immediately
+                            try:
+                                new_socket.setblocking(True)
+                                new_socket.sendall(b'error: another CLI client is already connected\ndone\n')
+                                try:
+                                    new_socket.shutdown(socket.SHUT_WR)
+                                except OSError:
+                                    pass  # Ignore shutdown errors
+                                new_socket.close()
+                            except OSError:
+                                try:
+                                    new_socket.close()
+                                except OSError:
+                                    pass
+                        else:
+                            # No client - accept this connection
+                            self.client_socket = new_socket
+                            self.client_socket.setblocking(False)
+                            self.client_fd = self.client_socket.fileno()
 
-                        # Initialize data structures for client
-                        read[self.client_fd] = socket_reader
-                        write[self.client_fd] = std_writer  # Forward socket commands to ExaBGP stdout
-                        backlog[self.client_fd] = deque()
-                        store[self.client_fd] = b''
+                            # Initialize data structures for client
+                            read[self.client_fd] = socket_reader
+                            write[self.client_fd] = std_writer  # Forward socket commands to ExaBGP stdout
+                            backlog[self.client_fd] = deque()
+                            store[self.client_fd] = b''
 
-                        # Update write destinations
-                        write[standard_in] = socket_writer  # Forward ExaBGP responses to socket
+                            # Update write destinations
+                            write[standard_in] = socket_writer  # Forward ExaBGP responses to socket
                 except OSError:
                     continue
 
-            # Read from client socket
-            if self.client_fd and self.client_fd in ready:
-                consume(self.client_fd)
-                # Check if client disconnected (empty read)
-                if self.client_fd and not self.client_socket:
-                    # Cleanup happened in socket_reader/socket_writer
-                    # Notify reactor that client disconnected (clears active_client_uuid)
-                    try:
-                        os.write(standard_out, b'bye\n')
-                    except OSError:
-                        pass
+            # Read from client sockets
+            if self.multi_client_mode:
+                # Multi-client mode: check all clients
+                for client_fd in list(self.clients.keys()):
+                    if client_fd in ready:
+                        consume(client_fd)
+                        # Check if client disconnected
+                        if client_fd not in self.clients:
+                            # Cleanup happened in socket reader
+                            # Remove from data structures
+                            if client_fd in read:
+                                del read[client_fd]
+                            if client_fd in write:
+                                del write[client_fd]
+                            if client_fd in backlog:
+                                del backlog[client_fd]
+                            if client_fd in store:
+                                del store[client_fd]
+            else:
+                # Legacy single-client mode
+                if self.client_fd and self.client_fd in ready:
+                    consume(self.client_fd)
+                    # Check if client disconnected (empty read)
+                    if self.client_fd and not self.client_socket:
+                        # Cleanup happened in socket_reader/socket_writer
+                        # Notify reactor that client disconnected (clears active_client_uuid)
+                        try:
+                            os.write(standard_out, b'bye\n')
+                        except OSError:
+                            pass
 
-                    # Remove client from data structures
-                    if self.client_fd in read:
-                        del read[self.client_fd]
-                    if self.client_fd in write:
-                        del write[self.client_fd]
-                    if self.client_fd in backlog:
-                        del backlog[self.client_fd]
-                    if self.client_fd in store:
-                        del store[self.client_fd]
-                    write[standard_in] = None
-                    self.client_fd = None  # Clear fd after cleanup
-                    continue
+                        # Remove client from data structures
+                        if self.client_fd in read:
+                            del read[self.client_fd]
+                        if self.client_fd in write:
+                            del write[self.client_fd]
+                        if self.client_fd in backlog:
+                            del backlog[self.client_fd]
+                        if self.client_fd in store:
+                            del store[self.client_fd]
+                        write[standard_in] = None
+                        self.client_fd = None  # Clear fd after cleanup
+                        continue
 
             # Read from stdin (ExaBGP responses)
             if standard_in in ready:
                 consume(standard_in)
 
             # Write pending data
-            sources = list(store.keys())
-            for source in sources:
-                if source not in store:
-                    continue
-                writer = write.get(source)
-                if not writer:
-                    # No client connected, discard data
-                    store[source] = b''
-                    backlog[source].clear()
-                    continue
+            if self.multi_client_mode:
+                # Multi-client mode: route responses to appropriate clients
+                # Process stdin responses (from ExaBGP)
+                while b'\n' in store[standard_in]:
+                    line, rest = store[standard_in].split(b'\n', 1)
+                    # Route this response to appropriate client(s)
+                    self.response_router.route_response(line + b'\n', self.clients)
+                    store[standard_in] = rest
 
-                while b'\n' in store[source]:
-                    line, rest = store[source].split(b'\n', 1)
-                    sent = writer(line + b'\n')
-                    if sent:
-                        store[source] = rest
+                if backlog[standard_in]:
+                    store[standard_in] += backlog[standard_in].popleft()
+
+                # Flush client write queues
+                for client_fd in list(self.clients.keys()):
+                    if client_fd not in self.clients:
                         continue
-                    break
+                    client = self.clients[client_fd]
+                    while client.write_queue:
+                        line = client.write_queue[0]
+                        try:
+                            sent = client.socket.send(line)
+                            if sent == len(line):
+                                client.write_queue.popleft()
+                            else:
+                                # Partial send - update buffer
+                                client.write_queue[0] = line[sent:]
+                                break
+                        except OSError as exc:
+                            if exc.errno in error.block:
+                                break  # Would block, try later
+                            else:
+                                # Client disconnected
+                                self._disconnect_client(client_fd, standard_out)
+                                # Remove from data structures
+                                if client_fd in read:
+                                    del read[client_fd]
+                                if client_fd in write:
+                                    del write[client_fd]
+                                if client_fd in backlog:
+                                    del backlog[client_fd]
+                                if client_fd in store:
+                                    del store[client_fd]
+                                break
 
-                if backlog[source]:
-                    store[source] += backlog[source].popleft()
+                # Process client commands (write to stdout)
+                for client_fd in list(self.clients.keys()):
+                    if client_fd not in self.clients or client_fd not in store:
+                        continue
+                    writer = write.get(client_fd)
+                    if not writer:
+                        continue
+
+                    while b'\n' in store[client_fd]:
+                        line, rest = store[client_fd].split(b'\n', 1)
+                        sent = writer(line + b'\n')
+                        if sent:
+                            store[client_fd] = rest
+                            continue
+                        break
+
+                    if backlog.get(client_fd):
+                        store[client_fd] += backlog[client_fd].popleft()
+            else:
+                # Legacy single-client mode
+                sources = list(store.keys())
+                for source in sources:
+                    if source not in store:
+                        continue
+                    writer = write.get(source)
+                    if not writer:
+                        # No client connected, discard data
+                        store[source] = b''
+                        backlog[source].clear()
+                        continue
+
+                    while b'\n' in store[source]:
+                        line, rest = store[source].split(b'\n', 1)
+                        sent = writer(line + b'\n')
+                        if sent:
+                            store[source] = rest
+                            continue
+                        break
+
+                    if backlog[source]:
+                        store[source] += backlog[source].popleft()
 
     def run(self) -> None:
         """Run the socket server."""

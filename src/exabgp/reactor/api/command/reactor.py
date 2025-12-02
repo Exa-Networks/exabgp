@@ -265,7 +265,7 @@ def ping(self: Command, reactor: Reactor, service: str, line: str, use_json: boo
         except ValueError:
             pass
 
-    # Determine if this client is the active one
+    # Multi-client support: all clients are active
     is_active = True
     if client_uuid and client_start_time is not None:
         import time
@@ -273,31 +273,40 @@ def ping(self: Command, reactor: Reactor, service: str, line: str, use_json: boo
         current_time = time.time()
         client_timeout = 15  # seconds - 10s ping interval + 5s grace
 
-        # Check if current active client has timed out (no ping received)
-        if reactor.active_client_uuid is not None:
-            time_since_last_ping = current_time - reactor.active_client_last_ping
-            if time_since_last_ping > client_timeout:
-                # Active client timed out - clear it
-                reactor.active_client_uuid = None
-                reactor.active_client_last_ping = 0.0
+        # Clean up stale clients (no ping received within timeout)
+        stale_uuids = [
+            uuid for uuid, last_ping in reactor.active_clients.items() if current_time - last_ping > client_timeout
+        ]
+        for uuid in stale_uuids:
+            del reactor.active_clients[uuid]
 
-        # Now determine active client (first-come-first-served)
-        if reactor.active_client_uuid is None:
-            # No active client - this one becomes active
-            reactor.active_client_uuid = client_uuid
-            reactor.active_client_last_ping = current_time
-        elif client_uuid == reactor.active_client_uuid:
-            # Same client - update last ping time
-            reactor.active_client_last_ping = current_time
-        else:
-            # Different client - not active (first client keeps connection)
-            is_active = False
+        # Update this client's ping time (all clients are active in multi-client mode)
+        reactor.active_clients[client_uuid] = current_time
 
     if output_json:
         response = {'pong': reactor.daemon_uuid, 'active': is_active}
         reactor.processes.write(service, json.dumps(response))
     else:
         reactor.processes.write(service, f'pong {reactor.daemon_uuid} active={str(is_active).lower()}')
+    reactor.processes.answer_done(service)
+    return True
+
+
+@Command.register('bye', False, json_support=True)
+def bye(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+    """Handle client disconnect - cleanup client tracking
+
+    Format: "bye <client_uuid>"
+    Called by socket server when a client disconnects.
+    """
+    # Parse client UUID if provided
+    parts = line.strip().split()
+    client_uuid = parts[1] if len(parts) >= 2 else None
+
+    # Remove client from active clients tracking
+    if client_uuid and client_uuid in reactor.active_clients:
+        del reactor.active_clients[client_uuid]
+
     reactor.processes.answer_done(service)
     return True
 
@@ -350,12 +359,3 @@ def status(self: Command, reactor: Reactor, service: str, line: str, use_json: b
     return True
 
 
-@Command.register('bye', False, json_support=True)
-def bye(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
-    """Handle client disconnect - clear active client tracking"""
-    # Clear active client when CLI disconnects
-    reactor.active_client_uuid = None
-    reactor.active_client_last_ping = 0.0
-    # Send acknowledgment to confirm disconnect
-    reactor.processes.answer_done(service)
-    return True

@@ -59,9 +59,8 @@ class Reactor:
         self.daemon_uuid: str = str(uuid.uuid4())
         self.daemon_start_time: float = time.time()
 
-        # Active CLI client tracking (for multi-client replacement detection)
-        self.active_client_uuid: str | None = None
-        self.active_client_last_ping: float = 0.0
+        # Active CLI client tracking (multi-client support)
+        self.active_clients: dict[str, float] = {}  # uuid -> last_ping_time
 
         self.max_loop_time: float = getenv().reactor.speed
         self._sleep_time: float = self.max_loop_time / 100
