@@ -74,16 +74,16 @@ class TestLeaf:
 
     def test_leaf_full(self):
         """Leaf can be created with all attributes."""
+        from exabgp.configuration.validator import IntegerValidator
 
-        def dummy_parser(tokeniser):
-            return 42
+        dummy_validator = IntegerValidator(min_value=0, max_value=65535)
 
         leaf = Leaf(
             type=ValueType.INTEGER,
             description='Test integer',
             default=100,
             mandatory=True,
-            parser=dummy_parser,
+            validator=dummy_validator,
             action='append-command',
             min_value=0,
             max_value=65535,
@@ -92,7 +92,7 @@ class TestLeaf:
         assert leaf.description == 'Test integer'
         assert leaf.default == 100
         assert leaf.mandatory is True
-        assert leaf.parser is dummy_parser
+        assert leaf.validator is dummy_validator
         assert leaf.action == 'append-command'
         assert leaf.min_value == 0
         assert leaf.max_value == 65535
@@ -136,20 +136,20 @@ class TestLeafList:
 
     def test_leaflist_full(self):
         """LeafList can be created with all attributes."""
+        from exabgp.configuration.validator import StringValidator
 
-        def dummy_parser(tokeniser):
-            return ['65000:100']
+        dummy_validator = StringValidator()
 
         leaflist = LeafList(
             type=ValueType.COMMUNITY,
             description='BGP communities',
-            parser=dummy_parser,
+            validator=dummy_validator,
             action='extend-command',
             choices=['no-export', 'no-advertise'],
         )
         assert leaflist.type == ValueType.COMMUNITY
         assert leaflist.description == 'BGP communities'
-        assert leaflist.parser is dummy_parser
+        assert leaflist.validator is dummy_validator
         assert leaflist.action == 'extend-command'
         assert leaflist.choices == ['no-export', 'no-advertise']
 
