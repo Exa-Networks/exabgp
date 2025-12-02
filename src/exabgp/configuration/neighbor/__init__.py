@@ -19,22 +19,21 @@ from exabgp.configuration.core import Error, Parser, Scope, Section
 from exabgp.configuration.neighbor.api import ParseAPI
 from exabgp.configuration.neighbor.family import ParseAddPath, ParseFamily
 from exabgp.configuration.neighbor.parser import (
-    description,
-    domainname,
     hold_time,
-    hostname,
     inherit,
     local_address,
-    md5,
-    rate_limit,
     router_id,
-    source_interface,
     ttl,
 )
+
+# Removed imports migrated to schema validators:
+# description, domainname, hostname, md5, rate_limit, source_interface
 from exabgp.configuration.schema import Container, Leaf, ValueType
 
 # from exabgp.configuration.parser import asn
-from exabgp.configuration.parser import auto_asn, auto_boolean, boolean, ip, peer_ip, port
+from exabgp.configuration.parser import auto_asn, auto_boolean
+
+# Removed imports migrated to schema validators: boolean, ip, peer_ip, port
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
@@ -54,6 +53,7 @@ class ParseNeighbor(Section):
                 type=ValueType.IP_RANGE,
                 description='IP address or range of the BGP peer',
                 mandatory=True,
+                action='set-command',
             ),
             'local-address': Leaf(
                 type=ValueType.IP_ADDRESS,
@@ -76,14 +76,17 @@ class ParseNeighbor(Section):
             'description': Leaf(
                 type=ValueType.STRING,
                 description='Neighbor description',
+                action='set-command',
             ),
             'host-name': Leaf(
                 type=ValueType.STRING,
                 description='Hostname capability value',
+                action='set-command',
             ),
             'domain-name': Leaf(
                 type=ValueType.STRING,
                 description='Domain name capability value',
+                action='set-command',
             ),
             # Timers
             'hold-time': Leaf(
@@ -96,26 +99,31 @@ class ParseNeighbor(Section):
             'rate-limit': Leaf(
                 type=ValueType.INTEGER,
                 description='Rate limit for updates (messages per second)',
+                action='set-command',
             ),
             # Connection options
             'passive': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Wait for incoming connections',
                 default=True,
+                action='set-command',
             ),
             'listen': Leaf(
                 type=ValueType.PORT,
                 description='Local TCP port to listen on',
                 default=179,
+                action='set-command',
             ),
             'connect': Leaf(
                 type=ValueType.PORT,
                 description='Remote TCP port to connect to',
                 default=179,
+                action='set-command',
             ),
             'source-interface': Leaf(
                 type=ValueType.STRING,
                 description='Source interface for BGP session',
+                action='set-command',
             ),
             # TTL security
             'outgoing-ttl': Leaf(
@@ -134,6 +142,7 @@ class ParseNeighbor(Section):
             'md5-password': Leaf(
                 type=ValueType.STRING,
                 description='TCP MD5 authentication password',
+                action='set-command',
             ),
             'md5-base64': Leaf(
                 type=ValueType.BOOLEAN,
@@ -143,32 +152,38 @@ class ParseNeighbor(Section):
             'md5-ip': Leaf(
                 type=ValueType.IP_ADDRESS,
                 description='IP address for MD5 authentication',
+                action='set-command',
             ),
             # Behavior options
             'group-updates': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Group updates for efficiency',
                 default=True,
+                action='set-command',
             ),
             'auto-flush': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Auto-flush updates',
                 default=True,
+                action='set-command',
             ),
             'adj-rib-out': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Maintain Adj-RIB-Out',
                 default=False,
+                action='set-command',
             ),
             'adj-rib-in': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Maintain Adj-RIB-In',
                 default=False,
+                action='set-command',
             ),
             'manual-eor': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Manual End-of-RIB control',
                 default=False,
+                action='set-command',
             ),
             'inherit': Leaf(
                 type=ValueType.STRING,
@@ -191,60 +206,37 @@ class ParseNeighbor(Section):
     syntax = ''
 
     known = {
-        'inherit': inherit,
-        'description': description,
-        'host-name': hostname,
-        'domain-name': domainname,
-        'router-id': router_id,
-        'hold-time': hold_time,
-        'rate-limit': rate_limit,
-        'local-address': local_address,
-        'source-interface': source_interface,
-        'peer-address': peer_ip,
-        'local-as': auto_asn,
-        'peer-as': auto_asn,
-        'passive': boolean,
-        'listen': port,
-        'connect': port,
-        'outgoing-ttl': ttl,
-        'incoming-ttl': ttl,
-        'md5-password': md5,
-        'md5-base64': auto_boolean,
-        'md5-ip': ip,
-        'group-updates': boolean,
-        'auto-flush': boolean,
-        'adj-rib-out': boolean,
-        'adj-rib-in': boolean,
-        'manual-eor': boolean,
+        # Cannot migrate (return complex types or optional values):
+        'inherit': inherit,  # returns list[str]
+        'router-id': router_id,  # returns RouterID object
+        'hold-time': hold_time,  # returns HoldTime object
+        'local-address': local_address,  # returns IP|None
+        'local-as': auto_asn,  # returns ASN|None
+        'peer-as': auto_asn,  # returns ASN|None
+        'outgoing-ttl': ttl,  # returns int|None
+        'incoming-ttl': ttl,  # returns int|None
+        'md5-base64': auto_boolean,  # returns bool|None
+        # Migrated to schema validators:
+        # description, host-name, domain-name, source-interface, md5-password,
+        # passive, listen, connect, group-updates, auto-flush, adj-rib-out,
+        # adj-rib-in, manual-eor, peer-address, md5-ip, rate-limit
     }
 
     action = {
+        # Cannot migrate (return complex types or optional values):
         'inherit': 'extend-command',
-        'description': 'set-command',
-        'host-name': 'set-command',
-        'domain-name': 'set-command',
         'router-id': 'set-command',
         'hold-time': 'set-command',
-        'rate-limit': 'set-command',
         'local-address': 'set-command',
-        'source-interface': 'set-command',
-        'peer-address': 'set-command',
         'local-as': 'set-command',
         'peer-as': 'set-command',
-        'passive': 'set-command',
-        'listen': 'set-command',
-        'connect': 'set-command',
         'outgoing-ttl': 'set-command',
         'incoming-ttl': 'set-command',
-        'md5-password': 'set-command',
         'md5-base64': 'set-command',
-        'md5-ip': 'set-command',
-        'group-updates': 'set-command',
-        'auto-flush': 'set-command',
-        'adj-rib-out': 'set-command',
-        'adj-rib-in': 'set-command',
-        'manual-eor': 'set-command',
         'route': 'append-name',
+        # Migrated to schema: description, host-name, domain-name, source-interface,
+        # md5-password, passive, listen, connect, group-updates, auto-flush,
+        # adj-rib-out, adj-rib-in, manual-eor, peer-address, md5-ip, rate-limit
     }
 
     default = {

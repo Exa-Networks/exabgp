@@ -355,10 +355,24 @@ Type mappings:
 - `capability.py`: 8 boolean entries migrated (kept `add-path` and `graceful-restart`)
 - `schema.py`: Fixed `Leaf.get_validator()` to configure BooleanValidator defaults
 
+**Phase 3:**
+- `neighbor/__init__.py`: 16 entries migrated to schema validators:
+  - description, host-name, domain-name, source-interface, md5-password
+  - passive, listen, connect, group-updates, auto-flush
+  - adj-rib-out, adj-rib-in, manual-eor
+  - peer-address, md5-ip, rate-limit
+
 ### Cannot Migrate ❌
 
-After implementation analysis, several sections in the plan cannot be migrated because their parsers return complex objects that schema validators cannot produce:
+After implementation analysis, several sections in the plan cannot be migrated because:
 
+**1. Custom parsing functions bypass Section.parse():**
+| File | Reason |
+|------|--------|
+| `announce/ip.py` | Custom `ip()` function directly accesses `known[command]` |
+| `l2vpn/vpls.py` | Custom `vpls()` function in `__init__.py` directly accesses `known[command]` |
+
+**2. Parsers return complex objects that schema validators cannot produce:**
 | File | Reason |
 |------|--------|
 | `operational/__init__.py` | Parsers return `Advisory`/`Query`/`Response` objects, NOT strings |
@@ -367,15 +381,29 @@ After implementation analysis, several sections in the plan cannot be migrated b
 | `capability.py` `add-path` | Returns int (0,1,2,3), but ENUMERATION validator returns strings |
 | `process/__init__.py` `run` | Returns `list[str]` and validates file existence |
 
+**3. Parsers return optional types:**
+| Entry | Reason |
+|-------|--------|
+| `neighbor/__init__.py` `hold-time` | Returns `HoldTime` object, not int |
+| `neighbor/__init__.py` `router-id` | Returns `RouterID` object, not IP |
+| `neighbor/__init__.py` `local-address` | Returns `IP|None`, not IP |
+| `neighbor/__init__.py` `local-as` | Returns `ASN|None`, not ASN |
+| `neighbor/__init__.py` `peer-as` | Returns `ASN|None`, not ASN |
+| `neighbor/__init__.py` `outgoing-ttl` | Returns `int|None`, not int |
+| `neighbor/__init__.py` `incoming-ttl` | Returns `int|None`, not int |
+| `neighbor/__init__.py` `md5-base64` | Returns `bool|None`, not bool |
+| `neighbor/__init__.py` `inherit` | Returns `list[str]`, not str |
+
 ### Migration Rule
 
 **Only migrate entries where:**
 1. Parser returns same type as schema validator (bool for BOOLEAN, str for STRING/ENUMERATION, int for INTEGER)
 2. No complex object creation (AFI, SAFI, Advisory, etc.)
 3. No state tracking or side effects
+4. Section uses `Section.parse()` (not custom parsing functions)
 
 ---
 
 **Created:** 2025-12-02
 **Updated:** 2025-12-02
-**Status:** Phase 1+2 (partial) complete, Phase 3 pending review
+**Status:** Phase 1, 2, 3 complete. Migration scope reduced from 117 to ~40 entries due to architectural constraints.
