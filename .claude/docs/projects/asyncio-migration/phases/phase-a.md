@@ -116,7 +116,7 @@ env exabgp_log_enable=false pytest ./tests/unit/ -q
 
 **Configuration Validation:**
 ```bash
-./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
+./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf
 # Result: ✅ Passed
 ```
 

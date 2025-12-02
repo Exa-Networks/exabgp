@@ -329,7 +329,7 @@
 2. ✅ `env exabgp_log_enable=false pytest ./tests/unit/ -x -q` (1376 tests)
 3. ✅ `./qa/bin/functional encoding` (1870 tests)
 4. ✅ `./qa/bin/functional decoding` (360 tests)
-5. ✅ `./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf`
+5. ✅ `./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf`
 
 **Continuous Validation:**
 - Run mypy after each file/group of files fixed

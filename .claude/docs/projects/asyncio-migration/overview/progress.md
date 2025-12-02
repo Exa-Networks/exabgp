@@ -357,7 +357,7 @@ env exabgp_log_enable=false pytest ./tests/unit/ -q
 # Result: ✅ 1376 passed in 4.02s
 
 # Configuration Validation
-./sbin/exabgp validate -nrv ./etc/exabgp/conf-ipself6.conf
+./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf
 # Result: ✅ Passed
 
 # Functional Encoding Tests
