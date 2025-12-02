@@ -31,27 +31,6 @@ from exabgp.configuration.static.parser import prefix
 # Import and re-export _build_route for backward compatibility
 from exabgp.configuration.announce.route_builder import _build_route  # noqa: F401
 
-# Legacy parser imports - kept for backward compatibility with files that
-# extend AnnounceIP.known (e.g., mvpn.py). New code should use schema validators.
-from exabgp.configuration.static.parser import attribute
-from exabgp.configuration.static.parser import next_hop
-from exabgp.configuration.static.parser import origin
-from exabgp.configuration.static.parser import med
-from exabgp.configuration.static.parser import as_path
-from exabgp.configuration.static.parser import local_preference
-from exabgp.configuration.static.parser import atomic_aggregate
-from exabgp.configuration.static.parser import aggregator
-from exabgp.configuration.static.parser import originator_id
-from exabgp.configuration.static.parser import cluster_list
-from exabgp.configuration.static.parser import community
-from exabgp.configuration.static.parser import large_community
-from exabgp.configuration.static.parser import extended_community
-from exabgp.configuration.static.parser import aigp
-from exabgp.configuration.static.parser import name as named
-from exabgp.configuration.static.parser import split
-from exabgp.configuration.static.parser import watchdog
-from exabgp.configuration.static.parser import withdraw
-
 
 class AnnounceIP(ParseAnnounce):
     # Schema definition for IP route announcements using RouteBuilder
@@ -178,52 +157,6 @@ class AnnounceIP(ParseAnnounce):
     ]
 
     syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
-
-    # Legacy dicts - kept for backward compatibility with files that extend
-    # AnnounceIP (e.g., mvpn.py). New code should use RouteBuilder schema.
-    known = {
-        'attribute': attribute,
-        'next-hop': next_hop,
-        'origin': origin,
-        'med': med,
-        'as-path': as_path,
-        'local-preference': local_preference,
-        'atomic-aggregate': atomic_aggregate,
-        'aggregator': aggregator,
-        'originator-id': originator_id,
-        'cluster-list': cluster_list,
-        'community': community,
-        'large-community': large_community,
-        'extended-community': extended_community,
-        'aigp': aigp,
-        'name': named,
-        'split': split,
-        'watchdog': watchdog,
-        'withdraw': withdraw,
-    }
-
-    action = {
-        'attribute': 'attribute-add',
-        'next-hop': 'nexthop-and-attribute',
-        'origin': 'attribute-add',
-        'med': 'attribute-add',
-        'as-path': 'attribute-add',
-        'local-preference': 'attribute-add',
-        'atomic-aggregate': 'attribute-add',
-        'aggregator': 'attribute-add',
-        'originator-id': 'attribute-add',
-        'cluster-list': 'attribute-add',
-        'community': 'attribute-add',
-        'large-community': 'attribute-add',
-        'extended-community': 'attribute-add',
-        'name': 'attribute-add',
-        'split': 'attribute-add',
-        'watchdog': 'attribute-add',
-        'withdraw': 'attribute-add',
-        'aigp': 'attribute-add',
-    }
-
-    assign: dict[str, str] = {}
 
     name = 'ip'
 

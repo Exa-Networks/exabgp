@@ -84,22 +84,6 @@ class AnnounceMup(ParseAnnounce):
 
     syntax = 'mup {{\n  <safi> {};\n}}'.format(';\n  '.join(definition))
 
-    known = {
-        'label': label,
-        'bgp-prefix-sid-srv6': prefix_sid_srv6,
-        'next-hop': next_hop,
-        'extended-community': extended_community,
-    }
-    action = {
-        'label': 'nlri-set',
-        'next-hop': 'nexthop-and-attribute',
-        'bgp-prefix-sid-srv6': 'attribute-add',
-        'extended-community': 'attribute-add',
-    }
-
-    assign = {}
-    default = {}
-
     name = 'mup'
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:

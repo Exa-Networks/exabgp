@@ -60,10 +60,6 @@ class AnnounceLabel(AnnouncePath):
 
     syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
-    known = {**AnnouncePath.known, 'label': label}
-    action = {**AnnouncePath.action, 'label': 'nlri-set'}
-    assign = {**AnnouncePath.assign, 'label': 'labels'}
-
     name = 'vpn'
     afi: AFI | None = None
 

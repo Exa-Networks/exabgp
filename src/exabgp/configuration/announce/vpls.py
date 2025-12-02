@@ -225,65 +225,6 @@ class AnnounceVPLS(ParseAnnounce):
 
     syntax = 'vpls {}\n'.format('  '.join(definition))
 
-    known = {
-        'rd': route_distinguisher,
-        'attribute': attribute,
-        'next-hop': next_hop,
-        'origin': origin,
-        'med': med,
-        'as-path': as_path,
-        'local-preference': local_preference,
-        'atomic-aggregate': atomic_aggregate,
-        'aggregator': aggregator,
-        'originator-id': originator_id,
-        'cluster-list': cluster_list,
-        'community': community,
-        'extended-community': extended_community,
-        'name': named,
-        'split': split,
-        'watchdog': watchdog,
-        'withdraw': withdraw,
-        'endpoint': vpls_endpoint,
-        'offset': vpls_offset,
-        'size': vpls_size,
-        'base': vpls_base,
-    }
-
-    action = {
-        'attribute': 'attribute-add',
-        'origin': 'attribute-add',
-        'med': 'attribute-add',
-        'as-path': 'attribute-add',
-        'local-preference': 'attribute-add',
-        'atomic-aggregate': 'attribute-add',
-        'aggregator': 'attribute-add',
-        'originator-id': 'attribute-add',
-        'cluster-list': 'attribute-add',
-        'community': 'attribute-add',
-        'extended-community': 'attribute-add',
-        'name': 'attribute-add',
-        'split': 'attribute-add',
-        'watchdog': 'attribute-add',
-        'withdraw': 'attribute-add',
-        'next-hop': 'nlri-set',
-        'route-distinguisher': 'nlri-set',
-        'rd': 'nlri-set',
-        'endpoint': 'nlri-set',
-        'offset': 'nlri-set',
-        'size': 'nlri-set',
-        'base': 'nlri-set',
-    }
-
-    assign = {
-        'next-hop': 'nexthop',
-        'rd': 'rd',
-        'route-distinguisher': 'rd',
-        'endpoint': 'endpoint',
-        'offset': 'offset',
-        'size': 'size',
-        'base': 'base',
-    }
-
     name = 'vpls'
     afi: AFI | None = None
 
