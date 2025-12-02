@@ -119,13 +119,15 @@ class TestHistoryTracker:
         tracker = HistoryTracker()
         assert not tracker.enabled
 
-    def test_enabled_by_default(self, monkeypatch, tmp_path):
+    def test_enabled_by_default(self, monkeypatch):
         """Test that tracker is enabled by default."""
         monkeypatch.setenv('exabgp_cli_history', 'true')
 
         # Mock path to avoid filesystem issues
+        temp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
+
         def mock_get_path(self):
-            return tmp_path / 'test_history.json'
+            return temp_dir / 'test_history.json'
 
         monkeypatch.setattr(HistoryTracker, '_get_history_path', mock_get_path)
         tracker = HistoryTracker()
@@ -371,9 +373,10 @@ class TestHistoryTracker:
         for i in range(5, 10):
             assert f'command {i}' in tracker_enabled._stats
 
-    def test_xdg_state_home_priority(self, monkeypatch, tmp_path):
+    def test_xdg_state_home_priority(self, monkeypatch):
         """Test XDG_STATE_HOME takes priority."""
-        state_dir = tmp_path / 'state'
+        temp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
+        state_dir = temp_dir / 'state'
         monkeypatch.setenv('XDG_STATE_HOME', str(state_dir))
 
         tracker = HistoryTracker(enabled=True)
@@ -381,9 +384,10 @@ class TestHistoryTracker:
 
         assert path == state_dir / 'exabgp' / 'cli_history.json'
 
-    def test_xdg_config_home_fallback(self, monkeypatch, tmp_path):
+    def test_xdg_config_home_fallback(self, monkeypatch):
         """Test XDG_CONFIG_HOME as fallback."""
-        config_dir = tmp_path / 'config'
+        temp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
+        config_dir = temp_dir / 'config'
         monkeypatch.setenv('XDG_CONFIG_HOME', str(config_dir))
         # Ensure XDG_STATE_HOME doesn't exist
         monkeypatch.delenv('XDG_STATE_HOME', raising=False)
@@ -397,17 +401,18 @@ class TestHistoryTracker:
         path = tracker._get_history_path()
         assert path == config_path
 
-    def test_legacy_migration(self, monkeypatch, tmp_path):
+    def test_legacy_migration(self, monkeypatch):
         """Test migration from legacy path."""
+        temp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
         # Create legacy file
-        legacy_path = tmp_path / '.exabgp_cli_history.json'
+        legacy_path = temp_dir / '.exabgp_cli_history.json'
         legacy_path.write_text('{"version": 1, "commands": {}}')
 
         # Mock home directory
-        monkeypatch.setattr(Path, 'home', lambda: tmp_path)
+        monkeypatch.setattr(Path, 'home', lambda: temp_dir)
 
         # Mock XDG paths to non-existent locations
-        state_dir = tmp_path / 'state'
+        state_dir = temp_dir / 'state'
         monkeypatch.setenv('XDG_STATE_HOME', str(state_dir))
 
         tracker = HistoryTracker(enabled=True)
@@ -435,9 +440,10 @@ class TestHistoryTracker:
 class TestIntegration:
     """Integration tests for history tracking."""
 
-    def test_full_workflow(self, tmp_path, monkeypatch):
+    def test_full_workflow(self, monkeypatch):
         """Test complete workflow: record, save, load, rank."""
-        history_file = tmp_path / 'history.json'
+        temp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
+        history_file = temp_dir / 'history.json'
 
         def mock_get_path(self):
             return history_file
@@ -469,9 +475,10 @@ class TestIntegration:
         success_bonus = tracker2.get_success_rate_bonus('show neighbor')
         assert success_bonus == 25  # 100% success
 
-    def test_privacy_no_ip_leakage(self, tmp_path, monkeypatch):
+    def test_privacy_no_ip_leakage(self, monkeypatch):
         """Test that IPs are never stored in history file."""
-        history_file = tmp_path / 'history.json'
+        temp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
+        history_file = temp_dir / 'history.json'
 
         def mock_get_path(self):
             return history_file
