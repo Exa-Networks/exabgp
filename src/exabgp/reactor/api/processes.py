@@ -98,6 +98,10 @@ def preexec_helper() -> None:
 class Processes:
     # how many time can a process can respawn in the time interval
     respawn_timemask: int = 0xFFFFFF - 0b111111
+
+    # Write queue backpressure thresholds
+    WRITE_QUEUE_HIGH_WATER: int = 1000  # Pause writes when queue exceeds this
+    WRITE_QUEUE_LOW_WATER: int = 100    # Resume writes when queue drops below this
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
     _dispatch: dict[int, Any] = {}
@@ -790,6 +794,92 @@ class Processes:
                 raise ProcessError from None
 
         return True
+
+    def get_queue_size(self, process: str) -> int:
+        """Get the current write queue size for a process.
+
+        Args:
+            process: Process name
+
+        Returns:
+            Number of items in write queue, or 0 if no queue exists
+        """
+        if process not in self._write_queue:
+            return 0
+        return len(self._write_queue[process])
+
+    def get_queue_stats(self) -> dict[str, dict[str, int]]:
+        """Get write queue statistics for all processes.
+
+        Returns:
+            Dict mapping process name to {'items': count, 'bytes': total_bytes}
+        """
+        stats = {}
+        for process_name, queue in self._write_queue.items():
+            total_bytes = sum(len(data) for data in queue)
+            stats[process_name] = {
+                'items': len(queue),
+                'bytes': total_bytes,
+            }
+        return stats
+
+    async def write_with_backpressure(self, process: str, string: str) -> bool:
+        """Write to process with backpressure support (async mode only).
+
+        Waits if write queue exceeds HIGH_WATER mark, resumes when it drops below LOW_WATER.
+        Automatically flushes queue while waiting.
+
+        Args:
+            process: Process name
+            string: String to write
+
+        Returns:
+            True if write succeeded, False if process doesn't exist
+
+        Raises:
+            ProcessError: If write fails or times out
+        """
+        if not self._async_mode:
+            # Fall back to sync write in sync mode
+            return self.write(process, string)
+
+        if process not in self._process:
+            return False
+
+        # Apply backpressure if queue is too large
+        queue_size = self.get_queue_size(process)
+        if queue_size > self.WRITE_QUEUE_HIGH_WATER:
+            log.warning(
+                lazymsg(
+                    'async.write.backpressure process={p} queue_size={qs} threshold={hw}',
+                    p=process,
+                    qs=queue_size,
+                    hw=self.WRITE_QUEUE_HIGH_WATER,
+                ),
+                'processes',
+            )
+
+            # Wait for queue to drain below low water mark
+            max_wait_iterations = 100  # 10 seconds at 100ms per iteration
+            iterations = 0
+            while self.get_queue_size(process) > self.WRITE_QUEUE_LOW_WATER:
+                await asyncio.sleep(0.1)
+                await self.flush_write_queue_async()
+                iterations += 1
+                if iterations >= max_wait_iterations:
+                    log.error(
+                        lazymsg('async.write.backpressure.timeout process={p}', p=process),
+                        'processes',
+                    )
+                    raise ProcessError(f'Write queue backpressure timeout for process {process}')
+
+            log.debug(
+                lazymsg('async.write.backpressure.released process={p} iterations={i}', p=process, i=iterations),
+                'processes',
+            )
+
+        # Queue the write (regular write() handles queueing in async mode)
+        return self.write(process, string)
 
     async def flush_write_queue_async(self) -> None:
         """Flush all queued writes to API processes (async mode only)
