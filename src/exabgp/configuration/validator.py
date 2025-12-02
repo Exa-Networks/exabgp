@@ -848,6 +848,12 @@ class RouteBuilderValidator(Validator[list[Any]]):
 
     This validator is typically created by the Section when processing
     a RouteBuilder schema, configured with the AFI/SAFI context.
+
+    For prefix-based routes (IP), prefix_parser parses the prefix and nlri_factory
+    is called with (afi, safi, action_type).
+
+    For non-prefix routes (VPLS), prefix_parser is None and nlri_factory is called
+    with no arguments - it should return a pre-constructed NLRI with defaults.
     """
 
     name: str = 'route-builder'
@@ -869,18 +875,19 @@ class RouteBuilderValidator(Validator[list[Any]]):
         from exabgp.bgp.message.update.attribute import Attributes
         from exabgp.bgp.message.update.nlri.cidr import CIDR
 
-        # Parse prefix using schema's prefix_parser
-        if self.schema.prefix_parser:
-            ipmask = self.schema.prefix_parser(tokeniser)
-        else:
-            raise ValueError('No prefix parser configured')
-
         # Create NLRI and Change
         if self.schema.nlri_factory is None:
             raise ValueError('No NLRI factory configured')
 
-        nlri = self.schema.nlri_factory(self.afi, self.safi, self.action_type)
-        nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
+        if self.schema.prefix_parser:
+            # Prefix-based route (IP): parse prefix and create NLRI with CIDR
+            ipmask = self.schema.prefix_parser(tokeniser)
+            nlri = self.schema.nlri_factory(self.afi, self.safi, self.action_type)
+            nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
+        else:
+            # Non-prefix route (VPLS): factory returns pre-constructed NLRI
+            nlri = self.schema.nlri_factory()
+
         change = Change(nlri, Attributes())
 
         # Process sub-commands from schema

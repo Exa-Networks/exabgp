@@ -8,7 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.configuration.core import Section
-from exabgp.configuration.schema import Container, Leaf, LeafList, ValueType
+from exabgp.configuration.schema import RouteBuilder, Leaf, LeafList, ValueType
+from exabgp.configuration.validator import LegacyParserValidator
+
+from exabgp.bgp.message.update.nlri import VPLS as VPLS_NLRI
 
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import origin
@@ -36,116 +39,155 @@ from exabgp.configuration.l2vpn.parser import vpls_base
 from exabgp.configuration.l2vpn.parser import next_hop
 
 
+def _vpls_nlri_factory():
+    """Factory for VPLS NLRI with default None values."""
+    return VPLS_NLRI(None, None, None, None, None)
+
+
 class ParseVPLS(Section):
-    # Schema definition for VPLS configuration
-    schema = Container(
+    # Schema definition for VPLS configuration using RouteBuilder
+    # nlri_factory returns VPLS NLRI with None values, filled via nlri-set actions
+    # prefix_parser is None since VPLS has no prefix
+    schema = RouteBuilder(
         description='VPLS configuration',
+        nlri_factory=_vpls_nlri_factory,
+        prefix_parser=None,
+        assign={
+            'next-hop': 'nexthop',
+            'rd': 'rd',
+            'route-distinguisher': 'rd',
+            'endpoint': 'endpoint',
+            'offset': 'offset',
+            'size': 'size',
+            'base': 'base',
+        },
         children={
             'rd': Leaf(
                 type=ValueType.RD,
                 description='Route distinguisher',
                 action='nlri-set',
+                validator=LegacyParserValidator(parser_func=route_distinguisher, name='rd'),
             ),
             'endpoint': Leaf(
                 type=ValueType.INTEGER,
                 description='VPLS endpoint ID',
                 action='nlri-set',
+                validator=LegacyParserValidator(parser_func=vpls_endpoint, name='endpoint'),
             ),
             'base': Leaf(
                 type=ValueType.INTEGER,
                 description='Label base',
                 action='nlri-set',
+                validator=LegacyParserValidator(parser_func=vpls_base, name='base'),
             ),
             'offset': Leaf(
                 type=ValueType.INTEGER,
                 description='Block offset',
                 action='nlri-set',
+                validator=LegacyParserValidator(parser_func=vpls_offset, name='offset'),
             ),
             'size': Leaf(
                 type=ValueType.INTEGER,
                 description='Block size',
                 action='nlri-set',
+                validator=LegacyParserValidator(parser_func=vpls_size, name='size'),
             ),
             'next-hop': Leaf(
                 type=ValueType.NEXT_HOP,
                 description='Next-hop IP address',
                 action='nlri-set',
+                validator=LegacyParserValidator(parser_func=next_hop, name='next-hop'),
             ),
             'attribute': Leaf(
                 type=ValueType.HEX_STRING,
                 description='Generic BGP attribute',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=attribute, name='attribute'),
             ),
             'origin': Leaf(
                 type=ValueType.ORIGIN,
                 description='BGP origin attribute',
                 choices=['igp', 'egp', 'incomplete'],
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=origin, name='origin'),
             ),
             'med': Leaf(
                 type=ValueType.MED,
                 description='Multi-exit discriminator',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=med, name='med'),
             ),
             'as-path': LeafList(
                 type=ValueType.AS_PATH,
                 description='AS path',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=as_path, name='as-path'),
             ),
             'local-preference': Leaf(
                 type=ValueType.LOCAL_PREF,
                 description='Local preference',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=local_preference, name='local-preference'),
             ),
             'atomic-aggregate': Leaf(
                 type=ValueType.ATOMIC_AGGREGATE,
                 description='Atomic aggregate flag',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=atomic_aggregate, name='atomic-aggregate'),
             ),
             'aggregator': Leaf(
                 type=ValueType.AGGREGATOR,
                 description='Aggregator',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=aggregator, name='aggregator'),
             ),
             'originator-id': Leaf(
                 type=ValueType.IP_ADDRESS,
                 description='Originator ID',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=originator_id, name='originator-id'),
             ),
             'cluster-list': LeafList(
                 type=ValueType.IP_ADDRESS,
                 description='Cluster list',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=cluster_list, name='cluster-list'),
             ),
             'community': LeafList(
                 type=ValueType.COMMUNITY,
                 description='Standard BGP communities',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=community, name='community'),
             ),
             'extended-community': LeafList(
                 type=ValueType.EXTENDED_COMMUNITY,
                 description='Extended BGP communities',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=extended_community, name='extended-community'),
             ),
             'name': Leaf(
                 type=ValueType.STRING,
                 description='Route name',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=named, name='name'),
             ),
             'split': Leaf(
                 type=ValueType.INTEGER,
                 description='Split prefix',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=split, name='split'),
             ),
             'watchdog': Leaf(
                 type=ValueType.STRING,
                 description='Watchdog name',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=watchdog, name='watchdog'),
             ),
             'withdraw': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Mark for withdrawal',
                 action='attribute-add',
+                validator=LegacyParserValidator(parser_func=withdraw, name='withdraw'),
             ),
         },
     )

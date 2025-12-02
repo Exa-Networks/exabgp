@@ -9,10 +9,7 @@ from __future__ import annotations
 
 from exabgp.configuration.l2vpn.vpls import ParseVPLS
 from exabgp.configuration.schema import Container
-
-from exabgp.bgp.message.update.nlri import VPLS
-from exabgp.bgp.message.update.attribute import Attributes
-from exabgp.rib.change import Change
+from exabgp.configuration.validator import RouteBuilderValidator
 
 
 class ParseL2VPN(ParseVPLS):
@@ -49,27 +46,6 @@ class ParseL2VPN(ParseVPLS):
 
 @ParseL2VPN.register('vpls', 'append-route')
 def vpls(tokeniser):
-    change = Change(VPLS(None, None, None, None, None), Attributes())
-
-    while True:
-        command = tokeniser()
-
-        if not command:
-            break
-
-        action = ParseVPLS.action[command]
-
-        if 'nlri-set' in action:
-            change.nlri.assign(ParseVPLS.assign[command], ParseL2VPN.known[command](tokeniser))
-        elif 'attribute-add' in action:
-            change.attributes.add(ParseL2VPN.known[command](tokeniser))
-        elif action == 'nexthop-and-attribute':
-            nexthop, attribute = ParseVPLS.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
-            change.attributes.add(attribute)
-        else:
-            raise ValueError('vpls: unknown command "{}"'.format(command))
-
-    return [
-        change,
-    ]
+    """Build VPLS route using RouteBuilderValidator with ParseVPLS schema."""
+    validator = RouteBuilderValidator(schema=ParseVPLS.schema)
+    return validator.validate(tokeniser)
