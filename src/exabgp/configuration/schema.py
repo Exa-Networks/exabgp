@@ -315,11 +315,14 @@ class RouteBuilder(Container):
         nlri_factory: Callable to create NLRI object (e.g., INET, VPLS)
         prefix_parser: Callable to parse the prefix/route target
         assign: Dict mapping command names to NLRI field names for nlri-set actions
+        factory_with_afi: If True, factory is called with (afi, safi, action) even without prefix
+                          (used for FlowSpec where NLRI needs AFI/SAFI but has no prefix)
     """
 
     nlri_factory: Callable[..., Any] | None = None
     prefix_parser: Callable[..., Any] | None = None
     assign: dict[str, str] = field(default_factory=dict)
+    factory_with_afi: bool = False
 
 
 # Type alias for schema elements

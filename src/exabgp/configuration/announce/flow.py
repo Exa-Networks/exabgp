@@ -10,19 +10,19 @@ from __future__ import annotations
 
 from exabgp.rib.change import Change
 
-from exabgp.bgp.message import Action
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.flow import Flow
-from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
+from exabgp.configuration.announce.route_builder import _build_route
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import RouteBuilder, Leaf, LeafList, ValueType
+from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.flow.parser import source
 from exabgp.configuration.flow.parser import destination
@@ -58,6 +58,210 @@ from exabgp.configuration.flow.parser import interface_set
 
 
 class AnnounceFlow(ParseAnnounce):
+    # Schema for FlowSpec routes using RouteBuilder (no prefix, factory needs AFI)
+    schema = RouteBuilder(
+        description='FlowSpec route announcement',
+        nlri_factory=Flow,
+        prefix_parser=None,  # FlowSpec has no prefix
+        factory_with_afi=True,  # Factory needs (afi, safi, action)
+        children={
+            # Match components (nlri-add)
+            'source': LeafList(
+                type=ValueType.IP_PREFIX,
+                description='Source IP prefix',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=source, name='source'),
+            ),
+            'source-ipv4': LeafList(
+                type=ValueType.IP_PREFIX,
+                description='Source IPv4 prefix',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=source, name='source-ipv4'),
+            ),
+            'source-ipv6': LeafList(
+                type=ValueType.IP_PREFIX,
+                description='Source IPv6 prefix',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=source, name='source-ipv6'),
+            ),
+            'destination': LeafList(
+                type=ValueType.IP_PREFIX,
+                description='Destination IP prefix',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=destination, name='destination'),
+            ),
+            'destination-ipv4': LeafList(
+                type=ValueType.IP_PREFIX,
+                description='Destination IPv4 prefix',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=destination, name='destination-ipv4'),
+            ),
+            'destination-ipv6': LeafList(
+                type=ValueType.IP_PREFIX,
+                description='Destination IPv6 prefix',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=destination, name='destination-ipv6'),
+            ),
+            'protocol': LeafList(
+                type=ValueType.STRING,
+                description='IP protocol',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=protocol, name='protocol'),
+            ),
+            'next-header': LeafList(
+                type=ValueType.STRING,
+                description='IPv6 next header',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=next_header, name='next-header'),
+            ),
+            'port': LeafList(
+                type=ValueType.INTEGER,
+                description='Any port (source or destination)',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=any_port, name='port'),
+            ),
+            'destination-port': LeafList(
+                type=ValueType.INTEGER,
+                description='Destination port',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=destination_port, name='destination-port'),
+            ),
+            'source-port': LeafList(
+                type=ValueType.INTEGER,
+                description='Source port',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=source_port, name='source-port'),
+            ),
+            'icmp-type': LeafList(
+                type=ValueType.INTEGER,
+                description='ICMP type',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=icmp_type, name='icmp-type'),
+            ),
+            'icmp-code': LeafList(
+                type=ValueType.INTEGER,
+                description='ICMP code',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=icmp_code, name='icmp-code'),
+            ),
+            'tcp-flags': LeafList(
+                type=ValueType.STRING,
+                description='TCP flags',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=tcp_flags, name='tcp-flags'),
+            ),
+            'packet-length': LeafList(
+                type=ValueType.INTEGER,
+                description='Packet length',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=packet_length, name='packet-length'),
+            ),
+            'dscp': LeafList(
+                type=ValueType.INTEGER,
+                description='DSCP value',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=dscp, name='dscp'),
+            ),
+            'traffic-class': LeafList(
+                type=ValueType.INTEGER,
+                description='IPv6 traffic class',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=traffic_class, name='traffic-class'),
+            ),
+            'fragment': LeafList(
+                type=ValueType.STRING,
+                description='Fragment flags',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=fragment, name='fragment'),
+            ),
+            'flow-label': LeafList(
+                type=ValueType.INTEGER,
+                description='IPv6 flow label',
+                action='nlri-add',
+                validator=LegacyParserValidator(parser_func=flow_label, name='flow-label'),
+            ),
+            # Action components
+            'accept': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Accept traffic (no-op)',
+                action='nop',
+                validator=LegacyParserValidator(parser_func=accept, name='accept'),
+            ),
+            'discard': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Discard traffic',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=discard, name='discard'),
+            ),
+            'rate-limit': Leaf(
+                type=ValueType.INTEGER,
+                description='Rate limit in bytes/second',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=rate_limit, name='rate-limit'),
+            ),
+            'redirect': Leaf(
+                type=ValueType.STRING,
+                description='Redirect to RT or IP',
+                action='nexthop-and-attribute',
+                validator=LegacyParserValidator(parser_func=redirect, name='redirect'),
+            ),
+            'redirect-to-nexthop': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Redirect to next-hop',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=redirect_next_hop, name='redirect-to-nexthop'),
+            ),
+            'redirect-to-nexthop-ietf': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Redirect to next-hop (IETF)',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=redirect_next_hop_ietf, name='redirect-to-nexthop-ietf'),
+            ),
+            'copy': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Copy traffic to IP',
+                action='nexthop-and-attribute',
+                validator=LegacyParserValidator(parser_func=copy, name='copy'),
+            ),
+            'mark': Leaf(
+                type=ValueType.INTEGER,
+                description='Set DSCP marking',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=mark, name='mark'),
+            ),
+            'action': Leaf(
+                type=ValueType.STRING,
+                description='Traffic action (sample|terminal|sample-terminal)',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=action, name='action'),
+            ),
+            'community': LeafList(
+                type=ValueType.COMMUNITY,
+                description='BGP community',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=community, name='community'),
+            ),
+            'large-community': LeafList(
+                type=ValueType.LARGE_COMMUNITY,
+                description='BGP large community',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=large_community, name='large-community'),
+            ),
+            'extended-community': LeafList(
+                type=ValueType.EXTENDED_COMMUNITY,
+                description='BGP extended community',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=extended_community, name='extended-community'),
+            ),
+            'interface-set': LeafList(
+                type=ValueType.STRING,
+                description='Interface set',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=interface_set, name='interface-set'),
+            ),
+        },
+    )
+
     definition = [
         'source 10.0.0.0/24',
         'source ::1/128/0',
@@ -185,50 +389,21 @@ class AnnounceFlow(ParseAnnounce):
         return True
 
 
-def flow(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
-    flow_nlri = Flow(afi, safi, Action.ANNOUNCE)
-    change = Change(flow_nlri, Attributes())
-
-    while True:
-        command = tokeniser()
-
-        if not command:
-            break
-
-        command_action = AnnounceFlow.action[command]
-
-        if command_action == 'nlri-add':
-            for adding in AnnounceFlow.known[command](tokeniser):
-                flow_nlri.add(adding)
-        elif command_action == 'attribute-add':
-            change.attributes.add(AnnounceFlow.known[command](tokeniser))
-        elif command_action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceFlow.known[command](tokeniser)
-            flow_nlri.nexthop = nexthop
-            change.attributes.add(attribute)
-        elif command_action == 'nop':
-            pass  # yes nothing to do !
-        else:
-            raise ValueError('flow: unknown command "{}"'.format(command))
-
-    return [change]
-
-
 @ParseAnnounce.register('flow', 'extend-name', 'ipv4')
 def flow_ip_v4(tokeniser: Tokeniser) -> list[Change]:
-    return flow(tokeniser, AFI.ipv4, SAFI.flow_ip)
+    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv4, SAFI.flow_ip, AnnounceFlow.check)
 
 
 @ParseAnnounce.register('flow-vpn', 'extend-name', 'ipv4')
 def flow_vpn_v4(tokeniser: Tokeniser) -> list[Change]:
-    return flow(tokeniser, AFI.ipv4, SAFI.flow_vpn)
+    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv4, SAFI.flow_vpn, AnnounceFlow.check)
 
 
 @ParseAnnounce.register('flow', 'extend-name', 'ipv6')
 def flow_ip_v6(tokeniser: Tokeniser) -> list[Change]:
-    return flow(tokeniser, AFI.ipv6, SAFI.flow_ip)
+    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv6, SAFI.flow_ip, AnnounceFlow.check)
 
 
 @ParseAnnounce.register('flow-vpn', 'extend-name', 'ipv6')
 def flow_vpn_v6(tokeniser: Tokeniser) -> list[Change]:
-    return flow(tokeniser, AFI.ipv6, SAFI.flow_vpn)
+    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv6, SAFI.flow_vpn, AnnounceFlow.check)

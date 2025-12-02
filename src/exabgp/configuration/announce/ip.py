@@ -25,9 +25,11 @@ from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
 from exabgp.configuration.schema import RouteBuilder, Leaf, LeafList, ValueType
-from exabgp.configuration.validator import RouteBuilderValidator
 
 from exabgp.configuration.static.parser import prefix
+
+# Import and re-export _build_route for backward compatibility
+from exabgp.configuration.announce.route_builder import _build_route  # noqa: F401
 
 # Legacy parser imports - kept for backward compatibility with files that
 # extend AnnounceIP.known (e.g., mvpn.py). New code should use schema validators.
@@ -248,41 +250,6 @@ class AnnounceIP(ParseAnnounce):
             return False
 
         return True
-
-
-def _build_route(
-    tokeniser: Tokeniser,
-    schema: RouteBuilder,
-    afi: AFI,
-    safi: SAFI,
-    check_func: callable | None = None,
-) -> list[Change]:
-    """Build route(s) using RouteBuilderValidator.
-
-    Args:
-        tokeniser: Token stream with route configuration
-        schema: RouteBuilder schema to use
-        afi: Address family identifier
-        safi: Subsequent address family identifier
-        check_func: Optional validation function to call on each change
-
-    Returns:
-        List of Change objects
-    """
-    validator = RouteBuilderValidator(
-        schema=schema,
-        afi=afi,
-        safi=safi,
-        action_type=Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW,
-    )
-    changes = validator.validate(tokeniser)
-
-    if check_func:
-        for change in changes:
-            if not check_func(change, afi):
-                raise ValueError('invalid announcement (missing next-hop ?)')
-
-    return changes
 
 
 @ParseAnnounce.register('multicast', 'extend-name', 'ipv4')

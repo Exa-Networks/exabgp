@@ -16,7 +16,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.update.nlri import VPLS
 
 from exabgp.configuration.announce import ParseAnnounce
-from exabgp.configuration.announce.ip import _build_route
+from exabgp.configuration.announce.route_builder import _build_route
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
