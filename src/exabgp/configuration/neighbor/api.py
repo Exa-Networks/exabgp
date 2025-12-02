@@ -21,8 +21,13 @@ from exabgp.configuration.neighbor.parser import processes_match
 from exabgp.configuration.schema import Container, Leaf, ValueType
 
 
+# ParseSend and ParseReceive use schema validators for boolean fields
+# (parsed, packets, consolidate, open, update, notification, keepalive, refresh, operational)
+
+
 class _ParseDirection(Section):
     # Schema definition for send/receive direction configuration
+    # All boolean fields use schema validators (no known dict entries needed)
     _direction_schema = Container(
         description='Message types to forward to external processes',
         children={
@@ -30,72 +35,61 @@ class _ParseDirection(Section):
                 type=ValueType.BOOLEAN,
                 description='Forward parsed messages',
                 default=True,
+                action='set-command',
             ),
             'packets': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward raw packets',
                 default=True,
+                action='set-command',
             ),
             'consolidate': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Consolidate updates',
                 default=True,
+                action='set-command',
             ),
             'open': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward OPEN messages',
                 default=True,
+                action='set-command',
             ),
             'update': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward UPDATE messages',
                 default=True,
+                action='set-command',
             ),
             'notification': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward NOTIFICATION messages',
                 default=True,
+                action='set-command',
             ),
             'keepalive': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward KEEPALIVE messages',
                 default=True,
+                action='set-command',
             ),
             'refresh': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward ROUTE-REFRESH messages',
                 default=True,
+                action='set-command',
             ),
             'operational': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward OPERATIONAL messages',
                 default=True,
+                action='set-command',
             ),
         },
     )
-    action = {
-        'parsed': 'set-command',
-        'packets': 'set-command',
-        'consolidate': 'set-command',
-        'open': 'set-command',
-        'update': 'set-command',
-        'notification': 'set-command',
-        'keepalive': 'set-command',
-        'refresh': 'set-command',
-        'operational': 'set-command',
-    }
-
-    known = {
-        'parsed': boolean,
-        'packets': boolean,
-        'consolidate': boolean,
-        'open': boolean,
-        'update': boolean,
-        'notification': boolean,
-        'keepalive': boolean,
-        'refresh': boolean,
-        'operational': boolean,
-    }
+    # Empty - all handled by schema validators
+    known: dict = {}
+    action: dict = {}
 
     default = {
         'parsed': True,

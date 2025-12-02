@@ -245,7 +245,18 @@ class Configuration(_Configuration):
 
         # Build structure entry for a parser
         def build_entry(parser: Section) -> dict[str, Any]:
-            commands = _SPECIAL_COMMANDS.get(parser.name, list(parser.known.keys()))
+            # Get commands from special list, known dict, or schema
+            if parser.name in _SPECIAL_COMMANDS:
+                commands = _SPECIAL_COMMANDS[parser.name]
+            else:
+                # Combine commands from known dict and schema Leaf children
+                commands = list(parser.known.keys())
+                if parser.schema:
+                    from exabgp.configuration.schema import Leaf, LeafList
+
+                    for name, child in parser.schema.children.items():
+                        if isinstance(child, (Leaf, LeafList)) and name not in commands:
+                            commands.append(name)
             return {
                 'class': parser,
                 'commands': commands,

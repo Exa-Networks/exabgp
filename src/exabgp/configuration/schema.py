@@ -120,7 +120,12 @@ class Leaf:
             return self.validator
 
         # Priority 2: Auto-generate from type
-        from exabgp.configuration.validator import get_validator, IntegerValidator, EnumerationValidator
+        from exabgp.configuration.validator import (
+            get_validator,
+            IntegerValidator,
+            EnumerationValidator,
+            BooleanValidator,
+        )
 
         v = get_validator(self.type)
         if v is None:
@@ -136,6 +141,9 @@ class Leaf:
         elif isinstance(v, EnumerationValidator):
             if self.choices:
                 v = v.with_choices(self.choices)
+        elif isinstance(v, BooleanValidator):
+            if self.default is not None and isinstance(self.default, bool):
+                v = v.with_default(self.default)
 
         return v
 

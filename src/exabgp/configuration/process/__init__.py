@@ -14,10 +14,7 @@ import uuid
 from exabgp.configuration.core import Section
 from exabgp.configuration.schema import Container, Leaf, ValueType
 
-from exabgp.configuration.process.parser import encoder
 from exabgp.configuration.process.parser import run
-
-from exabgp.configuration.parser import boolean
 
 API_PREFIX = 'api-internal-cli'
 
@@ -31,31 +28,30 @@ class ParseProcess(Section):
                 type=ValueType.STRING,
                 description='Command to execute (path and arguments)',
                 mandatory=True,
+                action='set-command',
             ),
             'encoder': Leaf(
                 type=ValueType.ENUMERATION,
                 description='Message encoding format',
                 choices=['text', 'json'],
                 default='text',
+                action='set-command',
             ),
             'respawn': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Restart process if it exits',
                 default=True,
+                action='set-command',
             ),
         },
     )
 
     syntax = 'process name-of-process {\n   run /path/to/command with its args;\n   encoder text|json;\n}'
+    # run must stay in known - it returns list[str] and does file validation
     known = {
-        'encoder': encoder,
-        'respawn': boolean,
         'run': run,
     }
-
     action = {
-        'encoder': 'set-command',
-        'respawn': 'set-command',
         'run': 'set-command',
     }
 
@@ -83,14 +79,29 @@ class ParseProcess(Section):
         return True
 
     def post(self):
-        known = self.known.keys()
         configured = self.scope.get().keys()
+        # Apply defaults from self.default dict
         for default in self.default:
             if default not in configured:
                 self.scope.set_value(default, self.default[default])
-        difference = set(known).difference(configured)
-        if difference:
-            return self.error.set('unset process sections: {}'.format(', '.join(str(d) for d in difference)))
+        # Apply defaults from schema
+        if self.schema:
+            from exabgp.configuration.schema import Leaf
+
+            for name, child in self.schema.children.items():
+                if isinstance(child, Leaf) and child.default is not None and name not in configured:
+                    self.scope.set_value(name, child.default)
+        # Check mandatory fields from schema
+        configured = self.scope.get().keys()  # refresh after defaults
+        if self.schema:
+            from exabgp.configuration.schema import Leaf
+
+            missing = []
+            for name, child in self.schema.children.items():
+                if isinstance(child, Leaf) and child.mandatory and name not in configured:
+                    missing.append(name)
+            if missing:
+                return self.error.set('unset process sections: {}'.format(', '.join(missing)))
         self.processes.update({self.named: self.scope.pop()})
         return True
 

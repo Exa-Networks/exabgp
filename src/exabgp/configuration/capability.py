@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.open.capability.graceful import Graceful
 
 from exabgp.configuration.core import Section
-from exabgp.configuration.parser import boolean
 from exabgp.configuration.parser import string
 from exabgp.configuration.schema import Container, Leaf, ValueType
 
@@ -145,17 +144,12 @@ class ParseCapability(Section):
         '}\n'
     )
 
+    # Schema validators handle BOOLEAN entries (nexthop, asn4, multi-session, operational,
+    # route-refresh, aigp, extended-message, software-version).
+    # Only entries with special parsing logic remain in known:
     known = {
-        'nexthop': boolean,
-        'add-path': addpath,
-        'asn4': boolean,
-        'graceful-restart': gracefulrestart,
-        'multi-session': boolean,
-        'operational': boolean,
-        'route-refresh': boolean,
-        'aigp': boolean,
-        'extended-message': boolean,
-        'software-version': boolean,
+        'add-path': addpath,  # Returns int (0,1,2,3), not string
+        'graceful-restart': gracefulrestart,  # Complex validation with "disable" keyword
     }
 
     # action dict removed - derived from schema (defaults to 'set-command')
