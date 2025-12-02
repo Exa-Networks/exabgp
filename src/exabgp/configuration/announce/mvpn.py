@@ -54,18 +54,6 @@ class AnnounceMVPN(ParseAnnounce):
 
     syntax = '<safi> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
-    known = dict(
-        AnnounceIP.known,
-    )
-
-    action = dict(
-        AnnounceIP.action,
-    )
-
-    assign = dict(
-        AnnounceIP.assign,
-    )
-
     name = 'mvpn'
     afi: AFI | None = None
 

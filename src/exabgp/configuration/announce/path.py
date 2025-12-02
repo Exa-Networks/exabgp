@@ -25,7 +25,6 @@ from exabgp.configuration.core import Error
 from exabgp.configuration.schema import RouteBuilder, Leaf, ValueType
 
 from exabgp.configuration.static.parser import prefix
-from exabgp.configuration.static.parser import path_information
 
 
 class AnnouncePath(AnnounceIP):
@@ -52,29 +51,6 @@ class AnnouncePath(AnnounceIP):
     ] + AnnounceIP.definition
 
     syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
-
-    # Legacy dicts - kept for backward compatibility with files that extend
-    # AnnouncePath (e.g., label.py). New code should use RouteBuilder schema.
-    known = dict(
-        AnnounceIP.known,
-        **{
-            'path-information': path_information,
-        },
-    )
-
-    action = dict(
-        AnnounceIP.action,
-        **{
-            'path-information': 'nlri-set',
-        },
-    )
-
-    assign = dict(
-        AnnounceIP.assign,
-        **{
-            'path-information': 'path_info',
-        },
-    )
 
     name = 'path'
     afi: AFI | None = None

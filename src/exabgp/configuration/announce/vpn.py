@@ -60,10 +60,6 @@ class AnnounceVPN(ParseAnnounce):
 
     syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
-    known = {**AnnounceLabel.known, 'rd': route_distinguisher}
-    action = {**AnnounceLabel.action, 'rd': 'nlri-set'}
-    assign = {**AnnounceLabel.assign, 'rd': 'rd'}
-
     name = 'vpn'
     afi: AFI | None = None
 
