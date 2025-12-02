@@ -46,6 +46,24 @@ from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 
 
+# Mapping for config keywords that don't match parser section names
+# Format: (parent_section_name, keyword) -> target_section_name
+# Only needed for exceptions where keyword != parser.name
+_KEYWORD_TO_SECTION: dict[tuple[str, str], str] = {
+    ('template', 'neighbor'): 'template-neighbor',
+    ('neighbor', 'l2vpn'): 'L2VPN',
+    ('template-neighbor', 'l2vpn'): 'L2VPN',
+    ('flow', 'route'): 'flow/route',
+    ('flow/route', 'match'): 'flow/match',
+    ('flow/route', 'then'): 'flow/then',
+    ('flow/route', 'scope'): 'flow/scope',
+    ('L2VPN', 'vpls'): 'l2vpn/vpls',
+    ('api', 'send'): 'api/send',
+    ('api', 'receive'): 'api/receive',
+    ('static', 'route'): 'static/route',
+}
+
+
 class _Configuration:
     def __init__(self) -> None:
         self.processes: dict[str, Any] = {}
@@ -162,186 +180,99 @@ class Configuration(_Configuration):
         self.vpls = ParseVPLS(*params)
         self.operational = ParseOperational(*params)
 
-        # We should check if name are unique when running Section.__init__
+        # Build parser registry: section_name -> parser instance
+        self._parsers: dict[str, Section] = {
+            p.name: p
+            for p in [
+                self.process,
+                self.template,
+                self.template_neighbor,
+                self.neighbor,
+                self.family,
+                self.addpath,
+                self.nexthop,
+                self.capability,
+                self.api,
+                self.api_send,
+                self.api_receive,
+                self.static,
+                self.static_route,
+                self.announce,
+                self.announce_ipv4,
+                self.announce_ipv6,
+                self.announce_l2vpn,
+                self.flow,
+                self.flow_route,
+                self.flow_match,
+                self.flow_then,
+                self.flow_scope,
+                self.l2vpn,
+                self.vpls,
+                self.operational,
+            ]
+        }
 
-        self._structure: dict[str, dict[str, Any]] = {
+        # Build structure from schemas
+        self._structure = self._build_structure()
+
+        self._neighbors: dict[str, Any] = {}
+        self._previous_neighbors: dict[str, Any] = {}
+
+    def _build_structure(self) -> dict[str, dict[str, Any]]:
+        """Build the configuration structure from parser schemas.
+
+        Returns a dict mapping section names to their configuration:
+        - 'class': parser instance
+        - 'commands': valid commands (from known.keys() or explicit list)
+        - 'sections': mapping of keywords to child section names
+        """
+        # Special command lists for parsers that don't use known.keys()
+        _SPECIAL_COMMANDS: dict[str, list[str]] = {
+            'ipv4': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
+            'ipv6': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
+            'l2vpn': ['vpls'],
+            'static': ['route', 'attributes'],
+        }
+
+        # Build sections dict from schema Container children
+        def get_sections(parser: Section) -> dict[str, str]:
+            sections: dict[str, str] = {}
+            for keyword in parser.get_subsection_keywords():
+                # Look up target section name from override mapping or use keyword as-is
+                target = _KEYWORD_TO_SECTION.get((parser.name, keyword), keyword)
+                sections[keyword] = target
+            return sections
+
+        # Build structure entry for a parser
+        def build_entry(parser: Section) -> dict[str, Any]:
+            commands = _SPECIAL_COMMANDS.get(parser.name, list(parser.known.keys()))
+            return {
+                'class': parser,
+                'commands': commands,
+                'sections': get_sections(parser),
+            }
+
+        # Start with root entry (special case - no parser)
+        structure: dict[str, dict[str, Any]] = {
             'root': {
                 'class': self.section,
                 'commands': [],
                 'sections': {
-                    'process': self.process.name,
-                    'neighbor': self.neighbor.name,
-                    'template': self.template.name,
+                    'process': 'process',
+                    'neighbor': 'neighbor',
+                    'template': 'template',
                 },
-            },
-            self.process.name: {
-                'class': self.process,
-                'commands': self.process.known.keys(),
-                'sections': {},
-            },
-            self.template.name: {
-                'class': self.template,
-                'commands': self.template.known.keys(),
-                'sections': {
-                    'neighbor': self.template_neighbor.name,
-                },
-            },
-            self.template_neighbor.name: {
-                'class': self.template_neighbor,
-                'commands': self.template_neighbor.known.keys(),
-                'sections': {
-                    'family': self.family.name,
-                    'capability': self.capability.name,
-                    'add-path': self.addpath.name,
-                    'nexthop': self.nexthop.name,
-                    'api': self.api.name,
-                    'static': self.static.name,
-                    'flow': self.flow.name,
-                    'l2vpn': self.l2vpn.name,
-                    'operational': self.operational.name,
-                    'announce': self.announce.name,
-                },
-            },
-            self.neighbor.name: {
-                'class': self.neighbor,
-                'commands': self.neighbor.known.keys(),
-                'sections': {
-                    'family': self.family.name,
-                    'capability': self.capability.name,
-                    'add-path': self.addpath.name,
-                    'nexthop': self.nexthop.name,
-                    'api': self.api.name,
-                    'static': self.static.name,
-                    'flow': self.flow.name,
-                    'l2vpn': self.l2vpn.name,
-                    'operational': self.operational.name,
-                    'announce': self.announce.name,
-                },
-            },
-            self.family.name: {
-                'class': self.family,
-                'commands': self.family.known.keys(),
-                'sections': {},
-            },
-            self.capability.name: {
-                'class': self.capability,
-                'commands': self.capability.known.keys(),
-                'sections': {},
-            },
-            self.nexthop.name: {
-                'class': self.nexthop,
-                'commands': self.nexthop.known.keys(),
-                'sections': {},
-            },
-            self.addpath.name: {
-                'class': self.addpath,
-                'commands': self.addpath.known.keys(),
-                'sections': {},
-            },
-            self.api.name: {
-                'class': self.api,
-                'commands': self.api.known.keys(),
-                'sections': {
-                    'send': self.api_send.name,
-                    'receive': self.api_receive.name,
-                },
-            },
-            self.api_send.name: {
-                'class': self.api_send,
-                'commands': self.api_send.known.keys(),
-                'sections': {},
-            },
-            self.api_receive.name: {
-                'class': self.api_receive,
-                'commands': self.api_receive.known.keys(),
-                'sections': {},
-            },
-            self.announce.name: {
-                'class': self.announce,
-                'commands': self.announce.known.keys(),
-                'sections': {
-                    'ipv4': self.announce_ipv4.name,
-                    'ipv6': self.announce_ipv6.name,
-                    'l2vpn': self.announce_l2vpn.name,
-                },
-            },
-            self.announce_ipv4.name: {
-                'class': self.announce_ipv4,
-                'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
-                'sections': {},
-            },
-            self.announce_ipv6.name: {
-                'class': self.announce_ipv6,
-                'commands': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
-                'sections': {},
-            },
-            self.announce_l2vpn.name: {
-                'class': self.announce_l2vpn,
-                'commands': [
-                    'vpls',
-                ],
-                'sections': {},
-            },
-            self.static.name: {
-                'class': self.static,
-                'commands': ['route', 'attributes'],
-                'sections': {
-                    'route': self.static_route.name,
-                },
-            },
-            self.static_route.name: {
-                'class': self.static_route,
-                'commands': self.static_route.known.keys(),
-                'sections': {},
-            },
-            self.flow.name: {
-                'class': self.flow,
-                'commands': self.flow.known.keys(),
-                'sections': {
-                    'route': self.flow_route.name,
-                },
-            },
-            self.flow_route.name: {
-                'class': self.flow_route,
-                'commands': self.flow_route.known.keys(),
-                'sections': {
-                    'match': self.flow_match.name,
-                    'then': self.flow_then.name,
-                    'scope': self.flow_scope.name,
-                },
-            },
-            self.flow_match.name: {
-                'class': self.flow_match,
-                'commands': self.flow_match.known.keys(),
-                'sections': {},
-            },
-            self.flow_then.name: {
-                'class': self.flow_then,
-                'commands': self.flow_then.known.keys(),
-                'sections': {},
-            },
-            self.flow_scope.name: {'class': self.flow_scope, 'commands': self.flow_scope.known.keys(), 'sections': {}},
-            self.l2vpn.name: {
-                'class': self.l2vpn,
-                'commands': self.l2vpn.known.keys(),
-                'sections': {
-                    'vpls': self.vpls.name,
-                },
-            },
-            self.vpls.name: {
-                'class': self.vpls,
-                'commands': self.l2vpn.known.keys(),
-                'sections': {},
-            },
-            self.operational.name: {
-                'class': self.operational,
-                'commands': self.operational.known.keys(),
-                'sections': {},
             },
         }
 
-        self._neighbors: dict[str, Any] = {}
-        self._previous_neighbors: dict[str, Any] = {}
+        # Add entries for all registered parsers
+        for name, parser in self._parsers.items():
+            structure[name] = build_entry(parser)
+
+        # Special case: l2vpn/vpls uses l2vpn.known (commands from parent)
+        structure['l2vpn/vpls']['commands'] = list(self.l2vpn.known.keys())
+
+        return structure
 
     @property
     def tokeniser(self) -> Tokeniser:

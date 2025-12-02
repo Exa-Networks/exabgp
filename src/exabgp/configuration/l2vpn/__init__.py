@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.configuration.l2vpn.vpls import ParseVPLS
+from exabgp.configuration.schema import Container
 
 from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.attribute import Attributes
@@ -17,8 +18,14 @@ from exabgp.rib.change import Change
 class ParseL2VPN(ParseVPLS):
     syntax = 'vpls {};\n'.format(' '.join(ParseVPLS.definition))
 
-    # Schema inherited from parent - same commands available
-    schema = ParseVPLS.schema
+    # Schema: inherit parent schema children and add vpls subsection
+    schema = Container(
+        description='L2VPN configuration',
+        children={
+            **ParseVPLS.schema.children,
+            'vpls': Container(description='VPLS instance configuration'),
+        },
+    )
 
     action = dict(ParseVPLS.action)
 
