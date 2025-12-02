@@ -201,7 +201,7 @@ def test_type_ignore_regression(test_num: int, total: int) -> bool:
 
 
 def test_functional_encoding(test_num: int, total: int) -> bool:
-    """Functional encoding tests (async mode - default)"""
+    """Functional encoding tests"""
     # Kill any leftover processes first
     subprocess.run('killall -9 python 2>/dev/null', shell=True)
     time.sleep(0.5)
@@ -209,8 +209,8 @@ def test_functional_encoding(test_num: int, total: int) -> bool:
     returncode, stdout, stderr = run_command('./qa/bin/functional encoding --quiet')
 
     if returncode != 0:
-        print_header(test_num, total, 'Functional Encoding Tests (Async Mode)')
-        print_error('Functional encoding tests (async) failed')
+        print_header(test_num, total, 'Functional Encoding Tests')
+        print_error('Functional encoding tests failed')
         print(stdout)
         if stderr:
             print(stderr)
@@ -219,37 +219,8 @@ def test_functional_encoding(test_num: int, total: int) -> bool:
     # Check for 100% pass rate - quiet mode outputs "passed N/N (100.0%)"
     pass_rate_match = re.search(r'100(?:\.\d+)?%', stdout)
     if not pass_rate_match:
-        print_header(test_num, total, 'Functional Encoding Tests (Async Mode)')
-        print_error('Functional encoding tests (async) did not achieve 100% pass rate')
-        print(stdout)
-        return False
-
-    return True
-
-
-def test_functional_encoding_legacy(test_num: int, total: int) -> bool:
-    """Functional encoding tests (legacy/sync mode)"""
-    # Kill any leftover processes first
-    subprocess.run('killall -9 python 2>/dev/null', shell=True)
-    time.sleep(0.5)
-
-    returncode, stdout, stderr = run_command(
-        './qa/bin/functional encoding --quiet', env={'exabgp_reactor_legacy': 'true'}
-    )
-
-    if returncode != 0:
-        print_header(test_num, total, 'Functional Encoding Tests (Legacy Mode)')
-        print_error('Functional encoding tests (legacy) failed')
-        print(stdout)
-        if stderr:
-            print(stderr)
-        return False
-
-    # Check for 100% pass rate - quiet mode outputs "passed N/N (100.0%)"
-    pass_rate_match = re.search(r'100(?:\.\d+)?%', stdout)
-    if not pass_rate_match:
-        print_header(test_num, total, 'Functional Encoding Tests (Legacy Mode)')
-        print_error('Functional encoding tests (legacy) did not achieve 100% pass rate')
+        print_header(test_num, total, 'Functional Encoding Tests')
+        print_error('Functional encoding tests did not achieve 100% pass rate')
         print(stdout)
         return False
 
@@ -285,7 +256,6 @@ def main() -> int:
         test_encode_decode,
         test_functional_decoding,
         test_functional_encoding,
-        test_functional_encoding_legacy,
         test_type_ignore_regression,
     ]
 
