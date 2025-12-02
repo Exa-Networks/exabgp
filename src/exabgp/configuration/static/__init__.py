@@ -42,6 +42,9 @@ def _check_true(change: Change, afi: AFI) -> bool:
 class ParseStatic(ParseStaticRoute):
     syntax: str = 'route <ip>/<netmask> {};'.format(' '.join(ParseStaticRoute.definition))
 
+    # Schema inherited from parent - same commands available
+    schema = ParseStaticRoute.schema
+
     action: dict[str | tuple[Any, ...], str] = dict(ParseStaticRoute.action)
 
     name: str = 'static'

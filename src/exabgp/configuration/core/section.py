@@ -142,7 +142,8 @@ class Section(Error):
             else:
                 insert = self.known[identifier](self.parser.tokeniser)
 
-            action = self.action.get(identifier, '')
+            # Try schema-derived action first, fall back to explicit action dict
+            action = self._action_from_schema(command) or self.action.get(identifier, '')
 
             if action == 'set-command':
                 self.scope.set_value(command, insert)
@@ -181,9 +182,30 @@ class Section(Error):
 
         return True
 
-    # Schema-based completion methods
+    # Schema-based methods
 
     schema: 'Container | None' = None  # Override in subclasses with schema definitions
+
+    @classmethod
+    def _action_from_schema(cls, command: str) -> str | None:
+        """Get action for command from schema.
+
+        Args:
+            command: The command name to look up
+
+        Returns:
+            Action string from schema, or None if schema not defined
+            or command not found in schema children.
+        """
+        if cls.schema is None:
+            return None
+
+        from exabgp.configuration.schema import Leaf, LeafList
+
+        child = cls.schema.children.get(command)
+        if isinstance(child, (Leaf, LeafList)):
+            return child.action
+        return None
 
     @classmethod
     def get_schema_completions(cls) -> list['Completion']:

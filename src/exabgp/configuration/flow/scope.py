@@ -37,11 +37,7 @@ class ParseFlowScope(Section):
         'interface-set': interface_set,
     }
 
-    # 'community','extended-community'
-
-    action: dict[str | tuple[Any, ...], str] = {
-        'interface-set': 'attribute-add',
-    }
+    # action dict removed - derived from schema
 
     name: str = 'flow/scope'
 

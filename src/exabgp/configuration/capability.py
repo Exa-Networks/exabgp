@@ -158,18 +158,7 @@ class ParseCapability(Section):
         'software-version': boolean,
     }
 
-    action = {
-        'nexthop': 'set-command',
-        'add-path': 'set-command',
-        'asn4': 'set-command',
-        'graceful-restart': 'set-command',
-        'multi-session': 'set-command',
-        'operational': 'set-command',
-        'route-refresh': 'set-command',
-        'aigp': 'set-command',
-        'extended-message': 'set-command',
-        'software-version': 'set-command',
-    }
+    # action dict removed - derived from schema (defaults to 'set-command')
 
     default = {
         'nexthop': True,

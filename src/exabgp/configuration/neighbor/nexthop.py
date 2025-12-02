@@ -51,10 +51,7 @@ class ParseNextHop(Section):
 
     convert = ParseFamily.convert
 
-    action = {
-        'ipv4': 'append-command',
-        'ipv6': 'append-command',
-    }
+    # action dict removed - derived from schema
 
     name = 'nexthop'
 
