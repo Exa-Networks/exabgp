@@ -249,6 +249,9 @@ def run(comment: str, configurations: list[str], pid: int = 0) -> None:
 
     if not env.profile.enable:
         exit_code = Reactor(configuration).run()
+        # Flush any pending log messages before exit
+        sys.stdout.flush()
+        sys.stderr.flush()
         __exit(env.debug.memory, exit_code)
 
     import cProfile

@@ -33,8 +33,28 @@ class option:
     # where the log should go, stdout, stderr, file, syslog, ...
     destination: ClassVar[str] = ''
 
-    option: ClassVar[dict[str, bool]]  # Set in load()
+    # Runtime configuration - which log sources are enabled based on environment
+    # Initialized with defaults, updated by load()
+    option: ClassVar[dict[str, bool]] = {
+        'pdb': False,
+        'reactor': False,
+        'daemon': False,
+        'processes': False,
+        'configuration': False,
+        'network': False,
+        'statistics': False,
+        'wire': False,
+        'message': False,
+        'rib': False,
+        'timer': False,
+        'routes': False,
+        'parser': False,
+        'startup': False,
+        'cli': False,
+        'api': False,
+    }
 
+    # Static defaults (kept for reference, not used by log_enabled)
     enabled: ClassVar[dict[str, bool]] = {
         'pdb': False,
         'reactor': False,
@@ -66,7 +86,7 @@ class option:
 
     @classmethod
     def log_enabled(cls, source: str, level: str) -> bool:
-        return cls.enabled.get(source, True) and cls.logit.get(level, False)
+        return cls.option.get(source, True) and cls.logit.get(level, False)
 
     @classmethod
     def load(cls, env: 'Environment') -> None:

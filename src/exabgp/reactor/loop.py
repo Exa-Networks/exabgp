@@ -442,6 +442,10 @@ class Reactor:
         # Setup listeners
         for ip in self._ips:
             if not self.listener.listen_on(ip, None, self._port, None, False, None):
+                log.critical(
+                    lazymsg('startup.failed.listener ip={ip} port={port}', ip=ip, port=self._port),
+                    'reactor',
+                )
                 return self.Exit.listening
 
         if not self.reload():
@@ -457,6 +461,15 @@ class Reactor:
                     neighbor.session.md5_base64,
                     neighbor.session.incoming_ttl,
                 ):
+                    log.critical(
+                        lazymsg(
+                            'startup.failed.listener ip={ip} port={port} neighbor={n}',
+                            ip=neighbor.session.md5_ip,
+                            port=neighbor.session.listen,
+                            n=neighbor.name(),
+                        ),
+                        'reactor',
+                    )
                     return self.Exit.listening
 
         # Start processes
