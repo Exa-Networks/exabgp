@@ -26,6 +26,7 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import Container, Leaf, LeafList, ValueType
 
 from exabgp.configuration.static.parser import prefix
 
@@ -51,6 +52,103 @@ from exabgp.configuration.static.parser import withdraw
 
 
 class AnnounceIP(ParseAnnounce):
+    # Schema definition for IP route announcements
+    schema = Container(
+        description='IP route announcement',
+        children={
+            'next-hop': Leaf(
+                type=ValueType.NEXT_HOP,
+                description='Next-hop IP address or "self"',
+                action='nexthop-and-attribute',
+            ),
+            'origin': Leaf(
+                type=ValueType.ORIGIN,
+                description='BGP origin attribute',
+                choices=['igp', 'egp', 'incomplete'],
+                action='attribute-add',
+            ),
+            'med': Leaf(
+                type=ValueType.MED,
+                description='Multi-exit discriminator',
+                action='attribute-add',
+            ),
+            'as-path': LeafList(
+                type=ValueType.AS_PATH,
+                description='AS path',
+                action='attribute-add',
+            ),
+            'local-preference': Leaf(
+                type=ValueType.LOCAL_PREF,
+                description='Local preference',
+                action='attribute-add',
+            ),
+            'atomic-aggregate': Leaf(
+                type=ValueType.ATOMIC_AGGREGATE,
+                description='Atomic aggregate flag',
+                action='attribute-add',
+            ),
+            'aggregator': Leaf(
+                type=ValueType.AGGREGATOR,
+                description='Aggregator (AS number and IP)',
+                action='attribute-add',
+            ),
+            'originator-id': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Originator ID',
+                action='attribute-add',
+            ),
+            'cluster-list': LeafList(
+                type=ValueType.IP_ADDRESS,
+                description='Cluster list',
+                action='attribute-add',
+            ),
+            'community': LeafList(
+                type=ValueType.COMMUNITY,
+                description='Standard BGP communities',
+                action='attribute-add',
+            ),
+            'large-community': LeafList(
+                type=ValueType.LARGE_COMMUNITY,
+                description='Large BGP communities',
+                action='attribute-add',
+            ),
+            'extended-community': LeafList(
+                type=ValueType.EXTENDED_COMMUNITY,
+                description='Extended BGP communities',
+                action='attribute-add',
+            ),
+            'aigp': Leaf(
+                type=ValueType.INTEGER,
+                description='Accumulated IGP metric',
+                action='attribute-add',
+            ),
+            'attribute': Leaf(
+                type=ValueType.HEX_STRING,
+                description='Generic BGP attribute',
+                action='attribute-add',
+            ),
+            'name': Leaf(
+                type=ValueType.STRING,
+                description='Route name',
+                action='attribute-add',
+            ),
+            'split': Leaf(
+                type=ValueType.INTEGER,
+                description='Split prefix',
+                action='attribute-add',
+            ),
+            'watchdog': Leaf(
+                type=ValueType.STRING,
+                description='Watchdog name',
+                action='attribute-add',
+            ),
+            'withdraw': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Mark for withdrawal',
+                action='attribute-add',
+            ),
+        },
+    )
     # put next-hop first as it is a requirement atm
     definition = [
         'next-hop <ip>',

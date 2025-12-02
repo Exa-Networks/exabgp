@@ -25,12 +25,25 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.parser import path_information
 
 
 class AnnouncePath(AnnounceIP):
+    # Schema extends AnnounceIP with path-information
+    schema = Container(
+        description='IP route announcement with path information',
+        children={
+            **AnnounceIP.schema.children,
+            'path-information': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Path information (path ID for ADD-PATH)',
+                action='nlri-set',
+            ),
+        },
+    )
     # put next-hop first as it is a requirement atm
     definition = [
         'label <15 bits number>',

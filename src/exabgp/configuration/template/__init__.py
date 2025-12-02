@@ -15,9 +15,18 @@ if TYPE_CHECKING:
     from exabgp.configuration.core.scope import Scope
 
 from exabgp.configuration.core import Section
+from exabgp.configuration.schema import Container
 
 
 class ParseTemplate(Section):
+    # Schema definition for template section
+    schema = Container(
+        description='Configuration templates for reuse',
+        children={
+            'neighbor': Container(description='Neighbor configuration template'),
+        },
+    )
+
     syntax = ''
 
     name = 'template'

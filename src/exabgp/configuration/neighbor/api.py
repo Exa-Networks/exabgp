@@ -18,9 +18,61 @@ from exabgp.configuration.core import Error
 from exabgp.configuration.parser import boolean
 from exabgp.configuration.neighbor.parser import processes
 from exabgp.configuration.neighbor.parser import processes_match
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 
 class _ParseDirection(Section):
+    # Schema definition for send/receive direction configuration
+    _direction_schema = Container(
+        description='Message types to forward to external processes',
+        children={
+            'parsed': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Forward parsed messages',
+                default=True,
+            ),
+            'packets': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Forward raw packets',
+                default=True,
+            ),
+            'consolidate': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Consolidate updates',
+                default=True,
+            ),
+            'open': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Forward OPEN messages',
+                default=True,
+            ),
+            'update': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Forward UPDATE messages',
+                default=True,
+            ),
+            'notification': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Forward NOTIFICATION messages',
+                default=True,
+            ),
+            'keepalive': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Forward KEEPALIVE messages',
+                default=True,
+            ),
+            'refresh': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Forward ROUTE-REFRESH messages',
+                default=True,
+            ),
+            'operational': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Forward OPERATIONAL messages',
+                default=True,
+            ),
+        },
+    )
     action = {
         'parsed': 'set-command',
         'packets': 'set-command',
@@ -73,18 +125,57 @@ class _ParseDirection(Section):
 
 
 class ParseSend(_ParseDirection):
+    schema = _ParseDirection._direction_schema
     syntax = 'send {}'.format(_ParseDirection.syntax)
 
     name = 'api/send'
 
 
 class ParseReceive(_ParseDirection):
+    schema = _ParseDirection._direction_schema
     syntax = 'receive {}'.format(_ParseDirection.syntax)
 
     name = 'api/receive'
 
 
 class ParseAPI(Section):
+    # Schema definition for API configuration
+    schema = Container(
+        description='API configuration for external process communication',
+        children={
+            'processes': Leaf(
+                type=ValueType.STRING,
+                description='List of process names to communicate with',
+            ),
+            'processes-match': Leaf(
+                type=ValueType.STRING,
+                description='Regex pattern to match process names',
+            ),
+            'neighbor-changes': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Notify on neighbor state changes',
+                default=True,
+            ),
+            'negotiated': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Notify on negotiation completion',
+                default=True,
+            ),
+            'fsm': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Notify on FSM state changes',
+                default=True,
+            ),
+            'signal': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Notify on signals',
+                default=True,
+            ),
+            'send': Container(description='Messages to send to processes'),
+            'receive': Container(description='Messages to receive from processes'),
+        },
+    )
+
     syntax = (
         'process {{\n'
         '  processes [ name-of-processes ];\n'

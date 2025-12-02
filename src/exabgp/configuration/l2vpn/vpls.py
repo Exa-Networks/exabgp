@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.configuration.core import Section
+from exabgp.configuration.schema import Container, Leaf, LeafList, ValueType
 
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import origin
@@ -36,6 +37,118 @@ from exabgp.configuration.l2vpn.parser import next_hop
 
 
 class ParseVPLS(Section):
+    # Schema definition for VPLS configuration
+    schema = Container(
+        description='VPLS configuration',
+        children={
+            'rd': Leaf(
+                type=ValueType.RD,
+                description='Route distinguisher',
+                action='nlri-set',
+            ),
+            'endpoint': Leaf(
+                type=ValueType.INTEGER,
+                description='VPLS endpoint ID',
+                action='nlri-set',
+            ),
+            'base': Leaf(
+                type=ValueType.INTEGER,
+                description='Label base',
+                action='nlri-set',
+            ),
+            'offset': Leaf(
+                type=ValueType.INTEGER,
+                description='Block offset',
+                action='nlri-set',
+            ),
+            'size': Leaf(
+                type=ValueType.INTEGER,
+                description='Block size',
+                action='nlri-set',
+            ),
+            'next-hop': Leaf(
+                type=ValueType.NEXT_HOP,
+                description='Next-hop IP address',
+                action='nlri-set',
+            ),
+            'attribute': Leaf(
+                type=ValueType.HEX_STRING,
+                description='Generic BGP attribute',
+                action='attribute-add',
+            ),
+            'origin': Leaf(
+                type=ValueType.ORIGIN,
+                description='BGP origin attribute',
+                choices=['igp', 'egp', 'incomplete'],
+                action='attribute-add',
+            ),
+            'med': Leaf(
+                type=ValueType.MED,
+                description='Multi-exit discriminator',
+                action='attribute-add',
+            ),
+            'as-path': LeafList(
+                type=ValueType.AS_PATH,
+                description='AS path',
+                action='attribute-add',
+            ),
+            'local-preference': Leaf(
+                type=ValueType.LOCAL_PREF,
+                description='Local preference',
+                action='attribute-add',
+            ),
+            'atomic-aggregate': Leaf(
+                type=ValueType.ATOMIC_AGGREGATE,
+                description='Atomic aggregate flag',
+                action='attribute-add',
+            ),
+            'aggregator': Leaf(
+                type=ValueType.AGGREGATOR,
+                description='Aggregator',
+                action='attribute-add',
+            ),
+            'originator-id': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Originator ID',
+                action='attribute-add',
+            ),
+            'cluster-list': LeafList(
+                type=ValueType.IP_ADDRESS,
+                description='Cluster list',
+                action='attribute-add',
+            ),
+            'community': LeafList(
+                type=ValueType.COMMUNITY,
+                description='Standard BGP communities',
+                action='attribute-add',
+            ),
+            'extended-community': LeafList(
+                type=ValueType.EXTENDED_COMMUNITY,
+                description='Extended BGP communities',
+                action='attribute-add',
+            ),
+            'name': Leaf(
+                type=ValueType.STRING,
+                description='Route name',
+                action='attribute-add',
+            ),
+            'split': Leaf(
+                type=ValueType.INTEGER,
+                description='Split prefix',
+                action='attribute-add',
+            ),
+            'watchdog': Leaf(
+                type=ValueType.STRING,
+                description='Watchdog name',
+                action='attribute-add',
+            ),
+            'withdraw': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Mark for withdrawal',
+                action='attribute-add',
+            ),
+        },
+    )
     definition = [
         'endpoint <vpls endpoint id; integer>',
         'base <label base; integer>',

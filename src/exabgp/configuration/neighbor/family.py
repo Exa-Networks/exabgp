@@ -16,9 +16,45 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 
 class ParseFamily(Section):
+    # Schema definition for address family configuration
+    schema = Container(
+        description='Address families to negotiate with the peer',
+        children={
+            'ipv4': Leaf(
+                type=ValueType.ENUMERATION,
+                description='IPv4 address family',
+                choices=['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
+                action='append-command',
+            ),
+            'ipv6': Leaf(
+                type=ValueType.ENUMERATION,
+                description='IPv6 address family',
+                choices=['unicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'mup', 'flow', 'flow-vpn'],
+                action='append-command',
+            ),
+            'l2vpn': Leaf(
+                type=ValueType.ENUMERATION,
+                description='L2VPN address family',
+                choices=['vpls', 'evpn'],
+                action='append-command',
+            ),
+            'bgp-ls': Leaf(
+                type=ValueType.ENUMERATION,
+                description='BGP-LS address family',
+                choices=['bgp-ls', 'bgp-ls-vpn'],
+                action='append-command',
+            ),
+            'all': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Announce all known address families',
+                action='append-command',
+            ),
+        },
+    )
     syntax = (
         'family {\n'
         '   all;      # default if not family block is present, announce all we know\n'
@@ -143,4 +179,40 @@ class ParseFamily(Section):
 
 
 class ParseAddPath(ParseFamily):
+    # Schema definition for ADD-PATH configuration (same structure as family)
+    schema = Container(
+        description='ADD-PATH address families to negotiate',
+        children={
+            'ipv4': Leaf(
+                type=ValueType.ENUMERATION,
+                description='IPv4 ADD-PATH family',
+                choices=['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
+                action='append-command',
+            ),
+            'ipv6': Leaf(
+                type=ValueType.ENUMERATION,
+                description='IPv6 ADD-PATH family',
+                choices=['unicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'mup', 'flow', 'flow-vpn'],
+                action='append-command',
+            ),
+            'l2vpn': Leaf(
+                type=ValueType.ENUMERATION,
+                description='L2VPN ADD-PATH family',
+                choices=['vpls', 'evpn'],
+                action='append-command',
+            ),
+            'bgp-ls': Leaf(
+                type=ValueType.ENUMERATION,
+                description='BGP-LS ADD-PATH family',
+                choices=['bgp-ls', 'bgp-ls-vpn'],
+                action='append-command',
+            ),
+            'all': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Enable ADD-PATH for all families',
+                action='append-command',
+            ),
+        },
+    )
+
     name = 'add-path'

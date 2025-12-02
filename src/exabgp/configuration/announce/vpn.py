@@ -27,12 +27,25 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.mpls import route_distinguisher
 
 
 class AnnounceVPN(ParseAnnounce):
+    # Schema extends AnnounceLabel with route-distinguisher
+    schema = Container(
+        description='VPN route announcement',
+        children={
+            **AnnounceLabel.schema.children,
+            'rd': Leaf(
+                type=ValueType.RD,
+                description='Route distinguisher',
+                action='nlri-set',
+            ),
+        },
+    )
     # put next-hop first as it is a requirement atm
     definition = [
         '  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n',

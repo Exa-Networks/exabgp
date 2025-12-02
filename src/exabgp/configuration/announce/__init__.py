@@ -18,6 +18,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import Container
 
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
@@ -106,6 +107,16 @@ class ParseAnnounce(Section):
 
 
 class SectionAnnounce(ParseAnnounce):
+    # Schema definition for announce section
+    schema = Container(
+        description='Route announcements',
+        children={
+            'ipv4': Container(description='IPv4 route announcements'),
+            'ipv6': Container(description='IPv6 route announcements'),
+            'l2vpn': Container(description='L2VPN route announcements'),
+        },
+    )
+
     name = 'announce'
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:

@@ -13,6 +13,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 
 from exabgp.configuration.flow.parser import source
@@ -33,6 +34,107 @@ from exabgp.configuration.flow.parser import flow_label
 
 
 class ParseFlowMatch(Section):
+    # Schema definition for FlowSpec match criteria
+    schema = Container(
+        description='FlowSpec match criteria',
+        children={
+            'source': Leaf(
+                type=ValueType.IP_PREFIX,
+                description='Source IP prefix to match',
+                action='nlri-add',
+            ),
+            'source-ipv4': Leaf(
+                type=ValueType.IP_PREFIX,
+                description='Source IPv4 prefix to match',
+                action='nlri-add',
+            ),
+            'source-ipv6': Leaf(
+                type=ValueType.IP_PREFIX,
+                description='Source IPv6 prefix to match',
+                action='nlri-add',
+            ),
+            'destination': Leaf(
+                type=ValueType.IP_PREFIX,
+                description='Destination IP prefix to match',
+                action='nlri-add',
+            ),
+            'destination-ipv4': Leaf(
+                type=ValueType.IP_PREFIX,
+                description='Destination IPv4 prefix to match',
+                action='nlri-add',
+            ),
+            'destination-ipv6': Leaf(
+                type=ValueType.IP_PREFIX,
+                description='Destination IPv6 prefix to match',
+                action='nlri-add',
+            ),
+            'protocol': Leaf(
+                type=ValueType.STRING,
+                description='IP protocol to match (IPv4 only)',
+                action='nlri-add',
+            ),
+            'next-header': Leaf(
+                type=ValueType.STRING,
+                description='Next header to match (IPv6 only)',
+                action='nlri-add',
+            ),
+            'port': Leaf(
+                type=ValueType.STRING,
+                description='Port range to match (source or destination)',
+                action='nlri-add',
+            ),
+            'destination-port': Leaf(
+                type=ValueType.STRING,
+                description='Destination port range to match',
+                action='nlri-add',
+            ),
+            'source-port': Leaf(
+                type=ValueType.STRING,
+                description='Source port range to match',
+                action='nlri-add',
+            ),
+            'icmp-type': Leaf(
+                type=ValueType.INTEGER,
+                description='ICMP type to match (IPv6 only)',
+                action='nlri-add',
+            ),
+            'icmp-code': Leaf(
+                type=ValueType.INTEGER,
+                description='ICMP code to match (IPv6 only)',
+                action='nlri-add',
+            ),
+            'tcp-flags': Leaf(
+                type=ValueType.STRING,
+                description='TCP flags to match',
+                action='nlri-add',
+            ),
+            'packet-length': Leaf(
+                type=ValueType.STRING,
+                description='Packet length range to match',
+                action='nlri-add',
+            ),
+            'dscp': Leaf(
+                type=ValueType.INTEGER,
+                description='DSCP value to match',
+                action='nlri-add',
+            ),
+            'traffic-class': Leaf(
+                type=ValueType.INTEGER,
+                description='Traffic class to match (IPv6 only)',
+                action='nlri-add',
+            ),
+            'fragment': Leaf(
+                type=ValueType.STRING,
+                description='Fragment flags to match (IPv4 only)',
+                action='nlri-add',
+            ),
+            'flow-label': Leaf(
+                type=ValueType.STRING,
+                description='Flow label to match (IPv6 only)',
+                action='nlri-add',
+            ),
+        },
+    )
     definition: list[str] = [
         'source 10.0.0.0/24',
         'source ::1/128/0',

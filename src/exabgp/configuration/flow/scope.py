@@ -11,11 +11,23 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 from exabgp.configuration.flow.parser import interface_set
 
 
 class ParseFlowScope(Section):
+    # Schema definition for FlowSpec scope
+    schema = Container(
+        description='FlowSpec scope configuration',
+        children={
+            'interface-set': Leaf(
+                type=ValueType.STRING,
+                description='Interface set (transitive:input:local_id:interface_id)',
+                action='attribute-add',
+            ),
+        },
+    )
     definition: list[str] = ['interface-set transitive:input:1234:1234']
 
     joined: str = ';\\n  '.join(definition)

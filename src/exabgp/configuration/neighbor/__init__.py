@@ -31,6 +31,7 @@ from exabgp.configuration.neighbor.parser import (
     source_interface,
     ttl,
 )
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 # from exabgp.configuration.parser import asn
 from exabgp.configuration.parser import auto_asn, auto_boolean, boolean, ip, peer_ip, port
@@ -43,6 +44,149 @@ from exabgp.util.enumeration import TriState
 
 class ParseNeighbor(Section):
     TTL_SECURITY = 255
+
+    # Schema definition for BGP neighbor configuration
+    schema = Container(
+        description='BGP neighbor (peer) configuration',
+        children={
+            # Session parameters
+            'peer-address': Leaf(
+                type=ValueType.IP_RANGE,
+                description='IP address or range of the BGP peer',
+                mandatory=True,
+            ),
+            'local-address': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Local IP address for the BGP session',
+            ),
+            'local-as': Leaf(
+                type=ValueType.ASN,
+                description='Local AS number (or "auto" to copy peer-as)',
+                mandatory=True,
+            ),
+            'peer-as': Leaf(
+                type=ValueType.ASN,
+                description='Peer AS number (or "auto" to copy local-as)',
+                mandatory=True,
+            ),
+            'router-id': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='BGP router ID (defaults to local-address)',
+            ),
+            'description': Leaf(
+                type=ValueType.STRING,
+                description='Neighbor description',
+            ),
+            'host-name': Leaf(
+                type=ValueType.STRING,
+                description='Hostname capability value',
+            ),
+            'domain-name': Leaf(
+                type=ValueType.STRING,
+                description='Domain name capability value',
+            ),
+            # Timers
+            'hold-time': Leaf(
+                type=ValueType.INTEGER,
+                description='BGP hold time in seconds (0 disables)',
+                default=180,
+                min_value=0,
+                max_value=65535,
+            ),
+            'rate-limit': Leaf(
+                type=ValueType.INTEGER,
+                description='Rate limit for updates (messages per second)',
+            ),
+            # Connection options
+            'passive': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Wait for incoming connections',
+                default=True,
+            ),
+            'listen': Leaf(
+                type=ValueType.PORT,
+                description='Local TCP port to listen on',
+                default=179,
+            ),
+            'connect': Leaf(
+                type=ValueType.PORT,
+                description='Remote TCP port to connect to',
+                default=179,
+            ),
+            'source-interface': Leaf(
+                type=ValueType.STRING,
+                description='Source interface for BGP session',
+            ),
+            # TTL security
+            'outgoing-ttl': Leaf(
+                type=ValueType.INTEGER,
+                description='TTL for outgoing packets (255 for GTSM)',
+                min_value=1,
+                max_value=255,
+            ),
+            'incoming-ttl': Leaf(
+                type=ValueType.INTEGER,
+                description='Minimum TTL for incoming packets (GTSM)',
+                min_value=1,
+                max_value=255,
+            ),
+            # Authentication
+            'md5-password': Leaf(
+                type=ValueType.STRING,
+                description='TCP MD5 authentication password',
+            ),
+            'md5-base64': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Password is base64 encoded',
+                default=False,
+            ),
+            'md5-ip': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='IP address for MD5 authentication',
+            ),
+            # Behavior options
+            'group-updates': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Group updates for efficiency',
+                default=True,
+            ),
+            'auto-flush': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Auto-flush updates',
+                default=True,
+            ),
+            'adj-rib-out': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Maintain Adj-RIB-Out',
+                default=False,
+            ),
+            'adj-rib-in': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Maintain Adj-RIB-In',
+                default=False,
+            ),
+            'manual-eor': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Manual End-of-RIB control',
+                default=False,
+            ),
+            'inherit': Leaf(
+                type=ValueType.STRING,
+                description='Inherit from template',
+            ),
+            # Subsections
+            'family': Container(description='Address families to negotiate'),
+            'capability': Container(description='BGP capabilities'),
+            'add-path': Container(description='ADD-PATH configuration'),
+            'nexthop': Container(description='Next-hop encoding options'),
+            'api': Container(description='External process API'),
+            'static': Container(description='Static routes to announce'),
+            'flow': Container(description='FlowSpec rules'),
+            'l2vpn': Container(description='L2VPN/VPLS configuration'),
+            'operational': Container(description='Operational messages'),
+            'announce': Container(description='Route announcements'),
+        },
+    )
 
     syntax = ''
 

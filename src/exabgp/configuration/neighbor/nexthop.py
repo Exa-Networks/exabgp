@@ -16,9 +16,26 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
 from exabgp.configuration.neighbor.family import ParseFamily
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 
 class ParseNextHop(Section):
+    # Schema definition for nexthop encoding configuration
+    schema = Container(
+        description='Next-hop encoding options for address families',
+        children={
+            'ipv4': Leaf(
+                type=ValueType.STRING,
+                description='IPv4 SAFI with alternate next-hop AFI (e.g., "unicast ipv6")',
+                action='append-command',
+            ),
+            'ipv6': Leaf(
+                type=ValueType.STRING,
+                description='IPv6 SAFI with alternate next-hop AFI (e.g., "unicast ipv4")',
+                action='append-command',
+            ),
+        },
+    )
     syntax = (
         'nexthop {\n'
         '   ipv4 unicast ipv6;\n'
