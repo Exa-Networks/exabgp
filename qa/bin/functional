@@ -1760,7 +1760,7 @@ class EncodingTests(Tests):
             if daemons_started % 10 == 0 and daemons_started != last_daemon_display:
                 self.display(daemons_started=daemons_started, clients_started=0)
                 last_daemon_display = daemons_started
-            time.sleep(0.005)
+            time.sleep(0.02)  # Stagger daemon starts to reduce CPU contention
 
         # Final display for daemons (only if not already displayed)
         if daemons_started != last_daemon_display:
@@ -1768,6 +1768,7 @@ class EncodingTests(Tests):
         time.sleep(0.02)
 
         # Start clients - timer shows [0/max] during setup
+        # Use slightly longer delay than daemons to reduce CPU contention
         clients_started = 0
         last_client_display = -1  # Track last displayed count to avoid duplicates
         for test in self.selected():
@@ -1788,7 +1789,7 @@ class EncodingTests(Tests):
             if clients_started % 10 == 0 and clients_started != last_client_display:
                 self.display(daemons_started=daemons_started, clients_started=clients_started)
                 last_client_display = clients_started
-            time.sleep(0.005)
+            time.sleep(0.05)  # Stagger client starts to reduce CPU contention
 
         # Final display for clients (only if not already displayed)
         if clients_started != last_client_display:
