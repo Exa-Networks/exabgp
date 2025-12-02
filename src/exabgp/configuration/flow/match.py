@@ -177,29 +177,7 @@ class ParseFlowMatch(Section):
         'flow-label': flow_label,
     }
 
-    # 'source-ipv4','destination-ipv4',
-
-    action: dict[str | tuple[Any, ...], str] = {
-        'source': 'nlri-add',
-        'source-ipv4': 'nlri-add',
-        'source-ipv6': 'nlri-add',
-        'destination': 'nlri-add',
-        'destination-ipv4': 'nlri-add',
-        'destination-ipv6': 'nlri-add',
-        'port': 'nlri-add',
-        'source-port': 'nlri-add',
-        'destination-port': 'nlri-add',
-        'protocol': 'nlri-add',
-        'packet-length': 'nlri-add',
-        'tcp-flags': 'nlri-add',
-        'next-header': 'nlri-add',
-        'fragment': 'nlri-add',
-        'icmp-code': 'nlri-add',
-        'icmp-type': 'nlri-add',
-        'dscp': 'nlri-add',
-        'traffic-class': 'nlri-add',
-        'flow-label': 'nlri-add',
-    }
+    # action dict removed - derived from schema
 
     name: str = 'flow/match'
 

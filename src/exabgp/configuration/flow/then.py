@@ -131,22 +131,7 @@ class ParseFlowThen(Section):
         'extended-community': extended_community,
     }
 
-    # 'community','extended-community'
-
-    action: dict[str | tuple[Any, ...], str] = {
-        'accept': 'nop',
-        'discard': 'attribute-add',
-        'rate-limit': 'attribute-add',
-        'redirect': 'nexthop-and-attribute',
-        'redirect-to-nexthop': 'attribute-add',
-        'redirect-to-nexthop-ietf': 'attribute-add',
-        'copy': 'nexthop-and-attribute',
-        'mark': 'attribute-add',
-        'action': 'attribute-add',
-        'community': 'attribute-add',
-        'large-community': 'attribute-add',
-        'extended-community': 'attribute-add',
-    }
+    # action dict removed - derived from schema
 
     name: str = 'flow/then'
 

@@ -17,6 +17,9 @@ from exabgp.rib.change import Change
 class ParseL2VPN(ParseVPLS):
     syntax = 'vpls {};\n'.format(' '.join(ParseVPLS.definition))
 
+    # Schema inherited from parent - same commands available
+    schema = ParseVPLS.schema
+
     action = dict(ParseVPLS.action)
 
     name = 'L2VPN'

@@ -107,13 +107,7 @@ class ParseFamily(Section):
         },
     }
 
-    action = {
-        'ipv4': 'append-command',
-        'ipv6': 'append-command',
-        'l2vpn': 'append-command',
-        'bgp-ls': 'append-command',
-        'all': 'append-command',
-    }
+    # action dict removed - derived from schema
 
     name = 'family'
 
