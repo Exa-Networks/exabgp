@@ -19,7 +19,7 @@ import json
 import os
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -57,8 +57,8 @@ class HistoryTracker:
 
     Example:
         >>> tracker = HistoryTracker()
-        >>> tracker.record_command("show neighbor", success=True)
-        >>> score = tracker.get_frequency_bonus("show neighbor")
+        >>> tracker.record_command('show neighbor', success=True)
+        >>> score = tracker.get_frequency_bonus('show neighbor')
         >>> score
         5
     """
@@ -249,7 +249,7 @@ class HistoryTracker:
             Anonymized command with IPs replaced
 
         Example:
-            >>> _anonymize_command("show neighbor 192.168.1.1")
+            >>> _anonymize_command('show neighbor 192.168.1.1')
             "show neighbor *"
         """
         # Replace IPv4 addresses with *
@@ -276,9 +276,7 @@ class HistoryTracker:
 
         # Remove entries older than max_age_days
         self._stats = {
-            cmd: stats
-            for cmd, stats in self._stats.items()
-            if (current_time - stats.last_used) < max_age_seconds
+            cmd: stats for cmd, stats in self._stats.items() if (current_time - stats.last_used) < max_age_seconds
         }
 
         # If still too many entries, keep only the most recent
@@ -409,9 +407,7 @@ class HistoryTracker:
             return 0
 
         return (
-            self.get_frequency_bonus(command)
-            + self.get_recency_bonus(command)
-            + self.get_success_rate_bonus(command)
+            self.get_frequency_bonus(command) + self.get_recency_bonus(command) + self.get_success_rate_bonus(command)
         )
 
     def invalidate_cache(self) -> None:

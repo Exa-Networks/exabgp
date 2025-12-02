@@ -18,10 +18,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, Callable, Literal, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.configuration.validator import Validator
+
+
+# Valid action types for Leaf/LeafList processing
+ActionType = Literal[
+    'set-command',  # Set value in command dict
+    'append-command',  # Append to list in command dict
+    'extend-command',  # Extend list in command dict
+    'append-name',  # Append name to list
+    'extend-name',  # Extend name list
+    'attribute-add',  # Add BGP attribute
+    'nlri-set',  # Set NLRI field
+    'nlri-add',  # Add to NLRI list
+    'nlri-nexthop',  # Set NLRI next-hop
+    'nexthop-and-attribute',  # Set next-hop and attribute
+    'append-route',  # Append complete route
+    'nop',  # No operation (placeholder)
+]
 
 
 class ValueType(Enum):
@@ -99,12 +116,24 @@ class Leaf:
     default: Any = None
     mandatory: bool = False
     parser: Callable | None = None  # Deprecated - use validator
-    action: str = 'set-command'
+    action: ActionType = 'set-command'
     choices: list[str] | None = None
     min_value: int | None = None
     max_value: int | None = None
     validator: 'Validator[Any] | None' = None  # Explicit validator override
     example: str | None = None  # Custom syntax hint for definition generation
+
+    def __post_init__(self) -> None:
+        """Validate fields and warn about deprecated usage."""
+        if self.parser is not None:
+            import warnings
+
+            warnings.warn(
+                f"Leaf.parser is deprecated for '{self.description or self.type.value}'. "
+                f'Use Leaf.validator instead for type-safe validation.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     def get_validator(self) -> 'Validator[Any] | None':
         """Get or create validator from type + constraints.
@@ -177,10 +206,22 @@ class LeafList:
     type: ValueType
     description: str = ''
     parser: Callable | None = None  # Deprecated - use validator
-    action: str = 'append-command'
+    action: ActionType = 'append-command'
     choices: list[str] | None = None
     validator: 'Validator[Any] | None' = None  # Explicit validator override
     example: str | None = None  # Custom syntax hint for definition generation
+
+    def __post_init__(self) -> None:
+        """Validate fields and warn about deprecated usage."""
+        if self.parser is not None:
+            import warnings
+
+            warnings.warn(
+                f"LeafList.parser is deprecated for '{self.description or self.type.value}'. "
+                f'Use LeafList.validator instead for type-safe validation.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     def get_validator(self) -> 'Validator[Any] | None':
         """Get or create validator from type + constraints.

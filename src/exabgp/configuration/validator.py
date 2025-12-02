@@ -25,6 +25,8 @@ if TYPE_CHECKING:
     from exabgp.protocol.ip import IP, IPRange
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.bgp.message.update.attribute import Origin, MED, LocalPreference, NextHop, NextHopSelf
+    from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+    from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
     from exabgp.protocol.ip import IPSelf
 
 T = TypeVar('T')
@@ -237,6 +239,42 @@ class BooleanValidator(Validator[bool]):
         if self.default is not None:
             schema['default'] = self.default
         return schema
+
+
+@dataclass
+class FlagValidator(Validator[bool]):
+    """Validates presence-only flags that don't require a value.
+
+    This is used for BGP attributes like atomic-aggregate that are
+    specified by mere presence (e.g., 'atomic-aggregate;') without a value.
+
+    Unlike BooleanValidator, this always returns True and accepts:
+    - Empty string (most common for presence flags)
+    - 'true' (for explicit confirmation)
+
+    Example:
+        >>> v = FlagValidator()
+        >>> v.validate_string('')  # Presence alone
+        True
+        >>> v.validate_string('true')  # Explicit
+        True
+    """
+
+    name: str = 'flag'
+
+    def _parse(self, value: str) -> bool:
+        """Parse flag - presence means True."""
+        if not value or value.lower() in ('', 'true'):
+            return True
+        raise ValueError(
+            f"'{value}' is not valid for a presence flag\n" f'  Flags are set by presence alone (no value needed)'
+        )
+
+    def to_schema(self) -> dict[str, Any]:
+        return {'type': 'boolean', 'const': True, 'description': 'Presence flag - no value required'}
+
+    def describe(self) -> str:
+        return 'flag (presence-only, no value)'
 
 
 @dataclass
@@ -473,6 +511,156 @@ class ASNValidator(Validator['ASN | None']):
 # =============================================================================
 # BGP-Specific Validators
 # =============================================================================
+
+
+@dataclass
+class RouteDistinguisherValidator(Validator['RouteDistinguisher']):
+    """Validates Route Distinguisher values (RFC 4364).
+
+    Supports three formats:
+    - Type 0: ASN:nn (2-byte AS + 4-byte number, e.g., "65000:100")
+    - Type 1: IP:nn (IPv4 address + 2-byte number, e.g., "192.0.2.1:100")
+    - Type 2: ASN:nn (4-byte AS + 2-byte number, e.g., "4200000000:100")
+    """
+
+    name: str = 'route-distinguisher'
+
+    def _parse(self, value: str) -> 'RouteDistinguisher':
+        from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+        from struct import pack
+
+        separator = value.find(':')
+        if separator <= 0:
+            raise ValueError(
+                f"'{value}' is not a valid route-distinguisher\n"
+                f"  Expected format: ASN:nn or IP:nn (e.g., '65000:100' or '192.0.2.1:100')"
+            )
+
+        prefix = value[:separator]
+        try:
+            suffix = int(value[separator + 1 :])
+        except ValueError:
+            raise ValueError(f"'{value}' is not a valid route-distinguisher\n" f'  Suffix must be a number') from None
+
+        # Type 1: IPv4:nn (IPv4 address administrator)
+        if '.' in prefix:
+            if suffix >= pow(2, 16):
+                raise ValueError(f'Suffix {suffix} too large for IPv4 RD (max 65535)')
+            try:
+                data_list: list[bytes] = [bytes([0, 1])]
+                data_list.extend([bytes([int(_)]) for _ in prefix.split('.')])
+                data_list.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
+                rtd = b''.join(data_list)
+                return RouteDistinguisher(rtd)
+            except (ValueError, IndexError):
+                raise ValueError(f"'{value}' is not a valid route-distinguisher (invalid IPv4 address)") from None
+
+        # Type 0 or Type 2: ASN:nn
+        try:
+            number = int(prefix)
+        except ValueError:
+            raise ValueError(f"'{value}' is not a valid route-distinguisher (prefix must be ASN or IPv4)") from None
+
+        # Type 0: 2-byte ASN + 4-byte number
+        if number < pow(2, 16) and suffix < pow(2, 32):
+            rtd = bytes([0, 0]) + pack('!H', number) + pack('!L', suffix)
+        # Type 2: 4-byte ASN + 2-byte number
+        elif number < pow(2, 32) and suffix < pow(2, 16):
+            rtd = bytes([0, 2]) + pack('!L', number) + pack('!H', suffix)
+        else:
+            raise ValueError(
+                f"'{value}' is not a valid route-distinguisher\n" f'  ASN and suffix out of range for RD formats'
+            )
+
+        return RouteDistinguisher(rtd)
+
+    def to_schema(self) -> dict[str, Any]:
+        return {
+            'type': 'string',
+            'pattern': r'^(\d+:\d+|\d+\.\d+\.\d+\.\d+:\d+)$',
+            'examples': ['65000:100', '192.0.2.1:100', '4200000000:100'],
+        }
+
+    def describe(self) -> str:
+        return 'route-distinguisher (ASN:nn or IP:nn)'
+
+
+@dataclass
+class RouteTargetValidator(Validator['ExtendedCommunity']):
+    """Validates Route Target extended community values.
+
+    Supports three formats:
+    - target:ASN:nn (2-byte AS, e.g., "target:65000:100" or "65000:100")
+    - target:IP:nn (IPv4 address, e.g., "target:192.0.2.1:100" or "192.0.2.1:100")
+    - target:ASN:nn (4-byte AS, e.g., "target:4200000000:100" or "4200000000:100")
+
+    The "target:" prefix is optional - if omitted, it's assumed.
+    """
+
+    name: str = 'route-target'
+
+    def _parse(self, value: str) -> 'ExtendedCommunity':
+        from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+        from struct import pack
+
+        # Strip optional 'target:' prefix
+        if value.startswith('target:'):
+            value = value[7:]
+
+        parts = value.split(':')
+        if len(parts) != 2:
+            raise ValueError(
+                f"'{value}' is not a valid route-target\n"
+                f"  Expected format: ASN:nn or IP:nn (e.g., '65000:100' or '192.0.2.1:100')\n"
+                f"  Optional 'target:' prefix is supported"
+            )
+
+        prefix, suffix_str = parts
+        try:
+            suffix = int(suffix_str)
+        except ValueError:
+            raise ValueError(f"'{value}' is not a valid route-target (suffix must be a number)") from None
+
+        # IPv4:nn format (Type 1)
+        if '.' in prefix:
+            from exabgp.protocol.ip import IPv4
+
+            if suffix >= pow(2, 16):
+                raise ValueError(f'Suffix {suffix} too large for IPv4 route-target (max 65535)')
+            try:
+                community_bytes = pack('!2s4sH', bytes([0x01, 0x02]), IPv4.pton(prefix), suffix)
+                return ExtendedCommunity.unpack_attribute(community_bytes, None)
+            except (ValueError, OSError):
+                raise ValueError(f"'{value}' is not a valid route-target (invalid IPv4 address)") from None
+
+        # ASN:nn format (Type 0 or Type 2)
+        try:
+            asn = int(prefix)
+        except ValueError:
+            raise ValueError(f"'{value}' is not a valid route-target (prefix must be ASN or IPv4)") from None
+
+        # Type 0: 2-byte ASN + 4-byte number
+        if asn < pow(2, 16) and suffix < pow(2, 32):
+            community_bytes = pack('!2sHL', bytes([0x00, 0x02]), asn, suffix)
+        # Type 2: 4-byte ASN + 2-byte number
+        elif asn < pow(2, 32) and suffix < pow(2, 16):
+            community_bytes = pack('!2sLH', bytes([0x02, 0x02]), asn, suffix)
+        else:
+            raise ValueError(
+                f"'{value}' is not a valid route-target\n" f'  ASN and suffix out of range for route-target formats'
+            )
+
+        return ExtendedCommunity.unpack_attribute(community_bytes, None)
+
+    def to_schema(self) -> dict[str, Any]:
+        return {
+            'type': 'string',
+            'pattern': r'^(target:)?(\d+:\d+|\d+\.\d+\.\d+\.\d+:\d+)$',
+            'examples': ['target:65000:100', '65000:100', '192.0.2.1:100', 'target:4200000000:100'],
+        }
+
+    def describe(self) -> str:
+        return 'route-target (ASN:nn or IP:nn)'
 
 
 @dataclass
@@ -1159,10 +1347,11 @@ def _build_validator_factories() -> dict['ValueType', Callable[[], Validator[Any
         ),
         ValueType.AS_PATH: lambda: LegacyParserValidator(parser_func=_get_as_path_parser(), name='as-path'),
         ValueType.AGGREGATOR: lambda: LegacyParserValidator(parser_func=_get_aggregator_parser(), name='aggregator'),
-        # Simple marker types (TODO: dedicated validators)
-        ValueType.RD: lambda: StringValidator(),
-        ValueType.RT: lambda: StringValidator(),
-        ValueType.ATOMIC_AGGREGATE: lambda: BooleanValidator(),
+        # Route Distinguisher and Route Target with dedicated validators
+        ValueType.RD: lambda: RouteDistinguisherValidator(),
+        ValueType.RT: lambda: RouteTargetValidator(),
+        # Atomic-aggregate is a presence flag (no value needed)
+        ValueType.ATOMIC_AGGREGATE: lambda: FlagValidator(),
     }
 
 

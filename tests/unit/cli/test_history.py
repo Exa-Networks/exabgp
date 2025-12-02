@@ -14,7 +14,6 @@ Tests:
 
 import json
 import os
-import tempfile
 import time
 from pathlib import Path
 
@@ -113,9 +112,11 @@ class TestHistoryTracker:
     def test_enabled_by_default(self, monkeypatch, tmp_path):
         """Test that tracker is enabled by default."""
         monkeypatch.setenv('exabgp_cli_history', 'true')
+
         # Mock path to avoid filesystem issues
         def mock_get_path(self):
             return tmp_path / 'test_history.json'
+
         monkeypatch.setattr(HistoryTracker, '_get_history_path', mock_get_path)
         tracker = HistoryTracker()
         assert tracker.enabled
@@ -125,7 +126,7 @@ class TestHistoryTracker:
         for value in ['false', 'False', '0', 'no', 'off']:
             monkeypatch.setenv('exabgp_cli_history', value)
             tracker = HistoryTracker()
-            assert not tracker.enabled, f"Should be disabled for value: {value}"
+            assert not tracker.enabled, f'Should be disabled for value: {value}'
 
     def test_record_command_disabled(self, tracker_disabled):
         """Test that disabled tracker doesn't record commands."""
@@ -418,7 +419,7 @@ class TestHistoryTracker:
         # Main file should exist and be valid
         assert temp_history_file.exists()
         with open(temp_history_file) as f:
-            data = json.load(f)  # Should not raise
+            _ = json.load(f)  # Should not raise
 
 
 class TestIntegration:

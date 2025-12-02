@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from exabgp.reactor.api.command.command import Command
 from exabgp.reactor.api.command.limit import match_neighbors
 from exabgp.reactor.api.command.limit import extract_neighbors
+from exabgp.reactor.api.error import format_api_error
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import Family

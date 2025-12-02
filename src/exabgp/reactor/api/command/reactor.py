@@ -150,6 +150,33 @@ def reset(self: Command, reactor: Reactor, service: str, line: str, use_json: bo
     return True
 
 
+@Command.register('queue-status', False, json_support=True)
+def queue_status(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+    """Display write queue status for all API processes.
+
+    Returns queue size (items and bytes) for each process.
+    Useful for monitoring backpressure and diagnosing slow API clients.
+    """
+    stats = reactor.processes.get_queue_stats()
+
+    if use_json:
+        reactor.processes.write(service, json.dumps(stats))
+    else:
+        # Text format: process: N items (M bytes)
+        if not stats:
+            reactor.processes.write(service, 'no queued messages')
+        else:
+            lines = []
+            for process_name, process_stats in sorted(stats.items()):
+                items = process_stats['items']
+                bytes_count = process_stats['bytes']
+                lines.append(f'{process_name}: {items} items ({bytes_count} bytes)')
+            reactor.processes.write(service, '\n'.join(lines))
+
+    reactor.processes.answer_done(service)
+    return True
+
+
 @Command.register('crash', json_support=True)
 def crash(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     async def callback() -> None:

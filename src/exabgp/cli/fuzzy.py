@@ -326,23 +326,23 @@ def print_benchmark_results(stats: dict[str, float]) -> None:
     Args:
         stats: Statistics dict from benchmark_fuzzy_matching()
     """
-    print(f"\nFuzzy Matching Performance Benchmark")
-    print(f"=====================================")
+    print('\nFuzzy Matching Performance Benchmark')
+    print('=====================================')
     print(f"Candidates: {stats['num_candidates']}")
     print(f"Trials:     {stats['num_trials']} × 12 queries = {stats['num_trials'] * 12} total")
-    print(f"\nLatency Statistics:")
+    print('\nLatency Statistics:')
     print(f"  Min:  {stats['min_ms']:6.2f} ms")
     print(f"  P50:  {stats['p50_ms']:6.2f} ms")
     print(f"  Avg:  {stats['avg_ms']:6.2f} ms")
     print(f"  P95:  {stats['p95_ms']:6.2f} ms")
     print(f"  P99:  {stats['p99_ms']:6.2f} ms")
     print(f"  Max:  {stats['max_ms']:6.2f} ms")
-    print(f"\nTarget:     <100 ms (P99)")
+    print('\nTarget:     <100 ms (P99)')
     print(f"Status:     {'✅ PASS' if stats['p99_ms'] < 100 else '❌ FAIL'}")
 
 
 if __name__ == '__main__':
     # Run benchmark when executed directly
-    print("Running fuzzy matching performance benchmark...")
+    print('Running fuzzy matching performance benchmark...')
     stats = benchmark_fuzzy_matching(num_candidates=200, num_trials=100)
     print_benchmark_results(stats)
