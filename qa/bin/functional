@@ -1428,6 +1428,7 @@ class EncodingTests(Tests):
             'exabgp_api_cli=false',
             'exabgp_debug_rotate=true',
             'exabgp_debug_configuration=true',
+            f'exabgp_api_socketname=exabgp-test-{actual_port}',  # Unique socket per test
         ]
         confs = ' '.join(test.conf['confs'])
         return f'env {" ".join(env_parts)} {Path.EXABGP} -d -p {confs}'
@@ -1450,6 +1451,7 @@ class EncodingTests(Tests):
                     'exabgp_debug_configuration=true',
                     "exabgp_tcp_bind=''",
                     'exabgp_tcp_port=%d' % test.conf['port'],
+                    f'exabgp_api_socketname=exabgp-test-{test.conf["port"]}',  # Unique socket per test
                     'INTERPRETER=%s' % INTERPRETER,
                 ]
             ),
