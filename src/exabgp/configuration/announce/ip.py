@@ -18,19 +18,19 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.inet import INET
-from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, LeafList, ValueType
+from exabgp.configuration.schema import RouteBuilder, Leaf, LeafList, ValueType
+from exabgp.configuration.validator import RouteBuilderValidator
 
 from exabgp.configuration.static.parser import prefix
 
-# from exabgp.configuration.static.parser import inet
+# Legacy parser imports - kept for backward compatibility with files that
+# extend AnnounceIP.known (e.g., mvpn.py). New code should use schema validators.
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import next_hop
 from exabgp.configuration.static.parser import origin
@@ -52,9 +52,12 @@ from exabgp.configuration.static.parser import withdraw
 
 
 class AnnounceIP(ParseAnnounce):
-    # Schema definition for IP route announcements
-    schema = Container(
+    # Schema definition for IP route announcements using RouteBuilder
+    # RouteBuilder handles the token loop that was previously in ip() function
+    schema = RouteBuilder(
         description='IP route announcement',
+        nlri_factory=INET,
+        prefix_parser=prefix,
         children={
             'next-hop': Leaf(
                 type=ValueType.NEXT_HOP,
@@ -174,6 +177,8 @@ class AnnounceIP(ParseAnnounce):
 
     syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
+    # Legacy dicts - kept for backward compatibility with files that extend
+    # AnnounceIP (e.g., mvpn.py). New code should use RouteBuilder schema.
     known = {
         'attribute': attribute,
         'next-hop': next_hop,
@@ -245,76 +250,46 @@ class AnnounceIP(ParseAnnounce):
         return True
 
 
-def ip(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
-    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
-    ipmask = prefix(tokeniser)
+def _build_route(
+    tokeniser: Tokeniser,
+    schema: RouteBuilder,
+    afi: AFI,
+    safi: SAFI,
+    check_func: callable | None = None,
+) -> list[Change]:
+    """Build route(s) using RouteBuilderValidator.
 
-    nlri = INET(afi, safi, nlri_action)
-    nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
+    Args:
+        tokeniser: Token stream with route configuration
+        schema: RouteBuilder schema to use
+        afi: Address family identifier
+        safi: Subsequent address family identifier
+        check_func: Optional validation function to call on each change
 
-    change = Change(nlri, Attributes())
+    Returns:
+        List of Change objects
+    """
+    validator = RouteBuilderValidator(
+        schema=schema,
+        afi=afi,
+        safi=safi,
+        action_type=Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW,
+    )
+    changes = validator.validate(tokeniser)
 
-    while True:
-        command = tokeniser()
+    if check_func:
+        for change in changes:
+            if not check_func(change, afi):
+                raise ValueError('invalid announcement (missing next-hop ?)')
 
-        if not command:
-            break
-
-        command_action = AnnounceIP.action.get(command, '')
-
-        if command_action == 'attribute-add':
-            change.attributes.add(AnnounceIP.known[command](tokeniser))
-        elif command_action == 'nlri-set':
-            change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))
-        elif command_action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceIP.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
-            change.attributes.add(attribute)
-        else:
-            raise ValueError('unknown command "{}"'.format(command))
-
-    if not AnnounceIP.check(change, afi):
-        raise ValueError('invalid announcement (missing next-hop ?)')
-
-    return [change]
-
-
-def ip_multicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
-    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
-    ipmask = prefix(tokeniser)
-
-    nlri = INET(afi, safi, nlri_action)
-    nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
-
-    change = Change(nlri, Attributes())
-
-    while True:
-        command = tokeniser()
-
-        if not command:
-            break
-
-        command_action = AnnounceIP.action.get(command, '')
-
-        if command_action == 'attribute-add':
-            change.attributes.add(AnnounceIP.known[command](tokeniser))
-        elif command_action == 'nlri-set':
-            change.nlri.assign(AnnounceIP.assign[command], AnnounceIP.known[command](tokeniser))
-        elif command_action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnounceIP.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
-            change.attributes.add(attribute)
-        else:
-            raise ValueError('unknown command "{}"'.format(command))
-
-    return [change]
+    return changes
 
 
 @ParseAnnounce.register('multicast', 'extend-name', 'ipv4')
 def multicast_v4(tokeniser: Tokeniser) -> list[Change]:
-    return ip_multicast(tokeniser, AFI.ipv4, SAFI.multicast)
+    return _build_route(tokeniser, AnnounceIP.schema, AFI.ipv4, SAFI.multicast)
 
 
 @ParseAnnounce.register('multicast', 'extend-name', 'ipv6')
 def multicast_v6(tokeniser: Tokeniser) -> list[Change]:
-    return ip_multicast(tokeniser, AFI.ipv6, SAFI.multicast)
+    return _build_route(tokeniser, AnnounceIP.schema, AFI.ipv6, SAFI.multicast)

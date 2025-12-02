@@ -1,4 +1,4 @@
-"""announce/label.py
+"""announce/path.py
 
 Created by Thomas Mangin on 2017-07-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -10,31 +10,32 @@ from __future__ import annotations
 
 from exabgp.rib.change import Change
 
-from exabgp.bgp.message import Action
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.inet import INET
-from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.configuration.announce import ParseAnnounce
-from exabgp.configuration.announce.ip import AnnounceIP
+from exabgp.configuration.announce.ip import AnnounceIP, _build_route
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import RouteBuilder, Leaf, ValueType
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.parser import path_information
 
 
 class AnnouncePath(AnnounceIP):
-    # Schema extends AnnounceIP with path-information
-    schema = Container(
+    # Schema extends AnnounceIP with path-information using RouteBuilder
+    schema = RouteBuilder(
         description='IP route announcement with path information',
+        nlri_factory=INET,
+        prefix_parser=prefix,
+        assign={
+            'path-information': 'path_info',
+        },
         children={
             **AnnounceIP.schema.children,
             'path-information': Leaf(
@@ -51,6 +52,8 @@ class AnnouncePath(AnnounceIP):
 
     syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
+    # Legacy dicts - kept for backward compatibility with files that extend
+    # AnnouncePath (e.g., label.py). New code should use RouteBuilder schema.
     known = dict(
         AnnounceIP.known,
         **{
@@ -89,45 +92,11 @@ class AnnouncePath(AnnounceIP):
         return True
 
 
-def ip_unicast(tokeniser: Tokeniser, afi: AFI, safi: SAFI) -> list[Change]:
-    nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
-    ipmask = prefix(tokeniser)
-
-    nlri = INET(afi, safi, nlri_action)
-    nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
-
-    change = Change(nlri, Attributes())
-
-    while True:
-        command = tokeniser()
-
-        if not command:
-            break
-
-        command_action = AnnouncePath.action.get(command, '')
-
-        if command_action == 'attribute-add':
-            change.attributes.add(AnnouncePath.known[command](tokeniser))
-        elif command_action == 'nlri-set':
-            change.nlri.assign(AnnouncePath.assign[command], AnnouncePath.known[command](tokeniser))
-        elif command_action == 'nexthop-and-attribute':
-            nexthop, attribute = AnnouncePath.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
-            change.attributes.add(attribute)
-        else:
-            raise ValueError('unknown command "{}"'.format(command))
-
-    if not AnnouncePath.check(change, afi):
-        raise ValueError('invalid announcement (missing next-hop ?)')
-
-    return [change]
-
-
 @ParseAnnounce.register('unicast', 'extend-name', 'ipv4')
 def unicast_v4(tokeniser: Tokeniser) -> list[Change]:
-    return ip_unicast(tokeniser, AFI.ipv4, SAFI.unicast)
+    return _build_route(tokeniser, AnnouncePath.schema, AFI.ipv4, SAFI.unicast, AnnouncePath.check)
 
 
 @ParseAnnounce.register('unicast', 'extend-name', 'ipv6')
 def unicast_v6(tokeniser: Tokeniser) -> list[Change]:
-    return ip_unicast(tokeniser, AFI.ipv6, SAFI.unicast)
+    return _build_route(tokeniser, AnnouncePath.schema, AFI.ipv6, SAFI.unicast, AnnouncePath.check)

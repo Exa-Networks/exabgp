@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.operational.parser import asm
 from exabgp.configuration.operational.parser import adm
@@ -22,6 +23,7 @@ from exabgp.configuration.operational.parser import lpcp
 
 class ParseOperational(Section):
     # Schema definition for operational messages
+    # Validators wrap existing parser functions to maintain backward compatibility
     schema = Container(
         description='Operational messages configuration',
         children={
@@ -29,67 +31,57 @@ class ParseOperational(Section):
                 type=ValueType.STRING,
                 description='Advisory State Message',
                 action='append-name',
+                validator=LegacyParserValidator(parser_func=asm, name='asm'),
             ),
             'adm': Leaf(
                 type=ValueType.STRING,
                 description='Advisory Dump Message',
                 action='append-name',
+                validator=LegacyParserValidator(parser_func=adm, name='adm'),
             ),
             'rpcq': Leaf(
                 type=ValueType.STRING,
                 description='Reachable Prefix Count Query',
                 action='append-name',
+                validator=LegacyParserValidator(parser_func=rpcq, name='rpcq'),
             ),
             'rpcp': Leaf(
                 type=ValueType.STRING,
                 description='Reachable Prefix Count Reply',
                 action='append-name',
+                validator=LegacyParserValidator(parser_func=rpcp, name='rpcp'),
             ),
             'apcq': Leaf(
                 type=ValueType.STRING,
                 description='Adj-RIB-Out Prefix Count Query',
                 action='append-name',
+                validator=LegacyParserValidator(parser_func=apcq, name='apcq'),
             ),
             'apcp': Leaf(
                 type=ValueType.STRING,
                 description='Adj-RIB-Out Prefix Count Reply',
                 action='append-name',
+                validator=LegacyParserValidator(parser_func=apcp, name='apcp'),
             ),
             'lpcq': Leaf(
                 type=ValueType.STRING,
                 description='Local Prefix Count Query',
                 action='append-name',
+                validator=LegacyParserValidator(parser_func=lpcq, name='lpcq'),
             ),
             'lpcp': Leaf(
                 type=ValueType.STRING,
                 description='Local Prefix Count Reply',
                 action='append-name',
+                validator=LegacyParserValidator(parser_func=lpcp, name='lpcp'),
             ),
         },
     )
     syntax = 'syntax:\n'
 
-    known = {
-        'asm': asm,
-        'adm': adm,
-        'rpcq': rpcq,
-        'rpcp': rpcp,
-        'apcq': apcq,
-        'apcp': apcp,
-        'lpcq': lpcq,
-        'lpcp': lpcp,
-    }
-
-    action = {
-        'asm': 'append-name',
-        'adm': 'append-name',
-        'rpcq': 'append-name',
-        'rpcp': 'append-name',
-        'apcq': 'append-name',
-        'apcp': 'append-name',
-        'lpcq': 'append-name',
-        'lpcp': 'append-name',
-    }
+    # Empty - all entries handled by schema validators
+    known: dict = {}
+    action: dict = {}
 
     name = 'operational'
 

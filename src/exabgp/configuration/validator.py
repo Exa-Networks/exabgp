@@ -630,6 +630,311 @@ class LegacyParserValidator(Validator[Any]):
 
 
 # =============================================================================
+# Extended Validators for Complex Objects
+# =============================================================================
+
+
+@dataclass
+class TupleValidator(Validator[tuple[Any, ...]]):
+    """Converts SAFI strings to (AFI, SAFI) or (AFI, SAFI, AFI) tuples.
+
+    Used by TupleLeaf for family/nexthop sections.
+
+    Example:
+        >>> v = TupleValidator(
+        ...     conversion_map={'ipv4': {'unicast': (AFI.ipv4, SAFI.unicast)}},
+        ...     afi_context='ipv4',
+        ... )
+        >>> v.validate_string('unicast')
+        (AFI.ipv4, SAFI.unicast)
+    """
+
+    name: str = 'tuple'
+    conversion_map: dict[str, dict[str, tuple[Any, ...]]] = field(default_factory=dict)
+    afi_context: str = ''
+
+    def _parse(self, value: str) -> tuple[Any, ...]:
+        if not self.conversion_map:
+            raise ValueError('No conversion map configured')
+
+        safi_map = self.conversion_map.get(self.afi_context)
+        if not safi_map:
+            raise ValueError(f"Unknown AFI context: '{self.afi_context}'")
+
+        result = safi_map.get(value.lower())
+        if not result:
+            valid = ', '.join(sorted(safi_map.keys()))
+            raise ValueError(f"'{value}' is not valid for {self.afi_context}\n  Valid options: {valid}")
+
+        return result
+
+    def with_context(self, afi: str, conversion_map: dict[str, dict[str, tuple[Any, ...]]]) -> 'TupleValidator':
+        """Return validator configured for specific AFI context."""
+        new = deepcopy(self)
+        new.afi_context = afi
+        new.conversion_map = conversion_map
+        return new
+
+    def to_schema(self) -> dict[str, Any]:
+        if self.afi_context and self.conversion_map:
+            safi_map = self.conversion_map.get(self.afi_context, {})
+            return {'type': 'string', 'enum': list(safi_map.keys())}
+        return {'type': 'string'}
+
+
+@dataclass
+class NextHopTupleValidator(Validator[tuple[Any, Any, Any]]):
+    """Validates nexthop configuration returning (AFI, SAFI, NextHop-AFI) tuples.
+
+    Parses two tokens: SAFI then NextHop-AFI, and returns a 3-tuple.
+    Used for nexthop section where alternate next-hop AFI is specified.
+
+    Example:
+        >>> v = NextHopTupleValidator(
+        ...     afi='ipv4',
+        ...     valid_safis=['unicast', 'multicast'],
+        ...     valid_nhafis=['ipv6'],
+        ... )
+        >>> v.validate(tokeniser)  # tokens: "unicast ipv6"
+        (AFI.ipv4, SAFI.unicast, AFI.ipv6)
+    """
+
+    name: str = 'nexthop-tuple'
+    afi: str = ''
+    valid_safis: list[str] = field(default_factory=list)
+    valid_nhafis: list[str] = field(default_factory=list)
+
+    def _parse(self, value: str) -> tuple[Any, Any, Any]:
+        """Not used directly - uses validate() with tokeniser for 2-token parsing."""
+        raise NotImplementedError('NextHopTupleValidator uses validate() directly')
+
+    def validate(self, tokeniser: 'Tokeniser') -> tuple[Any, Any, Any]:
+        """Parse SAFI and NextHop-AFI tokens, return 3-tuple."""
+        from exabgp.protocol.family import AFI as AFIEnum, SAFI as SAFIEnum
+
+        safi = tokeniser().lower()
+        if safi not in self.valid_safis:
+            valid = ', '.join(self.valid_safis)
+            raise ValueError(f"'{safi}' is not a valid SAFI for {self.afi}\n  Valid options: {valid}")
+
+        nhafi = tokeniser().lower()
+        if nhafi not in self.valid_nhafis:
+            valid = ', '.join(self.valid_nhafis)
+            raise ValueError(f"'{nhafi}' is not a valid next-hop AFI\n  Valid options: {valid}")
+
+        return (AFIEnum.fromString(self.afi), SAFIEnum.fromString(safi), AFIEnum.fromString(nhafi))
+
+    def to_schema(self) -> dict[str, Any]:
+        return {'type': 'string', 'format': 'nexthop-tuple'}
+
+
+@dataclass
+class StatefulValidator(Validator[T]):
+    """Wraps another validator with deduplication tracking.
+
+    Used by ParseFamily and ParseNextHop to prevent duplicate AFI/SAFI entries.
+    The `seen` set is a reference to the section's _seen attribute, allowing
+    state to persist across multiple parse calls.
+
+    Example:
+        >>> seen = set()
+        >>> inner = TupleValidator(...)
+        >>> v = StatefulValidator(inner=inner, seen=seen)
+        >>> v.validate(tokeniser)  # First call succeeds
+        >>> v.validate(tokeniser)  # Second call with same value raises ValueError
+    """
+
+    name: str = 'stateful'
+    inner: Validator[T] | None = None
+    seen: set[T] = field(default_factory=set)
+
+    def _parse(self, value: str) -> T:
+        """Not used directly - delegates to inner validator."""
+        if self.inner is None:
+            raise ValueError('No inner validator configured')
+        return self.inner._parse(value)
+
+    def validate(self, tokeniser: 'Tokeniser') -> T:
+        """Validate and check for duplicates."""
+        if self.inner is None:
+            raise ValueError('No inner validator configured')
+
+        result = self.inner.validate(tokeniser)
+
+        if result in self.seen:
+            raise ValueError(f'Duplicate entry: {result}')
+
+        self.seen.add(result)
+        return result
+
+    def validate_string(self, value: str) -> T:
+        """Validate string and check for duplicates."""
+        if self.inner is None:
+            raise ValueError('No inner validator configured')
+
+        result = self.inner.validate_string(value)
+
+        if result in self.seen:
+            raise ValueError(f'Duplicate entry: {result}')
+
+        self.seen.add(result)
+        return result
+
+    def to_schema(self) -> dict[str, Any]:
+        if self.inner:
+            return self.inner.to_schema()
+        return {'type': 'string'}
+
+
+@dataclass
+class CompositeValidator(Validator[Any]):
+    """Parses key-value pairs and constructs objects.
+
+    Used by CompositeLeaf for operational messages that parse patterns like:
+        asm afi 1 safi 1 advisory "message"
+
+    Example:
+        >>> v = CompositeValidator(
+        ...     parameters=['afi', 'safi', 'advisory'],
+        ...     factory=Advisory.ASM,
+        ...     converters={'afi': AFI.value, 'safi': SAFI.value},
+        ... )
+    """
+
+    name: str = 'composite'
+    parameters: list[str] = field(default_factory=list)
+    factory: Callable[..., Any] | None = None
+    converters: dict[str, Callable[[str], Any]] = field(default_factory=dict)
+
+    def _parse(self, value: str) -> Any:
+        """Not used directly - uses validate() with tokeniser."""
+        raise NotImplementedError('CompositeValidator uses validate() directly')
+
+    def validate(self, tokeniser: 'Tokeniser') -> Any:
+        """Parse key-value pairs and construct object."""
+        if not self.parameters:
+            raise ValueError('No parameters configured')
+
+        data: dict[str, Any] = {}
+        for param in self.parameters:
+            key = tokeniser()
+            if key.lower() != param:
+                raise ValueError(f"Expected '{param}', got '{key}'")
+
+            value = tokeniser()
+            converter = self.converters.get(param)
+            if converter:
+                try:
+                    data[param] = converter(value)
+                except (ValueError, KeyError) as e:
+                    raise ValueError(f'Invalid value for {param}: {value}') from e
+            else:
+                data[param] = value
+
+        if self.factory:
+            return self.factory(**data)
+        return data
+
+    def to_schema(self) -> dict[str, Any]:
+        return {'type': 'object', 'format': self.name}
+
+
+@dataclass
+class RouteBuilderValidator(Validator[list[Any]]):
+    """Builds Change objects from route syntax.
+
+    Used by RouteBuilder to replace custom ip() and vpls() functions.
+    Implements the token loop that builds NLRI + Attributes from sub-commands.
+
+    This validator is typically created by the Section when processing
+    a RouteBuilder schema, configured with the AFI/SAFI context.
+    """
+
+    name: str = 'route-builder'
+    schema: Any = None  # RouteBuilder instance
+    afi: Any = None  # AFI enum
+    safi: Any = None  # SAFI enum
+    action_type: Any = None  # Action.ANNOUNCE or Action.WITHDRAW
+
+    def _parse(self, value: str) -> list[Any]:
+        """Not used directly - uses validate() with tokeniser."""
+        raise NotImplementedError('RouteBuilderValidator uses validate() directly')
+
+    def validate(self, tokeniser: 'Tokeniser') -> list[Any]:
+        """Build Change objects from route syntax."""
+        if self.schema is None:
+            raise ValueError('No schema configured')
+
+        from exabgp.rib.change import Change
+        from exabgp.bgp.message.update.attribute import Attributes
+        from exabgp.bgp.message.update.nlri.cidr import CIDR
+
+        # Parse prefix using schema's prefix_parser
+        if self.schema.prefix_parser:
+            ipmask = self.schema.prefix_parser(tokeniser)
+        else:
+            raise ValueError('No prefix parser configured')
+
+        # Create NLRI and Change
+        if self.schema.nlri_factory is None:
+            raise ValueError('No NLRI factory configured')
+
+        nlri = self.schema.nlri_factory(self.afi, self.safi, self.action_type)
+        nlri.cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
+        change = Change(nlri, Attributes())
+
+        # Process sub-commands from schema
+        from exabgp.configuration.schema import Leaf, LeafList
+
+        while True:
+            command = tokeniser()
+            if not command:
+                break
+
+            child = self.schema.children.get(command)
+            if child is None:
+                valid = ', '.join(sorted(self.schema.children.keys()))
+                raise ValueError(f"Unknown command '{command}'\n  Valid options: {valid}")
+
+            # Get validator and parse value
+            if isinstance(child, (Leaf, LeafList)):
+                validator = child.get_validator()
+                if validator is None:
+                    raise ValueError(f"No validator for '{command}'")
+                value = validator.validate(tokeniser)
+                action = child.action
+
+                # Apply action
+                self._apply_action(change, command, action, value)
+
+        return [change]
+
+    def _apply_action(self, change: Any, command: str, action: str, value: Any) -> None:
+        """Apply parsed value to Change object based on action."""
+        if action == 'attribute-add':
+            change.attributes.add(value)
+        elif action == 'nexthop-and-attribute':
+            ip, attribute = value
+            if ip:
+                change.nlri.nexthop = ip
+            if attribute:
+                change.attributes.add(attribute)
+        elif action == 'nlri-set':
+            field_name = self.schema.assign.get(command, command)
+            change.nlri.assign(field_name, value)
+        elif action == 'nlri-nexthop':
+            change.nlri.nexthop = value
+        elif action == 'set-command':
+            # Store as attribute on change for later processing
+            setattr(change, command.replace('-', '_'), value)
+        else:
+            raise ValueError(f"Unknown action '{action}' for command '{command}'")
+
+    def to_schema(self) -> dict[str, Any]:
+        return {'type': 'array', 'items': {'type': 'object'}}
+
+
+# =============================================================================
 # ValueType → Validator Registry
 # =============================================================================
 
