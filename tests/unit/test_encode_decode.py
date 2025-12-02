@@ -29,6 +29,10 @@ class TestEncodeCommand(unittest.TestCase):
     def setUp(self):
         # Silence logging during tests
         log.silence()
+        # Clear RIB cache to prevent pollution from other tests
+        from exabgp.rib import RIB
+
+        RIB._cache.clear()
 
     def test_encode_basic_ipv4_route(self):
         """Test encoding a basic IPv4 route."""
@@ -351,6 +355,10 @@ class TestEncodeDecodeRoundTrip(unittest.TestCase):
 
     def setUp(self):
         log.silence()
+        # Clear RIB cache to prevent pollution from other tests
+        from exabgp.rib import RIB
+
+        RIB._cache.clear()
 
     def test_roundtrip_basic_ipv4(self):
         """Test that encode output can be decoded back."""
