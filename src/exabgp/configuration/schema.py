@@ -233,8 +233,97 @@ class Container:
     children: dict[str, Leaf | LeafList | Container] = field(default_factory=dict)
 
 
+# =============================================================================
+# Extended Schema Types for Complex Objects
+# =============================================================================
+
+
+@dataclass
+class TupleLeaf(Leaf):
+    """Leaf that returns tuples using a conversion map.
+
+    Used for family/nexthop commands that return (AFI, SAFI) or (AFI, SAFI, AFI).
+    The conversion_map maps AFI context to SAFI choices to tuple values.
+
+    Example:
+        TupleLeaf(
+            type=ValueType.ENUMERATION,
+            choices=['unicast', 'multicast', ...],
+            conversion_map={'ipv4': {'unicast': (AFI.ipv4, SAFI.unicast), ...}},
+            afi_context='ipv4',
+            track_duplicates=True,
+        )
+
+    Attributes:
+        conversion_map: Dict mapping AFI → SAFI → tuple result
+        afi_context: The AFI context for this leaf (set by command keyword)
+        track_duplicates: Whether to track seen values for deduplication
+    """
+
+    conversion_map: dict[str, dict[str, tuple[Any, ...]]] | None = None
+    afi_context: str = ''
+    track_duplicates: bool = False
+
+
+@dataclass
+class CompositeLeaf(Leaf):
+    """Leaf that constructs objects from multiple tokens.
+
+    Used for operational messages that parse patterns like:
+        asm afi ipv4 safi unicast advisory "message"
+
+    The validator parses key-value pairs and calls the result_factory.
+
+    Example:
+        CompositeLeaf(
+            parameters=['afi', 'safi', 'advisory'],
+            result_factory=Advisory.ASM,
+            action='append-name',
+        )
+
+    Attributes:
+        parameters: List of parameter names to parse in order
+        result_factory: Callable to create the result object
+        converters: Optional dict mapping parameter names to converter functions
+    """
+
+    parameters: list[str] = field(default_factory=list)
+    result_factory: Callable[..., Any] | None = None
+    converters: dict[str, Callable[[str], Any]] | None = None
+
+
+@dataclass
+class RouteBuilder(Container):
+    """Container that builds Change objects from child commands.
+
+    Replaces custom ip() and vpls() functions with schema-driven route building.
+    The nlri_factory creates the NLRI, prefix_parser parses the prefix,
+    and children define the attribute/nlri sub-commands.
+
+    Example:
+        RouteBuilder(
+            nlri_factory=INET,
+            prefix_parser=prefix,
+            children={
+                'next-hop': Leaf(type=ValueType.NEXT_HOP, action='nexthop-and-attribute'),
+                'origin': Leaf(type=ValueType.ORIGIN, action='attribute-add'),
+                ...
+            },
+        )
+
+    Attributes:
+        nlri_factory: Callable to create NLRI object (e.g., INET, VPLS)
+        prefix_parser: Callable to parse the prefix/route target
+        assign: Dict mapping command names to NLRI field names for nlri-set actions
+    """
+
+    nlri_factory: Callable[..., Any] | None = None
+    prefix_parser: Callable[..., Any] | None = None
+    assign: dict[str, str] = field(default_factory=dict)
+
+
 # Type alias for schema elements
-SchemaElement = Leaf | LeafList | Container
+SchemaElement = Leaf | LeafList | Container | TupleLeaf | CompositeLeaf | RouteBuilder
 
 
 @dataclass

@@ -119,13 +119,28 @@ class Section(Error):
     def post(self) -> bool:
         return True
 
+    def _get_stateful_validator(self, command: str) -> 'Validator[Any] | None':
+        """Get a stateful validator for commands requiring instance state.
+
+        Override in subclasses (like ParseFamily, ParseNextHop) to inject
+        instance-level state (e.g., _seen set for deduplication) into validators.
+
+        Args:
+            command: The command name being parsed
+
+        Returns:
+            StatefulValidator wrapping the schema validator, or None to use default
+        """
+        return None
+
     def parse(self, name: str, command: str) -> bool:  # noqa: C901
         """Parse a command and apply its action.
 
         Parser lookup priority:
         1. self.known dict (explicit registration) - backwards compatible
-        2. Schema validator (auto-generated from Leaf/LeafList)
-        3. Error if neither found
+        2. Stateful validator (from _get_stateful_validator hook)
+        3. Schema validator (auto-generated from Leaf/LeafList)
+        4. Error if none found
         """
         identifier = command if command in self.known else (self.name, command)
 
@@ -137,12 +152,16 @@ class Section(Error):
                 else:
                     insert = self.known[identifier](self.parser.tokeniser)
             else:
-                # Priority 2: Try schema validator
-                validator = self._validator_from_schema(command)
+                # Priority 2: Try stateful validator (for sections with deduplication)
+                validator = self._get_stateful_validator(command)
+
+                # Priority 3: Try schema validator
+                if validator is None:
+                    validator = self._validator_from_schema(command)
                 if validator is not None:
                     insert = validator.validate(self.parser.tokeniser)
                 else:
-                    # Priority 3: Unknown command - show suggestions
+                    # Priority 4: Unknown command - show suggestions
                     simple_options = sorted([k for k in self.known if isinstance(k, str)])
                     suggestions = _find_similar(command, simple_options)
 
