@@ -16,6 +16,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 from exabgp.configuration.flow.match import ParseFlowMatch
 from exabgp.configuration.flow.then import ParseFlowThen
@@ -32,6 +33,30 @@ from exabgp.logger import log, lazymsg
 
 
 class ParseFlowRoute(Section):
+    # Schema definition for FlowSpec route
+    schema = Container(
+        description='FlowSpec route definition',
+        children={
+            'rd': Leaf(
+                type=ValueType.RD,
+                description='Route distinguisher',
+                action='nlri-set',
+            ),
+            'route-distinguisher': Leaf(
+                type=ValueType.RD,
+                description='Route distinguisher (alias for rd)',
+                action='nlri-set',
+            ),
+            'next-hop': Leaf(
+                type=ValueType.NEXT_HOP,
+                description='Next-hop for redirect-to-nexthop',
+                action='nlri-nexthop',
+            ),
+            'match': Container(description='FlowSpec match criteria'),
+            'scope': Container(description='FlowSpec scope'),
+            'then': Container(description='FlowSpec actions'),
+        },
+    )
     syntax: str = (
         'route give-me-a-name {{\n'
         '  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n'

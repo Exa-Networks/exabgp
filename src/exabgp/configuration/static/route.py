@@ -28,6 +28,7 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.rib.change import Change
 
 from exabgp.configuration.core import Section
+from exabgp.configuration.schema import Container, Leaf, LeafList, ValueType
 
 # from exabgp.configuration.static.parser import inet
 from exabgp.configuration.static.parser import mpls
@@ -62,6 +63,134 @@ def pack_int(afi: AFI, integer: int) -> bytes:
 
 
 class ParseStaticRoute(Section):
+    # Schema definition for static route attributes
+    schema = Container(
+        description='Static route configuration',
+        children={
+            'next-hop': Leaf(
+                type=ValueType.NEXT_HOP,
+                description='Next-hop IP address or "self"',
+                action='nexthop-and-attribute',
+            ),
+            'path-information': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Path information (path ID for ADD-PATH)',
+                action='nlri-set',
+            ),
+            'rd': Leaf(
+                type=ValueType.RD,
+                description='Route distinguisher',
+                action='nlri-set',
+            ),
+            'route-distinguisher': Leaf(
+                type=ValueType.RD,
+                description='Route distinguisher (alias for rd)',
+                action='nlri-set',
+            ),
+            'label': Leaf(
+                type=ValueType.LABEL,
+                description='MPLS label stack',
+                action='nlri-set',
+            ),
+            'bgp-prefix-sid': Leaf(
+                type=ValueType.STRING,
+                description='BGP Prefix-SID attribute',
+                action='attribute-add',
+            ),
+            'bgp-prefix-sid-srv6': Leaf(
+                type=ValueType.STRING,
+                description='BGP Prefix-SID SRv6 attribute',
+                action='attribute-add',
+            ),
+            'attribute': Leaf(
+                type=ValueType.HEX_STRING,
+                description='Generic BGP attribute in hex format',
+                action='attribute-add',
+            ),
+            'origin': Leaf(
+                type=ValueType.ORIGIN,
+                description='BGP origin attribute',
+                choices=['igp', 'egp', 'incomplete'],
+                action='attribute-add',
+            ),
+            'med': Leaf(
+                type=ValueType.MED,
+                description='Multi-exit discriminator',
+                action='attribute-add',
+            ),
+            'as-path': LeafList(
+                type=ValueType.AS_PATH,
+                description='AS path',
+                action='attribute-add',
+            ),
+            'local-preference': Leaf(
+                type=ValueType.LOCAL_PREF,
+                description='Local preference',
+                action='attribute-add',
+            ),
+            'atomic-aggregate': Leaf(
+                type=ValueType.ATOMIC_AGGREGATE,
+                description='Atomic aggregate flag',
+                action='attribute-add',
+            ),
+            'aggregator': Leaf(
+                type=ValueType.AGGREGATOR,
+                description='Aggregator (AS number and IP)',
+                action='attribute-add',
+            ),
+            'originator-id': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Originator ID (route reflector)',
+                action='attribute-add',
+            ),
+            'cluster-list': LeafList(
+                type=ValueType.IP_ADDRESS,
+                description='Cluster list (route reflector)',
+                action='attribute-add',
+            ),
+            'community': LeafList(
+                type=ValueType.COMMUNITY,
+                description='Standard BGP communities',
+                action='attribute-add',
+            ),
+            'large-community': LeafList(
+                type=ValueType.LARGE_COMMUNITY,
+                description='Large BGP communities',
+                action='attribute-add',
+            ),
+            'extended-community': LeafList(
+                type=ValueType.EXTENDED_COMMUNITY,
+                description='Extended BGP communities',
+                action='attribute-add',
+            ),
+            'aigp': Leaf(
+                type=ValueType.INTEGER,
+                description='Accumulated IGP metric',
+                action='attribute-add',
+            ),
+            'name': Leaf(
+                type=ValueType.STRING,
+                description='Route name/mnemonic',
+                action='attribute-add',
+            ),
+            'split': Leaf(
+                type=ValueType.INTEGER,
+                description='Split prefix into smaller prefixes',
+                action='attribute-add',
+            ),
+            'watchdog': Leaf(
+                type=ValueType.STRING,
+                description='Watchdog name for route withdrawal',
+                action='attribute-add',
+            ),
+            'withdraw': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Mark route for withdrawal',
+                action='attribute-add',
+            ),
+        },
+    )
+
     # put next-hop first as it is a requirement atm
     definition = [
         'next-hop <ip>',

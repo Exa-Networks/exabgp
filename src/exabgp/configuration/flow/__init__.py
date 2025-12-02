@@ -15,6 +15,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import Container
 
 from exabgp.configuration.flow.route import ParseFlowRoute
 from exabgp.configuration.flow.route import ParseFlowMatch
@@ -28,6 +29,20 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 class ParseFlow(Section):
+    # Schema definition for FlowSpec section
+    schema = Container(
+        description='FlowSpec rules',
+        children={
+            'route': Container(
+                description='FlowSpec route definition',
+                children={
+                    **ParseFlowMatch.schema.children,
+                    **ParseFlowThen.schema.children,
+                    **ParseFlowScope.schema.children,
+                },
+            ),
+        },
+    )
     parts: str = ';\\n  '.join(ParseFlowRoute.syntax.split('\\n'))
     syntax: str = f'flow {{\n  {parts}}}'
 

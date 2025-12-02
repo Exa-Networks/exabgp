@@ -19,6 +19,9 @@ from exabgp.configuration.neighbor import ParseNeighbor
 
 
 class ParseTemplateNeighbor(Section):
+    # Schema is same as ParseNeighbor (template has same options)
+    schema = ParseNeighbor.schema
+
     syntax = 'neighbor {\n   <neighbor commands>\n}'
 
     known = ParseNeighbor.known

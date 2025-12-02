@@ -7,13 +7,16 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, TypeVar, TYPE_CHECKING
 from string import ascii_letters
 from string import digits
 
 from exabgp.configuration.core.error import Error
 from exabgp.configuration.core.scope import Scope
 from exabgp.configuration.core.parser import Parser
+
+if TYPE_CHECKING:
+    from exabgp.configuration.schema import Container, Completion
 
 F = TypeVar('F', bound=Callable[..., Any])
 
@@ -177,3 +180,46 @@ class Section(Error):
             return self.error.set(str(exc))
 
         return True
+
+    # Schema-based completion methods
+
+    schema: 'Container | None' = None  # Override in subclasses with schema definitions
+
+    @classmethod
+    def get_schema_completions(cls) -> list['Completion']:
+        """Get completions from this section's schema.
+
+        Returns:
+            List of Completion objects for commands and subsections.
+            Empty list if no schema defined.
+        """
+        if cls.schema is None:
+            return []
+
+        from exabgp.configuration.schema import get_completions
+
+        return get_completions(cls.schema, [])
+
+    @classmethod
+    def get_schema_value_completions(cls, command: str, partial: str = '') -> list[str]:
+        """Get value completions for an enumeration command.
+
+        Args:
+            command: The command name
+            partial: Partial value typed so far
+
+        Returns:
+            List of matching value strings.
+            Empty list if command not found or not an enumeration.
+        """
+        if cls.schema is None:
+            return []
+
+        from exabgp.configuration.schema import get_value_completions
+
+        return get_value_completions(cls.schema, [command], partial)
+
+    @classmethod
+    def has_schema(cls) -> bool:
+        """Check if this section has a schema defined."""
+        return cls.schema is not None

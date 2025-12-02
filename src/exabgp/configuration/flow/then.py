@@ -13,6 +13,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.schema import Container, Leaf, LeafList, ValueType
 
 from exabgp.configuration.flow.parser import accept
 from exabgp.configuration.flow.parser import discard
@@ -30,6 +31,73 @@ from exabgp.configuration.static.parser import extended_community
 
 
 class ParseFlowThen(Section):
+    # Schema definition for FlowSpec actions
+    schema = Container(
+        description='FlowSpec actions to apply',
+        children={
+            'accept': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Accept matching traffic',
+                action='nop',
+            ),
+            'discard': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Discard matching traffic',
+                action='attribute-add',
+            ),
+            'rate-limit': Leaf(
+                type=ValueType.INTEGER,
+                description='Rate limit in bytes per second',
+                action='attribute-add',
+            ),
+            'redirect': Leaf(
+                type=ValueType.STRING,
+                description='Redirect to VRF (route-target or IP)',
+                action='nexthop-and-attribute',
+            ),
+            'redirect-to-nexthop': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Redirect to next-hop',
+                action='attribute-add',
+            ),
+            'redirect-to-nexthop-ietf': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Redirect to next-hop (IETF format)',
+                action='attribute-add',
+            ),
+            'copy': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Copy to IP address',
+                action='nexthop-and-attribute',
+            ),
+            'mark': Leaf(
+                type=ValueType.INTEGER,
+                description='Set DSCP marking',
+                action='attribute-add',
+            ),
+            'action': Leaf(
+                type=ValueType.ENUMERATION,
+                description='Traffic action',
+                choices=['sample', 'terminal', 'sample-terminal'],
+                action='attribute-add',
+            ),
+            'community': LeafList(
+                type=ValueType.COMMUNITY,
+                description='Standard BGP communities',
+                action='attribute-add',
+            ),
+            'large-community': LeafList(
+                type=ValueType.LARGE_COMMUNITY,
+                description='Large BGP communities',
+                action='attribute-add',
+            ),
+            'extended-community': LeafList(
+                type=ValueType.EXTENDED_COMMUNITY,
+                description='Extended BGP communities',
+                action='attribute-add',
+            ),
+        },
+    )
     definition: list[str] = [
         'accept',
         'discard',

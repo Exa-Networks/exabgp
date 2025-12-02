@@ -20,6 +20,7 @@ from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.configuration.core import Section
 from exabgp.configuration.parser import boolean
 from exabgp.configuration.parser import string
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 
 def addpath(tokeniser: 'Tokeniser') -> int:
@@ -71,6 +72,65 @@ def gracefulrestart(tokeniser: 'Tokeniser', default: int | bool) -> int | bool:
 
 class ParseCapability(Section):
     TTL_SECURITY = 255
+
+    # Schema definition for BGP capabilities
+    schema = Container(
+        description='BGP capabilities to negotiate with the peer',
+        children={
+            'nexthop': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Extended next-hop capability',
+                default=True,
+            ),
+            'add-path': Leaf(
+                type=ValueType.ENUMERATION,
+                description='ADD-PATH capability mode',
+                choices=['disable', 'receive', 'send', 'send/receive'],
+            ),
+            'asn4': Leaf(
+                type=ValueType.BOOLEAN,
+                description='4-byte AS number capability',
+                default=True,
+            ),
+            'graceful-restart': Leaf(
+                type=ValueType.INTEGER,
+                description='Graceful restart time in seconds (0 to use hold-time, or "disable")',
+                default=0,
+                min_value=0,
+                max_value=4095,
+            ),
+            'multi-session': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Multi-session capability',
+                default=True,
+            ),
+            'operational': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Operational capability for advisory messages',
+                default=True,
+            ),
+            'route-refresh': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Route refresh capability',
+                default=True,
+            ),
+            'aigp': Leaf(
+                type=ValueType.BOOLEAN,
+                description='AIGP (Accumulated IGP Metric) capability',
+                default=True,
+            ),
+            'extended-message': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Extended message capability (>4096 bytes)',
+                default=True,
+            ),
+            'software-version': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Software version capability',
+                default=False,
+            ),
+        },
+    )
 
     syntax = (
         'capability {\n'

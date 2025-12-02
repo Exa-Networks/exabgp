@@ -12,6 +12,7 @@ import sys
 import uuid
 
 from exabgp.configuration.core import Section
+from exabgp.configuration.schema import Container, Leaf, ValueType
 
 from exabgp.configuration.process.parser import encoder
 from exabgp.configuration.process.parser import run
@@ -22,6 +23,29 @@ API_PREFIX = 'api-internal-cli'
 
 
 class ParseProcess(Section):
+    # Schema definition for external process configuration
+    schema = Container(
+        description='External process configuration',
+        children={
+            'run': Leaf(
+                type=ValueType.STRING,
+                description='Command to execute (path and arguments)',
+                mandatory=True,
+            ),
+            'encoder': Leaf(
+                type=ValueType.ENUMERATION,
+                description='Message encoding format',
+                choices=['text', 'json'],
+                default='text',
+            ),
+            'respawn': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Restart process if it exits',
+                default=True,
+            ),
+        },
+    )
+
     syntax = 'process name-of-process {\n   run /path/to/command with its args;\n   encoder text|json;\n}'
     known = {
         'encoder': encoder,
