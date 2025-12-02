@@ -46,16 +46,21 @@ class AnnounceMVPN(ParseAnnounce):
         },
     )
 
-    definition = [
+    # Type-specific NLRI syntaxes (not modeled in schema children)
+    _type_definitions = [
         'source-ad source <ip> group <ip> rd <rd>',
         'shared-join rp <ip> group <ip> rd <rd> source-as <source-as>',
         'source-join source <ip> group <ip> rd <rd> source-as <source-as>',
-    ] + AnnounceIP.definition
-
-    syntax = '<safi> { \n   ' + ' ;\n   '.join(definition) + '\n}'
+    ]
 
     name = 'mvpn'
     afi: AFI | None = None
+
+    @property
+    def syntax(self) -> str:
+        """Syntax combining type-specific NLRI syntax with schema-generated attributes."""
+        defn = ' ;\n   '.join(self._type_definitions + self.schema.definition)
+        return f'<safi> {{ \n   {defn}\n}}'
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, parser, scope, error)

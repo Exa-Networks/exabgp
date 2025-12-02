@@ -53,15 +53,14 @@ class AnnounceVPN(ParseAnnounce):
             ),
         },
     )
-    # put next-hop first as it is a requirement atm
-    definition = [
-        '  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n',
-    ] + AnnounceLabel.definition
-
-    syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
     name = 'vpn'
     afi: AFI | None = None
+
+    @property
+    def syntax(self) -> str:
+        """Syntax generated from schema."""
+        return self.schema.syntax
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         ParseAnnounce.__init__(self, parser, scope, error)

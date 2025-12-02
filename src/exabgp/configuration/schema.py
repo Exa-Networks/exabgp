@@ -91,6 +91,7 @@ class Leaf:
         choices: Valid values for ENUMERATION type
         min_value: Minimum value for INTEGER type
         max_value: Maximum value for INTEGER type
+        example: Custom syntax hint (overrides auto-generated from type)
     """
 
     type: ValueType
@@ -103,6 +104,7 @@ class Leaf:
     min_value: int | None = None
     max_value: int | None = None
     validator: 'Validator[Any] | None' = None  # Explicit validator override
+    example: str | None = None  # Custom syntax hint for definition generation
 
     def get_validator(self) -> 'Validator[Any] | None':
         """Get or create validator from type + constraints.
@@ -169,6 +171,7 @@ class LeafList:
         action: How to handle parsed values (typically 'append-command')
         choices: Valid values for ENUMERATION type elements
         validator: Explicit validator override
+        example: Custom syntax hint (overrides auto-generated from type)
     """
 
     type: ValueType
@@ -177,6 +180,7 @@ class LeafList:
     action: str = 'append-command'
     choices: list[str] | None = None
     validator: 'Validator[Any] | None' = None  # Explicit validator override
+    example: str | None = None  # Custom syntax hint for definition generation
 
     def get_validator(self) -> 'Validator[Any] | None':
         """Get or create validator from type + constraints.
@@ -205,6 +209,91 @@ class LeafList:
             v = v.with_choices(self.choices)
 
         return v
+
+
+# =============================================================================
+# Definition Generation: Schema → Syntax Hints
+# =============================================================================
+
+# Map ValueType to syntax hint string for definition generation
+VALUE_TYPE_HINTS: dict[ValueType, str] = {
+    # Network types
+    ValueType.IP_ADDRESS: '<ip>',
+    ValueType.IP_PREFIX: '<ip>/<mask>',
+    ValueType.IP_RANGE: '<ip-range>',
+    ValueType.ASN: '<asn>',
+    ValueType.PORT: '<port>',
+    # BGP-specific types
+    ValueType.COMMUNITY: '<community>',
+    ValueType.EXTENDED_COMMUNITY: '<ext-community>',
+    ValueType.LARGE_COMMUNITY: '<large-community>',
+    ValueType.RD: '<rd>',
+    ValueType.RT: '<rt>',
+    ValueType.NEXT_HOP: '<ip>',
+    # Basic types
+    ValueType.BOOLEAN: '',  # Flag, no value
+    ValueType.STRING: '<string>',
+    ValueType.INTEGER: '<number>',
+    ValueType.ENUMERATION: '<value>',
+    ValueType.HEX_STRING: '<hex>',
+    # Special types
+    ValueType.LABEL: '<label>',
+    ValueType.ORIGIN: 'IGP|EGP|INCOMPLETE',
+    ValueType.MED: '<number>',
+    ValueType.LOCAL_PREF: '<number>',
+    ValueType.ATOMIC_AGGREGATE: '',  # Flag
+    ValueType.AGGREGATOR: '(<asn>:<ip>)',
+    ValueType.AS_PATH: '[ <asn>.. ]',
+    ValueType.BANDWIDTH: '<bandwidth>',
+}
+
+
+def leaf_to_definition(name: str, leaf: Leaf | LeafList) -> str:
+    """Generate definition string from Leaf/LeafList schema.
+
+    Priority:
+    1. Use leaf.example if provided (custom override)
+    2. Use choices joined with | if available
+    3. Use VALUE_TYPE_HINTS mapping
+    4. Fall back to '<value>'
+
+    Args:
+        name: Command name (e.g., 'next-hop', 'origin')
+        leaf: Leaf or LeafList schema element
+
+    Returns:
+        Definition string (e.g., 'next-hop <ip>', 'origin IGP|EGP|INCOMPLETE')
+    """
+    # Priority 1: Custom example override
+    if leaf.example is not None:
+        value_hint = leaf.example
+    # Priority 2: Choices (case-insensitive display as uppercase)
+    elif leaf.choices:
+        value_hint = '|'.join(c.upper() for c in leaf.choices)
+    # Priority 3: ValueType mapping
+    else:
+        value_hint = VALUE_TYPE_HINTS.get(leaf.type, '<value>')
+
+    # For boolean/flag types, no value suffix
+    if value_hint:
+        return f'{name} {value_hint}'
+    return name
+
+
+def schema_to_definition(children: dict[str, Leaf | LeafList | 'Container']) -> list[str]:
+    """Generate definition list from schema children.
+
+    Args:
+        children: Dict of child schema elements
+
+    Returns:
+        List of definition strings for Leaf/LeafList children
+    """
+    result = []
+    for name, child in children.items():
+        if isinstance(child, (Leaf, LeafList)):
+            result.append(leaf_to_definition(name, child))
+    return result
 
 
 @dataclass
@@ -324,6 +413,17 @@ class RouteBuilder(Container):
     assign: dict[str, str] = field(default_factory=dict)
     factory_with_afi: bool = False
 
+    @property
+    def definition(self) -> list[str]:
+        """Generate definition list from schema children."""
+        return schema_to_definition(self.children)
+
+    @property
+    def syntax(self) -> str:
+        """Generate syntax string from definition."""
+        defn = ' ;\n   '.join(self.definition)
+        return f'<safi> <ip>/<netmask> {{ \n   {defn}\n}}'
+
 
 @dataclass
 class TypeSelectorBuilder(Container):
@@ -353,6 +453,11 @@ class TypeSelectorBuilder(Container):
 
     type_factories: dict[str, Callable[..., Any]] = field(default_factory=dict)
     factory_needs_action: bool = False
+
+    @property
+    def definition(self) -> list[str]:
+        """Generate definition list from schema children."""
+        return schema_to_definition(self.children)
 
 
 # Type alias for schema elements

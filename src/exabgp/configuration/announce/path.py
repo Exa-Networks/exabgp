@@ -45,15 +45,15 @@ class AnnouncePath(AnnounceIP):
             ),
         },
     )
-    # put next-hop first as it is a requirement atm
-    definition = [
-        'label <15 bits number>',
-    ] + AnnounceIP.definition
-
-    syntax = '<safi> <ip>/<netmask> { \n   ' + ' ;\n   '.join(definition) + '\n}'
 
     name = 'path'
+
     afi: AFI | None = None
+
+    @property
+    def syntax(self) -> str:
+        """Syntax generated from schema."""
+        return self.schema.syntax
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         AnnounceIP.__init__(self, parser, scope, error)
