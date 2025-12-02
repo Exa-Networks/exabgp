@@ -24,6 +24,7 @@ from exabgp.application import healthcheck
 from exabgp.application import shell
 from exabgp.application import schema
 from exabgp.application import export
+from exabgp.application import example
 
 
 def main() -> int | None:
@@ -142,6 +143,12 @@ def main() -> int | None:
     )
     config_export.set_defaults(func=export.cmdline)
     export.setargs(config_export)
+
+    config_example = config_subparsers.add_parser(
+        'example', help='generate documented configuration example', description=example.__doc__
+    )
+    config_example.set_defaults(func=example.cmdline)
+    example.setargs(config_example)
 
     try:
         cmdarg = parser.parse_args()
