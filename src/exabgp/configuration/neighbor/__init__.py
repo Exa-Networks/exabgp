@@ -54,6 +54,7 @@ class ParseNeighbor(Section):
                 description='IP address or range of the BGP peer',
                 mandatory=True,
                 action='set-command',
+                example='127.0.0.1',
             ),
             'local-address': Leaf(
                 type=ValueType.IP_ADDRESS,
