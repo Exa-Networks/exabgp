@@ -199,7 +199,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
 
     @classmethod
     def make(cls, bgp: bytes) -> tuple[IPrefix4, bytes]:
-        cidr = CIDR(bgp, AFI.ipv4)
+        cidr = CIDR(bgp)
         return cls(cidr.ton(), cidr.mask), bgp[CIDR.size(cidr.mask) + 1 :]
 
 
@@ -232,7 +232,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
     def make(cls, bgp: bytes) -> tuple[IPrefix6, bytes]:
         offset = bgp[1]
         # IPv6 FlowSpec has offset byte between mask and prefix
-        cidr = CIDR(bgp[0:1] + bgp[2:], AFI.ipv6)
+        cidr = CIDR(bgp[0:1] + bgp[2:])
         return cls(cidr.ton(), cidr.mask, offset), bgp[CIDR.size(cidr.mask) + 2 :]
 
 
