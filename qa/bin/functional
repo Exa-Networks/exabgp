@@ -2193,7 +2193,7 @@ class ParsingTests(Tests):
     def dry(self) -> str:
         result: List[str] = []
         for test in self.selected():
-            result.append(' '.join(['>', Path.EXABGP, 'validate', '-nrv', test.conf['fname']]))
+            result.append(' '.join(['>', Path.EXABGP, 'configuration', 'validate', '-nrv', test.conf['fname']]))
         return '\n'.join(result)
 
     def run_selected(self, timeout: int) -> bool:
@@ -2206,7 +2206,7 @@ class ParsingTests(Tests):
 
         for test in self.selected():
             test.running()
-            test.run([Path.EXABGP, 'validate', '-nrv', test.conf['fname']], env=None)
+            test.run([Path.EXABGP, 'configuration', 'validate', '-nrv', test.conf['fname']], env=None)
             time.sleep(0.005)
 
         time.sleep(0.02)
