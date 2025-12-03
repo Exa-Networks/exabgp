@@ -1,7 +1,5 @@
 """Tests for configuration constraints."""
 
-import pytest
-
 from exabgp.configuration.constraints import (
     CONSTRAINTS,
     HOLD_TIME_MIN,

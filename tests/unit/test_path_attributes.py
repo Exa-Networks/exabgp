@@ -92,7 +92,7 @@ def test_origin_igp() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Create ORIGIN IGP
-    origin = Origin(Origin.IGP)
+    origin = Origin.make_origin(Origin.IGP)
 
     # Verify value
     assert origin.origin == Origin.IGP
@@ -117,7 +117,7 @@ def test_origin_egp() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Create ORIGIN EGP
-    origin = Origin(Origin.EGP)
+    origin = Origin.make_origin(Origin.EGP)
 
     # Verify value
     assert origin.origin == Origin.EGP
@@ -138,7 +138,7 @@ def test_origin_incomplete() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Create ORIGIN INCOMPLETE
-    origin = Origin(Origin.INCOMPLETE)
+    origin = Origin.make_origin(Origin.INCOMPLETE)
 
     # Verify value
     assert origin.origin == Origin.INCOMPLETE
@@ -148,6 +148,60 @@ def test_origin_incomplete() -> None:
     packed = origin.pack_attribute(create_negotiated())
     assert len(packed) == 4
     assert packed[3] == 2  # INCOMPLETE value
+
+
+def test_origin_round_trip() -> None:
+    """Test Origin attribute round-trip: create -> pack -> unpack -> verify.
+
+    This test ensures the packed-bytes-first refactoring maintains compatibility.
+    """
+    from exabgp.bgp.message.update.attribute.origin import Origin
+
+    negotiated = create_negotiated()
+
+    for origin_value, expected_str in [
+        (Origin.IGP, 'igp'),
+        (Origin.EGP, 'egp'),
+        (Origin.INCOMPLETE, 'incomplete'),
+    ]:
+        # Create via factory method
+        original = Origin.make_origin(origin_value)
+
+        # Verify semantic value
+        assert original.origin == origin_value
+        assert str(original) == expected_str
+
+        # Pack to bytes
+        packed = original.pack_attribute(negotiated)
+
+        # Verify packed format: flag(1) + type(1) + length(1) + value(1)
+        assert len(packed) == 4
+        assert packed[0] == 0x40  # TRANSITIVE flag
+        assert packed[1] == 1  # ORIGIN type code
+        assert packed[2] == 1  # Length (1 byte)
+        assert packed[3] == origin_value  # Value
+
+        # Unpack from bytes (skip header, pass only payload)
+        unpacked = Origin.unpack_attribute(packed[3:], negotiated)
+
+        # Verify round-trip
+        assert unpacked.origin == original.origin
+        assert str(unpacked) == str(original)
+        assert unpacked == original
+
+
+def test_origin_cache_uses_factory() -> None:
+    """Test that Origin cache is populated with factory-created instances."""
+    from exabgp.bgp.message.update.attribute.origin import Origin
+    from exabgp.bgp.message.update.attribute.attribute import Attribute
+
+    # Cache should have entries for all three origin values
+    cache = Attribute.cache.get(Attribute.CODE.ORIGIN, {})
+    assert len(cache) >= 3
+
+    # All cached instances should have correct origin values
+    igp_cached = Origin.make_origin(Origin.IGP)
+    assert igp_cached.origin == Origin.IGP
 
 
 # ==============================================================================

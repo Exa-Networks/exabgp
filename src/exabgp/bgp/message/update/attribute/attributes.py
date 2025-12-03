@@ -206,7 +206,7 @@ class Attributes(dict):
         message = b''
 
         default = {
-            Attribute.CODE.ORIGIN: lambda left, right: Origin(Origin.IGP),
+            Attribute.CODE.ORIGIN: lambda left, right: Origin.make_origin(Origin.IGP),
             Attribute.CODE.AS_PATH: lambda left, right: (
                 ASPath([])
                 if left == right

@@ -189,11 +189,11 @@ def aigp(tokeniser: 'Tokeniser') -> AIGP:
 def origin(tokeniser: 'Tokeniser') -> Origin:
     value = tokeniser().lower()
     if value == 'igp':
-        return Origin(Origin.IGP)
+        return Origin.make_origin(Origin.IGP)
     if value == 'egp':
-        return Origin(Origin.EGP)
+        return Origin.make_origin(Origin.EGP)
     if value == 'incomplete':
-        return Origin(Origin.INCOMPLETE)
+        return Origin.make_origin(Origin.INCOMPLETE)
     raise ValueError(f"'{value}' is not a valid origin\n  Valid options: igp, egp, incomplete")
 
 
