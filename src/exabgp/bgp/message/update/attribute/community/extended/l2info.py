@@ -27,21 +27,37 @@ class L2Info(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0A
 
-    def __init__(self, encaps: int, control: int, mtu: int, reserved: int, community: bytes | None = None) -> None:
-        self.encaps: int = encaps
-        self.control: int = control
-        self.mtu: int = mtu
-        self.reserved: int = reserved
-        # reserved is called preference in draft-ietf-l2vpn-vpls-multihoming-07
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2sBBHH', self._subtype(), encaps, control, mtu, reserved),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_l2info(cls, encaps: int, control: int, mtu: int, reserved: int) -> L2Info:
+        """Create L2Info from semantic values.
+
+        reserved is called preference in draft-ietf-l2vpn-vpls-multihoming-07
+        """
+        packed = pack('!BBBBHH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, encaps, control, mtu, reserved)
+        return cls(packed)
+
+    @property
+    def encaps(self) -> int:
+        return self._packed[2]
+
+    @property
+    def control(self) -> int:
+        return self._packed[3]
+
+    @property
+    def mtu(self) -> int:
+        return unpack('!H', self._packed[4:6])[0]
+
+    @property
+    def reserved(self) -> int:
+        return unpack('!H', self._packed[6:8])[0]
 
     def __repr__(self) -> str:
         return 'l2info:{}:{}:{}:{}'.format(self.encaps, self.control, self.mtu, self.reserved)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> L2Info:
-        encaps, control, mtu, reserved = unpack('!BBHH', data[2:8])
-        return L2Info(encaps, control, mtu, reserved, data[:8])
+        return cls(data[:8])

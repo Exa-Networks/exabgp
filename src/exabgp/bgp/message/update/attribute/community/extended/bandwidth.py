@@ -26,15 +26,26 @@ class Bandwidth(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x40
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x04
 
-    def __init__(self, asn: int, speed: float, community: bytes | None = None) -> None:
-        self.asn: int = asn
-        self.speed: float = speed
-        ExtendedCommunity.__init__(self, community if community is not None else pack('!Hf', asn, speed))
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_bandwidth(cls, asn: int, speed: float) -> Bandwidth:
+        """Create Bandwidth from semantic values."""
+        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, speed)
+        return cls(packed)
+
+    @property
+    def asn(self) -> int:
+        return unpack('!H', self._packed[2:4])[0]
+
+    @property
+    def speed(self) -> float:
+        return unpack('!f', self._packed[4:8])[0]
 
     def __repr__(self) -> str:
         return 'bandwith:%d:%0.f' % (self.asn, self.speed)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> Bandwidth:
-        asn, speed = unpack('!Hf', data[2:8])
-        return Bandwidth(asn, speed, data[:8])
+        return cls(data[:8])

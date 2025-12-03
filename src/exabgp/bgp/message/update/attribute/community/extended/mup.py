@@ -33,13 +33,23 @@ class MUPExtendedCommunity(ExtendedCommunity):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
 
-    def __init__(self, sgid2: int, sgid4: int, transitive: bool = True, community: bytes | None = None) -> None:
-        self.sgid2: int = sgid2
-        self.sgid4: int = sgid4
-        ExtendedCommunity.__init__(
-            self,
-            community if community else pack('!2sHL', self._subtype(transitive), sgid2, sgid4),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_mup(cls, sgid2: int, sgid4: int, transitive: bool = True) -> MUPExtendedCommunity:
+        """Create MUPExtendedCommunity from semantic values."""
+        type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
+        packed = pack('!BBHL', type_byte, cls.COMMUNITY_SUBTYPE, sgid2, sgid4)
+        return cls(packed)
+
+    @property
+    def sgid2(self) -> int:
+        return unpack('!H', self._packed[2:4])[0]
+
+    @property
+    def sgid4(self) -> int:
+        return unpack('!L', self._packed[4:8])[0]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MUPExtendedCommunity):
@@ -58,5 +68,4 @@ class MUPExtendedCommunity(ExtendedCommunity):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> MUPExtendedCommunity:
-        sgid2, sgid4 = unpack('!HL', data[2:8])
-        return MUPExtendedCommunity(sgid2, sgid4, False, data[:8])
+        return cls(data[:8])

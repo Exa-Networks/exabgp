@@ -34,21 +34,29 @@ class TrafficRate(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x06
 
-    def __init__(self, asn: ASN, rate: float, community: bytes | None = None) -> None:
-        self.asn: ASN = asn
-        self.rate: float = rate
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2sHf', self._subtype(), asn, rate),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_traffic_rate(cls, asn: ASN, rate: float) -> TrafficRate:
+        """Create TrafficRate from semantic values."""
+        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, rate)
+        return cls(packed)
+
+    @property
+    def asn(self) -> ASN:
+        return ASN(unpack('!H', self._packed[2:4])[0])
+
+    @property
+    def rate(self) -> float:
+        return unpack('!f', self._packed[4:8])[0]
 
     def __repr__(self) -> str:
         return 'rate-limit:%d' % self.rate
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficRate:
-        asn, rate = unpack('!Hf', data[2:8])
-        return cls(ASN(asn), rate, data[:8])
+        return cls(data[:8])
 
 
 # ================================================================ TrafficAction
@@ -60,24 +68,23 @@ class TrafficAction(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x07
 
-    _sample: ClassVar[dict[bool, int]] = {
-        False: 0x0,
-        True: 0x2,
-    }
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
 
-    _terminal: ClassVar[dict[bool, int]] = {
-        False: 0x0,
-        True: 0x1,
-    }
+    @classmethod
+    def make_traffic_action(cls, sample: bool, terminal: bool) -> TrafficAction:
+        """Create TrafficAction from semantic values."""
+        bitmask = (0x2 if sample else 0x0) | (0x1 if terminal else 0x0)
+        packed = pack('!BBLBB', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, 0, 0, bitmask)
+        return cls(packed)
 
-    def __init__(self, sample: bool, terminal: bool, community: bytes | None = None) -> None:
-        self.sample: bool = sample
-        self.terminal: bool = terminal
-        bitmask = self._sample[sample] | self._terminal[terminal]
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2sLBB', self._subtype(), 0, 0, bitmask),
-        )
+    @property
+    def sample(self) -> bool:
+        return bool(self._packed[7] & 0x02)
+
+    @property
+    def terminal(self) -> bool:
+        return bool(self._packed[7] & 0x01)
 
     def __repr__(self) -> str:
         s = []
@@ -89,10 +96,7 @@ class TrafficAction(ExtendedCommunity):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficAction:
-        (bit,) = unpack('!B', data[7:8])
-        sample = bool(bit & 0x02)
-        terminal = bool(bit & 0x01)
-        return cls(sample, terminal, data[:8])
+        return cls(data[:8])
 
 
 # ============================================================== TrafficRedirect
@@ -104,21 +108,29 @@ class TrafficRedirect(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x08
 
-    def __init__(self, asn: ASN, target: int, community: bytes | None = None) -> None:
-        self.asn: ASN = asn
-        self.target: int = target
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2sHL', self._subtype(), asn, target),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_traffic_redirect(cls, asn: ASN, target: int) -> TrafficRedirect:
+        """Create TrafficRedirect from semantic values."""
+        packed = pack('!BBHL', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, target)
+        return cls(packed)
+
+    @property
+    def asn(self) -> ASN:
+        return ASN(unpack('!H', self._packed[2:4])[0])
+
+    @property
+    def target(self) -> int:
+        return unpack('!L', self._packed[4:8])[0]
 
     def __repr__(self) -> str:
         return 'redirect:{}:{}'.format(self.asn, self.target)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficRedirect:
-        asn, target = unpack('!HL', data[2:8])
-        return cls(ASN(asn), target, data[:8])
+        return cls(data[:8])
 
 
 @ExtendedCommunity.register
@@ -126,21 +138,29 @@ class TrafficRedirectASN4(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x82
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x08
 
-    def __init__(self, asn: ASN4, target: int, community: bytes | None = None) -> None:
-        self.asn: ASN4 = asn
-        self.target: int = target
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2sLH', self._subtype(), asn, target),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_traffic_redirect_asn4(cls, asn: ASN4, target: int) -> TrafficRedirectASN4:
+        """Create TrafficRedirectASN4 from semantic values."""
+        packed = pack('!BBLH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, target)
+        return cls(packed)
+
+    @property
+    def asn(self) -> ASN4:
+        return ASN4(unpack('!L', self._packed[2:6])[0])
+
+    @property
+    def target(self) -> int:
+        return unpack('!H', self._packed[6:8])[0]
 
     def __str__(self) -> str:
         return 'redirect:{}:{}'.format(self.asn, self.target)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficRedirectASN4:
-        asn, target = unpack('!LH', data[2:8])
-        return cls(ASN4(asn), target, data[:8])
+        return cls(data[:8])
 
 
 # ================================================================== TrafficMark
@@ -152,20 +172,25 @@ class TrafficMark(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x09
 
-    def __init__(self, dscp: int, community: bytes | None = None) -> None:
-        self.dscp: int = dscp
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2sLBB', self._subtype(), 0, 0, dscp),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_traffic_mark(cls, dscp: int) -> TrafficMark:
+        """Create TrafficMark from semantic values."""
+        packed = pack('!BBLBB', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, 0, 0, dscp)
+        return cls(packed)
+
+    @property
+    def dscp(self) -> int:
+        return self._packed[7]
 
     def __repr__(self) -> str:
         return 'mark %d' % self.dscp
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficMark:
-        (dscp,) = unpack('!B', data[7:8])
-        return cls(dscp, data[:8])
+        return cls(data[:8])
 
 
 # =============================================================== TrafficNextHopIPv4IETF
@@ -178,13 +203,22 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
 
-    def __init__(self, ip: IPv4, copy: bool, community: bytes | None = None) -> None:
-        self.ip: IPv4 = ip
-        self.copy: bool = copy
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2s4sH', self._subtype(), ip.pack_ip(), 1 if copy else 0),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_traffic_nexthop_ipv4(cls, ip: IPv4, copy: bool) -> TrafficNextHopIPv4IETF:
+        """Create TrafficNextHopIPv4IETF from semantic values."""
+        packed = pack('!BB4sH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, ip.pack_ip(), 1 if copy else 0)
+        return cls(packed)
+
+    @property
+    def ip(self) -> IPv4:
+        return IPv4.ntop(self._packed[2:6])  # type: ignore[return-value]
+
+    @property
+    def copy(self) -> bool:
+        return bool(unpack('!H', self._packed[6:8])[0] & 0x01)
 
     def __repr__(self) -> str:
         return (
@@ -195,8 +229,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficNextHopIPv4IETF:
-        ip, bit = unpack('!4sH', data[2:8])
-        return cls(IPv4.ntop(ip), bool(bit & 0x01), data[:8])  # type: ignore[arg-type]
+        return cls(data[:8])
 
 
 # =============================================================== TrafficNextHopIPv6IETF
@@ -209,13 +242,22 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
 
-    def __init__(self, ip: IPv6, copy: bool, community: bytes | None = None) -> None:
-        self.ip: IPv6 = ip
-        self.copy: bool = copy
-        ExtendedCommunityIPv6.__init__(
-            self,
-            community if community is not None else pack('!2s16sH', self._subtype(), ip.pack_ip(), 1 if copy else 0),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunityIPv6.__init__(self, packed)
+
+    @classmethod
+    def make_traffic_nexthop_ipv6(cls, ip: IPv6, copy: bool) -> TrafficNextHopIPv6IETF:
+        """Create TrafficNextHopIPv6IETF from semantic values."""
+        packed = pack('!BB16sH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, ip.pack_ip(), 1 if copy else 0)
+        return cls(packed)
+
+    @property
+    def ip(self) -> IPv6:
+        return IPv6.ntop(self._packed[2:18])  # type: ignore[return-value]
+
+    @property
+    def copy(self) -> bool:
+        return bool(unpack('!H', self._packed[18:20])[0] & 0x01)
 
     def __repr__(self) -> str:
         return (
@@ -226,8 +268,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficNextHopIPv6IETF:
-        ip, bit = unpack('!16sH', data[2:20])
-        return cls(IPv6.ntop(ip), bool(bit & 0x01), data[:20])  # type: ignore[arg-type]
+        return cls(data[:20])
 
 
 # =============================================================== TrafficNextHopSimpson
@@ -241,20 +282,25 @@ class TrafficNextHopSimpson(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x08
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
 
-    def __init__(self, copy: bool, community: bytes | None = None) -> None:
-        self.copy: bool = copy
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2sLH', self._subtype(), 0, 1 if copy else 0),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_traffic_nexthop_simpson(cls, copy: bool) -> TrafficNextHopSimpson:
+        """Create TrafficNextHopSimpson from semantic values."""
+        packed = pack('!BBLH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, 0, 1 if copy else 0)
+        return cls(packed)
+
+    @property
+    def copy(self) -> bool:
+        return bool(self._packed[7] & 0x01)
 
     def __repr__(self) -> str:
         return 'copy-to-nexthop' if self.copy else 'redirect-to-nexthop'
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficNextHopSimpson:
-        (bit,) = unpack('!B', data[7:8])
-        return cls(bool(bit & 0x01), data[:8])
+        return cls(data[:8])
 
 
 # ============================================================ TrafficRedirectIPv6
@@ -266,25 +312,29 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0B
 
-    def __init__(self, ip: str, asn: int, community: bytes | None = None) -> None:
-        self.ip: str = ip
-        self.asn: int = asn
-        ExtendedCommunityIPv6.__init__(
-            self,
-            (
-                community
-                if community is not None
-                else pack('!BB16sH', 0x00, 0x02, socket.inet_pton(socket.AF_INET6, ip), asn)
-            ),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunityIPv6.__init__(self, packed)
+
+    @classmethod
+    def make_traffic_redirect_ipv6(cls, ip: str, asn: int) -> TrafficRedirectIPv6:
+        """Create TrafficRedirectIPv6 from semantic values."""
+        packed = pack('!BB16sH', 0x00, 0x02, socket.inet_pton(socket.AF_INET6, ip), asn)
+        return cls(packed)
+
+    @property
+    def ip(self) -> str:
+        return socket.inet_ntop(socket.AF_INET6, self._packed[2:18])
+
+    @property
+    def asn(self) -> int:
+        return unpack('!H', self._packed[18:20])[0]
 
     def __str__(self) -> str:
         return 'redirect %s:%d' % (self.ip, self.asn)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> TrafficRedirectIPv6:
-        ip, asn = unpack('!16sH', data[2:11])
-        return cls(socket.inet_ntop(socket.AF_INET6, ip), asn, data[:11])
+        return cls(data[:20])
 
 
 # ============================================================ TrafficRedirectIP

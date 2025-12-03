@@ -25,13 +25,22 @@ class MacMobility(ExtendedCommunity):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
     DESCRIPTION: ClassVar[str] = 'mac-mobility'
 
-    def __init__(self, sequence: int, sticky: bool = False, community: bytes | None = None) -> None:
-        self.sequence: int = sequence
-        self.sticky: bool = sticky
-        ExtendedCommunity.__init__(
-            self,
-            community if community else pack('!2sBxI', self._subtype(transitive=True), 1 if sticky else 0, sequence),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_mac_mobility(cls, sequence: int, sticky: bool = False) -> MacMobility:
+        """Create MacMobility from semantic values."""
+        packed = pack('!BBBxI', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, 1 if sticky else 0, sequence)
+        return cls(packed)
+
+    @property
+    def sequence(self) -> int:
+        return unpack('!I', self._packed[4:8])[0]
+
+    @property
+    def sticky(self) -> bool:
+        return self._packed[2] == 1
 
     def __hash__(self) -> int:
         return hash((self.sticky, self.sequence))
@@ -44,5 +53,4 @@ class MacMobility(ExtendedCommunity):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> MacMobility:
-        flags, seq = unpack('!BxI', data[2:8])
-        return MacMobility(seq, flags == 1)
+        return cls(data[:8])

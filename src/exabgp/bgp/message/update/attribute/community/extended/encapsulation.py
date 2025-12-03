@@ -51,24 +51,22 @@ class Encapsulation(ExtendedCommunity):
         Type.MPLS_UDP: 'MPLS-in-UDP',
     }
 
-    def __init__(self, tunnel_type: int, community: bytes | None = None) -> None:
-        self.tunnel_type: int = tunnel_type
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2sLH', self._subtype(), 0, self.tunnel_type),
-        )
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_encapsulation(cls, tunnel_type: int) -> Encapsulation:
+        """Create Encapsulation from tunnel type."""
+        packed = pack('!BBLH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, 0, tunnel_type)
+        return cls(packed)
+
+    @property
+    def tunnel_type(self) -> int:
+        return unpack('!H', self._packed[6:8])[0]
 
     def __repr__(self) -> str:
         return 'encap:{}'.format(Encapsulation._string.get(self.tunnel_type, 'encap:UNKNOWN-%d' % self.tunnel_type))
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> Encapsulation:
-        (tunnel,) = unpack('!H', data[6:8])
-        return Encapsulation(tunnel, data[:8])
-
-        # type_  = data[0] & 0x0F
-        # stype = data[1]
-
-        # assert(type_==Encapsulation.COMMUNITY_TYPE)
-        # assert(stype==Encapsulation.COMMUNITY_SUBTYPE)
-        # assert(len(data)==6)
+        return cls(data[:8])

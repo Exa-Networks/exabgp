@@ -32,16 +32,30 @@ class InterfaceSet(ExtendedCommunity):
         3: 'input-output',
     }
 
-    def __init__(self, trans: bool, asn: ASN, target: int, direction: int, community: bytes | None = None) -> None:
-        self.asn: ASN = asn
-        self.target: int = target
-        self.direction: int = direction
-        self._transitive: bool = trans
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_interface_set(cls, asn: ASN, target: int, direction: int, transitive: bool = True) -> InterfaceSet:
+        """Create InterfaceSet from semantic values."""
+        type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
         new_target = (direction << 14) + target
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2sLH', self._subtype(self._transitive), asn, new_target),
-        )
+        packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, asn, new_target)
+        return cls(packed)
+
+    @property
+    def asn(self) -> ASN:
+        return ASN(unpack('!L', self._packed[2:6])[0])
+
+    @property
+    def target(self) -> int:
+        raw_target = unpack('!H', self._packed[6:8])[0]
+        return raw_target & 0x3FFF
+
+    @property
+    def direction(self) -> int:
+        raw_target = unpack('!H', self._packed[6:8])[0]
+        return raw_target >> 14
 
     def __repr__(self) -> str:
         str_direction = self.names.get(self.direction, str(self.direction))
@@ -49,7 +63,4 @@ class InterfaceSet(ExtendedCommunity):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> InterfaceSet:
-        asn, target = unpack('!LH', data[2:8])
-        direction = target >> 14
-        target = target & 0x1FFF
-        return cls(False, ASN(asn), target, direction, data[:8])
+        return cls(data[:8])

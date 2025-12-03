@@ -219,7 +219,7 @@ def test_route_target_asn2_number() -> None:
     # Create RT with 2-byte ASN
     asn = ASN(65000)
     number = 100
-    rt = RouteTargetASN2Number(asn, number, transitive=True)
+    rt = RouteTargetASN2Number.make_route_target(asn, number, transitive=True)
 
     # Verify representation
     assert str(rt) == 'target:65000:100'
@@ -252,7 +252,7 @@ def test_route_target_ip_number() -> None:
     # Create RT with IPv4 address
     ip = '192.0.2.1'
     number = 100
-    rt = RouteTargetIPNumber(ip, number, transitive=True)
+    rt = RouteTargetIPNumber.make_route_target(ip, number, transitive=True)
 
     # Verify representation
     assert str(rt) == 'target:192.0.2.1:100'
@@ -286,7 +286,7 @@ def test_route_target_asn4_number() -> None:
     # Create RT with 4-byte ASN (>65535)
     asn = ASN(4200000000)
     number = 100
-    rt = RouteTargetASN4Number(asn, number, transitive=True)
+    rt = RouteTargetASN4Number.make_route_target(asn, number, transitive=True)
 
     # Verify representation
     assert str(rt) == 'target:4200000000:100'
@@ -318,13 +318,13 @@ def test_route_target_transitive_flag() -> None:
 
     negotiated = create_negotiated()
     # Create transitive RT
-    rt_transitive = RouteTargetASN2Number(ASN(65000), 100, transitive=True)
+    rt_transitive = RouteTargetASN2Number.make_route_target(ASN(65000), 100, transitive=True)
     packed_trans = rt_transitive.pack_attribute(negotiated)
     # Transitive: bit 6 should be 0
     assert (packed_trans[0] & 0x40) == 0x00
 
     # Create non-transitive RT
-    rt_non_transitive = RouteTargetASN2Number(ASN(65000), 100, transitive=False)
+    rt_non_transitive = RouteTargetASN2Number.make_route_target(ASN(65000), 100, transitive=False)
     packed_non_trans = rt_non_transitive.pack_attribute(negotiated)
     # Non-transitive: bit 6 should be 1
     assert (packed_non_trans[0] & 0x40) == 0x40
@@ -371,7 +371,7 @@ def test_route_origin_community() -> None:
     # Create Route Origin
     asn = ASN(65000)
     number = 200
-    ro = OriginASN4Number(asn, number, transitive=True)
+    ro = OriginASN4Number.make_origin(asn, number, transitive=True)
 
     # Verify representation
     assert str(ro) == 'origin:65000:200'
@@ -395,20 +395,18 @@ def test_bandwidth_community() -> None:
     # Create bandwidth community: ASN 65000, 1 Gbps = 125000000 bytes/sec
     asn = 65000
     speed = 125000000.0
-    bw = Bandwidth(asn, speed)
+    bw = Bandwidth.make_bandwidth(asn, speed)
 
     # Verify representation
     assert 'bandwith' in str(bw).lower()  # Note: typo in original code
     assert len(bw) == 8
 
-    # Verify pack/unpack
+    # Verify pack/unpack - now includes type/subtype prefix
     packed = bw.pack_attribute(negotiated)
-    # Bandwidth.pack_attribute(negotiated) returns only the data (ASN + float), not full extended community
-    assert len(packed) == 6
+    assert len(packed) == 8
 
-    # Unpack requires type/subtype prefix
-    full_data = struct.pack('!BB', 0x40, 0x04) + packed
-    unpacked = Bandwidth.unpack_attribute(full_data, create_negotiated())
+    # Unpack and verify
+    unpacked = Bandwidth.unpack_attribute(packed, create_negotiated())
     assert unpacked.asn == asn
     # Float comparison with small tolerance
     assert abs(unpacked.speed - speed) < 1.0
@@ -425,7 +423,7 @@ def test_encapsulation_community_vxlan() -> None:
 
     negotiated = create_negotiated()
     # Create VXLAN encapsulation
-    encap = Encapsulation(Encapsulation.Type.VXLAN)
+    encap = Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN)
 
     # Verify representation
     assert str(encap) == 'encap:VXLAN'
@@ -462,7 +460,7 @@ def test_encapsulation_community_types() -> None:
     ]
 
     for tunnel_type, expected_str in test_cases:
-        encap = Encapsulation(tunnel_type)
+        encap = Encapsulation.make_encapsulation(tunnel_type)
         assert str(encap) == expected_str
 
         # Verify round-trip
@@ -477,16 +475,18 @@ def test_traffic_engineering_community() -> None:
     Used for QoS and traffic engineering policies.
     """
     from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
+    from exabgp.bgp.message.open.asn import ASN
 
     negotiated = create_negotiated()
     # Create traffic rate community
     # ASN 0 + 4-byte float rate (bytes/sec)
     asn = 0
     rate = 1000000.0  # 1 Mbps
-    tr = TrafficRate(asn, rate)
+    tr = TrafficRate.make_traffic_rate(ASN(asn), rate)
 
     # Verify basic properties
     assert len(tr) == 8
+    assert tr.rate == rate
 
     # Verify pack
     packed = tr.pack_attribute(negotiated)
@@ -508,11 +508,14 @@ def test_l2info_community() -> None:
     reserved = 0
 
     encaps = 1
-    l2info = L2Info(encaps, control, mtu, reserved)
+    l2info = L2Info.make_l2info(encaps, control, mtu, reserved)
 
     # Verify basic properties
     assert len(l2info) == 8
     assert l2info.mtu == mtu
+    assert l2info.encaps == encaps
+    assert l2info.control == control
+    assert l2info.reserved == reserved
 
     # Verify pack/unpack
     packed = l2info.pack_attribute(negotiated)
@@ -533,7 +536,7 @@ def test_mac_mobility_community() -> None:
     flags = 0x01  # Static flag
     sequence = 5
 
-    mac_mob = MacMobility(sequence, sticky=bool(flags))
+    mac_mob = MacMobility.make_mac_mobility(sequence, sticky=bool(flags))
 
     # Verify basic properties
     assert len(mac_mob) == 8
@@ -559,7 +562,7 @@ def test_flowspec_redirect_community() -> None:
     asn = ASN(65000)
     vrf_id = 999
 
-    redirect = RouteTargetASN2Number(asn, vrf_id, transitive=True)
+    redirect = RouteTargetASN2Number.make_route_target(asn, vrf_id, transitive=True)
 
     # Verify it's a valid RT that can be used for redirect
     assert len(redirect) == 8
@@ -593,11 +596,13 @@ def test_mup_community() -> None:
     # Architecture Segment Identifier (ASI) and Segment Identifier (SI)
     sgid2 = 100
     sgid4 = 200
-    mup = MUPExtendedCommunity(sgid2, sgid4, transitive=True)
+    mup = MUPExtendedCommunity.make_mup(sgid2, sgid4, transitive=True)
 
     # Verify basic properties
     assert len(mup) == 8
     assert str(mup) == 'mup:100:200'
+    assert mup.sgid2 == sgid2
+    assert mup.sgid4 == sgid4
 
 
 # ==============================================================================
@@ -721,7 +726,7 @@ def test_mixed_community_types() -> None:
     std_communities = Communities([std_comm1, std_comm2])
 
     # Create extended communities
-    ext_comm1 = RouteTargetASN2Number(ASN(65000), 200, transitive=True)
+    ext_comm1 = RouteTargetASN2Number.make_route_target(ASN(65000), 200, transitive=True)
     ext_communities = ExtendedCommunities([ext_comm1])
 
     # Create large communities
@@ -777,9 +782,9 @@ def test_community_equality() -> None:
     assert comm1a != comm2
 
     # Extended communities
-    rt1a = RouteTargetASN2Number(ASN(65000), 100, transitive=True)
-    rt1b = RouteTargetASN2Number(ASN(65000), 100, transitive=True)
-    rt2 = RouteTargetASN2Number(ASN(65000), 200, transitive=True)
+    rt1a = RouteTargetASN2Number.make_route_target(ASN(65000), 100, transitive=True)
+    rt1b = RouteTargetASN2Number.make_route_target(ASN(65000), 100, transitive=True)
+    rt2 = RouteTargetASN2Number.make_route_target(ASN(65000), 200, transitive=True)
 
     assert rt1a == rt1b
     assert rt1a != rt2

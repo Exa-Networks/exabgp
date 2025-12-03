@@ -462,7 +462,7 @@ class TestNLRIs(unittest.TestCase):
     def test99_RTCCreatePackUnpack(self) -> None:
         """Test pack/unpack for RTC routes"""
 
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, 64512, RouteTarget(64577, 123))
+        nlri = RTC.new(AFI.ipv4, SAFI.rtc, 64512, RouteTarget.make_route_target(64577, 123))
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
@@ -523,16 +523,16 @@ class TestNLRIs(unittest.TestCase):
     def test6_SameAttributesOrderMultivalued(self) -> None:
         atts1 = Attributes()
         eComs1 = ExtendedCommunities()
-        eComs1.communities.append(RouteTarget(64512, 1))
-        eComs1.communities.append(Encapsulation(Encapsulation.Type.VXLAN))
-        eComs1.communities.append(RouteTarget(64512, 2))
+        eComs1.communities.append(RouteTarget.make_route_target(64512, 1))
+        eComs1.communities.append(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
+        eComs1.communities.append(RouteTarget.make_route_target(64512, 2))
         atts1.add(eComs1)
 
         atts2 = Attributes()
         eComs2 = ExtendedCommunities()
-        eComs2.communities.append(RouteTarget(64512, 2))
-        eComs2.communities.append(RouteTarget(64512, 1))
-        eComs2.communities.append(Encapsulation(Encapsulation.Type.VXLAN))
+        eComs2.communities.append(RouteTarget.make_route_target(64512, 2))
+        eComs2.communities.append(RouteTarget.make_route_target(64512, 1))
+        eComs2.communities.append(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
         atts2.add(eComs2)
 
         self.assertEqual(hash(atts1), hash(atts2))
@@ -540,13 +540,13 @@ class TestNLRIs(unittest.TestCase):
 
     def test10_Ecoms(self) -> None:
         eComs1 = ExtendedCommunities()
-        eComs1.communities.append(Encapsulation(Encapsulation.Type.VXLAN))
+        eComs1.communities.append(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
         atts1 = Attributes()
         atts1.add(eComs1)
 
         eComs2 = ExtendedCommunities()
-        eComs2.communities.append(Encapsulation(Encapsulation.Type.VXLAN))
-        eComs2.communities.append(RouteTarget(64512, 1))
+        eComs2.communities.append(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
+        eComs2.communities.append(RouteTarget.make_route_target(64512, 1))
         atts2 = Attributes()
         atts2.add(eComs2)
 
@@ -554,10 +554,10 @@ class TestNLRIs(unittest.TestCase):
         self.assertFalse(atts2.sameValuesAs(atts1))
 
     def test11_RTs(self) -> None:
-        rt1a = RouteTarget(64512, 1)
-        rt1b = RouteTarget(64512, 1)
-        rt3 = RouteTarget(64512, 2)
-        rt4 = RouteTarget(64513, 1)
+        rt1a = RouteTarget.make_route_target(64512, 1)
+        rt1b = RouteTarget.make_route_target(64512, 1)
+        rt3 = RouteTarget.make_route_target(64512, 2)
+        rt4 = RouteTarget.make_route_target(64513, 1)
 
         self.assertEqual(hash(rt1a), hash(rt1b))
         self.assertNotEqual(hash(rt1a), hash(rt3))
@@ -571,7 +571,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(1, len(set([rt1a]).intersection(set([rt1b]))))
 
     def test12_RTRecord(self) -> None:
-        rt = RouteTarget(64512, 22)
+        rt = RouteTarget.make_route_target(64512, 22)
         rt_record = RTRecord.from_rt(rt)
         _ = rt_record
 
