@@ -184,7 +184,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
     cidr: CIDR
 
     def __init__(self, raw: bytes, netmask: int) -> None:
-        self.cidr = CIDR(raw, netmask)
+        self.cidr = CIDR.make_cidr(raw, netmask)
 
     def pack_prefix(self) -> bytes:
         raw = self.cidr.pack_nlri()
@@ -199,8 +199,8 @@ class IPrefix4(IPrefix, IComponent, IPv4):
 
     @classmethod
     def make(cls, bgp: bytes) -> tuple[IPrefix4, bytes]:
-        prefix, mask = CIDR.decode(AFI.ipv4, bgp)
-        return cls(prefix, mask), bgp[CIDR.size(mask) + 1 :]
+        cidr = CIDR.make_from_nlri(AFI.ipv4, bgp)
+        return cls(cidr.ton(), cidr.mask), bgp[CIDR.size(cidr.mask) + 1 :]
 
 
 class IPrefix6(IPrefix, IComponent, IPv6):
@@ -215,7 +215,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
     offset: int
 
     def __init__(self, raw: bytes, netmask: int, offset: int) -> None:
-        self.cidr = CIDR(raw, netmask)
+        self.cidr = CIDR.make_cidr(raw, netmask)
         self.offset = offset
 
     def pack_prefix(self) -> bytes:
@@ -231,8 +231,9 @@ class IPrefix6(IPrefix, IComponent, IPv6):
     @classmethod
     def make(cls, bgp: bytes) -> tuple[IPrefix6, bytes]:
         offset = bgp[1]
-        prefix, mask = CIDR.decode(AFI.ipv6, bgp[0:1] + bgp[2:])
-        return cls(prefix, mask, offset), bgp[CIDR.size(mask) + 2 :]
+        # IPv6 FlowSpec has offset byte between mask and prefix
+        cidr = CIDR.make_from_nlri(AFI.ipv6, bgp[0:1] + bgp[2:])
+        return cls(cidr.ton(), cidr.mask, offset), bgp[CIDR.size(cidr.mask) + 2 :]
 
 
 class IOperation(IComponent):

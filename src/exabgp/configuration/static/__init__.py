@@ -196,7 +196,7 @@ def attributes(tokeniser: Any) -> list[Change]:
         ipmask = prefix(tokeniser)
         # Create new NLRI of same type (nlri is typed as INET, all subclasses share same interface)
         new_cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
-        new_nlri: INET = nlri.__class__(new_cidr, nlri.afi, nlri.safi, Action.UNSET)
+        new_nlri: INET = nlri.__class__.from_cidr(new_cidr, nlri.afi, nlri.safi, Action.UNSET)
         if labels:
             new_nlri.labels = labels
         if rd:

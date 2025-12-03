@@ -33,7 +33,7 @@ class TestRTCCreation:
     def test_create_rtc_with_route_target(self) -> None:
         """Test creating RTC route with route target"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.rtc
@@ -43,7 +43,7 @@ class TestRTCCreation:
 
     def test_create_rtc_wildcard(self) -> None:
         """Test creating wildcard RTC route"""
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), None)
+        nlri = RTC.make_rtc(ASN(0), None)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.rtc
@@ -54,7 +54,7 @@ class TestRTCCreation:
     def test_create_rtc_with_action(self) -> None:
         """Test creating RTC with specific action"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt, action=Action.ANNOUNCE)
+        nlri = RTC.make_rtc(ASN(65000), rt, action=Action.ANNOUNCE)
 
         assert nlri.action == Action.ANNOUNCE
 
@@ -62,7 +62,7 @@ class TestRTCCreation:
         """Test creating RTC with nexthop"""
         rt = RouteTarget.make_route_target(64512, 100)
         nh = IP.create('10.0.0.1')
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt, nexthop=nh)
+        nlri = RTC.make_rtc(ASN(65000), rt, nexthop=nh)
 
         assert nlri.nexthop == nh
 
@@ -84,7 +84,7 @@ class TestRTCPackUnpack:
     def test_pack_unpack_rtc_with_rt(self) -> None:
         """Test pack/unpack roundtrip for RTC with route target"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(
@@ -100,7 +100,7 @@ class TestRTCPackUnpack:
 
     def test_pack_unpack_rtc_wildcard(self) -> None:
         """Test pack/unpack roundtrip for wildcard RTC"""
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), None)
+        nlri = RTC.make_rtc(ASN(0), None)
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(
@@ -115,7 +115,7 @@ class TestRTCPackUnpack:
     def test_pack_unpack_with_action(self) -> None:
         """Test pack/unpack preserves action"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(
@@ -130,7 +130,7 @@ class TestRTCPackUnpack:
 
         for asn in test_asns:
             rt = RouteTarget.make_route_target(64512, 100)
-            nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(asn), rt)
+            nlri = RTC.make_rtc(ASN(asn), rt)
             packed = nlri.pack_nlri(create_negotiated())
             unpacked, leftover = RTC.unpack_nlri(
                 AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -147,7 +147,7 @@ class TestRTCPackUnpack:
         ]
 
         for rt in test_rts:
-            nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+            nlri = RTC.make_rtc(ASN(65000), rt)
             packed = nlri.pack_nlri(create_negotiated())
             unpacked, leftover = RTC.unpack_nlri(
                 AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -159,7 +159,7 @@ class TestRTCPackUnpack:
     def test_unpack_with_leftover_data(self) -> None:
         """Test unpacking RTC with extra data after NLRI"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
         packed = nlri.pack_nlri(create_negotiated()) + b'\x01\x02\x03\x04'
         unpacked, leftover = RTC.unpack_nlri(
@@ -172,7 +172,7 @@ class TestRTCPackUnpack:
     def test_pack_resets_rt_flags(self) -> None:
         """Test that pack_nlri resets extended community flags"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
         packed = nlri.pack_nlri(create_negotiated())
 
@@ -187,7 +187,7 @@ class TestRTCStringRepresentation:
     def test_str_rtc_with_rt(self) -> None:
         """Test string representation with route target"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
         result = str(nlri)
         assert 'rtc' in result
@@ -196,7 +196,7 @@ class TestRTCStringRepresentation:
 
     def test_str_rtc_wildcard(self) -> None:
         """Test string representation for wildcard"""
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), None)
+        nlri = RTC.make_rtc(ASN(0), None)
 
         result = str(nlri)
         assert 'rtc wildcard' in result
@@ -204,13 +204,13 @@ class TestRTCStringRepresentation:
     def test_repr_rtc(self) -> None:
         """Test repr matches str"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
         assert repr(nlri) == str(nlri)
 
     def test_repr_rtc_wildcard(self) -> None:
         """Test repr for wildcard matches str"""
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), None)
+        nlri = RTC.make_rtc(ASN(0), None)
 
         assert repr(nlri) == str(nlri)
 
@@ -221,14 +221,14 @@ class TestRTCLength:
     def test_len_rtc_with_rt(self) -> None:
         """Test length of RTC with route target"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
         # Length should be (4 + 8) * 8 = 96 bits
         assert len(nlri) == 96
 
     def test_len_rtc_wildcard(self) -> None:
         """Test length of wildcard RTC"""
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), None)
+        nlri = RTC.make_rtc(ASN(0), None)
 
         # Wildcard length is 1
         assert len(nlri) == 1
@@ -242,7 +242,7 @@ class TestRTCLength:
         ]
 
         for rt in rts:
-            nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+            nlri = RTC.make_rtc(ASN(65000), rt)
             # All should be same length: (4 + 8) * 8 = 96 bits
             assert len(nlri) == 96
 
@@ -253,7 +253,7 @@ class TestRTCFeedback:
     def test_feedback_with_nexthop_announce(self) -> None:
         """Test feedback when nexthop is set for ANNOUNCE"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt, nexthop=IP.create('10.0.0.1'))
+        nlri = RTC.make_rtc(ASN(65000), rt, nexthop=IP.create('10.0.0.1'))
 
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert feedback == ''
@@ -261,7 +261,7 @@ class TestRTCFeedback:
     def test_feedback_without_nexthop_announce(self) -> None:
         """Test feedback when nexthop is missing (IP.NoNextHop) for ANNOUNCE"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
         # nexthop defaults to IP.NoNextHop
 
         feedback = nlri.feedback(Action.ANNOUNCE)
@@ -270,7 +270,7 @@ class TestRTCFeedback:
     def test_feedback_no_nexthop_withdraw(self) -> None:
         """Test feedback for WITHDRAW action (doesn't require nexthop)"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
         # nexthop defaults to IP.NoNextHop
 
         # WITHDRAW doesn't require nexthop validation
@@ -280,7 +280,7 @@ class TestRTCFeedback:
 
     def test_feedback_wildcard(self) -> None:
         """Test feedback for wildcard RTC"""
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), None)
+        nlri = RTC.make_rtc(ASN(0), None)
         # nexthop defaults to IP.NoNextHop
 
         feedback = nlri.feedback(Action.ANNOUNCE)
@@ -340,7 +340,7 @@ class TestRTCEdgeCases:
     def test_rtc_with_zero_origin(self) -> None:
         """Test RTC with origin ASN 0"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), rt)
+        nlri = RTC.make_rtc(ASN(0), rt)
 
         assert nlri.origin == 0
 
@@ -352,7 +352,7 @@ class TestRTCEdgeCases:
     def test_rtc_with_4byte_asn(self) -> None:
         """Test RTC with 4-byte ASN"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(4200000000), rt)
+        nlri = RTC.make_rtc(ASN(4200000000), rt)
 
         assert nlri.origin == 4200000000
 
@@ -374,7 +374,7 @@ class TestRTCEdgeCases:
     def test_rtc_different_safi_unpack(self) -> None:
         """Test unpacking RTC works with different SAFI in unpack_nlri"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
         packed = nlri.pack_nlri(create_negotiated())
         # The implementation uses the same unpacking regardless of SAFI passed
@@ -391,9 +391,9 @@ class TestRTCMultipleRoutes:
     def test_pack_unpack_multiple_routes(self) -> None:
         """Test packing/unpacking multiple RTC routes in sequence"""
         routes = [
-            RTC.new(AFI.ipv4, SAFI.rtc, ASN(65000), RouteTarget.make_route_target(64512, 100)),
-            RTC.new(AFI.ipv4, SAFI.rtc, ASN(65001), RouteTarget.make_route_target(64513, 200)),
-            RTC.new(AFI.ipv4, SAFI.rtc, ASN(0), None),  # wildcard
+            RTC.make_rtc(ASN(65000), RouteTarget.make_route_target(64512, 100)),
+            RTC.make_rtc(ASN(65001), RouteTarget.make_route_target(64513, 200)),
+            RTC.make_rtc(ASN(0), None),  # wildcard
         ]
 
         # Pack all routes
