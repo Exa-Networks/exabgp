@@ -5,17 +5,27 @@ ExaBGP Complete Test Suite Runner
 Runs all required tests in sequence, exits on first failure.
 Use this instead of running individual test commands.
 
+Usage:
+  ./qa/bin/test_everything           # Run all tests with progress
+  ./qa/bin/test_everything -l        # List available tests
+  ./qa/bin/test_everything unit      # Run single test by name
+  ./qa/bin/test_everything 3         # Run single test by number
+  ./qa/bin/test_everything unit encoding  # Run multiple tests
+
 Exit codes:
   0 - All tests passed
-  N - Test N failed (position in test list)
+  1 - Test failed
+  2 - Invalid arguments
 """
 
+import argparse
+import json
 import os
 import re
-import sys
 import subprocess
+import sys
 import time
-from typing import Tuple, Optional, Callable
+from pathlib import Path
 
 
 class Colors:
@@ -26,6 +36,7 @@ class Colors:
     YELLOW = '\033[93m'
     CYAN = '\033[96m'
     BOLD = '\033[1m'
+    DIM = '\033[2m'
     RESET = '\033[0m'
 
     @classmethod
@@ -36,6 +47,7 @@ class Colors:
         cls.YELLOW = ''
         cls.CYAN = ''
         cls.BOLD = ''
+        cls.DIM = ''
         cls.RESET = ''
 
 
@@ -44,243 +56,277 @@ if not sys.stdout.isatty():
     Colors.disable()
 
 
-def print_header(test_num: int, total: int, message: str) -> None:
-    """Print a test section header"""
-    print(f'\n{Colors.BOLD}{Colors.CYAN}{"=" * 70}{Colors.RESET}')
-    print(f'{Colors.BOLD}{Colors.CYAN}TEST {test_num}/{total}: {message}{Colors.RESET}')
-    print(f'{Colors.BOLD}{Colors.CYAN}{"=" * 70}{Colors.RESET}\n')
+# Default expected times (seconds) for first run
+DEFAULT_TIMES: dict[str, int] = {
+    'ruff-format': 3,
+    'ruff-check': 3,
+    'unit': 15,
+    'config': 2,
+    'no-neighbor': 5,
+    'encode-decode': 3,
+    'decoding': 10,
+    'encoding': 90,
+    'type-ignore': 1,
+}
+
+CACHE_FILE = Path.home() / '.cache' / 'exabgp' / 'test_times.json'
+MAX_HISTORY = 5
 
 
-def print_success(message: str) -> None:
-    """Print success message"""
-    print(f'{Colors.GREEN}✓ {message}{Colors.RESET}')
+def load_timing_cache() -> dict[str, list[float]]:
+    """Load timing history from cache file"""
+    if CACHE_FILE.exists():
+        try:
+            with open(CACHE_FILE) as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {}
 
 
-def print_error(message: str) -> None:
-    """Print error message"""
-    print(f'{Colors.RED}✗ {message}{Colors.RESET}')
+def save_timing_cache(cache: dict[str, list[float]]) -> None:
+    """Save timing history to cache file"""
+    CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(CACHE_FILE, 'w') as f:
+            json.dump(cache, f, indent=2)
+    except OSError:
+        pass  # Non-critical, ignore write failures
 
 
-def print_info(message: str) -> None:
-    """Print info message"""
-    print(f'{Colors.YELLOW}→ {message}{Colors.RESET}')
+def get_expected_time(cache: dict[str, list[float]], test_name: str) -> float:
+    """Get expected time from cache or default"""
+    if test_name in cache and cache[test_name]:
+        return sum(cache[test_name]) / len(cache[test_name])
+    return float(DEFAULT_TIMES.get(test_name, 10))
 
 
-def run_command(cmd: str, env: Optional[dict] = None, shell: bool = True) -> Tuple[int, str, str]:
-    """
-    Run a command and return exit code, stdout, stderr
+def record_time(cache: dict[str, list[float]], test_name: str, elapsed: float) -> None:
+    """Record actual time to cache (keep last N)"""
+    if test_name not in cache:
+        cache[test_name] = []
+    cache[test_name].append(elapsed)
+    cache[test_name] = cache[test_name][-MAX_HISTORY:]
 
-    Args:
-        cmd: Command to run
-        env: Optional environment variables to add
-        shell: Whether to run in shell mode
 
-    Returns:
-        Tuple of (exit_code, stdout, stderr)
-    """
-    # Merge environment
+def format_time(seconds: float) -> str:
+    """Format seconds as human-readable string"""
+    if seconds < 60:
+        return f'{seconds:.1f}s'
+    minutes = int(seconds // 60)
+    secs = seconds % 60
+    return f'{minutes}m{secs:.0f}s'
+
+
+def run_command(cmd: str, env: dict | None = None, shell: bool = True) -> tuple[int, str, str]:
+    """Run a command and return exit code, stdout, stderr"""
     full_env = os.environ.copy()
     if env:
         full_env.update(env)
 
-    # Run command
-    process = subprocess.Popen(
-        cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=full_env, text=True
-    )
-
+    process = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=full_env, text=True)
     stdout, stderr = process.communicate()
     return process.returncode, stdout, stderr
 
 
-def test_ruff_format(test_num: int, total: int) -> bool:
-    """Ruff format check"""
-    returncode, stdout, stderr = run_command('uv run ruff format src tests')
+# Test definitions: (name, command, description)
+# Commands can be a string or list of strings (run sequentially)
+TEST_COMMANDS: dict[str, str | list[str]] = {
+    'ruff-format': 'uv run ruff format src tests',
+    'ruff-check': 'uv run ruff check src qa tests',
+    'unit': 'env exabgp_log_enable=false uv run pytest ./tests/unit/ -q',
+    'config': './sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf',
+    'no-neighbor': './qa/scripts/test_no_neighbor.py',
+    'encode-decode': './qa/scripts/test_encode_decode.py',
+    'decoding': './qa/bin/functional decoding',
+    'encoding': ['killall -9 python 2>/dev/null; sleep 0.5', './qa/bin/functional encoding --quiet'],
+    'type-ignore': './qa/bin/check_type_ignores',
+}
 
-    if returncode != 0:
-        print_header(test_num, total, 'Ruff Format')
-        print_error('Ruff format failed')
-        if stdout:
-            print(stdout)
-        if stderr:
-            print(stderr)
-        return False
+TEST_DESCRIPTIONS: dict[str, str] = {
+    'ruff-format': 'Ruff format check',
+    'ruff-check': 'Ruff lint check',
+    'unit': 'Unit tests (pytest)',
+    'config': 'Configuration validation',
+    'no-neighbor': 'No-neighbor API test',
+    'encode-decode': 'Encode/decode CLI test',
+    'decoding': 'Functional decoding tests',
+    'encoding': 'Functional encoding tests',
+    'type-ignore': 'Type ignore regression check',
+}
 
-    return True
-
-
-def test_ruff_check(test_num: int, total: int) -> bool:
-    """Ruff check"""
-    returncode, stdout, stderr = run_command('uv run ruff check src qa tests')
-
-    if returncode != 0:
-        print_header(test_num, total, 'Ruff Check')
-        print_error('Ruff check failed')
-        if stdout:
-            print(stdout)
-        if stderr:
-            print(stderr)
-        return False
-
-    return True
-
-
-def test_unit_tests(test_num: int, total: int) -> bool:
-    """Unit tests"""
-    returncode, stdout, stderr = run_command('env exabgp_log_enable=false uv run pytest ./tests/unit/ -q', shell=True)
-
-    if returncode != 0:
-        print_header(test_num, total, 'Unit Tests')
-        print_error('Unit tests failed')
-        print(stdout)
-        if stderr:
-            print(stderr)
-        return False
-
-    return True
+# Ordered list of test names
+TEST_ORDER = [
+    'ruff-format',
+    'ruff-check',
+    'unit',
+    'config',
+    'no-neighbor',
+    'encode-decode',
+    'decoding',
+    'encoding',
+    'type-ignore',
+]
 
 
-def test_config_validation(test_num: int, total: int) -> bool:
-    """Configuration validation"""
-    returncode, stdout, stderr = run_command('./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf')
+def run_test(name: str, verbose: bool = False) -> tuple[bool, str, str]:
+    """Run a test by name, return (success, stdout, stderr)"""
+    cmd = TEST_COMMANDS[name]
 
-    if returncode != 0:
-        print_header(test_num, total, 'Configuration Validation')
-        print_error('Configuration validation failed')
-        if stdout:
-            print(stdout)
-        if stderr:
-            print(stderr)
-        return False
+    if isinstance(cmd, list):
+        # Multiple commands - run sequentially
+        all_stdout = []
+        all_stderr = []
+        for c in cmd:
+            if verbose:
+                print(f'{Colors.DIM}  $ {c}{Colors.RESET}')
+            returncode, stdout, stderr = run_command(c)
+            all_stdout.append(stdout)
+            all_stderr.append(stderr)
+            # Don't fail on setup commands (like killall)
+            if returncode != 0 and c == cmd[-1]:
+                return False, '\n'.join(all_stdout), '\n'.join(all_stderr)
+        stdout = '\n'.join(all_stdout)
+        stderr = '\n'.join(all_stderr)
+        returncode = 0
+    else:
+        if verbose:
+            print(f'{Colors.DIM}  $ {cmd}{Colors.RESET}')
+        returncode, stdout, stderr = run_command(cmd)
 
-    return True
+    # Special case: encoding needs 100% pass rate check
+    if name == 'encoding' and returncode == 0:
+        pass_rate_match = re.search(r'100(?:\.\d+)?%', stdout)
+        if not pass_rate_match:
+            return False, stdout, stderr
 
-
-def test_no_neighbor(test_num: int, total: int) -> bool:
-    """No-neighbor API-only mode"""
-    returncode, stdout, stderr = run_command('./qa/scripts/test_no_neighbor.py')
-
-    if returncode != 0:
-        print_header(test_num, total, 'No-Neighbor API Test')
-        print_error('No-neighbor test failed')
-        print(stdout)
-        if stderr:
-            print(stderr)
-        return False
-
-    return True
-
-
-def test_encode_decode(test_num: int, total: int) -> bool:
-    """Encode/decode CLI commands"""
-    returncode, stdout, stderr = run_command('./qa/scripts/test_encode_decode.py')
-
-    if returncode != 0:
-        print_header(test_num, total, 'Encode/Decode CLI Test')
-        print_error('Encode/decode test failed')
-        print(stdout)
-        if stderr:
-            print(stderr)
-        return False
-
-    return True
+    return returncode == 0, stdout, stderr
 
 
-def test_type_ignore_regression(test_num: int, total: int) -> bool:
-    """Type ignore regression check"""
-    returncode, stdout, stderr = run_command('./qa/bin/check_type_ignores')
-
-    if returncode != 0:
-        print_header(test_num, total, 'Type Ignore Regression Check')
-        print_error('Type ignore regression check failed - count increased above baseline')
-        print(stdout)
-        if stderr:
-            print(stderr)
-        return False
-
-    return True
-
-
-def test_functional_encoding(test_num: int, total: int) -> bool:
-    """Functional encoding tests"""
-    # Kill any leftover processes first
-    subprocess.run('killall -9 python 2>/dev/null', shell=True)
-    time.sleep(0.5)
-
-    returncode, stdout, stderr = run_command('./qa/bin/functional encoding --quiet')
-
-    if returncode != 0:
-        print_header(test_num, total, 'Functional Encoding Tests')
-        print_error('Functional encoding tests failed')
-        print(stdout)
-        if stderr:
-            print(stderr)
-        return False
-
-    # Check for 100% pass rate - quiet mode outputs "passed N/N (100.0%)"
-    pass_rate_match = re.search(r'100(?:\.\d+)?%', stdout)
-    if not pass_rate_match:
-        print_header(test_num, total, 'Functional Encoding Tests')
-        print_error('Functional encoding tests did not achieve 100% pass rate')
-        print(stdout)
-        return False
-
-    return True
+def list_tests(cache: dict[str, list[float]], verbose: bool = False) -> None:
+    """Print available tests with expected times"""
+    for i, name in enumerate(TEST_ORDER, 1):
+        expected = get_expected_time(cache, name)
+        desc = TEST_DESCRIPTIONS[name]
+        print(f'  {i}. {name:14} (~{format_time(expected):>5})  {desc}')
+        if verbose:
+            cmd = TEST_COMMANDS[name]
+            if isinstance(cmd, list):
+                for c in cmd:
+                    print(f'{Colors.DIM}      $ {c}{Colors.RESET}')
+            else:
+                print(f'{Colors.DIM}      $ {cmd}{Colors.RESET}')
 
 
-def test_functional_decoding(test_num: int, total: int) -> bool:
-    """Functional decoding tests"""
-    returncode, stdout, stderr = run_command('./qa/bin/functional decoding')
+def resolve_test_selector(selector: str) -> int | None:
+    """Resolve a test selector (name or number) to index, or None if invalid"""
+    # Try as number first
+    try:
+        num = int(selector)
+        if 1 <= num <= len(TEST_ORDER):
+            return num - 1
+    except ValueError:
+        pass
 
-    if returncode != 0:
-        print_header(test_num, total, 'Functional Decoding Tests')
-        print_error('Functional decoding tests failed')
-        print(stdout)
-        if stderr:
-            print(stderr)
-        return False
+    # Try as name
+    for i, name in enumerate(TEST_ORDER):
+        if name == selector:
+            return i
 
-    return True
+    return None
+
+
+def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: bool = False) -> int:
+    """Run selected tests with progress output. Returns exit code."""
+    start_time = time.time()
+    total = len(test_indices)
+
+    for run_num, test_idx in enumerate(test_indices, 1):
+        name = TEST_ORDER[test_idx]
+        desc = TEST_DESCRIPTIONS[name]
+        expected = get_expected_time(cache, name)
+
+        # Print progress line (no newline yet unless verbose)
+        if verbose:
+            print(f'[{run_num}/{total}] {name} (~{format_time(expected)})')
+        else:
+            print(f'[{run_num}/{total}] {name} (~{format_time(expected)}) ... ', end='', flush=True)
+
+        test_start = time.time()
+        success, stdout, stderr = run_test(name, verbose=verbose)
+        elapsed = time.time() - test_start
+
+        # Record timing
+        record_time(cache, name, elapsed)
+
+        if verbose:
+            if success:
+                print(f'{Colors.GREEN}✓{Colors.RESET} {format_time(elapsed)}')
+            else:
+                print(f'{Colors.RED}✗{Colors.RESET} {format_time(elapsed)}')
+        else:
+            if success:
+                print(f'{Colors.GREEN}✓{Colors.RESET} {format_time(elapsed)}')
+            else:
+                print(f'{Colors.RED}✗{Colors.RESET} {format_time(elapsed)}')
+
+        if not success:
+            # Show failure details
+            print(f'\n{Colors.RED}{Colors.BOLD}FAILED: {desc}{Colors.RESET}')
+            if stdout:
+                print(stdout)
+            if stderr:
+                print(stderr)
+            save_timing_cache(cache)
+            return 1
+
+    # All passed
+    total_elapsed = time.time() - start_time
+    save_timing_cache(cache)
+    print(f'{Colors.GREEN}✓ All {total} tests passed in {format_time(total_elapsed)}{Colors.RESET}')
+    return 0
 
 
 def main() -> int:
-    """Run all tests in sequence"""
-    start_time = time.time()
+    """Main entry point"""
+    parser = argparse.ArgumentParser(
+        description='ExaBGP test suite runner',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument('-l', '--list', action='store_true', help='List available tests')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Show commands being run')
+    parser.add_argument('tests', nargs='*', help='Tests to run (name or number)')
 
-    # Run all tests in sequence - functional tests last
-    tests: list[Callable[[int, int], bool]] = [
-        test_ruff_format,
-        test_ruff_check,
-        test_unit_tests,
-        test_config_validation,
-        test_no_neighbor,
-        test_encode_decode,
-        test_functional_decoding,
-        test_functional_encoding,
-        test_type_ignore_regression,
-    ]
+    args = parser.parse_args()
+    cache = load_timing_cache()
 
-    total = len(tests)
-    for i, test_func in enumerate(tests, start=1):
-        success = test_func(i, total)
-        if not success:
-            elapsed = time.time() - start_time
-            print(f'\n{Colors.RED}{Colors.BOLD}FAILED{Colors.RESET} after {elapsed:.1f}s')
-            print(f'{Colors.RED}Exit code: {i}{Colors.RESET}')
-            return i
+    if args.list:
+        list_tests(cache, verbose=args.verbose)
+        return 0
 
-    # All tests passed - single line output
-    elapsed = time.time() - start_time
-    print(f'{Colors.GREEN}✓ All {total} test suites passed in {elapsed:.1f}s{Colors.RESET}')
+    # Determine which tests to run
+    if args.tests:
+        test_indices = []
+        for selector in args.tests:
+            idx = resolve_test_selector(selector)
+            if idx is None:
+                print(f'{Colors.RED}Unknown test: {selector}{Colors.RESET}')
+                print('Use -l to list available tests')
+                return 2
+            test_indices.append(idx)
+    else:
+        # Run all tests
+        test_indices = list(range(len(TEST_ORDER)))
 
-    return 0
+    return run_tests(test_indices, cache, verbose=args.verbose)
 
 
 if __name__ == '__main__':
     try:
         sys.exit(main())
     except KeyboardInterrupt:
-        print(f'\n{Colors.YELLOW}Interrupted by user{Colors.RESET}')
+        print(f'\n{Colors.YELLOW}Interrupted{Colors.RESET}')
         sys.exit(130)
     except Exception as e:
-        print(f'\n{Colors.RED}Unexpected error: {e}{Colors.RESET}')
+        print(f'\n{Colors.RED}Error: {e}{Colors.RESET}')
         sys.exit(255)
