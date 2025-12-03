@@ -15,7 +15,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container
+from exabgp.configuration.schema import Container, Leaf, LeafList
 
 from exabgp.configuration.flow.route import ParseFlowRoute
 from exabgp.configuration.flow.route import ParseFlowMatch
@@ -52,9 +52,20 @@ class ParseFlow(Section):
     known.update(ParseFlowThen.known)
     known.update(ParseFlowScope.known)
 
-    action: dict[str | tuple[Any, ...], str] = dict(ParseFlowMatch.action)
-    action.update(ParseFlowThen.action)
-    action.update(ParseFlowScope.action)
+    # Route schema children for action lookup in route() function
+    _route_schema_children = {
+        **ParseFlowMatch.schema.children,
+        **ParseFlowThen.schema.children,
+        **ParseFlowScope.schema.children,
+    }
+
+    @classmethod
+    def _get_route_action(cls, command: str) -> str | None:
+        """Get action for a flow route command from schema."""
+        child = cls._route_schema_children.get(command)
+        if isinstance(child, (Leaf, LeafList)):
+            return child.action
+        return None
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         Section.__init__(self, parser, scope, error)
@@ -84,7 +95,9 @@ def route(tokeniser: Any) -> list[Change]:
         if not command:
             break
 
-        action: str = ParseFlow.action[command]
+        action = ParseFlow._get_route_action(command)
+        if action is None:
+            raise ValueError(f'flow route: unknown command "{command}"')
 
         if action == 'nlri-add':
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
