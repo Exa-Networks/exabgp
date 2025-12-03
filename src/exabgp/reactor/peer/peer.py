@@ -28,10 +28,11 @@ from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.delay import Delay
-from exabgp.util.enumeration import TriState
 from exabgp.reactor.keepalive import KA
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.protocol import Protocol
+from exabgp.reactor.timing import LoopTimer, timed_async
+from exabgp.util.enumeration import TriState
 
 
 # As we can not know if this is our first start or not, this flag is used to
@@ -451,50 +452,51 @@ class Peer:
 
     async def _establish(self) -> None:
         """Establishes BGP connection using async I/O"""
-        # try to establish the outgoing connection
-        self.fsm.change(FSM.ACTIVE)
+        async with timed_async(f'peer_establish_{self.id()}', warn_threshold_ms=5000):
+            # try to establish the outgoing connection
+            self.fsm.change(FSM.ACTIVE)
 
-        if getenv().bgp.passive:
-            while not self.proto:
-                await asyncio.sleep(0)  # Yield control like _NOP
+            if getenv().bgp.passive:
+                while not self.proto:
+                    await asyncio.sleep(0)  # Yield control like _NOP
 
-        self.fsm.change(FSM.IDLE)
+            self.fsm.change(FSM.IDLE)
 
-        if not self.proto:
-            await self._connect()
-        self.fsm.change(FSM.CONNECT)
-        assert self.proto is not None  # Set by _connect() or handle_connection()
-        assert self.proto.connection is not None
+            if not self.proto:
+                await self._connect()
+            self.fsm.change(FSM.CONNECT)
+            assert self.proto is not None  # Set by _connect() or handle_connection()
+            assert self.proto.connection is not None
 
-        # normal sending of OPEN first ...
-        if self.neighbor.session.local_as:
-            sent_open = await self._send_open()
-            self.proto.negotiated.sent(sent_open)
-            self.proto.negotiated.sent(sent_open)
-            self.fsm.change(FSM.OPENSENT)
+            # normal sending of OPEN first ...
+            if self.neighbor.session.local_as:
+                sent_open = await self._send_open()
+                self.proto.negotiated.sent(sent_open)
+                self.proto.negotiated.sent(sent_open)
+                self.fsm.change(FSM.OPENSENT)
 
-        # read the peer's open
-        received_open = await self._read_open()
-        self.proto.negotiated.received(received_open)
-        self.proto.negotiated.received(received_open)
+            # read the peer's open
+            received_open = await self._read_open()
+            self.proto.negotiated.received(received_open)
+            self.proto.negotiated.received(received_open)
 
-        self.proto.connection.msg_size = self.proto.negotiated.msg_size
+            self.proto.connection.msg_size = self.proto.negotiated.msg_size
 
-        # if we mirror the ASN, we need to read first and send second
-        if not self.neighbor.session.local_as:
-            sent_open = await self._send_open()
-            self.proto.negotiated.sent(sent_open)
-            self.proto.negotiated.sent(sent_open)
-            self.fsm.change(FSM.OPENSENT)
+            # if we mirror the ASN, we need to read first and send second
+            if not self.neighbor.session.local_as:
+                sent_open = await self._send_open()
+                self.proto.negotiated.sent(sent_open)
+                self.proto.negotiated.sent(sent_open)
+                self.fsm.change(FSM.OPENSENT)
 
-        self.proto.validate_open()
-        self.fsm.change(FSM.OPENCONFIRM)
+            self.proto.validate_open()
+            self.fsm.change(FSM.OPENCONFIRM)
 
-        self.recv_timer = ReceiveTimer(self.proto.connection.session, self.proto.negotiated.holdtime, 4, 0)
-        await self._send_ka()
-        await self._read_ka()
-        self.fsm.change(FSM.ESTABLISHED)
-        self.stats['complete'] = time.time()
+            self.recv_timer = ReceiveTimer(self.proto.connection.session, self.proto.negotiated.holdtime, 4, 0)
+            await self._send_ka()
+            await self._read_ka()
+            self.fsm.change(FSM.ESTABLISHED)
+            self.stats['complete'] = time.time()
 
         # let the caller know that we were sucesfull (async version doesn't need return value)
 
@@ -648,8 +650,13 @@ class Peer:
         self._delay.reset()
         log.debug(lazymsg('async.mainloop.started'), self.id())
 
+        # Timing instrumentation for peer message loop
+        peer_loop_timer = LoopTimer(f'peer_main_{self.id()}', warn_threshold_ms=50)
+
         try:
             while not self._teardown:
+                peer_loop_timer.start()
+
                 # Handle configuration reload
                 if self._neighbor:
                     previous = self._neighbor.previous.changes if self._neighbor.previous else []
@@ -695,6 +702,10 @@ class Peer:
                     if self._teardown:
                         log.debug(lazymsg('async.mainloop.exiting teardown={td}', td=self._teardown), self.id())
                         break
+
+                # Log timing for this iteration
+                peer_loop_timer.stop()
+                peer_loop_timer.log_if_slow()
 
         except NetworkError as exc:
             log.debug(lazymsg('async.network.error error={exc}', exc=exc), self.id())

@@ -216,6 +216,9 @@ class Connection:
 
         NOTE: asyncio.sock_recv() properly integrates with the event loop's
         I/O polling, so we don't need manual polling or busy-waiting.
+        The event loop handles yielding control automatically while waiting
+        for data, so no explicit timeout is needed here - BGP keepalive
+        mechanism handles dead connection detection.
         """
         if not self.io:
             self.close()
@@ -229,7 +232,9 @@ class Connection:
         while number > 0:
             try:
                 # asyncio.sock_recv() handles I/O waiting automatically via event loop
+                # This yields control to other tasks while waiting for data
                 read = await loop.sock_recv(self.io, number)
+
                 if not read:
                     self.close()
                     log.warning(
@@ -325,6 +330,8 @@ class Connection:
 
         NOTE: asyncio.sock_sendall() properly integrates with the event loop's
         I/O polling, so we don't need manual polling or busy-waiting.
+        The event loop handles yielding control automatically while waiting
+        to send data.
         """
         if not self.io:
             return
@@ -334,6 +341,7 @@ class Connection:
 
         try:
             # asyncio.sock_sendall() handles I/O waiting automatically via event loop
+            # This yields control to other tasks while waiting to send
             await loop.sock_sendall(self.io, data)
 
         except OSError as exc:
