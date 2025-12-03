@@ -608,16 +608,48 @@ for content in dir():
 @NLRI.register(AFI.ipv4, SAFI.flow_vpn)
 @NLRI.register(AFI.ipv6, SAFI.flow_vpn)
 class Flow(NLRI):
+    """FlowSpec NLRI for traffic filtering rules (RFC 5575).
+
+    Flow uses a builder pattern where rules are added via add() method.
+    The packed wire format is computed dynamically from the rules.
+    """
+
     rules: dict[int, list[FlowRule]]
     nexthop: Any
     rd: RouteDistinguisher
 
     def __init__(self, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.flow_ip, action: Action = Action.UNSET) -> None:
+        """Create a Flow NLRI.
+
+        Args:
+            afi: Address Family Identifier (ipv4 or ipv6)
+            safi: Subsequent Address Family Identifier (flow_ip or flow_vpn)
+            action: Route action (ANNOUNCE/WITHDRAW)
+        """
         NLRI.__init__(self, afi, safi, action)
         self.rules = {}
         self.nexthop = IP.NoNextHop
         # NORD is typed Optional but always set at module load (rd.py:115)
         self.rd = RouteDistinguisher.NORD
+
+    @classmethod
+    def make_flow(
+        cls,
+        afi: AFI = AFI.ipv4,
+        safi: SAFI = SAFI.flow_ip,
+        action: Action = Action.ANNOUNCE,
+    ) -> 'Flow':
+        """Factory method to create an empty Flow NLRI for building rules.
+
+        Args:
+            afi: Address Family Identifier (ipv4 or ipv6)
+            safi: Subsequent Address Family Identifier (flow_ip or flow_vpn)
+            action: Route action (ANNOUNCE/WITHDRAW)
+
+        Returns:
+            New Flow instance ready for adding rules via add()
+        """
+        return cls(afi, safi, action)
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:

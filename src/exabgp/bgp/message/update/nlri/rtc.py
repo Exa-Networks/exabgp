@@ -29,18 +29,53 @@ T = TypeVar('T', bound='RTC')
 class RTC(NLRI):
     # XXX: FIXME: no support yet for RTC variable length with prefixing
 
-    def __init__(self, afi: AFI, safi: SAFI, action: Action, origin: ASN, rt: RouteTarget | None) -> None:
+    def __init__(
+        self,
+        afi: AFI,
+        safi: SAFI,
+        action: Action,
+        origin: ASN,
+        rt: RouteTarget | None,
+    ) -> None:
+        """Create an RTC (Route Target Constraint) NLRI.
+
+        Args:
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            action: Route action (ANNOUNCE/WITHDRAW)
+            origin: Origin ASN
+            rt: RouteTarget or None for wildcard
+        """
         NLRI.__init__(self, afi, safi)
         self.action = action
         self.origin = origin
         self.rt = rt
         self.nexthop = IP.NoNextHop
 
-    def feedback(self, action: Action) -> str:  # type: ignore[override]
-        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
-            return 'rtc nlri next-hop missing'
-        return ''
+    @classmethod
+    def make_rtc(
+        cls,
+        origin: ASN,
+        rt: RouteTarget | None,
+        action: Action = Action.ANNOUNCE,
+        nexthop: Any = IP.NoNextHop,
+    ) -> 'RTC':
+        """Factory method to create an RTC NLRI.
 
+        Args:
+            origin: Origin ASN
+            rt: RouteTarget or None for wildcard
+            action: Route action (ANNOUNCE/WITHDRAW)
+            nexthop: Next-hop IP address
+
+        Returns:
+            New RTC instance
+        """
+        instance = cls(AFI.ipv4, SAFI.rtc, action, origin, rt)
+        instance.nexthop = nexthop
+        return instance
+
+    # Backward compatibility alias
     @classmethod
     def new(
         cls,
@@ -50,13 +85,16 @@ class RTC(NLRI):
         rt: RouteTarget,
         nexthop: Any = IP.NoNextHop,
         action: Action = Action.UNSET,
-    ) -> RTC:
+    ) -> 'RTC':
+        """Legacy factory method for backward compatibility."""
         instance = cls(afi, safi, action, origin, rt)
-        instance.origin = origin
-        instance.rt = rt
         instance.nexthop = nexthop
-        instance.action = action
         return instance
+
+    def feedback(self, action: Action) -> str:  # type: ignore[override]
+        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
+            return 'rtc nlri next-hop missing'
+        return ''
 
     def __len__(self) -> int:
         return (4 + len(self.rt)) * 8 if self.rt else 1
