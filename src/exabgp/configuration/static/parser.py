@@ -201,7 +201,7 @@ def med(tokeniser: 'Tokeniser') -> MED:
     value = tokeniser()
     if not value.isdigit():
         raise ValueError(f"'{value}' is not a valid MED\n  Must be a non-negative integer (e.g., 100)")
-    return MED(int(value))
+    return MED.make_med(int(value))
 
 
 def as_path(tokeniser: 'Tokeniser') -> ASPath:

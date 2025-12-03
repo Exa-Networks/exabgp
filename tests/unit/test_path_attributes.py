@@ -503,7 +503,7 @@ def test_med_basic() -> None:
 
     # Create MED
     med_value = 100
-    med = MED(med_value)
+    med = MED.make_med(med_value)
 
     # Verify value
     assert med.med == med_value
@@ -540,11 +540,49 @@ def test_med_comparison() -> None:
     from exabgp.bgp.message.update.attribute.med import MED
 
     # Create MEDs with different values
-    med_low = MED(50)
-    med_high = MED(200)
+    med_low = MED.make_med(50)
+    med_high = MED.make_med(200)
 
     # Lower MED should be preferred
     assert med_low.med < med_high.med
+
+
+def test_med_round_trip() -> None:
+    """Test MED attribute round-trip: create -> pack -> unpack -> verify.
+
+    This test ensures the packed-bytes-first refactoring maintains compatibility.
+    """
+    import struct
+
+    from exabgp.bgp.message.update.attribute.med import MED
+
+    negotiated = create_negotiated()
+
+    for med_value in [0, 100, 1000, 4294967295]:
+        # Create via factory method
+        original = MED.make_med(med_value)
+
+        # Verify semantic value
+        assert original.med == med_value
+        assert str(original) == str(med_value)
+
+        # Pack to bytes
+        packed = original.pack_attribute(negotiated)
+
+        # Verify packed format: flag(1) + type(1) + length(1) + value(4)
+        assert len(packed) == 7
+        assert packed[0] == 0x80  # OPTIONAL flag
+        assert packed[1] == 4  # MED type code
+        assert packed[2] == 4  # Length (4 bytes)
+        assert struct.unpack('!L', packed[3:])[0] == med_value
+
+        # Unpack from bytes (skip header, pass only payload)
+        unpacked = MED.unpack_attribute(packed[3:], negotiated)
+
+        # Verify round-trip
+        assert unpacked.med == original.med
+        assert str(unpacked) == str(original)
+        assert unpacked == original
 
 
 # ==============================================================================
