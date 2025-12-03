@@ -13,10 +13,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.bgp.message.open.asn import ASN, AS_TRANS
-from exabgp.protocol.ip import IPv4
-
+from exabgp.bgp.message.open.asn import AS_TRANS, ASN
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.protocol.ip import IPv4
 
 # =============================================================== AGGREGATOR (7)
 #
@@ -87,7 +86,7 @@ class Aggregator(Attribute):
             Aggregator instance
         """
         # Always store in 4-byte format internally
-        packed = asn.pack_asn(True) + speaker.pack_ip()
+        packed = asn.pack_asn4() + speaker.pack_ip()
         return cls(packed, asn4=True)
 
     @property
@@ -140,15 +139,15 @@ class Aggregator(Attribute):
                 return self._attribute(self._packed)
             else:
                 # Convert from 2-byte to 4-byte format
-                return self._attribute(asn.pack_asn(True) + speaker_packed)
+                return self._attribute(asn.pack_asn4() + speaker_packed)
 
         # Peer doesn't support ASN4
         if not asn.asn4():
             # ASN fits in 2 bytes
-            return self._attribute(asn.pack_asn(False) + speaker_packed)
+            return self._attribute(asn.pack_asn2() + speaker_packed)
         else:
             # ASN doesn't fit, use AS_TRANS and add AS4_AGGREGATOR
-            return self._attribute(AS_TRANS.pack_asn(False) + speaker_packed) + Aggregator4.make_aggregator(
+            return self._attribute(AS_TRANS.pack_asn2() + speaker_packed) + Aggregator4.make_aggregator(
                 asn, self.speaker
             ).pack_attribute(negotiated)
 
@@ -187,7 +186,7 @@ class Aggregator4(Aggregator):
     @classmethod
     def make_aggregator(cls, asn: ASN, speaker: IPv4) -> 'Aggregator4':
         """Create from ASN and speaker address."""
-        packed = asn.pack_asn(True) + speaker.pack_ip()
+        packed = asn.pack_asn4() + speaker.pack_ip()
         return cls(packed)
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
