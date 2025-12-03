@@ -98,8 +98,10 @@ class CommandShortcuts:
         ('a', 'announce', _announce_context),
         ('a', 'attributes', _attributes_context),
         ('a', 'adj-rib', _adj_rib_context),
+        ('a', 'ack', lambda pos, pre: len(pre) > 0 and pre[-1] == 'session'),  # session ack
         # Other single-letter shortcuts
         ('c', 'configuration', lambda pos, pre: True),
+        ('d', 'daemon', lambda pos, pre: pos == 0),  # Top-level only
         ('e', 'eor', _eor_context),
         ('e', 'extensive', lambda pos, pre: 'show' in pre),
         ('f', 'flow', _flow_context),
@@ -119,6 +121,8 @@ class CommandShortcuts:
         ('w', 'withdraw', _withdraw_context),
         ('w', 'watchdog', _watchdog_context),
         # Multi-letter shortcuts
+        ('ses', 'session', lambda pos, pre: pos == 0),  # Top-level only (avoid 's' conflict)
+        ('sy', 'sync', lambda pos, pre: len(pre) > 0 and pre[-1] == 'session'),  # session sync
         # Common typos
         ('neighbour', 'neighbor', lambda pos, pre: True),
         ('neigbour', 'neighbor', lambda pos, pre: True),

@@ -78,6 +78,8 @@ class CommandCompleter:
         # - 'neighbor' for "neighbor <IP> show/announce/withdraw" syntax
         # - 'adj-rib' for "adj-rib <in|out> show" syntax
         self.base_commands.extend(['neighbor', 'adj-rib'])
+        # Add noun-first top-level commands
+        self.base_commands.extend(['daemon', 'session', 'system', 'rib'])
 
         # Cache for neighbor IPs
         self._neighbor_cache: list[str] | None = None
@@ -517,6 +519,116 @@ class CommandCompleter:
             elif len(expanded_tokens) >= 3 and expanded_tokens[2] in ('announce', 'withdraw'):
                 # Strip "neighbor <ip>" and continue completion from that command
                 expanded_tokens = expanded_tokens[2:]
+
+        # Handle noun-first command completions
+        if len(expanded_tokens) >= 1:
+            first_token = expanded_tokens[0]
+
+            # Daemon commands: daemon <shutdown|reload|restart|status>
+            if first_token == 'daemon':
+                if len(expanded_tokens) == 1:
+                    candidates = ['shutdown', 'reload', 'restart', 'status']
+                    matches = self._filter_candidates(candidates, text)
+                    for match in matches:
+                        desc = {
+                            'shutdown': 'Shutdown ExaBGP daemon',
+                            'reload': 'Reload configuration',
+                            'restart': 'Restart daemon',
+                            'status': 'Show daemon status',
+                        }.get(match, '')
+                        self._add_completion_metadata(match, desc, 'command')
+                    return matches
+
+            # Session commands: session <ack|sync|reset|ping|bye>
+            elif first_token == 'session':
+                if len(expanded_tokens) == 1:
+                    candidates = ['ack', 'sync', 'reset', 'ping', 'bye']
+                    matches = self._filter_candidates(candidates, text)
+                    for match in matches:
+                        desc = {
+                            'ack': 'Manage acknowledgment responses',
+                            'sync': 'Manage sync mode',
+                            'reset': 'Reset async queue',
+                            'ping': 'Health check',
+                            'bye': 'Disconnect',
+                        }.get(match, '')
+                        self._add_completion_metadata(match, desc, 'command')
+                    return matches
+                elif len(expanded_tokens) == 2:
+                    # session ack <enable|disable|silence>
+                    if expanded_tokens[1] == 'ack':
+                        candidates = ['enable', 'disable', 'silence']
+                        matches = self._filter_candidates(candidates, text)
+                        for match in matches:
+                            desc = {
+                                'enable': 'Enable ACK responses',
+                                'disable': 'Disable ACK responses',
+                                'silence': 'Silence ACK permanently',
+                            }.get(match, '')
+                            self._add_completion_metadata(match, desc, 'option')
+                        return matches
+                    # session sync <enable|disable>
+                    elif expanded_tokens[1] == 'sync':
+                        candidates = ['enable', 'disable']
+                        matches = self._filter_candidates(candidates, text)
+                        for match in matches:
+                            desc = {
+                                'enable': 'Enable sync mode',
+                                'disable': 'Disable sync mode',
+                            }.get(match, '')
+                            self._add_completion_metadata(match, desc, 'option')
+                        return matches
+
+            # RIB commands: rib <show|flush|clear>
+            elif first_token == 'rib':
+                if len(expanded_tokens) == 1:
+                    candidates = ['show', 'flush', 'clear']
+                    matches = self._filter_candidates(candidates, text)
+                    for match in matches:
+                        desc = {
+                            'show': 'Show RIB entries',
+                            'flush': 'Flush RIB entries',
+                            'clear': 'Clear RIB entries',
+                        }.get(match, '')
+                        self._add_completion_metadata(match, desc, 'command')
+                    return matches
+                elif len(expanded_tokens) == 2:
+                    # rib show <in|out>
+                    if expanded_tokens[1] == 'show':
+                        candidates = ['in', 'out']
+                        matches = self._filter_candidates(candidates, text)
+                        for match in matches:
+                            desc = {'in': 'Adj-RIB-In (received)', 'out': 'Adj-RIB-Out (advertised)'}.get(match, '')
+                            self._add_completion_metadata(match, desc, 'option')
+                        return matches
+                    # rib flush <out>
+                    elif expanded_tokens[1] == 'flush':
+                        candidates = ['out']
+                        matches = self._filter_candidates(candidates, text)
+                        self._add_completion_metadata('out', 'Flush outbound RIB', 'option')
+                        return matches
+                    # rib clear <in|out>
+                    elif expanded_tokens[1] == 'clear':
+                        candidates = ['in', 'out']
+                        matches = self._filter_candidates(candidates, text)
+                        for match in matches:
+                            desc = {'in': 'Clear inbound RIB', 'out': 'Clear outbound RIB'}.get(match, '')
+                            self._add_completion_metadata(match, desc, 'option')
+                        return matches
+
+            # System commands: system <help|version|crash>
+            elif first_token == 'system':
+                if len(expanded_tokens) == 1:
+                    candidates = ['help', 'version', 'crash']
+                    matches = self._filter_candidates(candidates, text)
+                    for match in matches:
+                        desc = {
+                            'help': 'Show available commands',
+                            'version': 'Show ExaBGP version',
+                            'crash': 'Crash daemon (debug only)',
+                        }.get(match, '')
+                        self._add_completion_metadata(match, desc, 'command')
+                    return matches
 
         # Handle "adj-rib" completions (CLI-first syntax)
         # Supports both: "adj-rib <in|out> show" and "neighbor <ip> adj-rib <in|out> show"
