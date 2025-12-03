@@ -183,7 +183,7 @@ def aigp(tokeniser: 'Tokeniser') -> AIGP:
             f"'{value}' is not a valid AIGP value\n  Format: <number> or 0x<hex> (e.g., 100 or 0x64)"
         ) from None
 
-    return AIGP(b'\x01\x00\x0b' + pack('!Q', number))
+    return AIGP.make_aigp(number)
 
 
 def origin(tokeniser: 'Tokeniser') -> Origin:

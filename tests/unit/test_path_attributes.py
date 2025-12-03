@@ -699,16 +699,13 @@ def test_aigp_basic() -> None:
     Contains one or more TLVs; AIGP TLV (type 1) is most common.
     """
     from exabgp.bgp.message.update.attribute.aigp import AIGP
-    from struct import pack as struct_pack
 
-    # Create AIGP with metric value
-    # AIGP TLV format: Type(1) + Length(2) + Metric(8)
+    # Create AIGP with metric value using factory method
     metric = 1000
-    aigp_tlv = b'\x01\x00\x0b' + struct_pack('!Q', metric)
-    aigp = AIGP(aigp_tlv)
+    aigp = AIGP.make_aigp(metric)
 
-    # Verify basic properties
-    assert aigp.aigp == aigp_tlv
+    # Verify metric value via property
+    assert aigp.aigp == metric
 
     # Create mock negotiated with AIGP support
     negotiated = Mock()
@@ -729,23 +726,19 @@ def test_aigp_accumulation() -> None:
     Each router adds its IGP cost to reach the next hop.
     """
     from exabgp.bgp.message.update.attribute.aigp import AIGP
-    from struct import pack as struct_pack, unpack
 
-    # Create AIGPs with different metrics
+    # Create AIGPs with different metrics using factory method
     metric1 = 1000
     metric2 = 2000
-    aigp_tlv1 = b'\x01\x00\x0b' + struct_pack('!Q', metric1)
-    aigp_tlv2 = b'\x01\x00\x0b' + struct_pack('!Q', metric2)
-    aigp1 = AIGP(aigp_tlv1)
-    aigp2 = AIGP(aigp_tlv2)
+    aigp1 = AIGP.make_aigp(metric1)
+    aigp2 = AIGP.make_aigp(metric2)
 
-    # Extract metric values from TLVs for comparison
-    # Skip first 3 bytes (type + length), get 8-byte metric
-    metric1_extracted = unpack('!Q', aigp1.aigp[3:11])[0]
-    metric2_extracted = unpack('!Q', aigp2.aigp[3:11])[0]
+    # Verify metric values via property
+    assert aigp1.aigp == metric1
+    assert aigp2.aigp == metric2
 
     # Higher metric = longer path
-    assert metric2_extracted > metric1_extracted
+    assert aigp2.aigp > aigp1.aigp
 
 
 def test_aigp_optional_attribute() -> None:
@@ -1208,12 +1201,10 @@ def test_cluster_list_json() -> None:
 def test_aigp_pack_unpack_roundtrip() -> None:
     """Test AIGP pack/unpack roundtrip."""
     from exabgp.bgp.message.update.attribute.aigp import AIGP
-    import struct
 
-    # Create AIGP TLV: Type(1) + Length(2) + Metric(8)
+    # Create AIGP using factory method
     metric = 5000
-    aigp_tlv = b'\x01\x00\x0b' + struct.pack('!Q', metric)
-    original = AIGP(aigp_tlv)
+    original = AIGP.make_aigp(metric)
 
     # Create negotiated mock with AIGP support
     negotiated = Mock()
@@ -1227,20 +1218,18 @@ def test_aigp_pack_unpack_roundtrip() -> None:
     # Should have packed data
     assert len(packed) > 0
 
-    # Verify the TLV is preserved
-    assert original.aigp == aigp_tlv
+    # Verify the metric is preserved
+    assert original.aigp == metric
 
 
 def test_aigp_equality() -> None:
     """Test AIGP equality comparison."""
     from exabgp.bgp.message.update.attribute.aigp import AIGP
-    import struct
 
-    # Create two identical AIGPs
+    # Create two identical AIGPs using factory method
     metric = 1000
-    aigp_tlv = b'\x01\x00\x0b' + struct.pack('!Q', metric)
-    aigp1 = AIGP(aigp_tlv)
-    aigp2 = AIGP(aigp_tlv)
+    aigp1 = AIGP.make_aigp(metric)
+    aigp2 = AIGP.make_aigp(metric)
 
     # Should be equal
     assert aigp1 == aigp2
@@ -1250,11 +1239,9 @@ def test_aigp_equality() -> None:
 def test_aigp_no_pack_without_negotiation() -> None:
     """Test AIGP not packed when not negotiated or different AS."""
     from exabgp.bgp.message.update.attribute.aigp import AIGP
-    import struct
 
     metric = 1000
-    aigp_tlv = b'\x01\x00\x0b' + struct.pack('!Q', metric)
-    aigp = AIGP(aigp_tlv)
+    aigp = AIGP.make_aigp(metric)
 
     # Without AIGP negotiation and different AS
     negotiated = Mock()
@@ -1270,11 +1257,9 @@ def test_aigp_no_pack_without_negotiation() -> None:
 def test_aigp_pack_with_same_as() -> None:
     """Test AIGP packed when sent to same AS (IBGP)."""
     from exabgp.bgp.message.update.attribute.aigp import AIGP
-    import struct
 
     metric = 1000
-    aigp_tlv = b'\x01\x00\x0b' + struct.pack('!Q', metric)
-    aigp = AIGP(aigp_tlv)
+    aigp = AIGP.make_aigp(metric)
 
     # Same AS but no AIGP negotiation
     negotiated = Mock()
@@ -1290,17 +1275,16 @@ def test_aigp_pack_with_same_as() -> None:
 def test_aigp_repr_format() -> None:
     """Test AIGP string representation format."""
     from exabgp.bgp.message.update.attribute.aigp import AIGP
-    import struct
 
     metric = 255
-    aigp_tlv = b'\x01\x00\x0b' + struct.pack('!Q', metric)
-    aigp = AIGP(aigp_tlv)
+    aigp = AIGP.make_aigp(metric)
 
-    # Representation should be hex of last 8 bytes (metric)
+    # Representation should be hex of metric (0x00000000000000ff)
     repr_str = str(aigp)
     assert repr_str.startswith('0x')
     # Should be 16 hex chars (8 bytes)
     assert len(repr_str) == 18  # "0x" + 16 chars
+    assert repr_str == '0x00000000000000ff'
 
 
 # ==============================================================================
