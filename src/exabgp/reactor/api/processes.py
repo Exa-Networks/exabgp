@@ -101,7 +101,7 @@ class Processes:
 
     # Write queue backpressure thresholds
     WRITE_QUEUE_HIGH_WATER: int = 1000  # Pause writes when queue exceeds this
-    WRITE_QUEUE_LOW_WATER: int = 100    # Resume writes when queue drops below this
+    WRITE_QUEUE_LOW_WATER: int = 100  # Resume writes when queue drops below this
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
     _dispatch: dict[int, Any] = {}
@@ -143,7 +143,12 @@ class Processes:
         if self.respawn_number and self._restart[process]:
             log.debug(lazymsg('process.ended.restarting process={p}', p=process), 'processes')
             self._terminate(process)
-            self._start(process)
+            try:
+                self._start(process)
+            except ProcessError:
+                # Respawn limit exceeded - process is already terminated and logged
+                # Don't propagate exception into asyncio event loop
+                pass
         else:
             log.debug(lazymsg('process.ended process={p}', p=process), 'processes')
             self._terminate(process)
@@ -297,6 +302,8 @@ class Processes:
                                 ),
                                 'processes',
                             )
+                            # Clean up the process we just started before raising
+                            self._terminate(process)
                             raise ProcessError
                     else:
                         # reset long time since last respawn
