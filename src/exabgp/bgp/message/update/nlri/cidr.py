@@ -18,8 +18,7 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 
 # CIDR netmask constants
-CIDR_IPV4_MAX_MASK = 24  # Maximum IPv4 mask for heuristic detection
-CIDR_IPV6_LENGTH_BYTES = 4  # IPv6 address length in bytes (for detection)
+CIDR_IPV4_MAX_MASK = 32  # Maximum valid IPv4 mask
 
 # Valid IP address lengths
 CIDR_IPV4_LENGTH = 4
@@ -34,16 +33,21 @@ class CIDR:
 
     NOCIDR: ClassVar['CIDR']
 
-    def __init__(self, nlri: bytes, afi: AFI) -> None:
+    def __init__(self, nlri: bytes) -> None:
         """Create a CIDR from NLRI wire format bytes.
 
         Args:
             nlri: NLRI wire format bytes [mask][truncated_ip...]
-            afi: Address family (ipv4 or ipv6) - required for correct padding
+
+        The AFI is inferred from wire format using heuristic:
+        - IPv6 if mask > 32 (only IPv6 can have masks 33-128)
+        - IPv4 otherwise (masks 0-32 are ambiguous, default to IPv4)
 
         Raises:
             Notify: If NLRI data is too short for the mask
         """
+        # Infer AFI from wire format: mask > 32 can only be IPv6
+        afi = AFI.ipv6 if nlri[0] > CIDR_IPV4_MAX_MASK else AFI.ipv4
         prefix, mask = self.decode(afi, nlri)
         self._packed = prefix
         self._mask = mask
@@ -54,6 +58,30 @@ class CIDR:
         instance = object.__new__(cls)
         instance._packed = b''
         instance._mask = 0
+        return instance
+
+    @classmethod
+    def from_ipv4(cls, nlri: bytes) -> 'CIDR':
+        """Create CIDR from IPv4 NLRI wire format.
+
+        Use this when AFI is known to be IPv4.
+        """
+        prefix, mask = cls.decode(AFI.ipv4, nlri)
+        instance = object.__new__(cls)
+        instance._packed = prefix
+        instance._mask = mask
+        return instance
+
+    @classmethod
+    def from_ipv6(cls, nlri: bytes) -> 'CIDR':
+        """Create CIDR from IPv6 NLRI wire format.
+
+        Use this when AFI is known to be IPv6.
+        """
+        prefix, mask = cls.decode(AFI.ipv6, nlri)
+        instance = object.__new__(cls)
+        instance._packed = prefix
+        instance._mask = mask
         return instance
 
     @classmethod
@@ -154,10 +182,12 @@ class CIDR:
         # return data[:4], mask
 
     @classmethod
-    def unpack_cidr(cls, data: bytes) -> CIDR:
-        # Infer AFI from wire format using heuristic: IPv6 if mask > 32 or data too long for IPv4
-        afi = AFI.ipv6 if len(data) > CIDR_IPV6_LENGTH_BYTES or data[0] > CIDR_IPV4_MAX_MASK else AFI.ipv4
-        return cls(data, afi)
+    def unpack_cidr(cls, data: bytes) -> 'CIDR':
+        """Unpack CIDR from NLRI wire format bytes.
+
+        Alias for CIDR(data) - kept for API compatibility.
+        """
+        return cls(data)
 
     def __len__(self) -> int:
         return CIDR.size(self.mask) + 1
