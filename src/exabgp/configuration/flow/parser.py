@@ -306,7 +306,7 @@ def accept(tokeniser: 'Tokeniser') -> None:
 
 def discard(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
-    return ExtendedCommunities().add(TrafficRate(ASN(0), 0))
+    return ExtendedCommunities().add(TrafficRate.make_traffic_rate(ASN(0), 0))
 
 
 def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
@@ -327,7 +327,7 @@ def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
             ),
             'configuration',
         )
-    return ExtendedCommunities().add(TrafficRate(ASN(0), speed))
+    return ExtendedCommunities().add(TrafficRate.make_traffic_rate(ASN(0), speed))
 
 
 def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
@@ -336,18 +336,20 @@ def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
 
     # the redirect is an IPv4 or an IPv6 nexthop
     if count == 0 or (count > 1 and '[' not in data and ']' not in data):
-        return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson(False))
+        return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
 
     # the redirect is an IPv6 nexthop using [] notation
     if data.startswith('[') and data.endswith(']'):
-        return IP.create(data[1:-1]), ExtendedCommunities().add(TrafficNextHopSimpson(False))
+        return IP.create(data[1:-1]), ExtendedCommunities().add(
+            TrafficNextHopSimpson.make_traffic_nexthop_simpson(False)
+        )
 
     # the redirect is an ipv6:NN route-target using []: notation
     if count > 1:
         if ']:' not in data:
             try:
                 ip: IP = IP.create(data)
-                return ip, ExtendedCommunities().add(TrafficNextHopSimpson(False))
+                return ip, ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
             except (OSError, ValueError):
                 raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []') from None
 
@@ -358,7 +360,9 @@ def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
 
         if int(nn) >= pow(2, LOCAL_ADMIN_16_BITS):
             raise ValueError('Local administrator field is a 16 bits number, value too large {}'.format(nn))
-        return IP.create(ip_str), ExtendedCommunities().add(TrafficRedirectIPv6(ip_str, int(nn)))
+        return IP.create(ip_str), ExtendedCommunities().add(
+            TrafficRedirectIPv6.make_traffic_redirect_ipv6(ip_str, int(nn))
+        )
 
     # the redirect is an ASN:NN route-target
     if True:  # count == 1:
@@ -382,29 +386,31 @@ def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
                 raise ValueError(
                     'asn is a 32 bits number, local administrator field can only be 16 bit {}'.format(nn_int)
                 )
-            return IP.NoNextHop, ExtendedCommunities().add(TrafficRedirectASN4(ASN4(asn), nn_int))
+            return IP.NoNextHop, ExtendedCommunities().add(
+                TrafficRedirectASN4.make_traffic_redirect_asn4(ASN4(asn), nn_int)
+            )
 
         if nn_int >= pow(2, LOCAL_ADMIN_32_BITS):
             raise ValueError('Local administrator field is a 32 bits number, value too large {}'.format(nn_int))
 
-        return IP.NoNextHop, ExtendedCommunities().add(TrafficRedirect(ASN(asn), nn_int))
+        return IP.NoNextHop, ExtendedCommunities().add(TrafficRedirect.make_traffic_redirect(ASN(asn), nn_int))
 
     raise ValueError('redirect format incorrect')
 
 
 def redirect_next_hop(tokeniser: 'Tokeniser') -> ExtendedCommunities:
-    return ExtendedCommunities().add(TrafficNextHopSimpson(False))
+    return ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
 
 
 def redirect_next_hop_ietf(tokeniser: 'Tokeniser') -> ExtendedCommunities | ExtendedCommunitiesIPv6:
     ip: IP = IP.create(tokeniser())
     if ip.ipv4():
-        return ExtendedCommunities().add(TrafficNextHopIPv4IETF(cast(IPv4, ip), False))
-    return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF(cast(IPv6, ip), False))
+        return ExtendedCommunities().add(TrafficNextHopIPv4IETF.make_traffic_nexthop_ipv4(cast(IPv4, ip), False))
+    return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF.make_traffic_nexthop_ipv6(cast(IPv6, ip), False))
 
 
 def copy(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
-    return IP.create(tokeniser()), ExtendedCommunities().add(TrafficNextHopSimpson(True))
+    return IP.create(tokeniser()), ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(True))
 
 
 def mark(tokeniser: 'Tokeniser') -> ExtendedCommunities:
@@ -418,7 +424,7 @@ def mark(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     if dscp_value < 0 or dscp_value > DSCP_MAX_VALUE:
         raise ValueError(f'DSCP value {dscp_value} is out of range\n  Must be 0-{DSCP_MAX_VALUE}')
 
-    return ExtendedCommunities().add(TrafficMark(dscp_value))
+    return ExtendedCommunities().add(TrafficMark.make_traffic_mark(dscp_value))
 
 
 def action(tokeniser: 'Tokeniser') -> ExtendedCommunities:
@@ -430,7 +436,7 @@ def action(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     if not sample and not terminal:
         raise ValueError(f"'{value}' is not a valid flow action\n  Valid options: sample, terminal, sample-terminal")
 
-    return ExtendedCommunities().add(TrafficAction(sample, terminal))
+    return ExtendedCommunities().add(TrafficAction.make_traffic_action(sample, terminal))
 
 
 def _interface_set(data: str) -> InterfaceSet:
@@ -470,7 +476,7 @@ def _interface_set(data: str) -> InterfaceSet:
         raise ValueError(f'ASN {asn} is too large\n  Maximum is {pow(2, ASN32_MAX_BITS) - 1} (32 bits)')
     if route_target >= pow(2, GROUP_ID_BITS):
         raise ValueError(f'group-id {route_target} is too large\n  Maximum is {pow(2, GROUP_ID_BITS) - 1} (14 bits)')
-    return InterfaceSet(trans_bool, ASN(asn), route_target, int_direction)
+    return InterfaceSet.make_interface_set(ASN(asn), route_target, int_direction, trans_bool)
 
 
 def interface_set(tokeniser: 'Tokeniser') -> ExtendedCommunities:

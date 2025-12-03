@@ -24,19 +24,26 @@ class ConsistentHashSortOrder(ExtendedCommunity):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x14
     DESCRIPTION: ClassVar[str] = 'consistentHashSortOrder'
 
-    def __init__(self, order: int, reserved: int = 0, community: bytes | None = None) -> None:
-        self.order: int = order
-        self.reserved: int = reserved
+    def __init__(self, packed: bytes) -> None:
+        ExtendedCommunity.__init__(self, packed)
 
-        ExtendedCommunity.__init__(
-            self,
-            community if community is not None else pack('!2sIH', self._subtype(), order, reserved),
-        )
+    @classmethod
+    def make_chso(cls, order: int, reserved: int = 0) -> ConsistentHashSortOrder:
+        """Create ConsistentHashSortOrder from semantic values."""
+        packed = pack('!BBIH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, order, reserved)
+        return cls(packed)
+
+    @property
+    def order(self) -> int:
+        return unpack('!I', self._packed[2:6])[0]
+
+    @property
+    def reserved(self) -> int:
+        return unpack('!H', self._packed[6:8])[0]
 
     def __repr__(self) -> str:
         return '%s:%d' % (self.DESCRIPTION, self.order)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> ConsistentHashSortOrder:
-        order, reserved = unpack('!IH', data[2:8])
-        return ConsistentHashSortOrder(order, reserved, data[:8])
+        return cls(data[:8])

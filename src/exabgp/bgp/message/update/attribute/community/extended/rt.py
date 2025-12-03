@@ -32,11 +32,11 @@ class RouteTarget(ExtendedCommunity):
 
     @property
     def la(self) -> bytes:
-        return self.community[2 : self.LIMIT]
+        return self._packed[2 : self.LIMIT]
 
     @property
     def ga(self) -> bytes:
-        return self.community[self.LIMIT : 8]
+        return self._packed[self.LIMIT : 8]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, RouteTarget):
@@ -53,11 +53,23 @@ class RouteTargetASN2Number(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
 
-    def __init__(self, asn: ASN, number: int, transitive: bool = True, community: bytes | None = None) -> None:
-        self.asn: ASN = asn
-        self.number: int = number
-        # assert(number < pow(2,32))
-        RouteTarget.__init__(self, community if community else pack('!2sHL', self._subtype(transitive), asn, number))
+    def __init__(self, packed: bytes) -> None:
+        RouteTarget.__init__(self, packed)
+
+    @classmethod
+    def make_route_target(cls, asn: ASN, number: int, transitive: bool = True) -> RouteTargetASN2Number:
+        """Create RouteTargetASN2Number from semantic values."""
+        type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
+        packed = pack('!BBHL', type_byte, cls.COMMUNITY_SUBTYPE, asn, number)
+        return cls(packed)
+
+    @property
+    def asn(self) -> ASN:
+        return ASN(unpack('!H', self._packed[2:4])[0])
+
+    @property
+    def number(self) -> int:
+        return unpack('!L', self._packed[4:8])[0]
 
     def __hash__(self) -> int:
         return hash((self.asn, self.number))
@@ -67,8 +79,7 @@ class RouteTargetASN2Number(RouteTarget):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> RouteTargetASN2Number:
-        asn, number = unpack('!HL', data[2:8])
-        return cls(ASN(asn), number, False, data[:8])
+        return cls(data[:8])
 
 
 # ============================================================= RouteTargetIPNumber
@@ -80,16 +91,24 @@ class RouteTargetIPNumber(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, ip: str, number: int, transitive: bool = True, community: bytes | None = None) -> None:
-        self.ip: str = ip
-        self.number: int = number
-        # assert(number < pow(2,16))
-        RouteTarget.__init__(
-            self,
-            community if community else pack('!2s4sH', self._subtype(transitive), IPv4.pton(ip), number),
-        )
+    def __init__(self, packed: bytes) -> None:
+        RouteTarget.__init__(self, packed)
 
-    # why could we not simply use ExtendedCommunity.hash ?
+    @classmethod
+    def make_route_target(cls, ip: str, number: int, transitive: bool = True) -> RouteTargetIPNumber:
+        """Create RouteTargetIPNumber from semantic values."""
+        type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
+        packed = pack('!BB4sH', type_byte, cls.COMMUNITY_SUBTYPE, IPv4.pton(ip), number)
+        return cls(packed)
+
+    @property
+    def ip(self) -> str:
+        return IPv4.ntop(self._packed[2:6])
+
+    @property
+    def number(self) -> int:
+        return unpack('!H', self._packed[6:8])[0]
+
     def __hash__(self) -> int:
         return hash((self.ip, self.number))
 
@@ -98,8 +117,7 @@ class RouteTargetIPNumber(RouteTarget):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> RouteTargetIPNumber:
-        ip, number = unpack('!4sH', data[2:8])
-        return cls(IPv4.ntop(ip), number, False, data[:8])
+        return cls(data[:8])
 
 
 # ======================================================== RouteTargetASN4Number
@@ -111,13 +129,24 @@ class RouteTargetASN4Number(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x02
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, asn: ASN, number: int, transitive: bool = True, community: bytes | None = None) -> None:
-        self.asn: ASN = asn
-        self.number: int = number
-        # assert(number < pow(2,16))
-        RouteTarget.__init__(self, community if community else pack('!2sLH', self._subtype(transitive), asn, number))
+    def __init__(self, packed: bytes) -> None:
+        RouteTarget.__init__(self, packed)
 
-    # why could we not simply use ExtendedCommunity.hash ?
+    @classmethod
+    def make_route_target(cls, asn: ASN, number: int, transitive: bool = True) -> RouteTargetASN4Number:
+        """Create RouteTargetASN4Number from semantic values."""
+        type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
+        packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, asn, number)
+        return cls(packed)
+
+    @property
+    def asn(self) -> ASN:
+        return ASN(unpack('!L', self._packed[2:6])[0])
+
+    @property
+    def number(self) -> int:
+        return unpack('!H', self._packed[6:8])[0]
+
     def __hash__(self) -> int:
         return hash((self.asn, self.number))
 
@@ -126,5 +155,4 @@ class RouteTargetASN4Number(RouteTarget):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> RouteTargetASN4Number:
-        asn, number = unpack('!LH', data[2:8])
-        return cls(ASN(asn), number, False, data[:8])
+        return cls(data[:8])

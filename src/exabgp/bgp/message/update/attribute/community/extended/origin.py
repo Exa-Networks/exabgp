@@ -31,11 +31,11 @@ class Origin(ExtendedCommunity):
 
     @property
     def la(self) -> bytes:
-        return self.community[2 : self.LIMIT]
+        return self._packed[2 : self.LIMIT]
 
     @property
     def ga(self) -> bytes:
-        return self.community[self.LIMIT : 8]
+        return self._packed[self.LIMIT : 8]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Origin):
@@ -52,18 +52,30 @@ class OriginASNIP(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
 
-    def __init__(self, asn: ASN, ip: str, transitive: bool, community: bytes | None = None) -> None:
-        self.asn: ASN = asn
-        self.ip: str = ip
-        Origin.__init__(self, community if community else pack('!2sH4s', self._subtype(), asn, IPv4.pton(ip)))
+    def __init__(self, packed: bytes) -> None:
+        Origin.__init__(self, packed)
+
+    @classmethod
+    def make_origin(cls, asn: ASN, ip: str, transitive: bool = True) -> OriginASNIP:
+        """Create OriginASNIP from semantic values."""
+        type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
+        packed = pack('!BBH4s', type_byte, cls.COMMUNITY_SUBTYPE, asn, IPv4.pton(ip))
+        return cls(packed)
+
+    @property
+    def asn(self) -> ASN:
+        return ASN(unpack('!H', self._packed[2:4])[0])
+
+    @property
+    def ip(self) -> str:
+        return IPv4.ntop(self._packed[4:8])
 
     def __repr__(self) -> str:
         return 'origin:{}:{}'.format(self.asn, self.ip)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> OriginASNIP:
-        asn, ip = unpack('!H4s', data[2:8])
-        return cls(ASN(asn), IPv4.ntop(ip), False, data[:8])
+        return cls(data[:8])
 
 
 # ================================================================== OriginIPASN
@@ -75,18 +87,30 @@ class OriginIPASN(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, ip: str, asn: ASN, transitive: bool, community: bytes | None = None) -> None:
-        self.ip: str = ip
-        self.asn: ASN = asn
-        Origin.__init__(self, community if community else pack('!2s4sH', self._subtype(), IPv4.pton(ip), asn))
+    def __init__(self, packed: bytes) -> None:
+        Origin.__init__(self, packed)
+
+    @classmethod
+    def make_origin(cls, ip: str, asn: ASN, transitive: bool = True) -> OriginIPASN:
+        """Create OriginIPASN from semantic values."""
+        type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
+        packed = pack('!BB4sH', type_byte, cls.COMMUNITY_SUBTYPE, IPv4.pton(ip), asn)
+        return cls(packed)
+
+    @property
+    def ip(self) -> str:
+        return IPv4.ntop(self._packed[2:6])
+
+    @property
+    def asn(self) -> ASN:
+        return ASN(unpack('!H', self._packed[6:8])[0])
 
     def __repr__(self) -> str:
         return 'origin:{}:{}'.format(self.ip, self.asn)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> OriginIPASN:
-        ip, asn = unpack('!4sH', data[2:8])
-        return cls(IPv4.ntop(ip), ASN(asn), False, data[:8])
+        return cls(data[:8])
 
 
 # ============================================================= OriginASN4Number
@@ -98,15 +122,27 @@ class OriginASN4Number(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x02
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, asn: ASN, number: int, transitive: bool, community: bytes | None = None) -> None:
-        self.asn: ASN = asn
-        self.number: int = number
-        Origin.__init__(self, community if community else pack('!2sLH', self._subtype(), asn, number))
+    def __init__(self, packed: bytes) -> None:
+        Origin.__init__(self, packed)
+
+    @classmethod
+    def make_origin(cls, asn: ASN, number: int, transitive: bool = True) -> OriginASN4Number:
+        """Create OriginASN4Number from semantic values."""
+        type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
+        packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, asn, number)
+        return cls(packed)
+
+    @property
+    def asn(self) -> ASN:
+        return ASN(unpack('!L', self._packed[2:6])[0])
+
+    @property
+    def number(self) -> int:
+        return unpack('!H', self._packed[6:8])[0]
 
     def __repr__(self) -> str:
         return 'origin:{}:{}'.format(self.asn, self.number)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> OriginASN4Number:
-        asn, number = unpack('!LH', data[2:8])
-        return cls(ASN(asn), number, False, data[:8])
+        return cls(data[:8])

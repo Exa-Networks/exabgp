@@ -121,6 +121,10 @@ class ExtendedCommunityBase(Attribute):
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self._packed
 
+    def pack(self) -> bytes:
+        """Return packed bytes for sorting/comparison."""
+        return self._packed
+
     def _subtype(self, transitive: bool = True) -> bytes:
         # if not transitive -> set the 'transitive' bit, as per RFC4360
         return pack(
