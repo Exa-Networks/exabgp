@@ -156,6 +156,11 @@ class NextHopSelf(NextHop):
     def ipv6(self) -> bool:
         return self._afi == AFI.ipv6
 
+    def __bool__(self) -> bool:
+        # NextHopSelf is always truthy (resolved at pack time)
+        # Override because _packed is empty, making len() return 0
+        return True
+
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self._attribute(negotiated.nexthopself(self._afi).ton())
 
