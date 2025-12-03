@@ -40,9 +40,7 @@ class PMSI(Attribute):
     ID = Attribute.CODE.PMSI_TUNNEL
     FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
     CACHING = True
-    TUNNEL_TYPE: ClassVar[int] = -1
-
-    # TUNNEL_TYPE MUST NOT BE DEFINED HERE ( it allows to set it up as a self. value)
+    TUNNEL_TYPE: ClassVar[int] = -1  # Used for subclass registration
 
     _pmsi_known: ClassVar[dict[int, Type[PMSI]]] = dict()
     _name: ClassVar[dict[int, str]] = {
@@ -56,22 +54,89 @@ class PMSI(Attribute):
         7: 'mLDP MP2MP LSP',
     }
 
-    def __init__(self, tunnel: bytes, label: int, flags: int, raw_label: int | None = None) -> None:
-        self.label: int = label  # integer
-        self.raw_label: int | None = raw_label  # integer
-        self.flags: int = flags  # integer
-        self.tunnel: bytes = tunnel  # tunnel id, packed data
+    def __init__(self, packed: bytes) -> None:
+        """Initialize PMSI from packed wire-format bytes.
+
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_pmsi() for semantic construction.
+
+        Args:
+            packed: Raw attribute value bytes (flags:1 + tunnel_type:1 + label:3 + tunnel:variable)
+        """
+        self._packed: bytes = packed
+
+    @classmethod
+    def from_packet(cls, data: bytes) -> 'PMSI':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw attribute value bytes from wire
+
+        Returns:
+            PMSI instance (or appropriate subclass)
+
+        Raises:
+            ValueError: If data is malformed
+        """
+        if len(data) < 5:
+            raise ValueError(f'PMSI requires at least 5 bytes, got {len(data)}')
+        tunnel_type = data[1]
+        if tunnel_type in cls._pmsi_known:
+            return cls._pmsi_known[tunnel_type](data)
+        return cls(data)
+
+    @classmethod
+    def make_pmsi(cls, tunnel_type: int, flags: int, label: int, tunnel: bytes, raw_label: int | None = None) -> 'PMSI':
+        """Create PMSI from semantic values.
+
+        Args:
+            tunnel_type: Tunnel type (0-7 for known types)
+            flags: PMSI flags
+            label: MPLS label (will be shifted left by 4)
+            tunnel: Tunnel identifier bytes
+            raw_label: Raw 24-bit label value (if provided, used instead of label << 4)
+
+        Returns:
+            PMSI instance
+        """
+        if raw_label is not None:
+            packed_label = pack('!L', raw_label)[1:4]
+        else:
+            packed_label = pack('!L', label << 4)[1:4]
+        packed = pack('!BB', flags, tunnel_type) + packed_label + tunnel
+        if tunnel_type in cls._pmsi_known:
+            return cls._pmsi_known[tunnel_type](packed)
+        return cls(packed)
+
+    @property
+    def flags(self) -> int:
+        """Get PMSI flags by unpacking from bytes."""
+        return self._packed[0]
+
+    @property
+    def tunnel_type(self) -> int:
+        """Get tunnel type by unpacking from bytes."""
+        return self._packed[1]
+
+    @property
+    def raw_label(self) -> int:
+        """Get raw 24-bit label value by unpacking from bytes."""
+        return unpack('!L', b'\0' + self._packed[2:5])[0]
+
+    @property
+    def label(self) -> int:
+        """Get MPLS label by unpacking from bytes (raw_label >> 4)."""
+        return self.raw_label >> 4
+
+    @property
+    def tunnel(self) -> bytes:
+        """Get tunnel identifier bytes."""
+        return self._packed[5:]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, PMSI):
             return False
-        return (
-            self.ID == other.ID
-            and self.FLAG == other.FLAG
-            and self.label == other.label
-            and self.flags == other.flags
-            and self.tunnel == other.tunnel
-        )
+        return self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -81,26 +146,24 @@ class PMSI(Attribute):
         return PMSI._name.get(tunnel_type, 'unknown')
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        if self.raw_label:
-            packed_label = pack('!L', self.raw_label)[1:4]
-        else:
-            packed_label = pack('!L', self.label << 4)[1:4]
-        return self._attribute(pack('!BB3s', self.flags, self.TUNNEL_TYPE, packed_label) + self.tunnel)
+        return self._attribute(self._packed)
 
-    # XXX: FIXME: Orange code had 4 (and another reference to it in the code elsewhere)
     def __len__(self) -> int:
-        return len(self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
+        return len(self._packed)
 
     def prettytunnel(self) -> str:
         return '0x' + ''.join('{:02X}'.format(_) for _ in self.tunnel) if self.tunnel else ''
 
     def __repr__(self) -> str:
-        if self.raw_label:
-            label_repr = '%d(%d)' % (self.label, self.raw_label)
+        raw = self.raw_label
+        lbl = self.label
+        # Check if there's extra info in raw_label (bottom of stack bit, etc.)
+        if raw != (lbl << 4):
+            label_repr = f'{lbl}({raw})'
         else:
-            label_repr = str(self.label) if self.label else '0'
+            label_repr = str(lbl) if lbl else '0'
         return 'pmsi:{}:{}:{}:{}'.format(
-            self.name(self.TUNNEL_TYPE).replace(' ', '').lower(),
+            self.name(self.tunnel_type).replace(' ', '').lower(),
             str(self.flags),
             label_repr,
             self.prettytunnel(),
@@ -113,21 +176,9 @@ class PMSI(Attribute):
         cls._pmsi_known[klass.TUNNEL_TYPE] = klass
         return klass
 
-    @staticmethod
-    def pmsi_unknown(subtype: int, tunnel: bytes, label: int, flags: int, raw_label: int | None) -> PMSI:
-        pmsi = PMSI(tunnel, label, flags)
-        pmsi.TUNNEL_TYPE = subtype  # type: ignore[misc]
-        return pmsi
-
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> PMSI:
-        flags, subtype = unpack('!BB', data[:2])
-        raw_label = unpack('!L', b'\0' + data[2:5])[0]
-        label = raw_label >> 4
-        # should we check for bottom of stack before the shift ?
-        if subtype in cls._pmsi_known:
-            return cls._pmsi_known[subtype].unpack_pmsi(data[5:], label, flags, raw_label)  # type: ignore[attr-defined,no-any-return]
-        return cls.pmsi_unknown(subtype, data[5:], label, flags, raw_label)
+        return cls.from_packet(data)
 
 
 # ================================================================= PMSINoTunnel
@@ -138,15 +189,26 @@ class PMSI(Attribute):
 class PMSINoTunnel(PMSI):
     TUNNEL_TYPE: ClassVar[int] = 0
 
-    def __init__(self, label: int = 0, flags: int = 0, raw_label: int | None = None) -> None:
-        PMSI.__init__(self, b'', label, flags, raw_label=None)
+    @classmethod
+    def make_no_tunnel(cls, flags: int = 0, label: int = 0, raw_label: int | None = None) -> 'PMSINoTunnel':
+        """Create PMSINoTunnel from semantic values.
+
+        Args:
+            flags: PMSI flags
+            label: MPLS label
+            raw_label: Raw 24-bit label value (optional)
+
+        Returns:
+            PMSINoTunnel instance
+        """
+        if raw_label is not None:
+            packed_label = pack('!L', raw_label)[1:4]
+        else:
+            packed_label = pack('!L', label << 4)[1:4]
+        return cls(pack('!BB', flags, cls.TUNNEL_TYPE) + packed_label)
 
     def prettytunnel(self) -> str:
         return ''
-
-    @classmethod
-    def unpack_pmsi(cls, tunnel: bytes, label: int, flags: int, raw_label: int | None = None) -> PMSINoTunnel:
-        return cls(label, flags, raw_label)
 
 
 # ======================================================= PMSIIngressReplication
@@ -157,16 +219,31 @@ class PMSINoTunnel(PMSI):
 class PMSIIngressReplication(PMSI):
     TUNNEL_TYPE: ClassVar[int] = 6
 
-    def __init__(
-        self, ip: str, label: int = 0, flags: int = 0, tunnel: bytes | None = None, raw_label: int | None = None
-    ) -> None:
-        self.ip: str = ip  # looks like a bad name
-        PMSI.__init__(self, tunnel if tunnel else IPv4.pton(ip), label, flags, raw_label)
+    @classmethod
+    def make_ingress_replication(
+        cls, ip: str, flags: int = 0, label: int = 0, raw_label: int | None = None
+    ) -> 'PMSIIngressReplication':
+        """Create PMSIIngressReplication from semantic values.
+
+        Args:
+            ip: IPv4 address string for tunnel endpoint
+            flags: PMSI flags
+            label: MPLS label
+            raw_label: Raw 24-bit label value (optional)
+
+        Returns:
+            PMSIIngressReplication instance
+        """
+        if raw_label is not None:
+            packed_label = pack('!L', raw_label)[1:4]
+        else:
+            packed_label = pack('!L', label << 4)[1:4]
+        return cls(pack('!BB', flags, cls.TUNNEL_TYPE) + packed_label + IPv4.pton(ip))
+
+    @property
+    def ip(self) -> str:
+        """Get tunnel endpoint IP address."""
+        return IPv4.ntop(self.tunnel)
 
     def prettytunnel(self) -> str:
         return self.ip
-
-    @classmethod
-    def unpack_pmsi(cls, tunnel: bytes, label: int, flags: int, raw_label: int | None) -> PMSIIngressReplication:
-        ip = IPv4.ntop(tunnel)
-        return cls(ip, label, flags, tunnel, raw_label)
