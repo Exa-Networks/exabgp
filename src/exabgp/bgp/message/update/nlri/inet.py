@@ -67,8 +67,7 @@ class INET(NLRI):
     @property
     def cidr(self) -> CIDR:
         """Unpack CIDR from stored wire format bytes."""
-        prefix, mask = CIDR.decode(self.afi, self._packed)
-        return CIDR(prefix, mask)
+        return CIDR.make_from_nlri(self.afi, self._packed)
 
     @classmethod
     def from_cidr(

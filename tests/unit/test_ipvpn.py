@@ -31,7 +31,7 @@ class TestIPVPNCreation:
 
     def test_create_ipvpn_ipv4(self) -> None:
         """Test creating basic IPv4 IPVPN route"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -49,7 +49,7 @@ class TestIPVPNCreation:
 
     def test_create_ipvpn_ipv6(self) -> None:
         """Test creating basic IPv6 IPVPN route"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv6,
             SAFI.mpls_vpn,
             IP.pton('2001:db8::'),
@@ -66,7 +66,7 @@ class TestIPVPNCreation:
 
     def test_create_ipvpn_with_nexthop(self) -> None:
         """Test creating IPVPN with nexthop"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -80,7 +80,7 @@ class TestIPVPNCreation:
 
     def test_create_ipvpn_with_action(self) -> None:
         """Test creating IPVPN with specific action"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -92,10 +92,10 @@ class TestIPVPNCreation:
 
         assert nlri.action == Action.WITHDRAW
 
-    def test_create_ipvpn_direct_init(self) -> None:
-        """Test creating IPVPN via direct initialization"""
-        cidr = CIDR(IP.pton('10.0.0.0'), 24)
-        nlri = IPVPN(cidr, AFI.ipv4, SAFI.mpls_vpn, Action.ANNOUNCE)
+    def test_create_ipvpn_from_cidr(self) -> None:
+        """Test creating IPVPN via from_cidr factory method"""
+        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn, Action.ANNOUNCE)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.mpls_vpn
@@ -108,7 +108,7 @@ class TestIPVPNPackUnpack:
 
     def test_pack_unpack_ipv4_basic(self) -> None:
         """Test basic pack/unpack roundtrip for IPv4"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -131,7 +131,7 @@ class TestIPVPNPackUnpack:
 
     def test_pack_unpack_ipv6_basic(self) -> None:
         """Test basic pack/unpack roundtrip for IPv6"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv6,
             SAFI.mpls_vpn,
             IP.pton('2001:db8::'),
@@ -152,7 +152,7 @@ class TestIPVPNPackUnpack:
 
     def test_pack_unpack_multiple_labels(self) -> None:
         """Test pack/unpack with multiple MPLS labels"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('10.1.1.0'),
@@ -181,7 +181,7 @@ class TestIPVPNPackUnpack:
         ]
 
         for ip, mask in test_cases:
-            nlri = IPVPN.new(
+            nlri = IPVPN.make_vpn_route(
                 AFI.ipv4,
                 SAFI.mpls_vpn,
                 IP.pton(ip),
@@ -199,7 +199,7 @@ class TestIPVPNPackUnpack:
 
     def test_pack_unpack_with_leftover(self) -> None:
         """Test unpacking IPVPN with extra data after route"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -222,7 +222,7 @@ class TestIPVPNStringRepresentation:
 
     def test_str_ipvpn(self) -> None:
         """Test string representation"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -238,7 +238,7 @@ class TestIPVPNStringRepresentation:
 
     def test_repr_ipvpn(self) -> None:
         """Test repr matches str"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -251,7 +251,7 @@ class TestIPVPNStringRepresentation:
 
     def test_extensive_with_nexthop(self) -> None:
         """Test extensive representation with nexthop"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -271,7 +271,7 @@ class TestIPVPNLength:
 
     def test_len_ipvpn(self) -> None:
         """Test length includes labels and RD"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -291,7 +291,7 @@ class TestIPVPNLength:
 
     def test_len_with_multiple_labels(self) -> None:
         """Test length with multiple labels"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('10.1.1.0'),
@@ -309,7 +309,7 @@ class TestIPVPNEquality:
 
     def test_equal_routes(self) -> None:
         """Test that identical routes are equal"""
-        nlri1 = IPVPN.new(
+        nlri1 = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -318,7 +318,7 @@ class TestIPVPNEquality:
             RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
-        nlri2 = IPVPN.new(
+        nlri2 = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -331,7 +331,7 @@ class TestIPVPNEquality:
 
     def test_not_equal_different_rd(self) -> None:
         """Test that routes with different RDs are not equal"""
-        nlri1 = IPVPN.new(
+        nlri1 = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -340,7 +340,7 @@ class TestIPVPNEquality:
             RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
-        nlri2 = IPVPN.new(
+        nlri2 = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -353,7 +353,7 @@ class TestIPVPNEquality:
 
     def test_hash_consistency(self) -> None:
         """Test that hash is consistent"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -373,7 +373,7 @@ class TestIPVPNFeedback:
 
     def test_feedback_with_nexthop(self) -> None:
         """Test feedback when nexthop is set"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -388,7 +388,7 @@ class TestIPVPNFeedback:
 
     def test_feedback_without_nexthop(self) -> None:
         """Test feedback when nexthop is missing (NoNextHop)"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -403,7 +403,7 @@ class TestIPVPNFeedback:
 
     def test_feedback_withdraw_no_nexthop_required(self) -> None:
         """Test feedback for WITHDRAW doesn't require nexthop"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -423,7 +423,7 @@ class TestIPVPNIndex:
 
     def test_index_basic(self) -> None:
         """Test basic index generation"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -439,7 +439,7 @@ class TestIPVPNIndex:
 
     def test_index_contains_family(self) -> None:
         """Test index contains family information"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -460,7 +460,7 @@ class TestIPVPNJSON:
 
     def test_json_announced(self) -> None:
         """Test JSON serialization for announced route"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -476,7 +476,7 @@ class TestIPVPNJSON:
 
     def test_json_withdrawn(self) -> None:
         """Test JSON serialization for withdrawn route"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
@@ -503,7 +503,7 @@ class TestIPVPNEdgeCases:
 
     def test_ipvpn_zero_prefix_length(self) -> None:
         """Test IPVPN with /0 prefix"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('0.0.0.0'),
@@ -523,7 +523,7 @@ class TestIPVPNEdgeCases:
 
     def test_ipvpn_host_route_ipv4(self) -> None:
         """Test IPVPN with /32 host route"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('192.168.1.1'),
@@ -536,7 +536,7 @@ class TestIPVPNEdgeCases:
 
     def test_ipvpn_host_route_ipv6(self) -> None:
         """Test IPVPN with /128 host route"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv6,
             SAFI.mpls_vpn,
             IP.pton('2001:db8::1'),
@@ -554,7 +554,7 @@ class TestIPVPNMultipleRoutes:
     def test_pack_unpack_multiple_routes(self) -> None:
         """Test packing/unpacking multiple IPVPN routes"""
         routes = [
-            IPVPN.new(
+            IPVPN.make_vpn_route(
                 AFI.ipv4,
                 SAFI.mpls_vpn,
                 IP.pton('10.1.0.0'),
@@ -562,7 +562,7 @@ class TestIPVPNMultipleRoutes:
                 Labels.make_labels([100], True),
                 RouteDistinguisher.make_from_elements('10.0.0.1', 1),
             ),
-            IPVPN.new(
+            IPVPN.make_vpn_route(
                 AFI.ipv4,
                 SAFI.mpls_vpn,
                 IP.pton('10.2.0.0'),
@@ -570,7 +570,7 @@ class TestIPVPNMultipleRoutes:
                 Labels.make_labels([200], True),
                 RouteDistinguisher.make_from_elements('10.0.0.1', 2),
             ),
-            IPVPN.new(
+            IPVPN.make_vpn_route(
                 AFI.ipv4,
                 SAFI.mpls_vpn,
                 IP.pton('10.3.0.0'),

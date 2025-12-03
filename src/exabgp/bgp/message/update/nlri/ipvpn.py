@@ -111,9 +111,6 @@ class IPVPN(Label):
         instance.nexthop = IP.create(nexthop) if nexthop else IP.NoNextHop
         return instance
 
-    # Backward compatibility alias
-    new = make_vpn_route
-
     def extensive(self) -> str:
         return '{}{}'.format(Label.extensive(self), str(self.rd))
 

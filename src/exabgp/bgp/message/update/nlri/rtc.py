@@ -90,23 +90,6 @@ class RTC(NLRI):
         instance.nexthop = nexthop
         return instance
 
-    # Backward compatibility alias
-    @classmethod
-    def new(
-        cls,
-        afi: AFI,
-        safi: SAFI,
-        origin: ASN,
-        rt: RouteTarget | None,
-        nexthop: Any = IP.NoNextHop,
-        action: Action = Action.UNSET,
-    ) -> 'RTC':
-        """Legacy factory method for backward compatibility."""
-        packed_origin = pack('!L', int(origin)) if rt is not None else None
-        instance = cls(packed_origin, rt, afi, safi, action)
-        instance.nexthop = nexthop
-        return instance
-
     def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'rtc nlri next-hop missing'

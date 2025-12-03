@@ -76,6 +76,20 @@ class CIDR:
         """
         return cls(packed, mask)
 
+    @classmethod
+    def make_from_nlri(cls, afi: AFI, nlri: bytes) -> 'CIDR':
+        """Factory method to create a CIDR from NLRI wire format.
+
+        Args:
+            afi: Address family (ipv4 or ipv6) - determines padding size
+            nlri: NLRI wire format bytes [mask][truncated_ip...]
+
+        Returns:
+            New CIDR instance with full IP bytes (padded)
+        """
+        prefix, mask = cls.decode(afi, nlri)
+        return cls(prefix, mask)
+
     @property
     def mask(self) -> int:
         """Prefix length (0-32 for IPv4, 0-128 for IPv6)."""
