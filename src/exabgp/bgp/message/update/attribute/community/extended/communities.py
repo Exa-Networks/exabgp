@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterator, Sequence
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -16,7 +16,6 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunityBase
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunityIPv6
-from exabgp.bgp.message.update.attribute.community.initial.communities import Communities
 
 from exabgp.bgp.message.notification import Notify
 
@@ -30,23 +29,104 @@ EXTENDED_COMMUNITY_IPV6_SIZE = 20  # IPv6 extended community size
 
 
 @Attribute.register()
-class ExtendedCommunities(Communities):
-    ID = Attribute.CODE.EXTENDED_COMMUNITY
+class ExtendedCommunities(Attribute):
+    """Extended Communities attribute (code 16).
 
-    def add(self, data: ExtendedCommunityBase) -> ExtendedCommunities:  # type: ignore[override]
-        self.communities.append(data)  # type: ignore[arg-type]
-        self.communities.sort()
+    Stores packed wire-format bytes. Each extended community is 8 bytes.
+    """
+
+    ID = Attribute.CODE.EXTENDED_COMMUNITY
+    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+
+    def __init__(self, packed: bytes = b'') -> None:
+        """Initialize from packed wire-format bytes.
+
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_extended_communities() for semantic construction.
+
+        Args:
+            packed: Raw extended communities bytes (concatenated 8-byte extended communities)
+        """
+        self._packed: bytes = packed
+
+    @classmethod
+    def from_packet(cls, data: bytes) -> 'ExtendedCommunities':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw attribute value bytes from wire
+
+        Returns:
+            ExtendedCommunities instance
+
+        Raises:
+            Notify: If data length is not a multiple of 8
+        """
+        if len(data) % EXTENDED_COMMUNITY_SIZE != 0:
+            raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data])))
+        return cls(data)
+
+    @classmethod
+    def make_extended_communities(cls, communities: Sequence[ExtendedCommunityBase]) -> 'ExtendedCommunities':
+        """Create from list of ExtendedCommunity objects.
+
+        Args:
+            communities: Sequence of ExtendedCommunityBase objects
+
+        Returns:
+            ExtendedCommunities instance
+        """
+        sorted_communities = sorted(communities)
+        packed = b''.join(c.pack_attribute(None) for c in sorted_communities)  # type: ignore[arg-type]
+        return cls(packed)
+
+    def add(self, data: ExtendedCommunityBase) -> 'ExtendedCommunities':
+        """Add an extended community and return self (builder pattern).
+
+        Note: This unpacks, adds, sorts, and repacks.
+        """
+        communities = list(self.communities)
+        communities.append(data)
+        communities.sort()
+        self._packed = b''.join(c.pack_attribute(None) for c in communities)  # type: ignore[arg-type]
         return self
 
-    @staticmethod
-    def unpack_attribute(data: bytes, negotiated: Negotiated) -> ExtendedCommunities:
-        communities = ExtendedCommunities()
+    @property
+    def communities(self) -> list[ExtendedCommunityBase]:
+        """Get list of ExtendedCommunity objects by unpacking from bytes."""
+        result: list[ExtendedCommunityBase] = []
+        data = self._packed
         while data:
-            if data and len(data) < EXTENDED_COMMUNITY_SIZE:
-                raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data])))
-            communities.add(ExtendedCommunity.unpack_attribute(data[:EXTENDED_COMMUNITY_SIZE], negotiated))
+            result.append(ExtendedCommunity.unpack_attribute(data[:EXTENDED_COMMUNITY_SIZE], None))
             data = data[EXTENDED_COMMUNITY_SIZE:]
-        return communities
+        return result
+
+    def __len__(self) -> int:
+        return len(self._packed)
+
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
+        if self._packed:
+            return self._attribute(self._packed)
+        return b''
+
+    def __iter__(self) -> Iterator[ExtendedCommunityBase]:
+        return iter(self.communities)
+
+    def __repr__(self) -> str:
+        communities = self.communities
+        lc = len(communities)
+        if lc > 1:
+            return '[ {} ]'.format(' '.join(repr(community) for community in sorted(communities)))
+        if lc == 1:
+            return repr(communities[0])
+        return ''
+
+    def json(self) -> str:
+        return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
+
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'ExtendedCommunities':
+        return cls.from_packet(data)
 
 
 # ===================================================== ExtendedCommunitiesIPv6 (25)
@@ -54,20 +134,75 @@ class ExtendedCommunities(Communities):
 
 
 @Attribute.register()
-class ExtendedCommunitiesIPv6(Communities):
-    ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
+class ExtendedCommunitiesIPv6(Attribute):
+    """IPv6 Extended Communities attribute (code 25).
 
-    def add(self, data: ExtendedCommunityIPv6) -> ExtendedCommunitiesIPv6:  # type: ignore[override]
-        self.communities.append(data)  # type: ignore[arg-type]
-        self.communities.sort()
+    Stores packed wire-format bytes. Each IPv6 extended community is 20 bytes.
+    """
+
+    ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
+    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+
+    def __init__(self, packed: bytes = b'') -> None:
+        """Initialize from packed wire-format bytes."""
+        self._packed: bytes = packed
+
+    @classmethod
+    def from_packet(cls, data: bytes) -> 'ExtendedCommunitiesIPv6':
+        """Validate and create from wire-format bytes."""
+        if len(data) % EXTENDED_COMMUNITY_IPV6_SIZE != 0:
+            raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data])))
+        return cls(data)
+
+    @classmethod
+    def make_extended_communities_ipv6(cls, communities: Sequence[ExtendedCommunityIPv6]) -> 'ExtendedCommunitiesIPv6':
+        """Create from list of ExtendedCommunityIPv6 objects."""
+        sorted_communities = sorted(communities)
+        packed = b''.join(c.pack_attribute(None) for c in sorted_communities)  # type: ignore[arg-type]
+        return cls(packed)
+
+    def add(self, data: ExtendedCommunityIPv6) -> 'ExtendedCommunitiesIPv6':
+        """Add an IPv6 extended community and return self (builder pattern)."""
+        communities = list(self.communities)
+        communities.append(data)
+        communities.sort()
+        self._packed = b''.join(c.pack_attribute(None) for c in communities)  # type: ignore[arg-type]
         return self
 
-    @staticmethod
-    def unpack_attribute(data: bytes, negotiated: Negotiated) -> ExtendedCommunitiesIPv6:
-        communities = ExtendedCommunitiesIPv6()
+    @property
+    def communities(self) -> list[ExtendedCommunityIPv6]:
+        """Get list of ExtendedCommunityIPv6 objects by unpacking from bytes."""
+        result: list[ExtendedCommunityIPv6] = []
+        data = self._packed
         while data:
-            if data and len(data) < EXTENDED_COMMUNITY_IPV6_SIZE:
-                raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data])))
-            communities.add(ExtendedCommunityIPv6.unpack_attribute(data[:EXTENDED_COMMUNITY_IPV6_SIZE], negotiated))  # type: ignore[arg-type]
+            community = ExtendedCommunityIPv6.unpack_attribute(data[:EXTENDED_COMMUNITY_IPV6_SIZE], None)
+            result.append(community)  # type: ignore[arg-type]
             data = data[EXTENDED_COMMUNITY_IPV6_SIZE:]
-        return communities
+        return result
+
+    def __len__(self) -> int:
+        return len(self._packed)
+
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
+        if self._packed:
+            return self._attribute(self._packed)
+        return b''
+
+    def __iter__(self) -> Iterator[ExtendedCommunityIPv6]:
+        return iter(self.communities)
+
+    def __repr__(self) -> str:
+        communities = self.communities
+        lc = len(communities)
+        if lc > 1:
+            return '[ {} ]'.format(' '.join(repr(community) for community in sorted(communities)))
+        if lc == 1:
+            return repr(communities[0])
+        return ''
+
+    def json(self) -> str:
+        return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
+
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'ExtendedCommunitiesIPv6':
+        return cls.from_packet(data)
