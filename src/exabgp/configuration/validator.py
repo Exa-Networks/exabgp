@@ -751,7 +751,7 @@ class NextHopValidator(Validator[tuple['IP | IPSelf', 'NextHop | NextHopSelf']])
 
         try:
             ip_obj = IP.create(value)
-            return ip_obj, NextHop(ip_obj.top())
+            return ip_obj, NextHop.make_nexthop(ip_obj.top())
         except (OSError, IndexError, ValueError):
             raise ValueError(
                 f"'{value}' is not a valid next-hop\n  Format: <ip> or 'self' (e.g., 192.0.2.1 or self)"

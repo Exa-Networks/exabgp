@@ -422,7 +422,9 @@ class Attributes(dict):
                 'parser',
             )
             try:
-                decoded_generic: Attribute = GenericAttribute(aid, flag | Attribute.Flag.PARTIAL, attribute)
+                decoded_generic: Attribute = GenericAttribute.make_generic(
+                    aid, flag | Attribute.Flag.PARTIAL, attribute
+                )
             except IndexError:
                 self.add(TreatAsWithdraw(aid), attribute)
                 return self.parse(left, negotiated)

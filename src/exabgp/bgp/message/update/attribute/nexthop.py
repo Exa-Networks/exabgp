@@ -19,12 +19,15 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 # ================================================================== NextHop (3)
 
-# The inheritance order is important and attribute MUST be first for the righ register to be called
-# At least until we rename them to be more explicit
-
 
 @Attribute.register()
-class NextHop(Attribute, IP):  # type: ignore[misc]
+class NextHop(Attribute):
+    """Next Hop attribute (code 3).
+
+    Stores packed wire-format bytes (4 bytes for IPv4, 16 bytes for IPv6).
+    Delegates IP functionality via composition rather than inheritance.
+    """
+
     ID: ClassVar[int] = Attribute.CODE.NEXT_HOP
     FLAG: ClassVar[int] = Attribute.Flag.TRANSITIVE
     CACHING: ClassVar[bool] = True
@@ -32,9 +35,75 @@ class NextHop(Attribute, IP):  # type: ignore[misc]
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
     NO_GENERATION: ClassVar[bool] = True
 
-    # XXX: This is a bad API, as it works on non-raw data
-    def __init__(self, string: str, packed: bytes | None = None) -> None:
-        self.init(string, packed)
+    def __init__(self, packed: bytes) -> None:
+        """Initialize from packed wire-format bytes.
+
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_nexthop() for semantic construction.
+
+        Args:
+            packed: Raw IP address bytes (4 for IPv4, 16 for IPv6)
+        """
+        self._packed: bytes = packed
+
+    @classmethod
+    def from_packet(cls, data: bytes) -> 'NextHop':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw attribute value bytes from wire
+
+        Returns:
+            NextHop instance
+
+        Raises:
+            ValueError: If data length is invalid
+        """
+        if len(data) not in (4, 16):
+            raise ValueError(f'NextHop must be 4 or 16 bytes, got {len(data)}')
+        return cls(data)
+
+    @classmethod
+    def make_nexthop(cls, ip_string: str) -> 'NextHop':
+        """Create from IP address string.
+
+        Args:
+            ip_string: IP address as string (e.g., '192.168.1.1' or '2001:db8::1')
+
+        Returns:
+            NextHop instance
+        """
+        packed = IP.pton(ip_string)
+        return cls(packed)
+
+    @property
+    def afi(self) -> AFI:
+        """Get the address family."""
+        return AFI.ipv4 if len(self._packed) == 4 else AFI.ipv6
+
+    def top(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> str:
+        """Get string representation of the IP address."""
+        return IP.ntop(self._packed)
+
+    def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> bytes:
+        """Get packed bytes representation."""
+        return self._packed
+
+    def pack_ip(self) -> bytes:
+        """Get packed bytes (IP interface compatibility)."""
+        return self._packed
+
+    def index(self) -> bytes:
+        """Get the packed data for indexing/caching."""
+        return self._packed
+
+    def ipv4(self) -> bool:
+        """Check if this is an IPv4 address."""
+        return len(self._packed) == 4
+
+    def ipv6(self) -> bool:
+        """Check if this is an IPv6 address."""
+        return len(self._packed) == 16
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, NextHop):
@@ -44,39 +113,54 @@ class NextHop(Attribute, IP):  # type: ignore[misc]
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
-        return self._packed
-
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        return self._attribute(self.ton(negotiated))
-
-    @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> IP:
-        if not data:
-            return IP.NoNextHop
-        return IP.unpack_ip(data, NextHop)
+    def __len__(self) -> int:
+        return len(self._packed)
 
     def __repr__(self) -> str:
-        return IP.__repr__(self)
+        return self.top()
+
+    def __hash__(self) -> int:
+        return hash(('NextHop', self._packed))
+
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
+        return self._attribute(self._packed)
+
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'NextHop | IP':
+        if not data:
+            return IP.NoNextHop
+        return cls.from_packet(data)
 
 
 class NextHopSelf(NextHop):
+    """Special NextHop that resolves to the local address at pack time."""
+
     SELF: ClassVar[bool] = True
 
     def __init__(self, afi: AFI) -> None:
-        self.afi: AFI = afi
+        # Don't call super().__init__ - we don't have packed bytes yet
+        self._afi: AFI = afi
+        self._packed = b''  # Placeholder, resolved at pack time
+
+    @property
+    def afi(self) -> AFI:
+        """Get the address family."""
+        return self._afi
 
     def __repr__(self) -> str:
         return 'self'
 
     def ipv4(self) -> bool:
-        return self.afi == AFI.ipv4
+        return self._afi == AFI.ipv4
+
+    def ipv6(self) -> bool:
+        return self._afi == AFI.ipv6
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        return self._attribute(negotiated.nexthopself(self.afi).ton())
+        return self._attribute(negotiated.nexthopself(self._afi).ton())
 
     def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
         return negotiated.nexthopself(afi).ton()
 
     def __eq__(self, other: object) -> bool:
-        raise RuntimeError('do not use __eq__ with NextHop')
+        raise RuntimeError('do not use __eq__ with NextHopSelf')

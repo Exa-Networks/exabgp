@@ -280,7 +280,7 @@ class Neighbor:
         neighbor_self = self.ip_self(change.nlri.afi)
         change.nlri.nexthop = neighbor_self
         if Attribute.CODE.NEXT_HOP in change.attributes:
-            change.attributes[Attribute.CODE.NEXT_HOP] = NextHop(str(neighbor_self), neighbor_self.pack_ip())
+            change.attributes[Attribute.CODE.NEXT_HOP] = NextHop(neighbor_self.pack_ip())
         return change
 
     def __str__(self) -> str:
