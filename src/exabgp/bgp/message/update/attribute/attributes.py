@@ -366,7 +366,7 @@ class Attributes(dict):
 
             try:
                 decoded: Attribute = Attribute.unpack(aid, flag, attribute, negotiated)
-            except IndexError as exc:
+            except (IndexError, ValueError) as exc:
                 if kls and kls.TREAT_AS_WITHDRAW:
                     self.add(TreatAsWithdraw(aid))
                     return self.parse(left, negotiated)

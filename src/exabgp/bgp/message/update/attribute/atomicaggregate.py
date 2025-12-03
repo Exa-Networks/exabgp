@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.notification import Notify
 
 
 # ========================================================== AtomicAggregate (6)
@@ -33,7 +32,12 @@ class AtomicAggregate(Attribute):
 
         Args:
             packed: Raw attribute value bytes (must be empty for AtomicAggregate)
+
+        Raises:
+            ValueError: If packed data is not empty
         """
+        if packed:
+            raise ValueError(f'AtomicAggregate must be empty, got {len(packed)} bytes')
         self._packed: bytes = packed
 
     @classmethod
@@ -64,8 +68,7 @@ class AtomicAggregate(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> AtomicAggregate:
-        if data:
-            raise Notify(3, 2, 'invalid ATOMIC_AGGREGATE %s' % [hex(_) for _ in data])
+        # Validation happens in __init__
         return cls(data)
 
     @classmethod

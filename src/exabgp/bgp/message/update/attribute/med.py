@@ -32,7 +32,12 @@ class MED(Attribute):
 
         Args:
             packed: Raw attribute value bytes (4-byte unsigned integer, network order)
+
+        Raises:
+            ValueError: If packed data is not exactly 4 bytes
         """
+        if len(packed) != 4:
+            raise ValueError(f'MED requires exactly 4 bytes, got {len(packed)}')
         self._packed: bytes = packed
 
     @classmethod
@@ -50,15 +55,11 @@ class MED(Attribute):
     @property
     def med(self) -> int:
         """Get MED value by unpacking from bytes."""
-        if len(self._packed) != 4:
-            raise IndexError('MED has invalid data length')
         return unpack('!L', self._packed)[0]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MED):
             return False
-        if len(self._packed) != 4 or len(other._packed) != 4:
-            return self._packed == other._packed
         return self.ID == other.ID and self.FLAG == other.FLAG and self.med == other.med
 
     def __ne__(self, other: object) -> bool:
@@ -72,19 +73,12 @@ class MED(Attribute):
         return 7
 
     def __repr__(self) -> str:
-        if len(self._packed) != 4:
-            return 'invalid'
         return str(self.med)
 
     def __hash__(self) -> int:
-        if len(self._packed) != 4:
-            return hash(self._packed)
         return hash(self.med)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> MED:
-        if len(data) != 4:
-            from exabgp.bgp.message.notification import Notify
-
-            raise Notify(3, 5, f'MED attribute has invalid length {len(data)}, expected 4')
+        # Validation happens in __init__
         return cls(data)

@@ -33,7 +33,12 @@ class LocalPreference(Attribute):
 
         Args:
             packed: Raw attribute value bytes (4-byte unsigned integer, network order)
+
+        Raises:
+            ValueError: If packed data is not exactly 4 bytes
         """
+        if len(packed) != 4:
+            raise ValueError(f'LocalPreference requires exactly 4 bytes, got {len(packed)}')
         self._packed: bytes = packed
 
     @classmethod
@@ -51,15 +56,11 @@ class LocalPreference(Attribute):
     @property
     def localpref(self) -> int:
         """Get local preference value by unpacking from bytes."""
-        if len(self._packed) != 4:
-            raise IndexError('LocalPreference has invalid data length')
         return unpack('!L', self._packed)[0]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LocalPreference):
             return False
-        if len(self._packed) != 4 or len(other._packed) != 4:
-            return self._packed == other._packed
         return self.ID == other.ID and self.FLAG == other.FLAG and self.localpref == other.localpref
 
     def __ne__(self, other: object) -> bool:
@@ -73,14 +74,9 @@ class LocalPreference(Attribute):
         return 7
 
     def __repr__(self) -> str:
-        if len(self._packed) != 4:
-            return 'invalid'
         return str(self.localpref)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> LocalPreference:
-        if len(data) != 4:
-            from exabgp.bgp.message.notification import Notify
-
-            raise Notify(3, 5, f'LocalPreference attribute has invalid length {len(data)}, expected 4')
+        # Validation happens in __init__
         return cls(data)

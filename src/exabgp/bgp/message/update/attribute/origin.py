@@ -35,7 +35,12 @@ class Origin(Attribute):
 
         Args:
             packed: Raw attribute value bytes (single byte: 0=IGP, 1=EGP, 2=INCOMPLETE)
+
+        Raises:
+            ValueError: If packed data is not exactly 1 byte
         """
+        if len(packed) != 1:
+            raise ValueError(f'Origin requires exactly 1 byte, got {len(packed)}')
         self._packed: bytes = packed
 
     @classmethod
@@ -53,15 +58,11 @@ class Origin(Attribute):
     @property
     def origin(self) -> int:
         """Get origin value by unpacking from bytes."""
-        if not self._packed:
-            raise IndexError('Origin has no data (truncated or malformed)')
         return self._packed[0]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Origin):
             return False
-        if not self._packed or not other._packed:
-            return self._packed == other._packed
         return self.ID == other.ID and self.FLAG == other.FLAG and self.origin == other.origin
 
     def __ne__(self, other: object) -> bool:
@@ -75,8 +76,6 @@ class Origin(Attribute):
         return 4
 
     def __repr__(self) -> str:
-        if not self._packed:
-            return 'invalid'
         if self.origin == Origin.IGP:
             return 'igp'
         if self.origin == Origin.EGP:
@@ -87,10 +86,7 @@ class Origin(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Origin:
-        if len(data) != 1:
-            from exabgp.bgp.message.notification import Notify
-
-            raise Notify(3, 5, f'Origin attribute has invalid length {len(data)}, expected 1')
+        # Validation happens in __init__
         return cls(data)
 
     @classmethod
