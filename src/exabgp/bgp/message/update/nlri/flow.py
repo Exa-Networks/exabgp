@@ -612,6 +612,13 @@ class Flow(NLRI):
 
     Flow uses a builder pattern where rules are added via add() method.
     The packed wire format is computed dynamically from the rules.
+
+    Note: Packed-bytes-first pattern does not apply to Flow because:
+    1. Rules are added incrementally via add() method
+    2. Wire format depends on the entire rules collection
+    3. Length encoding requires knowing total size upfront
+
+    Use make_flow() to create a new Flow, then add rules via add().
     """
 
     rules: dict[int, list[FlowRule]]
@@ -619,7 +626,7 @@ class Flow(NLRI):
     rd: RouteDistinguisher
 
     def __init__(self, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.flow_ip, action: Action = Action.UNSET) -> None:
-        """Create a Flow NLRI.
+        """Create a Flow NLRI in builder mode.
 
         Args:
             afi: Address Family Identifier (ipv4 or ipv6)
@@ -640,6 +647,10 @@ class Flow(NLRI):
         action: Action = Action.ANNOUNCE,
     ) -> 'Flow':
         """Factory method to create an empty Flow NLRI for building rules.
+
+        This is the preferred way to create a Flow. After creation,
+        use add() to add rules, then the packed format is computed
+        dynamically when pack_nlri() is called.
 
         Args:
             afi: Address Family Identifier (ipv4 or ipv6)

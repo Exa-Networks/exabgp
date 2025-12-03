@@ -41,7 +41,7 @@ from exabgp.configuration.l2vpn.parser import next_hop
 
 def _vpls_nlri_factory():
     """Factory for VPLS NLRI with default None values."""
-    return VPLS_NLRI(None, None, None, None, None)
+    return VPLS_NLRI.make_empty()
 
 
 class ParseVPLS(Section):

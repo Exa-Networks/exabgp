@@ -21,11 +21,8 @@ class TestL2VPN(unittest.TestCase):
         separator = rd.find(':')
         prefix = rd[:separator]
         suffix = int(rd[separator + 1 :])
-        data = [chr(0), chr(1)]
-        data.extend([chr(int(_)) for _ in prefix.split('.')])
-        data.extend([chr(suffix >> 8), chr(suffix & 0xFF)])
-        bin_rd = ''.join(data)
-        return RouteDistinguisher(bin_rd)
+        # Use RouteDistinguisher.make_from_elements instead of manual construction
+        return RouteDistinguisher.make_from_elements(prefix, suffix)
 
     def setUp(self) -> None:
         """SetUp unittesting
@@ -35,8 +32,8 @@ class TestL2VPN(unittest.TestCase):
         """
         self.encoded_l2vpn_nlri1 = bytearray.fromhex('0011 0001 AC1E 0504 000D 0003 0001 0008 4000 11')
         self.encoded_l2vpn_nlri2 = bytearray.fromhex('0011 0001 AC1E 0503 000B 0003 0001 0008 4000 11')
-        self.decoded_l2vpn_nlri1 = VPLS(TestL2VPN.generate_rd('172.30.5.4:13'), 3, 262145, 1, 8)
-        self.decoded_l2vpn_nlri2 = VPLS(TestL2VPN.generate_rd('172.30.5.3:11'), 3, 262145, 1, 8)
+        self.decoded_l2vpn_nlri1 = VPLS.make_vpls(TestL2VPN.generate_rd('172.30.5.4:13'), 3, 262145, 1, 8)
+        self.decoded_l2vpn_nlri2 = VPLS.make_vpls(TestL2VPN.generate_rd('172.30.5.3:11'), 3, 262145, 1, 8)
         """
         output from Juniper
         Communities: target:54591:6 Layer2-info: encaps: VPLS, control flags:[0x0] , mtu: 0, site preference: 100

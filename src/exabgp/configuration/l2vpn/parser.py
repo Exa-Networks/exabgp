@@ -21,7 +21,7 @@ VPLS_PARAM_MAX = 0xFFFF  # Maximum value for VPLS endpoint, size, offset, and la
 
 
 def vpls(tokeniser):
-    return Change(VPLS(None, None, None, None, None), Attributes())
+    return Change(VPLS.make_empty(), Attributes())
 
 
 def vpls_endpoint(tokeniser):

@@ -37,44 +37,34 @@ unique: Iterator[int] = _unique()
 
 @NLRI.register(AFI.l2vpn, SAFI.vpls)
 class VPLS(NLRI):
-    def __init__(
-        self,
-        rd: RouteDistinguisher | bytes | None,
-        endpoint: int | None = None,
-        base: int | None = None,
-        offset: int | None = None,
-        size: int | None = None,
-    ) -> None:
-        """Create a VPLS NLRI.
+    """VPLS NLRI using packed-bytes-first pattern.
 
-        Supports two call signatures:
-        - Packed: VPLS(packed_bytes) - 17 bytes wire format
-        - Fields: VPLS(rd, endpoint, base, offset, size)
-        - Empty: VPLS(None, None, None, None, None) - for configuration parsing
+    Two modes:
+    - Packed mode: created from wire bytes, fields unpacked on property access
+    - Builder mode: created empty for configuration, fields assigned via setters
+    """
+
+    # Wire format length (excluding 2-byte length prefix)
+    PACKED_LENGTH = 17  # RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
+
+    def __init__(self, packed: bytes | None) -> None:
+        """Create a VPLS NLRI from packed wire-format bytes or empty for configuration.
 
         Args:
-            rd: RouteDistinguisher, packed wire bytes (17 bytes), or None
-            endpoint: VPLS endpoint (VE ID)
-            base: Label base
-            offset: Label block offset
-            size: Label block size
+            packed: 17 bytes wire format (RD + endpoint + offset + size + base), or None for builder mode
         """
         NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
         self.action = Action.ANNOUNCE
         self.nexthop = IP.NoNextHop
 
-        if isinstance(rd, bytes):
-            # Packed wire format (17 bytes): RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
-            self.rd = RouteDistinguisher(rd[0:8])
-            self.endpoint, self.offset, self.size = unpack('!HHH', rd[8:14])
-            self.base = unpack('!L', b'\x00' + rd[14:17])[0] >> 4
-        else:
-            # Individual fields or None (RouteDistinguisher or None)
-            self.rd = rd  # type: ignore[assignment]
-            self.endpoint = endpoint  # type: ignore[assignment]
-            self.base = base  # type: ignore[assignment]
-            self.offset = offset  # type: ignore[assignment]
-            self.size = size  # type: ignore[assignment,misc]  # shadows Family.size ClassVar
+        self._packed: bytes | None = packed
+
+        # Builder mode storage (used when _packed is None)
+        self._rd: RouteDistinguisher | None = None
+        self._endpoint: int | None = None
+        self._base: int | None = None
+        self._offset: int | None = None
+        self._size_value: int | None = None  # '_size' would shadow Family.size ClassVar
 
         self.unique = next(unique)
 
@@ -97,9 +87,88 @@ class VPLS(NLRI):
             size: Label block size
 
         Returns:
-            New VPLS instance
+            New VPLS instance with packed wire format
         """
-        return cls(rd, endpoint, base, offset, size)
+        packed = (
+            rd.pack_rd()
+            + pack('!HHH', endpoint, offset, size)
+            + pack('!L', (base << 4) | 0x1)[1:]  # 3 bytes with BOS bit
+        )
+        return cls(packed)
+
+    @classmethod
+    def make_empty(cls) -> 'VPLS':
+        """Factory method for configuration - creates empty VPLS for field assignment.
+
+        Returns:
+            New VPLS instance in builder mode (packed=None)
+        """
+        return cls(None)
+
+    @property
+    def rd(self) -> RouteDistinguisher | None:
+        """Route Distinguisher - unpacked from wire bytes or from builder storage."""
+        if self._packed is not None:
+            return RouteDistinguisher(self._packed[0:8])
+        return self._rd
+
+    @rd.setter
+    def rd(self, value: RouteDistinguisher | None) -> None:
+        """Set Route Distinguisher (builder mode only)."""
+        self._rd = value
+        self._packed = None  # Switch to builder mode
+
+    @property
+    def endpoint(self) -> int | None:
+        """VPLS endpoint (VE ID) - unpacked from wire bytes or from builder storage."""
+        if self._packed is not None:
+            return unpack('!H', self._packed[8:10])[0]
+        return self._endpoint
+
+    @endpoint.setter
+    def endpoint(self, value: int | None) -> None:
+        """Set VPLS endpoint (builder mode only)."""
+        self._endpoint = value
+        self._packed = None  # Switch to builder mode
+
+    @property
+    def offset(self) -> int | None:
+        """Label block offset - unpacked from wire bytes or from builder storage."""
+        if self._packed is not None:
+            return unpack('!H', self._packed[10:12])[0]
+        return self._offset
+
+    @offset.setter
+    def offset(self, value: int | None) -> None:
+        """Set label block offset (builder mode only)."""
+        self._offset = value
+        self._packed = None  # Switch to builder mode
+
+    @property
+    def size(self) -> int | None:
+        """Label block size - unpacked from wire bytes or from builder storage."""
+        if self._packed is not None:
+            return unpack('!H', self._packed[12:14])[0]
+        return self._size_value
+
+    @size.setter
+    def size(self, value: int | None) -> None:
+        """Set label block size (builder mode only)."""
+        self._size_value = value
+        self._packed = None  # Switch to builder mode
+
+    @property
+    def base(self) -> int | None:
+        """Label base - unpacked from wire bytes or from builder storage."""
+        if self._packed is not None:
+            return unpack('!L', b'\x00' + self._packed[14:17])[0] >> 4
+        return self._base
+
+    @base.setter
+    def base(self, value: int | None) -> None:
+        """Set label base (builder mode only)."""
+        self._base = value
+        self._packed = None  # Switch to builder mode
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
@@ -126,12 +195,17 @@ class VPLS(NLRI):
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
-        return (
-            b'\x00\x11'  # pack('!H',17)
-            + self.rd.pack_rd()
-            + pack('!HHH', self.endpoint, self.offset, self.size)
-            + pack('!L', (self.base << 4) | 0x1)[1:]  # setting the bottom of stack, should we ?
-        )
+        if self._packed is not None:
+            # Packed mode - use stored wire bytes
+            return b'\x00\x11' + self._packed
+        else:
+            # Builder mode - pack from individual fields
+            return (
+                b'\x00\x11'  # pack('!H',17)
+                + self._rd.pack_rd()  # type: ignore[union-attr]
+                + pack('!HHH', self._endpoint, self._offset, self._size_value)
+                + pack('!L', (self._base << 4) | 0x1)[1:]  # type: ignore[operator]  # setting the bottom of stack
+            )
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
         # RFC 7911 ADD-PATH is possible for VPLS but not yet implemented

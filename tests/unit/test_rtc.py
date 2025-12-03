@@ -67,9 +67,9 @@ class TestRTCCreation:
         assert nlri.nexthop == nh
 
     def test_create_rtc_direct_init(self) -> None:
-        """Test creating RTC via direct initialization"""
+        """Test creating RTC via make_rtc factory"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC(AFI.ipv4, SAFI.rtc, Action.ANNOUNCE, ASN(65000), rt)
+        nlri = RTC.make_rtc(ASN(65000), rt, Action.ANNOUNCE)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.rtc
