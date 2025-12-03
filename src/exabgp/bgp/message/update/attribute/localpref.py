@@ -31,26 +31,46 @@ class LocalPreference(Attribute):
     def __init__(self, packed: bytes) -> None:
         """Initialize LocalPreference from packed wire-format bytes.
 
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_localpref() for semantic construction.
+
         Args:
             packed: Raw attribute value bytes (4-byte unsigned integer, network order)
-
-        Raises:
-            ValueError: If packed data is not exactly 4 bytes
         """
-        if len(packed) != 4:
-            raise ValueError(f'LocalPreference requires exactly 4 bytes, got {len(packed)}')
         self._packed: bytes = packed
 
     @classmethod
+    def from_packet(cls, data: bytes) -> 'LocalPreference':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw attribute value bytes from wire
+
+        Returns:
+            LocalPreference instance
+
+        Raises:
+            ValueError: If data is not exactly 4 bytes
+        """
+        if len(data) != 4:
+            raise ValueError(f'LocalPreference requires exactly 4 bytes, got {len(data)}')
+        return cls(data)
+
+    @classmethod
     def make_localpref(cls, localpref: int) -> 'LocalPreference':
-        """Create LocalPreference from semantic value.
+        """Create LocalPreference from semantic value with validation.
 
         Args:
             localpref: Local preference value (0-4294967295), higher is preferred
 
         Returns:
             LocalPreference instance
+
+        Raises:
+            ValueError: If localpref value is out of range
         """
+        if not 0 <= localpref <= 0xFFFFFFFF:
+            raise ValueError(f'LocalPreference value out of range: {localpref}')
         return cls(pack('!L', localpref))
 
     @property
@@ -70,13 +90,12 @@ class LocalPreference(Attribute):
         return self._attribute(self._packed)
 
     def __len__(self) -> int:
-        # LocalPreference is always 4 bytes payload + 3 byte header = 7 bytes total
-        return 7
+        return len(self._packed)
 
     def __repr__(self) -> str:
         return str(self.localpref)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> LocalPreference:
-        # Validation happens in __init__
-        return cls(data)
+        # Wire data - use from_packet for validation
+        return cls.from_packet(data)
