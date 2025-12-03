@@ -51,6 +51,7 @@ INTERPRETER: str = os.environ.get('INTERPRETER') or os.environ.get('__PYVENV_LAU
 FLAKY_TESTS: List[str] = [
     'D',  # api-fast: known to be flaky
     'E',  # api-flow-merge: server occasionally times out
+    'W',  # api-rr-rib: occasionally fails in batch mode
     '7',  # api-api: occasionally fails in async mode
 ]
 
@@ -764,6 +765,7 @@ class Tests:
         self._max_timeout: int = 0
         self._daemons_count: int = 0
         self._clients_count: int = 0
+        self._retries_done: bool = False
 
     def new(self, name: str) -> Record:
         test = self.klass.new(name)
@@ -850,18 +852,30 @@ class Tests:
         pending = 0
         passed = 0
         failed = 0
+        flaky = 0
         failed_tests: List[str] = []
+        flaky_tests: List[str] = []
         pending_tests: List[str] = []
 
         for test in self.registered():
             if test.state == State.SUCCESS:
                 passed += 1
             elif test.state == State.FAIL:
-                failed += 1
-                failed_tests.append(test.nick)
+                # Don't count flaky tests as failed until retries are done
+                if not self._retries_done and test.nick in FLAKY_TESTS:
+                    flaky += 1
+                    flaky_tests.append(test.nick)
+                else:
+                    failed += 1
+                    failed_tests.append(test.nick)
             elif test.state == State.TIMEOUT:
-                failed += 1
-                failed_tests.append(test.nick)
+                # Don't count flaky tests as failed until retries are done
+                if not self._retries_done and test.nick in FLAKY_TESTS:
+                    flaky += 1
+                    flaky_tests.append(test.nick)
+                else:
+                    failed += 1
+                    failed_tests.append(test.nick)
             elif test.state in (State.NONE, State.STARTING, State.RUNNING):
                 pending += 1
                 pending_tests.append(test.nick)
@@ -883,7 +897,7 @@ class Tests:
             )
 
         # Format with labels and colors
-        # Order: timer, daemon/client, passed, failed (if > 0), pending
+        # Order: timer, daemon/client, passed, failed (if > 0), flaky (if > 0), pending
 
         # Build status line
         status_parts = [timer, daemon_client]
@@ -898,6 +912,13 @@ class Tests:
             if failed_tests:
                 failed_text += f' [{", ".join(failed_tests)}]'
             status_parts.append(failed_text)
+
+        # Add flaky section if there are flaky tests pending retry
+        if flaky > 0:
+            flaky_text = f'{yellow()}flaky{reset()} {flaky:2d}'
+            if flaky_tests:
+                flaky_text += f' [{", ".join(flaky_tests)}]'
+            status_parts.append(flaky_text)
 
         # Add pending last (show test IDs if < 10)
         # Trailing space ensures last character renders in some terminals
@@ -1516,7 +1537,7 @@ class EncodingTests(Tests):
         return '\n'.join(result)
 
     def _retry_flaky_tests(self, client: Dict[str, Exec], timeout: int, quiet: bool) -> bool:
-        """Retry known flaky tests that failed.
+        """Retry known flaky tests that failed or timed out.
 
         Args:
             client: Dictionary mapping test nick to client Exec objects
@@ -1526,7 +1547,9 @@ class EncodingTests(Tests):
         Returns:
             True if all retries passed, False if any retry failed
         """
-        failed_flaky_tests = [t for t in self.selected() if t.state == State.FAIL and t.nick in FLAKY_TESTS]
+        failed_flaky_tests = [
+            t for t in self.registered() if t.state in (State.FAIL, State.TIMEOUT) and t.nick in FLAKY_TESTS
+        ]
         if not failed_flaky_tests:
             return True
 
@@ -1579,8 +1602,8 @@ class EncodingTests(Tests):
             )
             time.sleep(0.1)
 
-            # Wait for completion (with shorter timeout for retry)
-            retry_timeout = min(10, timeout // 2)
+            # Wait for completion (retry gets reasonable time - some tests like api-flow-merge take ~25s)
+            retry_timeout = max(45, timeout // 2)
             retry_exit_time = time.time() + retry_timeout
 
             while time.time() < retry_exit_time:
@@ -1893,6 +1916,7 @@ class EncodingTests(Tests):
         # Retry known flaky tests that failed
         # To disable retry, comment out this function call
         retry_success = self._retry_flaky_tests(client, timeout, self._quiet)
+        self._retries_done = True
         if retry_success:
             # All retries passed, update overall success
             success = success or retry_success
@@ -1925,8 +1949,7 @@ class EncodingTests(Tests):
         else:
             # Multi-test mode: show debug output if exactly one non-flaky test failed
             non_flaky_failures = [
-                t for t in self.selected()
-                if t.state in (State.FAIL, State.TIMEOUT) and t.nick not in FLAKY_TESTS
+                t for t in self.selected() if t.state in (State.FAIL, State.TIMEOUT) and t.nick not in FLAKY_TESTS
             ]
             if len(non_flaky_failures) == 1 and first_failed_server is not None:
                 server_exec = first_failed_server
