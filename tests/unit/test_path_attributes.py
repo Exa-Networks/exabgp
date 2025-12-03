@@ -1296,29 +1296,30 @@ def test_pmsi_basic_creation() -> None:
     """Test PMSI attribute basic creation."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
-    # Create basic PMSI
+    # Create basic PMSI using factory method
     tunnel_data = b'\x01\x02\x03\x04'
     label = 100
     flags = 0
-    pmsi = PMSI(tunnel_data, label, flags)
+    tunnel_type = 1  # RSVP-TE P2MP LSP
+    pmsi = PMSI.make_pmsi(tunnel_type, flags, label, tunnel_data)
 
-    # Verify fields
+    # Verify fields via properties
     assert pmsi.tunnel == tunnel_data
     assert pmsi.label == label
     assert pmsi.flags == flags
-    assert pmsi.raw_label is None
+    assert pmsi.tunnel_type == tunnel_type
 
 
 def test_pmsi_pack_basic() -> None:
     """Test PMSI pack method."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
-    # Create PMSI with known tunnel type
+    # Create PMSI using factory method
     tunnel_data = b'\x01\x02\x03\x04'
     label = 100
     flags = 0
-    pmsi = PMSI(tunnel_data, label, flags)
-    pmsi.TUNNEL_TYPE = 1  # RSVP-TE P2MP LSP
+    tunnel_type = 1  # RSVP-TE P2MP LSP
+    pmsi = PMSI.make_pmsi(tunnel_type, flags, label, tunnel_data)
 
     negotiated = Mock()
 
@@ -1364,13 +1365,10 @@ def test_pmsi_equality() -> None:
     """Test PMSI equality comparison."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
-    # Create two identical PMSIs
+    # Create two identical PMSIs using factory method
     tunnel = b'\x01\x02\x03\x04'
-    pmsi1 = PMSI(tunnel, 100, 0)
-    pmsi1.TUNNEL_TYPE = 1
-
-    pmsi2 = PMSI(tunnel, 100, 0)
-    pmsi2.TUNNEL_TYPE = 1
+    pmsi1 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=tunnel)
+    pmsi2 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=tunnel)
 
     # Should be equal
     assert pmsi1 == pmsi2
@@ -1382,20 +1380,20 @@ def test_pmsi_inequality() -> None:
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Different tunnel data
-    pmsi1 = PMSI(b'\x01\x02\x03\x04', 100, 0)
-    pmsi2 = PMSI(b'\x05\x06\x07\x08', 100, 0)
+    pmsi1 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x01\x02\x03\x04')
+    pmsi2 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x05\x06\x07\x08')
 
     assert pmsi1 != pmsi2
 
     # Different label
-    pmsi3 = PMSI(b'\x01\x02\x03\x04', 100, 0)
-    pmsi4 = PMSI(b'\x01\x02\x03\x04', 200, 0)
+    pmsi3 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x01\x02\x03\x04')
+    pmsi4 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=200, tunnel=b'\x01\x02\x03\x04')
 
     assert pmsi3 != pmsi4
 
     # Different flags
-    pmsi5 = PMSI(b'\x01\x02\x03\x04', 100, 0)
-    pmsi6 = PMSI(b'\x01\x02\x03\x04', 100, 1)
+    pmsi5 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x01\x02\x03\x04')
+    pmsi6 = PMSI.make_pmsi(tunnel_type=1, flags=1, label=100, tunnel=b'\x01\x02\x03\x04')
 
     assert pmsi5 != pmsi6
 
@@ -1404,12 +1402,12 @@ def test_pmsi_length() -> None:
     """Test PMSI length calculation."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
-    # Create PMSI with known tunnel size
+    # Create PMSI with known tunnel size using factory method
     tunnel_data = b'\x01\x02\x03\x04'  # 4 bytes
-    pmsi = PMSI(tunnel_data, 100, 0)
+    pmsi = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=tunnel_data)
 
-    # Length should be tunnel + 5 (flags:1 + tunnel_type:1 + label:3)
-    assert len(pmsi) == 4 + 5
+    # Length should be total packed: flags(1) + tunnel_type(1) + label(3) + tunnel(4) = 9
+    assert len(pmsi) == 1 + 1 + 3 + 4
 
 
 def test_pmsi_repr_format() -> None:
@@ -1419,8 +1417,8 @@ def test_pmsi_repr_format() -> None:
     tunnel = b'\x01\x02\x03\x04'
     label = 100
     flags = 0
-    pmsi = PMSI(tunnel, label, flags)
-    pmsi.TUNNEL_TYPE = 1  # RSVP-TE P2MP LSP
+    tunnel_type = 1  # RSVP-TE P2MP LSP
+    pmsi = PMSI.make_pmsi(tunnel_type, flags, label, tunnel)
 
     repr_str = str(pmsi)
 
@@ -1453,11 +1451,12 @@ def test_pmsi_no_tunnel() -> None:
     """Test PMSINoTunnel subclass."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSINoTunnel
 
-    # Create PMSINoTunnel
-    pmsi = PMSINoTunnel(label=100, flags=0)
+    # Create PMSINoTunnel using factory method
+    pmsi = PMSINoTunnel.make_no_tunnel(flags=0, label=100)
 
     # Verify tunnel type
     assert pmsi.TUNNEL_TYPE == 0
+    assert pmsi.tunnel_type == 0
 
     # Verify tunnel is empty
     assert pmsi.tunnel == b''
@@ -1470,7 +1469,7 @@ def test_pmsi_no_tunnel_pack() -> None:
     """Test PMSINoTunnel pack method."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSINoTunnel
 
-    pmsi = PMSINoTunnel(label=100, flags=0)
+    pmsi = PMSINoTunnel.make_no_tunnel(flags=0, label=100)
 
     negotiated = Mock()
     packed = pmsi.pack_attribute(negotiated)
@@ -1481,14 +1480,23 @@ def test_pmsi_no_tunnel_pack() -> None:
 
 
 def test_pmsi_no_tunnel_unpack() -> None:
-    """Test PMSINoTunnel unpack_pmsi method."""
-    from exabgp.bgp.message.update.attribute.pmsi import PMSINoTunnel
+    """Test PMSINoTunnel unpack via PMSI.from_packet."""
+    from exabgp.bgp.message.update.attribute.pmsi import PMSI, PMSINoTunnel
+    import struct
 
-    # Create from empty tunnel
-    unpacked = PMSINoTunnel.unpack_pmsi(b'', 100, 0)
+    # Create wire data for no-tunnel PMSI
+    flags = 0
+    tunnel_type = 0  # No tunnel
+    label = 100
+    raw_label = label << 4
+    data = struct.pack('!BB', flags, tunnel_type) + struct.pack('!L', raw_label)[1:4]
 
-    assert unpacked.label == 100
-    assert unpacked.flags == 0
+    # Unpack via PMSI.from_packet - should return PMSINoTunnel
+    unpacked = PMSI.from_packet(data)
+
+    assert isinstance(unpacked, PMSINoTunnel)
+    assert unpacked.label == label
+    assert unpacked.flags == flags
     assert unpacked.tunnel == b''
 
 
@@ -1496,14 +1504,15 @@ def test_pmsi_ingress_replication() -> None:
     """Test PMSIIngressReplication subclass."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSIIngressReplication
 
-    # Create PMSIIngressReplication
+    # Create PMSIIngressReplication using factory method
     ip = '192.168.1.1'
-    pmsi = PMSIIngressReplication(ip, label=100, flags=0)
+    pmsi = PMSIIngressReplication.make_ingress_replication(ip, flags=0, label=100)
 
     # Verify tunnel type
     assert pmsi.TUNNEL_TYPE == 6
+    assert pmsi.tunnel_type == 6
 
-    # Verify IP is stored
+    # Verify IP is accessible via property
     assert pmsi.ip == ip
 
     # Verify tunnel contains packed IP
@@ -1514,7 +1523,7 @@ def test_pmsi_ingress_replication_pack() -> None:
     """Test PMSIIngressReplication pack method."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSIIngressReplication
 
-    pmsi = PMSIIngressReplication('192.168.1.1', label=100, flags=0)
+    pmsi = PMSIIngressReplication.make_ingress_replication('192.168.1.1', flags=0, label=100)
 
     negotiated = Mock()
     packed = pmsi.pack_attribute(negotiated)
@@ -1524,20 +1533,27 @@ def test_pmsi_ingress_replication_pack() -> None:
 
 
 def test_pmsi_ingress_replication_unpack() -> None:
-    """Test PMSIIngressReplication unpack_pmsi method."""
-    from exabgp.bgp.message.update.attribute.pmsi import PMSIIngressReplication
+    """Test PMSIIngressReplication unpack via PMSI.from_packet."""
+    from exabgp.bgp.message.update.attribute.pmsi import PMSI, PMSIIngressReplication
     from exabgp.protocol.ip import IPv4
+    import struct
 
-    # Create tunnel with IP
+    # Create wire data for ingress replication PMSI
     ip = '192.168.1.1'
+    flags = 0
+    tunnel_type = 6  # Ingress Replication
+    label = 100
+    raw_label = label << 4
     tunnel = IPv4.pton(ip)
+    data = struct.pack('!BB', flags, tunnel_type) + struct.pack('!L', raw_label)[1:4] + tunnel
 
-    # Create from tunnel
-    unpacked = PMSIIngressReplication.unpack_pmsi(tunnel, 100, 0, None)
+    # Unpack via PMSI.from_packet - should return PMSIIngressReplication
+    unpacked = PMSI.from_packet(data)
 
+    assert isinstance(unpacked, PMSIIngressReplication)
     assert unpacked.ip == ip
-    assert unpacked.label == 100
-    assert unpacked.flags == 0
+    assert unpacked.label == label
+    assert unpacked.flags == flags
 
 
 def test_pmsi_ingress_replication_prettytunnel() -> None:
@@ -1545,7 +1561,7 @@ def test_pmsi_ingress_replication_prettytunnel() -> None:
     from exabgp.bgp.message.update.attribute.pmsi import PMSIIngressReplication
 
     ip = '192.168.1.1'
-    pmsi = PMSIIngressReplication(ip, label=100, flags=0)
+    pmsi = PMSIIngressReplication.make_ingress_replication(ip, flags=0, label=100)
 
     # Pretty tunnel should return IP address
     assert pmsi.prettytunnel() == ip
@@ -1555,19 +1571,18 @@ def test_pmsi_raw_label_handling() -> None:
     """Test PMSI with raw_label parameter."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
-    # Create PMSI with raw_label
+    # Create PMSI with raw_label using factory method
     tunnel = b'\x01\x02\x03\x04'
     label = 100
-    raw_label = 1600  # label << 4
-    pmsi = PMSI(tunnel, label, 0, raw_label=raw_label)
+    raw_label = 1601  # label << 4 + bottom of stack bit
+    pmsi = PMSI.make_pmsi(tunnel_type=1, flags=0, label=label, tunnel=tunnel, raw_label=raw_label)
 
-    # Verify both are stored
-    assert pmsi.label == label
+    # Verify raw_label is preserved (label is derived from raw_label >> 4)
     assert pmsi.raw_label == raw_label
+    assert pmsi.label == raw_label >> 4
 
-    # Pack should use raw_label
+    # Pack should preserve raw_label
     negotiated = Mock()
-    pmsi.TUNNEL_TYPE = 1
     packed = pmsi.pack_attribute(negotiated)
 
     # Verify packed (just ensure it doesn't crash)
@@ -1602,7 +1617,7 @@ def test_pmsi_unknown_tunnel_type() -> None:
     negotiated = Mock()
     unpacked = PMSI.unpack_attribute(data, negotiated)
 
-    # Should create unknown PMSI
-    assert unpacked.TUNNEL_TYPE == 99
+    # Should create base PMSI with unknown tunnel type
+    assert unpacked.tunnel_type == 99  # Via property, not class variable
     assert unpacked.tunnel == tunnel_data
     assert unpacked.label == label
