@@ -67,7 +67,7 @@ class INET(NLRI):
     @property
     def cidr(self) -> CIDR:
         """Unpack CIDR from stored wire format bytes."""
-        return CIDR.make_from_nlri(self.afi, self._packed)
+        return CIDR(self._packed, self.afi)
 
     @classmethod
     def from_cidr(
@@ -117,7 +117,7 @@ class INET(NLRI):
         Returns:
             New INET instance
         """
-        cidr = CIDR(packed, mask)
+        cidr = CIDR.make_cidr(packed, mask)
         instance = cls(cidr.pack_nlri(), afi, safi, action, path_info)
         if nexthop is not None:
             instance.nexthop = nexthop

@@ -104,7 +104,7 @@ class IPVPN(Label):
         Returns:
             New IPVPN instance
         """
-        cidr = CIDR(packed, mask)
+        cidr = CIDR.make_cidr(packed, mask)
         instance = cls(cidr.pack_nlri(), afi, safi, action, path_info)
         instance.labels = labels
         instance.rd = rd

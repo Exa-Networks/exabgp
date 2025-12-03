@@ -1086,7 +1086,7 @@ class RouteBuilderValidator(Validator[list[Any]]):
         if self.schema.prefix_parser:
             # Prefix-based route (IP): parse prefix and create NLRI with CIDR
             ipmask = self.schema.prefix_parser(tokeniser)
-            cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
+            cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
             nlri = self.schema.nlri_factory.from_cidr(cidr, self.afi, self.safi, self.action_type)
         elif self.schema.factory_with_afi:
             # Non-prefix route with AFI (FlowSpec): factory needs AFI/SAFI/action but no CIDR
