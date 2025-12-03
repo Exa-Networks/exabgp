@@ -74,6 +74,11 @@ class AtomicAggregate(Attribute):
     def __len__(self) -> int:
         return len(self._packed)
 
+    def __bool__(self) -> bool:
+        # AtomicAggregate is always truthy (flag attribute with no payload)
+        # Override because _packed is always empty, making len() return 0
+        return True
+
     def __repr__(self) -> str:
         return ''
 

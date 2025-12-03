@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Type
+from typing import Type
 
 from exabgp.protocol.resource import Resource
 
