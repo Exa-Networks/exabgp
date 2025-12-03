@@ -42,47 +42,56 @@ PATH_INFO_SIZE: int = 4  # Path Identifier is 4 bytes (RFC 7911)
 class INET(NLRI):
     def __init__(
         self,
-        cidr_or_afi: CIDR | AFI,
-        afi_or_safi: AFI | SAFI,
-        safi_or_action: SAFI | Action = Action.UNSET,
-        action_or_path_info: Action | PathInfo = PathInfo.DISABLED,
+        packed: bytes,
+        afi: AFI,
+        safi: SAFI,
+        action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
     ) -> None:
-        """Create an INET NLRI.
-
-        Supports two call signatures for backward compatibility:
-        - New: INET(cidr, afi, safi, action, path_info)
-        - Legacy: INET(afi, safi, action) - cidr must be set separately
+        """Create an INET NLRI from packed CIDR bytes.
 
         Args:
-            cidr_or_afi: CIDR prefix (new) or AFI (legacy)
-            afi_or_safi: AFI (new) or SAFI (legacy)
-            safi_or_action: SAFI (new) or Action (legacy)
-            action_or_path_info: Action (new) or PathInfo (legacy, ignored)
-            path_info: AddPath path identifier (new signature only)
+            packed: CIDR wire format bytes [mask_byte][truncated_ip...]
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            action: Route action (ANNOUNCE/WITHDRAW)
+            path_info: AddPath path identifier
         """
-        # Detect signature based on first argument type
-        if isinstance(cidr_or_afi, CIDR):
-            # New signature: INET(cidr, afi, safi, action, path_info)
-            cidr = cidr_or_afi
-            afi = afi_or_safi  # type: ignore[assignment]
-            safi = safi_or_action  # type: ignore[assignment]
-            action = action_or_path_info if isinstance(action_or_path_info, Action) else Action.UNSET
-            pi = path_info
-        else:
-            # Legacy signature: INET(afi, safi, action)
-            cidr = CIDR.NOCIDR
-            afi = cidr_or_afi
-            safi = afi_or_safi  # type: ignore[assignment]
-            action = safi_or_action if isinstance(safi_or_action, Action) else Action.UNSET
-            pi = PathInfo.DISABLED
-
         NLRI.__init__(self, afi, safi, action)
-        self.cidr = cidr
-        self.path_info = pi
+        self._packed = packed  # CIDR wire format
+        self.path_info = path_info
         self.nexthop = IP.NoNextHop
         self.labels: Labels | None = None
         self.rd: RouteDistinguisher | None = None
+
+    @property
+    def cidr(self) -> CIDR:
+        """Unpack CIDR from stored wire format bytes."""
+        prefix, mask = CIDR.decode(self.afi, self._packed)
+        return CIDR(prefix, mask)
+
+    @classmethod
+    def from_cidr(
+        cls,
+        cidr: CIDR,
+        afi: AFI,
+        safi: SAFI,
+        action: Action = Action.UNSET,
+        path_info: PathInfo = PathInfo.DISABLED,
+    ) -> 'INET':
+        """Factory method to create INET from a CIDR object.
+
+        Args:
+            cidr: CIDR prefix
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            action: Route action (ANNOUNCE/WITHDRAW)
+            path_info: AddPath path identifier
+
+        Returns:
+            New INET instance
+        """
+        return cls(cidr.pack_nlri(), afi, safi, action, path_info)
 
     @classmethod
     def make_route(
@@ -100,7 +109,7 @@ class INET(NLRI):
         Args:
             afi: Address Family Identifier
             safi: Subsequent Address Family Identifier
-            packed: Packed IP address bytes
+            packed: Packed IP address bytes (full length)
             mask: Prefix length
             action: Route action (ANNOUNCE/WITHDRAW)
             path_info: AddPath path identifier
@@ -110,13 +119,13 @@ class INET(NLRI):
             New INET instance
         """
         cidr = CIDR(packed, mask)
-        instance = cls(cidr, afi, safi, action, path_info)
+        instance = cls(cidr.pack_nlri(), afi, safi, action, path_info)
         if nexthop is not None:
             instance.nexthop = nexthop
         return instance
 
     def __len__(self) -> int:
-        return len(self.cidr) + len(self.path_info)
+        return len(self._packed) + len(self.path_info)
 
     def __str__(self) -> str:
         return self.extensive()
@@ -140,7 +149,7 @@ class INET(NLRI):
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
-        return self.cidr.pack_nlri()
+        return self._packed
 
     def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
         if negotiated.addpath.send(self.afi, self.safi):
@@ -160,7 +169,7 @@ class INET(NLRI):
             addpath = b'disabled'
         else:
             addpath = self.path_info.pack_path()
-        return Family.index(self) + addpath + self.cidr.pack_nlri()
+        return Family.index(self) + addpath + self._packed
 
     def prefix(self) -> str:
         return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
@@ -258,9 +267,9 @@ class INET(NLRI):
 
         network, bgp = bgp[:size], bgp[size:]
 
-        # Create CIDR and NLRI with all parsed data
-        cidr = CIDR(network + bytes(IP.length(afi) - size), mask)
-        nlri = cls(cidr, afi, safi, action, path_info)
+        # Create NLRI with packed CIDR wire format: [mask_byte][truncated_ip]
+        packed = bytes([mask]) + network
+        nlri = cls(packed, afi, safi, action, path_info)
 
         # Set optional attributes
         if labels_list is not None:

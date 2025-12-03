@@ -110,7 +110,7 @@ def next_hop(tokeniser: 'Tokeniser', afi: AFI | None = None) -> tuple[IP | IPSel
 def inet(tokeniser: 'Tokeniser') -> Change:
     ipmask = prefix(tokeniser)
     cidr = CIDR(ipmask.ton(), ipmask.mask)
-    nlri = INET(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.UNSET)
+    nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.UNSET)
 
     return Change(nlri, Attributes())
 
@@ -122,7 +122,7 @@ def inet(tokeniser: 'Tokeniser') -> Change:
 def mpls(tokeniser: 'Tokeniser') -> Change:
     ipmask = prefix(tokeniser)
     cidr = CIDR(ipmask.ton(), ipmask.mask)
-    nlri = IPVPN(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.ANNOUNCE)
+    nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.ANNOUNCE)
 
     return Change(nlri, Attributes())
 

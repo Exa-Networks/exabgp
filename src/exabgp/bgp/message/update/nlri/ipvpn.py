@@ -29,27 +29,46 @@ from exabgp.protocol.ip import IP
 class IPVPN(Label):
     def __init__(
         self,
-        cidr_or_afi: CIDR | AFI,
-        afi_or_safi: AFI | SAFI,
-        safi_or_action: SAFI | Action = Action.UNSET,
-        action_or_path_info: Action | PathInfo = PathInfo.DISABLED,
+        packed: bytes,
+        afi: AFI,
+        safi: SAFI,
+        action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
     ) -> None:
-        """Create an IPVPN NLRI.
-
-        Supports two call signatures for backward compatibility:
-        - New: IPVPN(cidr, afi, safi, action, path_info)
-        - Legacy: IPVPN(afi, safi, action) - cidr must be set separately
+        """Create an IPVPN NLRI from packed CIDR bytes.
 
         Args:
-            cidr_or_afi: CIDR prefix (new) or AFI (legacy)
-            afi_or_safi: AFI (new) or SAFI (legacy)
-            safi_or_action: SAFI (new) or Action (legacy)
-            action_or_path_info: Action (new) or PathInfo (legacy, ignored)
-            path_info: AddPath path identifier (new signature only)
+            packed: CIDR wire format bytes [mask_byte][truncated_ip...]
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            action: Route action (ANNOUNCE/WITHDRAW)
+            path_info: AddPath path identifier
         """
-        Label.__init__(self, cidr_or_afi, afi_or_safi, safi_or_action, action_or_path_info, path_info)
+        Label.__init__(self, packed, afi, safi, action, path_info)
         self.rd = RouteDistinguisher.NORD
+
+    @classmethod
+    def from_cidr(
+        cls,
+        cidr: CIDR,
+        afi: AFI,
+        safi: SAFI,
+        action: Action = Action.UNSET,
+        path_info: PathInfo = PathInfo.DISABLED,
+    ) -> 'IPVPN':
+        """Factory method to create IPVPN from a CIDR object.
+
+        Args:
+            cidr: CIDR prefix
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            action: Route action (ANNOUNCE/WITHDRAW)
+            path_info: AddPath path identifier
+
+        Returns:
+            New IPVPN instance
+        """
+        return cls(cidr.pack_nlri(), afi, safi, action, path_info)
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
@@ -74,7 +93,7 @@ class IPVPN(Label):
         Args:
             afi: Address Family Identifier
             safi: Subsequent Address Family Identifier
-            packed: Packed IP address bytes
+            packed: Packed IP address bytes (full length)
             mask: Prefix length
             labels: MPLS labels
             rd: Route Distinguisher
@@ -86,7 +105,7 @@ class IPVPN(Label):
             New IPVPN instance
         """
         cidr = CIDR(packed, mask)
-        instance = cls(cidr, afi, safi, action, path_info)
+        instance = cls(cidr.pack_nlri(), afi, safi, action, path_info)
         instance.labels = labels
         instance.rd = rd
         instance.nexthop = IP.create(nexthop) if nexthop else IP.NoNextHop

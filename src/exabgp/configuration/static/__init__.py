@@ -80,13 +80,13 @@ def route(tokeniser: Any) -> list[Change]:
 
     nlri: INET
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-        nlri = IPVPN(cidr, IP.toafi(ipmask.top()), SAFI.mpls_vpn, nlri_action)
+        nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), SAFI.mpls_vpn, nlri_action)
         check = AnnounceVPN.check
     elif 'label' in tokeniser.tokens:
-        nlri = Label(cidr, IP.toafi(ipmask.top()), SAFI.nlri_mpls, nlri_action)
+        nlri = Label.from_cidr(cidr, IP.toafi(ipmask.top()), SAFI.nlri_mpls, nlri_action)
         check = AnnounceLabel.check
     else:
-        nlri = INET(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
+        nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
         check = AnnouncePath.check
 
     change = Change(nlri, Attributes())
@@ -139,11 +139,11 @@ def attributes(tokeniser: Any) -> list[Change]:
 
     nlri: INET
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-        nlri = IPVPN(cidr, IP.toafi(ipmask.top()), SAFI.mpls_vpn, nlri_action)
+        nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), SAFI.mpls_vpn, nlri_action)
     elif 'label' in tokeniser.tokens:
-        nlri = Label(cidr, IP.toafi(ipmask.top()), SAFI.nlri_mpls, nlri_action)
+        nlri = Label.from_cidr(cidr, IP.toafi(ipmask.top()), SAFI.nlri_mpls, nlri_action)
     else:
-        nlri = INET(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
+        nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
     attr = Attributes()
 
     labels: Any = None
