@@ -1,13 +1,81 @@
 #!/usr/bin/env python3
 
+import json
 import os
+import select
+import signal
 import sys
 import time
-import select
-import json
 
 
-def wait_for_ack(expected_count=1, timeout=2):
+def main() -> None:
+    try:
+        time.sleep(1)
+
+        sys.stdout.write('announce route 192.168.0.0/32 next-hop 10.0.0.0\n')
+        flush('clear adj-rib out\n')
+        if not wait_for_ack(expected_count=2):
+            # ACK not received, continuing anyway (ACKs may be disabled in config)
+            pass
+        time.sleep(0.1)  # Allow async mode to process before next command
+
+        flush('announce route 192.168.0.1/32 next-hop 10.0.0.1\n')
+        if not wait_for_ack():
+            # ACK not received, continuing anyway (ACKs may be disabled in config)
+            pass
+        time.sleep(0.1)  # Allow async mode to process before next command
+        flush('clear adj-rib out\n')
+        if not wait_for_ack():
+            # ACK not received, continuing anyway (ACKs may be disabled in config)
+            pass
+        time.sleep(0.1)  # Allow async mode to process before next command
+
+        sys.stdout.write('announce route 192.168.0.2/32 next-hop 10.0.0.2\n')
+        flush('announce route 192.168.0.3/32 next-hop 10.0.0.3\n')
+        if not wait_for_ack(expected_count=2):
+            # ACK not received, continuing anyway (ACKs may be disabled in config)
+            pass
+        time.sleep(0.1)  # Allow async mode to process before next command
+        flush('flush adj-rib out\n')
+        if not wait_for_ack():
+            # ACK not received, continuing anyway (ACKs may be disabled in config)
+            pass
+        time.sleep(0.1)  # Allow async mode to process before next command
+
+        flush('announce route 192.168.0.4/32 next-hop 10.0.0.4\n')
+        if not wait_for_ack():
+            # ACK not received, continuing anyway (ACKs may be disabled in config)
+            pass
+        time.sleep(0.1)  # Allow async mode to process before next command
+        flush('flush adj-rib out\n')
+        if not wait_for_ack():
+            # ACK not received, continuing anyway (ACKs may be disabled in config)
+            pass
+        time.sleep(0.1)  # Allow async mode to process before next command
+
+        flush('clear adj-rib out\n')
+        if not wait_for_ack():
+            # ACK not received, continuing anyway (ACKs may be disabled in config)
+            pass
+        time.sleep(0.1)  # Allow async mode to process before next command
+        flush('announce route 192.168.0.5/32 next-hop 10.0.0.5\n')
+        if not wait_for_ack():
+            # ACK not received, continuing anyway (ACKs may be disabled in config)
+            pass
+
+        # Wait for shutdown signal
+        now = time.time()
+        while os.getppid() != 1 and time.time() < now + 7:
+            line = sys.stdin.readline().strip()
+            if not line or 'shutdown' in line:
+                break
+            time.sleep(0.1)
+        # This route will never be sent
+    except IOError:
+        pass
+
+
+def wait_for_ack(expected_count: int = 1, timeout: int = 2) -> bool:
     """
     Wait for ACK responses from ExaBGP.
 
@@ -29,7 +97,7 @@ def wait_for_ack(expected_count=1, timeout=2):
     Raises:
         SystemExit: If ExaBGP sends shutdown message
     """
-    import json
+
     received = 0
     start_time = time.time()
 
@@ -52,17 +120,17 @@ def wait_for_ack(expected_count=1, timeout=2):
                 try:
                     data = json.loads(line)
                     answer = data.get('answer')
-                except:
+                except Exception:
                     pass
             else:
                 # Text format: done|error|shutdown
                 answer = line
 
-            if answer == "done":
+            if answer == 'done':
                 received += 1
-            elif answer == "error":
+            elif answer == 'error':
                 return False
-            elif answer == "shutdown":
+            elif answer == 'shutdown':
                 raise SystemExit(0)
             # Ignore other messages (could be BGP updates if receiving)
         else:
@@ -72,76 +140,12 @@ def wait_for_ack(expected_count=1, timeout=2):
     return True
 
 
-try:
-    time.sleep(1)
+def flush(msg: str) -> None:
+    """Write message to stdout and flush."""
+    sys.stdout.write(msg)
+    sys.stdout.flush()
 
-    sys.stdout.write('announce route 192.168.0.0/32 next-hop 10.0.0.0\n')
-    sys.stdout.write('clear adj-rib out\n')
-    sys.stdout.flush()
-    if not wait_for_ack(expected_count=2):
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-    time.sleep(0.1)  # Allow async mode to process before next command
 
-    sys.stdout.write('announce route 192.168.0.1/32 next-hop 10.0.0.1\n')
-    sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-    time.sleep(0.1)  # Allow async mode to process before next command
-    sys.stdout.write('clear adj-rib out\n')
-    sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-    time.sleep(0.1)  # Allow async mode to process before next command
-
-    sys.stdout.write('announce route 192.168.0.2/32 next-hop 10.0.0.2\n')
-    sys.stdout.write('announce route 192.168.0.3/32 next-hop 10.0.0.3\n')
-    sys.stdout.flush()
-    if not wait_for_ack(expected_count=2):
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-    time.sleep(0.1)  # Allow async mode to process before next command
-    sys.stdout.write('flush adj-rib out\n')
-    sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-    time.sleep(0.1)  # Allow async mode to process before next command
-
-    sys.stdout.write('announce route 192.168.0.4/32 next-hop 10.0.0.4\n')
-    sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-    time.sleep(0.1)  # Allow async mode to process before next command
-    sys.stdout.write('flush adj-rib out\n')
-    sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-    time.sleep(0.1)  # Allow async mode to process before next command
-
-    sys.stdout.write('clear adj-rib out\n')
-    sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-    time.sleep(0.1)  # Allow async mode to process before next command
-    sys.stdout.write('announce route 192.168.0.5/32 next-hop 10.0.0.5\n')
-    sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-
-    # Wait for shutdown signal
-    now = time.time()
-    while os.getppid() != 1 and time.time() < now + 7:
-        line = sys.stdin.readline().strip()
-        if not line or 'shutdown' in line:
-            break
-        time.sleep(0.1)
-    # This route will never be sent
-except IOError:
-    pass
+if __name__ == '__main__':
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    main()

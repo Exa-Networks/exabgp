@@ -1263,8 +1263,13 @@ class BGPProtocol(asyncio.Protocol):
             flushed('some messages are from previous session:')
 
     async def read_message(self):
+        timeout = self.service.options.get('timeout', 3.0)
         try:
-            header = await self.reader.read(19)
+            header = await asyncio.wait_for(self.reader.read(19), timeout=timeout)
+        except asyncio.TimeoutError:
+            flushed(f'\n{timestamp()} {Color.red("TIMEOUT")} - no message received in {timeout}s')
+            self.service.exit(1)
+            return '', ''
         except BrokenPipeError:
             if self.service.checker.completed():
                 self.service.exit(0)
@@ -1278,7 +1283,12 @@ class BGPProtocol(asyncio.Protocol):
             return '', ''
 
         length = unpack('!H', header[16:18])[0]
-        body = await self.reader.read(length - 19)
+        try:
+            body = await asyncio.wait_for(self.reader.read(length - 19), timeout=timeout)
+        except asyncio.TimeoutError:
+            flushed(f'\n{timestamp()} {Color.red("TIMEOUT")} - incomplete message (body timeout)')
+            self.service.exit(1)
+            return '', ''
         return header, body
         # return bytearray(header), bytearray(body)
 
@@ -1437,6 +1447,7 @@ def parse_cmdline():
         'sink': False,                     # just accept whatever is sent
         'echo': False,                     # just accept whatever is sent
         'ipv6': False,                     # bind to ipv4 by default
+        'timeout': 3.0,                    # per-message timeout in seconds
         'expect': []
     }
 
@@ -1478,6 +1489,9 @@ def parse_cmdline():
             continue
         if message.strip().startswith('option:tcp_connections:'):
             options['tcp_connections'] = int(message.strip().split(':')[-1])
+            continue
+        if message.strip().startswith('option:timeout:'):
+            options['timeout'] = float(message.strip().split(':')[-1])
             continue
         if message.strip().startswith('option:SIGUSR1:'):
             delay = int(message.split(':')[-1])

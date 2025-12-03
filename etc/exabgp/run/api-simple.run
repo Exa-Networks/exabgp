@@ -4,112 +4,128 @@
 Extends the basic api-no-neighbor test with additional commands.
 """
 
+import json
+import signal
 import sys
 import time
-import json
 
-try:
-    # Wait for ExaBGP to initialize
-    time.sleep(1)
 
-    # Test 1: version command
-    sys.stderr.write('TEST: version command\n')
-    sys.stdout.write('version\n')
-    sys.stdout.flush()
-
-    response = sys.stdin.readline().strip()
+def main() -> None:
     try:
-        data = json.loads(response)
-        if 'version' in data:
-            sys.stderr.write(f'  PASS: version={data["version"]}\n')
+        # Wait for ExaBGP to initialize
+        time.sleep(1)
+
+        # Test 1: version command
+        fail('TEST: version command\n')
+        flush('version\n')
+
+        response = sys.stdin.readline().strip()
+        try:
+            data = json.loads(response)
+            if 'version' in data:
+                fail(f'  PASS: version={data["version"]}\n')
+            else:
+                fail(f'  FAIL: JSON missing version field: {response}\n')
+                sys.exit(1)
+        except (json.JSONDecodeError, ValueError):
+            if 'exabgp' in response.lower() or any(c.isdigit() for c in response):
+                fail(f'  PASS: {response}\n')
+            else:
+                fail(f'  FAIL: unexpected response: {response}\n')
+                sys.exit(1)
+
+        # Read done
+        ack = sys.stdin.readline().strip()
+        if ack != 'done':
+            fail(f'  WARNING: expected done, got: {ack}\n')
+
+        # Test 2: ping command
+        fail('TEST: ping command\n')
+        flush('ping\n')
+
+        response = sys.stdin.readline().strip()
+        try:
+            data = json.loads(response)
+            if 'pong' in data:
+                fail(f'  PASS: pong={data["pong"]}, active={data.get("active", "N/A")}\n')
+            else:
+                fail(f'  FAIL: JSON missing pong field: {response}\n')
+                sys.exit(1)
+        except (json.JSONDecodeError, ValueError):
+            if 'pong' in response.lower():
+                fail(f'  PASS: {response}\n')
+            else:
+                fail(f'  FAIL: unexpected response: {response}\n')
+                sys.exit(1)
+
+        # Read done
+        ack = sys.stdin.readline().strip()
+        if ack != 'done':
+            fail(f'  WARNING: expected done, got: {ack}\n')
+
+        # Test 3: status command
+        fail('TEST: status command\n')
+        flush('status\n')
+
+        # Read multi-line status response
+        status_lines = []
+        while True:
+            line = sys.stdin.readline().strip()
+            if line == 'done':
+                break
+            if line:
+                status_lines.append(line)
+
+        status_text = '\n'.join(status_lines)
+        if 'PID' in status_text and ('UUID' in status_text or 'version' in status_text.lower()):
+            fail(f'  PASS: status returned {len(status_lines)} lines\n')
         else:
-            sys.stderr.write(f'  FAIL: JSON missing version field: {response}\n')
-            sys.exit(1)
-    except (json.JSONDecodeError, ValueError):
-        if 'exabgp' in response.lower() or any(c.isdigit() for c in response):
-            sys.stderr.write(f'  PASS: {response}\n')
-        else:
-            sys.stderr.write(f'  FAIL: unexpected response: {response}\n')
+            fail('  FAIL: status incomplete\n')
+            fail(f'  Response: {status_text}\n')
             sys.exit(1)
 
-    # Read done
-    ack = sys.stdin.readline().strip()
-    if ack != 'done':
-        sys.stderr.write(f'  WARNING: expected done, got: {ack}\n')
+        # Test 4: shutdown command
+        fail('TEST: shutdown command\n')
+        flush('shutdown\n')
 
-    # Test 2: ping command
-    sys.stderr.write('TEST: ping command\n')
-    sys.stdout.write('ping\n')
-    sys.stdout.flush()
+        response = sys.stdin.readline().strip()
+        try:
+            data = json.loads(response)
+            if data.get('answer') == 'shutdown':
+                fail('  PASS: shutdown acknowledged (JSON)\n')
+            else:
+                fail(f'  FAIL: unexpected JSON: {response}\n')
+                sys.exit(1)
+        except (json.JSONDecodeError, ValueError):
+            if 'shutdown' in response.lower():
+                fail(f'  PASS: {response}\n')
+            else:
+                fail(f'  FAIL: unexpected response: {response}\n')
+                sys.exit(1)
 
-    response = sys.stdin.readline().strip()
-    try:
-        data = json.loads(response)
-        if 'pong' in data:
-            sys.stderr.write(f'  PASS: pong={data["pong"]}, active={data.get("active", "N/A")}\n')
-        else:
-            sys.stderr.write(f'  FAIL: JSON missing pong field: {response}\n')
-            sys.exit(1)
-    except (json.JSONDecodeError, ValueError):
-        if 'pong' in response.lower():
-            sys.stderr.write(f'  PASS: {response}\n')
-        else:
-            sys.stderr.write(f'  FAIL: unexpected response: {response}\n')
-            sys.exit(1)
+        fail('SUCCESS: All API commands (version, ping, status, shutdown) passed\n')
+        sys.exit(0)
 
-    # Read done
-    ack = sys.stdin.readline().strip()
-    if ack != 'done':
-        sys.stderr.write(f'  WARNING: expected done, got: {ack}\n')
-
-    # Test 3: status command
-    sys.stderr.write('TEST: status command\n')
-    sys.stdout.write('status\n')
-    sys.stdout.flush()
-
-    # Read multi-line status response
-    status_lines = []
-    while True:
-        line = sys.stdin.readline().strip()
-        if line == 'done':
-            break
-        if line:
-            status_lines.append(line)
-
-    status_text = '\n'.join(status_lines)
-    if 'PID' in status_text and ('UUID' in status_text or 'version' in status_text.lower()):
-        sys.stderr.write(f'  PASS: status returned {len(status_lines)} lines\n')
-    else:
-        sys.stderr.write(f'  FAIL: status incomplete\n')
-        sys.stderr.write(f'  Response: {status_text}\n')
+    except (IOError, EOFError):
+        fail('Connection closed - shutdown successful\n')
+        sys.exit(0)
+    except Exception as e:
+        fail(f'ERROR: Unexpected exception: {e}\n')
         sys.exit(1)
 
-    # Test 4: shutdown command
-    sys.stderr.write('TEST: shutdown command\n')
-    sys.stdout.write('shutdown\n')
+
+def flush(msg: str) -> None:
+    """Write message to stdout and flush."""
+    sys.stdout.write(msg)
     sys.stdout.flush()
 
-    response = sys.stdin.readline().strip()
-    try:
-        data = json.loads(response)
-        if data.get('answer') == 'shutdown':
-            sys.stderr.write('  PASS: shutdown acknowledged (JSON)\n')
-        else:
-            sys.stderr.write(f'  FAIL: unexpected JSON: {response}\n')
-            sys.exit(1)
-    except (json.JSONDecodeError, ValueError):
-        if 'shutdown' in response.lower():
-            sys.stderr.write(f'  PASS: {response}\n')
-        else:
-            sys.stderr.write(f'  FAIL: unexpected response: {response}\n')
-            sys.exit(1)
 
-    sys.stderr.write('SUCCESS: All API commands (version, ping, status, shutdown) passed\n')
-    sys.exit(0)
+def fail(msg: str) -> None:
+    """Write error message to stderr and flush."""
+    sys.stderr.write(msg)
+    sys.stderr.flush()
 
-except (IOError, EOFError):
-    sys.stderr.write('Connection closed - shutdown successful\n')
-    sys.exit(0)
-except Exception as e:
-    sys.stderr.write(f'ERROR: Unexpected exception: {e}\n')
-    sys.exit(1)
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    main()

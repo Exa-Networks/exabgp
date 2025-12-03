@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-import os
-import sys
 import errno
 import fcntl
+import os
 import select
-
+import signal
+import sys
 
 errno_block = set(
     (
@@ -164,22 +164,28 @@ def read(timeout):
     return line
 
 
-announce = ['announce route 192.0.2.%d next-hop 10.0.0.1\n' % ip for ip in range(1, 255)]
+def main() -> None:
+    announce = ['announce route 192.0.2.%d next-hop 10.0.0.1\n' % ip for ip in range(1, 255)]
 
-leftover = False
-try:
-    while True:
-        received = read(1.0)  # wait for a maximum of one second
-        if received:
-            # do something with the data received
-            pass
+    leftover = False
+    try:
+        while True:
+            received = read(1.0)  # wait for a maximum of one second
+            if received:
+                # do something with the data received
+                pass
 
-        more, announce = announce[:10], announce[10:]
+            more, announce = announce[:10], announce[10:]
 
-        if more:
-            leftover = write(''.join(more))
-        elif leftover:
-            # echo back what we got
-            leftover = write()
-except Exception:
-    sync(sys.stdin)
+            if more:
+                leftover = write(''.join(more))
+            elif leftover:
+                # echo back what we got
+                leftover = write()
+    except Exception:
+        sync(sys.stdin)
+
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    main()

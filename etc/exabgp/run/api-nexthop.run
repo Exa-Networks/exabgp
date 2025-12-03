@@ -1,26 +1,45 @@
 #!/usr/bin/env python3
 
 import os
+import signal
 import sys
 import time
 
-sys.stdout.write('neighbor 127.0.0.1 announce route 2605::2/128 next-hop 2001::1 local-preference 500\n')
-sys.stdout.flush()
-time.sleep(0.2)
 
-sys.stdout.write('neighbor 127.0.0.1 announce route 2605::2/128 next-hop 2001::2 local-preference 500\n')
-sys.stdout.flush()
-time.sleep(0.2)
+def main() -> None:
+    time.sleep(0.2)
 
-sys.stdout.write('neighbor 127.0.0.1 announce route 2605::2/128 next-hop 2001::1 local-preference 500\n')
-sys.stdout.flush()
+    flush('neighbor 127.0.0.1 announce route 2605::2/128 next-hop 2001::1 local-preference 500\n')
+    time.sleep(0.2)
 
-try:
-    now = time.time()
-    while os.getppid() != 1 and time.time() < now + 5:
-        line = sys.stdin.readline().strip()
-        if not line or 'shutdown' in line:
-            break
-        time.sleep(1)
-except IOError:
-    pass
+    flush('neighbor 127.0.0.1 announce route 2605::2/128 next-hop 2001::2 local-preference 500\n')
+    time.sleep(0.2)
+
+    flush('neighbor 127.0.0.1 announce route 2605::2/128 next-hop 2001::1 local-preference 500\n')
+
+    try:
+        now = time.time()
+        while os.getppid() != 1 and time.time() < now + 5:
+            line = sys.stdin.readline().strip()
+            if not line or 'shutdown' in line:
+                break
+            time.sleep(1)
+    except IOError:
+        pass
+
+
+def flush(msg: str) -> None:
+    """Write message to stdout and flush."""
+    sys.stdout.write(msg)
+    sys.stdout.flush()
+
+
+def fail(msg: str) -> None:
+    """Write error message to stderr and flush."""
+    sys.stderr.write(msg)
+    sys.stderr.flush()
+
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    main()
