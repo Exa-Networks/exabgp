@@ -78,9 +78,11 @@ class Open(Message):
         self.capabilities: Capabilities = capabilities
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
+        # OPEN message ASN field is always 2 bytes (RFC 4271)
+        # 4-byte ASN is negotiated via ASN4 capability
         return self._message(
             self.version.pack_version()
-            + self.asn.trans().pack_asn()
+            + self.asn.trans().pack_asn2()
             + self.hold_time.pack_holdtime()
             + self.router_id.pack_ip()
             + self.capabilities.pack_capabilities(),
