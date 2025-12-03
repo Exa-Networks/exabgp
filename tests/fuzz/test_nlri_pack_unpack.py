@@ -12,7 +12,6 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri.inet import INET
-from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.protocol.family import AFI, SAFI
 
@@ -40,16 +39,12 @@ def create_negotiated(addpath_send=False, addpath_receive=False):
 @settings(deadline=None, max_examples=100, suppress_health_check=[HealthCheck.too_slow])
 def test_inet_ipv4_pack_unpack_roundtrip(ipv4_bytes: int, mask: int, with_addpath: bool) -> None:
     """Test INET IPv4 pack/unpack roundtrip with various configurations."""
-    # Create INET NLRI
-    nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-
     # Convert integer to 4-byte representation
     ip_bytes = ipv4_bytes.to_bytes(4, 'big')
-    nlri.cidr = CIDR.make_cidr(ip_bytes, mask)
 
-    # Add path info if testing addpath
-    if with_addpath:
-        nlri.path_info = PathInfo(b'\x00\x00\x00\x01')
+    # Create INET NLRI using factory method
+    path_info = PathInfo(b'\x00\x00\x00\x01') if with_addpath else PathInfo.DISABLED
+    nlri = INET.make_route(AFI.ipv4, SAFI.unicast, ip_bytes, mask, Action.ANNOUNCE, path_info)
 
     # Create negotiated with appropriate addpath config
     negotiated = create_negotiated(addpath_send=with_addpath)
@@ -80,9 +75,6 @@ def test_inet_ipv4_pack_unpack_roundtrip(ipv4_bytes: int, mask: int, with_addpat
 @settings(deadline=None, max_examples=50, suppress_health_check=[HealthCheck.too_slow])
 def test_inet_ipv6_pack_requires_negotiated(mask: int) -> None:
     """Test that INET IPv6 pack_nlri() requires negotiated parameter."""
-    # Create INET IPv6 NLRI
-    nlri = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-
     # Create valid IPv6 bytes (16 bytes)
     ip_bytes = b'\x20\x01\x0d\xb8' + b'\x00' * 12
 
@@ -90,7 +82,8 @@ def test_inet_ipv6_pack_requires_negotiated(mask: int) -> None:
     if mask > 128:
         return
 
-    nlri.cidr = CIDR.make_cidr(ip_bytes, mask)
+    # Create INET IPv6 NLRI using factory method
+    nlri = INET.make_route(AFI.ipv6, SAFI.unicast, ip_bytes, mask, Action.ANNOUNCE)
 
     # Create negotiated
     negotiated = create_negotiated()
@@ -115,8 +108,7 @@ def test_inet_ipv6_pack_requires_negotiated(mask: int) -> None:
 @settings(deadline=None, max_examples=20)
 def test_inet_pack_with_different_actions(action: Action) -> None:
     """Test INET pack with different action types."""
-    nlri = INET(AFI.ipv4, SAFI.unicast, action)
-    nlri.cidr = CIDR.make_cidr(b'\xc0\xa8\x01\x00', 24)
+    nlri = INET.make_route(AFI.ipv4, SAFI.unicast, b'\xc0\xa8\x01\x00', 24, action)
 
     negotiated = create_negotiated()
 
@@ -135,26 +127,22 @@ def test_inet_pack_with_different_actions(action: Action) -> None:
 @settings(deadline=None, max_examples=50)
 def test_inet_hash_includes_pathinfo(path_id: int) -> None:
     """Test that INET hash includes path_info for proper dictionary behavior."""
-    # Create two identical NLRIs
-    nlri1 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri1.cidr = CIDR.make_cidr(b'\xc0\xa8\x01\x00', 24)
-
-    nlri2 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri2.cidr = CIDR.make_cidr(b'\xc0\xa8\x01\x00', 24)
+    # Create two identical NLRIs with same path info
+    path_bytes = path_id.to_bytes(4, 'big')
+    nlri1 = INET.make_route(AFI.ipv4, SAFI.unicast, b'\xc0\xa8\x01\x00', 24, Action.ANNOUNCE, PathInfo(path_bytes))
+    nlri2 = INET.make_route(AFI.ipv4, SAFI.unicast, b'\xc0\xa8\x01\x00', 24, Action.ANNOUNCE, PathInfo(path_bytes))
 
     # Same path_info -> same hash
-    path_bytes = path_id.to_bytes(4, 'big')
-    nlri1.path_info = PathInfo(path_bytes)
-    nlri2.path_info = PathInfo(path_bytes)
-
     assert hash(nlri1) == hash(nlri2)
 
     # Different path_info -> different hash
-    nlri2.path_info = PathInfo(b'\xff\xff\xff\xff')
+    nlri3 = INET.make_route(
+        AFI.ipv4, SAFI.unicast, b'\xc0\xa8\x01\x00', 24, Action.ANNOUNCE, PathInfo(b'\xff\xff\xff\xff')
+    )
 
     # Only assert different if path_id isn't 0xFFFFFFFF
     if path_id != 0xFFFFFFFF:
-        assert hash(nlri1) != hash(nlri2)
+        assert hash(nlri1) != hash(nlri3)
 
 
 @pytest.mark.fuzz
@@ -165,11 +153,8 @@ def test_inet_hash_includes_pathinfo(path_id: int) -> None:
 @settings(deadline=None, max_examples=50)
 def test_inet_pack_size_varies_with_mask(mask1: int, mask2: int) -> None:
     """Test that packed NLRI size varies appropriately with mask length."""
-    nlri1 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri1.cidr = CIDR.make_cidr(b'\xc0\xa8\x01\x00', mask1)
-
-    nlri2 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri2.cidr = CIDR.make_cidr(b'\xc0\xa8\x01\x00', mask2)
+    nlri1 = INET.make_route(AFI.ipv4, SAFI.unicast, b'\xc0\xa8\x01\x00', mask1, Action.ANNOUNCE)
+    nlri2 = INET.make_route(AFI.ipv4, SAFI.unicast, b'\xc0\xa8\x01\x00', mask2, Action.ANNOUNCE)
 
     negotiated = create_negotiated()
 

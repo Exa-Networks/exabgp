@@ -27,24 +27,17 @@ from exabgp.protocol.ip import IP
 @NLRI.register(AFI.ipv4, SAFI.mpls_vpn)
 @NLRI.register(AFI.ipv6, SAFI.mpls_vpn)
 class IPVPN(Label):
-    def __init__(
-        self,
-        packed: bytes,
-        afi: AFI,
-        safi: SAFI,
-        action: Action = Action.UNSET,
-        path_info: PathInfo = PathInfo.DISABLED,
-    ) -> None:
+    def __init__(self, packed: bytes) -> None:
         """Create an IPVPN NLRI from packed CIDR bytes.
 
         Args:
             packed: CIDR wire format bytes [mask_byte][truncated_ip...]
-            afi: Address Family Identifier
-            safi: Subsequent Address Family Identifier
-            action: Route action (ANNOUNCE/WITHDRAW)
-            path_info: AddPath path identifier
+
+        AFI is inferred from mask (>32 implies IPv6).
+        SAFI defaults to mpls_vpn. Use factory methods for other families.
         """
-        Label.__init__(self, packed, afi, safi, action, path_info)
+        Label.__init__(self, packed)
+        self._safi = SAFI.mpls_vpn  # Override default
         self.rd = RouteDistinguisher.NORD
 
     @classmethod
@@ -68,7 +61,14 @@ class IPVPN(Label):
         Returns:
             New IPVPN instance
         """
-        return cls(cidr.pack_nlri(), afi, safi, action, path_info)
+        instance = object.__new__(cls)
+        NLRI.__init__(instance, afi, safi, action)
+        instance._packed = cidr.pack_nlri()
+        instance.path_info = path_info
+        instance.nexthop = IP.NoNextHop
+        instance.labels = Labels.NOLABEL
+        instance.rd = RouteDistinguisher.NORD
+        return instance
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
@@ -105,7 +105,7 @@ class IPVPN(Label):
             New IPVPN instance
         """
         cidr = CIDR.make_cidr(packed, mask)
-        instance = cls(cidr.pack_nlri(), afi, safi, action, path_info)
+        instance = cls.from_cidr(cidr, afi, safi, action, path_info)
         instance.labels = labels
         instance.rd = rd
         instance.nexthop = IP.create(nexthop) if nexthop else IP.NoNextHop
