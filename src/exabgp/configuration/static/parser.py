@@ -100,7 +100,7 @@ def next_hop(tokeniser: 'Tokeniser', afi: AFI | None = None) -> tuple[IP | IPSel
     ip = IP.create(value)
     if ip.afi == AFI.ipv4 and afi == AFI.ipv6:
         ip = IP.create('::ffff:{}'.format(ip))
-    return ip, NextHop(ip.top())
+    return ip, NextHop.make_nexthop(ip.top())
 
 
 # XXX: using Action.UNSET should we use the following ?
@@ -159,7 +159,7 @@ def attribute(tokeniser: 'Tokeniser') -> GenericAttribute:
     if end != ']':
         raise ValueError("invalid attribute format - missing closing ']'\n  Format: [ 0xCODE 0xFLAG 0xDATA ]")
 
-    return GenericAttribute(code_int, flag_int, data_bytes)
+    return GenericAttribute.make_generic(code_int, flag_int, data_bytes)
 
     # for ((ID,flag),klass) in Attribute.registered_attributes.items():
     # 	length = len(data)
@@ -303,7 +303,7 @@ def aggregator(tokeniser: 'Tokeniser') -> Aggregator:
         if tokeniser() != ')':
             raise ValueError("invalid aggregator - missing closing ')'\n  Format: (<ASN>:<router-id>)")
 
-    return Aggregator(local_as, local_address)
+    return Aggregator.make_aggregator(local_as, local_address)
 
 
 def originator_id(tokeniser: 'Tokeniser') -> OriginatorID:
@@ -312,7 +312,7 @@ def originator_id(tokeniser: 'Tokeniser') -> OriginatorID:
         raise ValueError(f"'{value}' is not a valid originator-id\n  Format: IPv4 address (e.g., 192.0.2.1)")
     if not all(_.isdigit() for _ in value.split('.')):
         raise ValueError(f"'{value}' is not a valid originator-id\n  Format: IPv4 address (e.g., 192.0.2.1)")
-    return OriginatorID(value)
+    return OriginatorID.make_originatorid(value)
 
 
 def cluster_list(tokeniser: 'Tokeniser') -> ClusterList:
@@ -329,7 +329,7 @@ def cluster_list(tokeniser: 'Tokeniser') -> ClusterList:
             clusterids.append(ClusterID(value))
         if not clusterids:
             raise ValueError('cluster-list is empty\n  Format: <cluster-id> or [ <cluster-id1>, <cluster-id2>, ... ]')
-        return ClusterList(clusterids)  # type: ignore[arg-type]
+        return ClusterList.make_clusterlist(clusterids)
     except ValueError:
         raise ValueError(
             f"'{value}' is not a valid cluster-list\n  Format: <cluster-id> or [ <cluster-id1>, <cluster-id2>, ... ]"

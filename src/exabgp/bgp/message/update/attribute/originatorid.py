@@ -12,31 +12,103 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.ip import IPv4
+from exabgp.protocol.ip import IP, IPv4
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
-# ============================================================== OriginatorID (3)
+# ============================================================== OriginatorID (9)
 
 
 @Attribute.register()
-class OriginatorID(Attribute, IPv4):  # type: ignore[misc]
+class OriginatorID(Attribute):
+    """Originator ID attribute (code 9).
+
+    Stores packed wire-format bytes (4 bytes IPv4 address).
+    Delegates IP functionality via composition rather than inheritance.
+    """
+
     ID: ClassVar[int] = Attribute.CODE.ORIGINATOR_ID
     FLAG: ClassVar[int] = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
 
+    def __init__(self, packed: bytes) -> None:
+        """Initialize from packed wire-format bytes.
+
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_originatorid() for semantic construction.
+
+        Args:
+            packed: Raw IPv4 address bytes (4 bytes)
+        """
+        self._packed: bytes = packed
+
+    @classmethod
+    def from_packet(cls, data: bytes) -> 'OriginatorID':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw attribute value bytes from wire
+
+        Returns:
+            OriginatorID instance
+
+        Raises:
+            ValueError: If data length is not 4
+        """
+        if len(data) != 4:
+            raise ValueError(f'OriginatorID must be 4 bytes, got {len(data)}')
+        return cls(data)
+
+    @classmethod
+    def make_originatorid(cls, ip_string: str) -> 'OriginatorID':
+        """Create from IP address string.
+
+        Args:
+            ip_string: IPv4 address as string (e.g., '192.168.1.1')
+
+        Returns:
+            OriginatorID instance
+        """
+        packed = IPv4.pton(ip_string)
+        return cls(packed)
+
+    def top(self, negotiated: Negotiated | None = None) -> str:
+        """Get string representation of the IP address."""
+        return IP.ntop(self._packed)
+
+    def ton(self, negotiated: Negotiated | None = None) -> bytes:
+        """Get packed bytes representation."""
+        return self._packed
+
+    def pack_ip(self) -> bytes:
+        """Get packed bytes (IP interface compatibility)."""
+        return self._packed
+
+    def index(self) -> bytes:
+        """Get the packed data for indexing/caching."""
+        return self._packed
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, OriginatorID):
             return False
-        return self.ID == other.ID and self.FLAG == other.FLAG
+        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
+    def __len__(self) -> int:
+        return len(self._packed)
+
+    def __repr__(self) -> str:
+        return self.top()
+
+    def __hash__(self) -> int:
+        return hash(('OriginatorID', self._packed))
+
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        return self._attribute(self.ton())
+        return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> IPv4:
-        return IPv4.unpack_ipv4(data, cls)
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'OriginatorID':
+        return cls.from_packet(data)
