@@ -40,26 +40,23 @@ PATH_INFO_SIZE: int = 4  # Path Identifier is 4 bytes (RFC 7911)
 @NLRI.register(AFI.ipv4, SAFI.multicast)
 @NLRI.register(AFI.ipv6, SAFI.multicast)
 class INET(NLRI):
-    def __init__(
-        self,
-        packed: bytes,
-        afi: AFI,
-        safi: SAFI,
-        action: Action = Action.UNSET,
-        path_info: PathInfo = PathInfo.DISABLED,
-    ) -> None:
+    # Maximum IPv4 prefix length - masks > 32 indicate IPv6
+    _IPV4_MAX_MASK = 32
+
+    def __init__(self, packed: bytes) -> None:
         """Create an INET NLRI from packed CIDR bytes.
 
         Args:
             packed: CIDR wire format bytes [mask_byte][truncated_ip...]
-            afi: Address Family Identifier
-            safi: Subsequent Address Family Identifier
-            action: Route action (ANNOUNCE/WITHDRAW)
-            path_info: AddPath path identifier
+
+        AFI is inferred from mask (>32 implies IPv6).
+        SAFI defaults to unicast. Use factory methods for other families.
         """
-        NLRI.__init__(self, afi, safi, action)
+        # Infer AFI from mask: > 32 can only be IPv6
+        afi = AFI.ipv6 if packed[0] > self._IPV4_MAX_MASK else AFI.ipv4
+        NLRI.__init__(self, afi, SAFI.unicast, Action.UNSET)
         self._packed = packed  # CIDR wire format
-        self.path_info = path_info
+        self.path_info = PathInfo.DISABLED
         self.nexthop = IP.NoNextHop
         self.labels: Labels | None = None
         self.rd: RouteDistinguisher | None = None
@@ -92,7 +89,14 @@ class INET(NLRI):
         Returns:
             New INET instance
         """
-        return cls(cidr.pack_nlri(), afi, safi, action, path_info)
+        instance = object.__new__(cls)
+        NLRI.__init__(instance, afi, safi, action)
+        instance._packed = cidr.pack_nlri()
+        instance.path_info = path_info
+        instance.nexthop = IP.NoNextHop
+        instance.labels = None
+        instance.rd = None
+        return instance
 
     @classmethod
     def make_route(
@@ -120,7 +124,7 @@ class INET(NLRI):
             New INET instance
         """
         cidr = CIDR.make_cidr(packed, mask)
-        instance = cls(cidr.pack_nlri(), afi, safi, action, path_info)
+        instance = cls.from_cidr(cidr, afi, safi, action, path_info)
         if nexthop is not None:
             instance.nexthop = nexthop
         return instance
@@ -268,9 +272,12 @@ class INET(NLRI):
 
         network, bgp = bgp[:size], bgp[size:]
 
-        # Create NLRI with packed CIDR wire format: [mask_byte][truncated_ip]
-        packed = bytes([mask]) + network
-        nlri = cls(packed, afi, safi, action, path_info)
+        # Create NLRI from CIDR
+        if afi == AFI.ipv4:
+            cidr = CIDR.from_ipv4(bytes([mask]) + network)
+        else:
+            cidr = CIDR.from_ipv6(bytes([mask]) + network)
+        nlri = cls.from_cidr(cidr, afi, safi, action, path_info)
 
         # Set optional attributes
         if labels_list is not None:
