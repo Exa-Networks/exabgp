@@ -12,8 +12,6 @@ from typing import TYPE_CHECKING, Type
 
 from exabgp.protocol.resource import Resource
 
-if TYPE_CHECKING:
-    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # =================================================================== ASN
 

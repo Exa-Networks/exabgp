@@ -169,7 +169,7 @@ def test_standard_community_multiple() -> None:
     comm3 = Community(comm3_bytes)
 
     # Create Communities attribute (collection)
-    communities = Communities([comm1, comm2, comm3])
+    communities = Communities.make_communities([comm1, comm2, comm3])
 
     # Verify all communities are present
     assert len(communities.communities) == 3
@@ -189,9 +189,9 @@ def test_standard_community_malformed() -> None:
 
     # Test with truncated data (2 bytes instead of 4)
     truncated = struct.pack('!H', 65000)
-    with pytest.raises((struct.error, ValueError)):
-        # This should fail because we can't unpack 2 bytes as !HH
-        Community(truncated)
+    with pytest.raises(ValueError):
+        # from_packet validates length and raises ValueError
+        Community.from_packet(truncated)
 
     # Test with valid but extreme values
     max_community = struct.pack('!HH', 0xFFFF, 0xFFFF)
@@ -656,7 +656,7 @@ def test_large_community_multiple() -> None:
     lc3 = LargeCommunity(lc3_bytes)
 
     # Create LargeCommunities attribute
-    large_communities = LargeCommunities([lc1, lc2, lc3])
+    large_communities = LargeCommunities.make_large_communities([lc1, lc2, lc3])
 
     # Verify all communities are present
     assert len(large_communities.communities) == 3
@@ -690,8 +690,9 @@ def test_large_community_malformed() -> None:
 
     # Test with truncated data (8 bytes instead of 12)
     truncated = struct.pack('!LL', 65000, 100)
-    with pytest.raises((struct.error, ValueError)):
-        LargeCommunity(truncated)
+    with pytest.raises(ValueError):
+        # from_packet validates length and raises ValueError
+        LargeCommunity.from_packet(truncated)
 
     # Test with valid 12-byte data
     valid = struct.pack('!LLL', 65000, 100, 200)
@@ -723,15 +724,15 @@ def test_mixed_community_types() -> None:
     # Create standard communities
     std_comm1 = Community(struct.pack('!HH', 65000, 100))
     std_comm2 = Community(Community.NO_EXPORT)
-    std_communities = Communities([std_comm1, std_comm2])
+    std_communities = Communities.make_communities([std_comm1, std_comm2])
 
     # Create extended communities
     ext_comm1 = RouteTargetASN2Number.make_route_target(ASN(65000), 200, transitive=True)
-    ext_communities = ExtendedCommunities([ext_comm1])
+    ext_communities = ExtendedCommunities.make_extended_communities([ext_comm1])
 
     # Create large communities
     large_comm1 = LargeCommunity(struct.pack('!LLL', 65000, 300, 400))
-    large_communities = LargeCommunities([large_comm1])
+    large_communities = LargeCommunities.make_large_communities([large_comm1])
 
     # Verify all types parse correctly
     assert len(std_communities.communities) == 2

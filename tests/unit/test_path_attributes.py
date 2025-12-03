@@ -220,7 +220,7 @@ def test_nexthop_valid_ipv4() -> None:
 
     # Create NEXT_HOP
     nh_ip = '192.0.2.1'
-    nexthop = NextHop(nh_ip)
+    nexthop = NextHop.make_nexthop(nh_ip)
 
     # Verify value
     assert str(nexthop) == '192.0.2.1'  # __repr__ returns just the IP
@@ -245,7 +245,7 @@ def test_nexthop_zero_address() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create NEXT_HOP with 0.0.0.0
-    nexthop = NextHop('0.0.0.0')
+    nexthop = NextHop.make_nexthop('0.0.0.0')
 
     # Should create successfully
     assert str(nexthop) == '0.0.0.0'  # __repr__ returns just the IP
@@ -265,7 +265,7 @@ def test_nexthop_self() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create NEXT_HOP pointing to self
-    nexthop = NextHop('10.0.0.1')
+    nexthop = NextHop.make_nexthop('10.0.0.1')
 
     assert str(nexthop) == '10.0.0.1'  # __repr__ returns just the IP
 
@@ -282,7 +282,7 @@ def test_nexthop_third_party() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create third-party NEXT_HOP
-    nexthop = NextHop('10.0.0.254')
+    nexthop = NextHop.make_nexthop('10.0.0.254')
 
     assert '10.0.0.254' in str(nexthop)
 
@@ -417,7 +417,7 @@ def test_aggregator_2byte_asn() -> None:
     # Create AGGREGATOR with 2-byte ASN
     asn = ASN(65000)
     speaker = IPv4.create('192.0.2.1')
-    aggregator = Aggregator(asn, speaker)
+    aggregator = Aggregator.make_aggregator(asn, speaker)
 
     # Verify representation
     assert '65000' in str(aggregator)
@@ -446,7 +446,7 @@ def test_aggregator_4byte_asn() -> None:
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
     speaker = IPv4.create('192.0.2.1')
-    aggregator = Aggregator(asn, speaker)
+    aggregator = Aggregator.make_aggregator(asn, speaker)
 
     # Verify pack (flag + type + length + 4-byte ASN + 4-byte IP)
     # Format: flag(1) + type(1) + length(1) + ASN(4) + IP(4) = 11 bytes
@@ -471,7 +471,7 @@ def test_aggregator_as_trans() -> None:
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
     speaker = IPv4.create('192.0.2.1')
-    aggregator = Aggregator(asn, speaker)
+    aggregator = Aggregator.make_aggregator(asn, speaker)
 
     # Pack for old speaker (should use AS_TRANS + AS4_AGGREGATOR)
     # Returns both AGGREGATOR (with AS_TRANS) and AS4_AGGREGATOR
@@ -601,7 +601,7 @@ def test_originator_id_basic() -> None:
 
     # Create ORIGINATOR_ID
     originator_ip = '192.0.2.1'
-    originator_id = OriginatorID(originator_ip)
+    originator_id = OriginatorID.make_originatorid(originator_ip)
 
     # Verify representation
     assert '192.0.2.1' in str(originator_id)
@@ -622,7 +622,7 @@ def test_originator_id_loop_prevention() -> None:
     from exabgp.bgp.message.update.attribute import Attribute
 
     # Create ORIGINATOR_ID
-    OriginatorID('192.0.2.1')
+    OriginatorID.make_originatorid('192.0.2.1')
 
     # Verify it's optional non-transitive
     assert OriginatorID.ID == Attribute.CODE.ORIGINATOR_ID
@@ -645,7 +645,7 @@ def test_cluster_list_single() -> None:
 
     # Create single cluster
     cluster_id = ClusterID('192.0.2.1')
-    cluster_list = ClusterList([cluster_id])
+    cluster_list = ClusterList.make_clusterlist([cluster_id])
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + ClusterID(4) = 7 bytes
@@ -664,7 +664,7 @@ def test_cluster_list_multiple() -> None:
     # Create multiple clusters
     cluster1 = ClusterID('192.0.2.1')
     cluster2 = ClusterID('192.0.2.2')
-    cluster_list = ClusterList([cluster1, cluster2])
+    cluster_list = ClusterList.make_clusterlist([cluster1, cluster2])
 
     # Verify pack (flag + type + length + 2 ClusterIDs)
     # Format: flag(1) + type(1) + length(1) + ClusterID(4) + ClusterID(4) = 11 bytes
@@ -854,7 +854,7 @@ def test_nexthop_pack_unpack_roundtrip() -> None:
 
     # Create NEXT_HOP
     original_ip = '192.0.2.1'
-    nexthop = NextHop(original_ip)
+    nexthop = NextHop.make_nexthop(original_ip)
 
     # Pack the attribute
     packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
@@ -875,14 +875,14 @@ def test_nexthop_equality() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create two identical next hops
-    nh1 = NextHop('192.0.2.1')
-    nh2 = NextHop('192.0.2.1')
+    nh1 = NextHop.make_nexthop('192.0.2.1')
+    nh2 = NextHop.make_nexthop('192.0.2.1')
 
     # Should be equal
     assert nh1 == nh2
 
     # Different next hops
-    nh3 = NextHop('192.0.2.2')
+    nh3 = NextHop.make_nexthop('192.0.2.2')
     assert nh1 != nh3
 
 
@@ -933,7 +933,7 @@ def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
     # Create original
     original_asn = ASN(65000)
     original_speaker = IPv4.create('192.0.2.1')
-    original = Aggregator(original_asn, original_speaker)
+    original = Aggregator.make_aggregator(original_asn, original_speaker)
 
     # Pack
     packed = original.pack_attribute(negotiated)
@@ -961,7 +961,7 @@ def test_aggregator_pack_unpack_roundtrip_4byte() -> None:
     # Create original with 4-byte ASN
     original_asn = ASN(4200000000)
     original_speaker = IPv4.create('192.0.2.1')
-    original = Aggregator(original_asn, original_speaker)
+    original = Aggregator.make_aggregator(original_asn, original_speaker)
 
     # Pack
     packed = original.pack_attribute(negotiated)
@@ -984,18 +984,18 @@ def test_aggregator_equality() -> None:
     from exabgp.protocol.ip import IPv4
 
     # Create two identical aggregators
-    agg1 = Aggregator(ASN(65000), IPv4.create('192.0.2.1'))
-    agg2 = Aggregator(ASN(65000), IPv4.create('192.0.2.1'))
+    agg1 = Aggregator.make_aggregator(ASN(65000), IPv4.create('192.0.2.1'))
+    agg2 = Aggregator.make_aggregator(ASN(65000), IPv4.create('192.0.2.1'))
 
     # Should be equal
     assert agg1 == agg2
 
     # Different ASN
-    agg3 = Aggregator(ASN(65001), IPv4.create('192.0.2.1'))
+    agg3 = Aggregator.make_aggregator(ASN(65001), IPv4.create('192.0.2.1'))
     assert agg1 != agg3
 
     # Different speaker
-    agg4 = Aggregator(ASN(65000), IPv4.create('192.0.2.2'))
+    agg4 = Aggregator.make_aggregator(ASN(65000), IPv4.create('192.0.2.2'))
     assert agg1 != agg4
 
 
@@ -1005,7 +1005,7 @@ def test_aggregator_json() -> None:
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.protocol.ip import IPv4
 
-    agg = Aggregator(ASN(65000), IPv4.create('192.0.2.1'))
+    agg = Aggregator.make_aggregator(ASN(65000), IPv4.create('192.0.2.1'))
 
     # Note: json() method has a bug (uses %d for IPv4), so we skip this test
     # or just verify the object has the method
@@ -1023,7 +1023,7 @@ def test_originator_id_pack_unpack_roundtrip() -> None:
 
     # Create original
     original_ip = '192.0.2.1'
-    original = OriginatorID(original_ip)
+    original = OriginatorID.make_originatorid(original_ip)
 
     # Pack
     packed = original.pack_attribute(create_negotiated())
@@ -1045,8 +1045,8 @@ def test_originator_id_equality() -> None:
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
     # Create two with same IP
-    oid1 = OriginatorID('192.0.2.1')
-    oid2 = OriginatorID('192.0.2.1')
+    oid1 = OriginatorID.make_originatorid('192.0.2.1')
+    oid2 = OriginatorID.make_originatorid('192.0.2.1')
 
     # Should be equal (note: implementation only checks ID and FLAG)
     assert oid1 == oid2
@@ -1058,8 +1058,8 @@ def test_originator_id_different_ips() -> None:
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
     # Create with different IPs
-    oid1 = OriginatorID('192.0.2.1')
-    oid2 = OriginatorID('192.0.2.2')
+    oid1 = OriginatorID.make_originatorid('192.0.2.1')
+    oid2 = OriginatorID.make_originatorid('192.0.2.2')
 
     # They are equal by implementation (only checks ID and FLAG)
     # But packed data is different
@@ -1070,7 +1070,7 @@ def test_originator_id_inherits_ipv4() -> None:
     """Test ORIGINATOR_ID inherits IPv4 functionality."""
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
-    oid = OriginatorID('192.0.2.1')
+    oid = OriginatorID.make_originatorid('192.0.2.1')
 
     # Should have IPv4 methods
     assert hasattr(oid, 'pack_ip')
@@ -1092,7 +1092,7 @@ def test_cluster_list_pack_unpack_roundtrip_single() -> None:
 
     # Create original
     cluster = ClusterID('192.0.2.1')
-    original = ClusterList([cluster])
+    original = ClusterList.make_clusterlist([cluster])
 
     # Pack
     packed = original.pack_attribute(create_negotiated())
@@ -1117,7 +1117,7 @@ def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
     cluster1 = ClusterID('192.0.2.1')
     cluster2 = ClusterID('192.0.2.2')
     cluster3 = ClusterID('192.0.2.3')
-    original = ClusterList([cluster1, cluster2, cluster3])
+    original = ClusterList.make_clusterlist([cluster1, cluster2, cluster3])
 
     # Pack
     packed = original.pack_attribute(create_negotiated())
@@ -1141,8 +1141,8 @@ def test_cluster_list_equality() -> None:
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
     # Create two identical cluster lists
-    cl1 = ClusterList([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
-    cl2 = ClusterList([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
+    cl1 = ClusterList.make_clusterlist([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
+    cl2 = ClusterList.make_clusterlist([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
 
     # Should be equal
     assert cl1 == cl2
@@ -1154,11 +1154,11 @@ def test_cluster_list_length() -> None:
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
     # Single cluster
-    cl_single = ClusterList([ClusterID('192.0.2.1')])
+    cl_single = ClusterList.make_clusterlist([ClusterID('192.0.2.1')])
     assert len(cl_single) == 4  # 1 cluster * 4 bytes
 
     # Multiple clusters
-    cl_multi = ClusterList([ClusterID('192.0.2.1'), ClusterID('192.0.2.2'), ClusterID('192.0.2.3')])
+    cl_multi = ClusterList.make_clusterlist([ClusterID('192.0.2.1'), ClusterID('192.0.2.2'), ClusterID('192.0.2.3')])
     assert len(cl_multi) == 12  # 3 clusters * 4 bytes
 
 
@@ -1166,7 +1166,7 @@ def test_cluster_list_repr_single() -> None:
     """Test CLUSTER_LIST string representation with single cluster."""
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
-    cl = ClusterList([ClusterID('192.0.2.1')])
+    cl = ClusterList.make_clusterlist([ClusterID('192.0.2.1')])
     # Implementation returns "[ IP ]" format even for single cluster if _len != 1 after initialization
     repr_str = str(cl)
     assert '192.0.2.1' in repr_str
@@ -1176,7 +1176,7 @@ def test_cluster_list_repr_multiple() -> None:
     """Test CLUSTER_LIST string representation with multiple clusters."""
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
-    cl = ClusterList([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
+    cl = ClusterList.make_clusterlist([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
     repr_str = str(cl)
 
     # Should be in bracket format
@@ -1190,7 +1190,7 @@ def test_cluster_list_json() -> None:
     """Test CLUSTER_LIST JSON serialization."""
     from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
 
-    cl = ClusterList([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
+    cl = ClusterList.make_clusterlist([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
     json_str = cl.json()
 
     # Should contain cluster IDs in JSON array format

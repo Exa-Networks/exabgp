@@ -42,7 +42,7 @@ This single file contains ALL core rules:
 # 1. Git state check
 git status && git diff && git diff --staged
 
-# 2. Backport review - MANDATORY AT SESSION START
+# 2. Backport review - MANDATORY AT SESSION START IF THE .claude/BACKPORT.md is older than a week
 LAST_HASH=$(grep "Last reviewed commit" .claude/BACKPORT.md | awk '{print $NF}')
 echo "=== Commits since last backport review ($LAST_HASH) ==="
 git log $LAST_HASH..HEAD --oneline
