@@ -30,15 +30,30 @@ class AtomicAggregate(Attribute):
     def __init__(self, packed: bytes = b'') -> None:
         """Initialize AtomicAggregate from packed wire-format bytes.
 
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_atomic_aggregate() for semantic construction.
+
         Args:
             packed: Raw attribute value bytes (must be empty for AtomicAggregate)
+        """
+        self._packed: bytes = packed
+
+    @classmethod
+    def from_packet(cls, data: bytes) -> 'AtomicAggregate':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw attribute value bytes from wire
+
+        Returns:
+            AtomicAggregate instance
 
         Raises:
-            ValueError: If packed data is not empty
+            ValueError: If data is not empty
         """
-        if packed:
-            raise ValueError(f'AtomicAggregate must be empty, got {len(packed)} bytes')
-        self._packed: bytes = packed
+        if data:
+            raise ValueError(f'AtomicAggregate must be empty, got {len(data)} bytes')
+        return cls(data)
 
     @classmethod
     def make_atomic_aggregate(cls) -> 'AtomicAggregate':
@@ -57,8 +72,7 @@ class AtomicAggregate(Attribute):
         return self._attribute(self._packed)
 
     def __len__(self) -> int:
-        # AtomicAggregate is always 0 bytes payload + 3 byte header = 3 bytes total
-        return 3
+        return len(self._packed)
 
     def __repr__(self) -> str:
         return ''
@@ -68,8 +82,8 @@ class AtomicAggregate(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> AtomicAggregate:
-        # Validation happens in __init__
-        return cls(data)
+        # Wire data - use from_packet for validation
+        return cls.from_packet(data)
 
     @classmethod
     def setCache(cls) -> None:

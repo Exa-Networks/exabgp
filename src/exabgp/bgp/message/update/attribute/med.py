@@ -30,26 +30,46 @@ class MED(Attribute):
     def __init__(self, packed: bytes) -> None:
         """Initialize MED from packed wire-format bytes.
 
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_med() for semantic construction.
+
         Args:
             packed: Raw attribute value bytes (4-byte unsigned integer, network order)
-
-        Raises:
-            ValueError: If packed data is not exactly 4 bytes
         """
-        if len(packed) != 4:
-            raise ValueError(f'MED requires exactly 4 bytes, got {len(packed)}')
         self._packed: bytes = packed
 
     @classmethod
+    def from_packet(cls, data: bytes) -> 'MED':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw attribute value bytes from wire
+
+        Returns:
+            MED instance
+
+        Raises:
+            ValueError: If data is not exactly 4 bytes
+        """
+        if len(data) != 4:
+            raise ValueError(f'MED requires exactly 4 bytes, got {len(data)}')
+        return cls(data)
+
+    @classmethod
     def make_med(cls, med: int) -> 'MED':
-        """Create MED from semantic value.
+        """Create MED from semantic value with validation.
 
         Args:
             med: Multi-Exit Discriminator value (0-4294967295)
 
         Returns:
             MED instance
+
+        Raises:
+            ValueError: If med value is out of range
         """
+        if not 0 <= med <= 0xFFFFFFFF:
+            raise ValueError(f'MED value out of range: {med}')
         return cls(pack('!L', med))
 
     @property
@@ -69,8 +89,7 @@ class MED(Attribute):
         return self._attribute(self._packed)
 
     def __len__(self) -> int:
-        # MED is always 4 bytes payload + 3 byte header = 7 bytes total
-        return 7
+        return len(self._packed)
 
     def __repr__(self) -> str:
         return str(self.med)
@@ -80,5 +99,5 @@ class MED(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> MED:
-        # Validation happens in __init__
-        return cls(data)
+        # Wire data - use from_packet for validation
+        return cls.from_packet(data)

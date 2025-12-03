@@ -33,26 +33,48 @@ class Origin(Attribute):
     def __init__(self, packed: bytes) -> None:
         """Initialize Origin from packed wire-format bytes.
 
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_origin() for semantic construction.
+
         Args:
             packed: Raw attribute value bytes (single byte: 0=IGP, 1=EGP, 2=INCOMPLETE)
-
-        Raises:
-            ValueError: If packed data is not exactly 1 byte
         """
-        if len(packed) != 1:
-            raise ValueError(f'Origin requires exactly 1 byte, got {len(packed)}')
         self._packed: bytes = packed
 
     @classmethod
+    def from_packet(cls, data: bytes) -> 'Origin':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw attribute value bytes from wire
+
+        Returns:
+            Origin instance
+
+        Raises:
+            ValueError: If data is not exactly 1 byte or value is invalid
+        """
+        if len(data) != 1:
+            raise ValueError(f'Origin requires exactly 1 byte, got {len(data)}')
+        if data[0] > 2:
+            raise ValueError(f'Invalid origin value: {data[0]}')
+        return cls(data)
+
+    @classmethod
     def make_origin(cls, origin: int) -> 'Origin':
-        """Create Origin from semantic value.
+        """Create Origin from semantic value with validation.
 
         Args:
             origin: IGP (0), EGP (1), or INCOMPLETE (2)
 
         Returns:
             Origin instance
+
+        Raises:
+            ValueError: If origin value is invalid
         """
+        if not 0 <= origin <= 2:
+            raise ValueError(f'Invalid origin value: {origin}')
         return cls(bytes([origin]))
 
     @property
@@ -72,8 +94,7 @@ class Origin(Attribute):
         return self._attribute(self._packed)
 
     def __len__(self) -> int:
-        # Origin is always 1 byte payload + 3 byte header = 4 bytes total
-        return 4
+        return len(self._packed)
 
     def __repr__(self) -> str:
         if self.origin == Origin.IGP:
@@ -86,8 +107,8 @@ class Origin(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Origin:
-        # Validation happens in __init__
-        return cls(data)
+        # Wire data - use from_packet for validation
+        return cls.from_packet(data)
 
     @classmethod
     def setCache(cls) -> None:
