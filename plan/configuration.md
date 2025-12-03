@@ -12,14 +12,14 @@ This document tracks improvements to ExaBGP's configuration system for better se
 
 ### ✅ Completion Status
 
-**Phases 1-3: COMPLETE** (as of 2025-12-03)
+**Phases 1-4: COMPLETE** (as of 2025-12-03)
 - ✅ Phase 1: Schema Foundation - Schema types, validators, "did you mean?" suggestions
 - ✅ Phase 2: Schema Export - JSON Schema generation via `exabgp schema export`
 - ✅ Phase 3: Self-Documentation - Example generation via `exabgp configuration example`
-
-**Phase 4: IN PROGRESS**
-- 🚧 Multi-error collection (planned)
-- 🚧 Cross-reference validation (planned)
+- ✅ Phase 4: Validation Enhancement
+  - ✅ 4.1: Multi-error collection (`Error.enable_collection()`)
+  - ✅ 4.2: Cross-reference validation (`CrossReferenceValidator`)
+  - ✅ 4.3: Centralized constraints (`constraints.py` with all BGP limits)
 
 **Phase 5: FUTURE**
 - ⏳ IDE Integration (VS Code extension - optional)
