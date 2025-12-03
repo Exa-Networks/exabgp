@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Iterator, Sequence
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -25,46 +25,102 @@ COMMUNITY_SIZE = 4  # Each standard community is 4 bytes (2 bytes ASN + 2 bytes 
 
 @Attribute.register()
 class Communities(Attribute):
+    """Communities attribute (code 8).
+
+    Stores packed wire-format bytes. Each community is 4 bytes.
+    """
+
     ID = Attribute.CODE.COMMUNITY
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    def __init__(self, communities: list[Community] | None = None) -> None:
-        # Must be None as = param is only evaluated once
-        if communities:
-            self.communities: list[Community] = communities
-        else:
-            self.communities = []
+    def __init__(self, packed: bytes = b'') -> None:
+        """Initialize from packed wire-format bytes.
 
-    def add(self, data: Community) -> Communities:
-        self.communities.append(data)
-        self.communities.sort()
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_communities() for semantic construction.
+
+        Args:
+            packed: Raw communities bytes (concatenated 4-byte communities)
+        """
+        self._packed: bytes = packed
+
+    @classmethod
+    def from_packet(cls, data: bytes) -> 'Communities':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw attribute value bytes from wire
+
+        Returns:
+            Communities instance
+
+        Raises:
+            Notify: If data length is not a multiple of 4
+        """
+        if len(data) % COMMUNITY_SIZE != 0:
+            raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data])))
+        return cls(data)
+
+    @classmethod
+    def make_communities(cls, communities: Sequence[Community]) -> 'Communities':
+        """Create from list of Community objects.
+
+        Args:
+            communities: Sequence of Community objects
+
+        Returns:
+            Communities instance
+        """
+        # Sort communities and pack
+        sorted_communities = sorted(communities)
+        packed = b''.join(c.pack_attribute(None) for c in sorted_communities)  # type: ignore[arg-type]
+        return cls(packed)
+
+    def add(self, data: Community) -> 'Communities':
+        """Add a community and return self (builder pattern).
+
+        Note: This unpacks, adds, sorts, and repacks. For building many communities,
+        consider collecting them first and using make_communities().
+        """
+        communities = list(self.communities)
+        communities.append(data)
+        communities.sort()
+        self._packed = b''.join(c.pack_attribute(None) for c in communities)  # type: ignore[arg-type]
         return self
 
+    @property
+    def communities(self) -> list[Community]:
+        """Get list of Community objects by unpacking from bytes."""
+        result: list[Community] = []
+        data = self._packed
+        while data:
+            result.append(Community(data[:COMMUNITY_SIZE]))
+            data = data[COMMUNITY_SIZE:]
+        return result
+
+    def __len__(self) -> int:
+        return len(self._packed)
+
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        if len(self.communities):
-            return self._attribute(b''.join(c.pack_attribute(negotiated) for c in self.communities))
+        if self._packed:
+            return self._attribute(self._packed)
         return b''
 
     def __iter__(self) -> Iterator[Community]:
         return iter(self.communities)
 
     def __repr__(self) -> str:
-        lc = len(self.communities)
+        communities = self.communities
+        lc = len(communities)
         if lc > 1:
-            return '[ {} ]'.format(' '.join(repr(community) for community in sorted(self.communities)))
+            return '[ {} ]'.format(' '.join(repr(community) for community in sorted(communities)))
         if lc == 1:
-            return repr(self.communities[0])
+            return repr(communities[0])
         return ''
 
     def json(self) -> str:
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
-    @staticmethod
-    def unpack_attribute(data: bytes, negotiated: Negotiated) -> Communities:
-        communities = Communities()
-        while data:
-            if data and len(data) < COMMUNITY_SIZE:
-                raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data])))
-            communities.add(Community.unpack_attribute(data[:COMMUNITY_SIZE], negotiated))
-            data = data[COMMUNITY_SIZE:]
-        return communities
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'Communities':
+        return cls.from_packet(data)

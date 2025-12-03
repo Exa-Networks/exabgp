@@ -20,6 +20,11 @@ if TYPE_CHECKING:
 
 
 class Community:
+    """Standard BGP Community (RFC 1997).
+
+    Stores packed wire-format bytes (4 bytes).
+    """
+
     MAX: ClassVar[int] = 0xFFFFFFFF
 
     NO_EXPORT: ClassVar[bytes] = pack('!L', 0xFFFFFF01)
@@ -31,76 +36,138 @@ class Community:
     cache: ClassVar[dict[bytes, Community]] = {}
     caching: ClassVar[bool] = True
 
-    def __init__(self, community: bytes) -> None:
-        self.community: bytes = community
-        self._str: str
-        if community == self.NO_EXPORT:
-            self._str = 'no-export'
-        elif community == self.NO_ADVERTISE:
-            self._str = 'no-advertise'
-        elif community == self.NO_EXPORT_SUBCONFED:
-            self._str = 'no-export-subconfed'
-        elif community == self.NO_PEER:
-            self._str = 'no-peer'
-        elif community == self.BLACKHOLE:
-            self._str = 'blackhole'
+    def __init__(self, packed: bytes) -> None:
+        """Initialize from packed wire-format bytes.
+
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_community() for semantic construction.
+
+        Args:
+            packed: Raw community bytes (4 bytes)
+        """
+        self._packed: bytes = packed
+
+    @classmethod
+    def from_packet(cls, data: bytes) -> 'Community':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw community bytes from wire
+
+        Returns:
+            Community instance
+
+        Raises:
+            ValueError: If data length is not 4
+        """
+        if len(data) != 4:
+            raise ValueError(f'Community must be 4 bytes, got {len(data)}')
+        return cls(data)
+
+    @classmethod
+    def make_community(cls, asn: int, value: int) -> 'Community':
+        """Create from ASN and value.
+
+        Args:
+            asn: 16-bit ASN portion
+            value: 16-bit value portion
+
+        Returns:
+            Community instance
+        """
+        packed = pack('!HH', asn, value)
+        return cls(packed)
+
+    @classmethod
+    def make_wellknown(cls, value: int) -> 'Community':
+        """Create from well-known community value.
+
+        Args:
+            value: 32-bit well-known community value
+
+        Returns:
+            Community instance
+        """
+        packed = pack('!L', value)
+        return cls(packed)
+
+    @property
+    def community(self) -> bytes:
+        """Get the packed community bytes (for compatibility)."""
+        return self._packed
+
+    def _get_string(self) -> str:
+        """Get string representation."""
+        if self._packed == self.NO_EXPORT:
+            return 'no-export'
+        elif self._packed == self.NO_ADVERTISE:
+            return 'no-advertise'
+        elif self._packed == self.NO_EXPORT_SUBCONFED:
+            return 'no-export-subconfed'
+        elif self._packed == self.NO_PEER:
+            return 'no-peer'
+        elif self._packed == self.BLACKHOLE:
+            return 'blackhole'
         else:
-            self._str = '%d:%d' % unpack('!HH', self.community)
+            return '%d:%d' % unpack('!HH', self._packed)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Community):
             return False
-        return self.community == other.community
+        return self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
         if not isinstance(other, Community):
             return True
-        return self.community != other.community
+        return self._packed != other._packed
 
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, Community):
             raise TypeError(f"'<' not supported between instances of 'Community' and '{type(other).__name__}'")
-        return self.community < other.community
+        return self._packed < other._packed
 
     def __le__(self, other: object) -> bool:
         if not isinstance(other, Community):
             raise TypeError(f"'<=' not supported between instances of 'Community' and '{type(other).__name__}'")
-        return self.community <= other.community
+        return self._packed <= other._packed
 
     def __gt__(self, other: object) -> bool:
         if not isinstance(other, Community):
             raise TypeError(f"'>' not supported between instances of 'Community' and '{type(other).__name__}'")
-        return self.community > other.community
+        return self._packed > other._packed
 
     def __ge__(self, other: object) -> bool:
         if not isinstance(other, Community):
             raise TypeError(f"'>=' not supported between instances of 'Community' and '{type(other).__name__}'")
-        return self.community >= other.community
+        return self._packed >= other._packed
+
+    def __hash__(self) -> int:
+        return hash(self._packed)
 
     def json(self) -> str:
-        return '[ %d, %d ]' % unpack('!HH', self.community)
+        return '[ %d, %d ]' % unpack('!HH', self._packed)
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        return self.community
+        return self._packed
 
     def __repr__(self) -> str:
-        return self._str
+        return self._get_string()
 
     def __len__(self) -> int:
         return 4
 
     @classmethod
-    def unpack_attribute(cls, community: bytes, negotiated: Negotiated) -> Community:
-        return cls(community)
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'Community':
+        return cls.from_packet(data)
 
     @classmethod
-    def cached(cls, community: bytes) -> Community:
+    def cached(cls, packed: bytes) -> 'Community':
         if not cls.caching:
-            return cls(community)
-        if community in cls.cache:
-            return cls.cache[community]
-        instance = cls(community)
-        cls.cache[community] = instance
+            return cls(packed)
+        if packed in cls.cache:
+            return cls.cache[packed]
+        instance = cls(packed)
+        cls.cache[packed] = instance
         return instance
 
 
