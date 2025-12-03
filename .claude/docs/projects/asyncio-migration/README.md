@@ -1,7 +1,7 @@
 # AsyncIO Migration Documentation
 
 **Current Status:** ✅ Phase 1 COMPLETE - 100% Test Parity Achieved
-**Last Updated:** 2025-11-19
+**Last Updated:** 2025-12-03
 
 ---
 
@@ -50,6 +50,43 @@ exabgp_reactor_asyncio=true ./sbin/exabgp config.conf
 
 ---
 
+## Debugging Performance Issues
+
+### Timing Instrumentation
+
+Enable timing instrumentation to diagnose slow reactor operations:
+
+```bash
+# Enable timing logs (logs warnings for operations > 50ms)
+exabgp_debug_timing=true exabgp_reactor_asyncio=true ./sbin/exabgp config.conf
+```
+
+**What it logs:**
+- Main loop iterations taking > 100ms
+- Peer message loop iterations taking > 50ms
+- Peer establishment taking > 5000ms
+- Operations exceeding thresholds are logged with elapsed time
+
+### Stress Tests
+
+Run stress tests to verify reactor performance:
+
+```bash
+# API reaction time and yield behavior
+pytest qa/stress/test_api_reaction.py -v
+
+# Peer throughput and multi-peer interleaving
+pytest qa/stress/test_peer_throughput.py -v
+```
+
+### Key Performance Fixes (2025-12-03)
+
+- **flush_write_queue_async**: Now yields control every 50 items to prevent reactor stalls
+- **Timing module**: New `src/exabgp/reactor/timing.py` with `LoopTimer` and `timed_async` helpers
+- Socket I/O uses asyncio's event loop for automatic control yielding
+
+---
+
 ## Key Documents Overview
 
 ### Active Reference (Use These)
@@ -79,6 +116,7 @@ exabgp_reactor_asyncio=true ./sbin/exabgp config.conf
 **2025-11-18:** Fixed deadlock, achieved 70/72 (97%)
 **2025-11-19:** Fixed loop ordering, achieved 72/72 (100%)
 **2025-11-19:** Confirmed status, updated documentation
+**2025-12-03:** Added timing instrumentation and yield points for performance debugging
 
 ---
 
@@ -155,5 +193,5 @@ See **[docs/projects/asyncio-migration/README.md](../../docs/projects/asyncio-mi
 
 ---
 
-**Last Updated:** 2025-11-19
+**Last Updated:** 2025-12-03
 **Maintainer:** ExaBGP Core Team

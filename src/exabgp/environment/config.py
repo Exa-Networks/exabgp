@@ -290,6 +290,7 @@ class DebugSection(ConfigSection):
     route: str = option('', 'decode the route using the configuration')
     defensive: bool = option(False, 'generate random fault in the code in purpose')
     rotate: bool = option(False, 'rotate configurations file on reload (signal)')
+    timing: bool = option(False, 'enable timing instrumentation for reactor performance analysis')
 
 
 # =============================================================================

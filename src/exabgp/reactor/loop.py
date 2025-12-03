@@ -28,6 +28,7 @@ from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.listener import Listener
 from exabgp.reactor.peer import Peer
+from exabgp.reactor.timing import LoopTimer
 from exabgp.version import version
 
 
@@ -192,7 +193,11 @@ class Reactor:
         control to peer tasks while processing events as fast as possible.
         The asyncio event loop handles I/O waiting automatically.
         """
+        # Timing instrumentation for performance analysis
+        loop_timer = LoopTimer('async_main_loop', warn_threshold_ms=100)
+
         while True:
+            loop_timer.start()
             try:
                 # Handle signals
                 if self.signal.received:
@@ -265,6 +270,10 @@ class Reactor:
                 if self._stopping and not self._peers.keys():
                     self._termination('exiting on peer termination', self.Exit.normal)
                     break
+
+                # Log timing for this iteration
+                loop_timer.stop()
+                loop_timer.log_if_slow()
 
             except asyncio.CancelledError:
                 # Raised when asyncio.run() cancels tasks (e.g., on Ctrl+C)

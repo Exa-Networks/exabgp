@@ -346,6 +346,24 @@ Generate random faults in the code intentionally (for testing fault tolerance).
 
 Rotate configuration files on reload (signal).
 
+### debug.timing
+**Default:** `false`
+**Type:** boolean
+
+Enable timing instrumentation for asyncio reactor performance analysis.
+
+When enabled, logs warnings for slow operations:
+- Main loop iterations > 100ms
+- Peer message loop iterations > 50ms
+- Peer establishment > 5000ms
+
+**Example:**
+```bash
+exabgp_debug_timing=true exabgp_reactor_asyncio=true ./sbin/exabgp config.conf
+```
+
+**Use case:** Diagnosing reactor responsiveness issues, identifying blocking operations.
+
 ---
 
 ## tcp.attempts - Detailed Behavior

@@ -7,42 +7,37 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import os
-import errno
-import time
-import subprocess
-import select
-import fcntl
 import asyncio
 import collections
-
-from typing import Any, Callable, Generator, IO, TypeVar, cast, TYPE_CHECKING
+import errno
+import fcntl
+import os
+import select
+import subprocess
+import time
 from threading import Thread
+from typing import IO, TYPE_CHECKING, Any, Callable, Generator, TypeVar, cast
 
 if TYPE_CHECKING:
-    from exabgp.bgp.neighbor import Neighbor
-    from exabgp.reactor.peer import Peer
+    from exabgp.bgp.fsm import FSM
     from exabgp.bgp.message import Open, Update
     from exabgp.bgp.message.notification import Notification
-    from exabgp.bgp.message.refresh import RouteRefresh
     from exabgp.bgp.message.operational import OperationalFamily
-    from exabgp.bgp.fsm import FSM
-
-from exabgp.util.errstr import errstr
-from exabgp.reactor.network.error import error
-
-from exabgp.configuration.core.format import formated
-from exabgp.reactor.api.response import Response, ResponseEncoder
-from exabgp.reactor.api.response.answer import Answer
+    from exabgp.bgp.message.refresh import RouteRefresh
+    from exabgp.bgp.neighbor import Neighbor
+    from exabgp.reactor.peer import Peer
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import Negotiated
-from exabgp.logger import log, lazymsg
-
+from exabgp.configuration.core.format import formated
+from exabgp.environment import getenv
+from exabgp.logger import lazymsg, log
+from exabgp.reactor.api.response import Response, ResponseEncoder
+from exabgp.reactor.api.response.answer import Answer
+from exabgp.reactor.network.error import error
+from exabgp.util.errstr import errstr
 from exabgp.version import json as json_version
 from exabgp.version import text as text_version
-
-from exabgp.environment import getenv
 
 # TypeVar for silenced decorator - preserves function signature
 _F = TypeVar('_F', bound=Callable[..., None])
@@ -892,9 +887,13 @@ class Processes:
         """Flush all queued writes to API processes (async mode only)
 
         Called by main loop to drain the write queue without blocking.
+        Processes up to BATCH_SIZE items then yields control to keep reactor responsive.
         """
         if not self._async_mode:
             return
+
+        # Max items to process before yielding - keeps reactor responsive
+        BATCH_SIZE = 10
 
         # Debug: Log queue status
         if self._write_queue:
@@ -902,7 +901,12 @@ class Processes:
                 if q:
                     log.debug(lazymsg('async.queue.flushing process={pn} items={cnt}', pn=p, cnt=len(q)), 'processes')
 
+        items_processed = 0
+
         for process_name in list(self._write_queue.keys()):
+            if items_processed >= BATCH_SIZE:
+                break
+
             if process_name not in self._process:
                 # Process terminated, clear its queue
                 del self._write_queue[process_name]
@@ -923,9 +927,11 @@ class Processes:
                 del self._write_queue[process_name]
                 continue
 
-            # Write all queued data using os.write (non-blocking)
-            while queue:
+            # Write up to remaining batch quota
+            while queue and items_processed < BATCH_SIZE:
                 data = queue.popleft()
+                items_processed += 1
+
                 try:
                     # Use os.write for non-blocking write
                     log.debug(
@@ -982,6 +988,9 @@ class Processes:
                         )
                         del self._write_queue[process_name]
                         break
+
+        # Always yield control after processing
+        await asyncio.sleep(0)
 
     def _answer(self, service: str, string: str, force: bool = False) -> None:
         # Check per-process ACK state
