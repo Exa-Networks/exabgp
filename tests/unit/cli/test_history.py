@@ -24,23 +24,43 @@ import pytest
 from exabgp.cli.history import CommandStats, HistoryTracker
 
 
-@pytest.fixture(autouse=True, scope='function')
-def clean_env():
-    """Clean up environment variables before and after each test."""
-    # Save original value
-    original = os.environ.get('exabgp_cli_history')
+@pytest.fixture(autouse=True, scope='module')
+def clean_env_module():
+    """Clean up environment variables before and after the entire module."""
+    # Save original values for all variables that affect HistoryTracker
+    env_vars = ['exabgp_cli_history', 'XDG_STATE_HOME', 'XDG_CONFIG_HOME']
+    original_values = {var: os.environ.get(var) for var in env_vars}
 
-    # Clean before test
-    if 'exabgp_cli_history' in os.environ:
-        del os.environ['exabgp_cli_history']
+    # Clean before module tests
+    for var in env_vars:
+        if var in os.environ:
+            del os.environ[var]
 
     yield
 
-    # Restore after test
-    if 'exabgp_cli_history' in os.environ:
-        del os.environ['exabgp_cli_history']
-    if original is not None:
-        os.environ['exabgp_cli_history'] = original
+    # Restore after module tests
+    for var in env_vars:
+        if var in os.environ:
+            del os.environ[var]
+        if original_values[var] is not None:
+            os.environ[var] = original_values[var]
+
+
+@pytest.fixture(autouse=True, scope='function')
+def clean_env_function():
+    """Clean up environment variables before and after each test."""
+    # Save original values for all variables that affect HistoryTracker
+    env_vars = ['exabgp_cli_history', 'XDG_STATE_HOME', 'XDG_CONFIG_HOME']
+    original_values = {var: os.environ.get(var) for var in env_vars}
+
+    yield
+
+    # Restore after test (clean between tests)
+    for var in env_vars:
+        if var in os.environ:
+            del os.environ[var]
+        if original_values[var] is not None:
+            os.environ[var] = original_values[var]
 
 
 class TestCommandStats:
@@ -99,8 +119,14 @@ class TestHistoryTracker:
     @pytest.fixture
     def tracker_enabled(self, temp_history_file, monkeypatch):
         """Create an enabled tracker with temporary storage."""
-        # Ensure parent directory exists
+        # Ensure parent directory exists with proper permissions
         temp_history_file.parent.mkdir(parents=True, exist_ok=True)
+        temp_history_file.parent.chmod(0o700)  # Ensure we have full permissions
+
+        # Create an empty history file to avoid permission issues during load
+        if not temp_history_file.exists():
+            temp_history_file.write_text('{"version": 1, "commands": {}}')
+            temp_history_file.chmod(0o600)
 
         # Mock _get_history_path to use temp file
         def mock_get_path(self):
@@ -111,6 +137,7 @@ class TestHistoryTracker:
         # Ensure history path is set
         if tracker._history_path is None:
             tracker._history_path = temp_history_file
+
         return tracker
 
     def test_disabled_by_default(self, monkeypatch):
