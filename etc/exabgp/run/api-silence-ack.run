@@ -1,13 +1,79 @@
 #!/usr/bin/env python3
 
+import json
 import os
+import select
+import signal
 import sys
 import time
-import select
-import json
+
+# Test sequence:
+# 1. Send a regular announce command and expect ACK (baseline test)
+# 2. Send silence-ack command and expect NO ACK (immediate silence, no ACK for this command)
+# 3. Send another announce command and expect NO ACK (should timeout)
+# 4. Send enable-ack command and expect ACK (re-enabling)
+# 5. Send final announce command and expect ACK (verify re-enabled)
 
 
-def wait_for_ack(expected_count=1, timeout=2):
+def main() -> None:
+    time.sleep(0.2)  # let the EOR pass
+
+    # Step 1: Baseline - send command and expect ACK
+    flush('announce route 2.1.0.0/24 next-hop 102.1.102.1\n')
+    time.sleep(0.1)
+
+    if not wait_for_ack(expected_count=1):
+        fail('ERROR: Baseline test failed - no ACK received for announce\n')
+        sys.exit(1)
+
+    # Step 2: Send silence-ack command and expect NO ACK (immediate silence)
+    flush('silence-ack\n')
+    time.sleep(0.1)
+
+    if wait_for_ack(expected_count=1, timeout=1):
+        fail('ERROR: Received unexpected ACK for silence-ack command (should be immediate silence)\n')
+        sys.exit(1)
+
+    # Step 3: Send command and expect NO ACK (should still be silent)
+    flush('announce route 2.2.0.0/24 next-hop 102.1.102.1\n')
+    time.sleep(0.1)
+
+    if wait_for_ack(expected_count=1, timeout=1):
+        fail('ERROR: Received unexpected ACK after silence-ack\n')
+        sys.exit(1)
+
+    # Step 4: Send enable-ack command and expect ACK
+    flush('enable-ack\n')
+    time.sleep(0.1)
+
+    if not wait_for_ack(expected_count=1):
+        fail('ERROR: No ACK received for enable-ack command\n')
+        sys.exit(1)
+
+    # Step 5: Send final command and expect ACK (verify re-enabled)
+    flush('announce route 2.3.0.0/24 next-hop 102.1.102.1\n')
+    time.sleep(0.1)
+
+    if not wait_for_ack(expected_count=1):
+        fail('ERROR: No ACK received after enable-ack\n')
+        sys.exit(1)
+
+    # All tests passed
+    fail('SUCCESS: All silence-ack tests passed\n')
+
+    # Wait for shutdown signal
+    try:
+        now = time.time()
+        while os.getppid() != 1 and time.time() < now + 5:
+            line = sys.stdin.readline().strip()
+            if not line or 'shutdown' in line:
+                break
+            time.sleep(1)
+    except IOError:
+        pass
+
+
+def wait_for_ack(expected_count: int = 1, timeout: int = 2) -> bool:
     """
     Wait for ACK responses from ExaBGP.
 
@@ -29,7 +95,7 @@ def wait_for_ack(expected_count=1, timeout=2):
     Raises:
         SystemExit: If ExaBGP sends shutdown message
     """
-    import json
+
     received = 0
     start_time = time.time()
 
@@ -52,17 +118,17 @@ def wait_for_ack(expected_count=1, timeout=2):
                 try:
                     data = json.loads(line)
                     answer = data.get('answer')
-                except:
+                except Exception:
                     pass
             else:
                 # Text format: done|error|shutdown
                 answer = line
 
-            if answer == "done":
+            if answer == 'done':
                 received += 1
-            elif answer == "error":
+            elif answer == 'error':
                 return False
-            elif answer == "shutdown":
+            elif answer == 'shutdown':
                 raise SystemExit(0)
             # Ignore other messages (could be BGP updates if receiving)
         else:
@@ -72,70 +138,18 @@ def wait_for_ack(expected_count=1, timeout=2):
     return True
 
 
-# Test sequence:
-# 1. Send a regular announce command and expect ACK (baseline test)
-# 2. Send silence-ack command and expect NO ACK (immediate silence, no ACK for this command)
-# 3. Send another announce command and expect NO ACK (should timeout)
-# 4. Send enable-ack command and expect ACK (re-enabling)
-# 5. Send final announce command and expect ACK (verify re-enabled)
+def flush(msg: str) -> None:
+    """Write message to stdout and flush."""
+    sys.stdout.write(msg)
+    sys.stdout.flush()
 
-time.sleep(0.2)  # let the EOR pass
 
-# Step 1: Baseline - send command and expect ACK
-sys.stdout.write('announce route 2.1.0.0/24 next-hop 102.1.102.1\n')
-sys.stdout.flush()
-time.sleep(0.1)
+def fail(msg: str) -> None:
+    """Write error message to stderr and flush."""
+    sys.stderr.write(msg)
+    sys.stderr.flush()
 
-if not wait_for_ack(expected_count=1):
-    sys.stderr.write('ERROR: Baseline test failed - no ACK received for announce\n')
-    sys.exit(1)
 
-# Step 2: Send silence-ack command and expect NO ACK (immediate silence)
-sys.stdout.write('silence-ack\n')
-sys.stdout.flush()
-time.sleep(0.1)
-
-if wait_for_ack(expected_count=1, timeout=1):
-    sys.stderr.write('ERROR: Received unexpected ACK for silence-ack command (should be immediate silence)\n')
-    sys.exit(1)
-
-# Step 3: Send command and expect NO ACK (should still be silent)
-sys.stdout.write('announce route 2.2.0.0/24 next-hop 102.1.102.1\n')
-sys.stdout.flush()
-time.sleep(0.1)
-
-if wait_for_ack(expected_count=1, timeout=1):
-    sys.stderr.write('ERROR: Received unexpected ACK after silence-ack\n')
-    sys.exit(1)
-
-# Step 4: Send enable-ack command and expect ACK
-sys.stdout.write('enable-ack\n')
-sys.stdout.flush()
-time.sleep(0.1)
-
-if not wait_for_ack(expected_count=1):
-    sys.stderr.write('ERROR: No ACK received for enable-ack command\n')
-    sys.exit(1)
-
-# Step 5: Send final command and expect ACK (verify re-enabled)
-sys.stdout.write('announce route 2.3.0.0/24 next-hop 102.1.102.1\n')
-sys.stdout.flush()
-time.sleep(0.1)
-
-if not wait_for_ack(expected_count=1):
-    sys.stderr.write('ERROR: No ACK received after enable-ack\n')
-    sys.exit(1)
-
-# All tests passed
-sys.stderr.write('SUCCESS: All silence-ack tests passed\n')
-
-# Wait for shutdown signal
-try:
-    now = time.time()
-    while os.getppid() != 1 and time.time() < now + 5:
-        line = sys.stdin.readline().strip()
-        if not line or 'shutdown' in line:
-            break
-        time.sleep(1)
-except IOError:
-    pass
+if __name__ == '__main__':
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    main()

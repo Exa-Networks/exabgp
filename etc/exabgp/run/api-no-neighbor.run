@@ -5,80 +5,98 @@ This test validates that ExaBGP reactor can start and accept API commands
 even when no neighbor blocks are defined in the configuration.
 """
 
+import json
+import signal
 import sys
 import time
-import json
 
-try:
-    # Wait for ExaBGP to initialize
-    time.sleep(1)
 
-    # Test 1: version command
-    sys.stderr.write('TEST: version command\n')
-    sys.stdout.write('version\n')
-    sys.stdout.flush()
-
-    response = sys.stdin.readline().strip()
-
-    # Response can be JSON or text format
-    version_ok = False
+def main() -> None:
     try:
-        data = json.loads(response)
-        if 'version' in data:
-            sys.stderr.write(f'  PASS: version={data["version"]}\n')
-            version_ok = True
-        else:
-            sys.stderr.write(f'  FAIL: JSON missing version field: {response}\n')
-    except (json.JSONDecodeError, ValueError):
-        # Text format fallback
-        if 'exabgp' in response.lower() or any(c.isdigit() for c in response):
-            sys.stderr.write(f'  PASS: {response}\n')
-            version_ok = True
-        else:
-            sys.stderr.write(f'  FAIL: unexpected response: {response}\n')
+        # Wait for ExaBGP to initialize
+        time.sleep(1)
 
-    if not version_ok:
+        # Test 1: version command
+        fail('TEST: version command\n')
+        flush('version\n')
+
+        response = sys.stdin.readline().strip()
+
+        # Response can be JSON or text format
+        version_ok = False
+        try:
+            data = json.loads(response)
+            if 'version' in data:
+                fail(f'  PASS: version={data["version"]}\n')
+                version_ok = True
+            else:
+                fail(f'  FAIL: JSON missing version field: {response}\n')
+        except (json.JSONDecodeError, ValueError):
+            # Text format fallback
+            if 'exabgp' in response.lower() or any(c.isdigit() for c in response):
+                fail(f'  PASS: {response}\n')
+                version_ok = True
+            else:
+                fail(f'  FAIL: unexpected response: {response}\n')
+
+        if not version_ok:
+            sys.exit(1)
+
+        # Read done acknowledgment
+        ack = sys.stdin.readline().strip()
+        if ack != 'done':
+            fail(f'  WARNING: expected done, got: {ack}\n')
+
+        # Test 2: shutdown command
+        fail('TEST: shutdown command\n')
+        flush('shutdown\n')
+
+        response = sys.stdin.readline().strip()
+
+        # Validate shutdown acknowledgment
+        shutdown_ok = False
+        try:
+            data = json.loads(response)
+            if data.get('answer') == 'shutdown':
+                fail('  PASS: shutdown acknowledged (JSON)\n')
+                shutdown_ok = True
+            else:
+                fail(f'  FAIL: unexpected JSON: {response}\n')
+        except (json.JSONDecodeError, ValueError):
+            # Text format fallback
+            if 'shutdown' in response.lower():
+                fail(f'  PASS: {response}\n')
+                shutdown_ok = True
+            else:
+                fail(f'  FAIL: unexpected response: {response}\n')
+
+        if not shutdown_ok:
+            sys.exit(1)
+
+        fail('SUCCESS: API commands work without neighbors\n')
+        sys.exit(0)
+
+    except (IOError, EOFError):
+        # Expected when ExaBGP shuts down
+        fail('Connection closed - shutdown successful\n')
+        sys.exit(0)
+    except Exception as e:
+        fail(f'ERROR: Unexpected exception: {e}\n')
         sys.exit(1)
 
-    # Read done acknowledgment
-    ack = sys.stdin.readline().strip()
-    if ack != 'done':
-        sys.stderr.write(f'  WARNING: expected done, got: {ack}\n')
 
-    # Test 2: shutdown command
-    sys.stderr.write('TEST: shutdown command\n')
-    sys.stdout.write('shutdown\n')
+def flush(msg: str) -> None:
+    """Write message to stdout and flush."""
+    sys.stdout.write(msg)
     sys.stdout.flush()
 
-    response = sys.stdin.readline().strip()
 
-    # Validate shutdown acknowledgment
-    shutdown_ok = False
-    try:
-        data = json.loads(response)
-        if data.get('answer') == 'shutdown':
-            sys.stderr.write('  PASS: shutdown acknowledged (JSON)\n')
-            shutdown_ok = True
-        else:
-            sys.stderr.write(f'  FAIL: unexpected JSON: {response}\n')
-    except (json.JSONDecodeError, ValueError):
-        # Text format fallback
-        if 'shutdown' in response.lower():
-            sys.stderr.write(f'  PASS: {response}\n')
-            shutdown_ok = True
-        else:
-            sys.stderr.write(f'  FAIL: unexpected response: {response}\n')
+def fail(msg: str) -> None:
+    """Write error message to stderr and flush."""
+    sys.stderr.write(msg)
+    sys.stderr.flush()
 
-    if not shutdown_ok:
-        sys.exit(1)
 
-    sys.stderr.write('SUCCESS: API commands work without neighbors\n')
-    sys.exit(0)
-
-except (IOError, EOFError):
-    # Expected when ExaBGP shuts down
-    sys.stderr.write('Connection closed - shutdown successful\n')
-    sys.exit(0)
-except Exception as e:
-    sys.stderr.write(f'ERROR: Unexpected exception: {e}\n')
-    sys.exit(1)
+if __name__ == '__main__':
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    main()

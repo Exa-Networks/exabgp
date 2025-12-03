@@ -3,17 +3,19 @@
 
 """ """
 
-import os
-import sys
 import errno
+import ipaddress
+import os
+import random
+import signal
+import sys
 import threading
 import time
-import ipaddress
 import traceback
+import urllib.parse
+
 import requests
 import requests_file
-import random
-import urllib.parse
 
 #
 # Adjustable values.
@@ -155,27 +157,37 @@ class responseThread(object):
                 pass
             except IOError as e:
                 if e.errno == errno.EPIPE:
-                    sys.stderr.write('broken pipe, terminating process.\n')
-                    sys.stderr.flush()
+                    fail('broken pipe, terminating process.\n')
                     os._exit(1)
                 else:
-                    sys.stderr.write('error {} reading from stdin.\n'.format(e.errno))
-                    sys.stderr.flush()
+                    fail('error {} reading from stdin.\n'.format(e.errno))
             else:
                 if line == 'shutdown':
-                    sys.stderr.write('shutdown request received, terminating process.\n')
-                    sys.stderr.flush()
+                    fail('shutdown request received, terminating process.\n')
                     os._exit(1)
                 if line != 'done':
-                    sys.stderr.write('unexpected response {} received.\n'.format(line))
-                    sys.stderr.flush()
+                    fail('unexpected response {} received.\n'.format(line))
 
 
 #
 # Start at the start
 #
 
+
+def flush(msg: str) -> None:
+    """Write message to stdout and flush."""
+    sys.stdout.write(msg)
+    sys.stdout.flush()
+
+
+def fail(msg: str) -> None:
+    """Write error message to stderr and flush."""
+    sys.stderr.write(msg)
+    sys.stderr.flush()
+
+
 if __name__ == '__main__':
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     # Start our blocklist retrival threads
 
     blocklistThreads = []
@@ -223,6 +235,5 @@ if __name__ == '__main__':
         try:
             time.sleep(delay)
         except KeyboardInterrupt:
-            sys.stderr.write('\nshutting down due to user request\n')
-            sys.stderr.flush()
+            fail('\nshutting down due to user request\n')
             os._exit(1)

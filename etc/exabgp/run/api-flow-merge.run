@@ -1,13 +1,57 @@
 #!/usr/bin/env python3
 
+import json
 import os
+import select
+import signal
 import sys
 import time
-import select
-import json
 
 
-def wait_for_ack(expected_count=1, timeout=2):
+def main() -> None:
+    messages = [
+        'announce flow route { match { source 4.4.4.4/32; } then { rate-limit 0; } }',
+        'announce flow route { match { source 5.5.5.5/32; } then { discard; } }',
+        'announce flow route { match { source 6.6.6.6/32; } scope { interface-set [ non-transitive:input:3405770241:1 ]; } then { discard; } }',
+        'announce flow route { match { source 7.7.7.7/32; } scope { interface-set [ non-transitive:input:3405770241:1 transitive:output:254:254 ]; } then { discard; } }',
+        'announce flow route { match { source 8.8.8.8/32; } then { discard; } scope { interface-set [ non-transitive:input:3405770241:1 transitive:output:254:254 ]; } }',
+        'announce flow route { match { source 9.9.9.9/32; } then { discard; } scope { interface-set [ non-transitive:input:3405770241:1 transitive:output:254:254 ]; } }',
+        'announce flow route { match { source 10.10.10.10/32; } scope { interface-set [ transitive:input-output:1234:10 transitive:input:1234:10 transitive:output:0:0]; } then { discard; } }',
+        'announce flow route destination 133.130.1.219/32 discard interface-set [ transitive:input:1234:10]',
+        'announce flow route destination 133.130.1.19/32 interface-set [ transitive:input:1234:10 ] discard',
+    ]
+
+    # Send all messages first
+    message_count = 0
+    for message in messages:
+        try:
+            flush(message + '\n')
+            message_count += 1
+        except IOError:
+            fail('IOError - ExaBGP exited ? ')
+            fail('Could not write message: %s\n' % message)
+
+    # Wait for all ACKs at once
+    if message_count > 0:
+        if not wait_for_ack(expected_count=message_count):
+            # ACK not received, continuing anyway (ACKs may be disabled in config)
+            pass
+
+    # Wait for shutdown signal
+    try:
+        now = time.time()
+        while os.getppid() != 1 and time.time() < now + 1:
+            line = sys.stdin.readline().strip()
+            if not line or 'shutdown' in line:
+                break
+            time.sleep(0.5)
+    except IOError:
+        pass
+
+    time.sleep(2)  # let the EOR pass
+
+
+def wait_for_ack(expected_count: int = 1, timeout: int = 2) -> bool:
     """
     Wait for ACK responses from ExaBGP.
 
@@ -29,7 +73,7 @@ def wait_for_ack(expected_count=1, timeout=2):
     Raises:
         SystemExit: If ExaBGP sends shutdown message
     """
-    import json
+
     received = 0
     start_time = time.time()
 
@@ -52,17 +96,17 @@ def wait_for_ack(expected_count=1, timeout=2):
                 try:
                     data = json.loads(line)
                     answer = data.get('answer')
-                except:
+                except Exception:
                     pass
             else:
                 # Text format: done|error|shutdown
                 answer = line
 
-            if answer == "done":
+            if answer == 'done':
                 received += 1
-            elif answer == "error":
+            elif answer == 'error':
                 return False
-            elif answer == "shutdown":
+            elif answer == 'shutdown':
                 raise SystemExit(0)
             # Ignore other messages (could be BGP updates if receiving)
         else:
@@ -72,46 +116,18 @@ def wait_for_ack(expected_count=1, timeout=2):
     return True
 
 
-time.sleep(2)  # let the EOR pass
+def flush(msg: str) -> None:
+    """Write message to stdout and flush."""
+    sys.stdout.write(msg)
+    sys.stdout.flush()
 
 
-messages = [
-    'announce flow route { match { source 4.4.4.4/32; } then { rate-limit 0; } }',
-    'announce flow route { match { source 5.5.5.5/32; } then { discard; } }',
-    'announce flow route { match { source 6.6.6.6/32; } scope { interface-set [ non-transitive:input:3405770241:1 ]; } then { discard; } }',
-    'announce flow route { match { source 7.7.7.7/32; } scope { interface-set [ non-transitive:input:3405770241:1 transitive:output:254:254 ]; } then { discard; } }',
-    'announce flow route { match { source 8.8.8.8/32; } then { discard; } scope { interface-set [ non-transitive:input:3405770241:1 transitive:output:254:254 ]; } }',
-    'announce flow route { match { source 9.9.9.9/32; } then { discard; } scope { interface-set [ non-transitive:input:3405770241:1 transitive:output:254:254 ]; } }',
-    'announce flow route { match { source 10.10.10.10/32; } scope { interface-set [ transitive:input-output:1234:10 transitive:input:1234:10 transitive:output:0:0]; } then { discard; } }',
-    'announce flow route destination 133.130.1.219/32 discard interface-set [ transitive:input:1234:10]',
-    'announce flow route destination 133.130.1.19/32 interface-set [ transitive:input:1234:10 ] discard',
-]
+def fail(msg: str) -> None:
+    """Write error message to stderr and flush."""
+    sys.stderr.write(msg)
+    sys.stderr.flush()
 
-# Send all messages first
-message_count = 0
-for message in messages:
-    try:
-        sys.stdout.write(message + '\n')
-        sys.stdout.flush()
-        message_count += 1
-    except IOError:
-        sys.stderr.write('IOError - ExaBGP exited ? ')
-        sys.stderr.write('Could not write message: %s\n' % message)
-        sys.stderr.flush()
 
-# Wait for all ACKs at once
-if message_count > 0:
-    if not wait_for_ack(expected_count=message_count):
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-
-# Wait for shutdown signal
-try:
-    now = time.time()
-    while os.getppid() != 1 and time.time() < now + 1:
-        line = sys.stdin.readline().strip()
-        if not line or 'shutdown' in line:
-            break
-        time.sleep(0.5)
-except IOError:
-    pass
+if __name__ == '__main__':
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    main()

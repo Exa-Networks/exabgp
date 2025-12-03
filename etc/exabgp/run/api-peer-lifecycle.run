@@ -1,16 +1,50 @@
 #!/usr/bin/env python3
 
-import os
+import json
+import select
+import signal
 import sys
 import time
-import select
-import json
-
-# Wait for ExaBGP to initialize
-time.sleep(1)
 
 
-def wait_for_ack(expected_count=1, timeout=2):
+def main() -> None:
+    # Wait for ExaBGP to initialize
+    time.sleep(1)
+
+    # Test dynamic peer lifecycle (create) + route announcement
+    # This test creates a neighbor dynamically (without pre-configured neighbor)
+    try:
+        messages = [
+            # 1. Create dynamic peer (127.0.0.1) - API format: create neighbor ...
+            #    This peer WILL connect to the test server and allow route announcement
+            'create neighbor 127.0.0.1 local-address 127.0.0.1 local-as 1 peer-as 1 router-id 1.2.3.4 api peer-lifecycle',
+            # 2. Announce route to dynamic peer (127.0.0.1)
+            #    This route will be sent and validated by test server
+            'announce route 1.1.0.0/24 next-hop 101.101.101.101',
+            # 3. Add invalid announce to force server to show what it received
+            #    The test server will stop after receiving expected messages and show output
+            'announce route 999.999.999.999/32 next-hop 1.1.1.1',
+        ]
+
+        for message in messages:
+            flush(message + '\n')
+            # Wait for ACK
+            if not wait_for_ack(expected_count=1, timeout=2):
+                # ACK not received, continuing anyway (ACKs may be disabled in config)
+                pass
+            time.sleep(0.2)
+
+        # Give server brief time to validate messages and stop
+        time.sleep(0.5)
+
+        # Send shutdown command to terminate ExaBGP gracefully
+        flush('shutdown\n')
+    except (IOError, BrokenPipeError, EOFError):
+        # Expected when ExaBGP shuts down
+        pass
+
+
+def wait_for_ack(expected_count: int = 1, timeout: int = 2) -> bool:
     """
     Wait for ACK responses from ExaBGP.
 
@@ -32,7 +66,6 @@ def wait_for_ack(expected_count=1, timeout=2):
     Raises:
         SystemExit: If ExaBGP sends shutdown message
     """
-    import json
 
     received = 0
     start_time = time.time()
@@ -56,7 +89,7 @@ def wait_for_ack(expected_count=1, timeout=2):
                 try:
                     data = json.loads(line)
                     answer = data.get('answer')
-                except:
+                except Exception:
                     pass
             else:
                 # Text format: done|error|shutdown
@@ -76,38 +109,12 @@ def wait_for_ack(expected_count=1, timeout=2):
     return True
 
 
-# Test dynamic peer lifecycle (create) + route announcement
-# This test creates a neighbor dynamically (without pre-configured neighbor)
-try:
-    messages = [
-        # 1. Create dynamic peer (127.0.0.1) - API format: create neighbor ...
-        #    This peer WILL connect to the test server and allow route announcement
-        'create neighbor 127.0.0.1 local-address 127.0.0.1 local-as 1 peer-as 1 router-id 1.2.3.4 api peer-lifecycle',
-
-        # 2. Announce route to dynamic peer (127.0.0.1)
-        #    This route will be sent and validated by test server
-        'announce route 1.1.0.0/24 next-hop 101.101.101.101',
-
-        # 3. Add invalid announce to force server to show what it received
-        #    The test server will stop after receiving expected messages and show output
-        'announce route 999.999.999.999/32 next-hop 1.1.1.1',
-    ]
-
-    for message in messages:
-        sys.stdout.write(message + '\n')
-        sys.stdout.flush()
-        # Wait for ACK
-        if not wait_for_ack(expected_count=1, timeout=2):
-            # ACK not received, continuing anyway (ACKs may be disabled in config)
-            pass
-        time.sleep(0.2)
-
-    # Give server brief time to validate messages and stop
-    time.sleep(0.5)
-
-    # Send shutdown command to terminate ExaBGP gracefully
-    sys.stdout.write('shutdown\n')
+def flush(msg: str) -> None:
+    """Write message to stdout and flush."""
+    sys.stdout.write(msg)
     sys.stdout.flush()
-except (IOError, BrokenPipeError, EOFError):
-    # Expected when ExaBGP shuts down
-    pass
+
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    main()

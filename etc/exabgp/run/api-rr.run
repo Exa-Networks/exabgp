@@ -1,61 +1,103 @@
 #!/usr/bin/env python3
 
 import os
+import signal
 import sys
 import time
 
+# Test sequence:
+# 1. Announce two routes
+# 2. Send route-refresh request
+# 3. Verify route-refresh response contains the announced routes
+# 4. Announce final route to signal success
 
-def check_ok():
+
+def main() -> None:
+    try:
+        time.sleep(0.2)  # let the EOR pass
+
+        # Announce first route
+        flush('announce route 192.168.0.0/32 next-hop 10.0.0.0\n')
+        time.sleep(0.2)
+        if not check_ack():
+            signal_failure()
+            return
+
+        # Announce second route
+        flush('announce route 192.168.0.1/32 next-hop 10.0.0.1\n')
+        time.sleep(0.2)
+        if not check_ack():
+            signal_failure()
+            return
+
+        # Send route-refresh request
+        flush('announce route-refresh ipv4 unicast\n')
+        time.sleep(0.2)
+        if not check_ack():
+            signal_failure()
+            return
+
+        # Read route-refresh responses and verify they contain our routes
+        valid = True
+
+        rr = sys.stdin.readline()
+        if '"nlri": "192.168.0.0/32"' not in rr:
+            valid = False
+            fail(f'ERROR: Expected nlri 192.168.0.0/32, got: {rr}\n')
+
+        rr = sys.stdin.readline()
+        if '"nlri": "192.168.0.1/32"' not in rr:
+            valid = False
+            fail(f'ERROR: Expected nlri 192.168.0.1/32, got: {rr}\n')
+
+        if valid:
+            flush('announce route 192.168.0.2/32 next-hop 10.0.0.1\n')
+        else:
+            signal_failure()
+
+        # Wait for shutdown
+        wait_for_shutdown()
+
+    except IOError:
+        pass
+
+
+def check_ack() -> bool:
+    """Check for ACK response. Returns True if 'done' received."""
     line = sys.stdin.readline().strip()
-    if line != 'done':
-        sys.stdout.write(f'debug expected "done" not "{line}"\n')
-        sys.stdout.write('announce route 255.255.255.255/32 next-hop 255.255.255.255\n')
-        sys.stdout.flush()
+    if 'done' in line:
+        return True
+    fail(f'ERROR: Expected "done", got: {line}\n')
+    return False
 
 
-try:
-    time.sleep(0.2)
-
-    sys.stdout.write('announce route 192.168.0.0/32 next-hop 10.0.0.0\n')
-    sys.stdout.flush()
-    time.sleep(0.2)
-    check_ok()
-
-    sys.stdout.write('announce route 192.168.0.1/32 next-hop 10.0.0.1\n')
-    sys.stdout.flush()
-    time.sleep(0.2)
-    check_ok()
-
-    sys.stdout.write('announce route-refresh ipv4 unicast\n')
-    sys.stdout.flush()
-    time.sleep(0.2)
-    check_ok()
-
-    valid = True
-
-    rr = sys.stdin.readline()
-    if '"nlri": "192.168.0.0/32"' not in rr:
-        valid = False
-        sys.stdout.write('debug ' + rr + '\n')
-        sys.stdout.flush()
-
-    rr = sys.stdin.readline()
-    if '"nlri": "192.168.0.1/32"' not in rr:
-        valid = False
-        sys.stdout.write('debug ' + rr + '\n')
-        sys.stdout.flush()
-
-    if valid:
-        sys.stdout.write('announce route 192.168.0.2/32 next-hop 10.0.0.1\n')
-    else:
-        sys.stdout.write('announce route 255.255.255.255/32 next-hop 255.255.255.255\n')
-    sys.stdout.flush()
-
-    now = time.time()
-    while os.getppid() != 1 and time.time() < now + 15:
+def wait_for_shutdown(timeout: int = 15) -> None:
+    """Wait for shutdown signal from ExaBGP."""
+    start_time = time.time()
+    while os.getppid() != 1 and time.time() - start_time < timeout:
         line = sys.stdin.readline().strip()
         if not line or 'shutdown' in line:
             break
         time.sleep(1)
-except IOError:
-    pass
+
+
+def signal_failure() -> None:
+    """Send error route to signal test failure."""
+    flush('announce route 255.255.255.255/32 next-hop 255.255.255.255\n')
+
+
+def flush(msg: str) -> None:
+    """Write message to stdout and flush."""
+    sys.stdout.write(msg)
+    sys.stdout.flush()
+
+
+def fail(msg: str) -> None:
+    """Write error message to stderr and flush."""
+    sys.stderr.write(msg)
+    sys.stderr.flush()
+
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    main()
