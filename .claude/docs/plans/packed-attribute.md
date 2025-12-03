@@ -108,8 +108,15 @@ class INET(NLRI):
 ### Wave 4: MP Attributes + BGP-LS + SR
 21-55. `mprnlri.py`, `mpurnlri.py`, `bgpls/*.py`, `sr/*.py`
 
-### Wave 5: Qualifiers
-56-60. `nlri/qualifier/path.py`, `rd.py`, `labels.py`, `esi.py`, `etag.py`
+### Wave 5: Qualifiers ✅ COMPLETE
+
+| File | Status | Factory Method |
+|------|--------|----------------|
+| `path.py` | ✅ Done | `PathInfo.make_from_integer(int)`, `PathInfo.make_from_ip(str)` |
+| `rd.py` | ✅ Done | `RouteDistinguisher.make_from_elements(prefix, suffix)` |
+| `labels.py` | ✅ Done | `Labels.make_labels(list[int], bos)` |
+| `esi.py` | ✅ Done | `ESI.make_default()`, `ESI.make_esi(bytes)` |
+| `etag.py` | ✅ Done | `EthernetTag.make_etag(int)` |
 
 ### Wave 6: NLRI Types
 61. **`src/exabgp/bgp/message/update/nlri/cidr.py`**

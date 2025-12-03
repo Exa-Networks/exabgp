@@ -31,7 +31,7 @@ class TestVPLSCreation:
 
     def test_create_vpls_basic(self) -> None:
         """Test creating basic VPLS route"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         assert vpls.afi == AFI.l2vpn
@@ -53,7 +53,7 @@ class TestVPLSCreation:
         ]
 
         for endpoint, base, offset, size in test_cases:
-            rd = RouteDistinguisher.fromElements('10.0.0.1', 100)
+            rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
             vpls = VPLS(rd, endpoint, base, offset, size)
 
             assert vpls.endpoint == endpoint
@@ -63,7 +63,7 @@ class TestVPLSCreation:
 
     def test_vpls_unique_counter(self) -> None:
         """Test that each VPLS instance gets a unique counter"""
-        rd = RouteDistinguisher.fromElements('10.0.0.1', 100)
+        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
         vpls1 = VPLS(rd, 3, 262145, 1, 8)
         vpls2 = VPLS(rd, 3, 262145, 1, 8)
 
@@ -77,7 +77,7 @@ class TestVPLSPackUnpack:
 
     def test_pack_unpack_basic(self) -> None:
         """Test basic pack/unpack roundtrip"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         packed = vpls.pack_nlri(create_negotiated())
@@ -102,7 +102,7 @@ class TestVPLSPackUnpack:
         ]
 
         for ip, rd_num, endpoint, base, offset, size in test_cases:
-            rd = RouteDistinguisher.fromElements(ip, rd_num)
+            rd = RouteDistinguisher.make_from_elements(ip, rd_num)
             vpls = VPLS(rd, endpoint, base, offset, size)
 
             packed = vpls.pack_nlri(create_negotiated())
@@ -117,7 +117,7 @@ class TestVPLSPackUnpack:
 
     def test_pack_format(self) -> None:
         """Test that pack produces correct format"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         packed = vpls.pack_nlri(create_negotiated())
@@ -130,7 +130,7 @@ class TestVPLSPackUnpack:
 
     def test_unpack_requires_exact_length(self) -> None:
         """Test that VPLS unpacking requires exact length match"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         # VPLS requires exact length - extra data causes Notify
@@ -143,7 +143,7 @@ class TestVPLSPackUnpack:
 
     def test_unpack_with_action_withdraw(self) -> None:
         """Test unpacking preserves WITHDRAW action"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         packed = vpls.pack_nlri(create_negotiated())
@@ -175,7 +175,7 @@ class TestVPLSStringRepresentation:
 
     def test_str_vpls(self) -> None:
         """Test string representation"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         result = str(vpls)
@@ -188,7 +188,7 @@ class TestVPLSStringRepresentation:
 
     def test_str_vpls_with_nexthop(self) -> None:
         """Test string representation with nexthop"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
         vpls.nexthop = IP.create('10.0.0.1')
 
@@ -198,7 +198,7 @@ class TestVPLSStringRepresentation:
 
     def test_str_vpls_without_nexthop(self) -> None:
         """Test string representation without nexthop"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         result = str(vpls)
@@ -207,7 +207,7 @@ class TestVPLSStringRepresentation:
 
     def test_extensive(self) -> None:
         """Test extensive method"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         result = vpls.extensive()
@@ -219,7 +219,7 @@ class TestVPLSJSON:
 
     def test_json_basic(self) -> None:
         """Test basic JSON serialization"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         json_str = vpls.json()
@@ -234,7 +234,7 @@ class TestVPLSJSON:
 
     def test_json_contains_rd(self) -> None:
         """Test JSON contains route distinguisher"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         json_str = vpls.json()
@@ -244,7 +244,7 @@ class TestVPLSJSON:
 
     def test_json_contains_all_fields(self) -> None:
         """Test JSON contains all required fields"""
-        rd = RouteDistinguisher.fromElements('10.0.0.1', 100)
+        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
         vpls = VPLS(rd, endpoint=10, base=500000, offset=50, size=16)
 
         json_str = vpls.json()
@@ -260,7 +260,7 @@ class TestVPLSFeedback:
 
     def test_feedback_all_fields_present(self) -> None:
         """Test feedback when all fields are present"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
         vpls.nexthop = IP.create('10.0.0.1')
 
@@ -269,7 +269,7 @@ class TestVPLSFeedback:
 
     def test_feedback_missing_nexthop(self) -> None:
         """Test feedback when nexthop is missing (IP.NoNextHop)"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
         # nexthop defaults to IP.NoNextHop
 
@@ -278,7 +278,7 @@ class TestVPLSFeedback:
 
     def test_feedback_missing_endpoint(self) -> None:
         """Test feedback when endpoint is missing"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=None, base=262145, offset=1, size=8)
         vpls.nexthop = IP.create('10.0.0.1')  # Set nexthop so we check endpoint
 
@@ -287,7 +287,7 @@ class TestVPLSFeedback:
 
     def test_feedback_missing_base(self) -> None:
         """Test feedback when base is missing"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=None, offset=1, size=8)
         vpls.nexthop = IP.create('10.0.0.1')  # Set nexthop so we check base
 
@@ -296,7 +296,7 @@ class TestVPLSFeedback:
 
     def test_feedback_missing_offset(self) -> None:
         """Test feedback when offset is missing"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=None, size=8)
         vpls.nexthop = IP.create('10.0.0.1')  # Set nexthop so we check offset
 
@@ -305,7 +305,7 @@ class TestVPLSFeedback:
 
     def test_feedback_missing_size(self) -> None:
         """Test feedback when size is missing"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=None)
         vpls.nexthop = IP.create('10.0.0.1')  # Set nexthop so we check size
 
@@ -322,7 +322,7 @@ class TestVPLSFeedback:
 
     def test_feedback_size_inconsistency(self) -> None:
         """Test feedback when base + size exceeds 20-bit limit"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         # 20 bits max = 0xFFFFF = 1048575
         # If base > (0xFFFFF - size), it's inconsistent
         vpls = VPLS(rd, endpoint=3, base=1048575, offset=1, size=10)
@@ -333,7 +333,7 @@ class TestVPLSFeedback:
 
     def test_feedback_base_at_limit(self) -> None:
         """Test feedback when base is at the exact limit"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         # Exactly at limit should pass
         vpls = VPLS(rd, endpoint=3, base=1048567, offset=1, size=8)
         vpls.nexthop = IP.create('10.0.0.1')
@@ -347,7 +347,7 @@ class TestVPLSAssign:
 
     def test_assign_nexthop(self) -> None:
         """Test assigning nexthop via assign method"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         nh = IP.create('10.0.0.1')
@@ -357,7 +357,7 @@ class TestVPLSAssign:
 
     def test_assign_endpoint(self) -> None:
         """Test assigning endpoint via assign method"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         vpls.assign('endpoint', 10)
@@ -366,7 +366,7 @@ class TestVPLSAssign:
 
     def test_assign_multiple_attributes(self) -> None:
         """Test assigning multiple attributes"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         vpls.assign('endpoint', 100)
@@ -385,7 +385,7 @@ class TestVPLSEdgeCases:
 
     def test_vpls_minimum_values(self) -> None:
         """Test VPLS with minimum values"""
-        rd = RouteDistinguisher.fromElements('0.0.0.1', 0)
+        rd = RouteDistinguisher.make_from_elements('0.0.0.1', 0)
         vpls = VPLS(rd, endpoint=0, base=0, offset=0, size=0)
 
         assert vpls.endpoint == 0
@@ -395,7 +395,7 @@ class TestVPLSEdgeCases:
 
     def test_vpls_maximum_base(self) -> None:
         """Test VPLS with maximum 20-bit base value"""
-        rd = RouteDistinguisher.fromElements('10.0.0.1', 100)
+        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
         max_base = 0xFFFFF  # 20 bits = 1048575
         vpls = VPLS(rd, endpoint=1, base=max_base, offset=1, size=0)
 
@@ -420,7 +420,7 @@ class TestVPLSEdgeCases:
 
     def test_pack_sets_bottom_of_stack(self) -> None:
         """Test that pack_nlri sets the bottom of stack bit"""
-        rd = RouteDistinguisher.fromElements('172.30.5.4', 13)
+        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS(rd, endpoint=3, base=262145, offset=1, size=8)
 
         packed = vpls.pack_nlri(create_negotiated())
@@ -437,9 +437,9 @@ class TestVPLSMultipleRoutes:
     def test_pack_unpack_multiple_separately(self) -> None:
         """Test packing/unpacking multiple VPLS routes (each requires exact length)"""
         routes = [
-            VPLS(RouteDistinguisher.fromElements('172.30.5.4', 13), 3, 262145, 1, 8),
-            VPLS(RouteDistinguisher.fromElements('172.30.5.3', 11), 3, 262145, 1, 8),
-            VPLS(RouteDistinguisher.fromElements('10.0.0.1', 100), 10, 500000, 50, 16),
+            VPLS(RouteDistinguisher.make_from_elements('172.30.5.4', 13), 3, 262145, 1, 8),
+            VPLS(RouteDistinguisher.make_from_elements('172.30.5.3', 11), 3, 262145, 1, 8),
+            VPLS(RouteDistinguisher.make_from_elements('10.0.0.1', 100), 10, 500000, 50, 16),
         ]
 
         # VPLS requires exact length, so pack and unpack each separately
@@ -465,7 +465,7 @@ class TestVPLSMultipleRoutes:
         ]
 
         for ip, rd_num, endpoint, base, offset, size in configs:
-            rd = RouteDistinguisher.fromElements(ip, rd_num)
+            rd = RouteDistinguisher.make_from_elements(ip, rd_num)
             vpls = VPLS(rd, endpoint, base, offset, size)
 
             packed = vpls.pack_nlri(create_negotiated())

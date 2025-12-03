@@ -40,7 +40,7 @@ class TestSourceAD:
 
     def test_sourcead_creation(self) -> None:
         """Test basic creation of SourceAD route"""
-        rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
+        rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
 
@@ -55,7 +55,7 @@ class TestSourceAD:
 
     def test_sourcead_pack_unpack_ipv4(self) -> None:
         """Test pack/unpack roundtrip for SourceAD with IPv4"""
-        rd = RouteDistinguisher.fromElements('10.0.0.1', 500)
+        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
 
@@ -74,7 +74,7 @@ class TestSourceAD:
 
     def test_sourcead_pack_unpack_ipv6(self) -> None:
         """Test pack/unpack roundtrip for SourceAD with IPv6"""
-        rd = RouteDistinguisher.fromElements('10.0.0.2', 100)
+        rd = RouteDistinguisher.make_from_elements('10.0.0.2', 100)
         source = IP.create('2001:db8:1::1')
         group = IP.create('ff0e::1')
 
@@ -93,7 +93,7 @@ class TestSourceAD:
 
     def test_sourcead_equality(self) -> None:
         """Test equality comparison for SourceAD routes"""
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
 
@@ -105,7 +105,7 @@ class TestSourceAD:
 
     def test_sourcead_inequality(self) -> None:
         """Test inequality for different SourceAD routes"""
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         source1 = IP.create('192.168.1.1')
         source2 = IP.create('192.168.1.2')
         group = IP.create('239.1.1.1')
@@ -118,7 +118,7 @@ class TestSourceAD:
 
     def test_sourcead_hash_consistency(self) -> None:
         """Test hash consistency for SourceAD routes"""
-        rd = RouteDistinguisher.fromElements('2.2.2.2', 20)
+        rd = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
         source = IP.create('192.168.2.1')
         group = IP.create('239.2.2.2')
 
@@ -129,7 +129,7 @@ class TestSourceAD:
 
     def test_sourcead_string_representation(self) -> None:
         """Test string representation of SourceAD"""
-        rd = RouteDistinguisher.fromElements('3.3.3.3', 30)
+        rd = RouteDistinguisher.make_from_elements('3.3.3.3', 30)
         source = IP.create('172.16.1.1')
         group = IP.create('239.3.3.3')
 
@@ -142,7 +142,7 @@ class TestSourceAD:
 
     def test_sourcead_json(self) -> None:
         """Test JSON serialization of SourceAD"""
-        rd = RouteDistinguisher.fromElements('4.4.4.4', 40)
+        rd = RouteDistinguisher.make_from_elements('4.4.4.4', 40)
         source = IP.create('10.20.30.40')
         group = IP.create('239.4.4.4')
 
@@ -157,7 +157,7 @@ class TestSourceAD:
     def test_sourcead_invalid_length(self) -> None:
         """Test SourceAD with invalid length raises error"""
         # Create invalid packed data with wrong length (15 bytes instead of 18 or 42)
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         invalid_data = rd.pack_rd() + b'\x20\x01\x02\x03\x04\x20\x05'  # 15 bytes total
 
         # Pack into MVPN format: CODE=5, length, data
@@ -168,7 +168,7 @@ class TestSourceAD:
 
     def test_sourcead_invalid_source_ip_length(self) -> None:
         """Test SourceAD with invalid source IP length raises error"""
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         # Create data with invalid source IP length (24 bits instead of 32 or 128)
         invalid_data = rd.pack_rd() + bytes([24]) + b'\x01\x02\x03' + bytes([32]) + b'\xef\x01\x01\x01'
 
@@ -179,7 +179,7 @@ class TestSourceAD:
 
     def test_sourcead_multicast_addresses(self) -> None:
         """Test SourceAD with various multicast group addresses"""
-        rd = RouteDistinguisher.fromElements('5.5.5.5', 50)
+        rd = RouteDistinguisher.make_from_elements('5.5.5.5', 50)
         source = IP.create('10.1.1.1')
 
         # Test various multicast groups
@@ -210,7 +210,7 @@ class TestSharedJoin:
 
     def test_sharedjoin_creation(self) -> None:
         """Test basic creation of SharedJoin route"""
-        rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
+        rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
         source_as = 65001
@@ -227,7 +227,7 @@ class TestSharedJoin:
 
     def test_sharedjoin_pack_unpack_ipv4(self) -> None:
         """Test pack/unpack roundtrip for SharedJoin with IPv4"""
-        rd = RouteDistinguisher.fromElements('10.0.0.1', 500)
+        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
         source_as = 64512
@@ -248,7 +248,7 @@ class TestSharedJoin:
 
     def test_sharedjoin_pack_unpack_ipv6(self) -> None:
         """Test pack/unpack roundtrip for SharedJoin with IPv6"""
-        rd = RouteDistinguisher.fromElements('10.0.0.2', 100)
+        rd = RouteDistinguisher.make_from_elements('10.0.0.2', 100)
         source = IP.create('2001:db8:1::1')
         group = IP.create('ff0e::1')
         source_as = 65000
@@ -269,7 +269,7 @@ class TestSharedJoin:
 
     def test_sharedjoin_equality(self) -> None:
         """Test equality comparison for SharedJoin routes"""
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
         source_as = 65001
@@ -282,7 +282,7 @@ class TestSharedJoin:
 
     def test_sharedjoin_inequality(self) -> None:
         """Test inequality for different SharedJoin routes"""
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
 
@@ -294,7 +294,7 @@ class TestSharedJoin:
 
     def test_sharedjoin_hash_consistency(self) -> None:
         """Test hash consistency for SharedJoin routes"""
-        rd = RouteDistinguisher.fromElements('2.2.2.2', 20)
+        rd = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
         source = IP.create('192.168.2.1')
         group = IP.create('239.2.2.2')
         source_as = 65002
@@ -306,7 +306,7 @@ class TestSharedJoin:
 
     def test_sharedjoin_string_representation(self) -> None:
         """Test string representation of SharedJoin"""
-        rd = RouteDistinguisher.fromElements('3.3.3.3', 30)
+        rd = RouteDistinguisher.make_from_elements('3.3.3.3', 30)
         source = IP.create('172.16.1.1')
         group = IP.create('239.3.3.3')
         source_as = 65003
@@ -321,7 +321,7 @@ class TestSharedJoin:
 
     def test_sharedjoin_json(self) -> None:
         """Test JSON serialization of SharedJoin"""
-        rd = RouteDistinguisher.fromElements('4.4.4.4', 40)
+        rd = RouteDistinguisher.make_from_elements('4.4.4.4', 40)
         source = IP.create('10.20.30.40')
         group = IP.create('239.4.4.4')
         source_as = 65004
@@ -338,7 +338,7 @@ class TestSharedJoin:
     def test_sharedjoin_invalid_length(self) -> None:
         """Test SharedJoin with invalid length raises error"""
         # Create invalid packed data with wrong length
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         invalid_data = rd.pack_rd() + b'\x00\x00\x00\x01\x20\x01\x02'  # Too short
 
         packed = bytes([6, len(invalid_data)]) + invalid_data
@@ -348,7 +348,7 @@ class TestSharedJoin:
 
     def test_sharedjoin_various_as_numbers(self) -> None:
         """Test SharedJoin with various AS numbers"""
-        rd = RouteDistinguisher.fromElements('5.5.5.5', 50)
+        rd = RouteDistinguisher.make_from_elements('5.5.5.5', 50)
         source = IP.create('10.1.1.1')
         group = IP.create('239.1.1.1')
 
@@ -375,7 +375,7 @@ class TestSourceJoin:
 
     def test_sourcejoin_creation(self) -> None:
         """Test basic creation of SourceJoin route"""
-        rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
+        rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
         source_as = 65001
@@ -392,7 +392,7 @@ class TestSourceJoin:
 
     def test_sourcejoin_pack_unpack_ipv4(self) -> None:
         """Test pack/unpack roundtrip for SourceJoin with IPv4"""
-        rd = RouteDistinguisher.fromElements('10.0.0.1', 500)
+        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
         source_as = 64512
@@ -413,7 +413,7 @@ class TestSourceJoin:
 
     def test_sourcejoin_pack_unpack_ipv6(self) -> None:
         """Test pack/unpack roundtrip for SourceJoin with IPv6"""
-        rd = RouteDistinguisher.fromElements('10.0.0.2', 100)
+        rd = RouteDistinguisher.make_from_elements('10.0.0.2', 100)
         source = IP.create('2001:db8:1::1')
         group = IP.create('ff0e::1')
         source_as = 65000
@@ -434,7 +434,7 @@ class TestSourceJoin:
 
     def test_sourcejoin_equality(self) -> None:
         """Test equality comparison for SourceJoin routes"""
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
         source_as = 65001
@@ -447,7 +447,7 @@ class TestSourceJoin:
 
     def test_sourcejoin_inequality(self) -> None:
         """Test inequality for different SourceJoin routes"""
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         source1 = IP.create('192.168.1.1')
         source2 = IP.create('192.168.1.2')
         group = IP.create('239.1.1.1')
@@ -461,7 +461,7 @@ class TestSourceJoin:
 
     def test_sourcejoin_hash_consistency(self) -> None:
         """Test hash consistency for SourceJoin routes"""
-        rd = RouteDistinguisher.fromElements('2.2.2.2', 20)
+        rd = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
         source = IP.create('192.168.2.1')
         group = IP.create('239.2.2.2')
         source_as = 65002
@@ -473,7 +473,7 @@ class TestSourceJoin:
 
     def test_sourcejoin_string_representation(self) -> None:
         """Test string representation of SourceJoin"""
-        rd = RouteDistinguisher.fromElements('3.3.3.3', 30)
+        rd = RouteDistinguisher.make_from_elements('3.3.3.3', 30)
         source = IP.create('172.16.1.1')
         group = IP.create('239.3.3.3')
         source_as = 65003
@@ -488,7 +488,7 @@ class TestSourceJoin:
 
     def test_sourcejoin_json(self) -> None:
         """Test JSON serialization of SourceJoin"""
-        rd = RouteDistinguisher.fromElements('4.4.4.4', 40)
+        rd = RouteDistinguisher.make_from_elements('4.4.4.4', 40)
         source = IP.create('10.20.30.40')
         group = IP.create('239.4.4.4')
         source_as = 65004
@@ -505,7 +505,7 @@ class TestSourceJoin:
     def test_sourcejoin_invalid_length(self) -> None:
         """Test SourceJoin with invalid length raises error"""
         # Create invalid packed data with wrong length
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         invalid_data = rd.pack_rd() + b'\x00\x00\x00\x01\x20\x01\x02'  # Too short
 
         packed = bytes([7, len(invalid_data)]) + invalid_data
@@ -515,7 +515,7 @@ class TestSourceJoin:
 
     def test_sourcejoin_ssm_multicast(self) -> None:
         """Test SourceJoin with SSM (Source-Specific Multicast) addresses"""
-        rd = RouteDistinguisher.fromElements('5.5.5.5', 50)
+        rd = RouteDistinguisher.make_from_elements('5.5.5.5', 50)
         source = IP.create('10.1.1.1')
         # SSM range: 232.0.0.0/8
         group = IP.create('232.1.1.1')
@@ -553,7 +553,7 @@ class TestMVPNGeneric:
     def test_mvpn_unpack_unknown_route_type(self) -> None:
         """Test unpacking unknown MVPN route type"""
         # Create a route with unknown code (99)
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         packed_rd = rd.pack_rd()
 
         # CODE=99, length=8 (just RD)
@@ -568,7 +568,7 @@ class TestMVPNGeneric:
 
     def test_mvpn_safi(self) -> None:
         """Test that MVPN routes use correct SAFI"""
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
 
@@ -578,7 +578,7 @@ class TestMVPNGeneric:
 
     def test_mvpn_route_distinction(self) -> None:
         """Test that different MVPN route types are distinct"""
-        rd = RouteDistinguisher.fromElements('1.1.1.1', 10)
+        rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
         source_as = 65001

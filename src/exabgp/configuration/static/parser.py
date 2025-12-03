@@ -89,8 +89,8 @@ def prefix(tokeniser: 'Tokeniser') -> IPRange:
 def path_information(tokeniser: 'Tokeniser') -> PathInfo:
     pi = tokeniser()
     if pi.isdigit():
-        return PathInfo(integer=int(pi))
-    return PathInfo(ip=pi)
+        return PathInfo.make_from_integer(int(pi))
+    return PathInfo.make_from_ip(pi)
 
 
 def next_hop(tokeniser: 'Tokeniser', afi: AFI | None = None) -> tuple[IP | IPSelf, NextHop | NextHopSelf]:

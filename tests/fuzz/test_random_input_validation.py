@@ -259,7 +259,7 @@ def test_mpls_label_values(label_value: int, exp: int, ttl: int) -> None:
     from exabgp.bgp.message.update.nlri.qualifier import Labels
 
     try:
-        label_obj = Labels([label_value])
+        label_obj = Labels.make_labels([label_value])
 
         # Verify we can pack it
         packed = label_obj.pack_labels()
