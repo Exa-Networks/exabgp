@@ -220,7 +220,9 @@ class Attributes(dict):
                     ],
                 )
             ),
-            Attribute.CODE.LOCAL_PREF: lambda left, right: LocalPreference(100) if left == right else NOTHING,
+            Attribute.CODE.LOCAL_PREF: lambda left, right: LocalPreference.make_localpref(100)
+            if left == right
+            else NOTHING,
         }
 
         skip = {

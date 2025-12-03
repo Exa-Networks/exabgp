@@ -725,7 +725,7 @@ class LocalPrefValidator(Validator['LocalPreference']):
         num = int(value)
         if num > 4294967295:
             raise ValueError(f'{num} exceeds maximum local-preference value (4294967295)')
-        return LocalPreference(num)
+        return LocalPreference.make_localpref(num)
 
     def to_schema(self) -> dict[str, Any]:
         return {'type': 'integer', 'minimum': 0, 'maximum': 4294967295}

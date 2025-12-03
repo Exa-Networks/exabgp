@@ -306,7 +306,7 @@ def test_localpref_basic() -> None:
     from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 
     # Create LOCAL_PREF with value 100 (common default)
-    localpref = LocalPreference(100)
+    localpref = LocalPreference.make_localpref(100)
 
     # Verify value
     assert localpref.localpref == 100
@@ -328,7 +328,7 @@ def test_localpref_high_preference() -> None:
     from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 
     # Create high LOCAL_PREF
-    localpref = LocalPreference(200)
+    localpref = LocalPreference.make_localpref(200)
 
     assert localpref.localpref == 200
 

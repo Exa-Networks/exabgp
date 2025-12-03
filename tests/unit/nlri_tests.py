@@ -503,19 +503,19 @@ class TestNLRIs(unittest.TestCase):
 
     def test4_DistinctAttributes(self) -> None:
         atts1 = Attributes()
-        atts1.add(LocalPreference(10))
+        atts1.add(LocalPreference.make_localpref(10))
 
         atts2 = Attributes()
-        atts2.add(LocalPreference(20))
+        atts2.add(LocalPreference.make_localpref(20))
 
         self.assertNotEqual(atts1, atts2)
 
     def test5_SameAttributes(self) -> None:
         atts1 = Attributes()
-        atts1.add(LocalPreference(10))
+        atts1.add(LocalPreference.make_localpref(10))
 
         atts2 = Attributes()
-        atts2.add(LocalPreference(10))
+        atts2.add(LocalPreference.make_localpref(10))
 
         self.assertEqual(hash(atts1), hash(atts2))
         self.assertEqual(atts1, atts2)

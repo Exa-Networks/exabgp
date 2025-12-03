@@ -265,7 +265,7 @@ def local_preference(tokeniser: 'Tokeniser') -> LocalPreference:
     value = tokeniser()
     if not value.isdigit():
         raise ValueError(f"'{value}' is not a valid local-preference\n  Must be a non-negative integer (e.g., 100)")
-    return LocalPreference(int(value))
+    return LocalPreference.make_localpref(int(value))
 
 
 def atomic_aggregate(tokeniser: 'Tokeniser') -> AtomicAggregate:
