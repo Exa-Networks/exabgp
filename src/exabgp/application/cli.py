@@ -382,6 +382,11 @@ Display Format (optional prefix):
                 # Ignore display prefix for write commands (no output to format)
                 display_override = None
 
+            # Transform noun-first CLI syntax to API syntax (before other transformations)
+            from exabgp.application.noun_first_transform import NounFirstTransform
+
+            command = NounFirstTransform.transform(command)
+
             # Translate CLI-friendly syntax to API syntax
             # "announce route refresh" -> "announce route-refresh"
             command = command.replace('route refresh', 'route-refresh')
