@@ -269,7 +269,7 @@ def local_preference(tokeniser: 'Tokeniser') -> LocalPreference:
 
 
 def atomic_aggregate(tokeniser: 'Tokeniser') -> AtomicAggregate:
-    return AtomicAggregate()
+    return AtomicAggregate.make_atomic_aggregate()
 
 
 def aggregator(tokeniser: 'Tokeniser') -> Aggregator:

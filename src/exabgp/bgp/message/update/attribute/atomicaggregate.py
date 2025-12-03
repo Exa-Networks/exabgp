@@ -28,15 +28,33 @@ class AtomicAggregate(Attribute):
     DISCARD = True
     VALID_ZERO = True
 
+    def __init__(self, packed: bytes = b'') -> None:
+        """Initialize AtomicAggregate from packed wire-format bytes.
+
+        Args:
+            packed: Raw attribute value bytes (must be empty for AtomicAggregate)
+        """
+        self._packed: bytes = packed
+
+    @classmethod
+    def make_atomic_aggregate(cls) -> 'AtomicAggregate':
+        """Create AtomicAggregate.
+
+        Returns:
+            AtomicAggregate instance
+        """
+        return cls(b'')
+
     # Inherited from Attribute
     # def __eq__ (self, other):
     # def __ne__ (self, other):
 
     def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
-        return self._attribute(b'')
+        return self._attribute(self._packed)
 
     def __len__(self) -> int:
-        return 0
+        # AtomicAggregate is always 0 bytes payload + 3 byte header = 3 bytes total
+        return 3
 
     def __repr__(self) -> str:
         return ''
@@ -48,12 +66,12 @@ class AtomicAggregate(Attribute):
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> AtomicAggregate:
         if data:
             raise Notify(3, 2, 'invalid ATOMIC_AGGREGATE %s' % [hex(_) for _ in data])
-        return cls()
+        return cls(data)
 
     @classmethod
     def setCache(cls) -> None:
         # There can only be one, build it now :)
-        cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][''] = cls()
+        cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][''] = cls.make_atomic_aggregate()
 
 
 AtomicAggregate.setCache()
