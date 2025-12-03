@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from struct import error, unpack
-from typing import TYPE_CHECKING, ClassVar, Sequence, Type, TypeVar, cast
+from typing import TYPE_CHECKING, ClassVar, Sequence, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -49,12 +49,6 @@ class CONFED_SET(list[ASN]):
     HEAD: ClassVar[str] = '{['
     TAIL: ClassVar[str] = ']}'
 
-    # def __getslice__(self, i, j):
-    #     return CONFED_SET(list.__getslice__(self, i, j))
-
-    # def __add__(self, other):
-    #     return CONFED_SET(list.__add__(self,other))
-
 
 # TypeVar for segment types - allows slicing to preserve type
 SegmentType = TypeVar('SegmentType', SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET)
@@ -62,17 +56,24 @@ SegmentType = TypeVar('SegmentType', SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET)
 
 @Attribute.register()
 class ASPath(Attribute):
+    """AS Path attribute (code 2).
+
+    Stores packed wire-format bytes. The wire format can be either 2-byte or 4-byte
+    ASNs depending on the negotiated capability. The _asn4 flag tracks which format
+    is stored.
+    """
+
+    ID = Attribute.CODE.AS_PATH
+    FLAG = Attribute.Flag.TRANSITIVE
+
     AS_SET: ClassVar[int] = SET.ID
     AS_SEQUENCE: ClassVar[int] = SEQUENCE.ID
     AS_CONFED_SEQUENCE: ClassVar[int] = CONFED_SEQUENCE.ID
     AS_CONFED_SET: ClassVar[int] = CONFED_SET.ID
-    ASN4: ClassVar[bool] = False
 
     # AS_PATH segment constants (RFC 4271)
     SEGMENT_MAX_LENGTH: ClassVar[int] = 255  # Maximum number of ASNs in single segment
 
-    ID = Attribute.CODE.AS_PATH
-    FLAG = Attribute.Flag.TRANSITIVE
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
     MANDATORY: ClassVar[bool] = True
     VALID_ZERO: ClassVar[bool] = True
@@ -86,82 +87,99 @@ class ASPath(Attribute):
         CONFED_SET.ID: CONFED_SET,
     }
 
-    def __init__(
-        self, as_path: Sequence[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET] = (), data: bytes | None = None
-    ) -> None:
-        self.aspath: tuple[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, ...] = tuple(as_path)
-        self.segments: bytes = b''
-        self.index: bytes | None = data  # the original packed data, use for indexing
-        self._str: str = ''
-        self._json: str = ''
+    def __init__(self, packed: bytes, asn4: bool = False) -> None:
+        """Initialize from packed wire-format bytes.
+
+        NO validation - trusted internal use only.
+        Use from_packet() for wire data or make_aspath() for semantic construction.
+
+        Args:
+            packed: Raw attribute value bytes
+            asn4: True if packed uses 4-byte ASNs, False for 2-byte
+        """
+        self._packed: bytes = packed
+        self._asn4: bool = asn4
+
+    @classmethod
+    def from_packet(cls, data: bytes, asn4: bool) -> 'ASPath':
+        """Validate and create from wire-format bytes.
+
+        Args:
+            data: Raw attribute value bytes from wire
+            asn4: True if data uses 4-byte ASNs, False for 2-byte
+
+        Returns:
+            ASPath instance
+
+        Raises:
+            Notify: If data format is invalid
+        """
+        # Validate by attempting to parse - will raise Notify on error
+        cls._unpack_segments_static(data, asn4)
+        return cls(data, asn4)
+
+    @classmethod
+    def make_aspath(
+        cls, segments: Sequence[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET], asn4: bool = False
+    ) -> 'ASPath':
+        """Create from parsed segments.
+
+        Args:
+            segments: Sequence of AS path segments (SET, SEQUENCE, etc.)
+            asn4: True to pack with 4-byte ASNs, False for 2-byte
+
+        Returns:
+            ASPath instance
+        """
+        packed = cls._pack_segments_raw(tuple(segments), asn4)
+        return cls(packed, asn4)
+
+    @property
+    def aspath(self) -> tuple[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, ...]:
+        """Get parsed AS path segments by unpacking from bytes."""
+        return self._unpack_segments_static(self._packed, self._asn4)
+
+    @property
+    def index(self) -> bytes:
+        """Get the original packed data, used for indexing/caching."""
+        return self._packed
+
+    @property
+    def as_seq(self) -> list[ASN]:
+        """Get ASNs from SEQUENCE segments (flattened)."""
+        result: list[ASN] = []
+        for seg in self.aspath:
+            if isinstance(seg, (SEQUENCE, CONFED_SEQUENCE)):
+                result.extend(seg)
+        return result
+
+    @property
+    def as_set(self) -> list[ASN]:
+        """Get ASNs from SET segments (flattened)."""
+        result: list[ASN] = []
+        for seg in self.aspath:
+            if isinstance(seg, (SET, CONFED_SET)):
+                result.extend(seg)
+        return result
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ASPath):
             return False
         return (
-            self.ID == other.ID and self.FLAG == other.FLAG and self.ASN4 == other.ASN4 and self.aspath == other.aspath
+            self.ID == other.ID
+            and self.FLAG == other.FLAG
+            and self._asn4 == other._asn4
+            and self._packed == other._packed
         )
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    @classmethod
-    def _segment(cls, seg_type: int, values: SegmentType, asn4: bool) -> bytes:
-        length = len(values)
-        if length == 0:
-            return b''
-        if length > cls.SEGMENT_MAX_LENGTH:
-            # Cast slices back to original type for recursive calls
-            first_half = type(values)(values[: cls.SEGMENT_MAX_LENGTH])
-            second_half = type(values)(values[cls.SEGMENT_MAX_LENGTH :])
-            return cls._segment(seg_type, first_half, asn4) + cls._segment(seg_type, second_half, asn4)
-        # asn4 bool used here, but pack_asn expects Negotiated - works at runtime
-        return bytes([seg_type, length]) + b''.join(v.pack_asn(asn4) for v in values)  # type: ignore[arg-type]
-
-    @classmethod
-    def pack_segments(cls, aspath: tuple[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, ...], asn4: bool) -> bytes:
-        segments = b''
-        for content in aspath:
-            # TypeVar can't handle Union in call site - works at runtime
-            segments += cls._segment(content.ID, content, asn4)  # type: ignore[type-var]
-        return cls._attribute(segments)
-
-    @classmethod
-    def _asn_pack(cls, aspath: SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, asn4: bool) -> bytes:
-        # TypeVar can't handle Union in call site - works at runtime
-        return cls._attribute(cls._segment(cls.ID, aspath, asn4))  # type: ignore[type-var]
-
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        if negotiated.asn4:
-            return self.pack_segments(self.aspath, negotiated.asn4)
-
-        # if the peer does not understand ASN4, we need to build a transitive AS4_PATH
-        astrans = []
-        asn4 = False
-
-        for content in self.aspath:
-            local = content.__class__()
-            for asn in content:
-                if not asn.asn4():
-                    local.append(asn)
-                else:
-                    local.append(AS_TRANS)
-                    asn4 = True
-            astrans.append(local)
-
-        message = ASPath.pack_segments(astrans, negotiated.asn4)  # type: ignore[arg-type]
-        if asn4:
-            message += AS4Path.pack_segments(self.aspath, asn4)
-
-        return message
-
     def __len__(self) -> int:
-        raise RuntimeError('it makes no sense to ask for the size of this object')
+        return len(self._packed)
 
     def __repr__(self) -> str:
-        if not self._str:
-            self._str = self.string()
-        return self._str
+        return self.string()
 
     def string(self) -> str:
         parts = []
@@ -177,26 +195,15 @@ class ASPath(Attribute):
                 'element': content.NAME,
                 'value': list(content),
             }
-
-        self._json = json.dumps(jason)
-        return self._json
+        return json.dumps(jason)
 
     @classmethod
-    def _new_aspaths(cls, data: bytes, asn4: bool, klass: Type[ASPath | AS4Path] | None = None) -> ASPath | AS4Path:
-        backup = data
-
-        unpacker = {
-            False: '!H',
-            True: '!L',
-        }
-        size = {
-            False: 2,
-            True: 4,
-        }
-
-        upr = unpacker[asn4]
-        length = size[asn4]
-
+    def _unpack_segments_static(
+        cls, data: bytes, asn4: bool
+    ) -> tuple[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, ...]:
+        """Unpack segments from wire format."""
+        unpacker = '!L' if asn4 else '!H'
+        length = 4 if asn4 else 2
         aspath: list[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET] = []
 
         try:
@@ -210,11 +217,10 @@ class ASPath(Attribute):
                 end = 2 + (slen * length)
                 sdata = data[2:end]
                 data = data[end:]
-                # Eat the data and ignore it if the ASPath attribute is know known
                 asns = cls._DISPATCH[stype]()
 
                 for _ in range(slen):
-                    asn = unpack(upr, sdata[:length])[0]
+                    asn = unpack(unpacker, sdata[:length])[0]
                     asns.append(ASN(asn))
                     sdata = sdata[length:]
 
@@ -225,40 +231,127 @@ class ASPath(Attribute):
         except error:  # struct
             raise Notify(3, 11, 'not enough data to decode AS_PATH or AS4_PATH') from None
 
-        if klass:
-            return klass(tuple(aspath), backup)
-        return cls(tuple(aspath), backup)
+        return tuple(aspath)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> ASPath | None:
+    def _pack_segments_raw(
+        cls, segments: tuple[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, ...], asn4: bool
+    ) -> bytes:
+        """Pack segments to wire format (without attribute header)."""
+        result = b''
+        for content in segments:
+            result += cls._segment(content.ID, content, asn4)
+        return result
+
+    @classmethod
+    def _segment(cls, seg_type: int, values: SegmentType, asn4: bool) -> bytes:
+        length = len(values)
+        if length == 0:
+            return b''
+        if length > cls.SEGMENT_MAX_LENGTH:
+            first_half = type(values)(values[: cls.SEGMENT_MAX_LENGTH])
+            second_half = type(values)(values[cls.SEGMENT_MAX_LENGTH :])
+            return cls._segment(seg_type, first_half, asn4) + cls._segment(seg_type, second_half, asn4)
+        return bytes([seg_type, length]) + b''.join(v.pack_asn(asn4) for v in values)  # type: ignore[arg-type]
+
+    def pack_attribute(self, negotiated: Negotiated) -> bytes:
+        """Pack for sending to peer.
+
+        Handles format conversion based on negotiated capability:
+        - If peer supports ASN4: send with 4-byte ASNs
+        - If peer doesn't support ASN4: send with 2-byte ASNs, use AS_TRANS for large ASNs,
+          and add AS4_PATH attribute for the real values
+        """
+        if negotiated.asn4:
+            # Peer supports ASN4, ensure we pack with 4-byte format
+            if self._asn4:
+                # Already in 4-byte format
+                return self._attribute(self._packed)
+            else:
+                # Convert from 2-byte to 4-byte format
+                return self._attribute(self._pack_segments_raw(self.aspath, asn4=True))
+
+        # Peer doesn't support ASN4, need 2-byte format with possible AS_TRANS
+        has_large_asn = False
+        astrans = []
+
+        for content in self.aspath:
+            local = content.__class__()
+            for asn in content:
+                if not asn.asn4():
+                    local.append(asn)
+                else:
+                    local.append(AS_TRANS)
+                    has_large_asn = True
+            astrans.append(local)
+
+        message = self._attribute(self._pack_segments_raw(tuple(astrans), asn4=False))
+        if has_large_asn:
+            # Add AS4_PATH for large ASNs
+            message += AS4Path._attribute(AS4Path._pack_segments_raw(self.aspath, asn4=True))
+
+        return message
+
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'ASPath | None':
         if not data:
-            return None  # ASPath.Empty
-        return cls._new_aspaths(data, negotiated.asn4, ASPath)
+            return None
+        return cls.from_packet(data, negotiated.asn4)
 
 
-ASPath.Empty = ASPath([])
+ASPath.Empty = ASPath(b'', asn4=False)
+
+
+# Backward compatibility alias
+AS2Path = ASPath
 
 
 # ================================================================= AS4Path (17)
-#
 
 
 @Attribute.register()
 class AS4Path(ASPath):
+    """AS4_PATH attribute (code 17). Always uses 4-byte ASNs."""
+
     ID = Attribute.CODE.AS4_PATH
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
-    ASN4: ClassVar[bool] = True
 
     Empty: ClassVar[AS4Path | None] = None
 
-    def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
-        return ASPath.pack_segments(self.aspath, True)
+    def __init__(self, packed: bytes, asn4: bool = True) -> None:
+        """Initialize from packed wire-format bytes.
+
+        AS4Path always uses 4-byte ASNs, so asn4 parameter is ignored.
+        """
+        super().__init__(packed, asn4=True)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> AS4Path | None:
+    def from_packet(cls, data: bytes, asn4: bool = True) -> 'AS4Path':
+        """Validate and create from wire-format bytes.
+
+        AS4Path always uses 4-byte ASNs.
+        """
+        # Validate by attempting to parse - will raise Notify on error
+        cls._unpack_segments_static(data, asn4=True)
+        return cls(data)
+
+    @classmethod
+    def make_aspath(
+        cls, segments: Sequence[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET], asn4: bool = True
+    ) -> 'AS4Path':
+        """Create from parsed segments. Always uses 4-byte ASNs."""
+        packed = cls._pack_segments_raw(tuple(segments), asn4=True)
+        return cls(packed)
+
+    def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
+        """Pack AS4_PATH. Always uses 4-byte format."""
+        return self._attribute(self._packed)
+
+    @classmethod
+    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'AS4Path | None':
         if not data:
-            return None  # AS4Path.Empty
-        return cast(AS4Path, cls._new_aspaths(data, True, AS4Path))
+            return None
+        return cls.from_packet(data)
 
 
-AS4Path.Empty = AS4Path([])
+AS4Path.Empty = AS4Path(b'')

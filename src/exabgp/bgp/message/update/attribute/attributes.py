@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, ASPath
+from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, SET, AS2Path
 from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard, TreatAsWithdraw
 
 # For bagpipe
@@ -208,9 +208,9 @@ class Attributes(dict):
         default = {
             Attribute.CODE.ORIGIN: lambda left, right: Origin.make_origin(Origin.IGP),
             Attribute.CODE.AS_PATH: lambda left, right: (
-                ASPath([])
+                AS2Path.make_aspath([])
                 if left == right
-                else ASPath(
+                else AS2Path.make_aspath(
                     [
                         SEQUENCE(
                             [
@@ -240,7 +240,7 @@ class Attributes(dict):
             if code not in keys and code in default:
                 attr = default[code](local_asn, peer_asn)
                 if attr is not NOTHING:
-                    # attr is Origin, ASPath, or LocalPreference - all have pack_attribute
+                    # attr is Origin, AS2Path, or LocalPreference - all have pack_attribute
                     assert hasattr(attr, 'pack_attribute')
                     message += attr.pack_attribute(negotiated)
                 continue
@@ -474,7 +474,13 @@ class Attributes(dict):
             as_set = as2path.as_set[:-len4]
             as_set.extend(as4path.as_set)
 
-        aspath = ASPath(as_seq, as_set)
+        # Build segments from merged ASN lists
+        segments: list[SET | SEQUENCE] = []
+        if as_seq:
+            segments.append(SEQUENCE(as_seq))
+        if as_set:
+            segments.append(SET(as_set))
+        aspath = AS2Path.make_aspath(segments)
         self.add(aspath, key)
 
     def __hash__(self) -> int:  # type: ignore[override]

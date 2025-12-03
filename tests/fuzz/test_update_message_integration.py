@@ -119,12 +119,12 @@ def test_messages_packs_simple_ipv4_announcement() -> None:
 
     # Create minimal attributes
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
 
     update = Update([nlri], attributes)
@@ -243,12 +243,12 @@ def test_messages_filters_by_negotiated_families() -> None:
     nlri_v4.nexthop = IP.create('192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
 
     update = Update([nlri_v4], attributes)
@@ -287,12 +287,12 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
     original_nlri.nexthop = IP.create('192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     original_attributes = Attributes()
     original_attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    original_attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    original_attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     original_attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
 
     update = Update([original_nlri], original_attributes)
@@ -372,12 +372,12 @@ def test_roundtrip_multiple_nlris() -> None:
         nlris.append(nlri)
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
 
     update = Update(nlris, attributes)
@@ -414,7 +414,7 @@ def test_roundtrip_with_multiple_attributes() -> None:
     nlri.nexthop = IP.create('192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
     from exabgp.bgp.message.update.attribute.med import MED
     from exabgp.bgp.message.update.attribute.localpref import LocalPreference
@@ -422,7 +422,7 @@ def test_roundtrip_with_multiple_attributes() -> None:
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([SEQUENCE([ASN(65001), ASN(65002)])])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([SEQUENCE([ASN(65001), ASN(65002)])])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
     attributes[Attribute.CODE.MED] = MED.make_med(100)
     attributes[Attribute.CODE.LOCAL_PREF] = LocalPreference.make_localpref(200)
@@ -472,12 +472,12 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
     announce1.nexthop = IP.create('192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
 
     nlris = [withdraw1, withdraw2, announce1]
@@ -528,11 +528,11 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
     nlri.nexthop = IPv6.create('2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
 
     update = Update([nlri], attributes)
 
@@ -563,11 +563,11 @@ def test_roundtrip_ipv6_announcement() -> None:
     nlri.nexthop = IPv6.create('2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
 
     update = Update([nlri], attributes)
 
@@ -619,12 +619,12 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
     nlri_v6.nexthop = IPv6.create('2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
 
     update = Update([nlri_v4, nlri_v6], attributes)
@@ -666,12 +666,12 @@ def test_messages_splits_large_nlri_set() -> None:
         nlris.append(nlri)
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
 
     update = Update(nlris, attributes)
@@ -707,12 +707,12 @@ def test_messages_respects_negotiated_msg_size() -> None:
         nlris.append(nlri)
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
 
     update = Update(nlris, attributes)
@@ -744,7 +744,7 @@ def test_messages_handles_large_attributes() -> None:
     nlri.nexthop = IP.create('192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
     from exabgp.bgp.message.open.asn import ASN
 
@@ -753,7 +753,7 @@ def test_messages_handles_large_attributes() -> None:
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([large_as_path])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([large_as_path])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
 
     update = Update([nlri], attributes)
@@ -803,7 +803,7 @@ def test_integration_full_update_cycle() -> None:
         nlris.append(nlri)
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
     from exabgp.bgp.message.update.attribute.med import MED
     from exabgp.bgp.message.update.attribute.localpref import LocalPreference
@@ -811,7 +811,7 @@ def test_integration_full_update_cycle() -> None:
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([SEQUENCE([ASN(65001), ASN(65002)])])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([SEQUENCE([ASN(65001), ASN(65002)])])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
     attributes[Attribute.CODE.MED] = MED.make_med(100)
     attributes[Attribute.CODE.LOCAL_PREF] = LocalPreference.make_localpref(200)
@@ -906,12 +906,12 @@ def test_integration_sorting_and_grouping() -> None:
     nlris = [nlri1, nlri2, nlri3]
 
     from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     attributes = Attributes()
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
-    attributes[Attribute.CODE.AS_PATH] = ASPath([])
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
 
     update = Update(nlris, attributes)

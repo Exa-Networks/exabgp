@@ -34,7 +34,7 @@ from exabgp.bgp.message.update.attribute import NextHop
 from exabgp.bgp.message.update.attribute import NextHopSelf
 from exabgp.bgp.message.update.attribute import Origin
 from exabgp.bgp.message.update.attribute import MED
-from exabgp.bgp.message.update.attribute import ASPath
+from exabgp.bgp.message.update.attribute import AS2Path
 from exabgp.bgp.message.update.attribute import SET
 from exabgp.bgp.message.update.attribute import SEQUENCE
 from exabgp.bgp.message.update.attribute import CONFED_SET
@@ -204,7 +204,7 @@ def med(tokeniser: 'Tokeniser') -> MED:
     return MED.make_med(int(value))
 
 
-def as_path(tokeniser: 'Tokeniser') -> ASPath:
+def as_path(tokeniser: 'Tokeniser') -> AS2Path:
     as_path: list[SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET | ASN] = []
     insert: (SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET) | None = None
 
@@ -229,7 +229,7 @@ def as_path(tokeniser: 'Tokeniser') -> ASPath:
 
         elif len(as_path) == 0:
             try:
-                return ASPath([SEQUENCE([ASN.from_string(value)])])
+                return AS2Path.make_aspath([SEQUENCE([ASN.from_string(value)])])
             except ValueError:
                 raise ValueError('could not parse as-path') from None
         else:
@@ -252,7 +252,7 @@ def as_path(tokeniser: 'Tokeniser') -> ASPath:
 
                 # Filter out any ASN that snuck in, only keep segment types
                 segments = [seg for seg in as_path if isinstance(seg, (SEQUENCE, CONFED_SEQUENCE, SET, CONFED_SET))]
-                return ASPath(segments)
+                return AS2Path.make_aspath(segments)
 
             try:
                 insert.append(ASN.from_string(value))
