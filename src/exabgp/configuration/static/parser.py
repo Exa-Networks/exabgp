@@ -109,10 +109,10 @@ def next_hop(tokeniser: 'Tokeniser', afi: AFI | None = None) -> tuple[IP | IPSel
 
 def inet(tokeniser: 'Tokeniser') -> Change:
     ipmask = prefix(tokeniser)
-    inet = INET(afi=IP.toafi(ipmask.top()), safi=IP.tosafi(ipmask.top()), action=Action.UNSET)
-    inet.cidr = CIDR(ipmask.ton(), ipmask.mask)
+    cidr = CIDR(ipmask.ton(), ipmask.mask)
+    nlri = INET(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.UNSET)
 
-    return Change(inet, Attributes())
+    return Change(nlri, Attributes())
 
 
 # XXX: using Action.ANNOUNCE should we use the following ?
@@ -121,10 +121,10 @@ def inet(tokeniser: 'Tokeniser') -> Change:
 
 def mpls(tokeniser: 'Tokeniser') -> Change:
     ipmask = prefix(tokeniser)
-    mpls = IPVPN(afi=IP.toafi(ipmask.top()), safi=IP.tosafi(ipmask.top()), action=Action.ANNOUNCE)
-    mpls.cidr = CIDR(ipmask.ton(), ipmask.mask)
+    cidr = CIDR(ipmask.ton(), ipmask.mask)
+    nlri = IPVPN(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.ANNOUNCE)
 
-    return Change(mpls, Attributes())
+    return Change(nlri, Attributes())
 
 
 def attribute(tokeniser: 'Tokeniser') -> GenericAttribute:

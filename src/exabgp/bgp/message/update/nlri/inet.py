@@ -40,13 +40,80 @@ PATH_INFO_SIZE: int = 4  # Path Identifier is 4 bytes (RFC 7911)
 @NLRI.register(AFI.ipv4, SAFI.multicast)
 @NLRI.register(AFI.ipv6, SAFI.multicast)
 class INET(NLRI):
-    def __init__(self, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
+    def __init__(
+        self,
+        cidr_or_afi: CIDR | AFI,
+        afi_or_safi: AFI | SAFI,
+        safi_or_action: SAFI | Action = Action.UNSET,
+        action_or_path_info: Action | PathInfo = PathInfo.DISABLED,
+        path_info: PathInfo = PathInfo.DISABLED,
+    ) -> None:
+        """Create an INET NLRI.
+
+        Supports two call signatures for backward compatibility:
+        - New: INET(cidr, afi, safi, action, path_info)
+        - Legacy: INET(afi, safi, action) - cidr must be set separately
+
+        Args:
+            cidr_or_afi: CIDR prefix (new) or AFI (legacy)
+            afi_or_safi: AFI (new) or SAFI (legacy)
+            safi_or_action: SAFI (new) or Action (legacy)
+            action_or_path_info: Action (new) or PathInfo (legacy, ignored)
+            path_info: AddPath path identifier (new signature only)
+        """
+        # Detect signature based on first argument type
+        if isinstance(cidr_or_afi, CIDR):
+            # New signature: INET(cidr, afi, safi, action, path_info)
+            cidr = cidr_or_afi
+            afi = afi_or_safi  # type: ignore[assignment]
+            safi = safi_or_action  # type: ignore[assignment]
+            action = action_or_path_info if isinstance(action_or_path_info, Action) else Action.UNSET
+            pi = path_info
+        else:
+            # Legacy signature: INET(afi, safi, action)
+            cidr = CIDR.NOCIDR
+            afi = cidr_or_afi
+            safi = afi_or_safi  # type: ignore[assignment]
+            action = safi_or_action if isinstance(safi_or_action, Action) else Action.UNSET
+            pi = PathInfo.DISABLED
+
         NLRI.__init__(self, afi, safi, action)
-        self.path_info = PathInfo.DISABLED
-        self.cidr = CIDR.NOCIDR
+        self.cidr = cidr
+        self.path_info = pi
         self.nexthop = IP.NoNextHop
         self.labels: Labels | None = None
         self.rd: RouteDistinguisher | None = None
+
+    @classmethod
+    def make_route(
+        cls,
+        afi: AFI,
+        safi: SAFI,
+        packed: bytes,
+        mask: int,
+        action: Action = Action.ANNOUNCE,
+        path_info: PathInfo = PathInfo.DISABLED,
+        nexthop: 'IP | None' = None,
+    ) -> 'INET':
+        """Factory method to create an INET route.
+
+        Args:
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            packed: Packed IP address bytes
+            mask: Prefix length
+            action: Route action (ANNOUNCE/WITHDRAW)
+            path_info: AddPath path identifier
+            nexthop: Next-hop IP address
+
+        Returns:
+            New INET instance
+        """
+        cidr = CIDR(packed, mask)
+        instance = cls(cidr, afi, safi, action, path_info)
+        if nexthop is not None:
+            instance.nexthop = nexthop
+        return instance
 
     def __len__(self) -> int:
         return len(self.cidr) + len(self.path_info)
@@ -131,15 +198,14 @@ class INET(NLRI):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[INET, bytes]:
-        nlri = cls(afi, safi, action)
-
+        # Parse path_info if AddPath is enabled
         if addpath:
             if len(bgp) <= PATH_INFO_SIZE:
                 raise ValueError('Trying to extract path-information but we do not have enough data')
-            nlri.path_info = PathInfo(bgp[:PATH_INFO_SIZE])
+            path_info = PathInfo(bgp[:PATH_INFO_SIZE])
             bgp = bgp[PATH_INFO_SIZE:]
         else:
-            nlri.path_info = PathInfo.DISABLED
+            path_info = PathInfo.DISABLED
 
         mask = bgp[0]
         bgp = bgp[1:]
@@ -147,15 +213,17 @@ class INET(NLRI):
         _, rd_size = Family.size.get((afi, safi), (0, 0))
         rd_mask = rd_size * 8
 
+        # Parse labels if present
+        labels_list: list[int] | None = None
         if safi.has_label():
-            labels: list[int] = []
+            labels_list = []
             while mask - rd_mask >= LABEL_SIZE_BITS:
                 label = int(unpack('!L', bytes([0]) + bgp[:3])[0])
                 bgp = bgp[3:]
                 mask -= LABEL_SIZE_BITS  # 3 bytes
                 # The last 4 bits are the bottom of Stack
                 # The last bit is set for the last label
-                labels.append(label >> 4)
+                labels_list.append(label >> 4)
                 # This is a route withdrawal
                 if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
                     break
@@ -164,13 +232,13 @@ class INET(NLRI):
                     break
                 if label & LABEL_BOTTOM_OF_STACK_BIT:
                     break
-            nlri.labels = Labels.make_labels(labels)
 
+        # Parse route distinguisher if present
+        rd: RouteDistinguisher | None = None
         if rd_size:
             mask -= rd_mask  # the route distinguisher
-            rd = bgp[:rd_size]
+            rd = RouteDistinguisher(bgp[:rd_size])
             bgp = bgp[rd_size:]
-            nlri.rd = RouteDistinguisher(rd)
 
         if mask < 0:
             raise Notify(3, 10, 'invalid length in NLRI prefix')
@@ -190,6 +258,14 @@ class INET(NLRI):
 
         network, bgp = bgp[:size], bgp[size:]
 
-        nlri.cidr = CIDR(network + bytes(IP.length(afi) - size), mask)
+        # Create CIDR and NLRI with all parsed data
+        cidr = CIDR(network + bytes(IP.length(afi) - size), mask)
+        nlri = cls(cidr, afi, safi, action, path_info)
+
+        # Set optional attributes
+        if labels_list is not None:
+            nlri.labels = Labels.make_labels(labels_list)
+        if rd is not None:
+            nlri.rd = rd
 
         return nlri, bgp

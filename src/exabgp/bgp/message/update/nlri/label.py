@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo
@@ -26,8 +27,28 @@ from exabgp.protocol.ip import IP
 @NLRI.register(AFI.ipv4, SAFI.nlri_mpls)
 @NLRI.register(AFI.ipv6, SAFI.nlri_mpls)
 class Label(INET):
-    def __init__(self, afi: AFI, safi: SAFI, action: Action) -> None:
-        INET.__init__(self, afi, safi, action)
+    def __init__(
+        self,
+        cidr_or_afi: CIDR | AFI,
+        afi_or_safi: AFI | SAFI,
+        safi_or_action: SAFI | Action = Action.UNSET,
+        action_or_path_info: Action | PathInfo = PathInfo.DISABLED,
+        path_info: PathInfo = PathInfo.DISABLED,
+    ) -> None:
+        """Create a Label NLRI.
+
+        Supports two call signatures for backward compatibility:
+        - New: Label(cidr, afi, safi, action, path_info)
+        - Legacy: Label(afi, safi, action) - cidr must be set separately
+
+        Args:
+            cidr_or_afi: CIDR prefix (new) or AFI (legacy)
+            afi_or_safi: AFI (new) or SAFI (legacy)
+            safi_or_action: SAFI (new) or Action (legacy)
+            action_or_path_info: Action (new) or PathInfo (legacy, ignored)
+            path_info: AddPath path identifier (new signature only)
+        """
+        INET.__init__(self, cidr_or_afi, afi_or_safi, safi_or_action, action_or_path_info, path_info)
         self.labels = Labels.NOLABEL
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]

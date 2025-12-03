@@ -21,18 +21,65 @@ from exabgp.bgp.message.notification import Notify
 CIDR_IPV4_MAX_MASK = 24  # Maximum IPv4 mask for heuristic detection
 CIDR_IPV6_LENGTH_BYTES = 4  # IPv6 address length in bytes (for detection)
 
+# Valid IP address lengths
+CIDR_IPV4_LENGTH = 4
+CIDR_IPV6_LENGTH = 16
+CIDR_MAX_MASK = 128
+
 
 class CIDR:
     EOR: bool = False
 
     _mask_to_bytes: dict[int, int] = {}
 
-    NOCIDR: ClassVar[CIDR]
+    NOCIDR: ClassVar['CIDR']
 
     def __init__(self, packed: bytes, mask: int) -> None:
+        """Create a CIDR from packed IP bytes and prefix mask.
+
+        Args:
+            packed: Full IP address bytes (4 bytes for IPv4, 16 for IPv6)
+            mask: Prefix length (0-32 for IPv4, 0-128 for IPv6)
+
+        Raises:
+            ValueError: If packed length is invalid or mask is out of range
+        """
+        if packed:
+            if len(packed) not in (CIDR_IPV4_LENGTH, CIDR_IPV6_LENGTH):
+                raise ValueError(
+                    f'CIDR packed must be {CIDR_IPV4_LENGTH} or {CIDR_IPV6_LENGTH} bytes, got {len(packed)}'
+                )
+            max_mask = 32 if len(packed) == CIDR_IPV4_LENGTH else CIDR_MAX_MASK
+            if not (0 <= mask <= max_mask):
+                raise ValueError(f'CIDR mask must be 0-{max_mask}, got {mask}')
         self._packed = packed
-        self.mask = mask
-        self._ip: str | None = None
+        self._mask = mask
+
+    @classmethod
+    def _create_nocidr(cls) -> 'CIDR':
+        """Create the NOCIDR singleton. Called once at module load."""
+        instance = object.__new__(cls)
+        instance._packed = b''
+        instance._mask = 0
+        return instance
+
+    @classmethod
+    def make_cidr(cls, packed: bytes, mask: int) -> 'CIDR':
+        """Factory method to create a CIDR from packed IP bytes and mask.
+
+        Args:
+            packed: Full IP address bytes (4 bytes for IPv4, 16 for IPv6)
+            mask: Prefix length
+
+        Returns:
+            New CIDR instance
+        """
+        return cls(packed, mask)
+
+    @property
+    def mask(self) -> int:
+        """Prefix length (0-32 for IPv4, 0-128 for IPv6)."""
+        return self._mask
 
     @classmethod
     def size(cls, mask: int) -> int:
@@ -65,9 +112,8 @@ class CIDR:
         return self._packed >= other._packed
 
     def top(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> str:
-        if not self._ip:
-            self._ip = IP.ntop(self._packed)
-        return self._ip
+        """Return the IP address as a string."""
+        return IP.ntop(self._packed)
 
     def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> bytes:
         return self._packed
@@ -116,4 +162,4 @@ class CIDR:
 for netmask in range(129):
     CIDR._mask_to_bytes[netmask] = int(math.ceil(float(netmask) / 8))
 
-CIDR.NOCIDR = CIDR(b'', 0)
+CIDR.NOCIDR = CIDR._create_nocidr()
