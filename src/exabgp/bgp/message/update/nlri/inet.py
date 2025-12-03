@@ -164,7 +164,7 @@ class INET(NLRI):
                     break
                 if label & LABEL_BOTTOM_OF_STACK_BIT:
                     break
-            nlri.labels = Labels(labels)
+            nlri.labels = Labels.make_labels(labels)
 
         if rd_size:
             mask -= rd_mask  # the route distinguisher

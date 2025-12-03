@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # (since draft-ietf-l2vpn-evpn-05)
 
 from __future__ import annotations
-from typing import Type
 
 from struct import pack
 from struct import unpack
@@ -18,14 +17,26 @@ from struct import unpack
 
 class EthernetTag:
     MAX = pow(2, 32) - 1
+    LENGTH = 4
 
-    def __init__(self, tag: int = 0) -> None:
-        self.tag: int = tag
+    def __init__(self, packed: bytes) -> None:
+        if len(packed) != self.LENGTH:
+            raise ValueError(f'EthernetTag requires exactly {self.LENGTH} bytes, got {len(packed)}')
+        self._packed = packed
+
+    @classmethod
+    def make_etag(cls, tag: int) -> 'EthernetTag':
+        """Create EthernetTag from integer value."""
+        return cls(pack('!L', tag))
+
+    @property
+    def tag(self) -> int:
+        return unpack('!L', self._packed)[0]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, EthernetTag):
             return False
-        return self.tag == other.tag
+        return self._packed == other._packed
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
@@ -46,17 +57,17 @@ class EthernetTag:
         return repr(self.tag)
 
     def pack_etag(self) -> bytes:
-        return pack('!L', self.tag)
+        return self._packed
 
     def __len__(self) -> int:
-        return 4
+        return self.LENGTH
 
     def __hash__(self) -> int:
-        return hash(self.tag)
+        return hash(self._packed)
 
     @classmethod
-    def unpack_etag(cls: Type[EthernetTag], data: bytes) -> EthernetTag:
-        return cls(unpack('!L', data[:4])[0])
+    def unpack_etag(cls, data: bytes) -> 'EthernetTag':
+        return cls(data[: cls.LENGTH])
 
     def json(self, compact: bool = False) -> str:
         return '"ethernet-tag": {}'.format(self.tag)

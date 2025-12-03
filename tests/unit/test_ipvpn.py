@@ -35,8 +35,8 @@ class TestIPVPNCreation:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         assert nlri.afi == AFI.ipv4
@@ -53,8 +53,8 @@ class TestIPVPNCreation:
             SAFI.mpls_vpn,
             IP.pton('2001:db8::'),
             32,
-            Labels([100], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 200),
+            Labels.make_labels([100], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 200),
         )
 
         assert nlri.afi == AFI.ipv6
@@ -70,8 +70,8 @@ class TestIPVPNCreation:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
             nexthop='10.0.0.254',
         )
 
@@ -84,8 +84,8 @@ class TestIPVPNCreation:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
             action=Action.WITHDRAW,
         )
 
@@ -111,8 +111,8 @@ class TestIPVPNPackUnpack:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         packed = nlri.pack_nlri(create_negotiated())
@@ -134,8 +134,8 @@ class TestIPVPNPackUnpack:
             SAFI.mpls_vpn,
             IP.pton('2001:db8::'),
             32,
-            Labels([100], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 200),
+            Labels.make_labels([100], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 200),
         )
 
         packed = nlri.pack_nlri(create_negotiated())
@@ -155,8 +155,8 @@ class TestIPVPNPackUnpack:
             SAFI.mpls_vpn,
             IP.pton('10.1.1.0'),
             24,
-            Labels([100, 200, 300], True),
-            RouteDistinguisher.fromElements('172.16.0.1', 50),
+            Labels.make_labels([100, 200, 300], True),
+            RouteDistinguisher.make_from_elements('172.16.0.1', 50),
         )
 
         packed = nlri.pack_nlri(create_negotiated())
@@ -184,8 +184,8 @@ class TestIPVPNPackUnpack:
                 SAFI.mpls_vpn,
                 IP.pton(ip),
                 mask,
-                Labels([42], True),
-                RouteDistinguisher.fromElements('10.0.0.1', 100),
+                Labels.make_labels([42], True),
+                RouteDistinguisher.make_from_elements('10.0.0.1', 100),
             )
 
             packed = nlri.pack_nlri(create_negotiated())
@@ -202,8 +202,8 @@ class TestIPVPNPackUnpack:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         packed = nlri.pack_nlri(create_negotiated()) + b'\x01\x02\x03\x04'
@@ -225,8 +225,8 @@ class TestIPVPNStringRepresentation:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         result = str(nlri)
@@ -241,8 +241,8 @@ class TestIPVPNStringRepresentation:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         assert repr(nlri) == str(nlri)
@@ -254,8 +254,8 @@ class TestIPVPNStringRepresentation:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
             nexthop='10.0.0.254',
         )
 
@@ -274,8 +274,8 @@ class TestIPVPNLength:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         # Length should include RD (8 bytes) + labels + CIDR + path_info
@@ -294,8 +294,8 @@ class TestIPVPNLength:
             SAFI.mpls_vpn,
             IP.pton('10.1.1.0'),
             24,
-            Labels([100, 200, 300], True),
-            RouteDistinguisher.fromElements('172.16.0.1', 50),
+            Labels.make_labels([100, 200, 300], True),
+            RouteDistinguisher.make_from_elements('172.16.0.1', 50),
         )
 
         # 3 labels = 9 bytes, RD = 8 bytes
@@ -312,8 +312,8 @@ class TestIPVPNEquality:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         nlri2 = IPVPN.new(
@@ -321,8 +321,8 @@ class TestIPVPNEquality:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         assert nlri1 == nlri2
@@ -334,8 +334,8 @@ class TestIPVPNEquality:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         nlri2 = IPVPN.new(
@@ -343,8 +343,8 @@ class TestIPVPNEquality:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 200),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 200),
         )
 
         assert nlri1 != nlri2
@@ -356,8 +356,8 @@ class TestIPVPNEquality:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         hash1 = hash(nlri)
@@ -376,8 +376,8 @@ class TestIPVPNFeedback:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
             nexthop='10.0.0.254',
         )
 
@@ -391,8 +391,8 @@ class TestIPVPNFeedback:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
         # nexthop defaults to NoNextHop when not provided
 
@@ -406,8 +406,8 @@ class TestIPVPNFeedback:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
         # nexthop defaults to NoNextHop when not provided
 
@@ -426,8 +426,8 @@ class TestIPVPNIndex:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         index = nlri.index()
@@ -442,8 +442,8 @@ class TestIPVPNIndex:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         index = nlri.index()
@@ -463,8 +463,8 @@ class TestIPVPNJSON:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         json_str = nlri.json(announced=True)
@@ -479,8 +479,8 @@ class TestIPVPNJSON:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         json_str = nlri.json(announced=False)
@@ -506,8 +506,8 @@ class TestIPVPNEdgeCases:
             SAFI.mpls_vpn,
             IP.pton('0.0.0.0'),
             0,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         assert nlri.cidr.mask == 0
@@ -526,8 +526,8 @@ class TestIPVPNEdgeCases:
             SAFI.mpls_vpn,
             IP.pton('192.168.1.1'),
             32,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         assert nlri.cidr.mask == 32
@@ -539,8 +539,8 @@ class TestIPVPNEdgeCases:
             SAFI.mpls_vpn,
             IP.pton('2001:db8::1'),
             128,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('10.0.0.1', 100),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
 
         assert nlri.cidr.mask == 128
@@ -557,24 +557,24 @@ class TestIPVPNMultipleRoutes:
                 SAFI.mpls_vpn,
                 IP.pton('10.1.0.0'),
                 16,
-                Labels([100], True),
-                RouteDistinguisher.fromElements('10.0.0.1', 1),
+                Labels.make_labels([100], True),
+                RouteDistinguisher.make_from_elements('10.0.0.1', 1),
             ),
             IPVPN.new(
                 AFI.ipv4,
                 SAFI.mpls_vpn,
                 IP.pton('10.2.0.0'),
                 16,
-                Labels([200], True),
-                RouteDistinguisher.fromElements('10.0.0.1', 2),
+                Labels.make_labels([200], True),
+                RouteDistinguisher.make_from_elements('10.0.0.1', 2),
             ),
             IPVPN.new(
                 AFI.ipv4,
                 SAFI.mpls_vpn,
                 IP.pton('10.3.0.0'),
                 16,
-                Labels([300], True),
-                RouteDistinguisher.fromElements('10.0.0.1', 3),
+                Labels.make_labels([300], True),
+                RouteDistinguisher.make_from_elements('10.0.0.1', 3),
             ),
         ]
 

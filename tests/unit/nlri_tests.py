@@ -66,7 +66,7 @@ class TestNLRIs(unittest.TestCase):
         """Test pack/unpack for MVPN Source A-D route"""
         nlri = MVPN_SourceAD(
             afi=AFI.ipv4,
-            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('1.2.3.0'),
             group=IP.create('226.0.0.1'),
         )
@@ -89,7 +89,7 @@ class TestNLRIs(unittest.TestCase):
 
         nlri = MVPN_SourceAD(
             afi=AFI.ipv6,
-            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('fd12::2'),
             group=IP.create('ff0e::1'),
         )
@@ -114,7 +114,7 @@ class TestNLRIs(unittest.TestCase):
         """Test pack/unpack for MVPN Source-Join route"""
         nlri = MVPN_SourceJoin(
             afi=AFI.ipv4,
-            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('1.2.3.0'),
             group=IP.create('226.0.0.1'),
             source_as=1234,
@@ -139,7 +139,7 @@ class TestNLRIs(unittest.TestCase):
 
         nlri = MVPN_SourceJoin(
             afi=AFI.ipv6,
-            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('fd12::2'),
             group=IP.create('ff0e::1'),
             source_as=1234,
@@ -166,7 +166,7 @@ class TestNLRIs(unittest.TestCase):
         """Test pack/unpack for MVPN Shared-Join route"""
         nlri = MVPN_SharedJoin(
             afi=AFI.ipv4,
-            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('1.2.3.0'),
             group=IP.create('226.0.0.1'),
             source_as=1234,
@@ -191,7 +191,7 @@ class TestNLRIs(unittest.TestCase):
 
         nlri = MVPN_SharedJoin(
             afi=AFI.ipv6,
-            rd=RouteDistinguisher.fromElements('42.42.42.42', 5),
+            rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('fd12::2'),
             group=IP.create('ff0e::1'),
             source_as=1234,
@@ -223,8 +223,8 @@ class TestNLRIs(unittest.TestCase):
             SAFI.mpls_vpn,
             IP.pton('1.2.3.0'),
             24,
-            Labels([42], True),
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
         )
 
         packed = nlri.pack_nlri(create_negotiated())
@@ -247,12 +247,12 @@ class TestNLRIs(unittest.TestCase):
     def test99_EVPNMACCreatePackUnpack(self) -> None:
         """Test pack/unpack for E-VPN MAC routes"""
         nlri = EVPNMAC(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
-            ESI(),
-            EthernetTag(111),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
+            ESI.make_default(),
+            EthernetTag.make_etag(111),
             MAC('01:02:03:04:05:06'),
             6 * 8,
-            Labels([42], True),
+            Labels.make_labels([42], True),
             IP.create('1.1.1.1'),
         )
 
@@ -269,7 +269,7 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertEqual('42.42.42.42:5', unpacked.rd._str())
         self.assertEqual(ESI.DEFAULT, unpacked.esi.esi)
-        self.assertEqual(EthernetTag(111), unpacked.etag)
+        self.assertEqual(EthernetTag.make_etag(111), unpacked.etag)
         self.assertEqual(MAC('01:02:03:04:05:06'), unpacked.mac)
 
         self.assertEqual(IP.create('1.1.1.1'), unpacked.ip)
@@ -281,8 +281,8 @@ class TestNLRIs(unittest.TestCase):
         """Test pack/unpack for E-VPN Multicast routes"""
 
         nlri = EVPNMulticast(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
-            EthernetTag(111),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
+            EthernetTag.make_etag(111),
             IP.create('1.1.1.1'),
         )
 
@@ -298,17 +298,17 @@ class TestNLRIs(unittest.TestCase):
         self.assertTrue(isinstance(unpacked, EVPNMulticast))
 
         self.assertEqual('42.42.42.42:5', unpacked.rd._str())
-        self.assertEqual(EthernetTag(111), unpacked.etag)
+        self.assertEqual(EthernetTag.make_etag(111), unpacked.etag)
         self.assertEqual(IP.create('1.1.1.1'), unpacked.ip)
 
     def test99_EVPNPrefixCreatePackUnpack(self) -> None:
         """Test pack/unpack for E-VPN Prefix routes"""
 
         nlri = EVPNPrefix(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
-            ESI(),
-            EthernetTag(111),
-            Labels([42], True),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
+            ESI.make_default(),
+            EthernetTag.make_etag(111),
+            Labels.make_labels([42], True),
             IP.create('1.1.1.0'),
             24,
             IP.create('2.2.2.2'),
@@ -327,7 +327,7 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertEqual('42.42.42.42:5', unpacked.rd._str())
         self.assertEqual(ESI.DEFAULT, unpacked.esi.esi)
-        self.assertEqual(EthernetTag(111), unpacked.etag)
+        self.assertEqual(EthernetTag.make_etag(111), unpacked.etag)
         self.assertEqual(IP.create('1.1.1.0'), unpacked.ip)
         self.assertEqual(24, unpacked.iplen)
         self.assertEqual(IP.create('2.2.2.2'), unpacked.gwip)
@@ -340,22 +340,22 @@ class TestNLRIs(unittest.TestCase):
         """
 
         nlri1 = EVPNMAC(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
-            ESI(),
-            EthernetTag(111),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
+            ESI.make_default(),
+            EthernetTag.make_etag(111),
             MAC('01:02:03:04:05:06'),
             6 * 8,
-            Labels([42], True),
+            Labels.make_labels([42], True),
             IP.create('1.1.1.1'),
         )
 
         nlri2 = EVPNMAC(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
-            ESI(),
-            EthernetTag(111),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
+            ESI.make_default(),
+            EthernetTag.make_etag(111),
             MAC('01:02:03:04:05:06'),
             6 * 8,
-            Labels([42], True),
+            Labels.make_labels([42], True),
             IP.create('1.1.1.1'),
         )
 
@@ -369,18 +369,18 @@ class TestNLRIs(unittest.TestCase):
         """
 
         nlri0 = EVPNMAC(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
-            ESI(),
-            EthernetTag(111),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
+            ESI.make_default(),
+            EthernetTag.make_etag(111),
             MAC('01:02:03:04:05:06'),
             6 * 8,
-            Labels([42], True),
+            Labels.make_labels([42], True),
             IP.create('1.1.1.1'),
         )
 
         # ESI
         nlri1 = EVPNMAC(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI(
                 bytes(
                     [
@@ -389,53 +389,53 @@ class TestNLRIs(unittest.TestCase):
                     * 10,
                 ),
             ),
-            EthernetTag(111),
+            EthernetTag.make_etag(111),
             MAC('01:02:03:04:05:06'),
             6 * 8,
-            Labels([42], True),
+            Labels.make_labels([42], True),
             IP.create('1.1.1.1'),
         )
 
         # label
         nlri2 = EVPNMAC(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
-            ESI(),
-            EthernetTag(111),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
+            ESI.make_default(),
+            EthernetTag.make_etag(111),
             MAC('01:02:03:04:05:06'),
             6 * 8,
-            Labels([4444], True),
+            Labels.make_labels([4444], True),
             IP.create('1.1.1.1'),
         )
 
         # IP: different IPs, but same MACs: different route
         nlri3 = EVPNMAC(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
-            ESI(),
-            EthernetTag(111),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
+            ESI.make_default(),
+            EthernetTag.make_etag(111),
             MAC('01:02:03:04:05:06'),
             6 * 8,
-            Labels([42], True),
+            Labels.make_labels([42], True),
             IP.create('2.2.2.2'),
         )
 
         # with a next hop...
         nlri4 = EVPNMAC(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
-            ESI(),
-            EthernetTag(111),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
+            ESI.make_default(),
+            EthernetTag.make_etag(111),
             MAC('01:02:03:04:05:06'),
             6 * 8,
-            Labels([42], True),
+            Labels.make_labels([42], True),
             IP.create('1.1.1.1'),
             IP.pton('10.10.10.10'),
         )
         nlri5 = EVPNMAC(
-            RouteDistinguisher.fromElements('42.42.42.42', 5),
-            ESI(),
-            EthernetTag(111),
+            RouteDistinguisher.make_from_elements('42.42.42.42', 5),
+            ESI.make_default(),
+            EthernetTag.make_etag(111),
             MAC('01:02:03:04:05:06'),
             6 * 8,
-            Labels([42], True),
+            Labels.make_labels([42], True),
             IP.create('1.1.1.1'),
             IP.pton('11.11.11.11'),
         )

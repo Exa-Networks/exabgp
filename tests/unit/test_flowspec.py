@@ -526,7 +526,7 @@ class TestFlowNLRI:
         negotiated = create_negotiated()
         flow = Flow()
 
-        rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
+        rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         flow.rd = rd
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -776,7 +776,7 @@ class TestFlowUnpack:
         """Test unpacking VPN flow with route distinguisher"""
         negotiated = create_negotiated()
         flow1 = Flow(afi=AFI.ipv4, safi=SAFI.flow_vpn)
-        rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
+        rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         flow1.rd = rd
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
@@ -859,7 +859,7 @@ class TestFlowUnpack:
     def test_flow_extensive_string_with_rd(self) -> None:
         """Test extensive string representation with route distinguisher"""
         flow = Flow()
-        rd = RouteDistinguisher.fromElements('1.2.3.4', 100)
+        rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         flow.rd = rd
 
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)

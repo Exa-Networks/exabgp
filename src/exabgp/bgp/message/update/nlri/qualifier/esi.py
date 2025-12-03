@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
-from typing import Type
 
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI
 # (since draft-ietf-l2vpn-evpn-05)
@@ -20,15 +19,29 @@ class ESI:
     DEFAULT = bytes([0x00] * LENGTH)  # All zeros
     MAX = bytes([0xFF] * LENGTH)  # All ones
 
-    def __init__(self, esi: bytes | None = None) -> None:
-        self.esi: bytes = self.DEFAULT if esi is None else esi
-        if len(self.esi) != self.LENGTH:
-            raise Exception(f'incorrect ESI, len {len(esi)} instead of {self.LENGTH}')  # type: ignore[arg-type]
+    def __init__(self, packed: bytes) -> None:
+        if len(packed) != self.LENGTH:
+            raise ValueError(f'ESI requires exactly {self.LENGTH} bytes, got {len(packed)}')
+        self._packed = packed
+
+    @classmethod
+    def make_esi(cls, esi_bytes: bytes) -> 'ESI':
+        """Create ESI from bytes."""
+        return cls(esi_bytes)
+
+    @classmethod
+    def make_default(cls) -> 'ESI':
+        """Create ESI with default value (all zeros)."""
+        return cls(cls.DEFAULT)
+
+    @property
+    def esi(self) -> bytes:
+        return self._packed
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ESI):
             return False
-        return self.esi == other.esi
+        return self._packed == other._packed
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing ESI for ordering does not make sense')
@@ -43,24 +56,24 @@ class ESI:
         raise RuntimeError('comparing ESI for ordering does not make sense')
 
     def __str__(self) -> str:
-        if self.esi == self.DEFAULT:
+        if self._packed == self.DEFAULT:
             return '-'
-        return ':'.join('{:02x}'.format(_) for _ in self.esi)
+        return ':'.join('{:02x}'.format(_) for _ in self._packed)
 
     def __repr__(self) -> str:
         return self.__str__()
 
     def pack_esi(self) -> bytes:
-        return self.esi
+        return self._packed
 
     def __len__(self) -> int:
         return self.LENGTH
 
     def __hash__(self) -> int:
-        return hash(self.esi)
+        return hash(self._packed)
 
     @classmethod
-    def unpack_esi(cls: Type[ESI], data: bytes) -> ESI:
+    def unpack_esi(cls, data: bytes) -> 'ESI':
         return cls(data[: cls.LENGTH])
 
     def json(self, compact: bool = False) -> str:

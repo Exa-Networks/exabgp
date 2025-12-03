@@ -48,7 +48,7 @@ def label(tokeniser: Any) -> Labels:
     else:
         labels.append(int(value))
 
-    return Labels(labels)
+    return Labels.make_labels(labels)
 
 
 def route_distinguisher(tokeniser: Any) -> RouteDistinguisher:
