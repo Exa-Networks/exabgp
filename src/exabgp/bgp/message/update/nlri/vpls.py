@@ -37,24 +37,69 @@ unique: Iterator[int] = _unique()
 
 @NLRI.register(AFI.l2vpn, SAFI.vpls)
 class VPLS(NLRI):
-    # XXX: Should take AFI, SAFI and OUT.direction as parameter to match other NLRI
     def __init__(
         self,
+        rd: RouteDistinguisher | bytes | None,
+        endpoint: int | None = None,
+        base: int | None = None,
+        offset: int | None = None,
+        size: int | None = None,
+    ) -> None:
+        """Create a VPLS NLRI.
+
+        Supports two call signatures:
+        - Packed: VPLS(packed_bytes) - 17 bytes wire format
+        - Fields: VPLS(rd, endpoint, base, offset, size)
+        - Empty: VPLS(None, None, None, None, None) - for configuration parsing
+
+        Args:
+            rd: RouteDistinguisher, packed wire bytes (17 bytes), or None
+            endpoint: VPLS endpoint (VE ID)
+            base: Label base
+            offset: Label block offset
+            size: Label block size
+        """
+        NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
+        self.action = Action.ANNOUNCE
+        self.nexthop = IP.NoNextHop
+
+        if isinstance(rd, bytes):
+            # Packed wire format (17 bytes): RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
+            self.rd = RouteDistinguisher(rd[0:8])
+            self.endpoint, self.offset, self.size = unpack('!HHH', rd[8:14])
+            self.base = unpack('!L', b'\x00' + rd[14:17])[0] >> 4
+        else:
+            # Individual fields or None (RouteDistinguisher or None)
+            self.rd = rd  # type: ignore[assignment]
+            self.endpoint = endpoint  # type: ignore[assignment]
+            self.base = base  # type: ignore[assignment]
+            self.offset = offset  # type: ignore[assignment]
+            self.size = size  # type: ignore[assignment,misc]  # shadows Family.size ClassVar
+
+        self.unique = next(unique)
+
+    @classmethod
+    def make_vpls(
+        cls,
         rd: RouteDistinguisher,
         endpoint: int,
         base: int,
         offset: int,
         size: int,
-    ) -> None:
-        NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
-        self.action = Action.ANNOUNCE
-        self.nexthop = IP.NoNextHop
-        self.rd = rd
-        self.base = base
-        self.offset = offset
-        self.size = size  # type: ignore[assignment,misc]  # shadows Family.size ClassVar
-        self.endpoint = endpoint
-        self.unique = next(unique)
+    ) -> 'VPLS':
+        """Factory method to create a VPLS NLRI from components.
+
+        Args:
+            rd: Route Distinguisher
+            endpoint: VPLS endpoint (VE ID)
+            base: Label base
+            offset: Label block offset
+            size: Label block size
+
+        Returns:
+            New VPLS instance
+        """
+        return cls(rd, endpoint, base, offset, size)
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
@@ -127,14 +172,13 @@ class VPLS(NLRI):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[VPLS, bytes]:
-        # label is 20bits, stored using 3 bytes, 24 bits
+        # Wire format: length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3) = 19 bytes
         (length,) = unpack('!H', bgp[0:2])
         if len(bgp) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
-        rd = RouteDistinguisher(bgp[2:10])
-        endpoint, offset, size = unpack('!HHH', bgp[10:16])
-        base = unpack('!L', b'\x00' + bgp[16:19])[0] >> 4
-        nlri = cls(rd, endpoint, base, offset, size)
+
+        # Create VPLS from packed wire format (17 bytes, excluding length prefix)
+        packed = bgp[2:19]
+        nlri = cls(packed)
         nlri.action = action
-        # nlri.nexthop = IP.unpack_ip(nexthop)
         return nlri, bgp[19:]
