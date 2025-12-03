@@ -83,7 +83,7 @@ class ParseAnnounce(Section):
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
             cidr = CIDR(pack_int(afi, ip), cut)
-            nlri = klass(cidr, afi, safi, Action.ANNOUNCE)
+            nlri = klass.from_cidr(cidr, afi, safi, Action.ANNOUNCE)
             nlri.nexthop = nexthop  # nexthop can be NextHopSelf
             nlri.path_info = path_info
             # next ip

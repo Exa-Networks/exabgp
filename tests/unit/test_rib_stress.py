@@ -57,9 +57,9 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else (32 if afi == AFI.ipv4 else 128)
 
-    # Create NLRI
-    nlri = INET(afi, SAFI.unicast, action)
-    nlri.cidr = CIDR(IP.pton(ip_str), mask)
+    # Create NLRI with packed-bytes-first pattern
+    cidr = CIDR(IP.pton(ip_str), mask)
+    nlri = INET.from_cidr(cidr, afi, SAFI.unicast, action)
 
     # Create attributes
     attrs = Attributes()

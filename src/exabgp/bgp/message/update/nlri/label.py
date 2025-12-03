@@ -29,27 +29,46 @@ from exabgp.protocol.ip import IP
 class Label(INET):
     def __init__(
         self,
-        cidr_or_afi: CIDR | AFI,
-        afi_or_safi: AFI | SAFI,
-        safi_or_action: SAFI | Action = Action.UNSET,
-        action_or_path_info: Action | PathInfo = PathInfo.DISABLED,
+        packed: bytes,
+        afi: AFI,
+        safi: SAFI,
+        action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
     ) -> None:
-        """Create a Label NLRI.
-
-        Supports two call signatures for backward compatibility:
-        - New: Label(cidr, afi, safi, action, path_info)
-        - Legacy: Label(afi, safi, action) - cidr must be set separately
+        """Create a Label NLRI from packed CIDR bytes.
 
         Args:
-            cidr_or_afi: CIDR prefix (new) or AFI (legacy)
-            afi_or_safi: AFI (new) or SAFI (legacy)
-            safi_or_action: SAFI (new) or Action (legacy)
-            action_or_path_info: Action (new) or PathInfo (legacy, ignored)
-            path_info: AddPath path identifier (new signature only)
+            packed: CIDR wire format bytes [mask_byte][truncated_ip...]
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            action: Route action (ANNOUNCE/WITHDRAW)
+            path_info: AddPath path identifier
         """
-        INET.__init__(self, cidr_or_afi, afi_or_safi, safi_or_action, action_or_path_info, path_info)
+        INET.__init__(self, packed, afi, safi, action, path_info)
         self.labels = Labels.NOLABEL
+
+    @classmethod
+    def from_cidr(
+        cls,
+        cidr: CIDR,
+        afi: AFI,
+        safi: SAFI,
+        action: Action = Action.UNSET,
+        path_info: PathInfo = PathInfo.DISABLED,
+    ) -> 'Label':
+        """Factory method to create Label from a CIDR object.
+
+        Args:
+            cidr: CIDR prefix
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            action: Route action (ANNOUNCE/WITHDRAW)
+            path_info: AddPath path identifier
+
+        Returns:
+            New Label instance
+        """
+        return cls(cidr.pack_nlri(), afi, safi, action, path_info)
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
