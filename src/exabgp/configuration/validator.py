@@ -674,11 +674,11 @@ class OriginValidator(Validator['Origin']):
 
         lower = value.lower()
         if lower == 'igp':
-            return Origin(Origin.IGP)
+            return Origin.make_origin(Origin.IGP)
         if lower == 'egp':
-            return Origin(Origin.EGP)
+            return Origin.make_origin(Origin.EGP)
         if lower == 'incomplete':
-            return Origin(Origin.INCOMPLETE)
+            return Origin.make_origin(Origin.INCOMPLETE)
         raise ValueError(f"'{value}' is not a valid origin\n  Valid options: igp, egp, incomplete")
 
     def to_schema(self) -> dict[str, Any]:
