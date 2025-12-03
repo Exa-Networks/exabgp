@@ -424,7 +424,7 @@ def test_roundtrip_with_multiple_attributes() -> None:
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = ASPath([SEQUENCE([ASN(65001), ASN(65002)])])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
-    attributes[Attribute.CODE.MED] = MED(100)
+    attributes[Attribute.CODE.MED] = MED.make_med(100)
     attributes[Attribute.CODE.LOCAL_PREF] = LocalPreference(200)
 
     update = Update([nlri], attributes)
@@ -813,7 +813,7 @@ def test_integration_full_update_cycle() -> None:
     attributes[Attribute.CODE.ORIGIN] = Origin.make_origin(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = ASPath([SEQUENCE([ASN(65001), ASN(65002)])])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop('192.0.2.1')
-    attributes[Attribute.CODE.MED] = MED(100)
+    attributes[Attribute.CODE.MED] = MED.make_med(100)
     attributes[Attribute.CODE.LOCAL_PREF] = LocalPreference(200)
 
     original_update = Update(nlris, attributes)
