@@ -13,6 +13,7 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 import pytest
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher, Labels
 from exabgp.protocol.ip import IP
@@ -93,7 +94,8 @@ class TestIPVPNCreation:
 
     def test_create_ipvpn_direct_init(self) -> None:
         """Test creating IPVPN via direct initialization"""
-        nlri = IPVPN(AFI.ipv4, SAFI.mpls_vpn, Action.ANNOUNCE)
+        cidr = CIDR(IP.pton('10.0.0.0'), 24)
+        nlri = IPVPN(cidr, AFI.ipv4, SAFI.mpls_vpn, Action.ANNOUNCE)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.mpls_vpn

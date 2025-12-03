@@ -357,21 +357,20 @@ class ParseStaticRoute(Section):
         afi = nlri.afi
         safi = nlri.safi
 
-        # Really ugly
+        # Extract data from original NLRI before clearing
         klass = nlri.__class__
         nexthop = nlri.nexthop
         path_info = nlri.path_info if safi.has_path() else None
         labels = nlri.labels if safi.has_label() else None
         rd = nlri.rd if safi.has_rd() else None
 
-        nlri.cidr.mask = cut
         last.nlri = NLRI.EMPTY  # Clear reference after extracting data
 
         # generate the new routes
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
-            new_nlri: Any = klass(afi, safi, Action.ANNOUNCE)
-            new_nlri.cidr = CIDR(pack_int(afi, ip), cut)
+            new_cidr = CIDR(pack_int(afi, ip), cut)
+            new_nlri: Any = klass(new_cidr, afi, safi, Action.ANNOUNCE)
             new_nlri.nexthop = nexthop  # nexthop can be NextHopSelf
             if path_info is not None:
                 new_nlri.path_info = path_info

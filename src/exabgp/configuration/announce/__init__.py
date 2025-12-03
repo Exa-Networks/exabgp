@@ -72,19 +72,18 @@ class ParseAnnounce(Section):
         afi = inet_nlri.afi
         safi = inet_nlri.safi
 
-        # Really ugly
+        # Extract data from original NLRI before clearing
         klass = inet_nlri.__class__
         path_info = inet_nlri.path_info
         nexthop = inet_nlri.nexthop
 
-        inet_nlri.cidr.mask = cut
         last.nlri = NLRI.EMPTY  # Clear reference after extracting data
 
         # generate the new routes
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
-            nlri = klass(afi, safi, Action.ANNOUNCE)
-            nlri.cidr = CIDR(pack_int(afi, ip), cut)
+            cidr = CIDR(pack_int(afi, ip), cut)
+            nlri = klass(cidr, afi, safi, Action.ANNOUNCE)
             nlri.nexthop = nexthop  # nexthop can be NextHopSelf
             nlri.path_info = path_info
             # next ip

@@ -29,7 +29,8 @@ class TestLabelCreation:
 
     def test_create_label_ipv4(self) -> None:
         """Test creating basic IPv4 labeled route"""
-        label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
+        cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        label = Label(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
 
         assert label.afi == AFI.ipv4
         assert label.safi == SAFI.nlri_mpls
@@ -38,15 +39,16 @@ class TestLabelCreation:
 
     def test_create_label_ipv6(self) -> None:
         """Test creating basic IPv6 labeled route"""
-        label = Label(AFI.ipv6, SAFI.nlri_mpls, Action.ANNOUNCE)
+        cidr = CIDR(IP.pton('2001:db8::'), 32)
+        label = Label(cidr, AFI.ipv6, SAFI.nlri_mpls, Action.ANNOUNCE)
 
         assert label.afi == AFI.ipv6
         assert label.safi == SAFI.nlri_mpls
 
     def test_create_label_with_data(self) -> None:
         """Test creating labeled route with all attributes"""
-        label = Label(AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
-        label.cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        label = Label(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.labels = Labels.make_labels([100], True)
         label.nexthop = IP.create('10.0.0.1')
 

@@ -32,8 +32,8 @@ class TestINETFeedback:
 
     def test_feedback_announce_without_nexthop(self) -> None:
         """Test feedback when nexthop is missing for ANNOUNCE"""
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        nlri = INET(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
         # nexthop defaults to NoNextHop
 
         feedback = nlri.feedback(Action.ANNOUNCE)
@@ -41,8 +41,8 @@ class TestINETFeedback:
 
     def test_feedback_announce_with_nexthop(self) -> None:
         """Test feedback when nexthop is set for ANNOUNCE"""
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        nlri = INET(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
         nlri.nexthop = IP.create('10.0.0.1')
 
         feedback = nlri.feedback(Action.ANNOUNCE)
@@ -50,8 +50,8 @@ class TestINETFeedback:
 
     def test_feedback_withdraw_no_nexthop_required(self) -> None:
         """Test feedback for WITHDRAW doesn't require nexthop"""
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-        nlri.cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        nlri = INET(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
         # nexthop defaults to NoNextHop
 
         feedback = nlri.feedback(Action.WITHDRAW)
@@ -63,9 +63,8 @@ class TestINETIndex:
 
     def test_index_with_pathinfo(self) -> None:
         """Test index generation with path info"""
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR(IP.pton('192.168.1.0'), 24)
-        nlri.path_info = PathInfo(b'\x00\x00\x00\x01')
+        cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        nlri = INET(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE, PathInfo(b'\x00\x00\x00\x01'))
 
         index = nlri.index()
 
@@ -74,9 +73,8 @@ class TestINETIndex:
 
     def test_index_without_pathinfo(self) -> None:
         """Test index generation without path info"""
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR(IP.pton('192.168.1.0'), 24)
-        nlri.path_info = PathInfo.NOPATH
+        cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        nlri = INET(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE, PathInfo.NOPATH)
 
         index = nlri.index()
 
@@ -89,8 +87,8 @@ class TestINETJSON:
 
     def test_json_compact_mode(self) -> None:
         """Test JSON in compact mode"""
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        nlri = INET(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
 
         json_str = nlri.json(announced=True, compact=True)
 
@@ -99,8 +97,8 @@ class TestINETJSON:
 
     def test_json_non_compact_mode(self) -> None:
         """Test JSON in non-compact mode"""
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        nlri = INET(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
 
         json_str = nlri.json(announced=True, compact=False)
 
@@ -267,28 +265,32 @@ class TestINETCreationVariants:
 
     def test_create_ipv4_unicast(self) -> None:
         """Test creating IPv4 unicast INET"""
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        cidr = CIDR(IP.pton('192.168.1.0'), 24)
+        nlri = INET(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.unicast
 
     def test_create_ipv6_unicast(self) -> None:
         """Test creating IPv6 unicast INET"""
-        nlri = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
+        cidr = CIDR(IP.pton('2001:db8::'), 32)
+        nlri = INET(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
 
         assert nlri.afi == AFI.ipv6
         assert nlri.safi == SAFI.unicast
 
     def test_create_ipv4_multicast(self) -> None:
         """Test creating IPv4 multicast INET"""
-        nlri = INET(AFI.ipv4, SAFI.multicast, Action.ANNOUNCE)
+        cidr = CIDR(IP.pton('224.0.0.0'), 4)
+        nlri = INET(cidr, AFI.ipv4, SAFI.multicast, Action.ANNOUNCE)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.multicast
 
     def test_create_ipv6_multicast(self) -> None:
         """Test creating IPv6 multicast INET"""
-        nlri = INET(AFI.ipv6, SAFI.multicast, Action.ANNOUNCE)
+        cidr = CIDR(IP.pton('ff00::'), 8)
+        nlri = INET(cidr, AFI.ipv6, SAFI.multicast, Action.ANNOUNCE)
 
         assert nlri.afi == AFI.ipv6
         assert nlri.safi == SAFI.multicast
