@@ -27,30 +27,44 @@ T = TypeVar('T', bound='RTC')
 
 @NLRI.register(AFI.ipv4, SAFI.rtc)
 class RTC(NLRI):
+    """RTC (Route Target Constraint) NLRI using partial packed-bytes-first pattern.
+
+    Note: Full packed-bytes-first pattern cannot be applied because rt (RouteTarget)
+    requires 'negotiated' for unpacking. Origin ASN is stored as packed bytes,
+    but rt is stored as RouteTarget object.
+    """
+
     # XXX: FIXME: no support yet for RTC variable length with prefixing
 
     def __init__(
         self,
-        afi: AFI,
-        safi: SAFI,
-        action: Action,
-        origin: ASN,
+        packed_origin: bytes | None,
         rt: RouteTarget | None,
+        afi: AFI = AFI.ipv4,
+        safi: SAFI = SAFI.rtc,
+        action: Action = Action.UNSET,
     ) -> None:
         """Create an RTC (Route Target Constraint) NLRI.
 
         Args:
+            packed_origin: 4 bytes packed origin ASN, or None for wildcard
+            rt: RouteTarget or None for wildcard
             afi: Address Family Identifier
             safi: Subsequent Address Family Identifier
             action: Route action (ANNOUNCE/WITHDRAW)
-            origin: Origin ASN
-            rt: RouteTarget or None for wildcard
         """
         NLRI.__init__(self, afi, safi)
-        self.action = action
-        self.origin = origin
+        self._packed_origin: bytes | None = packed_origin
         self.rt = rt
+        self.action = action
         self.nexthop = IP.NoNextHop
+
+    @property
+    def origin(self) -> ASN:
+        """Origin ASN - unpacked from wire bytes."""
+        if self._packed_origin is None:
+            return ASN(0)
+        return ASN(unpack('!L', self._packed_origin)[0])
 
     @classmethod
     def make_rtc(
@@ -71,7 +85,8 @@ class RTC(NLRI):
         Returns:
             New RTC instance
         """
-        instance = cls(AFI.ipv4, SAFI.rtc, action, origin, rt)
+        packed_origin = pack('!L', int(origin)) if rt is not None else None
+        instance = cls(packed_origin, rt, AFI.ipv4, SAFI.rtc, action)
         instance.nexthop = nexthop
         return instance
 
@@ -82,12 +97,13 @@ class RTC(NLRI):
         afi: AFI,
         safi: SAFI,
         origin: ASN,
-        rt: RouteTarget,
+        rt: RouteTarget | None,
         nexthop: Any = IP.NoNextHop,
         action: Action = Action.UNSET,
     ) -> 'RTC':
         """Legacy factory method for backward compatibility."""
-        instance = cls(afi, safi, action, origin, rt)
+        packed_origin = pack('!L', int(origin)) if rt is not None else None
+        instance = cls(packed_origin, rt, afi, safi, action)
         instance.nexthop = nexthop
         return instance
 
@@ -113,17 +129,23 @@ class RTC(NLRI):
         # RFC 7911 ADD-PATH is possible for RTC but not yet implemented
         # We reset ext com flag bits from the first byte in the packed RT
         # because in an RTC route these flags never appear.
-        if self.rt:
+        if self.rt and self._packed_origin:
             packedRT = self.rt.pack_attribute(negotiated)
-            return pack('!BLB', len(self), self.origin, RTC.resetFlags(packedRT[0])) + packedRT[1:]
+            return pack('!B', len(self)) + self._packed_origin + bytes([RTC.resetFlags(packedRT[0])]) + packedRT[1:]
         return pack('!B', 0)
 
     def index(self) -> bytes:
         # RTC uses negotiated in pack_nlri, so we can't use _pack_nlri_simple
         # Index should be stable regardless of negotiated, so build it directly
-        if self.rt:
+        if self.rt and self._packed_origin:
             packedRT = self.rt._pack()  # type: ignore[attr-defined]  # Use internal pack without negotiated
-            return Family.index(self) + pack('!BLB', len(self), self.origin, RTC.resetFlags(packedRT[0])) + packedRT[1:]  # type: ignore[no-any-return]
+            return (
+                Family.index(self)
+                + pack('!B', len(self))
+                + self._packed_origin
+                + bytes([RTC.resetFlags(packedRT[0])])
+                + packedRT[1:]
+            )  # type: ignore[no-any-return]
         return Family.index(self) + pack('!B', 0)
 
     @classmethod
@@ -133,21 +155,15 @@ class RTC(NLRI):
         length = bgp[0]
 
         if length == 0:
-            return cls(afi, safi, action, ASN(0), None), bgp[1:]
+            return cls(None, None, afi, safi, action), bgp[1:]
 
         if length < 8 * 4:
             raise Exception('incorrect RT length: %d (should be >=32,<=96)' % length)
 
         # We are reseting the flags on the RouteTarget extended
         # community, because they do not make sense for an RTC route
+        # Store origin as packed bytes directly from wire
+        packed_origin = bgp[1:5]
+        rt = RouteTarget.unpack_attribute(bytes([RTC.resetFlags(bgp[5])]) + bgp[6:13], negotiated)  # type: ignore[arg-type]
 
-        return (
-            cls(
-                afi,
-                safi,
-                action,
-                ASN(unpack('!L', bgp[1:5])[0]),
-                RouteTarget.unpack_attribute(bytes([RTC.resetFlags(bgp[5])]) + bgp[6:13], negotiated),  # type: ignore[arg-type]
-            ),
-            bgp[13:],
-        )
+        return cls(packed_origin, rt, afi, safi, action), bgp[13:]

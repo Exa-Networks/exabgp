@@ -51,7 +51,7 @@ from exabgp.configuration.l2vpn.parser import next_hop
 
 def _vpls_factory() -> VPLS:
     """Factory function for VPLS NLRI with empty fields."""
-    return VPLS(None, None, None, None, None)  # type: ignore[arg-type]
+    return VPLS.make_empty()
 
 
 class AnnounceVPLS(ParseAnnounce):
