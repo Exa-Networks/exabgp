@@ -158,7 +158,7 @@ def test_attributes_parse_multiple_attributes() -> None:
 def test_attributes_parse_as_path() -> None:
     """Test parsing AS_PATH attribute."""
     from exabgp.bgp.message.update.attribute.attributes import Attributes
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -169,7 +169,7 @@ def test_attributes_parse_as_path() -> None:
     attributes = Attributes.unpack(data, negotiated)
 
     assert 2 in attributes  # AS_PATH code
-    assert isinstance(attributes[2], ASPath)
+    assert isinstance(attributes[2], AS2Path)
 
 
 # =============================================================================

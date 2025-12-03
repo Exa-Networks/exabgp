@@ -17,6 +17,7 @@ from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
+from exabgp.bgp.message.update.attribute.aspath import AS2Path
 from exabgp.bgp.message.update.attribute.aspath import AS4Path
 from exabgp.bgp.message.update.attribute.aspath import SET
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE
@@ -50,6 +51,7 @@ __all__ = [
     'GenericAttribute',
     'Origin',
     'ASPath',
+    'AS2Path',
     'AS4Path',
     'SET',
     'SEQUENCE',
