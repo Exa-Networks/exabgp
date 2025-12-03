@@ -45,7 +45,7 @@ def test_inet_ipv4_pack_unpack_roundtrip(ipv4_bytes: int, mask: int, with_addpat
 
     # Convert integer to 4-byte representation
     ip_bytes = ipv4_bytes.to_bytes(4, 'big')
-    nlri.cidr = CIDR(ip_bytes, mask)
+    nlri.cidr = CIDR.make_cidr(ip_bytes, mask)
 
     # Add path info if testing addpath
     if with_addpath:
@@ -90,7 +90,7 @@ def test_inet_ipv6_pack_requires_negotiated(mask: int) -> None:
     if mask > 128:
         return
 
-    nlri.cidr = CIDR(ip_bytes, mask)
+    nlri.cidr = CIDR.make_cidr(ip_bytes, mask)
 
     # Create negotiated
     negotiated = create_negotiated()
@@ -116,7 +116,7 @@ def test_inet_ipv6_pack_requires_negotiated(mask: int) -> None:
 def test_inet_pack_with_different_actions(action: Action) -> None:
     """Test INET pack with different action types."""
     nlri = INET(AFI.ipv4, SAFI.unicast, action)
-    nlri.cidr = CIDR(b'\xc0\xa8\x01\x00', 24)
+    nlri.cidr = CIDR.make_cidr(b'\xc0\xa8\x01\x00', 24)
 
     negotiated = create_negotiated()
 
@@ -137,10 +137,10 @@ def test_inet_hash_includes_pathinfo(path_id: int) -> None:
     """Test that INET hash includes path_info for proper dictionary behavior."""
     # Create two identical NLRIs
     nlri1 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri1.cidr = CIDR(b'\xc0\xa8\x01\x00', 24)
+    nlri1.cidr = CIDR.make_cidr(b'\xc0\xa8\x01\x00', 24)
 
     nlri2 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri2.cidr = CIDR(b'\xc0\xa8\x01\x00', 24)
+    nlri2.cidr = CIDR.make_cidr(b'\xc0\xa8\x01\x00', 24)
 
     # Same path_info -> same hash
     path_bytes = path_id.to_bytes(4, 'big')
@@ -166,10 +166,10 @@ def test_inet_hash_includes_pathinfo(path_id: int) -> None:
 def test_inet_pack_size_varies_with_mask(mask1: int, mask2: int) -> None:
     """Test that packed NLRI size varies appropriately with mask length."""
     nlri1 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri1.cidr = CIDR(b'\xc0\xa8\x01\x00', mask1)
+    nlri1.cidr = CIDR.make_cidr(b'\xc0\xa8\x01\x00', mask1)
 
     nlri2 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri2.cidr = CIDR(b'\xc0\xa8\x01\x00', mask2)
+    nlri2.cidr = CIDR.make_cidr(b'\xc0\xa8\x01\x00', mask2)
 
     negotiated = create_negotiated()
 

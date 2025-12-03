@@ -114,7 +114,7 @@ def test_messages_packs_simple_ipv4_announcement() -> None:
 
     # Create a simple IPv4 route
     nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR(IP.pton('10.0.0.0'), 8)
+    nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
     nlri.nexthop = IP.create('192.0.2.1')
 
     # Create minimal attributes
@@ -157,7 +157,7 @@ def test_messages_packs_ipv4_withdrawal() -> None:
 
     # Create a withdrawal
     nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    nlri.cidr = CIDR(IP.pton('10.0.0.0'), 8)
+    nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
 
     attributes = Attributes()
 
@@ -208,7 +208,7 @@ def test_messages_include_withdraw_flag() -> None:
 
     # Create a withdrawal
     nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    nlri.cidr = CIDR(IP.pton('10.0.0.0'), 8)
+    nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
 
     attributes = Attributes()
     update = Update([nlri], attributes)
@@ -239,7 +239,7 @@ def test_messages_filters_by_negotiated_families() -> None:
 
     # Create IPv4 route (should be included)
     nlri_v4 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri_v4.cidr = CIDR(IP.pton('10.0.0.0'), 8)
+    nlri_v4.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
     nlri_v4.nexthop = IP.create('192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -283,7 +283,7 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
 
     # Create original route
     original_nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    original_nlri.cidr = CIDR(IP.pton('10.0.0.0'), 8)
+    original_nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
     original_nlri.nexthop = IP.create('192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -331,7 +331,7 @@ def test_roundtrip_ipv4_withdrawal() -> None:
 
     # Create withdrawal
     nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    nlri.cidr = CIDR(IP.pton('192.168.0.0'), 16)
+    nlri.cidr = CIDR.make_cidr(IP.pton('192.168.0.0'), 16)
 
     attributes = Attributes()
     update = Update([nlri], attributes)
@@ -367,7 +367,7 @@ def test_roundtrip_multiple_nlris() -> None:
     nlris = []
     for prefix, prefixlen in [('10.0.0.0', 8), ('10.1.0.0', 16), ('10.2.0.0', 16)]:
         nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR(IP.pton(prefix), prefixlen)
+        nlri.cidr = CIDR.make_cidr(IP.pton(prefix), prefixlen)
         nlri.nexthop = IP.create('192.0.2.1')
         nlris.append(nlri)
 
@@ -410,7 +410,7 @@ def test_roundtrip_with_multiple_attributes() -> None:
 
     # Create route
     nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR(IP.pton('10.0.0.0'), 8)
+    nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
     nlri.nexthop = IP.create('192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -461,14 +461,14 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
 
     # Create withdrawals
     withdraw1 = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    withdraw1.cidr = CIDR(IP.pton('172.16.0.0'), 12)
+    withdraw1.cidr = CIDR.make_cidr(IP.pton('172.16.0.0'), 12)
 
     withdraw2 = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    withdraw2.cidr = CIDR(IP.pton('192.168.0.0'), 16)
+    withdraw2.cidr = CIDR.make_cidr(IP.pton('192.168.0.0'), 16)
 
     # Create announcements
     announce1 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    announce1.cidr = CIDR(IP.pton('10.0.0.0'), 8)
+    announce1.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
     announce1.nexthop = IP.create('192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -524,7 +524,7 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
 
     # Create IPv6 route
     nlri = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
+    nlri.cidr = CIDR.make_cidr(IPv6.create('2001:db8::').pack_ip(), 32)
     nlri.nexthop = IPv6.create('2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -559,7 +559,7 @@ def test_roundtrip_ipv6_announcement() -> None:
 
     # Create IPv6 route
     nlri = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
+    nlri.cidr = CIDR.make_cidr(IPv6.create('2001:db8::').pack_ip(), 32)
     nlri.nexthop = IPv6.create('2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -610,12 +610,12 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
 
     # Create IPv4 route
     nlri_v4 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri_v4.cidr = CIDR(IP.pton('10.0.0.0'), 8)
+    nlri_v4.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
     nlri_v4.nexthop = IP.create('192.0.2.1')
 
     # Create IPv6 route
     nlri_v6 = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    nlri_v6.cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
+    nlri_v6.cidr = CIDR.make_cidr(IPv6.create('2001:db8::').pack_ip(), 32)
     nlri_v6.nexthop = IPv6.create('2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -661,7 +661,7 @@ def test_messages_splits_large_nlri_set() -> None:
     nlris = []
     for i in range(100):  # 100 routes
         nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR(IP.pton(f'10.{i % 256}.0.0'), 16)
+        nlri.cidr = CIDR.make_cidr(IP.pton(f'10.{i % 256}.0.0'), 16)
         nlri.nexthop = IP.create('192.0.2.1')
         nlris.append(nlri)
 
@@ -702,7 +702,7 @@ def test_messages_respects_negotiated_msg_size() -> None:
     nlris = []
     for i in range(20):
         nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR(IP.pton(f'10.{i}.0.0'), 16)
+        nlri.cidr = CIDR.make_cidr(IP.pton(f'10.{i}.0.0'), 16)
         nlri.nexthop = IP.create('192.0.2.1')
         nlris.append(nlri)
 
@@ -740,7 +740,7 @@ def test_messages_handles_large_attributes() -> None:
 
     # Create route
     nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR(IP.pton('10.0.0.0'), 8)
+    nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
     nlri.nexthop = IP.create('192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -792,13 +792,13 @@ def test_integration_full_update_cycle() -> None:
     # Withdrawals
     for prefix, prefixlen in [('172.16.0.0', 12), ('192.168.0.0', 16)]:
         nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-        nlri.cidr = CIDR(IP.pton(prefix), prefixlen)
+        nlri.cidr = CIDR.make_cidr(IP.pton(prefix), prefixlen)
         nlris.append(nlri)
 
     # Announcements
     for prefix, prefixlen in [('10.0.0.0', 8), ('10.1.0.0', 16), ('10.2.0.0', 16)]:
         nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR(IP.pton(prefix), prefixlen)
+        nlri.cidr = CIDR.make_cidr(IP.pton(prefix), prefixlen)
         nlri.nexthop = IP.create('192.0.2.1')
         nlris.append(nlri)
 
@@ -854,7 +854,7 @@ def test_integration_empty_attributes_for_withdrawal_only() -> None:
     nlris = []
     for prefix, prefixlen in [('10.0.0.0', 8), ('192.168.0.0', 16)]:
         nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-        nlri.cidr = CIDR(IP.pton(prefix), prefixlen)
+        nlri.cidr = CIDR.make_cidr(IP.pton(prefix), prefixlen)
         nlris.append(nlri)
 
     # Empty attributes
@@ -893,14 +893,14 @@ def test_integration_sorting_and_grouping() -> None:
 
     # Mix of withdrawals and announcements in random order
     nlri1 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri1.cidr = CIDR(IP.pton('10.2.0.0'), 16)
+    nlri1.cidr = CIDR.make_cidr(IP.pton('10.2.0.0'), 16)
     nlri1.nexthop = IP.create('192.0.2.1')
 
     nlri2 = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    nlri2.cidr = CIDR(IP.pton('172.16.0.0'), 12)
+    nlri2.cidr = CIDR.make_cidr(IP.pton('172.16.0.0'), 12)
 
     nlri3 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri3.cidr = CIDR(IP.pton('10.1.0.0'), 16)
+    nlri3.cidr = CIDR.make_cidr(IP.pton('10.1.0.0'), 16)
     nlri3.nexthop = IP.create('192.0.2.1')
 
     nlris = [nlri1, nlri2, nlri3]

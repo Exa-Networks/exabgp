@@ -369,7 +369,7 @@ class ParseStaticRoute(Section):
         # generate the new routes
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
-            new_cidr = CIDR(pack_int(afi, ip), cut)
+            new_cidr = CIDR.make_cidr(pack_int(afi, ip), cut)
             new_nlri: Any = klass.from_cidr(new_cidr, afi, safi, Action.ANNOUNCE)
             new_nlri.nexthop = nexthop  # nexthop can be NextHopSelf
             if path_info is not None:

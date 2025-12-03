@@ -80,7 +80,7 @@ def test_mpreach_ipv4_unicast() -> None:
     from exabgp.bgp.message import Action
 
     # Create IPv4 unicast prefix
-    cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
+    cidr = CIDR.make_cidr(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     prefix.nexthop = IPv4.create('192.0.2.1')
 
@@ -112,7 +112,7 @@ def test_mpreach_ipv6_unicast() -> None:
     from exabgp.bgp.message import Action
 
     # Create IPv6 unicast prefix
-    cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
+    cidr = CIDR.make_cidr(IPv6.create('2001:db8::').pack_ip(), 32)
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
     prefix.nexthop = IPv6.create('2001:db8::1')
 
@@ -152,7 +152,7 @@ def test_mpreach_multiple_prefixes() -> None:
 
     prefixes = []
     for ip, mask in prefix_cidrs:
-        cidr = CIDR(IPv4.create(ip).pack_ip(), mask)
+        cidr = CIDR.make_cidr(IPv4.create(ip).pack_ip(), mask)
         prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
         prefix.nexthop = nexthop
         prefixes.append(prefix)
@@ -179,7 +179,7 @@ def test_mpreach_pack_ipv4() -> None:
     from exabgp.bgp.message import Action
 
     # Create IPv4 unicast prefix
-    cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
+    cidr = CIDR.make_cidr(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     prefix.nexthop = IPv4.create('192.0.2.1')
 
@@ -220,7 +220,7 @@ def test_mpreach_nexthop_ipv6_global() -> None:
     from exabgp.bgp.message import Action
 
     # Create IPv6 unicast prefix with global next-hop
-    cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
+    cidr = CIDR.make_cidr(IPv6.create('2001:db8::').pack_ip(), 32)
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
     prefix.nexthop = IPv6.create('2001:db8::1')  # Global next-hop
 
@@ -251,7 +251,7 @@ def test_mpunreach_ipv4_unicast() -> None:
     from exabgp.bgp.message import Action
 
     # Create IPv4 unicast prefix to withdraw
-    cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
+    cidr = CIDR.make_cidr(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
     # Create MP_UNREACH_NLRI
@@ -280,7 +280,7 @@ def test_mpunreach_ipv6_unicast() -> None:
     from exabgp.bgp.message import Action
 
     # Create IPv6 unicast prefix to withdraw
-    cidr = CIDR(IPv6.create('2001:db8::').pack_ip(), 32)
+    cidr = CIDR.make_cidr(IPv6.create('2001:db8::').pack_ip(), 32)
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
 
     # Create MP_UNREACH_NLRI
@@ -314,7 +314,7 @@ def test_mpunreach_multiple_prefixes() -> None:
 
     prefixes = []
     for ip, mask in prefix_cidrs:
-        cidr = CIDR(IPv4.create(ip).pack_ip(), mask)
+        cidr = CIDR.make_cidr(IPv4.create(ip).pack_ip(), mask)
         prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
         prefixes.append(prefix)
 
@@ -341,7 +341,7 @@ def test_mpunreach_pack_ipv4() -> None:
     from exabgp.bgp.message import Action
 
     # Create IPv4 unicast prefix to withdraw
-    cidr = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
+    cidr = CIDR.make_cidr(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
     # Create MP_UNREACH_NLRI
@@ -502,11 +502,11 @@ def test_mpreach_equality() -> None:
     from exabgp.bgp.message import Action
 
     # Create two identical MP_REACH_NLRI attributes
-    cidr1 = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
+    cidr1 = CIDR.make_cidr(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     prefix1.nexthop = IPv4.create('192.0.2.1')
 
-    cidr2 = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
+    cidr2 = CIDR.make_cidr(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     prefix2.nexthop = IPv4.create('192.0.2.1')
 
@@ -528,10 +528,10 @@ def test_mpunreach_equality() -> None:
     from exabgp.bgp.message import Action
 
     # Create two identical MP_UNREACH_NLRI attributes
-    cidr1 = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
+    cidr1 = CIDR.make_cidr(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
-    cidr2 = CIDR(IPv4.create('10.0.0.0').pack_ip(), 24)
+    cidr2 = CIDR.make_cidr(IPv4.create('10.0.0.0').pack_ip(), 24)
     prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
     mpunreach1 = MPURNLRI(AFI.ipv4, SAFI.unicast, [prefix1])

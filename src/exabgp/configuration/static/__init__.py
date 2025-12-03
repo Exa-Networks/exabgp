@@ -76,7 +76,7 @@ def route(tokeniser: Any) -> list[Change]:
     check: Callable[[Change, AFI], bool] = _check_true
 
     # Create CIDR first (packed-bytes-first pattern)
-    cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
+    cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
 
     nlri: INET
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
@@ -135,7 +135,7 @@ def attributes(tokeniser: Any) -> list[Change]:
     tokeniser.afi = ipmask.afi
 
     # Create CIDR first (packed-bytes-first pattern)
-    cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
+    cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
 
     nlri: INET
     if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
@@ -195,7 +195,7 @@ def attributes(tokeniser: Any) -> list[Change]:
 
         ipmask = prefix(tokeniser)
         # Create new NLRI of same type (nlri is typed as INET, all subclasses share same interface)
-        new_cidr = CIDR(ipmask.pack_ip(), ipmask.mask)
+        new_cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
         new_nlri: INET = nlri.__class__.from_cidr(new_cidr, nlri.afi, nlri.safi, Action.UNSET)
         if labels:
             new_nlri.labels = labels

@@ -34,25 +34,18 @@ class CIDR:
 
     NOCIDR: ClassVar['CIDR']
 
-    def __init__(self, packed: bytes, mask: int) -> None:
-        """Create a CIDR from packed IP bytes and prefix mask.
+    def __init__(self, nlri: bytes, afi: AFI) -> None:
+        """Create a CIDR from NLRI wire format bytes.
 
         Args:
-            packed: Full IP address bytes (4 bytes for IPv4, 16 for IPv6)
-            mask: Prefix length (0-32 for IPv4, 0-128 for IPv6)
+            nlri: NLRI wire format bytes [mask][truncated_ip...]
+            afi: Address family (ipv4 or ipv6) - required for correct padding
 
         Raises:
-            ValueError: If packed length is invalid or mask is out of range
+            Notify: If NLRI data is too short for the mask
         """
-        if packed:
-            if len(packed) not in (CIDR_IPV4_LENGTH, CIDR_IPV6_LENGTH):
-                raise ValueError(
-                    f'CIDR packed must be {CIDR_IPV4_LENGTH} or {CIDR_IPV6_LENGTH} bytes, got {len(packed)}'
-                )
-            max_mask = 32 if len(packed) == CIDR_IPV4_LENGTH else CIDR_MAX_MASK
-            if not (0 <= mask <= max_mask):
-                raise ValueError(f'CIDR mask must be 0-{max_mask}, got {mask}')
-        self._packed = packed
+        prefix, mask = self.decode(afi, nlri)
+        self._packed = prefix
         self._mask = mask
 
     @classmethod
@@ -73,22 +66,22 @@ class CIDR:
 
         Returns:
             New CIDR instance
+
+        Raises:
+            ValueError: If packed length is invalid or mask is out of range
         """
-        return cls(packed, mask)
-
-    @classmethod
-    def make_from_nlri(cls, afi: AFI, nlri: bytes) -> 'CIDR':
-        """Factory method to create a CIDR from NLRI wire format.
-
-        Args:
-            afi: Address family (ipv4 or ipv6) - determines padding size
-            nlri: NLRI wire format bytes [mask][truncated_ip...]
-
-        Returns:
-            New CIDR instance with full IP bytes (padded)
-        """
-        prefix, mask = cls.decode(afi, nlri)
-        return cls(prefix, mask)
+        if packed:
+            if len(packed) not in (CIDR_IPV4_LENGTH, CIDR_IPV6_LENGTH):
+                raise ValueError(
+                    f'CIDR packed must be {CIDR_IPV4_LENGTH} or {CIDR_IPV6_LENGTH} bytes, got {len(packed)}'
+                )
+            max_mask = 32 if len(packed) == CIDR_IPV4_LENGTH else CIDR_MAX_MASK
+            if not (0 <= mask <= max_mask):
+                raise ValueError(f'CIDR mask must be 0-{max_mask}, got {mask}')
+        instance = object.__new__(cls)
+        instance._packed = packed
+        instance._mask = mask
+        return instance
 
     @property
     def mask(self) -> int:
@@ -162,9 +155,9 @@ class CIDR:
 
     @classmethod
     def unpack_cidr(cls, data: bytes) -> CIDR:
+        # Infer AFI from wire format using heuristic: IPv6 if mask > 32 or data too long for IPv4
         afi = AFI.ipv6 if len(data) > CIDR_IPV6_LENGTH_BYTES or data[0] > CIDR_IPV4_MAX_MASK else AFI.ipv4
-        prefix, mask = cls.decode(afi, data)
-        return cls(prefix, mask)
+        return cls(data, afi)
 
     def __len__(self) -> int:
         return CIDR.size(self.mask) + 1
