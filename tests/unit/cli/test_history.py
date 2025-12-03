@@ -427,6 +427,10 @@ class TestHistoryTracker:
         """Test XDG_CONFIG_HOME as fallback."""
         temp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
         temp_dir.chmod(0o700)
+
+        # Mock home directory to temp_dir to avoid interference from real home directory
+        monkeypatch.setattr(Path, 'home', lambda: temp_dir)
+
         config_dir = temp_dir / 'config'
         config_dir.mkdir(parents=True, exist_ok=True)
         config_dir.chmod(0o700)
@@ -458,10 +462,14 @@ class TestHistoryTracker:
         # Mock home directory
         monkeypatch.setattr(Path, 'home', lambda: temp_dir)
 
-        # Mock XDG paths to non-existent locations
+        # Mock XDG paths - create state dir with proper permissions for migration
         state_dir = temp_dir / 'state'
         state_dir.mkdir(parents=True, exist_ok=True)
         state_dir.chmod(0o700)
+        # Pre-create the exabgp subdirectory to ensure migration succeeds
+        exabgp_dir = state_dir / 'exabgp'
+        exabgp_dir.mkdir(parents=True, exist_ok=True)
+        exabgp_dir.chmod(0o700)
         monkeypatch.setenv('XDG_STATE_HOME', str(state_dir))
 
         tracker = HistoryTracker(enabled=True)
