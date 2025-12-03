@@ -366,7 +366,7 @@ def test_atomic_aggregate_zero_length() -> None:
     from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 
     # Create ATOMIC_AGGREGATE
-    atomic = AtomicAggregate()
+    atomic = AtomicAggregate.make_atomic_aggregate()
 
     # Verify representation (__repr__ returns empty string)
     assert str(atomic) == ''
@@ -388,7 +388,7 @@ def test_atomic_aggregate_presence() -> None:
     from exabgp.bgp.message.update.attribute import Attribute
 
     # Create ATOMIC_AGGREGATE
-    AtomicAggregate()
+    AtomicAggregate.make_atomic_aggregate()
 
     # Verify it's well-known discretionary
     assert AtomicAggregate.ID == Attribute.CODE.ATOMIC_AGGREGATE
