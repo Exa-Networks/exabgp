@@ -357,5 +357,3 @@ def status(self: Command, reactor: Reactor, service: str, line: str, use_json: b
 
     reactor.processes.answer_done(service)
     return True
-
-
