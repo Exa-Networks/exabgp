@@ -35,7 +35,7 @@ from exabgp.protocol.family import AFI, SAFI
 
 def make_context(afi: AFI, safi: SAFI) -> OpenContext:
     """Create a default OpenContext for testing."""
-    return OpenContext(
+    return OpenContext.make_open_context(
         afi=afi,
         safi=safi,
         addpath=False,

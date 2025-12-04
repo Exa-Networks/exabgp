@@ -91,7 +91,7 @@ def create_negotiated_mock(families: Any = None, asn4: Any = False, msg_size: An
 
     # Add nlri_context method that returns a proper OpenContext
     def nlri_context(afi: AFI, safi: SAFI) -> OpenContext:
-        return OpenContext(
+        return OpenContext.make_open_context(
             afi=afi,
             safi=safi,
             addpath=False,
