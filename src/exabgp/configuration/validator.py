@@ -267,7 +267,7 @@ class FlagValidator(Validator[bool]):
         if not value or value.lower() in ('', 'true'):
             return True
         raise ValueError(
-            f"'{value}' is not valid for a presence flag\n" f'  Flags are set by presence alone (no value needed)'
+            f"'{value}' is not valid for a presence flag\n  Flags are set by presence alone (no value needed)"
         )
 
     def to_schema(self) -> dict[str, Any]:
@@ -311,7 +311,7 @@ class EnumerationValidator(Validator[str]):
 
     def describe(self) -> str:
         if self.choices:
-            return f"one of: {', '.join(self.choices)}"
+            return f'one of: {", ".join(self.choices)}'
         return 'enumeration'
 
 
@@ -415,7 +415,7 @@ class IPPrefixValidator(Validator['IPRange']):
             # Validate host bits are zero
             if iprange.address() & iprange.mask.hostmask() != 0:
                 raise ValueError(
-                    f"'{value}' is not a valid network\n" f'  Host bits must be zero for the given prefix length'
+                    f"'{value}' is not a valid network\n  Host bits must be zero for the given prefix length"
                 )
 
             return iprange
@@ -540,7 +540,7 @@ class RouteDistinguisherValidator(Validator['RouteDistinguisher']):
         try:
             suffix = int(value[separator + 1 :])
         except ValueError:
-            raise ValueError(f"'{value}' is not a valid route-distinguisher\n" f'  Suffix must be a number') from None
+            raise ValueError(f"'{value}' is not a valid route-distinguisher\n  Suffix must be a number") from None
 
         # Type 1: IPv4:nn (IPv4 address administrator)
         if '.' in prefix:
@@ -569,7 +569,7 @@ class RouteDistinguisherValidator(Validator['RouteDistinguisher']):
             rtd = bytes([0, 2]) + pack('!L', number) + pack('!H', suffix)
         else:
             raise ValueError(
-                f"'{value}' is not a valid route-distinguisher\n" f'  ASN and suffix out of range for RD formats'
+                f"'{value}' is not a valid route-distinguisher\n  ASN and suffix out of range for RD formats"
             )
 
         return RouteDistinguisher(rtd)
@@ -647,7 +647,7 @@ class RouteTargetValidator(Validator['ExtendedCommunity']):
             community_bytes = pack('!2sLH', bytes([0x02, 0x02]), asn, suffix)
         else:
             raise ValueError(
-                f"'{value}' is not a valid route-target\n" f'  ASN and suffix out of range for route-target formats'
+                f"'{value}' is not a valid route-target\n  ASN and suffix out of range for route-target formats"
             )
 
         return ExtendedCommunity.unpack_attribute(community_bytes, None)

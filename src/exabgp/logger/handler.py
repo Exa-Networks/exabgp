@@ -50,7 +50,7 @@ def _get_syslog_address() -> str:
         now = time.strftime('%H:%M:%S')
         pid = os.getpid()
         print(
-            f'{now} {pid:<6} {"startup":<15} ' f'syslog socket {path} does not exist - syslog logging may not work',
+            f'{now} {pid:<6} {"startup":<15} syslog socket {path} does not exist - syslog logging may not work',
             file=sys.stderr,
         )
     return path
