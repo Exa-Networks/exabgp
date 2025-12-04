@@ -80,13 +80,13 @@ class INET(NLRI):
 | Wave | Category | Status | Classes |
 |------|----------|--------|---------|
 | 1 | Simple Attributes | ✅ COMPLETE | 4 |
-| 2 | Complex Attributes | ✅ COMPLETE | 8 |
+| 2 | Complex Attributes | ✅ COMPLETE | 10 |
 | 3 | Community Attributes | ✅ COMPLETE | ~20 |
-| 4 | MP/SR/BGP-LS Attributes | 🔄 PENDING | ~50 |
+| 4 | MP/SR/BGP-LS Attributes | 🔄 PARTIAL | ~50 (~28 done) |
 | 5 | Qualifiers | ✅ COMPLETE | 5 |
 | 6 | NLRI Types | 🔄 PARTIAL | ~10 |
 | 7 | EVPN/BGP-LS/MUP/MVPN NLRI | ✅ COMPLETE | ~20 |
-| 8 | Messages | ✅ COMPLETE | 5 |
+| 8 | Messages | ✅ COMPLETE | 6 |
 
 **See:** [progress.md](progress.md) for detailed tracking of each class.
 

@@ -123,14 +123,17 @@ class MPRNLRI(Attribute, Family):
         return self._nlris_cache
 ```
 
-**OpenContext:** Minimal frozen dataclass (in `negotiated.py`) containing:
+**OpenContext:** Class with caching (in `negotiated.py`) containing:
 - `afi: AFI` - Address Family Identifier
 - `safi: SAFI` - Subsequent Address Family Identifier
 - `addpath: bool` - AddPath enabled for this AFI/SAFI
 - `asn4: bool` - 4-byte ASN mode
 - `msg_size: int` - Max UPDATE size (4096 standard, 65535 extended)
 
-**Negotiated.nlri_context(afi, safi):** Method to build `OpenContext` from negotiated state.
+Uses `__slots__` and class-level `_cache` dict. Factory method `make_open_context()` returns
+cached instances for identical parameter combinations.
+
+**Negotiated.nlri_context(afi, safi):** Method to build cached `OpenContext` from negotiated state.
 
 **Key changes:**
 1. `__init__(packed, context)` - stores wire bytes for unpack path
@@ -329,8 +332,15 @@ class MPRNLRI(Attribute, Family):
 
 ---
 
-## Recent Progress (2025-12-04)
+## Recent Progress
 
+### 2025-12-04 (Session 2)
+- Converted MPRNLRI/MPURNLRI to hybrid packed-bytes pattern
+- Added `OpenContext` class with `make_open_context()` caching factory
+- Added `Negotiated.nlri_context(afi, safi)` method
+- All tests passing: 2689 unit tests, 72 encoding, 18 decoding
+
+### 2025-12-04 (Session 1)
 Converted BGP-LS base classes and key subclasses to packed-bytes-first pattern:
 - `BaseLS`, `FlagLS`, `GenericLSID` - base classes now use `__init__(packed: bytes)`
 - 15+ link attributes (AdminGroup, IgpMetric, MaxBw, SrAdjacency, Srv6EndX, etc.)
@@ -338,15 +348,12 @@ Converted BGP-LS base classes and key subclasses to packed-bytes-first pattern:
 - 3 prefix attributes (PrefixMetric, SrPrefix)
 - All with proper `@property` accessors and factory methods
 
-All tests passing: 2690 unit tests, 72 encoding, 18 decoding.
-
 ---
 
 ## Next Priority
 
-**Remaining Wave 4 classes** (~24 pending):
-1. MP attributes (`MPRNLRI`, `MPURNLRI`) - need architectural decision
-2. SR attributes (5 classes)
-3. Remaining BGP-LS node attributes (IsisArea, LocalTeRid, NodeOpaque, SrAlgorithm)
-4. Remaining BGP-LS prefix attributes (IgpExTags, IgpFlags, IgpTags, etc.)
-5. Remaining SRv6 attributes (Srv6Capabilities, Srv6Locator, Srv6SidStructure)
+**Remaining Wave 4 classes** (~22 pending):
+1. SR attributes (5 classes) - `SrLabelIndex`, `SrGb`, etc.
+2. Remaining BGP-LS node attributes (IsisArea, LocalTeRid, NodeOpaque, SrAlgorithm)
+3. Remaining BGP-LS prefix attributes (IgpExTags, IgpFlags, IgpTags, etc.)
+4. Remaining SRv6 attributes (Srv6Capabilities, Srv6Locator, Srv6SidStructure)
