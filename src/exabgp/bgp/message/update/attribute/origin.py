@@ -61,7 +61,7 @@ class Origin(Attribute):
         return cls(data)
 
     @classmethod
-    def make_origin(cls, origin: int) -> 'Origin':
+    def from_int(cls, origin: int) -> 'Origin':
         """Create Origin from semantic value with validation.
 
         Args:
@@ -113,9 +113,9 @@ class Origin(Attribute):
     @classmethod
     def setCache(cls) -> None:
         # there can only be three, build them now
-        IGP = Origin.make_origin(Origin.IGP)
-        EGP = Origin.make_origin(Origin.EGP)
-        INC = Origin.make_origin(Origin.INCOMPLETE)
+        IGP = Origin.from_int(Origin.IGP)
+        EGP = Origin.from_int(Origin.EGP)
+        INC = Origin.from_int(Origin.INCOMPLETE)
 
         cls.cache[Attribute.CODE.ORIGIN][IGP.pack_attribute()] = IGP
         cls.cache[Attribute.CODE.ORIGIN][EGP.pack_attribute()] = EGP

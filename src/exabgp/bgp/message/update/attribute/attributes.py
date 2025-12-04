@@ -206,7 +206,7 @@ class Attributes(dict):
         message = b''
 
         default = {
-            Attribute.CODE.ORIGIN: lambda left, right: Origin.make_origin(Origin.IGP),
+            Attribute.CODE.ORIGIN: lambda left, right: Origin.from_int(Origin.IGP),
             Attribute.CODE.AS_PATH: lambda left, right: (
                 AS2Path.make_aspath([])
                 if left == right
@@ -220,9 +220,7 @@ class Attributes(dict):
                     ],
                 )
             ),
-            Attribute.CODE.LOCAL_PREF: lambda left, right: LocalPreference.make_localpref(100)
-            if left == right
-            else NOTHING,
+            Attribute.CODE.LOCAL_PREF: lambda left, right: LocalPreference.from_int(100) if left == right else NOTHING,
         }
 
         skip = {

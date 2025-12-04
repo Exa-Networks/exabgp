@@ -92,7 +92,7 @@ def test_origin_igp() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Create ORIGIN IGP
-    origin = Origin.make_origin(Origin.IGP)
+    origin = Origin.from_int(Origin.IGP)
 
     # Verify value
     assert origin.origin == Origin.IGP
@@ -117,7 +117,7 @@ def test_origin_egp() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Create ORIGIN EGP
-    origin = Origin.make_origin(Origin.EGP)
+    origin = Origin.from_int(Origin.EGP)
 
     # Verify value
     assert origin.origin == Origin.EGP
@@ -138,7 +138,7 @@ def test_origin_incomplete() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Create ORIGIN INCOMPLETE
-    origin = Origin.make_origin(Origin.INCOMPLETE)
+    origin = Origin.from_int(Origin.INCOMPLETE)
 
     # Verify value
     assert origin.origin == Origin.INCOMPLETE
@@ -165,7 +165,7 @@ def test_origin_round_trip() -> None:
         (Origin.INCOMPLETE, 'incomplete'),
     ]:
         # Create via factory method
-        original = Origin.make_origin(origin_value)
+        original = Origin.from_int(origin_value)
 
         # Verify semantic value
         assert original.origin == origin_value
@@ -200,7 +200,7 @@ def test_origin_cache_uses_factory() -> None:
     assert len(cache) >= 3
 
     # All cached instances should have correct origin values
-    igp_cached = Origin.make_origin(Origin.IGP)
+    igp_cached = Origin.from_int(Origin.IGP)
     assert igp_cached.origin == Origin.IGP
 
 
@@ -220,7 +220,7 @@ def test_nexthop_valid_ipv4() -> None:
 
     # Create NEXT_HOP
     nh_ip = '192.0.2.1'
-    nexthop = NextHop.make_nexthop(nh_ip)
+    nexthop = NextHop.from_string(nh_ip)
 
     # Verify value
     assert str(nexthop) == '192.0.2.1'  # __repr__ returns just the IP
@@ -245,7 +245,7 @@ def test_nexthop_zero_address() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create NEXT_HOP with 0.0.0.0
-    nexthop = NextHop.make_nexthop('0.0.0.0')
+    nexthop = NextHop.from_string('0.0.0.0')
 
     # Should create successfully
     assert str(nexthop) == '0.0.0.0'  # __repr__ returns just the IP
@@ -265,7 +265,7 @@ def test_nexthop_self() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create NEXT_HOP pointing to self
-    nexthop = NextHop.make_nexthop('10.0.0.1')
+    nexthop = NextHop.from_string('10.0.0.1')
 
     assert str(nexthop) == '10.0.0.1'  # __repr__ returns just the IP
 
@@ -282,7 +282,7 @@ def test_nexthop_third_party() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create third-party NEXT_HOP
-    nexthop = NextHop.make_nexthop('10.0.0.254')
+    nexthop = NextHop.from_string('10.0.0.254')
 
     assert '10.0.0.254' in str(nexthop)
 
@@ -306,7 +306,7 @@ def test_localpref_basic() -> None:
     from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 
     # Create LOCAL_PREF with value 100 (common default)
-    localpref = LocalPreference.make_localpref(100)
+    localpref = LocalPreference.from_int(100)
 
     # Verify value
     assert localpref.localpref == 100
@@ -328,7 +328,7 @@ def test_localpref_high_preference() -> None:
     from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 
     # Create high LOCAL_PREF
-    localpref = LocalPreference.make_localpref(200)
+    localpref = LocalPreference.from_int(200)
 
     assert localpref.localpref == 200
 
@@ -503,7 +503,7 @@ def test_med_basic() -> None:
 
     # Create MED
     med_value = 100
-    med = MED.make_med(med_value)
+    med = MED.from_int(med_value)
 
     # Verify value
     assert med.med == med_value
@@ -540,8 +540,8 @@ def test_med_comparison() -> None:
     from exabgp.bgp.message.update.attribute.med import MED
 
     # Create MEDs with different values
-    med_low = MED.make_med(50)
-    med_high = MED.make_med(200)
+    med_low = MED.from_int(50)
+    med_high = MED.from_int(200)
 
     # Lower MED should be preferred
     assert med_low.med < med_high.med
@@ -560,7 +560,7 @@ def test_med_round_trip() -> None:
 
     for med_value in [0, 100, 1000, 4294967295]:
         # Create via factory method
-        original = MED.make_med(med_value)
+        original = MED.from_int(med_value)
 
         # Verify semantic value
         assert original.med == med_value
@@ -601,7 +601,7 @@ def test_originator_id_basic() -> None:
 
     # Create ORIGINATOR_ID
     originator_ip = '192.0.2.1'
-    originator_id = OriginatorID.make_originatorid(originator_ip)
+    originator_id = OriginatorID.from_string(originator_ip)
 
     # Verify representation
     assert '192.0.2.1' in str(originator_id)
@@ -622,7 +622,7 @@ def test_originator_id_loop_prevention() -> None:
     from exabgp.bgp.message.update.attribute import Attribute
 
     # Create ORIGINATOR_ID
-    OriginatorID.make_originatorid('192.0.2.1')
+    OriginatorID.from_string('192.0.2.1')
 
     # Verify it's optional non-transitive
     assert OriginatorID.ID == Attribute.CODE.ORIGINATOR_ID
@@ -702,7 +702,7 @@ def test_aigp_basic() -> None:
 
     # Create AIGP with metric value using factory method
     metric = 1000
-    aigp = AIGP.make_aigp(metric)
+    aigp = AIGP.from_int(metric)
 
     # Verify metric value via property
     assert aigp.aigp == metric
@@ -730,8 +730,8 @@ def test_aigp_accumulation() -> None:
     # Create AIGPs with different metrics using factory method
     metric1 = 1000
     metric2 = 2000
-    aigp1 = AIGP.make_aigp(metric1)
-    aigp2 = AIGP.make_aigp(metric2)
+    aigp1 = AIGP.from_int(metric1)
+    aigp2 = AIGP.from_int(metric2)
 
     # Verify metric values via property
     assert aigp1.aigp == metric1
@@ -847,7 +847,7 @@ def test_nexthop_pack_unpack_roundtrip() -> None:
 
     # Create NEXT_HOP
     original_ip = '192.0.2.1'
-    nexthop = NextHop.make_nexthop(original_ip)
+    nexthop = NextHop.from_string(original_ip)
 
     # Pack the attribute
     packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
@@ -868,14 +868,14 @@ def test_nexthop_equality() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Create two identical next hops
-    nh1 = NextHop.make_nexthop('192.0.2.1')
-    nh2 = NextHop.make_nexthop('192.0.2.1')
+    nh1 = NextHop.from_string('192.0.2.1')
+    nh2 = NextHop.from_string('192.0.2.1')
 
     # Should be equal
     assert nh1 == nh2
 
     # Different next hops
-    nh3 = NextHop.make_nexthop('192.0.2.2')
+    nh3 = NextHop.from_string('192.0.2.2')
     assert nh1 != nh3
 
 
@@ -1016,7 +1016,7 @@ def test_originator_id_pack_unpack_roundtrip() -> None:
 
     # Create original
     original_ip = '192.0.2.1'
-    original = OriginatorID.make_originatorid(original_ip)
+    original = OriginatorID.from_string(original_ip)
 
     # Pack
     packed = original.pack_attribute(create_negotiated())
@@ -1038,8 +1038,8 @@ def test_originator_id_equality() -> None:
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
     # Create two with same IP
-    oid1 = OriginatorID.make_originatorid('192.0.2.1')
-    oid2 = OriginatorID.make_originatorid('192.0.2.1')
+    oid1 = OriginatorID.from_string('192.0.2.1')
+    oid2 = OriginatorID.from_string('192.0.2.1')
 
     # Should be equal (note: implementation only checks ID and FLAG)
     assert oid1 == oid2
@@ -1051,8 +1051,8 @@ def test_originator_id_different_ips() -> None:
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
     # Create with different IPs
-    oid1 = OriginatorID.make_originatorid('192.0.2.1')
-    oid2 = OriginatorID.make_originatorid('192.0.2.2')
+    oid1 = OriginatorID.from_string('192.0.2.1')
+    oid2 = OriginatorID.from_string('192.0.2.2')
 
     # They are equal by implementation (only checks ID and FLAG)
     # But packed data is different
@@ -1063,7 +1063,7 @@ def test_originator_id_inherits_ipv4() -> None:
     """Test ORIGINATOR_ID inherits IPv4 functionality."""
     from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
-    oid = OriginatorID.make_originatorid('192.0.2.1')
+    oid = OriginatorID.from_string('192.0.2.1')
 
     # Should have IPv4 methods
     assert hasattr(oid, 'pack_ip')
@@ -1204,7 +1204,7 @@ def test_aigp_pack_unpack_roundtrip() -> None:
 
     # Create AIGP using factory method
     metric = 5000
-    original = AIGP.make_aigp(metric)
+    original = AIGP.from_int(metric)
 
     # Create negotiated mock with AIGP support
     negotiated = Mock()
@@ -1228,8 +1228,8 @@ def test_aigp_equality() -> None:
 
     # Create two identical AIGPs using factory method
     metric = 1000
-    aigp1 = AIGP.make_aigp(metric)
-    aigp2 = AIGP.make_aigp(metric)
+    aigp1 = AIGP.from_int(metric)
+    aigp2 = AIGP.from_int(metric)
 
     # Should be equal
     assert aigp1 == aigp2
@@ -1241,7 +1241,7 @@ def test_aigp_no_pack_without_negotiation() -> None:
     from exabgp.bgp.message.update.attribute.aigp import AIGP
 
     metric = 1000
-    aigp = AIGP.make_aigp(metric)
+    aigp = AIGP.from_int(metric)
 
     # Without AIGP negotiation and different AS
     negotiated = Mock()
@@ -1259,7 +1259,7 @@ def test_aigp_pack_with_same_as() -> None:
     from exabgp.bgp.message.update.attribute.aigp import AIGP
 
     metric = 1000
-    aigp = AIGP.make_aigp(metric)
+    aigp = AIGP.from_int(metric)
 
     # Same AS but no AIGP negotiation
     negotiated = Mock()
@@ -1277,7 +1277,7 @@ def test_aigp_repr_format() -> None:
     from exabgp.bgp.message.update.attribute.aigp import AIGP
 
     metric = 255
-    aigp = AIGP.make_aigp(metric)
+    aigp = AIGP.from_int(metric)
 
     # Representation should be hex of metric (0x00000000000000ff)
     repr_str = str(aigp)

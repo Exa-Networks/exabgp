@@ -146,7 +146,7 @@ class TestMAC:
         mac = MACQUAL('aa:bb:cc:dd:ee:ff')
         maclen = 48
         label = Labels.make_labels([600], True)
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
 
         route = MAC.make_mac(rd, esi, etag, mac, maclen, label, ip)
 
@@ -179,7 +179,7 @@ class TestMAC:
         mac = MACQUAL('aa:bb:cc:dd:ee:ff')
         maclen = 48
         label = Labels.make_labels([800], True)
-        ip = IP.make_ip('10.1.1.1')
+        ip = IP.from_string('10.1.1.1')
 
         route = MAC.make_mac(rd, esi, etag, mac, maclen, label, ip)
         packed = route.pack_nlri(create_negotiated())
@@ -221,7 +221,7 @@ class TestMAC:
         mac = MACQUAL('fe:dc:ba:98:76:54')
         maclen = 48
         label = Labels.make_labels([1000], True)
-        ip = IP.make_ip('2001:db8::1')
+        ip = IP.from_string('2001:db8::1')
 
         route = MAC.make_mac(rd, esi, etag, mac, maclen, label, ip)
         packed = route.pack_nlri(create_negotiated())
@@ -239,7 +239,7 @@ class TestMAC:
         rd = RouteDistinguisher.make_from_elements('10.10.10.10', 100)
         etag = EthernetTag.make_etag(1000)
         mac = MACQUAL('aa:bb:cc:dd:ee:ff')
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
 
         route1 = MAC.make_mac(rd, ESI.make_default(), etag, mac, 48, Labels.make_labels([100], True), ip)
         route2 = MAC.make_mac(rd, ESI.make_default(), etag, mac, 48, Labels.make_labels([200], True), ip)
@@ -252,7 +252,7 @@ class TestMAC:
         rd = RouteDistinguisher.make_from_elements('11.11.11.11', 110)
         etag = EthernetTag.make_etag(1100)
         mac = MACQUAL('11:22:33:44:55:66')
-        ip = IP.make_ip('10.0.0.1')
+        ip = IP.from_string('10.0.0.1')
 
         route1 = MAC.make_mac(rd, ESI.make_default(), etag, mac, 48, Labels.make_labels([100], True), ip)
         route2 = MAC.make_mac(rd, ESI(bytes([1] * 10)), etag, mac, 48, Labels.make_labels([200], True), ip)
@@ -278,7 +278,7 @@ class TestMAC:
         esi = ESI.make_default()
         etag = EthernetTag.make_etag(1300)
         mac = MACQUAL('aa:bb:cc:dd:ee:ff')
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
         label = Labels.make_labels([1400], True)
 
         route = MAC.make_mac(rd, esi, etag, mac, 48, label, ip)
@@ -295,7 +295,7 @@ class TestMAC:
         esi = ESI.make_default()
         etag = EthernetTag.make_etag(1400)
         mac = MACQUAL('11:22:33:44:55:66')
-        ip = IP.make_ip('10.1.1.1')
+        ip = IP.from_string('10.1.1.1')
         label = Labels.make_labels([1500], True)
 
         route = MAC.make_mac(rd, esi, etag, mac, 48, label, ip)
@@ -318,7 +318,7 @@ class TestMulticast:
         """Test creation of Multicast route with IPv4"""
         rd = RouteDistinguisher.make_from_elements('15.15.15.15', 150)
         etag = EthernetTag.make_etag(1500)
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
 
         route = Multicast.make_multicast(rd, etag, ip)
 
@@ -332,7 +332,7 @@ class TestMulticast:
         """Test creation of Multicast route with IPv6"""
         rd = RouteDistinguisher.make_from_elements('16.16.16.16', 160)
         etag = EthernetTag.make_etag(1600)
-        ip = IP.make_ip('2001:db8::1')
+        ip = IP.from_string('2001:db8::1')
 
         route = Multicast.make_multicast(rd, etag, ip)
 
@@ -343,7 +343,7 @@ class TestMulticast:
         """Test pack/unpack roundtrip for Multicast route with IPv4"""
         rd = RouteDistinguisher.make_from_elements('17.17.17.17', 170)
         etag = EthernetTag.make_etag(1700)
-        ip = IP.make_ip('10.0.0.1')
+        ip = IP.from_string('10.0.0.1')
 
         route = Multicast.make_multicast(rd, etag, ip)
         packed = route.pack_nlri(create_negotiated())
@@ -360,7 +360,7 @@ class TestMulticast:
         """Test pack/unpack roundtrip for Multicast route with IPv6"""
         rd = RouteDistinguisher.make_from_elements('18.18.18.18', 180)
         etag = EthernetTag.make_etag(1800)
-        ip = IP.make_ip('fe80::1')
+        ip = IP.from_string('fe80::1')
 
         route = Multicast.make_multicast(rd, etag, ip)
         packed = route.pack_nlri(create_negotiated())
@@ -377,7 +377,7 @@ class TestMulticast:
         """Test hash calculation for Multicast route"""
         rd = RouteDistinguisher.make_from_elements('19.19.19.19', 190)
         etag = EthernetTag.make_etag(1900)
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
 
         route = Multicast.make_multicast(rd, etag, ip)
         hash_val = hash(route)
@@ -388,7 +388,7 @@ class TestMulticast:
         """Test string representation of Multicast route"""
         rd = RouteDistinguisher.make_from_elements('20.20.20.20', 200)
         etag = EthernetTag.make_etag(2000)
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
 
         route = Multicast.make_multicast(rd, etag, ip)
         str_repr = str(route)
@@ -400,7 +400,7 @@ class TestMulticast:
         """Test JSON serialization of Multicast route"""
         rd = RouteDistinguisher.make_from_elements('21.21.21.21', 210)
         etag = EthernetTag.make_etag(2100)
-        ip = IP.make_ip('10.1.1.1')
+        ip = IP.from_string('10.1.1.1')
 
         route = Multicast.make_multicast(rd, etag, ip)
         json_str = route.json()
@@ -422,7 +422,7 @@ class TestEthernetSegment:
         """Test creation of EthernetSegment route with IPv4"""
         rd = RouteDistinguisher.make_from_elements('22.22.22.22', 220)
         esi = ESI(bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
 
         route = EthernetSegment.make_ethernetsegment(rd, esi, ip)
 
@@ -436,7 +436,7 @@ class TestEthernetSegment:
         """Test creation of EthernetSegment route with IPv6"""
         rd = RouteDistinguisher.make_from_elements('23.23.23.23', 230)
         esi = ESI(bytes([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]))
-        ip = IP.make_ip('2001:db8::1')
+        ip = IP.from_string('2001:db8::1')
 
         route = EthernetSegment.make_ethernetsegment(rd, esi, ip)
 
@@ -447,7 +447,7 @@ class TestEthernetSegment:
         """Test pack/unpack roundtrip for EthernetSegment with IPv4"""
         rd = RouteDistinguisher.make_from_elements('24.24.24.24', 240)
         esi = ESI(bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
-        ip = IP.make_ip('10.0.0.1')
+        ip = IP.from_string('10.0.0.1')
 
         route = EthernetSegment.make_ethernetsegment(rd, esi, ip)
         packed = route.pack_nlri(create_negotiated())
@@ -463,7 +463,7 @@ class TestEthernetSegment:
         """Test pack/unpack roundtrip for EthernetSegment with IPv6"""
         rd = RouteDistinguisher.make_from_elements('25.25.25.25', 250)
         esi = ESI(bytes([5, 5, 5, 5, 5, 5, 5, 5, 5, 5]))
-        ip = IP.make_ip('fe80::1')
+        ip = IP.from_string('fe80::1')
 
         route = EthernetSegment.make_ethernetsegment(rd, esi, ip)
         packed = route.pack_nlri(create_negotiated())
@@ -478,7 +478,7 @@ class TestEthernetSegment:
     def test_segment_equality(self) -> None:
         """Test equality comparison for EthernetSegment routes"""
         rd = RouteDistinguisher.make_from_elements('26.26.26.26', 260)
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
 
         route1 = EthernetSegment.make_ethernetsegment(rd, ESI.make_default(), ip)
         route2 = EthernetSegment.make_ethernetsegment(rd, ESI(bytes([1] * 10)), ip)
@@ -489,7 +489,7 @@ class TestEthernetSegment:
     def test_segment_hash_consistency(self) -> None:
         """Test hash consistency - ESI should not affect hash"""
         rd = RouteDistinguisher.make_from_elements('27.27.27.27', 270)
-        ip = IP.make_ip('10.0.0.1')
+        ip = IP.from_string('10.0.0.1')
 
         route1 = EthernetSegment.make_ethernetsegment(rd, ESI.make_default(), ip)
         route2 = EthernetSegment.make_ethernetsegment(rd, ESI(bytes([1] * 10)), ip)
@@ -511,7 +511,7 @@ class TestEthernetSegment:
         """Test string representation of EthernetSegment route"""
         rd = RouteDistinguisher.make_from_elements('29.29.29.29', 290)
         esi = ESI.make_default()
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
 
         route = EthernetSegment.make_ethernetsegment(rd, esi, ip)
         str_repr = str(route)
@@ -523,7 +523,7 @@ class TestEthernetSegment:
         """Test JSON serialization of EthernetSegment route"""
         rd = RouteDistinguisher.make_from_elements('30.30.30.30', 300)
         esi = ESI.make_default()
-        ip = IP.make_ip('10.1.1.1')
+        ip = IP.from_string('10.1.1.1')
 
         route = EthernetSegment.make_ethernetsegment(rd, esi, ip)
         json_str = route.json()
@@ -547,9 +547,9 @@ class TestPrefix:
         esi = ESI.make_default()
         etag = EthernetTag.make_etag(3100)
         label = Labels.make_labels([3200], True)
-        ip = IP.make_ip('10.1.1.0')
+        ip = IP.from_string('10.1.1.0')
         iplen = 24
-        gwip = IP.make_ip('10.1.1.1')
+        gwip = IP.from_string('10.1.1.1')
 
         route = Prefix.make_prefix(rd, esi, etag, label, ip, iplen, gwip)
 
@@ -566,9 +566,9 @@ class TestPrefix:
         esi = ESI.make_default()
         etag = EthernetTag.make_etag(3200)
         label = Labels.make_labels([3300], True)
-        ip = IP.make_ip('2001:db8::')
+        ip = IP.from_string('2001:db8::')
         iplen = 64
-        gwip = IP.make_ip('2001:db8::1')
+        gwip = IP.from_string('2001:db8::1')
 
         route = Prefix.make_prefix(rd, esi, etag, label, ip, iplen, gwip)
 
@@ -582,9 +582,9 @@ class TestPrefix:
         esi = ESI.make_default()
         etag = EthernetTag.make_etag(3300)
         label = Labels.make_labels([3400], True)
-        ip = IP.make_ip('192.168.1.0')
+        ip = IP.from_string('192.168.1.0')
         iplen = 24
-        gwip = IP.make_ip('192.168.1.1')
+        gwip = IP.from_string('192.168.1.1')
 
         route = Prefix.make_prefix(rd, esi, etag, label, ip, iplen, gwip)
         packed = route.pack_nlri(create_negotiated())
@@ -604,9 +604,9 @@ class TestPrefix:
         esi = ESI.make_default()
         etag = EthernetTag.make_etag(3400)
         label = Labels.make_labels([3500], True)
-        ip = IP.make_ip('2001:db8:1::')
+        ip = IP.from_string('2001:db8:1::')
         iplen = 48
-        gwip = IP.make_ip('2001:db8:1::1')
+        gwip = IP.from_string('2001:db8:1::1')
 
         route = Prefix.make_prefix(rd, esi, etag, label, ip, iplen, gwip)
         packed = route.pack_nlri(create_negotiated())
@@ -624,10 +624,10 @@ class TestPrefix:
         """Test equality comparison for Prefix routes"""
         rd = RouteDistinguisher.make_from_elements('35.35.35.35', 350)
         etag = EthernetTag.make_etag(3500)
-        ip = IP.make_ip('10.1.1.0')
+        ip = IP.from_string('10.1.1.0')
         iplen = 24
         label = Labels.make_labels([100], True)
-        gwip = IP.make_ip('10.1.1.1')
+        gwip = IP.from_string('10.1.1.1')
 
         # Create two identical routes
         route1 = Prefix.make_prefix(rd, ESI.make_default(), etag, label, ip, iplen, gwip)
@@ -637,21 +637,21 @@ class TestPrefix:
         assert route1 == route2
 
         # Test that different gwip makes them unequal (via NLRI.index())
-        route3 = Prefix.make_prefix(rd, ESI.make_default(), etag, label, ip, iplen, IP.make_ip('10.1.1.2'))
+        route3 = Prefix.make_prefix(rd, ESI.make_default(), etag, label, ip, iplen, IP.from_string('10.1.1.2'))
         assert route1 != route3
 
     def test_prefix_hash_consistency(self) -> None:
         """Test hash consistency - ESI, label, and gwip should not affect hash"""
         rd = RouteDistinguisher.make_from_elements('36.36.36.36', 360)
         etag = EthernetTag.make_etag(3600)
-        ip = IP.make_ip('10.2.2.0')
+        ip = IP.from_string('10.2.2.0')
         iplen = 24
 
         route1 = Prefix.make_prefix(
-            rd, ESI.make_default(), etag, Labels.make_labels([100], True), ip, iplen, IP.make_ip('10.2.2.1')
+            rd, ESI.make_default(), etag, Labels.make_labels([100], True), ip, iplen, IP.from_string('10.2.2.1')
         )
         route2 = Prefix.make_prefix(
-            rd, ESI(bytes([1] * 10)), etag, Labels.make_labels([200], True), ip, iplen, IP.make_ip('10.2.2.2')
+            rd, ESI(bytes([1] * 10)), etag, Labels.make_labels([200], True), ip, iplen, IP.from_string('10.2.2.2')
         )
 
         assert hash(route1) == hash(route2)
@@ -662,9 +662,9 @@ class TestPrefix:
         esi = ESI.make_default()
         etag = EthernetTag.make_etag(3700)
         label = Labels.make_labels([3800], True)
-        ip = IP.make_ip('10.3.3.0')
+        ip = IP.from_string('10.3.3.0')
         iplen = 24
-        gwip = IP.make_ip('10.3.3.1')
+        gwip = IP.from_string('10.3.3.1')
 
         route = Prefix.make_prefix(rd, esi, etag, label, ip, iplen, gwip)
         str_repr = str(route)
@@ -679,9 +679,9 @@ class TestPrefix:
         esi = ESI.make_default()
         etag = EthernetTag.make_etag(3800)
         label = Labels.make_labels([3900], True)
-        ip = IP.make_ip('10.4.4.0')
+        ip = IP.from_string('10.4.4.0')
         iplen = 24
-        gwip = IP.make_ip('10.4.4.1')
+        gwip = IP.from_string('10.4.4.1')
 
         route = Prefix.make_prefix(rd, esi, etag, label, ip, iplen, gwip)
         json_str = route.json()
@@ -746,10 +746,10 @@ class TestEVPNIntegration:
         esi = ESI.make_default()
         etag = EthernetTag.make_etag(4100)
         label = Labels.make_labels([4200], True)
-        gwip = IP.make_ip('10.5.5.1')
+        gwip = IP.from_string('10.5.5.1')
 
         for iplen in [8, 16, 24, 32]:
-            ip = IP.make_ip('10.5.5.0')
+            ip = IP.from_string('10.5.5.0')
             route = Prefix.make_prefix(rd, esi, etag, label, ip, iplen, gwip)
             assert route.iplen == iplen
 
@@ -757,7 +757,7 @@ class TestEVPNIntegration:
         """Test EVPN routes with ADD-PATH support via unpack_nlri"""
         rd = RouteDistinguisher.make_from_elements('42.42.42.42', 420)
         etag = EthernetTag.make_etag(4200)
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
 
         route = Multicast.make_multicast(rd, etag, ip)
         packed = route.pack_nlri(create_negotiated())
@@ -773,8 +773,8 @@ class TestEVPNIntegration:
         """Test EVPN routes with next hop"""
         rd = RouteDistinguisher.make_from_elements('43.43.43.43', 430)
         etag = EthernetTag.make_etag(4300)
-        ip = IP.make_ip('192.168.1.1')
-        nexthop = IP.make_ip('192.168.1.254')
+        ip = IP.from_string('192.168.1.1')
+        nexthop = IP.from_string('192.168.1.254')
 
         route = Multicast.make_multicast(rd, etag, ip, nexthop=nexthop)
 

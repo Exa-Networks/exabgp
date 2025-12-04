@@ -76,7 +76,7 @@ def prefix(tokeniser: 'Tokeniser') -> IPRange:
             mask = 128
 
     tokeniser.afi = IP.toafi(ip)
-    iprange = IPRange.make_ip(ip, mask)
+    iprange = IPRange.from_string(ip, mask)
 
     if iprange.address() & iprange.mask.hostmask() != 0:
         raise ValueError(
@@ -97,10 +97,10 @@ def next_hop(tokeniser: 'Tokeniser', afi: AFI | None = None) -> tuple[IP | IPSel
     value = tokeniser()
     if value.lower() == 'self':
         return IPSelf(tokeniser.afi), NextHopSelf(tokeniser.afi)
-    ip = IP.make_ip(value)
+    ip = IP.from_string(value)
     if ip.afi == AFI.ipv4 and afi == AFI.ipv6:
-        ip = IP.make_ip('::ffff:{}'.format(ip))
-    return ip, NextHop.make_nexthop(ip.top())
+        ip = IP.from_string('::ffff:{}'.format(ip))
+    return ip, NextHop.from_string(ip.top())
 
 
 # XXX: using Action.UNSET should we use the following ?
@@ -183,17 +183,17 @@ def aigp(tokeniser: 'Tokeniser') -> AIGP:
             f"'{value}' is not a valid AIGP value\n  Format: <number> or 0x<hex> (e.g., 100 or 0x64)"
         ) from None
 
-    return AIGP.make_aigp(number)
+    return AIGP.from_int(number)
 
 
 def origin(tokeniser: 'Tokeniser') -> Origin:
     value = tokeniser().lower()
     if value == 'igp':
-        return Origin.make_origin(Origin.IGP)
+        return Origin.from_int(Origin.IGP)
     if value == 'egp':
-        return Origin.make_origin(Origin.EGP)
+        return Origin.from_int(Origin.EGP)
     if value == 'incomplete':
-        return Origin.make_origin(Origin.INCOMPLETE)
+        return Origin.from_int(Origin.INCOMPLETE)
     raise ValueError(f"'{value}' is not a valid origin\n  Valid options: igp, egp, incomplete")
 
 
@@ -201,7 +201,7 @@ def med(tokeniser: 'Tokeniser') -> MED:
     value = tokeniser()
     if not value.isdigit():
         raise ValueError(f"'{value}' is not a valid MED\n  Must be a non-negative integer (e.g., 100)")
-    return MED.make_med(int(value))
+    return MED.from_int(int(value))
 
 
 def as_path(tokeniser: 'Tokeniser') -> AS2Path:
@@ -265,7 +265,7 @@ def local_preference(tokeniser: 'Tokeniser') -> LocalPreference:
     value = tokeniser()
     if not value.isdigit():
         raise ValueError(f"'{value}' is not a valid local-preference\n  Must be a non-negative integer (e.g., 100)")
-    return LocalPreference.make_localpref(int(value))
+    return LocalPreference.from_int(int(value))
 
 
 def atomic_aggregate(tokeniser: 'Tokeniser') -> AtomicAggregate:
@@ -312,7 +312,7 @@ def originator_id(tokeniser: 'Tokeniser') -> OriginatorID:
         raise ValueError(f"'{value}' is not a valid originator-id\n  Format: IPv4 address (e.g., 192.0.2.1)")
     if not all(_.isdigit() for _ in value.split('.')):
         raise ValueError(f"'{value}' is not a valid originator-id\n  Format: IPv4 address (e.g., 192.0.2.1)")
-    return OriginatorID.make_originatorid(value)
+    return OriginatorID.from_string(value)
 
 
 def cluster_list(tokeniser: 'Tokeniser') -> ClusterList:

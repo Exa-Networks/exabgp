@@ -64,7 +64,7 @@ class NextHop(Attribute):
         return cls(data)
 
     @classmethod
-    def make_nexthop(cls, ip_string: str) -> 'NextHop':
+    def from_string(cls, ip_string: str) -> 'NextHop':
         """Create from IP address string.
 
         Args:

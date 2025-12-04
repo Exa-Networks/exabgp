@@ -469,7 +469,7 @@ def test_attributes_has_method() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = Attributes()
-    attributes.add(Origin.make_origin(Origin.IGP))
+    attributes.add(Origin.from_int(Origin.IGP))
 
     assert attributes.has(1)  # ORIGIN
     assert not attributes.has(2)  # AS_PATH
@@ -481,7 +481,7 @@ def test_attributes_remove_method() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = Attributes()
-    attributes.add(Origin.make_origin(Origin.IGP))
+    attributes.add(Origin.from_int(Origin.IGP))
 
     assert attributes.has(1)
 

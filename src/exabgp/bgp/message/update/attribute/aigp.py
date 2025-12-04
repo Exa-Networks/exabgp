@@ -89,7 +89,7 @@ class AIGP(Attribute):
         return cls(data[:tlv_length])
 
     @classmethod
-    def make_aigp(cls, value: int) -> 'AIGP':
+    def from_int(cls, value: int) -> 'AIGP':
         """Create AIGP from metric value.
 
         Args:

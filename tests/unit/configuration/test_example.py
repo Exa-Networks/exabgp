@@ -27,7 +27,7 @@ class TestValueTypeExamples:
         from exabgp.protocol.ip import IP
 
         example = VALUE_TYPE_EXAMPLES[ValueType.IP_ADDRESS]
-        IP.make_ip(example)  # Raises if invalid
+        IP.from_string(example)  # Raises if invalid
 
     def test_asn_example_valid(self):
         """ASN example should be a valid AS number."""

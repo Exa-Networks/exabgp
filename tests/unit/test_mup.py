@@ -43,7 +43,7 @@ class TestInterworkSegmentDiscoveryRoute:
     def test_isd_creation(self) -> None:
         """Test basic creation of ISD route"""
         rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
-        prefix_ip = IP.make_ip('10.0.0.0')
+        prefix_ip = IP.from_string('10.0.0.0')
         prefix_ip_len = 24
 
         route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
@@ -59,7 +59,7 @@ class TestInterworkSegmentDiscoveryRoute:
     def test_isd_pack_unpack_ipv4(self) -> None:
         """Test pack/unpack roundtrip for ISD with IPv4"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
-        prefix_ip = IP.make_ip('192.168.1.0')
+        prefix_ip = IP.from_string('192.168.1.0')
         prefix_ip_len = 24
 
         route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
@@ -78,7 +78,7 @@ class TestInterworkSegmentDiscoveryRoute:
     def test_isd_pack_unpack_ipv6(self) -> None:
         """Test pack/unpack roundtrip for ISD with IPv6"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.2', 100)
-        prefix_ip = IP.make_ip('2001:db8:1:2::')
+        prefix_ip = IP.from_string('2001:db8:1:2::')
         prefix_ip_len = 64
 
         route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv6)
@@ -97,7 +97,7 @@ class TestInterworkSegmentDiscoveryRoute:
     def test_isd_equality(self) -> None:
         """Test equality comparison for ISD routes"""
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
-        prefix_ip = IP.make_ip('10.0.0.0')
+        prefix_ip = IP.from_string('10.0.0.0')
         prefix_ip_len = 24
 
         route1 = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
@@ -110,7 +110,7 @@ class TestInterworkSegmentDiscoveryRoute:
         """Test inequality for different ISD routes"""
         rd1 = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         rd2 = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
-        prefix_ip = IP.make_ip('10.0.0.0')
+        prefix_ip = IP.from_string('10.0.0.0')
 
         route1 = InterworkSegmentDiscoveryRoute.make_isd(rd1, 24, prefix_ip, AFI.ipv4)
         route2 = InterworkSegmentDiscoveryRoute.make_isd(rd2, 24, prefix_ip, AFI.ipv4)
@@ -121,7 +121,7 @@ class TestInterworkSegmentDiscoveryRoute:
     def test_isd_hash_consistency(self) -> None:
         """Test hash consistency for ISD routes"""
         rd = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
-        prefix_ip = IP.make_ip('10.1.0.0')
+        prefix_ip = IP.from_string('10.1.0.0')
         prefix_ip_len = 16
 
         route1 = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
@@ -132,7 +132,7 @@ class TestInterworkSegmentDiscoveryRoute:
     def test_isd_string_representation(self) -> None:
         """Test string representation of ISD"""
         rd = RouteDistinguisher.make_from_elements('3.3.3.3', 30)
-        prefix_ip = IP.make_ip('172.16.0.0')
+        prefix_ip = IP.from_string('172.16.0.0')
         prefix_ip_len = 12
 
         route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
@@ -145,7 +145,7 @@ class TestInterworkSegmentDiscoveryRoute:
     def test_isd_json(self) -> None:
         """Test JSON serialization of ISD"""
         rd = RouteDistinguisher.make_from_elements('4.4.4.4', 40)
-        prefix_ip = IP.make_ip('10.20.30.0')
+        prefix_ip = IP.from_string('10.20.30.0')
         prefix_ip_len = 24
 
         route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
@@ -161,7 +161,7 @@ class TestInterworkSegmentDiscoveryRoute:
         rd = RouteDistinguisher.make_from_elements('5.5.5.5', 50)
 
         for prefix_len in [8, 16, 24, 32]:
-            prefix_ip = IP.make_ip('10.0.0.0')
+            prefix_ip = IP.from_string('10.0.0.0')
             route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_len, prefix_ip, AFI.ipv4)
             packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MUP.unpack_nlri(
@@ -182,7 +182,7 @@ class TestDirectSegmentDiscoveryRoute:
     def test_dsd_creation(self) -> None:
         """Test basic creation of DSD route"""
         rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
-        ip = IP.make_ip('10.0.0.1')
+        ip = IP.from_string('10.0.0.1')
 
         route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
 
@@ -196,7 +196,7 @@ class TestDirectSegmentDiscoveryRoute:
     def test_dsd_pack_unpack_ipv4(self) -> None:
         """Test pack/unpack roundtrip for DSD with IPv4"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
-        ip = IP.make_ip('192.168.1.1')
+        ip = IP.from_string('192.168.1.1')
 
         route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
         packed = route.pack_nlri(create_negotiated())
@@ -213,7 +213,7 @@ class TestDirectSegmentDiscoveryRoute:
     def test_dsd_pack_unpack_ipv6(self) -> None:
         """Test pack/unpack roundtrip for DSD with IPv6"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.2', 100)
-        ip = IP.make_ip('2001:db8:1:2::1')
+        ip = IP.from_string('2001:db8:1:2::1')
 
         route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv6)
         packed = route.pack_nlri(create_negotiated())
@@ -230,7 +230,7 @@ class TestDirectSegmentDiscoveryRoute:
     def test_dsd_equality(self) -> None:
         """Test equality comparison for DSD routes"""
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
-        ip = IP.make_ip('10.0.0.1')
+        ip = IP.from_string('10.0.0.1')
 
         route1 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
         route2 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
@@ -241,8 +241,8 @@ class TestDirectSegmentDiscoveryRoute:
     def test_dsd_inequality(self) -> None:
         """Test inequality for different DSD routes"""
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
-        ip1 = IP.make_ip('10.0.0.1')
-        ip2 = IP.make_ip('10.0.0.2')
+        ip1 = IP.from_string('10.0.0.1')
+        ip2 = IP.from_string('10.0.0.2')
 
         route1 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip1, AFI.ipv4)
         route2 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip2, AFI.ipv4)
@@ -253,7 +253,7 @@ class TestDirectSegmentDiscoveryRoute:
     def test_dsd_hash_consistency(self) -> None:
         """Test hash consistency for DSD routes"""
         rd = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
-        ip = IP.make_ip('10.1.0.1')
+        ip = IP.from_string('10.1.0.1')
 
         route1 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
         route2 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
@@ -263,7 +263,7 @@ class TestDirectSegmentDiscoveryRoute:
     def test_dsd_string_representation(self) -> None:
         """Test string representation of DSD"""
         rd = RouteDistinguisher.make_from_elements('3.3.3.3', 30)
-        ip = IP.make_ip('172.16.0.1')
+        ip = IP.from_string('172.16.0.1')
 
         route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
         route_str = str(route)
@@ -274,7 +274,7 @@ class TestDirectSegmentDiscoveryRoute:
     def test_dsd_json(self) -> None:
         """Test JSON serialization of DSD"""
         rd = RouteDistinguisher.make_from_elements('4.4.4.4', 40)
-        ip = IP.make_ip('10.20.30.40')
+        ip = IP.from_string('10.20.30.40')
 
         route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
         json_str = route.json()
@@ -309,9 +309,9 @@ class TestType1SessionTransformedRoute:
     def test_t1st_creation(self) -> None:
         """Test basic creation of T1ST route"""
         rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
-        prefix_ip = IP.make_ip('10.0.0.0')
-        endpoint_ip = IP.make_ip('192.168.1.1')
-        source_ip = IP.make_ip('192.168.2.1')
+        prefix_ip = IP.from_string('10.0.0.0')
+        endpoint_ip = IP.from_string('192.168.1.1')
+        source_ip = IP.from_string('192.168.2.1')
 
         route = Type1SessionTransformedRoute.make_t1st(
             rd=rd,
@@ -337,9 +337,9 @@ class TestType1SessionTransformedRoute:
     def test_t1st_pack_unpack_ipv4_with_source(self) -> None:
         """Test pack/unpack roundtrip for T1ST with IPv4 and source address"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
-        prefix_ip = IP.make_ip('192.168.1.0')
-        endpoint_ip = IP.make_ip('10.1.1.1')
-        source_ip = IP.make_ip('10.2.2.2')
+        prefix_ip = IP.from_string('192.168.1.0')
+        endpoint_ip = IP.from_string('10.1.1.1')
+        source_ip = IP.from_string('10.2.2.2')
 
         route = Type1SessionTransformedRoute.make_t1st(
             rd=rd,
@@ -370,8 +370,8 @@ class TestType1SessionTransformedRoute:
     def test_t1st_pack_unpack_ipv4_without_source(self) -> None:
         """Test pack/unpack roundtrip for T1ST with IPv4 without source address"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
-        prefix_ip = IP.make_ip('192.168.1.0')
-        endpoint_ip = IP.make_ip('10.1.1.1')
+        prefix_ip = IP.from_string('192.168.1.0')
+        endpoint_ip = IP.from_string('10.1.1.1')
 
         route = Type1SessionTransformedRoute.make_t1st(
             rd=rd,
@@ -399,9 +399,9 @@ class TestType1SessionTransformedRoute:
     def test_t1st_pack_unpack_ipv6(self) -> None:
         """Test pack/unpack roundtrip for T1ST with IPv6"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.2', 100)
-        prefix_ip = IP.make_ip('2001:db8:1::')
-        endpoint_ip = IP.make_ip('2001:db8:2::1')
-        source_ip = IP.make_ip('2001:db8:3::1')
+        prefix_ip = IP.from_string('2001:db8:1::')
+        endpoint_ip = IP.from_string('2001:db8:2::1')
+        source_ip = IP.from_string('2001:db8:3::1')
 
         route = Type1SessionTransformedRoute.make_t1st(
             rd=rd,
@@ -429,9 +429,9 @@ class TestType1SessionTransformedRoute:
     def test_t1st_equality(self) -> None:
         """Test equality comparison for T1ST routes"""
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
-        prefix_ip = IP.make_ip('10.0.0.0')
-        endpoint_ip = IP.make_ip('192.168.1.1')
-        source_ip = IP.make_ip('192.168.2.1')
+        prefix_ip = IP.from_string('10.0.0.0')
+        endpoint_ip = IP.from_string('192.168.1.1')
+        source_ip = IP.from_string('192.168.2.1')
 
         route1 = Type1SessionTransformedRoute.make_t1st(
             rd,
@@ -464,8 +464,8 @@ class TestType1SessionTransformedRoute:
     def test_t1st_hash_consistency(self) -> None:
         """Test hash consistency for T1ST routes"""
         rd = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
-        prefix_ip = IP.make_ip('10.1.0.0')
-        endpoint_ip = IP.make_ip('192.168.1.1')
+        prefix_ip = IP.from_string('10.1.0.0')
+        endpoint_ip = IP.from_string('192.168.1.1')
 
         route1 = Type1SessionTransformedRoute.make_t1st(
             rd,
@@ -497,8 +497,8 @@ class TestType1SessionTransformedRoute:
     def test_t1st_string_representation(self) -> None:
         """Test string representation of T1ST"""
         rd = RouteDistinguisher.make_from_elements('3.3.3.3', 30)
-        prefix_ip = IP.make_ip('172.16.0.0')
-        endpoint_ip = IP.make_ip('10.1.1.1')
+        prefix_ip = IP.from_string('172.16.0.0')
+        endpoint_ip = IP.from_string('10.1.1.1')
 
         route = Type1SessionTransformedRoute.make_t1st(
             rd,
@@ -520,8 +520,8 @@ class TestType1SessionTransformedRoute:
     def test_t1st_json(self) -> None:
         """Test JSON serialization of T1ST"""
         rd = RouteDistinguisher.make_from_elements('4.4.4.4', 40)
-        prefix_ip = IP.make_ip('10.20.30.0')
-        endpoint_ip = IP.make_ip('10.1.1.1')
+        prefix_ip = IP.from_string('10.20.30.0')
+        endpoint_ip = IP.from_string('10.1.1.1')
 
         route = Type1SessionTransformedRoute.make_t1st(
             rd,
@@ -546,7 +546,7 @@ class TestType1SessionTransformedRoute:
     def test_t1st_invalid_endpoint_length(self) -> None:
         """Test T1ST with invalid endpoint IP length raises error"""
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
-        prefix_ip = IP.make_ip('10.0.0.0')
+        prefix_ip = IP.from_string('10.0.0.0')
 
         # Create packed data with invalid endpoint length (33 bits)
         packed_rd = rd.pack_rd()
@@ -563,10 +563,10 @@ class TestType1SessionTransformedRoute:
     def test_t1st_variable_prefix_lengths(self) -> None:
         """Test T1ST with various prefix lengths"""
         rd = RouteDistinguisher.make_from_elements('5.5.5.5', 50)
-        endpoint_ip = IP.make_ip('10.1.1.1')
+        endpoint_ip = IP.from_string('10.1.1.1')
 
         for prefix_len in [8, 16, 24, 32]:
-            prefix_ip = IP.make_ip('10.0.0.0')
+            prefix_ip = IP.from_string('10.0.0.0')
             route = Type1SessionTransformedRoute.make_t1st(
                 rd,
                 prefix_len,
@@ -598,7 +598,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_creation(self) -> None:
         """Test basic creation of T2ST route"""
         rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
-        endpoint_ip = IP.make_ip('192.168.1.1')
+        endpoint_ip = IP.from_string('192.168.1.1')
 
         route = Type2SessionTransformedRoute.make_t2st(
             rd=rd,
@@ -619,7 +619,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_pack_unpack_ipv4_no_teid(self) -> None:
         """Test pack/unpack roundtrip for T2ST with IPv4 without TEID"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
-        endpoint_ip = IP.make_ip('192.168.1.1')
+        endpoint_ip = IP.from_string('192.168.1.1')
 
         route = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
         packed = route.pack_nlri(create_negotiated())
@@ -638,7 +638,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_pack_unpack_ipv4_with_teid(self) -> None:
         """Test pack/unpack roundtrip for T2ST with IPv4 with TEID"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
-        endpoint_ip = IP.make_ip('192.168.1.1')
+        endpoint_ip = IP.from_string('192.168.1.1')
         # endpoint_len = 32 (IP) + 32 (TEID bits) = 64
         teid = 0xABCDEF12
 
@@ -656,7 +656,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_pack_unpack_ipv6_no_teid(self) -> None:
         """Test pack/unpack roundtrip for T2ST with IPv6 without TEID"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.2', 100)
-        endpoint_ip = IP.make_ip('2001:db8:1::1')
+        endpoint_ip = IP.from_string('2001:db8:1::1')
 
         route = Type2SessionTransformedRoute.make_t2st(rd, 128, endpoint_ip, 0, AFI.ipv6)
         packed = route.pack_nlri(create_negotiated())
@@ -673,7 +673,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_pack_unpack_ipv6_with_teid(self) -> None:
         """Test pack/unpack roundtrip for T2ST with IPv6 with TEID"""
         rd = RouteDistinguisher.make_from_elements('10.0.0.2', 100)
-        endpoint_ip = IP.make_ip('2001:db8:1::1')
+        endpoint_ip = IP.from_string('2001:db8:1::1')
         # endpoint_len = 128 (IP) + 16 (TEID bits) = 144
         teid = 0x1234
 
@@ -691,7 +691,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_equality(self) -> None:
         """Test equality comparison for T2ST routes"""
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
-        endpoint_ip = IP.make_ip('192.168.1.1')
+        endpoint_ip = IP.from_string('192.168.1.1')
 
         route1 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
         route2 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
@@ -702,7 +702,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_inequality(self) -> None:
         """Test inequality for different T2ST routes"""
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
-        endpoint_ip = IP.make_ip('192.168.1.1')
+        endpoint_ip = IP.from_string('192.168.1.1')
 
         route1 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
         route2 = Type2SessionTransformedRoute.make_t2st(rd, 64, endpoint_ip, 12345, AFI.ipv4)
@@ -713,7 +713,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_hash_consistency(self) -> None:
         """Test hash consistency for T2ST routes"""
         rd = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
-        endpoint_ip = IP.make_ip('10.1.1.1')
+        endpoint_ip = IP.from_string('10.1.1.1')
 
         route1 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
         route2 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
@@ -723,7 +723,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_string_representation(self) -> None:
         """Test string representation of T2ST"""
         rd = RouteDistinguisher.make_from_elements('3.3.3.3', 30)
-        endpoint_ip = IP.make_ip('172.16.0.1')
+        endpoint_ip = IP.from_string('172.16.0.1')
 
         route = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
         route_str = str(route)
@@ -734,7 +734,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_json(self) -> None:
         """Test JSON serialization of T2ST"""
         rd = RouteDistinguisher.make_from_elements('4.4.4.4', 40)
-        endpoint_ip = IP.make_ip('10.20.30.40')
+        endpoint_ip = IP.from_string('10.20.30.40')
 
         route = Type2SessionTransformedRoute.make_t2st(rd, 64, endpoint_ip, 99999, AFI.ipv4)
         json_str = route.json()
@@ -748,7 +748,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_teid_too_large(self) -> None:
         """Test T2ST with TEID that's too large raises error"""
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
-        endpoint_ip = IP.make_ip('192.168.1.1')
+        endpoint_ip = IP.from_string('192.168.1.1')
 
         # endpoint_len = 32 (IP) + 33 (TEID bits) = 65 - too large!
         with pytest.raises(Exception):
@@ -758,7 +758,7 @@ class TestType2SessionTransformedRoute:
     def test_t2st_various_teid_sizes(self) -> None:
         """Test T2ST with various TEID sizes"""
         rd = RouteDistinguisher.make_from_elements('5.5.5.5', 50)
-        endpoint_ip = IP.make_ip('10.1.1.1')
+        endpoint_ip = IP.from_string('10.1.1.1')
 
         # Test different TEID bit sizes: 0, 8, 16, 24, 32
         for teid_bits in [0, 8, 16, 24, 32]:
@@ -816,7 +816,7 @@ class TestMUPGeneric:
     def test_mup_safi(self) -> None:
         """Test that MUP routes use correct SAFI"""
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
-        ip = IP.make_ip('10.0.0.1')
+        ip = IP.from_string('10.0.0.1')
 
         route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
 

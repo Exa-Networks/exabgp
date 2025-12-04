@@ -67,8 +67,8 @@ class TestNLRIs(unittest.TestCase):
         nlri = MVPN_SourceAD.make_sourcead(
             afi=AFI.ipv4,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
-            source=IP.make_ip('1.2.3.0'),
-            group=IP.make_ip('226.0.0.1'),
+            source=IP.from_string('1.2.3.0'),
+            group=IP.from_string('226.0.0.1'),
         )
 
         packed = nlri.pack_nlri(create_negotiated())
@@ -90,8 +90,8 @@ class TestNLRIs(unittest.TestCase):
         nlri = MVPN_SourceAD.make_sourcead(
             afi=AFI.ipv6,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
-            source=IP.make_ip('fd12::2'),
-            group=IP.make_ip('ff0e::1'),
+            source=IP.from_string('fd12::2'),
+            group=IP.from_string('ff0e::1'),
         )
 
         packed = nlri.pack_nlri(create_negotiated())
@@ -115,8 +115,8 @@ class TestNLRIs(unittest.TestCase):
         nlri = MVPN_SourceJoin.make_sourcejoin(
             afi=AFI.ipv4,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
-            source=IP.make_ip('1.2.3.0'),
-            group=IP.make_ip('226.0.0.1'),
+            source=IP.from_string('1.2.3.0'),
+            group=IP.from_string('226.0.0.1'),
             source_as=1234,
         )
 
@@ -140,8 +140,8 @@ class TestNLRIs(unittest.TestCase):
         nlri = MVPN_SourceJoin.make_sourcejoin(
             afi=AFI.ipv6,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
-            source=IP.make_ip('fd12::2'),
-            group=IP.make_ip('ff0e::1'),
+            source=IP.from_string('fd12::2'),
+            group=IP.from_string('ff0e::1'),
             source_as=1234,
         )
 
@@ -167,8 +167,8 @@ class TestNLRIs(unittest.TestCase):
         nlri = MVPN_SharedJoin.make_sharedjoin(
             afi=AFI.ipv4,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
-            source=IP.make_ip('1.2.3.0'),
-            group=IP.make_ip('226.0.0.1'),
+            source=IP.from_string('1.2.3.0'),
+            group=IP.from_string('226.0.0.1'),
             source_as=1234,
         )
 
@@ -192,8 +192,8 @@ class TestNLRIs(unittest.TestCase):
         nlri = MVPN_SharedJoin.make_sharedjoin(
             afi=AFI.ipv6,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
-            source=IP.make_ip('fd12::2'),
-            group=IP.make_ip('ff0e::1'),
+            source=IP.from_string('fd12::2'),
+            group=IP.from_string('ff0e::1'),
             source_as=1234,
         )
 
@@ -253,7 +253,7 @@ class TestNLRIs(unittest.TestCase):
             MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels.make_labels([42], True),
-            IP.make_ip('1.1.1.1'),
+            IP.from_string('1.1.1.1'),
         )
 
         packed = nlri.pack_nlri(create_negotiated())
@@ -272,7 +272,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(EthernetTag.make_etag(111), unpacked.etag)
         self.assertEqual(MAC('01:02:03:04:05:06'), unpacked.mac)
 
-        self.assertEqual(IP.make_ip('1.1.1.1'), unpacked.ip)
+        self.assertEqual(IP.from_string('1.1.1.1'), unpacked.ip)
 
         self.assertEqual(1, len(unpacked.label.labels))
         self.assertEqual(42, unpacked.label.labels[0])
@@ -283,7 +283,7 @@ class TestNLRIs(unittest.TestCase):
         nlri = EVPNMulticast(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             EthernetTag.make_etag(111),
-            IP.make_ip('1.1.1.1'),
+            IP.from_string('1.1.1.1'),
         )
 
         packed = nlri.pack_nlri(create_negotiated())
@@ -299,7 +299,7 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertEqual('42.42.42.42:5', unpacked.rd._str())
         self.assertEqual(EthernetTag.make_etag(111), unpacked.etag)
-        self.assertEqual(IP.make_ip('1.1.1.1'), unpacked.ip)
+        self.assertEqual(IP.from_string('1.1.1.1'), unpacked.ip)
 
     def test99_EVPNPrefixCreatePackUnpack(self) -> None:
         """Test pack/unpack for E-VPN Prefix routes"""
@@ -309,9 +309,9 @@ class TestNLRIs(unittest.TestCase):
             ESI.make_default(),
             EthernetTag.make_etag(111),
             Labels.make_labels([42], True),
-            IP.make_ip('1.1.1.0'),
+            IP.from_string('1.1.1.0'),
             24,
-            IP.make_ip('2.2.2.2'),
+            IP.from_string('2.2.2.2'),
         )
 
         packed = nlri.pack_nlri(create_negotiated())
@@ -328,9 +328,9 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual('42.42.42.42:5', unpacked.rd._str())
         self.assertEqual(ESI.DEFAULT, unpacked.esi.esi)
         self.assertEqual(EthernetTag.make_etag(111), unpacked.etag)
-        self.assertEqual(IP.make_ip('1.1.1.0'), unpacked.ip)
+        self.assertEqual(IP.from_string('1.1.1.0'), unpacked.ip)
         self.assertEqual(24, unpacked.iplen)
-        self.assertEqual(IP.make_ip('2.2.2.2'), unpacked.gwip)
+        self.assertEqual(IP.from_string('2.2.2.2'), unpacked.gwip)
         self.assertEqual(1, len(unpacked.label.labels))
         self.assertEqual(42, unpacked.label.labels[0])
 
@@ -346,7 +346,7 @@ class TestNLRIs(unittest.TestCase):
             MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels.make_labels([42], True),
-            IP.make_ip('1.1.1.1'),
+            IP.from_string('1.1.1.1'),
         )
 
         nlri2 = EVPNMAC(
@@ -356,7 +356,7 @@ class TestNLRIs(unittest.TestCase):
             MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels.make_labels([42], True),
-            IP.make_ip('1.1.1.1'),
+            IP.from_string('1.1.1.1'),
         )
 
         self.assertEqual(hash(nlri1), hash(nlri2))
@@ -375,7 +375,7 @@ class TestNLRIs(unittest.TestCase):
             MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels.make_labels([42], True),
-            IP.make_ip('1.1.1.1'),
+            IP.from_string('1.1.1.1'),
         )
 
         # ESI
@@ -393,7 +393,7 @@ class TestNLRIs(unittest.TestCase):
             MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels.make_labels([42], True),
-            IP.make_ip('1.1.1.1'),
+            IP.from_string('1.1.1.1'),
         )
 
         # label
@@ -404,7 +404,7 @@ class TestNLRIs(unittest.TestCase):
             MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels.make_labels([4444], True),
-            IP.make_ip('1.1.1.1'),
+            IP.from_string('1.1.1.1'),
         )
 
         # IP: different IPs, but same MACs: different route
@@ -415,7 +415,7 @@ class TestNLRIs(unittest.TestCase):
             MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels.make_labels([42], True),
-            IP.make_ip('2.2.2.2'),
+            IP.from_string('2.2.2.2'),
         )
 
         # with a next hop...
@@ -426,7 +426,7 @@ class TestNLRIs(unittest.TestCase):
             MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels.make_labels([42], True),
-            IP.make_ip('1.1.1.1'),
+            IP.from_string('1.1.1.1'),
             IP.pton('10.10.10.10'),
         )
         nlri5 = EVPNMAC(
@@ -436,7 +436,7 @@ class TestNLRIs(unittest.TestCase):
             MAC('01:02:03:04:05:06'),
             6 * 8,
             Labels.make_labels([42], True),
-            IP.make_ip('1.1.1.1'),
+            IP.from_string('1.1.1.1'),
             IP.pton('11.11.11.11'),
         )
 
@@ -503,19 +503,19 @@ class TestNLRIs(unittest.TestCase):
 
     def test4_DistinctAttributes(self) -> None:
         atts1 = Attributes()
-        atts1.add(LocalPreference.make_localpref(10))
+        atts1.add(LocalPreference.from_int(10))
 
         atts2 = Attributes()
-        atts2.add(LocalPreference.make_localpref(20))
+        atts2.add(LocalPreference.from_int(20))
 
         self.assertNotEqual(atts1, atts2)
 
     def test5_SameAttributes(self) -> None:
         atts1 = Attributes()
-        atts1.add(LocalPreference.make_localpref(10))
+        atts1.add(LocalPreference.from_int(10))
 
         atts2 = Attributes()
-        atts2.add(LocalPreference.make_localpref(10))
+        atts2.add(LocalPreference.from_int(10))
 
         self.assertEqual(hash(atts1), hash(atts2))
         self.assertEqual(atts1, atts2)

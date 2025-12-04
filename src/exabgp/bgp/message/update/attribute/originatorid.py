@@ -61,7 +61,7 @@ class OriginatorID(Attribute):
         return cls(data)
 
     @classmethod
-    def make_originatorid(cls, ip_string: str) -> 'OriginatorID':
+    def from_string(cls, ip_string: str) -> 'OriginatorID':
         """Create from IP address string.
 
         Args:

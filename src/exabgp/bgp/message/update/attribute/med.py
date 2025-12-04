@@ -56,7 +56,7 @@ class MED(Attribute):
         return cls(data)
 
     @classmethod
-    def make_med(cls, med: int) -> 'MED':
+    def from_int(cls, med: int) -> 'MED':
         """Create MED from semantic value with validation.
 
         Args:

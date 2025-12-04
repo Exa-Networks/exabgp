@@ -61,7 +61,7 @@ class TestRTCCreation:
     def test_create_rtc_with_nexthop(self) -> None:
         """Test creating RTC with nexthop"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nh = IP.make_ip('10.0.0.1')
+        nh = IP.from_string('10.0.0.1')
         nlri = RTC.make_rtc(ASN(65000), rt, nexthop=nh)
 
         assert nlri.nexthop == nh
@@ -253,7 +253,7 @@ class TestRTCFeedback:
     def test_feedback_with_nexthop_announce(self) -> None:
         """Test feedback when nexthop is set for ANNOUNCE"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.make_rtc(ASN(65000), rt, nexthop=IP.make_ip('10.0.0.1'))
+        nlri = RTC.make_rtc(ASN(65000), rt, nexthop=IP.from_string('10.0.0.1'))
 
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert feedback == ''

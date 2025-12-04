@@ -184,7 +184,7 @@ def withdraw_route(self: 'API', reactor: Reactor, service: str, line: str, use_j
                 change.nlri.action = Action.WITHDRAW
                 # NextHop is a mandatory field (but we do not require in)
                 if change.nlri.nexthop is IP.NoNextHop:
-                    change.nlri.nexthop = NextHop.make_nexthop('0.0.0.0')
+                    change.nlri.nexthop = NextHop.from_string('0.0.0.0')
 
                 if not ParseStaticRoute.check(change):
                     peer_list = ', '.join(peers) if peers else 'all peers'
