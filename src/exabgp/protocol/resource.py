@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from typing import Any, Type, Iterator, ClassVar
 from exabgp.util import string_is_hex
 
@@ -14,7 +15,21 @@ from exabgp.util import string_is_hex
 RESOURCE_VALUE_MAX: int = 0xFFFF  # Maximum 16-bit unsigned integer value
 
 
-class Resource(int):
+class BaseValue(int, ABC):
+    """Base class for int types that provide short() for display.
+
+    Flow values need two things:
+    1. int behavior - for byte encoding (bytes([value]), pack('!H', value))
+    2. short() -> str - for string formatting
+    """
+
+    @abstractmethod
+    def short(self) -> str:
+        """Return short string representation for display."""
+        ...
+
+
+class Resource(BaseValue):
     NAME: ClassVar[str] = ''
     codes: ClassVar[dict[str, int]] = {}
     names: ClassVar[dict[int, str]] = {}
@@ -93,3 +108,14 @@ class BitResource(Resource):
 
     def __str__(self) -> str:
         return '+'.join(self.named_bits())
+
+
+class NumericValue(BaseValue):
+    """Plain numeric value without named constants.
+
+    Used in FlowSpec rules where the value doesn't have a named registry
+    (like arbitrary port numbers or packet lengths).
+    """
+
+    def short(self) -> str:
+        return str(int(self))

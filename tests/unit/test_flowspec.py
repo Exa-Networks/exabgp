@@ -36,6 +36,7 @@ from exabgp.bgp.message.update.nlri.flow import (
     NumericOperator,
     BinaryOperator,
 )
+from exabgp.protocol.resource import NumericValue
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.ip import IPv4, IP
 from exabgp.protocol.ip.tcp.flag import TCPFlag
@@ -91,7 +92,7 @@ class TestFlow4Components:
 
     def test_flowipprotocol_tcp(self) -> None:
         """Test IP protocol matching (TCP = 6)"""
-        proto = FlowIPProtocol(NumericOperator.EQ, 6)
+        proto = FlowIPProtocol(NumericOperator.EQ, NumericValue(6))
 
         assert proto.value == 6
         packed = proto.pack()
@@ -102,19 +103,19 @@ class TestFlow4Components:
     def test_flowipprotocol_operators(self) -> None:
         """Test different numeric operators for IP protocol"""
         # Equal to
-        proto_eq = FlowIPProtocol(NumericOperator.EQ, 6)
+        proto_eq = FlowIPProtocol(NumericOperator.EQ, NumericValue(6))
         assert proto_eq.operations & NumericOperator.EQ
 
         # Greater than
-        proto_gt = FlowIPProtocol(NumericOperator.GT, 6)
+        proto_gt = FlowIPProtocol(NumericOperator.GT, NumericValue(6))
         assert proto_gt.operations & NumericOperator.GT
 
         # Less than
-        proto_lt = FlowIPProtocol(NumericOperator.LT, 6)
+        proto_lt = FlowIPProtocol(NumericOperator.LT, NumericValue(6))
         assert proto_lt.operations & NumericOperator.LT
 
         # Not equal (combination of LT and GT)
-        proto_neq = FlowIPProtocol(NumericOperator.NEQ, 6)
+        proto_neq = FlowIPProtocol(NumericOperator.NEQ, NumericValue(6))
         assert proto_neq.operations & NumericOperator.LT
         assert proto_neq.operations & NumericOperator.GT
 
@@ -176,7 +177,7 @@ class TestFlowPorts:
 
     def test_flowanyport_single(self) -> None:
         """Test any port (source or destination) matching"""
-        port = FlowAnyPort(NumericOperator.EQ, 80)
+        port = FlowAnyPort(NumericOperator.EQ, NumericValue(80))
 
         assert port.value == 80
         port.pack()
@@ -184,7 +185,7 @@ class TestFlowPorts:
 
     def test_flowdestinationport_https(self) -> None:
         """Test destination port matching for HTTPS"""
-        dport = FlowDestinationPort(NumericOperator.EQ, 443)
+        dport = FlowDestinationPort(NumericOperator.EQ, NumericValue(443))
 
         assert dport.value == 443
         dport.pack()
@@ -193,14 +194,14 @@ class TestFlowPorts:
     def test_flowsourceport_range(self) -> None:
         """Test source port range matching"""
         # Port >= 1024
-        sport_gte = FlowSourcePort(NumericOperator.GT | NumericOperator.EQ, 1024)
+        sport_gte = FlowSourcePort(NumericOperator.GT | NumericOperator.EQ, NumericValue(1024))
 
         assert sport_gte.operations & NumericOperator.GT
         assert sport_gte.operations & NumericOperator.EQ
 
     def test_port_large_value(self) -> None:
         """Test port with 2-byte value encoding"""
-        port = FlowDestinationPort(NumericOperator.EQ, 8080)
+        port = FlowDestinationPort(NumericOperator.EQ, NumericValue(8080))
 
         packed = port.pack()
         # Should use 2-byte encoding for 8080
@@ -208,7 +209,7 @@ class TestFlowPorts:
 
     def test_port_string_representation(self) -> None:
         """Test string representation of port matches"""
-        port = FlowAnyPort(NumericOperator.EQ, 25)
+        port = FlowAnyPort(NumericOperator.EQ, NumericValue(25))
         port_str = str(port)
         assert '25' in port_str
 
@@ -405,7 +406,7 @@ class TestFlowNLRI:
 
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         src = Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24)
-        port = FlowAnyPort(NumericOperator.EQ, 80)
+        port = FlowAnyPort(NumericOperator.EQ, NumericValue(80))
 
         assert flow.add(dest) is True
         assert flow.add(src) is True
@@ -464,8 +465,8 @@ class TestFlowNLRI:
         flow = Flow.make_flow()
 
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
-        port1 = FlowAnyPort(NumericOperator.GT, 1024)
-        port2 = FlowAnyPort(NumericOperator.LT, 65535)
+        port1 = FlowAnyPort(NumericOperator.GT, NumericValue(1024))
+        port2 = FlowAnyPort(NumericOperator.LT, NumericValue(65535))
 
         flow.add(dest)
         flow.add(port1)
@@ -484,7 +485,7 @@ class TestFlowNLRI:
 
         # Add many components to exceed 0xF0 bytes
         for port in range(1000, 1100):
-            flow.add(FlowAnyPort(NumericOperator.EQ, port))
+            flow.add(FlowAnyPort(NumericOperator.EQ, NumericValue(port)))
 
         packed = flow.pack_nlri(negotiated)
 
@@ -496,7 +497,7 @@ class TestFlowNLRI:
         flow = Flow.make_flow()
 
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
-        proto = FlowIPProtocol(NumericOperator.EQ, 6)
+        proto = FlowIPProtocol(NumericOperator.EQ, NumericValue(6))
 
         flow.add(dest)
         flow.add(proto)
@@ -562,8 +563,8 @@ class TestFlowNLRI:
 
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         # Port >= 1024 AND port <= 65535
-        port1 = FlowAnyPort(NumericOperator.GT | NumericOperator.EQ, 1024)
-        port2 = FlowAnyPort(NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ, 65535)
+        port1 = FlowAnyPort(NumericOperator.GT | NumericOperator.EQ, NumericValue(1024))
+        port2 = FlowAnyPort(NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ, NumericValue(65535))
 
         flow.add(dest)
         flow.add(port1)
@@ -578,8 +579,8 @@ class TestFlowNLRI:
         flow = Flow.make_flow()
 
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
-        proto = FlowIPProtocol(NumericOperator.EQ, 6)  # TCP
-        dport = FlowDestinationPort(NumericOperator.EQ, 80)
+        proto = FlowIPProtocol(NumericOperator.EQ, NumericValue(6))  # TCP
+        dport = FlowDestinationPort(NumericOperator.EQ, NumericValue(80))
         tcp_syn = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.SYN)
 
         flow.add(dest)
@@ -599,9 +600,9 @@ class TestFlowNLRI:
         flow = Flow.make_flow()
 
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
-        proto = FlowIPProtocol(NumericOperator.EQ, 1)  # ICMP
-        icmp_type = FlowICMPType(NumericOperator.EQ, 8)  # Echo request
-        icmp_code = FlowICMPCode(NumericOperator.EQ, 0)
+        proto = FlowIPProtocol(NumericOperator.EQ, NumericValue(1))  # ICMP
+        icmp_type = FlowICMPType(NumericOperator.EQ, NumericValue(8))  # Echo request
+        icmp_code = FlowICMPCode(NumericOperator.EQ, NumericValue(0))
 
         flow.add(dest)
         flow.add(proto)
@@ -618,8 +619,8 @@ class TestFlowNLRI:
 
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         # Packets between 100 and 1500 bytes
-        pkt_len1 = FlowPacketLength(NumericOperator.GT | NumericOperator.EQ, 100)
-        pkt_len2 = FlowPacketLength(NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ, 1500)
+        pkt_len1 = FlowPacketLength(NumericOperator.GT | NumericOperator.EQ, NumericValue(100))
+        pkt_len2 = FlowPacketLength(NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ, NumericValue(1500))
 
         flow.add(dest)
         flow.add(pkt_len1)
@@ -634,7 +635,7 @@ class TestFlowNLRI:
         flow = Flow.make_flow()
 
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
-        dscp = FlowDSCP(NumericOperator.EQ, 46)  # EF
+        dscp = FlowDSCP(NumericOperator.EQ, NumericValue(46))  # EF
 
         flow.add(dest)
         flow.add(dscp)
@@ -668,17 +669,17 @@ class TestOperators:
     def test_numeric_operator_combinations(self) -> None:
         """Test various numeric operator combinations"""
         # Less than or equal
-        port_lte = FlowAnyPort(NumericOperator.LT | NumericOperator.EQ, 1024)
+        port_lte = FlowAnyPort(NumericOperator.LT | NumericOperator.EQ, NumericValue(1024))
         assert port_lte.operations & NumericOperator.LT
         assert port_lte.operations & NumericOperator.EQ
 
         # Greater than or equal
-        port_gte = FlowAnyPort(NumericOperator.GT | NumericOperator.EQ, 1024)
+        port_gte = FlowAnyPort(NumericOperator.GT | NumericOperator.EQ, NumericValue(1024))
         assert port_gte.operations & NumericOperator.GT
         assert port_gte.operations & NumericOperator.EQ
 
         # Not equal
-        port_neq = FlowAnyPort(NumericOperator.NEQ, 1024)
+        port_neq = FlowAnyPort(NumericOperator.NEQ, NumericValue(1024))
         assert port_neq.operations & NumericOperator.LT
         assert port_neq.operations & NumericOperator.GT
 
@@ -701,10 +702,10 @@ class TestOperators:
     def test_operator_string_representations(self) -> None:
         """Test string representation of operators"""
         # Numeric operators
-        port_eq = FlowAnyPort(NumericOperator.EQ, 80)
+        port_eq = FlowAnyPort(NumericOperator.EQ, NumericValue(80))
         assert '=' in str(port_eq) or '80' in str(port_eq)
 
-        port_gt = FlowAnyPort(NumericOperator.GT, 1024)
+        port_gt = FlowAnyPort(NumericOperator.GT, NumericValue(1024))
         str_repr = str(port_gt)
         # Should contain either '>' or the value
         assert '>' in str_repr or '1024' in str_repr
@@ -731,8 +732,8 @@ class TestFlowUnpack:
         flow1 = Flow.make_flow()
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         src = Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24)
-        proto = FlowIPProtocol(NumericOperator.EQ, 6)  # TCP
-        dport = FlowDestinationPort(NumericOperator.EQ, 80)
+        proto = FlowIPProtocol(NumericOperator.EQ, NumericValue(6))  # TCP
+        dport = FlowDestinationPort(NumericOperator.EQ, NumericValue(80))
 
         flow1.add(dest)
         flow1.add(src)
@@ -761,7 +762,7 @@ class TestFlowUnpack:
 
         # Add many components to create large flow (need > 240 bytes)
         for port in range(1000, 1200):
-            flow1.add(FlowAnyPort(NumericOperator.EQ, port))
+            flow1.add(FlowAnyPort(NumericOperator.EQ, NumericValue(port)))
 
         packed = flow1.pack_nlri(negotiated)
 
@@ -807,9 +808,9 @@ class TestFlowUnpack:
         flow1 = Flow.make_flow()
 
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
-        proto = FlowIPProtocol(NumericOperator.EQ, 6)
-        port1 = FlowDestinationPort(NumericOperator.GT, 1024)
-        port2 = FlowDestinationPort(NumericOperator.AND | NumericOperator.LT, 65535)
+        proto = FlowIPProtocol(NumericOperator.EQ, NumericValue(6))
+        port1 = FlowDestinationPort(NumericOperator.GT, NumericValue(1024))
+        port2 = FlowDestinationPort(NumericOperator.AND | NumericOperator.LT, NumericValue(65535))
 
         flow1.add(dest)
         flow1.add(proto)
@@ -892,13 +893,13 @@ class TestFlowEdgeCases:
     def test_numeric_operator_true_false(self) -> None:
         """Test TRUE and FALSE numeric operators"""
         # TRUE operator
-        proto_true = FlowIPProtocol(NumericOperator.TRUE, 6)
+        proto_true = FlowIPProtocol(NumericOperator.TRUE, NumericValue(6))
         str_repr = str(proto_true)
         # Should contain 'true' in representation
         assert 'true' in str_repr.lower() or '6' in str_repr
 
         # FALSE operator
-        proto_false = FlowIPProtocol(NumericOperator.FALSE, 6)
+        proto_false = FlowIPProtocol(NumericOperator.FALSE, NumericValue(6))
         str_repr = str(proto_false)
         assert str_repr is not None
 
@@ -944,7 +945,7 @@ class TestFlowEdgeCases:
         """Test string representation differs for single vs multiple rules"""
         flow1 = Flow.make_flow()
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
-        proto = FlowIPProtocol(NumericOperator.EQ, 6)
+        proto = FlowIPProtocol(NumericOperator.EQ, NumericValue(6))
         flow1.add(dest)
         flow1.add(proto)
 
@@ -953,8 +954,8 @@ class TestFlowEdgeCases:
         # Create flow with multiple same-type rules
         flow2 = Flow.make_flow()
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
-        port1 = FlowAnyPort(NumericOperator.GT, 1024)
-        port2 = FlowAnyPort(NumericOperator.LT, 65535)
+        port1 = FlowAnyPort(NumericOperator.GT, NumericValue(1024))
+        port2 = FlowAnyPort(NumericOperator.LT, NumericValue(65535))
         flow2.add(dest)
         flow2.add(port1)
         flow2.add(port2)
@@ -976,7 +977,7 @@ class TestFlowEdgeCases:
         ]
 
         for op, expected in operators:
-            port = FlowAnyPort(op, 80)
+            port = FlowAnyPort(op, NumericValue(80))
             str_repr = str(port)
             # Should either contain the operator symbol or the value
             assert expected in str_repr or '80' in str_repr
