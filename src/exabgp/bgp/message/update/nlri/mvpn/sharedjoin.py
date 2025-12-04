@@ -37,21 +37,57 @@ class SharedJoin(MVPN):
 
     def __init__(
         self,
+        packed: bytes,
+        afi: AFI,
+        action: Action | None = None,
+        addpath: int | None = None,
+    ) -> None:
+        MVPN.__init__(self, afi=afi, action=action, addpath=addpath)  # type: ignore[arg-type]
+        self._packed = packed
+
+    @classmethod
+    def make_sharedjoin(
+        cls,
         rd: RouteDistinguisher,
         afi: AFI,
         source: IP,
         group: IP,
         source_as: int,
-        packed: bytes | None = None,
         action: Action | None = None,
         addpath: int | None = None,
-    ) -> None:
-        MVPN.__init__(self, afi=afi, action=action, addpath=addpath)  # type: ignore[arg-type]
-        self.rd: RouteDistinguisher = rd
-        self.group: IP = group
-        self.source: IP = source
-        self.source_as: int = source_as
-        self._pack(packed)
+    ) -> 'SharedJoin':
+        """Factory method to create SharedJoin from semantic parameters."""
+        packed = (
+            rd.pack_rd()
+            + pack('!I', source_as)
+            + bytes([len(source) * 8])  # type: ignore[arg-type]
+            + source.pack_ip()
+            + bytes([len(group) * 8])  # type: ignore[arg-type]
+            + group.pack_ip()
+        )
+        return cls(packed, afi, action, addpath)
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+
+    @property
+    def source_as(self) -> int:
+        return int.from_bytes(self._packed[8:12], 'big')
+
+    @property
+    def source(self) -> IP:
+        cursor = 12
+        sourceiplen = int(self._packed[cursor] / 8)
+        return IP.unpack_ip(self._packed[cursor + 1 : cursor + 1 + sourceiplen])
+
+    @property
+    def group(self) -> IP:
+        cursor = 12
+        sourceiplen = int(self._packed[cursor] / 8)
+        cursor += 1 + sourceiplen
+        groupiplen = int(self._packed[cursor] / 8)
+        return IP.unpack_ip(self._packed[cursor + 1 : cursor + 1 + groupiplen])
 
     def __eq__(self, other: object) -> bool:
         return (
@@ -71,33 +107,14 @@ class SharedJoin(MVPN):
     def __hash__(self) -> int:
         return hash((self.rd, self.source, self.group, self.source_as))
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-        self._packed = (
-            self.rd.pack_rd()
-            + pack('!I', self.source_as)
-            + bytes([len(self.source) * 8])  # type: ignore[arg-type]
-            + self.source.pack_ip()
-            + bytes([len(self.group) * 8])  # type: ignore[arg-type]
-            + self.group.pack_ip()
-        )
-        return self._packed
-
     @classmethod
     def unpack_mvpn_route(cls, data: bytes, afi: AFI) -> SharedJoin:
         datalen = len(data)
         if datalen not in (MVPN_SHAREDJOIN_IPV4_LENGTH, MVPN_SHAREDJOIN_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Invalid C-Multicast Route length ({datalen} bytes).')
-        cursor = 0
-        rd = RouteDistinguisher.unpack_routedistinguisher(data[cursor:8])
-        cursor += 8
-        source_as = int.from_bytes(data[cursor : cursor + 4], 'big')
-        cursor += 4
+
+        # Validate source IP length
+        cursor = 12  # After RD (8) + Source AS (4)
         sourceiplen = int(data[cursor] / 8)
         cursor += 1
         if sourceiplen != IPv4.BYTES and sourceiplen != IPv6.BYTES:
@@ -106,18 +123,18 @@ class SharedJoin(MVPN):
                 5,
                 f'Invalid C-Multicast Route length ({sourceiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
-        sourceip = IP.unpack_ip(data[cursor : cursor + sourceiplen])
         cursor += sourceiplen
+
+        # Validate group IP length
         groupiplen = int(data[cursor] / 8)
-        cursor += 1
         if groupiplen != IPv4.BYTES and groupiplen != IPv6.BYTES:
             raise Notify(
                 3,
                 5,
                 f'Invalid C-Multicast Route length ({groupiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
-        groupip = IP.unpack_ip(data[cursor : cursor + groupiplen])
-        return cls(afi=afi, rd=rd, source=sourceip, group=groupip, source_as=source_as, packed=data)
+
+        return cls(data, afi)
 
     def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE

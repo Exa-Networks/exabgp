@@ -47,21 +47,61 @@ class Type2SessionTransformedRoute(MUP):
     NAME: ClassVar[str] = 'Type2SessionTransformedRoute'
     SHORT_NAME: ClassVar[str] = 'T2ST'
 
-    def __init__(
-        self,
+    def __init__(self, packed: bytes, afi: AFI) -> None:
+        MUP.__init__(self, afi)
+        self._packed = packed
+
+    @classmethod
+    def make_t2st(
+        cls,
         rd: RouteDistinguisher,
         endpoint_len: int,
         endpoint_ip: IP,
         teid: int,
         afi: AFI,
-        packed: bytes | None = None,
-    ) -> None:
-        MUP.__init__(self, afi)
-        self.rd: RouteDistinguisher = rd
-        self.endpoint_len: int = endpoint_len
-        self.endpoint_ip: IP = endpoint_ip
-        self.teid: int = teid
-        self._pack(packed)
+    ) -> 'Type2SessionTransformedRoute':
+        """Factory method to create T2ST from semantic parameters."""
+        packed = rd.pack_rd() + pack('!B', endpoint_len) + endpoint_ip.pack_ip()
+
+        endpoint_size = MUP_T2ST_IPV4_SIZE_BITS if endpoint_ip.afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
+        teid_size = endpoint_len - endpoint_size
+
+        if teid_size < 0 or teid_size > MUP_T2ST_TEID_MAX_SIZE:
+            raise Exception('teid is too large %d (range 0~32)' % teid_size)
+
+        teid_packed = pack('!I', teid)
+
+        offset = teid_size // 8
+        remainder = teid_size % 8
+        if remainder != 0:
+            offset += 1
+
+        if teid_size > 0:
+            packed += teid_packed[-offset:]
+
+        return cls(packed, afi)
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+
+    @property
+    def endpoint_len(self) -> int:
+        return self._packed[8]
+
+    @property
+    def endpoint_ip(self) -> IP:
+        afi_bytes_size = 4 if self.afi == AFI.ipv4 else 16
+        return IP.unpack_ip(self._packed[9 : 9 + afi_bytes_size])
+
+    @property
+    def teid(self) -> int:
+        afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if self.afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
+        afi_bytes_size = 4 if self.afi == AFI.ipv4 else 16
+        end = 9 + afi_bytes_size
+        if self.endpoint_len > afi_bit_size:
+            return int.from_bytes(self._packed[end:], 'big')
+        return 0
 
     def index(self) -> bytes:
         return MUP.index(self)
@@ -97,52 +137,11 @@ class Type2SessionTransformedRoute(MUP):
             ),
         )
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-
-        # fmt: off
-        self._packed = (
-            self.rd.pack_rd()
-            + pack('!B', self.endpoint_len)
-            + self.endpoint_ip.pack_ip()
-        )
-        # fmt: on
-
-        endpoint_size = MUP_T2ST_IPV4_SIZE_BITS if self.endpoint_ip.afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
-        teid_size = self.endpoint_len - endpoint_size
-
-        if teid_size < 0 or teid_size > MUP_T2ST_TEID_MAX_SIZE:
-            raise Exception('teid is too large %d (range 0~32)' % teid_size)
-
-        teid_packed = pack('!I', self.teid)
-
-        offset = teid_size // 8
-        remainder = teid_size % 8
-        if remainder != 0:
-            offset += 1
-
-        # as the fix is part of a large patch ..
-        # this is where the main problem was: taking wrong bits
-        if teid_size > 0:
-            self._packed += teid_packed[-offset:]
-
-        return self._packed
-
     @classmethod
     def unpack_mup_route(cls, data: bytes, afi: AFI) -> Type2SessionTransformedRoute:
         afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
-        afi_bytes_size = 4 if afi == AFI.ipv4 else 16
-        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
         endpoint_len = data[8]
-        end = 9 + afi_bytes_size
-        endpoint_ip = IP.unpack_ip(data[9:end])
 
-        teid = 0
         if endpoint_len > afi_bit_size:
             teid_len = endpoint_len - afi_bit_size
             if afi == AFI.ipv4 and teid_len > MUP_T2ST_TEID_MAX_SIZE:
@@ -154,9 +153,7 @@ class Type2SessionTransformedRoute(MUP):
                     'endpoint length is too large %d (max %d for Ipv6)' % (endpoint_len, MUP_T2ST_IPV6_MAX_ENDPOINT)
                 )
 
-            teid = int.from_bytes(data[end:], 'big')
-
-        return cls(rd, endpoint_len, endpoint_ip, teid, afi)
+        return cls(data, afi)
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)

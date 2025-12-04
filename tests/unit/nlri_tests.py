@@ -64,7 +64,7 @@ class TestNLRIs(unittest.TestCase):
     # Tests on MVPN NLRIs
     def test300_MVPNSourceAD_CreatePackUnpack(self) -> None:
         """Test pack/unpack for MVPN Source A-D route"""
-        nlri = MVPN_SourceAD(
+        nlri = MVPN_SourceAD.make_sourcead(
             afi=AFI.ipv4,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('1.2.3.0'),
@@ -87,7 +87,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual('42.42.42.42:5', unpacked.rd._str())
         self.assertEqual('226.0.0.1', str(unpacked.group))
 
-        nlri = MVPN_SourceAD(
+        nlri = MVPN_SourceAD.make_sourcead(
             afi=AFI.ipv6,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('fd12::2'),
@@ -112,7 +112,7 @@ class TestNLRIs(unittest.TestCase):
 
     def test300_MVPNSourceJoin_CreatePackUnpack(self) -> None:
         """Test pack/unpack for MVPN Source-Join route"""
-        nlri = MVPN_SourceJoin(
+        nlri = MVPN_SourceJoin.make_sourcejoin(
             afi=AFI.ipv4,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('1.2.3.0'),
@@ -137,7 +137,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual('226.0.0.1', str(unpacked.group))
         self.assertEqual(1234, unpacked.source_as)
 
-        nlri = MVPN_SourceJoin(
+        nlri = MVPN_SourceJoin.make_sourcejoin(
             afi=AFI.ipv6,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('fd12::2'),
@@ -164,7 +164,7 @@ class TestNLRIs(unittest.TestCase):
 
     def test300_MVPNSharedJoin_CreatePackUnpack(self) -> None:
         """Test pack/unpack for MVPN Shared-Join route"""
-        nlri = MVPN_SharedJoin(
+        nlri = MVPN_SharedJoin.make_sharedjoin(
             afi=AFI.ipv4,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('1.2.3.0'),
@@ -189,7 +189,7 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual('226.0.0.1', str(unpacked.group))
         self.assertEqual(1234, unpacked.source_as)
 
-        nlri = MVPN_SharedJoin(
+        nlri = MVPN_SharedJoin.make_sharedjoin(
             afi=AFI.ipv6,
             rd=RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             source=IP.create('fd12::2'),

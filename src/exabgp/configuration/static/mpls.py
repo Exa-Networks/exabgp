@@ -245,7 +245,7 @@ def mvpn_sharedjoin(tokeniser: Any, afi: AFI, action: Any) -> SharedJoin:
     if asnum > ASN_MAX_VALUE:
         raise Exception(f"expect source-as to be a integer in the range 0-{ASN_MAX_VALUE}, but received '{value}'")
 
-    return SharedJoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
+    return SharedJoin.make_sharedjoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
 
 
 # source-join source <ip> group <ip> rd <rd> source-as <source-as>
@@ -276,7 +276,7 @@ def mvpn_sourcejoin(tokeniser: Any, afi: AFI, action: Any) -> SourceJoin:
     if asnum > ASN_MAX_VALUE:
         raise Exception(f"expect source-as to be a integer in the range 0-{ASN_MAX_VALUE}, but received '{value}'")
 
-    return SourceJoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
+    return SourceJoin.make_sourcejoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
 
 
 #'source-ad source <ip address> group <ip address> rd <rd>'
@@ -299,7 +299,7 @@ def mvpn_sourcead(tokeniser: Any, afi: AFI, action: Any) -> SourceAD:
     tokeniser.consume('rd')
     rd = route_distinguisher(tokeniser)
 
-    return SourceAD(rd=rd, afi=afi, source=sourceip, group=groupip, action=action)
+    return SourceAD.make_sourcead(rd=rd, afi=afi, source=sourceip, group=groupip, action=action)
 
 
 # 'mup-isd <ip prefix> rd <rd>',
@@ -311,7 +311,7 @@ def srv6_mup_isd(tokeniser: Any, afi: AFI) -> InterworkSegmentDiscoveryRoute:
         raise Exception(f"expect rd, but received '{value}'")
     rd = route_distinguisher(tokeniser)
 
-    return InterworkSegmentDiscoveryRoute(
+    return InterworkSegmentDiscoveryRoute.make_isd(
         rd=rd,
         prefix_ip_len=prefix_len,
         prefix_ip=prefix_ip,
@@ -334,7 +334,7 @@ def srv6_mup_dsd(tokeniser: Any, afi: AFI) -> DirectSegmentDiscoveryRoute:
         raise Exception(f"expect rd, but received '{value}'")
     rd = route_distinguisher(tokeniser)
 
-    return DirectSegmentDiscoveryRoute(
+    return DirectSegmentDiscoveryRoute.make_dsd(
         rd=rd,
         ip=ip,
         afi=afi,
@@ -382,7 +382,7 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
         else:
             raise Exception(f'unexpect afi: {afi}')
 
-    return Type1SessionTransformedRoute(
+    return Type1SessionTransformedRoute.make_t1st(
         rd=rd,
         prefix_ip_len=prefix_ip_len,
         prefix_ip=prefix_ip,
@@ -429,7 +429,7 @@ def srv6_mup_t2st(tokeniser: Any, afi: AFI) -> Type2SessionTransformedRoute:
     if teid >= pow(2, teid_len):
         raise Exception(f'unexpect teid format, we can not store {teid} using {teid_len} bits')
 
-    return Type2SessionTransformedRoute(
+    return Type2SessionTransformedRoute.make_t2st(
         rd=rd,
         endpoint_len=endpoint_ip.bits + teid_len,  # 32 or 128
         endpoint_ip=endpoint_ip,

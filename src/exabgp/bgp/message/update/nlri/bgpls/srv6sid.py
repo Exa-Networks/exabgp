@@ -7,7 +7,7 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from struct import pack, unpack
+from struct import unpack
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
@@ -56,41 +56,39 @@ class SRv6SID(BGPLS):
 
     def __init__(
         self,
-        protocol_id: int,
-        domain: int,
-        local_node_descriptors: list[NodeDescriptor],
-        srv6_sid_descriptors: dict[str, Any],
+        packed: bytes,
         action: Action = Action.UNSET,
         addpath: PathInfo | None = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
-        self.proto_id: int = protocol_id
-        self.domain: int = domain
-        self.local_node_descriptors: list[NodeDescriptor] = local_node_descriptors
-        self.srv6_sid_descriptors: dict[str, Any] = srv6_sid_descriptors
+        self._packed = packed
 
-    @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, length: int) -> SRv6SID:
-        proto_id = unpack('!B', data[0:1])[0]
-        if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
-        domain = unpack('!Q', data[1:9])[0]
+    @property
+    def proto_id(self) -> int:
+        return unpack('!B', self._packed[0:1])[0]
 
-        tlvs = data[9:length]
+    @property
+    def domain(self) -> int:
+        return unpack('!Q', self._packed[1:9])[0]
+
+    def _parse_tlvs(self) -> tuple[list[NodeDescriptor], dict[str, Any]]:
+        """Parse TLVs from packed data."""
+        proto_id = self.proto_id
+        tlvs = self._packed[9:]
+
         node_type, node_length = unpack('!HH', tlvs[0:4])
         if node_type != TLV_LOCAL_NODE_DESC:
-            raise Exception(
-                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
-            )
+            return [], {}
+
         tlvs = tlvs[4:]
-        local_node_descriptors = tlvs[:node_length]
+        local_node_data = tlvs[:node_length]
         node_ids: list[NodeDescriptor] = []
-        while local_node_descriptors:
-            node_id, left = NodeDescriptor.unpack_node(local_node_descriptors, proto_id)
+        while local_node_data:
+            node_id, left = NodeDescriptor.unpack_node(local_node_data, proto_id)
             node_ids.append(node_id)
-            if left == local_node_descriptors:
-                raise RuntimeError('sub-calls should consume data')
-            local_node_descriptors = left
+            if left == local_node_data:
+                break
+            local_node_data = left
 
         tlvs = tlvs[node_length:]
         srv6_sid_descriptors: dict[str, Any] = {}
@@ -98,7 +96,7 @@ class SRv6SID(BGPLS):
 
         while tlvs:
             if len(tlvs) < MIN_TLV_HEADER_SIZE:
-                raise RuntimeError('SRv6 SID Descriptors are too short')
+                break
             sid_type, sid_length = unpack('!HH', tlvs[:4])
             if sid_type == TLV_MULTI_TOPO_ID:
                 srv6_sid_descriptors['multi-topology-ids'].append(MTID.unpack_mtid(tlvs[4 : sid_length + 4]).json())
@@ -110,29 +108,61 @@ class SRv6SID(BGPLS):
                 srv6_sid_descriptors[f'generic-tlv-{sid_type}'].append(hexstring(tlvs[4 : sid_length + 4]))
 
             tlvs = tlvs[sid_length + 4 :]
-        return cls(proto_id, domain, node_ids, srv6_sid_descriptors)
+
+        return node_ids, srv6_sid_descriptors
+
+    @property
+    def local_node_descriptors(self) -> list[NodeDescriptor]:
+        return self._parse_tlvs()[0]
+
+    @property
+    def srv6_sid_descriptors(self) -> dict[str, Any]:
+        return self._parse_tlvs()[1]
+
+    @classmethod
+    def unpack_bgpls_nlri(cls, data: bytes, length: int) -> SRv6SID:
+        proto_id = unpack('!B', data[0:1])[0]
+        if proto_id not in PROTO_CODES.keys():
+            raise Exception(f'Protocol-ID {proto_id} is not valid')
+
+        # Validate node descriptor TLV type
+        tlvs = data[9:length]
+        node_type, node_length = unpack('!HH', tlvs[0:4])
+        if node_type != TLV_LOCAL_NODE_DESC:
+            raise Exception(
+                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
+            )
+
+        # Validate node descriptors can be parsed
+        tlvs = tlvs[4:]
+        local_node_data = tlvs[:node_length]
+        while local_node_data:
+            _node_id, left = NodeDescriptor.unpack_node(local_node_data, proto_id)
+            if left == local_node_data:
+                raise RuntimeError('sub-calls should consume data')
+            local_node_data = left
+
+        # Validate SRv6 SID descriptors
+        tlvs = tlvs[node_length:]
+        while tlvs:
+            if len(tlvs) < MIN_TLV_HEADER_SIZE:
+                raise RuntimeError('SRv6 SID Descriptors are too short')
+            _sid_type, sid_length = unpack('!HH', tlvs[:4])
+            tlvs = tlvs[sid_length + 4 :]
+
+        return cls(data[:length])
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
-        nlri = pack('!B', self.proto_id)
-        nlri += pack('!Q', self.domain)
-        # Note: local_node_descriptors and srv6_sid_descriptors should be bytes here
-        # The type annotation allows List but pack expects bytes
-        if isinstance(self.local_node_descriptors, bytes):
-            nlri += self.local_node_descriptors
-        if isinstance(self.srv6_sid_descriptors, bytes):
-            nlri += self.srv6_sid_descriptors
-        return nlri
+        return self._packed
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
         # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, SAFI.bgp_ls)
-        return self._pack_nlri_simple()
+        return self._packed
 
     def __len__(self) -> int:
-        local_len = len(self.local_node_descriptors) if isinstance(self.local_node_descriptors, (bytes, list)) else 0
-        sid_len = len(self.srv6_sid_descriptors) if isinstance(self.srv6_sid_descriptors, (bytes, dict)) else 0
-        return 1 + 8 + local_len + sid_len
+        return len(self._packed)
 
     def __repr__(self) -> str:
         return f'{self.NAME}(protocol_id={self.proto_id}, domain={self.domain})'

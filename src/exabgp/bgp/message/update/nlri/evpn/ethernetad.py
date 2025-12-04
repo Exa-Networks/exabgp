@@ -41,22 +41,47 @@ class EthernetAD(EVPN):
 
     def __init__(
         self,
-        rd: RouteDistinguisher,
-        esi: ESI,
-        etag: EthernetTag,
-        label: Labels | None,
-        packed: bytes | None = None,
+        packed: bytes,
         nexthop: IP = IP.NoNextHop,
         action: Action | None = None,
         addpath: PathInfo | None = None,
     ) -> None:
         EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
+        self._packed = packed
         self.nexthop = nexthop
-        self.rd = rd
-        self.esi = esi
-        self.etag = etag
-        self.label = label if label else Labels.NOLABEL
-        self._pack(packed)
+
+    @classmethod
+    def make_ethernetad(
+        cls,
+        rd: RouteDistinguisher,
+        esi: ESI,
+        etag: EthernetTag,
+        label: Labels | None,
+        nexthop: IP = IP.NoNextHop,
+        action: Action | None = None,
+        addpath: PathInfo | None = None,
+    ) -> 'EthernetAD':
+        """Factory method to create EthernetAD from semantic parameters."""
+        label_to_use = label if label else Labels.NOLABEL
+        packed = rd.pack_rd() + esi.pack_esi() + etag.pack_etag() + label_to_use.pack_labels()
+        return cls(packed, nexthop, action, addpath)
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+
+    @property
+    def esi(self) -> ESI:
+        return ESI.unpack_esi(self._packed[8:18])
+
+    @property
+    def etag(self) -> EthernetTag:
+        return EthernetTag.unpack_etag(self._packed[18:22])
+
+    @property
+    def label(self) -> Labels:
+        # Labels are variable length (3 bytes per label), consume all remaining bytes
+        return Labels.unpack_labels(self._packed[22:])
 
     def __eq__(self, other: object) -> bool:
         return (
@@ -77,25 +102,9 @@ class EthernetAD(EVPN):
         # esi and label MUST *NOT* be part of the hash
         return hash((self.rd, self.etag))
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-
-        self._packed = self.rd.pack_rd() + self.esi.pack_esi() + self.etag.pack_etag() + self.label.pack_labels()
-        return self._packed
-
     @classmethod
     def unpack_evpn_route(cls, data: bytes) -> EthernetAD:
-        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
-        esi = ESI.unpack_esi(data[8:18])
-        etag = EthernetTag.unpack_etag(data[18:22])
-        label = Labels.unpack_labels(data[22:25])
-
-        return cls(rd, esi, etag, label, data)
+        return cls(data)
 
     def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE

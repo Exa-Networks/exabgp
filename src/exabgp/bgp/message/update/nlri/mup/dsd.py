@@ -30,11 +30,30 @@ class DirectSegmentDiscoveryRoute(MUP):
     NAME: ClassVar[str] = 'DirectSegmentDiscoveryRoute'
     SHORT_NAME: ClassVar[str] = 'DSD'
 
-    def __init__(self, rd: RouteDistinguisher, ip: IP, afi: AFI, packed: bytes | None = None) -> None:
+    def __init__(self, packed: bytes, afi: AFI) -> None:
         MUP.__init__(self, afi)
-        self.rd: RouteDistinguisher = rd
-        self.ip: IP = ip
-        self._pack(packed)
+        self._packed = packed
+
+    @classmethod
+    def make_dsd(
+        cls,
+        rd: RouteDistinguisher,
+        ip: IP,
+        afi: AFI,
+    ) -> 'DirectSegmentDiscoveryRoute':
+        """Factory method to create DSD from semantic parameters."""
+        packed = rd.pack_rd() + ip.pack_ip()
+        return cls(packed, afi)
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+
+    @property
+    def ip(self) -> IP:
+        data_len = len(self._packed)
+        size = data_len - 8
+        return IP.unpack_ip(self._packed[8 : 8 + size])
 
     def index(self) -> bytes:
         return MUP.index(self)
@@ -55,32 +74,13 @@ class DirectSegmentDiscoveryRoute(MUP):
     def __hash__(self) -> int:
         return hash((self.rd, self.ip))
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-
-        # fmt: off
-        self._packed = (
-            self.rd.pack_rd()
-            + self.ip.pack_ip()
-        )
-        # fmt: on
-        return self._packed
-
     @classmethod
     def unpack_mup_route(cls, data: bytes, afi: AFI) -> DirectSegmentDiscoveryRoute:
         data_len = len(data)
-        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
         size = data_len - 8
         if size not in [4, 16]:
             raise Notify(3, 5, 'Invalid IP size, expect 4 or 16 octets. accuracy size %d' % size)
-        ip = IP.unpack_ip(data[8 : 8 + size])
-
-        return cls(rd, ip, afi)
+        return cls(data, afi)
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)
