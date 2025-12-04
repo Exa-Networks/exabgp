@@ -213,10 +213,10 @@ uv run pytest tests/unit/path/to/test.py -v  # Should FAIL
 
 ### 4. Coding Standards
 
-**Core principle:** Python 3.10+, strict mypy, stable BGP APIs
+**Core principle:** Python 3.12+, strict mypy, stable BGP APIs
 
 ✅ **Required:**
-- Python 3.10+ syntax: `int | str` NOT `Union[int, str]`
+- Python 3.12+ syntax: `int | str` NOT `Union[int, str]`
 - NO code requiring mypy config changes
 - BGP APIs: keep `negotiated` parameter (stable API, unused OK)
 - Fix type errors at root cause, avoid `# type: ignore`

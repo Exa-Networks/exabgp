@@ -31,13 +31,13 @@
 
 ---
 
-## Python 3.10+ Compatibility (MANDATORY)
+## Python 3.12+ Compatibility (MANDATORY)
 
 ### Type Annotations
 
-ExaBGP 6.0 requires Python 3.10+, enabling modern type annotation syntax:
+ExaBGP 6.0 requires Python 3.12+, enabling modern type annotation syntax:
 
-✅ **CORRECT (Python 3.10+ style - preferred):**
+✅ **CORRECT (Python 3.12+ style - preferred):**
 ```python
 def func(x: int | str) -> bool | None:
     data: dict[str, list[int]] = {}
@@ -273,7 +273,7 @@ return cast(int, untrusted_value)
 
 ## Quick Checklist
 
-- [ ] Python 3.10+ syntax (prefer `int | str` over `Union[int, str]`)
+- [ ] Python 3.12+ syntax (prefer `int | str` over `Union[int, str]`)
 - [ ] Avoid `| None` class attributes when possible
 - [ ] Fix type errors at root cause, avoid `# type: ignore`
 - [ ] Only use `cast()` when preceded by runtime type check (isinstance/hasattr)

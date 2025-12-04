@@ -16,7 +16,7 @@ This single file contains core rules that apply to ALL interactions:
 - Verification before claiming success
 - Communication style (terse, emoji-prefixed)
 - Testing requirements (./qa/bin/test_everything)
-- Coding standards essentials (Python 3.10+, mypy)
+- Coding standards essentials (Python 3.12+, mypy)
 - Session start workflow
 - Contextual protocol loading guide
 

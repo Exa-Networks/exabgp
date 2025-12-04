@@ -60,5 +60,5 @@ killall -9 Python  # macOS uses capital P
 All must pass:
 - Linting (Python 3.12)
 - Type checking (Python 3.12)
-- Unit tests (Python 3.10-3.13)
-- Functional tests (Python 3.10-3.13)
+- Unit tests (Python 3.12-3.14)
+- Functional tests (Python 3.12-3.14)
