@@ -98,7 +98,7 @@ DSCP_MAX_VALUE = 0b111111  # DSCP is a 6-bit field (0-63)
 
 
 def flow(tokeniser: 'Tokeniser') -> Change:
-    return Change(Flow(), Attributes())
+    return Change(Flow.make_flow(), Attributes())
 
 
 def source(tokeniser: 'Tokeniser') -> Generator[Flow4Source | Flow6Source, None, None]:
@@ -110,16 +110,16 @@ def source(tokeniser: 'Tokeniser') -> Generator[Flow4Source | Flow6Source, None,
         netmask: str
         ip, netmask = data.split('/')
         raw: bytes = b''.join(bytes([int(_)]) for _ in ip.split('.'))
-        yield Flow4Source(raw, int(netmask))
+        yield Flow4Source.make_prefix4(raw, int(netmask))
     # Check if it's IPv6 without an offset
     elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH:
         ip, netmask = data.split('/')
-        yield Flow6Source(IP.pton(ip), int(netmask), 0)
+        yield Flow6Source.make_prefix6(IP.pton(ip), int(netmask), 0)
     # Check if it's IPv6 with an offset
     elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH:
         offset: str
         ip, netmask, offset = data.split('/')
-        yield Flow6Source(IP.pton(ip), int(netmask), int(offset))
+        yield Flow6Source.make_prefix6(IP.pton(ip), int(netmask), int(offset))
 
 
 def destination(tokeniser: 'Tokeniser') -> Generator[Flow4Destination | Flow6Destination, None, None]:
@@ -131,16 +131,16 @@ def destination(tokeniser: 'Tokeniser') -> Generator[Flow4Destination | Flow6Des
         netmask: str
         ip, netmask = data.split('/')
         raw: bytes = b''.join(bytes([int(_)]) for _ in ip.split('.'))
-        yield Flow4Destination(raw, int(netmask))
+        yield Flow4Destination.make_prefix4(raw, int(netmask))
     # Check if it's IPv6 without an offset
     elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH:
         ip, netmask = data.split('/')
-        yield Flow6Destination(IP.pton(ip), int(netmask), 0)
+        yield Flow6Destination.make_prefix6(IP.pton(ip), int(netmask), 0)
     # Check if it's IPv6 with an offset
     elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH:
         offset: str
         ip, netmask, offset = data.split('/')
-        yield Flow6Destination(IP.pton(ip), int(netmask), int(offset))
+        yield Flow6Destination.make_prefix6(IP.pton(ip), int(netmask), int(offset))
 
 
 # Expressions

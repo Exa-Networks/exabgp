@@ -72,18 +72,8 @@ class IComponent:
     FLAG: ClassVar[bool] = False
 
     def pack(self) -> bytes:
-        """Polymorphic pack method that delegates to specific pack_X() methods.
-
-        Subclasses should implement either pack_prefix() or pack_operation().
-        This method provides backward compatibility and polymorphism.
-        """
-        # Check which specific pack method exists and call it
-        if hasattr(self, 'pack_prefix'):
-            return self.pack_prefix()  # type: ignore[no-any-return]
-        elif hasattr(self, 'pack_operation'):
-            return self.pack_operation()  # type: ignore[no-any-return]
-        else:
-            raise NotImplementedError(f'{self.__class__.__name__} must implement pack_prefix() or pack_operation()')
+        """Pack the component to wire format. Must be overridden by subclasses."""
+        raise NotImplementedError(f'{self.__class__.__name__} must implement pack()')
 
 
 class CommonOperator:
@@ -174,6 +164,12 @@ class IPrefix:
 
 
 class IPrefix4(IPrefix, IComponent, IPv4):
+    """IPv4 FlowSpec prefix using packed-bytes-first pattern.
+
+    Wire format stored in _packed: [mask][truncated_ip...]
+    CIDR unpacked on demand via property.
+    """
+
     # Must be defined in subclasses
     CODE: ClassVar[int] = -1
     NAME: ClassVar[str] = ''
@@ -181,15 +177,41 @@ class IPrefix4(IPrefix, IComponent, IPv4):
 
     # not used, just present for simplying the nlri generation
     operations: int = 0x0
-    cidr: CIDR
 
-    def __init__(self, raw: bytes, netmask: int) -> None:
-        self.cidr = CIDR.make_cidr(raw, netmask)
+    def __init__(self, packed: bytes) -> None:
+        """Create from wire format bytes [mask][truncated_ip...].
+
+        Args:
+            packed: NLRI wire format bytes (mask byte + truncated IP)
+        """
+        self._packed = packed
+
+    @property
+    def cidr(self) -> CIDR:
+        """CIDR - unpacked from wire bytes on demand."""
+        return CIDR(self._packed)
+
+    @classmethod
+    def make_prefix4(cls, raw: bytes, netmask: int) -> 'IPrefix4':
+        """Factory to create from full IP bytes and mask (for config parsing).
+
+        Args:
+            raw: Full IP address bytes (4 bytes for IPv4)
+            netmask: Prefix length
+
+        Returns:
+            New IPrefix4 instance with packed wire format
+        """
+        packed = bytes([netmask]) + raw[: CIDR.size(netmask)]
+        return cls(packed)
+
+    def pack(self) -> bytes:
+        """Pack to wire format: [ID][mask][truncated_ip...]"""
+        return bytes([self.ID]) + self._packed
 
     def pack_prefix(self) -> bytes:
-        raw = self.cidr.pack_nlri()
-        # ID is defined in subclasses
-        return bytes([self.ID]) + raw
+        """Alias for pack() - backwards compatibility."""
+        return self.pack()
 
     def short(self) -> str:
         return str(self.cidr)
@@ -199,11 +221,20 @@ class IPrefix4(IPrefix, IComponent, IPv4):
 
     @classmethod
     def make(cls, bgp: bytes) -> tuple[IPrefix4, bytes]:
+        """Unpack from wire format, storing raw bytes."""
         cidr = CIDR(bgp)
-        return cls(cidr.ton(), cidr.mask), bgp[CIDR.size(cidr.mask) + 1 :]
+        packed = bgp[: len(cidr)]  # mask byte + truncated IP bytes
+        return cls(packed), bgp[len(cidr) :]
 
 
 class IPrefix6(IPrefix, IComponent, IPv6):
+    """IPv6 FlowSpec prefix using packed-bytes-first pattern.
+
+    Wire format stored in _packed: [mask][truncated_ip...]
+    Offset stored separately (IPv6 FlowSpec specific).
+    CIDR unpacked on demand via property.
+    """
+
     # Must be defined in subclasses
     CODE: ClassVar[int] = -1
     NAME: ClassVar[str] = ''
@@ -211,29 +242,65 @@ class IPrefix6(IPrefix, IComponent, IPv6):
 
     # not used, just present for simplying the nlri generation
     operations: int = 0x0
-    cidr: CIDR
-    offset: int
 
-    def __init__(self, raw: bytes, netmask: int, offset: int) -> None:
-        self.cidr = CIDR.make_cidr(raw, netmask)
-        self.offset = offset
+    def __init__(self, packed: bytes, offset: int) -> None:
+        """Create from wire format bytes [mask][truncated_ip...] and offset.
+
+        Args:
+            packed: NLRI wire format bytes (mask byte + truncated IP)
+            offset: IPv6 FlowSpec offset value
+        """
+        self._packed = packed
+        self._offset = offset
+
+    @property
+    def cidr(self) -> CIDR:
+        """CIDR - unpacked from wire bytes on demand."""
+        return CIDR(self._packed)
+
+    @property
+    def offset(self) -> int:
+        """IPv6 FlowSpec offset value."""
+        return self._offset
+
+    @classmethod
+    def make_prefix6(cls, raw: bytes, netmask: int, offset: int) -> 'IPrefix6':
+        """Factory to create from full IP bytes, mask and offset (for config parsing).
+
+        Args:
+            raw: Full IP address bytes (16 bytes for IPv6)
+            netmask: Prefix length
+            offset: IPv6 FlowSpec offset value
+
+        Returns:
+            New IPrefix6 instance with packed wire format
+        """
+        packed = bytes([netmask]) + raw[: CIDR.size(netmask)]
+        return cls(packed, offset)
+
+    def pack(self) -> bytes:
+        """Pack to wire format: [ID][mask][offset][ip...]"""
+        return bytes([self.ID, self.cidr.mask, self._offset]) + self.cidr.pack_ip()
 
     def pack_prefix(self) -> bytes:
-        # ID is defined in subclasses
-        return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()
+        """Alias for pack() - backwards compatibility."""
+        return self.pack()
 
     def short(self) -> str:
-        return '{}/{}'.format(self.cidr, self.offset)
+        return '{}/{}'.format(self.cidr, self._offset)
 
     def __str__(self) -> str:
-        return '{}/{}'.format(self.cidr, self.offset)
+        return '{}/{}'.format(self.cidr, self._offset)
 
     @classmethod
     def make(cls, bgp: bytes) -> tuple[IPrefix6, bytes]:
+        """Unpack from wire format, storing raw bytes and offset."""
         offset = bgp[1]
         # IPv6 FlowSpec has offset byte between mask and prefix
+        # Wire format: [mask][offset][ip...], we store [mask][ip...] in _packed
         cidr = CIDR(bgp[0:1] + bgp[2:])
-        return cls(cidr.ton(), cidr.mask, offset), bgp[CIDR.size(cidr.mask) + 2 :]
+        packed = bgp[0:1] + bgp[2 : 2 + CIDR.size(cidr.mask)]
+        return cls(packed, offset), bgp[CIDR.size(cidr.mask) + 2 :]
 
 
 class IOperation(IComponent):
@@ -249,10 +316,15 @@ class IOperation(IComponent):
         self.value = value
         self.first = None  # handled by pack/str
 
-    def pack_operation(self) -> bytes:
+    def pack(self) -> bytes:
+        """Pack to wire format: [operator][value...]"""
         length, value = self.encode(self.value)
         op = self.operations | _len_to_bit(length)
         return bytes([op]) + value
+
+    def pack_operation(self) -> bytes:
+        """Alias for pack() - backwards compatibility."""
+        return self.pack()
 
     def encode(
         self, value: int | 'Protocol' | 'Port' | 'ICMPType' | 'ICMPCode' | 'TCPFlag' | 'Fragment'
@@ -609,36 +681,33 @@ for content in dir():
 @NLRI.register(AFI.ipv4, SAFI.flow_vpn)
 @NLRI.register(AFI.ipv6, SAFI.flow_vpn)
 class Flow(NLRI):
-    """FlowSpec NLRI for traffic filtering rules (RFC 5575).
+    """FlowSpec NLRI for traffic filtering rules (RFC 5575) using packed-bytes-first pattern.
 
-    Flow uses a builder pattern where rules are added via add() method.
-    The packed wire format is computed dynamically from the rules.
+    Wire format stored in _packed (excluding length prefix).
+    Rules parsed lazily on access via rules property.
+    When rules are modified via add(), _packed is marked stale and recomputed on next pack.
 
-    Note: Packed-bytes-first pattern does not apply to Flow because:
-    1. Rules are added incrementally via add() method
-    2. Wire format depends on the entire rules collection
-    3. Length encoding requires knowing total size upfront
-
-    Use make_flow() to create a new Flow, then add rules via add().
+    Two modes:
+    - Packed mode: created from wire bytes, rules parsed lazily
+    - Builder mode: created empty for config, rules added via add()
     """
 
-    rules: dict[int, list[FlowRule]]
     nexthop: Any
-    rd: RouteDistinguisher
 
-    def __init__(self, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.flow_ip, action: Action = Action.UNSET) -> None:
-        """Create a Flow NLRI in builder mode.
+    def __init__(self, packed: bytes, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
+        """Create a Flow NLRI from wire format bytes.
 
         Args:
+            packed: Wire format bytes (excluding length prefix) - RD + rules for flow_vpn, just rules for flow_ip
             afi: Address Family Identifier (ipv4 or ipv6)
             safi: Subsequent Address Family Identifier (flow_ip or flow_vpn)
             action: Route action (ANNOUNCE/WITHDRAW)
         """
         NLRI.__init__(self, afi, safi, action)
-        self.rules = {}
+        self._packed = packed
+        self._rules_cache: dict[int, list[FlowRule]] | None = None
+        self._packed_stale = False
         self.nexthop = IP.NoNextHop
-        # NORD is typed Optional but always set at module load (rd.py:115)
-        self.rd = RouteDistinguisher.NORD
 
     @classmethod
     def make_flow(
@@ -649,9 +718,8 @@ class Flow(NLRI):
     ) -> 'Flow':
         """Factory method to create an empty Flow NLRI for building rules.
 
-        This is the preferred way to create a Flow. After creation,
-        use add() to add rules, then the packed format is computed
-        dynamically when pack_nlri() is called.
+        This is the preferred way to create a Flow for configuration.
+        After creation, use add() to add rules.
 
         Args:
             afi: Address Family Identifier (ipv4 or ipv6)
@@ -661,7 +729,77 @@ class Flow(NLRI):
         Returns:
             New Flow instance ready for adding rules via add()
         """
-        return cls(afi, safi, action)
+        # Start with empty packed - will be computed when needed
+        packed = RouteDistinguisher.NORD.pack_rd() if safi in (SAFI.flow_vpn,) else b''
+        instance = cls(packed, afi, safi, action)
+        instance._rules_cache = {}  # Enable builder mode with empty rules
+        return instance
+
+    @property
+    def rules(self) -> dict[int, list[FlowRule]]:
+        """Rules dict - parsed lazily from _packed on first access."""
+        if self._rules_cache is not None:
+            return self._rules_cache
+        self._rules_cache = self._parse_rules()
+        return self._rules_cache
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        """Route Distinguisher - from _rd_override if set, else from _packed for flow_vpn."""
+        # Check override first (set via setter)
+        if hasattr(self, '_rd_override') and self._rd_override is not None:
+            return self._rd_override
+        # Extract from packed bytes if flow_vpn
+        if self.safi in (SAFI.flow_vpn,) and len(self._packed) >= 8:
+            return RouteDistinguisher(self._packed[:8])
+        return RouteDistinguisher.NORD
+
+    @rd.setter
+    def rd(self, value: RouteDistinguisher) -> None:
+        """Set RD - triggers packed recomputation."""
+        # Parse rules first if needed
+        _ = self.rules
+        # Update the RD in packed by rebuilding
+        self._packed_stale = True
+        # Store the new RD value - it will be used when repacking
+        self._rd_override = value
+
+    def _parse_rules(self) -> dict[int, list[FlowRule]]:
+        """Parse rules from _packed bytes."""
+        rules: dict[int, list[FlowRule]] = {}
+        bgp = self._packed
+
+        # Skip RD for flow_vpn
+        if self.safi in (SAFI.flow_vpn,) and len(bgp) >= 8:
+            bgp = bgp[8:]
+
+        try:
+            while bgp:
+                what, bgp = bgp[0], bgp[1:]
+
+                if what not in decode.get(self.afi, {}):
+                    break  # Unknown component, stop parsing
+
+                decoded = decode[self.afi][what]
+                klass = factory[self.afi][what]
+
+                if decoded == 'prefix':
+                    adding, bgp = klass.make(bgp)  # type: ignore[attr-defined]
+                    rules.setdefault(adding.ID, []).append(adding)
+                else:
+                    end: int = 0
+                    while not end:
+                        byte, bgp = bgp[0], bgp[1:]
+                        end = CommonOperator.eol(byte)
+                        operator = CommonOperator.operator(byte)
+                        length = CommonOperator.length(byte)
+                        value, bgp = bgp[:length], bgp[length:]
+                        adding_val = klass.decoder(value)  # type: ignore[attr-defined]
+                        rules.setdefault(what, []).append(klass(operator, adding_val))  # type: ignore[arg-type,call-arg]
+        except (IndexError, KeyError):
+            pass  # Incomplete data, return what we have
+
+        return rules
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
@@ -672,6 +810,10 @@ class Flow(NLRI):
         return len(self._pack_nlri_simple())
 
     def add(self, rule: FlowRule) -> bool:
+        """Add a rule to the Flow NLRI.
+
+        Adding rules marks _packed as stale, requiring recomputation on next pack.
+        """
         ID = rule.ID
         if ID in (FlowDestination.ID, FlowSource.ID):
             # re-enabled multiple source/destination as it is allowed by some vendor
@@ -688,26 +830,24 @@ class Flow(NLRI):
             if rule.NAME.endswith('ipv6'):
                 self.afi = AFI.ipv6
         self.rules.setdefault(ID, []).append(rule)
+        self._packed_stale = True  # Mark packed as stale after modification
         return True
 
     def _pack_nlri_simple(self) -> bytes:
-        """Pack NLRI without negotiated-dependent data (no addpath)."""
-        ordered_rules: list[bytes] = []
-        # the order is a RFC requirement
-        for ID in sorted(self.rules.keys()):
-            rules = self.rules[ID]
-            # for each component get all the operation to do
-            # the format use does not prevent two opposing rules meaning that no packet can ever match
-            for rule in rules:
-                rule.operations &= CommonOperator.EOL ^ 0xFF
-            rules[-1].operations |= CommonOperator.EOL
-            # and add it to the last rule
-            if ID not in (FlowDestination.ID, FlowSource.ID):
-                ordered_rules.append(bytes([ID]))
-            ordered_rules.append(b''.join(rule.pack() for rule in rules))
+        """Pack NLRI without negotiated-dependent data (no addpath).
 
-        components = self.rd.pack_rd() + b''.join(ordered_rules)
+        Returns stored _packed bytes with length prefix if not stale,
+        otherwise recomputes from rules.
+        """
+        # If packed is valid (not stale), return with length prefix
+        if not self._packed_stale and self._packed:
+            return self._encode_length(self._packed)
 
+        # Recompute from rules
+        return self._pack_from_rules()
+
+    def _encode_length(self, components: bytes) -> bytes:
+        """Encode length prefix for wire format."""
         lc = len(components)
         if lc < FLOW_LENGTH_COMPACT_MAX:
             return bytes([lc]) + components
@@ -718,6 +858,33 @@ class Flow(NLRI):
             0,
             'my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can',
         )
+
+    def _pack_from_rules(self) -> bytes:
+        """Recompute wire format from rules dict."""
+        ordered_rules: list[bytes] = []
+        # the order is a RFC requirement
+        for ID in sorted(self.rules.keys()):
+            rules = self.rules[ID]
+            # for each component get all the operation to do
+            # the format use does not prevent two opposing rules meaning that no packet can ever match
+            for rule in rules:
+                rule.operations &= CommonOperator.EOL ^ 0xFF
+            if rules:
+                rules[-1].operations |= CommonOperator.EOL
+            # and add it to the last rule
+            if ID not in (FlowDestination.ID, FlowSource.ID):
+                ordered_rules.append(bytes([ID]))
+            ordered_rules.append(b''.join(rule.pack() for rule in rules))
+
+        # Use rd_override if set (from rd setter), otherwise use rd property
+        rd_to_use = getattr(self, '_rd_override', None) or self.rd
+        components = rd_to_use.pack_rd() + b''.join(ordered_rules)
+
+        # Update _packed and clear stale flag
+        self._packed = components
+        self._packed_stale = False
+
+        return self._encode_length(components)
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
         # RFC 7911 ADD-PATH is possible for FlowSpec but not yet implemented
@@ -772,6 +939,7 @@ class Flow(NLRI):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[Flow | NLRI, bytes]:
+        """Unpack Flow NLRI from wire format, storing raw bytes."""
         length, bgp = bgp[0], bgp[1:]
 
         if length & FLOW_LENGTH_EXTENDED_MASK == FLOW_LENGTH_EXTENDED_VALUE:  # bigger than 240
@@ -782,52 +950,37 @@ class Flow(NLRI):
             raise Notify(3, 10, 'invalid length at the start of the the flow')
 
         over = bgp[length:]
+        packed = bgp[:length]
 
-        bgp = bgp[:length]
-        nlri = cls(afi, safi, action)
+        # Create Flow with packed bytes - rules will be parsed lazily
+        nlri = cls(packed, afi, safi, action)
 
+        # Validate by parsing (this populates _rules_cache)
         try:
-            if safi == SAFI.flow_vpn:
-                nlri.rd = RouteDistinguisher(bgp[:8])
-                bgp = bgp[8:]
-
             seen: list[int] = []
+            rules = nlri.rules  # Trigger lazy parsing
 
-            while bgp:
-                what, bgp = bgp[0], bgp[1:]
+            # Validate rule order
+            for rule_id in sorted(rules.keys()):
+                for rule in rules[rule_id]:
+                    if rule_id in (FlowDestination.ID, FlowSource.ID):
+                        seen.append(rule.ID)
+                    else:
+                        seen.append(rule_id)
+                        break  # Only add ID once per rule type for non-prefix
 
-                if what not in decode.get(afi, {}):
-                    raise Notify(3, 10, 'unknown flowspec component received for address family %d' % what)
+            # Check AFI compatibility for source/destination
+            src_rules = rules.get(FlowSource.ID, [])
+            dst_rules = rules.get(FlowDestination.ID, [])
+            if src_rules and dst_rules:
+                if src_rules[0].afi != dst_rules[0].afi:
+                    raise Notify(
+                        3,
+                        10,
+                        'components are incompatible (mix ipv4/ipv6)',
+                    )
 
-                seen.append(what)
-                if sorted(seen) != seen:
-                    raise Notify(3, 10, 'components are not sent in the right order {}'.format(seen))
-
-                decoded = decode[afi][what]
-                klass = factory[afi][what]
-
-                if decoded == 'prefix':
-                    adding, bgp = klass.make(bgp)  # type: ignore[attr-defined]
-                    if not nlri.add(adding):
-                        raise Notify(
-                            3,
-                            10,
-                            'components are incompatible (two sources, two destinations, mix ipv4/ipv6) {}'.format(
-                                seen
-                            ),
-                        )
-                else:
-                    end: int = 0
-                    while not end:
-                        byte, bgp = bgp[0], bgp[1:]
-                        end = CommonOperator.eol(byte)
-                        operator = CommonOperator.operator(byte)
-                        length = CommonOperator.length(byte)
-                        value, bgp = bgp[:length], bgp[length:]
-                        adding = klass.decoder(value)  # type: ignore[attr-defined]
-                        nlri.add(klass(operator, adding))  # type: ignore[arg-type,call-arg]
-
-            return nlri, bgp + over
+            return nlri, over
         except Notify:
             return NLRI.INVALID, over
         except ValueError:

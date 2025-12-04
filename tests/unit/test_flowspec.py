@@ -62,7 +62,7 @@ class TestFlow4Components:
 
     def test_flow4_destination_basic(self) -> None:
         """Test IPv4 destination prefix"""
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
 
         assert dest.cidr.mask == 24
         packed = dest.pack()
@@ -73,7 +73,7 @@ class TestFlow4Components:
 
     def test_flow4_source_basic(self) -> None:
         """Test IPv4 source prefix"""
-        src = Flow4Source(IPv4.pton('10.1.2.0'), 24)
+        src = Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24)
 
         assert src.cidr.mask == 24
         packed = src.pack()
@@ -84,7 +84,7 @@ class TestFlow4Components:
 
     def test_flow4_string_representation(self) -> None:
         """Test string representation of IPv4 flow components"""
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
 
         dest_str = str(dest)
         assert '192.0.2.0/24' in dest_str
@@ -129,7 +129,7 @@ class TestFlow6Components:
 
     def test_flow6_destination_basic(self) -> None:
         """Test IPv6 destination prefix"""
-        dest = Flow6Destination(IP.from_string('2001:db8::').pack_ip(), 48, 0)
+        dest = Flow6Destination.make_prefix6(IP.from_string('2001:db8::').pack_ip(), 48, 0)
 
         assert dest.cidr.mask == 48
         assert dest.offset == 0
@@ -140,7 +140,7 @@ class TestFlow6Components:
 
     def test_flow6_source_basic(self) -> None:
         """Test IPv6 source prefix"""
-        src = Flow6Source(IP.from_string('2001:db8:1::').pack_ip(), 64, 0)
+        src = Flow6Source.make_prefix6(IP.from_string('2001:db8:1::').pack_ip(), 64, 0)
 
         assert src.cidr.mask == 64
         assert src.offset == 0
@@ -151,7 +151,7 @@ class TestFlow6Components:
 
     def test_flow6_offset(self) -> None:
         """Test IPv6 prefix with offset"""
-        dest = Flow6Destination(IP.from_string('2001:db8::').pack_ip(), 48, 16)
+        dest = Flow6Destination.make_prefix6(IP.from_string('2001:db8::').pack_ip(), 48, 16)
 
         assert dest.offset == 16
         dest_str = str(dest)
@@ -392,7 +392,7 @@ class TestFlowNLRI:
 
     def test_flow_creation(self) -> None:
         """Test basic Flow NLRI creation"""
-        flow = Flow()
+        flow = Flow.make_flow()
 
         assert flow.afi == AFI.ipv4
         assert flow.safi == SAFI.flow_ip
@@ -401,10 +401,10 @@ class TestFlowNLRI:
 
     def test_flow_add_components(self) -> None:
         """Test adding components to flow"""
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
-        src = Flow4Source(IPv4.pton('10.1.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
+        src = Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24)
         port = FlowAnyPort(NumericOperator.EQ, 80)
 
         assert flow.add(dest) is True
@@ -415,13 +415,13 @@ class TestFlowNLRI:
 
     def test_flow_ipv6_afi_switch(self) -> None:
         """Test that adding IPv6 components switches AFI"""
-        flow = Flow()
+        flow = Flow.make_flow()
 
         # Start with IPv4
         assert flow.afi == AFI.ipv4
 
         # Add IPv6 destination
-        dest6 = Flow6Destination(IP.from_string('2001:db8::').pack_ip(), 48, 0)
+        dest6 = Flow6Destination.make_prefix6(IP.from_string('2001:db8::').pack_ip(), 48, 0)
         flow.add(dest6)
 
         # AFI should switch to IPv6
@@ -429,10 +429,10 @@ class TestFlowNLRI:
 
     def test_flow_mixed_afi_reject(self) -> None:
         """Test that mixing IPv4 and IPv6 prefixes is rejected"""
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest4 = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
-        src6 = Flow6Source(IP.from_string('2001:db8::').pack_ip(), 64, 0)
+        dest4 = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
+        src6 = Flow6Source.make_prefix6(IP.from_string('2001:db8::').pack_ip(), 64, 0)
 
         flow.add(dest4)
         # Adding IPv6 source after IPv4 dest should fail
@@ -443,10 +443,10 @@ class TestFlowNLRI:
     def test_flow_pack_basic(self) -> None:
         """Test packing a basic flow specification"""
         negotiated = create_negotiated()
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
-        src = Flow4Source(IPv4.pton('10.1.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
+        src = Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24)
 
         flow.add(dest)
         flow.add(src)
@@ -461,9 +461,9 @@ class TestFlowNLRI:
     def test_flow_pack_with_ports(self) -> None:
         """Test packing flow with port specifications"""
         negotiated = create_negotiated()
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         port1 = FlowAnyPort(NumericOperator.GT, 1024)
         port2 = FlowAnyPort(NumericOperator.LT, 65535)
 
@@ -477,9 +477,9 @@ class TestFlowNLRI:
     def test_flow_pack_long_format(self) -> None:
         """Test packing flow with 2-byte length encoding"""
         negotiated = create_negotiated()
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
 
         # Add many components to exceed 0xF0 bytes
@@ -493,9 +493,9 @@ class TestFlowNLRI:
 
     def test_flow_string_representation(self) -> None:
         """Test string representation of flow"""
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         proto = FlowIPProtocol(NumericOperator.EQ, 6)
 
         flow.add(dest)
@@ -508,10 +508,10 @@ class TestFlowNLRI:
 
     def test_flow_json(self) -> None:
         """Test JSON serialization of flow"""
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
-        src = Flow4Source(IPv4.pton('10.1.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
+        src = Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24)
 
         flow.add(dest)
         flow.add(src)
@@ -524,12 +524,12 @@ class TestFlowNLRI:
     def test_flow_with_route_distinguisher(self) -> None:
         """Test flow with route distinguisher (VPNv4)"""
         negotiated = create_negotiated()
-        flow = Flow()
+        flow = Flow.make_flow()
 
         rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         flow.rd = rd
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
 
         packed = flow.pack_nlri(negotiated)
@@ -539,11 +539,11 @@ class TestFlowNLRI:
 
     def test_flow_equality(self) -> None:
         """Test flow equality comparison"""
-        flow1 = Flow()
-        flow2 = Flow()
+        flow1 = Flow.make_flow()
+        flow2 = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
-        src = Flow4Source(IPv4.pton('10.1.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
+        src = Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24)
 
         flow1.add(dest)
         flow1.add(src)
@@ -558,9 +558,9 @@ class TestFlowNLRI:
     def test_flow_and_operator(self) -> None:
         """Test AND operator between flow components"""
         negotiated = create_negotiated()
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         # Port >= 1024 AND port <= 65535
         port1 = FlowAnyPort(NumericOperator.GT | NumericOperator.EQ, 1024)
         port2 = FlowAnyPort(NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ, 65535)
@@ -575,9 +575,9 @@ class TestFlowNLRI:
     def test_flow_tcp_flags_combination(self) -> None:
         """Test flow with TCP flags matching"""
         negotiated = create_negotiated()
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         proto = FlowIPProtocol(NumericOperator.EQ, 6)  # TCP
         dport = FlowDestinationPort(NumericOperator.EQ, 80)
         tcp_syn = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.SYN)
@@ -596,9 +596,9 @@ class TestFlowNLRI:
     def test_flow_icmp_specification(self) -> None:
         """Test flow for ICMP packets"""
         negotiated = create_negotiated()
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         proto = FlowIPProtocol(NumericOperator.EQ, 1)  # ICMP
         icmp_type = FlowICMPType(NumericOperator.EQ, 8)  # Echo request
         icmp_code = FlowICMPCode(NumericOperator.EQ, 0)
@@ -614,9 +614,9 @@ class TestFlowNLRI:
     def test_flow_packet_length_range(self) -> None:
         """Test flow with packet length range"""
         negotiated = create_negotiated()
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         # Packets between 100 and 1500 bytes
         pkt_len1 = FlowPacketLength(NumericOperator.GT | NumericOperator.EQ, 100)
         pkt_len2 = FlowPacketLength(NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ, 1500)
@@ -631,9 +631,9 @@ class TestFlowNLRI:
     def test_flow_dscp_marking(self) -> None:
         """Test flow with DSCP/TOS matching"""
         negotiated = create_negotiated()
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         dscp = FlowDSCP(NumericOperator.EQ, 46)  # EF
 
         flow.add(dest)
@@ -645,9 +645,9 @@ class TestFlowNLRI:
     def test_flow_fragment_matching(self) -> None:
         """Test flow with fragment matching"""
         negotiated = create_negotiated()
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         frag = FlowFragment(BinaryOperator.MATCH, Fragment.DONT)
 
         flow.add(dest)
@@ -728,9 +728,9 @@ class TestFlowUnpack:
         """Test complete pack/unpack roundtrip"""
         negotiated = create_negotiated()
         # Create a flow
-        flow1 = Flow()
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
-        src = Flow4Source(IPv4.pton('10.1.2.0'), 24)
+        flow1 = Flow.make_flow()
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
+        src = Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24)
         proto = FlowIPProtocol(NumericOperator.EQ, 6)  # TCP
         dport = FlowDestinationPort(NumericOperator.EQ, 80)
 
@@ -755,8 +755,8 @@ class TestFlowUnpack:
     def test_flow_unpack_large_length(self) -> None:
         """Test unpacking flow with 2-byte length encoding"""
         negotiated = create_negotiated()
-        flow1 = Flow()
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        flow1 = Flow.make_flow()
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow1.add(dest)
 
         # Add many components to create large flow (need > 240 bytes)
@@ -775,11 +775,11 @@ class TestFlowUnpack:
     def test_flow_unpack_with_rd(self) -> None:
         """Test unpacking VPN flow with route distinguisher"""
         negotiated = create_negotiated()
-        flow1 = Flow(afi=AFI.ipv4, safi=SAFI.flow_vpn)
+        flow1 = Flow.make_flow(afi=AFI.ipv4, safi=SAFI.flow_vpn)
         rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         flow1.rd = rd
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow1.add(dest)
 
         packed = flow1.pack_nlri(negotiated)
@@ -804,9 +804,9 @@ class TestFlowUnpack:
     def test_flow_unpack_multiple_components(self) -> None:
         """Test unpacking flow with multiple port specifications"""
         negotiated = create_negotiated()
-        flow1 = Flow()
+        flow1 = Flow.make_flow()
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         proto = FlowIPProtocol(NumericOperator.EQ, 6)
         port1 = FlowDestinationPort(NumericOperator.GT, 1024)
         port2 = FlowDestinationPort(NumericOperator.AND | NumericOperator.LT, 65535)
@@ -825,8 +825,8 @@ class TestFlowUnpack:
 
     def test_flow_feedback_no_nexthop(self) -> None:
         """Test feedback when announcing flow without nexthop"""
-        flow = Flow()
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        flow = Flow.make_flow()
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
         # flow.nexthop defaults to IP.NoNextHop
 
@@ -836,8 +836,8 @@ class TestFlowUnpack:
 
     def test_flow_feedback_with_nexthop(self) -> None:
         """Test feedback when nexthop is set"""
-        flow = Flow()
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        flow = Flow.make_flow()
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
         flow.nexthop = IP.from_string('10.0.0.1')
 
@@ -847,8 +847,8 @@ class TestFlowUnpack:
 
     def test_flow_extensive_string_with_nexthop(self) -> None:
         """Test extensive string representation with nexthop"""
-        flow = Flow()
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        flow = Flow.make_flow()
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
         flow.nexthop = IP.from_string('10.0.0.1')
 
@@ -858,11 +858,11 @@ class TestFlowUnpack:
 
     def test_flow_extensive_string_with_rd(self) -> None:
         """Test extensive string representation with route distinguisher"""
-        flow = Flow()
+        flow = Flow.make_flow()
         rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         flow.rd = rd
 
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
 
         ext_str = flow.extensive()
@@ -871,8 +871,8 @@ class TestFlowUnpack:
 
     def test_flow_json_with_nexthop(self) -> None:
         """Test JSON with nexthop"""
-        flow = Flow()
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        flow = Flow.make_flow()
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
         flow.nexthop = IP.from_string('10.0.0.1')
 
@@ -917,8 +917,8 @@ class TestFlowEdgeCases:
     def test_flow_len_method(self) -> None:
         """Test __len__ method"""
         negotiated = create_negotiated()
-        flow = Flow()
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        flow = Flow.make_flow()
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
 
         # Length should match packed size
@@ -928,10 +928,10 @@ class TestFlowEdgeCases:
 
     def test_flow_multiple_destinations_allowed(self) -> None:
         """Test that multiple destinations are allowed"""
-        flow = Flow()
+        flow = Flow.make_flow()
 
-        dest1 = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
-        dest2 = Flow4Destination(IPv4.pton('192.0.3.0'), 24)
+        dest1 = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
+        dest2 = Flow4Destination.make_prefix4(IPv4.pton('192.0.3.0'), 24)
 
         result1 = flow.add(dest1)
         result2 = flow.add(dest2)
@@ -942,8 +942,8 @@ class TestFlowEdgeCases:
 
     def test_flow_rules_str_single_vs_multiple(self) -> None:
         """Test string representation differs for single vs multiple rules"""
-        flow1 = Flow()
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        flow1 = Flow.make_flow()
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         proto = FlowIPProtocol(NumericOperator.EQ, 6)
         flow1.add(dest)
         flow1.add(proto)
@@ -951,8 +951,8 @@ class TestFlowEdgeCases:
         str(flow1)
 
         # Create flow with multiple same-type rules
-        flow2 = Flow()
-        dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
+        flow2 = Flow.make_flow()
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         port1 = FlowAnyPort(NumericOperator.GT, 1024)
         port2 = FlowAnyPort(NumericOperator.LT, 65535)
         flow2.add(dest)
