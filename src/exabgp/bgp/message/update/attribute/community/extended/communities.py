@@ -7,7 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator, Sequence
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, Iterator, Sequence
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -24,12 +25,37 @@ EXTENDED_COMMUNITY_SIZE = 8  # Standard extended community size
 EXTENDED_COMMUNITY_IPV6_SIZE = 20  # IPv6 extended community size
 
 
+# ===================================================== ExtendedCommunitiesBase
+# Abstract base class for extended community attributes
+
+
+class ExtendedCommunitiesBase(Attribute, ABC):
+    """Abstract base class for extended community attributes.
+
+    Defines the common interface for ExtendedCommunities (code 16) and
+    ExtendedCommunitiesIPv6 (code 25).
+    """
+
+    _packed: bytes
+
+    @property
+    @abstractmethod
+    def communities(self) -> list[Any]:
+        """Get list of community objects by unpacking from bytes."""
+        ...
+
+    @abstractmethod
+    def add(self, data: Any) -> 'ExtendedCommunitiesBase':
+        """Add a community and return self (builder pattern)."""
+        ...
+
+
 # ===================================================== ExtendedCommunities (16)
 # https://www.iana.org/assignments/bgp-extended-communities
 
 
 @Attribute.register()
-class ExtendedCommunities(Attribute):
+class ExtendedCommunities(ExtendedCommunitiesBase):
     """Extended Communities attribute (code 16).
 
     Stores packed wire-format bytes. Each extended community is 8 bytes.
@@ -134,7 +160,7 @@ class ExtendedCommunities(Attribute):
 
 
 @Attribute.register()
-class ExtendedCommunitiesIPv6(Attribute):
+class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
     """IPv6 Extended Communities attribute (code 25).
 
     Stores packed wire-format bytes. Each IPv6 extended community is 20 bytes.
