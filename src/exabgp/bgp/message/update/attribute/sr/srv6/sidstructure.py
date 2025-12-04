@@ -34,56 +34,60 @@ from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidIn
 @Srv6SidInformation.register()
 class Srv6SidStructure:  # type: ignore[type-var]
     TLV: ClassVar[int] = 1
+    LENGTH: ClassVar[int] = 6
 
     registered_subsubtlvs: ClassVar[dict[int, type]] = dict()
 
-    def __init__(
-        self,
+    def __init__(self, packed: bytes) -> None:
+        if len(packed) != self.LENGTH:
+            raise ValueError(f'Srv6SidStructure requires exactly {self.LENGTH} bytes, got {len(packed)}')
+        self._packed: bytes = packed
+
+    @classmethod
+    def make_sid_structure(
+        cls,
         loc_block_len: int,
         loc_node_len: int,
         func_len: int,
         arg_len: int,
         tpose_len: int,
         tpose_offset: int,
-        packed: bytes | None = None,
-    ) -> None:
-        self.loc_block_len: int = loc_block_len
-        self.loc_node_len: int = loc_node_len
-        self.func_len: int = func_len
-        self.arg_len: int = arg_len
-        self.tpose_len: int = tpose_len
-        self.tpose_offset: int = tpose_offset
-        self.packed: bytes = self.pack_tlv()
+    ) -> 'Srv6SidStructure':
+        """Factory method for semantic construction."""
+        packed = pack('!BBBBBB', loc_block_len, loc_node_len, func_len, arg_len, tpose_len, tpose_offset)
+        return cls(packed)
+
+    @property
+    def loc_block_len(self) -> int:
+        return self._packed[0]
+
+    @property
+    def loc_node_len(self) -> int:
+        return self._packed[1]
+
+    @property
+    def func_len(self) -> int:
+        return self._packed[2]
+
+    @property
+    def arg_len(self) -> int:
+        return self._packed[3]
+
+    @property
+    def tpose_len(self) -> int:
+        return self._packed[4]
+
+    @property
+    def tpose_offset(self) -> int:
+        return self._packed[5]
 
     @classmethod
     def unpack_attribute(cls, data: bytes, length: int) -> Srv6SidStructure:
-        loc_block_len: int = data[0]
-        loc_node_len: int = data[1]
-        func_len: int = data[2]
-        arg_len: int = data[3]
-        tpose_len: int = data[4]
-        tpose_offset: int = data[5]
-
-        return cls(
-            loc_block_len=loc_block_len,
-            loc_node_len=loc_node_len,
-            func_len=func_len,
-            arg_len=arg_len,
-            tpose_len=tpose_len,
-            tpose_offset=tpose_offset,
-        )
+        # Validation happens in __init__
+        return cls(data[: cls.LENGTH])
 
     def pack_tlv(self) -> bytes:
-        return (
-            pack('!B', self.TLV)
-            + pack('!H', 6)
-            + pack('!B', self.loc_block_len)
-            + pack('!B', self.loc_node_len)
-            + pack('!B', self.func_len)
-            + pack('!B', self.arg_len)
-            + pack('!B', self.tpose_len)
-            + pack('!B', self.tpose_offset)
-        )
+        return pack('!B', self.TLV) + pack('!H', self.LENGTH) + self._packed
 
     def __str__(self) -> str:
         return 'sid-structure [%d,%d,%d,%d,%d,%d]' % (

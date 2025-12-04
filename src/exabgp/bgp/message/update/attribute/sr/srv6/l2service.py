@@ -65,7 +65,7 @@ class Srv6L2Service:
                     data[3 : length + 3], length
                 )
             else:
-                subtlv = GenericSrv6ServiceSubTlv(code, data[3 : length + 3])
+                subtlv = GenericSrv6ServiceSubTlv(data[3 : length + 3], code)
             subtlvs.append(subtlv)
             data = data[length + 3 :]
 

@@ -13,9 +13,14 @@ class GenericSrv6ServiceSubTlv:
     # TLV code - defined in subclasses, used by registry
     TLV: ClassVar[int]
 
-    def __init__(self, code: int, packed: bytes) -> None:
+    def __init__(self, packed: bytes, code: int) -> None:
+        self._packed: bytes = packed
         self.code: int = code
-        self.packed: bytes = packed
+
+    @property
+    def packed(self) -> bytes:
+        """Raw TLV payload bytes."""
+        return self._packed
 
     def __repr__(self) -> str:
         return 'SRv6 Service Sub-TLV type %d not implemented' % self.code
@@ -25,7 +30,7 @@ class GenericSrv6ServiceSubTlv:
         return ''
 
     def pack_tlv(self) -> bytes:
-        return self.packed
+        return self._packed
 
     @classmethod
     def unpack_attribute(cls, data: bytes, length: int) -> 'GenericSrv6ServiceSubTlv':
@@ -37,9 +42,14 @@ class GenericSrv6ServiceDataSubSubTlv:
     # TLV code - defined in subclasses, used by registry
     TLV: ClassVar[int]
 
-    def __init__(self, code: int, packed: bytes) -> None:
+    def __init__(self, packed: bytes, code: int) -> None:
+        self._packed: bytes = packed
         self.code: int = code
-        self.packed: bytes = packed
+
+    @property
+    def packed(self) -> bytes:
+        """Raw TLV payload bytes."""
+        return self._packed
 
     def __repr__(self) -> str:
         return 'SRv6 Service Data Sub-Sub-TLV type %d not implemented' % self.code
@@ -49,7 +59,7 @@ class GenericSrv6ServiceDataSubSubTlv:
         return ''
 
     def pack_tlv(self) -> bytes:
-        return self.packed
+        return self._packed
 
     @classmethod
     def unpack_attribute(cls, data: bytes, length: int) -> 'GenericSrv6ServiceDataSubSubTlv':
