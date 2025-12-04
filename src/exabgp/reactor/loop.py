@@ -79,6 +79,7 @@ class Reactor:
         self.api: API = API(self)
 
         self._peers: dict[str, Peer] = {}
+        self._dynamic_peers: set[str] = set()  # Dynamic peers created via API
 
         self._saved_pid: bool = False
 
@@ -159,7 +160,7 @@ class Reactor:
             if self._rate_limited(key, peer.neighbor.rate_limit):
                 continue
 
-            if not hasattr(peer, '_async_task') or peer._async_task is None:
+            if peer._async_task is None:
                 peer.start_async_task()
 
         # Wait briefly to allow tasks to run
@@ -169,7 +170,7 @@ class Reactor:
         completed_peers = []
         for key in list(self._peers.keys()):
             peer = self._peers[key]
-            if hasattr(peer, '_async_task') and peer._async_task is not None:
+            if peer._async_task is not None:
                 if peer._async_task.done():
                     try:
                         # Check if task raised an exception
