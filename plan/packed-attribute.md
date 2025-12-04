@@ -94,16 +94,26 @@ class INET(NLRI):
 
 ## Implementation Order (Remaining)
 
-### Wave 2: Complex Attributes
-5. `src/exabgp/bgp/message/update/attribute/aspath.py`
-6. `src/exabgp/bgp/message/update/attribute/nexthop.py` (multiple inheritance)
-7. `src/exabgp/bgp/message/update/attribute/aggregator.py`
-8. `src/exabgp/bgp/message/update/attribute/clusterlist.py`
-9. `src/exabgp/bgp/message/update/attribute/originatorid.py`
-10. `src/exabgp/bgp/message/update/attribute/generic.py`
+### Wave 2: Complex Attributes ✅ COMPLETE
 
-### Wave 3: Community Attributes
-11-20. All files in `attribute/community/`
+| File | Status | Factory Method |
+|------|--------|----------------|
+| `aspath.py` | ✅ Done | `ASPath.make_aspath(...)` |
+| `nexthop.py` | ✅ Done | `NextHop.make_nexthop(...)` |
+| `aggregator.py` | ✅ Done | `Aggregator.make_aggregator(...)` |
+| `clusterlist.py` | ✅ Done | `ClusterList.make_clusterlist(...)` |
+| `originatorid.py` | ✅ Done | `OriginatorId.make_originatorid(...)` |
+| `generic.py` | ✅ Done | `GenericAttribute.make_generic(...)` |
+
+**Also converted:** `aigp.py`, `pmsi.py`
+
+### Wave 3: Community Attributes ✅ COMPLETE
+
+| Category | Files | Status |
+|----------|-------|--------|
+| Initial | `community.py`, `communities.py` | ✅ Done |
+| Large | `community.py`, `communities.py` | ✅ Done |
+| Extended | 12 files (community, communities, rt, origin, traffic, bandwidth, encapsulation, flowspec_scope, l2info, mac_mobility, mup, chso) | ✅ Done |
 
 ### Wave 4: MP Attributes + BGP-LS + SR
 21-55. `mprnlri.py`, `mpurnlri.py`, `bgpls/*.py`, `sr/*.py`
@@ -118,14 +128,19 @@ class INET(NLRI):
 | `esi.py` | ✅ Done | `ESI.make_default()`, `ESI.make_esi(bytes)` |
 | `etag.py` | ✅ Done | `EthernetTag.make_etag(int)` |
 
-### Wave 6: NLRI Types
-61. **`src/exabgp/bgp/message/update/nlri/cidr.py`**
-62. **`src/exabgp/bgp/message/update/nlri/inet.py`**
-63. `src/exabgp/bgp/message/update/nlri/label.py`
-64. `src/exabgp/bgp/message/update/nlri/ipvpn.py`
-65. `src/exabgp/bgp/message/update/nlri/vpls.py`
-66. `src/exabgp/bgp/message/update/nlri/rtc.py`
-67. `src/exabgp/bgp/message/update/nlri/flow.py`
+### Wave 6: NLRI Types 🔄 IN PROGRESS
+
+| File | Status | Notes |
+|------|--------|-------|
+| `cidr.py` | ✅ Done | `__init__(self, nlri: bytes)` |
+| `inet.py` | ✅ Done | `__init__(self, packed: bytes, ...)` |
+| `label.py` | ✅ Done | `__init__(self, packed: bytes, ...)` |
+| `ipvpn.py` | ✅ Done | `__init__(self, packed: bytes, ...)` |
+| `vpls.py` | ✅ Done | `__init__(self, packed: bytes, ...)` |
+| `rtc.py` | ✅ Partial | Origin as packed bytes; RT needs `negotiated` for unpacking |
+| `flow.py` | 🔄 Pending | Complex builder pattern - needs conversion |
+| `flow.py:IPrefix4` | 🔄 Pending | FlowSpec prefix component |
+| `flow.py:IPrefix6` | 🔄 Pending | FlowSpec prefix component |
 
 ### Wave 7: EVPN + BGP-LS + MUP + MVPN NLRI ✅ COMPLETE
 

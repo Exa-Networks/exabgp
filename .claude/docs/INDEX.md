@@ -51,23 +51,21 @@
 - `NEIGHBOR_SELECTOR_SYNTAX.md` - Neighbor selector grammar
 - `ENVIRONMENT_VARIABLES.md` - Environment variables reference
 
-### Active Work (`.claude/docs/wip/` - 12 files)
+### Active Work (`plan/` - project root)
 
-**type-annotations/** - 🔄 ACTIVE Type safety improvements
-- `README.md` - Project overview and navigation
-- `INDEX.md` - Complete file index
-- `PROGRESS.md` - Current progress tracking
-- `ANY_REPLACEMENT_PLAN.md` - Plan to replace Any types
-- `MYPY_ELIMINATION_PLAN.md` - Eliminate type: ignore comments
-- `MYPY_STATUS.md` - Current mypy error status
-- `PYTHON38_COMPATIBILITY.md` - Python 3.8+ compatibility requirements
-- `type-ignore-elimination/README.md` - Sub-project overview
-- `type-ignore-elimination/TYPE_IGNORE_ELIMINATION.md` - Elimination plan
-- `archive/initial-planning/` - 4 historical files (analysis, plan, progress, README)
+**Note:** Active project plans are now in `plan/` directory at project root.
 
-**xxx-cleanup/** - 🔄 ACTIVE XXX comment resolution
-- `README.md` - Project overview
-- `TODO.md` - XXX inventory and tracking
+**Main TODO:** `plan/todo.md` - Central tracking for all quality improvements
+- Type Safety (89 mypy errors - 92% reduction from baseline)
+- Packed-bytes-first refactoring
+- Test coverage (59.71%)
+- Security, architecture, code quality
+
+**Project-specific plans:**
+- `plan/packed-attribute.md` - Packed-bytes-first refactoring waves
+- `plan/coverage.md` - Test coverage audit
+- `plan/type-annotations/` - Type annotation detailed plans
+- `plan/xxx-cleanup/` - XXX comment cleanup (Phases 4-5 pending)
 
 ### Completed Projects (`.claude/docs/projects/` - 50+ files)
 
@@ -87,8 +85,9 @@
 **cli-dual-transport/** - ✅ COMPLETE
 - Project documentation (location verified but not enumerated)
 
-**type-annotations/** - 🔄 MOVED TO wip/
-- Historical planning docs moved to wip/type-annotations/archive/initial-planning/
+**type-annotations/** - 🔄 MOVED TO plan/
+- Active tracking now in `plan/todo.md`
+- Detailed plans in `plan/type-annotations/`
 
 ### Archive (`.claude/docs/archive/` - 25+ files)
 
@@ -152,11 +151,11 @@
 |----------|-------|--------|
 | Protocols (root) | 18 | ✅ Active |
 | Codebase reference (exabgp/) | 11 | ✅ Active |
-| Work in progress (wip/) | 12 | 🔄 Active |
+| Active plans (plan/) | 15+ | 🔄 Active |
 | Completed projects | 50+ | ✅ Complete |
 | Archive | 25+ | 📦 Historical |
-| **Total** | **100** | - |
+| **Total** | **100+** | - |
 
 ---
 
-**Updated:** 2025-11-30
+**Updated:** 2025-12-04
