@@ -40,17 +40,52 @@ class SrPrefix(FlagLS):
     TLV = 1158
     FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
 
-    def __init__(
-        self,
-        flags: dict[str, int],
-        sids: list[int],
-        sr_algo: int,
-        undecoded: tuple[str, ...] = (),
-    ) -> None:
-        self.flags = flags
-        self.sids = sids
-        self.sr_algo = sr_algo
-        self.undecoded = undecoded
+    # flags property is inherited from FlagLS and unpacks from _packed[0:1]
+
+    @property
+    def sr_algo(self) -> int:
+        """Unpack and return the SR algorithm from packed bytes."""
+        return self._packed[1]
+
+    @property
+    def sids(self) -> list[int]:
+        """Unpack and return the SIDs from packed bytes."""
+        flags = self.flags
+        data = self._packed[4:]  # Skip Flags(1) + Algorithm(1) + Reserved(2)
+        sids = []
+        while data:
+            if flags['V'] and flags['L']:
+                sid = unpack('!L', bytes([0]) + data[:3])[0]
+                data = data[3:]
+                sids.append(sid)
+            elif (not flags['V']) and (not flags['L']):
+                if len(data) < SID_LABEL_LENGTH_NO_FLAGS:
+                    break
+                sid = unpack('!I', data[:SID_LABEL_LENGTH_NO_FLAGS])[0]
+                data = data[SID_LABEL_LENGTH_NO_FLAGS:]
+                sids.append(sid)
+            else:
+                break
+        return sids
+
+    @property
+    def undecoded(self) -> tuple[str, ...]:
+        """Unpack and return any undecoded SID data from packed bytes."""
+        flags = self.flags
+        data = self._packed[4:]  # Skip Flags(1) + Algorithm(1) + Reserved(2)
+        raw = []
+        while data:
+            if flags['V'] and flags['L']:
+                data = data[3:]
+            elif (not flags['V']) and (not flags['L']):
+                if len(data) < SID_LABEL_LENGTH_NO_FLAGS:
+                    raw.append(hexstring(data))
+                    break
+                data = data[SID_LABEL_LENGTH_NO_FLAGS:]
+            else:
+                raw.append(hexstring(data))
+                break
+        return tuple(raw)
 
     def __repr__(self) -> str:
         return 'prefix_flags: {}, sids: {}, undecoded_sid: {}'.format(self.flags, self.sids, self.undecoded)
@@ -59,42 +94,12 @@ class SrPrefix(FlagLS):
     def unpack_bgpls(cls, data: bytes) -> SrPrefix:
         if len(data) < SRPREFIX_MIN_LENGTH:
             raise Notify(3, 5, f'SR Prefix SID: data too short, need {SRPREFIX_MIN_LENGTH} bytes, got {len(data)}')
-        # We only support IS-IS flags for now.
+        # Validation for V/L flags and SID length
         flags = cls.unpack_flags(data[0:1])
-        #
-        # Parse Algorithm
-        sr_algo = data[1]
-        # Move pointer 4 bytes: Flags(1) + Algorithm(1) + Reserved(2)
-        data = data[4:]
-        # SID/Index/Label: according to the V and L flags, it contains
-        # either:
-        # *  A 3 octet local label where the 20 rightmost bits are used for
-        # 	 encoding the label value.  In this case the V and L flags MUST
-        # 	 be set.
-        #
-        # *  A 4 octet index defining the offset in the SID/Label space
-        # 	 advertised by this router using the encodings defined in
-        #  	 Section 3.1.  In this case V and L flags MUST be unset.
-        sids = []
-        raw = []
-        while data:
-            if flags['V'] and flags['L']:
-                sid = unpack('!L', bytes([0]) + data[:3])[0]
-                data = data[3:]
-                sids.append(sid)
-            elif (not flags['V']) and (not flags['L']):
-                if len(data) != SID_LABEL_LENGTH_NO_FLAGS:
-                    # Cisco IOS XR Software, Version 6.1.1.19I is not
-                    # correctly setting the flags
-                    raise Notify(3, 5, "SID/Label size doesn't match V and L flag state")
-                sid = unpack('!I', data[:SID_LABEL_LENGTH_NO_FLAGS])[0]
-                data = data[SID_LABEL_LENGTH_NO_FLAGS:]
-                sids.append(sid)
-            else:
-                raw.append(hexstring(data))
-                break
-
-        return cls(flags=flags, sids=sids, sr_algo=sr_algo, undecoded=tuple(raw))
+        sid_data = data[4:]
+        if (not flags['V']) and (not flags['L']) and len(sid_data) != SID_LABEL_LENGTH_NO_FLAGS:
+            raise Notify(3, 5, "SID/Label size doesn't match V and L flag state")
+        return cls(data)
 
     def json(self, compact: bool = False) -> str:
         return f'"sr-prefix-flags": {json.dumps(self.flags)}, "sids": {json.dumps(self.sids)}, "undecoded-sids": {json.dumps(self.undecoded)}, "sr-algorithm": {json.dumps(self.sr_algo)}'

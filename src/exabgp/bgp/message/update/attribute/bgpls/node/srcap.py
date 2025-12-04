@@ -60,9 +60,37 @@ class SrCapabilities(FlagLS):
     TLV = 1034
     FLAGS = ['I', 'V', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
 
-    def __init__(self, flags: dict[str, int], sids: list[list[int]]) -> None:
-        FlagLS.__init__(self, flags)
-        self.sids = sids
+    # flags property is inherited from FlagLS and unpacks from _packed[0:1]
+
+    @property
+    def sids(self) -> list[list[int]]:
+        """Unpack and return the SIDs from packed bytes."""
+        data = self._packed[SRCAP_FLAGS_RESERVED_SIZE:]
+        sids = []
+
+        while data:
+            if len(data) < SRCAP_MIN_ENTRY_LENGTH:
+                break
+            range_size = unpack('!L', bytes([0]) + data[:SRCAP_RANGE_SIZE_BYTES])[0]
+            sub_type, length = unpack(
+                '!HH', data[SRCAP_RANGE_SIZE_BYTES : SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE]
+            )
+            if sub_type != SRCAP_LABEL_SUB_TLV_TYPE:
+                break
+            total_entry_size = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE + length
+            if len(data) < total_entry_size:
+                break
+            if length == SRCAP_LABEL_SIZE_3:
+                start = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE
+                sids.append(
+                    [range_size, unpack('!I', bytes([0]) + data[start : start + length])[0] & SRCAP_LABEL_MASK_20BIT]
+                )
+            elif length == SRCAP_LABEL_SIZE_4:
+                start = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE
+                sids.append([range_size, unpack('!I', data[start : start + length])[0]])
+            data = data[length + SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE :]
+
+        return sids
 
     def __repr__(self) -> str:
         return '{}: {}, sids: {}'.format(self.REPR, self.flags, self.sids)
@@ -71,48 +99,22 @@ class SrCapabilities(FlagLS):
     def unpack_bgpls(cls, data: bytes) -> SrCapabilities:
         if len(data) < SRCAP_MIN_LENGTH:
             raise Notify(3, 5, f'SR Capabilities: data too short, need {SRCAP_MIN_LENGTH} bytes, got {len(data)}')
-        # Extract node capability flags
-        flags = cls.unpack_flags(data[0:1])
-        # Move pointer past flags and reserved bytes
-        data = data[SRCAP_FLAGS_RESERVED_SIZE:]
-        sids = []
-
-        while data:
-            # Validate minimum entry length before parsing
-            if len(data) < SRCAP_MIN_ENTRY_LENGTH:
-                raise Notify(
-                    3, 5, f'SR Capabilities: entry data too short, need {SRCAP_MIN_ENTRY_LENGTH} bytes, got {len(data)}'
-                )
-            # Range Size: 3 octet value indicating the number of labels in
-            # the range.
-            range_size = unpack('!L', bytes([0]) + data[:SRCAP_RANGE_SIZE_BYTES])[0]
-
-            # SID/Label: If length is set to 3, then the 20 rightmost bits
-            # represent a label.  If length is set to 4, then the value
-            # represents a 32 bit SID.
+        # Validate structure before storing
+        offset = SRCAP_FLAGS_RESERVED_SIZE
+        while offset < len(data):
+            if len(data) - offset < SRCAP_MIN_ENTRY_LENGTH:
+                raise Notify(3, 5, f'SR Capabilities: entry data too short, need {SRCAP_MIN_ENTRY_LENGTH} bytes')
             sub_type, length = unpack(
-                '!HH', data[SRCAP_RANGE_SIZE_BYTES : SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE]
+                '!HH',
+                data[offset + SRCAP_RANGE_SIZE_BYTES : offset + SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE],
             )
             if sub_type != SRCAP_LABEL_SUB_TLV_TYPE:
                 raise Notify(3, 5, f'Invalid sub-TLV type: {sub_type}')
-            # Validate we have enough data for the SID/Label value
             total_entry_size = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE + length
-            if len(data) < total_entry_size:
-                raise Notify(
-                    3, 5, f'SR Capabilities: SID/Label data too short, need {total_entry_size} bytes, got {len(data)}'
-                )
-            if length == SRCAP_LABEL_SIZE_3:
-                start = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE
-                sids.append(
-                    [range_size, unpack('!I', bytes([0]) + data[start : start + length])[0] & SRCAP_LABEL_MASK_20BIT]
-                )
-            elif length == SRCAP_LABEL_SIZE_4:
-                # 32-bit SID starts at offset 7 (range:3 + sub-TLV header:4)
-                start = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE
-                sids.append([range_size, unpack('!I', data[start : start + length])[0]])
-            data = data[length + SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE :]
-
-        return cls(flags, sids)
+            if len(data) - offset < total_entry_size:
+                raise Notify(3, 5, 'SR Capabilities: SID/Label data too short')
+            offset += total_entry_size
+        return cls(data)
 
     def json(self, compact: bool = False) -> str:
         return f'{FlagLS.json(self)}, "sids": {self.sids}'

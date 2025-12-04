@@ -73,7 +73,7 @@
 
 ---
 
-## Wave 4: MP Attributes + BGP-LS + SR ⏳ PENDING
+## Wave 4: MP Attributes + BGP-LS + SR 🔄 PARTIAL
 
 ### MP Attributes
 
@@ -101,65 +101,66 @@
 | `attribute/sr/srv6/sidinformation.py` | Srv6SidInformation | ⏳ | Has `packed` param but ignores it |
 | `attribute/sr/srv6/sidstructure.py` | Srv6SidStructure | ⏳ | Has `packed` param but ignores it |
 
-### BGP-LS Base Classes
+### BGP-LS Base Classes ✅ COMPLETE
 
 | File | Class | Status | Notes |
 |------|-------|--------|-------|
-| `attribute/bgpls/linkstate.py` | LinkState | ⏳ | Container - takes `list[BaseLS]` |
-| `attribute/bgpls/linkstate.py` | BaseLS | ⏳ | Base class for all LS attributes |
-| `attribute/bgpls/linkstate.py` | FlagLS | ⏳ | Base class for flag-based LS |
-| `attribute/bgpls/linkstate.py` | GenericLSID | ⏳ | Takes `content: bytes` |
+| `attribute/bgpls/linkstate.py` | LinkState | ✅ | Container - takes `list[BaseLS]` |
+| `attribute/bgpls/linkstate.py` | BaseLS | ✅ | `__init__(packed: bytes)` |
+| `attribute/bgpls/linkstate.py` | FlagLS | ✅ | `flags` property unpacks from `_packed` |
+| `attribute/bgpls/linkstate.py` | GenericLSID | ✅ | `__init__(packed: bytes)` |
 
-### BGP-LS Link Attributes
+### BGP-LS Link Attributes ✅ COMPLETE
 
-| File | Class | Status |
-|------|-------|--------|
-| `attribute/bgpls/link/admingroup.py` | AdminGroup | ⏳ |
-| `attribute/bgpls/link/igpmetric.py` | IgpMetric | ⏳ |
-| `attribute/bgpls/link/linkname.py` | LinkName | ⏳ |
-| `attribute/bgpls/link/maxbw.py` | MaxBw | ⏳ |
-| `attribute/bgpls/link/mplsmask.py` | MplsMask | ⏳ |
-| `attribute/bgpls/link/opaque.py` | LinkOpaque | ⏳ |
-| `attribute/bgpls/link/protection.py` | Protection | ⏳ |
-| `attribute/bgpls/link/rsvpbw.py` | RsvpBw | ⏳ |
-| `attribute/bgpls/link/rterid.py` | RouterId | ⏳ |
-| `attribute/bgpls/link/sradj.py` | SrAdjacency | ⏳ |
-| `attribute/bgpls/link/sradjlan.py` | SrAdjacencyLan | ⏳ |
-| `attribute/bgpls/link/srlg.py` | Srlg | ⏳ |
-| `attribute/bgpls/link/srv6capabilities.py` | Srv6Capabilities | ⏳ |
-| `attribute/bgpls/link/srv6endpointbehavior.py` | Srv6EndpointBehavior | ⏳ |
-| `attribute/bgpls/link/srv6endx.py` | Srv6EndX | ⏳ |
-| `attribute/bgpls/link/srv6lanendx.py` | Srv6LanEndX | ⏳ |
-| `attribute/bgpls/link/srv6locator.py` | Srv6Locator | ⏳ |
-| `attribute/bgpls/link/srv6sidstructure.py` | Srv6SidStructure | ⏳ |
-| `attribute/bgpls/link/temetric.py` | TeMetric | ⏳ |
-| `attribute/bgpls/link/unrsvpbw.py` | UnrsvpBw | ⏳ |
+| File | Class | Status | Factory Method |
+|------|-------|--------|----------------|
+| `attribute/bgpls/link/admingroup.py` | AdminGroup | ✅ | `make_admingroup(int)` |
+| `attribute/bgpls/link/igpmetric.py` | IgpMetric | ✅ | (variable length, use `unpack_bgpls`) |
+| `attribute/bgpls/link/linkname.py` | LinkName | ✅ | `make_linkname(str)` |
+| `attribute/bgpls/link/maxbw.py` | MaxBw | ✅ | `make_maxbw(float)` |
+| `attribute/bgpls/link/mplsmask.py` | MplsMask | ✅ | (FlagLS, use `unpack_bgpls`) |
+| `attribute/bgpls/link/opaque.py` | LinkOpaque | ✅ | (raw bytes) |
+| `attribute/bgpls/link/protection.py` | LinkProtectionType | ✅ | (FlagLS, use `unpack_bgpls`) |
+| `attribute/bgpls/link/rsvpbw.py` | RsvpBw | ✅ | `make_rsvpbw(float)` |
+| `attribute/bgpls/link/rterid.py` | RemoteTeRid | ✅ | `make_remoteterid(str)` |
+| `attribute/bgpls/link/sradj.py` | SrAdjacency | ✅ | Properties unpack from `_packed` |
+| `attribute/bgpls/link/sradjlan.py` | SrAdjacencyLan | ✅ | Properties unpack from `_packed` |
+| `attribute/bgpls/link/srlg.py` | Srlg | ✅ | `make_srlg(list[int])` |
+| `attribute/bgpls/link/srv6capabilities.py` | Srv6Capabilities | ⏳ | |
+| `attribute/bgpls/link/srv6endpointbehavior.py` | Srv6EndpointBehavior | ⏳ | |
+| `attribute/bgpls/link/srv6endx.py` | Srv6EndX | ✅ | (complex, stores parsed content) |
+| `attribute/bgpls/link/srv6lanendx.py` | Srv6LanEndXISIS | ✅ | (complex, stores parsed content) |
+| `attribute/bgpls/link/srv6lanendx.py` | Srv6LanEndXOSPF | ✅ | (complex, stores parsed content) |
+| `attribute/bgpls/link/srv6locator.py` | Srv6Locator | ⏳ | |
+| `attribute/bgpls/link/srv6sidstructure.py` | Srv6SidStructure | ⏳ | |
+| `attribute/bgpls/link/temetric.py` | TeMetric | ✅ | `make_temetric(int)` |
+| `attribute/bgpls/link/unrsvpbw.py` | UnRsvpBw | ✅ | `make_unrsvpbw(list[float])` |
 
-### BGP-LS Node Attributes
+### BGP-LS Node Attributes 🔄 PARTIAL
 
-| File | Class | Status |
-|------|-------|--------|
-| `attribute/bgpls/node/isisarea.py` | IsisArea | ⏳ |
-| `attribute/bgpls/node/lterid.py` | LterID | ⏳ |
-| `attribute/bgpls/node/nodeflags.py` | NodeFlags | ⏳ |
-| `attribute/bgpls/node/nodename.py` | NodeName | ⏳ |
-| `attribute/bgpls/node/opaque.py` | NodeOpaque | ⏳ |
-| `attribute/bgpls/node/sralgo.py` | SrAlgorithm | ⏳ |
-| `attribute/bgpls/node/srcap.py` | SrCapabilities | ⏳ |
+| File | Class | Status | Notes |
+|------|-------|--------|-------|
+| `attribute/bgpls/node/isisarea.py` | IsisArea | ⏳ | |
+| `attribute/bgpls/node/lterid.py` | LocalTeRid | ⏳ | |
+| `attribute/bgpls/node/nodeflags.py` | NodeFlags | ✅ | (FlagLS, use `unpack_bgpls`) |
+| `attribute/bgpls/node/nodename.py` | NodeName | ✅ | `make_nodename(str)` |
+| `attribute/bgpls/node/opaque.py` | NodeOpaque | ⏳ | |
+| `attribute/bgpls/node/sralgo.py` | SrAlgorithm | ⏳ | |
+| `attribute/bgpls/node/srcap.py` | SrCapabilities | ✅ | Properties unpack from `_packed` |
 
-### BGP-LS Prefix Attributes
+### BGP-LS Prefix Attributes 🔄 PARTIAL
 
-| File | Class | Status |
-|------|-------|--------|
-| `attribute/bgpls/prefix/igpextags.py` | IgpExTags | ⏳ |
-| `attribute/bgpls/prefix/igpflags.py` | IgpFlags | ⏳ |
-| `attribute/bgpls/prefix/igptags.py` | IgpTags | ⏳ |
-| `attribute/bgpls/prefix/opaque.py` | PrefixOpaque | ⏳ |
-| `attribute/bgpls/prefix/ospfaddr.py` | OspfAddr | ⏳ |
-| `attribute/bgpls/prefix/prefixmetric.py` | PrefixMetric | ⏳ |
-| `attribute/bgpls/prefix/srigpprefixattr.py` | SrIgpPrefixAttr | ⏳ |
-| `attribute/bgpls/prefix/srprefix.py` | SrPrefix | ⏳ |
-| `attribute/bgpls/prefix/srrid.py` | SrRid | ⏳ |
+| File | Class | Status | Notes |
+|------|-------|--------|-------|
+| `attribute/bgpls/prefix/igpextags.py` | IgpExTags | ⏳ | |
+| `attribute/bgpls/prefix/igpflags.py` | IgpFlags | ⏳ | |
+| `attribute/bgpls/prefix/igptags.py` | IgpTags | ⏳ | |
+| `attribute/bgpls/prefix/opaque.py` | PrefixOpaque | ⏳ | |
+| `attribute/bgpls/prefix/ospfaddr.py` | OspfForwardingAddress | ⏳ | |
+| `attribute/bgpls/prefix/prefixmetric.py` | PrefixMetric | ✅ | `make_prefixmetric(int)` |
+| `attribute/bgpls/prefix/srigpprefixattr.py` | SrIgpPrefixAttr | ⏳ | |
+| `attribute/bgpls/prefix/srprefix.py` | SrPrefix | ✅ | Properties unpack from `_packed` |
+| `attribute/bgpls/prefix/srrid.py` | SrSourceRouterID | ⏳ | |
 
 ---
 
@@ -258,21 +259,35 @@
 | Wave 1 | 4 | 0 | 0 | 0 | 4 |
 | Wave 2 | 10 | 0 | 0 | 1 | 11 |
 | Wave 3 | ~20 | 0 | 0 | 0 | ~20 |
-| Wave 4 | 1 | 0 | 49 | 0 | 50 |
+| Wave 4 | ~25 | 0 | ~24 | 0 | ~50 |
 | Wave 5 | 5 | 0 | 0 | 0 | 5 |
 | Wave 6 | 5 | 1 | 0 | 3 | 9 |
 | Wave 7 | ~20 | 0 | 0 | 0 | ~20 |
 | Wave 8 | 6 | 0 | 0 | 0 | 6 |
-| **TOTAL** | **~71** | **1** | **49** | **4** | **~125** |
+| **TOTAL** | **~95** | **1** | **~24** | **4** | **~125** |
 
-**Completion: ~58%** (71 done + 1 partial out of ~121 convertible classes)
+**Completion: ~77%** (95 done + 1 partial out of ~121 convertible classes)
+
+---
+
+## Recent Progress (2025-12-04)
+
+Converted BGP-LS base classes and key subclasses to packed-bytes-first pattern:
+- `BaseLS`, `FlagLS`, `GenericLSID` - base classes now use `__init__(packed: bytes)`
+- 15+ link attributes (AdminGroup, IgpMetric, MaxBw, SrAdjacency, Srv6EndX, etc.)
+- 4 node attributes (NodeFlags, NodeName, SrCapabilities)
+- 3 prefix attributes (PrefixMetric, SrPrefix)
+- All with proper `@property` accessors and factory methods
+
+All tests passing: 2690 unit tests, 72 encoding, 18 decoding.
 
 ---
 
 ## Next Priority
 
-**Wave 4** contains the remaining 49 classes to convert:
-1. Start with base classes (`BaseLS`, `FlagLS`) - enables cascade to subclasses
-2. Then MP attributes (`MPRNLRI`, `MPURNLRI`)
-3. Then SR attributes (8 classes)
-4. Then BGP-LS subclasses (~40 classes) - mostly mechanical once base is done
+**Remaining Wave 4 classes** (~24 pending):
+1. MP attributes (`MPRNLRI`, `MPURNLRI`) - need architectural decision
+2. SR attributes (5 classes)
+3. Remaining BGP-LS node attributes (IsisArea, LocalTeRid, NodeOpaque, SrAlgorithm)
+4. Remaining BGP-LS prefix attributes (IgpExTags, IgpFlags, IgpTags, etc.)
+5. Remaining SRv6 attributes (Srv6Capabilities, Srv6Locator, Srv6SidStructure)

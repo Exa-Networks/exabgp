@@ -34,15 +34,28 @@ class NodeName(BaseLS):
     REPR = 'Node Name'
     JSON = 'node-name'
 
-    def __init__(self, nodename: str) -> None:
-        BaseLS.__init__(self, nodename)
+    @property
+    def content(self) -> str:
+        """Unpack and return the node name as a string."""
+        return self._packed.decode('ascii')
+
+    @classmethod
+    def make_nodename(cls, name: str) -> NodeName:
+        """Factory method to create NodeName from string.
+
+        Args:
+            name: The node name string
+
+        Returns:
+            NodeName instance with packed bytes
+        """
+        return cls(name.encode('ascii'))
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> NodeName:
         if len(data) > MAX_NODE_NAME_LENGTH:
             raise Notify(3, 5, 'Node Name TLV length too large')
-
-        return cls(data.decode('ascii'))
+        return cls(data)
 
     def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": {json.dumps(self.content)}'

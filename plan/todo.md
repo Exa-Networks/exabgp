@@ -129,6 +129,8 @@
 - [ ] `bgp/message/update/attribute/` - Various validation TODOs (6 locations)
 - [ ] `data/check.py` - Improve ipv4/ipv6 validators
 - [ ] `protocol/ip/__init__.py` - IP/Range/CIDR API improvements
+- [ ] FamilyTuple type alias standardization (67 type hints across 18 files)
+  - **See:** `plan/family-tuple-standardization.md`
 
 ### XXX Cleanup (Phases 4-5)
 

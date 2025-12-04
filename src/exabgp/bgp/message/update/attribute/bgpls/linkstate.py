@@ -130,8 +130,22 @@ class BaseLS:
 
     BGPLS_SUBTLV_HEADER_SIZE: int = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
 
-    def __init__(self, content: Any) -> None:
-        self.content = content
+    def __init__(self, packed: bytes) -> None:
+        """Initialize with packed wire-format bytes.
+
+        Args:
+            packed: Raw TLV payload bytes (after type/length header)
+        """
+        self._packed = packed
+
+    @property
+    def content(self) -> Any:
+        """Unpack and return content from packed bytes.
+
+        Subclasses should override this to provide proper unpacking.
+        Default implementation returns raw bytes.
+        """
+        return self._packed
 
     def json(self, compact: bool = False) -> str:
         try:
@@ -162,13 +176,20 @@ class GenericLSID(BaseLS):
     TLV: int = 0
     MERGE: bool = True
 
-    def __init__(self, content: bytes) -> None:
-        BaseLS.__init__(
-            self,
-            [
-                content,
-            ],
-        )
+    def __init__(self, packed: bytes) -> None:
+        """Initialize with packed wire-format bytes.
+
+        Args:
+            packed: Raw TLV payload bytes
+        """
+        self._packed = packed
+        # For merge support, content is a list of packed bytes
+        self._content_list: list[bytes] = [packed]
+
+    @property
+    def content(self) -> list[bytes]:
+        """Return list of packed bytes (for merge support)."""
+        return self._content_list
 
     def __repr__(self) -> str:
         return 'Attribute with code [ {} ] not implemented'.format(self.TLV)
@@ -176,6 +197,10 @@ class GenericLSID(BaseLS):
     def json(self, compact: bool = False) -> str:
         merged = ', '.join([f'"{hexstring(_)}"' for _ in self.content])
         return f'"generic-lsid-{self.TLV}": [{merged}]'
+
+    def merge(self, other: GenericLSID) -> None:
+        """Merge another GenericLSID's content into this one."""
+        self._content_list.extend(other.content)
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> GenericLSID:
@@ -186,8 +211,18 @@ class FlagLS(BaseLS):
     # Subclasses define FLAGS as a list of flag names, e.g. ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
     FLAGS: list[str] = []
 
-    def __init__(self, flags: dict[str, int]) -> None:
-        self.flags = flags
+    def __init__(self, packed: bytes) -> None:
+        """Initialize with packed wire-format bytes.
+
+        Args:
+            packed: Raw TLV payload bytes containing flags
+        """
+        self._packed = packed
+
+    @property
+    def flags(self) -> dict[str, int]:
+        """Unpack and return flags from packed bytes."""
+        return self.unpack_flags(self._packed[0:1])
 
     def __repr__(self) -> str:
         return '{}: {}'.format(self.REPR, self.flags)
@@ -224,4 +259,4 @@ class FlagLS(BaseLS):
     def unpack_bgpls(cls, data: bytes) -> FlagLS:
         cls.check(data)
         # We only support IS-IS for now.
-        return cls(cls.unpack_flags(data[0:1]))
+        return cls(data)

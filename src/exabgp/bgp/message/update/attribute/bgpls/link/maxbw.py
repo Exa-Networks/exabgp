@@ -6,7 +6,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
@@ -27,7 +27,17 @@ class MaxBw(BaseLS):
     JSON = 'maximum-link-bandwidth'
     LEN = 4
 
+    @property
+    def content(self) -> float:
+        """Unpack and return the max bandwidth from packed bytes."""
+        return unpack('!f', self._packed)[0]
+
+    @classmethod
+    def make_maxbw(cls, bandwidth: float) -> MaxBw:
+        """Factory method to create MaxBw from bandwidth value."""
+        return cls(pack('!f', bandwidth))
+
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> MaxBw:
         cls.check(data)
-        return cls(unpack('!f', data)[0])
+        return cls(data)

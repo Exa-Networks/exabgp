@@ -6,9 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from struct import unpack
-
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 #
 #     0                   1                   2                   3
@@ -24,12 +23,16 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 
 @LinkState.register_lsid()
-class LinkOpaque:
+class LinkOpaque(BaseLS):
     TLV = 1097
     REPR = 'Opaque Link attribute'
-    REPR = 'opaque-link'
+    JSON = 'opaque-link'
+
+    @property
+    def content(self) -> bytes:
+        """Return the raw opaque bytes."""
+        return self._packed
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> LinkOpaque:
-        length = len(data)
-        return cls(unpack('!%ds' % length, data)[0])  # type: ignore[call-arg]
+        return cls(data)

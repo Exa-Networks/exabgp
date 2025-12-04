@@ -46,8 +46,24 @@ class Srv6EndX(FlagLS):
     MERGE = True
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, content: dict[str, object]) -> None:
-        self.content: list[dict[str, object]] = [content]
+    def __init__(self, packed: bytes, parsed_content: dict[str, object] | None = None) -> None:
+        """Initialize with packed bytes and optionally pre-parsed content.
+
+        For Srv6EndX, content is complex (includes sub-TLVs parsed to JSON),
+        so we store both packed bytes and parsed content.
+        """
+        self._packed = packed
+        # Store parsed content in a list (for merge support)
+        self._content_list: list[dict[str, object]] = [parsed_content] if parsed_content else []
+
+    @property
+    def content(self) -> list[dict[str, object]]:
+        """Return the parsed content list."""
+        return self._content_list
+
+    def merge(self, other: Srv6EndX) -> None:
+        """Merge another Srv6EndX's content into this one."""
+        self._content_list.extend(other.content)
 
     def __repr__(self) -> str:
         return '\n'.join(
@@ -76,6 +92,7 @@ class Srv6EndX(FlagLS):
     def unpack_bgpls(cls, data: bytes) -> Srv6EndX:
         if len(data) < SRV6_ENDX_MIN_LENGTH:
             raise Notify(3, 5, f'SRv6 End.X SID: data too short, need {SRV6_ENDX_MIN_LENGTH} bytes, got {len(data)}')
+        original_data = data
         behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]
@@ -101,7 +118,7 @@ class Srv6EndX(FlagLS):
                 subtlvs.append(f'"unknown-subtlv-{code}": "{hex_data}"')
             data = data[length + cls.BGPLS_SUBTLV_HEADER_SIZE :]
 
-        content = {
+        parsed_content = {
             'flags': flags,
             'behavior': behavior,
             'algorithm': algorithm,
@@ -110,7 +127,7 @@ class Srv6EndX(FlagLS):
             **json.loads('{' + ', '.join(subtlvs) + '}'),
         }
 
-        return cls(content=content)
+        return cls(packed=original_data, parsed_content=parsed_content)
 
     def json(self, compact: bool = False) -> str:
         return '"srv6-endx": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))

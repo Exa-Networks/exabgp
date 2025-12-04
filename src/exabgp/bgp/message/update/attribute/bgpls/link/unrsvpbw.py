@@ -6,7 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
+from typing import Sequence
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
@@ -29,7 +30,19 @@ class UnRsvpBw(BaseLS):
     JSON = 'unreserved-bandwidth'
     LEN = 32
 
+    @property
+    def content(self) -> list[float]:
+        """Unpack and return the 8 priority-level bandwidths from packed bytes."""
+        return list(unpack('!ffffffff', self._packed))
+
+    @classmethod
+    def make_unrsvpbw(cls, bandwidths: Sequence[float]) -> UnRsvpBw:
+        """Factory method to create UnRsvpBw from 8 bandwidth values."""
+        if len(bandwidths) != 8:
+            raise ValueError('UnRsvpBw requires exactly 8 bandwidth values')
+        return cls(pack('!ffffffff', *bandwidths))
+
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> UnRsvpBw:
         cls.check(data)
-        return cls(unpack('!ffffffff', data))
+        return cls(data)

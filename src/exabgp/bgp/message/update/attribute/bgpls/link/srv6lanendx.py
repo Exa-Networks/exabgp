@@ -110,8 +110,19 @@ class Srv6LanEndXISIS(Srv6):
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, content: dict[str, object]) -> None:
-        self.content: list[dict[str, object]] = [content]
+    def __init__(self, packed: bytes, parsed_content: dict[str, object] | None = None) -> None:
+        """Initialize with packed bytes and optionally pre-parsed content."""
+        self._packed = packed
+        self._content_list: list[dict[str, object]] = [parsed_content] if parsed_content else []
+
+    @property
+    def content(self) -> list[dict[str, object]]:
+        """Return the parsed content list."""
+        return self._content_list
+
+    def merge(self, other: Srv6LanEndXISIS) -> None:
+        """Merge another Srv6LanEndXISIS's content into this one."""
+        self._content_list.extend(other.content)
 
     def __repr__(self) -> str:
         return '\n'.join(
@@ -143,7 +154,7 @@ class Srv6LanEndXISIS(Srv6):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXISIS:
-        return cls(cls._unpack_data(data, ISIS))
+        return cls(data, cls._unpack_data(data, ISIS))
 
     def json(self, compact: bool = False) -> str:
         return '"srv6-lan-endx-isis": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
@@ -156,8 +167,19 @@ class Srv6LanEndXOSPF(Srv6):
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, content: dict[str, object]) -> None:
-        self.content: list[dict[str, object]] = [content]
+    def __init__(self, packed: bytes, parsed_content: dict[str, object] | None = None) -> None:
+        """Initialize with packed bytes and optionally pre-parsed content."""
+        self._packed = packed
+        self._content_list: list[dict[str, object]] = [parsed_content] if parsed_content else []
+
+    @property
+    def content(self) -> list[dict[str, object]]:
+        """Return the parsed content list."""
+        return self._content_list
+
+    def merge(self, other: Srv6LanEndXOSPF) -> None:
+        """Merge another Srv6LanEndXOSPF's content into this one."""
+        self._content_list.extend(other.content)
 
     def __repr__(self) -> str:
         return '\n'.join(
@@ -189,7 +211,7 @@ class Srv6LanEndXOSPF(Srv6):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXOSPF:
-        return cls(cls._unpack_data(data, OSPF))
+        return cls(data, cls._unpack_data(data, OSPF))
 
     def json(self, compact: bool = False) -> str:
         return '"srv6-lan-endx-ospf": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
