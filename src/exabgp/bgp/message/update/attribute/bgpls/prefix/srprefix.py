@@ -30,6 +30,10 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 # SID/Label data length when flags are not set
 SID_LABEL_LENGTH_NO_FLAGS = 4  # Length of SID/Label when V and L flags are both false
 
+# Minimum data length for SR Prefix SID TLV
+# Flags (1) + Algorithm (1) + Reserved (2) = 4 bytes
+SRPREFIX_MIN_LENGTH = 4
+
 
 @LinkState.register_lsid()
 class SrPrefix(FlagLS):
@@ -53,6 +57,8 @@ class SrPrefix(FlagLS):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> SrPrefix:
+        if len(data) < SRPREFIX_MIN_LENGTH:
+            raise Notify(3, 5, f'SR Prefix SID: data too short, need {SRPREFIX_MIN_LENGTH} bytes, got {len(data)}')
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])
         #

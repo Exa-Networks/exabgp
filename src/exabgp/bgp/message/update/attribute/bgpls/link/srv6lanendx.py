@@ -13,12 +13,19 @@ from exabgp.util import hexstring
 
 from typing import Callable
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.protocol.ip import IP, IPv6
 
 # BGP-LS Sub-TLV header constants
 BGPLS_SUBTLV_HEADER_SIZE = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
+
+# Minimum data length for SRv6 LAN End.X SID TLV (RFC 9514 Section 4.2)
+# ISIS: Endpoint Behavior (2) + Flags (1) + Algorithm (1) + Weight (1) + Reserved (1) + SystemID (6) + SID (16) = 28 bytes
+# OSPF: Endpoint Behavior (2) + Flags (1) + Algorithm (1) + Weight (1) + Reserved (1) + RouterID (4) + SID (16) = 26 bytes
+SRV6_LAN_ENDX_ISIS_MIN_LENGTH = 28
+SRV6_LAN_ENDX_OSPF_MIN_LENGTH = 26
 
 #    RFC 9514:   4.2. SRv6 LAN End.X SID TLV
 #  0                   1                   2                   3
@@ -52,6 +59,12 @@ OSPF = 2
 class Srv6(FlagLS):
     @classmethod
     def _unpack_data(cls, data: bytes, protocol_type: int) -> dict[str, object]:
+        min_length = SRV6_LAN_ENDX_ISIS_MIN_LENGTH if protocol_type == ISIS else SRV6_LAN_ENDX_OSPF_MIN_LENGTH
+        if len(data) < min_length:
+            proto_name = 'ISIS' if protocol_type == ISIS else 'OSPF'
+            raise Notify(
+                3, 5, f'SRv6 LAN End.X SID ({proto_name}): data too short, need {min_length} bytes, got {len(data)}'
+            )
         behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]

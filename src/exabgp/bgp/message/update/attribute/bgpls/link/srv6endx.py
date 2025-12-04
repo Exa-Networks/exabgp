@@ -10,9 +10,14 @@ import json
 from struct import unpack
 from typing import Callable
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
 from exabgp.protocol.ip import IPv6
 from exabgp.util import hexstring
+
+# Minimum data length for SRv6 End.X SID TLV (RFC 9514 Section 4.1)
+# Endpoint Behavior (2) + Flags (1) + Algorithm (1) + Weight (1) + Reserved (1) + SID (16) = 22 bytes
+SRV6_ENDX_MIN_LENGTH = 22
 
 #    RFC 9514:  4.1. SRv6 End.X SID TLV
 #  0                   1                   2                   3
@@ -69,6 +74,8 @@ class Srv6EndX(FlagLS):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6EndX:
+        if len(data) < SRV6_ENDX_MIN_LENGTH:
+            raise Notify(3, 5, f'SRv6 End.X SID: data too short, need {SRV6_ENDX_MIN_LENGTH} bytes, got {len(data)}')
         behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]

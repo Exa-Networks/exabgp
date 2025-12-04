@@ -86,7 +86,13 @@ class LinkState(Attribute):
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> LinkState:
         ls_attrs: list[BaseLS] = []
         while data:
+            if len(data) < 4:
+                raise Notify(3, 5, f'BGP-LS: TLV header too short, need 4 bytes, got {len(data)}')
             scode, length = unpack('!HH', data[:4])
+            if len(data) < length + 4:
+                raise Notify(
+                    3, 5, f'BGP-LS: TLV data too short for type {scode}, need {length + 4} bytes, got {len(data)}'
+                )
             payload = data[4 : length + 4]
             BaseLS.check_length(payload, length)
 
@@ -191,6 +197,8 @@ class FlagLS(BaseLS):
 
     @classmethod
     def unpack_flags(cls, data: bytes) -> dict[str, int]:
+        if not data:
+            raise Notify(3, 5, 'BGP-LS: empty data for flag unpacking')
         pad = cls.FLAGS.count('RSV')
         repeat = len(cls.FLAGS) - pad
         hex_rep = int(binascii.b2a_hex(data), 16)
