@@ -143,23 +143,46 @@ Exit code: 0
 
 ---
 
-### 3. Testing Requirement
+### 3. Test-Driven Development (TDD) 🚨
 
-**Core principle:** Never claim success without running ALL tests
+**Core principle:** Write tests BEFORE code. Tests define expected behavior.
 
-❌ **Forbidden without testing:**
-- "Done" / "Fixed" / "Ready" / "Complete"
-- Any claim of working code
+## TDD Workflow (MANDATORY)
+
+**STEP 1: Write tests FIRST**
+```bash
+# Create/update unit tests for new interface
+# Tests MUST fail initially - this proves they test something
+uv run pytest tests/unit/path/to/test.py -v  # Should FAIL
+```
+
+**STEP 2: Implement code to make tests pass**
+
+**STEP 3: Verify ALL tests pass**
+```bash
+./qa/bin/test_everything  # ALL 6 test suites
+```
+
+## Test Requirements by Change Type
+
+| Change Type | Required Tests |
+|-------------|----------------|
+| Bug fix | Test that reproduces the bug (fails before fix) |
+| New feature | Unit tests + functional tests if applicable |
+| Refactoring | Verify existing tests cover the code |
+| New `__init__` signature | Unit test: construct, verify properties |
+| New factory method | Unit test: factory creates valid instance |
+| Validation logic | Unit test: invalid input raises exception |
+
+❌ **Forbidden:**
+- Writing code before tests
+- Claiming "Done" / "Fixed" / "Complete" without test verification
+- Skipping the "tests fail first" step
 
 ✅ **Required before claiming success:**
 ```bash
 ./qa/bin/test_everything  # ALL 6 test suites
 ```
-
-**Regression tests mandatory:**
-- Bug fix → Add test that would have caught bug
-- New feature → Add unit + functional tests
-- Refactoring → Verify tests cover code
 
 **Test locations:**
 - Unit tests: `tests/unit/`
@@ -337,11 +360,16 @@ git status && git log --oneline -5
 - ❌ "Done" / "Finished" / "Complete"
 - ❌ Any claim code works
 
+**Without writing tests FIRST (TDD):**
+- ❌ Implementing code before tests exist
+- ❌ Skipping the "verify tests fail" step
+- ❌ "I'll add tests later"
+
 **Without explicit user request:**
 - ❌ `git commit` / `git push`
 - ❌ "I've committed..." / "I've pushed..."
 
-**Auto-fix:** Stop. Run command. Paste output. Then claim.
+**Auto-fix:** Stop. Write tests. Verify they fail. Implement. Verify they pass. Then claim.
 
 ---
 
@@ -360,4 +388,4 @@ git status && git log --oneline -5
 
 ---
 
-**Updated:** 2025-11-30
+**Updated:** 2025-12-04
