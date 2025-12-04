@@ -149,8 +149,8 @@ cached instances for identical parameter combinations.
 | File | Class | Status | Notes |
 |------|-------|--------|-------|
 | `attribute/sr/prefixsid.py` | PrefixSid | ✅ | Already correct |
-| `attribute/sr/labelindex.py` | SrLabelIndex | ⏳ | Has `packed` param but ignores it |
-| `attribute/sr/srgb.py` | SrGb | ⏳ | Has `packed` param but ignores it |
+| `attribute/sr/labelindex.py` | SrLabelIndex | ✅ | `make_labelindex(int)` |
+| `attribute/sr/srgb.py` | SrGb | ✅ | `make_srgb(list[tuple])` |
 
 ### SRv6 Attributes
 
@@ -321,18 +321,25 @@ cached instances for identical parameter combinations.
 | Wave 1 | 4 | 0 | 0 | 0 | 4 |
 | Wave 2 | 10 | 0 | 0 | 1 | 11 |
 | Wave 3 | ~20 | 0 | 0 | 0 | ~20 |
-| Wave 4 | ~25 | 0 | ~24 | 0 | ~50 |
+| Wave 4 | ~27 | 0 | ~22 | 0 | ~50 |
 | Wave 5 | 5 | 0 | 0 | 0 | 5 |
 | Wave 6 | 5 | 1 | 0 | 3 | 9 |
 | Wave 7 | ~20 | 0 | 0 | 0 | ~20 |
 | Wave 8 | 6 | 0 | 0 | 0 | 6 |
-| **TOTAL** | **~95** | **1** | **~24** | **4** | **~125** |
+| **TOTAL** | **~97** | **1** | **~22** | **4** | **~125** |
 
-**Completion: ~77%** (95 done + 1 partial out of ~121 convertible classes)
+**Completion: ~79%** (97 done + 1 partial out of ~120 convertible classes)
 
 ---
 
 ## Recent Progress
+
+### 2025-12-04 (Session 3)
+- Converted SrLabelIndex to packed-bytes-first: `__init__(packed)` + `make_labelindex(int)` factory
+- Converted SrGb to packed-bytes-first: `__init__(packed)` + `make_srgb(list[tuple])` factory
+- Both now use `@property` for unpacking values from `_packed`
+- Updated call sites in `configuration/static/mpls.py`
+- All 9 test suites pass
 
 ### 2025-12-04 (Session 2)
 - Converted MPRNLRI/MPURNLRI to hybrid packed-bytes pattern
@@ -353,7 +360,7 @@ Converted BGP-LS base classes and key subclasses to packed-bytes-first pattern:
 ## Next Priority
 
 **Remaining Wave 4 classes** (~22 pending):
-1. SR attributes (5 classes) - `SrLabelIndex`, `SrGb`, etc.
+1. SRv6 attributes (6 classes) - GenericSrv6*, Srv6L2/L3Service, Srv6SidInformation, Srv6SidStructure
 2. Remaining BGP-LS node attributes (IsisArea, LocalTeRid, NodeOpaque, SrAlgorithm)
 3. Remaining BGP-LS prefix attributes (IgpExTags, IgpFlags, IgpTags, etc.)
-4. Remaining SRv6 attributes (Srv6Capabilities, Srv6Locator, Srv6SidStructure)
+4. Remaining BGP-LS link SRv6 attributes (Srv6Capabilities, Srv6Locator, Srv6SidStructure)

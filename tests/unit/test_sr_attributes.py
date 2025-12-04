@@ -47,16 +47,35 @@ def create_negotiated() -> Negotiated:
 class TestSrLabelIndex:
     """Test Label-Index TLV (Type 1) for SR-MPLS."""
 
+    def test_packed_bytes_first_init(self) -> None:
+        """Test __init__(packed: bytes) interface."""
+        # Wire format payload: Reserved(1) + Flags(2) + LabelIndex(4)
+        packed = struct.pack('!B', 0) + struct.pack('!H', 0) + struct.pack('!I', 100)
+        label_index = SrLabelIndex(packed)
+        assert label_index.labelindex == 100
+        assert label_index.TLV == 1
+        assert label_index.LENGTH == 7
+
+    def test_packed_bytes_first_invalid_size(self) -> None:
+        """Test __init__ raises ValueError for invalid size."""
+        with pytest.raises(ValueError, match='7 bytes'):
+            SrLabelIndex(b'\x00\x00\x00')  # Too short
+
+    def test_make_labelindex_factory(self) -> None:
+        """Test make_labelindex() factory method."""
+        label_index = SrLabelIndex.make_labelindex(100)
+        assert label_index.labelindex == 100
+
     def test_create_label_index(self) -> None:
-        """Test creating a Label-Index TLV."""
-        label_index = SrLabelIndex(labelindex=100)
+        """Test creating a Label-Index TLV via factory."""
+        label_index = SrLabelIndex.make_labelindex(100)
         assert label_index.labelindex == 100
         assert label_index.TLV == 1
         assert label_index.LENGTH == 7
 
     def test_label_index_pack(self) -> None:
         """Test packing Label-Index TLV."""
-        label_index = SrLabelIndex(labelindex=100)
+        label_index = SrLabelIndex.make_labelindex(100)
         packed = label_index.pack_tlv()
 
         # Format: Type(1) + Length(2) + Reserved(1) + Flags(2) + LabelIndex(4)
@@ -78,7 +97,7 @@ class TestSrLabelIndex:
 
     def test_label_index_pack_unpack_roundtrip(self) -> None:
         """Test pack/unpack roundtrip for Label-Index."""
-        original = SrLabelIndex(labelindex=12345)
+        original = SrLabelIndex.make_labelindex(12345)
         packed = original.pack_tlv()
 
         # Extract the data portion (skip Type and Length fields)
@@ -89,12 +108,12 @@ class TestSrLabelIndex:
 
     def test_label_index_repr(self) -> None:
         """Test string representation of Label-Index."""
-        label_index = SrLabelIndex(labelindex=100)
+        label_index = SrLabelIndex.make_labelindex(100)
         assert repr(label_index) == '100'
 
     def test_label_index_json(self) -> None:
         """Test JSON serialization of Label-Index."""
-        label_index = SrLabelIndex(labelindex=100)
+        label_index = SrLabelIndex.make_labelindex(100)
         json_str = label_index.json()
         assert json_str == '"sr-label-index": 100'
 
@@ -110,7 +129,7 @@ class TestSrLabelIndex:
 
     def test_label_index_zero(self) -> None:
         """Test Label-Index with zero value."""
-        label_index = SrLabelIndex(labelindex=0)
+        label_index = SrLabelIndex.make_labelindex(0)
         assert label_index.labelindex == 0
 
         packed = label_index.pack_tlv()
@@ -121,7 +140,7 @@ class TestSrLabelIndex:
     def test_label_index_max_value(self) -> None:
         """Test Label-Index with maximum 32-bit value."""
         max_index = 0xFFFFFFFF
-        label_index = SrLabelIndex(labelindex=max_index)
+        label_index = SrLabelIndex.make_labelindex(max_index)
         assert label_index.labelindex == max_index
 
         packed = label_index.pack_tlv()
@@ -138,15 +157,37 @@ class TestSrLabelIndex:
 class TestSrGb:
     """Test Originator SRGB TLV (Type 3) for SR-MPLS."""
 
+    def test_packed_bytes_first_init(self) -> None:
+        """Test __init__(packed: bytes) interface."""
+        # Wire format payload: Flags(2) + Base(3) + Range(3)
+        packed = struct.pack('!H', 0)  # Flags
+        packed += struct.pack('!L', 16000)[1:]  # Base (3 bytes)
+        packed += struct.pack('!L', 8000)[1:]  # Range (3 bytes)
+        srgb = SrGb(packed)
+        assert srgb.srgbs == [(16000, 8000)]
+        assert srgb.TLV == 3
+
+    def test_packed_bytes_first_invalid_size(self) -> None:
+        """Test __init__ raises ValueError for invalid payload size."""
+        # Minimum payload: Flags(2) = 2 bytes, SRGB entries are 6 bytes each
+        # So (payload - 2) must be divisible by 6
+        with pytest.raises(ValueError, match='SRGB payload'):
+            SrGb(b'\x00\x00\x01\x02\x03')  # 5 bytes: Flags(2) + 3 extra (not 6)
+
+    def test_make_srgb_factory(self) -> None:
+        """Test make_srgb() factory method."""
+        srgb = SrGb.make_srgb([(16000, 8000)])
+        assert srgb.srgbs == [(16000, 8000)]
+
     def test_create_srgb_single_range(self) -> None:
-        """Test creating SRGB with single range."""
-        srgb = SrGb(srgbs=[(16000, 8000)])
+        """Test creating SRGB with single range via factory."""
+        srgb = SrGb.make_srgb([(16000, 8000)])
         assert srgb.srgbs == [(16000, 8000)]
         assert srgb.TLV == 3
 
     def test_create_srgb_multiple_ranges(self) -> None:
-        """Test creating SRGB with multiple ranges."""
-        srgb = SrGb(srgbs=[(16000, 8000), (24000, 1000), (32000, 4000)])
+        """Test creating SRGB with multiple ranges via factory."""
+        srgb = SrGb.make_srgb([(16000, 8000), (24000, 1000), (32000, 4000)])
         assert len(srgb.srgbs) == 3
         assert srgb.srgbs[0] == (16000, 8000)
         assert srgb.srgbs[1] == (24000, 1000)
@@ -154,7 +195,7 @@ class TestSrGb:
 
     def test_srgb_pack_single_range(self) -> None:
         """Test packing SRGB with single range."""
-        srgb = SrGb(srgbs=[(16000, 8000)])
+        srgb = SrGb.make_srgb([(16000, 8000)])
         packed = srgb.pack_tlv()
 
         # Format: Type(1) + Length(2) + Flags(2) + Base(3) + Range(3)
@@ -176,7 +217,7 @@ class TestSrGb:
 
     def test_srgb_pack_multiple_ranges(self) -> None:
         """Test packing SRGB with multiple ranges."""
-        srgb = SrGb(srgbs=[(16000, 8000), (24000, 1000)])
+        srgb = SrGb.make_srgb([(16000, 8000), (24000, 1000)])
         packed = srgb.pack_tlv()
 
         # Type(1) + Length(2) + Flags(2) + 2 * (Base(3) + Range(3))
@@ -210,7 +251,7 @@ class TestSrGb:
 
     def test_srgb_pack_unpack_roundtrip(self) -> None:
         """Test pack/unpack roundtrip for SRGB."""
-        original = SrGb(srgbs=[(16000, 8000), (24000, 1000)])
+        original = SrGb.make_srgb([(16000, 8000), (24000, 1000)])
         packed = original.pack_tlv()
 
         # Extract data portion (skip Type and Length)
@@ -222,7 +263,7 @@ class TestSrGb:
 
     def test_srgb_repr(self) -> None:
         """Test string representation of SRGB."""
-        srgb = SrGb(srgbs=[(16000, 8000), (24000, 1000)])
+        srgb = SrGb.make_srgb([(16000, 8000), (24000, 1000)])
         repr_str = repr(srgb)
         assert '16000' in repr_str
         assert '8000' in repr_str
@@ -231,7 +272,7 @@ class TestSrGb:
 
     def test_srgb_json(self) -> None:
         """Test JSON serialization of SRGB."""
-        srgb = SrGb(srgbs=[(16000, 8000)])
+        srgb = SrGb.make_srgb([(16000, 8000)])
         json_str = srgb.json()
         assert '"sr-srgbs"' in json_str
         assert '16000' in json_str
@@ -239,7 +280,7 @@ class TestSrGb:
 
     def test_srgb_empty_ranges(self) -> None:
         """Test SRGB with empty ranges."""
-        srgb = SrGb(srgbs=[])
+        srgb = SrGb.make_srgb([])
         packed = srgb.pack_tlv()
 
         # Should still have Type + Length + Flags
@@ -248,7 +289,7 @@ class TestSrGb:
     def test_srgb_max_label_values(self) -> None:
         """Test SRGB with maximum 3-byte label values."""
         max_label = 0xFFFFFF  # 3 bytes max
-        srgb = SrGb(srgbs=[(max_label, max_label)])
+        srgb = SrGb.make_srgb([(max_label, max_label)])
         packed = srgb.pack_tlv()
 
         data = packed[3:]
@@ -268,7 +309,7 @@ class TestPrefixSid:
 
     def test_create_prefix_sid_with_label_index(self) -> None:
         """Test creating PrefixSid with Label-Index TLV."""
-        label_index = SrLabelIndex(labelindex=100)
+        label_index = SrLabelIndex.make_labelindex(100)
         prefix_sid = PrefixSid(sr_attrs=[label_index])
 
         assert len(prefix_sid.sr_attrs) == 1
@@ -276,7 +317,7 @@ class TestPrefixSid:
 
     def test_create_prefix_sid_with_srgb(self) -> None:
         """Test creating PrefixSid with SRGB TLV."""
-        srgb = SrGb(srgbs=[(16000, 8000)])
+        srgb = SrGb.make_srgb([(16000, 8000)])
         prefix_sid = PrefixSid(sr_attrs=[srgb])
 
         assert len(prefix_sid.sr_attrs) == 1
@@ -284,8 +325,8 @@ class TestPrefixSid:
 
     def test_create_prefix_sid_with_both_tlvs(self) -> None:
         """Test creating PrefixSid with both Label-Index and SRGB."""
-        label_index = SrLabelIndex(labelindex=100)
-        srgb = SrGb(srgbs=[(16000, 8000)])
+        label_index = SrLabelIndex.make_labelindex(100)
+        srgb = SrGb.make_srgb([(16000, 8000)])
         prefix_sid = PrefixSid(sr_attrs=[label_index, srgb])
 
         assert len(prefix_sid.sr_attrs) == 2
@@ -294,7 +335,7 @@ class TestPrefixSid:
 
     def test_prefix_sid_pack(self) -> None:
         """Test packing PrefixSid attribute."""
-        label_index = SrLabelIndex(labelindex=100)
+        label_index = SrLabelIndex.make_labelindex(100)
         prefix_sid = PrefixSid(sr_attrs=[label_index])
 
         packed = prefix_sid.pack_attribute(create_negotiated())
@@ -375,8 +416,8 @@ class TestPrefixSid:
 
     def test_prefix_sid_pack_unpack_roundtrip(self) -> None:
         """Test pack/unpack roundtrip for PrefixSid."""
-        label_index = SrLabelIndex(labelindex=200)
-        srgb = SrGb(srgbs=[(16000, 8000), (24000, 1000)])
+        label_index = SrLabelIndex.make_labelindex(200)
+        srgb = SrGb.make_srgb([(16000, 8000), (24000, 1000)])
         original = PrefixSid(sr_attrs=[label_index, srgb])
 
         original.pack_attribute(create_negotiated())
@@ -395,7 +436,7 @@ class TestPrefixSid:
 
     def test_prefix_sid_str_label_index_only(self) -> None:
         """Test string representation with only Label-Index."""
-        label_index = SrLabelIndex(labelindex=100)
+        label_index = SrLabelIndex.make_labelindex(100)
         prefix_sid = PrefixSid(sr_attrs=[label_index])
 
         str_repr = str(prefix_sid)
@@ -403,8 +444,8 @@ class TestPrefixSid:
 
     def test_prefix_sid_str_label_index_and_srgb(self) -> None:
         """Test string representation with Label-Index and SRGB."""
-        label_index = SrLabelIndex(labelindex=100)
-        srgb = SrGb(srgbs=[(16000, 8000)])
+        label_index = SrLabelIndex.make_labelindex(100)
+        srgb = SrGb.make_srgb([(16000, 8000)])
         prefix_sid = PrefixSid(sr_attrs=[label_index, srgb])
 
         str_repr = str(prefix_sid)
@@ -413,8 +454,8 @@ class TestPrefixSid:
 
     def test_prefix_sid_json(self) -> None:
         """Test JSON serialization of PrefixSid."""
-        label_index = SrLabelIndex(labelindex=100)
-        srgb = SrGb(srgbs=[(16000, 8000)])
+        label_index = SrLabelIndex.make_labelindex(100)
+        srgb = SrGb.make_srgb([(16000, 8000)])
         prefix_sid = PrefixSid(sr_attrs=[label_index, srgb])
 
         json_str = prefix_sid.json()
@@ -424,7 +465,7 @@ class TestPrefixSid:
 
     def test_prefix_sid_attribute_properties(self) -> None:
         """Test PrefixSid attribute properties."""
-        label_index = SrLabelIndex(labelindex=100)
+        label_index = SrLabelIndex.make_labelindex(100)
         PrefixSid(sr_attrs=[label_index])
 
         # Check attribute ID and flags
@@ -507,7 +548,7 @@ class TestSREdgeCases:
 
     def test_prefix_sid_str_no_label_index(self) -> None:
         """Test string representation with no Label-Index."""
-        srgb = SrGb(srgbs=[(16000, 8000)])
+        srgb = SrGb.make_srgb([(16000, 8000)])
         prefix_sid = PrefixSid(sr_attrs=[srgb])
 
         # Should fall through to generic string representation
@@ -519,7 +560,7 @@ class TestSREdgeCases:
         test_values = [0, 1, 100, 1000, 10000, 100000, 1000000]
 
         for value in test_values:
-            label_index = SrLabelIndex(labelindex=value)
+            label_index = SrLabelIndex.make_labelindex(value)
             assert label_index.labelindex == value
 
             packed = label_index.pack_tlv()
@@ -530,7 +571,7 @@ class TestSREdgeCases:
     def test_srgb_large_number_of_ranges(self) -> None:
         """Test SRGB with many ranges."""
         ranges = [(i * 1000, 1000) for i in range(10)]
-        srgb = SrGb(srgbs=ranges)
+        srgb = SrGb.make_srgb(ranges)
 
         assert len(srgb.srgbs) == 10
 

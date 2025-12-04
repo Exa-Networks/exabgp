@@ -42,9 +42,32 @@ class SrGb:
     # multiple of 6.
     LENGTH: ClassVar[int] = -1
 
-    def __init__(self, srgbs: list[tuple[int, int]], packed: bytes | None = None) -> None:
-        self.srgbs: list[tuple[int, int]] = srgbs
-        self.packed: bytes = self.pack_tlv()
+    def __init__(self, packed: bytes) -> None:
+        # Payload format: Flags(2) + N * (Base(3) + Range(3))
+        # Minimum: 2 bytes (flags only), remainder must be divisible by 6
+        if len(packed) < 2 or (len(packed) - 2) % 6 != 0:
+            raise ValueError(f'Invalid SRGB payload size: {len(packed)} bytes (must be 2 + N*6)')
+        self._packed: bytes = packed
+
+    @classmethod
+    def make_srgb(cls, srgbs: list[tuple[int, int]]) -> 'SrGb':
+        """Factory method for semantic construction."""
+        payload: bytes = pack('!H', 0)  # flags
+        for b, r in srgbs:
+            payload = payload + pack('!L', b)[1:] + pack('!L', r)[1:]
+        return cls(payload)
+
+    @property
+    def srgbs(self) -> list[tuple[int, int]]:
+        """List of (base, range) tuples unpacked from _packed."""
+        result: list[tuple[int, int]] = []
+        data = self._packed[2:]  # Skip flags
+        while data:
+            base: int = unpack('!L', bytes([0]) + data[:3])[0]
+            srange: int = unpack('!L', bytes([0]) + data[3:6])[0]
+            result.append((base, srange))
+            data = data[6:]
+        return result
 
     def __repr__(self) -> str:
         items: list[str] = []
@@ -54,27 +77,12 @@ class SrGb:
         return f'[ {joined} ]'
 
     def pack_tlv(self) -> bytes:
-        payload: bytes = pack('!H', 0)  # flags
-        for b, r in self.srgbs:
-            payload = payload + pack('!L', b)[1:] + pack('!L', r)[1:]
-        return pack('!B', self.TLV) + pack('!H', len(payload)) + payload
+        return pack('!B', self.TLV) + pack('!H', len(self._packed)) + self._packed
 
     @classmethod
     def unpack_attribute(cls, data: bytes, length: int) -> SrGb:
-        srgbs: list[tuple[int, int]] = []
-        # Flags: 16 bits of flags.  None is defined by this document.  The
-        # flag field MUST be clear on transmission and MUST be ignored at
-        # reception.
-        data = data[2:]
-        # SRGB: 3 octets of base followed by 3 octets of range.  Note that
-        # the SRGB field MAY appear multiple times.  If the SRGB field
-        # appears multiple times, the SRGB consists of multiple ranges.
-        while data:
-            base: int = unpack('!L', bytes([0]) + data[:3])[0]
-            srange: int = unpack('!L', bytes([0]) + data[3:6])[0]
-            srgbs.append((base, srange))
-            data = data[6:]
-        return cls(srgbs=srgbs)
+        # Validation happens in __init__
+        return cls(data)
 
     def json(self, compact: bool | None = None) -> str:
         return f'"sr-srgbs": {json.dumps(self.srgbs)}'

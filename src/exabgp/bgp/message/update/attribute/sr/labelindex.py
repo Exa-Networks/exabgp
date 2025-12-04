@@ -30,37 +30,36 @@ class SrLabelIndex:
     TLV: ClassVar[int] = 1
     LENGTH: ClassVar[int] = 7
 
-    def __init__(self, labelindex: int, packed: bytes | None = None) -> None:
-        self.labelindex: int = labelindex
-        self.packed: bytes = self.pack_tlv()
+    def __init__(self, packed: bytes) -> None:
+        if len(packed) != self.LENGTH:
+            raise ValueError(f'SrLabelIndex requires exactly {self.LENGTH} bytes, got {len(packed)}')
+        self._packed: bytes = packed
+
+    @classmethod
+    def make_labelindex(cls, labelindex: int) -> 'SrLabelIndex':
+        """Factory method for semantic construction."""
+        reserved, flags = 0, 0
+        packed = pack('!B', reserved) + pack('!H', flags) + pack('!I', labelindex)
+        return cls(packed)
+
+    @property
+    def labelindex(self) -> int:
+        """Label index value (unpacked from bytes 3-7)."""
+        return unpack('!I', self._packed[3:7])[0]
 
     def __repr__(self) -> str:
         return '{}'.format(self.labelindex)
 
     def pack_tlv(self) -> bytes:
-        reserved, flags = 0, 0
-        return (
-            pack('!B', self.TLV)
-            + pack('!H', self.LENGTH)
-            + pack('!B', reserved)
-            + pack('!H', flags)
-            + pack('!I', self.labelindex)
-        )
+        return pack('!B', self.TLV) + pack('!H', self.LENGTH) + self._packed
 
     @classmethod
     def unpack_attribute(cls, data: bytes, length: int) -> SrLabelIndex:
-        labelindex = -1
         if length != cls.LENGTH:
-            raise Notify(3, 5, f'Invalid TLV size. Should be 7 but {length} received')
-        # Shift reserved bits
-        data = data[1:]
-        # Shift Flags
-        # Flags: 16 bits of flags.  None is defined by this document.  The
-        # flag field MUST be clear on transmission and MUST be ignored at
-        # reception.
-        data = data[2:6]
-        labelindex = unpack('!I', data)[0]
-        return cls(labelindex=labelindex, packed=data)
+            raise Notify(3, 5, f'Invalid TLV size. Should be {cls.LENGTH} but {length} received')
+        # Data is: Reserved(1) + Flags(2) + LabelIndex(4) = 7 bytes
+        # Validation happens in __init__
+        return cls(data)
 
     def json(self, compact: bool = False) -> str:
         return '"sr-label-index": %d' % (self.labelindex)

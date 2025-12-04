@@ -118,7 +118,7 @@ def prefix_sid(tokeniser: Any) -> PrefixSid:  # noqa: C901
         raise ValueError(f'could not parse BGP PrefixSid attribute: {e}') from None
 
     if int(label_sid) < pow(2, 32):
-        sr_attrs.append(SrLabelIndex(int(label_sid)))
+        sr_attrs.append(SrLabelIndex.make_labelindex(int(label_sid)))
 
     for srgb in srgb_data:
         if len(srgb) == SRGB_TUPLE_SIZE and int(srgb[0]) < pow(2, 24) and int(srgb[1]) < pow(2, 24):
@@ -127,7 +127,7 @@ def prefix_sid(tokeniser: Any) -> PrefixSid:  # noqa: C901
             raise ValueError('could not parse SRGB tupple')
 
     if srgbs:
-        sr_attrs.append(SrGb(srgbs))
+        sr_attrs.append(SrGb.make_srgb(srgbs))
 
     return PrefixSid(sr_attrs)
 
