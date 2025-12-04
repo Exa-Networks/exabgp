@@ -46,7 +46,6 @@ except ImportError:
 INTERPRETER: str = os.environ.get('INTERPRETER') or os.environ.get('__PYVENV_LAUNCHER__', sys.executable)
 
 
-
 # Configuration types for different test classes
 class EncodingConf(TypedDict):
     """Configuration for encoding tests"""
@@ -1528,15 +1527,17 @@ class EncodingTests(Tests):
 
         if not quiet:
             flush()
-            flush(
-                f'{yellow()}Retrying {len(failed_tests)} failed test(s) individually: {", ".join([t.nick for t in failed_tests])}{reset()}'
-            )
+            flush()
+            flush('=' * 60)
+            flush(f'{yellow()}RETRYING {len(failed_tests)} FAILED TEST(S){reset()}')
+            flush('=' * 60)
+            flush(f'Tests: {", ".join([t.nick for t in failed_tests])}')
 
         all_retries_passed = True
 
         for test in failed_tests:
             if not quiet:
-                flush(f'{yellow()}Retry{reset()} {test.nick} {test.name}...', end=' ')
+                flush(f'  {yellow()}Retry{reset()} {test.nick} {test.name}...', end=' ')
 
             # Reset test state
             test.state = State.NONE
@@ -1601,6 +1602,19 @@ class EncodingTests(Tests):
             # Cleanup
             time.sleep(0.2)
             self._force_cleanup_all([test], {test.nick: client[test.nick]})
+
+        # Summary of retry results
+        if not quiet:
+            still_failed = [t for t in failed_tests if t.state in (State.FAIL, State.TIMEOUT)]
+            recovered = len(failed_tests) - len(still_failed)
+            flush()
+            if recovered > 0:
+                flush(f'{green()}Recovered: {recovered}/{len(failed_tests)} test(s) passed on retry{reset()}')
+            if still_failed:
+                flush(
+                    f'{red()}Still failing: {len(still_failed)} test(s): {", ".join([t.nick for t in still_failed])}{reset()}'
+                )
+            flush('=' * 60)
 
         return all_retries_passed
 
@@ -1892,7 +1906,8 @@ class EncodingTests(Tests):
 
         # Determine final success by checking if ANY tests are still failed
         # (retries update test.state to SUCCESS if they pass)
-        final_failures = [t for t in self.selected() if t.state in (State.FAIL, State.TIMEOUT)]
+        # Use registered() not selected() - selected() excludes FAIL/TIMEOUT states
+        final_failures = [t for t in self.registered() if t.state in (State.FAIL, State.TIMEOUT)]
         success = len(final_failures) == 0
 
         # Move to new line after final display
@@ -2117,6 +2132,78 @@ class DecodingTests(Tests):
 
 
 class ParsingTests(Tests):
+    def _retry_failed_tests(self, timeout: int) -> bool:
+        """Retry all failed tests individually.
+
+        Returns:
+            True if all retries passed, False if any retry failed
+        """
+        failed_tests = [t for t in self.registered() if t.state in (State.FAIL, State.TIMEOUT)]
+        if not failed_tests:
+            return True
+
+        flush()
+        flush()
+        flush('=' * 60)
+        flush(f'{yellow()}RETRYING {len(failed_tests)} FAILED TEST(S){reset()}')
+        flush('=' * 60)
+        flush(f'Tests: {", ".join([t.nick for t in failed_tests])}')
+
+        all_retries_passed = True
+
+        for test in failed_tests:
+            flush(f'{yellow()}Retry{reset()} {test.nick} {test.name}...', end=' ')
+
+            # Reset test state
+            test.state = State.NONE
+            test.code = -1
+            test.stdout = b''
+            test.stderr = b''
+            test.start_time = None
+
+            # Re-run the validation command
+            test.running()
+            test.run([Path.EXABGP, 'configuration', 'validate', '-nrv', test.conf['fname']], env=None)
+
+            # Wait for completion with timeout
+            retry_timeout = max(10, timeout // 2)
+            retry_exit_time = time.time() + retry_timeout
+
+            while time.time() < retry_exit_time:
+                if test.ready():
+                    break
+                time.sleep(0.1)
+
+            # Check result
+            if not test.ready():
+                test.terminate(collect=False)
+                test.state = State.TIMEOUT
+                all_retries_passed = False
+                flush(f'{red()}✗ (timeout){reset()}')
+            else:
+                test_passed = test.result(test.success())
+                if test_passed:
+                    flush(f'{green()}✓{reset()}')
+                else:
+                    all_retries_passed = False
+                    flush(f'{red()}✗{reset()}')
+
+            time.sleep(0.1)
+
+        # Summary of retry results
+        still_failed = [t for t in failed_tests if t.state in (State.FAIL, State.TIMEOUT)]
+        recovered = len(failed_tests) - len(still_failed)
+        flush()
+        if recovered > 0:
+            flush(f'{green()}Recovered: {recovered}/{len(failed_tests)} test(s) passed on retry{reset()}')
+        if still_failed:
+            flush(
+                f'{red()}Still failing: {len(still_failed)} test(s): {", ".join([t.nick for t in still_failed])}{reset()}'
+            )
+        flush('=' * 60)
+
+        return all_retries_passed
+
     class Test(Record, Exec):  # pyright: ignore[reportUnsafeMultipleInheritance]
         """Test combining Record state with Exec process management.
 
@@ -2230,6 +2317,14 @@ class ParsingTests(Tests):
             test.mark_timeout()
             test.terminate(collect=False)
             success = False
+
+        # Retry all failed tests individually
+        self._retry_failed_tests(timeout)
+
+        # Determine final success by checking if ANY tests are still failed
+        # Use registered() not selected() - selected() excludes FAIL/TIMEOUT states
+        final_failures = [t for t in self.registered() if t.state in (State.FAIL, State.TIMEOUT)]
+        success = len(final_failures) == 0
 
         # Move to new line after final display
         flush()
