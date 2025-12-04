@@ -363,7 +363,7 @@ exabgp_reactor_asyncio=true ./sbin/exabgp config.conf
 
 ## Key Requirements
 
-**Python 3.10+ ONLY:**
+**Python 3.12+ ONLY:**
 - Prefer `int | str` over `Union[int, str]`
 - Prefer `str | None` over `Optional[str]`
 - See `.claude/CODING_STANDARDS.md`
@@ -404,7 +404,7 @@ Before declaring success:
 - [ ] `git status` reviewed
 - [ ] Plan files updated (if working on a plan)
 - [ ] User approval for commit/push
-- [ ] Python 3.10+ syntax
+- [ ] Python 3.12+ syntax
 - [ ] No asyncio introduced
 
 Before ending session:
