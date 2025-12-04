@@ -30,6 +30,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 
 from exabgp.protocol import Protocol
+from exabgp.protocol.resource import BaseValue, NumericValue
 from exabgp.protocol.ip.icmp import ICMPType
 from exabgp.protocol.ip.icmp import ICMPCode
 from exabgp.protocol.ip.fragment import Fragment
@@ -138,11 +139,11 @@ def _bit_to_len(value: int) -> int:
     return NumericOperator.power[(value & CommonOperator.len_position) >> 4]
 
 
-def _number(string: bytes) -> int:
+def _number(string: bytes) -> NumericValue:
     value = 0
     for c in string:
         value = (value << 8) + c
-    return value
+    return NumericValue(value)
 
 
 # Interface ..................
@@ -306,12 +307,10 @@ class IPrefix6(IPrefix, IComponent, IPv6):
 class IOperation(IComponent):
     # need to implement encode which encode the value of the operator
     operations: int
-    value: int | 'Protocol' | 'Port' | 'ICMPType' | 'ICMPCode' | 'TCPFlag' | 'Fragment'
+    value: BaseValue
     first: bool | None
 
-    def __init__(
-        self, operations: int, value: int | 'Protocol' | 'Port' | 'ICMPType' | 'ICMPCode' | 'TCPFlag' | 'Fragment'
-    ) -> None:
+    def __init__(self, operations: int, value: BaseValue) -> None:
         self.operations = operations
         self.value = value
         self.first = None  # handled by pack/str
@@ -326,9 +325,7 @@ class IOperation(IComponent):
         """Alias for pack() - backwards compatibility."""
         return self.pack()
 
-    def encode(
-        self, value: int | 'Protocol' | 'Port' | 'ICMPType' | 'ICMPCode' | 'TCPFlag' | 'Fragment'
-    ) -> tuple[int, bytes]:
+    def encode(self, value: BaseValue) -> tuple[int, bytes]:
         raise NotImplementedError('this method must be implemented by subclasses')
 
     # def decode (self, value):
@@ -341,7 +338,7 @@ class IOperation(IComponent):
 
 
 class IOperationByte(IOperation):
-    def encode(self, value: int) -> tuple[int, bytes]:
+    def encode(self, value: BaseValue) -> tuple[int, bytes]:
         return 1, bytes([value])
 
     # def decode (self, bgp):
@@ -349,14 +346,14 @@ class IOperationByte(IOperation):
 
 
 class IOperationByteShort(IOperation):
-    def encode(self, value: int) -> tuple[int, bytes]:
+    def encode(self, value: BaseValue) -> tuple[int, bytes]:
         if value < (1 << 8):
             return 1, bytes([value])
         return 2, pack('!H', value)
 
 
 class IOperationByteShortLong(IOperation):
-    def encode(self, value: int) -> tuple[int, bytes]:
+    def encode(self, value: BaseValue) -> tuple[int, bytes]:
         if value < (1 << 8):
             return 1, bytes([value])
         if value < (1 << 16):
@@ -371,7 +368,7 @@ class NumericString:
     OPERATION: ClassVar[str] = 'numeric'
     # Set by subclasses - always present when short() is called
     operations: int
-    value: int | 'Protocol' | 'ICMPType' | 'ICMPCode'
+    value: BaseValue
 
     _string: ClassVar[dict[int, str]] = {
         NumericOperator.TRUE: 'true',
@@ -396,9 +393,7 @@ class NumericString:
         op = self.operations & (CommonOperator.EOL ^ 0xFF)
         if op in [NumericOperator.TRUE, NumericOperator.FALSE]:
             return self._string[op]
-        # Use short() if available, else str()
-        short_method = getattr(self.value, 'short', None)
-        value = short_method() if short_method else str(self.value)
+        value = self.value.short()
         return '{}{}'.format(self._string.get(op, '{:02X}'.format(op)), value)
 
     def __str__(self) -> str:
@@ -409,7 +404,7 @@ class BinaryString:
     OPERATION: ClassVar[str] = 'binary'
     # Set by subclasses - always present when short() is called
     operations: int
-    value: int | 'TCPFlag' | 'Fragment'
+    value: BaseValue
 
     _string: ClassVar[dict[int, str]] = {
         BinaryOperator.INCLUDE: '',
@@ -435,22 +430,20 @@ class BinaryString:
 
 def converter(
     function: Callable[[str], int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag'], klass: Type | None = None
-) -> Callable[[str], int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag']:
-    def _integer(value: str) -> int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag':
+) -> Callable[[str], BaseValue]:
+    def _integer(value: str) -> BaseValue:
         if klass is None:
-            return function(value)
+            return NumericValue(function(value))
         try:
             return klass(value)  # type: ignore[no-any-return]
         except ValueError:
-            return function(value)
+            return NumericValue(function(value))
 
     return _integer
 
 
-def decoder(
-    function: Callable[[bytes], int], klass: Type = int
-) -> Callable[[bytes], int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag']:
-    def _inner(value: bytes) -> int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag':
+def decoder(function: Callable[[bytes], int], klass: Type = NumericValue) -> Callable[[bytes], BaseValue]:
+    def _inner(value: bytes) -> BaseValue:
         return klass(function(value))  # type: ignore[no-any-return]
 
     return _inner
@@ -533,81 +526,81 @@ class Flow6Source(IPrefix6, FlowSource):
 class FlowIPProtocol(IOperationByte, NumericString, IPv4):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'protocol'
-    converter: ClassVar[Callable[[str], int | Protocol]] = converter(Protocol.from_string, Protocol)
-    decoder: ClassVar[Callable[[bytes], int | Protocol]] = decoder(ord, Protocol)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(Protocol.from_string, Protocol)
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(ord, Protocol)
 
 
 class FlowNextHeader(IOperationByte, NumericString, IPv6):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'next-header'
-    converter: ClassVar[Callable[[str], int | Protocol]] = converter(Protocol.from_string, Protocol)
-    decoder: ClassVar[Callable[[bytes], int | Protocol]] = decoder(ord, Protocol)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(Protocol.from_string, Protocol)
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(ord, Protocol)
 
 
 class FlowAnyPort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x04
     NAME: ClassVar[str] = 'port'
-    converter: ClassVar[Callable[[str], int]] = converter(port_value)
-    decoder: ClassVar[Callable[[bytes], int]] = _number
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value)
+    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
 class FlowDestinationPort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x05
     NAME: ClassVar[str] = 'destination-port'
-    converter: ClassVar[Callable[[str], int]] = converter(port_value)
-    decoder: ClassVar[Callable[[bytes], int]] = _number
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value)
+    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
 class FlowSourcePort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x06
     NAME: ClassVar[str] = 'source-port'
-    converter: ClassVar[Callable[[str], int]] = converter(port_value)
-    decoder: ClassVar[Callable[[bytes], int]] = _number
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value)
+    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
 class FlowICMPType(IOperationByte, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x07
     NAME: ClassVar[str] = 'icmp-type'
-    converter: ClassVar[Callable[[str], int | ICMPType]] = converter(ICMPType.from_string, ICMPType)
-    decoder: ClassVar[Callable[[bytes], int | ICMPType]] = decoder(_number, ICMPType)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(ICMPType.from_string, ICMPType)
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, ICMPType)
 
 
 class FlowICMPCode(IOperationByte, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x08
     NAME: ClassVar[str] = 'icmp-code'
-    converter: ClassVar[Callable[[str], int | ICMPCode]] = converter(ICMPCode.from_string, ICMPCode)
-    decoder: ClassVar[Callable[[bytes], int | ICMPCode]] = decoder(_number, ICMPCode)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(ICMPCode.from_string, ICMPCode)
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, ICMPCode)
 
 
 class FlowTCPFlag(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID: ClassVar[int] = 0x09
     NAME: ClassVar[str] = 'tcp-flags'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], int | TCPFlag]] = converter(TCPFlag.named)
-    decoder: ClassVar[Callable[[bytes], int | TCPFlag]] = decoder(_number, TCPFlag)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(TCPFlag.named)
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, TCPFlag)
 
 
 class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x0A
     NAME: ClassVar[str] = 'packet-length'
-    converter: ClassVar[Callable[[str], int]] = converter(packet_length)
-    decoder: ClassVar[Callable[[bytes], int]] = _number
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(packet_length)
+    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
 # RFC2474
 class FlowDSCP(IOperationByte, NumericString, IPv4):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'dscp'
-    converter: ClassVar[Callable[[str], int]] = converter(dscp_value)
-    decoder: ClassVar[Callable[[bytes], int]] = _number
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(dscp_value)
+    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
 # RFC2460
 class FlowTrafficClass(IOperationByte, NumericString, IPv6):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'traffic-class'
-    converter: ClassVar[Callable[[str], int]] = converter(class_value)
-    decoder: ClassVar[Callable[[bytes], int]] = _number
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(class_value)
+    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
 # BinaryOperator
@@ -615,16 +608,16 @@ class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID: ClassVar[int] = 0x0C
     NAME: ClassVar[str] = 'fragment'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], int | Fragment]] = converter(Fragment.named)
-    decoder: ClassVar[Callable[[bytes], int | Fragment]] = decoder(ord, Fragment)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(Fragment.named)
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(ord, Fragment)
 
 
 # draft-raszuk-idr-flow-spec-v6-01
 class FlowFlowLabel(IOperationByteShortLong, NumericString, IPv6):
     ID: ClassVar[int] = 0x0D
     NAME: ClassVar[str] = 'flow-label'
-    converter: ClassVar[Callable[[str], int]] = converter(label_value)
-    decoder: ClassVar[Callable[[bytes], int]] = _number
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(label_value)
+    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
 # ..........................................................
@@ -879,7 +872,7 @@ class Flow(NLRI):
             ordered_rules.append(b''.join(rule.pack() for rule in rules))
 
         # Use rd_override if set (from rd setter), otherwise use rd property
-        rd_to_use = getattr(self, '_rd_override', None) or self.rd
+        rd_to_use = self._rd_override or self.rd
         components = rd_to_use.pack_rd() + b''.join(ordered_rules)
 
         # Update _packed and clear stale flag
@@ -905,9 +898,7 @@ class Flow(NLRI):
                 # only add ' ' after the first element
                 if idx and not rule.operations & NumericOperator.AND:
                     r_str.append(' ')
-                # Use short() if available, else str()
-                short_method = getattr(rule, 'short', None)
-                r_str.append(short_method() if short_method else str(rule))
+                r_str.append(rule.short())
             line = ''.join(r_str)
             if len(r_str) > 1:
                 line = '[ {} ]'.format(line)
