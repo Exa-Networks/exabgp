@@ -263,7 +263,7 @@ def benchmark_fuzzy_matching(num_candidates: int = 200, num_trials: int = 100) -
 
     Example:
         >>> stats = benchmark_fuzzy_matching(200, 100)
-        >>> print(f"Average: {stats['avg_ms']:.2f}ms")
+        >>> print(f'Average: {stats["avg_ms"]:.2f}ms')
         Average: 15.23ms
     """
     import time
@@ -328,17 +328,17 @@ def print_benchmark_results(stats: dict[str, float]) -> None:
     """
     print('\nFuzzy Matching Performance Benchmark')
     print('=====================================')
-    print(f"Candidates: {stats['num_candidates']}")
-    print(f"Trials:     {stats['num_trials']} × 12 queries = {stats['num_trials'] * 12} total")
+    print(f'Candidates: {stats["num_candidates"]}')
+    print(f'Trials:     {stats["num_trials"]} × 12 queries = {stats["num_trials"] * 12} total')
     print('\nLatency Statistics:')
-    print(f"  Min:  {stats['min_ms']:6.2f} ms")
-    print(f"  P50:  {stats['p50_ms']:6.2f} ms")
-    print(f"  Avg:  {stats['avg_ms']:6.2f} ms")
-    print(f"  P95:  {stats['p95_ms']:6.2f} ms")
-    print(f"  P99:  {stats['p99_ms']:6.2f} ms")
-    print(f"  Max:  {stats['max_ms']:6.2f} ms")
+    print(f'  Min:  {stats["min_ms"]:6.2f} ms')
+    print(f'  P50:  {stats["p50_ms"]:6.2f} ms')
+    print(f'  Avg:  {stats["avg_ms"]:6.2f} ms')
+    print(f'  P95:  {stats["p95_ms"]:6.2f} ms')
+    print(f'  P99:  {stats["p99_ms"]:6.2f} ms')
+    print(f'  Max:  {stats["max_ms"]:6.2f} ms')
     print('\nTarget:     <100 ms (P99)')
-    print(f"Status:     {'✅ PASS' if stats['p99_ms'] < 100 else '❌ FAIL'}")
+    print(f'Status:     {"✅ PASS" if stats["p99_ms"] < 100 else "❌ FAIL"}')
 
 
 if __name__ == '__main__':

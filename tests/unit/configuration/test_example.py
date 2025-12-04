@@ -246,6 +246,6 @@ class TestGeneratedConfigSyntax:
             # Config statements should end with ;
             if not stripped.endswith(';') and not stripped.endswith('}'):
                 # This might be a continuation line, check if it's valid
-                assert (
-                    stripped.endswith(';') or stripped.endswith('{') or stripped.endswith('}')
-                ), f'Line does not end with semicolon or brace: {line}'
+                assert stripped.endswith(';') or stripped.endswith('{') or stripped.endswith('}'), (
+                    f'Line does not end with semicolon or brace: {line}'
+                )
