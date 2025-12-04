@@ -1,0 +1,549 @@
+diff --git a/.claude/ESSENTIAL_PROTOCOLS.md b/.claude/ESSENTIAL_PROTOCOLS.md
+index 7010be81..62d4043e 100644
+--- a/.claude/ESSENTIAL_PROTOCOLS.md
++++ b/.claude/ESSENTIAL_PROTOCOLS.md
+@@ -10,6 +10,83 @@
+ 
+ ## 🚨 CRITICAL RULES 🚨
+ 
++### 0. Work Preservation (NEVER LOSE CODE) 🚨🚨🚨
++
++**Core principle:** NEVER discard uncommitted work. ALWAYS ask first.
++
++## ❌ ABSOLUTELY FORBIDDEN - NO EXCEPTIONS:
++
++1. **NEVER run these commands on modified files:**
++   - `git checkout -- <file>`
++   - `git checkout HEAD -- <file>`
++   - `git reset --hard`
++   - `git stash drop`
++
++2. **NEVER decide on your own to revert/discard work**
++   - Even if tests fail
++   - Even if you think the approach is wrong
++   - Even if you want to try a different approach
++
++## ✅ MANDATORY WORKFLOW when you want to revert/change approach:
++
++**STEP 1: ALWAYS save first**
++```bash
++git diff > .claude/backups/work-$(date +%Y%m%d-%H%M%S).patch
++```
++
++**STEP 2: ALWAYS ask the user**
++Use AskUserQuestion tool:
++- "Tests are failing. Should I: (a) keep debugging, (b) save and try different approach, (c) revert to last working state?"
++- WAIT for user response before ANY destructive action
++
++**STEP 3: Only proceed after explicit user approval**
++
++## When tests fail on experimental code:
++
++1. **DO NOT REVERT** - the work has value even if broken
++2. Save to backup: `git diff > .claude/backups/failing-code.patch`
++3. ASK user what to do next
++4. Options to present:
++   - Continue debugging
++   - Commit as WIP: "WIP: experimental (tests failing)"
++   - Try different approach (after saving)
++
++**Backup location:** `.claude/backups/` - ALWAYS use this folder
++
++**Recovery:** If work was lost, check:
++- `.claude/backups/` - saved patches
++- `git stash list` - stashed changes
++- `git reflog` - recent commits
++
++**See:** ERROR_RECOVERY_PROTOCOL.md for recovery procedures
++
++---
++
++### 0.5. Plan Maintenance (Keep Notes Updated)
++
++**Core principle:** Always maintain notes as you work
++
++✅ **Required during complex work:**
++1. If a plan file exists (e.g., `~/.claude/plans/*.md`), update it as you discover:
++   - Edge cases found during implementation
++   - Design decisions made
++   - Issues encountered and their resolutions
++   - Status of each task (✅/🔄/❌)
++
++2. Before ending a session or when making significant progress:
++   - Update the plan with current state
++   - Note any failing tests and their causes
++   - Document what was learned
++
++3. When tests fail:
++   - Add the failure details to the plan BEFORE attempting fixes
++   - Document the root cause once identified
++   - This creates a record even if the session is interrupted
++
++**Benefit:** If a session is lost, the plan file contains the context needed to resume.
++
++---
++
+ ### 1. Verification Before Claiming
+ 
+ **Core principle:** Never claim success without proof
+diff --git a/src/exabgp/bgp/message/update/nlri/ipvpn.py b/src/exabgp/bgp/message/update/nlri/ipvpn.py
+index 65fa4813..ef42b557 100644
+--- a/src/exabgp/bgp/message/update/nlri/ipvpn.py
++++ b/src/exabgp/bgp/message/update/nlri/ipvpn.py
+@@ -98,31 +98,62 @@ if TYPE_CHECKING:
+ 
+ from exabgp.bgp.message import Action
+ from exabgp.bgp.message.update.nlri.cidr import CIDR
++from exabgp.bgp.message.update.nlri.inet import (
++    PATH_INFO_SIZE,
++    LABEL_SIZE_BITS,
++    LABEL_BOTTOM_OF_STACK_BIT,
++    LABEL_WITHDRAW_VALUE,
++    LABEL_NEXTHOP_VALUE,
++)
+ from exabgp.bgp.message.update.nlri.label import Label
+ from exabgp.bgp.message.update.nlri.nlri import NLRI
+ from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
++from exabgp.bgp.message.notification import Notify
+ from exabgp.protocol.family import AFI, SAFI, Family
+ from exabgp.protocol.ip import IP
+ 
+ # ====================================================== IPVPN
+ # RFC 4364
+ 
++# Route Distinguisher size in bytes
++RD_SIZE = 8
++RD_SIZE_BITS = RD_SIZE * 8
++
+ 
+ @NLRI.register(AFI.ipv4, SAFI.mpls_vpn)
+ @NLRI.register(AFI.ipv6, SAFI.mpls_vpn)
+ class IPVPN(Label):
++    """IPVPN NLRI with separate storage for CIDR, labels, and RD.
++
++    Wire format: [mask][labels][rd][prefix]
++    Storage: _packed (CIDR), _labels_packed (labels bytes), _rd_packed (RD bytes)
++    pack_nlri() = concatenation of all parts with computed mask
++    """
++
+     def __init__(self, packed: bytes) -> None:
+         """Create an IPVPN NLRI from packed CIDR bytes.
+ 
+         Args:
+             packed: CIDR wire format bytes [mask_byte][truncated_ip...]
+ 
+         AFI is inferred from mask (>32 implies IPv6).
+         SAFI defaults to mpls_vpn. Use factory methods for other families.
+         """
+         Label.__init__(self, packed)
+         self._safi = SAFI.mpls_vpn  # Override default
+-        self.rd = RouteDistinguisher.NORD
++        self._rd_packed: bytes = b''  # RD bytes (empty = NORD)
++
++    @property
++    def rd(self) -> RouteDistinguisher:
++        """Get Route Distinguisher from stored bytes."""
++        if not self._rd_packed:
++            return RouteDistinguisher.NORD
++        return RouteDistinguisher(self._rd_packed)
++
++    @rd.setter
++    def rd(self, value: RouteDistinguisher) -> None:
++        """Set Route Distinguisher by storing its packed bytes."""
++        self._rd_packed = value.pack_rd()
+ 
+     @classmethod
+     def from_cidr(
+@@ -151,7 +182,7 @@ class IPVPN(Label):
+         instance.path_info = path_info
+         instance.nexthop = IP.NoNextHop
+         instance.labels = Labels.NOLABEL
+-        instance.rd = RouteDistinguisher.NORD
++        instance._rd_packed = b''  # NORD
+         return instance
+ 
+     def feedback(self, action: Action) -> str:  # type: ignore[override]
+@@ -172,22 +203,7 @@ class IPVPN(Label):
+         action: Action = Action.UNSET,
+         path_info: PathInfo = PathInfo.DISABLED,
+     ) -> 'IPVPN':
+-        """Factory method to create an IPVPN route.
+-
+-        Args:
+-            afi: Address Family Identifier
+-            safi: Subsequent Address Family Identifier
+-            packed: Packed IP address bytes (full length)
+-            mask: Prefix length
+-            labels: MPLS labels
+-            rd: Route Distinguisher
+-            nexthop: Next-hop IP address (as string)
+-            action: Route action (ANNOUNCE/WITHDRAW)
+-            path_info: AddPath path identifier
+-
+-        Returns:
+-            New IPVPN instance
+-        """
++        """Factory method to create an IPVPN route."""
+         cidr = CIDR.make_cidr(packed, mask)
+         instance = cls.from_cidr(cidr, afi, safi, action, path_info)
+         instance.labels = labels
+@@ -205,10 +221,11 @@ class IPVPN(Label):
+         return self.extensive()
+ 
+     def __len__(self) -> int:
+-        return Label.__len__(self) + len(self.rd)  # type: ignore[arg-type]
++        # Total length = labels + rd + cidr (including mask byte) + path_info
++        return len(self.labels) + len(self._rd_packed) + len(self._packed) + len(self.path_info)
+ 
+     def __eq__(self, other: Any) -> bool:
+-        return Label.__eq__(self, other) and self.rd == other.rd and Label.__eq__(self, other)
++        return Label.__eq__(self, other) and self._rd_packed == other._rd_packed
+ 
+     def __ne__(self, other: Any) -> bool:
+         return not self.__eq__(other)
+@@ -227,65 +244,112 @@ class IPVPN(Label):
+         return True
+ 
+     def _pack_nlri_simple(self) -> bytes:
+-        """Pack NLRI without negotiated-dependent data (no addpath)."""
+-        assert self.labels is not None  # Always set in Label.__init__
+-        assert self.rd is not None  # Always set in IPVPN.__init__
+-        mask = bytes([len(self.labels) * 8 + len(self.rd) * 8 + self.cidr.mask])
+-        return mask + self.labels.pack_labels() + self.rd.pack_rd() + self.cidr.pack_ip()
++        """Pack NLRI without negotiated-dependent data (no addpath).
++
++        Wire format: [mask][labels][rd][prefix]
++        Simple concatenation of stored bytes.
++        """
++        labels_packed = self.labels.pack_labels()
++        mask = len(labels_packed) * 8 + len(self._rd_packed) * 8 + self.cidr.mask
++        return bytes([mask]) + labels_packed + self._rd_packed + self.cidr.pack_ip()
+ 
+     def pack_nlri(self, negotiated: Negotiated) -> bytes:
+         if negotiated.addpath.send(self.afi, self.safi):
+-            # ADD-PATH negotiated: MUST send 4-byte path ID
+             if self.path_info is PathInfo.DISABLED:
+                 addpath = PathInfo.NOPATH.pack_path()
+             else:
+                 addpath = self.path_info.pack_path()
+         else:
+             addpath = b''
+         return addpath + self._pack_nlri_simple()
+ 
+     def index(self) -> bytes:
+         if self.path_info is PathInfo.NOPATH:
+             addpath = b'no-pi'
+         elif self.path_info is PathInfo.DISABLED:
+             addpath = b'disabled'
+         else:
+             addpath = self.path_info.pack_path()
+-        assert self.rd is not None  # Always set in IPVPN.__init__
+-        mask = bytes([len(self.rd) * 8 + self.cidr.mask])
+-        return Family.index(self) + addpath + mask + self.rd.pack_rd() + self.cidr.pack_ip()
++        # Index uses RD + prefix (without labels) for uniqueness
++        mask = bytes([len(self._rd_packed) * 8 + self.cidr.mask])
++        return Family.index(self) + addpath + mask + self._rd_packed + self.cidr.pack_ip()
+ 
+     def _internal(self, announced: bool = True) -> list[str]:
+         r = Label._internal(self, announced)
+-        if announced and self.rd:
++        if announced and self._rd_packed:
+             r.append(self.rd.json())
+         return r
+ 
+-    # @classmethod
+-    # def _rd (cls, data, mask):
+-    # 	mask -= 8*8  # the 8 bytes of the route distinguisher
+-    # 	rd = data[:8]
+-    # 	data = data[8:]
+-    #
+-    # 	if mask < 0:
+-    # 		raise Notify(3,10,'invalid length in NLRI prefix')
+-    #
+-    # 	if not data and mask:
+-    # 		raise Notify(3,10,'not enough data for the mask provided to decode the NLRI')
+-    #
+-    # 	return RouteDistinguisher(rd), mask, data
+-    #
+-    # @classmethod
+-    # def unpack_mpls (cls, afi, safi, data, action, addpath):
+-    # 	pathinfo, data = cls._pathinfo(data,addpath)
+-    # 	mask, labels, data = cls._labels(data,action)
+-    # 	rd, mask, data = cls._rd(data,mask)
+-    # 	nlri, data = cls.unpack_cidr(afi,safi,mask,data,action)
+-    # 	nlri.path_info = pathinfo
+-    # 	nlri.labels = labels
+-    # 	nlri.rd = rd
+-    # 	return nlri,data
+-    #
+-    # @classmethod
+-    # def unpack_nlri (cls, afi, safi, data, addpath):
+-    # 	return cls.unpack_mpls(afi,safi,data,addpath)
++    @classmethod
++    def unpack_nlri(
++        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
++    ) -> tuple['IPVPN', bytes]:
++        """Unpack IPVPN NLRI from wire format.
++
++        Uses SAFI to determine RD presence (exact, not heuristic).
++        Wire format: [mask][labels][rd][prefix]
++        """
++        from struct import unpack
++
++        # Parse path_info if AddPath is enabled
++        if addpath:
++            if len(bgp) <= PATH_INFO_SIZE:
++                raise ValueError('Trying to extract path-information but we do not have enough data')
++            path_info = PathInfo(bgp[:PATH_INFO_SIZE])
++            bgp = bgp[PATH_INFO_SIZE:]
++        else:
++            path_info = PathInfo.DISABLED
++
++        mask = bgp[0]
++        bgp = bgp[1:]
++
++        # Get RD size from Family.size (exact, not heuristic)
++        _, rd_size = Family.size.get((afi, safi), (0, 0))
++        rd_bits = rd_size * 8
++
++        # Parse labels using mask (original algorithm from INET.unpack_nlri)
++        labels_list: list[int] = []
++        if safi.has_label():
++            while mask - rd_bits >= LABEL_SIZE_BITS:
++                label = int(unpack('!L', bytes([0]) + bgp[:3])[0])
++                bgp = bgp[3:]
++                mask -= LABEL_SIZE_BITS
++                labels_list.append(label >> 4)
++                if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
++                    break
++                if label == LABEL_NEXTHOP_VALUE:
++                    break
++                if label & LABEL_BOTTOM_OF_STACK_BIT:
++                    break
++
++        # Parse RD if present (exact from SAFI, not heuristic)
++        rd_packed = b''
++        if rd_size:
++            mask -= rd_bits
++            rd_packed = bgp[:rd_size]
++            bgp = bgp[rd_size:]
++
++        if mask < 0:
++            raise Notify(3, 10, 'invalid length in NLRI prefix')
++
++        if not bgp and mask:
++            raise Notify(3, 10, 'not enough data for the mask provided')
++
++        # Parse prefix
++        size = CIDR.size(mask)
++        if len(bgp) < size:
++            raise Notify(3, 10, f'could not decode IPVPN NLRI with family {AFI(afi)} {SAFI(safi)}')
++
++        network, bgp = bgp[:size], bgp[size:]
++
++        # Create NLRI - _packed stores CIDR only
++        cidr_packed = bytes([mask]) + network
++        instance = object.__new__(cls)
++        NLRI.__init__(instance, afi, safi, action)
++        instance._packed = cidr_packed
++        instance.path_info = path_info
++        instance.nexthop = IP.NoNextHop
++        instance.labels = Labels.make_labels(labels_list) if labels_list else Labels.NOLABEL
++        instance._rd_packed = rd_packed
++
++        return instance, bgp
+diff --git a/src/exabgp/configuration/static/route.py b/src/exabgp/configuration/static/route.py
+index 7dd57e47..5445a9ee 100644
+--- a/src/exabgp/configuration/static/route.py
++++ b/src/exabgp/configuration/static/route.py
+@@ -358,11 +358,16 @@ class ParseStaticRoute(Section):
+         safi = nlri.safi
+ 
+         # Extract data from original NLRI before clearing
++        # Check NLRI class type rather than SAFI (SAFI may be unicast even for VPN routes)
++        from exabgp.bgp.message.update.nlri.label import Label
++        from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
++
+         klass = nlri.__class__
+         nexthop = nlri.nexthop
+         path_info = nlri.path_info if safi.has_path() else None
+-        labels = nlri.labels if safi.has_label() else None
+-        rd = nlri.rd if safi.has_rd() else None
++        # Check class type since SAFI may not reflect actual capabilities
++        labels = nlri.labels if isinstance(nlri, Label) else None
++        rd = nlri.rd if isinstance(nlri, IPVPN) else None
+ 
+         last.nlri = NLRI.EMPTY  # Clear reference after extracting data
+ 
+diff --git a/tests/unit/test_inet.py b/tests/unit/test_inet.py
+index 9637ca5b..0b9ba11a 100644
+--- a/tests/unit/test_inet.py
++++ b/tests/unit/test_inet.py
+@@ -14,6 +14,7 @@ import pytest
+ from exabgp.protocol.family import AFI, SAFI
+ from exabgp.bgp.message import Action
+ from exabgp.bgp.message.update.nlri.inet import INET
++from exabgp.bgp.message.update.nlri.label import Label
+ from exabgp.bgp.message.update.nlri.cidr import CIDR
+ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
+ from exabgp.bgp.message.notification import Notify
+@@ -184,51 +185,55 @@ class TestINETPathInfo:
+         assert remaining == data
+ 
+ 
+-class TestINETUnpackLabels:
+-    """Test unpacking INET with labels"""
++class TestLabelUnpack:
++    """Test unpacking Label NLRI (labeled unicast routes)
++
++    Note: Labeled routes use the Label class, not INET directly.
++    The Label class handles SAFI.nlri_mpls with its own unpack_nlri.
++    """
+ 
+     def test_unpack_with_withdraw_label(self) -> None:
+         """Test unpacking route with withdraw label (0x800000)"""
+         # Label 0x800000 indicates withdrawal
+         # Format: mask (1 byte) + label (3 bytes) + network
+         withdraw_label = b'\x00\x80\x00\x00'  # Label 0x800000
+         data = b'\x38' + withdraw_label + b'\xc0\xa8\x01'  # mask=56 (24 for label + 32 for prefix)
+ 
+-        nlri, leftover = INET.unpack_nlri(
++        nlri, leftover = Label.unpack_nlri(
+             AFI.ipv4, SAFI.nlri_mpls, data, Action.WITHDRAW, addpath=False, negotiated=create_negotiated()
+         )
+ 
+-        assert isinstance(nlri, INET)
++        assert isinstance(nlri, Label)
+         assert nlri.action == Action.WITHDRAW
+ 
+     def test_unpack_with_null_label(self) -> None:
+         """Test unpacking route with null label (0x000000)"""
+         # Label 0x000000 is special (next-hop)
+         null_label = b'\x00\x00\x00\x00'
+         data = b'\x38' + null_label + b'\xc0\xa8\x01'
+ 
+-        nlri, leftover = INET.unpack_nlri(
++        nlri, leftover = Label.unpack_nlri(
+             AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
+         )
+ 
+-        assert isinstance(nlri, INET)
++        assert isinstance(nlri, Label)
+ 
+     def test_unpack_with_bottom_of_stack_label(self) -> None:
+         """Test unpacking label with bottom-of-stack bit set"""
+         # Bottom of stack bit is the LSB of the label (bit 0)
+         # Label with BOS: last byte has bit 0 set
+         # Format: mask + 3-byte label + IP address
+         # Label value 100 = 0x64, shifted left by 4 = 0x640, with BOS (bit 0) = 0x641
+         bos_label = b'\x00\x06\x41'  # Label 100 with BOS bit
+         # Mask = 24 (label) + 24 (for /24 prefix) = 48
+         data = b'\x30' + bos_label + b'\xc0\xa8\x01\x00'
+ 
+-        nlri, leftover = INET.unpack_nlri(
++        nlri, leftover = Label.unpack_nlri(
+             AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
+         )
+ 
+-        assert isinstance(nlri, INET)
+-        assert hasattr(nlri, 'labels')
++        assert isinstance(nlri, Label)
++        assert nlri.labels.labels == [100]
+ 
+ 
+ class TestINETUnpackMulticast:
+diff --git a/tests/unit/test_ipvpn.py b/tests/unit/test_ipvpn.py
+index 154c981d..e9f9716e 100644
+--- a/tests/unit/test_ipvpn.py
++++ b/tests/unit/test_ipvpn.py
+@@ -894,5 +894,90 @@ class TestIPVPNMultipleLabelEdgeCases:
+         assert nlri_with_label.labels.labels == [42]
+ 
+ 
++class TestIPVPNHighMaskValues:
++    """Test IPVPN with high mask values (labels + RD + prefix > 128 bits)
++
++    These tests ensure CIDR.size() handles masks > 128 correctly.
++    Issue: CIDR._mask_to_bytes only went to 128, causing IPVPN unpack to fail
++    for routes with labels + RD + larger prefixes.
++    """
++
++    def test_ipv6_vpn_high_mask(self) -> None:
++        """Test IPv6 VPN with mask > 128 (label + RD + 48-bit prefix = 136 bits)
++
++        This matches the conf-parity.conf scenario that was previously failing.
++        """
++        nlri = IPVPN.make_vpn_route(
++            AFI.ipv6,
++            SAFI.mpls_vpn,
++            IP.pton('2001:4b50:20c0::'),
++            48,
++            Labels.make_labels([926], True),
++            RouteDistinguisher.make_from_elements('3215', 583457597),
++        )
++
++        # Verify original creation
++        assert nlri.cidr.prefix() == '2001:4b50:20c0::/48'
++        assert nlri.labels.labels == [926]
++        assert nlri.rd._str() == '3215:583457597'
++
++        # Pack and verify mask is 136 (24 + 64 + 48)
++        packed = nlri.pack_nlri(create_negotiated())
++        assert packed[0] == 136  # 24 (label) + 64 (RD) + 48 (prefix)
++
++        # Unpack and verify round-trip
++        unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
++
++        assert len(leftover) == 0
++        assert unpacked.cidr.prefix() == '2001:4b50:20c0::/48'
++        assert unpacked.labels.labels == [926]
++        assert unpacked.rd._str() == '3215:583457597'
++
++    def test_ipv4_vpn_three_labels_high_mask(self) -> None:
++        """Test IPv4 VPN with 3 labels (mask = 160 bits)"""
++        nlri = IPVPN.make_vpn_route(
++            AFI.ipv4,
++            SAFI.mpls_vpn,
++            IP.pton('10.1.1.0'),
++            24,
++            Labels.make_labels([100, 200, 300], True),
++            RouteDistinguisher.make_from_elements('172.16.0.1', 50),
++        )
++
++        # Verify original
++        assert nlri.labels.labels == [100, 200, 300]
++
++        # Pack and verify mask is 160 (72 + 64 + 24)
++        packed = nlri.pack_nlri(create_negotiated())
++        assert packed[0] == 160  # 72 (3 labels) + 64 (RD) + 24 (prefix)
++
++        # Unpack and verify round-trip
++        unpacked, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
++
++        assert unpacked.labels.labels == [100, 200, 300]
++        assert unpacked.cidr.prefix() == '10.1.1.0/24'
++
++    def test_ipv6_vpn_128_prefix_maximum_mask(self) -> None:
++        """Test IPv6 VPN with /128 prefix (mask = 216 bits - maximum)"""
++        nlri = IPVPN.make_vpn_route(
++            AFI.ipv6,
++            SAFI.mpls_vpn,
++            IP.pton('2001:db8::1'),
++            128,
++            Labels.make_labels([42], True),
++            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
++        )
++
++        # Pack and verify mask is 216 (24 + 64 + 128)
++        packed = nlri.pack_nlri(create_negotiated())
++        assert packed[0] == 216  # 24 (label) + 64 (RD) + 128 (prefix)
++
++        # Unpack and verify round-trip
++        unpacked, _ = IPVPN.unpack_nlri(AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
++
++        assert unpacked.cidr.mask == 128
++        assert unpacked.labels.labels == [42]
++
++
+ if __name__ == '__main__':
+     pytest.main([__file__, '-v'])
