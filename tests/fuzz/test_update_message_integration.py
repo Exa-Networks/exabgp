@@ -112,7 +112,7 @@ def create_inet_nlri(
 
     # Pack IP address
     if afi == AFI_CLASS.ipv6:
-        packed = IPv6.create(prefix).pack_ip()
+        packed = IPv6(prefix).pack_ip()
     else:
         packed = IP.pton(prefix)
 
@@ -121,9 +121,9 @@ def create_inet_nlri(
 
     if nexthop:
         if afi == AFI_CLASS.ipv6:
-            nlri.nexthop = IPv6.create(nexthop)
+            nlri.nexthop = IPv6(nexthop)
         else:
-            nlri.nexthop = IP.create(nexthop)
+            nlri.nexthop = IP.make_ip(nexthop)
 
     return nlri
 

@@ -76,7 +76,7 @@ def prefix(tokeniser: 'Tokeniser') -> IPRange:
             mask = 128
 
     tokeniser.afi = IP.toafi(ip)
-    iprange = IPRange.create(ip, mask)
+    iprange = IPRange.make_ip(ip, mask)
 
     if iprange.address() & iprange.mask.hostmask() != 0:
         raise ValueError(
@@ -97,9 +97,9 @@ def next_hop(tokeniser: 'Tokeniser', afi: AFI | None = None) -> tuple[IP | IPSel
     value = tokeniser()
     if value.lower() == 'self':
         return IPSelf(tokeniser.afi), NextHopSelf(tokeniser.afi)
-    ip = IP.create(value)
+    ip = IP.make_ip(value)
     if ip.afi == AFI.ipv4 and afi == AFI.ipv6:
-        ip = IP.create('::ffff:{}'.format(ip))
+        ip = IP.make_ip('::ffff:{}'.format(ip))
     return ip, NextHop.make_nexthop(ip.top())
 
 

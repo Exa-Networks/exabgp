@@ -68,7 +68,7 @@ class IP:
     # deprecate the string API in favor of top()
 
     def __init__(self) -> None:
-        raise RuntimeError('You should use IP.create() to use IP')
+        raise RuntimeError('You should use IP.make_ip() to use IP')
 
     def init(self, string: str, packed: bytes | None = None) -> IP:
         # XXX: the str should not be needed
@@ -193,7 +193,7 @@ class IP:
         return None
 
     @classmethod
-    def create(cls, string: str, packed: bytes | None = None, klass: Type[IP] | None = None) -> IP:
+    def make_ip(cls, string: str, packed: bytes | None = None, klass: Type[IP] | None = None) -> IP:
         if klass:
             return klass(string, packed)  # type: ignore[call-arg]
         return cls.klass(string)(string, packed)  # type: ignore[call-arg,misc]
@@ -238,7 +238,7 @@ class IP:
 
     @classmethod
     def unpack_ip(cls, data: bytes, klass: Type[IP] | None = None) -> IP:
-        return cls.create(IP.ntop(data), data, klass)
+        return cls.make_ip(IP.ntop(data), data, klass)
 
 
 # ======================================================================== Range
@@ -253,8 +253,8 @@ class IPRange(IP):
         self.mask = NetMask.create(mask, IP.toafi(ip))
 
     @classmethod
-    def create(klass: Type[IPRange], ip: str, mask: int) -> IPRange:  # type: ignore[override]
-        return klass(ip, mask)
+    def make_ip(cls, ip: str, mask: int) -> IPRange:  # type: ignore[override]
+        return cls(ip, mask)
 
     def __repr__(self) -> str:
         if (self.ipv4() and self.mask == IPv4.HOST_MASK) or (self.ipv6() and self.mask == IPv6.HOST_MASK):

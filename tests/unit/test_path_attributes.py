@@ -416,7 +416,7 @@ def test_aggregator_2byte_asn() -> None:
 
     # Create AGGREGATOR with 2-byte ASN
     asn = ASN(65000)
-    speaker = IPv4.create('192.0.2.1')
+    speaker = IPv4('192.0.2.1')
     aggregator = Aggregator.make_aggregator(asn, speaker)
 
     # Verify representation
@@ -445,7 +445,7 @@ def test_aggregator_4byte_asn() -> None:
 
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
-    speaker = IPv4.create('192.0.2.1')
+    speaker = IPv4('192.0.2.1')
     aggregator = Aggregator.make_aggregator(asn, speaker)
 
     # Verify pack (flag + type + length + 4-byte ASN + 4-byte IP)
@@ -470,7 +470,7 @@ def test_aggregator_as_trans() -> None:
 
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
-    speaker = IPv4.create('192.0.2.1')
+    speaker = IPv4('192.0.2.1')
     aggregator = Aggregator.make_aggregator(asn, speaker)
 
     # Pack for old speaker (should use AS_TRANS + AS4_AGGREGATOR)
@@ -925,7 +925,7 @@ def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
 
     # Create original
     original_asn = ASN(65000)
-    original_speaker = IPv4.create('192.0.2.1')
+    original_speaker = IPv4('192.0.2.1')
     original = Aggregator.make_aggregator(original_asn, original_speaker)
 
     # Pack
@@ -953,7 +953,7 @@ def test_aggregator_pack_unpack_roundtrip_4byte() -> None:
 
     # Create original with 4-byte ASN
     original_asn = ASN(4200000000)
-    original_speaker = IPv4.create('192.0.2.1')
+    original_speaker = IPv4('192.0.2.1')
     original = Aggregator.make_aggregator(original_asn, original_speaker)
 
     # Pack
@@ -977,18 +977,18 @@ def test_aggregator_equality() -> None:
     from exabgp.protocol.ip import IPv4
 
     # Create two identical aggregators
-    agg1 = Aggregator.make_aggregator(ASN(65000), IPv4.create('192.0.2.1'))
-    agg2 = Aggregator.make_aggregator(ASN(65000), IPv4.create('192.0.2.1'))
+    agg1 = Aggregator.make_aggregator(ASN(65000), IPv4('192.0.2.1'))
+    agg2 = Aggregator.make_aggregator(ASN(65000), IPv4('192.0.2.1'))
 
     # Should be equal
     assert agg1 == agg2
 
     # Different ASN
-    agg3 = Aggregator.make_aggregator(ASN(65001), IPv4.create('192.0.2.1'))
+    agg3 = Aggregator.make_aggregator(ASN(65001), IPv4('192.0.2.1'))
     assert agg1 != agg3
 
     # Different speaker
-    agg4 = Aggregator.make_aggregator(ASN(65000), IPv4.create('192.0.2.2'))
+    agg4 = Aggregator.make_aggregator(ASN(65000), IPv4('192.0.2.2'))
     assert agg1 != agg4
 
 
@@ -998,7 +998,7 @@ def test_aggregator_json() -> None:
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.protocol.ip import IPv4
 
-    agg = Aggregator.make_aggregator(ASN(65000), IPv4.create('192.0.2.1'))
+    agg = Aggregator.make_aggregator(ASN(65000), IPv4('192.0.2.1'))
 
     # Note: json() method has a bug (uses %d for IPv4), so we skip this test
     # or just verify the object has the method

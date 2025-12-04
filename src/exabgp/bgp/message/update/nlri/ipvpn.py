@@ -208,7 +208,7 @@ class IPVPN(Label):
         instance = cls.from_cidr(cidr, afi, safi, action, path_info)
         instance.labels = labels
         instance.rd = rd
-        instance.nexthop = IP.create(nexthop) if nexthop else IP.NoNextHop
+        instance.nexthop = IP.make_ip(nexthop) if nexthop else IP.NoNextHop
         return instance
 
     def extensive(self) -> str:

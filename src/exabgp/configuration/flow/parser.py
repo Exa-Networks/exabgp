@@ -296,7 +296,7 @@ def next_hop(tokeniser: 'Tokeniser') -> NextHopSelf | NextHop:
 
     if value.lower() == 'self':
         return NextHopSelf(AFI.ipv4)
-    ip: IP = IP.create(value)
+    ip: IP = IP.make_ip(value)
     return NextHop.make_nexthop(ip.top())
 
 
@@ -336,11 +336,11 @@ def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
 
     # the redirect is an IPv4 or an IPv6 nexthop
     if count == 0 or (count > 1 and '[' not in data and ']' not in data):
-        return IP.create(data), ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
+        return IP.make_ip(data), ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
 
     # the redirect is an IPv6 nexthop using [] notation
     if data.startswith('[') and data.endswith(']'):
-        return IP.create(data[1:-1]), ExtendedCommunities().add(
+        return IP.make_ip(data[1:-1]), ExtendedCommunities().add(
             TrafficNextHopSimpson.make_traffic_nexthop_simpson(False)
         )
 
@@ -348,7 +348,7 @@ def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
     if count > 1:
         if ']:' not in data:
             try:
-                ip: IP = IP.create(data)
+                ip: IP = IP.make_ip(data)
                 return ip, ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
             except (OSError, ValueError):
                 raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []') from None
@@ -360,7 +360,7 @@ def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
 
         if int(nn) >= pow(2, LOCAL_ADMIN_16_BITS):
             raise ValueError('Local administrator field is a 16 bits number, value too large {}'.format(nn))
-        return IP.create(ip_str), ExtendedCommunities().add(
+        return IP.make_ip(ip_str), ExtendedCommunities().add(
             TrafficRedirectIPv6.make_traffic_redirect_ipv6(ip_str, int(nn))
         )
 
@@ -403,14 +403,14 @@ def redirect_next_hop(tokeniser: 'Tokeniser') -> ExtendedCommunities:
 
 
 def redirect_next_hop_ietf(tokeniser: 'Tokeniser') -> ExtendedCommunities | ExtendedCommunitiesIPv6:
-    ip: IP = IP.create(tokeniser())
+    ip: IP = IP.make_ip(tokeniser())
     if ip.ipv4():
         return ExtendedCommunities().add(TrafficNextHopIPv4IETF.make_traffic_nexthop_ipv4(cast(IPv4, ip), False))
     return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF.make_traffic_nexthop_ipv6(cast(IPv6, ip), False))
 
 
 def copy(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
-    return IP.create(tokeniser()), ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(True))
+    return IP.make_ip(tokeniser()), ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(True))
 
 
 def mark(tokeniser: 'Tokeniser') -> ExtendedCommunities:

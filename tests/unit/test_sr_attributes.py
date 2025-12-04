@@ -638,7 +638,7 @@ class TestSrv6SidInformation:
 
     def test_create_sid_information(self) -> None:
         """Test creating SRv6 SID Information."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
@@ -650,7 +650,7 @@ class TestSrv6SidInformation:
 
     def test_sid_information_with_structure(self) -> None:
         """Test SRv6 SID Information with SID Structure."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_struct = Srv6SidStructure(40, 24, 16, 0, 0, 0)
         sid_info = Srv6SidInformation(
             sid=sid,
@@ -662,7 +662,7 @@ class TestSrv6SidInformation:
 
     def test_sid_information_pack(self) -> None:
         """Test packing SRv6 SID Information."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
@@ -675,7 +675,7 @@ class TestSrv6SidInformation:
 
     def test_sid_information_unpack(self) -> None:
         """Test unpacking SRv6 SID Information."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         data = struct.pack('!B', 0)  # Reserved
         data += sid.pack_ip()  # SID (16 bytes)
         data += struct.pack('!B', 0)  # Flags
@@ -688,7 +688,7 @@ class TestSrv6SidInformation:
 
     def test_sid_information_str(self) -> None:
         """Test string representation of SID Information."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
@@ -699,7 +699,7 @@ class TestSrv6SidInformation:
 
     def test_sid_information_json(self) -> None:
         """Test JSON serialization of SID Information."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
@@ -715,7 +715,7 @@ class TestSrv6L3Service:
 
     def test_create_l3_service(self) -> None:
         """Test creating SRv6 L3 Service."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
@@ -727,7 +727,7 @@ class TestSrv6L3Service:
 
     def test_l3_service_pack(self) -> None:
         """Test packing SRv6 L3 Service."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
@@ -743,7 +743,7 @@ class TestSrv6L3Service:
     def test_l3_service_unpack(self) -> None:
         """Test unpacking SRv6 L3 Service."""
         # Create SID Information sub-TLV
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_data = struct.pack('!B', 1)  # Type = 1 (SID Info)
         sid_data += struct.pack('!H', 21)  # Length
         sid_data += struct.pack('!B', 0)  # Reserved
@@ -761,7 +761,7 @@ class TestSrv6L3Service:
 
     def test_l3_service_str(self) -> None:
         """Test string representation of L3 Service."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(sid=sid, behavior=0x0001, subsubtlvs=[])
         l3_service = Srv6L3Service(subtlvs=[sid_info])
         str_repr = str(l3_service)
@@ -769,7 +769,7 @@ class TestSrv6L3Service:
 
     def test_l3_service_json(self) -> None:
         """Test JSON serialization of L3 Service."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(sid=sid, behavior=0x0001, subsubtlvs=[])
         l3_service = Srv6L3Service(subtlvs=[sid_info])
         json_str = l3_service.json()
@@ -781,7 +781,7 @@ class TestSrv6L2Service:
 
     def test_create_l2_service(self) -> None:
         """Test creating SRv6 L2 Service."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0002,
@@ -793,7 +793,7 @@ class TestSrv6L2Service:
 
     def test_l2_service_pack(self) -> None:
         """Test packing SRv6 L2 Service."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0002,
@@ -807,7 +807,7 @@ class TestSrv6L2Service:
 
     def test_l2_service_unpack(self) -> None:
         """Test unpacking SRv6 L2 Service."""
-        sid = IPv6.create('2001:db8::2')
+        sid = IPv6('2001:db8::2')
         sid_data = struct.pack('!B', 1)  # Type = 1 (SID Info)
         sid_data += struct.pack('!H', 21)  # Length
         sid_data += struct.pack('!B', 0)  # Reserved
@@ -824,7 +824,7 @@ class TestSrv6L2Service:
 
     def test_l2_service_str(self) -> None:
         """Test string representation of L2 Service."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(sid=sid, behavior=0x0002, subsubtlvs=[])
         l2_service = Srv6L2Service(subtlvs=[sid_info])
         str_repr = str(l2_service)
@@ -832,7 +832,7 @@ class TestSrv6L2Service:
 
     def test_l2_service_json(self) -> None:
         """Test JSON serialization of L2 Service."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(sid=sid, behavior=0x0002, subsubtlvs=[])
         l2_service = Srv6L2Service(subtlvs=[sid_info])
         json_str = l2_service.json()
@@ -921,7 +921,7 @@ class TestSrv6Integration:
 
     def test_prefix_sid_with_srv6_l3(self) -> None:
         """Test PrefixSid containing SRv6 L3 Service."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(sid=sid, behavior=0x0001, subsubtlvs=[])
         l3_service = Srv6L3Service(subtlvs=[sid_info])
         prefix_sid = PrefixSid(sr_attrs=[l3_service])
@@ -931,7 +931,7 @@ class TestSrv6Integration:
 
     def test_prefix_sid_with_srv6_l2(self) -> None:
         """Test PrefixSid containing SRv6 L2 Service."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(sid=sid, behavior=0x0002, subsubtlvs=[])
         l2_service = Srv6L2Service(subtlvs=[sid_info])
         prefix_sid = PrefixSid(sr_attrs=[l2_service])
@@ -941,7 +941,7 @@ class TestSrv6Integration:
 
     def test_prefix_sid_srv6_str(self) -> None:
         """Test string representation of PrefixSid with SRv6."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(sid=sid, behavior=0x0001, subsubtlvs=[])
         l3_service = Srv6L3Service(subtlvs=[sid_info])
         prefix_sid = PrefixSid(sr_attrs=[l3_service])
@@ -951,7 +951,7 @@ class TestSrv6Integration:
 
     def test_prefix_sid_srv6_json(self) -> None:
         """Test JSON serialization of PrefixSid with SRv6."""
-        sid = IPv6.create('2001:db8::1')
+        sid = IPv6('2001:db8::1')
         sid_info = Srv6SidInformation(sid=sid, behavior=0x0001, subsubtlvs=[])
         l3_service = Srv6L3Service(subtlvs=[sid_info])
         prefix_sid = PrefixSid(sr_attrs=[l3_service])

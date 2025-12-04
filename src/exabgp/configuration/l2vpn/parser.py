@@ -61,4 +61,4 @@ def next_hop(tokeniser):
 
     if value.lower() == 'self':
         return NextHopSelf(AFI.ipv4)
-    return IP.create(value)
+    return IP.make_ip(value)

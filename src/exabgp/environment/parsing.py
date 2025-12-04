@@ -85,7 +85,7 @@ def ip_list(_: str) -> list[IP]:
         if not ip:
             continue
         elif isip(ip):
-            ips.append(IP.create(ip))
+            ips.append(IP.make_ip(ip))
         else:
             raise TypeError(f'ip {ip} is invalid')
     return ips

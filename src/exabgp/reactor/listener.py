@@ -135,7 +135,7 @@ class Listener:
     ) -> bool:
         try:
             if not remote_addr:
-                remote_addr = IP.create('0.0.0.0') if local_addr.ipv4() else IP.create('::')
+                remote_addr = IP.make_ip('0.0.0.0') if local_addr.ipv4() else IP.make_ip('::')
             self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
             md5_enabled: str = 'true' if md5_password else 'false'
             log.debug(
@@ -212,7 +212,7 @@ class Listener:
                 if neighbor is None:
                     continue
 
-                connection_local = IP.create(connection.local).address()
+                connection_local = IP.make_ip(connection.local).address()
                 assert neighbor.session.peer_address is not None  # Configured neighbors must have peer_address
                 neighbor_peer_start = neighbor.session.peer_address.address()
                 neighbor_peer_next = neighbor_peer_start + neighbor.range_size
@@ -220,7 +220,7 @@ class Listener:
                 if not neighbor_peer_start <= connection_local < neighbor_peer_next:
                     continue
 
-                connection_peer = IP.create(connection.peer).address()
+                connection_peer = IP.make_ip(connection.peer).address()
                 assert neighbor.session.local_address is not None  # Configured neighbors must have local_address
                 neighbor_local = neighbor.session.local_address.address()
 
@@ -275,8 +275,8 @@ class Listener:
                 new_neighbor = copy.copy(ranged_neighbor[0])
                 new_neighbor.range_size = 1
                 new_neighbor.ephemeral = True
-                new_neighbor.session.local_address = IP.create(connection.peer)
-                new_neighbor.session.peer_address = IP.create(connection.local)
+                new_neighbor.session.local_address = IP.make_ip(connection.peer)
+                new_neighbor.session.peer_address = IP.make_ip(connection.local)
                 if not new_neighbor.session.router_id:
                     new_neighbor.session.router_id = RouterID(connection.local)
 
