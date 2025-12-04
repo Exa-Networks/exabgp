@@ -894,5 +894,90 @@ class TestIPVPNMultipleLabelEdgeCases:
         assert nlri_with_label.labels.labels == [42]
 
 
+class TestIPVPNHighMaskValues:
+    """Test IPVPN with high mask values (labels + RD + prefix > 128 bits)
+
+    These tests ensure CIDR.size() handles masks > 128 correctly.
+    Issue: CIDR._mask_to_bytes only went to 128, causing IPVPN unpack to fail
+    for routes with labels + RD + larger prefixes.
+    """
+
+    def test_ipv6_vpn_high_mask(self) -> None:
+        """Test IPv6 VPN with mask > 128 (label + RD + 48-bit prefix = 136 bits)
+
+        This matches the conf-parity.conf scenario that was previously failing.
+        """
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv6,
+            SAFI.mpls_vpn,
+            IP.pton('2001:4b50:20c0::'),
+            48,
+            Labels.make_labels([926], True),
+            RouteDistinguisher.make_from_elements('3215', 583457597),
+        )
+
+        # Verify original creation
+        assert nlri.cidr.prefix() == '2001:4b50:20c0::/48'
+        assert nlri.labels.labels == [926]
+        assert nlri.rd._str() == '3215:583457597'
+
+        # Pack and verify mask is 136 (24 + 64 + 48)
+        packed = nlri.pack_nlri(create_negotiated())
+        assert packed[0] == 136  # 24 (label) + 64 (RD) + 48 (prefix)
+
+        # Unpack and verify round-trip
+        unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
+
+        assert len(leftover) == 0
+        assert unpacked.cidr.prefix() == '2001:4b50:20c0::/48'
+        assert unpacked.labels.labels == [926]
+        assert unpacked.rd._str() == '3215:583457597'
+
+    def test_ipv4_vpn_three_labels_high_mask(self) -> None:
+        """Test IPv4 VPN with 3 labels (mask = 160 bits)"""
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv4,
+            SAFI.mpls_vpn,
+            IP.pton('10.1.1.0'),
+            24,
+            Labels.make_labels([100, 200, 300], True),
+            RouteDistinguisher.make_from_elements('172.16.0.1', 50),
+        )
+
+        # Verify original
+        assert nlri.labels.labels == [100, 200, 300]
+
+        # Pack and verify mask is 160 (72 + 64 + 24)
+        packed = nlri.pack_nlri(create_negotiated())
+        assert packed[0] == 160  # 72 (3 labels) + 64 (RD) + 24 (prefix)
+
+        # Unpack and verify round-trip
+        unpacked, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
+
+        assert unpacked.labels.labels == [100, 200, 300]
+        assert unpacked.cidr.prefix() == '10.1.1.0/24'
+
+    def test_ipv6_vpn_128_prefix_maximum_mask(self) -> None:
+        """Test IPv6 VPN with /128 prefix (mask = 216 bits - maximum)"""
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv6,
+            SAFI.mpls_vpn,
+            IP.pton('2001:db8::1'),
+            128,
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
+        )
+
+        # Pack and verify mask is 216 (24 + 64 + 128)
+        packed = nlri.pack_nlri(create_negotiated())
+        assert packed[0] == 216  # 24 (label) + 64 (RD) + 128 (prefix)
+
+        # Unpack and verify round-trip
+        unpacked, _ = IPVPN.unpack_nlri(AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
+
+        assert unpacked.cidr.mask == 128
+        assert unpacked.labels.labels == [42]
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
