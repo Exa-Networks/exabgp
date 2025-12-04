@@ -89,7 +89,7 @@ class SrCapabilities(FlagLS):
                     [range_size, unpack('!I', bytes([0]) + data[start : start + length])[0] & SRCAP_LABEL_MASK_20BIT]
                 )
             elif length == SRCAP_LABEL_SIZE_4:
-                # XXX: really we are reading 7+ but then re-parsing it again ??
+                # 32-bit SID starts at offset 7 (range:3 + sub-TLV header:4)
                 start = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE
                 sids.append([range_size, unpack('!I', data[start : start + length])[0]])
             data = data[length + SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE :]

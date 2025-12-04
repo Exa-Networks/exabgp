@@ -23,6 +23,7 @@ from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
 
 def _unique() -> Iterator[int]:
@@ -76,6 +77,8 @@ class VPLS(NLRI):
         base: int,
         offset: int,
         size: int,
+        action: Action = Action.ANNOUNCE,
+        addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'VPLS':
         """Factory method to create a VPLS NLRI from components.
 
@@ -85,6 +88,8 @@ class VPLS(NLRI):
             base: Label base
             offset: Label block offset
             size: Label block size
+            action: Route action (ANNOUNCE or WITHDRAW)
+            addpath: ADD-PATH path identifier
 
         Returns:
             New VPLS instance with packed wire format
@@ -94,16 +99,30 @@ class VPLS(NLRI):
             + pack('!HHH', endpoint, offset, size)
             + pack('!L', (base << 4) | 0x1)[1:]  # 3 bytes with BOS bit
         )
-        return cls(packed)
+        instance = cls(packed)
+        instance.action = action
+        instance.addpath = addpath
+        return instance
 
     @classmethod
-    def make_empty(cls) -> 'VPLS':
+    def make_empty(
+        cls,
+        action: Action = Action.ANNOUNCE,
+        addpath: PathInfo = PathInfo.DISABLED,
+    ) -> 'VPLS':
         """Factory method for configuration - creates empty VPLS for field assignment.
+
+        Args:
+            action: Route action (ANNOUNCE or WITHDRAW)
+            addpath: ADD-PATH path identifier
 
         Returns:
             New VPLS instance in builder mode (packed=None)
         """
-        return cls(None)
+        instance = cls(None)
+        instance.action = action
+        instance.addpath = addpath
+        return instance
 
     @property
     def rd(self) -> RouteDistinguisher | None:
@@ -215,9 +234,9 @@ class VPLS(NLRI):
     def index(self) -> bytes:
         return Family.index(self) + self._pack_nlri_simple()
 
-    # XXX: FIXME: we need an unique key here.
-    # XXX: What can we use as unique key ?
     def json(self, compact: bool | None = None) -> str:
+        # Note: The unique key for VPLS is the combination of all fields (rd, endpoint, base, offset, size).
+        # This matches what index() returns for UPDATE withdraw matching.
         content = ', '.join(
             [
                 self.rd.json(),

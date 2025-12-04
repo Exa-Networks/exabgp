@@ -1,8 +1,8 @@
 # XXX Comment Cleanup - TODO
 
-**Status:** Partial - Phase 1-3 complete
+**Status:** Partial - Phase 1-3 complete, 2 resolved + 1 reopened during audit
 **Started:** 2025-11-25
-**Updated:** 2025-11-25
+**Updated:** 2025-12-04
 
 ---
 
@@ -10,8 +10,8 @@
 
 ### API Breaking Changes (Category 4)
 **Decision:** Make breaking changes, update all callers
-- NextHop API (string vs bytes)
-- VPLS signature alignment
+- ~~NextHop API (string vs bytes)~~ ✅ resolved
+- VPLS signature alignment (reopened - make_vpls needs action/addpath)
 - Attribute.CODE instantiability
 - TrafficNextHopSimpson inheritance
 
@@ -93,21 +93,21 @@
 
 ### 4.1 NextHop API - string vs raw bytes
 - **File:** `src/exabgp/bgp/message/update/attribute/nexthop.py:34`
-- **Status:** Pending
-- **Action:** Change to accept bytes, update all callers
+- **Status:** ✅ RESOLVED - XXX comment no longer exists
 
 ### 4.2 Attribute.CODE instantiability
-- **File:** `src/exabgp/bgp/message/update/attribute/attribute.py:87-88`
+- **File:** `src/exabgp/bgp/message/update/attribute/attribute.py:103-104`
 - **Status:** Pending
 - **Action:** Make CODE non-instantiable, update usages
 
 ### 4.3 VPLS signature alignment
-- **File:** `src/exabgp/bgp/message/update/nlri/vpls.py:39`
-- **Status:** Pending
-- **Action:** Add AFI, SAFI, action parameters to match other NLRIs
+- **File:** `src/exabgp/bgp/message/update/nlri/vpls.py:71-107`
+- **Status:** REOPENED - XXX removed but issue persists
+- **Issue:** `make_vpls()` missing `action` and `addpath` params that other NLRIs have (INET, IPVPN, EVPN, Flow)
+- **Action:** Add `action: Action = Action.ANNOUNCE` and `addpath: PathInfo = PathInfo.DISABLED` to `make_vpls()`
 
 ### 4.4 TrafficNextHopSimpson inheritance
-- **File:** `src/exabgp/bgp/message/update/attribute/community/extended/traffic.py:236`
+- **File:** `src/exabgp/bgp/message/update/attribute/community/extended/traffic.py:277`
 - **Status:** Pending
 - **Action:** Make subclass of NextHop or IP
 
@@ -116,15 +116,15 @@
 ## Phase 5: Investigation Required - NOT STARTED
 
 ### 5.1 VPLS unique key
-- **File:** `src/exabgp/bgp/message/update/nlri/vpls.py:95-96`
+- **File:** `src/exabgp/bgp/message/update/nlri/vpls.py:218-219`
 - **Status:** Pending investigation
 
 ### 5.2 RTC variable length prefixing
-- **File:** `src/exabgp/bgp/message/update/nlri/rtc.py:30`
+- **File:** `src/exabgp/bgp/message/update/nlri/rtc.py:37`
 - **Status:** Pending investigation
 
 ### 5.3 EVPN MAC index
-- **File:** `src/exabgp/bgp/message/update/nlri/evpn/mac.py:82`
+- **File:** `src/exabgp/bgp/message/update/nlri/evpn/mac.py:132`
 - **Status:** Pending investigation
 
 ### 5.4 SRCAP redundant parsing
@@ -133,7 +133,7 @@
 
 ### 5.5 PMSI length discrepancy
 - **File:** `src/exabgp/bgp/message/update/attribute/pmsi.py:90`
-- **Status:** Pending investigation
+- **Status:** ✅ RESOLVED - XXX comment no longer exists
 
 ### 5.6 BGP-LS IGP tags LEN checks
 - **Files:** `igpextags.py:31`, `igptags.py:34`
@@ -151,6 +151,7 @@
 | 2025-11-25 | Phase 2 implementation | RFC 4271 NEXTHOP validation |
 | 2025-11-25 | Phase 3 implementation | Caching init removed, comments clarified |
 | 2025-11-25 | All tests pass | Ready for commit |
+| 2025-12-04 | Validation audit | 2 resolved (4.1, 5.5), 4.3 reopened (make_vpls needs action/addpath), line numbers updated |
 
 ---
 

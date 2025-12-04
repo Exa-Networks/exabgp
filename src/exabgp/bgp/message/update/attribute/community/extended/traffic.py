@@ -273,8 +273,9 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
 
 # =============================================================== TrafficNextHopSimpson
 # draft-simpson-idr-flowspec-redirect-02
-
-# XXX: FIXME: I guess this should be a subclass of NextHop or IP ..
+#
+# Unlike TrafficNextHopIPv4IETF/IPv6IETF which contain an explicit IP address,
+# this community signals "redirect to the UPDATE's existing NextHop" - no IP stored.
 
 
 @ExtendedCommunity.register

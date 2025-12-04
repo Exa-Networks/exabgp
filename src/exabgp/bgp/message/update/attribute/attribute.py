@@ -37,7 +37,7 @@ class TreatAsWithdraw:
     def __str__(self) -> str:
         if self.aid is None:
             return 'treat-as-withdraw'
-        return 'treat-as-withdraw due to {}'.format(Attribute.CODE(self.aid))
+        return 'treat-as-withdraw due to {}'.format(Attribute.CODE.name(self.aid))
 
 
 class Discard:
@@ -53,7 +53,7 @@ class Discard:
     def __str__(self) -> str:
         if self.aid is None:
             return 'discard'
-        return 'discard due to {}'.format(Attribute.CODE(self.aid))
+        return 'discard due to {}'.format(Attribute.CODE.name(self.aid))
 
 
 # ==================================================================== Attribute
@@ -100,9 +100,7 @@ class Attribute:
 
     # ---------------------------------------------------------------------------
 
-    # XXX: FIXME: The API of ID is a bit different (it can be instanciated)
-    # XXX: FIXME: This is legacy. should we change to not be ?
-    class CODE(int):
+    class CODE:
         # This should move within the classes and not be here
         # RFC 4271
         ORIGIN: ClassVar[int] = 0x01
@@ -178,15 +176,10 @@ class Attribute:
             0xFFFF: 'internal-treath-as-withdraw',
         }
 
-        def __repr__(self) -> str:
-            return self.names.get(self, 'unknown-attribute-{}'.format(hex(self)))
-
-        def __str__(self) -> str:
-            return repr(self)
-
         @classmethod
-        def name(cls, self: int) -> str:
-            return cls.names.get(self, 'unknown-attribute-{}'.format(hex(self)))
+        def name(cls, code: int) -> str:
+            """Return human-readable name for an attribute code."""
+            return cls.names.get(code, 'unknown-attribute-{}'.format(hex(code)))
 
     # ---------------------------------------------------------------------------
 
