@@ -65,6 +65,7 @@ plan/
 
 **Status:** [emoji] [Active|Planning|Completed|On Hold]
 **Started:** YYYY-MM-DD
+**Last Updated:** YYYY-MM-DD
 **See also:** [related files]
 
 ## Goal
@@ -88,6 +89,29 @@ plan/
 ## Risks
 
 [Known risks and mitigations]
+
+## Recent Failures
+
+| Date | Test | Error | Root Cause | Status |
+|------|------|-------|------------|--------|
+| 2025-12-04 | test_example | AssertionError: ... | Off-by-one | ✅ Fixed |
+
+## Blockers
+
+| Blocker | Discovered | Status | Notes |
+|---------|------------|--------|-------|
+| Need API change | 2025-12-03 | 🔴 Blocking | Discuss with team |
+
+## Resume Point
+
+**Last worked:** YYYY-MM-DD
+**Last commit:** [hash or "uncommitted"]
+**Session ended:** Mid-task / Clean break / Blocked
+
+**To resume:**
+1. [Exact next step to take]
+2. [Context needed]
+3. [Watch out for: potential issues]
 ```
 
 ### Status Emojis

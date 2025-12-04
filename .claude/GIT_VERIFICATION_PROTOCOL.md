@@ -143,12 +143,55 @@ git status && git log --oneline -3
 
 ---
 
+## Plan Files and Git
+
+### Before Committing Code
+
+1. Run `git status` - check if plan files in `plan/` are modified
+2. If YES (plan files modified):
+   - **Default:** Include plan files with code in same commit
+   - Use commit message format: `Type: What changed` (plan updates implicit)
+   - Only ask user if they want separate commits for unusual cases
+
+3. If NO (only code modified):
+   - Proceed normally
+
+### When Plan Files Are Modified but No Code to Commit
+
+If `git status` shows plan file changes but no code:
+- Ask user: "Plan files updated. Commit now, or leave for later?"
+- If commit: Use message like "Docs: Update plan/[file] - [brief description]"
+- If leave: Will show in next session's git status
+
+### At Session End
+
+If plan files have uncommitted changes:
+- Warn user: "Plan files have uncommitted changes: [list]"
+- Recommend committing with any pending code
+- Never force - leave uncommitted if user prefers
+
+### Commit Message Examples
+
+```bash
+# Code + plan together (default)
+git commit -m "Fix: Resolve race condition in peer handler"
+
+# Plan-only commit
+git commit -m "Docs: Update plan/packed-bytes/progress.md - Wave 7 complete"
+
+# WIP with plan
+git commit -m "WIP: BGP-LS refactoring (see plan/packed-bytes/)"
+```
+
+---
+
 ## See Also
 
 - MANDATORY_REFACTORING_PROTOCOL.md - Git commits during refactoring
 - VERIFICATION_PROTOCOL.md - Verify git state before claiming
 - BACKPORT.md - Bug fix tracking for backports
+- SESSION_END_CHECKLIST.md - Plan file handling at session end
 
 ---
 
-**Updated:** 2025-11-30
+**Updated:** 2025-12-04
