@@ -135,7 +135,7 @@ class Session:
         from exabgp.bgp.message.open.routerid import RouterID
 
         if self.auto_discovery:
-            self.local_address = IP.create(local)
+            self.local_address = IP.make_ip(local)
 
         if self.router_id is None and self.local_address.afi == AFI.ipv4:
             self.router_id = RouterID(self.local_address.top())

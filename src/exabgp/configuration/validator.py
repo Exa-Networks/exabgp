@@ -355,7 +355,7 @@ class IPAddressValidator(Validator['IP']):
         from exabgp.protocol.family import AFI
 
         try:
-            ip_obj = IP.create(value)
+            ip_obj = IP.make_ip(value)
         except (OSError, IndexError, ValueError):
             raise ValueError(f"'{value}' is not a valid IP address") from None
 
@@ -410,7 +410,7 @@ class IPPrefixValidator(Validator['IPRange']):
                 ip_str = value
                 mask = 128 if ':' in value else 32
 
-            iprange = IPRange.create(ip_str, mask)
+            iprange = IPRange.make_ip(ip_str, mask)
 
             # Validate host bits are zero
             if iprange.address() & iprange.mask.hostmask() != 0:
@@ -450,7 +450,7 @@ class IPRangeValidator(Validator['IPRange']):
                 ip_str = value
                 mask = 128 if ':' in value else 32
 
-            return IPRange.create(ip_str, mask)
+            return IPRange.make_ip(ip_str, mask)
         except (OSError, IndexError, ValueError):
             raise ValueError(
                 f"'{value}' is not a valid IP address or range\n"
@@ -750,7 +750,7 @@ class NextHopValidator(Validator[tuple['IP | IPSelf', 'NextHop | NextHopSelf']])
             return IPSelf(AFI.ipv4), NextHopSelf(AFI.ipv4)
 
         try:
-            ip_obj = IP.create(value)
+            ip_obj = IP.make_ip(value)
             return ip_obj, NextHop.make_nexthop(ip_obj.top())
         except (OSError, IndexError, ValueError):
             raise ValueError(

@@ -190,7 +190,7 @@ class TestVPLSStringRepresentation:
         """Test string representation with nexthop"""
         rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS.make_vpls(rd, endpoint=3, base=262145, offset=1, size=8)
-        vpls.nexthop = IP.create('10.0.0.1')
+        vpls.nexthop = IP.make_ip('10.0.0.1')
 
         result = str(vpls)
         assert 'next-hop' in result
@@ -262,7 +262,7 @@ class TestVPLSFeedback:
         """Test feedback when all fields are present"""
         rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS.make_vpls(rd, endpoint=3, base=262145, offset=1, size=8)
-        vpls.nexthop = IP.create('10.0.0.1')
+        vpls.nexthop = IP.make_ip('10.0.0.1')
 
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert feedback == ''
@@ -285,7 +285,7 @@ class TestVPLSFeedback:
         vpls.offset = 1
         vpls.size = 8
         # endpoint not set
-        vpls.nexthop = IP.create('10.0.0.1')  # Set nexthop so we check endpoint
+        vpls.nexthop = IP.make_ip('10.0.0.1')  # Set nexthop so we check endpoint
 
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert 'vpls nlri endpoint missing' in feedback
@@ -299,7 +299,7 @@ class TestVPLSFeedback:
         vpls.offset = 1
         vpls.size = 8
         # base not set
-        vpls.nexthop = IP.create('10.0.0.1')  # Set nexthop so we check base
+        vpls.nexthop = IP.make_ip('10.0.0.1')  # Set nexthop so we check base
 
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert 'vpls nlri base missing' in feedback
@@ -313,7 +313,7 @@ class TestVPLSFeedback:
         vpls.base = 262145
         vpls.size = 8
         # offset not set
-        vpls.nexthop = IP.create('10.0.0.1')  # Set nexthop so we check offset
+        vpls.nexthop = IP.make_ip('10.0.0.1')  # Set nexthop so we check offset
 
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert 'vpls nlri offset missing' in feedback
@@ -327,7 +327,7 @@ class TestVPLSFeedback:
         vpls.base = 262145
         vpls.offset = 1
         # size not set
-        vpls.nexthop = IP.create('10.0.0.1')  # Set nexthop so we check size
+        vpls.nexthop = IP.make_ip('10.0.0.1')  # Set nexthop so we check size
 
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert 'vpls nlri size missing' in feedback
@@ -340,7 +340,7 @@ class TestVPLSFeedback:
         vpls.offset = 1
         vpls.size = 8
         # rd not set
-        vpls.nexthop = IP.create('10.0.0.1')  # Set nexthop so we check RD
+        vpls.nexthop = IP.make_ip('10.0.0.1')  # Set nexthop so we check RD
 
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert 'vpls nlri route-distinguisher missing' in feedback
@@ -351,7 +351,7 @@ class TestVPLSFeedback:
         # 20 bits max = 0xFFFFF = 1048575
         # If base > (0xFFFFF - size), it's inconsistent
         vpls = VPLS.make_vpls(rd, endpoint=3, base=1048575, offset=1, size=10)
-        vpls.nexthop = IP.create('10.0.0.1')  # Set nexthop so we check size consistency
+        vpls.nexthop = IP.make_ip('10.0.0.1')  # Set nexthop so we check size consistency
 
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert 'vpls nlri size inconsistency' in feedback
@@ -361,7 +361,7 @@ class TestVPLSFeedback:
         rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         # Exactly at limit should pass
         vpls = VPLS.make_vpls(rd, endpoint=3, base=1048567, offset=1, size=8)
-        vpls.nexthop = IP.create('10.0.0.1')
+        vpls.nexthop = IP.make_ip('10.0.0.1')
 
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert feedback == ''
@@ -374,7 +374,7 @@ class TestVPLSAssign:
         """Test assigning nexthop via assign method"""
         vpls = VPLS.make_empty()
 
-        nh = IP.create('10.0.0.1')
+        nh = IP.make_ip('10.0.0.1')
         vpls.assign('nexthop', nh)
 
         assert vpls.nexthop == nh

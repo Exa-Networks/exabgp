@@ -50,12 +50,12 @@ class TestLabelCreation:
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.labels = Labels.make_labels([100], True)
-        label.nexthop = IP.create('10.0.0.1')
+        label.nexthop = IP.make_ip('10.0.0.1')
 
         assert label.cidr.prefix() == '192.168.1.0/24'
         assert len(label.labels.labels) == 1
         assert label.labels.labels[0] == 100
-        assert label.nexthop == IP.create('10.0.0.1')
+        assert label.nexthop == IP.make_ip('10.0.0.1')
 
 
 class TestLabelStringRepresentation:
@@ -92,7 +92,7 @@ class TestLabelStringRepresentation:
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.labels = Labels.make_labels([100], True)
-        label.nexthop = IP.create('10.0.0.1')
+        label.nexthop = IP.make_ip('10.0.0.1')
 
         result = label.extensive()
         assert '192.168.1.0/24' in result
@@ -195,7 +195,7 @@ class TestLabelFeedback:
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
         label.labels = Labels.make_labels([100], True)
-        label.nexthop = IP.create('10.0.0.1')
+        label.nexthop = IP.make_ip('10.0.0.1')
 
         feedback = label.feedback(Action.ANNOUNCE)
         assert feedback == ''

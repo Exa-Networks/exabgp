@@ -151,11 +151,11 @@ class TestBuildNeighbor:
 
     def test_minimal_neighbor(self):
         params = {
-            'peer-address': IP.create('127.0.0.1'),
-            'local-address': IP.create('127.0.0.1'),
+            'peer-address': IP.make_ip('127.0.0.1'),
+            'local-address': IP.make_ip('127.0.0.1'),
             'local-as': 65000,
             'peer-as': 65001,
-            'router-id': RouterID.create('1.2.3.4'),
+            'router-id': RouterID('1.2.3.4'),
         }
 
         neighbor = _build_neighbor(params)
@@ -170,11 +170,11 @@ class TestBuildNeighbor:
 
     def test_neighbor_with_different_local_address(self):
         params = {
-            'peer-address': IP.create('10.0.0.2'),
-            'local-address': IP.create('10.0.0.1'),
+            'peer-address': IP.make_ip('10.0.0.2'),
+            'local-address': IP.make_ip('10.0.0.1'),
             'local-as': 65000,
             'peer-as': 65001,
-            'router-id': RouterID.create('1.2.3.4'),
+            'router-id': RouterID('1.2.3.4'),
         }
 
         neighbor = _build_neighbor(params)
@@ -183,11 +183,11 @@ class TestBuildNeighbor:
 
     def test_neighbor_with_api_processes(self):
         params = {
-            'peer-address': IP.create('127.0.0.1'),
-            'local-address': IP.create('127.0.0.1'),
+            'peer-address': IP.make_ip('127.0.0.1'),
+            'local-address': IP.make_ip('127.0.0.1'),
             'local-as': 65000,
             'peer-as': 65001,
-            'router-id': RouterID.create('1.2.3.4'),
+            'router-id': RouterID('1.2.3.4'),
         }
 
         neighbor = _build_neighbor(params, api_processes=['proc1', 'proc2'])
@@ -196,11 +196,11 @@ class TestBuildNeighbor:
 
     def test_neighbor_without_api_processes(self):
         params = {
-            'peer-address': IP.create('127.0.0.1'),
-            'local-address': IP.create('127.0.0.1'),
+            'peer-address': IP.make_ip('127.0.0.1'),
+            'local-address': IP.make_ip('127.0.0.1'),
             'local-as': 65000,
             'peer-as': 65001,
-            'router-id': RouterID.create('1.2.3.4'),
+            'router-id': RouterID('1.2.3.4'),
         }
 
         neighbor = _build_neighbor(params)
@@ -210,11 +210,11 @@ class TestBuildNeighbor:
 
     def test_neighbor_with_families(self):
         params = {
-            'peer-address': IP.create('127.0.0.1'),
-            'local-address': IP.create('127.0.0.1'),
+            'peer-address': IP.make_ip('127.0.0.1'),
+            'local-address': IP.make_ip('127.0.0.1'),
             'local-as': 65000,
             'peer-as': 65001,
-            'router-id': RouterID.create('1.2.3.4'),
+            'router-id': RouterID('1.2.3.4'),
             'families': [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)],
         }
 
@@ -226,10 +226,10 @@ class TestBuildNeighbor:
 
     def test_missing_peer_address(self):
         params = {
-            'local-address': IP.create('127.0.0.1'),
+            'local-address': IP.make_ip('127.0.0.1'),
             'local-as': 65000,
             'peer-as': 65001,
-            'router-id': RouterID.create('1.2.3.4'),
+            'router-id': RouterID('1.2.3.4'),
         }
 
         with pytest.raises(ValueError, match='missing required parameter: peer-address'):
@@ -237,10 +237,10 @@ class TestBuildNeighbor:
 
     def test_missing_local_ip(self):
         params = {
-            'peer-address': IP.create('127.0.0.1'),
+            'peer-address': IP.make_ip('127.0.0.1'),
             'local-as': 65000,
             'peer-as': 65001,
-            'router-id': RouterID.create('1.2.3.4'),
+            'router-id': RouterID('1.2.3.4'),
         }
 
         with pytest.raises(ValueError, match='missing required parameter: local-ip'):
@@ -248,10 +248,10 @@ class TestBuildNeighbor:
 
     def test_missing_local_as(self):
         params = {
-            'peer-address': IP.create('127.0.0.1'),
-            'local-address': IP.create('127.0.0.1'),
+            'peer-address': IP.make_ip('127.0.0.1'),
+            'local-address': IP.make_ip('127.0.0.1'),
             'peer-as': 65001,
-            'router-id': RouterID.create('1.2.3.4'),
+            'router-id': RouterID('1.2.3.4'),
         }
 
         with pytest.raises(ValueError, match='missing required parameter: local-as'):
@@ -259,10 +259,10 @@ class TestBuildNeighbor:
 
     def test_missing_peer_as(self):
         params = {
-            'peer-address': IP.create('127.0.0.1'),
-            'local-address': IP.create('127.0.0.1'),
+            'peer-address': IP.make_ip('127.0.0.1'),
+            'local-address': IP.make_ip('127.0.0.1'),
             'local-as': 65000,
-            'router-id': RouterID.create('1.2.3.4'),
+            'router-id': RouterID('1.2.3.4'),
         }
 
         with pytest.raises(ValueError, match='missing required parameter: peer-as'):
@@ -270,8 +270,8 @@ class TestBuildNeighbor:
 
     def test_missing_router_id(self):
         params = {
-            'peer-address': IP.create('127.0.0.1'),
-            'local-address': IP.create('127.0.0.1'),
+            'peer-address': IP.make_ip('127.0.0.1'),
+            'local-address': IP.make_ip('127.0.0.1'),
             'local-as': 65000,
             'peer-as': 65001,
         }

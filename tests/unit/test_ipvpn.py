@@ -76,7 +76,7 @@ class TestIPVPNCreation:
             nexthop='10.0.0.254',
         )
 
-        assert nlri.nexthop == IP.create('10.0.0.254')
+        assert nlri.nexthop == IP.make_ip('10.0.0.254')
 
     def test_create_ipvpn_with_action(self) -> None:
         """Test creating IPVPN with specific action"""

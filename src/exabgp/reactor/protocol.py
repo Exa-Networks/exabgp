@@ -127,7 +127,7 @@ class Protocol:
             self.peer.reactor.processes.connected(self.peer.neighbor)
 
         if not local:
-            self.neighbor.session.local_address = IP.create(self.connection.local)
+            self.neighbor.session.local_address = IP.make_ip(self.connection.local)
             if self.neighbor.session.router_id is None and self.neighbor.session.local_address.afi == AFI.ipv4:
                 self.neighbor.session.router_id = RouterID(self.neighbor.session.local_address.top())
 

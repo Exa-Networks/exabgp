@@ -37,7 +37,7 @@ def register_peer() -> None:
 def _parse_ip(value: str) -> IP:
     """Parse IP address string into IP object."""
     try:
-        return IP.create(value)
+        return IP.make_ip(value)
     except Exception as e:
         raise ValueError(f'invalid IP address {value}: {e}')
 
@@ -147,7 +147,7 @@ def _parse_neighbor_params(line: str) -> tuple[dict[str, Any], list[str]]:
         elif key == 'peer-as':
             params['peer-as'], i = parse_param(key, tokens, i, seen_params, _parse_asn)
         elif key == 'router-id':
-            params['router-id'], i = parse_param(key, tokens, i, seen_params, RouterID.create)
+            params['router-id'], i = parse_param(key, tokens, i, seen_params, RouterID)
         elif key == 'family-allowed':
             params['families'], i = parse_param(key, tokens, i, seen_params, _parse_families)
         elif key == 'graceful-restart':
@@ -190,7 +190,7 @@ def _parse_neighbor_params(line: str) -> tuple[dict[str, Any], list[str]]:
 
     # Default router-id to local-address if not provided
     if 'router-id' not in params:
-        params['router-id'] = RouterID.create(str(params['local-address']))
+        params['router-id'] = RouterID(str(params['local-address']))
 
     return params, api_processes
 

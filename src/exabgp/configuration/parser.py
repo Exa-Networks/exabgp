@@ -107,7 +107,7 @@ def peer_ip(tokeniser: Tokeniser) -> IPRange:
         mask = 128 if ':' in value else 32
 
     try:
-        return IPRange.create(value, mask)
+        return IPRange.make_ip(value, mask)
     except (OSError, IndexError, ValueError):
         raise ValueError(
             f"'{value}' is not a valid IP address\n  Format: <ip> or <ip>/<prefix> (e.g., 192.0.2.1 or 2001:db8::1/64)"
@@ -120,6 +120,6 @@ def ip(tokeniser: Tokeniser) -> IP:
 
     value = tokeniser()
     try:
-        return IP.create(value)
+        return IP.make_ip(value)
     except (OSError, IndexError, ValueError):
         raise ValueError(f"'{value}' is not a valid IP address (e.g., 192.0.2.1 or 2001:db8::1)") from None

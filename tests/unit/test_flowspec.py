@@ -129,7 +129,7 @@ class TestFlow6Components:
 
     def test_flow6_destination_basic(self) -> None:
         """Test IPv6 destination prefix"""
-        dest = Flow6Destination(IP.create('2001:db8::').pack_ip(), 48, 0)
+        dest = Flow6Destination(IP.make_ip('2001:db8::').pack_ip(), 48, 0)
 
         assert dest.cidr.mask == 48
         assert dest.offset == 0
@@ -140,7 +140,7 @@ class TestFlow6Components:
 
     def test_flow6_source_basic(self) -> None:
         """Test IPv6 source prefix"""
-        src = Flow6Source(IP.create('2001:db8:1::').pack_ip(), 64, 0)
+        src = Flow6Source(IP.make_ip('2001:db8:1::').pack_ip(), 64, 0)
 
         assert src.cidr.mask == 64
         assert src.offset == 0
@@ -151,7 +151,7 @@ class TestFlow6Components:
 
     def test_flow6_offset(self) -> None:
         """Test IPv6 prefix with offset"""
-        dest = Flow6Destination(IP.create('2001:db8::').pack_ip(), 48, 16)
+        dest = Flow6Destination(IP.make_ip('2001:db8::').pack_ip(), 48, 16)
 
         assert dest.offset == 16
         dest_str = str(dest)
@@ -421,7 +421,7 @@ class TestFlowNLRI:
         assert flow.afi == AFI.ipv4
 
         # Add IPv6 destination
-        dest6 = Flow6Destination(IP.create('2001:db8::').pack_ip(), 48, 0)
+        dest6 = Flow6Destination(IP.make_ip('2001:db8::').pack_ip(), 48, 0)
         flow.add(dest6)
 
         # AFI should switch to IPv6
@@ -432,7 +432,7 @@ class TestFlowNLRI:
         flow = Flow()
 
         dest4 = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
-        src6 = Flow6Source(IP.create('2001:db8::').pack_ip(), 64, 0)
+        src6 = Flow6Source(IP.make_ip('2001:db8::').pack_ip(), 64, 0)
 
         flow.add(dest4)
         # Adding IPv6 source after IPv4 dest should fail
@@ -839,7 +839,7 @@ class TestFlowUnpack:
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
-        flow.nexthop = IP.create('10.0.0.1')
+        flow.nexthop = IP.make_ip('10.0.0.1')
 
         # Should not complain when nexthop is set
         feedback = flow.feedback(Action.ANNOUNCE)
@@ -850,7 +850,7 @@ class TestFlowUnpack:
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
-        flow.nexthop = IP.create('10.0.0.1')
+        flow.nexthop = IP.make_ip('10.0.0.1')
 
         ext_str = flow.extensive()
         assert 'next-hop' in ext_str
@@ -874,7 +874,7 @@ class TestFlowUnpack:
         flow = Flow()
         dest = Flow4Destination(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
-        flow.nexthop = IP.create('10.0.0.1')
+        flow.nexthop = IP.make_ip('10.0.0.1')
 
         json_str = flow.json()
         assert 'next-hop' in json_str

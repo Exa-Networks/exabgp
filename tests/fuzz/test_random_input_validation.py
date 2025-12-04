@@ -62,7 +62,7 @@ def test_ipv4_creation(prefix_len: int, octet1: int, octet2: int, octet3: int, o
     ip_str = f'{octet1}.{octet2}.{octet3}.{octet4}/{prefix_len}'
 
     try:
-        ip = IPv4.create(ip_str)
+        ip = IPv4(ip_str)
         # Should succeed for valid inputs
         assert ip is not None
         assert str(ip) == ip_str
