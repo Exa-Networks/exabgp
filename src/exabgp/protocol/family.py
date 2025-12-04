@@ -102,11 +102,11 @@ class AFI(int):
         return []
 
     @classmethod
-    def fromString(cls, string: str) -> AFI:
+    def from_string(cls, string: str) -> AFI:
         return cls.codes.get(string, cls.undefined)
 
     @classmethod
-    def create(cls, value: int) -> AFI:
+    def from_int(cls, value: int) -> AFI:
         return cls.cache.get(value, AFI(value))
 
 
@@ -244,11 +244,11 @@ class SAFI(int):
         return cls.codes.get(name, None)
 
     @classmethod
-    def fromString(cls, string: str) -> SAFI:
+    def from_string(cls, string: str) -> SAFI:
         return cls.codes.get(string, cls.undefined)
 
     @classmethod
-    def create(cls, value: int) -> SAFI:
+    def from_int(cls, value: int) -> SAFI:
         return cls.cache.get(value, SAFI(value))
 
 
@@ -338,8 +338,8 @@ class Family:
     safi: SAFI
 
     def __init__(self, afi: int, safi: int) -> None:
-        self.afi = AFI.create(afi)
-        self.safi = SAFI.create(safi)
+        self.afi = AFI.from_int(afi)
+        self.safi = SAFI.from_int(safi)
 
     def has_label(self) -> bool:
         return self.safi.has_label()

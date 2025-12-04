@@ -55,18 +55,18 @@ class RouteRefresh(Message):
 
     @classmethod
     def make_route_refresh(cls, afi: int, safi: int, reserved: int = 0) -> 'RouteRefresh':
-        afi_obj = AFI.create(afi)
-        safi_obj = SAFI.create(safi)
+        afi_obj = AFI.from_int(afi)
+        safi_obj = SAFI.from_int(safi)
         packed = afi_obj.pack_afi() + bytes([reserved]) + safi_obj.pack_safi()
         return cls(packed)
 
     @property
     def afi(self) -> AFI:
-        return AFI.create(unpack('!H', self._packed[0:2])[0])
+        return AFI.from_int(unpack('!H', self._packed[0:2])[0])
 
     @property
     def safi(self) -> SAFI:
-        return SAFI.create(self._packed[3])
+        return SAFI.from_int(self._packed[3])
 
     @property
     def reserved(self) -> Reserved:

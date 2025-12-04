@@ -926,7 +926,7 @@ class NextHopTupleValidator(Validator[tuple[Any, Any, Any]]):
             valid = ', '.join(self.valid_nhafis)
             raise ValueError(f"'{nhafi}' is not a valid next-hop AFI\n  Valid options: {valid}")
 
-        return (AFIEnum.fromString(self.afi), SAFIEnum.fromString(safi), AFIEnum.fromString(nhafi))
+        return (AFIEnum.from_string(self.afi), SAFIEnum.from_string(safi), AFIEnum.from_string(nhafi))
 
     def to_schema(self) -> dict[str, Any]:
         return {'type': 'string', 'format': 'nexthop-tuple'}
