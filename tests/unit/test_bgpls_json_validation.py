@@ -194,8 +194,8 @@ class TestLinkAttributesJson:
 
     def test_srv6_capabilities_json(self) -> None:
         """Srv6Capabilities (TLV 1038) produces valid JSON"""
-        flags = {'O': 0, 'RSV': 0}
-        attr = Srv6Capabilities(flags=flags)
+        flags = {'O': 0}
+        attr = Srv6Capabilities.make_srv6_capabilities(flags=flags)
         result = validate_json(attr.json(), 'Srv6Capabilities')
         assert 'srv6-capabilities' in result
 
@@ -244,24 +244,23 @@ class TestLinkAttributesJson:
         result = validate_json(attr.json(), 'Srv6LanEndXOSPF')
         assert 'srv6-lan-endx-ospf' in result
 
-    @pytest.mark.skip(reason='Srv6Locator not yet converted to packed-bytes-first')
     def test_srv6_locator_json(self) -> None:
         """Srv6Locator (TLV 1162) produces valid JSON"""
-        flags = {'D': 0, 'RSV': 0}
-        attr = Srv6Locator(flags=flags, algorithm=0, metric=100, subtlvs=[])
+        flags = {'D': 0}
+        attr = Srv6Locator.make_srv6_locator(flags=flags, algorithm=0, metric=100)
         result = validate_json(attr.json(), 'Srv6Locator')
         assert 'srv6-locator' in result
 
     def test_srv6_endpoint_behavior_json(self) -> None:
         """Srv6EndpointBehavior (TLV 1250) produces valid JSON"""
-        attr = Srv6EndpointBehavior(endpoint_behavior=48, flags=[], algorithm=128)
+        attr = Srv6EndpointBehavior.make_srv6_endpoint_behavior(endpoint_behavior=48, algorithm=128)
         result = validate_json(attr.json(), 'Srv6EndpointBehavior')
         assert 'srv6-endpoint-behavior' in result
         assert 'endpoint-behavior' in result['srv6-endpoint-behavior']
 
     def test_srv6_sid_structure_json(self) -> None:
         """Srv6SidStructure (TLV 1252) produces valid JSON"""
-        attr = Srv6SidStructure(loc_block_len=32, loc_node_len=16, func_len=0, arg_len=80)
+        attr = Srv6SidStructure.make_srv6_sid_structure(loc_block_len=32, loc_node_len=16, func_len=0, arg_len=80)
         result = validate_json(attr.json(), 'Srv6SidStructure')
         assert 'srv6-sid-structure' in result
         assert 'loc_block_len' in result['srv6-sid-structure']
