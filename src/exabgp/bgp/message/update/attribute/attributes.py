@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, SET, AS2Path
 from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard, TreatAsWithdraw
+from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesBase
 
 # For bagpipe
 from exabgp.bgp.message.update.attribute.community import Communities
@@ -180,10 +181,9 @@ class Attributes(dict):
             self._str = ''
             self._json = ''
 
-            # attribute.ID is EXTENDED_COMMUNITY, so attribute has .communities
-            communities = getattr(attribute, 'communities', None)
-            assert communities is not None, f'EXTENDED_COMMUNITY attribute missing communities: {type(attribute)}'
-            for community in communities:
+            # attribute.ID is EXTENDED_COMMUNITY, so attribute is ExtendedCommunitiesBase
+            assert isinstance(attribute, ExtendedCommunitiesBase)
+            for community in attribute.communities:
                 self[attribute.ID].add(community)
             return
 
@@ -239,10 +239,8 @@ class Attributes(dict):
             if code not in keys and code in default:
                 attr = default[code](local_asn, peer_asn)
                 if attr is not NOTHING:
-                    # attr is Origin, AS2Path, or LocalPreference - all have pack_attribute
-                    pack_attribute = getattr(attr, 'pack_attribute', None)
-                    assert pack_attribute is not None, f'default attribute missing pack_attribute: {type(attr)}'
-                    message += pack_attribute(negotiated)
+                    # attr is Origin, AS2Path, or LocalPreference - all Attribute subclasses
+                    message += attr.pack_attribute(negotiated)
                 continue
 
             attribute = self[code]
