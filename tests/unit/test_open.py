@@ -90,7 +90,7 @@ class TestData(unittest.TestCase):
 
     def test_2_open(self) -> None:
         capabilities = Capabilities()
-        o = Open(Version(4), ASN(65500), HoldTime(180), RouterID('127.0.0.1'), capabilities)
+        o = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('127.0.0.1'), capabilities)
         self.assertEqual(o.version, 4)
         self.assertEqual(o.asn, 65500)
         self.assertEqual(o.router_id, RouterID('127.0.0.1'))

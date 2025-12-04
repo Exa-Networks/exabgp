@@ -344,7 +344,7 @@ class Protocol:
         else:
             raise RuntimeError('no ASN available for the OPEN message')
 
-        sent_open = Open(
+        sent_open = Open.make_open(
             Version(4),
             local_as,
             self.neighbor.hold_time,

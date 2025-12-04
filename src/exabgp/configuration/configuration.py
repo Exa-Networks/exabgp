@@ -124,7 +124,9 @@ class _Configuration:
                 for refresh in refreshes:
                     family = (refresh.afi, refresh.safi)
                     if family in self.neighbors[neighbor].families():
-                        self.neighbors[neighbor].refresh.append(RouteRefresh(refresh.afi, refresh.safi))
+                        self.neighbors[neighbor].refresh.append(
+                            RouteRefresh.make_route_refresh(refresh.afi, refresh.safi)
+                        )
                     else:
                         family_err = family
                         neighbor_err: str = neighbor

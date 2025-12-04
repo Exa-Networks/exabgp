@@ -26,8 +26,17 @@ class KeepAlive(Message):
     ID = Message.CODE.KEEPALIVE
     TYPE = bytes([Message.CODE.KEEPALIVE])
 
+    def __init__(self, packed: bytes = b'') -> None:
+        if packed:
+            raise ValueError(f'KeepAlive must have empty payload, got {len(packed)} bytes')
+        self._packed = packed
+
+    @classmethod
+    def make_keepalive(cls) -> 'KeepAlive':
+        return cls(b'')
+
     def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(b'')
+        return self._message(self._packed)
 
     def __str__(self) -> str:
         return 'KEEPALIVE'
@@ -38,4 +47,4 @@ class KeepAlive(Message):
         # But could happen when calling the function programmatically
         if data:
             raise Notify(1, 2, 'Keepalive can not have any payload but contains %s' % hexstring(data))
-        return cls()
+        return cls(data)

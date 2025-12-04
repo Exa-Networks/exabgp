@@ -68,25 +68,47 @@ class Open(Message):
     ID = Message.CODE.OPEN
     TYPE = bytes([Message.CODE.OPEN])
 
-    def __init__(
-        self, version: Version, asn: ASN, hold_time: HoldTime, router_id: RouterID, capabilities: Capabilities
-    ) -> None:
-        self.version: Version = version
-        self.asn: ASN = asn
-        self.hold_time: HoldTime = hold_time
-        self.router_id: RouterID = router_id
-        self.capabilities: Capabilities = capabilities
+    # Fixed header size: version(1) + asn(2) + hold_time(2) + router_id(4)
+    HEADER_SIZE = 9
 
-    def pack_message(self, negotiated: Negotiated) -> bytes:
+    def __init__(self, packed: bytes, capabilities: Capabilities) -> None:
+        if len(packed) != self.HEADER_SIZE:
+            raise ValueError(f'Open header requires exactly {self.HEADER_SIZE} bytes, got {len(packed)}')
+        self._packed = packed
+        self._capabilities = capabilities
+
+    @classmethod
+    def make_open(
+        cls, version: Version, asn: ASN, hold_time: HoldTime, router_id: RouterID, capabilities: Capabilities
+    ) -> 'Open':
         # OPEN message ASN field is always 2 bytes (RFC 4271)
         # 4-byte ASN is negotiated via ASN4 capability
-        return self._message(
-            self.version.pack_version()
-            + self.asn.trans().pack_asn2()
-            + self.hold_time.pack_holdtime()
-            + self.router_id.pack_ip()
-            + self.capabilities.pack_capabilities(),
-        )
+        packed = version.pack_version() + asn.trans().pack_asn2() + hold_time.pack_holdtime() + router_id.pack_ip()
+        return cls(packed, capabilities)
+
+    @property
+    def version(self) -> Version:
+        return Version(self._packed[0])
+
+    @property
+    def asn(self) -> ASN:
+        return ASN(unpack('!H', self._packed[1:3])[0])
+
+    @property
+    def hold_time(self) -> HoldTime:
+        return HoldTime(unpack('!H', self._packed[3:5])[0])
+
+    @property
+    def router_id(self) -> RouterID:
+        numeric = unpack('!L', self._packed[5:9])[0]
+        return RouterID('%d.%d.%d.%d' % (numeric >> 24, (numeric >> 16) & 0xFF, (numeric >> 8) & 0xFF, numeric & 0xFF))
+
+    @property
+    def capabilities(self) -> Capabilities:
+        return self._capabilities
+
+    def pack_message(self, negotiated: Negotiated) -> bytes:
+        return self._message(self._packed + self._capabilities.pack_capabilities())
 
     def __str__(self) -> str:
         return 'OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]' % (
@@ -104,8 +126,4 @@ class Open(Message):
             # Only version 4 is supported nowdays ..
             raise Notify(2, 1, 'version number: %d' % data[0])
 
-        asn = unpack('!H', data[1:3])[0]
-        hold_time = unpack('!H', data[3:5])[0]
-        numeric = unpack('!L', data[5:9])[0]
-        router_id = '%d.%d.%d.%d' % (numeric >> 24, (numeric >> 16) & 0xFF, (numeric >> 8) & 0xFF, numeric & 0xFF)
-        return cls(Version(version), ASN(asn), HoldTime(hold_time), RouterID(router_id), Capabilities.unpack(data[9:]))
+        return cls(data[0:9], Capabilities.unpack(data[9:]))

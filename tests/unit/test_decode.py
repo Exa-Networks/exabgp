@@ -351,14 +351,14 @@ class TestUpdateDecoding(unittest.TestCase):
             routerid_1 = str(neighbor.router_id)
             routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.router_id).split('.', -1))
 
-            o1 = Open(
+            o1 = Open.make_open(
                 Version(4),
                 ASN(neighbor.local_as),
                 HoldTime(180),
                 RouterID(routerid_1),
                 capa,
             )
-            o2 = Open(
+            o2 = Open.make_open(
                 Version(4),
                 ASN(neighbor.peer_as),
                 HoldTime(180),
