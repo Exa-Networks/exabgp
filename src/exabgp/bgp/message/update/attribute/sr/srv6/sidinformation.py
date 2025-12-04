@@ -84,7 +84,7 @@ class Srv6SidInformation:  # type: ignore[type-var]
                     data[3 : length + 3], length
                 )
             else:
-                subsubtlv = GenericSrv6ServiceDataSubSubTlv(code, data[3 : length + 3])
+                subsubtlv = GenericSrv6ServiceDataSubSubTlv(data[3 : length + 3], code)
             subsubtlvs.append(subsubtlv)
             data = data[length + 3 :]
 

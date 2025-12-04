@@ -592,16 +592,32 @@ class TestSREdgeCases:
 class TestSrv6SidStructure:
     """Test SRv6 SID Structure Sub-Sub-TLV."""
 
+    def test_packed_bytes_first_init(self) -> None:
+        """Test __init__(packed: bytes) interface."""
+        # Wire format: 6 bytes (loc_block, loc_node, func, arg, tpose_len, tpose_offset)
+        packed = struct.pack('!BBBBBB', 40, 24, 16, 0, 0, 0)
+        sid_struct = Srv6SidStructure(packed)
+        assert sid_struct.loc_block_len == 40
+        assert sid_struct.loc_node_len == 24
+        assert sid_struct.func_len == 16
+        assert sid_struct.arg_len == 0
+        assert sid_struct.tpose_len == 0
+        assert sid_struct.tpose_offset == 0
+
+    def test_packed_bytes_first_invalid_size(self) -> None:
+        """Test __init__ raises ValueError for invalid size."""
+        with pytest.raises(ValueError, match='6 bytes'):
+            Srv6SidStructure(b'\x00\x00\x00')  # Too short
+
+    def test_make_sid_structure_factory(self) -> None:
+        """Test make_sid_structure() factory method."""
+        sid_struct = Srv6SidStructure.make_sid_structure(40, 24, 16, 0, 0, 0)
+        assert sid_struct.loc_block_len == 40
+        assert sid_struct.loc_node_len == 24
+
     def test_create_sid_structure(self) -> None:
-        """Test creating SRv6 SID Structure."""
-        sid_struct = Srv6SidStructure(
-            loc_block_len=40,
-            loc_node_len=24,
-            func_len=16,
-            arg_len=0,
-            tpose_len=0,
-            tpose_offset=0,
-        )
+        """Test creating SRv6 SID Structure via factory."""
+        sid_struct = Srv6SidStructure.make_sid_structure(40, 24, 16, 0, 0, 0)
         assert sid_struct.loc_block_len == 40
         assert sid_struct.loc_node_len == 24
         assert sid_struct.func_len == 16
@@ -609,14 +625,7 @@ class TestSrv6SidStructure:
 
     def test_sid_structure_pack(self) -> None:
         """Test packing SRv6 SID Structure."""
-        sid_struct = Srv6SidStructure(
-            loc_block_len=40,
-            loc_node_len=24,
-            func_len=16,
-            arg_len=0,
-            tpose_len=0,
-            tpose_offset=0,
-        )
+        sid_struct = Srv6SidStructure.make_sid_structure(40, 24, 16, 0, 0, 0)
         packed = sid_struct.pack_tlv()
 
         # Format: Type(1) + Length(2) + 6 bytes of structure
@@ -638,14 +647,7 @@ class TestSrv6SidStructure:
 
     def test_sid_structure_pack_unpack_roundtrip(self) -> None:
         """Test pack/unpack roundtrip for SID Structure."""
-        original = Srv6SidStructure(
-            loc_block_len=32,
-            loc_node_len=32,
-            func_len=16,
-            arg_len=48,
-            tpose_len=0,
-            tpose_offset=64,
-        )
+        original = Srv6SidStructure.make_sid_structure(32, 32, 16, 48, 0, 64)
         packed = original.pack_tlv()
         data = packed[3:]  # Skip Type and Length
 
@@ -659,7 +661,7 @@ class TestSrv6SidStructure:
 
     def test_sid_structure_str(self) -> None:
         """Test string representation of SID Structure."""
-        sid_struct = Srv6SidStructure(40, 24, 16, 0, 0, 0)
+        sid_struct = Srv6SidStructure.make_sid_structure(40, 24, 16, 0, 0, 0)
         str_repr = str(sid_struct)
         assert 'sid-structure' in str_repr
         assert '40' in str_repr
@@ -668,7 +670,7 @@ class TestSrv6SidStructure:
 
     def test_sid_structure_json(self) -> None:
         """Test JSON serialization of SID Structure."""
-        sid_struct = Srv6SidStructure(40, 24, 16, 0, 0, 0)
+        sid_struct = Srv6SidStructure.make_sid_structure(40, 24, 16, 0, 0, 0)
         json_str = sid_struct.json()
         assert 'structure' in json_str
         assert 'locator-block-length' in json_str
@@ -692,7 +694,7 @@ class TestSrv6SidInformation:
     def test_sid_information_with_structure(self) -> None:
         """Test SRv6 SID Information with SID Structure."""
         sid = IPv6('2001:db8::1')
-        sid_struct = Srv6SidStructure(40, 24, 16, 0, 0, 0)
+        sid_struct = Srv6SidStructure.make_sid_structure(40, 24, 16, 0, 0, 0)
         sid_info = Srv6SidInformation(
             sid=sid,
             behavior=0x0001,
@@ -885,13 +887,13 @@ class TestGenericSrv6:
 
     def test_generic_service_subtlv(self) -> None:
         """Test GenericSrv6ServiceSubTlv."""
-        generic = GenericSrv6ServiceSubTlv(code=99, packed=b'\x01\x02\x03\x04')
+        generic = GenericSrv6ServiceSubTlv(b'\x01\x02\x03\x04', code=99)
         assert generic.code == 99
         assert generic.packed == b'\x01\x02\x03\x04'
 
     def test_generic_service_subtlv_repr(self) -> None:
         """Test string representation of GenericSrv6ServiceSubTlv."""
-        generic = GenericSrv6ServiceSubTlv(code=99, packed=b'\x01\x02')
+        generic = GenericSrv6ServiceSubTlv(b'\x01\x02', code=99)
         repr_str = repr(generic)
         assert '99' in repr_str
         assert 'not implemented' in repr_str.lower()
@@ -899,26 +901,26 @@ class TestGenericSrv6:
     def test_generic_service_subtlv_pack(self) -> None:
         """Test packing GenericSrv6ServiceSubTlv."""
         data = b'\x01\x02\x03\x04'
-        generic = GenericSrv6ServiceSubTlv(code=99, packed=data)
+        generic = GenericSrv6ServiceSubTlv(data, code=99)
         packed = generic.pack_tlv()
         assert packed == data
 
     def test_generic_service_subtlv_json(self) -> None:
         """Test JSON serialization of GenericSrv6ServiceSubTlv."""
-        generic = GenericSrv6ServiceSubTlv(code=99, packed=b'\x01\x02')
+        generic = GenericSrv6ServiceSubTlv(b'\x01\x02', code=99)
         json_str = generic.json()
         # Returns empty string for unimplemented TLVs
         assert json_str == ''
 
     def test_generic_service_data_subsubtlv(self) -> None:
         """Test GenericSrv6ServiceDataSubSubTlv."""
-        generic = GenericSrv6ServiceDataSubSubTlv(code=88, packed=b'\x0a\x0b\x0c')
+        generic = GenericSrv6ServiceDataSubSubTlv(b'\x0a\x0b\x0c', code=88)
         assert generic.code == 88
         assert generic.packed == b'\x0a\x0b\x0c'
 
     def test_generic_service_data_subsubtlv_repr(self) -> None:
         """Test string representation of GenericSrv6ServiceDataSubSubTlv."""
-        generic = GenericSrv6ServiceDataSubSubTlv(code=88, packed=b'\x0a')
+        generic = GenericSrv6ServiceDataSubSubTlv(b'\x0a', code=88)
         repr_str = repr(generic)
         assert '88' in repr_str
         assert 'not implemented' in repr_str.lower()
@@ -926,7 +928,7 @@ class TestGenericSrv6:
     def test_generic_service_data_subsubtlv_pack(self) -> None:
         """Test packing GenericSrv6ServiceDataSubSubTlv."""
         data = b'\x0a\x0b\x0c\x0d'
-        generic = GenericSrv6ServiceDataSubSubTlv(code=88, packed=data)
+        generic = GenericSrv6ServiceDataSubSubTlv(data, code=88)
         packed = generic.pack_tlv()
         assert packed == data
 

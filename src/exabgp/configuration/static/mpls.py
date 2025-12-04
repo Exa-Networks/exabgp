@@ -171,14 +171,7 @@ def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:  # type: ignore[return]
             value = tokeniser()
 
             subsubtlvs.append(
-                Srv6SidStructure(
-                    loc_block_len=values[0],
-                    loc_node_len=values[1],
-                    func_len=values[2],
-                    arg_len=values[3],
-                    tpose_len=values[4],
-                    tpose_offset=values[5],
-                ),
+                Srv6SidStructure.make_sid_structure(values[0], values[1], values[2], values[3], values[4], values[5]),
             )
 
     subtlvs.append(
