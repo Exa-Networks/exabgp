@@ -28,8 +28,10 @@ class LocalTeRid(BaseLS):
     REPR = 'Local TE Router IDs'
     JSON = 'local-te-router-ids'
 
-    def __init__(self, terids: list[str]) -> None:
-        BaseLS.__init__(self, terids)
+    def __init__(self, packed: bytes) -> None:
+        self._packed = packed
+        # For merge support, content is a list of packed bytes
+        self._content_list: list[bytes] = [packed]
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> LocalTeRid:
@@ -38,7 +40,16 @@ class LocalTeRid(BaseLS):
         if length not in (4, 16):
             raise Notify(3, 5, 'Invalid remote-te size')
 
-        return cls([str(IP.unpack_ip(data))])
+        return cls(data)
+
+    @property
+    def content(self) -> list[str]:
+        """List of TE Router IDs as strings."""
+        return [str(IP.unpack_ip(data)) for data in self._content_list]
+
+    def merge(self, other: 'LocalTeRid') -> None:
+        """Merge another LocalTeRid's packed bytes into this one."""
+        self._content_list.extend(other._content_list)
 
     def json(self, compact: bool = False) -> str:
         joined = '", "'.join(self.content)

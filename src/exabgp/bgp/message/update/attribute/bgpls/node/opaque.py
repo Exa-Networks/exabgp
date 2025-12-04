@@ -7,7 +7,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from struct import unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
@@ -32,12 +31,14 @@ class NodeOpaque(BaseLS):
     REPR = 'Node Opaque attribute'
     JSON = 'opaque'
 
-    def __init__(self, opaque: bytes) -> None:
-        BaseLS.__init__(self, opaque)
-
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> NodeOpaque:
-        return cls(unpack('!%ds' % len(data), data)[0])
+        return cls(data)
+
+    @property
+    def content(self) -> bytes:
+        """Opaque data as bytes."""
+        return self._packed
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return f'"{self.JSON}": {json.dumps(self._packed.hex())}'

@@ -26,14 +26,16 @@ class IsisArea(BaseLS):
     REPR = 'ISIS area id'
     JSON = 'area-id'
 
-    def __init__(self, areaid: int) -> None:
-        BaseLS.__init__(self, areaid)
-
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> IsisArea:
         if not data:
             raise Notify(3, 5, 'ISIS Area: empty data')
-        return cls(int(data.hex(), 16))
+        return cls(data)
+
+    @property
+    def content(self) -> int:
+        """ISIS area ID as integer."""
+        return int(self._packed.hex(), 16)
 
     def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": "{self.content}"'
