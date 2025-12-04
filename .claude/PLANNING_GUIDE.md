@@ -1,20 +1,24 @@
 # Planning Guide
 
-**Standard structure for all `.claude/` planning docs.**
+**All project plans live in `plan/` directory (project root), tracked in git.**
 
 ---
 
-## Directory Structure
+## Plan Location
+
+**IMPORTANT:** All plans MUST be saved to the `plan/` directory in the project root, NOT in `.claude/` or `~/.claude/plans/`.
 
 ```
-.claude/<project-name>/
-├── README.md          # Overview and navigation
-├── PLAN.md            # Implementation plan
-├── ANALYSIS.md        # Findings (optional)
-├── PROGRESS.md        # Progress tracking
+plan/                              # Project root
+├── todo.md                        # Central TODO tracking
+├── packed-attribute.md            # Packed-bytes-first refactoring
+├── coverage.md                    # Test coverage audit
+├── python312-buffer-protocol.md   # Future: Python 3.12 + memoryview
+├── type-annotations/              # Type annotation detailed plans
+└── xxx-cleanup/                   # XXX comment cleanup
 ```
 
-**Naming:** Lowercase with hyphens: `type-annotations/`, `async-migration/`
+**Naming:** Lowercase with hyphens: `type-annotations/`, `python312-buffer-protocol.md`
 
 ---
 
@@ -91,16 +95,17 @@ Brief description.
 ## Archiving
 
 **When complete:**
-1. Move to `.claude/docs/archive/<project>/`
-2. Add notice in main README
-3. Keep 2-line summary in active README
+1. Keep completed plan in `plan/` with status "Complete"
+2. Or move to `.claude/docs/archive/<project>/` if no longer relevant
+3. Update `plan/todo.md` to mark as complete
 
 ---
 
 ## Examples
 
-**See:** `.claude/docs/archive/` for archived examples
+**Active plans:** `plan/` directory
+**Archived docs:** `.claude/docs/archive/`
 
 ---
 
-**Updated:** 2025-11-16
+**Updated:** 2025-12-04

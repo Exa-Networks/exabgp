@@ -153,21 +153,22 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 
 ---
 
-## Active Work (`docs/wip/`)
+## Active Work
 
-Active development projects. Completed work moves to `docs/projects/`.
+**All active project plans are in:** `plan/` (project root)
 
-### Type Annotations (`docs/wip/type-annotations/`)
-**Status:** Phase 3 - MyPy error reduction
-**Progress:** 605 errors (47% ↓ from 1,149 baseline)
+### Main TODO: `plan/todo.md`
+Central tracking for all quality improvement work:
+- Type Safety (89 mypy errors remaining - 92% reduction)
+- Packed-bytes-first refactoring
+- Test coverage improvements
+- Security, architecture, code quality
 
-**Files:**
-- README.md - Project overview
-- MYPY_STATUS.md - Current error analysis
-- PROGRESS.md - Phase tracking
-- See full structure in `docs/wip/type-annotations/`
-
-**Historical docs:** `docs/projects/type-annotations/` (early planning)
+### Project-Specific Plans
+- `plan/packed-attribute.md` - Packed-bytes-first refactoring waves
+- `plan/coverage.md` - Test coverage audit
+- `plan/type-annotations/` - Type annotation detailed plans
+- `plan/xxx-cleanup/` - XXX comment cleanup
 
 ---
 

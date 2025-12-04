@@ -9,10 +9,10 @@
 ## Quick Summary
 
 **Use decision tree below to determine correct location:**
+- Implementation plans & active work → `plan/` (project root)
 - Codebase usage/modification → `.claude/exabgp/`
 - Work protocols/rules → `.claude/` (root)
 - Completed project history → `.claude/docs/projects/`
-- Active work → `.claude/docs/wip/`
 - Superseded/obsolete → `.claude/docs/archive/`
 
 **See full decision tree below with examples.**
@@ -106,42 +106,27 @@ Examples:
 
 ---
 
-### 4. Is this about ACTIVE WORK IN PROGRESS?
+### 4. Is this about ACTIVE WORK IN PROGRESS or IMPLEMENTATION PLANS?
 
-**YES** → Goes in `.claude/docs/wip/{project-name}/`
+**YES** → Goes in `plan/` (project root, tracked in git)
 
 Examples:
 - "Type annotation progress tracking"
 - "Current mypy error status"
 - "Ongoing refactoring plan"
+- "Plan to add new NLRI type"
+- "API improvement proposal"
 
 **Structure:**
 ```
-.claude/docs/wip/{project-name}/
-├── README.md           # Current status
-├── PROGRESS.md         # Live progress tracking
-├── STATUS.md           # Current state
-├── PLAN.md             # Active plan
-└── {specific}.md       # Work-specific docs
+plan/                              # Project root
+├── todo.md                        # Central TODO tracking
+├── packed-attribute.md            # Packed-bytes-first refactoring
+├── coverage.md                    # Test coverage audit
+├── python312-buffer-protocol.md   # Future: Python 3.12 + memoryview
+├── type-annotations/              # Type annotation detailed plans
+└── xxx-cleanup/                   # XXX comment cleanup
 ```
-
-**Update when:** Work progresses, status changes
-
-**When complete:** Move to `.claude/docs/projects/{project-name}/`
-
----
-
-### 5. Is this about a SPECIFIC IMPLEMENTATION PLAN?
-
-**YES** → Goes in `plan/` (project root)
-
-Examples:
-- "Plan to add new NLRI type"
-- "Health monitoring implementation plan"
-- "API improvement proposal"
-- "Refactoring plan"
-
-**Location:** `plan/{feature-name}.md`
 
 **Format:**
 ```markdown
@@ -160,13 +145,13 @@ Examples:
 [Required tests]
 ```
 
-**Update when:** Plan changes, implementation starts/completes
+**Update when:** Work progresses, plan changes, implementation starts/completes
 
-**When complete:** Move to `.claude/docs/projects/` with session summary
+**When complete:** Mark status as "Complete" in plan file, update `plan/todo.md`
 
 ---
 
-### 6. Is this about CODEBASE API/REFERENCE (commands, syntax, protocols)?
+### 5. Is this about CODEBASE API/REFERENCE (commands, syntax, protocols)?
 
 **YES** → Goes in `.claude/exabgp/`
 
@@ -190,7 +175,7 @@ Examples:
 
 ---
 
-### 7. Is this ARCHITECTURE or TEST documentation?
+### 6. Is this ARCHITECTURE or TEST documentation?
 
 **YES** → Goes in `.claude/` with descriptive name
 
