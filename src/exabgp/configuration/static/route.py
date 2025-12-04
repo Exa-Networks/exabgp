@@ -358,11 +358,16 @@ class ParseStaticRoute(Section):
         safi = nlri.safi
 
         # Extract data from original NLRI before clearing
+        # Check NLRI class type rather than SAFI (SAFI may be unicast even for VPN routes)
+        from exabgp.bgp.message.update.nlri.label import Label
+        from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
+
         klass = nlri.__class__
         nexthop = nlri.nexthop
         path_info = nlri.path_info if safi.has_path() else None
-        labels = nlri.labels if safi.has_label() else None
-        rd = nlri.rd if safi.has_rd() else None
+        # Check class type since SAFI may not reflect actual capabilities
+        labels = nlri.labels if isinstance(nlri, Label) else None
+        rd = nlri.rd if isinstance(nlri, IPVPN) else None
 
         last.nlri = NLRI.EMPTY  # Clear reference after extracting data
 

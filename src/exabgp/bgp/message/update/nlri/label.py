@@ -59,7 +59,7 @@ Wire Format (_packed):
     This class stores ONLY the CIDR payload in _packed (not the full labeled NLRI).
 
     _packed stores: [mask_byte][truncated_ip_bytes...]  (same as INET)
-    self.labels stores: Labels object with the MPLS label stack
+    _labels_packed stores: raw label bytes (empty = NOLABEL)
 
     On pack_nlri(), these are combined:
         output = [length][labels][prefix] where length = labels*24 + mask
@@ -95,6 +95,13 @@ from exabgp.protocol.ip import IP
 @NLRI.register(AFI.ipv4, SAFI.nlri_mpls)
 @NLRI.register(AFI.ipv6, SAFI.nlri_mpls)
 class Label(INET):
+    """Label NLRI with separate storage for CIDR and labels.
+
+    Wire format: [mask][labels][prefix]
+    Storage: _packed (CIDR), _labels_packed (label bytes)
+    pack_nlri() = concatenation with computed mask
+    """
+
     def __init__(self, packed: bytes) -> None:
         """Create a Label NLRI from packed CIDR bytes.
 
@@ -105,8 +112,20 @@ class Label(INET):
         SAFI defaults to nlri_mpls. Use factory methods for other families.
         """
         INET.__init__(self, packed)
-        self._safi = SAFI.nlri_mpls  # Override default
-        self.labels = Labels.NOLABEL
+        self.safi = SAFI.nlri_mpls  # Override unicast default from INET
+        self._labels_packed: bytes = b''  # Label bytes (empty = NOLABEL)
+
+    @property
+    def labels(self) -> Labels:
+        """Get Labels from stored bytes."""
+        if not self._labels_packed:
+            return Labels.NOLABEL
+        return Labels(self._labels_packed)
+
+    @labels.setter
+    def labels(self, value: Labels) -> None:
+        """Set Labels by storing packed bytes."""
+        self._labels_packed = value.pack_labels()
 
     @classmethod
     def from_cidr(
@@ -134,7 +153,7 @@ class Label(INET):
         instance._packed = cidr.pack_nlri()
         instance.path_info = path_info
         instance.nexthop = IP.NoNextHop
-        instance.labels = Labels.NOLABEL
+        instance._labels_packed = b''  # NOLABEL
         instance.rd = None
         return instance
 
@@ -153,10 +172,10 @@ class Label(INET):
         return self.extensive()
 
     def __len__(self) -> int:
-        return INET.__len__(self) + len(self.labels)  # type: ignore[arg-type]
+        return INET.__len__(self) + len(self._labels_packed)
 
     def __eq__(self, other: Any) -> bool:
-        return self.labels == other.labels and INET.__eq__(self, other)
+        return self._labels_packed == other._labels_packed and INET.__eq__(self, other)
 
     def __hash__(self) -> int:
         if self.path_info is PathInfo.NOPATH:
@@ -172,9 +191,8 @@ class Label(INET):
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
-        assert self.labels is not None  # Always set in Label.__init__
-        mask = bytes([len(self.labels) * 8 + self.cidr.mask])
-        return mask + self.labels.pack_labels() + self.cidr.pack_ip()
+        mask = bytes([len(self._labels_packed) * 8 + self.cidr.mask])
+        return mask + self._labels_packed + self.cidr.pack_ip()
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
         if negotiated.addpath.send(self.afi, self.safi):
@@ -199,7 +217,7 @@ class Label(INET):
 
     def _internal(self, announced: bool = True) -> list[str]:
         r = INET._internal(self, announced)
-        if announced and self.labels:
+        if announced and self._labels_packed:
             r.append(self.labels.json())
         return r
 

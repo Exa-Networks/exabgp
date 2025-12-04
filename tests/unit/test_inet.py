@@ -14,6 +14,7 @@ import pytest
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.notification import Notify
@@ -184,8 +185,12 @@ class TestINETPathInfo:
         assert remaining == data
 
 
-class TestINETUnpackLabels:
-    """Test unpacking INET with labels"""
+class TestLabelUnpack:
+    """Test unpacking Label NLRI (labeled unicast routes)
+
+    Note: Labeled routes use the Label class, not INET directly.
+    The Label class handles SAFI.nlri_mpls with its own unpack_nlri.
+    """
 
     def test_unpack_with_withdraw_label(self) -> None:
         """Test unpacking route with withdraw label (0x800000)"""
@@ -194,11 +199,11 @@ class TestINETUnpackLabels:
         withdraw_label = b'\x00\x80\x00\x00'  # Label 0x800000
         data = b'\x38' + withdraw_label + b'\xc0\xa8\x01'  # mask=56 (24 for label + 32 for prefix)
 
-        nlri, leftover = INET.unpack_nlri(
+        nlri, leftover = Label.unpack_nlri(
             AFI.ipv4, SAFI.nlri_mpls, data, Action.WITHDRAW, addpath=False, negotiated=create_negotiated()
         )
 
-        assert isinstance(nlri, INET)
+        assert isinstance(nlri, Label)
         assert nlri.action == Action.WITHDRAW
 
     def test_unpack_with_null_label(self) -> None:
@@ -207,11 +212,11 @@ class TestINETUnpackLabels:
         null_label = b'\x00\x00\x00\x00'
         data = b'\x38' + null_label + b'\xc0\xa8\x01'
 
-        nlri, leftover = INET.unpack_nlri(
+        nlri, leftover = Label.unpack_nlri(
             AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
         )
 
-        assert isinstance(nlri, INET)
+        assert isinstance(nlri, Label)
 
     def test_unpack_with_bottom_of_stack_label(self) -> None:
         """Test unpacking label with bottom-of-stack bit set"""
@@ -223,12 +228,12 @@ class TestINETUnpackLabels:
         # Mask = 24 (label) + 24 (for /24 prefix) = 48
         data = b'\x30' + bos_label + b'\xc0\xa8\x01\x00'
 
-        nlri, leftover = INET.unpack_nlri(
+        nlri, leftover = Label.unpack_nlri(
             AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
         )
 
-        assert isinstance(nlri, INET)
-        assert hasattr(nlri, 'labels')
+        assert isinstance(nlri, Label)
+        assert nlri.labels.labels == [100]
 
 
 class TestINETUnpackMulticast:
