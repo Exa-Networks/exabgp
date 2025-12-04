@@ -163,6 +163,25 @@ uv run pytest tests/unit/path/to/test.py -v  # Should FAIL
 ./qa/bin/test_everything  # ALL 6 test suites
 ```
 
+**IF TESTS FAIL:**
+1. **STOP** - Do NOT immediately try to fix
+2. **Update plan file FIRST** (if one exists for this work):
+   - Add entry to "## Recent Failures" section
+   - Include: test name, error message, suspected cause
+3. **THEN** proceed to fix
+4. **After fixing**, update plan with resolution
+
+**Template for failure entry:**
+```markdown
+### [Date] Test Failure: test_name
+
+**Error:** [paste error message]
+**Suspected cause:** [your analysis]
+**Status:** 🔄 Investigating | ✅ Fixed | ❌ Blocked
+
+**Resolution:** [what fixed it, or why blocked]
+```
+
 ## Test Requirements by Change Type
 
 | Change Type | Required Tests |
@@ -233,7 +252,20 @@ git status && git diff && git diff --staged
 
 If ANY modified/staged files: ASK user how to handle before starting work.
 
-### 3. Load contextual protocols based on task
+### 3. Check plan state
+
+```bash
+ls -la plan/
+```
+
+- List all active plan files
+- For each, check status emoji in header (🔄 Active, 📋 Planning, ✅ Completed, ⏸️ On Hold)
+- Report to user: "Active plans: [list with status]"
+- Ask: "Which plan (if any) are we working on today?"
+
+**If working on a plan:** Keep it updated throughout the session (see Plan Update Triggers below).
+
+### 4. Load contextual protocols based on task
 
 **Use decision tree below to determine which additional protocols to read.**
 
@@ -246,7 +278,7 @@ If ANY modified/staged files: ASK user how to handle before starting work.
 | Error recovery / mistakes | ERROR_RECOVERY_PROTOCOL.md | 2.9 KB |
 | Feature development | *(covered in this file - see below)* | - |
 
-### 4. Use decision tree if uncertain
+### 5. Use decision tree if uncertain
 
 See README.md "What Do You Want to Do?" table
 
@@ -303,6 +335,36 @@ git status && git log --oneline -5
 
 ---
 
+## Plan Update Triggers
+
+**When to update plan files (if working on a plan):**
+
+### Mandatory Triggers (MUST update)
+- ❌ **Test failure** → Document in "Recent Failures" BEFORE fixing
+- 🚫 **Blocker discovered** → Add to "Blockers" section
+- 💡 **Design decision made** → Add to "Decisions" or relevant section
+- ✅ **Task completed** → Mark ✅ in progress table
+- 🛑 **Session ending** → Full plan review (see SESSION_END_CHECKLIST.md)
+
+### What Counts as "Significant Progress"
+Any of these means update the plan:
+- Completed a task (even partial)
+- Changed approach/strategy
+- Discovered something unexpected
+- Hit a blocker
+- Made a decision that affects scope
+
+### Enforcement
+Before ending ANY session where you worked on a plan:
+- [ ] Plan file has "Last Updated" timestamp current
+- [ ] All failures documented
+- [ ] All blockers documented
+- [ ] "Resume Point" section updated
+
+**See:** SESSION_END_CHECKLIST.md for complete checklist
+
+---
+
 ## Reference Materials (NOT Auto-Loaded)
 
 **Consult these when needed:**
@@ -313,6 +375,7 @@ git status && git log --oneline -5
 - PLANNING_GUIDE.md - Project planning standards
 - BACKPORT.md - Bug fix tracking for backports
 - PRE_FLIGHT_CHECKLIST.md - Session start checklist
+- SESSION_END_CHECKLIST.md - Session end checklist (mandatory)
 
 **Complete protocol listing:** README.md
 

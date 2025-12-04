@@ -46,6 +46,9 @@ git status && git diff && git diff --staged
 LAST_HASH=$(grep "Last reviewed commit" .claude/BACKPORT.md | awk '{print $NF}')
 echo "=== Commits since last backport review ($LAST_HASH) ==="
 git log $LAST_HASH..HEAD --oneline
+
+# 3. Plan state check
+ls -la plan/
 ```
 
 **THEN use AskUserQuestion tool to ask about any issues found:**
@@ -67,6 +70,13 @@ Question 2 (if new commits since backport review):
   options:
     - label: "Yes, update", description: "All commits are typing/refactoring/docs, no bug fixes"
     - label: "Review commits", description: "Show me the commits to check for bug fixes"
+
+Question 3 (if plan files exist):
+  header: "Active plans"
+  question: "Active plans found: [list with status]. Which plan are we working on?"
+  options:
+    - label: "[plan name]", description: "Continue work on this plan"
+    - label: "None", description: "Not working on any plan today"
 ```
 
 **Self-check after reading:**
@@ -74,6 +84,7 @@ Question 2 (if new commits since backport review):
 - [ ] Can I state the verification rule? (Paste command output before claiming)
 - [ ] Can I state the git rule? (Fresh git status before operations)
 - [ ] Did I RUN the backport check above? (Not just read about it)
+- [ ] Did I RUN the plan state check above? (Not just read about it)
 - [ ] Will I APPLY these to my next response? (Not just "know" them)
 
 **THEN complete:** `.claude/PRE_FLIGHT_CHECKLIST.md` before starting work.
@@ -374,23 +385,32 @@ Unused `negotiated` parameters are OK and EXPECTED.
 ## Directory Structure
 
 `.claude/` - Core protocols and codebase documentation:
-- **Protocols:** 13 session-start files (VERIFICATION_DISCIPLINE.md, etc.)
+- **Protocols:** 14 session files (ESSENTIAL_PROTOCOLS.md, SESSION_END_CHECKLIST.md, etc.)
 - **Codebase reference:** exabgp/ - architecture, patterns, BGP mappings
 - **Reference:** FUNCTIONAL_TEST_ARCHITECTURE.md, FILE_NAMING_CONVENTIONS.md
 - **Documentation:** docs/ - projects, reference, plans, wip, archive
+
+`plan/` - Implementation plans and active work:
+- **Naming:** See plan/README.md for conventions
+- **Template:** Includes Progress, Failures, Blockers, Resume Point sections
 
 ---
 
 ## Quick Checklist
 
 Before declaring success:
-- [ ] Read all 11 protocol files
+- [ ] Read ESSENTIAL_PROTOCOLS.md
 - [ ] `./qa/bin/test_everything` passes
 - [ ] `git status` reviewed
+- [ ] Plan files updated (if working on a plan)
 - [ ] User approval for commit/push
 - [ ] Python 3.10+ syntax
 - [ ] No asyncio introduced
 
+Before ending session:
+- [ ] Run SESSION_END_CHECKLIST.md (mandatory)
+- [ ] Update plan files with progress/failures/resume point
+
 ---
 
-**Updated:** 2025-11-26
+**Updated:** 2025-12-04

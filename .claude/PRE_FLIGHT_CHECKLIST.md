@@ -50,7 +50,22 @@ git log <hash>..HEAD --oneline
 
 ---
 
-## 4. Codebase References (For New Features/Refactoring)
+## 4. Plan State Check
+
+```bash
+ls -la plan/
+```
+
+- [ ] Listed active plan files
+- [ ] Checked status emoji in each plan header (🔄/📋/✅/⏸️)
+- [ ] Reported to user: "Active plans: [list with status]"
+- [ ] Asked user: "Which plan (if any) are we working on today?"
+
+**If working on a plan:** Keep it updated throughout session (see ESSENTIAL_PROTOCOLS.md § Plan Update Triggers)
+
+---
+
+## 5. Codebase References (For New Features/Refactoring)
 
 **If task involves new features, major changes, or unfamiliar areas:**
 
@@ -64,11 +79,12 @@ git log <hash>..HEAD --oneline
 
 ---
 
-## 5. Ready to Work
+## 6. Ready to Work
 
 - [ ] All protocols read
 - [ ] Git state checked
 - [ ] Backport review completed
+- [ ] Plan state checked
 - [ ] User informed of any pre-existing changes
 - [ ] No assumptions made
 - [ ] Relevant codebase references reviewed (if applicable)
