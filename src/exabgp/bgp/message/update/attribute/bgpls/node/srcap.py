@@ -47,6 +47,11 @@ SRCAP_LABEL_SIZE_4 = 4  # 32-bit SID
 SRCAP_SUB_TLV_HEADER_SIZE = 4  # Type (2) + Length (2)
 SRCAP_LABEL_MASK_20BIT = 0xFFFFF  # Mask for 20-bit label
 
+# Minimum data length for SR Capabilities TLV
+# Flags (1) + Reserved (1) = 2 bytes initial, then 7+ per SID entry
+SRCAP_MIN_LENGTH = 2  # Minimum for flags + reserved
+SRCAP_MIN_ENTRY_LENGTH = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE  # 7 bytes per entry header
+
 
 @LinkState.register_lsid()
 class SrCapabilities(FlagLS):
@@ -64,6 +69,8 @@ class SrCapabilities(FlagLS):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> SrCapabilities:
+        if len(data) < SRCAP_MIN_LENGTH:
+            raise Notify(3, 5, f'SR Capabilities: data too short, need {SRCAP_MIN_LENGTH} bytes, got {len(data)}')
         # Extract node capability flags
         flags = cls.unpack_flags(data[0:1])
         # Move pointer past flags and reserved bytes
@@ -71,6 +78,11 @@ class SrCapabilities(FlagLS):
         sids = []
 
         while data:
+            # Validate minimum entry length before parsing
+            if len(data) < SRCAP_MIN_ENTRY_LENGTH:
+                raise Notify(
+                    3, 5, f'SR Capabilities: entry data too short, need {SRCAP_MIN_ENTRY_LENGTH} bytes, got {len(data)}'
+                )
             # Range Size: 3 octet value indicating the number of labels in
             # the range.
             range_size = unpack('!L', bytes([0]) + data[:SRCAP_RANGE_SIZE_BYTES])[0]
@@ -83,6 +95,12 @@ class SrCapabilities(FlagLS):
             )
             if sub_type != SRCAP_LABEL_SUB_TLV_TYPE:
                 raise Notify(3, 5, f'Invalid sub-TLV type: {sub_type}')
+            # Validate we have enough data for the SID/Label value
+            total_entry_size = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE + length
+            if len(data) < total_entry_size:
+                raise Notify(
+                    3, 5, f'SR Capabilities: SID/Label data too short, need {total_entry_size} bytes, got {len(data)}'
+                )
             if length == SRCAP_LABEL_SIZE_3:
                 start = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE
                 sids.append(

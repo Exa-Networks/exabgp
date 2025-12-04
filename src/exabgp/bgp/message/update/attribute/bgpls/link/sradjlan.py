@@ -12,9 +12,14 @@ from typing import Any, TYPE_CHECKING
 
 from exabgp.util import hexstring
 from exabgp.protocol.iso import ISO
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+
+# Minimum data length for SR Adjacency LAN SID TLV
+# Flags (1) + Weight (1) + Reserved (2) + System-ID (6) = 10 bytes
+SRADJ_LAN_MIN_LENGTH = 10
 
 if TYPE_CHECKING:
     pass
@@ -56,6 +61,10 @@ class SrAdjacencyLan(FlagLS):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> SrAdjacencyLan:
+        if len(data) < SRADJ_LAN_MIN_LENGTH:
+            raise Notify(
+                3, 5, f'SR Adjacency LAN SID: data too short, need {SRADJ_LAN_MIN_LENGTH} bytes, got {len(data)}'
+            )
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])
         # Parse adj weight

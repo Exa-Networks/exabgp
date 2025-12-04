@@ -6,6 +6,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
@@ -30,6 +31,8 @@ class IsisArea(BaseLS):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> IsisArea:
+        if not data:
+            raise Notify(3, 5, 'ISIS Area: empty data')
         return cls(int(data.hex(), 16))
 
     def json(self, compact: bool = False) -> str:

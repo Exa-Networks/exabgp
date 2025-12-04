@@ -10,8 +10,13 @@ import json
 from struct import unpack
 from exabgp.util import hexstring
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+
+# Minimum data length for SR Adjacency SID TLV
+# Flags (1) + Weight (1) + Reserved (2) = 4 bytes
+SRADJ_MIN_LENGTH = 4
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -48,6 +53,8 @@ class SrAdjacency(FlagLS):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> SrAdjacency:
+        if len(data) < SRADJ_MIN_LENGTH:
+            raise Notify(3, 5, f'SR Adjacency SID: data too short, need {SRADJ_MIN_LENGTH} bytes, got {len(data)}')
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])
         # Parse adj weight
