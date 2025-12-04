@@ -56,6 +56,18 @@ class MAC(EVPN):
 
     def __init__(
         self,
+        packed: bytes,
+        nexthop: IP = IP.NoNextHop,
+        action: Action | None = None,
+        addpath: PathInfo | None = None,
+    ) -> None:
+        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
+        self._packed = packed
+        self.nexthop = nexthop
+
+    @classmethod
+    def make_mac(
+        cls,
         rd: RouteDistinguisher,
         esi: ESI,
         etag: EthernetTag,
@@ -63,21 +75,59 @@ class MAC(EVPN):
         maclen: int,
         label: Labels | None,
         ip: IP | None,
-        packed: bytes | None = None,
         nexthop: IP = IP.NoNextHop,
         action: Action | None = None,
         addpath: PathInfo | None = None,
-    ) -> None:
-        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
-        self.nexthop = nexthop
-        self.rd = rd
-        self.esi = esi
-        self.etag = etag
-        self.maclen = maclen
-        self.mac = mac
-        self.ip = ip
-        self.label = label if label else Labels.NOLABEL
-        self._pack(packed)
+    ) -> 'MAC':
+        """Factory method to create MAC from semantic parameters."""
+        label_to_use = label if label else Labels.NOLABEL
+        # fmt: off
+        packed = (
+            rd.pack_rd()
+            + esi.pack_esi()
+            + etag.pack_etag()
+            + bytes([maclen])
+            + mac.pack_mac()
+            + bytes([len(ip) * 8 if ip else 0])  # type: ignore[arg-type]
+            + (ip.pack_ip() + label_to_use.pack_labels() if ip else label_to_use.pack_labels())
+        )
+        # fmt: on
+        return cls(packed, nexthop, action, addpath)
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+
+    @property
+    def esi(self) -> ESI:
+        return ESI.unpack_esi(self._packed[8:18])
+
+    @property
+    def etag(self) -> EthernetTag:
+        return EthernetTag.unpack_etag(self._packed[18:22])
+
+    @property
+    def maclen(self) -> int:
+        return self._packed[22]
+
+    @property
+    def mac(self) -> MACQUAL:
+        return MACQUAL.unpack_mac(self._packed[23:29])
+
+    @property
+    def ip(self) -> IP | None:
+        iplen_bits = self._packed[29]
+        if iplen_bits == 0:
+            return None
+        iplen_bytes = iplen_bits // 8
+        return IP.unpack_ip(self._packed[30 : 30 + iplen_bytes])
+
+    @property
+    def label(self) -> Labels:
+        iplen_bits = self._packed[29]
+        iplen_bytes = iplen_bits // 8 if iplen_bits else 0
+        label_start = 30 + iplen_bytes
+        return Labels.unpack_labels(self._packed[label_start : label_start + 3])
 
     # XXX: we have to ignore a part of the route
     def index(self) -> bytes:
@@ -113,51 +163,23 @@ class MAC(EVPN):
         # esi and label MUST *NOT* be part of the hash
         return hash((self.rd, self.etag, self.mac, self.ip))
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-
-        # maclen: only 48 supported by the draft
-        # fmt: off
-        self._packed = (
-            self.rd.pack_rd()
-            + self.esi.pack_esi()
-            + self.etag.pack_etag()
-            + bytes([self.maclen])
-            + self.mac.pack_mac()
-            + bytes([len(self.ip) * 8 if self.ip else 0])  # type: ignore[arg-type]
-            + (self.ip.pack_ip() + self.label.pack_labels() if self.ip else self.label.pack_labels())
-        )
-        # fmt: on
-        return self._packed
-
     @classmethod
     def unpack_evpn_route(cls, data: bytes) -> MAC:
+        # Validate the data before creating the instance
         datalen = len(data)
-        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
-        esi = ESI.unpack_esi(data[8:18])
-        etag = EthernetTag.unpack_etag(data[18:22])
         maclength = data[22]
 
         if maclength > MAC_ADDRESS_LEN_BITS or maclength < 0:
             raise Notify(3, 5, 'invalid MAC Address length in {}'.format(cls.NAME))
-        end = 23 + 6  # MAC length MUST be 6
 
-        mac = MACQUAL.unpack_mac(data[23:end])
-
+        end = 29  # After MAC address (8+10+4+1+6)
         length = data[end]
         iplen = length / 8
 
         if datalen in [33, 36]:  # No IP information (1 or 2 labels)
-            iplenUnpack = 0
             if iplen != 0:
                 raise Notify(3, 5, 'IP length is given as %d, but current MAC route has no IP information' % iplen)
         elif datalen in [37, 40]:  # Using IPv4 addresses (1 or 2 labels)
-            iplenUnpack = 4
             if iplen > IPV4_ADDRESS_LEN_BITS or iplen < 0:
                 raise Notify(
                     3,
@@ -165,7 +187,6 @@ class MAC(EVPN):
                     'IP field length is given as %d, but current MAC route is IPv4 and valus is out of range' % iplen,
                 )
         elif datalen in [49, 52]:  # Using IPv6 addresses (1 or 2 labels)
-            iplenUnpack = 16
             if iplen > IPV6_ADDRESS_LEN_BITS or iplen < 0:
                 raise Notify(
                     3,
@@ -179,14 +200,7 @@ class MAC(EVPN):
                 'Data field length is given as %d, but does not match one of the expected lengths' % datalen,
             )
 
-        payload = data[end + 1 : end + 1 + iplenUnpack]
-        if payload:
-            ip = IP.unpack_ip(data[end + 1 : end + 1 + iplenUnpack])
-        else:
-            ip = None
-        label = Labels.unpack_labels(data[end + 1 + iplenUnpack : end + 1 + iplenUnpack + 3])
-
-        return cls(rd, esi, etag, mac, maclength, label, ip, data)
+        return cls(data)
 
     def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE

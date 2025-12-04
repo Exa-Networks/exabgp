@@ -52,22 +52,56 @@ class NODE(BGPLS):
 
     def __init__(
         self,
-        domain: int,
-        proto_id: int,
-        node_ids: list[NodeDescriptor],
-        packed: bytes | None = None,
+        packed: bytes,
         nexthop: IP = IP.NoNextHop,
         action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
         addpath: PathInfo | None = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
-        self.domain: int = domain
-        self.proto_id: int = proto_id
-        self.node_ids: list[NodeDescriptor] = node_ids
+        self._packed = packed
         self.nexthop = nexthop
-        self._pack: bytes | None = packed
         self.route_d: RouteDistinguisher | None = route_d
+
+    @classmethod
+    def make_node(
+        cls,
+        domain: int,
+        proto_id: int,
+        node_ids: list[NodeDescriptor],
+        nexthop: IP = IP.NoNextHop,
+        action: Action = Action.UNSET,
+        route_d: RouteDistinguisher | None = None,
+        addpath: PathInfo | None = None,
+    ) -> 'NODE':
+        """Factory method to create NODE from semantic parameters."""
+        node_tlvs = b''.join(node_id.pack_tlv() for node_id in node_ids)
+        node_length = len(node_tlvs)
+        packed = pack('!BQ', proto_id, domain) + pack('!HH', NODE_DESCRIPTOR_TYPE, node_length) + node_tlvs
+        return cls(packed, nexthop, action, route_d, addpath)
+
+    @property
+    def proto_id(self) -> int:
+        return unpack('!B', self._packed[0:1])[0]
+
+    @property
+    def domain(self) -> int:
+        return unpack('!Q', self._packed[1:9])[0]
+
+    @property
+    def node_ids(self) -> list[NodeDescriptor]:
+        node_type, node_length = unpack('!HH', self._packed[9:13])
+        if node_type != NODE_DESCRIPTOR_TYPE:
+            return []
+        values = self._packed[13 : 13 + node_length]
+        node_ids: list[NodeDescriptor] = []
+        while values:
+            node_id, left = NodeDescriptor.unpack_node(values, self.proto_id)
+            node_ids.append(node_id)
+            if left == values:
+                break
+            values = left
+        return node_ids
 
     def json(self, compact: bool = False) -> str:
         nodes = ', '.join(d.json() for d in self.node_ids)
@@ -89,26 +123,23 @@ class NODE(BGPLS):
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')
-        domain = unpack('!Q', data[1:9])[0]
 
-        # unpack list of node descriptors
+        # Validate node descriptor TLV type
         node_type, node_length = unpack('!HH', data[9:13])
         if node_type != NODE_DESCRIPTOR_TYPE:
             raise Exception(
                 f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
             )
-        values = data[13 : 13 + node_length]
 
-        node_ids: list[NodeDescriptor] = []
+        # Validate node descriptors can be parsed (ensures data integrity)
+        values = data[13 : 13 + node_length]
         while values:
-            # Unpack Node Descriptor Sub-TLVs
-            node_id, left = NodeDescriptor.unpack_node(values, proto_id)
-            node_ids.append(node_id)
+            _node_id, left = NodeDescriptor.unpack_node(values, proto_id)
             if left == values:
                 raise RuntimeError('sub-calls should consume data')
             values = left
 
-        return cls(domain=domain, proto_id=proto_id, node_ids=node_ids, route_d=rd, packed=data)
+        return cls(data, route_d=rd)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, NODE):
@@ -127,16 +158,4 @@ class NODE(BGPLS):
         return hash((self.proto_id, self.domain, tuple(self.node_ids), self.route_d))
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
-        if self._pack:
-            return self._pack
-
-        # Calculate packed bytes dynamically
-        # Pack node descriptor TLVs
-        node_tlvs = b''.join(node_id.pack_tlv() for node_id in self.node_ids)
-        node_length = len(node_tlvs)
-
-        # Structure: proto_id (1) + domain (8) + node_type (2) + node_length (2) + node_tlvs
-        self._pack = (
-            pack('!BQ', self.proto_id, self.domain) + pack('!HH', NODE_DESCRIPTOR_TYPE, node_length) + node_tlvs
-        )
-        return self._pack
+        return self._packed

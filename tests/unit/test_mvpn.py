@@ -44,7 +44,7 @@ class TestSourceAD:
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
 
-        route = SourceAD(rd, AFI.ipv4, source, group)
+        route = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
 
         assert route.CODE == 5
         assert route.NAME == 'Source Active A-D Route'
@@ -59,7 +59,7 @@ class TestSourceAD:
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
 
-        route = SourceAD(rd, AFI.ipv4, source, group)
+        route = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
@@ -78,7 +78,7 @@ class TestSourceAD:
         source = IP.create('2001:db8:1::1')
         group = IP.create('ff0e::1')
 
-        route = SourceAD(rd, AFI.ipv6, source, group)
+        route = SourceAD.make_sourcead(rd, AFI.ipv6, source, group)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
@@ -97,8 +97,8 @@ class TestSourceAD:
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
 
-        route1 = SourceAD(rd, AFI.ipv4, source, group)
-        route2 = SourceAD(rd, AFI.ipv4, source, group)
+        route1 = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
+        route2 = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
 
         assert route1 == route2
         assert not route1 != route2
@@ -110,8 +110,8 @@ class TestSourceAD:
         source2 = IP.create('192.168.1.2')
         group = IP.create('239.1.1.1')
 
-        route1 = SourceAD(rd, AFI.ipv4, source1, group)
-        route2 = SourceAD(rd, AFI.ipv4, source2, group)
+        route1 = SourceAD.make_sourcead(rd, AFI.ipv4, source1, group)
+        route2 = SourceAD.make_sourcead(rd, AFI.ipv4, source2, group)
 
         assert route1 != route2
         assert not route1 == route2
@@ -122,8 +122,8 @@ class TestSourceAD:
         source = IP.create('192.168.2.1')
         group = IP.create('239.2.2.2')
 
-        route1 = SourceAD(rd, AFI.ipv4, source, group)
-        route2 = SourceAD(rd, AFI.ipv4, source, group)
+        route1 = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
+        route2 = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
 
         assert hash(route1) == hash(route2)
 
@@ -133,7 +133,7 @@ class TestSourceAD:
         source = IP.create('172.16.1.1')
         group = IP.create('239.3.3.3')
 
-        route = SourceAD(rd, AFI.ipv4, source, group)
+        route = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
         route_str = str(route)
 
         assert 'sourcead' in route_str.lower()
@@ -146,7 +146,7 @@ class TestSourceAD:
         source = IP.create('10.20.30.40')
         group = IP.create('239.4.4.4')
 
-        route = SourceAD(rd, AFI.ipv4, source, group)
+        route = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
         json_str = route.json()
 
         assert '"code": 5' in json_str
@@ -191,7 +191,7 @@ class TestSourceAD:
 
         for group_str in multicast_groups:
             group = IP.create(group_str)
-            route = SourceAD(rd, AFI.ipv4, source, group)
+            route = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
             packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MVPN.unpack_nlri(
                 AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -215,7 +215,7 @@ class TestSharedJoin:
         group = IP.create('239.1.1.1')
         source_as = 65001
 
-        route = SharedJoin(rd, AFI.ipv4, source, group, source_as)
+        route = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, source_as)
 
         assert route.CODE == 6
         assert route.NAME == 'C-Multicast Shared Tree Join route'
@@ -232,7 +232,7 @@ class TestSharedJoin:
         group = IP.create('239.1.1.1')
         source_as = 64512
 
-        route = SharedJoin(rd, AFI.ipv4, source, group, source_as)
+        route = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, source_as)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
@@ -253,7 +253,7 @@ class TestSharedJoin:
         group = IP.create('ff0e::1')
         source_as = 65000
 
-        route = SharedJoin(rd, AFI.ipv6, source, group, source_as)
+        route = SharedJoin.make_sharedjoin(rd, AFI.ipv6, source, group, source_as)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
@@ -274,8 +274,8 @@ class TestSharedJoin:
         group = IP.create('239.1.1.1')
         source_as = 65001
 
-        route1 = SharedJoin(rd, AFI.ipv4, source, group, source_as)
-        route2 = SharedJoin(rd, AFI.ipv4, source, group, source_as)
+        route1 = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, source_as)
+        route2 = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, source_as)
 
         assert route1 == route2
         assert not route1 != route2
@@ -286,8 +286,8 @@ class TestSharedJoin:
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
 
-        route1 = SharedJoin(rd, AFI.ipv4, source, group, 65001)
-        route2 = SharedJoin(rd, AFI.ipv4, source, group, 65002)
+        route1 = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, 65001)
+        route2 = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, 65002)
 
         # Different AS should not affect equality (only rd, source, group matter)
         assert route1 == route2  # AS not included in equality check
@@ -299,8 +299,8 @@ class TestSharedJoin:
         group = IP.create('239.2.2.2')
         source_as = 65002
 
-        route1 = SharedJoin(rd, AFI.ipv4, source, group, source_as)
-        route2 = SharedJoin(rd, AFI.ipv4, source, group, source_as)
+        route1 = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, source_as)
+        route2 = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, source_as)
 
         assert hash(route1) == hash(route2)
 
@@ -311,7 +311,7 @@ class TestSharedJoin:
         group = IP.create('239.3.3.3')
         source_as = 65003
 
-        route = SharedJoin(rd, AFI.ipv4, source, group, source_as)
+        route = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, source_as)
         route_str = str(route)
 
         assert 'shared-join' in route_str.lower()
@@ -326,7 +326,7 @@ class TestSharedJoin:
         group = IP.create('239.4.4.4')
         source_as = 65004
 
-        route = SharedJoin(rd, AFI.ipv4, source, group, source_as)
+        route = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, source_as)
         json_str = route.json()
 
         assert '"code": 6' in json_str
@@ -356,7 +356,7 @@ class TestSharedJoin:
         as_numbers = [1, 64512, 65535, 4200000000]  # 2-byte and 4-byte AS
 
         for asn in as_numbers:
-            route = SharedJoin(rd, AFI.ipv4, source, group, asn)
+            route = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, asn)
             packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MVPN.unpack_nlri(
                 AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -380,7 +380,7 @@ class TestSourceJoin:
         group = IP.create('239.1.1.1')
         source_as = 65001
 
-        route = SourceJoin(rd, AFI.ipv4, source, group, source_as)
+        route = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
 
         assert route.CODE == 7
         assert route.NAME == 'C-Multicast Source Tree Join route'
@@ -397,7 +397,7 @@ class TestSourceJoin:
         group = IP.create('239.1.1.1')
         source_as = 64512
 
-        route = SourceJoin(rd, AFI.ipv4, source, group, source_as)
+        route = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
@@ -418,7 +418,7 @@ class TestSourceJoin:
         group = IP.create('ff0e::1')
         source_as = 65000
 
-        route = SourceJoin(rd, AFI.ipv6, source, group, source_as)
+        route = SourceJoin.make_sourcejoin(rd, AFI.ipv6, source, group, source_as)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
@@ -439,8 +439,8 @@ class TestSourceJoin:
         group = IP.create('239.1.1.1')
         source_as = 65001
 
-        route1 = SourceJoin(rd, AFI.ipv4, source, group, source_as)
-        route2 = SourceJoin(rd, AFI.ipv4, source, group, source_as)
+        route1 = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
+        route2 = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
 
         assert route1 == route2
         assert not route1 != route2
@@ -453,8 +453,8 @@ class TestSourceJoin:
         group = IP.create('239.1.1.1')
         source_as = 65001
 
-        route1 = SourceJoin(rd, AFI.ipv4, source1, group, source_as)
-        route2 = SourceJoin(rd, AFI.ipv4, source2, group, source_as)
+        route1 = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source1, group, source_as)
+        route2 = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source2, group, source_as)
 
         assert route1 != route2
         assert not route1 == route2
@@ -466,8 +466,8 @@ class TestSourceJoin:
         group = IP.create('239.2.2.2')
         source_as = 65002
 
-        route1 = SourceJoin(rd, AFI.ipv4, source, group, source_as)
-        route2 = SourceJoin(rd, AFI.ipv4, source, group, source_as)
+        route1 = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
+        route2 = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
 
         assert hash(route1) == hash(route2)
 
@@ -478,7 +478,7 @@ class TestSourceJoin:
         group = IP.create('239.3.3.3')
         source_as = 65003
 
-        route = SourceJoin(rd, AFI.ipv4, source, group, source_as)
+        route = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
         route_str = str(route)
 
         assert 'source-join' in route_str.lower()
@@ -493,7 +493,7 @@ class TestSourceJoin:
         group = IP.create('239.4.4.4')
         source_as = 65004
 
-        route = SourceJoin(rd, AFI.ipv4, source, group, source_as)
+        route = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
         json_str = route.json()
 
         assert '"code": 7' in json_str
@@ -521,7 +521,7 @@ class TestSourceJoin:
         group = IP.create('232.1.1.1')
         source_as = 65005
 
-        route = SourceJoin(rd, AFI.ipv4, source, group, source_as)
+        route = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
         packed = route.pack_nlri(create_negotiated())
         unpacked, _ = MVPN.unpack_nlri(
             AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -572,7 +572,7 @@ class TestMVPNGeneric:
         source = IP.create('192.168.1.1')
         group = IP.create('239.1.1.1')
 
-        route = SourceAD(rd, AFI.ipv4, source, group)
+        route = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
 
         assert route.safi == SAFI.mcast_vpn
 
@@ -583,9 +583,9 @@ class TestMVPNGeneric:
         group = IP.create('239.1.1.1')
         source_as = 65001
 
-        sourcead = SourceAD(rd, AFI.ipv4, source, group)
-        sharedjoin = SharedJoin(rd, AFI.ipv4, source, group, source_as)
-        sourcejoin = SourceJoin(rd, AFI.ipv4, source, group, source_as)
+        sourcead = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
+        sharedjoin = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, source_as)
+        sourcejoin = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
 
         # Different route types should have different codes
         assert sourcead.CODE != sharedjoin.CODE

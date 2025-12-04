@@ -49,8 +49,13 @@ class Type1SessionTransformedRoute(MUP):
     NAME: ClassVar[str] = 'Type1SessionTransformedRoute'
     SHORT_NAME: ClassVar[str] = 'T1ST'
 
-    def __init__(
-        self,
+    def __init__(self, packed: bytes, afi: AFI) -> None:
+        MUP.__init__(self, afi)
+        self._packed = packed
+
+    @classmethod
+    def make_t1st(
+        cls,
         rd: RouteDistinguisher,
         prefix_ip_len: int,
         prefix_ip: IP,
@@ -61,19 +66,98 @@ class Type1SessionTransformedRoute(MUP):
         source_ip_len: int,
         source_ip: IP | bytes,
         afi: AFI,
-        packed: bytes | None = None,
-    ) -> None:
-        MUP.__init__(self, afi)
-        self.rd: RouteDistinguisher = rd
-        self.prefix_ip_len: int = prefix_ip_len
-        self.prefix_ip: IP = prefix_ip
-        self.teid: int = teid
-        self.qfi: int = qfi
-        self.endpoint_ip_len: int = endpoint_ip_len
-        self.endpoint_ip: IP = endpoint_ip
-        self.source_ip_len: int = source_ip_len
-        self.source_ip: IP | bytes = source_ip
-        self._pack(packed)
+    ) -> 'Type1SessionTransformedRoute':
+        """Factory method to create T1ST from semantic parameters."""
+        offset = prefix_ip_len // 8
+        remainder = prefix_ip_len % 8
+        if remainder != 0:
+            offset += 1
+
+        prefix_ip_packed = prefix_ip.pack_ip()
+        packed = (
+            rd.pack_rd()
+            + pack('!B', prefix_ip_len)
+            + prefix_ip_packed[0:offset]
+            + pack('!IB', teid, qfi)
+            + pack('!B', endpoint_ip_len)
+            + endpoint_ip.pack_ip()
+        )
+
+        if source_ip_len != 0:
+            source_ip_packed = source_ip.pack_ip() if isinstance(source_ip, IP) else source_ip
+            packed += pack('!B', source_ip_len) + source_ip_packed
+
+        return cls(packed, afi)
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+
+    @property
+    def prefix_ip_len(self) -> int:
+        return self._packed[8]
+
+    @property
+    def prefix_ip(self) -> IP:
+        ip_offset = self.prefix_ip_len // 8
+        ip_remainder = self.prefix_ip_len % 8
+        if ip_remainder != 0:
+            ip_offset += 1
+
+        ip = self._packed[9 : 9 + ip_offset]
+        ip_size = 4 if self.afi != AFI.ipv6 else 16
+        ip_padding = ip_size - ip_offset
+        if ip_padding > 0:
+            ip = ip + bytes(ip_padding)
+        return IP.unpack_ip(ip)
+
+    def _get_teid_qfi_offset(self) -> int:
+        """Calculate offset to TEID field."""
+        ip_offset = self.prefix_ip_len // 8
+        ip_remainder = self.prefix_ip_len % 8
+        if ip_remainder != 0:
+            ip_offset += 1
+        return 9 + ip_offset
+
+    @property
+    def teid(self) -> int:
+        offset = self._get_teid_qfi_offset()
+        return int.from_bytes(self._packed[offset : offset + 4], 'big')
+
+    @property
+    def qfi(self) -> int:
+        offset = self._get_teid_qfi_offset() + 4
+        return self._packed[offset]
+
+    @property
+    def endpoint_ip_len(self) -> int:
+        offset = self._get_teid_qfi_offset() + 5
+        return self._packed[offset]
+
+    @property
+    def endpoint_ip(self) -> IP:
+        offset = self._get_teid_qfi_offset() + 6
+        ep_len = self.endpoint_ip_len // 8
+        return IP.unpack_ip(self._packed[offset : offset + ep_len])
+
+    @property
+    def source_ip_len(self) -> int:
+        offset = self._get_teid_qfi_offset() + 6 + self.endpoint_ip_len // 8
+        datasize = len(self._packed)
+        source_ip_size = datasize - offset
+        if source_ip_size > 0:
+            return self._packed[offset]
+        return 0
+
+    @property
+    def source_ip(self) -> IP | bytes:
+        offset = self._get_teid_qfi_offset() + 6 + self.endpoint_ip_len // 8
+        datasize = len(self._packed)
+        source_ip_size = datasize - offset
+        if source_ip_size > 0:
+            sip_len = self._packed[offset] // 8
+            return IP.unpack_ip(self._packed[offset + 1 : offset + 1 + sip_len])
+        return b''
 
     def __eq__(self, other: Any) -> bool:
         return (
@@ -134,86 +218,34 @@ class Type1SessionTransformedRoute(MUP):
             ),
         )
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-
-        offset = self.prefix_ip_len // 8
-        remainder = self.prefix_ip_len % 8
-        if remainder != 0:
-            offset += 1
-
-        prefix_ip_packed = self.prefix_ip.pack_ip()
-
-        # fmt: off
-        self._packed = (
-            self.rd.pack_rd()
-            + pack('!B',self.prefix_ip_len)
-            + prefix_ip_packed[0: offset]
-            + pack('!IB',self.teid, self.qfi)
-            + pack('!B',self.endpoint_ip_len)
-            + self.endpoint_ip.pack_ip()
-        )
-
-        if self.source_ip_len != 0:
-            source_ip_packed = self.source_ip.pack_ip() if isinstance(self.source_ip, IP) else self.source_ip
-            self._packed += pack('!B', self.source_ip_len) + source_ip_packed
-
-        # fmt: on
-        return self._packed
-
     @classmethod
     def unpack_mup_route(cls, data: bytes, afi: AFI) -> Type1SessionTransformedRoute:
-        datasize = len(data)
-        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
+        # Validate endpoint_ip_len before creating instance
         prefix_ip_len = data[8]
         ip_offset = prefix_ip_len // 8
         ip_remainder = prefix_ip_len % 8
         if ip_remainder != 0:
             ip_offset += 1
 
-        ip = data[9 : 9 + ip_offset]
-        ip_size = 4 if afi != AFI.ipv6 else 16
-        ip_padding = ip_size - ip_offset
-        if ip_padding != 0 and ip_padding > 0:
-            ip += bytes(ip_padding)
-
-        size = ip_offset
-        prefix_ip = IP.unpack_ip(ip)
-        size += 9
-        teid = int.from_bytes(data[size : size + 4], 'big')
-        size += 4
-        qfi = data[size]
-        size += 1
+        size = 9 + ip_offset
+        size += 5  # teid (4) + qfi (1)
         endpoint_ip_len = data[size]
-        size += 1
 
         if endpoint_ip_len not in [32, 128]:
             raise RuntimeError('mup t1st endpoint ip length is not 32bit or 128bit, unexpect len: %d' % endpoint_ip_len)
 
         ep_len = endpoint_ip_len // 8
-        endpoint_ip = IP.unpack_ip(data[size : size + ep_len])
-        size += ep_len
+        size += 1 + ep_len
 
+        datasize = len(data)
         source_ip_size = datasize - size
-
-        source_ip_len = 0
-        source_ip: IP | bytes = b''
 
         if source_ip_size > 0:
             source_ip_len = data[size]
-            size += 1
             if source_ip_len not in [32, 128]:
                 raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
-            sip_len = source_ip_len // 8
-            source_ip = IP.unpack_ip(data[size : size + sip_len])
-            size += sip_len
 
-        return cls(rd, prefix_ip_len, prefix_ip, teid, qfi, endpoint_ip_len, endpoint_ip, source_ip_len, source_ip, afi)
+        return cls(data, afi)
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)

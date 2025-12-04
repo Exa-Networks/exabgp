@@ -39,20 +39,41 @@ class Multicast(EVPN):
 
     def __init__(
         self,
-        rd: RouteDistinguisher,
-        etag: EthernetTag,
-        ip: IP,
-        packed: bytes | None = None,
+        packed: bytes,
         nexthop: IP = IP.NoNextHop,
         action: Action | None = None,
         addpath: PathInfo | None = None,
     ) -> None:
         EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
+        self._packed = packed
         self.nexthop = nexthop
-        self.rd = rd
-        self.etag = etag
-        self.ip = ip
-        self._pack(packed)
+
+    @classmethod
+    def make_multicast(
+        cls,
+        rd: RouteDistinguisher,
+        etag: EthernetTag,
+        ip: IP,
+        nexthop: IP = IP.NoNextHop,
+        action: Action | None = None,
+        addpath: PathInfo | None = None,
+    ) -> 'Multicast':
+        """Factory method to create Multicast from semantic parameters."""
+        packed = rd.pack_rd() + etag.pack_etag() + bytes([len(ip) * 8]) + ip.pack_ip()  # type: ignore[arg-type]
+        return cls(packed, nexthop, action, addpath)
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+
+    @property
+    def etag(self) -> EthernetTag:
+        return EthernetTag.unpack_etag(self._packed[8:12])
+
+    @property
+    def ip(self) -> IP:
+        iplen = self._packed[12]
+        return IP.unpack_ip(self._packed[13 : 13 + iplen // 8])
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -68,26 +89,12 @@ class Multicast(EVPN):
     def __hash__(self) -> int:
         return hash((self.afi, self.safi, self.CODE, self.rd, self.etag, self.ip))
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-
-        self._packed = self.rd.pack_rd() + self.etag.pack_etag() + bytes([len(self.ip) * 8]) + self.ip.pack_ip()  # type: ignore[arg-type]
-        return self._packed
-
     @classmethod
     def unpack_evpn_route(cls, data: bytes) -> Multicast:
-        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
-        etag = EthernetTag.unpack_etag(data[8:12])
         iplen = data[12]
         if iplen not in (4 * 8, 16 * 8):
             raise Exception('IP len is %d, but EVPN route currently support only IPv4' % iplen)
-        ip = IP.unpack_ip(data[13 : 13 + iplen // 8])
-        return cls(rd, etag, ip, data)
+        return cls(data)
 
     def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE

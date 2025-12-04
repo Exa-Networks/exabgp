@@ -32,14 +32,44 @@ class InterworkSegmentDiscoveryRoute(MUP):
     NAME: ClassVar[str] = 'InterworkSegmentDiscoveryRoute'
     SHORT_NAME: ClassVar[str] = 'ISD'
 
-    def __init__(
-        self, rd: RouteDistinguisher, prefix_ip_len: int, prefix_ip: IP, afi: AFI, packed: bytes | None = None
-    ) -> None:
+    def __init__(self, packed: bytes, afi: AFI) -> None:
         MUP.__init__(self, afi)
-        self.rd: RouteDistinguisher = rd
-        self.prefix_ip_len: int = prefix_ip_len
-        self.prefix_ip: IP = prefix_ip
-        self._pack(packed)
+        self._packed = packed
+
+    @classmethod
+    def make_isd(
+        cls,
+        rd: RouteDistinguisher,
+        prefix_ip_len: int,
+        prefix_ip: IP,
+        afi: AFI,
+    ) -> 'InterworkSegmentDiscoveryRoute':
+        """Factory method to create ISD from semantic parameters."""
+        offset = prefix_ip_len // 8
+        remainder = prefix_ip_len % 8
+        if remainder != 0:
+            offset += 1
+
+        prefix_ip_packed = prefix_ip.pack_ip()
+        packed = rd.pack_rd() + pack('!B', prefix_ip_len) + prefix_ip_packed[0:offset]
+        return cls(packed, afi)
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+
+    @property
+    def prefix_ip_len(self) -> int:
+        return self._packed[8]
+
+    @property
+    def prefix_ip(self) -> IP:
+        size = 4 if self.afi != AFI.ipv6 else 16
+        ip = self._packed[9:]
+        padding = size - len(ip)
+        if padding > 0:
+            ip = ip + bytes(padding)
+        return IP.unpack_ip(ip)
 
     def index(self) -> bytes:
         return MUP.index(self)
@@ -61,41 +91,9 @@ class InterworkSegmentDiscoveryRoute(MUP):
     def __hash__(self) -> int:
         return hash((self.rd, self.prefix_ip_len, self.prefix_ip))
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-
-        offset = self.prefix_ip_len // 8
-        remainder = self.prefix_ip_len % 8
-        if remainder != 0:
-            offset += 1
-
-        prefix_ip_packed = self.prefix_ip.pack_ip()
-        # fmt: off
-        self._packed = (
-            self.rd.pack_rd()
-            + pack('!B',self.prefix_ip_len)
-            + prefix_ip_packed[0: offset]
-        )
-        # fmt: on
-        return self._packed
-
     @classmethod
     def unpack_mup_route(cls, data: bytes, afi: AFI) -> InterworkSegmentDiscoveryRoute:
-        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
-        prefix_ip_len = data[8]
-        size = 4 if afi != AFI.ipv6 else 16
-        ip = data[9:]
-        padding = size - len(ip)
-        if padding != 0 and padding > 0:
-            ip += bytes(padding)
-        prefix_ip = IP.unpack_ip(ip)
-
-        return cls(rd, prefix_ip_len, prefix_ip, afi)
+        return cls(data, afi)
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)

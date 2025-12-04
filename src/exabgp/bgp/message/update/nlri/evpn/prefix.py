@@ -61,6 +61,18 @@ class Prefix(EVPN):
 
     def __init__(
         self,
+        packed: bytes,
+        nexthop: IP = IP.NoNextHop,
+        action: Action | None = None,
+        addpath: PathInfo | None = None,
+    ) -> None:
+        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
+        self._packed = packed
+        self.nexthop = nexthop
+
+    @classmethod
+    def make_prefix(
+        cls,
         rd: RouteDistinguisher,
         esi: ESI,
         etag: EthernetTag,
@@ -68,31 +80,72 @@ class Prefix(EVPN):
         ip: IP,
         iplen: int,
         gwip: IP,
-        packed: bytes | None = None,
         nexthop: IP = IP.NoNextHop,
         action: Action | None = None,
         addpath: PathInfo | None = None,
-    ) -> None:
-        """rd: a RouteDistinguisher
+    ) -> 'Prefix':
+        """Factory method to create Prefix from semantic parameters.
+
+        rd: a RouteDistinguisher
         esi: an EthernetSegmentIdentifier
         etag: an EthernetTag
-        mac: a MAC
         label: a LabelStackEntry
         ip: an IP address (dotted quad string notation)
         iplen: prefixlength for ip (defaults to 32)
         gwip: an IP address (dotted quad string notation)
         """
-        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
-        self.nexthop = nexthop
-        self.rd = rd
-        self.esi = esi
-        self.etag = etag
-        self.ip = ip
-        self.iplen = iplen
-        self.gwip = gwip
-        self.label = label
-        self.label = label if label else Labels.NOLABEL
-        self._pack(packed)
+        label_to_use = label if label else Labels.NOLABEL
+        packed = (
+            rd.pack_rd()
+            + esi.pack_esi()
+            + etag.pack_etag()
+            + bytes([iplen])
+            + ip.pack_ip()
+            + gwip.pack_ip()
+            + label_to_use.pack_labels()
+        )
+        return cls(packed, nexthop, action, addpath)
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+
+    @property
+    def esi(self) -> ESI:
+        return ESI.unpack_esi(self._packed[8:18])
+
+    @property
+    def etag(self) -> EthernetTag:
+        return EthernetTag.unpack_etag(self._packed[18:22])
+
+    @property
+    def iplen(self) -> int:
+        return self._packed[22]
+
+    @property
+    def ip(self) -> IP:
+        # IP address is either 4 or 16 bytes based on total length
+        datalen = len(self._packed)
+        if datalen == 34:  # IPv4: 8+10+4+1+4+4+3
+            return IP.unpack_ip(self._packed[23:27])
+        else:  # IPv6: 8+10+4+1+16+16+3 = 58
+            return IP.unpack_ip(self._packed[23:39])
+
+    @property
+    def gwip(self) -> IP:
+        datalen = len(self._packed)
+        if datalen == 34:  # IPv4
+            return IP.unpack_ip(self._packed[27:31])
+        else:  # IPv6
+            return IP.unpack_ip(self._packed[39:55])
+
+    @property
+    def label(self) -> Labels:
+        datalen = len(self._packed)
+        if datalen == 34:  # IPv4
+            return Labels.unpack_labels(self._packed[31:34])
+        else:  # IPv6
+            return Labels.unpack_labels(self._packed[55:58])
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Prefix):
@@ -126,56 +179,12 @@ class Prefix(EVPN):
         # esi, and label, gwip must *not* be part of the hash
         return hash('{}:{}:{}:{}'.format(self.rd, self.etag, self.ip, self.iplen))
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-
-        assert self.label is not None  # Always set in __init__
-        self._packed = (
-            self.rd.pack_rd()
-            + self.esi.pack_esi()
-            + self.etag.pack_etag()
-            + bytes([self.iplen])
-            + self.ip.pack_ip()
-            + self.gwip.pack_ip()
-            + self.label.pack_labels()
-        )
-        return self._packed
-
     @classmethod
     def unpack_evpn_route(cls, exdata: bytes) -> Prefix:
-        data = exdata
-
         # Get the data length to understand if addresses are IPv4 or IPv6
-        datalen = len(data)
+        datalen = len(exdata)
 
-        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
-        data = data[8:]
-
-        esi = ESI.unpack_esi(data[:10])
-        data = data[10:]
-
-        etag = EthernetTag.unpack_etag(data[:4])
-        data = data[4:]
-
-        iplen = data[0]
-        data = data[1:]
-
-        if datalen == (26 + 8):  # Using IPv4 addresses
-            ip = IP.unpack_ip(data[:4])
-            data = data[4:]
-            gwip = IP.unpack_ip(data[:4])
-            data = data[4:]
-        elif datalen == (26 + 32):  # Using IPv6 addresses
-            ip = IP.unpack_ip(data[:16])
-            data = data[16:]
-            gwip = IP.unpack_ip(data[:16])
-            data = data[16:]
-        else:
+        if datalen not in (34, 58):  # 34 for IPv4, 58 for IPv6
             raise Notify(
                 3,
                 5,
@@ -183,12 +192,9 @@ class Prefix(EVPN):
                 % datalen,
             )
 
-        label = Labels.unpack_labels(data[:3])
-
-        return cls(rd, esi, etag, label, ip, iplen, gwip, exdata)
+        return cls(exdata)
 
     def json(self, compact: bool = False) -> str:
-        assert self.label is not None  # Always set in __init__
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

@@ -46,7 +46,7 @@ class TestInterworkSegmentDiscoveryRoute:
         prefix_ip = IP.create('10.0.0.0')
         prefix_ip_len = 24
 
-        route = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
+        route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
 
         assert route.ARCHTYPE == 1
         assert route.CODE == 1
@@ -62,7 +62,7 @@ class TestInterworkSegmentDiscoveryRoute:
         prefix_ip = IP.create('192.168.1.0')
         prefix_ip_len = 24
 
-        route = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
+        route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
@@ -81,7 +81,7 @@ class TestInterworkSegmentDiscoveryRoute:
         prefix_ip = IP.create('2001:db8:1:2::')
         prefix_ip_len = 64
 
-        route = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv6)
+        route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv6)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
@@ -100,8 +100,8 @@ class TestInterworkSegmentDiscoveryRoute:
         prefix_ip = IP.create('10.0.0.0')
         prefix_ip_len = 24
 
-        route1 = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
-        route2 = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
+        route1 = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
+        route2 = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
 
         assert route1 == route2
         assert not route1 != route2
@@ -112,8 +112,8 @@ class TestInterworkSegmentDiscoveryRoute:
         rd2 = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
         prefix_ip = IP.create('10.0.0.0')
 
-        route1 = InterworkSegmentDiscoveryRoute(rd1, 24, prefix_ip, AFI.ipv4)
-        route2 = InterworkSegmentDiscoveryRoute(rd2, 24, prefix_ip, AFI.ipv4)
+        route1 = InterworkSegmentDiscoveryRoute.make_isd(rd1, 24, prefix_ip, AFI.ipv4)
+        route2 = InterworkSegmentDiscoveryRoute.make_isd(rd2, 24, prefix_ip, AFI.ipv4)
 
         assert route1 != route2
         assert not route1 == route2
@@ -124,8 +124,8 @@ class TestInterworkSegmentDiscoveryRoute:
         prefix_ip = IP.create('10.1.0.0')
         prefix_ip_len = 16
 
-        route1 = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
-        route2 = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
+        route1 = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
+        route2 = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
 
         assert hash(route1) == hash(route2)
 
@@ -135,7 +135,7 @@ class TestInterworkSegmentDiscoveryRoute:
         prefix_ip = IP.create('172.16.0.0')
         prefix_ip_len = 12
 
-        route = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
+        route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
         route_str = str(route)
 
         assert 'isd' in route_str.lower()
@@ -148,7 +148,7 @@ class TestInterworkSegmentDiscoveryRoute:
         prefix_ip = IP.create('10.20.30.0')
         prefix_ip_len = 24
 
-        route = InterworkSegmentDiscoveryRoute(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
+        route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
         json_str = route.json()
 
         assert 'InterworkSegmentDiscoveryRoute' in json_str
@@ -162,7 +162,7 @@ class TestInterworkSegmentDiscoveryRoute:
 
         for prefix_len in [8, 16, 24, 32]:
             prefix_ip = IP.create('10.0.0.0')
-            route = InterworkSegmentDiscoveryRoute(rd, prefix_len, prefix_ip, AFI.ipv4)
+            route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_len, prefix_ip, AFI.ipv4)
             packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MUP.unpack_nlri(
                 AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -184,7 +184,7 @@ class TestDirectSegmentDiscoveryRoute:
         rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         ip = IP.create('10.0.0.1')
 
-        route = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv4)
+        route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
 
         assert route.ARCHTYPE == 1
         assert route.CODE == 2
@@ -198,7 +198,7 @@ class TestDirectSegmentDiscoveryRoute:
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
         ip = IP.create('192.168.1.1')
 
-        route = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv4)
+        route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
@@ -215,7 +215,7 @@ class TestDirectSegmentDiscoveryRoute:
         rd = RouteDistinguisher.make_from_elements('10.0.0.2', 100)
         ip = IP.create('2001:db8:1:2::1')
 
-        route = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv6)
+        route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv6)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
@@ -232,8 +232,8 @@ class TestDirectSegmentDiscoveryRoute:
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         ip = IP.create('10.0.0.1')
 
-        route1 = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv4)
-        route2 = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv4)
+        route1 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
+        route2 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
 
         assert route1 == route2
         assert not route1 != route2
@@ -244,8 +244,8 @@ class TestDirectSegmentDiscoveryRoute:
         ip1 = IP.create('10.0.0.1')
         ip2 = IP.create('10.0.0.2')
 
-        route1 = DirectSegmentDiscoveryRoute(rd, ip1, AFI.ipv4)
-        route2 = DirectSegmentDiscoveryRoute(rd, ip2, AFI.ipv4)
+        route1 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip1, AFI.ipv4)
+        route2 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip2, AFI.ipv4)
 
         assert route1 != route2
         assert not route1 == route2
@@ -255,8 +255,8 @@ class TestDirectSegmentDiscoveryRoute:
         rd = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
         ip = IP.create('10.1.0.1')
 
-        route1 = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv4)
-        route2 = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv4)
+        route1 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
+        route2 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
 
         assert hash(route1) == hash(route2)
 
@@ -265,7 +265,7 @@ class TestDirectSegmentDiscoveryRoute:
         rd = RouteDistinguisher.make_from_elements('3.3.3.3', 30)
         ip = IP.create('172.16.0.1')
 
-        route = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv4)
+        route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
         route_str = str(route)
 
         assert 'dsd' in route_str.lower()
@@ -276,7 +276,7 @@ class TestDirectSegmentDiscoveryRoute:
         rd = RouteDistinguisher.make_from_elements('4.4.4.4', 40)
         ip = IP.create('10.20.30.40')
 
-        route = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv4)
+        route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
         json_str = route.json()
 
         assert 'DirectSegmentDiscoveryRoute' in json_str
@@ -313,7 +313,7 @@ class TestType1SessionTransformedRoute:
         endpoint_ip = IP.create('192.168.1.1')
         source_ip = IP.create('192.168.2.1')
 
-        route = Type1SessionTransformedRoute(
+        route = Type1SessionTransformedRoute.make_t1st(
             rd=rd,
             prefix_ip_len=24,
             prefix_ip=prefix_ip,
@@ -341,7 +341,7 @@ class TestType1SessionTransformedRoute:
         endpoint_ip = IP.create('10.1.1.1')
         source_ip = IP.create('10.2.2.2')
 
-        route = Type1SessionTransformedRoute(
+        route = Type1SessionTransformedRoute.make_t1st(
             rd=rd,
             prefix_ip_len=24,
             prefix_ip=prefix_ip,
@@ -373,7 +373,7 @@ class TestType1SessionTransformedRoute:
         prefix_ip = IP.create('192.168.1.0')
         endpoint_ip = IP.create('10.1.1.1')
 
-        route = Type1SessionTransformedRoute(
+        route = Type1SessionTransformedRoute.make_t1st(
             rd=rd,
             prefix_ip_len=24,
             prefix_ip=prefix_ip,
@@ -403,7 +403,7 @@ class TestType1SessionTransformedRoute:
         endpoint_ip = IP.create('2001:db8:2::1')
         source_ip = IP.create('2001:db8:3::1')
 
-        route = Type1SessionTransformedRoute(
+        route = Type1SessionTransformedRoute.make_t1st(
             rd=rd,
             prefix_ip_len=64,
             prefix_ip=prefix_ip,
@@ -433,7 +433,7 @@ class TestType1SessionTransformedRoute:
         endpoint_ip = IP.create('192.168.1.1')
         source_ip = IP.create('192.168.2.1')
 
-        route1 = Type1SessionTransformedRoute(
+        route1 = Type1SessionTransformedRoute.make_t1st(
             rd,
             24,
             prefix_ip,
@@ -445,7 +445,7 @@ class TestType1SessionTransformedRoute:
             source_ip,
             AFI.ipv4,
         )
-        route2 = Type1SessionTransformedRoute(
+        route2 = Type1SessionTransformedRoute.make_t1st(
             rd,
             24,
             prefix_ip,
@@ -467,7 +467,7 @@ class TestType1SessionTransformedRoute:
         prefix_ip = IP.create('10.1.0.0')
         endpoint_ip = IP.create('192.168.1.1')
 
-        route1 = Type1SessionTransformedRoute(
+        route1 = Type1SessionTransformedRoute.make_t1st(
             rd,
             24,
             prefix_ip,
@@ -479,7 +479,7 @@ class TestType1SessionTransformedRoute:
             b'',
             AFI.ipv4,
         )
-        route2 = Type1SessionTransformedRoute(
+        route2 = Type1SessionTransformedRoute.make_t1st(
             rd,
             24,
             prefix_ip,
@@ -500,7 +500,7 @@ class TestType1SessionTransformedRoute:
         prefix_ip = IP.create('172.16.0.0')
         endpoint_ip = IP.create('10.1.1.1')
 
-        route = Type1SessionTransformedRoute(
+        route = Type1SessionTransformedRoute.make_t1st(
             rd,
             12,
             prefix_ip,
@@ -523,7 +523,7 @@ class TestType1SessionTransformedRoute:
         prefix_ip = IP.create('10.20.30.0')
         endpoint_ip = IP.create('10.1.1.1')
 
-        route = Type1SessionTransformedRoute(
+        route = Type1SessionTransformedRoute.make_t1st(
             rd,
             24,
             prefix_ip,
@@ -567,7 +567,7 @@ class TestType1SessionTransformedRoute:
 
         for prefix_len in [8, 16, 24, 32]:
             prefix_ip = IP.create('10.0.0.0')
-            route = Type1SessionTransformedRoute(
+            route = Type1SessionTransformedRoute.make_t1st(
                 rd,
                 prefix_len,
                 prefix_ip,
@@ -600,7 +600,7 @@ class TestType2SessionTransformedRoute:
         rd = RouteDistinguisher.make_from_elements('1.2.3.4', 100)
         endpoint_ip = IP.create('192.168.1.1')
 
-        route = Type2SessionTransformedRoute(
+        route = Type2SessionTransformedRoute.make_t2st(
             rd=rd,
             endpoint_len=32,
             endpoint_ip=endpoint_ip,
@@ -621,7 +621,7 @@ class TestType2SessionTransformedRoute:
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
         endpoint_ip = IP.create('192.168.1.1')
 
-        route = Type2SessionTransformedRoute(rd, 32, endpoint_ip, 0, AFI.ipv4)
+        route = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
@@ -642,7 +642,7 @@ class TestType2SessionTransformedRoute:
         # endpoint_len = 32 (IP) + 32 (TEID bits) = 64
         teid = 0xABCDEF12
 
-        route = Type2SessionTransformedRoute(rd, 64, endpoint_ip, teid, AFI.ipv4)
+        route = Type2SessionTransformedRoute.make_t2st(rd, 64, endpoint_ip, teid, AFI.ipv4)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
@@ -658,7 +658,7 @@ class TestType2SessionTransformedRoute:
         rd = RouteDistinguisher.make_from_elements('10.0.0.2', 100)
         endpoint_ip = IP.create('2001:db8:1::1')
 
-        route = Type2SessionTransformedRoute(rd, 128, endpoint_ip, 0, AFI.ipv6)
+        route = Type2SessionTransformedRoute.make_t2st(rd, 128, endpoint_ip, 0, AFI.ipv6)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
@@ -677,7 +677,7 @@ class TestType2SessionTransformedRoute:
         # endpoint_len = 128 (IP) + 16 (TEID bits) = 144
         teid = 0x1234
 
-        route = Type2SessionTransformedRoute(rd, 144, endpoint_ip, teid, AFI.ipv6)
+        route = Type2SessionTransformedRoute.make_t2st(rd, 144, endpoint_ip, teid, AFI.ipv6)
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
@@ -693,8 +693,8 @@ class TestType2SessionTransformedRoute:
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         endpoint_ip = IP.create('192.168.1.1')
 
-        route1 = Type2SessionTransformedRoute(rd, 32, endpoint_ip, 0, AFI.ipv4)
-        route2 = Type2SessionTransformedRoute(rd, 32, endpoint_ip, 0, AFI.ipv4)
+        route1 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
+        route2 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
 
         assert route1 == route2
         assert not route1 != route2
@@ -704,8 +704,8 @@ class TestType2SessionTransformedRoute:
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         endpoint_ip = IP.create('192.168.1.1')
 
-        route1 = Type2SessionTransformedRoute(rd, 32, endpoint_ip, 0, AFI.ipv4)
-        route2 = Type2SessionTransformedRoute(rd, 64, endpoint_ip, 12345, AFI.ipv4)
+        route1 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
+        route2 = Type2SessionTransformedRoute.make_t2st(rd, 64, endpoint_ip, 12345, AFI.ipv4)
 
         # Different TEID should make them unequal
         assert route1 != route2
@@ -715,8 +715,8 @@ class TestType2SessionTransformedRoute:
         rd = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
         endpoint_ip = IP.create('10.1.1.1')
 
-        route1 = Type2SessionTransformedRoute(rd, 32, endpoint_ip, 0, AFI.ipv4)
-        route2 = Type2SessionTransformedRoute(rd, 32, endpoint_ip, 0, AFI.ipv4)
+        route1 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
+        route2 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
 
         assert hash(route1) == hash(route2)
 
@@ -725,7 +725,7 @@ class TestType2SessionTransformedRoute:
         rd = RouteDistinguisher.make_from_elements('3.3.3.3', 30)
         endpoint_ip = IP.create('172.16.0.1')
 
-        route = Type2SessionTransformedRoute(rd, 32, endpoint_ip, 0, AFI.ipv4)
+        route = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
         route_str = str(route)
 
         assert 't2st' in route_str.lower()
@@ -736,7 +736,7 @@ class TestType2SessionTransformedRoute:
         rd = RouteDistinguisher.make_from_elements('4.4.4.4', 40)
         endpoint_ip = IP.create('10.20.30.40')
 
-        route = Type2SessionTransformedRoute(rd, 64, endpoint_ip, 99999, AFI.ipv4)
+        route = Type2SessionTransformedRoute.make_t2st(rd, 64, endpoint_ip, 99999, AFI.ipv4)
         json_str = route.json()
 
         assert 'Type2SessionTransformedRoute' in json_str
@@ -752,7 +752,7 @@ class TestType2SessionTransformedRoute:
 
         # endpoint_len = 32 (IP) + 33 (TEID bits) = 65 - too large!
         with pytest.raises(Exception):
-            route = Type2SessionTransformedRoute(rd, 65, endpoint_ip, 0xFFFFFFFF, AFI.ipv4)
+            route = Type2SessionTransformedRoute.make_t2st(rd, 65, endpoint_ip, 0xFFFFFFFF, AFI.ipv4)
             route.pack_nlri(create_negotiated())  # This should raise when packing
 
     def test_t2st_various_teid_sizes(self) -> None:
@@ -765,7 +765,7 @@ class TestType2SessionTransformedRoute:
             endpoint_len = 32 + teid_bits
             teid_value = (1 << teid_bits) - 1 if teid_bits > 0 else 0
 
-            route = Type2SessionTransformedRoute(rd, endpoint_len, endpoint_ip, teid_value, AFI.ipv4)
+            route = Type2SessionTransformedRoute.make_t2st(rd, endpoint_len, endpoint_ip, teid_value, AFI.ipv4)
             packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MUP.unpack_nlri(
                 AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
@@ -818,6 +818,6 @@ class TestMUPGeneric:
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         ip = IP.create('10.0.0.1')
 
-        route = DirectSegmentDiscoveryRoute(rd, ip, AFI.ipv4)
+        route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
 
         assert route.safi == SAFI.mup

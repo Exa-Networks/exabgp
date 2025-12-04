@@ -6,7 +6,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import pack, unpack
+from struct import unpack
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
@@ -53,37 +53,33 @@ class PREFIXv6(BGPLS):
 
     def __init__(
         self,
-        domain: int,
-        proto_id: int,
-        local_node: list[NodeDescriptor],
-        packed: bytes | None = None,
-        ospf_type: OspfRoute | None = None,
-        prefix: IpReach | None = None,
+        packed: bytes,
         nexthop: IP = IP.NoNextHop,
         route_d: RouteDistinguisher | None = None,
         action: Action = Action.UNSET,
         addpath: PathInfo | None = None,
     ) -> None:
         BGPLS.__init__(self, action, addpath)
-        self.domain: int = domain
-        self.ospf_type: OspfRoute | None = ospf_type
-        self.proto_id: int = proto_id
-        self.local_node: list[NodeDescriptor] = local_node
-        self.prefix: IpReach | None = prefix
+        self._packed = packed
         self.nexthop = nexthop
-        self._pack: bytes | None = packed
         self.route_d: RouteDistinguisher | None = route_d
 
-    @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> PREFIXv6:
-        ospf_type: OspfRoute | None = None
+    @property
+    def proto_id(self) -> int:
+        return unpack('!B', self._packed[0:1])[0]
+
+    @property
+    def domain(self) -> int:
+        return unpack('!Q', self._packed[1:9])[0]
+
+    def _parse_tlvs(self) -> tuple[list[NodeDescriptor], OspfRoute | None, IpReach | None]:
+        """Parse TLVs from packed data."""
         local_node: list[NodeDescriptor] = []
+        ospf_type: OspfRoute | None = None
         prefix: IpReach | None = None
-        proto_id = unpack('!B', data[0:1])[0]
-        if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
-        domain = unpack('!Q', data[1:9])[0]
-        tlvs = data[9:]
+
+        tlvs = self._packed[9:]
+        proto_id = self.proto_id
 
         while tlvs:
             tlv_type, tlv_length = unpack('!HH', tlvs[:4])
@@ -92,35 +88,53 @@ class PREFIXv6(BGPLS):
 
             if tlv_type == TLV_LOCAL_NODE_DESC:
                 while value:
-                    # Unpack Local Node Descriptor Sub-TLVs
-                    # We pass proto_id as TLV interpretation
-                    # follows IGP type
                     node, left = NodeDescriptor.unpack_node(value, proto_id)
                     local_node.append(node)
                     if left == value:
+                        break
+                    value = left
+            elif tlv_type == TLV_OSPF_ROUTE_TYPE:
+                ospf_type = OspfRoute.unpack_ospfroute(value)
+            elif tlv_type == TLV_IP_REACHABILITY:
+                prefix = IpReach.unpack_ipreachability(value, 4)
+
+        return local_node, ospf_type, prefix
+
+    @property
+    def local_node(self) -> list[NodeDescriptor]:
+        return self._parse_tlvs()[0]
+
+    @property
+    def ospf_type(self) -> OspfRoute | None:
+        return self._parse_tlvs()[1]
+
+    @property
+    def prefix(self) -> IpReach | None:
+        return self._parse_tlvs()[2]
+
+    @classmethod
+    def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> PREFIXv6:
+        proto_id = unpack('!B', data[0:1])[0]
+        if proto_id not in PROTO_CODES.keys():
+            raise Exception(f'Protocol-ID {proto_id} is not valid')
+
+        # Validate TLVs can be parsed (logging unknown TLVs)
+        tlvs = data[9:]
+        while tlvs:
+            tlv_type, tlv_length = unpack('!HH', tlvs[:4])
+            value = tlvs[4 : 4 + tlv_length]
+            tlvs = tlvs[4 + tlv_length :]
+
+            if tlv_type == TLV_LOCAL_NODE_DESC:
+                while value:
+                    _node, left = NodeDescriptor.unpack_node(value, proto_id)
+                    if left == value:
                         raise RuntimeError('sub-calls should consume data')
                     value = left
-                continue
+            elif tlv_type not in [TLV_OSPF_ROUTE_TYPE, TLV_IP_REACHABILITY]:
+                log.critical(lazymsg('unknown prefix v6 TLV {tlv_type}', tlv_type=tlv_type))
 
-            if tlv_type == TLV_OSPF_ROUTE_TYPE:
-                ospf_type = OspfRoute.unpack_ospfroute(value)
-                continue
-
-            if tlv_type == TLV_IP_REACHABILITY:
-                prefix = IpReach.unpack_ipreachability(value, 4)
-                continue
-
-            log.critical(lazymsg('unknown prefix v6 TLV {tlv_type}', tlv_type=tlv_type))
-
-        return cls(
-            domain=domain,
-            proto_id=proto_id,
-            packed=data,
-            local_node=local_node,
-            ospf_type=ospf_type,
-            prefix=prefix,
-            route_d=rd,
-        )
+        return cls(data, route_d=rd)
 
     def __eq__(self, other: object) -> bool:
         return (
@@ -162,25 +176,4 @@ class PREFIXv6(BGPLS):
         return f'{{ {content} }}'
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
-        if self._pack:
-            return self._pack
-
-        # Calculate packed bytes dynamically
-        # Structure: proto_id (1) + domain (8) + TLVs
-        tlvs = b''
-
-        # Pack local node descriptors if present
-        if self.local_node:
-            node_tlvs = b''.join(node.pack_tlv() for node in self.local_node)
-            tlvs += pack('!HH', TLV_LOCAL_NODE_DESC, len(node_tlvs)) + node_tlvs
-
-        # Pack OSPF route type if present
-        if self.ospf_type:
-            tlvs += self.ospf_type.pack_tlv()
-
-        # Pack IP reachability if present
-        if self.prefix:
-            tlvs += self.prefix.pack_tlv()
-
-        self._pack = pack('!BQ', self.proto_id, self.domain) + tlvs
-        return self._pack
+        return self._packed

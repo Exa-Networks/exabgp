@@ -41,20 +41,41 @@ class EthernetSegment(EVPN):
 
     def __init__(
         self,
-        rd: RouteDistinguisher,
-        esi: ESI,
-        ip: IP,
-        packed: bytes | None = None,
+        packed: bytes,
         nexthop: IP = IP.NoNextHop,
         action: Action | None = None,
         addpath: Any = None,
     ) -> None:
         EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
+        self._packed = packed
         self.nexthop = nexthop
-        self.rd = rd
-        self.esi = esi
-        self.ip = ip
-        self._pack(packed)
+
+    @classmethod
+    def make_ethernetsegment(
+        cls,
+        rd: RouteDistinguisher,
+        esi: ESI,
+        ip: IP,
+        nexthop: IP = IP.NoNextHop,
+        action: Action | None = None,
+        addpath: Any = None,
+    ) -> 'EthernetSegment':
+        """Factory method to create EthernetSegment from semantic parameters."""
+        packed = rd.pack_rd() + esi.pack_esi() + bytes([len(ip) * 8]) + ip.pack_ip()  # type: ignore[arg-type]
+        return cls(packed, nexthop, action, addpath)
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+
+    @property
+    def esi(self) -> ESI:
+        return ESI.unpack_esi(self._packed[8:18])
+
+    @property
+    def ip(self) -> IP:
+        iplen = self._packed[18]
+        return IP.unpack_ip(self._packed[19 : 19 + (iplen // 8)])
 
     def __eq__(self, other: object) -> bool:
         return (
@@ -75,28 +96,8 @@ class EthernetSegment(EVPN):
         # esi and label MUST *NOT* be part of the hash
         return hash((self.rd, self.ip))
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-
-        # fmt: off
-        self._packed = (
-            self.rd.pack_rd()
-            + self.esi.pack_esi()
-            + bytes([len(self.ip) * 8 if self.ip else 0])  # type: ignore[arg-type]
-            + self.ip.pack_ip() if self.ip else b''
-        )
-        # fmt: on
-        return self._packed
-
     @classmethod
     def unpack_evpn_route(cls, data: bytes) -> EthernetSegment:
-        rd = RouteDistinguisher.unpack_routedistinguisher(data[:8])
-        esi = ESI.unpack_esi(data[8:18])
         iplen = data[18]
 
         if iplen not in (32, 128):
@@ -106,9 +107,7 @@ class EthernetSegment(EVPN):
                 'IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits' % iplen,
             )
 
-        ip = IP.unpack_ip(data[19 : 19 + (iplen // 8)])
-
-        return cls(rd, esi, ip, data)
+        return cls(data)
 
     def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE
