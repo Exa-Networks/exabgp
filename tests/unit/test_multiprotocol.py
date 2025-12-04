@@ -29,6 +29,20 @@ from unittest.mock import Mock
 
 import pytest
 
+from exabgp.bgp.message.open.capability.negotiated import OpenContext
+from exabgp.protocol.family import AFI, SAFI
+
+
+def make_context(afi: AFI, safi: SAFI) -> OpenContext:
+    """Create a default OpenContext for testing."""
+    return OpenContext(
+        afi=afi,
+        safi=safi,
+        addpath=False,
+        asn4=False,
+        msg_size=4096,
+    )
+
 
 @pytest.fixture(autouse=True)
 def mock_logger() -> Any:
@@ -85,7 +99,7 @@ def test_mpreach_ipv4_unicast() -> None:
     prefix.nexthop = IPv4('192.0.2.1')
 
     # Create MP_REACH_NLRI
-    mpreach = MPRNLRI.make_mprnlri(AFI.ipv4, SAFI.unicast, [prefix])
+    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix])
 
     # Verify family
     assert mpreach.afi == AFI.ipv4
@@ -117,7 +131,7 @@ def test_mpreach_ipv6_unicast() -> None:
     prefix.nexthop = IPv6('2001:db8::1')
 
     # Create MP_REACH_NLRI
-    mpreach = MPRNLRI.make_mprnlri(AFI.ipv6, SAFI.unicast, [prefix])
+    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv6, SAFI.unicast), [prefix])
 
     # Verify family
     assert mpreach.afi == AFI.ipv6
@@ -158,7 +172,7 @@ def test_mpreach_multiple_prefixes() -> None:
         prefixes.append(prefix)
 
     # Create MP_REACH_NLRI with multiple prefixes
-    mpreach = MPRNLRI.make_mprnlri(AFI.ipv4, SAFI.unicast, prefixes)
+    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), prefixes)
 
     # Verify all prefixes are included
     assert len(mpreach.nlris) == 3
@@ -184,7 +198,7 @@ def test_mpreach_pack_ipv4() -> None:
     prefix.nexthop = IPv4('192.0.2.1')
 
     # Create MP_REACH_NLRI
-    mpreach = MPRNLRI.make_mprnlri(AFI.ipv4, SAFI.unicast, [prefix])
+    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix])
 
     # Create mock negotiated
     negotiated = Mock()
@@ -225,7 +239,7 @@ def test_mpreach_nexthop_ipv6_global() -> None:
     prefix.nexthop = IPv6('2001:db8::1')  # Global next-hop
 
     # Create MP_REACH_NLRI
-    mpreach = MPRNLRI.make_mprnlri(AFI.ipv6, SAFI.unicast, [prefix])
+    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv6, SAFI.unicast), [prefix])
 
     # Verify next-hop is set
     assert prefix.nexthop is not None
@@ -255,7 +269,7 @@ def test_mpunreach_ipv4_unicast() -> None:
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
     # Create MP_UNREACH_NLRI
-    mpunreach = MPURNLRI.make_mpurnlri(AFI.ipv4, SAFI.unicast, [prefix])
+    mpunreach = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix])
 
     # Verify family
     assert mpunreach.afi == AFI.ipv4
@@ -284,7 +298,7 @@ def test_mpunreach_ipv6_unicast() -> None:
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
 
     # Create MP_UNREACH_NLRI
-    mpunreach = MPURNLRI.make_mpurnlri(AFI.ipv6, SAFI.unicast, [prefix])
+    mpunreach = MPURNLRI.make_mpurnlri(make_context(AFI.ipv6, SAFI.unicast), [prefix])
 
     # Verify family
     assert mpunreach.afi == AFI.ipv6
@@ -319,7 +333,7 @@ def test_mpunreach_multiple_prefixes() -> None:
         prefixes.append(prefix)
 
     # Create MP_UNREACH_NLRI with multiple prefixes
-    mpunreach = MPURNLRI.make_mpurnlri(AFI.ipv4, SAFI.unicast, prefixes)
+    mpunreach = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), prefixes)
 
     # Verify all prefixes are included
     assert len(mpunreach.nlris) == 3
@@ -345,7 +359,7 @@ def test_mpunreach_pack_ipv4() -> None:
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
     # Create MP_UNREACH_NLRI
-    mpunreach = MPURNLRI.make_mpurnlri(AFI.ipv4, SAFI.unicast, [prefix])
+    mpunreach = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix])
 
     # Create mock negotiated
     negotiated = Mock()
@@ -393,7 +407,7 @@ def test_mpreach_afi_safi_combinations() -> None:
 
     for afi, safi, description in test_cases:
         # Create MP_REACH_NLRI with this family
-        mpreach = MPRNLRI.make_mprnlri(afi, safi, [])
+        mpreach = MPRNLRI.make_mprnlri(make_context(afi, safi), [])
 
         # Verify family is correctly set
         assert mpreach.afi == afi, f'AFI mismatch for {description}'
@@ -415,7 +429,7 @@ def test_mpunreach_afi_safi_combinations() -> None:
 
     for afi, safi, description in test_cases:
         # Create MP_UNREACH_NLRI with this family
-        mpunreach = MPURNLRI.make_mpurnlri(afi, safi, [])
+        mpunreach = MPURNLRI.make_mpurnlri(make_context(afi, safi), [])
 
         # Verify family is correctly set
         assert mpunreach.afi == afi, f'AFI mismatch for {description}'
@@ -437,7 +451,7 @@ def test_mpreach_empty_nlri_eor() -> None:
     from exabgp.protocol.family import AFI, SAFI
 
     # Create MP_REACH_NLRI with empty NLRI list
-    mpreach = MPRNLRI.make_mprnlri(AFI.ipv4, SAFI.unicast, [])
+    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [])
 
     # Verify it's empty
     assert len(mpreach.nlris) == 0
@@ -453,7 +467,7 @@ def test_mpunreach_empty_nlri() -> None:
     from exabgp.protocol.family import AFI, SAFI
 
     # Create MP_UNREACH_NLRI with empty NLRI list
-    mpunreach = MPURNLRI.make_mpurnlri(AFI.ipv4, SAFI.unicast, [])
+    mpunreach = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [])
 
     # Verify it's empty
     assert len(mpunreach.nlris) == 0
@@ -510,8 +524,8 @@ def test_mpreach_equality() -> None:
     prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     prefix2.nexthop = IPv4('192.0.2.1')
 
-    mpreach1 = MPRNLRI.make_mprnlri(AFI.ipv4, SAFI.unicast, [prefix1])
-    mpreach2 = MPRNLRI.make_mprnlri(AFI.ipv4, SAFI.unicast, [prefix2])
+    mpreach1 = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix1])
+    mpreach2 = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix2])
 
     # Verify equality (implementation may vary based on NLRI equality)
     assert mpreach1.afi == mpreach2.afi
@@ -534,8 +548,8 @@ def test_mpunreach_equality() -> None:
     cidr2 = CIDR.make_cidr(IPv4('10.0.0.0').pack_ip(), 24)
     prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
-    mpunreach1 = MPURNLRI.make_mpurnlri(AFI.ipv4, SAFI.unicast, [prefix1])
-    mpunreach2 = MPURNLRI.make_mpurnlri(AFI.ipv4, SAFI.unicast, [prefix2])
+    mpunreach1 = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix1])
+    mpunreach2 = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix2])
 
     # Verify equality (implementation may vary based on NLRI equality)
     assert mpunreach1.afi == mpunreach2.afi

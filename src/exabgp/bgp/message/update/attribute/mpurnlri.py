@@ -13,7 +13,7 @@ from typing import Generator
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
-from exabgp.bgp.message.open.capability.negotiated import NLRIParseContext
+from exabgp.bgp.message.open.capability.negotiated import OpenContext
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
@@ -31,7 +31,7 @@ class MPURNLRI(Attribute, Family):
     _MODE_PACKED = 1  # Created from wire bytes (unpack path)
     _MODE_NLRIS = 2  # Created from NLRI list (semantic path)
 
-    def __init__(self, packed: bytes, context: NLRIParseContext) -> None:
+    def __init__(self, packed: bytes, context: OpenContext) -> None:
         """Create MPURNLRI from wire-format bytes.
 
         Args:
@@ -48,12 +48,11 @@ class MPURNLRI(Attribute, Family):
         Family.__init__(self, AFI.from_int(_afi), SAFI.from_int(_safi))
 
     @classmethod
-    def make_mpurnlri(cls, afi: AFI, safi: SAFI, nlris: list[NLRI]) -> 'MPURNLRI':
+    def make_mpurnlri(cls, context: OpenContext, nlris: list[NLRI]) -> 'MPURNLRI':
         """Create MPURNLRI from semantic data (NLRI list).
 
         Args:
-            afi: Address Family Identifier
-            safi: Subsequent Address Family Identifier
+            context: Parsing context containing AFI/SAFI and negotiated parameters
             nlris: List of NLRI objects to include
 
         Returns:
@@ -61,10 +60,8 @@ class MPURNLRI(Attribute, Family):
         """
         # Create minimal packed header just for Family init
         # Full packing happens in packed_attributes()
-        header = afi.pack_afi() + safi.pack_safi()
-        # Create dummy context - not used in semantic mode
-        dummy_context = NLRIParseContext(addpath=False, asn4=False, msg_size=4096)
-        instance = cls(header, dummy_context)
+        header = context.afi.pack_afi() + context.safi.pack_safi()
+        instance = cls(header, context)
         # Switch to semantic mode
         instance._mode = cls._MODE_NLRIS
         instance._nlris_cache = nlris
@@ -159,11 +156,18 @@ class MPURNLRI(Attribute, Family):
             raise Notify(3, 0, 'presented a non-negotiated family {} {}'.format(afi, safi))
 
         # Create context for lazy NLRI parsing
-        context = NLRIParseContext.from_negotiated(negotiated, afi, safi)
+        context = negotiated.nlri_context(afi, safi)
 
         # Store wire bytes and context - NLRIs parsed lazily
         return cls(data, context)
 
 
-# Create empty MPURNLRI using factory method
-EMPTY_MPURNLRI = MPURNLRI.make_mpurnlri(AFI.undefined, SAFI.undefined, [])
+# Create empty MPURNLRI using factory method with default context
+_EMPTY_CONTEXT = OpenContext(
+    afi=AFI.undefined,
+    safi=SAFI.undefined,
+    addpath=False,
+    asn4=False,
+    msg_size=4096,
+)
+EMPTY_MPURNLRI = MPURNLRI.make_mpurnlri(_EMPTY_CONTEXT, [])

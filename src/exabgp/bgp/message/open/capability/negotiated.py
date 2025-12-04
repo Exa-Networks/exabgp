@@ -30,31 +30,26 @@ from exabgp.protocol.family import SAFI
 
 
 @dataclass(frozen=True)
-class NLRIParseContext:
-    """Minimal context needed for NLRI parsing and packing.
+class OpenContext:
+    """Minimal context derived from OPEN negotiation for NLRI parsing and packing.
 
     This dataclass captures only the negotiated parameters needed to parse
     and pack NLRI data, avoiding the need to pass the full Negotiated
     object when storing parsed MP attributes.
 
     Attributes:
+        afi: Address Family Identifier for this context.
+        safi: Subsequent Address Family Identifier for this context.
         addpath: Whether AddPath is enabled for this AFI/SAFI combination.
         asn4: Whether 4-byte ASN mode is negotiated.
         msg_size: Maximum BGP message size (4096 standard, 65535 extended).
     """
 
+    afi: AFI
+    safi: SAFI
     addpath: bool
     asn4: bool
     msg_size: int
-
-    @classmethod
-    def from_negotiated(cls, negotiated: 'Negotiated', afi: AFI, safi: SAFI) -> 'NLRIParseContext':
-        """Create parse context from full Negotiated state."""
-        return cls(
-            addpath=negotiated.required(afi, safi),
-            asn4=negotiated.asn4,
-            msg_size=negotiated.msg_size,
-        )
 
 
 class Negotiated:
@@ -272,6 +267,16 @@ class Negotiated:
             return self.addpath.receive(afi, safi)
         else:
             return self.addpath.send(afi, safi)
+
+    def nlri_context(self, afi: AFI, safi: SAFI) -> OpenContext:
+        """Build OpenContext for the given AFI/SAFI from negotiated state."""
+        return OpenContext(
+            afi=afi,
+            safi=safi,
+            addpath=self.required(afi, safi),
+            asn4=self.asn4,
+            msg_size=self.msg_size,
+        )
 
 
 # =================================================================== RequirePath
