@@ -98,6 +98,9 @@
 
 ### Security
 
+- [x] BGP-LS data validation - malformed TLV crash prevention ✅
+- [ ] Runtime crash analysis audit - systematic review of all parsing code for missing length/bounds checks
+  - **See:** `plan/runtime-validation/TODO.md`
 - [ ] Add input validation layer in configuration parsers
 - [ ] Sanitize error messages for external-facing APIs
 
@@ -168,3 +171,9 @@
 - `reactor/loop.py` - 41 tests added
 - `reactor/protocol.py` - 57 tests exist
 - `reactor/network/connection.py` - 80 tests exist
+
+### BGP-LS Data Validation ✅
+- 12 vulnerabilities fixed across 11 files
+- Added length validation to prevent IndexError/struct.error/ValueError crashes
+- Files: srv6endx, srv6lanendx, srv6sidstructure, srv6locator, srv6endpointbehavior, srcap, sradjlan, sradj, linkstate, isisarea, srprefix
+- **See:** `plan/runtime-validation/bgpls.md`
