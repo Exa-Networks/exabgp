@@ -57,7 +57,7 @@ class LocalPreference(Attribute):
         return cls(data)
 
     @classmethod
-    def make_localpref(cls, localpref: int) -> 'LocalPreference':
+    def from_int(cls, localpref: int) -> 'LocalPreference':
         """Create LocalPreference from semantic value with validation.
 
         Args:

@@ -44,7 +44,7 @@ class TestINETFeedback:
         """Test feedback when nexthop is set for ANNOUNCE"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.nexthop = IP.make_ip('10.0.0.1')
+        nlri.nexthop = IP.from_string('10.0.0.1')
 
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert feedback == ''

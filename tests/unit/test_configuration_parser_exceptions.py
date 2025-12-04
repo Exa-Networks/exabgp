@@ -74,7 +74,7 @@ class TestFlowParserExceptions:
     """Test flow/parser.py exception handling patterns."""
 
     def test_redirect_ipv6_without_brackets_raises_os_error(self):
-        """Test that IP.make_ip() raises OSError for invalid IP addresses.
+        """Test that IP.from_string() raises OSError for invalid IP addresses.
 
         The flow/parser.py redirect function catches this and converts to ValueError
         with a helpful message about IPv6 bracket notation.
@@ -83,7 +83,7 @@ class TestFlowParserExceptions:
 
         # IP.create raises OSError for invalid IPs (inet_pton failure)
         with pytest.raises(OSError):
-            IP.make_ip('2001:db8::1:invalid')
+            IP.from_string('2001:db8::1:invalid')
 
 
 class TestAFISAFIParsingExceptions:

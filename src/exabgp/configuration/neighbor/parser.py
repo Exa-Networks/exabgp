@@ -109,7 +109,7 @@ def local_address(tokeniser) -> IP | None:
     if value == 'auto':
         return None
     try:
-        return IP.make_ip(value)
+        return IP.from_string(value)
     except (OSError, IndexError, ValueError):
         raise ValueError(
             f"'{value}' is not a valid IP address\n  Format: <ip> or 'auto' (e.g., 192.0.2.1 or 2001:db8::1)"

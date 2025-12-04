@@ -37,7 +37,7 @@ def register_peer() -> None:
 def _parse_ip(value: str) -> IP:
     """Parse IP address string into IP object."""
     try:
-        return IP.make_ip(value)
+        return IP.from_string(value)
     except Exception as e:
         raise ValueError(f'invalid IP address {value}: {e}')
 

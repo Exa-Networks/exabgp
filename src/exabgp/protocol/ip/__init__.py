@@ -68,7 +68,7 @@ class IP:
     # deprecate the string API in favor of top()
 
     def __init__(self) -> None:
-        raise RuntimeError('You should use IP.make_ip() to use IP')
+        raise RuntimeError('You should use IP.from_string() to use IP')
 
     def init(self, string: str, packed: bytes | None = None) -> IP:
         # XXX: the str should not be needed
@@ -193,7 +193,7 @@ class IP:
         return None
 
     @classmethod
-    def make_ip(cls, string: str, packed: bytes | None = None, klass: Type[IP] | None = None) -> IP:
+    def from_string(cls, string: str, packed: bytes | None = None, klass: Type[IP] | None = None) -> IP:
         if klass:
             return klass(string, packed)  # type: ignore[call-arg]
         return cls.klass(string)(string, packed)  # type: ignore[call-arg,misc]
@@ -238,7 +238,7 @@ class IP:
 
     @classmethod
     def unpack_ip(cls, data: bytes, klass: Type[IP] | None = None) -> IP:
-        return cls.make_ip(IP.ntop(data), data, klass)
+        return cls.from_string(IP.ntop(data), data, klass)
 
 
 # ======================================================================== Range
@@ -253,7 +253,7 @@ class IPRange(IP):
         self.mask = NetMask.make_netmask(mask, IP.toafi(ip))
 
     @classmethod
-    def make_ip(cls, ip: str, mask: int) -> IPRange:  # type: ignore[override]
+    def from_string(cls, ip: str, mask: int) -> IPRange:  # type: ignore[override]
         return cls(ip, mask)
 
     def __repr__(self) -> str:

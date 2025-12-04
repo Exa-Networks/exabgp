@@ -355,7 +355,7 @@ class IPAddressValidator(Validator['IP']):
         from exabgp.protocol.family import AFI
 
         try:
-            ip_obj = IP.make_ip(value)
+            ip_obj = IP.from_string(value)
         except (OSError, IndexError, ValueError):
             raise ValueError(f"'{value}' is not a valid IP address") from None
 
@@ -410,7 +410,7 @@ class IPPrefixValidator(Validator['IPRange']):
                 ip_str = value
                 mask = 128 if ':' in value else 32
 
-            iprange = IPRange.make_ip(ip_str, mask)
+            iprange = IPRange.from_string(ip_str, mask)
 
             # Validate host bits are zero
             if iprange.address() & iprange.mask.hostmask() != 0:
@@ -450,7 +450,7 @@ class IPRangeValidator(Validator['IPRange']):
                 ip_str = value
                 mask = 128 if ':' in value else 32
 
-            return IPRange.make_ip(ip_str, mask)
+            return IPRange.from_string(ip_str, mask)
         except (OSError, IndexError, ValueError):
             raise ValueError(
                 f"'{value}' is not a valid IP address or range\n"
@@ -674,11 +674,11 @@ class OriginValidator(Validator['Origin']):
 
         lower = value.lower()
         if lower == 'igp':
-            return Origin.make_origin(Origin.IGP)
+            return Origin.from_int(Origin.IGP)
         if lower == 'egp':
-            return Origin.make_origin(Origin.EGP)
+            return Origin.from_int(Origin.EGP)
         if lower == 'incomplete':
-            return Origin.make_origin(Origin.INCOMPLETE)
+            return Origin.from_int(Origin.INCOMPLETE)
         raise ValueError(f"'{value}' is not a valid origin\n  Valid options: igp, egp, incomplete")
 
     def to_schema(self) -> dict[str, Any]:
@@ -702,7 +702,7 @@ class MEDValidator(Validator['MED']):
         num = int(value)
         if num > 4294967295:
             raise ValueError(f'{num} exceeds maximum MED value (4294967295)')
-        return MED.make_med(num)
+        return MED.from_int(num)
 
     def to_schema(self) -> dict[str, Any]:
         return {'type': 'integer', 'minimum': 0, 'maximum': 4294967295}
@@ -725,7 +725,7 @@ class LocalPrefValidator(Validator['LocalPreference']):
         num = int(value)
         if num > 4294967295:
             raise ValueError(f'{num} exceeds maximum local-preference value (4294967295)')
-        return LocalPreference.make_localpref(num)
+        return LocalPreference.from_int(num)
 
     def to_schema(self) -> dict[str, Any]:
         return {'type': 'integer', 'minimum': 0, 'maximum': 4294967295}
@@ -750,8 +750,8 @@ class NextHopValidator(Validator[tuple['IP | IPSelf', 'NextHop | NextHopSelf']])
             return IPSelf(AFI.ipv4), NextHopSelf(AFI.ipv4)
 
         try:
-            ip_obj = IP.make_ip(value)
-            return ip_obj, NextHop.make_nexthop(ip_obj.top())
+            ip_obj = IP.from_string(value)
+            return ip_obj, NextHop.from_string(ip_obj.top())
         except (OSError, IndexError, ValueError):
             raise ValueError(
                 f"'{value}' is not a valid next-hop\n  Format: <ip> or 'self' (e.g., 192.0.2.1 or self)"
