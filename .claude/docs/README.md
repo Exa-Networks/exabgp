@@ -19,7 +19,7 @@ Project documentation for completed work, historical development, and reference 
 - `plan/packed-attribute.md` - Packed-bytes-first refactoring
 - `plan/coverage.md` - Test coverage audit
 - `plan/type-annotations/` - Type annotation detailed plans
-- `plan/xxx-cleanup/` - XXX comment cleanup
+- `plan/comment-cleanup/` - XXX comment cleanup (✅ Complete)
 
 ---
 
