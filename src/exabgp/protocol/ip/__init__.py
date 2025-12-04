@@ -250,7 +250,7 @@ class IPRange(IP):
 
     def __init__(self, ip: str, mask: int) -> None:
         IP.init(self, ip)
-        self.mask = NetMask.create(mask, IP.toafi(ip))
+        self.mask = NetMask.make_netmask(mask, IP.toafi(ip))
 
     @classmethod
     def make_ip(cls, ip: str, mask: int) -> IPRange:  # type: ignore[override]
