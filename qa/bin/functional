@@ -879,12 +879,15 @@ class Tests:
                 pending += 1
                 pending_tests.append(test.nick)
 
-        # Show timer: timeout [elapsed/max] - yellow label and max number
+        # Show timer: elapsed time and timeout limit
         if self._start_time and self._max_timeout:
             elapsed = int(time.time() - self._start_time)
-            # Cap elapsed time to max timeout to prevent timer overshoot
-            elapsed = min(elapsed, self._max_timeout)
-            timer = f'{yellow()}timeout{reset()} [{elapsed:2d}/{yellow()}{self._max_timeout:2d}{reset()}]'
+            # Cap displayed elapsed for timeout ratio, but show real elapsed
+            capped = min(elapsed, self._max_timeout)
+            timer = f'{cyan()}elapsed{reset()} {elapsed:2d}s {yellow()}timeout{reset()} [{capped:2d}/{yellow()}{self._max_timeout:2d}{reset()}]'
+        elif self._start_time:
+            elapsed = int(time.time() - self._start_time)
+            timer = f'{cyan()}elapsed{reset()} {elapsed:2d}s'
         else:
             timer = ''
 
@@ -937,7 +940,7 @@ class Tests:
         if quiet:
             return
         flush(
-            '\nFormat: timeout [0/max] daemons N clients N -> timeout [elapsed/max] daemons N clients N passed N failed N [failed test IDs] pending N [pending test IDs]\n'
+            '\nFormat: elapsed Ns timeout [0/max] daemons N clients N -> elapsed Ns timeout [N/max] daemons N clients N passed N failed N [IDs] pending N [IDs]\n'
         )
 
     def _extract_sent_messages(self, client_stderr: str) -> List[str]:
