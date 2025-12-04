@@ -2042,10 +2042,60 @@ class DecodingTests(Tests):
             )
         return '\n'.join(result)
 
-    def run_selected(self, timeout: int) -> bool:
+    def _print_test_output(self, test: 'DecodingTests.Test') -> None:
+        """Print test output with timing for verbose/debug mode"""
+        duration = time.time() - test.start_time if test.start_time else 0
+        is_success = test.state == State.SUCCESS
+        is_timeout = test.state == State.TIMEOUT
+        status = '✓' if is_success else '✗'
+        color_fn = green() if is_success else red()
+
+        flush()  # New line to separate from live display
+        flush(f'{color_fn}{status}{reset()} {test.nick} {test.name} ({duration:.2f}s)')
+
+        # Ensure output is collected
+        test.collect()
+
+        # Show stdout
+        if test.stdout:
+            stdout = test.stdout.decode('utf-8', errors='replace')
+            lines = [ln for ln in stdout.split('\n') if ln.strip()]
+            if lines:
+                flush(f'  {cyan()}stdout{reset()} ({len(lines)} lines):')
+                for line in lines:
+                    flush(f'    {line}')
+
+        # Show stderr
+        if test.stderr:
+            stderr = test.stderr.decode('utf-8', errors='replace')
+            lines = [ln for ln in stderr.split('\n') if ln.strip()]
+            if lines:
+                flush(f'  {cyan()}stderr{reset()} ({len(lines)} lines):')
+                for line in lines:
+                    flush(f'    {line}')
+
+        # Add debug hints on failure
+        if not is_success:
+            flush()
+            flush(f'  {yellow()}debug hints:{reset()}')
+            if is_timeout:
+                flush(f'    - test timed out after {duration:.1f}s')
+            flush(f'    - run single test: ./qa/bin/functional decoding {test.nick}')
+            flush(f'    - decode command:  ./sbin/exabgp decode -f "{test.conf["family"]}" --{test.conf["type"]} {test.conf["packet"]}')
+
+    def run_selected(
+        self,
+        timeout: int,
+        verbose: bool = False,
+        debug_tests: Optional[List[str]] = None,
+        quiet: bool = False,
+    ) -> bool:
         self._start_time = time.time()
         self._max_timeout = timeout
-        self.legend()
+        self._verbose = verbose
+        self._debug_tests = set(debug_tests) if debug_tests else set()
+        self._quiet = quiet
+        self.legend(quiet=quiet)
         # Ensure sufficient file descriptors for tests that spawn many processes
         check_ulimit()
         success = True
@@ -2075,7 +2125,11 @@ class DecodingTests(Tests):
 
         for test in self.selected():
             self.display()
-            success = test.result(test.success()) and success
+            test_passed = test.result(test.success())
+            success = test_passed and success
+            # Show per-test output in verbose mode or if test is in debug list
+            if self._verbose or test.nick in self._debug_tests:
+                self._print_test_output(test)
             time.sleep(0.05)
 
         exit_time = time.time() + timeout
@@ -2103,12 +2157,19 @@ class DecodingTests(Tests):
                     test.mark_timeout()
                     test.terminate(collect=False)  # Don't block on collect in hot loop
                     success = False
+                    # Show per-test output in verbose mode or if test is in debug list
+                    if self._verbose or test.nick in self._debug_tests:
+                        self._print_test_output(test)
                     continue
 
                 if not test.ready():
                     continue
                 running.remove(test)
-                success = test.result(test.success()) and success
+                test_passed = test.result(test.success())
+                success = test_passed and success
+                # Show per-test output in verbose mode or if test is in debug list
+                if self._verbose or test.nick in self._debug_tests:
+                    self._print_test_output(test)
 
             # If no tests are still running, exit immediately
             if not running:
@@ -2125,7 +2186,8 @@ class DecodingTests(Tests):
             success = False
 
         # Move to new line after final display
-        flush()
+        if not self._quiet:
+            flush()
 
         self.summary(server=None, client=None, num_tests_selected=None)
         return success
@@ -2253,10 +2315,60 @@ class ParsingTests(Tests):
             result.append(' '.join(['>', Path.EXABGP, 'configuration', 'validate', '-nrv', test.conf['fname']]))
         return '\n'.join(result)
 
-    def run_selected(self, timeout: int) -> bool:
+    def _print_test_output(self, test: 'ParsingTests.Test') -> None:
+        """Print test output with timing for verbose/debug mode"""
+        duration = time.time() - test.start_time if test.start_time else 0
+        is_success = test.state == State.SUCCESS
+        is_timeout = test.state == State.TIMEOUT
+        status = '✓' if is_success else '✗'
+        color_fn = green() if is_success else red()
+
+        flush()  # New line to separate from live display
+        flush(f'{color_fn}{status}{reset()} {test.nick} {test.name} ({duration:.2f}s)')
+
+        # Ensure output is collected
+        test.collect()
+
+        # Show stdout
+        if test.stdout:
+            stdout = test.stdout.decode('utf-8', errors='replace')
+            lines = [ln for ln in stdout.split('\n') if ln.strip()]
+            if lines:
+                flush(f'  {cyan()}stdout{reset()} ({len(lines)} lines):')
+                for line in lines:
+                    flush(f'    {line}')
+
+        # Show stderr
+        if test.stderr:
+            stderr = test.stderr.decode('utf-8', errors='replace')
+            lines = [ln for ln in stderr.split('\n') if ln.strip()]
+            if lines:
+                flush(f'  {cyan()}stderr{reset()} ({len(lines)} lines):')
+                for line in lines:
+                    flush(f'    {line}')
+
+        # Add debug hints on failure
+        if not is_success:
+            flush()
+            flush(f'  {yellow()}debug hints:{reset()}')
+            if is_timeout:
+                flush(f'    - test timed out after {duration:.1f}s')
+            flush(f'    - run single test: ./qa/bin/functional parsing {test.nick}')
+            flush(f'    - validate command: ./sbin/exabgp configuration validate -nrv {test.conf["fname"]}')
+
+    def run_selected(
+        self,
+        timeout: int,
+        verbose: bool = False,
+        debug_tests: Optional[List[str]] = None,
+        quiet: bool = False,
+    ) -> bool:
         self._start_time = time.time()
         self._max_timeout = timeout
-        self.legend()
+        self._verbose = verbose
+        self._debug_tests = set(debug_tests) if debug_tests else set()
+        self._quiet = quiet
+        self.legend(quiet=quiet)
         # Ensure sufficient file descriptors for tests that spawn many processes
         check_ulimit()
         success = True
@@ -2269,7 +2381,11 @@ class ParsingTests(Tests):
         time.sleep(0.02)
 
         for test in self.selected():
-            success = test.result(test.success()) and success
+            test_passed = test.result(test.success())
+            success = test_passed and success
+            # Show per-test output in verbose mode or if test is in debug list
+            if self._verbose or test.nick in self._debug_tests:
+                self._print_test_output(test)
             time.sleep(0.005)
 
         exit_time = time.time() + timeout
@@ -2297,12 +2413,19 @@ class ParsingTests(Tests):
                     test.mark_timeout()
                     test.terminate(collect=False)  # Don't block on collect in hot loop
                     success = False
+                    # Show per-test output in verbose mode or if test is in debug list
+                    if self._verbose or test.nick in self._debug_tests:
+                        self._print_test_output(test)
                     continue
 
                 if not test.ready():
                     continue
                 running.remove(test)
-                success = test.result(test.success()) and success
+                test_passed = test.result(test.success())
+                success = test_passed and success
+                # Show per-test output in verbose mode or if test is in debug list
+                if self._verbose or test.nick in self._debug_tests:
+                    self._print_test_output(test)
 
             # If no tests are still running, exit immediately
             if not running:
@@ -2327,7 +2450,8 @@ class ParsingTests(Tests):
         success = len(final_failures) == 0
 
         # Move to new line after final display
-        flush()
+        if not self._quiet:
+            flush()
 
         self.summary(server=None, client=None, num_tests_selected=None)
         return success
@@ -2544,16 +2668,21 @@ def add_test(
         quiet = getattr(parsed, 'quiet', False)
 
         # Handle --debug: run all tests but only show verbose output for specified tests
-        if debug_tests and isinstance(tests, EncodingTests):
+        if debug_tests:
             # Validate debug test nicks
             for nick in debug_tests:
                 if nick not in tests._by_nick:
                     sys.exit(f'could not find test {nick}')
             tests.enable_all()
 
-        if hasattr(tests, '_save_dir') or isinstance(tests, EncodingTests):
+        # Pass verbose/debug/quiet to all test types that support it
+        if isinstance(tests, EncodingTests):
             success_exit = tests.run_selected(
                 parsed.timeout, save_dir=save_dir, verbose=verbose, debug_tests=debug_tests, quiet=quiet
+            )
+        elif isinstance(tests, (DecodingTests, ParsingTests)):
+            success_exit = tests.run_selected(
+                parsed.timeout, verbose=verbose, debug_tests=debug_tests, quiet=quiet
             )
         else:
             success_exit = tests.run_selected(parsed.timeout)
@@ -2578,7 +2707,7 @@ if __name__ == '__main__':
         subparser,
         'decoding',
         decoding,
-        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port'],
+        ['list', 'short_list', 'edit', 'dry', 'timeout', 'port', 'verbose', 'debug', 'quiet'],
     )
     add_test(
         subparser,
@@ -2600,7 +2729,7 @@ if __name__ == '__main__':
             'quiet',
         ],
     )
-    add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit'])
+    add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit', 'verbose', 'debug', 'quiet'])
 
     parsed = parser.parse_args()
     if vars(parsed):
