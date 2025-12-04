@@ -15,7 +15,7 @@ from exabgp.protocol.resource import Resource
 class NetMask(Resource):
     NAME: ClassVar[str] = 'netmask'
 
-    maximum: int  # Set by create() - 32 for IPv4, 128 for IPv6
+    maximum: int  # Set by make_netmask() - 32 for IPv4, 128 for IPv6
 
     def size(self) -> int:
         return int(pow(2, self.maximum - int(self)))
@@ -72,7 +72,7 @@ class NetMask(Resource):
     codes: ClassVar[dict[str, int]] = dict([(inst, name) for (name, inst) in names.items()])
 
     @classmethod
-    def create(cls, string: str | int, afi: AFI) -> NetMask:
+    def make_netmask(cls, string: str | int, afi: AFI) -> NetMask:
         if afi == AFI.ipv4:
             if isinstance(string, str) and string in cls.codes:
                 klass = cls(cls.codes[string])
