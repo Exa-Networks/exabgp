@@ -1,8 +1,76 @@
-"""labelled.py
+"""label.py (MPLS Labeled Routes)
 
 Created by Thomas Mangin on 2014-06-27.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
+
+RFC References:
+===============
+
+RFC 3107 - Carrying Label Information in BGP-4
+https://www.rfc-editor.org/rfc/rfc3107.html
+
+    Defines how MPLS labels are carried in BGP UPDATE messages.
+    Labels are prepended to the NLRI prefix within MP_REACH_NLRI.
+
+    SAFI value: 4 (SAFI_NLRI_MPLS / nlri_mpls)
+
+    Wire format for labeled NLRI:
+
+        +---------------------------+
+        |   Length (1 octet)        |  <- Total bits: label_bits + prefix_bits
+        +---------------------------+
+        |   Label 1 (3 octets)      |  <- 20-bit label + 3 exp + 1 BoS
+        +---------------------------+
+        |   Label 2 (3 octets)      |  <- Optional, if label stack
+        +---------------------------+
+        |   ...                     |
+        +---------------------------+
+        |   Label N (3 octets)      |  <- Last label has BoS=1
+        +---------------------------+
+        |   Prefix (variable)       |  <- IP prefix bytes
+        +---------------------------+
+
+    Label encoding (3 bytes / 24 bits):
+        - Bits 0-19:  Label value (20 bits)
+        - Bits 20-22: Experimental/TC (3 bits)
+        - Bit 23:     Bottom of Stack (BoS) - 1 if last label
+
+    Special label values:
+        - 0x800000: Withdrawal label (label=524288 with BoS)
+        - 0x000000: Next-hop label
+
+    Length field calculation:
+        Length = (num_labels * 24) + prefix_mask_bits
+
+    Example: /24 prefix with one label
+        Length = 24 + 24 = 48 bits
+        Wire: [0x30][label 3 bytes][prefix 3 bytes] = 7 bytes total
+
+RFC 8277 - Using BGP to Bind MPLS Labels to Address Prefixes
+https://www.rfc-editor.org/rfc/rfc8277.html
+
+    Updates RFC 3107 with clarifications on label binding.
+    Deprecates the use of SAFI 4 for some cases in favor of
+    SAFI 1 with label binding via attributes.
+
+Wire Format (_packed):
+=====================
+    This class stores ONLY the CIDR payload in _packed (not the full labeled NLRI).
+
+    _packed stores: [mask_byte][truncated_ip_bytes...]  (same as INET)
+    self.labels stores: Labels object with the MPLS label stack
+
+    On pack_nlri(), these are combined:
+        output = [length][labels][prefix] where length = labels*24 + mask
+
+    Note: path_info (ADD-PATH) is stored in self.path_info, NOT in _packed.
+
+Class Hierarchy:
+===============
+    INET (inet.py) - base for unicast/multicast
+      └── Label (this class) - adds MPLS label stack
+            └── IPVPN (ipvpn.py) - adds Route Distinguisher
 """
 
 from __future__ import annotations

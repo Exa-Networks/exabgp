@@ -1,8 +1,92 @@
-"""ipvpn.py
+"""ipvpn.py (BGP/MPLS IP VPNs - VPNv4/VPNv6)
 
 Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
+
+RFC References:
+===============
+
+RFC 4364 - BGP/MPLS IP Virtual Private Networks (VPNs)
+https://www.rfc-editor.org/rfc/rfc4364.html
+
+    Defines VPN-IPv4 (VPNv4) address family for MPLS VPNs.
+    SAFI value: 128 (mpls_vpn)
+
+    VPN-IPv4 NLRI wire format (within MP_REACH_NLRI payload):
+
+        +---------------------------+
+        |   Length (1 octet)        |  <- Total bits: labels + RD + prefix
+        +---------------------------+
+        |   Label(s) (3+ octets)    |  <- MPLS label stack (per RFC 3107)
+        +---------------------------+
+        |   RD (8 octets)           |  <- Route Distinguisher
+        +---------------------------+
+        |   Prefix (variable)       |  <- IPv4 prefix bytes
+        +---------------------------+
+
+    Length field calculation:
+        Length = (num_labels * 24) + 64 + prefix_mask_bits
+        Example: /24 with 1 label = 24 + 64 + 24 = 112 bits
+
+RFC 4659 - BGP-MPLS IP VPN Extension for IPv6 VPN
+https://www.rfc-editor.org/rfc/rfc4659.html
+
+    Extends RFC 4364 for IPv6 VPNs (VPNv6).
+    AFI 2 (IPv6), SAFI 128 (mpls_vpn)
+
+    VPN-IPv6 address: 8-byte RD + 16-byte IPv6 = 24 bytes total
+
+Route Distinguisher (RD) Encoding:
+=================================
+    RD is 8 bytes: 2-byte type + 6-byte value
+
+    Type 0 (ASN2:NN):
+        +---------------------------+
+        |   Type (2 octets) = 0     |
+        +---------------------------+
+        |   ASN (2 octets)          |  <- 2-byte AS number
+        +---------------------------+
+        |   Assigned (4 octets)     |  <- Admin-assigned value
+        +---------------------------+
+
+    Type 1 (IP:NN):
+        +---------------------------+
+        |   Type (2 octets) = 1     |
+        +---------------------------+
+        |   IP (4 octets)           |  <- IPv4 address
+        +---------------------------+
+        |   Assigned (2 octets)     |  <- Admin-assigned value
+        +---------------------------+
+
+    Type 2 (ASN4:NN):
+        +---------------------------+
+        |   Type (2 octets) = 2     |
+        +---------------------------+
+        |   ASN (4 octets)          |  <- 4-byte AS number
+        +---------------------------+
+        |   Assigned (2 octets)     |  <- Admin-assigned value
+        +---------------------------+
+
+Wire Format (_packed):
+=====================
+    This class stores ONLY the CIDR payload in _packed (not the full VPN NLRI).
+
+    _packed stores: [mask_byte][truncated_ip_bytes...]  (same as INET/Label)
+    self.labels stores: Labels object with the MPLS label stack
+    self.rd stores: RouteDistinguisher object
+
+    On pack_nlri(), these are combined:
+        output = [length][labels][rd][prefix]
+        where length = labels*24 + 64 + mask
+
+    Note: path_info (ADD-PATH) is stored in self.path_info, NOT in _packed.
+
+Class Hierarchy:
+===============
+    INET (inet.py) - base for unicast/multicast
+      └── Label (label.py) - adds MPLS label stack
+            └── IPVPN (this class) - adds Route Distinguisher
 """
 
 from __future__ import annotations
