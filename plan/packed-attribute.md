@@ -127,8 +127,18 @@ class INET(NLRI):
 66. `src/exabgp/bgp/message/update/nlri/rtc.py`
 67. `src/exabgp/bgp/message/update/nlri/flow.py`
 
-### Wave 7: EVPN + BGP-LS NLRI
-68-80. `evpn/*.py`, `bgpls/*.py`, `mup/*.py`, `mvpn/*.py`
+### Wave 7: EVPN + BGP-LS + MUP + MVPN NLRI ✅ COMPLETE
+
+| Category | Files | Status |
+|----------|-------|--------|
+| EVPN | ethernetad, mac, multicast, prefix, segment | ✅ Done |
+| BGP-LS | node, link, prefixv4, prefixv6, srv6sid | ✅ Done |
+| MUP | isd, dsd, t1st, t2st | ✅ Done |
+| MVPN | sourcead, sourcejoin, sharedjoin | ✅ Done |
+
+**Commit:** 17331d4a
+
+**Note:** Base classes (`evpn/nlri.py`, `bgpls/nlri.py`, `mup/nlri.py`, `mvpn/nlri.py`) are abstract bases that initialize `_packed = b''` as placeholder. Subclasses properly set `_packed` in their `__init__`. Generic* fallback classes accept packed bytes. No changes needed to base classes.
 
 ### Wave 8: Messages
 81. `src/exabgp/bgp/message/keepalive.py`

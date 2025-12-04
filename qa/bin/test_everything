@@ -35,6 +35,9 @@ class Colors:
     RED = '\033[91m'
     YELLOW = '\033[93m'
     CYAN = '\033[96m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    WHITE = '\033[97m'
     BOLD = '\033[1m'
     DIM = '\033[2m'
     RESET = '\033[0m'
@@ -46,6 +49,9 @@ class Colors:
         cls.RED = ''
         cls.YELLOW = ''
         cls.CYAN = ''
+        cls.BLUE = ''
+        cls.MAGENTA = ''
+        cls.WHITE = ''
         cls.BOLD = ''
         cls.DIM = ''
         cls.RESET = ''
@@ -205,10 +211,17 @@ def run_test(name: str, verbose: bool = False) -> tuple[bool, str, str]:
 
 def list_tests(cache: dict[str, list[float]], verbose: bool = False) -> None:
     """Print available tests with expected times"""
+    print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
+    print(f'{Colors.BOLD}{Colors.WHITE}  Available Tests{Colors.RESET}')
+    print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
     for i, name in enumerate(TEST_ORDER, 1):
         expected = get_expected_time(cache, name)
         desc = TEST_DESCRIPTIONS[name]
-        print(f'  {i}. {name:14} (~{format_time(expected):>5})  {desc}')
+        num = f'{Colors.CYAN}{i}.{Colors.RESET}'
+        test_name = f'{Colors.WHITE}{Colors.BOLD}{name:14}{Colors.RESET}'
+        time_str = f'{Colors.BLUE}(~{format_time(expected):>5}){Colors.RESET}'
+        desc_str = f'{Colors.DIM}{desc}{Colors.RESET}'
+        print(f'  {num} {test_name} {time_str}  {desc_str}')
         if verbose:
             cmd = TEST_COMMANDS[name]
             if isinstance(cmd, list):
@@ -216,6 +229,7 @@ def list_tests(cache: dict[str, list[float]], verbose: bool = False) -> None:
                     print(f'{Colors.DIM}      $ {c}{Colors.RESET}')
             else:
                 print(f'{Colors.DIM}      $ {cmd}{Colors.RESET}')
+    print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
 
 
 def resolve_test_selector(selector: str) -> int | None:
@@ -240,35 +254,44 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
     """Run selected tests with progress output. Returns exit code."""
     start_time = time.time()
     total = len(test_indices)
+    results: list[tuple[str, bool, float]] = []  # (name, success, elapsed)
+    cumulative_time = 0.0  # Track time spent on previous tests
 
     for run_num, test_idx in enumerate(test_indices, 1):
         name = TEST_ORDER[test_idx]
         desc = TEST_DESCRIPTIONS[name]
         expected = get_expected_time(cache, name)
 
-        # Print progress line (no newline yet unless verbose)
+        # Calculate expected total time at end of this test
+        expected_finish = cumulative_time + expected
+
+        # Print progress line with colors
+        progress = f'{Colors.CYAN}[{run_num}/{total}]{Colors.RESET}'
+        test_name = f'{Colors.WHITE}{Colors.BOLD}{name:14}{Colors.RESET}'
+        eta_str = f'{Colors.DIM}({Colors.MAGENTA}ETA {format_time(expected_finish)}{Colors.DIM}){Colors.RESET}'
+
         if verbose:
-            print(f'[{run_num}/{total}] {name} (~{format_time(expected)})')
+            print(f'{progress} {test_name} {eta_str}')
         else:
-            print(f'[{run_num}/{total}] {name} (~{format_time(expected)}) ... ', end='', flush=True)
+            print(f'{progress} {test_name} {eta_str} ... ', end='', flush=True)
 
         test_start = time.time()
         success, stdout, stderr = run_test(name, verbose=verbose)
         elapsed = time.time() - test_start
 
-        # Record timing
-        record_time(cache, name, elapsed)
+        # Update cumulative time with actual elapsed
+        cumulative_time += elapsed
 
-        if verbose:
-            if success:
-                print(f'{Colors.GREEN}✓{Colors.RESET} {format_time(elapsed)}')
-            else:
-                print(f'{Colors.RED}✗{Colors.RESET} {format_time(elapsed)}')
+        # Record timing and result
+        record_time(cache, name, elapsed)
+        results.append((name, success, elapsed))
+
+        # Show result with colored time
+        elapsed_str = f'{Colors.BLUE}{format_time(elapsed)}{Colors.RESET}'
+        if success:
+            print(f'{Colors.GREEN}✓{Colors.RESET} {elapsed_str}')
         else:
-            if success:
-                print(f'{Colors.GREEN}✓{Colors.RESET} {format_time(elapsed)}')
-            else:
-                print(f'{Colors.RED}✗{Colors.RESET} {format_time(elapsed)}')
+            print(f'{Colors.RED}✗{Colors.RESET} {elapsed_str}')
 
         if not success:
             # Show failure details
@@ -280,10 +303,26 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
             save_timing_cache(cache)
             return 1
 
-    # All passed
+    # All passed - show summary
     total_elapsed = time.time() - start_time
     save_timing_cache(cache)
-    print(f'{Colors.GREEN}✓ All {total} tests passed in {format_time(total_elapsed)}{Colors.RESET}')
+
+    # Print summary table (verbose only)
+    if verbose:
+        print()
+        print(f'{Colors.CYAN}{"─" * 50}{Colors.RESET}')
+        print(f'{Colors.BOLD}{Colors.WHITE}  Test Summary{Colors.RESET}')
+        print(f'{Colors.CYAN}{"─" * 50}{Colors.RESET}')
+        for name, success, elapsed in results:
+            status = f'{Colors.GREEN}✓{Colors.RESET}' if success else f'{Colors.RED}✗{Colors.RESET}'
+            time_str = f'{Colors.BLUE}{format_time(elapsed):>6}{Colors.RESET}'
+            print(f'  {status} {name:14} {time_str}')
+        print(f'{Colors.CYAN}{"─" * 50}{Colors.RESET}')
+        print(f'  {Colors.GREEN}{Colors.BOLD}Total: {format_time(total_elapsed)}{Colors.RESET}')
+        print(f'{Colors.CYAN}{"─" * 50}{Colors.RESET}')
+        print()
+
+    print(f'{Colors.GREEN}{Colors.BOLD}✓ All {total} tests passed in {format_time(total_elapsed)}{Colors.RESET}')
     return 0
 
 
