@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -29,13 +28,15 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 
-@dataclass(frozen=True)
 class OpenContext:
     """Minimal context derived from OPEN negotiation for NLRI parsing and packing.
 
-    This dataclass captures only the negotiated parameters needed to parse
+    This class captures only the negotiated parameters needed to parse
     and pack NLRI data, avoiding the need to pass the full Negotiated
     object when storing parsed MP attributes.
+
+    Instances are cached and reused for the same parameter combinations.
+    Use make_open_context() factory method to create instances.
 
     Attributes:
         afi: Address Family Identifier for this context.
@@ -45,11 +46,42 @@ class OpenContext:
         msg_size: Maximum BGP message size (4096 standard, 65535 extended).
     """
 
-    afi: AFI
-    safi: SAFI
-    addpath: bool
-    asn4: bool
-    msg_size: int
+    __slots__ = ('afi', 'safi', 'addpath', 'asn4', 'msg_size')
+
+    _cache: ClassVar[dict[tuple[AFI, SAFI, bool, bool, int], 'OpenContext']] = {}
+
+    def __init__(self, afi: AFI, safi: SAFI, addpath: bool, asn4: bool, msg_size: int) -> None:
+        # Direct construction - use make_open_context() for cached instances
+        self.afi = afi
+        self.safi = safi
+        self.addpath = addpath
+        self.asn4 = asn4
+        self.msg_size = msg_size
+
+    @classmethod
+    def make_open_context(cls, afi: AFI, safi: SAFI, addpath: bool, asn4: bool, msg_size: int) -> 'OpenContext':
+        """Factory method that returns cached OpenContext instances."""
+        key = (afi, safi, addpath, asn4, msg_size)
+        if key not in cls._cache:
+            cls._cache[key] = cls(afi, safi, addpath, asn4, msg_size)
+        return cls._cache[key]
+
+    def __repr__(self) -> str:
+        return f'OpenContext(afi={self.afi}, safi={self.safi}, addpath={self.addpath}, asn4={self.asn4}, msg_size={self.msg_size})'
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, OpenContext):
+            return False
+        return (
+            self.afi == other.afi
+            and self.safi == other.safi
+            and self.addpath == other.addpath
+            and self.asn4 == other.asn4
+            and self.msg_size == other.msg_size
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.afi, self.safi, self.addpath, self.asn4, self.msg_size))
 
 
 class Negotiated:
@@ -269,8 +301,8 @@ class Negotiated:
             return self.addpath.send(afi, safi)
 
     def nlri_context(self, afi: AFI, safi: SAFI) -> OpenContext:
-        """Build OpenContext for the given AFI/SAFI from negotiated state."""
-        return OpenContext(
+        """Build or retrieve cached OpenContext for the given AFI/SAFI."""
+        return OpenContext.make_open_context(
             afi=afi,
             safi=safi,
             addpath=self.required(afi, safi),

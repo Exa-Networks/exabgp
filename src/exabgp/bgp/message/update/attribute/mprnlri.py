@@ -288,7 +288,7 @@ class MPRNLRI(Attribute, Family):
 
 
 # Create empty MPRNLRI using factory method with default context
-_EMPTY_CONTEXT = OpenContext(
+_EMPTY_CONTEXT = OpenContext.make_open_context(
     afi=AFI.undefined,
     safi=SAFI.undefined,
     addpath=False,
