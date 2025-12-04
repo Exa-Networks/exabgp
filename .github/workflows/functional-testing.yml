@@ -45,11 +45,7 @@ jobs:
 
       - name: Functional
         run: |
-          # Get list of all test identifiers and run them sequentially
-          for test in $(uv run ./qa/bin/functional encoding --short-list); do
-            echo "Running test: $test"
-            uv run ./qa/bin/functional encoding "$test"
-          done
+          uv run ./qa/bin/functional encoding
 
       - name: Decoding
         run: |
