@@ -41,16 +41,16 @@ jobs:
 
       - name: Configuration
         run: |
-          ./qa/bin/functional parsing
+          uv run ./qa/bin/functional parsing
 
       - name: Functional
         run: |
           # Get list of all test identifiers and run them sequentially
-          for test in $(./qa/bin/functional encoding --short-list); do
+          for test in $(uv run ./qa/bin/functional encoding --short-list); do
             echo "Running test: $test"
-            ./qa/bin/functional encoding "$test"
+            uv run ./qa/bin/functional encoding "$test"
           done
 
       - name: Decoding
         run: |
-          ./qa/bin/functional decoding
+          uv run ./qa/bin/functional decoding

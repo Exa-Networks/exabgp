@@ -42,7 +42,7 @@ jobs:
       - name: Type ignore regression check (BLOCKING)
         run: |
           echo "Checking type:ignore count against baseline..."
-          ./qa/bin/check_type_ignores
+          uv run ./qa/bin/check_type_ignores
 
       - name: Full codebase type check (informational)
         run: |
