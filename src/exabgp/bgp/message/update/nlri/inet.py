@@ -3,6 +3,68 @@
 Created by Thomas Mangin on 2014-06-27.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
+
+RFC References:
+===============
+
+RFC 4271 - A Border Gateway Protocol 4 (BGP-4)
+https://www.rfc-editor.org/rfc/rfc4271.html
+
+    Section 4.3 - UPDATE Message Format:
+    The base NLRI format for IPv4 unicast/multicast routes in the
+    UPDATE message NLRI field (after path attributes):
+
+        +---------------------------+
+        |   Length (1 octet)        |  <- Prefix length in BITS
+        +---------------------------+
+        |   Prefix (variable)       |  <- ceiling(Length/8) bytes
+        +---------------------------+
+
+    Multiple NLRI can be packed consecutively in the UPDATE.
+
+RFC 4760 - Multiprotocol Extensions for BGP-4
+https://www.rfc-editor.org/rfc/rfc4760.html
+
+    Enables BGP to carry routing information for multiple address families.
+    Uses MP_REACH_NLRI (type 14) and MP_UNREACH_NLRI (type 15) attributes.
+
+    Key AFI/SAFI values for INET:
+        AFI 1 (IPv4), SAFI 1 (unicast)  - IPv4 unicast
+        AFI 1 (IPv4), SAFI 2 (multicast) - IPv4 multicast
+        AFI 2 (IPv6), SAFI 1 (unicast)  - IPv6 unicast
+        AFI 2 (IPv6), SAFI 2 (multicast) - IPv6 multicast
+
+RFC 7911 - Advertisement of Multiple Paths in BGP (ADD-PATH)
+https://www.rfc-editor.org/rfc/rfc7911.html
+
+    Adds a 4-byte Path Identifier before each NLRI to allow
+    advertising multiple paths for the same prefix:
+
+        +---------------------------+
+        |   Path ID (4 octets)      |  <- Only if ADD-PATH negotiated
+        +---------------------------+
+        |   Length (1 octet)        |
+        +---------------------------+
+        |   Prefix (variable)       |
+        +---------------------------+
+
+Wire Format (_packed):
+=====================
+    This class stores ONLY the NLRI payload bytes (not BGP message framing).
+
+    _packed stores: [mask_byte][truncated_ip_bytes...]
+    - This is the CIDR portion only (same as CIDR class)
+    - path_info, nexthop stored separately (not in _packed)
+    - labels, rd are None for base INET (subclasses override)
+
+    Note: path_info (ADD-PATH) is parsed separately during unpack and
+    stored in self.path_info. It is NOT included in _packed.
+
+Class Hierarchy:
+===============
+    INET (this class) - base for unicast/multicast
+      └── Label (label.py) - adds MPLS label stack (RFC 3107)
+            └── IPVPN (ipvpn.py) - adds Route Distinguisher (RFC 4364)
 """
 
 from __future__ import annotations

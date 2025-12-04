@@ -3,6 +3,54 @@
 Created by Thomas Mangin on 2013-08-07.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
+
+RFC References:
+===============
+
+RFC 4271 - A Border Gateway Protocol 4 (BGP-4)
+https://www.rfc-editor.org/rfc/rfc4271.html
+
+    Section 4.3 - UPDATE Message Format:
+    NLRI (Network Layer Reachability Information) is encoded as
+    <length, prefix> tuples:
+
+        +---------------------------+
+        |   Length (1 octet)        |  <- Prefix length in BITS (0-32 for IPv4, 0-128 for IPv6)
+        +---------------------------+
+        |   Prefix (variable)       |  <- Minimum octets to hold Length bits, padded to byte boundary
+        +---------------------------+
+
+    "The Prefix field contains an IP address prefix, followed by the
+     minimum number of trailing bits needed to make the end of the
+     field fall on an octet boundary."
+
+    Examples:
+        /0   -> 1 byte:  [0x00]                        (0 prefix bytes)
+        /8   -> 2 bytes: [0x08][first octet]           (1 prefix byte)
+        /24  -> 4 bytes: [0x18][3 octets]              (3 prefix bytes)
+        /32  -> 5 bytes: [0x20][4 octets]              (4 prefix bytes, full IPv4)
+        /128 -> 17 bytes: [0x80][16 octets]            (16 prefix bytes, full IPv6)
+
+RFC 4760 - Multiprotocol Extensions for BGP-4
+https://www.rfc-editor.org/rfc/rfc4760.html
+
+    Extends NLRI encoding to support multiple address families via
+    MP_REACH_NLRI (type 14) and MP_UNREACH_NLRI (type 15) path attributes.
+    The NLRI encoding within these attributes uses the same <length, prefix>
+    format as RFC 4271.
+
+Wire Format (_packed):
+=====================
+    This class stores ONLY the NLRI payload bytes (not BGP message framing).
+
+    _packed stores: [mask_byte][truncated_ip_bytes...]
+    - mask_byte: prefix length in bits (0-128)
+    - truncated_ip_bytes: ceiling(mask/8) bytes of the IP address
+
+    The trailing bits in the last byte (if mask % 8 != 0) are irrelevant
+    per RFC 4271 and should be zero for cleanliness.
+
+    Note: This is the raw prefix encoding, not wrapped in any TLV structure.
 """
 
 from __future__ import annotations

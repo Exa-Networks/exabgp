@@ -598,5 +598,301 @@ class TestIPVPNMultipleRoutes:
         assert unpacked_routes[2].labels.labels[0] == 300
 
 
+class TestIPVPNFromCidrEdgeCases:
+    """Test edge cases for IPVPN.from_cidr factory method (Wave 6 refactoring scenarios)
+
+    These tests verify behavior when IPVPN is created via from_cidr with
+    default labels (NOLABEL) and rd (NORD), then optionally modified.
+    """
+
+    def test_from_cidr_defaults_no_labels_no_rd(self) -> None:
+        """Test from_cidr creates IPVPN with NOLABEL and NORD by default"""
+        cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
+        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
+
+        assert nlri.labels == Labels.NOLABEL
+        assert nlri.rd == RouteDistinguisher.NORD
+        assert nlri.cidr.prefix() == '192.168.1.0/24'
+
+    def test_from_cidr_then_set_rd_only(self) -> None:
+        """Test from_cidr then setting RD (no labels)"""
+        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
+        nlri.rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
+
+        assert nlri.labels == Labels.NOLABEL
+        assert nlri.rd._str() == '10.0.0.1:100'
+        assert nlri.cidr.prefix() == '10.0.0.0/24'
+
+    def test_from_cidr_then_set_labels_only(self) -> None:
+        """Test from_cidr then setting labels (no RD)"""
+        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
+        nlri.labels = Labels.make_labels([42], True)
+
+        assert nlri.labels.labels == [42]
+        assert nlri.rd == RouteDistinguisher.NORD
+        assert nlri.cidr.prefix() == '10.0.0.0/24'
+
+    def test_from_cidr_set_rd_before_labels(self) -> None:
+        """Test from_cidr with RD set BEFORE labels (config parser order)
+
+        The configuration parser often sets RD before labels. Verify this
+        order works correctly.
+        """
+        cidr = CIDR.make_cidr(IP.pton('192.168.0.0'), 16)
+        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
+
+        # Set RD first (like config parser does)
+        nlri.rd = RouteDistinguisher.make_from_elements('172.16.0.1', 50)
+        assert nlri.rd._str() == '172.16.0.1:50'
+        assert nlri.cidr.prefix() == '192.168.0.0/16'
+
+        # Then set labels
+        nlri.labels = Labels.make_labels([100, 200], True)
+        assert nlri.labels.labels == [100, 200]
+        assert nlri.rd._str() == '172.16.0.1:50'  # RD should be preserved
+        assert nlri.cidr.prefix() == '192.168.0.0/16'  # CIDR should be preserved
+
+    def test_from_cidr_set_labels_before_rd(self) -> None:
+        """Test from_cidr with labels set BEFORE RD"""
+        cidr = CIDR.make_cidr(IP.pton('192.168.0.0'), 16)
+        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
+
+        # Set labels first
+        nlri.labels = Labels.make_labels([100], True)
+        assert nlri.labels.labels == [100]
+
+        # Then set RD
+        nlri.rd = RouteDistinguisher.make_from_elements('172.16.0.1', 50)
+        assert nlri.labels.labels == [100]  # Labels should be preserved
+        assert nlri.rd._str() == '172.16.0.1:50'
+        assert nlri.cidr.prefix() == '192.168.0.0/16'
+
+
+class TestIPVPNZeroPrefixEdgeCases:
+    """Test /0 prefix edge cases (default route scenarios)"""
+
+    def test_ipv4_zero_prefix_with_labels_and_rd(self) -> None:
+        """Test IPv4 /0 prefix with labels and RD - roundtrip"""
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv4,
+            SAFI.mpls_vpn,
+            IP.pton('0.0.0.0'),
+            0,
+            Labels.make_labels([999], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 1),
+        )
+
+        # Verify creation
+        assert nlri.cidr.mask == 0
+        assert nlri.labels.labels == [999]
+        assert nlri.rd._str() == '10.0.0.1:1'
+
+        # Pack and unpack
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, leftover = IPVPN.unpack_nlri(
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
+
+        assert len(leftover) == 0
+        assert unpacked.cidr.mask == 0
+        assert unpacked.labels.labels == [999]
+        assert unpacked.rd._str() == '10.0.0.1:1'
+
+    def test_ipv6_zero_prefix_with_labels_and_rd(self) -> None:
+        """Test IPv6 /0 prefix with labels and RD - roundtrip"""
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv6,
+            SAFI.mpls_vpn,
+            IP.pton('::'),
+            0,
+            Labels.make_labels([888], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 2),
+        )
+
+        assert nlri.cidr.mask == 0
+        assert nlri.labels.labels == [888]
+
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, leftover = IPVPN.unpack_nlri(
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
+
+        assert len(leftover) == 0
+        assert unpacked.cidr.mask == 0
+        assert unpacked.labels.labels == [888]
+
+
+class TestIPVPNIPv6MaskEdgeCases:
+    """Test IPv6 IPVPN with various mask values (mask <= 128 detection edge cases)"""
+
+    def test_ipv6_small_prefix_with_labels_mask_lte_128(self) -> None:
+        """Test IPv6 IPVPN with /32 prefix (mask = 24 + 64 + 32 = 120 <= 128)
+
+        This is an edge case where the total length in bits (labels + RD + prefix)
+        is <= 128, which could confuse label detection logic.
+        """
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv6,
+            SAFI.mpls_vpn,
+            IP.pton('2001:db8::'),
+            32,  # Small IPv6 prefix
+            Labels.make_labels([100], True),  # 1 label = 24 bits
+            RouteDistinguisher.make_from_elements('10.0.0.1', 200),  # RD = 64 bits
+        )
+        # Total: 24 + 64 + 32 = 120 bits <= 128
+
+        assert nlri.cidr.mask == 32
+        assert nlri.labels.labels == [100]
+        assert nlri.rd._str() == '10.0.0.1:200'
+
+        # Roundtrip test
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, _ = IPVPN.unpack_nlri(
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
+
+        assert unpacked.cidr.mask == 32
+        assert unpacked.labels.labels == [100]
+        assert '2001:db8::' in unpacked.cidr.prefix()
+
+    def test_ipv6_prefix_exactly_128_total_bits(self) -> None:
+        """Test IPv6 IPVPN where total bits = exactly 128
+
+        This edge case: 24 (1 label) + 64 (RD) + 40 (prefix) = 128 bits
+        """
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv6,
+            SAFI.mpls_vpn,
+            IP.pton('2001:db8:abcd::'),
+            40,  # /40 prefix
+            Labels.make_labels([50], True),  # 1 label = 24 bits
+            RouteDistinguisher.make_from_elements('10.0.0.1', 1),  # RD = 64 bits
+        )
+        # Total: 24 + 64 + 40 = 128 bits
+
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, _ = IPVPN.unpack_nlri(
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
+
+        assert unpacked.cidr.mask == 40
+        assert unpacked.labels.labels == [50]
+
+    def test_ipv6_prefix_over_128_total_bits(self) -> None:
+        """Test IPv6 IPVPN where total bits > 128
+
+        This edge case: 24 (1 label) + 64 (RD) + 64 (prefix) = 152 bits
+        """
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv6,
+            SAFI.mpls_vpn,
+            IP.pton('2001:db8:abcd:1234::'),
+            64,  # /64 prefix
+            Labels.make_labels([75], True),  # 1 label = 24 bits
+            RouteDistinguisher.make_from_elements('10.0.0.1', 1),  # RD = 64 bits
+        )
+        # Total: 24 + 64 + 64 = 152 bits
+
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, _ = IPVPN.unpack_nlri(
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
+
+        assert unpacked.cidr.mask == 64
+        assert unpacked.labels.labels == [75]
+
+
+class TestIPVPNRDTypeVariants:
+    """Test Route Distinguisher type variants (Type 0, 1, 2)"""
+
+    def test_rd_type_0_asn2(self) -> None:
+        """Test RD Type 0 (2-byte ASN:4-byte value)"""
+        # Type 0: ASN:value format with 2-byte ASN (prefix as string)
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv4,
+            SAFI.mpls_vpn,
+            IP.pton('10.0.0.0'),
+            24,
+            Labels.make_labels([100], True),
+            RouteDistinguisher.make_from_elements('65000', 12345),  # ASN:value (string prefix)
+        )
+
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, _ = IPVPN.unpack_nlri(
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
+
+        assert unpacked.rd._str() == '65000:12345'
+
+    def test_rd_type_1_ip(self) -> None:
+        """Test RD Type 1 (IP:value format)"""
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv4,
+            SAFI.mpls_vpn,
+            IP.pton('10.0.0.0'),
+            24,
+            Labels.make_labels([100], True),
+            RouteDistinguisher.make_from_elements('192.168.1.1', 100),  # IP:value
+        )
+
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, _ = IPVPN.unpack_nlri(
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
+
+        assert unpacked.rd._str() == '192.168.1.1:100'
+
+
+class TestIPVPNMultipleLabelEdgeCases:
+    """Test IPVPN with multiple MPLS labels in the stack"""
+
+    def test_maximum_typical_label_stack(self) -> None:
+        """Test with 3 labels (common maximum for MPLS VPN)"""
+        nlri = IPVPN.make_vpn_route(
+            AFI.ipv4,
+            SAFI.mpls_vpn,
+            IP.pton('10.0.0.0'),
+            24,
+            Labels.make_labels([100, 200, 300], True),  # 3 labels = 72 bits
+            RouteDistinguisher.make_from_elements('10.0.0.1', 1),
+        )
+
+        packed = nlri.pack_nlri(create_negotiated())
+        unpacked, _ = IPVPN.unpack_nlri(
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+        )
+
+        assert len(unpacked.labels.labels) == 3
+        assert unpacked.labels.labels == [100, 200, 300]
+        assert unpacked.cidr.prefix() == '10.0.0.0/24'
+
+    def test_single_label_vs_no_labels(self) -> None:
+        """Compare behavior of NOLABEL vs single label"""
+        # With NOLABEL
+        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        nlri_no_label = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
+        nlri_no_label.rd = RouteDistinguisher.make_from_elements('10.0.0.1', 1)
+
+        # With single label
+        nlri_with_label = IPVPN.make_vpn_route(
+            AFI.ipv4,
+            SAFI.mpls_vpn,
+            IP.pton('10.0.0.0'),
+            24,
+            Labels.make_labels([42], True),
+            RouteDistinguisher.make_from_elements('10.0.0.1', 1),
+        )
+
+        # Both should have same RD and CIDR
+        assert nlri_no_label.rd._str() == nlri_with_label.rd._str()
+        assert nlri_no_label.cidr.prefix() == nlri_with_label.cidr.prefix()
+
+        # But different labels
+        assert nlri_no_label.labels == Labels.NOLABEL
+        assert nlri_with_label.labels.labels == [42]
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
