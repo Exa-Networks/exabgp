@@ -89,10 +89,10 @@ if TYPE_CHECKING:
 ### Testing After Phase 1
 ```bash
 # Lint check
-ruff format src/exabgp/reactor && ruff check src/exabgp/reactor
+uv run ruff format src/exabgp/reactor && uv run ruff check src/exabgp/reactor
 
 # Unit tests
-env exabgp_log_enable=false pytest ./tests/unit/
+env exabgp_log_enable=false uv run pytest ./tests/unit/
 
 # Quick functional test
 ./qa/bin/functional encoding A
@@ -137,8 +137,8 @@ from exabgp.reactor.protocol import NOP
 ### Testing After Phase 2 ✅
 ```bash
 # All tests PASSED
-ruff format src/exabgp/reactor && ruff check src/exabgp/reactor  # PASS (1 file reformatted)
-env exabgp_log_enable=false pytest ./tests/unit/  # PASS (1376/1376)
+uv run ruff format src/exabgp/reactor && uv run ruff check src/exabgp/reactor  # PASS (1 file reformatted)
+env exabgp_log_enable=false uv run pytest ./tests/unit/  # PASS (1376/1376)
 ./qa/bin/functional encoding A  # PASS
 ```
 
@@ -170,8 +170,8 @@ from exabgp.bgp.message import Open, Operational
 ### Testing After Phase 3 ✅
 ```bash
 # All tests PASSED
-ruff format src/exabgp/reactor/api src/exabgp/bgp/message && ruff check src  # PASS (no changes)
-env exabgp_log_enable=false pytest ./tests/unit/  # PASS (1376/1376)
+uv run ruff format src/exabgp/reactor/api src/exabgp/bgp/message && uv run ruff check src  # PASS (no changes)
+env exabgp_log_enable=false uv run pytest ./tests/unit/  # PASS (1376/1376)
 ./qa/bin/functional encoding B  # PASS
 ```
 
@@ -219,8 +219,8 @@ env exabgp_log_enable=false pytest ./tests/unit/  # PASS (1376/1376)
 ### Testing After Phase 4 ✅
 ```bash
 # All tests PASSED
-ruff check src/exabgp/bgp/neighbor.py  # PASS
-env exabgp_log_enable=false pytest ./tests/unit/  # PASS (1376/1376)
+uv run ruff check src/exabgp/bgp/neighbor.py  # PASS
+env exabgp_log_enable=false uv run pytest ./tests/unit/  # PASS (1376/1376)
 ```
 
 ---
@@ -257,8 +257,8 @@ def register(cls) -> Callable[[Type[T]], Type[T]]:
 
 ### Testing After Phase 5
 ```bash
-ruff format src && ruff check src
-env exabgp_log_enable=false pytest ./tests/unit/
+uv run ruff format src && uv run ruff check src
+env exabgp_log_enable=false uv run pytest ./tests/unit/
 ```
 
 ---
@@ -297,8 +297,8 @@ from exabgp.environment import Env
 
 ### Testing After Phase 6
 ```bash
-ruff format src/exabgp/logger && ruff check src/exabgp/logger
-env exabgp_log_enable=false pytest ./tests/unit/
+uv run ruff format src/exabgp/logger && uv run ruff check src/exabgp/logger
+env exabgp_log_enable=false uv run pytest ./tests/unit/
 ```
 
 ---
@@ -343,8 +343,8 @@ Update:
 
 ### Testing After Phase 7
 ```bash
-ruff format src/exabgp/bgp/message/update/nlri && ruff check src
-env exabgp_log_enable=false pytest ./tests/unit/test_flow*.py
+uv run ruff format src/exabgp/bgp/message/update/nlri && uv run ruff check src
+env exabgp_log_enable=false uv run pytest ./tests/unit/test_flow*.py -v
 ./qa/bin/functional encoding | grep -i flow
 ```
 
@@ -373,8 +373,8 @@ env exabgp_log_enable=false pytest ./tests/unit/test_flow*.py
 
 ### Testing After Phase 8
 ```bash
-ruff format src && ruff check src
-env exabgp_log_enable=false pytest ./tests/unit/
+uv run ruff format src && uv run ruff check src
+env exabgp_log_enable=false uv run pytest ./tests/unit/
 ./qa/bin/functional encoding
 ```
 
@@ -411,19 +411,19 @@ These uses of `Any` are appropriate and should remain:
 ### After Each File Edit
 ```bash
 # Quick syntax check
-ruff check <file>
+uv run ruff check <file>
 
 # Format
-ruff format <file>
+uv run ruff format <file>
 ```
 
 ### After Each Phase
 ```bash
 # 1. Lint the affected directory/files
-ruff format src && ruff check src
+uv run ruff format src && uv run ruff check src
 
 # 2. Run unit tests
-env exabgp_log_enable=false pytest ./tests/unit/
+env exabgp_log_enable=false uv run pytest ./tests/unit/
 
 # 3. Run relevant functional tests
 ./qa/bin/functional encoding
@@ -435,8 +435,8 @@ env exabgp_log_enable=false pytest ./tests/unit/
 ### Before Completion
 ```bash
 # Full test suite
-ruff format src && ruff check src
-env exabgp_log_enable=false pytest --cov ./tests/unit/
+uv run ruff format src && uv run ruff check src
+env exabgp_log_enable=false uv run pytest --cov ./tests/unit/
 ./qa/bin/functional encoding
 ./qa/bin/parsing
 ```

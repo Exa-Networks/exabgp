@@ -65,14 +65,14 @@ Comprehensive improvements to ExaBGP's testing infrastructure including function
 
 ```bash
 # Unit tests
-env exabgp_log_enable=false pytest ./tests/unit/
+env exabgp_log_enable=false uv run pytest ./tests/unit/
 
 # Functional tests
 ./qa/bin/functional encoding
 ./qa/bin/functional decoding
 
 # Linting
-ruff format src && ruff check src
+uv run ruff format src && uv run ruff check src
 ```
 
 ## Related Work

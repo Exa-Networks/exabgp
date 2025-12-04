@@ -538,20 +538,19 @@ class TestRouteType:
 
 2. **Install test dependencies** (if needed):
    ```bash
-   pip install -e .
-   pip install pytest pytest-cov hypothesis pytest-benchmark pytest-xdist pytest-timeout psutil
+   uv sync
    ```
 
 3. **Run existing tests**:
    ```bash
    # All non-fuzz tests
-   python -m pytest tests/ -m "not fuzz" -v
+   uv run pytest tests/ -m "not fuzz" -v
 
    # Coverage for specific module (e.g., EVPN)
-   python -m pytest tests/ --cov=src/exabgp/bgp/message/update/nlri/evpn --cov-report=term-missing
+   uv run pytest tests/ --cov=src/exabgp/bgp/message/update/nlri/evpn --cov-report=term-missing
 
    # Full coverage report
-   python -m pytest tests/ -m "not fuzz" --cov=exabgp --cov-report=term-missing | tail -150
+   uv run pytest tests/ -m "not fuzz" --cov=exabgp --cov-report=term-missing | tail -150
    ```
 
 4. **Start next module** (MUP recommended):

@@ -188,15 +188,10 @@ def example2(neighbor: Optional['Neighbor']) -> None:
    grep -r "def.*|.*:" src/exabgp/
    ```
 
-3. **Run tests with Python 3.8 (if available)**
+3. **Always run full test suite**
    ```bash
-   python3.8 -m pytest ./tests/unit/
-   ```
-
-4. **Always run full test suite**
-   ```bash
-   ruff format src && ruff check src
-   env exabgp_log_enable=false pytest ./tests/unit/
+   uv run ruff format src && uv run ruff check src
+   env exabgp_log_enable=false uv run pytest ./tests/unit/
    ./qa/bin/functional encoding
    ```
 

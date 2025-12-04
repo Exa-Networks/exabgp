@@ -97,16 +97,16 @@ After each change:
 
 ```bash
 # Quick check
-ruff check <file>
+uv run ruff check <file>
 
 # After each phase
-ruff format src && ruff check src
-env exabgp_log_enable=false pytest ./tests/unit/
+uv run ruff format src && uv run ruff check src
+env exabgp_log_enable=false uv run pytest ./tests/unit/
 ./qa/bin/functional encoding
 
 # Full validation before completion
-ruff format src && ruff check src
-env exabgp_log_enable=false pytest --cov ./tests/unit/
+uv run ruff format src && uv run ruff check src
+env exabgp_log_enable=false uv run pytest --cov ./tests/unit/
 ./qa/bin/functional encoding
 ./qa/bin/parsing
 ```

@@ -233,7 +233,7 @@ uv run pytest tests/unit/path/to/test.py -v  # Should FAIL
 
 **Linting:**
 ```bash
-ruff format src && ruff check src  # Must pass
+uv run ruff format src && uv run ruff check src  # Must pass
 ```
 
 **See:** CODING_STANDARDS.md for complete standards

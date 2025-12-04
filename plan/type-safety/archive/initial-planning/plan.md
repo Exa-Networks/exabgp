@@ -592,13 +592,13 @@ class FSM:
 ### After Each Commit
 ```bash
 # Linting
-ruff format && ruff check
+uv run ruff format && uv run ruff check
 
 # Unit tests
-env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py
+env exabgp_log_enable=false uv run pytest --cov --cov-reset ./tests/*_test.py
 
 # Type checking (incremental)
-mypy src/exabgp/
+uv run mypy src/exabgp/
 ```
 
 ### After Each Phase
@@ -615,11 +615,11 @@ killall -9 Python  # macOS uses capital P
 ### Before Sprint Complete
 ```bash
 # Full CI/CD validation
-ruff format && ruff check
-env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py
+uv run ruff format && uv run ruff check
+env exabgp_log_enable=false uv run pytest --cov --cov-reset ./tests/*_test.py
 ./qa/bin/parsing
 ./qa/bin/functional encoding
-mypy src/exabgp/
+uv run mypy src/exabgp/
 ```
 
 ---
