@@ -65,7 +65,7 @@
 - `plan/packed-attribute.md` - Packed-bytes-first refactoring waves
 - `plan/coverage.md` - Test coverage audit
 - `plan/type-annotations/` - Type annotation detailed plans
-- `plan/xxx-cleanup/` - XXX comment cleanup (Phases 4-5 pending)
+- `plan/comment-cleanup/` - XXX comment cleanup (✅ Complete)
 
 ### Completed Projects (`.claude/docs/projects/` - 50+ files)
 

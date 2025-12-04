@@ -2,7 +2,7 @@
 
 **Status:** 📋 Planning (low priority)
 **Priority:** Low
-**See also:** `type-safety/`, `xxx-cleanup/`
+**See also:** `type-safety/`, `comment-cleanup/`
 
 ## Goal
 

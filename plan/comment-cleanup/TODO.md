@@ -1,6 +1,6 @@
 # XXX Comment Cleanup - TODO
 
-**Status:** Partial - Phase 1-3 complete, 2 resolved + 1 reopened during audit
+**Status:** ✅ COMPLETE - All phases resolved
 **Started:** 2025-11-25
 **Updated:** 2025-12-04
 
@@ -101,35 +101,34 @@
 - **Action:** Make CODE non-instantiable, update usages
 
 ### 4.3 VPLS signature alignment
-- **File:** `src/exabgp/bgp/message/update/nlri/vpls.py:71-107`
-- **Status:** REOPENED - XXX removed but issue persists
-- **Issue:** `make_vpls()` missing `action` and `addpath` params that other NLRIs have (INET, IPVPN, EVPN, Flow)
-- **Action:** Add `action: Action = Action.ANNOUNCE` and `addpath: PathInfo = PathInfo.DISABLED` to `make_vpls()`
+- **File:** `src/exabgp/bgp/message/update/nlri/vpls.py:73-105`
+- **Status:** ✅ RESOLVED - `make_vpls()` has `action` and `addpath` params
+- **Also:** `make_empty()` factory method added with same params (lines 107-125)
 
 ### 4.4 TrafficNextHopSimpson inheritance
-- **File:** `src/exabgp/bgp/message/update/attribute/community/extended/traffic.py:277`
-- **Status:** Pending
-- **Action:** Make subclass of NextHop or IP
+- **File:** `src/exabgp/bgp/message/update/attribute/community/extended/traffic.py:282-304`
+- **Status:** ✅ RESOLVED - No change needed
+- **Analysis:** Current design is correct. TrafficNextHopSimpson is an ExtendedCommunity (not NextHop/IP) because it doesn't contain an IP address - it only signals "use the UPDATE's existing NextHop" with a copy flag. Inheriting from NextHop or IP would be semantically wrong.
 
 ---
 
-## Phase 5: Investigation Required - NOT STARTED
+## Phase 5: Investigation Required - ✅ COMPLETE
 
 ### 5.1 VPLS unique key
-- **File:** `src/exabgp/bgp/message/update/nlri/vpls.py:218-219`
-- **Status:** Pending investigation
+- **File:** `src/exabgp/bgp/message/update/nlri/vpls.py:237-240`
+- **Status:** ✅ RESOLVED - XXX removed, unique key = all fields (rd, endpoint, base, offset, size) documented
 
 ### 5.2 RTC variable length prefixing
-- **File:** `src/exabgp/bgp/message/update/nlri/rtc.py:37`
-- **Status:** Pending investigation
+- **File:** `src/exabgp/bgp/message/update/nlri/rtc.py:30-38`
+- **Status:** ✅ RESOLVED - XXX removed, limitation documented in docstring (RFC 4684 prefix filtering not implemented)
 
 ### 5.3 EVPN MAC index
-- **File:** `src/exabgp/bgp/message/update/nlri/evpn/mac.py:132`
-- **Status:** Pending investigation
+- **File:** `src/exabgp/bgp/message/update/nlri/evpn/mac.py:132-138`
+- **Status:** ✅ RESOLVED - XXX removed, design documented: index() uses full bytes, __eq__() uses RFC key fields
 
 ### 5.4 SRCAP redundant parsing
-- **File:** `src/exabgp/bgp/message/update/attribute/bgpls/node/srcap.py:92`
-- **Status:** Pending investigation
+- **File:** `src/exabgp/bgp/message/update/attribute/bgpls/node/srcap.py:88-91`
+- **Status:** ✅ RESOLVED - XXX removed, offset calculation (7 = 3 range + 4 header) is correct, not redundant
 
 ### 5.5 PMSI length discrepancy
 - **File:** `src/exabgp/bgp/message/update/attribute/pmsi.py:90`
@@ -137,7 +136,7 @@
 
 ### 5.6 BGP-LS IGP tags LEN checks
 - **Files:** `igpextags.py:31`, `igptags.py:34`
-- **Status:** Pending investigation
+- **Status:** ✅ RESOLVED - XXX removed, cls.check(data) validates length, comments document expected format
 
 ---
 
@@ -152,6 +151,9 @@
 | 2025-11-25 | Phase 3 implementation | Caching init removed, comments clarified |
 | 2025-11-25 | All tests pass | Ready for commit |
 | 2025-12-04 | Validation audit | 2 resolved (4.1, 5.5), 4.3 reopened (make_vpls needs action/addpath), line numbers updated |
+| 2025-12-04 | Recheck 4.3 | 4.3 resolved - make_vpls() has action/addpath params |
+| 2025-12-04 | Investigate 4.4 | 4.4 resolved - current design correct, no inheritance change needed |
+| 2025-12-04 | Investigate Phase 5 | All 6 items resolved - XXX comments replaced with documentation in commit c948819c |
 
 ---
 

@@ -23,7 +23,7 @@ plan/
 │   ├── README.md
 │   └── *.md
 │
-├── xxx-cleanup/                 # XXX comment resolution
+├── comment-cleanup/             # XXX comment resolution (✅ Complete)
 │   ├── README.md
 │   └── TODO.md
 │

@@ -125,7 +125,7 @@ plan/                              # Project root
 ├── coverage.md                    # Test coverage audit
 ├── python312-buffer-protocol.md   # Future: Python 3.12 + memoryview
 ├── type-annotations/              # Type annotation detailed plans
-└── xxx-cleanup/                   # XXX comment cleanup
+└── comment-cleanup/               # XXX comment cleanup (✅ Complete)
 ```
 
 **Format:**

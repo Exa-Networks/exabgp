@@ -130,12 +130,12 @@ Migrate to Python 3.12+ and use `memoryview` for zero-copy parsing.
 
 ---
 
-### XXX Cleanup (Phases 4-5)
+### XXX Cleanup ✅
 
-**See:** `plan/xxx-cleanup/`
+**See:** `plan/comment-cleanup/`
 
-- [ ] Phase 4: API Design Issues
-- [ ] Phase 5: Investigation Required
+- [x] Phase 4: API Design Issues ✅
+- [x] Phase 5: Investigation Required ✅
 
 ---
 
@@ -155,7 +155,7 @@ All plans in `plan/` directory:
 | `architecture.md` | 📋 Planning | Circular dependency fixes |
 | `code-quality.md` | 📋 Planning | Misc improvements |
 | `family-tuple.md` | 📋 Planning | FamilyTuple type alias |
-| `xxx-cleanup/` | 🔄 Active | XXX comment resolution |
+| `comment-cleanup/` | ✅ Complete | XXX comment resolution |
 
 ---
 
