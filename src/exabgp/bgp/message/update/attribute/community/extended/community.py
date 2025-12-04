@@ -17,7 +17,9 @@ from exabgp.bgp.message.update.attribute import Attribute
 from struct import pack
 
 # ======================================================= ExtendedCommunity (16)
-# XXX: Should subclasses register with transitivity ?
+#
+# Subclasses register by (type, subtype) only - transitivity is a per-instance
+# property determined from wire bits at runtime via transitive(), per RFC 4360.
 
 
 class ExtendedCommunityBase(Attribute):

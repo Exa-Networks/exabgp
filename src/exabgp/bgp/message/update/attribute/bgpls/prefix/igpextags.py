@@ -28,7 +28,7 @@ class IgpExTags(BaseLS):
     TLV = 1154
     REPR = 'IGP Extended Route Tags'
     JSON = 'igp-extended-route-tags'
-    # XXX: can we find a LEN to check?
+    # Variable length: each extended tag is 8 bytes, length should be multiple of 8.
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> IgpExTags:

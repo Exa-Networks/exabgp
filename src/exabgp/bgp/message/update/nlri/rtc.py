@@ -32,9 +32,10 @@ class RTC(NLRI):
     Note: Full packed-bytes-first pattern cannot be applied because rt (RouteTarget)
     requires 'negotiated' for unpacking. Origin ASN is stored as packed bytes,
     but rt is stored as RouteTarget object.
-    """
 
-    # XXX: FIXME: no support yet for RTC variable length with prefixing
+    Limitation: RFC 4684 prefix-based RTC filtering (variable length with partial RT)
+    is not yet implemented - only full RTC constraints are supported.
+    """
 
     def __init__(
         self,

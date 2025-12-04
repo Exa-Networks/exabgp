@@ -298,7 +298,7 @@ class Attributes(dict):
     @staticmethod
     def flag_attribute_content(data: bytes) -> tuple[int, int, bytes]:
         flag = Attribute.Flag(data[0])
-        attr = Attribute.CODE(data[1])
+        attr = data[1]
 
         if flag & Attribute.Flag.EXTENDED_LENGTH:
             length = unpack('!H', data[2:4])[0]
@@ -313,7 +313,7 @@ class Attributes(dict):
         try:
             # We do not care if the attribute are transitive or not as we do not redistribute
             flag = Attribute.Flag(data[0])
-            aid = Attribute.CODE(data[1])
+            aid = data[1]
         except IndexError:
             self.add(TreatAsWithdraw())
             return self
@@ -345,7 +345,7 @@ class Attributes(dict):
 
         if aid in self:
             if kls and kls.NO_DUPLICATE:
-                raise Notify(3, 1, 'multiple attribute for {}'.format(str(Attribute.CODE(aid))))
+                raise Notify(3, 1, 'multiple attribute for {}'.format(Attribute.CODE.name(aid)))
 
             log.debug(
                 lazymsg(

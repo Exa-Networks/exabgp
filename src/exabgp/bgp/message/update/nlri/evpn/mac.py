@@ -129,8 +129,11 @@ class MAC(EVPN):
         label_start = 30 + iplen_bytes
         return Labels.unpack_labels(self._packed[label_start : label_start + 3])
 
-    # XXX: we have to ignore a part of the route
     def index(self) -> bytes:
+        # Note: Per RFC 7432 Section 7.2, the route key for Type 2 should only include
+        # etag, mac, and ip (ESI and labels are attributes, not key). However, this
+        # implementation uses full packed bytes for index. The __eq__ method correctly
+        # excludes ESI and label for semantic equality comparisons.
         return EVPN.index(self)
 
     def __eq__(self, other: object) -> bool:
