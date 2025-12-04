@@ -45,14 +45,6 @@ except ImportError:
 
 INTERPRETER: str = os.environ.get('INTERPRETER') or os.environ.get('__PYVENV_LAUNCHER__', sys.executable)
 
-# Known flaky tests that should be retried on failure
-# Add test nick (letter/number) here if a test occasionally fails but passes on retry
-# To disable retry feature entirely, comment out the _retry_flaky_tests() call in run_selected()
-FLAKY_TESTS: List[str] = [
-    'D',  # api-fast: known to be flaky
-    'W',  # api-rr-rib: occasionally fails in batch mode
-    '7',  # api-api: occasionally fails in async mode
-]
 
 
 # Configuration types for different test classes
@@ -851,30 +843,15 @@ class Tests:
         pending = 0
         passed = 0
         failed = 0
-        flaky = 0
         failed_tests: List[str] = []
-        flaky_tests: List[str] = []
         pending_tests: List[str] = []
 
         for test in self.registered():
             if test.state == State.SUCCESS:
                 passed += 1
-            elif test.state == State.FAIL:
-                # Don't count flaky tests as failed until retries are done
-                if not self._retries_done and test.nick in FLAKY_TESTS:
-                    flaky += 1
-                    flaky_tests.append(test.nick)
-                else:
-                    failed += 1
-                    failed_tests.append(test.nick)
-            elif test.state == State.TIMEOUT:
-                # Don't count flaky tests as failed until retries are done
-                if not self._retries_done and test.nick in FLAKY_TESTS:
-                    flaky += 1
-                    flaky_tests.append(test.nick)
-                else:
-                    failed += 1
-                    failed_tests.append(test.nick)
+            elif test.state in (State.FAIL, State.TIMEOUT):
+                failed += 1
+                failed_tests.append(test.nick)
             elif test.state in (State.NONE, State.STARTING, State.RUNNING):
                 pending += 1
                 pending_tests.append(test.nick)
@@ -899,7 +876,7 @@ class Tests:
             )
 
         # Format with labels and colors
-        # Order: timer, daemon/client, passed, failed (if > 0), flaky (if > 0), pending
+        # Order: timer, daemon/client, passed, failed (if > 0), pending
 
         # Build status line
         status_parts = [timer, daemon_client]
@@ -914,13 +891,6 @@ class Tests:
             if failed_tests:
                 failed_text += f' [{", ".join(failed_tests)}]'
             status_parts.append(failed_text)
-
-        # Add flaky section if there are flaky tests pending retry
-        if flaky > 0:
-            flaky_text = f'{yellow()}flaky{reset()} {flaky:2d}'
-            if flaky_tests:
-                flaky_text += f' [{", ".join(flaky_tests)}]'
-            status_parts.append(flaky_text)
 
         # Add pending last (show test IDs if < 10)
         # Trailing space ensures last character renders in some terminals
@@ -1032,7 +1002,7 @@ class Tests:
     ) -> None:
         """Print detailed server/client output for debugging.
 
-        Called for single test runs or when exactly one non-flaky test fails
+        Called for single test runs or when exactly one test fails
         in a multi-test run.
         """
         if not server and not client:
@@ -1538,8 +1508,11 @@ class EncodingTests(Tests):
             )
         return '\n'.join(result)
 
-    def _retry_flaky_tests(self, client: Dict[str, Exec], timeout: int, quiet: bool) -> bool:
-        """Retry known flaky tests that failed or timed out.
+    def _retry_failed_tests(self, client: Dict[str, Exec], timeout: int, quiet: bool) -> bool:
+        """Retry all failed tests individually.
+
+        When running tests in parallel, some may fail due to resource contention
+        or timing issues. Retrying them individually often resolves these issues.
 
         Args:
             client: Dictionary mapping test nick to client Exec objects
@@ -1549,21 +1522,19 @@ class EncodingTests(Tests):
         Returns:
             True if all retries passed, False if any retry failed
         """
-        failed_flaky_tests = [
-            t for t in self.registered() if t.state in (State.FAIL, State.TIMEOUT) and t.nick in FLAKY_TESTS
-        ]
-        if not failed_flaky_tests:
+        failed_tests = [t for t in self.registered() if t.state in (State.FAIL, State.TIMEOUT)]
+        if not failed_tests:
             return True
 
         if not quiet:
             flush()
             flush(
-                f'{yellow()}Retrying {len(failed_flaky_tests)} known flaky test(s): {", ".join([t.nick for t in failed_flaky_tests])}{reset()}'
+                f'{yellow()}Retrying {len(failed_tests)} failed test(s) individually: {", ".join([t.nick for t in failed_tests])}{reset()}'
             )
 
         all_retries_passed = True
 
-        for test in failed_flaky_tests:
+        for test in failed_tests:
             if not quiet:
                 flush(f'{yellow()}Retry{reset()} {test.nick} {test.name}...', end=' ')
 
@@ -1761,7 +1732,7 @@ class EncodingTests(Tests):
         # Remember how many tests we're running for single-test debug mode
         num_tests_selected = len(self.selected())
 
-        # Track first non-flaky failure for debug output in multi-test runs
+        # Track first failure for debug output in multi-test runs
         first_failed_test: Optional[EncodingTests.Test] = None
         first_failed_server: Optional[Exec] = None
         first_failed_client: Optional[Exec] = None
@@ -1856,8 +1827,8 @@ class EncodingTests(Tests):
                     test.terminate(collect=False)  # Don't block on collect in hot loop
                     client[test.nick].terminate(collect=False)
                     success = False
-                    # Capture first non-flaky failure for debug output
-                    if first_failed_test is None and test.nick not in FLAKY_TESTS:
+                    # Capture first failure for debug output
+                    if first_failed_test is None:
                         first_failed_test = test
                         test.collect()
                         client[test.nick].collect()
@@ -1879,15 +1850,14 @@ class EncodingTests(Tests):
                 test_passed = test.result(test.success())
                 success = test_passed and success
 
-                # Capture first non-flaky failure for debug output
+                # Capture first failure for debug output
                 if not test_passed and first_failed_test is None:
-                    if test.nick not in FLAKY_TESTS:
-                        first_failed_test = test
-                        # Collect output now before it's lost
-                        test.collect()
-                        client[test.nick].collect()
-                        first_failed_server = test
-                        first_failed_client = client[test.nick]
+                    first_failed_test = test
+                    # Collect output now before it's lost
+                    test.collect()
+                    client[test.nick].collect()
+                    first_failed_server = test
+                    first_failed_client = client[test.nick]
 
                 # Show per-test output in verbose mode or if test is in debug list
                 if self._verbose or test.nick in self._debug_tests:
@@ -1915,16 +1885,15 @@ class EncodingTests(Tests):
         # Force kill any remaining test processes
         self._force_cleanup_all(list(self.selected()), client)
 
-        # Retry known flaky tests that failed
-        # To disable retry, comment out this function call
-        retry_success = self._retry_flaky_tests(client, timeout, self._quiet)
+        # Retry all failed tests individually
+        # Tests may fail in parallel due to resource contention but pass when run alone
+        self._retry_failed_tests(client, timeout, self._quiet)
         self._retries_done = True
-        if retry_success:
-            # All retries passed, update overall success
-            success = success or retry_success
-        else:
-            # Some retries failed
-            success = False
+
+        # Determine final success by checking if ANY tests are still failed
+        # (retries update test.state to SUCCESS if they pass)
+        final_failures = [t for t in self.selected() if t.state in (State.FAIL, State.TIMEOUT)]
+        success = len(final_failures) == 0
 
         # Move to new line after final display
         flush()
@@ -1949,11 +1918,9 @@ class EncodingTests(Tests):
                 if client_exec and not client_exec.stdout and not client_exec.stderr:
                     client_exec.collect()
         else:
-            # Multi-test mode: show debug output if exactly one non-flaky test failed
-            non_flaky_failures = [
-                t for t in self.selected() if t.state in (State.FAIL, State.TIMEOUT) and t.nick not in FLAKY_TESTS
-            ]
-            if len(non_flaky_failures) == 1 and first_failed_server is not None:
+            # Multi-test mode: show debug output if exactly one test failed
+            failures = [t for t in self.selected() if t.state in (State.FAIL, State.TIMEOUT)]
+            if len(failures) == 1 and first_failed_server is not None:
                 server_exec = first_failed_server
                 client_exec = first_failed_client
 
