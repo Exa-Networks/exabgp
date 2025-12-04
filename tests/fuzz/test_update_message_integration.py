@@ -91,6 +91,43 @@ def create_negotiated_mock(families: Any = None, asn4: Any = False, msg_size: An
     return negotiated
 
 
+def create_inet_nlri(
+    prefix: str,
+    prefixlen: int,
+    action: Any,
+    afi: Any = None,
+    safi: Any = None,
+    nexthop: str | None = None,
+) -> Any:
+    """Helper to create INET NLRI using the new factory method pattern."""
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.protocol.ip import IP, IPv6
+    from exabgp.protocol.family import AFI as AFI_CLASS, SAFI as SAFI_CLASS
+
+    if afi is None:
+        afi = AFI_CLASS.ipv4
+    if safi is None:
+        safi = SAFI_CLASS.unicast
+
+    # Pack IP address
+    if afi == AFI_CLASS.ipv6:
+        packed = IPv6.create(prefix).pack_ip()
+    else:
+        packed = IP.pton(prefix)
+
+    cidr = CIDR.make_cidr(packed, prefixlen)
+    nlri = INET.from_cidr(cidr, afi, safi, action)
+
+    if nexthop:
+        if afi == AFI_CLASS.ipv6:
+            nlri.nexthop = IPv6.create(nexthop)
+        else:
+            nlri.nexthop = IP.create(nexthop)
+
+    return nlri
+
+
 # ==============================================================================
 # Phase 1: Message Packing Basics
 # ==============================================================================
@@ -103,19 +140,13 @@ def test_messages_packs_simple_ipv4_announcement() -> None:
     This tests the critical messages() method that was previously UNTESTED.
     """
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create a simple IPv4 route
-    nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
-    nlri.nexthop = IP.create('192.0.2.1')
+    # Create a simple IPv4 route using factory method
+    nlri = create_inet_nlri('10.0.0.0', 8, Action.ANNOUNCE, nexthop='192.0.2.1')
 
     # Create minimal attributes
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -146,18 +177,13 @@ def test_messages_packs_simple_ipv4_announcement() -> None:
 def test_messages_packs_ipv4_withdrawal() -> None:
     """Test that messages() generates valid UPDATE for IPv4 withdrawal."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create a withdrawal
-    nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
+    # Create a withdrawal using factory method
+    nlri = create_inet_nlri('10.0.0.0', 8, Action.WITHDRAW)
 
     attributes = Attributes()
 
@@ -197,18 +223,13 @@ def test_messages_handles_no_nlris() -> None:
 def test_messages_include_withdraw_flag() -> None:
     """Test that include_withdraw flag controls withdrawal inclusion."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create a withdrawal
-    nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
+    # Create a withdrawal using factory method
+    nlri = create_inet_nlri('10.0.0.0', 8, Action.WITHDRAW)
 
     attributes = Attributes()
     update = Update([nlri], attributes)
@@ -227,20 +248,15 @@ def test_messages_filters_by_negotiated_families() -> None:
     Only routes for negotiated families should be included.
     """
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
     from exabgp.protocol.family import AFI, SAFI
 
     # Only negotiate IPv4 unicast
     negotiated = create_negotiated_mock(families=[(AFI.ipv4, SAFI.unicast)])
 
-    # Create IPv4 route (should be included)
-    nlri_v4 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri_v4.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
-    nlri_v4.nexthop = IP.create('192.0.2.1')
+    # Create IPv4 route (should be included) using factory method
+    nlri_v4 = create_inet_nlri('10.0.0.0', 8, Action.ANNOUNCE, nexthop='192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
@@ -272,19 +288,13 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
     This validates data integrity through the full UPDATE cycle.
     """
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create original route
-    original_nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    original_nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
-    original_nlri.nexthop = IP.create('192.0.2.1')
+    # Create original route using factory method
+    original_nlri = create_inet_nlri('10.0.0.0', 8, Action.ANNOUNCE, nexthop='192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
@@ -320,18 +330,13 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
 def test_roundtrip_ipv4_withdrawal() -> None:
     """Test pack then unpack preserves IPv4 withdrawal data."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create withdrawal
-    nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    nlri.cidr = CIDR.make_cidr(IP.pton('192.168.0.0'), 16)
+    # Create withdrawal using factory method
+    nlri = create_inet_nlri('192.168.0.0', 16, Action.WITHDRAW)
 
     attributes = Attributes()
     update = Update([nlri], attributes)
@@ -354,21 +359,15 @@ def test_roundtrip_ipv4_withdrawal() -> None:
 def test_roundtrip_multiple_nlris() -> None:
     """Test pack then unpack preserves multiple NLRIs."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create multiple routes
+    # Create multiple routes using factory method
     nlris = []
     for prefix, prefixlen in [('10.0.0.0', 8), ('10.1.0.0', 16), ('10.2.0.0', 16)]:
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR.make_cidr(IP.pton(prefix), prefixlen)
-        nlri.nexthop = IP.create('192.0.2.1')
+        nlri = create_inet_nlri(prefix, prefixlen, Action.ANNOUNCE, nexthop='192.0.2.1')
         nlris.append(nlri)
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -399,19 +398,13 @@ def test_roundtrip_multiple_nlris() -> None:
 def test_roundtrip_with_multiple_attributes() -> None:
     """Test pack then unpack preserves multiple path attributes."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create route
-    nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
-    nlri.nexthop = IP.create('192.0.2.1')
+    # Create route using factory method
+    nlri = create_inet_nlri('10.0.0.0', 8, Action.ANNOUNCE, nexthop='192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
@@ -450,26 +443,17 @@ def test_roundtrip_with_multiple_attributes() -> None:
 def test_roundtrip_mixed_announce_withdraw() -> None:
     """Test pack then unpack preserves mixed announcements and withdrawals."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create withdrawals
-    withdraw1 = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    withdraw1.cidr = CIDR.make_cidr(IP.pton('172.16.0.0'), 12)
+    # Create withdrawals using factory method
+    withdraw1 = create_inet_nlri('172.16.0.0', 12, Action.WITHDRAW)
+    withdraw2 = create_inet_nlri('192.168.0.0', 16, Action.WITHDRAW)
 
-    withdraw2 = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    withdraw2.cidr = CIDR.make_cidr(IP.pton('192.168.0.0'), 16)
-
-    # Create announcements
-    announce1 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    announce1.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
-    announce1.nexthop = IP.create('192.0.2.1')
+    # Create announcements using factory method
+    announce1 = create_inet_nlri('10.0.0.0', 8, Action.ANNOUNCE, nexthop='192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
@@ -512,20 +496,15 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
     IPv6 routes should be packed using multiprotocol extensions.
     """
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IPv6
     from exabgp.protocol.family import AFI, SAFI
 
     # Negotiate IPv6 unicast
     negotiated = create_negotiated_mock(families=[(AFI.ipv6, SAFI.unicast)])
 
-    # Create IPv6 route
-    nlri = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR.make_cidr(IPv6.create('2001:db8::').pack_ip(), 32)
-    nlri.nexthop = IPv6.create('2001:db8::1')
+    # Create IPv6 route using factory method
+    nlri = create_inet_nlri('2001:db8::', 32, Action.ANNOUNCE, afi=AFI.ipv6, nexthop='2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
@@ -548,19 +527,14 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
 def test_roundtrip_ipv6_announcement() -> None:
     """Test pack then unpack preserves IPv6 announcement via MP_REACH."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IPv6
     from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock(families=[(AFI.ipv6, SAFI.unicast)])
 
-    # Create IPv6 route
-    nlri = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR.make_cidr(IPv6.create('2001:db8::').pack_ip(), 32)
-    nlri.nexthop = IPv6.create('2001:db8::1')
+    # Create IPv6 route using factory method
+    nlri = create_inet_nlri('2001:db8::', 32, Action.ANNOUNCE, afi=AFI.ipv6, nexthop='2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
@@ -593,11 +567,8 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
     Should generate messages with both standard NLRI and MP extensions.
     """
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP, IPv6
     from exabgp.protocol.family import AFI, SAFI
 
     # Negotiate both families
@@ -608,15 +579,11 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
         ]
     )
 
-    # Create IPv4 route
-    nlri_v4 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri_v4.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
-    nlri_v4.nexthop = IP.create('192.0.2.1')
+    # Create IPv4 route using factory method
+    nlri_v4 = create_inet_nlri('10.0.0.0', 8, Action.ANNOUNCE, nexthop='192.0.2.1')
 
-    # Create IPv6 route
-    nlri_v6 = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    nlri_v6.cidr = CIDR.make_cidr(IPv6.create('2001:db8::').pack_ip(), 32)
-    nlri_v6.nexthop = IPv6.create('2001:db8::1')
+    # Create IPv6 route using factory method
+    nlri_v6 = create_inet_nlri('2001:db8::', 32, Action.ANNOUNCE, afi=AFI.ipv6, nexthop='2001:db8::1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
@@ -648,21 +615,15 @@ def test_messages_splits_large_nlri_set() -> None:
     When NLRIs exceed message size limit, should generate multiple messages.
     """
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock(msg_size=1024)  # Small message size
 
-    # Create many routes
+    # Create many routes using factory method
     nlris = []
     for i in range(100):  # 100 routes
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR.make_cidr(IP.pton(f'10.{i % 256}.0.0'), 16)
-        nlri.nexthop = IP.create('192.0.2.1')
+        nlri = create_inet_nlri(f'10.{i % 256}.0.0', 16, Action.ANNOUNCE, nexthop='192.0.2.1')
         nlris.append(nlri)
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -688,22 +649,16 @@ def test_messages_splits_large_nlri_set() -> None:
 def test_messages_respects_negotiated_msg_size() -> None:
     """Test that messages() respects negotiated message size limit."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     # Small message size
     negotiated = create_negotiated_mock(msg_size=512)
 
-    # Create routes
+    # Create routes using factory method
     nlris = []
     for i in range(20):
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR.make_cidr(IP.pton(f'10.{i}.0.0'), 16)
-        nlri.nexthop = IP.create('192.0.2.1')
+        nlri = create_inet_nlri(f'10.{i}.0.0', 16, Action.ANNOUNCE, nexthop='192.0.2.1')
         nlris.append(nlri)
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -729,19 +684,13 @@ def test_messages_respects_negotiated_msg_size() -> None:
 def test_messages_handles_large_attributes() -> None:
     """Test messages() with large attributes approaching size limits."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create route
-    nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri.cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
-    nlri.nexthop = IP.create('192.0.2.1')
+    # Create route using factory method
+    nlri = create_inet_nlri('10.0.0.0', 8, Action.ANNOUNCE, nexthop='192.0.2.1')
 
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
@@ -777,29 +726,22 @@ def test_integration_full_update_cycle() -> None:
     Tests complete flow: create -> pack -> unpack -> verify
     """
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create diverse NLRI set
+    # Create diverse NLRI set using factory method
     nlris = []
 
     # Withdrawals
     for prefix, prefixlen in [('172.16.0.0', 12), ('192.168.0.0', 16)]:
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-        nlri.cidr = CIDR.make_cidr(IP.pton(prefix), prefixlen)
+        nlri = create_inet_nlri(prefix, prefixlen, Action.WITHDRAW)
         nlris.append(nlri)
 
     # Announcements
     for prefix, prefixlen in [('10.0.0.0', 8), ('10.1.0.0', 16), ('10.2.0.0', 16)]:
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.cidr = CIDR.make_cidr(IP.pton(prefix), prefixlen)
-        nlri.nexthop = IP.create('192.0.2.1')
+        nlri = create_inet_nlri(prefix, prefixlen, Action.ANNOUNCE, nexthop='192.0.2.1')
         nlris.append(nlri)
 
     from exabgp.bgp.message.update.attribute.origin import Origin
@@ -841,20 +783,15 @@ def test_integration_full_update_cycle() -> None:
 def test_integration_empty_attributes_for_withdrawal_only() -> None:
     """Test that withdrawal-only UPDATEs can have empty attributes."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Only withdrawals
+    # Only withdrawals using factory method
     nlris = []
     for prefix, prefixlen in [('10.0.0.0', 8), ('192.168.0.0', 16)]:
-        nlri = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-        nlri.cidr = CIDR.make_cidr(IP.pton(prefix), prefixlen)
+        nlri = create_inet_nlri(prefix, prefixlen, Action.WITHDRAW)
         nlris.append(nlri)
 
     # Empty attributes
@@ -879,29 +816,15 @@ def test_integration_empty_attributes_for_withdrawal_only() -> None:
 def test_integration_sorting_and_grouping() -> None:
     """Test that messages() properly sorts and groups NLRIs."""
     from exabgp.bgp.message.update import Update
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.attribute import Attributes, Attribute
     from exabgp.bgp.message.action import Action
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
-    # Create unsorted NLRIs
-    nlris = []
-
-    # Mix of withdrawals and announcements in random order
-    nlri1 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri1.cidr = CIDR.make_cidr(IP.pton('10.2.0.0'), 16)
-    nlri1.nexthop = IP.create('192.0.2.1')
-
-    nlri2 = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    nlri2.cidr = CIDR.make_cidr(IP.pton('172.16.0.0'), 12)
-
-    nlri3 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri3.cidr = CIDR.make_cidr(IP.pton('10.1.0.0'), 16)
-    nlri3.nexthop = IP.create('192.0.2.1')
+    # Mix of withdrawals and announcements in random order using factory method
+    nlri1 = create_inet_nlri('10.2.0.0', 16, Action.ANNOUNCE, nexthop='192.0.2.1')
+    nlri2 = create_inet_nlri('172.16.0.0', 12, Action.WITHDRAW)
+    nlri3 = create_inet_nlri('10.1.0.0', 16, Action.ANNOUNCE, nexthop='192.0.2.1')
 
     nlris = [nlri1, nlri2, nlri3]
 
