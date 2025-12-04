@@ -198,16 +198,16 @@ cached instances for identical parameter combinations.
 | `attribute/bgpls/link/temetric.py` | TeMetric | ✅ | `make_temetric(int)` |
 | `attribute/bgpls/link/unrsvpbw.py` | UnRsvpBw | ✅ | `make_unrsvpbw(list[float])` |
 
-### BGP-LS Node Attributes 🔄 PARTIAL
+### BGP-LS Node Attributes ✅ COMPLETE
 
 | File | Class | Status | Notes |
 |------|-------|--------|-------|
-| `attribute/bgpls/node/isisarea.py` | IsisArea | ⏳ | |
-| `attribute/bgpls/node/lterid.py` | LocalTeRid | ⏳ | |
+| `attribute/bgpls/node/isisarea.py` | IsisArea | ✅ | `content` property unpacks int |
+| `attribute/bgpls/node/lterid.py` | LocalTeRid | ✅ | `content` property unpacks list[str] |
 | `attribute/bgpls/node/nodeflags.py` | NodeFlags | ✅ | (FlagLS, use `unpack_bgpls`) |
 | `attribute/bgpls/node/nodename.py` | NodeName | ✅ | `make_nodename(str)` |
-| `attribute/bgpls/node/opaque.py` | NodeOpaque | ⏳ | |
-| `attribute/bgpls/node/sralgo.py` | SrAlgorithm | ⏳ | |
+| `attribute/bgpls/node/opaque.py` | NodeOpaque | ✅ | `content` property returns bytes |
+| `attribute/bgpls/node/sralgo.py` | SrAlgorithm | ✅ | `content` property unpacks list[int] |
 | `attribute/bgpls/node/srcap.py` | SrCapabilities | ✅ | Properties unpack from `_packed` |
 
 ### BGP-LS Prefix Attributes 🔄 PARTIAL
@@ -321,14 +321,14 @@ cached instances for identical parameter combinations.
 | Wave 1 | 4 | 0 | 0 | 0 | 4 |
 | Wave 2 | 10 | 0 | 0 | 1 | 11 |
 | Wave 3 | ~20 | 0 | 0 | 0 | ~20 |
-| Wave 4 | ~31 | 0 | ~16 | 3 | ~50 |
+| Wave 4 | ~35 | 0 | ~12 | 3 | ~50 |
 | Wave 5 | 5 | 0 | 0 | 0 | 5 |
 | Wave 6 | 5 | 1 | 0 | 3 | 9 |
 | Wave 7 | ~20 | 0 | 0 | 0 | ~20 |
 | Wave 8 | 6 | 0 | 0 | 0 | 6 |
-| **TOTAL** | **~101** | **1** | **~16** | **7** | **~125** |
+| **TOTAL** | **~105** | **1** | **~12** | **7** | **~125** |
 
-**Completion: ~86%** (101 done + 1 partial out of ~118 convertible classes)
+**Completion: ~90%** (105 done + 1 partial out of ~118 convertible classes)
 
 ---
 
@@ -341,7 +341,8 @@ cached instances for identical parameter combinations.
 - Updated GenericSrv6* classes: reordered params to `__init__(packed, code)`
 - Marked Srv6L2Service/L3Service/SidInformation as N/A (container pattern like PrefixSid)
 - Updated call sites in `configuration/static/mpls.py`
-- All 9 test suites pass (89 SR-specific tests)
+- Converted BGP-LS Node attributes (IsisArea, LocalTeRid, NodeOpaque, SrAlgorithm) to use `content` property
+- All 9 test suites pass
 
 ### 2025-12-04 (Session 2)
 - Converted MPRNLRI/MPURNLRI to hybrid packed-bytes pattern
@@ -361,7 +362,6 @@ Converted BGP-LS base classes and key subclasses to packed-bytes-first pattern:
 
 ## Next Priority
 
-**Remaining Wave 4 classes** (~16 pending):
-1. BGP-LS node attributes (IsisArea, LocalTeRid, NodeOpaque, SrAlgorithm)
-2. BGP-LS prefix attributes (IgpExTags, IgpFlags, IgpTags, PrefixOpaque, OspfForwardingAddress, SrIgpPrefixAttr, SrSourceRouterID)
-3. BGP-LS link SRv6 attributes (Srv6Capabilities, Srv6EndpointBehavior, Srv6Locator, Srv6SidStructure)
+**Remaining Wave 4 classes** (~12 pending):
+1. BGP-LS prefix attributes (IgpExTags, IgpFlags, IgpTags, PrefixOpaque, OspfForwardingAddress, SrIgpPrefixAttr, SrSourceRouterID)
+2. BGP-LS link SRv6 attributes (Srv6Capabilities, Srv6EndpointBehavior, Srv6Locator, Srv6SidStructure)

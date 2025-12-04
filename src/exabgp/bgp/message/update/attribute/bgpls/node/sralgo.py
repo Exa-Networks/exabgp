@@ -30,19 +30,17 @@ class SrAlgorithm(BaseLS):
     REPR = 'SrAlgorithms'
     JSON = 'sr-algorithms'
 
-    def __init__(self, sr_algos: list[int]) -> None:
-        BaseLS.__init__(self, sr_algos)
-
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> SrAlgorithm:
         # Looks like IOS XR advertises len 0 on this sub TLV
         # when using default SPF.
-        return cls(
-            [_ for _ in data]
-            or [
-                0,
-            ],
-        )
+        return cls(data)
+
+    @property
+    def content(self) -> list[int]:
+        """List of SR algorithm values."""
+        # Empty data means default SPF algorithm (0)
+        return list(self._packed) or [0]
 
     def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": {json.dumps(self.content)}'
