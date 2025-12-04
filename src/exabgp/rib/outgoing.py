@@ -288,10 +288,10 @@ class OutgoingRIB(Cache):
         # Route Refresh - use snapshots to avoid modification during iteration
 
         for afi, safi in refresh_families:
-            yield RouteRefresh(afi, safi, RouteRefresh.start)
+            yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.start)
 
         for change in refresh_changes:
             yield Update([change.nlri], change.attributes)
 
         for afi, safi in refresh_families:
-            yield RouteRefresh(afi, safi, RouteRefresh.end)
+            yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.end)

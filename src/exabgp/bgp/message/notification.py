@@ -99,54 +99,67 @@ class Notification(Message, Exception):
         (7, 2): 'Malformed Message Subtype',
     }
 
-    def __init__(self, code: int, subcode: int, data: bytes = b'', parse_data: bool = True) -> None:
+    def __init__(self, packed: bytes) -> None:
+        if len(packed) < 2:
+            raise ValueError(f'Notification requires at least 2 bytes, got {len(packed)}')
         Exception.__init__(self)
-        self.code = code
-        self.subcode = subcode
+        self._packed = packed
 
-        if not parse_data:
-            self.data = data
-            return
+    @classmethod
+    def make_notification(cls, code: int, subcode: int, data: bytes = b'') -> 'Notification':
+        return cls(bytes([code, subcode]) + data)
+
+    @property
+    def code(self) -> int:
+        return self._packed[0]
+
+    @property
+    def subcode(self) -> int:
+        return self._packed[1]
+
+    @property
+    def raw_data(self) -> bytes:
+        return self._packed[2:]
+
+    @property
+    def data(self) -> bytes:
+        """Parse raw_data into human-readable form for display."""
+        raw = self.raw_data
+        code = self.code
+        subcode = self.subcode
 
         if (code, subcode) not in [(6, 2), (6, 4)]:
-            self.data = data if not len([_ for _ in str(data) if _ not in string.printable]) else hexbytes(data)
-            return
+            return raw if not len([_ for _ in str(raw) if _ not in string.printable]) else hexbytes(raw)
 
-        if len(data) == 0:
+        if len(raw) == 0:
             # shutdown without shutdown communication (the old fashioned way)
-            self.data = b''
-            return
+            return b''
 
         # draft-ietf-idr-shutdown or the peer was using 6,2 with data
-
-        shutdown_length = data[0]
-        data = data[1:]
+        shutdown_length = raw[0]
+        payload = raw[1:]
 
         if shutdown_length == 0:
-            self.data = b'empty Shutdown Communication.'
-            # move offset past length field
-            return
+            return b'empty Shutdown Communication.'
 
-        if len(data) < shutdown_length:
-            self.data = f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(data)}]'.encode()
-            return
+        if len(payload) < shutdown_length:
+            return f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(payload)}]'.encode()
 
         if shutdown_length > self.SHUTDOWN_COMM_MAX_LEGACY:
-            self.data = (
-                f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'.encode()
+            return (
+                f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(payload)}]'.encode()
             )
-            return
 
         try:
-            decoded_msg = data[:shutdown_length].decode('utf-8').replace('\r', ' ').replace('\n', ' ')
-            self.data = f'Shutdown Communication: "{decoded_msg}"'.encode()
+            decoded_msg = payload[:shutdown_length].decode('utf-8').replace('\r', ' ').replace('\n', ' ')
+            result = f'Shutdown Communication: "{decoded_msg}"'.encode()
         except UnicodeDecodeError:
-            self.data = f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(data)}]'.encode()
-            return
+            return f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(payload)}]'.encode()
 
-        trailer = data[shutdown_length:]
+        trailer = payload[shutdown_length:]
         if trailer:
-            self.data += (', trailing data: ' + hexstring(trailer)).encode('utf-8')
+            result += (', trailing data: ' + hexstring(trailer)).encode('utf-8')
+        return result
 
     def __str__(self) -> str:
         code_str = self._str_code.get(self.code, 'unknown error')
@@ -156,7 +169,7 @@ class Notification(Message, Exception):
 
     @classmethod
     def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Notification:
-        return cls(data[0], data[1], data[2:])
+        return cls(data)
 
 
 # =================================================================== Notify
@@ -169,7 +182,18 @@ class Notify(Notification):
             data = self._str_subcode.get((code, subcode), 'unknown notification type')
         if (code, subcode) in [(6, 2), (6, 4)]:
             data = chr(len(data)) + data
-        Notification.__init__(self, code, subcode, bytes(data, 'ascii'), False)
+        # Build packed bytes directly: code + subcode + data
+        packed = bytes([code, subcode]) + bytes(data, 'ascii')
+        Notification.__init__(self, packed)
+
+    @classmethod
+    def make_notify(cls, code: int, subcode: int, data: str | None = None) -> 'Notify':
+        return cls(code, subcode, data)
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(bytes([self.code, self.subcode]) + self.data)
+        return self._message(self._packed)
+
+    @property
+    def data(self) -> bytes:
+        """For Notify (sending), data is the raw wire-format data, not parsed."""
+        return self.raw_data

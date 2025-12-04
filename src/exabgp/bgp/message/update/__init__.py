@@ -66,8 +66,23 @@ class Update(Message):
     EOR: ClassVar[bool] = False
 
     def __init__(self, nlris: list[NLRI], attributes: Attributes) -> None:
-        self.nlris: list[NLRI] = nlris
-        self.attributes: Attributes = attributes
+        # Update is a composite container - NLRIs and Attributes are already packed-bytes-first
+        # No single _packed representation exists because messages() can generate multiple
+        # wire-format messages from one Update due to size limits
+        self._nlris: list[NLRI] = nlris
+        self._attributes: Attributes = attributes
+
+    @classmethod
+    def make_update(cls, nlris: list[NLRI], attributes: Attributes) -> 'Update':
+        return cls(nlris, attributes)
+
+    @property
+    def nlris(self) -> list[NLRI]:
+        return self._nlris
+
+    @property
+    def attributes(self) -> Attributes:
+        return self._attributes
 
     # message not implemented we should use messages below.
 

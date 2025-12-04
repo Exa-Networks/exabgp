@@ -86,8 +86,8 @@ def _negotiated(neighbor: Neighbor) -> tuple[Negotiated, Negotiated]:
     routerid_1 = str(neighbor.session.router_id)
     routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.session.router_id).split('.', -1))
 
-    o1 = Open(Version(4), ASN(neighbor.session.local_as), HoldTime(180), RouterID(routerid_1), capa)
-    o2 = Open(Version(4), ASN(neighbor.session.peer_as), HoldTime(180), RouterID(routerid_2), capa)
+    o1 = Open.make_open(Version(4), ASN(neighbor.session.local_as), HoldTime(180), RouterID(routerid_1), capa)
+    o2 = Open.make_open(Version(4), ASN(neighbor.session.peer_as), HoldTime(180), RouterID(routerid_2), capa)
     negotiated_in = Negotiated(neighbor, Direction.IN)
     negotiated_out = Negotiated(neighbor, Direction.OUT)
     negotiated_in.sent(o1)

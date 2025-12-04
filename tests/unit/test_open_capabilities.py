@@ -55,7 +55,7 @@ def test_open_creation_basic() -> None:
     OPEN message contains: Version, ASN, Hold Time, Router ID, Capabilities
     """
     capabilities = Capabilities()
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert open_msg.version == 4
     assert open_msg.asn == 65500
@@ -70,7 +70,7 @@ def test_open_creation_with_2byte_asn() -> None:
     ASNs 1-65535 are 2-byte ASNs.
     """
     capabilities = Capabilities()
-    open_msg = Open(Version(4), ASN(64512), HoldTime(90), RouterID('10.0.0.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(64512), HoldTime(90), RouterID('10.0.0.1'), capabilities)
 
     assert open_msg.asn == 64512
 
@@ -102,7 +102,7 @@ def test_open_with_multiprotocol_ipv4_unicast() -> None:
     capabilities = Capabilities()
     capabilities[Capability.CODE.MULTIPROTOCOL] = [(AFI.ipv4, SAFI.unicast)]
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert Capability.CODE.MULTIPROTOCOL in open_msg.capabilities
     assert (AFI.ipv4, SAFI.unicast) in open_msg.capabilities[Capability.CODE.MULTIPROTOCOL]
@@ -113,7 +113,7 @@ def test_open_with_multiprotocol_ipv6_unicast() -> None:
     capabilities = Capabilities()
     capabilities[Capability.CODE.MULTIPROTOCOL] = [(AFI.ipv6, SAFI.unicast)]
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert (AFI.ipv6, SAFI.unicast) in open_msg.capabilities[Capability.CODE.MULTIPROTOCOL]
 
@@ -129,7 +129,7 @@ def test_open_with_multiple_multiprotocol_families() -> None:
         (AFI.ipv6, SAFI.unicast),
     ]
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     mp_caps = open_msg.capabilities[Capability.CODE.MULTIPROTOCOL]
     assert (AFI.ipv4, SAFI.unicast) in mp_caps
@@ -144,7 +144,7 @@ def test_open_with_vpnv4_capability() -> None:
     capabilities = Capabilities()
     capabilities[Capability.CODE.MULTIPROTOCOL] = [(AFI.ipv4, SAFI.mpls_vpn)]
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert (AFI.ipv4, SAFI.mpls_vpn) in open_msg.capabilities[Capability.CODE.MULTIPROTOCOL]
 
@@ -157,7 +157,7 @@ def test_open_with_multicast_capability() -> None:
         (AFI.ipv6, SAFI.multicast),
     ]
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     mp_caps = open_msg.capabilities[Capability.CODE.MULTIPROTOCOL]
     assert (AFI.ipv4, SAFI.multicast) in mp_caps
@@ -177,7 +177,7 @@ def test_open_with_route_refresh_capability() -> None:
     capabilities = Capabilities()
     capabilities[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert Capability.CODE.ROUTE_REFRESH in open_msg.capabilities
 
@@ -190,7 +190,7 @@ def test_open_with_enhanced_route_refresh() -> None:
     capabilities = Capabilities()
     capabilities[Capability.CODE.ENHANCED_ROUTE_REFRESH] = RouteRefresh()
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert Capability.CODE.ENHANCED_ROUTE_REFRESH in open_msg.capabilities
 
@@ -209,7 +209,7 @@ def test_open_with_4byte_asn_capability() -> None:
     asn4_value = 4200000000  # Large ASN requiring 4 bytes
     capabilities[Capability.CODE.FOUR_BYTES_ASN] = asn4_value
 
-    open_msg = Open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     # When using 4-byte ASN, the 2-byte ASN field should be AS_TRANS (23456)
     assert open_msg.asn == 23456
@@ -230,7 +230,7 @@ def test_open_with_various_4byte_asns() -> None:
         capabilities = Capabilities()
         capabilities[Capability.CODE.FOUR_BYTES_ASN] = asn4
 
-        open_msg = Open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+        open_msg = Open.make_open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
         assert open_msg.capabilities[Capability.CODE.FOUR_BYTES_ASN] == asn4
 
@@ -259,7 +259,7 @@ def test_open_with_graceful_restart_basic() -> None:
 
     capabilities[Capability.CODE.GRACEFUL_RESTART] = graceful
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert Capability.CODE.GRACEFUL_RESTART in open_msg.capabilities
 
@@ -281,7 +281,7 @@ def test_open_with_graceful_restart_multiple_families() -> None:
 
     capabilities[Capability.CODE.GRACEFUL_RESTART] = graceful
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     gr_cap = open_msg.capabilities[Capability.CODE.GRACEFUL_RESTART]
     assert (AFI.ipv4, SAFI.unicast) in gr_cap
@@ -304,7 +304,7 @@ def test_open_with_graceful_restart_flags() -> None:
 
     capabilities[Capability.CODE.GRACEFUL_RESTART] = graceful
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     gr_cap = open_msg.capabilities[Capability.CODE.GRACEFUL_RESTART]
     assert gr_cap.restart_flag == Graceful.RESTART_STATE
@@ -327,7 +327,7 @@ def test_open_with_addpath_receive() -> None:
 
     capabilities[Capability.CODE.ADD_PATH] = addpath
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert Capability.CODE.ADD_PATH in open_msg.capabilities
 
@@ -341,7 +341,7 @@ def test_open_with_addpath_send() -> None:
 
     capabilities[Capability.CODE.ADD_PATH] = addpath
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     ap_cap = open_msg.capabilities[Capability.CODE.ADD_PATH]
     assert (AFI.ipv4, SAFI.unicast) in ap_cap
@@ -357,7 +357,7 @@ def test_open_with_addpath_send_receive() -> None:
 
     capabilities[Capability.CODE.ADD_PATH] = addpath
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     ap_cap = open_msg.capabilities[Capability.CODE.ADD_PATH]
     assert (AFI.ipv4, SAFI.unicast) in ap_cap
@@ -378,7 +378,7 @@ def test_open_with_extended_message_capability() -> None:
     capabilities = Capabilities()
     capabilities[Capability.CODE.EXTENDED_MESSAGE] = ExtendedMessage()
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert Capability.CODE.EXTENDED_MESSAGE in open_msg.capabilities
 
@@ -407,7 +407,7 @@ def test_open_with_multiple_capabilities() -> None:
     # 4-Byte ASN
     capabilities[Capability.CODE.FOUR_BYTES_ASN] = 4200000000
 
-    open_msg = Open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert Capability.CODE.MULTIPROTOCOL in open_msg.capabilities
     assert Capability.CODE.ROUTE_REFRESH in open_msg.capabilities
@@ -444,7 +444,7 @@ def test_open_with_full_capability_set() -> None:
     # Extended Message
     capabilities[Capability.CODE.EXTENDED_MESSAGE] = ExtendedMessage()
 
-    open_msg = Open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     # Verify all capabilities are present
     assert len(open_msg.capabilities) == 6
@@ -470,7 +470,7 @@ def test_open_message_encoding_basic() -> None:
     - Optional Parameters: variable
     """
     capabilities = Capabilities()
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     msg = open_msg.pack_message(create_negotiated())
 
@@ -497,7 +497,7 @@ def test_open_message_encoding_with_capabilities() -> None:
 
     capabilities[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
 
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     msg = open_msg.pack_message(create_negotiated())
 
@@ -519,7 +519,7 @@ def test_open_with_various_hold_times() -> None:
 
     for ht in hold_times:
         capabilities = Capabilities()
-        open_msg = Open(Version(4), ASN(65500), HoldTime(ht), RouterID('192.0.2.1'), capabilities)
+        open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(ht), RouterID('192.0.2.1'), capabilities)
 
         assert open_msg.hold_time == ht
 
@@ -536,7 +536,7 @@ def test_open_with_various_router_ids() -> None:
 
     for rid in router_ids:
         capabilities = Capabilities()
-        open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID(rid), capabilities)
+        open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID(rid), capabilities)
 
         assert open_msg.router_id == RouterID(rid)
 
@@ -547,7 +547,7 @@ def test_open_version_field() -> None:
     RFC 4271: BGP version is 4.
     """
     capabilities = Capabilities()
-    open_msg = Open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
     assert open_msg.version == 4
 

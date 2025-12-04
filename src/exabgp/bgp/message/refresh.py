@@ -43,17 +43,37 @@ class RouteRefresh(Message):
     ID = Message.CODE.ROUTE_REFRESH
     TYPE = bytes([Message.CODE.ROUTE_REFRESH])
 
+    # Reserved field values for route refresh subtypes
     request = 0
     start = 1
     end = 2
 
-    def __init__(self, afi: int, safi: int, reserved: int = 0) -> None:
-        self.afi = AFI.create(afi)
-        self.safi = SAFI.create(safi)
-        self.reserved = Reserved(reserved)
+    def __init__(self, packed: bytes) -> None:
+        if len(packed) != 4:
+            raise ValueError(f'RouteRefresh requires exactly 4 bytes, got {len(packed)}')
+        self._packed = packed
+
+    @classmethod
+    def make_route_refresh(cls, afi: int, safi: int, reserved: int = 0) -> 'RouteRefresh':
+        afi_obj = AFI.create(afi)
+        safi_obj = SAFI.create(safi)
+        packed = afi_obj.pack_afi() + bytes([reserved]) + safi_obj.pack_safi()
+        return cls(packed)
+
+    @property
+    def afi(self) -> AFI:
+        return AFI.create(unpack('!H', self._packed[0:2])[0])
+
+    @property
+    def safi(self) -> SAFI:
+        return SAFI.create(self._packed[3])
+
+    @property
+    def reserved(self) -> Reserved:
+        return Reserved(self._packed[2])
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(self.afi.pack_afi() + bytes([self.reserved]) + self.safi.pack_safi())
+        return self._message(self._packed)
 
     def messages(self, negotiated: Negotiated, include_withdraw: bool) -> Generator[bytes, None, None]:
         yield self.pack_message(negotiated)
@@ -76,18 +96,12 @@ class RouteRefresh(Message):
             raise Notify(7, 1, 'invalid route-refresh message') from None
         if reserved not in (0, 1, 2):
             raise Notify(7, 2, 'invalid route-refresh message subtype')
-        return RouteRefresh(afi, safi, reserved)
+        return cls(data)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, RouteRefresh):
             return False
-        if self.afi != other.afi:
-            return False
-        if self.safi != other.safi:
-            return False
-        if self.reserved != other.reserved:
-            return False
-        return True
+        return self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)

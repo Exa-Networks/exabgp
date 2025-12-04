@@ -155,12 +155,23 @@ class INET(NLRI):
 
 **Note:** Base classes (`evpn/nlri.py`, `bgpls/nlri.py`, `mup/nlri.py`, `mvpn/nlri.py`) are abstract bases that initialize `_packed = b''` as placeholder. Subclasses properly set `_packed` in their `__init__`. Generic* fallback classes accept packed bytes. No changes needed to base classes.
 
-### Wave 8: Messages
-81. `src/exabgp/bgp/message/keepalive.py`
-82. `src/exabgp/bgp/message/notification.py`
-83. `src/exabgp/bgp/message/refresh.py`
-84. `src/exabgp/bgp/message/open/__init__.py`
-85. `src/exabgp/bgp/message/update/__init__.py`
+### Wave 8: Messages ✅ COMPLETE
+
+| File | Status | Factory Method |
+|------|--------|----------------|
+| `keepalive.py` | ✅ Done | `KeepAlive.make_keepalive()` |
+| `notification.py` | ✅ Done | `Notification.make_notification(code, subcode, data)` |
+| `refresh.py` | ✅ Done | `RouteRefresh.make_route_refresh(afi, safi, reserved)` |
+| `open/__init__.py` | ✅ Done | `Open.make_open(version, asn, hold_time, router_id, capabilities)` |
+| `update/__init__.py` | ✅ Done | `Update.make_update(nlris, attributes)` - composite container |
+
+**Notes:**
+- KeepAlive: Trivial case (empty payload), `_packed = b''`
+- RouteRefresh: 4-byte wire format, properties extract AFI/SAFI/reserved
+- Notification: 2+ byte wire format, `data` property parses shutdown communication
+- Notify subclass: Keeps semantic constructor for backwards compatibility
+- Open: Fixed 9-byte header in `_packed`, capabilities stored separately
+- Update: Composite container - NLRIs/Attributes already packed-bytes-first, no single `_packed`
 
 ---
 
