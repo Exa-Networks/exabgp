@@ -18,6 +18,7 @@ import socket
 import traceback
 import re
 import time
+import threading
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum
@@ -55,10 +56,55 @@ class ClientConnection:
 
 
 class ResponseRouter:
-    """Route responses to appropriate client(s)."""
+    """Route responses to appropriate client(s).
+
+    Thread-safe response routing with request ID tracking.
+    - Fix 1: Request IDs allow correlating responses to specific client commands
+    - Fix 2: Lock protects active_command_client from race conditions
+    """
 
     def __init__(self) -> None:
         self.active_command_client: int | None = None  # fd of client executing command
+        self.lock = threading.Lock()  # Fix 2: Protect active_command_client
+        # Fix 1: Track pending requests by request_id -> client_fd
+        self.pending_requests: dict[str, int] = {}
+
+    def register_request(self, request_id: str, client_fd: int) -> None:
+        """Register a pending request with its client fd (Fix 1)."""
+        with self.lock:
+            self.pending_requests[request_id] = client_fd
+
+    def set_active_client(self, client_fd: int) -> None:
+        """Set the active command client (Fix 2: thread-safe)."""
+        with self.lock:
+            self.active_command_client = client_fd
+
+    def _extract_request_id(self, line: str) -> str | None:
+        """Extract request_id from response if present (Fix 1).
+
+        Supports formats:
+        - Text: "pong <uuid> active=true request_id=<id>"
+        - JSON: {"pong": ..., "request_id": "<id>"}
+        - General: any response with request_id=<id> suffix
+        """
+        # Check for request_id= in text format
+        if 'request_id=' in line:
+            match = re.search(r'request_id=(\S+)', line)
+            if match:
+                return match.group(1)
+
+        # Check JSON format
+        if line.startswith('{'):
+            try:
+                import json
+
+                parsed = json.loads(line)
+                if isinstance(parsed, dict) and 'request_id' in parsed:
+                    return str(parsed['request_id'])
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        return None
 
     def classify_response(self, line: str) -> ResponseType:
         """Determine if response is unicast or broadcast."""
@@ -89,22 +135,42 @@ class ResponseRouter:
         return ResponseType.UNICAST
 
     def route_response(self, line: bytes, clients: dict[int, ClientConnection]) -> None:
-        """Route response to appropriate client(s)."""
-        response_type = self.classify_response(line.decode('utf-8', errors='replace'))
+        """Route response to appropriate client(s).
+
+        Fix 1: First try to route by request_id if present.
+        Fix 2: Use lock when accessing active_command_client.
+        """
+        line_str = line.decode('utf-8', errors='replace')
+        response_type = self.classify_response(line_str)
 
         if response_type == ResponseType.BROADCAST:
             # Send to ALL clients
             for client in clients.values():
                 client.write_queue.append(line)
         else:
-            # Send only to active command client
-            if self.active_command_client and self.active_command_client in clients:
-                clients[self.active_command_client].write_queue.append(line)
+            # Fix 1: Try to route by request_id first
+            request_id = self._extract_request_id(line_str)
+            target_client: int | None = None
 
-                # Clear active client after done/error
-                stripped = line.decode('utf-8', errors='replace').strip()
-                if stripped in ('done', 'error'):
-                    self.active_command_client = None
+            with self.lock:
+                if request_id and request_id in self.pending_requests:
+                    target_client = self.pending_requests[request_id]
+                elif self.active_command_client:
+                    target_client = self.active_command_client
+
+                # Route to target client
+                if target_client and target_client in clients:
+                    clients[target_client].write_queue.append(line)
+
+                    # Clear tracking after done/error
+                    stripped = line_str.strip()
+                    if stripped in ('done', 'error'):
+                        # Clear request_id tracking
+                        if request_id and request_id in self.pending_requests:
+                            del self.pending_requests[request_id]
+                        # Clear active client
+                        if self.active_command_client == target_client:
+                            self.active_command_client = None
 
 
 def unix_socket(root: str, socketname: str = 'exabgp') -> list[str]:
@@ -278,9 +344,14 @@ class Control:
         # Remove from tracking
         del self.clients[fd]
 
-        # Clear active command client if it was this client
-        if self.response_router.active_command_client == fd:
-            self.response_router.active_command_client = None
+        # Fix 2: Clear active command client if it was this client (thread-safe)
+        with self.response_router.lock:
+            if self.response_router.active_command_client == fd:
+                self.response_router.active_command_client = None
+            # Also clear any pending requests for this client
+            stale_requests = [rid for rid, cfd in self.response_router.pending_requests.items() if cfd == fd]
+            for rid in stale_requests:
+                del self.response_router.pending_requests[rid]
 
     def cleanup_client(self) -> None:
         """Clean up client connection only (keep server listening).
@@ -514,8 +585,8 @@ class Control:
 
                             def make_std_writer_for_client(client_fd: int) -> Callable[[bytes], int]:
                                 def writer(line: bytes) -> int:
-                                    # Mark this client as active when sending command
-                                    self.response_router.active_command_client = client_fd
+                                    # Fix 2: Use thread-safe setter for active client
+                                    self.response_router.set_active_client(client_fd)
                                     try:
                                         return os.write(standard_out, line)
                                     except OSError as exc:

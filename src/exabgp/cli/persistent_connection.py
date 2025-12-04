@@ -22,7 +22,12 @@ from exabgp.cli.colors import Colors
 
 
 class PersistentSocketConnection:
-    """Persistent Unix socket connection with background health monitoring"""
+    """Persistent Unix socket connection with background health monitoring
+
+    Implements fixes for multi-client connection issues:
+    - Fix 1: Request ID tracking for response correlation
+    - Fix 3: Command retry on reconnect
+    """
 
     def __init__(self, socket_path: str) -> None:
         self.socket_path = socket_path
@@ -44,6 +49,14 @@ class PersistentSocketConnection:
         self.client_uuid = str(uuid_lib.uuid4())
         self.client_start_time = time.time()
 
+        # Fix 1: Request ID counter for correlating commands with responses
+        self._request_id_counter: int = 0
+        self._current_request_id: str | None = None
+
+        # Fix 3: Store last command for retry on reconnect
+        self._last_command: str | None = None
+        self._command_needs_retry: bool = False
+
         # Response handling
         self.pending_responses: Queue[str] = Queue()
         self.response_buffer = ''
@@ -63,6 +76,12 @@ class PersistentSocketConnection:
 
         self.health_thread = threading.Thread(target=self._health_monitor, daemon=True)
         self.health_thread.start()
+
+    def _generate_request_id(self) -> str:
+        """Generate unique request ID for command tracking (Fix 1)."""
+        with self.lock:
+            self._request_id_counter += 1
+            return f'{self.client_uuid[:8]}-{self._request_id_counter}'
 
     def _connect(self) -> None:
         """Establish socket connection"""
@@ -321,6 +340,22 @@ class PersistentSocketConnection:
 
                 # Success - resume health monitoring
                 self.reconnecting = False
+
+                # Fix 3: Check if there's a command that needs retry
+                with self.lock:
+                    needs_retry = self._command_needs_retry
+                    last_cmd = self._last_command
+                    # Clear retry flag to prevent duplicate retries
+                    self._command_needs_retry = False
+
+                if needs_retry and last_cmd:
+                    sys.stderr.write(f'⟳ Retrying command: {last_cmd[:50]}...\n')
+                    sys.stderr.flush()
+                    # Queue the retry response for the waiting send_command
+                    retry_response = self.send_command(last_cmd, is_retry=True)
+                    # The retry response will be handled by the main thread
+                    self.pending_responses.put(retry_response)
+
                 return True
 
             except SystemExit:
@@ -560,12 +595,19 @@ class PersistentSocketConnection:
                 self._signal_shutdown()
                 return
 
-    def send_command(self, command: str) -> str:
-        """Send user command and wait for response"""
+    def send_command(self, command: str, is_retry: bool = False) -> str:
+        """Send user command and wait for response.
+
+        Fix 3: Commands can be retried after reconnection if they were in-flight.
+        """
         # Mark command in progress to prevent ping interference
         with self.lock:
             self.command_in_progress = True
             self.pending_user_command = True
+            # Fix 3: Store command for potential retry (but not if this IS a retry)
+            if not is_retry:
+                self._last_command = command
+                self._command_needs_retry = True
 
         try:
             # Flush any stale responses from queue (e.g., pending ping responses)
@@ -589,6 +631,9 @@ class PersistentSocketConnection:
             # Wait for response (with timeout)
             try:
                 response: str = self.pending_responses.get(timeout=5.0)
+                # Fix 3: Command completed successfully, no retry needed
+                with self.lock:
+                    self._command_needs_retry = False
                 return response
             except Empty:
                 return 'Error: Timeout waiting for response'

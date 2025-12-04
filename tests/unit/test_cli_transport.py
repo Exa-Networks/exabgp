@@ -423,3 +423,172 @@ class TestCommandShortcuts:
                     # Should contain 'show neighbor'
                     assert 'show' in call_args[0][1]
                     assert 'neighbor' in call_args[0][1]
+
+
+class TestResponseRouter:
+    """Test ResponseRouter class for multi-client response routing (Fixes 1 & 2)"""
+
+    def test_response_router_lock_initialization(self) -> None:
+        """Test that ResponseRouter initializes with a lock (Fix 2)"""
+        from exabgp.application.unixsocket import ResponseRouter
+
+        router = ResponseRouter()
+
+        assert hasattr(router, 'lock')
+        assert router.active_command_client is None
+        assert router.pending_requests == {}
+
+    def test_set_active_client_thread_safe(self) -> None:
+        """Test set_active_client uses lock (Fix 2)"""
+        from exabgp.application.unixsocket import ResponseRouter
+
+        router = ResponseRouter()
+        router.set_active_client(42)
+
+        assert router.active_command_client == 42
+
+    def test_register_request(self) -> None:
+        """Test request ID registration (Fix 1)"""
+        from exabgp.application.unixsocket import ResponseRouter
+
+        router = ResponseRouter()
+        router.register_request('req-123', 42)
+
+        assert router.pending_requests['req-123'] == 42
+
+    def test_extract_request_id_text_format(self) -> None:
+        """Test request ID extraction from text format (Fix 1)"""
+        from exabgp.application.unixsocket import ResponseRouter
+
+        router = ResponseRouter()
+
+        # Text format: request_id=<id>
+        request_id = router._extract_request_id('pong abc123 active=true request_id=req-456')
+        assert request_id == 'req-456'
+
+    def test_extract_request_id_json_format(self) -> None:
+        """Test request ID extraction from JSON format (Fix 1)"""
+        from exabgp.application.unixsocket import ResponseRouter
+
+        router = ResponseRouter()
+
+        # JSON format
+        request_id = router._extract_request_id('{"pong": "abc123", "active": true, "request_id": "req-789"}')
+        assert request_id == 'req-789'
+
+    def test_extract_request_id_not_present(self) -> None:
+        """Test request ID extraction returns None when not present"""
+        from exabgp.application.unixsocket import ResponseRouter
+
+        router = ResponseRouter()
+
+        request_id = router._extract_request_id('pong abc123 active=true')
+        assert request_id is None
+
+    def test_classify_response_broadcast(self) -> None:
+        """Test broadcast response classification"""
+        from exabgp.application.unixsocket import ResponseRouter, ResponseType
+
+        router = ResponseRouter()
+
+        assert router.classify_response('neighbor 1.2.3.4 state established') == ResponseType.BROADCAST
+        assert router.classify_response('neighbor 1.2.3.4 up') == ResponseType.BROADCAST
+        assert router.classify_response('neighbor 1.2.3.4 down') == ResponseType.BROADCAST
+
+    def test_classify_response_unicast(self) -> None:
+        """Test unicast response classification"""
+        from exabgp.application.unixsocket import ResponseRouter, ResponseType
+
+        router = ResponseRouter()
+
+        assert router.classify_response('done') == ResponseType.UNICAST
+        assert router.classify_response('error') == ResponseType.UNICAST
+        assert router.classify_response('pong abc123') == ResponseType.UNICAST
+
+    def test_route_response_by_request_id(self) -> None:
+        """Test response routing uses request_id when available (Fix 1)"""
+        from exabgp.application.unixsocket import ResponseRouter, ClientConnection
+        import socket as sock
+
+        router = ResponseRouter()
+
+        # Register a request
+        router.register_request('req-123', 42)
+
+        # Create mock clients
+        mock_socket = Mock(spec=sock.socket)
+        client42 = ClientConnection(socket=mock_socket, fd=42)
+        client43 = ClientConnection(socket=mock_socket, fd=43)
+        clients = {42: client42, 43: client43}
+
+        # Route a response with request_id
+        router.route_response(b'pong abc request_id=req-123\n', clients)
+
+        # Should be routed to client 42 (by request_id)
+        assert len(client42.write_queue) == 1
+        assert len(client43.write_queue) == 0
+
+    def test_route_response_clears_on_done(self) -> None:
+        """Test response routing clears tracking on done/error"""
+        from exabgp.application.unixsocket import ResponseRouter, ClientConnection
+        import socket as sock
+
+        router = ResponseRouter()
+
+        # Setup active client
+        router.set_active_client(42)
+
+        # Create mock client
+        mock_socket = Mock(spec=sock.socket)
+        client42 = ClientConnection(socket=mock_socket, fd=42)
+        clients = {42: client42}
+
+        # Route 'done' response
+        router.route_response(b'done\n', clients)
+
+        # Active client should be cleared
+        assert router.active_command_client is None
+
+
+class TestPersistentConnectionRetry:
+    """Test PersistentSocketConnection command retry functionality (Fix 3)"""
+
+    def test_generate_request_id(self) -> None:
+        """Test request ID generation is unique and sequential"""
+        from exabgp.cli.persistent_connection import PersistentSocketConnection
+
+        # Create connection without actually connecting
+        with patch('socket.socket'):
+            with patch.object(PersistentSocketConnection, '_connect'):
+                with patch.object(PersistentSocketConnection, '_initial_ping'):
+                    with patch.object(PersistentSocketConnection, '_setup_signal_handler'):
+                        conn = PersistentSocketConnection('/fake/path')
+                        conn.reader_thread = Mock()
+                        conn.health_thread = Mock()
+
+                        # Generate IDs
+                        id1 = conn._generate_request_id()
+                        id2 = conn._generate_request_id()
+                        id3 = conn._generate_request_id()
+
+                        # Should be sequential
+                        assert id1 != id2 != id3
+                        assert '-1' in id1
+                        assert '-2' in id2
+                        assert '-3' in id3
+
+    def test_command_retry_flag_initialization(self) -> None:
+        """Test command retry flags are initialized (Fix 3)"""
+        from exabgp.cli.persistent_connection import PersistentSocketConnection
+
+        with patch('socket.socket'):
+            with patch.object(PersistentSocketConnection, '_connect'):
+                with patch.object(PersistentSocketConnection, '_initial_ping'):
+                    with patch.object(PersistentSocketConnection, '_setup_signal_handler'):
+                        conn = PersistentSocketConnection('/fake/path')
+                        conn.reader_thread = Mock()
+                        conn.health_thread = Mock()
+
+                        assert conn._last_command is None
+                        assert conn._command_needs_retry is False
+                        assert conn._request_id_counter == 0
