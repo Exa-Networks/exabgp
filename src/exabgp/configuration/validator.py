@@ -1264,8 +1264,8 @@ class TypeSelectorValidator(Validator[list[Any]]):
                 else:
                     change.attributes.add(attribute)
         elif action == 'nlri-set':
-            assign = getattr(self.schema, 'assign', None)
-            field_name = assign.get(command, command) if assign else command
+            assign = getattr(self.schema, 'assign', {})
+            field_name = assign.get(command, command)
             change.nlri.assign(field_name, value)
         elif action == 'nop':
             pass
