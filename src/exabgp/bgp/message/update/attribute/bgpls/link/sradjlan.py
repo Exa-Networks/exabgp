@@ -53,8 +53,15 @@ class SrAdjacencyLan(FlagLS):
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
     MERGE = True
 
-    def __init__(self, sradjlans: list[dict[str, Any]]) -> None:
-        self.sr_adj_lan_sids: list[dict[str, Any]] = sradjlans
+    def __init__(self, packed: bytes, parsed_sids: list[dict[str, Any]] | None = None) -> None:
+        """Initialize with packed bytes and optionally pre-parsed content."""
+        self._packed = packed
+        self._sr_adj_lan_sids: list[dict[str, Any]] = parsed_sids if parsed_sids else []
+
+    @property
+    def sr_adj_lan_sids(self) -> list[dict[str, Any]]:
+        """Return the parsed SR adjacency LAN SIDs."""
+        return self._sr_adj_lan_sids
 
     def __repr__(self) -> str:
         return f'sr-adj-lan-sids: {self.sr_adj_lan_sids}'
@@ -65,6 +72,7 @@ class SrAdjacencyLan(FlagLS):
             raise Notify(
                 3, 5, f'SR Adjacency LAN SID: data too short, need {SRADJ_LAN_MIN_LENGTH} bytes, got {len(data)}'
             )
+        original_data = data
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])
         # Parse adj weight
@@ -83,6 +91,7 @@ class SrAdjacencyLan(FlagLS):
         #  	 Section 3.1.  In this case V and L flags MUST be unset.
         sids = []
         raw = []
+        sid = 0  # Default value in case no SID is parsed
         while data:
             # Range Size: 3 octet value indicating the number of labels in
             # the range.
@@ -98,11 +107,12 @@ class SrAdjacencyLan(FlagLS):
                 raw.append(hexstring(data))
                 break
 
-        return cls([{'flags': flags, 'weight': weight, 'system-id': system_id, 'sid': sid, 'undecoded': raw}])
+        parsed = [{'flags': flags, 'weight': weight, 'system-id': system_id, 'sid': sid, 'undecoded': raw}]
+        return cls(original_data, parsed)
 
     def json(self, compact: bool = False) -> str:
         return f'"sr-adj-lan-sids": {json.dumps(self.sr_adj_lan_sids)}'
 
     def merge(self, other: BaseLS) -> None:
         if isinstance(other, SrAdjacencyLan):
-            self.sr_adj_lan_sids.extend(other.sr_adj_lan_sids)
+            self._sr_adj_lan_sids.extend(other.sr_adj_lan_sids)

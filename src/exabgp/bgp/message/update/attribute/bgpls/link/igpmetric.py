@@ -40,18 +40,30 @@ class IgpMetric(BaseLS):
     REPR = 'IGP Metric'
     JSON = 'igp-metric'
 
-    @classmethod
-    def unpack_bgpls(cls, data: bytes) -> IgpMetric:
+    @property
+    def content(self) -> int:
+        """Unpack and return the metric value from packed bytes.
+
+        Variable length: 1-byte (IS-IS small), 2-byte (OSPF), or 3-byte (IS-IS wide).
+        """
+        data = self._packed
         if len(data) == IGP_METRIC_SIZE_OSPF:
             # OSPF
-            return cls(unpack('!H', data)[0])
+            return unpack('!H', data)[0]
 
         if len(data) == IGP_METRIC_SIZE_ISIS_SMALL:
             # ISIS small metrics
-            return cls(data[0])
+            return data[0]
 
         if len(data) == IGP_METRIC_SIZE_ISIS_WIDE:
             # ISIS wide metrics
-            return cls(unpack('!L', bytes([0]) + data)[0])
+            return unpack('!L', bytes([0]) + data)[0]
 
+        # Shouldn't reach here if unpack_bgpls validated
         raise Notify(3, 5, 'Incorrect IGP Metric Size')
+
+    @classmethod
+    def unpack_bgpls(cls, data: bytes) -> IgpMetric:
+        if len(data) not in (IGP_METRIC_SIZE_ISIS_SMALL, IGP_METRIC_SIZE_OSPF, IGP_METRIC_SIZE_ISIS_WIDE):
+            raise Notify(3, 5, 'Incorrect IGP Metric Size')
+        return cls(data)

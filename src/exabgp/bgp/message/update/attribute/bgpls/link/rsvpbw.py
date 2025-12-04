@@ -6,7 +6,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
@@ -29,7 +29,17 @@ class RsvpBw(BaseLS):
     JSON = 'maximum-reservable-link-bandwidth'
     LEN = 4
 
+    @property
+    def content(self) -> float:
+        """Unpack and return the reservable bandwidth from packed bytes."""
+        return unpack('!f', self._packed)[0]
+
+    @classmethod
+    def make_rsvpbw(cls, bandwidth: float) -> RsvpBw:
+        """Factory method to create RsvpBw from bandwidth value."""
+        return cls(pack('!f', bandwidth))
+
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> RsvpBw:
         cls.check(data)
-        return cls(unpack('!f', data)[0])
+        return cls(data)

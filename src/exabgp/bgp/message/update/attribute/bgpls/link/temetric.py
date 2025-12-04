@@ -6,7 +6,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
@@ -29,7 +29,17 @@ class TeMetric(BaseLS):
     JSON = 'te-metric'
     LEN = 4
 
+    @property
+    def content(self) -> int:
+        """Unpack and return the TE metric from packed bytes."""
+        return unpack('!L', self._packed)[0]
+
+    @classmethod
+    def make_temetric(cls, metric: int) -> TeMetric:
+        """Factory method to create TeMetric from metric value."""
+        return cls(pack('!I', metric))
+
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> TeMetric:
         cls.check(data)
-        return cls(unpack('!L', data)[0])
+        return cls(data)

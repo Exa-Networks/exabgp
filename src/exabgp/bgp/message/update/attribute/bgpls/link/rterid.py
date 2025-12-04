@@ -25,9 +25,19 @@ class RemoteTeRid(BaseLS):
     REPR = 'Remote TE Router ID'
     JSON = 'remote-te-router-id'
 
+    @property
+    def content(self) -> str:
+        """Unpack and return the IP address as a string."""
+        return IP.unpack_ip(self._packed)
+
+    @classmethod
+    def make_remoteterid(cls, ip: str) -> RemoteTeRid:
+        """Factory method to create RemoteTeRid from IP address string."""
+        return cls(IP.pton(ip))
+
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> RemoteTeRid:
         length = len(data)
         if length not in (4, 16):
             raise Notify(3, 5, 'Invalid remote-te size')
-        return cls(IP.unpack_ip(data))
+        return cls(data)
