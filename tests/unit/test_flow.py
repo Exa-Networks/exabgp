@@ -37,8 +37,8 @@ class TestFlow(unittest.TestCase):
 
     def test_rule(self) -> None:
         components = {
-            'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
-            'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
+            'destination': Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24),
+            'source': Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24),
             'anyport_1': FlowAnyPort(NumericOperator.EQ, 25),
         }
         messages = {
@@ -57,8 +57,8 @@ class TestFlow(unittest.TestCase):
 
     def test_rule_and(self) -> None:
         components = {
-            'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
-            'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
+            'destination': Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24),
+            'source': Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24),
             'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, 25),
             'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, 80),
         }
@@ -69,7 +69,7 @@ class TestFlow(unittest.TestCase):
             'anyport_2': [0x04, 0x85, 0x50],
         }
 
-        flow = Flow()
+        flow = Flow.make_flow()
         message = b''
         for key in ['destination', 'source', 'anyport_1', 'anyport_2']:
             flow.add(components[key])
@@ -81,8 +81,8 @@ class TestFlow(unittest.TestCase):
 
     def test_nlri(self) -> None:
         components = {
-            'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
-            'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
+            'destination': Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24),
+            'source': Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24),
             'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, 25),
             'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, 80),
         }
@@ -93,7 +93,7 @@ class TestFlow(unittest.TestCase):
             'anyport_2': [0x85, 0x50],
         }
 
-        flow = Flow()
+        flow = Flow.make_flow()
         message = b''
         for key in ['destination', 'source', 'anyport_1', 'anyport_2']:
             flow.add(components[key])
@@ -110,18 +110,18 @@ class TestFlow(unittest.TestCase):
 
     def test_compare(self) -> None:
         components = {
-            'destination': Flow4Destination(IPv4.pton('192.0.2.0'), 24),
-            'source': Flow4Source(IPv4.pton('10.1.2.0'), 24),
+            'destination': Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24),
+            'source': Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24),
             'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, 25),
             'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, 80),
             'anyport_3': FlowAnyPort(NumericOperator.EQ, 80),
         }
 
-        flow1 = Flow()
+        flow1 = Flow.make_flow()
         for key in ['destination', 'source', 'anyport_1', 'anyport_2']:
             flow1.add(components[key])
 
-        flow2 = Flow()
+        flow2 = Flow.make_flow()
         for key in ['destination', 'source', 'anyport_3']:
             flow2.add(components[key])
 

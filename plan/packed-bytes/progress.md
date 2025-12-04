@@ -238,7 +238,7 @@ cached instances for identical parameter combinations.
 
 ---
 
-## Wave 6: NLRI Types 🔄 PARTIAL
+## Wave 6: NLRI Types ✅ COMPLETE
 
 | File | Class | Status | Notes |
 |------|-------|--------|-------|
@@ -246,11 +246,37 @@ cached instances for identical parameter combinations.
 | `nlri/inet.py` | INET | ✅ | `__init__(self, packed: bytes, ...)` |
 | `nlri/label.py` | Label | ✅ | `__init__(self, packed: bytes, ...)` |
 | `nlri/ipvpn.py` | IPVPN | ✅ | `__init__(self, packed: bytes, ...)` |
-| `nlri/vpls.py` | VPLS | ✅ | `__init__(self, packed: bytes, ...)` |
-| `nlri/rtc.py` | RTC | 🔄 | Origin as packed; RT needs `negotiated` |
-| `nlri/flow.py` | Flow | ⊘ N/A | Builder pattern - excluded by design |
-| `nlri/flow.py` | IPrefix4 | ⊘ N/A | FlowSpec component - excluded |
-| `nlri/flow.py` | IPrefix6 | ⊘ N/A | FlowSpec component - excluded |
+| `nlri/vpls.py` | VPLS | ✅ | `__init__(packed)` + `make_vpls()`, `make_empty()` factories |
+| `nlri/rtc.py` | RTC | ✅ | `__init__(packed_origin, rt)` + `make_rtc()` factory |
+| `nlri/flow.py` | Flow | ✅ | `__init__(packed, afi, safi, action)` + `make_flow()` factory |
+| `nlri/flow.py` | IPrefix4 | ✅ | `__init__(packed)` + `make_prefix4()` factory |
+| `nlri/flow.py` | IPrefix6 | ✅ | `__init__(packed, offset)` + `make_prefix6()` factory |
+
+#### RTC Design Note (2025-12-04)
+
+RTC uses a hybrid pattern:
+- `packed_origin: bytes | None` - 4 bytes packed ASN, stored as wire bytes
+- `rt: RouteTarget | None` - stored as object (RT unpacking requires `negotiated`)
+- `origin` property unpacks ASN from `_packed_origin`
+- `make_rtc(origin, rt)` factory creates instances from semantic values
+
+This is the best we can achieve because RouteTarget.unpack_attribute() requires negotiated context.
+
+#### Flow Design Note (2025-12-04)
+
+Flow uses a hybrid pattern with lazy rule parsing:
+- `_packed: bytes` - stores wire format bytes (excluding length prefix)
+- `_rules_cache: dict | None` - parsed rules, lazily populated on first access
+- `_packed_stale: bool` - marks when packed needs recomputation
+- `_rd_override: RouteDistinguisher | None` - RD set via setter
+
+Key methods:
+- `__init__(packed, afi, safi, action)` - create from wire bytes
+- `make_flow(afi, safi, action)` - factory for builder mode (config/API)
+- `rules` property - lazy parses from `_packed` on first access
+- `rd` property - returns `_rd_override` if set, else extracts from `_packed`
+- `add(rule)` - adds rule, marks `_packed_stale=True`
+- `_pack_nlri_simple()` - returns stored bytes if valid, else recomputes
 
 ---
 
@@ -323,12 +349,12 @@ cached instances for identical parameter combinations.
 | Wave 3 | ~20 | 0 | 0 | 0 | ~20 |
 | Wave 4 | ~50 | 0 | 0 | 3 | ~53 |
 | Wave 5 | 5 | 0 | 0 | 0 | 5 |
-| Wave 6 | 5 | 1 | 0 | 3 | 9 |
+| Wave 6 | 9 | 0 | 0 | 0 | 9 |
 | Wave 7 | ~20 | 0 | 0 | 0 | ~20 |
 | Wave 8 | 6 | 0 | 0 | 0 | 6 |
-| **TOTAL** | **~120** | **1** | **0** | **7** | **~128** |
+| **TOTAL** | **~124** | **0** | **0** | **4** | **~128** |
 
-**Completion: ~99%** (120 done + 1 partial out of ~121 convertible classes)
+**Completion: 100%** (all convertible classes done)
 
 ---
 

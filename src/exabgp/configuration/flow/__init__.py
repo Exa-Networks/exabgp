@@ -86,7 +86,7 @@ class ParseFlow(Section):
 
 @ParseFlow.register('route', 'append-route')
 def route(tokeniser: Any) -> list[Change]:
-    flow_nlri = Flow()
+    flow_nlri = Flow.make_flow()
     change: Change = Change(flow_nlri, Attributes())
 
     while True:
