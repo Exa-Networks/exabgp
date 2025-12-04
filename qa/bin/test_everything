@@ -140,7 +140,7 @@ def run_command(cmd: str, env: dict | None = None, shell: bool = True) -> tuple[
 TEST_COMMANDS: dict[str, str | list[str]] = {
     'ruff-format': 'uv run ruff format src tests',
     'ruff-check': 'uv run ruff check src qa tests',
-    'unit': 'env exabgp_log_enable=false uv run pytest ./tests/unit/ -q',
+    'unit': 'env exabgp_log_enable=false uv run pytest ./tests/unit/ ./tests/fuzz/ -q',
     'config': './sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf',
     'no-neighbor': './qa/scripts/test_no_neighbor.py',
     'encode-decode': './qa/scripts/test_encode_decode.py',
