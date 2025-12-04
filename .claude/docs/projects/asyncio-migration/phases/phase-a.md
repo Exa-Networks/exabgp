@@ -104,13 +104,13 @@ async def _read_ka_async(self) -> None:
 
 **Linting:**
 ```bash
-ruff format src && ruff check src
+uv run ruff format src && uv run ruff check src
 # Result: All checks passed!
 ```
 
 **Unit Tests:**
 ```bash
-env exabgp_log_enable=false pytest ./tests/unit/ -q
+env exabgp_log_enable=false uv run pytest ./tests/unit/ -q
 # Result: 1376 passed in 4.02s
 ```
 

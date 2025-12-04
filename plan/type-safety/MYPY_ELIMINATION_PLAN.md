@@ -325,14 +325,14 @@
 ## Testing Strategy
 
 **After Each Phase:**
-1. ✅ `ruff format src && ruff check src`
-2. ✅ `env exabgp_log_enable=false pytest ./tests/unit/ -x -q` (1376 tests)
+1. ✅ `uv run ruff format src && uv run ruff check src`
+2. ✅ `env exabgp_log_enable=false uv run pytest ./tests/unit/ -x -q` (1376 tests)
 3. ✅ `./qa/bin/functional encoding` (1870 tests)
 4. ✅ `./qa/bin/functional decoding` (360 tests)
 5. ✅ `./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf`
 
 **Continuous Validation:**
-- Run mypy after each file/group of files fixed
+- Run `uv run mypy` after each file/group of files fixed
 - Ensure error count decreases monotonically
 - Commit working changes frequently
 

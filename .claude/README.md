@@ -242,8 +242,8 @@ Recover from error | ERROR_RECOVERY_PROTOCOL.md | ERROR_RECOVERY_PROTOCOL.md
 
 ```bash
 # Before claiming "fixed"/"ready"/"complete":
-ruff format src && ruff check src
-env exabgp_log_enable=false pytest ./tests/unit/
+uv run ruff format src && uv run ruff check src
+env exabgp_log_enable=false uv run pytest ./tests/unit/
 ./qa/bin/functional encoding <test_id>
 ```
 

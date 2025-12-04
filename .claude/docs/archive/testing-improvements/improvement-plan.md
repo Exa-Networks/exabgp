@@ -395,12 +395,12 @@ dev-dependencies = [
 ### Optional (For Advanced Fuzzing)
 ```bash
 # Atheris (coverage-guided fuzzing)
-pip install atheris
+uv pip install atheris
 
 # AFL++ (mutation-based fuzzing)
 # Requires system installation
 apt-get install afl++
-pip install python-afl
+uv pip install python-afl
 ```
 
 ### Coverage Configuration Updates

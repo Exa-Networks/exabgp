@@ -73,10 +73,10 @@ Run stress tests to verify reactor performance:
 
 ```bash
 # API reaction time and yield behavior
-pytest qa/stress/test_api_reaction.py -v
+uv run pytest qa/stress/test_api_reaction.py -v
 
 # Peer throughput and multi-peer interleaving
-pytest qa/stress/test_peer_throughput.py -v
+uv run pytest qa/stress/test_peer_throughput.py -v
 ```
 
 ### Key Performance Fixes (2025-12-03)

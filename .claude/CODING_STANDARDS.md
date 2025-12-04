@@ -57,8 +57,8 @@ def func(x: Union[int, str]) -> Optional[bool]:
 ## Linting
 
 ```bash
-ruff format src/  # Single quotes, 120 char
-ruff check src/   # Must pass
+uv run ruff format src/  # Single quotes, 120 char
+uv run ruff check src/   # Must pass
 ```
 
 ---
@@ -144,7 +144,7 @@ After fixing ANY bug:
 **Check before committing:**
 ```bash
 # Test if module passes strict
-mypy --disallow-untyped-defs --disallow-untyped-calls --disallow-incomplete-defs --warn-return-any src/exabgp/<module>/
+uv run mypy --disallow-untyped-defs --disallow-untyped-calls --disallow-incomplete-defs --warn-return-any src/exabgp/<module>/
 ```
 
 **If output shows "Success: no issues found":**

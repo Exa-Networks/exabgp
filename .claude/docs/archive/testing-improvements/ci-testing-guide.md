@@ -23,17 +23,16 @@ This guide documents the complete CI testing requirements for ExaBGP. Before dec
 #### Commands to run:
 ```bash
 # Install dependencies
-python -m pip install --upgrade pip
-pip install -r qa/requirements.txt
+uv sync
 
 # Run flake8 (critical errors only)
-flake8 . --max-line-length 120 \
+uv run flake8 . --max-line-length 120 \
   --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages \
   --count --select=E9,F63,F7,F82 --show-source --statistics
 
 # Run ruff (format then check)
-ruff format src
-ruff check src
+uv run ruff format src
+uv run ruff check src
 ```
 
 **What it checks:**
@@ -50,11 +49,10 @@ ruff check src
 #### Commands to run:
 ```bash
 # Install dependencies
-python -m pip install --upgrade pip
-pip install -r qa/requirements.txt
+uv sync
 
 # Run unit tests with coverage (now uses standard test_*.py naming)
-env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py
+env exabgp_log_enable=false uv run pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py
 ```
 
 **Test files (using standard pytest naming convention):**
@@ -70,9 +68,7 @@ env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit
 #### Commands to run:
 ```bash
 # Install dependencies
-python -m pip install --no-cache-dir --upgrade pip
-pip install --no-cache-dir -r requirements.txt
-pip install psutil
+uv sync
 
 # 1. Configuration/Parsing tests
 ./qa/bin/functional parsing
@@ -98,9 +94,7 @@ done
 
 ```bash
 # Install dependencies
-python -m pip install --no-cache-dir --upgrade pip
-pip install --no-cache-dir -r requirements.txt
-pip install psutil
+uv sync
 
 # Set user
 export EXABGP_DAEMON_USER=$(whoami)
@@ -252,11 +246,11 @@ All workflows trigger on:
 ### Minimal local testing:
 ```bash
 # Linting
-flake8 . --max-line-length 120 --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages --count --select=E9,F63,F7,F82 --show-source --statistics
-ruff format src && ruff check src
+uv run flake8 . --max-line-length 120 --exclude src/exabgp/vendoring/ --exclude build/ --exclude site-packages --count --select=E9,F63,F7,F82 --show-source --statistics
+uv run ruff format src && uv run ruff check src
 
 # Unit tests
-env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py
+env exabgp_log_enable=false uv run pytest --cov --cov-reset ./tests/*_test.py
 
 # Functional tests
 ./qa/bin/functional parsing
@@ -266,16 +260,13 @@ for test in $(./qa/bin/functional encoding --short-list); do ./qa/bin/functional
 
 ### Full CI simulation:
 ```bash
-# Run all tests across all Python versions (requires pyenv or similar)
-for version in 3.8 3.9 3.10 3.11 3.12; do
-  echo "Testing Python $version"
-  python$version -m pytest --cov --cov-reset ./tests/*_test.py
-  python$version qa/bin/functional parsing
-  for test in $(python$version qa/bin/functional encoding --short-list); do
-    python$version qa/bin/functional encoding "$test"
-  done
-  python$version qa/bin/functional decoding
+# Run all tests (Python 3.12+ required)
+uv run pytest --cov --cov-reset ./tests/*_test.py
+./qa/bin/functional parsing
+for test in $(./qa/bin/functional encoding --short-list); do
+  ./qa/bin/functional encoding "$test"
 done
+./qa/bin/functional decoding
 ```
 
 ---

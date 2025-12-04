@@ -281,17 +281,17 @@ items = (x for x in list if condition)  # <-- generator expression
 
 ### Unit Tests
 ```bash
-PYTHONPATH=src python -m pytest tests/unit/ -v
+uv run pytest tests/unit/ -v
 ```
 
 ### Fuzz Tests
 ```bash
-PYTHONPATH=src python -m pytest tests/fuzz/ -v
+uv run pytest tests/fuzz/ -v
 ```
 
 ### Full Test Suite
 ```bash
-PYTHONPATH=src python -m pytest tests/ -v --cov=src/exabgp
+uv run pytest tests/ -v --cov=src/exabgp
 ```
 
 ### Functional Tests

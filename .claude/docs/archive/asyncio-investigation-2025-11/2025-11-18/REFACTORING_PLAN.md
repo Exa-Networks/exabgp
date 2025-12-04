@@ -139,7 +139,7 @@ exabgp_reactor_asyncio=true ./qa/bin/functional decoding
 
 **Verification:**
 ```bash
-ruff format src && ruff check src
+uv run ruff format src && uv run ruff check src
 ```
 **Expected:** All checks passed
 

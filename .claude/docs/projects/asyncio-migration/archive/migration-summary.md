@@ -217,7 +217,7 @@ Each PR includes:
 ### This Session
 ```bash
 # Record baseline
-PYTHONPATH=src python -m pytest tests/ -v --cov=src/exabgp > baseline.log
+uv run pytest tests/ -v --cov=src/exabgp > baseline.log
 
 # Create PR branch
 git checkout -b async-pr-01-infrastructure
@@ -226,7 +226,7 @@ git checkout -b async-pr-01-infrastructure
 # (see MIGRATION_QUICK_START.md for details)
 
 # Test
-PYTHONPATH=src python -m pytest tests/ -v
+uv run pytest tests/ -v
 
 # Commit and push
 git commit -m "[async-migration] PR #1: Add async/await infrastructure"

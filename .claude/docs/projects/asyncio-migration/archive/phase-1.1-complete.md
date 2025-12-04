@@ -84,7 +84,7 @@ Lines of Test Code       ~4,000    ~5,680    +1,680 (+42%)
 git checkout claude/continue-testing-improvements-011CUvZFpuL6siYbqjn17U5h
 
 # 2. Verify tests
-PYTHONPATH=src python -m pytest tests/ -v
+uv run pytest tests/ -v
 
 # 3. Check status
 cat PROGRESS.md
@@ -139,14 +139,13 @@ cat PROGRESS.md
 ## 📝 Important Notes
 
 ### Test Execution
-Always use `PYTHONPATH=src` when running tests:
 ```bash
-PYTHONPATH=src python -m pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 ### Dependencies Required
 ```bash
-pip install hypothesis pytest-cov pytest-xdist pytest-timeout pytest-benchmark
+uv sync
 ```
 
 ### Logger Mocking Pattern

@@ -61,8 +61,8 @@ ExaBGP supports Python 3.8.1+ and CI tests run on Python 3.8-3.12. Before making
 ## Testing Requirements
 
 After each change:
-1. ✅ `ruff format src && ruff check src` (catches many compatibility issues)
-2. ✅ `env exabgp_log_enable=false pytest ./tests/unit/`
+1. ✅ `uv run ruff format src && uv run ruff check src` (catches many compatibility issues)
+2. ✅ `env exabgp_log_enable=false uv run pytest ./tests/unit/`
 3. ✅ `./qa/bin/functional encoding` (for affected components)
 
 ## Related Documentation

@@ -12,7 +12,7 @@ Comprehensive test coverage for socket and pipe transports.
 
 **Run:**
 ```bash
-env exabgp_log_enable=false pytest ./tests/unit/test_cli_transport.py -v
+env exabgp_log_enable=false uv run pytest ./tests/unit/test_cli_transport.py -v
 ```
 
 **Coverage:**
@@ -147,7 +147,7 @@ env exabgp_log_enable=false pytest ./tests/unit/test_cli_transport.py -v
 
 ```bash
 # Unit tests
-env exabgp_log_enable=false pytest ./tests/unit/test_cli_transport.py -v
+env exabgp_log_enable=false uv run pytest ./tests/unit/test_cli_transport.py -v
 
 # Functional tests (comprehensive)
 ./tests/functional/test_cli_transports.sh
@@ -160,10 +160,10 @@ env exabgp_log_enable=false pytest ./tests/unit/test_cli_transport.py -v
 
 ```bash
 # Single unit test class
-pytest ./tests/unit/test_cli_transport.py::TestUnixSocketDiscovery -v
+uv run pytest ./tests/unit/test_cli_transport.py::TestUnixSocketDiscovery -v
 
 # Single unit test
-pytest ./tests/unit/test_cli_transport.py::TestTransportSelection::test_default_transport_is_socket -v
+uv run pytest ./tests/unit/test_cli_transport.py::TestTransportSelection::test_default_transport_is_socket -v
 ```
 
 ---
@@ -195,7 +195,7 @@ rm -rf /tmp/exabgp-test
 
 ```bash
 # Must pass before commit:
-env exabgp_log_enable=false pytest ./tests/unit/ -q
+env exabgp_log_enable=false uv run pytest ./tests/unit/ -q
 ./tests/quick-transport-test.sh
 ```
 
@@ -203,7 +203,7 @@ env exabgp_log_enable=false pytest ./tests/unit/ -q
 
 ```bash
 # Complete validation:
-env exabgp_log_enable=false pytest ./tests/unit/test_cli_transport.py -v
+env exabgp_log_enable=false uv run pytest ./tests/unit/test_cli_transport.py -v
 ./tests/functional/test_cli_transports.sh
 ./qa/bin/functional encoding
 ./qa/bin/functional decoding
