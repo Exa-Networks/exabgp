@@ -66,8 +66,10 @@ Use AskUserQuestion tool:
 
 **Core principle:** Always maintain notes as you work. NEVER delete from plan files.
 
+**Plan file location:** `plan/` - Implementation plans and active work (project root)
+
 ✅ **Required during complex work:**
-1. If a plan file exists (e.g., `~/.claude/plans/*.md`), update it as you discover:
+1. If a plan file exists (e.g., `plan/*.md`), update it as you discover:
    - Edge cases found during implementation
    - Design decisions made
    - Issues encountered and their resolutions
