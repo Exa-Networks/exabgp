@@ -79,8 +79,64 @@
 
 | File | Class | Status | Notes |
 |------|-------|--------|-------|
-| `attribute/mprnlri.py` | MPRNLRI | ⏳ | Takes `(afi, safi, nlris)` not packed |
-| `attribute/mpurnlri.py` | MPURNLRI | ⏳ | Takes `(afi, safi, nlris)` not packed |
+| `attribute/mprnlri.py` | MPRNLRI | ✅ | Hybrid pattern - see below |
+| `attribute/mpurnlri.py` | MPURNLRI | ✅ | Hybrid pattern - see below |
+
+#### MPRNLRI/MPURNLRI Design Decision (2025-12-04)
+
+**Problem:** These are container attributes holding multiple NLRIs. The standard packed-bytes-first
+pattern (`__init__(packed: bytes)`) doesn't naturally fit because:
+
+1. Wire format is computed dynamically (groups NLRIs by nexthop for MPRNLRI)
+2. May yield MULTIPLE wire attributes when NLRIs exceed size limits
+3. Packing requires `negotiated` context (for addpath, nexthop encoding)
+
+**Decision:** Hybrid pattern with two modes - unpacked path stores wire bytes + context,
+semantic path stores NLRI list. NLRIs are parsed lazily on access.
+
+**Implemented pattern:**
+```python
+class MPRNLRI(Attribute, Family):
+    _MODE_PACKED = 1  # Created from wire bytes (unpack path)
+    _MODE_NLRIS = 2   # Created from NLRI list (semantic path)
+
+    def __init__(self, packed: bytes, context: NLRIParseContext) -> None:
+        self._packed = packed
+        self._context = context
+        self._mode = self._MODE_PACKED
+        self._nlris_cache: list[NLRI] | None = None
+
+    @classmethod
+    def make_mprnlri(cls, afi: AFI, safi: SAFI, nlris: list[NLRI]) -> 'MPRNLRI':
+        # Creates instance in semantic mode with NLRIs stored directly
+        instance = cls(header, dummy_context)
+        instance._mode = cls._MODE_NLRIS
+        instance._nlris_cache = nlris
+        return instance
+
+    @property
+    def nlris(self) -> list[NLRI]:
+        # Returns cached NLRIs or parses from _packed lazily
+        if self._nlris_cache is not None:
+            return self._nlris_cache
+        self._nlris_cache = self._parse_nlris()
+        return self._nlris_cache
+```
+
+**NLRIParseContext:** Minimal frozen dataclass containing only what's needed for NLRI parsing:
+- `addpath: bool` - AddPath enabled for this AFI/SAFI
+- `asn4: bool` - 4-byte ASN mode
+- `msg_size: int` - Max UPDATE size (4096 standard, 65535 extended)
+- `from_negotiated(negotiated, afi, safi)` - factory from full Negotiated object
+
+**Key changes:**
+1. `__init__(packed, context)` - stores wire bytes for unpack path
+2. `make_mprnlri(afi, safi, nlris)` - factory for semantic creation
+3. `nlris` property - lazy parsing with caching
+4. `packed_attributes()` generator - unchanged, yields multiple bytes as needed
+5. All call sites updated to use `make_mprnlri()` / `make_mpurnlri()` factories
+
+**Tests:** All 9 test suites pass (2621 unit, 74 encoding, 18 decoding)
 
 ### SR Attributes
 

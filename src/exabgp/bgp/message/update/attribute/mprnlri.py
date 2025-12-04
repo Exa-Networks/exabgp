@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
+from exabgp.bgp.message.open.capability.negotiated import NLRIParseContext
 
 # from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
@@ -23,7 +24,7 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 
-# ==================================================== MP Unreacheable NLRI (15)
+# ==================================================== MP Reachable NLRI (14)
 #
 
 
@@ -33,10 +34,114 @@ class MPRNLRI(Attribute, Family):
     ID = Attribute.CODE.MP_REACH_NLRI
     NO_DUPLICATE = True
 
-    def __init__(self, afi: int | AFI, safi: int | SAFI, nlris: list[NLRI]) -> None:
-        Family.__init__(self, afi, safi)
-        # all the routes must have the same next-hop
-        self.nlris: list[NLRI] = nlris
+    # Mode indicators
+    _MODE_PACKED = 1  # Created from wire bytes (unpack path)
+    _MODE_NLRIS = 2  # Created from NLRI list (semantic path)
+
+    def __init__(self, packed: bytes, context: NLRIParseContext) -> None:
+        """Create MPRNLRI from wire-format bytes.
+
+        Args:
+            packed: Wire-format payload (after attribute header)
+            context: Parsing context for NLRI decoding
+        """
+        self._packed = packed
+        self._context = context
+        self._mode = self._MODE_PACKED
+        self._nlris_cache: list[NLRI] | None = None
+        # Initialize Family from packed data
+        _afi = unpack('!H', packed[:2])[0]
+        _safi = packed[2]
+        Family.__init__(self, AFI.from_int(_afi), SAFI.from_int(_safi))
+
+    @classmethod
+    def make_mprnlri(cls, afi: AFI, safi: SAFI, nlris: list[NLRI]) -> 'MPRNLRI':
+        """Create MPRNLRI from semantic data (NLRI list).
+
+        Args:
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            nlris: List of NLRI objects to include
+
+        Returns:
+            MPRNLRI instance in semantic mode
+        """
+        # Create minimal packed header just for Family init
+        # Full packing happens in packed_attributes()
+        header = afi.pack_afi() + safi.pack_safi()
+        # Create dummy context - not used in semantic mode
+        dummy_context = NLRIParseContext(addpath=False, asn4=False, msg_size=4096)
+        instance = cls(header + b'\x00\x00', dummy_context)
+        # Switch to semantic mode
+        instance._mode = cls._MODE_NLRIS
+        instance._nlris_cache = nlris
+        return instance
+
+    @property
+    def nlris(self) -> list[NLRI]:
+        """Get the list of NLRIs, parsing from wire format if needed."""
+        if self._nlris_cache is not None:
+            return self._nlris_cache
+
+        if self._mode == self._MODE_PACKED:
+            self._nlris_cache = self._parse_nlris()
+            return self._nlris_cache
+
+        return []
+
+    def _parse_nlris(self) -> list[NLRI]:
+        """Parse NLRIs from wire format using stored context."""
+        nlris: list[NLRI] = []
+        data = self._packed
+
+        # -- Reading AFI/SAFI (already done in __init__ for Family)
+        offset = 3
+
+        # -- Reading length of next-hop
+        len_nh = data[offset]
+        offset += 1
+
+        if (self.afi, self.safi) not in Family.size:
+            raise Notify(3, 0, 'unsupported {} {}'.format(self.afi, self.safi))
+
+        length, rd = Family.size[(self.afi, self.safi)]
+
+        size = len_nh - rd
+
+        # Parse nexthops
+        nhs = data[offset + rd : offset + rd + size]
+        nexthops = [nhs[pos : pos + 16] for pos in range(0, len(nhs), 16)]
+
+        offset += len_nh
+
+        # Skip reserved byte
+        offset += 1
+
+        # Reading the NLRIs
+        nlri_data = data[offset:]
+
+        while nlri_data:
+            if nexthops:
+                for nexthop in nexthops:
+                    nlri_result, left_result = NLRI.unpack_nlri(
+                        self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._context.addpath, Negotiated.UNSET
+                    )
+                    if nlri_result is not NLRI.INVALID:
+                        nlri_result.nexthop = NextHop.unpack_attribute(nexthop, Negotiated.UNSET)
+                        nlris.append(nlri_result)
+            else:
+                nlri_result, left_result = NLRI.unpack_nlri(
+                    self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._context.addpath, Negotiated.UNSET
+                )
+                if nlri_result is not NLRI.INVALID:
+                    nlris.append(nlri_result)
+
+            if left_result == nlri_data:
+                raise RuntimeError('sub-calls should consume data')
+
+            nlri_data = left_result
+
+        return nlris
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MPRNLRI):
@@ -119,13 +224,15 @@ class MPRNLRI(Attribute, Family):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> MPRNLRI:
-        nlris = []
+        """Unpack MPRNLRI from wire format.
 
-        # -- Reading AFI/SAFI
+        Validates the data and creates an MPRNLRI instance storing the wire bytes.
+        NLRIs are parsed lazily when accessed via the nlris property.
+        """
+        # -- Reading AFI/SAFI for validation
         _afi, _safi = unpack('!HB', data[:3])
         afi, safi = AFI.from_int(_afi), SAFI.from_int(_safi)
         offset = 3
-        nh_afi = afi
 
         # we do not want to accept unknown families
         if negotiated and (afi, safi) not in negotiated.families:
@@ -139,10 +246,6 @@ class MPRNLRI(Attribute, Family):
             raise Notify(3, 0, 'unsupported {} {}'.format(afi, safi))
 
         length, rd = Family.size[(afi, safi)]
-
-        # Is the peer going to send us some Path Information with the route (AddPath)
-        # It need to be done before adapting the family for another possible next-hop
-        addpath = negotiated.required(afi, safi)
 
         if negotiated.nexthop:
             if len_nh in (16, 32, 24):
@@ -163,51 +266,29 @@ class MPRNLRI(Attribute, Family):
                 % (afi, safi, len_nh, ' or '.join(str(_) for _ in length)),
             )
 
-        size = len_nh - rd
-
-        # Note: Caching nexthop slices was benchmarked but is slower than direct slicing
-        # (dict lookup overhead exceeds slice cost). See lab/benchmark_nexthop_cache.py
-        nhs = data[offset + rd : offset + rd + size]
-        nexthops = [nhs[pos : pos + 16] for pos in range(0, len(nhs), 16)]
-
         # chech the RD is well zero
-        if rd and sum([int(_) for _ in data[offset:8]]) != 0:
+        if rd and sum([int(_) for _ in data[offset : offset + 8]]) != 0:
             raise Notify(3, 0, "MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 
         offset += len_nh
 
-        # Skip a reserved bit as somone had to bug us !
+        # Skip a reserved bit as someone had to bug us !
         reserved = data[offset]
         offset += 1
 
         if reserved != 0:
             raise Notify(3, 0, 'the reserved bit of MP_REACH_NLRI is not zero')
 
-        # Reading the NLRIs
-        data = data[offset:]
-
-        if not data:
+        # Verify there's NLRI data
+        if offset >= len(data):
             raise Notify(3, 0, 'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi, safi))
 
-        while data:
-            if nexthops:
-                for nexthop in nexthops:
-                    nlri_result, left_result = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, negotiated)
-                    # allow unpack_nlri to return NLRI.INVALID for "treat as withdraw"
-                    if nlri_result is not NLRI.INVALID:
-                        nlri_result.nexthop = NextHop.unpack_attribute(nexthop, negotiated)
-                        nlris.append(nlri_result)
-            else:
-                nlri_result, left_result = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, negotiated)
-                # allow unpack_nlri to return NLRI.INVALID for "treat as withdraw"
-                if nlri_result is not NLRI.INVALID:
-                    nlris.append(nlri_result)
+        # Create context for lazy NLRI parsing
+        context = NLRIParseContext.from_negotiated(negotiated, afi, safi)
 
-            if left_result == data:
-                raise RuntimeError('sub-calls should consume data')
-
-            data = left_result
-        return cls(afi, safi, nlris)
+        # Store wire bytes and context - NLRIs parsed lazily
+        return cls(data, context)
 
 
-EMPTY_MPRNLRI = MPRNLRI(AFI.undefined, SAFI.undefined, [])
+# Create empty MPRNLRI using factory method
+EMPTY_MPRNLRI = MPRNLRI.make_mprnlri(AFI.undefined, SAFI.undefined, [])

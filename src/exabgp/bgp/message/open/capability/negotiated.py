@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -26,6 +27,34 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+
+
+@dataclass(frozen=True)
+class NLRIParseContext:
+    """Minimal context needed for NLRI parsing and packing.
+
+    This dataclass captures only the negotiated parameters needed to parse
+    and pack NLRI data, avoiding the need to pass the full Negotiated
+    object when storing parsed MP attributes.
+
+    Attributes:
+        addpath: Whether AddPath is enabled for this AFI/SAFI combination.
+        asn4: Whether 4-byte ASN mode is negotiated.
+        msg_size: Maximum BGP message size (4096 standard, 65535 extended).
+    """
+
+    addpath: bool
+    asn4: bool
+    msg_size: int
+
+    @classmethod
+    def from_negotiated(cls, negotiated: 'Negotiated', afi: AFI, safi: SAFI) -> 'NLRIParseContext':
+        """Create parse context from full Negotiated state."""
+        return cls(
+            addpath=negotiated.required(afi, safi),
+            asn4=negotiated.asn4,
+            msg_size=negotiated.msg_size,
+        )
 
 
 class Negotiated:
