@@ -322,9 +322,9 @@ class Update(Message):
         if nexthop is not IP.NoNextHop and neighbor is not None:
             try:
                 local_address = neighbor.session.local_address
-                nexthop_packed = getattr(nexthop, '_packed', None)
-                local_packed = getattr(local_address, '_packed', None)
-                if local_address is not None and nexthop_packed is not None and local_packed is not None:
+                nexthop_packed = getattr(nexthop, '_packed', b'')
+                local_packed = getattr(local_address, '_packed', b'')
+                if local_address is not None and nexthop_packed and local_packed:
                     if nexthop_packed == local_packed:
                         log.warning(
                             lambda: 'received NEXT_HOP {} equals our local address (RFC 4271 violation)'.format(
