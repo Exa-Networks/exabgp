@@ -318,11 +318,14 @@ class Update(Message):
 
         # RFC 4271 Section 5.1.3: NEXT_HOP MUST NOT be the IP address of the receiving speaker
         # Log warning but don't kill session - peer may have misconfigured next-hop
-        if nexthop is not IP.NoNextHop and hasattr(negotiated, 'neighbor'):
+        neighbor = getattr(negotiated, 'neighbor', None)
+        if nexthop is not IP.NoNextHop and neighbor is not None:
             try:
-                local_address = negotiated.neighbor.session.local_address
-                if local_address is not None and hasattr(nexthop, '_packed') and hasattr(local_address, '_packed'):
-                    if nexthop._packed == local_address._packed:
+                local_address = neighbor.session.local_address
+                nexthop_packed = getattr(nexthop, '_packed', None)
+                local_packed = getattr(local_address, '_packed', None)
+                if local_address is not None and nexthop_packed is not None and local_packed is not None:
+                    if nexthop_packed == local_packed:
                         log.warning(
                             lambda: 'received NEXT_HOP {} equals our local address (RFC 4271 violation)'.format(
                                 nexthop

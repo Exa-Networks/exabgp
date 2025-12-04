@@ -66,8 +66,10 @@ class Cache:
         if cached.attributes.index() != change.attributes.index():
             return False
 
-        if hasattr(cached.nlri, 'nexthop') and hasattr(change.nlri, 'nexthop'):
-            if cached.nlri.nexthop.index() != change.nlri.nexthop.index():
+        cached_nh = getattr(cached.nlri, 'nexthop', None)
+        change_nh = getattr(change.nlri, 'nexthop', None)
+        if cached_nh is not None and change_nh is not None:
+            if cached_nh.index() != change_nh.index():
                 return False
 
         return True

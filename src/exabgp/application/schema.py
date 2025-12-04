@@ -59,32 +59,41 @@ def _get_root_schema() -> Container:
     children: dict[str, SchemaElement] = {}
 
     # Main sections with schemas
-    if hasattr(ParseNeighbor, 'schema') and ParseNeighbor.schema:
-        children['neighbor'] = ParseNeighbor.schema
+    schema = getattr(ParseNeighbor, 'schema', None)
+    if schema:
+        children['neighbor'] = schema
 
-    if hasattr(ParseProcess, 'schema') and ParseProcess.schema:
-        children['process'] = ParseProcess.schema
+    schema = getattr(ParseProcess, 'schema', None)
+    if schema:
+        children['process'] = schema
 
-    if hasattr(ParseTemplate, 'schema') and ParseTemplate.schema:
-        children['template'] = ParseTemplate.schema
+    schema = getattr(ParseTemplate, 'schema', None)
+    if schema:
+        children['template'] = schema
 
-    if hasattr(ParseCapability, 'schema') and ParseCapability.schema:
-        children['capability'] = ParseCapability.schema
+    schema = getattr(ParseCapability, 'schema', None)
+    if schema:
+        children['capability'] = schema
 
-    if hasattr(ParseFamily, 'schema') and ParseFamily.schema:
-        children['family'] = ParseFamily.schema
+    schema = getattr(ParseFamily, 'schema', None)
+    if schema:
+        children['family'] = schema
 
-    if hasattr(ParseStatic, 'schema') and ParseStatic.schema:
-        children['static'] = ParseStatic.schema
+    schema = getattr(ParseStatic, 'schema', None)
+    if schema:
+        children['static'] = schema
 
-    if hasattr(ParseFlow, 'schema') and ParseFlow.schema:
-        children['flow'] = ParseFlow.schema
+    schema = getattr(ParseFlow, 'schema', None)
+    if schema:
+        children['flow'] = schema
 
-    if hasattr(ParseL2VPN, 'schema') and ParseL2VPN.schema:
-        children['l2vpn'] = ParseL2VPN.schema
+    schema = getattr(ParseL2VPN, 'schema', None)
+    if schema:
+        children['l2vpn'] = schema
 
-    if hasattr(ParseOperational, 'schema') and ParseOperational.schema:
-        children['operational'] = ParseOperational.schema
+    schema = getattr(ParseOperational, 'schema', None)
+    if schema:
+        children['operational'] = schema
 
     return Container(
         description='ExaBGP configuration schema',
@@ -170,8 +179,8 @@ def _get_section_schema(section: str) -> Container | None:
     if parser_class is None:
         return None
 
-    if hasattr(parser_class, 'schema') and parser_class.schema:
-        schema = parser_class.schema
+    schema = getattr(parser_class, 'schema', None)
+    if schema:
         if isinstance(schema, Container):
             return schema
 

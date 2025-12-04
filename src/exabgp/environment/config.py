@@ -428,7 +428,8 @@ class Environment:
     def __contains__(self, key: str) -> bool:
         """Support 'in' operator."""
         key = key.replace('-', '_')
-        return hasattr(self, key) and isinstance(getattr(self, key), ConfigSection)
+        attr = getattr(self, key, None)
+        return attr is not None and isinstance(attr, ConfigSection)
 
     def __iter__(self) -> Iterator[str]:
         """Iterate over section names."""

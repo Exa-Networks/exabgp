@@ -1232,7 +1232,8 @@ class TypeSelectorValidator(Validator[list[Any]]):
 
                 # For nexthop-and-attribute, use validate_with_afi if validator wants AFI
                 used_afi = False
-                if action == 'nexthop-and-attribute' and hasattr(validator, 'accepts_afi') and validator.accepts_afi:
+                accepts_afi = getattr(validator, 'accepts_afi', False)
+                if action == 'nexthop-and-attribute' and accepts_afi:
                     value = validator.validate_with_afi(tokeniser, self.afi)
                     used_afi = True
                 else:
@@ -1263,7 +1264,8 @@ class TypeSelectorValidator(Validator[list[Any]]):
                 else:
                     change.attributes.add(attribute)
         elif action == 'nlri-set':
-            field_name = self.schema.assign.get(command, command) if hasattr(self.schema, 'assign') else command
+            assign = getattr(self.schema, 'assign', None)
+            field_name = assign.get(command, command) if assign else command
             change.nlri.assign(field_name, value)
         elif action == 'nop':
             pass

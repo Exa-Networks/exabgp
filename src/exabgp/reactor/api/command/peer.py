@@ -338,9 +338,7 @@ def neighbor_create(self: Command, reactor: Reactor, service: str, line: str, us
         reactor._peers[key] = peer
 
         # Mark as dynamic peer (ephemeral - removed on reload)
-        if not hasattr(reactor, '_dynamic_peers'):
-            reactor._dynamic_peers = set()  # type: ignore[attr-defined]
-        reactor._dynamic_peers.add(key)  # type: ignore[attr-defined]
+        reactor._dynamic_peers.add(key)
 
         # Success response - use _answer() which works in both sync and async modes
         reactor.processes._answer(service, 'done')
@@ -405,7 +403,7 @@ def neighbor_delete(self: Command, reactor: Reactor, service: str, line: str, us
                     del reactor.configuration.neighbors[peer_name]
 
                 # Remove from dynamic peers tracking
-                if hasattr(reactor, '_dynamic_peers') and peer_name in reactor._dynamic_peers:
+                if peer_name in reactor._dynamic_peers:
                     reactor._dynamic_peers.remove(peer_name)
 
                 deleted_count += 1

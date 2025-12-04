@@ -396,8 +396,9 @@ class NumericString:
         op = self.operations & (CommonOperator.EOL ^ 0xFF)
         if op in [NumericOperator.TRUE, NumericOperator.FALSE]:
             return self._string[op]
-        # ugly hack as dynamic languages are what they are and use used __str__ in the past
-        value = self.value.short() if hasattr(self.value, 'short') else str(self.value)
+        # Use short() if available, else str()
+        short_method = getattr(self.value, 'short', None)
+        value = short_method() if short_method else str(self.value)
         return '{}{}'.format(self._string.get(op, '{:02X}'.format(op)), value)
 
     def __str__(self) -> str:
@@ -707,6 +708,7 @@ class Flow(NLRI):
         self._packed = packed
         self._rules_cache: dict[int, list[FlowRule]] | None = None
         self._packed_stale = False
+        self._rd_override: RouteDistinguisher | None = None
         self.nexthop = IP.NoNextHop
 
     @classmethod
@@ -747,7 +749,7 @@ class Flow(NLRI):
     def rd(self) -> RouteDistinguisher:
         """Route Distinguisher - from _rd_override if set, else from _packed for flow_vpn."""
         # Check override first (set via setter)
-        if hasattr(self, '_rd_override') and self._rd_override is not None:
+        if self._rd_override is not None:
             return self._rd_override
         # Extract from packed bytes if flow_vpn
         if self.safi in (SAFI.flow_vpn,) and len(self._packed) >= 8:
@@ -903,8 +905,9 @@ class Flow(NLRI):
                 # only add ' ' after the first element
                 if idx and not rule.operations & NumericOperator.AND:
                     r_str.append(' ')
-                # ugly hack as dynamic languages are what they are and use used __str__ in the past
-                r_str.append(rule.short() if hasattr(rule, 'short') else str(rule))
+                # Use short() if available, else str()
+                short_method = getattr(rule, 'short', None)
+                r_str.append(short_method() if short_method else str(rule))
             line = ''.join(r_str)
             if len(r_str) > 1:
                 line = '[ {} ]'.format(line)

@@ -181,8 +181,9 @@ class Attributes(dict):
             self._json = ''
 
             # attribute.ID is EXTENDED_COMMUNITY, so attribute has .communities
-            assert hasattr(attribute, 'communities')
-            for community in attribute.communities:
+            communities = getattr(attribute, 'communities', None)
+            assert communities is not None, f'EXTENDED_COMMUNITY attribute missing communities: {type(attribute)}'
+            for community in communities:
                 self[attribute.ID].add(community)
             return
 
@@ -239,8 +240,9 @@ class Attributes(dict):
                 attr = default[code](local_asn, peer_asn)
                 if attr is not NOTHING:
                     # attr is Origin, AS2Path, or LocalPreference - all have pack_attribute
-                    assert hasattr(attr, 'pack_attribute')
-                    message += attr.pack_attribute(negotiated)
+                    pack_attribute = getattr(attr, 'pack_attribute', None)
+                    assert pack_attribute is not None, f'default attribute missing pack_attribute: {type(attr)}'
+                    message += pack_attribute(negotiated)
                 continue
 
             attribute = self[code]

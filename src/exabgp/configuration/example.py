@@ -296,24 +296,27 @@ def _get_root_schema() -> Container:
     try:
         from exabgp.configuration.neighbor import ParseNeighbor
 
-        if hasattr(ParseNeighbor, 'schema') and ParseNeighbor.schema:
-            children['neighbor'] = ParseNeighbor.schema
+        schema = getattr(ParseNeighbor, 'schema', None)
+        if schema:
+            children['neighbor'] = schema
     except ImportError:
         pass
 
     try:
         from exabgp.configuration.process import ParseProcess
 
-        if hasattr(ParseProcess, 'schema') and ParseProcess.schema:
-            children['process'] = ParseProcess.schema
+        schema = getattr(ParseProcess, 'schema', None)
+        if schema:
+            children['process'] = schema
     except ImportError:
         pass
 
     try:
         from exabgp.configuration.template import ParseTemplate
 
-        if hasattr(ParseTemplate, 'schema') and ParseTemplate.schema:
-            children['template'] = ParseTemplate.schema
+        schema = getattr(ParseTemplate, 'schema', None)
+        if schema:
+            children['template'] = schema
     except ImportError:
         pass
 

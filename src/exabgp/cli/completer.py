@@ -355,14 +355,15 @@ class CommandCompleter:
                     sys.stdout.write('\n')
 
                 # Show extended help if requested
-                if show_help and metadata and hasattr(metadata, 'syntax_hint'):
-                    if metadata.syntax_hint:
+                if show_help and metadata:
+                    syntax_hint = getattr(metadata, 'syntax_hint', None)
+                    if syntax_hint:
                         sys.stdout.write(f'           {Colors.DIM}Syntax: {Colors.RESET}')
-                        sys.stdout.write(f'{Colors.CYAN}{metadata.syntax_hint}{Colors.RESET}\n')
-                if show_help and metadata and hasattr(metadata, 'example'):
-                    if metadata.example:
+                        sys.stdout.write(f'{Colors.CYAN}{syntax_hint}{Colors.RESET}\n')
+                    example = getattr(metadata, 'example', None)
+                    if example:
                         sys.stdout.write(f'           {Colors.DIM}Example: {Colors.RESET}')
-                        sys.stdout.write(f'{Colors.CYAN}{metadata.example}{Colors.RESET}\n')
+                        sys.stdout.write(f'{Colors.CYAN}{example}{Colors.RESET}\n')
             else:
                 # No color
                 if desc_str:
@@ -372,10 +373,12 @@ class CommandCompleter:
 
                 # Show extended help if requested (no color)
                 if show_help and metadata:
-                    if hasattr(metadata, 'syntax_hint') and metadata.syntax_hint:
-                        sys.stdout.write(f'           Syntax: {metadata.syntax_hint}\n')
-                    if hasattr(metadata, 'example') and metadata.example:
-                        sys.stdout.write(f'           Example: {metadata.example}\n')
+                    syntax_hint = getattr(metadata, 'syntax_hint', None)
+                    if syntax_hint:
+                        sys.stdout.write(f'           Syntax: {syntax_hint}\n')
+                    example = getattr(metadata, 'example', None)
+                    if example:
+                        sys.stdout.write(f'           Example: {example}\n')
 
         # Redraw the prompt and current input
         formatter = OutputFormatter()
