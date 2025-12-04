@@ -10,6 +10,90 @@
 
 ## 🚨 CRITICAL RULES 🚨
 
+### 0. Work Preservation (NEVER LOSE CODE) 🚨🚨🚨
+
+**Core principle:** NEVER discard uncommitted work. ALWAYS ask first.
+
+## ❌ FORBIDDEN without saving diff first AND asking user:
+
+1. **These commands require SAVE + ASK workflow:**
+   - `git checkout -- <file>`
+   - `git checkout HEAD -- <file>`
+   - `git reset --hard`
+   - `git stash drop`
+
+2. **NEVER decide on your own to revert/discard work**
+   - Even if tests fail
+   - Even if you think the approach is wrong
+   - Even if you want to try a different approach
+
+## ✅ MANDATORY WORKFLOW when you want to revert/change approach:
+
+**STEP 1: ALWAYS save first**
+```bash
+git diff > .claude/backups/work-$(date +%Y%m%d-%H%M%S).patch
+```
+
+**STEP 2: ALWAYS ask the user**
+Use AskUserQuestion tool:
+- "Tests are failing. Should I: (a) keep debugging, (b) save and try different approach, (c) revert to last working state?"
+- WAIT for user response before ANY destructive action
+
+**STEP 3: Only proceed after explicit user approval**
+
+## When tests fail on experimental code:
+
+1. **DO NOT REVERT** - the work has value even if broken
+2. Save to backup: `git diff > .claude/backups/failing-code.patch`
+3. ASK user what to do next
+4. Options to present:
+   - Continue debugging
+   - Commit as WIP: "WIP: experimental (tests failing)"
+   - Try different approach (after saving)
+
+**Backup location:** `.claude/backups/` - ALWAYS use this folder
+
+**Recovery:** If work was lost, check:
+- `.claude/backups/` - saved patches
+- `git stash list` - stashed changes
+- `git reflog` - recent commits
+
+**See:** ERROR_RECOVERY_PROTOCOL.md for recovery procedures
+
+---
+
+### 0.5. Plan Maintenance (Keep Notes Updated)
+
+**Core principle:** Always maintain notes as you work. NEVER delete from plan files.
+
+✅ **Required during complex work:**
+1. If a plan file exists (e.g., `~/.claude/plans/*.md`), update it as you discover:
+   - Edge cases found during implementation
+   - Design decisions made
+   - Issues encountered and their resolutions
+   - Status of each task (✅/🔄/❌)
+
+2. Before ending a session or when making significant progress:
+   - Update the plan with current state
+   - Note any failing tests and their causes
+   - Document what was learned
+
+3. When tests fail:
+   - Add the failure details to the plan BEFORE attempting fixes
+   - Document the root cause once identified
+   - This creates a record even if the session is interrupted
+
+## ❌ NEVER delete content from plan files
+
+- Only APPEND new information
+- Mark outdated sections with ~~strikethrough~~ or "SUPERSEDED BY: ..."
+- Keep history of failed approaches - they have value
+- If an approach didn't work, document WHY before trying another
+
+**Benefit:** If a session is lost, the plan file contains the full context needed to resume.
+
+---
+
 ### 1. Verification Before Claiming
 
 **Core principle:** Never claim success without proof
