@@ -14,9 +14,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEndXISIS, Srv6LanEndXOSPF
 
-# Minimum data length for SRv6 SID Structure TLV (RFC 9514 Section 8)
+# Fixed data length for SRv6 SID Structure TLV (RFC 9514 Section 8)
 # LB Length (1) + LN Length (1) + Function Length (1) + Argument Length (1) = 4 bytes
-SRV6_SID_STRUCTURE_MIN_LENGTH = 4
+SRV6_SID_STRUCTURE_LEN = 4
 
 #     RFC 9514 : 8.  SRv6 SID Structure TLV
 #     0                   1                   2                   3
@@ -36,30 +36,53 @@ SRV6_SID_STRUCTURE_MIN_LENGTH = 4
 @LinkState.register_lsid()
 class Srv6SidStructure(BaseLS):
     TLV = 1252
+    LEN = SRV6_SID_STRUCTURE_LEN
 
-    def __init__(self, loc_block_len: int, loc_node_len: int, func_len: int, arg_len: int) -> None:
-        self.loc_block_len = loc_block_len
-        self.loc_node_len = loc_node_len
-        self.func_len = func_len
-        self.arg_len = arg_len
+    @property
+    def loc_block_len(self) -> int:
+        """Return locator block length from packed bytes."""
+        return self._packed[0]
+
+    @property
+    def loc_node_len(self) -> int:
+        """Return locator node length from packed bytes."""
+        return self._packed[1]
+
+    @property
+    def func_len(self) -> int:
+        """Return function length from packed bytes."""
+        return self._packed[2]
+
+    @property
+    def arg_len(self) -> int:
+        """Return argument length from packed bytes."""
+        return self._packed[3]
+
+    @classmethod
+    def make_srv6_sid_structure(
+        cls, loc_block_len: int, loc_node_len: int, func_len: int, arg_len: int
+    ) -> Srv6SidStructure:
+        """Create Srv6SidStructure from semantic values.
+
+        Args:
+            loc_block_len: Locator block length in bits
+            loc_node_len: Locator node length in bits
+            func_len: Function length in bits
+            arg_len: Argument length in bits
+
+        Returns:
+            Srv6SidStructure instance
+        """
+        packed = bytes([loc_block_len, loc_node_len, func_len, arg_len])
+        return cls(packed)
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6SidStructure:
-        if len(data) < SRV6_SID_STRUCTURE_MIN_LENGTH:
+        if len(data) < SRV6_SID_STRUCTURE_LEN:
             raise Notify(
-                3, 5, f'SRv6 SID Structure: data too short, need {SRV6_SID_STRUCTURE_MIN_LENGTH} bytes, got {len(data)}'
+                3, 5, f'SRv6 SID Structure: data too short, need {SRV6_SID_STRUCTURE_LEN} bytes, got {len(data)}'
             )
-        loc_block_len = data[0]
-        loc_node_len = data[1]
-        func_len = data[2]
-        arg_len = data[3]
-
-        return cls(
-            loc_block_len=loc_block_len,
-            loc_node_len=loc_node_len,
-            func_len=func_len,
-            arg_len=arg_len,
-        )
+        return cls(data)
 
     def __str__(self) -> str:
         return 'sid-structure [%d,%d,%d,%d,]' % (

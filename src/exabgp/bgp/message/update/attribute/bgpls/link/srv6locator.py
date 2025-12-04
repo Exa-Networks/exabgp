@@ -39,25 +39,51 @@ class Srv6Locator(FlagLS):
     FLAGS = ['D'] + ['RSV' for _ in range(7)]
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, flags: dict[str, int], algorithm: int, metric: int, subtlvs: list[object]) -> None:
-        self.flags = flags
-        self.algorithm = algorithm
-        self.metric = metric
-        self.subtlvs = subtlvs
+    # flags property inherited from FlagLS - unpacks from _packed[0:1]
+
+    @property
+    def algorithm(self) -> int:
+        """Return algorithm from packed bytes."""
+        return self._packed[1]
+
+    @property
+    def metric(self) -> int:
+        """Unpack and return metric from packed bytes."""
+        return unpack('!I', self._packed[4:8])[0]
+
+    @property
+    def subtlvs(self) -> list[object]:
+        """Return sub-TLVs (none defined in RFC 9514)."""
+        return []
 
     def __repr__(self) -> str:
         return 'flags: {}, algorithm: {}, metric: {}'.format(self.flags, self.algorithm, self.metric)
 
     @classmethod
+    def make_srv6_locator(cls, flags: dict[str, int], algorithm: int, metric: int) -> Srv6Locator:
+        """Create Srv6Locator from semantic values.
+
+        Args:
+            flags: Dict with 'D' key (down bit)
+            algorithm: 8-bit algorithm value
+            metric: 32-bit metric value
+
+        Returns:
+            Srv6Locator instance
+        """
+        from struct import pack
+
+        # Build 8-bit flags field (D is bit 7)
+        flags_byte = (flags.get('D', 0) & 1) << 7
+        # Pack: Flags (1) + Algorithm (1) + Reserved (2) + Metric (4)
+        packed = pack('!BBHI', flags_byte, algorithm, 0, metric)
+        return cls(packed)
+
+    @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6Locator:
         if len(data) < SRV6_LOCATOR_MIN_LENGTH:
             raise Notify(3, 5, f'SRv6 Locator: data too short, need {SRV6_LOCATOR_MIN_LENGTH} bytes, got {len(data)}')
-        flags = cls.unpack_flags(bytes(data[0:1]))
-        algorithm = data[1]
-        metric = unpack('!I', data[4:8])[0]
-        subtlvs: list[object] = []  # No sub-TLVs defined in RFC 9514
-
-        return cls(flags=flags, algorithm=algorithm, metric=metric, subtlvs=subtlvs)
+        return cls(data)
 
     def json(self, compact: bool = False) -> str:
         return '"srv6-locator": ' + json.dumps(

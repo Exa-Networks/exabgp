@@ -1,12 +1,10 @@
-"""nodename.py
+"""opaque.py
 
 Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from __future__ import annotations
-
-from struct import unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
@@ -28,6 +26,8 @@ class PrefixOpaque(BaseLS):
     REPR = 'Opaque Prefix Attribute'
     JSON = 'opaque-prefix'
 
+    # content property inherited from BaseLS returns self._packed (raw bytes)
+
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> PrefixOpaque:
-        return cls(unpack('!%ds' % len(data), data)[0])
+        return cls(data)

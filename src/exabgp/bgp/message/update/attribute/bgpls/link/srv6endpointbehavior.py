@@ -13,9 +13,9 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
-# Minimum data length for SRv6 Endpoint Behavior TLV (RFC 9514 Section 7.1)
+# Fixed data length for SRv6 Endpoint Behavior TLV (RFC 9514 Section 7.1)
 # Endpoint Behavior (2) + Flags (1) + Algorithm (1) = 4 bytes
-SRV6_ENDPOINT_BEHAVIOR_MIN_LENGTH = 4
+SRV6_ENDPOINT_BEHAVIOR_LEN = 4
 
 #     RFC 9514 : 7.1.  SRv6 Endpoint Behavior TLV
 #     0                   1                   2                   3
@@ -32,30 +32,49 @@ SRV6_ENDPOINT_BEHAVIOR_MIN_LENGTH = 4
 @LinkState.register_lsid()
 class Srv6EndpointBehavior(BaseLS):
     TLV = 1250
+    LEN = SRV6_ENDPOINT_BEHAVIOR_LEN
 
-    def __init__(
-        self,
-        endpoint_behavior: int,
-        flags: list[str],
-        algorithm: int,
-    ) -> None:
-        self.endpoint_behavior = endpoint_behavior
-        self.flags = flags
-        self.algorithm = algorithm
+    @property
+    def endpoint_behavior(self) -> int:
+        """Unpack and return endpoint behavior from packed bytes."""
+        return unpack('!H', self._packed[0:2])[0]
+
+    @property
+    def flags(self) -> list[str]:
+        """Return flags (none defined according to RFC 9514 and 9352)."""
+        return []
+
+    @property
+    def algorithm(self) -> int:
+        """Return algorithm from packed bytes."""
+        return self._packed[3]
+
+    @classmethod
+    def make_srv6_endpoint_behavior(cls, endpoint_behavior: int, algorithm: int) -> Srv6EndpointBehavior:
+        """Create Srv6EndpointBehavior from semantic values.
+
+        Args:
+            endpoint_behavior: 16-bit endpoint behavior code
+            algorithm: 8-bit algorithm value
+
+        Returns:
+            Srv6EndpointBehavior instance
+        """
+        from struct import pack
+
+        # Pack: Endpoint Behavior (2) + Flags (1, reserved=0) + Algorithm (1)
+        packed = pack('!HBB', endpoint_behavior, 0, algorithm)
+        return cls(packed)
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6EndpointBehavior:
-        if len(data) < SRV6_ENDPOINT_BEHAVIOR_MIN_LENGTH:
+        if len(data) < SRV6_ENDPOINT_BEHAVIOR_LEN:
             raise Notify(
                 3,
                 5,
-                f'SRv6 Endpoint Behavior: data too short, need {SRV6_ENDPOINT_BEHAVIOR_MIN_LENGTH} bytes, got {len(data)}',
+                f'SRv6 Endpoint Behavior: data too short, need {SRV6_ENDPOINT_BEHAVIOR_LEN} bytes, got {len(data)}',
             )
-        flags: list[str] = []  # No flags defined according to RFC 9514 and 9352
-        algorithm = data[3]
-        endpoint_behavior = unpack('!H', data[0:2])[0]
-
-        return cls(endpoint_behavior=endpoint_behavior, flags=flags, algorithm=algorithm)
+        return cls(data)
 
     def __str__(self) -> str:
         return 'srv6-endpoint-behavior [0x%s, flags: %s, algorithm: %d]' % (

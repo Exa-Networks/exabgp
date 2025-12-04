@@ -73,7 +73,7 @@
 
 ---
 
-## Wave 4: MP Attributes + BGP-LS + SR 🔄 PARTIAL
+## Wave 4: MP Attributes + BGP-LS + SR ✅ COMPLETE
 
 ### MP Attributes
 
@@ -174,8 +174,8 @@ cached instances for identical parameter combinations.
 
 ### BGP-LS Link Attributes ✅ COMPLETE
 
-| File | Class | Status | Factory Method |
-|------|-------|--------|----------------|
+| File | Class | Status | Notes |
+|------|-------|--------|-------|
 | `attribute/bgpls/link/admingroup.py` | AdminGroup | ✅ | `make_admingroup(int)` |
 | `attribute/bgpls/link/igpmetric.py` | IgpMetric | ✅ | (variable length, use `unpack_bgpls`) |
 | `attribute/bgpls/link/linkname.py` | LinkName | ✅ | `make_linkname(str)` |
@@ -188,13 +188,13 @@ cached instances for identical parameter combinations.
 | `attribute/bgpls/link/sradj.py` | SrAdjacency | ✅ | Properties unpack from `_packed` |
 | `attribute/bgpls/link/sradjlan.py` | SrAdjacencyLan | ✅ | Properties unpack from `_packed` |
 | `attribute/bgpls/link/srlg.py` | Srlg | ✅ | `make_srlg(list[int])` |
-| `attribute/bgpls/link/srv6capabilities.py` | Srv6Capabilities | ⏳ | |
-| `attribute/bgpls/link/srv6endpointbehavior.py` | Srv6EndpointBehavior | ⏳ | |
+| `attribute/bgpls/link/srv6capabilities.py` | Srv6Capabilities | ✅ | `make_srv6_capabilities(flags)` |
+| `attribute/bgpls/link/srv6endpointbehavior.py` | Srv6EndpointBehavior | ✅ | `make_srv6_endpoint_behavior(...)` |
 | `attribute/bgpls/link/srv6endx.py` | Srv6EndX | ✅ | (complex, stores parsed content) |
 | `attribute/bgpls/link/srv6lanendx.py` | Srv6LanEndXISIS | ✅ | (complex, stores parsed content) |
 | `attribute/bgpls/link/srv6lanendx.py` | Srv6LanEndXOSPF | ✅ | (complex, stores parsed content) |
-| `attribute/bgpls/link/srv6locator.py` | Srv6Locator | ⏳ | |
-| `attribute/bgpls/link/srv6sidstructure.py` | Srv6SidStructure | ⏳ | |
+| `attribute/bgpls/link/srv6locator.py` | Srv6Locator | ✅ | `make_srv6_locator(...)` |
+| `attribute/bgpls/link/srv6sidstructure.py` | Srv6SidStructure | ✅ | `make_srv6_sid_structure(...)` |
 | `attribute/bgpls/link/temetric.py` | TeMetric | ✅ | `make_temetric(int)` |
 | `attribute/bgpls/link/unrsvpbw.py` | UnRsvpBw | ✅ | `make_unrsvpbw(list[float])` |
 
@@ -210,19 +210,19 @@ cached instances for identical parameter combinations.
 | `attribute/bgpls/node/sralgo.py` | SrAlgorithm | ✅ | `content` property unpacks list[int] |
 | `attribute/bgpls/node/srcap.py` | SrCapabilities | ✅ | Properties unpack from `_packed` |
 
-### BGP-LS Prefix Attributes 🔄 PARTIAL
+### BGP-LS Prefix Attributes ✅ COMPLETE
 
 | File | Class | Status | Notes |
 |------|-------|--------|-------|
-| `attribute/bgpls/prefix/igpextags.py` | IgpExTags | ⏳ | |
-| `attribute/bgpls/prefix/igpflags.py` | IgpFlags | ⏳ | |
-| `attribute/bgpls/prefix/igptags.py` | IgpTags | ⏳ | |
-| `attribute/bgpls/prefix/opaque.py` | PrefixOpaque | ⏳ | |
-| `attribute/bgpls/prefix/ospfaddr.py` | OspfForwardingAddress | ⏳ | |
+| `attribute/bgpls/prefix/igpextags.py` | IgpExTags | ✅ | `content` property unpacks list[int] |
+| `attribute/bgpls/prefix/igpflags.py` | IgpFlags | ✅ | (FlagLS, inherits pattern) |
+| `attribute/bgpls/prefix/igptags.py` | IgpTags | ✅ | `content` property unpacks list[int] |
+| `attribute/bgpls/prefix/opaque.py` | PrefixOpaque | ✅ | `content` property returns bytes |
+| `attribute/bgpls/prefix/ospfaddr.py` | OspfForwardingAddress | ✅ | `content` property unpacks IP string |
 | `attribute/bgpls/prefix/prefixmetric.py` | PrefixMetric | ✅ | `make_prefixmetric(int)` |
-| `attribute/bgpls/prefix/srigpprefixattr.py` | SrIgpPrefixAttr | ⏳ | |
+| `attribute/bgpls/prefix/srigpprefixattr.py` | SrIgpPrefixAttr | ✅ | (FlagLS, added LEN=1) |
 | `attribute/bgpls/prefix/srprefix.py` | SrPrefix | ✅ | Properties unpack from `_packed` |
-| `attribute/bgpls/prefix/srrid.py` | SrSourceRouterID | ⏳ | |
+| `attribute/bgpls/prefix/srrid.py` | SrSourceRouterID | ✅ | `content` property unpacks IP string |
 
 ---
 
@@ -321,18 +321,35 @@ cached instances for identical parameter combinations.
 | Wave 1 | 4 | 0 | 0 | 0 | 4 |
 | Wave 2 | 10 | 0 | 0 | 1 | 11 |
 | Wave 3 | ~20 | 0 | 0 | 0 | ~20 |
-| Wave 4 | ~35 | 0 | ~12 | 3 | ~50 |
+| Wave 4 | ~50 | 0 | 0 | 3 | ~53 |
 | Wave 5 | 5 | 0 | 0 | 0 | 5 |
 | Wave 6 | 5 | 1 | 0 | 3 | 9 |
 | Wave 7 | ~20 | 0 | 0 | 0 | ~20 |
 | Wave 8 | 6 | 0 | 0 | 0 | 6 |
-| **TOTAL** | **~105** | **1** | **~12** | **7** | **~125** |
+| **TOTAL** | **~120** | **1** | **0** | **7** | **~128** |
 
-**Completion: ~90%** (105 done + 1 partial out of ~118 convertible classes)
+**Completion: ~99%** (120 done + 1 partial out of ~121 convertible classes)
 
 ---
 
 ## Recent Progress
+
+### 2025-12-04 (Session 4)
+- Converted BGP-LS prefix attributes to packed-bytes-first:
+  - IgpTags: `content` property unpacks list of 32-bit tags
+  - IgpExTags: `content` property unpacks list of 64-bit tags
+  - PrefixOpaque: `content` property returns raw bytes (inherits from BaseLS)
+  - OspfForwardingAddress: `content` property unpacks IP string
+  - SrSourceRouterID: `content` property unpacks IP string
+  - SrIgpPrefixAttr: Added missing LEN=1 (FlagLS pattern)
+- Converted BGP-LS link SRv6 attributes to packed-bytes-first:
+  - Srv6Capabilities: Properties + `make_srv6_capabilities(flags)` factory
+  - Srv6EndpointBehavior: Properties + `make_srv6_endpoint_behavior(...)` factory
+  - Srv6Locator: Properties + `make_srv6_locator(...)` factory
+  - Srv6SidStructure: Properties + `make_srv6_sid_structure(...)` factory
+- Updated tests to use factory methods, enabled previously skipped Srv6Locator test
+- All 9 test suites pass (2699 unit, 74 encoding, 18 decoding)
+- Wave 4 now complete (all BGP-LS link/node/prefix attributes done)
 
 ### 2025-12-04 (Session 3)
 - Converted SrLabelIndex to packed-bytes-first: `__init__(packed)` + `make_labelindex(int)` factory
@@ -362,6 +379,6 @@ Converted BGP-LS base classes and key subclasses to packed-bytes-first pattern:
 
 ## Next Priority
 
-**Remaining Wave 4 classes** (~12 pending):
-1. BGP-LS prefix attributes (IgpExTags, IgpFlags, IgpTags, PrefixOpaque, OspfForwardingAddress, SrIgpPrefixAttr, SrSourceRouterID)
-2. BGP-LS link SRv6 attributes (Srv6Capabilities, Srv6EndpointBehavior, Srv6Locator, Srv6SidStructure)
+**Wave 6 remaining:** RTC partial - needs `negotiated` context for RT encoding.
+
+**Project nearly complete** - only 1 class with partial status (RTC in Wave 6).

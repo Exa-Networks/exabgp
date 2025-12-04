@@ -7,6 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 from struct import unpack
+from typing import Any
 
 from exabgp.util import split
 
@@ -33,7 +34,12 @@ class IgpTags(BaseLS):
     JSON = 'igp-route-tags'
     # Variable length: each tag is 4 bytes, length should be multiple of 4.
 
+    @property
+    def content(self) -> Any:
+        """Unpack and return list of 32-bit route tags from packed bytes."""
+        return [unpack('!L', chunk)[0] for chunk in split(self._packed, 4)]
+
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> IgpTags:
         cls.check(data)
-        return cls([unpack('!L', _)[0] for _ in split(data, 4)])
+        return cls(data)

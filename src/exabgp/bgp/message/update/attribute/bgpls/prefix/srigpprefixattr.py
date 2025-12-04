@@ -27,4 +27,4 @@ class SrIgpPrefixAttr(FlagLS):
     JSON = 'sr-prefix-attribute-flags'
     TLV = 1170
     FLAGS = ['X', 'R', 'N', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    # MISSING LEN
+    LEN = 1

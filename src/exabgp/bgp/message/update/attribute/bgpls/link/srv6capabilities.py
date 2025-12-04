@@ -1,4 +1,4 @@
-"""srv6endx.py
+"""srv6capabilities.py
 
 Created by Quentin De Muynck
 Copyright (c) 2025 Exa Networks. All rights reserved.
@@ -23,14 +23,21 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #
 #                    Figure 1: SRv6 Capabilities TLV Format
 
+# Fixed length: Flags (2) + Reserved (2) = 4 bytes
+SRV6_CAPABILITIES_LEN = 4
+
 
 @LinkState.register_lsid()
 class Srv6Capabilities(BaseLS):
     TLV = 1038
+    LEN = SRV6_CAPABILITIES_LEN
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, flags: dict[str, int]) -> None:
-        self.flags = flags
+    @property
+    def flags(self) -> dict[str, int]:
+        """Unpack and return flags from packed bytes."""
+        flags_value = int.from_bytes(self._packed[0:2], byteorder='big')
+        return {'O': flags_value & (1 << 6)}
 
     def __repr__(self) -> str:
         return 'flags: {}'.format(self.flags)
@@ -49,10 +56,25 @@ class Srv6Capabilities(BaseLS):
         return decorator
 
     @classmethod
+    def make_srv6_capabilities(cls, flags: dict[str, int]) -> Srv6Capabilities:
+        """Create Srv6Capabilities from semantic values.
+
+        Args:
+            flags: Dict with 'O' key (bit 6 of flags field)
+
+        Returns:
+            Srv6Capabilities instance
+        """
+        # Build 16-bit flags field
+        flags_value = (flags.get('O', 0) & 1) << 6
+        # Pack: Flags (2 bytes) + Reserved (2 bytes)
+        packed = flags_value.to_bytes(2, byteorder='big') + b'\x00\x00'
+        return cls(packed)
+
+    @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6Capabilities:
-        flags_value = int.from_bytes(data[0:2], byteorder='big')
-        flags = {'O': flags_value & (1 << 6)}
-        return cls(flags=flags)
+        cls.check(data)
+        return cls(data)
 
     def json(self, compact: bool = False) -> str:
         return '"srv6-capabilities": ' + json.dumps(
