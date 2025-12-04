@@ -123,20 +123,23 @@ class MPRNLRI(Attribute, Family):
         return self._nlris_cache
 ```
 
-**NLRIParseContext:** Minimal frozen dataclass containing only what's needed for NLRI parsing:
+**OpenContext:** Minimal frozen dataclass (in `negotiated.py`) containing:
+- `afi: AFI` - Address Family Identifier
+- `safi: SAFI` - Subsequent Address Family Identifier
 - `addpath: bool` - AddPath enabled for this AFI/SAFI
 - `asn4: bool` - 4-byte ASN mode
 - `msg_size: int` - Max UPDATE size (4096 standard, 65535 extended)
-- `from_negotiated(negotiated, afi, safi)` - factory from full Negotiated object
+
+**Negotiated.nlri_context(afi, safi):** Method to build `OpenContext` from negotiated state.
 
 **Key changes:**
 1. `__init__(packed, context)` - stores wire bytes for unpack path
-2. `make_mprnlri(afi, safi, nlris)` - factory for semantic creation
+2. `make_mprnlri(context, nlris)` - factory takes `OpenContext` instead of AFI/SAFI
 3. `nlris` property - lazy parsing with caching
 4. `packed_attributes()` generator - unchanged, yields multiple bytes as needed
-5. All call sites updated to use `make_mprnlri()` / `make_mpurnlri()` factories
+5. Call sites use `negotiated.nlri_context(afi, safi)` to get context
 
-**Tests:** All 9 test suites pass (2621 unit, 74 encoding, 18 decoding)
+**Tests:** All 9 test suites pass (2689 unit, 74 encoding, 18 decoding)
 
 ### SR Attributes
 

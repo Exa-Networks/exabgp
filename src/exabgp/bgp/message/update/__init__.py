@@ -253,8 +253,9 @@ class Update(Message):
             afi, safi = family
             mp_reach = b''
             mp_unreach = b''
-            mp_announce = MPRNLRI.make_mprnlri(afi, safi, mp_nlris[family].get(Action.ANNOUNCE, []))
-            mp_withdraw = MPURNLRI.make_mpurnlri(afi, safi, mp_nlris[family].get(Action.WITHDRAW, []))
+            context = negotiated.nlri_context(afi, safi)
+            mp_announce = MPRNLRI.make_mprnlri(context, mp_nlris[family].get(Action.ANNOUNCE, []))
+            mp_withdraw = MPURNLRI.make_mpurnlri(context, mp_nlris[family].get(Action.WITHDRAW, []))
 
             for mprnlri in mp_announce.packed_attributes(negotiated, msg_size - len(withdraws + announced)):
                 if mp_reach:
