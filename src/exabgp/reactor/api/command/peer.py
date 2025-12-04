@@ -79,15 +79,15 @@ def _parse_families(value: str) -> list[tuple[AFI, SAFI]]:
         afi_str, safi_str = parts
 
         # Convert to AFI/SAFI objects
-        # Note: fromString() typically returns undefined values rather than raising,
+        # Note: from_string() typically returns undefined values rather than raising,
         # but we keep exception handling for safety against future changes
         try:
-            afi = AFI.fromString(afi_str)
+            afi = AFI.from_string(afi_str)
         except (KeyError, AttributeError):
             raise ValueError(f'unknown AFI {afi_str}')
 
         try:
-            safi = SAFI.fromString(safi_str)
+            safi = SAFI.from_string(safi_str)
         except (KeyError, AttributeError):
             raise ValueError(f'unknown SAFI {safi_str}')
 

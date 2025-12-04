@@ -142,8 +142,8 @@ class OperationalFamily(Operational):
 
     def __init__(self, what: int, afi: int | AFI, safi: int | SAFI, data: bytes = b'') -> None:
         Operational.__init__(self, what)
-        self.afi: AFI = AFI.create(afi)
-        self.safi: SAFI = SAFI.create(safi)
+        self.afi: AFI = AFI.from_int(afi)
+        self.safi: SAFI = SAFI.from_int(safi)
         self.data: bytes = data
 
     def family(self) -> tuple[AFI, SAFI]:

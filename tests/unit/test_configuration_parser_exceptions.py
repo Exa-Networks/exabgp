@@ -89,24 +89,24 @@ class TestFlowParserExceptions:
 class TestAFISAFIParsingExceptions:
     """Test AFI/SAFI parsing exception handling.
 
-    Note: AFI.fromString() and SAFI.fromString() do NOT raise exceptions
+    Note: AFI.from_string() and SAFI.from_string() do NOT raise exceptions
     for invalid input - they return default values ('undefined', 'unknown safi 0').
     The except Exception blocks in peer.py are defensive but currently ineffective.
     """
 
     def test_afi_from_string_returns_undefined_for_invalid(self):
-        """Test that AFI.fromString() returns undefined for invalid AFI (no exception)."""
+        """Test that AFI.from_string() returns undefined for invalid AFI (no exception)."""
         from exabgp.protocol.family import AFI
 
-        result = AFI.fromString('invalid-afi')
+        result = AFI.from_string('invalid-afi')
         # Returns AFI.undefined instead of raising
         assert str(result) == 'undefined'
 
     def test_safi_from_string_returns_undefined_for_invalid(self):
-        """Test that SAFI.fromString() returns undefined for invalid SAFI (no exception)."""
+        """Test that SAFI.from_string() returns undefined for invalid SAFI (no exception)."""
         from exabgp.protocol.family import SAFI
 
-        result = SAFI.fromString('invalid-safi')
+        result = SAFI.from_string('invalid-safi')
         # Returns SAFI.undefined instead of raising
         assert str(result) == 'undefined'
 

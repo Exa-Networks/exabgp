@@ -142,7 +142,7 @@ class NLRI(Family):
     @classmethod
     def register(cls, afi: int, safi: int, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
         def register_nlri(klass: Type[NLRI]) -> Type[NLRI]:
-            new: tuple[AFI, SAFI] = (AFI.create(afi), SAFI.create(safi))
+            new: tuple[AFI, SAFI] = (AFI.from_int(afi), SAFI.from_int(safi))
             if new in cls.registered_nlri:
                 if force:
                     # python has a bug and does not allow %ld/%ld (pypy does)
@@ -169,7 +169,7 @@ class NLRI(Family):
     ) -> tuple[NLRI, bytes]:
         a: AFI
         s: SAFI
-        a, s = AFI.create(afi), SAFI.create(safi)
+        a, s = AFI.from_int(afi), SAFI.from_int(safi)
         log.debug(lazynlri(a, s, addpath, data), 'parser')
 
         key: str = '{}/{}'.format(a, s)

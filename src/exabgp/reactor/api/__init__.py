@@ -204,11 +204,11 @@ class API(Command):
         if number != API_EOR_TOKEN_COUNT:
             return False
 
-        afi = AFI.fromString(tokens[0])
+        afi = AFI.from_string(tokens[0])
         if afi == AFI.undefined:
             return False
 
-        safi = SAFI.fromString(tokens[1])
+        safi = SAFI.from_string(tokens[1])
         if safi == SAFI.undefined:
             return False
 

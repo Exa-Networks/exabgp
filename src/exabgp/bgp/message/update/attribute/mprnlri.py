@@ -123,7 +123,7 @@ class MPRNLRI(Attribute, Family):
 
         # -- Reading AFI/SAFI
         _afi, _safi = unpack('!HB', data[:3])
-        afi, safi = AFI.create(_afi), SAFI.create(_safi)
+        afi, safi = AFI.from_int(_afi), SAFI.from_int(_safi)
         offset = 3
         nh_afi = afi
 
