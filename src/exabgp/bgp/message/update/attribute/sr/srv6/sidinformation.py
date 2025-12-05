@@ -11,6 +11,7 @@ from typing import Callable, ClassVar, Type, TypeVar
 
 from exabgp.protocol.ip import IPv6
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
 from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceDataSubSubTlv
@@ -71,14 +72,22 @@ class Srv6SidInformation:  # type: ignore[type-var]
 
     @classmethod
     def unpack_attribute(cls, data: bytes, length: int) -> Srv6SidInformation:
+        # SRv6 SID Information: reserved(1) + SID(16) + flags(1) + behavior(2) + reserved(1) = 21 bytes minimum
+        if len(data) < 21:
+            raise Notify(3, 1, f'SRv6 SID Information too short: need 21 bytes, got {len(data)}')
         sid: IPv6 = IPv6.unpack_ipv6(data[1:17])
         behavior: int = unpack('!H', data[18:20])[0]
         subsubtlvs: list[GenericSrv6ServiceDataSubSubTlv] = []
 
         data = data[21:]
         while data:
+            # Sub-Sub-TLV header: type(1) + length(2) = 3 bytes minimum
+            if len(data) < 3:
+                raise Notify(3, 1, f'SRv6 Sub-Sub-TLV header truncated: need 3 bytes, got {len(data)}')
             code: int = data[0]
             length = unpack('!H', data[1:3])[0]
+            if len(data) < length + 3:
+                raise Notify(3, 1, f'SRv6 Sub-Sub-TLV truncated: need {length + 3} bytes, got {len(data)}')
             if code in cls.registered_subsubtlvs:
                 subsubtlv: GenericSrv6ServiceDataSubSubTlv = cls.registered_subsubtlvs[code].unpack_attribute(
                     data[3 : length + 3], length
