@@ -429,15 +429,10 @@ class BinaryString:
 
 
 def converter(
-    function: Callable[[str], int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag'], klass: Type | None = None
+    function: Callable[[str], int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag'], klass: Type[BaseValue]
 ) -> Callable[[str], BaseValue]:
     def _integer(value: str) -> BaseValue:
-        if klass is None:
-            return NumericValue(function(value))
-        try:
-            return klass(value)  # type: ignore[no-any-return]
-        except ValueError:
-            return NumericValue(function(value))
+        return klass(function(value))
 
     return _integer
 
@@ -540,21 +535,21 @@ class FlowNextHeader(IOperationByte, NumericString, IPv6):
 class FlowAnyPort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x04
     NAME: ClassVar[str] = 'port'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
 class FlowDestinationPort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x05
     NAME: ClassVar[str] = 'destination-port'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
 class FlowSourcePort(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x06
     NAME: ClassVar[str] = 'source-port'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
@@ -576,14 +571,14 @@ class FlowTCPFlag(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID: ClassVar[int] = 0x09
     NAME: ClassVar[str] = 'tcp-flags'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(TCPFlag.named)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(TCPFlag.named, TCPFlag)
     decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, TCPFlag)
 
 
 class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
     ID: ClassVar[int] = 0x0A
     NAME: ClassVar[str] = 'packet-length'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(packet_length)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(packet_length, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
@@ -591,7 +586,7 @@ class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
 class FlowDSCP(IOperationByte, NumericString, IPv4):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'dscp'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(dscp_value)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(dscp_value, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
@@ -599,7 +594,7 @@ class FlowDSCP(IOperationByte, NumericString, IPv4):
 class FlowTrafficClass(IOperationByte, NumericString, IPv6):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'traffic-class'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(class_value)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(class_value, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
@@ -608,7 +603,7 @@ class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
     ID: ClassVar[int] = 0x0C
     NAME: ClassVar[str] = 'fragment'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(Fragment.named)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(Fragment.named, Fragment)
     decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(ord, Fragment)
 
 
@@ -616,7 +611,7 @@ class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
 class FlowFlowLabel(IOperationByteShortLong, NumericString, IPv6):
     ID: ClassVar[int] = 0x0D
     NAME: ClassVar[str] = 'flow-label'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(label_value)
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(label_value, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
