@@ -158,9 +158,20 @@ uv run pytest tests/unit/path/to/test.py -v  # Should FAIL
 
 **STEP 2: Implement code to make tests pass**
 
-**STEP 3: Verify ALL tests pass**
+**STEP 3: During development - run TARGETED tests**
 ```bash
-./qa/bin/test_everything  # ALL 6 test suites
+# Run only the specific test file you're working on
+uv run pytest tests/unit/specific_test.py -v
+
+# Or a specific test function
+uv run pytest tests/unit/specific_test.py::test_function -v
+
+# DO NOT run ./qa/bin/test_everything repeatedly - it takes ages
+```
+
+**STEP 4: Before claiming "done" - run ALL tests**
+```bash
+./qa/bin/test_everything  # ALL 6 test suites - only at the end
 ```
 
 **IF TESTS FAIL:**
