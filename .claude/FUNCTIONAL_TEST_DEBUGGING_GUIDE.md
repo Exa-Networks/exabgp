@@ -144,6 +144,24 @@ failed     0
 
 ---
 
+## 🚨 30-Second Rule
+
+**If any functional test takes more than 30 seconds: DO NOT WAIT.**
+
+1. Kill the test immediately
+2. Re-run with `-v` to identify which test(s) are hanging
+3. Debug the failing test(s) individually using `--server` / `--client` method
+
+```bash
+# Test taking too long? Kill it, then:
+./qa/bin/functional encoding -v          # See which test hangs
+./qa/bin/functional encoding <test_id>   # Run just that test
+```
+
+**Why:** A hanging test wastes time and masks the real issue. Individual tests should complete in under 10 seconds.
+
+---
+
 ## Debug Process
 
 ### 1. Identify Failing Test

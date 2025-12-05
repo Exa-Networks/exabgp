@@ -1,65 +1,102 @@
-# Plan: Refactor API with Parallel v4/v6 Dispatchers
+# Plan: Refactor API with Tree-Based Dictionary Dispatch
 
-## Status: IN PROGRESS
+## Status: IN PROGRESS - Phase 1-4 Complete
+
+## Goal
+
+Refactor the API dispatch system to use tree-based dictionary routing with proper Tokeniser usage:
+1. v6 dispatcher uses tree-based dict structure with Tokeniser ✅
+2. v4 dispatcher translates commands to v6 format and delegates to v6 (pending)
+3. All handlers receive clean v6 format commands (pending)
 
 ## Progress
 
-### Completed
-- [x] Create `dispatch/common.py` - Handler type, exceptions, COMMANDS list
-- [x] Create `dispatch/v6.py` - dispatch_v6() implementation
-- [x] Create `dispatch/v4.py` - dispatch_v4() implementation
-- [x] Create `dispatch/__init__.py` - exports
-- [x] Update `API` class in `__init__.py` - use new dispatchers, remove Command inheritance
-- [x] Update `reactor.py` handlers - new signature (peers, command)
-- [x] Update `announce.py` handlers - new signature (peers, command)
+### Phase 1: Update Tokeniser ✅
+- Added `consumed` counter to track token consumption
+- Added `_get()` and `_peek()` helper methods
+- Commit: 98878dee
 
-### Remaining
-- [ ] Update `neighbor.py` handlers - new signature (peers, command)
-- [ ] Update `peer.py` handlers - new signature (peers, command)
-- [ ] Update `rib.py` handlers - new signature (peers, command)
-- [ ] Update `watchdog.py` handlers - new signature (peers, command)
-- [ ] Delete obsolete files: `transform.py`, `dispatch.py` (old), `command/command.py`
-- [ ] Run `./qa/bin/test_everything` to verify
+### Phase 2: Add Tree Dispatch Infrastructure ✅
+- Added to `dispatch/common.py`:
+  - `DispatchTree`, `DispatchNode` type aliases
+  - `SELECTOR_KEY` constant
+  - `tokenise_command()`, `remaining_string()` functions
+  - `dispatch()` tree walker function
+  - `extract_selector()` using peek/consume pattern
+- Commit: 98878dee
 
-## Resume Point
+### Phase 3: Refactor v6 Dispatcher ✅
+- Replaced 352-line if/elif chain with tree-based dictionary
+- Tree structure clearly shows command hierarchy
+- `dispatch_v6()` now uses tree dispatch
+- Commit: 98878dee
 
-Continue by updating the remaining handler files with new signature:
+### Phase 4: Add v6_announce/v6_withdraw Dispatchers ✅
+- Added dispatcher functions that route to specific handlers
+- Currently prepends "announce"/"withdraw" prefix for backward compatibility
+- Commit: 98878dee
+
+### Phase 5: Update API Class (pending)
+- Minor changes to use new dispatch return type
+
+### Phase 6: Update api_* Methods for Clean Format (pending)
+- Update `api_route()`, `api_flow()`, etc. to accept clean format
+- Remove action prefix requirement from handlers
+- Remove prefix prepending in v6_announce/v6_withdraw
+
+### Phase 7: Refactor v4 to Translate and Delegate (pending)
+- Replace v4 dispatch logic with translation to v6 format
+- Delegate to v6 dispatcher
+
+## Architecture
+
+### Tree Structure (v6.py)
 ```python
-def handler(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+tree = {
+    '#': comment_handler,
+    'daemon': {
+        'shutdown': shutdown_handler,
+        'reload': reload_handler,
+        ...
+    },
+    'peer': {
+        'list': list_neighbor,
+        'show': show_neighbor,
+        SELECTOR_KEY: {  # *, IP, or [bracket] selector
+            'announce': v6_announce,
+            'withdraw': v6_withdraw,
+            'show': show_neighbor,
+            'teardown': teardown,
+        },
+    },
+    ...
+}
 ```
 
-Files to update:
-1. `src/exabgp/reactor/api/command/neighbor.py` - Remove @Command.register, update signature
-2. `src/exabgp/reactor/api/command/peer.py` - Remove @Command.register, update signature
-3. `src/exabgp/reactor/api/command/rib.py` - Remove @Command.register, update signature, remove extract_neighbors calls
-4. `src/exabgp/reactor/api/command/watchdog.py` - Remove @Command.register, update signature
-
-Then delete:
-- `src/exabgp/reactor/api/transform.py`
-- `src/exabgp/reactor/api/dispatch.py` (old single file)
-- `src/exabgp/reactor/api/command/command.py`
-
-## Architecture Summary
-
-### New Handler Signature
-```python
-Handler = Callable[['API', 'Reactor', str, list[str], str, bool], bool]
-# (api, reactor, service, peers, command, use_json)
+### Dispatch Flow
 ```
-
-### New Flow
+Command: "peer * announce route 10.0.0.0/24 next-hop 1.2.3.4"
+    ↓
+dispatch_v6() creates Tokeniser, replenishes with tokens
+    ↓
+dispatch() walks tree:
+  - consumes 'peer'
+  - sees '*' is selector start (SELECTOR_KEY)
+  - extract_selector() consumes '*', returns all peers
+  - consumes 'announce'
+  - returns (v6_announce, peers)
+    ↓
+remaining_string() = "route 10.0.0.0/24 next-hop 1.2.3.4"
+    ↓
+v6_announce() prepends "announce", calls announce_route()
 ```
-v4 command → dispatch_v4() → (handler, peers, command) → handler
-v6 command → dispatch_v6() → (handler, peers, command) → handler
-```
-
-### Files Created
-- `src/exabgp/reactor/api/dispatch/__init__.py`
-- `src/exabgp/reactor/api/dispatch/common.py`
-- `src/exabgp/reactor/api/dispatch/v4.py`
-- `src/exabgp/reactor/api/dispatch/v6.py`
 
 ### Files Modified
-- `src/exabgp/reactor/api/__init__.py` - API class, no longer inherits from Command
-- `src/exabgp/reactor/api/command/reactor.py` - All handlers updated
-- `src/exabgp/reactor/api/command/announce.py` - All handlers updated
+- `src/exabgp/configuration/core/parser.py` - Tokeniser.consumed counter
+- `src/exabgp/reactor/api/dispatch/common.py` - Tree dispatch infrastructure
+- `src/exabgp/reactor/api/dispatch/v6.py` - Tree-based dispatch
+- `src/exabgp/reactor/api/dispatch/__init__.py` - New exports
+- `src/exabgp/reactor/api/command/announce.py` - v6_announce/v6_withdraw
+
+### Documentation Added
+- `.claude/exabgp/TOKENISER_USAGE.md` - Tokeniser usage patterns
