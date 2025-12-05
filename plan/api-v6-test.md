@@ -212,7 +212,24 @@ Test passes when:
 
 ## Resume Point
 
-Next step: Fix the bugs found above, starting with `system queue-status` error
+**For next session:**
+
+1. **Fix `system queue-status` error** - `{'error': 'Invalid version: version'}`
+   - Check `src/exabgp/reactor/api/command/reactor.py`
+   - The command seems to be misinterpreting "version" as a parameter
+
+2. **Fix invalid command handling** - Should return error, not done
+   - Check `src/exabgp/reactor/api/dispatch.py` - dispatch() function
+   - Unknown commands should return `answer_error()`
+
+3. **Fix `withdraw route` without family** - Should work like `announce route`
+   - Check `src/exabgp/reactor/api/command/announce.py`
+
+4. **Improve test script response handling**
+   - Add response draining between commands
+   - Adjust expected values to match actual v6 API format
+
+**Run test:** `./qa/bin/functional api 0 -v`
 
 ---
 
