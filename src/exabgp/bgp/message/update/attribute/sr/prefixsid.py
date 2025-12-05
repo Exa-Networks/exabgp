@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.notification import Notify
 
 from exabgp.util import hexstring
 
@@ -56,10 +57,15 @@ class PrefixSid(Attribute):
     def unpack_attribute(cls: Type[T], data: bytes, negotiated: Negotiated) -> T:
         sr_attrs: list[Any] = []
         while data:
+            # TLV header: Type(1) + Length(2) = 3 bytes minimum
+            if len(data) < 3:
+                raise Notify(3, 1, f'SR Prefix-SID TLV header truncated: need 3 bytes, got {len(data)}')
             # Type = 1 octet
             scode: int = data[0]
             # L = 2 octet  :|
             length: int = unpack('!H', data[1:3])[0]
+            if len(data) < length + 3:
+                raise Notify(3, 1, f'SR Prefix-SID TLV truncated: need {length + 3} bytes, got {len(data)}')
             if scode in cls.registered_srids:
                 klass: Any = cls.registered_srids[scode].unpack_attribute(data[3 : length + 3], length)
             else:
