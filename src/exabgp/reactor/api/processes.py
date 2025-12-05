@@ -37,7 +37,8 @@ from exabgp.reactor.api.response.answer import Answer
 from exabgp.reactor.network.error import error
 from exabgp.util.errstr import errstr
 from exabgp.version import json as json_version
-from exabgp.version import text as text_version
+from exabgp.version import json_v4 as json_v4_version
+from exabgp.version import text_v4 as text_v4_version
 
 # TypeVar for silenced decorator - preserves function signature
 _F = TypeVar('_F', bound=Callable[..., None])
@@ -246,8 +247,30 @@ class Processes:
 
             run = configuration.get('run', '')
             if run:
+                # Select encoder based on API version
+                api_version = getenv().api.version
                 use_json = configuration.get('encoder', 'text') == 'json'
-                self._encoder[process] = Response.JSON(json_version) if use_json else Response.Text(text_version)
+
+                if api_version == 4:
+                    # v4 (legacy): support both JSON and Text, log deprecation warning
+                    log.warning(
+                        lazymsg('API v4 is deprecated. Set exabgp_api_version=6 to use v6 (JSON only).'),
+                        'processes',
+                    )
+                    # Use per-process encoder setting (already computed above from process config)
+                    if use_json:
+                        self._encoder[process] = Response.V4.JSON(json_v4_version)
+                    else:
+                        self._encoder[process] = Response.V4.Text(text_v4_version)
+                else:
+                    # v6 (default): JSON only
+                    if not use_json:
+                        log.warning(
+                            lazymsg('Text encoder requested but API v6 is JSON-only. Using JSON encoder.'),
+                            'processes',
+                        )
+                    self._encoder[process] = Response.JSON(json_version)
+
                 # TODO: Future enhancement - add 'ack-format' config option for JSON ACKs
                 # Would allow: ack-format json; to send {"status": "ok"} instead of "done"
                 self._ackjson[process] = False

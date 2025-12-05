@@ -100,9 +100,22 @@ class ResponseEncoder(Protocol):
     ) -> str: ...
 
 
+class V4:
+    """API v4 (legacy) encoders - wrap v6 and transform output."""
+
+    from exabgp.reactor.api.response.v4.json import V4JSON as JSON
+    from exabgp.reactor.api.response.v4.text import V4Text as Text
+
+
 class Response:
+    """Response encoders for API output."""
+
+    # v6 encoders (default)
     JSON: type[JSON]
     Text: type[Text]
 
     from exabgp.reactor.api.response.text import Text
     from exabgp.reactor.api.response.json import JSON
+
+    # v4 encoders (legacy)
+    V4 = V4

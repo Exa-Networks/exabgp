@@ -16,9 +16,9 @@ def main() -> None:
         # Wait for ExaBGP to initialize
         time.sleep(1)
 
-        # Test 1: version command
+        # Test 1: version command (v6 format)
         fail('TEST: version command\n')
-        flush('version\n')
+        flush('system version\n')
 
         response = sys.stdin.readline().strip()
 
@@ -47,9 +47,9 @@ def main() -> None:
         if ack != 'done':
             fail(f'  WARNING: expected done, got: {ack}\n')
 
-        # Test 2: shutdown command
+        # Test 2: shutdown command (v6 format)
         fail('TEST: shutdown command\n')
-        flush('shutdown\n')
+        flush('daemon shutdown\n')
 
         response = sys.stdin.readline().strip()
 

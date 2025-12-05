@@ -27,7 +27,9 @@ date = datetime.fromtimestamp(modification_time)
 commit = 'unset'
 release = '6.0.0-{}+uncontrolled'.format(date.strftime('%Y%m%d'))
 json = '6.0.0'
+json_v4 = '4.0.1'  # Legacy API v4 version string
 text = '6.0.0'
+text_v4 = '4.0.1'  # Legacy API v4 version string
 version = os.environ.get('exabgp_version', release)
 
 # Do not change the first line as it is parsed by scripts

@@ -257,17 +257,41 @@ class ApiSection(ConfigSection):
 
     _section_name: ClassVar[str] = 'api'
 
+    version: int = option(6, 'API version (4=legacy with text/json, 6=json only)', reader=parsing.api_version)
     ack: bool = option(True, 'acknowledge api command(s) and report issues')
     chunk: int = option(1, 'maximum lines to print before yielding in show routes api')
-    encoder: str = option(
-        'json', '(experimental) default encoder to use with with external API (text or json)', reader=parsing.api
-    )
+    encoder: str = option('json', 'default encoder for API v4 (text or json), ignored in v6', reader=parsing.api)
     compact: bool = option(False, 'shorter JSON encoding for IPv4/IPv6 Unicast NLRI')
     respawn: bool = option(True, 'should we try to respawn helper processes if they dies')
     terminate: bool = option(False, 'should we terminate ExaBGP if any helper process dies')
     cli: bool = option(True, 'should we create a named pipe for the cli')
     pipename: str = option('exabgp', 'name to be used for the exabgp pipe')
     socketname: str = option('exabgp', 'name to be used for the exabgp Unix socket')
+
+    def __init__(self) -> None:
+        super().__init__()
+        # Store initial values for restoration when switching API versions
+        # These are set by snapshot_initial() after config loading
+        self._initial_version: int = 6  # Default until snapshot
+        self._initial_encoder: str = 'json'  # Default until snapshot
+        self._snapshot_done: bool = False
+
+    def snapshot_initial(self) -> None:
+        """Snapshot initial values (called once at startup after config load)."""
+        if not self._snapshot_done:
+            self._initial_version = self.version
+            self._initial_encoder = self.encoder
+            self._snapshot_done = True
+
+    @property
+    def initial_version(self) -> int:
+        """Return initial API version (before any runtime changes)."""
+        return self._initial_version
+
+    @property
+    def initial_encoder(self) -> str:
+        """Return initial encoder setting (before any runtime changes)."""
+        return self._initial_encoder
 
 
 class ReactorSection(ConfigSection):
@@ -395,6 +419,9 @@ class Environment:
 
         # Backward compatibility for tcp.once -> tcp.attempts
         cls._handle_tcp_compatibility(env)
+
+        # Snapshot initial API settings for restoration when switching versions
+        env.api.snapshot_initial()
 
     @classmethod
     def _handle_tcp_compatibility(cls, env: Environment) -> None:

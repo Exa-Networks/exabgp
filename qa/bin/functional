@@ -482,6 +482,7 @@ class Exec:
         if env is None:
             env = os.environ.copy()
             env['exabgp_log_enable'] = 'false'
+            env['exabgp_api_version'] = '4'  # v6 is default, v4 for backward compatibility (text encoder)
 
         # Use PIPE to capture all output for test verification
         self._process = subprocess.Popen(
@@ -1548,6 +1549,7 @@ class EncodingTests(Tests):
             'exabgp_debug_rotate=true',
             'exabgp_debug_configuration=true',
             f'exabgp_api_socketname=exabgp-test-{actual_port}',  # Unique socket per test
+            'exabgp_api_version=4',  # v6 is default, v4 for backward compatibility (text encoder)
         ]
         confs = ' '.join(test.conf['confs'])
         return f'env {" ".join(env_parts)} {Path.EXABGP} -d -p {confs}'
@@ -1571,6 +1573,7 @@ class EncodingTests(Tests):
                     "exabgp_tcp_bind=''",
                     'exabgp_tcp_port=%d' % test.conf['port'],
                     f'exabgp_api_socketname=exabgp-test-{test.conf["port"]}',  # Unique socket per test
+                    'exabgp_api_version=4',  # v6 is default, v4 for backward compatibility (text encoder)
                     'INTERPRETER=%s' % INTERPRETER,
                 ]
             ),
@@ -2028,7 +2031,9 @@ class EncodingTests(Tests):
 
         # Retry all failed tests individually
         # Tests may fail in parallel due to resource contention but pass when run alone
-        self._retry_failed_tests(client, timeout, self._quiet)
+        # Skip retry when running a single test - no point retrying what was already run individually
+        if num_tests_selected > 1:
+            self._retry_failed_tests(client, timeout, self._quiet)
         self._retries_done = True
 
         # Determine final success by checking if ANY tests are still failed

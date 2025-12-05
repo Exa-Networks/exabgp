@@ -26,61 +26,57 @@ def register_reactor() -> None:
 
 @Command.register('help', False, json_support=True)
 def help_command(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+    from exabgp.reactor.api.dispatch import get_commands
+
+    commands = get_commands()
+
     if use_json:
         # Build JSON structure with command metadata
         commands_list = []
-        encoding = 'json'
 
-        for command in sorted(self.callback[encoding]):
+        for cmd_name, neighbor_support, options in sorted(commands, key=lambda x: x[0]):
             cmd_info = {
-                'command': command,
-                'neighbor_support': self.callback['neighbor'][command],
-                'json_support': True,  # We're listing commands from json callback
+                'command': cmd_name,
+                'neighbor_support': neighbor_support,
+                'json_support': True,
             }
-
-            # Add options if available
-            opts = self.callback['options'][command]
-            if isinstance(opts, (list, tuple, set)):
-                cmd_info['options'] = list(opts)
-
+            if options:
+                cmd_info['options'] = options
             commands_list.append(cmd_info)
 
         help_data = {
-            'description': 'Available API commands',
-            'neighbor_filters': ['local-ip', 'local-as', 'peer-as', 'router-id'],
+            'description': 'Available API commands (v6 format)',
+            'peer_filters': ['local-ip', 'local-as', 'peer-as', 'router-id'],
             'commands': commands_list,
         }
 
         reactor.processes.write(service, json.dumps(help_data))
     else:
-        # Text mode output (original implementation)
+        # Text mode output
         lines = []
-        encoding = 'text'
-        for command in sorted(self.callback[encoding]):
-            opts = self.callback['options'][command]
-            if isinstance(opts, (list, tuple, set)):
-                options = ' | '.join(str(o) for o in opts)
-                extended = f'{command} [ {options} ]'
+
+        for cmd_name, neighbor_support, options in sorted(commands, key=lambda x: x[0]):
+            if options:
+                opts_str = ' | '.join(str(o) for o in options)
+                extended = f'{cmd_name} [ {opts_str} ]'
             else:
-                extended = command
-            lines.append(
-                '[neighbor <ip> [filters]] ' + command if self.callback['neighbor'][command] else f'{extended} '
-            )
+                extended = cmd_name
+            lines.append('[peer <ip> [filters]] ' + extended if neighbor_support else f'{extended} ')
 
         reactor.processes.write(service, '')
-        reactor.processes.write(service, 'available API commands are listed here:')
-        reactor.processes.write(service, '=======================================')
+        reactor.processes.write(service, 'available API commands (v6 format):')
+        reactor.processes.write(service, '====================================')
         reactor.processes.write(service, '')
         reactor.processes.write(
             service,
             'filter can be: [local-ip <ip>][local-as <asn>][peer-as <asn>][router-id <router-id>]',
         )
         reactor.processes.write(service, '')
-        reactor.processes.write(service, 'command are:')
-        reactor.processes.write(service, '------------')
+        reactor.processes.write(service, 'commands:')
+        reactor.processes.write(service, '---------')
         reactor.processes.write(service, '')
-        for line in sorted(lines):
-            reactor.processes.write(service, line)
+        for line_text in sorted(lines):
+            reactor.processes.write(service, line_text)
         reactor.processes.write(service, '')
 
     reactor.processes.answer_done(service)
@@ -306,6 +302,81 @@ def bye(self: Command, reactor: Reactor, service: str, line: str, use_json: bool
     # Remove client from active clients tracking
     if client_uuid and client_uuid in reactor.active_clients:
         del reactor.active_clients[client_uuid]
+
+    reactor.processes.answer_done(service)
+    return True
+
+
+@Command.register('api version', False, json_support=True, options={'4', '6'})
+def api_version_cmd(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+    """Display or set the API version.
+
+    Usage:
+        api version       - Show current API version (4=legacy, 6=json-only)
+        api version 4     - Set API version to 4 (legacy, supports text/json)
+        api version 6     - Set API version to 6 (json-only, default)
+
+    Note: Version changes take effect on next process restart.
+    """
+    from exabgp.environment import getenv
+
+    parts = line.strip().split()
+
+    # Check if a version number was provided
+    if len(parts) >= 3:
+        version_str = parts[2]
+        try:
+            new_version = int(version_str)
+            if new_version not in (4, 6):
+                if use_json:
+                    reactor.processes.write(service, json.dumps({'error': 'API version must be 4 or 6'}))
+                else:
+                    reactor.processes.write(service, 'error: API version must be 4 or 6')
+                reactor.processes.answer_error(service)
+                return False
+
+            # Set the new version in the environment
+            getenv().api.version = new_version
+
+            if use_json:
+                reactor.processes.write(
+                    service,
+                    json.dumps(
+                        {
+                            'status': 'API version set',
+                            'version': new_version,
+                            'note': 'effective on next process restart',
+                        }
+                    ),
+                )
+            else:
+                reactor.processes.write(
+                    service, f'API version set to {new_version} (effective on next process restart)'
+                )
+
+        except ValueError:
+            if use_json:
+                reactor.processes.write(service, json.dumps({'error': f'Invalid version: {version_str}'}))
+            else:
+                reactor.processes.write(service, f'error: invalid version: {version_str}')
+            reactor.processes.answer_error(service)
+            return False
+    else:
+        # Just show current version
+        current_version = getenv().api.version
+        if use_json:
+            reactor.processes.write(
+                service,
+                json.dumps(
+                    {
+                        'api_version': current_version,
+                        'description': 'legacy (text/json)' if current_version == 4 else 'json-only',
+                    }
+                ),
+            )
+        else:
+            desc = 'legacy (text/json)' if current_version == 4 else 'json-only'
+            reactor.processes.write(service, f'API version: {current_version} ({desc})')
 
     reactor.processes.answer_done(service)
     return True

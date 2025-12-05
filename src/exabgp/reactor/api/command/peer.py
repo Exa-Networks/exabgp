@@ -124,8 +124,9 @@ def _parse_neighbor_params(line: str) -> tuple[dict[str, Any], list[str]]:
     tokens = line.split()
     if len(tokens) < 2:
         raise ValueError('no neighbor selector')
-    if tokens[0] != 'neighbor':
-        raise ValueError('command must start with "neighbor <ip>"')
+    # Accept both 'neighbor' (v4) and 'peer' (v6) as first token
+    if tokens[0] not in ('neighbor', 'peer'):
+        raise ValueError('command must start with "neighbor <ip>" or "peer <ip>"')
 
     params: dict[str, Any] = {}
     api_processes: list[str] = []
@@ -297,13 +298,16 @@ def neighbor_create(self: Command, reactor: Reactor, service: str, line: str, us
     """
     try:
         # line contains FULL command including "create", need to strip it
-        # Expected format: "create neighbor <ip> local-address <ip> ..."
-        # Strip "create " prefix if present
+        # v4 format: "create neighbor <ip> local-address <ip> ..."
+        # v6 format: "peer create <ip> local-address <ip> ..."
         line = line.strip()
-        if line.startswith('create '):
-            line = line[7:]  # Remove "create " prefix
+        if line.startswith('peer create '):
+            # v6 format: strip "peer create " and add "peer " prefix for parsing
+            line = 'peer ' + line[12:]
+        elif line.startswith('create '):
+            line = line[7:]  # Remove "create " prefix (v4 format)
         elif line.startswith('create\t'):
-            line = line[7:]  # Remove "create\t" prefix
+            line = line[7:]  # Remove "create\t" prefix (v4 format)
 
         # Parse parameters and API processes
         params, api_processes = _parse_neighbor_params(line)
@@ -353,26 +357,33 @@ def neighbor_create(self: Command, reactor: Reactor, service: str, line: str, us
 
 
 @Command.register('delete', neighbor=False, json_support=True)
-def neighbor_delete(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
-    """Delete BGP neighbor(s) dynamically at runtime.
+def peer_delete(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+    """Delete BGP peer(s) dynamically at runtime (v6 command).
 
-    API format: delete neighbor <selector>
+    v6 format: peer delete <selector>
 
-    Supports full neighbor selector syntax using existing announce/withdraw syntax.
+    Supports full peer selector syntax.
 
-    Examples (API format):
-        delete neighbor 127.0.0.2                        # Delete specific peer
-        delete neighbor *                                # Delete all peers (dangerous!)
-        delete neighbor 127.0.0.2 local-as 1             # Delete with filter
+    Examples:
+        peer delete 127.0.0.2                        # Delete specific peer
+        peer delete *                                # Delete all peers (dangerous!)
+        peer delete 127.0.0.2 local-as 1             # Delete with filter
 
-    Note: Only dynamic peers created via 'create neighbor' should be deleted.
+    Note: Only dynamic peers created via 'peer create' should be deleted.
           Deleting static (configured) peers may cause issues on reload.
     """
     try:
         # Parse selector using extract_neighbors
-        # Line should be: "neighbor <selector>"
-        if not line.strip().startswith('neighbor'):
-            reactor.processes.answer_error(service, 'missing neighbor selector')
+        # v6 format only: "peer delete <selector>" or "peer <selector>"
+        line = line.strip()
+        if line.startswith('peer delete '):
+            # Strip "peer delete " and convert to neighbor format for extract_neighbors
+            line = 'neighbor ' + line[12:]
+        elif line.startswith('peer '):
+            # Strip "peer " and convert to neighbor format
+            line = 'neighbor ' + line[5:]
+        else:
+            reactor.processes.answer_error(service, 'invalid delete command format')
             return False
 
         descriptions, command = extract_neighbors(line)
