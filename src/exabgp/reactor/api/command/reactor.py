@@ -317,14 +317,21 @@ def api_version_cmd(self: Command, reactor: Reactor, service: str, line: str, us
         api version 6     - Set API version to 6 (json-only, default)
 
     Note: Version changes take effect on next process restart.
+
+    v6 command format: "system api version [4|6]"
+    v4 command format: "api version [4|6]"
     """
     from exabgp.environment import getenv
 
     parts = line.strip().split()
 
+    # v6 format: "system api version [4|6]" - version number at index 3
+    # v4 format: "api version [4|6]" - version number at index 2
+    version_idx = 3 if parts[0] == 'system' else 2
+
     # Check if a version number was provided
-    if len(parts) >= 3:
-        version_str = parts[2]
+    if len(parts) > version_idx:
+        version_str = parts[version_idx]
         try:
             new_version = int(version_str)
             if new_version not in (4, 6):
