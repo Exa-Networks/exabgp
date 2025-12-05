@@ -752,3 +752,103 @@ def withdraw_ipv6(
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
+
+
+# =============================================================================
+# v6 announce/withdraw dispatcher functions
+# =============================================================================
+
+# v6 announce dispatcher mapping
+_V6_ANNOUNCE_HANDLERS: dict[str, str] = {
+    'route': 'announce_route',
+    'route-refresh': 'announce_refresh',
+    'ipv4': 'announce_ipv4',
+    'ipv6': 'announce_ipv6',
+    'flow': 'announce_flow',
+    'eor': 'announce_eor',
+    'watchdog': 'announce_watchdog',
+    'attribute': 'announce_attributes',
+    'attributes': 'announce_attributes',
+    'operational': 'announce_operational',
+    'vpls': 'announce_vpls',
+}
+
+# v6 withdraw dispatcher mapping
+_V6_WITHDRAW_HANDLERS: dict[str, str] = {
+    'route': 'withdraw_route',
+    'ipv4': 'withdraw_ipv4',
+    'ipv6': 'withdraw_ipv6',
+    'flow': 'withdraw_flow',
+    'watchdog': 'withdraw_watchdog',
+    'attribute': 'withdraw_attribute',
+    'attributes': 'withdraw_attribute',
+    'vpls': 'withdraw_vpls',
+}
+
+
+def v6_announce(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+    """v6 announce dispatcher - routes to specific handler based on type token.
+
+    Command format: <type> <spec>
+    e.g., "route 10.0.0.0/24 next-hop 1.2.3.4"
+
+    Note: Current handlers expect "announce <type> <spec>" format, so we
+    prepend "announce" before calling. This will be removed when Phase 6
+    updates the api_* methods to accept the clean format.
+    """
+    from exabgp.reactor.api.command import watchdog as watchdog_cmd
+
+    words = command.split(None, 1)
+    if not words:
+        reactor.processes.answer_error(service)
+        return False
+
+    route_type = words[0]
+    handler_name = _V6_ANNOUNCE_HANDLERS.get(route_type)
+    if not handler_name:
+        reactor.processes.answer_error(service, f'unknown announce type: {route_type}')
+        return False
+
+    # Get handler from this module or watchdog module
+    if 'watchdog' in handler_name:
+        handler = getattr(watchdog_cmd, handler_name)
+    else:
+        handler = globals()[handler_name]
+
+    # Prepend "announce" for handlers expecting full format (temporary until Phase 6)
+    full_command = f'announce {command}'
+    return handler(self, reactor, service, peers, full_command, use_json)
+
+
+def v6_withdraw(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+    """v6 withdraw dispatcher - routes to specific handler based on type token.
+
+    Command format: <type> <spec>
+    e.g., "route 10.0.0.0/24"
+
+    Note: Current handlers expect "withdraw <type> <spec>" format, so we
+    prepend "withdraw" before calling. This will be removed when Phase 6
+    updates the api_* methods to accept the clean format.
+    """
+    from exabgp.reactor.api.command import watchdog as watchdog_cmd
+
+    words = command.split(None, 1)
+    if not words:
+        reactor.processes.answer_error(service)
+        return False
+
+    route_type = words[0]
+    handler_name = _V6_WITHDRAW_HANDLERS.get(route_type)
+    if not handler_name:
+        reactor.processes.answer_error(service, f'unknown withdraw type: {route_type}')
+        return False
+
+    # Get handler from this module or watchdog module
+    if 'watchdog' in handler_name:
+        handler = getattr(watchdog_cmd, handler_name)
+    else:
+        handler = globals()[handler_name]
+
+    # Prepend "withdraw" for handlers expecting full format (temporary until Phase 6)
+    full_command = f'withdraw {command}'
+    return handler(self, reactor, service, peers, full_command, use_json)
