@@ -101,10 +101,10 @@ class PersistentSocketConnection:
                 # Connection rejected before we could send
                 sys.stderr.write('\n')
                 sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-                sys.stderr.write('║  ERROR: Another CLI client is already connected        ║\n')
+                sys.stderr.write('║  ERROR: Connection rejected by daemon                  ║\n')
                 sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-                sys.stderr.write('║  Only one CLI client can be active at a time.          ║\n')
-                sys.stderr.write('║  Please close the other client first.                  ║\n')
+                sys.stderr.write('║  The ExaBGP daemon closed the connection.              ║\n')
+                sys.stderr.write('║  Please check if ExaBGP is running properly.           ║\n')
                 sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
                 sys.stderr.write('\n')
                 sys.stderr.flush()
@@ -115,13 +115,13 @@ class PersistentSocketConnection:
             while True:
                 data = self.socket.recv(4096)  # type: ignore[union-attr]
                 if not data:
-                    # Connection closed - likely another client already connected
+                    # Connection closed by daemon
                     sys.stderr.write('\n')
                     sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-                    sys.stderr.write('║  ERROR: Another CLI client is already connected        ║\n')
+                    sys.stderr.write('║  ERROR: Connection closed by daemon                    ║\n')
                     sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-                    sys.stderr.write('║  Only one CLI client can be active at a time.          ║\n')
-                    sys.stderr.write('║  Please close the other client first.                  ║\n')
+                    sys.stderr.write('║  The ExaBGP daemon closed the connection unexpectedly. ║\n')
+                    sys.stderr.write('║  Please check if ExaBGP is running properly.           ║\n')
                     sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
                     sys.stderr.write('\n')
                     sys.stderr.flush()
@@ -133,14 +133,17 @@ class PersistentSocketConnection:
                 if '\ndone\n' in response_buffer or response_buffer.endswith('done\n'):
                     break
 
-            # Check for immediate rejection (another client already connected)
-            if response_buffer.startswith('error:') and 'already connected' in response_buffer:
+            # Check for immediate rejection (error response from daemon)
+            if response_buffer.startswith('error:'):
+                # Extract and display the error message from daemon
+                error_msg = response_buffer.split('\n')[0]
+                if error_msg.startswith('error:'):
+                    error_msg = error_msg[6:].strip()
                 sys.stderr.write('\n')
                 sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-                sys.stderr.write('║  ERROR: Another CLI client is already connected        ║\n')
+                sys.stderr.write('║  ERROR: Connection rejected by daemon                  ║\n')
                 sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-                sys.stderr.write('║  Only one CLI client can be active at a time.          ║\n')
-                sys.stderr.write('║  Please close the other client first.                  ║\n')
+                sys.stderr.write(f'║  {error_msg:<54} ║\n')
                 sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
                 sys.stderr.write('\n')
                 sys.stderr.flush()
@@ -182,14 +185,13 @@ class PersistentSocketConnection:
 
             if uuid_found:
                 if not is_active:
-                    # Another client is already active
+                    # Connection established but marked as not active
                     sys.stderr.write('\n')
                     sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-                    sys.stderr.write('║  ERROR: Another CLI client is already connected        ║\n')
+                    sys.stderr.write('║  ERROR: Connection not active                          ║\n')
                     sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-                    sys.stderr.write('║  Only one CLI client can be active at a time.          ║\n')
-                    sys.stderr.write('║  Please close the other client first, or wait for      ║\n')
-                    sys.stderr.write('║  the active client to disconnect.                      ║\n')
+                    sys.stderr.write('║  The daemon rejected this CLI session.                 ║\n')
+                    sys.stderr.write('║  Please check daemon logs for details.                 ║\n')
                     sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
                     sys.stderr.write('\n')
                     sys.stderr.flush()
@@ -210,10 +212,10 @@ class PersistentSocketConnection:
             sys.stderr.write('║  ExaBGP daemon is not responding to commands.          ║\n')
             sys.stderr.write('║                                                        ║\n')
             sys.stderr.write('║  Possible causes:                                      ║\n')
-            sys.stderr.write('║    • Another CLI client is already connected           ║\n')
+            sys.stderr.write('║    • The daemon is busy or overloaded                  ║\n')
             sys.stderr.write('║    • The daemon crashed after accepting connection     ║\n')
             sys.stderr.write('║                                                        ║\n')
-            sys.stderr.write('║  Try closing any other CLI clients first.              ║\n')
+            sys.stderr.write('║  Please check if ExaBGP is running properly.           ║\n')
             sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
             sys.stderr.write('\n')
             sys.stderr.flush()

@@ -52,15 +52,15 @@ class API(Command):
         log.error(lazymsg('api.failure report={report}', report=report), 'processes', level)
 
     def process(self, reactor: 'Reactor', service: str, command: str) -> bool:
-        use_json = False
-        # it to allow a global "set encoding json"
-        # it to allow a global "set encoding text"
-        # to not have to set the encoding on each command
-        if 'json' in command.split(' '):
-            use_json = True
-
         # API version handling
         api_version = getenv().api.version
+
+        # v6 API is JSON-only, v4 API checks for 'json' as last word
+        if api_version == 6:
+            use_json = True
+        else:
+            words = command.split()
+            use_json = words[-1] == 'json' if words else False
 
         if api_version == 4:
             # v4 mode: transform v4 commands to v6 format before dispatch
@@ -87,12 +87,15 @@ class API(Command):
 
         Uses async write methods to prevent blocking the event loop.
         """
-        use_json = False
-        if 'json' in command.split(' '):
-            use_json = True
-
         # API version handling
         api_version = getenv().api.version
+
+        # v6 API is JSON-only, v4 API checks for 'json' as last word
+        if api_version == 6:
+            use_json = True
+        else:
+            words = command.split()
+            use_json = words[-1] == 'json' if words else False
 
         if api_version == 4:
             # v4 mode: transform v4 commands to v6 format before dispatch

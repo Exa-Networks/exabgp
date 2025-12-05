@@ -45,8 +45,8 @@ class InteractiveCLI:
         self.formatter = OutputFormatter()
         self.running = True
         self.daemon_uuid = daemon_uuid
-        self.output_encoding = 'json'  # API encoding format ('json' or 'text')
-        self.display_mode = 'text'  # Display mode ('json' or 'text')
+        # Note: v6 API is JSON-only, so no output_encoding setting needed
+        self.display_mode = 'text'  # Display mode ('json' or 'text') - controls CLI output formatting
         self.sync_mode = False  # Sync mode: wait for routes on wire before ACK (default: off)
 
         # Initialize command history tracker (for smart completion ranking)
@@ -239,14 +239,10 @@ Display Format (optional prefix):
             value = tokens[2].lower()
 
             if setting == 'encoding':
-                # Set API output encoding: 'set encoding json' or 'set encoding text'
-                if value in ('json', 'text'):
-                    self.output_encoding = value
-                    sys.stdout.write(f'{self.formatter.format_info(f"API output encoding set to {value}")}\n')
-                else:
-                    sys.stdout.write(
-                        f'{self.formatter.format_error(f"Invalid encoding {value!r}. Use json or text.")}\n'
-                    )
+                # v6 API is JSON-only, encoding cannot be changed
+                sys.stdout.write(
+                    f'{self.formatter.format_error("API v6 is JSON-only. Use 'set display' to change output formatting.")}\n'
+                )
                 return True
 
             elif setting == 'display':
@@ -272,9 +268,9 @@ Display Format (optional prefix):
                 if value in ('on', 'off'):
                     new_sync = value == 'on'
                     if new_sync != self.sync_mode:
-                        # Send enable-sync or disable-sync to daemon
-                        cmd = 'enable-sync' if new_sync else 'disable-sync'
-                        result = self.send_command(cmd)
+                        # Send session sync enable/disable to daemon (v6 API format)
+                        sync_cmd = 'session sync enable' if new_sync else 'session sync disable'
+                        result = self.send_command(sync_cmd)
                         if result and result.startswith('Error:'):
                             sys.stdout.write(f'{self.formatter.format_error(result[7:])}\n')
                             return True
@@ -344,36 +340,13 @@ Display Format (optional prefix):
             tokens = command.split()
 
             # Check for display format prefix (json/text at START)
+            # This controls how the CLI displays output, not the API encoding
             display_override = None
             if tokens and tokens[0].lower() in ('json', 'text'):
                 display_override = tokens[0].lower()
                 # Strip display prefix from command
                 command = ' '.join(tokens[1:])
                 tokens = command.split()  # Re-tokenize
-
-            # Check if command has explicit encoding override (json/text at end)
-            override_encoding = None
-
-            if tokens and tokens[-1].lower() in ('json', 'text'):
-                override_encoding = tokens[-1].lower()
-                # Strip override keyword from command
-                command = ' '.join(tokens[:-1])
-                tokens = command.split()  # Re-tokenize after stripping
-
-            # Validate format combination
-            if display_override and override_encoding:
-                if display_override != override_encoding:
-                    # Conflicting formats - block execution
-                    error_msg = (
-                        f"Error: Conflicting formats - display='{display_override}' "
-                        f"but API encoding='{override_encoding}'\n"
-                        f'Use matching formats or omit one:\n'
-                        f"  '{command} {override_encoding}' (both {override_encoding})\n"
-                        f"  '{display_override} {command} {display_override}' (both {display_override})\n"
-                        f"  '{display_override} {command}' (display only)"
-                    )
-                    sys.stdout.write(f'{self.formatter.format_error(error_msg)}\n')
-                    return
 
             # Check if this is a read command (write commands ignore display prefix)
             is_read = self._is_read_command(command)
@@ -384,14 +357,9 @@ Display Format (optional prefix):
             # CLI uses v6 API format natively - no transformation needed
             # Commands are sent directly to daemon in v6 format:
             #   daemon shutdown, peer * announce route, peer show, etc.
+            # Note: v6 API is JSON-only, so no encoding suffix needed
 
-            # Determine which encoding to use (override takes precedence)
-            encoding_to_use = override_encoding if override_encoding else self.output_encoding
-
-            # Append encoding keyword to command before sending to daemon
-            command_with_encoding = f'{command} {encoding_to_use}'
-
-            result = self.send_command(command_with_encoding)
+            result = self.send_command(command)
 
             # Check for socket/timeout errors
             if result and result.startswith('Error: '):
@@ -450,22 +418,8 @@ Display Format (optional prefix):
 
             # Not an error - format normally
             # Determine display mode (display_override takes precedence over session default)
+            # Note: v6 API always returns JSON, so no format mismatch validation needed
             display_to_use = display_override if display_override else self.display_mode
-
-            # Validate API response format matches display request
-            # If user requested JSON display but API returned text, fail loudly
-            if display_to_use == 'json' and encoding_to_use == 'text':
-                # This should be impossible - tests should catch this
-                error_obj = {
-                    'error': 'API returned text format when JSON was requested for display',
-                    'details': 'This is a bug - please report',
-                    'command': command,
-                    'api_encoding': encoding_to_use,
-                    'display_mode': display_to_use,
-                }
-                error_json = json.dumps(error_obj, indent=2)
-                sys.stdout.write(f'{self.formatter.format_error(error_json)}\n')
-                return
 
             formatted = self.formatter.format_command_output(result, display_mode=display_to_use)
 
