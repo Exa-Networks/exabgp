@@ -84,3 +84,12 @@ class Cache:
             self._seen.setdefault(family, {})[index] = change
         elif family in self._seen:
             self._seen[family].pop(index, None)
+
+    # remove a change from cache (for withdrawals without modifying nlri.action)
+    def update_cache_withdraw(self, change: Change) -> None:
+        if not self.cache:
+            return
+        family = change.nlri.family().afi_safi()
+        index = change.index()
+        if family in self._seen:
+            self._seen[family].pop(index, None)
