@@ -38,12 +38,37 @@
 - API tests: 38/38 passed
 - All 11 test suites pass
 
-### Remaining Phases (future work)
+### Additional Completed Phases (2025-12-05)
 
-- Phase 5: Update all Change creation sites to use tuples
-- Phase 6: Update cache to store tuples instead of Change
-- Phase 7: Remove action from NLRI
-- Phase 8: Delete Change class
+**Phase 5: Update incoming RIB handler ✅**
+- `UpdateHandler.handle()` and `handle_async()` now call `update_cache(nlri, attributes)`
+- No more `Change` object creation in the receive path
+- Removed `from exabgp.rib.change import Change` from handler
+
+**Phase 6: Update cache and RIB with overloaded signatures ✅**
+- `Cache.update_cache()` now accepts `(change)` or `(nlri, attributes)`
+- `Cache.update_cache_withdraw()` now accepts `(change)` or `(nlri)`
+- `OutgoingRIB.add_to_rib()` now accepts `(change, force)` or `(nlri, attrs, force)`
+- `OutgoingRIB.del_from_rib()` now accepts `(change)` or `(nlri, attrs)`
+- Full backward compatibility with existing callers
+
+**Phase 7: Configuration parsers - keeping Change ✅**
+- Decision: Keep `Change` class for configuration parsing
+- `Change` serves as a clean data container for "route with attributes"
+- Not performance critical (only at config load time)
+- The new signatures allow callers to pass `(nlri, attrs)` directly where beneficial
+
+### Remaining (Lower Priority)
+
+- **Remove action from NLRI** - Would require significant changes to cache filtering
+- **Delete Change class entirely** - Keep for configuration, provides clean abstraction
+
+### Summary
+
+The original performance goal (eliminating deepcopy in del_from_rib) is complete.
+Additional phases added overloaded signatures to avoid unnecessary Change creation
+in the receive path. The Change class is retained for configuration parsing where
+it provides a useful abstraction.
 
 ---
 

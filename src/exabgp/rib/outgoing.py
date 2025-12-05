@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Iterator, overload
 
 from exabgp.logger import log, lazymsg
 
@@ -203,12 +203,27 @@ class OutgoingRIB(Cache):
                 self._watchdog[watchdog].setdefault('-', {})[change.index()] = change
                 self._watchdog[watchdog]['+'].pop(change.index())
 
-    def del_from_rib(self, change: Change) -> None:
-        log.debug(lazymsg('rib.remove change={change}', change=change), 'rib')
+    @overload
+    def del_from_rib(self, change: 'Change') -> None: ...
+    @overload
+    def del_from_rib(self, nlri: 'NLRI', attributes: 'Attributes | None' = None) -> None: ...
 
-        change_index = change.index()
-        change_family = change.nlri.family().afi_safi()
-        nlri_index = change.nlri.index()
+    def del_from_rib(self, change_or_nlri: 'Change | NLRI', attributes: 'Attributes | None' = None) -> None:
+        # Handle both signatures: (change) or (nlri, attributes)
+        if attributes is None and hasattr(change_or_nlri, 'attributes'):
+            # Legacy signature: del_from_rib(change)
+            change = change_or_nlri  # type: ignore[assignment]
+            nlri = change.nlri
+            change_index = change.index()
+        else:
+            # New signature: del_from_rib(nlri, attributes)
+            nlri = change_or_nlri  # type: ignore[assignment]
+            change_index = self._make_index(nlri)
+
+        log.debug(lazymsg('rib.remove nlri={nlri}', nlri=nlri), 'rib')
+
+        change_family = nlri.family().afi_safi()
+        nlri_index = nlri.index()
 
         attr_af_nlri = self._new_attr_af_nlri
         new_nlri = self._new_nlri
@@ -227,15 +242,38 @@ class OutgoingRIB(Cache):
 
         # Store withdraw in separate structure - no deepcopy needed!
         # The NLRI is stored directly, action is determined by which dict it's in
-        self._pending_withdraws.setdefault(change_family, {})[nlri_index] = change.nlri
+        self._pending_withdraws.setdefault(change_family, {})[nlri_index] = nlri
 
         # Update cache to remove the announced route
-        self.update_cache_withdraw(change)
+        self.update_cache_withdraw(nlri)
 
     def add_to_resend(self, change: Change) -> None:
         self._refresh_changes.append(change)
 
-    def add_to_rib(self, change: Change, force: bool = False) -> None:
+    @overload
+    def add_to_rib(self, change: 'Change', force: bool = False) -> None: ...
+    @overload
+    def add_to_rib(self, nlri: 'NLRI', attributes: 'Attributes', force: bool = False) -> None: ...
+
+    def add_to_rib(
+        self,
+        change_or_nlri: 'Change | NLRI',
+        attributes_or_force: 'Attributes | bool' = False,
+        force: bool = False,
+    ) -> None:
+        from exabgp.rib.change import Change
+
+        # Handle both signatures: (change, force) or (nlri, attributes, force)
+        if isinstance(attributes_or_force, bool):
+            # Legacy signature: add_to_rib(change, force=False)
+            change = change_or_nlri  # type: ignore[assignment]
+            force = attributes_or_force
+        else:
+            # New signature: add_to_rib(nlri, attributes, force=False)
+            nlri = change_or_nlri  # type: ignore[assignment]
+            attrs = attributes_or_force
+            change = Change(nlri, attrs)
+
         log.debug(lazymsg('rib.insert change={change}', change=change), 'rib')
 
         if not force and self.in_cache(change):

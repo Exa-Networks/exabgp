@@ -7,12 +7,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Iterator, overload
 
 from exabgp.bgp.message import Action
 
 if TYPE_CHECKING:
     from exabgp.rib.change import Change
+    from exabgp.bgp.message.update.nlri.nlri import NLRI
+    from exabgp.bgp.message.update.attribute.attributes import Attributes
     from exabgp.protocol.family import AFI, SAFI
 
 
@@ -74,22 +76,71 @@ class Cache:
 
         return True
 
+    @staticmethod
+    def _make_index(nlri: 'NLRI') -> bytes:
+        """Compute cache index for an NLRI (family prefix + nlri index)."""
+        return b'%02x%02x' % nlri.family().afi_safi() + nlri.index()
+
     # add a change to the cache of seen Change
-    def update_cache(self, change: Change) -> None:
+    @overload
+    def update_cache(self, change: 'Change') -> None: ...
+    @overload
+    def update_cache(self, nlri: 'NLRI', attributes: 'Attributes') -> None: ...
+
+    def update_cache(self, change_or_nlri: 'Change | NLRI', attributes: 'Attributes | None' = None) -> None:
         if not self.cache:
             return
-        family = change.nlri.family().afi_safi()
-        index = change.index()
-        if change.nlri.action == Action.ANNOUNCE:
-            self._seen.setdefault(family, {})[index] = change
+
+        # Handle both signatures: (change) or (nlri, attributes)
+        if attributes is None:
+            # Legacy signature: update_cache(change)
+            change = change_or_nlri  # type: ignore[assignment]
+            nlri = change.nlri
+            attrs = change.attributes
+            family = nlri.family().afi_safi()
+            index = change.index()
+        else:
+            # New signature: update_cache(nlri, attributes)
+            nlri = change_or_nlri  # type: ignore[assignment]
+            attrs = attributes
+            family = nlri.family().afi_safi()
+            index = self._make_index(nlri)
+
+        if nlri.action == Action.ANNOUNCE:
+            # Store as Change for backward compatibility with cached_changes()
+            from exabgp.rib.change import Change
+
+            self._seen.setdefault(family, {})[index] = Change(nlri, attrs)
         elif family in self._seen:
             self._seen[family].pop(index, None)
 
     # remove a change from cache (for withdrawals without modifying nlri.action)
-    def update_cache_withdraw(self, change: Change) -> None:
+    @overload
+    def update_cache_withdraw(self, change: 'Change') -> None: ...
+    @overload
+    def update_cache_withdraw(self, nlri: 'NLRI', attributes: 'Attributes | None' = None) -> None: ...
+
+    def update_cache_withdraw(self, change_or_nlri: 'Change | NLRI', attributes: 'Attributes | None' = None) -> None:
         if not self.cache:
             return
-        family = change.nlri.family().afi_safi()
-        index = change.index()
+
+        # Handle both signatures
+        if attributes is None and hasattr(change_or_nlri, 'index') and callable(change_or_nlri.index):
+            # Check if it's a Change object (has index() method that returns bytes)
+            try:
+                change = change_or_nlri  # type: ignore[assignment]
+                family = change.nlri.family().afi_safi()
+                index = change.index()
+            except AttributeError:
+                # It's an NLRI
+                nlri = change_or_nlri  # type: ignore[assignment]
+                family = nlri.family().afi_safi()
+                index = self._make_index(nlri)
+        else:
+            # New signature: (nlri, attributes) - attributes ignored for withdraw
+            nlri = change_or_nlri  # type: ignore[assignment]
+            family = nlri.family().afi_safi()
+            index = self._make_index(nlri)
+
         if family in self._seen:
             self._seen[family].pop(index, None)
