@@ -40,8 +40,8 @@ class OutgoingRIB(Cache):
     _refresh_changes: list[Change]
 
     # New structure for withdraws - avoids deepcopy by not modifying nlri.action
-    # Indexed by family -> nlri_index -> NLRI
-    _pending_withdraws: dict[tuple[AFI, SAFI], dict[bytes, 'NLRI']]
+    # Indexed by family -> nlri_index -> (NLRI, Attributes)
+    _pending_withdraws: dict[tuple[AFI, SAFI], dict[bytes, tuple['NLRI', 'Attributes']]]
 
     def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]]) -> None:
         Cache.__init__(self, cache, families)
@@ -214,10 +214,12 @@ class OutgoingRIB(Cache):
             # Legacy signature: del_from_rib(change)
             change = change_or_nlri  # type: ignore[assignment]
             nlri = change.nlri
+            attrs = change.attributes
             change_index = change.index()
         else:
             # New signature: del_from_rib(nlri, attributes)
             nlri = change_or_nlri  # type: ignore[assignment]
+            attrs = attributes
             change_index = self._make_index(nlri)
 
         log.debug(lazymsg('rib.remove nlri={nlri}', nlri=nlri), 'rib')
@@ -241,8 +243,10 @@ class OutgoingRIB(Cache):
             new_nlri.pop(change_index, None)
 
         # Store withdraw in separate structure - no deepcopy needed!
-        # The NLRI is stored directly, action is determined by which dict it's in
-        self._pending_withdraws.setdefault(change_family, {})[nlri_index] = nlri
+        # Store (NLRI, Attributes) tuple, action is determined by which dict it's in
+        from exabgp.bgp.message.update.attribute.attributes import Attributes as AttrsClass
+
+        self._pending_withdraws.setdefault(change_family, {})[nlri_index] = (nlri, attrs if attrs else AttrsClass())
 
         # Update cache to remove the announced route
         self.update_cache_withdraw(nlri)
@@ -298,8 +302,6 @@ class OutgoingRIB(Cache):
         self.update_cache(change)
 
     def updates(self, grouped: bool) -> Iterator[Update | RouteRefresh]:
-        from exabgp.bgp.message.update.attribute.attributes import Attributes as AttrsClass
-
         attr_af_nlri = self._new_attr_af_nlri
         new_attr = self._new_attribute
 
@@ -347,13 +349,13 @@ class OutgoingRIB(Cache):
         # Generate Updates for pending withdraws using the new Update signature
         # Update(announces=[], withdraws=nlris, attributes) - no nlri.action needed
         # Yield one Update per NLRI to match original behavior
-        for family, nlris_dict in pending_withdraws.items():
-            if not nlris_dict:
+        for family, nlri_attr_dict in pending_withdraws.items():
+            if not nlri_attr_dict:
                 continue
-            for nlri in nlris_dict.values():
+            for nlri, attrs in nlri_attr_dict.values():
                 # Use new 3-arg signature: (announces, withdraws, attributes)
-                # Withdraws don't need path attributes per RFC 4760
-                yield Update([], [nlri], AttrsClass())
+                # Withdraws include attributes for proper BGP encoding (e.g., FlowSpec rate-limit)
+                yield Update([], [nlri], attrs)
 
         # Route Refresh - use snapshots to avoid modification during iteration
 
