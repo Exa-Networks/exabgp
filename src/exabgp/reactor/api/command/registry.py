@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
-from exabgp.reactor.api.command.command import Command
+from exabgp.reactor.api.dispatch.common import get_commands
 
 
 @dataclass
@@ -39,7 +39,7 @@ class CommandMetadata:
         """Generate command syntax from name and options."""
         syntax = self.name
         if self.neighbor_support:
-            syntax = f'[neighbor <ip> [filters]] {syntax}'
+            syntax = f'[peer <ip> [filters]] {syntax}'
         if self.options:
             opts = ' '.join(f'[{opt}]' for opt in self.options)
             syntax = f'{syntax} {opts}'
@@ -177,35 +177,39 @@ class CommandRegistry:
     def __init__(self) -> None:
         """Initialize the command registry."""
         self._metadata_cache: dict[str, CommandMetadata] = {}
+        self._commands_cache: list[tuple[str, bool, list[str] | None]] | None = None
+
+    def _get_commands_list(self) -> list[tuple[str, bool, list[str] | None]]:
+        """Get cached list of commands from dispatch/common.py."""
+        if self._commands_cache is None:
+            self._commands_cache = get_commands()
+        return self._commands_cache
 
     def get_all_commands(self) -> list[str]:
         """Return list of all registered command names."""
-        return list(Command.functions)
+        return [cmd[0] for cmd in self._get_commands_list()]
 
     def get_command_metadata(self, command_name: str) -> CommandMetadata | None:
         """Get metadata for a specific command."""
         if command_name in self._metadata_cache:
             return self._metadata_cache[command_name]
 
-        # Check if command exists
-        if command_name not in Command.callback['text']:
+        # Find command in COMMANDS list
+        command_info = None
+        for cmd, neighbor_support, options in self._get_commands_list():
+            if cmd == command_name:
+                command_info = (cmd, neighbor_support, options)
+                break
+
+        if not command_info:
             return None
 
-        # Build metadata from Command.callback
-        neighbor_val = Command.callback['neighbor'].get(command_name, True)
-        neighbor_support = bool(neighbor_val) if not isinstance(neighbor_val, bool) else neighbor_val
-
-        options_val = Command.callback['options'].get(command_name)
-        options: list[str] | None = None
-        if isinstance(options_val, list):
-            options = [str(opt) for opt in options_val]
-        elif isinstance(options_val, dict):
-            options = list(options_val.keys())
+        cmd, neighbor_support, options = command_info
 
         metadata = CommandMetadata(
             name=command_name,
             neighbor_support=neighbor_support,
-            json_support=command_name in Command.callback['json'],
+            json_support=True,  # v6 API is JSON-only
             options=options,
             category=self.CATEGORIES.get(command_name, 'general'),
         )

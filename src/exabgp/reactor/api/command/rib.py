@@ -18,8 +18,6 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.neighbor import NeighborTemplate
 from exabgp.environment import getenv
-from exabgp.reactor.api.command.command import Command
-from exabgp.reactor.api.command.limit import extract_neighbors, match_neighbors
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -99,39 +97,13 @@ def _show_adjrib_callback(
     return callback
 
 
-@Command.register(
-    'show adj-rib out',
-    False,
-    [
-        'extensive',
-    ],
-    True,
-)
-@Command.register(
-    'show adj-rib in',
-    False,
-    [
-        'extensive',
-    ],
-    True,
-)
-def show_adj_rib(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
-    words = line.split()
-    extensive = line.endswith(' extensive')
-    try:
-        rib = words[2]
-        if rib not in ('in', 'out'):
-            reactor.processes.answer_error(service)
-            return False
-    except IndexError:
-        if words[1] == 'adj-rib-in':
-            rib = 'in'
-        elif words[1] == 'adj-rib-out':
-            rib = 'out'
-        else:
-            reactor.processes.answer_error(service)
-            return False
+def show_adj_rib(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+    # command contains direction and options (e.g., "in extensive" or "out")
+    words = command.split()
+    extensive = 'extensive' in words
 
+    # Get direction from first word
+    rib = words[0] if words else ''
     if rib not in ('in', 'out'):
         reactor.processes.answer_error(service)
         return False
@@ -149,29 +121,29 @@ def show_adj_rib(self: Command, reactor: Reactor, service: str, line: str, use_j
         words.remove('json')
         use_json = True
 
-    for remove in ('show', 'adj-rib', 'adj-rib-in', 'adj-rib-out', 'in', 'out', 'extensive'):
+    for remove in ('in', 'out', 'extensive', 'inet', 'flow', 'l2vpn'):
         if remove in words:
             words.remove(remove)
     last = '' if not words else words[0]
     callback = _show_adjrib_callback(reactor, service, last, klass, False, rib, extensive, use_json)
-    reactor.asynchronous.schedule(service, line, callback())
+    reactor.asynchronous.schedule(service, command, callback())
     return True
 
 
-@Command.register('flush adj-rib out', json_support=True)
-def flush_adj_rib_out(self: 'API', reactor: 'Reactor', service: str, line: str, use_json: bool) -> bool:
-    async def callback(self: 'API', peers: list[str]) -> None:
-        peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
-        self.log_message(f'flushing adjb-rib out for {peer_list}')
-        for peer_name in peers:
+def flush_adj_rib_out(
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+) -> bool:
+    async def callback(self: 'API', peer_list: list[str]) -> None:
+        peer_names = ', '.join(peer_list) if peer_list else 'all peers'
+        self.log_message(f'flushing adjb-rib out for {peer_names}')
+        for peer_name in peer_list:
             reactor.neighbor_rib_resend(peer_name)
             await asyncio.sleep(0)  # Yield control after each peer (matches original yield False)
 
         await reactor.processes.answer_done_async(service)
 
     try:
-        descriptions, command = extract_neighbors(line)
-        peers = match_neighbors(reactor.established_peers(), descriptions)
+        # peers list already parsed by dispatcher
         if not peers:
             self.log_failure(f'no neighbor matching the command : {command}', 'warning')
             reactor.processes.answer_error(service)
@@ -188,12 +160,13 @@ def flush_adj_rib_out(self: 'API', reactor: 'Reactor', service: str, line: str, 
         return False
 
 
-@Command.register('clear adj-rib', json_support=True)
-def clear_adj_rib(self: 'API', reactor: 'Reactor', service: str, line: str, use_json: bool) -> bool:
-    async def callback(self: 'API', peers: list[str], direction: str) -> None:
-        peer_list = ', '.join(peers if peers else []) if peers is not None else 'all peers'
-        self.log_message(f'clearing adjb-rib-{direction} for {peer_list}')
-        for peer_name in peers:
+def clear_adj_rib(
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+) -> bool:
+    async def callback(self: 'API', peer_list: list[str], direction: str) -> None:
+        peer_names = ', '.join(peer_list) if peer_list else 'all peers'
+        self.log_message(f'clearing adjb-rib-{direction} for {peer_names}')
+        for peer_name in peer_list:
             if direction == 'out':
                 reactor.neighbor_rib_out_withdraw(peer_name)
             else:
@@ -203,14 +176,13 @@ def clear_adj_rib(self: 'API', reactor: 'Reactor', service: str, line: str, use_
         await reactor.processes.answer_done_async(service)
 
     try:
-        descriptions, command = extract_neighbors(line)
-        peers = match_neighbors(reactor.peers(), descriptions)
+        # peers list already parsed by dispatcher
         if not peers:
             self.log_failure(f'no neighbor matching the command : {command}', 'warning')
             reactor.processes.answer_error(service)
             return False
         words = command.split()
-        direction = 'in' if 'adj-rib-in' in words or 'in' in words else 'out'
+        direction = 'in' if 'in' in words else 'out'
         reactor.asynchronous.schedule(service, command, callback(self, peers, direction))
         return True
     except ValueError:

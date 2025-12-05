@@ -49,7 +49,8 @@ class TestPingCommand:
         service = 'test-service'
 
         # Execute command in text mode with explicit 'text' keyword
-        result = ping(None, reactor, service, 'ping text', use_json=False)
+        # New signature: ping(self, reactor, service, peers, command, use_json)
+        result = ping(None, reactor, service, [], 'text', use_json=False)
 
         assert result is True
         assert len(reactor.processes.written_data) >= 1
@@ -66,7 +67,8 @@ class TestPingCommand:
         service = 'test-service'
 
         # Execute command in JSON mode
-        result = ping(None, reactor, service, 'ping', use_json=True)
+        # New signature: ping(self, reactor, service, peers, command, use_json)
+        result = ping(None, reactor, service, [], '', use_json=True)
 
         assert result is True
         assert len(reactor.processes.written_data) >= 1
@@ -91,7 +93,8 @@ class TestStatusCommand:
         service = 'test-service'
 
         # Execute command in text mode
-        result = status(None, reactor, service, 'status', use_json=False)
+        # New signature: status(self, reactor, service, peers, command, use_json)
+        result = status(None, reactor, service, [], '', use_json=False)
 
         assert result is True
         assert len(reactor.processes.written_data) > 0
@@ -110,7 +113,8 @@ class TestStatusCommand:
         service = 'test-service'
 
         # Execute command in JSON mode
-        result = status(None, reactor, service, 'status', use_json=True)
+        # New signature: status(self, reactor, service, peers, command, use_json)
+        result = status(None, reactor, service, [], '', use_json=True)
 
         assert result is True
         assert len(reactor.processes.written_data) >= 1
@@ -134,7 +138,8 @@ class TestStatusCommand:
         service = 'test-service'
 
         # Execute command in JSON mode for easy parsing
-        result = status(None, reactor, service, 'status', use_json=True)
+        # New signature: status(self, reactor, service, peers, command, use_json)
+        result = status(None, reactor, service, [], '', use_json=True)
 
         assert result is True
         output = reactor.processes.written_data[0]
@@ -156,14 +161,15 @@ class TestCommandIntegration:
         service = 'test-service'
 
         # Get UUID from ping (JSON mode)
-        ping(None, reactor, service, 'ping', use_json=True)
+        # New signature: ping(self, reactor, service, peers, command, use_json)
+        ping(None, reactor, service, [], '', use_json=True)
         ping_output = reactor.processes.written_data[0]
         ping_data = json.loads(ping_output)
         ping_uuid = ping_data['pong']
 
         # Get UUID from status
         reactor.processes.written_data = []
-        status(None, reactor, service, 'status', use_json=True)
+        status(None, reactor, service, [], '', use_json=True)
         status_output = reactor.processes.written_data[0]
         status_data = json.loads(status_output)
 
@@ -178,14 +184,15 @@ class TestCommandIntegration:
         service = 'test-service'
 
         # Client 1 connects first (using text mode for easier assertion)
-        ping(None, reactor, service, 'ping client-1 1000.0 text', use_json=False)
+        # New signature: ping(self, reactor, service, peers, command, use_json)
+        ping(None, reactor, service, [], 'client-1 1000.0 text', use_json=False)
         client1_output = reactor.processes.written_data[0]
         assert 'active=true' in client1_output
         assert 'client-1' in reactor.active_clients
 
         # Client 2 connects - should also be active (multi-client support)
         reactor.processes.written_data = []
-        ping(None, reactor, service, 'ping client-2 2000.0 text', use_json=False)
+        ping(None, reactor, service, [], 'client-2 2000.0 text', use_json=False)
         client2_output = reactor.processes.written_data[0]
         assert 'active=true' in client2_output
 
@@ -195,13 +202,13 @@ class TestCommandIntegration:
 
         # Client 1 still active
         reactor.processes.written_data = []
-        ping(None, reactor, service, 'ping client-1 1000.0 text', use_json=False)
+        ping(None, reactor, service, [], 'client-1 1000.0 text', use_json=False)
         client1_still_active = reactor.processes.written_data[0]
         assert 'active=true' in client1_still_active
 
         # Client 2 also still active
         reactor.processes.written_data = []
-        ping(None, reactor, service, 'ping client-2 2000.0 text', use_json=False)
+        ping(None, reactor, service, [], 'client-2 2000.0 text', use_json=False)
         client2_still_active = reactor.processes.written_data[0]
         assert 'active=true' in client2_still_active
 
@@ -213,7 +220,8 @@ class TestCommandIntegration:
         service = 'test-service'
 
         # Client 1 connects first (using text mode for easier assertion)
-        ping(None, reactor, service, 'ping client-1 1000.0 text', use_json=False)
+        # New signature: ping(self, reactor, service, peers, command, use_json)
+        ping(None, reactor, service, [], 'client-1 1000.0 text', use_json=False)
         assert 'active=true' in reactor.processes.written_data[0]
         assert 'client-1' in reactor.active_clients
 
@@ -222,7 +230,7 @@ class TestCommandIntegration:
 
         # Client 2 connects - should be active, and client-1 should be cleaned up
         reactor.processes.written_data = []
-        ping(None, reactor, service, 'ping client-2 2000.0 text', use_json=False)
+        ping(None, reactor, service, [], 'client-2 2000.0 text', use_json=False)
         output = reactor.processes.written_data[0]
         assert 'active=true' in output
         assert 'client-2' in reactor.active_clients

@@ -17,11 +17,10 @@ from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.reactor.api.command.command import Command
-from exabgp.reactor.api.command.limit import extract_neighbors, match_neighbors
 from exabgp.configuration.neighbor.api import ParseAPI
 
 if TYPE_CHECKING:
+    from exabgp.reactor.api import API
     from exabgp.reactor.loop import Reactor
 
 
@@ -29,7 +28,7 @@ def register_peer() -> None:
     """Register peer management commands.
 
     This function is called during module initialization to ensure
-    the @Command.register decorators are executed.
+    the handler functions are available.
     """
     pass
 
@@ -271,14 +270,15 @@ def _build_neighbor(params: dict[str, Any], api_processes: list[str] | None = No
     return neighbor
 
 
-@Command.register('create', neighbor=False, json_support=True)
-def neighbor_create(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def neighbor_create(
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+) -> bool:
     """Create a new BGP neighbor dynamically at runtime.
 
-    API format: create neighbor <ip> local-address <ip> local-as <asn> peer-as <asn> [router-id <ip>] [family-allowed <families>] [graceful-restart <seconds>] [group-updates true|false] [api <process>]...
+    API format: peer create <ip> local-address <ip> local-as <asn> peer-as <asn> [router-id <ip>] [family-allowed <families>] [graceful-restart <seconds>] [group-updates true|false] [api <process>]...
 
     Required parameters:
-        - neighbor <ip> - peer IP address
+        - <ip> - peer IP address
         - local-address <ip> - local IP address (mandatory, no auto-discovery)
         - local-as <asn> - local AS number
         - peer-as <asn> - peer AS number
@@ -290,24 +290,15 @@ def neighbor_create(self: Command, reactor: Reactor, service: str, line: str, us
         - group-updates true|false (defaults to true)
         - api <process> (repeat 'api' keyword for multiple processes)
 
-    Examples (API format):
-        create neighbor 127.0.0.2 local-address 127.0.0.1 local-as 65001 peer-as 65002
-        create neighbor 127.0.0.2 local-address 127.0.0.1 local-as 65001 peer-as 65002 router-id 2.2.2.2 api peer-lifecycle
-        create neighbor 10.0.0.2 local-address 10.0.0.1 local-as 65001 peer-as 65002 api proc1 api proc2
-        create neighbor 10.0.0.2 local-address 10.0.0.1 local-as 65001 peer-as 65002 family-allowed ipv4-unicast/ipv6-unicast api monitor
+    Examples (v6 API format):
+        peer create 127.0.0.2 local-address 127.0.0.1 local-as 65001 peer-as 65002
+        peer create 127.0.0.2 local-address 127.0.0.1 local-as 65001 peer-as 65002 router-id 2.2.2.2 api peer-lifecycle
+        peer create 10.0.0.2 local-address 10.0.0.1 local-as 65001 peer-as 65002 api proc1 api proc2
     """
     try:
-        # line contains FULL command including "create", need to strip it
-        # v4 format: "create neighbor <ip> local-address <ip> ..."
-        # v6 format: "peer create <ip> local-address <ip> ..."
-        line = line.strip()
-        if line.startswith('peer create '):
-            # v6 format: strip "peer create " and add "peer " prefix for parsing
-            line = 'peer ' + line[12:]
-        elif line.startswith('create '):
-            line = line[7:]  # Remove "create " prefix (v4 format)
-        elif line.startswith('create\t'):
-            line = line[7:]  # Remove "create\t" prefix (v4 format)
+        # command contains params after "peer create" stripped (e.g., "127.0.0.2 local-address 127.0.0.1 ...")
+        # Add "peer " prefix for _parse_neighbor_params which expects "neighbor <ip>" or "peer <ip>" format
+        line = 'peer ' + command.strip()
 
         # Parse parameters and API processes
         params, api_processes = _parse_neighbor_params(line)
@@ -356,8 +347,7 @@ def neighbor_create(self: Command, reactor: Reactor, service: str, line: str, us
         return False
 
 
-@Command.register('delete', neighbor=False, json_support=True)
-def peer_delete(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def peer_delete(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Delete BGP peer(s) dynamically at runtime (v6 command).
 
     v6 format: peer delete <selector>
@@ -373,24 +363,7 @@ def peer_delete(self: Command, reactor: Reactor, service: str, line: str, use_js
           Deleting static (configured) peers may cause issues on reload.
     """
     try:
-        # Parse selector using extract_neighbors
-        # v6 format only: "peer delete <selector>" or "peer <selector>"
-        line = line.strip()
-        if line.startswith('peer delete '):
-            # Strip "peer delete " and convert to neighbor format for extract_neighbors
-            line = 'neighbor ' + line[12:]
-        elif line.startswith('peer '):
-            # Strip "peer " and convert to neighbor format
-            line = 'neighbor ' + line[5:]
-        else:
-            reactor.processes.answer_error(service, 'invalid delete command format')
-            return False
-
-        descriptions, command = extract_neighbors(line)
-
-        # Get matching peers
-        peers = match_neighbors(reactor.peers(service), descriptions)
-
+        # peers list already parsed by dispatcher
         if not peers:
             # No matches - return error
             reactor.processes.answer_error(service, 'no neighbors match the selector')

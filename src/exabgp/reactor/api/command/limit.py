@@ -176,6 +176,7 @@ def match_neighbor(description: list[str], name: str) -> bool:
     return True
 
 
+# TODO: convert to a generator
 def match_neighbors(peers: Iterable[str], descriptions: list[list[str]]) -> list[str]:
     """Return the sublist of peers matching the description passed, or None if no description is given"""
     if not descriptions:
