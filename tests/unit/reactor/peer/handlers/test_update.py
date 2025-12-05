@@ -39,7 +39,8 @@ class TestUpdateHandler:
         nlri1, nlri2 = Mock(), Mock()
         update = Mock()
         update.TYPE = Update.TYPE
-        update.nlris = [nlri1, nlri2]
+        update.announces = [nlri1, nlri2]
+        update.withdraws = []
         update.attributes = Mock()
 
         list(handler.handle(mock_context, update))
@@ -50,7 +51,8 @@ class TestUpdateHandler:
         """UpdateHandler handles updates with no NLRIs."""
         update = Mock()
         update.TYPE = Update.TYPE
-        update.nlris = []
+        update.announces = []
+        update.withdraws = []
         update.attributes = Mock()
 
         list(handler.handle(mock_context, update))
@@ -61,7 +63,8 @@ class TestUpdateHandler:
         """UpdateHandler increments counter per update."""
         update = Mock()
         update.TYPE = Update.TYPE
-        update.nlris = []
+        update.announces = []
+        update.withdraws = []
         update.attributes = Mock()
 
         list(handler.handle(mock_context, update))
@@ -79,7 +82,8 @@ class TestUpdateHandler:
         """handle() returns a generator."""
         update = Mock()
         update.TYPE = Update.TYPE
-        update.nlris = []
+        update.announces = []
+        update.withdraws = []
         update.attributes = Mock()
 
         result = handler.handle(mock_context, update)
@@ -108,7 +112,8 @@ class TestUpdateHandlerAsync:
         nlri1, nlri2 = Mock(), Mock()
         update = Mock()
         update.TYPE = Update.TYPE
-        update.nlris = [nlri1, nlri2]
+        update.announces = [nlri1, nlri2]
+        update.withdraws = []
         update.attributes = Mock()
 
         await handler.handle_async(mock_context, update)
@@ -120,7 +125,8 @@ class TestUpdateHandlerAsync:
         """handle_async increments counter."""
         update = Mock()
         update.TYPE = Update.TYPE
-        update.nlris = []
+        update.announces = []
+        update.withdraws = []
         update.attributes = Mock()
 
         await handler.handle_async(mock_context, update)

@@ -44,20 +44,25 @@ class Cache:
         self,
         families: list[tuple[AFI, SAFI]] | None = None,
         actions: tuple[int, ...] = (Action.ANNOUNCE,),
-    ) -> Iterator[Change]:
+    ) -> Iterator['Change']:
         # families can be None or []
         requested_families = self.families if families is None else set(families).intersection(self.families)
 
         # we use list() to make a snapshot of the data at the time we run the command
+        # Note: The cache only stores announces (withdraws are removed), so the action
+        # filter is effectively a no-op but kept for backward compatibility
         for family in requested_families:
             for change in list(self._seen.get(family, {}).values()):
-                if change.nlri.action in actions:
+                # Cache only stores announces, but check action for backward compat
+                # Once nlri.action is removed, this filter can be removed too
+                if Action.ANNOUNCE in actions:
                     yield change
 
-    def in_cache(self, change: Change) -> bool:
+    def in_cache(self, change: 'Change') -> bool:
         if not self.cache:
             return False
 
+        # Withdraws are never duplicates - they always need to be processed
         if change.nlri.action == Action.WITHDRAW:
             return False
 
@@ -86,27 +91,38 @@ class Cache:
     def update_cache(self, change: 'Change') -> None: ...
     @overload
     def update_cache(self, nlri: 'NLRI', attributes: 'Attributes') -> None: ...
+    @overload
+    def update_cache(self, nlri: 'NLRI', attributes: 'Attributes', action: int) -> None: ...
 
-    def update_cache(self, change_or_nlri: 'Change | NLRI', attributes: 'Attributes | None' = None) -> None:
+    def update_cache(
+        self,
+        change_or_nlri: 'Change | NLRI',
+        attributes: 'Attributes | None' = None,
+        action: int | None = None,
+    ) -> None:
         if not self.cache:
             return
 
-        # Handle both signatures: (change) or (nlri, attributes)
+        # Handle signatures: (change) or (nlri, attributes) or (nlri, attributes, action)
         if attributes is None:
-            # Legacy signature: update_cache(change)
+            # Legacy signature: update_cache(change) - uses nlri.action
             change = change_or_nlri  # type: ignore[assignment]
             nlri = change.nlri
             attrs = change.attributes
             family = nlri.family().afi_safi()
             index = change.index()
+            # For legacy callers, still read from nlri.action
+            actual_action = nlri.action
         else:
-            # New signature: update_cache(nlri, attributes)
+            # New signature: update_cache(nlri, attributes[, action])
             nlri = change_or_nlri  # type: ignore[assignment]
             attrs = attributes
             family = nlri.family().afi_safi()
             index = self._make_index(nlri)
+            # Use explicit action if provided, otherwise fall back to nlri.action
+            actual_action = action if action is not None else nlri.action
 
-        if nlri.action == Action.ANNOUNCE:
+        if actual_action == Action.ANNOUNCE:
             # Store as Change for backward compatibility with cached_changes()
             from exabgp.rib.change import Change
 

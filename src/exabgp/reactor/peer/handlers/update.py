@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generator, cast
 
-from exabgp.bgp.message import Message, Update
+from exabgp.bgp.message import Action, Message, Update
 from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.reactor.peer.handlers.base import MessageHandler
 
@@ -43,9 +43,17 @@ class UpdateHandler(MessageHandler):
 
         log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
 
-        for nlri in update.nlris:
-            # Pass (nlri, attributes) directly - no Change object needed
-            ctx.neighbor.rib.incoming.update_cache(nlri, update.attributes)
+        # Process announces - pass action explicitly
+        for nlri in update.announces:
+            ctx.neighbor.rib.incoming.update_cache(nlri, update.attributes, Action.ANNOUNCE)
+            log.debug(
+                lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
+                ctx.peer_id,
+            )
+
+        # Process withdraws - use dedicated method
+        for nlri in update.withdraws:
+            ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
@@ -64,9 +72,17 @@ class UpdateHandler(MessageHandler):
 
         log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
 
-        for nlri in update.nlris:
-            # Pass (nlri, attributes) directly - no Change object needed
-            ctx.neighbor.rib.incoming.update_cache(nlri, update.attributes)
+        # Process announces - pass action explicitly
+        for nlri in update.announces:
+            ctx.neighbor.rib.incoming.update_cache(nlri, update.attributes, Action.ANNOUNCE)
+            log.debug(
+                lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
+                ctx.peer_id,
+            )
+
+        # Process withdraws - use dedicated method
+        for nlri in update.withdraws:
+            ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
