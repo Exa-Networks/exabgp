@@ -1469,6 +1469,9 @@ def parse_cmdline():
     content = [_.strip() for _ in cmdarg.checks.readlines() if _.strip() and '#' not in _]
     expect = []
     for message in content:
+        # Skip config file declarations (handled by functional test runner)
+        if message.strip().startswith('option:file:'):
+            continue
         if message.strip() == 'option:bind:ipv6':
             options['ipv6'] = True
             continue

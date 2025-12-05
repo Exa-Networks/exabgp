@@ -1499,21 +1499,42 @@ class Tests:
         self._print_summary_results(passed, failed, timed_out, skipped, quiet=quiet)
 
 
-def parse_msg_options(msg_file: str) -> int:
-    """Parse option directives from .msg file
+def parse_ci_file(ci_file: str) -> tuple[list[str], int]:
+    """Parse .ci file for config files and options.
+
+    The .ci file format:
+        option:file:config1.conf
+        option:file:config2.conf
+        option:tcp_connections:2
+        # comments
+        1:raw:FFFF...  (message expectations)
+
+    Returns:
+        Tuple of (list of config file names, tcp_connections count)
+    """
+    config_files: list[str] = []
+    tcp_connections = 1
+    try:
+        with open(ci_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('option:file:'):
+                    config_files.append(line.split(':', 2)[2])
+                elif line.startswith('option:tcp_connections:'):
+                    tcp_connections = int(line.split(':')[-1])
+    except Exception:
+        pass
+    return config_files, tcp_connections
+
+
+def parse_msg_options(ci_file: str) -> int:
+    """Parse option directives from .ci file
 
     Returns:
         TCP connections count from file, or 1 as default
     """
-    try:
-        with open(msg_file, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith('option:tcp_connections:'):
-                    return int(line.split(':')[-1])
-    except Exception:
-        pass
-    return 1
+    _, tcp_connections = parse_ci_file(ci_file)
+    return tcp_connections
 
 
 class EncodingTests(Tests):
@@ -1568,29 +1589,15 @@ class EncodingTests(Tests):
         for filename in self.path_config.all_ci_files:
             name = os.path.basename(filename)[:-3]
             test = self.new(name)
-            with open(filename, 'r') as reader:
-                content = reader.readline()
-            test.conf['confs'] = [Path.etc(_) for _ in content.split()]
+            # Parse merged .ci file format (option:file:... lines for config files)
+            config_files, _ = parse_ci_file(filename)
+            test.conf['confs'] = [Path.etc(_) for _ in config_files]
             test.conf['ci'] = self.path_config.ci_path(name, 'ci')
-            if self.path_config.has_msg_files:
-                test.conf['msg'] = self.path_config.ci_path(name, 'msg')
+            # .ci file now contains message expectations (merged format)
+            test.conf['msg'] = test.conf['ci']
             test.conf['port'] = Port.get()
-            test.files.extend(test.conf['confs'])
+            # Only .ci file for --edit (merged format contains everything)
             test.files.append(test.conf['ci'])
-            if self.path_config.has_msg_files:
-                test.files.append(test.conf['msg'])
-
-            for f in test.conf['confs']:
-                with open(f) as reader:
-                    for line in reader:
-                        found = self.API.match(line)
-                        if not found:
-                            continue
-                        run_name = found.group(1)
-                        if not run_name.startswith('/'):
-                            run_name = Path.etc(run_name)
-                        if run_name not in test.files:
-                            test.files.append(run_name)
 
     def client_cmd(self, nick: str, port: Optional[int] = None) -> str:
         """Generate a single-line copy-pasteable client command."""
@@ -2518,25 +2525,12 @@ class CLITests(Tests):
         for filename in self.path_config.all_ci_files:
             name = os.path.basename(filename)[:-3]
             test = self.new(name)
-            with open(filename, 'r') as reader:
-                content = reader.readline()
-            test.conf['confs'] = [Path.etc(_) for _ in content.split()]
+            # Parse merged .ci file format (option:file:... lines for config files)
+            config_files, _ = parse_ci_file(filename)
+            test.conf['confs'] = [Path.etc(_) for _ in config_files]
             test.conf['ci'] = self.path_config.ci_path(name, 'ci')
-            test.files.extend(test.conf['confs'])
+            # Only .ci file for --edit (merged format contains everything)
             test.files.append(test.conf['ci'])
-
-            # Find .run files referenced in configs
-            for f in test.conf['confs']:
-                with open(f) as reader:
-                    for line in reader:
-                        found = self.RUN_PATTERN.match(line)
-                        if not found:
-                            continue
-                        run_name = found.group(1)
-                        if not run_name.startswith('/'):
-                            run_name = Path.etc(run_name)
-                        if run_name not in test.files:
-                            test.files.append(run_name)
 
     def dry(self) -> str:
         result: List[str] = []

@@ -1,1 +1,2 @@
-api-notification.conf
+option:file:api-notification.conf
+A1:notification:closing session because we can
