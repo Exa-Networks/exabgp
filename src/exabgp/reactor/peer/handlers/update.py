@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Generator, cast
 from exabgp.bgp.message import Message, Update
 from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.reactor.peer.handlers.base import MessageHandler
-from exabgp.rib.change import Change
 
 if TYPE_CHECKING:
     from exabgp.reactor.peer.context import PeerContext
@@ -45,7 +44,8 @@ class UpdateHandler(MessageHandler):
         log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
 
         for nlri in update.nlris:
-            ctx.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
+            # Pass (nlri, attributes) directly - no Change object needed
+            ctx.neighbor.rib.incoming.update_cache(nlri, update.attributes)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
@@ -65,7 +65,8 @@ class UpdateHandler(MessageHandler):
         log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
 
         for nlri in update.nlris:
-            ctx.neighbor.rib.incoming.update_cache(Change(nlri, update.attributes))
+            # Pass (nlri, attributes) directly - no Change object needed
+            ctx.neighbor.rib.incoming.update_cache(nlri, update.attributes)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
