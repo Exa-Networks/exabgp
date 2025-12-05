@@ -98,20 +98,28 @@ class Update(Message):
     def split(data: bytes) -> tuple[bytes, bytes, bytes]:
         length = len(data)
 
-        len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
-        withdrawn = data[UPDATE_WITHDRAWN_LENGTH_OFFSET : len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET]
+        # UPDATE minimum: withdrawn_len(2) + attr_len(2) = 4 bytes
+        if length < UPDATE_ATTR_LENGTH_HEADER_SIZE:
+            raise Notify(3, 1, f'UPDATE message too short: need {UPDATE_ATTR_LENGTH_HEADER_SIZE} bytes, got {length}')
 
-        if len(withdrawn) != len_withdrawn:
-            raise Notify(3, 1, 'invalid withdrawn routes length, not enough data available')
+        len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
+
+        # Verify we have enough data for withdrawn routes + attr length field
+        if length < UPDATE_ATTR_LENGTH_HEADER_SIZE + len_withdrawn:
+            raise Notify(3, 1, f'UPDATE withdrawn length {len_withdrawn} exceeds available data')
+
+        withdrawn = data[UPDATE_WITHDRAWN_LENGTH_OFFSET : len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET]
 
         start_attributes = len_withdrawn + UPDATE_ATTR_LENGTH_HEADER_SIZE
         len_attributes = unpack('!H', data[len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET : start_attributes])[0]
+
+        # Verify we have enough data for attributes
+        if length < start_attributes + len_attributes:
+            raise Notify(3, 1, f'UPDATE attributes length {len_attributes} exceeds available data')
+
         start_announced = len_withdrawn + len_attributes + UPDATE_ATTR_LENGTH_HEADER_SIZE
         attributes = data[start_attributes:start_announced]
         announced = data[start_announced:]
-
-        if len(attributes) != len_attributes:
-            raise Notify(3, 1, 'invalid total path attribute length, not enough data available')
 
         if (
             UPDATE_WITHDRAWN_LENGTH_OFFSET

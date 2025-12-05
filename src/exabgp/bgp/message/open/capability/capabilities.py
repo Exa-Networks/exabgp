@@ -254,15 +254,41 @@ class Capabilities(dict[int, Capability]):
 
         capabilities = Capabilities()
 
-        # Extended optional parameters
-        option_len: int = data[0]
-        option_type: int = data[1]
+        # Empty optional parameters is valid
+        if not data:
+            return capabilities
 
-        if option_len == Capabilities.EXTENDED_LENGTH and option_type == Capabilities.EXTENDED_LENGTH:
-            option_len = unpack('!H', data[2:4])[0]
-            data = data[4 : option_len + 4]
-            decoder = _extended_type_length
+        # Need at least 1 byte for option_len
+        if len(data) < 1:
+            raise Notify(2, 0, 'OPEN optional parameters too short')
+
+        # Extended optional parameters (RFC 9072)
+        option_len: int = data[0]
+
+        # Check for extended format marker
+        if option_len == Capabilities.EXTENDED_LENGTH:
+            # Extended format needs at least 4 bytes: marker + type + 2-byte length
+            if len(data) < 4:
+                raise Notify(2, 0, f'OPEN extended parameters too short: need 4 bytes, got {len(data)}')
+            option_type: int = data[1]
+            if option_type == Capabilities.EXTENDED_LENGTH:
+                option_len = unpack('!H', data[2:4])[0]
+                if len(data) < option_len + 4:
+                    raise Notify(
+                        2, 0, f'OPEN extended parameters truncated: need {option_len + 4} bytes, got {len(data)}'
+                    )
+                data = data[4 : option_len + 4]
+                decoder = _extended_type_length
+            else:
+                # Standard format with option_len=255
+                if len(data) < option_len + 1:
+                    raise Notify(2, 0, f'OPEN parameters truncated: need {option_len + 1} bytes, got {len(data)}')
+                data = data[1 : option_len + 1]
+                decoder = _key_values
         else:
+            # Standard format
+            if len(data) < option_len + 1:
+                raise Notify(2, 0, f'OPEN parameters truncated: need {option_len + 1} bytes, got {len(data)}')
             data = data[1 : option_len + 1]
             decoder = _key_values
 
