@@ -266,12 +266,14 @@ class VPLS(NLRI):
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[VPLS, bytes]:
         # Wire format: length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3) = 19 bytes
+        if len(bgp) < 2:
+            raise Notify(3, 10, f'VPLS NLRI too short: need at least 2 bytes, got {len(bgp)}')
         (length,) = unpack('!H', bgp[0:2])
         if len(bgp) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
 
         # Create VPLS from packed wire format (17 bytes, excluding length prefix)
-        packed = bgp[2:19]
+        packed = bgp[2 : 2 + length]
         nlri = cls(packed)
         nlri.action = action
-        return nlri, bgp[19:]
+        return nlri, bgp[2 + length :]
