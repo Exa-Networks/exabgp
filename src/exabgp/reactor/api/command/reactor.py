@@ -1,4 +1,6 @@
-"""line/reactor.py
+"""command/reactor.py
+
+Reactor control commands (shutdown, reload, help, etc.)
 
 Created by Thomas Mangin on 2017-07-01.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -12,11 +14,11 @@ import json
 from typing import TYPE_CHECKING
 
 from exabgp.version import version as _version
-from exabgp.reactor.api.command.command import Command
 
 from exabgp.logger import log, lazymsg
 
 if TYPE_CHECKING:
+    from exabgp.reactor.api import API
     from exabgp.reactor.loop import Reactor
 
 
@@ -24,8 +26,7 @@ def register_reactor() -> None:
     pass
 
 
-@Command.register('help', False, json_support=True)
-def help_command(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def help_command(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     from exabgp.reactor.api.dispatch import get_commands
 
     commands = get_commands()
@@ -83,8 +84,7 @@ def help_command(self: Command, reactor: Reactor, service: str, line: str, use_j
     return True
 
 
-@Command.register('shutdown', False, json_support=True)
-def shutdown(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def shutdown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     reactor.signal.received = reactor.signal.SHUTDOWN
     if use_json:
         reactor.processes.write(service, json.dumps({'status': 'shutdown in progress'}))
@@ -94,8 +94,7 @@ def shutdown(self: Command, reactor: Reactor, service: str, line: str, use_json:
     return True
 
 
-@Command.register('reload', False, json_support=True)
-def reload(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def reload(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     reactor.signal.received = reactor.signal.RELOAD
     if use_json:
         reactor.processes.write(service, json.dumps({'status': 'reload in progress'}))
@@ -105,8 +104,7 @@ def reload(self: Command, reactor: Reactor, service: str, line: str, use_json: b
     return True
 
 
-@Command.register('restart', False, json_support=True)
-def restart(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def restart(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     reactor.signal.received = reactor.signal.RESTART
     if use_json:
         reactor.processes.write(service, json.dumps({'status': 'restart in progress'}))
@@ -116,8 +114,7 @@ def restart(self: Command, reactor: Reactor, service: str, line: str, use_json: 
     return True
 
 
-@Command.register('version', False, json_support=True)
-def version(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def version(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     if use_json:
         reactor.processes.write(service, json.dumps({'version': _version, 'application': 'exabgp'}))
     else:
@@ -126,15 +123,13 @@ def version(self: Command, reactor: Reactor, service: str, line: str, use_json: 
     return True
 
 
-@Command.register('#', False, json_support=True)
-def comment(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
-    log.debug(lazymsg('api.comment text={text}', text=line.lstrip().lstrip('#').strip()), 'processes')
+def comment(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+    log.debug(lazymsg('api.comment text={text}', text=command.lstrip().lstrip('#').strip()), 'processes')
     reactor.processes.answer_done(service)
     return True
 
 
-@Command.register('reset', False, json_support=True)
-def reset(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def reset(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     reactor.asynchronous.clear(service)
 
     if use_json:
@@ -146,8 +141,7 @@ def reset(self: Command, reactor: Reactor, service: str, line: str, use_json: bo
     return True
 
 
-@Command.register('queue-status', False, json_support=True)
-def queue_status(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def queue_status(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Display write queue status for all API processes.
 
     Returns queue size (items and bytes) for each process.
@@ -173,43 +167,38 @@ def queue_status(self: Command, reactor: Reactor, service: str, line: str, use_j
     return True
 
 
-@Command.register('crash', json_support=True)
-def crash(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def crash(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     async def callback() -> None:
         raise ValueError('crash test of the API')
         await asyncio.sleep(0)  # This line is unreachable but matches original structure
 
     # Send acknowledgment before scheduling the crash
     reactor.processes.answer_done(service)
-    reactor.asynchronous.schedule(service, line, callback())
+    reactor.asynchronous.schedule(service, command, callback())
     return True
 
 
-@Command.register('disable-ack', False, json_support=True)
-def disable_ack(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def disable_ack(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Disable ACK responses for this connection (sends 'done' for this command, then disables)"""
     reactor.processes.set_ack(service, False)
     reactor.processes.answer_done(service, force=True)
     return True
 
 
-@Command.register('enable-ack', False, json_support=True)
-def enable_ack(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def enable_ack(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Re-enable ACK responses for this connection"""
     reactor.processes.set_ack(service, True)
     reactor.processes.answer_done(service)
     return True
 
 
-@Command.register('silence-ack', False, json_support=True)
-def silence_ack(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def silence_ack(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Disable ACK responses immediately (no 'done' sent for this command)"""
     reactor.processes.set_ack(service, False)
     return True
 
 
-@Command.register('enable-sync', False, json_support=True)
-def enable_sync(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def enable_sync(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Enable sync mode - wait for routes to be flushed to wire before ACK.
 
     When sync mode is enabled, announce/withdraw commands will wait until
@@ -222,8 +211,7 @@ def enable_sync(self: Command, reactor: Reactor, service: str, line: str, use_js
     return True
 
 
-@Command.register('disable-sync', False, json_support=True)
-def disable_sync(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def disable_sync(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Disable sync mode - ACK immediately after RIB update (default).
 
     When sync mode is disabled (default), announce/withdraw commands return
@@ -235,15 +223,14 @@ def disable_sync(self: Command, reactor: Reactor, service: str, line: str, use_j
     return True
 
 
-@Command.register('ping', False, json_support=True)
-def ping(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def ping(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Lightweight health check - responds with 'pong <UUID>' and active status
 
     Defaults to JSON output unless 'text' keyword is explicitly used.
     """
     # Parse client UUID and start time if provided
     # Format: "ping <client_uuid> <client_start_time>"
-    parts = line.strip().split()
+    parts = command.strip().split()
     client_uuid = None
     client_start_time = None
 
@@ -254,10 +241,10 @@ def ping(self: Command, reactor: Reactor, service: str, line: str, use_json: boo
     else:
         output_json = True
 
-    if len(parts) >= 3:
-        client_uuid = parts[1]
+    if len(parts) >= 2:
+        client_uuid = parts[0]
         try:
-            client_start_time = float(parts[2])
+            client_start_time = float(parts[1])
         except ValueError:
             pass
 
@@ -288,16 +275,15 @@ def ping(self: Command, reactor: Reactor, service: str, line: str, use_json: boo
     return True
 
 
-@Command.register('bye', False, json_support=True)
-def bye(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def bye(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Handle client disconnect - cleanup client tracking
 
     Format: "bye <client_uuid>"
     Called by socket server when a client disconnects.
     """
     # Parse client UUID if provided
-    parts = line.strip().split()
-    client_uuid = parts[1] if len(parts) >= 2 else None
+    parts = command.strip().split()
+    client_uuid = parts[0] if parts else None
 
     # Remove client from active clients tracking
     if client_uuid and client_uuid in reactor.active_clients:
@@ -307,8 +293,9 @@ def bye(self: Command, reactor: Reactor, service: str, line: str, use_json: bool
     return True
 
 
-@Command.register('api version', False, json_support=True, options={'4', '6'})
-def api_version_cmd(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def api_version_cmd(
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+) -> bool:
     """Display or set the API version.
 
     Usage:
@@ -317,21 +304,14 @@ def api_version_cmd(self: Command, reactor: Reactor, service: str, line: str, us
         api version 6     - Set API version to 6 (json-only, default)
 
     Note: Version changes take effect on next process restart.
-
-    v6 command format: "system api version [4|6]"
-    v4 command format: "api version [4|6]"
     """
     from exabgp.environment import getenv
 
-    parts = line.strip().split()
+    parts = command.strip().split()
 
-    # v6 format: "system api version [4|6]" - version number at index 3
-    # v4 format: "api version [4|6]" - version number at index 2
-    version_idx = 3 if parts[0] == 'system' else 2
-
-    # Check if a version number was provided
-    if len(parts) > version_idx:
-        version_str = parts[version_idx]
+    # Check if a version number was provided (first part after command prefix stripped)
+    if parts:
+        version_str = parts[0]
         try:
             new_version = int(version_str)
             if new_version not in (4, 6):
@@ -389,8 +369,7 @@ def api_version_cmd(self: Command, reactor: Reactor, service: str, line: str, us
     return True
 
 
-@Command.register('status', False, json_support=True)
-def status(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
+def status(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Display daemon status information (UUID, uptime, version, peers)"""
     import os
     import time

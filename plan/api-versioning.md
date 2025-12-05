@@ -264,6 +264,7 @@ Created `src/exabgp/reactor/api/dispatch.py` with:
 - `COMMANDS` metadata list for help command
 - `dispatch()` function returns (handler, neighbor_support)
 - `UnknownCommand` exception for unknown commands
+- `InvalidCommand` exception for invalid commands
 
 ### Steps
 

@@ -1,4 +1,6 @@
-"""decoder/__init__.py
+"""api/__init__.py
+
+API command processing.
 
 Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -25,9 +27,7 @@ from exabgp.rib.change import Change
 
 from exabgp.environment import getenv
 from exabgp.logger import log, lazymsg
-from exabgp.reactor.api.command import Command
-from exabgp.reactor.api.transform import v4_to_v6, is_v4_command
-from exabgp.reactor.api.dispatch import dispatch, UnknownCommand
+from exabgp.reactor.api.dispatch import dispatch_v4, dispatch_v6, UnknownCommand, NoMatchingPeers
 from exabgp.configuration.configuration import Configuration
 
 # API command parsing constants
@@ -38,7 +38,7 @@ API_EOR_TOKEN_COUNT = 2  # EOR command requires 2 tokens (AFI and SAFI)
 #
 
 
-class API(Command):
+class API:
     def __init__(self, reactor: 'Reactor') -> None:
         self.reactor: 'Reactor' = reactor
         self.configuration: Configuration = Configuration([])
@@ -52,42 +52,10 @@ class API(Command):
         log.error(lazymsg('api.failure report={report}', report=report), 'processes', level)
 
     def process(self, reactor: 'Reactor', service: str, command: str) -> bool:
-        # API version handling
-        api_version = getenv().api.version
+        """Process an API command (sync version).
 
-        # v6 API is JSON-only, v4 API checks for 'json' as last word
-        if api_version == 6:
-            use_json = True
-        else:
-            words = command.split()
-            use_json = words[-1] == 'json' if words else False
-
-        if api_version == 4:
-            # v4 mode: transform v4 commands to v6 format before dispatch
-            try:
-                transformed = v4_to_v6(command)
-                if transformed != command:
-                    log.debug(lazymsg('api.transform v4={v4} v6={v6}', v4=command, v6=transformed), 'api')
-                command = transformed
-            except ValueError as e:
-                log.warning(lazymsg('api.transform.error command={cmd} error={e}', cmd=command, e=str(e)), 'api')
-                reactor.processes.answer_error(service, f'invalid command: {e}')
-                return False
-        else:
-            # v6 mode: reject v4-format commands
-            if is_v4_command(command):
-                log.warning(lazymsg('api.v4.rejected command={cmd}', cmd=command), 'api')
-                reactor.processes.answer_error(service, 'v4 command rejected in v6 mode')
-                return False
-
-        return self.response(reactor, service, command, use_json)
-
-    async def process_async(self, reactor: 'Reactor', service: str, command: str) -> bool:
-        """Async version of process() - handles API commands in async mode
-
-        Uses async write methods to prevent blocking the event loop.
+        Uses parallel v4/v6 dispatchers based on API version setting.
         """
-        # API version handling
         api_version = getenv().api.version
 
         # v6 API is JSON-only, v4 API checks for 'json' as last word
@@ -97,54 +65,53 @@ class API(Command):
             words = command.split()
             use_json = words[-1] == 'json' if words else False
 
-        if api_version == 4:
-            # v4 mode: transform v4 commands to v6 format before dispatch
-            try:
-                transformed = v4_to_v6(command)
-                if transformed != command:
-                    log.debug(lazymsg('api.transform v4={v4} v6={v6}', v4=command, v6=transformed), 'api')
-                command = transformed
-            except ValueError as e:
-                log.warning(lazymsg('api.transform.error command={cmd} error={e}', cmd=command, e=str(e)), 'api')
-                await reactor.processes.answer_error_async(service, f'invalid command: {e}')
-                return False
-        else:
-            # v6 mode: reject v4-format commands
-            if is_v4_command(command):
-                log.warning(lazymsg('api.v4.rejected command={cmd}', cmd=command), 'api')
-                await reactor.processes.answer_error_async(service, 'v4 command rejected in v6 mode')
-                return False
-
-        return await self.response_async(reactor, service, command, use_json)
-
-    def response(self, reactor: 'Reactor', service: str, command: str, use_json: bool) -> bool:
         try:
-            handler, _ = dispatch(command)
-            return handler(self, reactor, service, command, use_json)
+            if api_version == 4:
+                handler, peers, remaining = dispatch_v4(command, reactor, service)
+            else:
+                handler, peers, remaining = dispatch_v6(command, reactor, service)
+            return handler(self, reactor, service, peers, remaining, use_json)
         except UnknownCommand:
-            reactor.processes.answer_error(service)
             log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
+            reactor.processes.answer_error(service)
+            return False
+        except NoMatchingPeers:
+            log.warning(lazymsg('api.command.no_peers command={command}', command=command), 'api')
+            reactor.processes.answer_error(service)
             return False
 
-    async def response_async(self, reactor: 'Reactor', service: str, command: str, use_json: bool) -> bool:
-        """Async version of response() - handles API commands without blocking
+    async def process_async(self, reactor: 'Reactor', service: str, command: str) -> bool:
+        """Process an API command (async version).
 
-        With non-blocking stdin, sync handlers won't block the event loop.
-        The write() method handles EAGAIN gracefully in async mode.
+        Uses parallel v4/v6 dispatchers based on API version setting.
         After calling the handler, flush any queued writes immediately.
         """
+        api_version = getenv().api.version
+
+        # v6 API is JSON-only, v4 API checks for 'json' as last word
+        if api_version == 6:
+            use_json = True
+        else:
+            words = command.split()
+            use_json = words[-1] == 'json' if words else False
+
         try:
-            handler, _ = dispatch(command)
-            # Call sync handler - with non-blocking stdin, write() won't block
-            result = handler(self, reactor, service, command, use_json)
-            # Flush any queued writes immediately (for commands like enable-ack/disable-ack
-            # that call answer_done() without scheduling async callbacks)
+            if api_version == 4:
+                handler, peers, remaining = dispatch_v4(command, reactor, service)
+            else:
+                handler, peers, remaining = dispatch_v6(command, reactor, service)
+            result = handler(self, reactor, service, peers, remaining, use_json)
+            # Flush any queued writes immediately
             await reactor.processes.flush_write_queue_async()
             return bool(result)
         except UnknownCommand:
-            reactor.processes.answer_error(service)
             log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
-            # Flush error response
+            reactor.processes.answer_error(service)
+            await reactor.processes.flush_write_queue_async()
+            return False
+        except NoMatchingPeers:
+            log.warning(lazymsg('api.command.no_peers command={command}', command=command), 'api')
+            reactor.processes.answer_error(service)
             await reactor.processes.flush_write_queue_async()
             return False
 

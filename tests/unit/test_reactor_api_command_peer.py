@@ -337,8 +337,9 @@ class TestNeighborCreateCommand:
         """Test creating a new peer successfully."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
-        command = 'create neighbor 127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4'
-        result = neighbor_create(None, mock_reactor, 'test-service', command, False)
+        # command is params after "peer create" stripped
+        command = '127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4'
+        result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
 
         assert result is True
         mock_reactor.processes._answer.assert_called_once_with('test-service', 'done')
@@ -349,14 +350,14 @@ class TestNeighborCreateCommand:
         """Test creating a peer that already exists."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
-        command = 'create neighbor 127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4'
+        command = '127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4'
 
         # Create first peer
-        result1 = neighbor_create(None, mock_reactor, 'test-service', command, False)
+        result1 = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
         assert result1 is True
 
         # Try to create duplicate
-        result2 = neighbor_create(None, mock_reactor, 'test-service', command, False)
+        result2 = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
         assert result2 is False
         mock_reactor.processes.answer_error.assert_called()
         error_msg = mock_reactor.processes.answer_error.call_args[0][1]
@@ -366,8 +367,8 @@ class TestNeighborCreateCommand:
         """Test creating peer with invalid IP address."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
-        command = 'create neighbor 999.999.999.999 local-address 127.0.0.1 local-as 65000 peer-as 65001'
-        result = neighbor_create(None, mock_reactor, 'test-service', command, False)
+        command = '999.999.999.999 local-address 127.0.0.1 local-as 65000 peer-as 65001'
+        result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
 
         assert result is False
         mock_reactor.processes.answer_error.assert_called()
@@ -376,8 +377,8 @@ class TestNeighborCreateCommand:
         """Test creating peer with missing required parameters."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
-        command = 'create neighbor 127.0.0.1 local-as 65000'
-        result = neighbor_create(None, mock_reactor, 'test-service', command, False)
+        command = '127.0.0.1 local-as 65000'
+        result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
 
         assert result is False
         mock_reactor.processes.answer_error.assert_called()
@@ -387,13 +388,13 @@ class TestNeighborCreateCommand:
         from exabgp.reactor.api.command.peer import neighbor_create
 
         commands = [
-            'create neighbor 127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4',
-            'create neighbor 127.0.0.2 local-address 127.0.0.1 local-as 65000 peer-as 65002 router-id 1.2.3.5',
-            'create neighbor 10.0.0.1 local-address 10.0.0.2 local-as 65003 peer-as 65004 router-id 1.2.3.6',
+            '127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4',
+            '127.0.0.2 local-address 127.0.0.1 local-as 65000 peer-as 65002 router-id 1.2.3.5',
+            '10.0.0.1 local-address 10.0.0.2 local-as 65003 peer-as 65004 router-id 1.2.3.6',
         ]
 
         for cmd in commands:
-            result = neighbor_create(None, mock_reactor, 'test-service', cmd, False)
+            result = neighbor_create(None, mock_reactor, 'test-service', [], cmd, False)
             assert result is True
 
         assert len(mock_reactor._peers) == 3
@@ -404,8 +405,8 @@ class TestNeighborCreateCommand:
         from exabgp.reactor.api.command.peer import neighbor_create
         from exabgp.protocol.family import AFI, SAFI
 
-        command = 'create neighbor 10.0.0.2 local-address 10.0.0.1 local-as 65000 peer-as 65001 router-id 2.3.4.5 family-allowed ipv4-unicast/ipv6-unicast'
-        result = neighbor_create(None, mock_reactor, 'test-service', command, False)
+        command = '10.0.0.2 local-address 10.0.0.1 local-as 65000 peer-as 65001 router-id 2.3.4.5 family-allowed ipv4-unicast/ipv6-unicast'
+        result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
 
         assert result is True
         assert len(mock_reactor._peers) == 1
@@ -435,8 +436,8 @@ class TestNeighborCreateCommand:
         """Test that API processes are correctly stored in peer configuration."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
-        command = 'create neighbor 127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4 api proc1 api proc2'
-        result = neighbor_create(None, mock_reactor, 'test-service', command, False)
+        command = '127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4 api proc1 api proc2'
+        result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
 
         assert result is True
 
@@ -453,12 +454,12 @@ class TestNeighborCreateCommand:
 
         # Create two peers with same peer-address but different local-address
         commands = [
-            'create neighbor 127.0.0.1 local-address 10.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4',
-            'create neighbor 127.0.0.1 local-address 10.0.0.2 local-as 65000 peer-as 65001 router-id 1.2.3.4',
+            '127.0.0.1 local-address 10.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4',
+            '127.0.0.1 local-address 10.0.0.2 local-as 65000 peer-as 65001 router-id 1.2.3.4',
         ]
 
         for cmd in commands:
-            result = neighbor_create(None, mock_reactor, 'test-service', cmd, False)
+            result = neighbor_create(None, mock_reactor, 'test-service', [], cmd, False)
             assert result is True
 
         # Should have 2 distinct peers (different local-address = different keys)
@@ -490,14 +491,14 @@ class TestPeerDeleteCommand:
         reactor.processes.answer_error = Mock()
         reactor.processes.answer_done = Mock()
 
-        # Create test peers
+        # Create test peers (command is params after "peer create" stripped)
         commands = [
-            'create neighbor 127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4',
-            'create neighbor 127.0.0.2 local-address 127.0.0.1 local-as 65000 peer-as 65002 router-id 1.2.3.5',
+            '127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4',
+            '127.0.0.2 local-address 127.0.0.1 local-as 65000 peer-as 65002 router-id 1.2.3.5',
         ]
 
         for cmd in commands:
-            neighbor_create(None, reactor, 'test-service', cmd, False)
+            neighbor_create(None, reactor, 'test-service', [], cmd, False)
 
         # Add remove() method to all created peers
         for key, peer in list(reactor._peers.items()):
@@ -513,18 +514,14 @@ class TestPeerDeleteCommand:
 
     def test_delete_existing_peer(self, mock_reactor_with_peers):
         """Test deleting an existing peer."""
-        from unittest.mock import patch
         from exabgp.reactor.api.command.peer import peer_delete
 
         initial_count = len(mock_reactor_with_peers._peers)
         all_peers = list(mock_reactor_with_peers._peers.keys())
         target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
 
-        command = 'peer 127.0.0.1'
-
-        # Mock match_neighbors to return only the matching peer
-        with patch('exabgp.reactor.api.command.peer.match_neighbors', return_value=[target_peer]):
-            result = peer_delete(None, mock_reactor_with_peers, 'test-service', command, False)
+        # peers list is now passed directly (already matched by dispatcher)
+        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
 
         assert result is True
         mock_reactor_with_peers.processes.answer_done.assert_called_once()
@@ -532,14 +529,10 @@ class TestPeerDeleteCommand:
 
     def test_delete_nonexistent_peer(self, mock_reactor_with_peers):
         """Test deleting a peer that doesn't exist."""
-        from unittest.mock import patch
         from exabgp.reactor.api.command.peer import peer_delete
 
-        command = 'peer 192.168.1.1'
-
-        # Mock match_neighbors to return empty list (no matches)
-        with patch('exabgp.reactor.api.command.peer.match_neighbors', return_value=[]):
-            result = peer_delete(None, mock_reactor_with_peers, 'test-service', command, False)
+        # Empty peers list means no matches
+        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [], '', False)
 
         assert result is False
         mock_reactor_with_peers.processes.answer_error.assert_called()
@@ -550,26 +543,26 @@ class TestPeerDeleteCommand:
         """Test deleting all peers with wildcard selector."""
         from exabgp.reactor.api.command.peer import peer_delete
 
-        initial_count = len(mock_reactor_with_peers._peers)
-        command = 'peer *'
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', command, False)
+        # All peers passed in the list
+        all_peers = list(mock_reactor_with_peers._peers.keys())
+        assert len(all_peers) > 0  # Verify we have peers to delete
+        result = peer_delete(None, mock_reactor_with_peers, 'test-service', all_peers, '', False)
 
         assert result is True
-        assert len(mock_reactor_with_peers._peers) < initial_count
+        assert len(mock_reactor_with_peers._peers) == 0
 
     def test_delete_with_missing_selector(self, mock_reactor_with_peers):
         """Test delete command with missing peer selector."""
         from exabgp.reactor.api.command.peer import peer_delete
 
-        command = 'peer'  # Missing selector
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', command, False)
+        # Empty peers list simulates no selector match
+        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [], '', False)
 
         assert result is False
         mock_reactor_with_peers.processes.answer_error.assert_called()
 
     def test_delete_verifies_peer_removed(self, mock_reactor_with_peers):
         """Test that delete properly removes peer from all data structures."""
-        from unittest.mock import patch
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Get initial state
@@ -579,11 +572,8 @@ class TestPeerDeleteCommand:
         initial_config = len(mock_reactor_with_peers.configuration.neighbors)
         initial_dynamic = len(mock_reactor_with_peers._dynamic_peers)
 
-        command = 'peer 127.0.0.1'
-
-        # Mock match_neighbors to return the target peer
-        with patch('exabgp.reactor.api.command.peer.match_neighbors', return_value=[target_peer]):
-            result = peer_delete(None, mock_reactor_with_peers, 'test-service', command, False)
+        # Pass the matched peer directly
+        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
 
         assert result is True
 
@@ -602,7 +592,6 @@ class TestPeerDeleteCommand:
 
     def test_delete_keeps_other_peers_intact(self, mock_reactor_with_peers):
         """Test that deleting one peer doesn't affect others."""
-        from unittest.mock import patch
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Get all peer keys and configurations before delete
@@ -619,11 +608,8 @@ class TestPeerDeleteCommand:
                 'local-as': peer.neighbor.session.local_as,
             }
 
-        command = 'peer 127.0.0.1'
-
-        # Delete the target peer
-        with patch('exabgp.reactor.api.command.peer.match_neighbors', return_value=[target_peer]):
-            result = peer_delete(None, mock_reactor_with_peers, 'test-service', command, False)
+        # Delete the target peer (pass matched peer directly)
+        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
 
         assert result is True
 
@@ -638,7 +624,6 @@ class TestPeerDeleteCommand:
 
     def test_delete_calls_peer_remove(self, mock_reactor_with_peers):
         """Test that delete calls peer.remove() for graceful TCP teardown."""
-        from unittest.mock import patch
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Get target peer
@@ -646,11 +631,8 @@ class TestPeerDeleteCommand:
         target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
         peer_obj = mock_reactor_with_peers._peers[target_peer]
 
-        command = 'peer 127.0.0.1'
-
-        # Delete the peer
-        with patch('exabgp.reactor.api.command.peer.match_neighbors', return_value=[target_peer]):
-            result = peer_delete(None, mock_reactor_with_peers, 'test-service', command, False)
+        # Delete the peer (pass matched peer directly)
+        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
 
         assert result is True
 
@@ -659,7 +641,6 @@ class TestPeerDeleteCommand:
 
     def test_delete_removes_key_from_all_structures(self, mock_reactor_with_peers):
         """Test that delete removes peer key from reactor, config, and dynamic tracking."""
-        from unittest.mock import patch
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Get target peer key
@@ -671,11 +652,8 @@ class TestPeerDeleteCommand:
         assert target_peer in mock_reactor_with_peers.configuration.neighbors
         assert target_peer in mock_reactor_with_peers._dynamic_peers
 
-        command = 'peer 127.0.0.2'
-
-        # Delete the peer
-        with patch('exabgp.reactor.api.command.peer.match_neighbors', return_value=[target_peer]):
-            result = peer_delete(None, mock_reactor_with_peers, 'test-service', command, False)
+        # Delete the peer (pass matched peer directly)
+        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
 
         assert result is True
 
@@ -686,7 +664,7 @@ class TestPeerDeleteCommand:
 
     def test_delete_graceful_shutdown_order(self, mock_reactor_with_peers):
         """Test that delete follows correct order: remove() BEFORE deleting from structures."""
-        from unittest.mock import patch, Mock
+        from unittest.mock import Mock
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Track operation order
@@ -706,11 +684,8 @@ class TestPeerDeleteCommand:
 
         peer_obj.remove = Mock(side_effect=mock_remove)
 
-        command = 'peer 127.0.0.1'
-
-        # Delete the peer
-        with patch('exabgp.reactor.api.command.peer.match_neighbors', return_value=[target_peer]):
-            result = peer_delete(None, mock_reactor_with_peers, 'test-service', command, False)
+        # Delete the peer (pass matched peer directly)
+        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
 
         assert result is True
 

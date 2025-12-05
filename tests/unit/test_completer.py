@@ -145,22 +145,23 @@ class TestNestedCommandCompletion:
         assert 'route-refresh' in matches
 
     def test_complete_show_neighbor_options(self):
-        """Test completion for show neighbor options"""
-        matches = self.completer._get_completions(['show', 'neighbor'], '')
+        """Test completion for peer <ip> show options (v6 format)"""
+        # v6 API requires: peer <ip> show [options]
+        matches = self.completer._get_completions(['peer', '192.168.1.1', 'show'], '')
         # Should include options
         assert 'summary' in matches or 'extensive' in matches or 'configuration' in matches
 
     def test_complete_show_neighbor_with_ips(self):
-        """Test that show neighbor completion includes neighbor IPs"""
+        """Test that peer <ip> show completion includes options (v6 format)"""
         # Create completer with neighbor data
         neighbor_json = json.dumps([{'peer-address': '192.168.1.1'}, {'peer-address': '10.0.0.1'}])
         mock_send = Mock(return_value=neighbor_json)
         completer = CommandCompleter(mock_send)
 
-        matches = completer._get_completions(['show', 'neighbor'], '')
-        # Should include both options AND neighbor IPs
-        assert 'summary' in matches or 'extensive' in matches  # Options
-        assert '192.168.1.1' in matches or '10.0.0.1' in matches  # IPs
+        # v6 API requires: peer <ip> show [options]
+        matches = completer._get_completions(['peer', '192.168.1.1', 'show'], '')
+        # Should include show options
+        assert 'summary' in matches or 'extensive' in matches or 'configuration' in matches
 
     def test_complete_show_adj_rib(self):
         """Test completion for show adj-rib - v6 API blocks 'show', use 'rib show' instead"""
@@ -613,8 +614,9 @@ class TestRealWorldScenarios:
         self.completer = CommandCompleter(self.mock_send)
 
     def test_show_neighbor_summary(self):
-        """Test completing 'show neighbor summary'"""
-        matches = self.completer._get_completions(['show', 'neighbor'], 's')
+        """Test completing 'peer <ip> show summary' (v6 format)"""
+        # v6 API requires: peer <ip> show [options]
+        matches = self.completer._get_completions(['peer', '192.168.1.1', 'show'], 's')
         assert 'summary' in matches
 
     def test_announce_eor_ipv4_unicast(self):
@@ -701,21 +703,20 @@ class TestShowCommandCompletion:
         assert 'neighbor' not in matches
 
     def test_show_neighbor_shows_all_completions(self):
-        """Test that 'show neighbor' shows options and IPs"""
-        matches = self.completer._get_completions(['show', 'neighbor'], '')
+        """Test that 'peer <ip> show' shows options (v6 format)"""
+        # v6 API requires: peer <ip> show [options]
+        matches = self.completer._get_completions(['peer', '192.168.1.1', 'show'], '')
         # Should have options
         assert 'summary' in matches
         assert 'extensive' in matches
         assert 'configuration' in matches
         # Note: v6 API is JSON-only, so 'json' suffix is not offered
         assert 'json' not in matches
-        # Should have neighbor IPs
-        assert '192.168.1.1' in matches
-        assert '10.0.0.1' in matches
 
     def test_show_neighbor_s_filters_correctly(self):
-        """Test that 'show neighbor s' only shows 'summary'"""
-        matches = self.completer._get_completions(['show', 'neighbor'], 's')
+        """Test that 'peer <ip> show s' only shows 'summary' (v6 format)"""
+        # v6 API requires: peer <ip> show [options]
+        matches = self.completer._get_completions(['peer', '192.168.1.1', 'show'], 's')
         assert 'summary' in matches
         assert 'extensive' not in matches
         assert 'configuration' not in matches
