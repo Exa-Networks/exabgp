@@ -64,7 +64,8 @@ COMMANDS: list[tuple[str, bool, list[str] | None]] = [
     ('rib clear in', True, None),
     ('rib clear out', True, None),
     # Peer operations
-    ('peer show', False, ['summary', 'extensive', 'configuration']),
+    ('peer list', False, None),  # List all peers
+    ('peer show', False, ['summary', 'extensive', 'configuration']),  # peer <ip> show
     ('peer teardown', True, None),
     ('peer create', False, None),
     ('peer delete', False, None),
@@ -247,7 +248,8 @@ def _dispatch_peer_command(
     """Dispatch peer-prefixed commands.
 
     Handles:
-    - peer show [ip] [summary|extensive]
+    - peer list - list all peers
+    - peer <ip> show [summary|extensive|configuration] - show specific peer
     - peer [ip|*|bracket] teardown
     - peer create <ip> { config }
     - peer delete <ip>
@@ -257,13 +259,18 @@ def _dispatch_peer_command(
     if len(parts) < 2:
         raise UnknownCommand(command)
 
-    # Find the action word (show, teardown, create, delete, announce, withdraw)
+    # Find the action word (list, show, teardown, create, delete, announce, withdraw)
     # It may be at parts[1], or later if there are selectors
 
     # Check for immediate action words at parts[1]
     action = parts[1]
 
+    if action == 'list':
+        # peer list - list all peers
+        return neighbor_cmd.show_neighbor, False
+
     if action == 'show':
+        # peer show - legacy format, kept for compatibility
         return neighbor_cmd.show_neighbor, False
 
     if action == 'create':
@@ -305,7 +312,7 @@ def _dispatch_peer_with_selector(
     # Find action word by scanning for known actions
     action_idx = None
     for i, word in enumerate(parts[1:], start=1):
-        if word in ('teardown', 'announce', 'withdraw'):
+        if word in ('show', 'teardown', 'announce', 'withdraw'):
             action_idx = i
             break
 
@@ -313,6 +320,10 @@ def _dispatch_peer_with_selector(
         raise UnknownCommand(command)
 
     action = parts[action_idx]
+
+    if action == 'show':
+        # peer <ip> show [summary|extensive|configuration]
+        return neighbor_cmd.show_neighbor, False
 
     if action == 'teardown':
         return neighbor_cmd.teardown, True

@@ -428,9 +428,9 @@ class Control:
         standard_in = sys.stdin.fileno()
         standard_out = sys.stdout.fileno()
 
-        # Enable ACK for this CLI control process
+        # Enable ACK for this CLI control process (v6 API format)
         try:
-            os.write(standard_out, b'enable-ack\n')
+            os.write(standard_out, b'session ack enable\n')
             # Read and discard the 'done' response
             poller = select.poll()
             poller.register(standard_in, select.POLLIN)

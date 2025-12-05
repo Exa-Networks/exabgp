@@ -120,6 +120,22 @@ class TestCLICompletion(unittest.TestCase):
         self.assertNotIn('shutdown', completions)
         self.assertNotIn('crash', completions)
 
+    def test_peer_list_suggests_list(self):
+        """Test that 'peer' suggests 'list' as an option"""
+        completions = self.completer._get_completions(['peer'], '')
+
+        # Should contain 'list' for listing all peers
+        self.assertIn('list', completions)
+        # Should also contain wildcard for operations on all peers
+        self.assertIn('*', completions)
+
+    def test_peer_list_partial(self):
+        """Test that 'peer l' suggests 'list'"""
+        completions = self.completer._get_completions(['peer'], 'l')
+
+        # Should match 'list'
+        self.assertIn('list', completions)
+
     def test_peer_wildcard_shows_actions(self):
         """Test that after 'peer *', announce/withdraw/show/teardown are suggested"""
         completions = self.completer._get_completions(['peer', '*'], '')

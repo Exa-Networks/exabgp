@@ -73,7 +73,8 @@ class TestBaseCommandCompletion:
         # Should include v6 API top-level commands
         assert 'peer' in matches
         assert 'daemon' in matches
-        assert 'session' in matches
+        # Note: 'session' is internal CLI-daemon protocol, not exposed in autocomplete
+        assert 'session' not in matches
         assert 'system' in matches
         assert 'rib' in matches
         # Should include CLI commands
@@ -85,10 +86,10 @@ class TestBaseCommandCompletion:
         assert 'shutdown' not in matches
         assert 'show' not in matches
 
-    def test_complete_partial_ses(self):
-        """Test completing 'ses' - should suggest session"""
-        matches = self.completer._get_completions([], 'ses')
-        assert 'session' in matches
+    def test_complete_partial_set(self):
+        """Test completing 'set' - should suggest 'set' CLI command"""
+        matches = self.completer._get_completions([], 'set')
+        assert 'set' in matches
         # v4 commands not in base
         assert 'show' not in matches
         assert 'shutdown' not in matches
@@ -706,7 +707,8 @@ class TestShowCommandCompletion:
         assert 'summary' in matches
         assert 'extensive' in matches
         assert 'configuration' in matches
-        assert 'json' in matches
+        # Note: v6 API is JSON-only, so 'json' suffix is not offered
+        assert 'json' not in matches
         # Should have neighbor IPs
         assert '192.168.1.1' in matches
         assert '10.0.0.1' in matches

@@ -51,11 +51,11 @@ class TestDisplayFormatPrefix(unittest.TestCase):
                 # Execute command with json prefix (v6 API format)
                 self.cli._execute_command('json peer show')
 
-                # Verify command sent to API (should have json encoding)
+                # Verify command sent to API
+                # Note: v6 API is JSON-only, so no encoding suffix is needed
                 self.mock_send.assert_called_once()
                 sent_cmd = self.mock_send.call_args[0][0]
-                self.assertIn('peer show', sent_cmd)
-                self.assertIn('json', sent_cmd)
+                self.assertEqual(sent_cmd, 'peer show')  # No suffix, v6 API is JSON-only
 
                 # Verify format_command_output called with display_mode='json'
                 mock_format.assert_called_once()
@@ -70,11 +70,11 @@ class TestDisplayFormatPrefix(unittest.TestCase):
                 # Execute command with text prefix (v6 API format)
                 self.cli._execute_command('text peer show')
 
-                # Verify command sent to API (should have json encoding - default)
+                # Verify command sent to API
+                # Note: v6 API is JSON-only, prefix only controls CLI display
                 self.mock_send.assert_called_once()
                 sent_cmd = self.mock_send.call_args[0][0]
-                self.assertIn('peer show', sent_cmd)
-                self.assertIn('json', sent_cmd)  # Default API encoding is json
+                self.assertEqual(sent_cmd, 'peer show')  # No suffix, v6 API is JSON-only
 
                 # Verify format_command_output called with display_mode='text'
                 mock_format.assert_called_once()
@@ -124,35 +124,45 @@ class TestDisplayFormatPrefix(unittest.TestCase):
                 mock_format.assert_called_once()
                 self.assertEqual(mock_format.call_args[1]['display_mode'], 'text')
 
-    def test_invalid_combination_blocked(self):
-        """Test invalid combination is blocked with error"""
-        with patch.object(self.cli.formatter, 'format_error') as mock_error:
-            # Execute: text peer show json (conflicting, v6 API format)
-            self.cli._execute_command('text peer show json')
+    def test_prefix_with_suffix_passes_suffix_through(self):
+        """Test that suffix is passed through when prefix is used (v6 API)
 
-            # Should NOT send command
-            self.mock_send.assert_not_called()
+        In v6 API, there's no conflict detection - the CLI prefix controls display
+        while any suffix in the command is passed to the API as-is.
+        """
+        with patch.object(self.cli.formatter, 'format_success'):
+            with patch.object(self.cli.formatter, 'format_command_output') as mock_format:
+                mock_format.return_value = 'formatted output'
 
-            # Should display error
-            mock_error.assert_called_once()
-            error_msg = mock_error.call_args[0][0]
-            self.assertIn('Conflicting formats', error_msg)
-            self.assertIn("display='text'", error_msg)
-            self.assertIn("API encoding='json'", error_msg)
+                # Execute: text peer show json - suffix is passed through to API
+                self.cli._execute_command('text peer show json')
 
-    def test_invalid_combination_json_text_blocked(self):
-        """Test invalid combination: json prefix + text suffix is blocked"""
-        with patch.object(self.cli.formatter, 'format_error') as mock_error:
-            # Execute: json show neighbor text (conflicting)
-            self.cli._execute_command('json show neighbor text')
+                # Command should be sent with suffix intact
+                self.mock_send.assert_called_once()
+                sent_cmd = self.mock_send.call_args[0][0]
+                self.assertEqual(sent_cmd, 'peer show json')
 
-            # Should NOT send command
-            self.mock_send.assert_not_called()
+                # Display mode from prefix
+                mock_format.assert_called_once()
+                self.assertEqual(mock_format.call_args[1]['display_mode'], 'text')
 
-            # Should display error
-            mock_error.assert_called_once()
-            error_msg = mock_error.call_args[0][0]
-            self.assertIn('Conflicting formats', error_msg)
+    def test_json_prefix_with_different_suffix(self):
+        """Test json prefix with text suffix (v6 API passes through)"""
+        with patch.object(self.cli.formatter, 'format_success'):
+            with patch.object(self.cli.formatter, 'format_command_output') as mock_format:
+                mock_format.return_value = 'formatted output'
+
+                # Execute: json show neighbor text - suffix passed through
+                self.cli._execute_command('json show neighbor text')
+
+                # Command should be sent
+                self.mock_send.assert_called_once()
+                sent_cmd = self.mock_send.call_args[0][0]
+                self.assertEqual(sent_cmd, 'show neighbor text')
+
+                # Display mode from prefix
+                mock_format.assert_called_once()
+                self.assertEqual(mock_format.call_args[1]['display_mode'], 'json')
 
     def test_write_command_ignores_display_prefix(self):
         """Test write commands ignore display prefix"""
@@ -169,17 +179,28 @@ class TestDisplayFormatPrefix(unittest.TestCase):
             # Display prefix should be stripped from command
             self.assertNotIn('json announce', sent_cmd)
 
-    def test_api_text_with_json_display_fails_loudly(self):
-        """Test that requesting JSON display with text API encoding fails with JSON error"""
+    def test_json_prefix_with_text_suffix_sends_command(self):
+        """Test json display prefix with text suffix (v6 API)
+
+        In v6 API, the display prefix controls CLI rendering while the suffix
+        is passed through to the API. No conflict detection needed since
+        v6 API is JSON-only - the 'text' suffix is just a parameter.
+        """
         with patch.object(self.cli.formatter, 'format_success'):
-            with patch.object(self.cli.formatter, 'format_error') as mock_error:
-                # This should be impossible, but test the safety check
-                # Manually set encoding to text and display to json (v6 API format)
+            with patch.object(self.cli.formatter, 'format_command_output') as mock_format:
+                mock_format.return_value = 'formatted output'
+
+                # Execute: json peer show text - suffix passed to API
                 self.cli._execute_command('json peer show text')
 
-                # Should block due to conflicting formats before reaching this code path
-                self.mock_send.assert_not_called()
-                mock_error.assert_called_once()
+                # Command should be sent
+                self.mock_send.assert_called_once()
+                sent_cmd = self.mock_send.call_args[0][0]
+                self.assertEqual(sent_cmd, 'peer show text')
+
+                # Display mode from prefix
+                mock_format.assert_called_once()
+                self.assertEqual(mock_format.call_args[1]['display_mode'], 'json')
 
     def test_suffix_only_still_works(self):
         """Test backward compatibility: suffix-only format still works"""

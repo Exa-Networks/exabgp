@@ -15,7 +15,7 @@ Complete reference for ExaBGP's Unix socket API protocol.
 ExaBGP provides a Unix domain socket API for external control. The CLI uses this API to send commands and receive responses.
 
 **Key characteristics:**
-- Single-client mode (one CLI connection at a time)
+- Multi-client capable (multiple CLI connections supported)
 - Persistent connection with health monitoring
 - Text and JSON response formats
 - Synchronous request/response pattern
@@ -76,9 +76,9 @@ pong <daemon_uuid> active=true
 done
 ```
 
-**If another client already connected:**
+**If connection rejected:**
 ```
-error: Another CLI client is already connected
+error: <reason from daemon>
 error
 ```
 
@@ -201,7 +201,39 @@ error
 | `ping text` | Force text response | No |
 | `status` | Daemon status | Yes |
 
-### Neighbor Commands
+### Peer Commands (v6 API)
+
+**List all peers:**
+```
+peer list
+```
+Returns JSON list of all configured peers with address, AS, and connection state.
+
+**Show peer information:**
+```
+peer <ip> show [summary|extensive|configuration]
+peer * show [summary|extensive|configuration]
+```
+
+**Peer actions:**
+```
+peer <ip|*> announce <route-spec>
+peer <ip|*> withdraw <route-spec>
+peer <ip|*> teardown <code>
+```
+
+**Examples:**
+```
+peer list                                    # List all configured peers (JSON)
+peer 192.0.2.1 show                          # Show peer info
+peer 192.0.2.1 show extensive               # Detailed peer info
+peer * show summary                          # All peers summary
+peer 192.0.2.1 announce route 10.0.0.0/24 next-hop 192.168.1.1
+peer * withdraw route 10.0.0.0/24
+peer 192.0.2.1 teardown 6                   # Tear down with code 6
+```
+
+### Legacy Neighbor Commands (v4 API)
 
 **Syntax:**
 ```

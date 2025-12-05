@@ -58,13 +58,18 @@ def teardown(self: 'API', reactor: 'Reactor', service: str, line: str, use_json:
 def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_json: bool) -> bool:
     words = line.split()
 
+    # Check if this is "peer list" command (defaults to summary)
+    is_peer_list = 'list' in words
+
     extensive = 'extensive' in words
     configuration = 'configuration' in words
-    summary = 'summary' in words
+    summary = 'summary' in words or is_peer_list  # peer list defaults to summary
     jason = 'json' in words
     text = 'text' in words
 
-    if summary:
+    if 'list' in words:
+        words.remove('list')
+    if summary and 'summary' in words:
         words.remove('summary')
     if extensive:
         words.remove('extensive')
@@ -75,7 +80,17 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
     if text:
         words.remove('text')
 
-    limit = words[-1] if words[-1] != 'neighbor' else ''
+    # Get IP filter from command
+    # v4 syntax: show neighbor [<ip>] [options] - IP at end
+    # v6 syntax: peer <ip> show [options] - IP at words[1]
+    limit = ''
+    if words:
+        # Check v6 syntax first: peer <ip> show
+        if len(words) >= 2 and words[0] == 'peer' and words[1] not in ('*', 'show', 'list'):
+            limit = words[1]
+        # Fall back to v4 syntax: last word if not a keyword
+        elif words[-1] not in ('neighbor', 'peer', 'show'):
+            limit = words[-1]
 
     async def callback_configuration() -> None:
         for neighbor_name in reactor.configuration.neighbors.keys():
@@ -178,6 +193,49 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
                 await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         await reactor.processes.answer_done_async(service)
 
+    async def callback_list_json() -> None:
+        """Simple peer list - just IP, AS, and state for each configured neighbor."""
+        peers = []
+        try:
+            for neighbor_name in reactor.configuration.neighbors.keys():
+                neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
+                if not neighbor:
+                    continue
+
+                peer_addr = str(neighbor.session.peer_address) if neighbor.session.peer_address else None
+                if not peer_addr:
+                    continue
+
+                peer_as = neighbor.session.peer_as
+
+                # Check if connected and get state
+                if neighbor_name in reactor.peers():
+                    cli_data = reactor.neighbor_cli_data(neighbor_name)
+                    state = cli_data.get('state', 'unknown') if cli_data else 'unknown'
+                else:
+                    state = None  # Not connected
+
+                peers.append(
+                    {
+                        'peer-address': peer_addr,
+                        'peer-as': peer_as,
+                        'state': state,
+                    }
+                )
+        except Exception as e:
+            reactor.processes.write(service, f'{{"error": "{e}"}}')
+
+        for line in json.dumps(peers).split('\n'):
+            reactor.processes.write(service, line)
+            await asyncio.sleep(0)
+        await reactor.processes.answer_done_async(service)
+
+    # peer list: simple JSON list of peers
+    if is_peer_list and use_json:
+        reactor.asynchronous.schedule(service, line, callback_list_json())
+        return True
+
+    # Full JSON output for peer <ip> show
     if use_json:
         reactor.asynchronous.schedule(service, line, callback_json())
         return True
@@ -194,7 +252,7 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
         reactor.asynchronous.schedule(service, line, callback_configuration())
         return True
 
-    reactor.processes.write(service, 'please specify summary, extensive or configuration')
-    reactor.processes.write(service, 'you can filter by peer ip address adding it after the word neighbor')
+    reactor.processes.write(service, 'usage: peer <ip> show [summary|extensive|configuration]')
+    reactor.processes.write(service, '       peer list')
     reactor.processes.answer_done(service)
     return True
