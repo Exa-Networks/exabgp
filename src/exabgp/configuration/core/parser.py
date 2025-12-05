@@ -25,27 +25,24 @@ class Tokeniser:
         self.announce: bool = True
         self.afi = AFI.undefined
         self.fname: str = ''
+        self.consumed: int = 0
 
     def replenish(self, content: list[str]) -> 'Tokeniser':
         self.next.clear()
         self.tokens = content
         self.generator = iter(content)
+        self.consumed = 0
         return self
 
     def clear(self) -> None:
         self.replenish([])
         self.announce = True
 
-    def __call__(self) -> str:
-        if self.next:
-            return self.next.popleft()
-
-        try:
-            return next(self.generator)
-        except StopIteration:
-            return ''
-
     def peek(self) -> str:
+        """Peek at next token without incrementing consumed counter."""
+        if self.next:
+            return self.next[0]
+
         try:
             peaked = next(self.generator)
             self.next.append(peaked)
@@ -53,15 +50,31 @@ class Tokeniser:
         except StopIteration:
             return ''
 
+    def _get(self) -> str:
+        """Get next token, incrementing consumed counter."""
+        if self.next:
+            self.consumed += 1
+            return self.next.popleft()
+
+        try:
+            tok = next(self.generator)
+            self.consumed += 1
+            return tok
+        except StopIteration:
+            return ''
+
+    def __call__(self) -> str:
+        return self._get()
+
     def consume(self, name):
-        next = self.__call__()
-        if next != name:
-            raise ValueError(f"expected '{name}' but found '{next}' instead")
+        next_tok = self._get()
+        if next_tok != name:
+            raise ValueError(f"expected '{name}' but found '{next_tok}' instead")
 
     def consume_if_match(self, name):
-        next = self.peek()
-        if next == name:
-            self.__call__()
+        next_tok = self.peek()
+        if next_tok == name:
+            self._get()
             return True
         return False
 

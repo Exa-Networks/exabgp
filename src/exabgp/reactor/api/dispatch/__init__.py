@@ -16,6 +16,14 @@ from exabgp.reactor.api.dispatch.common import (
     NoMatchingPeers,
     COMMANDS,
     get_commands,
+    # Tree dispatch infrastructure
+    DispatchTree,
+    DispatchNode,
+    SELECTOR_KEY,
+    tokenise_command,
+    remaining_string,
+    dispatch,
+    extract_selector,
 )
 from exabgp.reactor.api.dispatch.v4 import dispatch_v4
 from exabgp.reactor.api.dispatch.v6 import dispatch_v6
@@ -26,6 +34,15 @@ __all__ = [
     'NoMatchingPeers',
     'COMMANDS',
     'get_commands',
+    # Tree dispatch infrastructure
+    'DispatchTree',
+    'DispatchNode',
+    'SELECTOR_KEY',
+    'tokenise_command',
+    'remaining_string',
+    'dispatch',
+    'extract_selector',
+    # Dispatchers
     'dispatch_v4',
     'dispatch_v6',
 ]

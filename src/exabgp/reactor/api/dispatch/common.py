@@ -9,7 +9,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Union
+
+from exabgp.configuration.core.parser import Tokeniser
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -21,9 +23,20 @@ if TYPE_CHECKING:
 # - reactor: Reactor instance
 # - service: service name for responses
 # - peers: list of matching peer names (empty for non-neighbor commands)
-# - command: remaining command after action prefix and selectors stripped
+# - command: remaining command after dispatch prefix stripped
 # - use_json: whether to output JSON format
 Handler = Callable[['API', 'Reactor', str, list[str], str, bool], bool]
+
+# Dispatch tree types
+# A node is either a handler (leaf) or a dict of child nodes
+DispatchNode = Union[Handler, 'DispatchTree']
+DispatchTree = dict[str, DispatchNode]
+
+# Special key for selector-consuming nodes (peer selectors like *, IP, or [bracket syntax])
+SELECTOR_KEY = '__selector__'
+
+# Valid selector keys for filtering peers
+SELECTOR_KEYS = frozenset(['local-ip', 'local-as', 'peer-as', 'router-id', 'family-allowed'])
 
 
 class UnknownCommand(Exception):
@@ -114,3 +127,241 @@ def get_commands() -> list[tuple[str, bool, list[str] | None]]:
     Returns list of (command, neighbor_support, options) tuples.
     """
     return COMMANDS
+
+
+# =============================================================================
+# Tree-based dispatch infrastructure
+# =============================================================================
+
+
+def tokenise_command(command: str) -> tuple[list[str], str]:
+    """Convert command string to token list for dispatch tree traversal.
+
+    Uses simple whitespace splitting for prefix tokens (announce, flow, etc.)
+    but preserves the full original command for extracting remaining string.
+
+    The config tokeniser breaks on { } ; which doesn't work for commands
+    like "announce flow route { match { ... } }" - we'd lose everything
+    after the first {.
+
+    Instead, we split on whitespace to get dispatch tokens, and track
+    position in original string to extract remaining after dispatch.
+
+    Args:
+        command: The API command string
+
+    Returns:
+        Tuple of (token_list, original_command)
+        - token_list: List of space-separated words for dispatch tree
+        - original_command: Original command for extracting remaining
+    """
+    return command.split(), command
+
+
+def remaining_string(tokeniser: Tokeniser, original: str) -> str:
+    """Get remaining tokens as the original command substring.
+
+    Uses tokeniser.consumed to know how many words were consumed
+    during dispatch, then extracts the remaining portion of
+    the original command string.
+
+    Args:
+        tokeniser: Tokeniser with consumed count
+        original: Original command string
+
+    Returns:
+        Remaining portion of original command after consumed words
+    """
+    consumed = tokeniser.consumed
+    words = original.split()
+
+    if consumed >= len(words):
+        return ''
+    return ' '.join(words[consumed:])
+
+
+def is_selector_start(token: str) -> bool:
+    """Check if a token could be the start of a peer selector.
+
+    Selectors can be:
+    - '*' (wildcard for all peers)
+    - '[' (bracket syntax for multiple selectors)
+    - An IP address (single peer)
+
+    Args:
+        token: The token to check
+
+    Returns:
+        True if this could start a selector
+    """
+    if not token:
+        return False
+    if token in ('*', '['):
+        return True
+    # Check if it looks like an IP address (contains . or :)
+    return '.' in token or ':' in token
+
+
+def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> list[str]:
+    """Extract peer selector by consuming tokens from the tokeniser.
+
+    This function owns its token consumption - it will consume exactly
+    the tokens that make up the selector.
+
+    Supports:
+    - * (all peers)
+    - Single IP address
+    - Bracket syntax: [ip key value, ip2]
+
+    Args:
+        tokeniser: Tokeniser to consume tokens from
+        reactor: Reactor for peer lookup
+        service: Service name for peer filtering
+
+    Returns:
+        List of matching peer names
+    """
+    from exabgp.reactor.api.command.limit import match_neighbors
+
+    first_token = tokeniser()
+
+    # Wildcard - all peers
+    if first_token == '*':
+        return list(reactor.peers(service))
+
+    # Bracket syntax: [ip1 key value, ip2]
+    if first_token == '[':
+        return _parse_bracket_selector(tokeniser, reactor, service)
+
+    # Single IP address
+    return match_neighbors(reactor.peers(service), [[f'neighbor {first_token}']])
+
+
+def _parse_bracket_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> list[str]:
+    """Parse bracket selector syntax: [ip1 key value, ip2].
+
+    Called after '[' has been consumed.
+
+    Args:
+        tokeniser: Tokeniser positioned after '['
+        reactor: Reactor for peer lookup
+        service: Service name for peer filtering
+
+    Returns:
+        List of matching peer names
+    """
+    from exabgp.reactor.api.command.limit import match_neighbors
+
+    descriptions: list[list[str]] = []
+    current_def: list[str] = []
+
+    while True:
+        # Peek to decide what to do
+        peeked = tokeniser.peek()
+
+        if not peeked:
+            # End of tokens - finalize current definition
+            if current_def:
+                descriptions.append(current_def)
+            break
+
+        if peeked == ']':
+            tokeniser()  # Consume the ']'
+            if current_def:
+                descriptions.append(current_def)
+            break
+
+        if peeked == ',':
+            tokeniser()  # Consume the ','
+            if current_def:
+                descriptions.append(current_def)
+                current_def = []
+            continue
+
+        # Consume the actual content token
+        tok = tokeniser()
+
+        # First token in a selector definition is the IP
+        if not current_def:
+            current_def = [f'neighbor {tok}']
+        elif tok in SELECTOR_KEYS:
+            # Key-value pair: consume the value too
+            value = tokeniser()
+            if value:
+                current_def.append(f'{tok} {value}')
+        else:
+            # Unknown token - include it anyway
+            current_def.append(tok)
+
+    return match_neighbors(reactor.peers(service), descriptions)
+
+
+def dispatch(
+    tree: DispatchTree,
+    tokeniser: Tokeniser,
+    reactor: 'Reactor',
+    service: str,
+) -> tuple[Handler, list[str]]:
+    """Walk dispatch tree consuming tokens until a handler is found.
+
+    Uses peek() to check for selector nodes before consuming, allowing
+    extract_selector() to own its token consumption.
+
+    Args:
+        tree: The dispatch tree (dict of dicts with handlers as leaves)
+        tokeniser: Tokeniser with tokens to consume
+        reactor: Reactor instance for peer lookup
+        service: Service name for peer filtering
+
+    Returns:
+        Tuple of (handler, peers)
+        - handler: The function to call
+        - peers: List of matching peer names (empty for non-peer commands)
+
+    Raises:
+        UnknownCommand: If the command cannot be matched to a handler
+
+    Note:
+        tokeniser.consumed tracks how many tokens were consumed.
+        This is used by remaining_string() to extract the remaining command portion.
+    """
+    peers: list[str] = []
+    node: DispatchNode = tree
+
+    while True:
+        # Peek first to check what we're dealing with
+        peeked = tokeniser.peek()
+
+        # No more tokens
+        if not peeked:
+            # Check if current node IS a handler (reached end of command at handler)
+            if callable(node):
+                return node, peers
+            raise UnknownCommand('incomplete command')
+
+        # Current node must be a dict to continue traversal
+        if not isinstance(node, dict):
+            raise UnknownCommand(f'unexpected token: {peeked}')
+
+        # Check if this is a selector node and the token looks like a selector start
+        if SELECTOR_KEY in node and peeked not in node and is_selector_start(peeked):
+            # Let extract_selector consume its own tokens
+            peers = extract_selector(tokeniser, reactor, service)
+            node = node[SELECTOR_KEY]
+            # Don't consume again - extract_selector already did
+            if callable(node):
+                return node, peers
+            continue
+
+        # Now consume the token for regular tree traversal
+        token = tokeniser()
+
+        # Try to match token in tree
+        if token in node:
+            node = node[token]
+        else:
+            raise UnknownCommand(f'unknown command: {token}')
+
+        # Found a handler?
+        if callable(node):
+            return node, peers
