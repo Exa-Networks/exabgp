@@ -956,6 +956,8 @@ class Processes:
                 items_processed += 1
 
                 try:
+                    if not data:
+                        continue
                     # Use os.write for non-blocking write
                     log.debug(
                         lazymsg(
