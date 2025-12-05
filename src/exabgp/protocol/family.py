@@ -83,7 +83,9 @@ class AFI(int):
 
     @staticmethod
     def unpack_afi(data: bytes) -> AFI:
-        return AFI.common.get(data, AFI(unpack('!H', data)[0]))
+        if len(data) < 2:
+            raise ValueError(f'AFI data too short: need 2 bytes, got {len(data)}')
+        return AFI.common.get(data[:2], AFI(unpack('!H', data[:2])[0]))
 
     @classmethod
     def value(cls, name: str) -> AFI | None:
