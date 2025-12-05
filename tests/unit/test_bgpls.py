@@ -880,7 +880,7 @@ class TestBGPLSUnpack:
         """Test unpacking IPv4 Prefix NLRI via BGPLS.unpack_nlri()"""
         bgp_data = (
             b'\x00\x03'  # NLRI Type: 3 (IPv4 Prefix)
-            b'\x00\x1e'  # Total NLRI Length: 30
+            b'\x00\x1c'  # Total NLRI Length: 28 (actual payload size)
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -898,7 +898,7 @@ class TestBGPLSUnpack:
         """Test unpacking IPv6 Prefix NLRI via BGPLS.unpack_nlri()"""
         bgp_data = (
             b'\x00\x04'  # NLRI Type: 4 (IPv6 Prefix)
-            b'\x00\x1f'  # Total NLRI Length: 31
+            b'\x00\x1d'  # Total NLRI Length: 29 (actual payload size)
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'

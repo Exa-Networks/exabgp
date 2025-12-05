@@ -19,6 +19,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -136,7 +137,19 @@ class BGPLS(NLRI):
     def unpack_nlri(
         cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: PathInfo | None, negotiated
     ) -> tuple[T, bytes]:
+        # BGP-LS NLRI header: type(2) + length(2) = 4 bytes minimum
+        if len(bgp) < 4:
+            raise Notify(3, 10, f'BGP-LS NLRI too short: need at least 4 bytes, got {len(bgp)}')
         code, length = unpack('!HH', bgp[:4])
+
+        # For VPN, need 8 more bytes for RD
+        if safi == SAFI.bgp_ls_vpn:
+            if len(bgp) < 12:
+                raise Notify(3, 10, f'BGP-LS VPN NLRI too short: need at least 12 bytes, got {len(bgp)}')
+
+        if len(bgp) < length + 4:
+            raise Notify(3, 10, f'BGP-LS NLRI truncated: need {length + 4} bytes, got {len(bgp)}')
+
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:
                 # Extract Route Distinguisher
