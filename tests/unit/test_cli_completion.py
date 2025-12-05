@@ -55,64 +55,63 @@ class TestCLICompletion(unittest.TestCase):
         self.assertFalse(changed)
 
     def test_get_completions_base_commands(self):
-        """Test getting completions for base commands"""
-        # Empty context, partial match 'sh'
-        completions = self.completer._get_completions([], 'sh')
+        """Test getting completions for base commands (v6 API)"""
+        # Empty context, partial match 'da'
+        completions = self.completer._get_completions([], 'da')
 
-        # 'show' filtered out, should suggest 'shutdown'
-        self.assertNotIn('show', completions)
-        self.assertIn('shutdown', completions)
-        # Should not contain unrelated commands
-        self.assertNotIn('neighbor', completions)
+        # Should suggest 'daemon'
+        self.assertIn('daemon', completions)
+        # v4 commands not in base
+        self.assertNotIn('shutdown', completions)
 
     def test_get_completions_with_context(self):
         """Test getting completions with command context"""
-        # After 'show', get completions for 'n'
-        completions = self.completer._get_completions(['show'], 'n')
+        # After 'daemon', get completions for 'sh'
+        completions = self.completer._get_completions(['daemon'], 'sh')
 
-        # 'neighbor' filtered out - use 'neighbor <ip> show' syntax instead
-        self.assertNotIn('neighbor', completions)
+        # Should suggest 'shutdown'
+        self.assertIn('shutdown', completions)
 
     def test_get_completions_exact_match(self):
-        """Test completions when token is exact match"""
-        # 'announce' is exact match
-        completions = self.completer._get_completions([], 'announce')
+        """Test completions when token is exact match (v6 API)"""
+        # 'peer' is exact match
+        completions = self.completer._get_completions([], 'peer')
 
-        # Should return 'announce' as it's a valid command
-        self.assertIn('announce', completions)
+        # Should return 'peer' as it's a valid command
+        self.assertIn('peer', completions)
 
     def test_expand_preserves_exact_matches(self):
         """Test that exact matches are preserved during expansion"""
-        # 'show neighbor' are both exact matches
-        tokens = ['show', 'neighbor']
+        # 'daemon shutdown' are both exact matches
+        tokens = ['daemon', 'shutdown']
         expanded, changed = self.completer._try_auto_expand_tokens(tokens)
 
-        self.assertEqual(expanded, ['show', 'neighbor'])
+        self.assertEqual(expanded, ['daemon', 'shutdown'])
         self.assertFalse(changed)  # No changes since both are exact matches
 
     def test_completion_metadata(self):
         """Test that completions include metadata for displaying descriptions"""
         # Get completions for base commands
-        completions = self.completer._get_completions([], 'ann')
+        completions = self.completer._get_completions([], 'da')
 
-        # Should get completions matching 'ann'
-        self.assertIn('announce', completions)
+        # Should get completions matching 'da'
+        self.assertIn('daemon', completions)
 
         # Verify metadata was added (used for showing descriptions)
         # This metadata is displayed when multiple matches exist
-        self.assertIn('announce', self.completer.match_metadata)
-        self.assertIsNotNone(self.completer.match_metadata['announce'].description)
+        self.assertIn('daemon', self.completer.match_metadata)
+        self.assertIsNotNone(self.completer.match_metadata['daemon'].description)
 
-    def test_neighbor_ip_only_shows_announce_withdraw_show(self):
-        """Test that after 'neighbor <ip>', only announce/withdraw/show/adj-rib are suggested"""
-        # After neighbor IP, should only get announce, withdraw, show, adj-rib
-        completions = self.completer._get_completions(['neighbor', '127.0.0.1'], '')
+    def test_peer_ip_shows_actions(self):
+        """Test that after 'peer <ip>', announce/withdraw/show/teardown are suggested"""
+        # After peer IP, should get v6 API actions
+        completions = self.completer._get_completions(['peer', '127.0.0.1'], '')
 
-        # Should contain these four
+        # Should contain v6 API actions
         self.assertIn('announce', completions)
         self.assertIn('withdraw', completions)
         self.assertIn('show', completions)
-        self.assertIn('adj-rib', completions)
+        self.assertIn('teardown', completions)
 
         # Should NOT contain other commands (ping, help, reload, etc.)
         self.assertNotIn('ping', completions)
@@ -121,58 +120,32 @@ class TestCLICompletion(unittest.TestCase):
         self.assertNotIn('shutdown', completions)
         self.assertNotIn('crash', completions)
 
-        # Should be exactly 4 items
-        self.assertEqual(len(completions), 4)
+    def test_peer_wildcard_shows_actions(self):
+        """Test that after 'peer *', announce/withdraw/show/teardown are suggested"""
+        completions = self.completer._get_completions(['peer', '*'], '')
 
-    def test_neighbor_ip_announce_completes_as_root_announce(self):
-        """Test that 'neighbor <ip> announce' completes same as root 'announce'"""
-        # Get completions after "neighbor 127.0.0.1 announce"
-        neighbor_completions = self.completer._get_completions(['neighbor', '127.0.0.1', 'announce'], '')
+        # Should contain v6 API actions
+        self.assertIn('announce', completions)
+        self.assertIn('withdraw', completions)
+        self.assertIn('show', completions)
+        self.assertIn('teardown', completions)
 
-        # Get completions after just "announce" (root level)
-        root_completions = self.completer._get_completions(['announce'], '')
+    def test_peer_ip_announce_suggests_subcommands(self):
+        """Test that 'peer <ip> announce' suggests route, eor, flow, etc."""
+        completions = self.completer._get_completions(['peer', '127.0.0.1', 'announce'], '')
 
-        # Should be identical
-        self.assertEqual(sorted(neighbor_completions), sorted(root_completions))
+        # Should suggest announce subcommands
+        self.assertIn('route', completions)
+        self.assertIn('eor', completions)
+        self.assertIn('flow', completions)
 
-    def test_neighbor_ip_show_completes_as_show_neighbor_ip(self):
-        """Test that 'neighbor <ip> show' completes as 'show neighbor <ip>'"""
-        # Get completions after "neighbor 127.0.0.1 show"
-        neighbor_completions = self.completer._get_completions(['neighbor', '127.0.0.1', 'show'], '')
+    def test_peer_ip_withdraw_suggests_subcommands(self):
+        """Test that 'peer <ip> withdraw' suggests route, flow, etc."""
+        completions = self.completer._get_completions(['peer', '127.0.0.1', 'withdraw'], '')
 
-        # Get completions after "show neighbor 127.0.0.1" (transformed level)
-        show_neighbor_completions = self.completer._get_completions(['show', 'neighbor', '127.0.0.1'], '')
-
-        # Should be identical to "show neighbor <ip>" level
-        self.assertEqual(sorted(neighbor_completions), sorted(show_neighbor_completions))
-
-        # Should NOT be same as root "show" level
-        root_show_completions = self.completer._get_completions(['show'], '')
-        self.assertNotEqual(sorted(neighbor_completions), sorted(root_show_completions))
-
-    def test_neighbor_ip_withdraw_completes_as_root_withdraw(self):
-        """Test that 'neighbor <ip> withdraw' completes same as root 'withdraw'"""
-        # Get completions after "neighbor 127.0.0.1 withdraw"
-        neighbor_completions = self.completer._get_completions(['neighbor', '127.0.0.1', 'withdraw'], '')
-
-        # Get completions after just "withdraw" (root level)
-        root_completions = self.completer._get_completions(['withdraw'], '')
-
-        # Should be identical
-        self.assertEqual(sorted(neighbor_completions), sorted(root_completions))
-
-    def test_show_neighbor_ip_does_not_suggest_ip_again(self):
-        """Test that 'show neighbor <ip>' does not suggest the IP again"""
-        # Get completions after "show neighbor 127.0.0.1"
-        completions = self.completer._get_completions(['show', 'neighbor', '127.0.0.1'], '')
-
-        # Should suggest options (summary, extensive, configuration, json)
-        # But should NOT suggest IP addresses again
-        for completion in completions:
-            # None of the completions should be IP addresses
-            self.assertFalse(
-                self.completer._is_ip_address(completion), f"Completion '{completion}' should not be an IP address"
-            )
+        # Should suggest withdraw subcommands
+        self.assertIn('route', completions)
+        self.assertIn('flow', completions)
 
     def test_announce_route_prefix_suggests_attributes(self):
         """Test that 'announce route <prefix>' suggests BGP attributes"""
@@ -184,12 +157,12 @@ class TestCLICompletion(unittest.TestCase):
         for attr in expected_attributes:
             self.assertIn(attr, completions, f"Expected attribute '{attr}' not in completions: {completions}")
 
-    def test_neighbor_announce_route_prefix_suggests_attributes(self):
-        """Test that 'neighbor <ip> announce route <prefix>' suggests BGP attributes"""
-        # Get completions after "neighbor 127.0.0.1 announce route 1.2.3.4/32"
-        completions = self.completer._get_completions(['neighbor', '127.0.0.1', 'announce', 'route', '1.2.3.4/32'], '')
+    def test_peer_announce_route_prefix_suggests_attributes(self):
+        """Test that 'peer <ip> announce route <prefix>' suggests BGP attributes"""
+        # Get completions after "peer 127.0.0.1 announce route 1.2.3.4/32"
+        completions = self.completer._get_completions(['peer', '127.0.0.1', 'announce', 'route', '1.2.3.4/32'], '')
 
-        # Should suggest BGP attributes (same as without neighbor prefix)
+        # Should suggest BGP attributes
         expected_attributes = ['next-hop', 'as-path', 'community', 'local-preference', 'med']
         for attr in expected_attributes:
             self.assertIn(attr, completions, f"Expected attribute '{attr}' not in completions: {completions}")
@@ -298,8 +271,8 @@ class TestOutputFormatter(unittest.TestCase):
         self.assertEqual(parsed[0]['id'], 1)
 
 
-class TestNeighborShowTransformation(unittest.TestCase):
-    """Test cases for neighbor show command transformation"""
+class TestV6APICommands(unittest.TestCase):
+    """Test cases for v6 API commands - CLI sends commands directly without transformation"""
 
     def setUp(self):
         """Set up test fixtures"""
@@ -311,49 +284,63 @@ class TestNeighborShowTransformation(unittest.TestCase):
 
         self.cli = InteractiveCLI(send_command=mock_send_command)
 
-    def test_neighbor_show_transforms_to_show_neighbor(self):
-        """Test that 'neighbor <ip> show' transforms to 'show neighbor <ip>'"""
-        # Execute "neighbor 127.0.0.1 show"
-        self.cli._execute_command('neighbor 127.0.0.1 show')
+    def test_peer_show_sends_directly(self):
+        """Test that 'peer show' is sent directly to daemon"""
+        # Execute "peer show"
+        self.cli._execute_command('peer show')
 
-        # Should have sent "show neighbor 127.0.0.1 text" (text is default encoding)
+        # Should send v6 format directly
         self.assertEqual(len(self.sent_commands), 1)
         sent = self.sent_commands[0]
-        self.assertIn('show neighbor 127.0.0.1', sent)
+        self.assertIn('peer show', sent)
 
-    def test_neighbor_show_with_options(self):
-        """Test that 'neighbor <ip> show <options>' preserves options"""
-        # Execute "neighbor 127.0.0.1 show summary"
-        self.cli._execute_command('neighbor 127.0.0.1 show summary')
+    def test_peer_show_with_options(self):
+        """Test that 'peer show summary' is sent directly"""
+        # Execute "peer show summary"
+        self.cli._execute_command('peer show summary')
 
-        # Should transform to "show neighbor 127.0.0.1 summary"
+        # Should send v6 format directly
         self.assertEqual(len(self.sent_commands), 1)
         sent = self.sent_commands[0]
-        self.assertIn('show neighbor 127.0.0.1 summary', sent)
+        self.assertIn('peer show summary', sent)
 
-    def test_neighbor_announce_not_transformed(self):
-        """Test that 'neighbor <ip> announce' is NOT transformed"""
-        # Execute "neighbor 127.0.0.1 announce route 1.2.3.0/24"
-        self.cli._execute_command('neighbor 127.0.0.1 announce route 1.2.3.0/24')
+    def test_peer_announce_sends_directly(self):
+        """Test that 'peer <ip> announce' is sent directly"""
+        # Execute "peer 127.0.0.1 announce route 1.2.3.0/24"
+        self.cli._execute_command('peer 127.0.0.1 announce route 1.2.3.0/24')
 
-        # Should send as-is (with encoding appended)
+        # Should send v6 format directly
         self.assertEqual(len(self.sent_commands), 1)
         sent = self.sent_commands[0]
-        self.assertIn('neighbor 127.0.0.1 announce route 1.2.3.0/24', sent)
-        # Should NOT start with "show"
-        self.assertFalse(sent.startswith('show'))
+        self.assertIn('peer 127.0.0.1 announce route 1.2.3.0/24', sent)
 
-    def test_neighbor_withdraw_not_transformed(self):
-        """Test that 'neighbor <ip> withdraw' is NOT transformed"""
-        # Execute "neighbor 127.0.0.1 withdraw route 1.2.3.0/24"
-        self.cli._execute_command('neighbor 127.0.0.1 withdraw route 1.2.3.0/24')
+    def test_peer_withdraw_sends_directly(self):
+        """Test that 'peer <ip> withdraw' is sent directly"""
+        # Execute "peer 127.0.0.1 withdraw route 1.2.3.0/24"
+        self.cli._execute_command('peer 127.0.0.1 withdraw route 1.2.3.0/24')
 
-        # Should send as-is (with encoding appended)
+        # Should send v6 format directly
         self.assertEqual(len(self.sent_commands), 1)
         sent = self.sent_commands[0]
-        self.assertIn('neighbor 127.0.0.1 withdraw route 1.2.3.0/24', sent)
-        # Should NOT start with "show"
-        self.assertFalse(sent.startswith('show'))
+        self.assertIn('peer 127.0.0.1 withdraw route 1.2.3.0/24', sent)
+
+    def test_peer_wildcard_announce(self):
+        """Test that 'peer * announce' is sent directly"""
+        # Execute "peer * announce route 1.2.3.0/24 next-hop 10.0.0.1"
+        self.cli._execute_command('peer * announce route 1.2.3.0/24 next-hop 10.0.0.1')
+
+        # Should send v6 format directly
+        self.assertEqual(len(self.sent_commands), 1)
+        sent = self.sent_commands[0]
+        self.assertIn('peer * announce route 1.2.3.0/24 next-hop 10.0.0.1', sent)
+
+    def test_daemon_shutdown_sends_directly(self):
+        """Test that 'daemon shutdown' is sent directly"""
+        self.cli._execute_command('daemon shutdown')
+
+        self.assertEqual(len(self.sent_commands), 1)
+        sent = self.sent_commands[0]
+        self.assertIn('daemon shutdown', sent)
 
 
 if __name__ == '__main__':

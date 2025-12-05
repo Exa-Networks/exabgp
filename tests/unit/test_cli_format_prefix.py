@@ -48,13 +48,13 @@ class TestDisplayFormatPrefix(unittest.TestCase):
             with patch.object(self.cli.formatter, 'format_command_output') as mock_format:
                 mock_format.return_value = 'formatted output'
 
-                # Execute command with json prefix
-                self.cli._execute_command('json show neighbor')
+                # Execute command with json prefix (v6 API format)
+                self.cli._execute_command('json peer show')
 
                 # Verify command sent to API (should have json encoding)
                 self.mock_send.assert_called_once()
                 sent_cmd = self.mock_send.call_args[0][0]
-                self.assertIn('show neighbor', sent_cmd)
+                self.assertIn('peer show', sent_cmd)
                 self.assertIn('json', sent_cmd)
 
                 # Verify format_command_output called with display_mode='json'
@@ -67,13 +67,13 @@ class TestDisplayFormatPrefix(unittest.TestCase):
             with patch.object(self.cli.formatter, 'format_command_output') as mock_format:
                 mock_format.return_value = 'formatted output'
 
-                # Execute command with text prefix
-                self.cli._execute_command('text show neighbor')
+                # Execute command with text prefix (v6 API format)
+                self.cli._execute_command('text peer show')
 
                 # Verify command sent to API (should have json encoding - default)
                 self.mock_send.assert_called_once()
                 sent_cmd = self.mock_send.call_args[0][0]
-                self.assertIn('show neighbor', sent_cmd)
+                self.assertIn('peer show', sent_cmd)
                 self.assertIn('json', sent_cmd)  # Default API encoding is json
 
                 # Verify format_command_output called with display_mode='text'
@@ -89,8 +89,8 @@ class TestDisplayFormatPrefix(unittest.TestCase):
                 # Set session default to text
                 self.cli.display_mode = 'text'
 
-                # Execute command without prefix
-                self.cli._execute_command('show neighbor')
+                # Execute command without prefix (v6 API format)
+                self.cli._execute_command('peer show')
 
                 # Verify format_command_output called with display_mode='text' (session default)
                 mock_format.assert_called_once()
@@ -102,8 +102,8 @@ class TestDisplayFormatPrefix(unittest.TestCase):
             with patch.object(self.cli.formatter, 'format_command_output') as mock_format:
                 mock_format.return_value = 'formatted output'
 
-                # Execute: json show neighbor json
-                self.cli._execute_command('json show neighbor json')
+                # Execute: json peer show json (v6 API format)
+                self.cli._execute_command('json peer show json')
 
                 # Should succeed - both json
                 self.mock_send.assert_called_once()
@@ -116,8 +116,8 @@ class TestDisplayFormatPrefix(unittest.TestCase):
             with patch.object(self.cli.formatter, 'format_command_output') as mock_format:
                 mock_format.return_value = 'formatted output'
 
-                # Execute: text show neighbor text
-                self.cli._execute_command('text show neighbor text')
+                # Execute: text peer show text (v6 API format)
+                self.cli._execute_command('text peer show text')
 
                 # Should succeed - both text
                 self.mock_send.assert_called_once()
@@ -127,8 +127,8 @@ class TestDisplayFormatPrefix(unittest.TestCase):
     def test_invalid_combination_blocked(self):
         """Test invalid combination is blocked with error"""
         with patch.object(self.cli.formatter, 'format_error') as mock_error:
-            # Execute: text show neighbor json (conflicting)
-            self.cli._execute_command('text show neighbor json')
+            # Execute: text peer show json (conflicting, v6 API format)
+            self.cli._execute_command('text peer show json')
 
             # Should NOT send command
             self.mock_send.assert_not_called()
@@ -174,8 +174,8 @@ class TestDisplayFormatPrefix(unittest.TestCase):
         with patch.object(self.cli.formatter, 'format_success'):
             with patch.object(self.cli.formatter, 'format_error') as mock_error:
                 # This should be impossible, but test the safety check
-                # Manually set encoding to text and display to json
-                self.cli._execute_command('json show neighbor text')
+                # Manually set encoding to text and display to json (v6 API format)
+                self.cli._execute_command('json peer show text')
 
                 # Should block due to conflicting formats before reaching this code path
                 self.mock_send.assert_not_called()
@@ -187,13 +187,13 @@ class TestDisplayFormatPrefix(unittest.TestCase):
             with patch.object(self.cli.formatter, 'format_command_output') as mock_format:
                 mock_format.return_value = 'formatted output'
 
-                # Execute: show neighbor json (no prefix, suffix only)
-                self.cli._execute_command('show neighbor json')
+                # Execute: peer show json (no prefix, suffix only, v6 API format)
+                self.cli._execute_command('peer show json')
 
                 # Should work normally
                 self.mock_send.assert_called_once()
                 sent_cmd = self.mock_send.call_args[0][0]
-                self.assertIn('show neighbor', sent_cmd)
+                self.assertIn('peer show', sent_cmd)
                 self.assertIn('json', sent_cmd)
 
                 # Display mode should use session default (text)
@@ -206,13 +206,13 @@ class TestDisplayFormatPrefix(unittest.TestCase):
             with patch.object(self.cli.formatter, 'format_command_output') as mock_format:
                 mock_format.return_value = 'formatted output'
 
-                # Execute: json show neighbor (prefix only, no suffix)
-                self.cli._execute_command('json show neighbor')
+                # Execute: json peer show (prefix only, no suffix, v6 API format)
+                self.cli._execute_command('json peer show')
 
                 # Should work - API uses default encoding (json)
                 self.mock_send.assert_called_once()
                 sent_cmd = self.mock_send.call_args[0][0]
-                self.assertIn('show neighbor', sent_cmd)
+                self.assertIn('peer show', sent_cmd)
 
                 # Display mode should be json (from prefix)
                 mock_format.assert_called_once()
@@ -244,31 +244,33 @@ class TestCompletionWithPrefix(unittest.TestCase):
         self.assertIn('text', matches)
 
     def test_completion_after_json_prefix(self):
-        """Test completion after 'json ' suggests normal commands"""
+        """Test completion after 'json ' suggests v6 commands"""
         matches = self.completer._get_completions(['json'], 's')
 
-        # Should suggest commands starting with 's' (show filtered, shutdown suggested)
-        self.assertNotIn('show', matches)  # Filtered out
-        self.assertIn('shutdown', matches)
+        # Should suggest v6 commands starting with 's' (session, system, set)
+        self.assertIn('session', matches)
+        self.assertIn('system', matches)
+        # v4 commands not in base
+        self.assertNotIn('shutdown', matches)
         # Should NOT suggest 'json' again
         self.assertNotIn('json', matches)
 
     def test_completion_after_text_prefix(self):
-        """Test completion after 'text ' suggests normal commands"""
-        matches = self.completer._get_completions(['text'], 'h')
+        """Test completion after 'text ' suggests v6 commands"""
+        matches = self.completer._get_completions(['text'], 'd')
 
-        # Should suggest commands starting with 'h'
-        self.assertIn('help', matches)
+        # Should suggest v6 commands starting with 'd'
+        self.assertIn('daemon', matches)
         # Should NOT suggest 'text' again
         self.assertNotIn('text', matches)
 
-    def test_completion_json_show_neighbor(self):
-        """Test completion works normally after display prefix"""
-        # After "json show ", neighbor is filtered out
-        matches = self.completer._get_completions(['json', 'show'], 'n')
+    def test_completion_json_peer_show(self):
+        """Test completion works normally after display prefix (v6 API)"""
+        # After "json peer ", should suggest wildcard and peer IPs
+        matches = self.completer._get_completions(['json', 'peer'], '')
 
-        # 'neighbor' filtered out - use 'neighbor <ip> show' syntax instead
-        self.assertNotIn('neighbor', matches)
+        # Should suggest wildcard
+        self.assertIn('*', matches)
 
 
 if __name__ == '__main__':

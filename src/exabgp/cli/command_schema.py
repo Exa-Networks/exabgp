@@ -64,12 +64,12 @@ class CLICommandSpec:
 
 
 # CLI Command Schema Registry
-# Maps runtime API commands to their value specifications
+# Maps runtime API commands to their value specifications (v6 API format)
 CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
-    # Announce commands
-    'announce route': CLICommandSpec(
-        name='announce route',
-        description='Announce a BGP route to neighbors',
+    # Peer announce commands (v6 uses "peer <selector> announce route")
+    'peer * announce route': CLICommandSpec(
+        name='peer * announce route',
+        description='Announce a BGP route to all peers',
         arguments={
             'prefix': CLIValueSpec(
                 value_type=ValueType.IP_PREFIX,
@@ -130,9 +130,9 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
             ),
         },
     ),
-    'announce eor': CLICommandSpec(
-        name='announce eor',
-        description='Announce End-of-RIB marker',
+    'peer * announce eor': CLICommandSpec(
+        name='peer * announce eor',
+        description='Announce End-of-RIB marker to all peers',
         arguments={
             'afi': CLIValueSpec(
                 value_type=ValueType.ENUMERATION,
@@ -150,9 +150,9 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
             ),
         },
     ),
-    'announce route-refresh': CLICommandSpec(
-        name='announce route-refresh',
-        description='Request route refresh from peer',
+    'peer * announce route-refresh': CLICommandSpec(
+        name='peer * announce route-refresh',
+        description='Request route refresh from all peers',
         arguments={
             'afi': CLIValueSpec(
                 value_type=ValueType.ENUMERATION,
@@ -169,10 +169,10 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
             ),
         },
     ),
-    # Withdraw commands
-    'withdraw route': CLICommandSpec(
-        name='withdraw route',
-        description='Withdraw a previously announced route',
+    # Peer withdraw commands
+    'peer * withdraw route': CLICommandSpec(
+        name='peer * withdraw route',
+        description='Withdraw a previously announced route from all peers',
         arguments={
             'prefix': CLIValueSpec(
                 value_type=ValueType.IP_PREFIX,
@@ -196,14 +196,14 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
             ),
         },
     ),
-    # Show commands
-    'show neighbor': CLICommandSpec(
-        name='show neighbor',
-        description='Display neighbor information',
+    # Peer show commands (v6 API)
+    'peer show': CLICommandSpec(
+        name='peer show',
+        description='Display peer information',
         arguments={
             'ip': CLIValueSpec(
                 value_type=ValueType.IP_ADDRESS,
-                description='Neighbor IP address (optional filter)',
+                description='Peer IP address (optional filter)',
                 examples=['127.0.0.1', '192.168.1.1'],
                 required=False,
             )
@@ -211,35 +211,29 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         options={
             'summary': CLIValueSpec(
                 value_type=ValueType.BOOLEAN,
-                description='Show brief neighbor status',
+                description='Show brief peer status',
                 required=False,
             ),
             'extensive': CLIValueSpec(
                 value_type=ValueType.BOOLEAN,
-                description='Show detailed neighbor information',
+                description='Show detailed peer information',
                 required=False,
             ),
             'configuration': CLIValueSpec(
                 value_type=ValueType.BOOLEAN,
-                description='Show neighbor configuration',
+                description='Show peer configuration',
                 required=False,
             ),
         },
     ),
-    'show adj-rib': CLICommandSpec(
-        name='show adj-rib',
-        description='Display Adj-RIB-In or Adj-RIB-Out',
+    # RIB show commands (v6 API)
+    'rib show in': CLICommandSpec(
+        name='rib show in',
+        description='Display Adj-RIB-In (received routes)',
         arguments={
-            'direction': CLIValueSpec(
-                value_type=ValueType.ENUMERATION,
-                description='RIB direction',
-                examples=['in', 'out'],
-                required=True,
-                choices=['in', 'out'],
-            ),
             'ip': CLIValueSpec(
                 value_type=ValueType.IP_ADDRESS,
-                description='Neighbor IP address (optional filter)',
+                description='Peer IP address (optional filter)',
                 examples=['127.0.0.1', '192.168.1.1'],
                 required=False,
             ),
@@ -252,18 +246,29 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
             ),
         },
     ),
-    # Teardown command
-    'teardown': CLICommandSpec(
-        name='teardown',
-        description='Tear down BGP session with neighbor',
+    'rib show out': CLICommandSpec(
+        name='rib show out',
+        description='Display Adj-RIB-Out (advertised routes)',
         arguments={
             'ip': CLIValueSpec(
                 value_type=ValueType.IP_ADDRESS,
-                description='Neighbor IP address',
+                description='Peer IP address (optional filter)',
                 examples=['127.0.0.1', '192.168.1.1'],
-                required=False,  # Can target all neighbors
-            )
+                required=False,
+            ),
         },
+        options={
+            'extensive': CLIValueSpec(
+                value_type=ValueType.BOOLEAN,
+                description='Show detailed route information',
+                required=False,
+            ),
+        },
+    ),
+    # Peer teardown command (v6 API)
+    'peer * teardown': CLICommandSpec(
+        name='peer * teardown',
+        description='Tear down BGP session with all peers',
         options={
             'notification': CLIValueSpec(
                 value_type=ValueType.INTEGER,
@@ -280,7 +285,7 @@ def get_command_spec(command: str) -> CLICommandSpec | None:
     """Get CLI command specification.
 
     Args:
-        command: Command name (e.g., "announce route", "show neighbor")
+        command: Command name (e.g., "peer * announce route", "peer show")
 
     Returns:
         CLICommandSpec or None if not found

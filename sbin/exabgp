@@ -1,24 +1,28 @@
 #!/bin/sh
 
+# Get the project root path
+path="$(cd "$(dirname "$0")"/.. ; pwd)"
+
+# Get base version from pyproject.toml (single source of truth)
+BASE_VERSION=$(grep "^version = " "$path/pyproject.toml" | sed "s/version = '\\(.*\\)'/\\1/")
+
 git status 2> /dev/null > /dev/null
 
 # returns 128 if not in a git repo
 # returns 127 if git is not installed
 
 if [ -z "$exabgp_version" ]; then
-    if [ $? -eq  0 ]; then
-        GIT_TAG=`git status | egrep 'detached at 3|4' | wc -l`
+    if [ $? -eq 0 ]; then
+        GIT_TAG=$(git status | egrep 'detached at 3|4' | wc -l)
         if [ $GIT_TAG -eq 0 ]; then
-            GIT_BRANCH=`git branch | grep "*" | awk '{ print $2}'`
-            GIT_COMMIT=`git rev-parse --short=10 HEAD`
-            export exabgp_version="5.0.0-$(date +%Y%m%d)+${GIT_BRANCH}-${GIT_COMMIT}"
+            GIT_BRANCH=$(git branch | grep "*" | awk '{ print $2}')
+            GIT_COMMIT=$(git rev-parse --short=10 HEAD)
+            export exabgp_version="${BASE_VERSION}-$(date +%Y%m%d)+${GIT_BRANCH}-${GIT_COMMIT}"
         fi
     else
-        export exabgp_version="5.0.0-$(date -r $0 +%Y%m%d)+uncontrolled"
+        export exabgp_version="${BASE_VERSION}-$(date -r $0 +%Y%m%d)+uncontrolled"
     fi
 fi
-
-path="$(cd "$(dirname "$0")"/.. ; pwd)"
 
 export EXABGP_ROOT=$path
 export PYTHONPATH="$path"/src
