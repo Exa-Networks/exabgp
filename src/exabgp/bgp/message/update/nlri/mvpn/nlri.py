@@ -11,6 +11,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.nlri import NLRI
 
@@ -97,8 +98,14 @@ class MVPN(NLRI):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[MVPN, bytes]:
+        # MVPN NLRI: route_type(1) + length(1) + route_data(length)
+        if len(bgp) < 2:
+            raise Notify(3, 10, f'MVPN NLRI too short: need at least 2 bytes, got {len(bgp)}')
         code = bgp[0]
         length = bgp[1]
+
+        if len(bgp) < length + 2:
+            raise Notify(3, 10, f'MVPN NLRI truncated: need {length + 2} bytes, got {len(bgp)}')
 
         if code in cls.registered_mvpn:
             klass = cls.registered_mvpn[code].unpack_mvpn_route(bgp[2 : length + 2], afi)
