@@ -148,6 +148,10 @@ class MPURNLRI(Attribute, Family):
         Validates the data and creates an MPURNLRI instance storing the wire bytes.
         NLRIs are parsed lazily when accessed via the nlris property.
         """
+        # MP_UNREACH_NLRI minimum: AFI(2) + SAFI(1) = 3 bytes
+        if len(data) < 3:
+            raise Notify(3, 9, f'MP_UNREACH_NLRI too short: need at least 3 bytes, got {len(data)}')
+
         # -- Reading AFI/SAFI for validation
         _afi, _safi = unpack('!HB', data[:3])
         afi, safi = AFI.from_int(_afi), SAFI.from_int(_safi)
