@@ -912,6 +912,133 @@ class Tests:
             '\nFormat: elapsed Ns timeout [0/max] daemons N clients N -> elapsed Ns timeout [N/max] daemons N clients N passed N failed N [IDs] pending N [IDs]\n'
         )
 
+    def _setup_run(
+        self,
+        timeout: int,
+        verbose: bool = False,
+        debug_tests: Optional[List[str]] = None,
+        quiet: bool = False,
+    ) -> None:
+        """Common initialization for run_selected() methods."""
+        self._start_time = time.time()
+        self._max_timeout = timeout
+        self._verbose = verbose
+        self._debug_tests = set(debug_tests) if debug_tests else set()
+        self._quiet = quiet
+        self.legend(quiet=quiet)
+        check_ulimit()
+
+    def _print_test_output_header(self, test: Record, duration: float) -> None:
+        """Print common test output header: status icon, name, timing."""
+        is_success = test.state == State.SUCCESS
+        status = '✓' if is_success else '✗'
+        color_fn = green() if is_success else red()
+        flush()  # New line to separate from live display
+        flush(f'{color_fn}{status}{reset()} {test.nick} {test.name} ({duration:.2f}s)')
+
+    def _print_test_output_streams(
+        self,
+        stdout: Optional[bytes],
+        stderr: Optional[bytes],
+        stdout_label: str = 'stdout',
+        stderr_label: str = 'stderr',
+        stderr_filter: Optional[Pattern[str]] = None,
+    ) -> None:
+        """Print stdout/stderr output with consistent formatting.
+
+        Args:
+            stdout: Raw stdout bytes
+            stderr: Raw stderr bytes
+            stdout_label: Label for stdout section (default: 'stdout')
+            stderr_label: Label for stderr section (default: 'stderr')
+            stderr_filter: Optional regex pattern - lines matching are excluded
+        """
+        if stdout:
+            decoded = stdout.decode('utf-8', errors='replace')
+            lines = [ln for ln in decoded.split('\n') if ln.strip()]
+            if lines:
+                flush(f'  {cyan()}{stdout_label}{reset()} ({len(lines)} lines):')
+                for line in lines:
+                    flush(f'    {line}')
+
+        if stderr:
+            decoded = stderr.decode('utf-8', errors='replace')
+            lines = [ln for ln in decoded.split('\n') if ln.strip()]
+            if stderr_filter:
+                lines = [ln for ln in lines if not stderr_filter.search(ln)]
+            if lines:
+                flush(f'  {cyan()}{stderr_label}{reset()} ({len(lines)} lines):')
+                for line in lines:
+                    flush(f'    {line}')
+
+    def _print_debug_hints_header(self, is_timeout: bool, duration: float) -> None:
+        """Print common debug hints header."""
+        flush()
+        flush(f'  {yellow()}debug hints:{reset()}')
+        if is_timeout:
+            flush(f'    - test timed out after {duration:.1f}s')
+
+    def _run_event_loop(self, timeout: int, running: set) -> bool:
+        """Run common event loop for monitoring test completion.
+
+        Args:
+            timeout: Total timeout in seconds
+            running: Set of running tests (modified in place)
+
+        Returns:
+            True if all tests passed, False otherwise
+        """
+        success = True
+        exit_time = time.time() + timeout
+        last_display = 0.0
+
+        while running:
+            current_time = time.time()
+
+            # Check timeout first
+            if current_time >= exit_time:
+                self.display()
+                break
+
+            # Throttle display updates to once per second
+            if current_time - last_display >= 1.0:
+                self.display()
+                last_display = current_time
+
+            for test in list(running):
+                # Check per-test timeout first
+                if test.has_timed_out():
+                    running.remove(test)
+                    test.mark_timeout()
+                    test.terminate(collect=False)
+                    success = False
+                    if self._verbose or test.nick in self._debug_tests:
+                        self._print_test_output(test)
+                    continue
+
+                if not test.ready():
+                    continue
+                running.remove(test)
+                test_passed = test.result(test.success())
+                success = test_passed and success
+                if self._verbose or test.nick in self._debug_tests:
+                    self._print_test_output(test)
+
+            # If no tests are still running, exit immediately
+            if not running:
+                self.display()
+                break
+
+            time.sleep(0.1)
+
+        # Clean up any remaining running tests
+        for test in running:
+            test.mark_timeout()
+            test.terminate(collect=False)
+            success = False
+
+        return success
+
     def _extract_sent_messages(self, client_stderr: str) -> List[str]:
         """Extract BGP messages sent by client from stderr log"""
         sent = []
@@ -2014,17 +2141,6 @@ class DecodingTests(Tests):
                 test.conf['json'] = test._cleanup(decoded)
             test.files.append(filename)
 
-    def listing(self) -> None:
-        flush()
-        flush('The available tests are:')
-        flush()
-        for tests in self._iterate():
-            parts = []
-            for test in tests:
-                parts.append(f' {test.nick:2} {test.name:25}')
-            flush(''.join(parts))
-        flush()
-
     def dry(self) -> str:
         result: List[str] = []
         for test in self.selected():
@@ -2045,41 +2161,14 @@ class DecodingTests(Tests):
     def _print_test_output(self, test: 'DecodingTests.Test') -> None:
         """Print test output with timing for verbose/debug mode"""
         duration = time.time() - test.start_time if test.start_time else 0
-        is_success = test.state == State.SUCCESS
-        is_timeout = test.state == State.TIMEOUT
-        status = '✓' if is_success else '✗'
-        color_fn = green() if is_success else red()
-
-        flush()  # New line to separate from live display
-        flush(f'{color_fn}{status}{reset()} {test.nick} {test.name} ({duration:.2f}s)')
-
-        # Ensure output is collected
         test.collect()
 
-        # Show stdout
-        if test.stdout:
-            stdout = test.stdout.decode('utf-8', errors='replace')
-            lines = [ln for ln in stdout.split('\n') if ln.strip()]
-            if lines:
-                flush(f'  {cyan()}stdout{reset()} ({len(lines)} lines):')
-                for line in lines:
-                    flush(f'    {line}')
-
-        # Show stderr
-        if test.stderr:
-            stderr = test.stderr.decode('utf-8', errors='replace')
-            lines = [ln for ln in stderr.split('\n') if ln.strip()]
-            if lines:
-                flush(f'  {cyan()}stderr{reset()} ({len(lines)} lines):')
-                for line in lines:
-                    flush(f'    {line}')
+        self._print_test_output_header(test, duration)
+        self._print_test_output_streams(test.stdout, test.stderr)
 
         # Add debug hints on failure
-        if not is_success:
-            flush()
-            flush(f'  {yellow()}debug hints:{reset()}')
-            if is_timeout:
-                flush(f'    - test timed out after {duration:.1f}s')
+        if test.state != State.SUCCESS:
+            self._print_debug_hints_header(test.state == State.TIMEOUT, duration)
             flush(f'    - run single test: ./qa/bin/functional decoding {test.nick}')
             flush(f'    - decode command:  ./sbin/exabgp decode -f "{test.conf["family"]}" --{test.conf["type"]} {test.conf["packet"]}')
 
@@ -2090,102 +2179,35 @@ class DecodingTests(Tests):
         debug_tests: Optional[List[str]] = None,
         quiet: bool = False,
     ) -> bool:
-        self._start_time = time.time()
-        self._max_timeout = timeout
-        self._verbose = verbose
-        self._debug_tests = set(debug_tests) if debug_tests else set()
-        self._quiet = quiet
-        self.legend(quiet=quiet)
-        # Ensure sufficient file descriptors for tests that spawn many processes
-        check_ulimit()
+        self._setup_run(timeout, verbose, debug_tests, quiet)
         success = True
+
+        # Launch all decode tests
         for test in self.selected():
             test.running()
             self.display()
             message = test.conf['type']
             if message == 'open':
-                cmd = [
-                    Path.EXABGP,
-                    'decode',
-                    '--%s' % test.conf['type'],
-                    test.conf['packet'],
-                ]
+                cmd = [Path.EXABGP, 'decode', '--%s' % test.conf['type'], test.conf['packet']]
             elif message in ['update', 'nlri']:
-                cmd = [
-                    Path.EXABGP,
-                    'decode',
-                    '-f',
-                    test.conf['family'],
-                    '--%s' % test.conf['type'],
-                    test.conf['packet'],
-                ]
+                cmd = [Path.EXABGP, 'decode', '-f', test.conf['family'], '--%s' % test.conf['type'], test.conf['packet']]
             else:
                 raise ValueError(f'invalid message type: {message}')
             test.run(cmd, env=None)
 
+        # Early result check for fast tests
         for test in self.selected():
             self.display()
             test_passed = test.result(test.success())
             success = test_passed and success
-            # Show per-test output in verbose mode or if test is in debug list
             if self._verbose or test.nick in self._debug_tests:
                 self._print_test_output(test)
             time.sleep(0.05)
 
-        exit_time = time.time() + timeout
-        last_display = 0  # Track last display time to throttle updates
+        # Run event loop for remaining tests
         running = set(self.selected())
+        success = self._run_event_loop(timeout, running) and success
 
-        while running:
-            current_time = time.time()
-
-            # Check timeout first
-            if current_time >= exit_time:
-                # Show final display before cleanup to avoid timer overshoot
-                self.display()
-                break
-
-            # Throttle display updates to once per second
-            if current_time - last_display >= 1.0:
-                self.display()
-                last_display = current_time
-
-            for test in list(running):
-                # Check per-test timeout first
-                if test.has_timed_out():
-                    running.remove(test)
-                    test.mark_timeout()
-                    test.terminate(collect=False)  # Don't block on collect in hot loop
-                    success = False
-                    # Show per-test output in verbose mode or if test is in debug list
-                    if self._verbose or test.nick in self._debug_tests:
-                        self._print_test_output(test)
-                    continue
-
-                if not test.ready():
-                    continue
-                running.remove(test)
-                test_passed = test.result(test.success())
-                success = test_passed and success
-                # Show per-test output in verbose mode or if test is in debug list
-                if self._verbose or test.nick in self._debug_tests:
-                    self._print_test_output(test)
-
-            # If no tests are still running, exit immediately
-            if not running:
-                # Show final display before cleanup
-                self.display()
-                break
-
-            time.sleep(0.1)
-
-        # Clean up any remaining running tests without blocking
-        for test in running:
-            test.mark_timeout()
-            test.terminate(collect=False)
-            success = False
-
-        # Move to new line after final display
         if not self._quiet:
             flush()
 
@@ -2298,17 +2320,6 @@ class ParsingTests(Tests):
             test.conf['fname'] = filename
             test.files.append(filename)
 
-    def listing(self) -> None:
-        flush()
-        flush('The available tests are:')
-        flush()
-        for tests in self._iterate():
-            parts = []
-            for test in tests:
-                parts.append(f' {test.nick:2} {test.name:25}')
-            flush(''.join(parts))
-        flush()
-
     def dry(self) -> str:
         result: List[str] = []
         for test in self.selected():
@@ -2318,41 +2329,14 @@ class ParsingTests(Tests):
     def _print_test_output(self, test: 'ParsingTests.Test') -> None:
         """Print test output with timing for verbose/debug mode"""
         duration = time.time() - test.start_time if test.start_time else 0
-        is_success = test.state == State.SUCCESS
-        is_timeout = test.state == State.TIMEOUT
-        status = '✓' if is_success else '✗'
-        color_fn = green() if is_success else red()
-
-        flush()  # New line to separate from live display
-        flush(f'{color_fn}{status}{reset()} {test.nick} {test.name} ({duration:.2f}s)')
-
-        # Ensure output is collected
         test.collect()
 
-        # Show stdout
-        if test.stdout:
-            stdout = test.stdout.decode('utf-8', errors='replace')
-            lines = [ln for ln in stdout.split('\n') if ln.strip()]
-            if lines:
-                flush(f'  {cyan()}stdout{reset()} ({len(lines)} lines):')
-                for line in lines:
-                    flush(f'    {line}')
-
-        # Show stderr
-        if test.stderr:
-            stderr = test.stderr.decode('utf-8', errors='replace')
-            lines = [ln for ln in stderr.split('\n') if ln.strip()]
-            if lines:
-                flush(f'  {cyan()}stderr{reset()} ({len(lines)} lines):')
-                for line in lines:
-                    flush(f'    {line}')
+        self._print_test_output_header(test, duration)
+        self._print_test_output_streams(test.stdout, test.stderr)
 
         # Add debug hints on failure
-        if not is_success:
-            flush()
-            flush(f'  {yellow()}debug hints:{reset()}')
-            if is_timeout:
-                flush(f'    - test timed out after {duration:.1f}s')
+        if test.state != State.SUCCESS:
+            self._print_debug_hints_header(test.state == State.TIMEOUT, duration)
             flush(f'    - run single test: ./qa/bin/functional parsing {test.nick}')
             flush(f'    - validate command: ./sbin/exabgp configuration validate -nrv {test.conf["fname"]}')
 
@@ -2363,16 +2347,10 @@ class ParsingTests(Tests):
         debug_tests: Optional[List[str]] = None,
         quiet: bool = False,
     ) -> bool:
-        self._start_time = time.time()
-        self._max_timeout = timeout
-        self._verbose = verbose
-        self._debug_tests = set(debug_tests) if debug_tests else set()
-        self._quiet = quiet
-        self.legend(quiet=quiet)
-        # Ensure sufficient file descriptors for tests that spawn many processes
-        check_ulimit()
+        self._setup_run(timeout, verbose, debug_tests, quiet)
         success = True
 
+        # Launch all parsing tests
         for test in self.selected():
             test.running()
             test.run([Path.EXABGP, 'configuration', 'validate', '-nrv', test.conf['fname']], env=None)
@@ -2380,76 +2358,25 @@ class ParsingTests(Tests):
 
         time.sleep(0.02)
 
+        # Early result check for fast tests
         for test in self.selected():
             test_passed = test.result(test.success())
             success = test_passed and success
-            # Show per-test output in verbose mode or if test is in debug list
             if self._verbose or test.nick in self._debug_tests:
                 self._print_test_output(test)
             time.sleep(0.005)
 
-        exit_time = time.time() + timeout
-        last_display = 0  # Track last display time to throttle updates
+        # Run event loop for remaining tests
         running = set(self.selected())
-
-        while running:
-            current_time = time.time()
-
-            # Check timeout first
-            if current_time >= exit_time:
-                # Show final display before cleanup to avoid timer overshoot
-                self.display()
-                break
-
-            # Throttle display updates to once per second
-            if current_time - last_display >= 1.0:
-                self.display()
-                last_display = current_time
-
-            for test in list(running):
-                # Check per-test timeout first
-                if test.has_timed_out():
-                    running.remove(test)
-                    test.mark_timeout()
-                    test.terminate(collect=False)  # Don't block on collect in hot loop
-                    success = False
-                    # Show per-test output in verbose mode or if test is in debug list
-                    if self._verbose or test.nick in self._debug_tests:
-                        self._print_test_output(test)
-                    continue
-
-                if not test.ready():
-                    continue
-                running.remove(test)
-                test_passed = test.result(test.success())
-                success = test_passed and success
-                # Show per-test output in verbose mode or if test is in debug list
-                if self._verbose or test.nick in self._debug_tests:
-                    self._print_test_output(test)
-
-            # If no tests are still running, exit immediately
-            if not running:
-                # Show final display before cleanup
-                self.display()
-                break
-
-            time.sleep(0.1)
-
-        # Clean up any remaining running tests without blocking
-        for test in running:
-            test.mark_timeout()
-            test.terminate(collect=False)
-            success = False
+        success = self._run_event_loop(timeout, running) and success
 
         # Retry all failed tests individually
         self._retry_failed_tests(timeout)
 
         # Determine final success by checking if ANY tests are still failed
-        # Use registered() not selected() - selected() excludes FAIL/TIMEOUT states
         final_failures = [t for t in self.registered() if t.state in (State.FAIL, State.TIMEOUT)]
         success = len(final_failures) == 0
 
-        # Move to new line after final display
         if not self._quiet:
             flush()
 
