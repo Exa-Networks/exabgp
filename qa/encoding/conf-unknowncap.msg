@@ -1,2 +1,0 @@
-option:open:send-unknown-capability
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
