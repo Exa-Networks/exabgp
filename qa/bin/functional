@@ -279,6 +279,7 @@ class Path:
     BGP: str = os.path.join(ROOT, 'qa', 'sbin', 'bgp')
     DECODING: str = os.path.join(os.path.join(ROOT, 'qa', 'decoding'))
     ENCODING: str = os.path.join(os.path.join(ROOT, 'qa', 'encoding'))
+    API: str = os.path.join(os.path.join(ROOT, 'qa', 'api'))
 
     ALL_ETC: List[str] = glob.glob(os.path.join(ETC, '*.conf'))
     ALL_ETC.sort()
@@ -286,6 +287,8 @@ class Path:
     ALL_DECODING.sort()
     ALL_ENCODING: List[str] = glob.glob(os.path.join(ENCODING, '*.ci'))
     ALL_ENCODING.sort()
+    ALL_API: List[str] = glob.glob(os.path.join(API, '*.ci'))
+    ALL_API.sort()
 
     @staticmethod
     def etc(fname: str) -> str:
@@ -294,6 +297,10 @@ class Path:
     @staticmethod
     def ci(fname: str, ext: str) -> str:
         return os.path.abspath(os.path.join(Path.ENCODING, fname) + '.' + ext)
+
+    @staticmethod
+    def api_ci(fname: str) -> str:
+        return os.path.abspath(os.path.join(Path.API, fname) + '.ci')
 
     @classmethod
     def validate(cls) -> None:
@@ -2389,6 +2396,126 @@ class ParsingTests(Tests):
         return success
 
 
+class APIConf(TypedDict):
+    """Configuration for API tests"""
+
+    confs: List[str]  # List of config file paths
+    ci: str  # Path to .ci file
+
+
+class APITests(Tests):
+    """API tests - validate JSON responses from v6 API commands.
+
+    Unlike encoding tests (which validate BGP wire format), API tests:
+    - Start ExaBGP with a config that runs a test script
+    - The test script sends v6 API commands and validates JSON responses
+    - Success: exit code 0 AND 'SUCCESS' in output
+    """
+
+    API_PATTERN: Pattern[str] = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
+
+    class Test(Record, Exec):  # pyright: ignore[reportUnsafeMultipleInheritance]
+        """Test combining Record state with Exec process management."""
+
+        def __init__(self, nick: str, name: str) -> None:
+            Record.__init__(self, nick, name)
+            Exec.__init__(self)
+            self._check: bytes = b'SUCCESS'
+
+        @property
+        def api_conf(self) -> 'APIConf':
+            """Typed access to API configuration"""
+            return self.conf  # type: ignore[return-value]
+
+        def success(self) -> bool:
+            self.collect()
+            if self.code == 0:
+                if self._check in self.stdout or self._check in self.stderr:
+                    return True
+            return False
+
+    def __init__(self) -> None:
+        super().__init__(self.Test)
+
+        for filename in Path.ALL_API:
+            name = os.path.basename(filename)[:-3]
+            test = self.new(name)
+            with open(filename, 'r') as reader:
+                content = reader.readline()
+            test.conf['confs'] = [Path.etc(_) for _ in content.split()]
+            test.conf['ci'] = Path.api_ci(name)
+            test.files.extend(test.conf['confs'])
+            test.files.append(test.conf['ci'])
+
+            # Find .run files referenced in configs
+            for f in test.conf['confs']:
+                with open(f) as reader:
+                    for line in reader:
+                        found = self.API_PATTERN.match(line)
+                        if not found:
+                            continue
+                        run_name = found.group(1)
+                        if not run_name.startswith('/'):
+                            run_name = Path.etc(run_name)
+                        if run_name not in test.files:
+                            test.files.append(run_name)
+
+    def dry(self) -> str:
+        result: List[str] = []
+        for test in self.selected():
+            confs = ' '.join(test.conf['confs'])
+            result.append(f'> env exabgp_api_version=6 {Path.EXABGP} -d -p {confs}')
+        return '\n'.join(result)
+
+    def _print_test_output(self, test: 'APITests.Test') -> None:
+        """Print test output with timing for verbose/debug mode"""
+        duration = time.time() - test.start_time if test.start_time else 0
+        test.collect()
+
+        self._print_test_output_header(test, duration)
+        self._print_test_output_streams(test.stdout, test.stderr)
+
+        # Add debug hints on failure
+        if test.state != State.SUCCESS:
+            self._print_debug_hints_header(test.state == State.TIMEOUT, duration)
+            confs = ' '.join(test.conf['confs'])
+            flush(f'    - run single test: ./qa/bin/functional api {test.nick}')
+            flush(f'    - run manually:    env exabgp_api_version=6 ./sbin/exabgp -d -p {confs}')
+
+    def run_selected(
+        self,
+        timeout: int,
+        verbose: bool = False,
+        debug_tests: Optional[List[str]] = None,
+        quiet: bool = False,
+    ) -> bool:
+        self._setup_run(timeout, verbose, debug_tests, quiet)
+        success = True
+
+        # Launch all API tests
+        for test in self.selected():
+            test.running()
+            confs = test.conf['confs']
+            # Use v6 API (JSON-only) for API tests
+            env = os.environ.copy()
+            env['exabgp_log_enable'] = 'false'
+            env['exabgp_api_version'] = '6'  # v6 = JSON-only API
+            test.run([Path.EXABGP, '-d', '-p'] + confs, env=env)
+            time.sleep(0.01)
+
+        time.sleep(0.1)
+
+        # Run event loop for test completion
+        running = set(self.selected())
+        success = self._run_event_loop(timeout, running) and success
+
+        if not self._quiet:
+            flush()
+
+        self.summary(server=None, client=None, num_tests_selected=None, quiet=quiet)
+        return success
+
+
 def run_stress_test(
     tests: 'EncodingTests',
     test_nick: str,
@@ -2612,7 +2739,7 @@ def add_test(
             success_exit = tests.run_selected(
                 parsed.timeout, save_dir=save_dir, verbose=verbose, debug_tests=debug_tests, quiet=quiet
             )
-        elif isinstance(tests, (DecodingTests, ParsingTests)):
+        elif isinstance(tests, (DecodingTests, ParsingTests, APITests)):
             success_exit = tests.run_selected(
                 parsed.timeout, verbose=verbose, debug_tests=debug_tests, quiet=quiet
             )
@@ -2631,6 +2758,7 @@ if __name__ == '__main__':
     decoding = DecodingTests()
     encoding = EncodingTests()
     parsing = ParsingTests()
+    api = APITests()
 
     parser = argparse.ArgumentParser(description='The BGP swiss army knife of networking functional testing tool')
     subparser = parser.add_subparsers()
@@ -2662,6 +2790,7 @@ if __name__ == '__main__':
         ],
     )
     add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit', 'verbose', 'debug', 'quiet'])
+    add_test(subparser, 'api', api, ['list', 'short_list', 'dry', 'edit', 'timeout', 'verbose', 'debug', 'quiet'])
 
     parsed = parser.parse_args()
     if vars(parsed):

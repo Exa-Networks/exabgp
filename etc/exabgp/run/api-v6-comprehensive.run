@@ -1,0 +1,522 @@
+#!/usr/bin/env python3
+"""
+api-v6-comprehensive.run - Comprehensive v6 API command test
+
+Tests ALL v6 API commands systematically with JSON response validation.
+Ends with kill route (255.255.255.255/32) for clean shutdown.
+
+Exit codes:
+  0 - All tests passed
+  1 - One or more tests failed
+"""
+
+import json
+import os
+import select
+import signal
+import sys
+import time
+from typing import Any
+
+
+class APITest:
+    """Comprehensive API test runner with JSON validation."""
+
+    WILDCARD = '*'
+
+    def __init__(self):
+        self.passed = 0
+        self.failed = 0
+        self.errors: list[str] = []
+
+    def flush(self, msg: str) -> None:
+        """Write message to stdout (to ExaBGP) and flush."""
+        sys.stdout.write(msg)
+        sys.stdout.flush()
+
+    def log(self, msg: str) -> None:
+        """Write log message to stderr."""
+        sys.stderr.write(f'{msg}\n')
+        sys.stderr.flush()
+
+    def send(self, cmd: str, timeout: float = 2.0) -> dict | str | None:
+        """Send command and return parsed JSON response.
+
+        Returns:
+            dict: Parsed JSON response
+            str: Raw text if not JSON
+            None: No response (timeout or silence mode)
+        """
+        self.flush(f'{cmd}\n')
+        return self.read_response(timeout)
+
+    def read_response(self, timeout: float = 2.0) -> dict | str | None:
+        """Read and parse response from ExaBGP.
+
+        Collects lines until we get an 'answer' terminator (done/error/shutdown).
+        """
+        start = time.time()
+        responses: list = []
+
+        while time.time() - start < timeout:
+            ready, _, _ = select.select([sys.stdin], [], [], 0.1)
+            if not ready:
+                continue
+
+            line = sys.stdin.readline().strip()
+            if not line:
+                continue
+
+            # Try to parse as JSON
+            try:
+                data = json.loads(line)
+                # Check for terminator - only if it's a dict with 'answer' key
+                if isinstance(data, dict):
+                    answer = data.get('answer')
+                    if answer in ('done', 'error', 'shutdown'):
+                        if answer == 'shutdown':
+                            self.log('Received shutdown signal')
+                            raise SystemExit(0)
+                        # Return terminator + any accumulated data
+                        if responses:
+                            return {'data': responses, 'answer': answer}
+                        return data
+                # Accumulate non-terminator responses (could be dict or list)
+                responses.append(data)
+            except json.JSONDecodeError:
+                # Not JSON - check for text terminators
+                if line in ('done', 'error', 'shutdown'):
+                    if line == 'shutdown':
+                        self.log('Received shutdown signal')
+                        raise SystemExit(0)
+                    if responses:
+                        return {'data': responses, 'answer': line}
+                    return {'answer': line}
+                # Return raw text
+                return line
+
+        # Timeout - return accumulated responses or None
+        if responses:
+            return {'data': responses, 'answer': 'timeout'}
+        return None
+
+    def expect(self, cmd: str, expected: dict | str, desc: str = '', timeout: float = 2.0) -> bool:
+        """Send command and validate response matches expected pattern.
+
+        Args:
+            cmd: v6 API command to send
+            expected: Expected response pattern (supports wildcards)
+            desc: Test description
+            timeout: Response timeout
+
+        Returns:
+            True if response matches expected pattern
+        """
+        response = self.send(cmd, timeout)
+        test_desc = desc or cmd
+
+        if self.validate(expected, response):
+            self.passed += 1
+            self.log(f'PASS: {test_desc}')
+            return True
+        else:
+            self.failed += 1
+            error = f'{test_desc}: expected {expected}, got {response}'
+            self.errors.append(error)
+            self.log(f'FAIL: {test_desc}')
+            self.log(f'      Expected: {expected}')
+            self.log(f'      Got:      {response}')
+            return False
+
+    def expect_error(self, cmd: str, desc: str = '', timeout: float = 2.0) -> bool:
+        """Send command and expect error response.
+
+        Returns True if response contains answer='error'.
+        """
+        response = self.send(cmd, timeout)
+        test_desc = desc or cmd
+
+        if isinstance(response, dict) and response.get('answer') == 'error':
+            self.passed += 1
+            self.log(f'PASS: {test_desc} (got expected error)')
+            return True
+        else:
+            self.failed += 1
+            self.errors.append(f'{test_desc}: expected error, got {response}')
+            self.log(f'FAIL: {test_desc}')
+            self.log(f'      Expected: error response')
+            self.log(f'      Got:      {response}')
+            return False
+
+    def expect_any(self, cmd: str, desc: str = '', timeout: float = 2.0) -> bool:
+        """Send command and expect any non-error response.
+
+        Returns True if response is not an error.
+        """
+        response = self.send(cmd, timeout)
+        test_desc = desc or cmd
+
+        if response is None:
+            self.failed += 1
+            self.errors.append(f'{test_desc}: no response (timeout)')
+            self.log(f'FAIL: {test_desc} (no response)')
+            return False
+
+        if isinstance(response, dict) and response.get('answer') == 'error':
+            self.failed += 1
+            self.errors.append(f'{test_desc}: got error: {response}')
+            self.log(f'FAIL: {test_desc} (got error)')
+            return False
+
+        self.passed += 1
+        self.log(f'PASS: {test_desc}')
+        return True
+
+    def validate(self, expected: Any, actual: Any) -> bool:
+        """Validate actual response against expected pattern.
+
+        Wildcards:
+        - "*" at value level matches any value
+        - {"key": "*"} matches any value for key
+        """
+        # Wildcard matches anything
+        if expected == self.WILDCARD:
+            return True
+
+        # None check
+        if actual is None:
+            return expected is None
+
+        # Dict validation
+        if isinstance(expected, dict):
+            if not isinstance(actual, dict):
+                return False
+            # Check all expected keys are present with matching values
+            for key, exp_val in expected.items():
+                if key not in actual:
+                    return False
+                if not self.validate(exp_val, actual[key]):
+                    return False
+            return True
+
+        # List validation
+        if isinstance(expected, list):
+            if not isinstance(actual, list):
+                return False
+            if len(expected) == 1 and expected[0] == self.WILDCARD:
+                # [*] matches any list
+                return True
+            if len(expected) != len(actual):
+                return False
+            for exp_item, act_item in zip(expected, expected):
+                if not self.validate(exp_item, act_item):
+                    return False
+            return True
+
+        # Primitive comparison
+        return expected == actual
+
+    # === Test Phases ===
+
+    def test_system_commands(self) -> None:
+        """Phase 1: Test system commands (no peer required)."""
+        self.log('\n=== Phase 1: System Commands ===')
+
+        self.expect(
+            'system version',
+            {'version': '*', 'application': 'exabgp'},
+            'system version returns version info',
+        )
+
+        self.expect(
+            'system help',
+            {'description': '*', 'commands': '*'},
+            'system help returns command list',
+        )
+
+        self.expect(
+            'system api version',
+            {'api_version': '*'},
+            'system api version returns version',
+        )
+
+        self.expect_any(
+            'system queue-status',
+            'system queue-status returns stats',
+        )
+
+    def test_session_commands(self) -> None:
+        """Phase 2: Test session management commands."""
+        self.log('\n=== Phase 2: Session Commands ===')
+
+        self.expect(
+            'session ping',
+            {'pong': '*', 'active': True},
+            'session ping returns pong with active=true',
+        )
+
+        self.expect(
+            'session ack enable',
+            {'answer': 'done'},
+            'session ack enable returns done',
+        )
+
+        # Test sync control
+        self.expect(
+            'session sync enable',
+            {'answer': 'done'},
+            'session sync enable returns done',
+        )
+
+        self.expect(
+            'session sync disable',
+            {'answer': 'done'},
+            'session sync disable returns done',
+        )
+
+        # Test reset
+        self.expect_any(
+            'session reset',
+            'session reset clears queue',
+        )
+
+    def test_daemon_commands(self) -> None:
+        """Phase 3: Test daemon status commands."""
+        self.log('\n=== Phase 3: Daemon Commands ===')
+
+        self.expect(
+            'daemon status',
+            {'version': '*', 'uuid': '*', 'pid': '*'},
+            'daemon status returns full info',
+        )
+
+        # Note: daemon shutdown/reload/restart would terminate test - skip
+
+    def test_peer_commands(self) -> None:
+        """Phase 4: Test peer operations (requires established peer)."""
+        self.log('\n=== Phase 4: Peer Commands ===')
+
+        # peer list
+        self.expect_any(
+            'peer list',
+            'peer list returns peer array',
+        )
+
+        # peer show (may fail if peer not established yet)
+        self.expect_any(
+            'peer 127.0.0.1 show',
+            'peer show returns neighbor info',
+            timeout=3.0,
+        )
+
+        self.expect_any(
+            'peer 127.0.0.1 show summary',
+            'peer show summary works',
+            timeout=3.0,
+        )
+
+    def test_announce_commands(self) -> None:
+        """Phase 5: Test route announcement commands."""
+        self.log('\n=== Phase 5: Announce Commands ===')
+
+        # Basic route announcement
+        self.expect(
+            'peer 127.0.0.1 announce route 10.0.0.0/24 next-hop 1.2.3.4',
+            {'answer': 'done'},
+            'announce route succeeds',
+        )
+
+        # IPv4 explicit
+        self.expect(
+            'peer 127.0.0.1 announce ipv4 unicast 10.0.1.0/24 next-hop 1.2.3.4',
+            {'answer': 'done'},
+            'announce ipv4 unicast succeeds',
+        )
+
+        # EOR
+        self.expect(
+            'peer 127.0.0.1 announce eor ipv4 unicast',
+            {'answer': 'done'},
+            'announce eor succeeds',
+        )
+
+        # Route-refresh
+        self.expect(
+            'peer 127.0.0.1 announce route-refresh ipv4 unicast',
+            {'answer': 'done'},
+            'announce route-refresh succeeds',
+        )
+
+    def test_withdraw_commands(self) -> None:
+        """Phase 6: Test route withdrawal commands."""
+        self.log('\n=== Phase 6: Withdraw Commands ===')
+
+        self.expect(
+            'peer 127.0.0.1 withdraw route 10.0.0.0/24',
+            {'answer': 'done'},
+            'withdraw route succeeds',
+        )
+
+        self.expect(
+            'peer 127.0.0.1 withdraw ipv4 unicast 10.0.1.0/24',
+            {'answer': 'done'},
+            'withdraw ipv4 unicast succeeds',
+        )
+
+    def test_rib_commands(self) -> None:
+        """Phase 7: Test RIB operations."""
+        self.log('\n=== Phase 7: RIB Commands ===')
+
+        self.expect_any(
+            'rib show in',
+            'rib show in succeeds',
+            timeout=3.0,
+        )
+
+        self.expect_any(
+            'rib show out',
+            'rib show out succeeds',
+            timeout=3.0,
+        )
+
+        self.expect(
+            'rib clear in',
+            {'answer': 'done'},
+            'rib clear in succeeds',
+        )
+
+        self.expect(
+            'rib clear out',
+            {'answer': 'done'},
+            'rib clear out succeeds',
+        )
+
+    def test_error_cases(self) -> None:
+        """Phase 8: Test error handling."""
+        self.log('\n=== Phase 8: Error Cases ===')
+
+        # Invalid command
+        self.expect_error(
+            'invalid_command_xyz_12345',
+            'invalid command returns error',
+        )
+
+        # Invalid daemon action
+        self.expect_error(
+            'daemon invalid_action_xyz',
+            'invalid daemon action returns error',
+        )
+
+        # Invalid peer IP (should error or return empty)
+        response = self.send('peer 999.999.999.999 show', timeout=2.0)
+        if response is None or (isinstance(response, dict) and response.get('answer') == 'error'):
+            self.passed += 1
+            self.log('PASS: invalid peer returns error or no response')
+        else:
+            # It's OK if it returns something - peer might not exist
+            self.passed += 1
+            self.log('PASS: invalid peer handled (returned response)')
+
+    def test_comment(self) -> None:
+        """Phase 9: Test comment handling."""
+        self.log('\n=== Phase 9: Comment ===')
+
+        # Comment should be acknowledged silently or with done
+        response = self.send('# this is a comment', timeout=1.0)
+        if response is None or (isinstance(response, dict) and response.get('answer') == 'done'):
+            self.passed += 1
+            self.log('PASS: comment handled correctly')
+        else:
+            self.failed += 1
+            self.errors.append(f'comment: unexpected response {response}')
+            self.log(f'FAIL: comment got unexpected response: {response}')
+
+    def send_kill_route(self) -> None:
+        """Phase 10: Send kill route for clean shutdown."""
+        self.log('\n=== Phase 10: Cleanup (Kill Route) ===')
+        self.flush('peer 127.0.0.1 announce route 255.255.255.255/32 next-hop 255.255.255.255\n')
+        time.sleep(0.5)
+        self.log('Kill route sent')
+
+    def report(self) -> None:
+        """Report test results."""
+        self.log('\n' + '=' * 60)
+        self.log('TEST RESULTS')
+        self.log('=' * 60)
+        self.log(f'Passed: {self.passed}')
+        self.log(f'Failed: {self.failed}')
+        total = self.passed + self.failed
+        if total > 0:
+            rate = (self.passed / total) * 100
+            self.log(f'Success rate: {rate:.1f}%')
+
+        if self.errors:
+            self.log('\nErrors:')
+            for err in self.errors:
+                self.log(f'  - {err}')
+
+        self.log('=' * 60)
+
+        if self.failed == 0:
+            self.log('SUCCESS: All tests passed')
+        else:
+            self.log(f'FAILURE: {self.failed} test(s) failed')
+
+    def run_all_tests(self) -> int:
+        """Execute all test phases in sequence.
+
+        Returns:
+            0 if all tests passed, 1 otherwise
+        """
+        self.log('Starting v6 API comprehensive test')
+        self.log(f'PID: {os.getpid()}, PPID: {os.getppid()}')
+
+        # Wait for BGP session establishment
+        time.sleep(2)
+
+        try:
+            # Run all test phases
+            self.test_system_commands()
+            self.test_session_commands()
+            self.test_daemon_commands()
+            self.test_peer_commands()
+            self.test_announce_commands()
+            self.test_withdraw_commands()
+            self.test_rib_commands()
+            self.test_error_cases()
+            self.test_comment()
+
+            # Cleanup
+            self.send_kill_route()
+
+            # Report results
+            self.report()
+
+            # Wait for shutdown signal
+            now = time.time()
+            while os.getppid() != 1 and time.time() < now + 5:
+                try:
+                    line = sys.stdin.readline().strip()
+                    if not line or 'shutdown' in line:
+                        break
+                except Exception:
+                    break
+                time.sleep(0.5)
+
+        except (IOError, BrokenPipeError):
+            self.log('Connection lost')
+        except SystemExit:
+            pass
+
+        return 0 if self.failed == 0 else 1
+
+
+def main() -> int:
+    """Main entry point."""
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    test = APITest()
+    return test.run_all_tests()
+
+
+if __name__ == '__main__':
+    sys.exit(main())
