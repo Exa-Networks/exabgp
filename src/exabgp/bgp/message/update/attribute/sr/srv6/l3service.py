@@ -9,6 +9,7 @@ from __future__ import annotations
 from struct import pack, unpack
 from typing import Callable, ClassVar, Type, TypeVar
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceSubTlv
 
@@ -55,11 +56,20 @@ class Srv6L3Service:
     def unpack_attribute(cls, data: bytes, length: int) -> Srv6L3Service:
         subtlvs: list[GenericSrv6ServiceSubTlv] = []
 
-        # First byte is eserved
+        # Need at least 1 byte for reserved field
+        if len(data) < 1:
+            raise Notify(3, 1, 'SRv6 L3 Service TLV too short: need at least 1 byte')
+
+        # First byte is reserved
         data = data[1:]
         while data:
+            # Sub-TLV header: type(1) + length(2) = 3 bytes minimum
+            if len(data) < 3:
+                raise Notify(3, 1, f'SRv6 L3 Service Sub-TLV header truncated: need 3 bytes, got {len(data)}')
             code: int = data[0]
             length = unpack('!H', data[1:3])[0]
+            if len(data) < length + 3:
+                raise Notify(3, 1, f'SRv6 L3 Service Sub-TLV truncated: need {length + 3} bytes, got {len(data)}')
             if code in cls.registered_subtlvs:
                 subtlv: GenericSrv6ServiceSubTlv = cls.registered_subtlvs[code].unpack_attribute(
                     data[3 : length + 3], length
