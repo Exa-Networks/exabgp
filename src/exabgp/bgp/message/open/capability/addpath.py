@@ -14,6 +14,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log, lazymsg
 
 # ====================================================================== AddPath
@@ -72,7 +73,10 @@ class AddPath(Capability, dict[tuple[AFI, SAFI], int]):
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:
             log.debug(lazymsg('capability.addpath.duplicate action=merge'), 'parser')
+        # Each ADD-PATH entry is 4 bytes: AFI(2) + SAFI(1) + send/receive(1)
         while data:
+            if len(data) < 4:
+                raise Notify(2, 0, f'ADD-PATH capability truncated: need 4 bytes per entry, got {len(data)}')
             afi = AFI.unpack_afi(data[:2])
             safi = SAFI.unpack_safi(data[2:3])
             sr = data[3]

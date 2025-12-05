@@ -15,6 +15,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log, lazymsg
 
 # ================================================================ NextHop
@@ -58,7 +59,10 @@ class NextHop(Capability, list[tuple[AFI, SAFI, AFI]]):
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:
             log.debug(lazymsg('capability.nexthop.duplicate action=merge'), 'parser')
+        # Each NextHop entry is 6 bytes: AFI(2) + reserved(1) + SAFI(1) + NextHop AFI(2)
         while data:
+            if len(data) < 6:
+                raise Notify(2, 0, f'NextHop capability truncated: need 6 bytes per entry, got {len(data)}')
             afi = AFI.unpack_afi(data[:2])
             safi = SAFI.unpack_safi(data[3:4])
             nexthop = AFI.unpack_afi(data[4:6])
