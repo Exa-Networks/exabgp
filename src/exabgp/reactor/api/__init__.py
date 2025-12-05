@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Callable, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -23,8 +23,11 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message import Operational
 from exabgp.rib.change import Change
 
+from exabgp.environment import getenv
 from exabgp.logger import log, lazymsg
 from exabgp.reactor.api.command import Command
+from exabgp.reactor.api.transform import v4_to_v6, is_v4_command
+from exabgp.reactor.api.dispatch import dispatch, UnknownCommand
 from exabgp.configuration.configuration import Configuration
 
 # API command parsing constants
@@ -55,6 +58,28 @@ class API(Command):
         # to not have to set the encoding on each command
         if 'json' in command.split(' '):
             use_json = True
+
+        # API version handling
+        api_version = getenv().api.version
+
+        if api_version == 4:
+            # v4 mode: transform v4 commands to v6 format before dispatch
+            try:
+                transformed = v4_to_v6(command)
+                if transformed != command:
+                    log.debug(lazymsg('api.transform v4={v4} v6={v6}', v4=command, v6=transformed), 'api')
+                command = transformed
+            except ValueError as e:
+                log.warning(lazymsg('api.transform.error command={cmd} error={e}', cmd=command, e=str(e)), 'api')
+                reactor.processes.answer_error(service, f'invalid command: {e}')
+                return False
+        else:
+            # v6 mode: reject v4-format commands
+            if is_v4_command(command):
+                log.warning(lazymsg('api.v4.rejected command={cmd}', cmd=command), 'api')
+                reactor.processes.answer_error(service, 'v4 command rejected in v6 mode')
+                return False
+
         return self.response(reactor, service, command, use_json)
 
     async def process_async(self, reactor: 'Reactor', service: str, command: str) -> bool:
@@ -65,17 +90,38 @@ class API(Command):
         use_json = False
         if 'json' in command.split(' '):
             use_json = True
+
+        # API version handling
+        api_version = getenv().api.version
+
+        if api_version == 4:
+            # v4 mode: transform v4 commands to v6 format before dispatch
+            try:
+                transformed = v4_to_v6(command)
+                if transformed != command:
+                    log.debug(lazymsg('api.transform v4={v4} v6={v6}', v4=command, v6=transformed), 'api')
+                command = transformed
+            except ValueError as e:
+                log.warning(lazymsg('api.transform.error command={cmd} error={e}', cmd=command, e=str(e)), 'api')
+                await reactor.processes.answer_error_async(service, f'invalid command: {e}')
+                return False
+        else:
+            # v6 mode: reject v4-format commands
+            if is_v4_command(command):
+                log.warning(lazymsg('api.v4.rejected command={cmd}', cmd=command), 'api')
+                await reactor.processes.answer_error_async(service, 'v4 command rejected in v6 mode')
+                return False
+
         return await self.response_async(reactor, service, command, use_json)
 
     def response(self, reactor: 'Reactor', service: str, command: str, use_json: bool) -> bool:
-        api = 'json' if use_json else 'text'
-        for registered in self.functions:
-            if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
-                handler = cast(Callable[..., bool], self.callback[api][registered])
-                return handler(self, reactor, service, command, use_json)
-        reactor.processes.answer_error(service)
-        log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
-        return False
+        try:
+            handler, _ = dispatch(command)
+            return handler(self, reactor, service, command, use_json)
+        except UnknownCommand:
+            reactor.processes.answer_error(service)
+            log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
+            return False
 
     async def response_async(self, reactor: 'Reactor', service: str, command: str, use_json: bool) -> bool:
         """Async version of response() - handles API commands without blocking
@@ -84,22 +130,20 @@ class API(Command):
         The write() method handles EAGAIN gracefully in async mode.
         After calling the handler, flush any queued writes immediately.
         """
-        api = 'json' if use_json else 'text'
-        for registered in self.functions:
-            if registered == command or command.endswith(' ' + registered) or registered + ' ' in command:
-                handler = cast(Callable[..., bool], self.callback[api][registered])
-                # Call sync handler - with non-blocking stdin, write() won't block
-                result = handler(self, reactor, service, command, use_json)
-                # Flush any queued writes immediately (for commands like enable-ack/disable-ack
-                # that call answer_done() without scheduling async callbacks)
-                await reactor.processes.flush_write_queue_async()
-                return bool(result)
-        # Error case
-        reactor.processes.answer_error(service)
-        log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
-        # Flush error response
-        await reactor.processes.flush_write_queue_async()
-        return False
+        try:
+            handler, _ = dispatch(command)
+            # Call sync handler - with non-blocking stdin, write() won't block
+            result = handler(self, reactor, service, command, use_json)
+            # Flush any queued writes immediately (for commands like enable-ack/disable-ack
+            # that call answer_done() without scheduling async callbacks)
+            await reactor.processes.flush_write_queue_async()
+            return bool(result)
+        except UnknownCommand:
+            reactor.processes.answer_error(service)
+            log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
+            # Flush error response
+            await reactor.processes.flush_write_queue_async()
+            return False
 
     def api_route(self, command: str) -> list[Change]:
         action, line = command.split(' ', 1)

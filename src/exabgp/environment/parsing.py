@@ -60,6 +60,16 @@ def api(_: str) -> str:
     return encoder
 
 
+def api_version(_: str) -> int:
+    try:
+        version = int(_)
+    except ValueError:
+        raise TypeError(f'invalid API version: {_}') from None
+    if version not in (4, 6):
+        raise TypeError(f'API version must be 4 or 6, got {version}')
+    return version
+
+
 def methods(_: str) -> list[str]:
     return _.upper().split()
 
