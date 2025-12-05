@@ -165,6 +165,7 @@ def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> 
     Supports:
     - * (all peers)
     - Single IP address
+    - Extended: IP key value key value... (e.g., 127.0.0.1 local-as 1 peer-as 1)
     - Bracket syntax: [ip key value, ip2]
 
     Args:
@@ -187,8 +188,24 @@ def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> 
     if first_token == '[':
         return _parse_bracket_selector(tokeniser, reactor, service)
 
-    # Single IP address
-    return match_neighbors(reactor.peers(service), [[f'neighbor {first_token}']])
+    # IP address with optional key-value pairs: IP [key value]...
+    definition: list[str] = [f'neighbor {first_token}']
+
+    # Consume any following key-value pairs
+    while True:
+        peeked = tokeniser.peek()
+        if not peeked or peeked not in SELECTOR_KEYS:
+            break
+        # Consume key
+        key = tokeniser()
+        # Consume value
+        value = tokeniser()
+        if value:
+            definition.append(f'{key} {value}')
+        else:
+            break
+
+    return match_neighbors(reactor.peers(service), [definition])
 
 
 def _parse_bracket_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> list[str]:
