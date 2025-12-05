@@ -78,6 +78,23 @@ class Tokeniser:
             return True
         return False
 
+    def remaining_string(self) -> str:
+        """Get remaining tokens as the original command substring.
+
+        Uses tokeniser.consumed to know how many words were consumed
+        during dispatch, then extracts the remaining portion of
+        the original command string.
+
+        Args:
+            tokeniser: Tokeniser with consumed count
+            original: Original command string
+
+        Returns:
+            Remaining portion of original command after consumed words
+        """
+
+        return ' '.join([_ for _ in self.next] + [_ for _ in self.generator])
+
 
 class Parser:
     @staticmethod
