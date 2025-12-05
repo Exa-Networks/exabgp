@@ -71,7 +71,9 @@ DEFAULT_TIMES: dict[str, int] = {
     'no-neighbor': 5,
     'encode-decode': 3,
     'decoding': 10,
-    'encoding': 90,
+    'encoding': 45,
+    'api': 90,
+    'cli': 10,
     'type-ignore': 1,
 }
 
@@ -146,6 +148,8 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     'encode-decode': './qa/scripts/test_encode_decode.py',
     'decoding': './qa/bin/functional decoding',
     'encoding': ['killall -9 python 2>/dev/null; sleep 0.5', './qa/bin/functional encoding --quiet'],
+    'api': './qa/bin/functional api --quiet',
+    'cli': './qa/bin/functional cli --quiet',
     'type-ignore': './qa/bin/check_type_ignores',
 }
 
@@ -158,6 +162,8 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'encode-decode': 'Encode/decode CLI test',
     'decoding': 'Functional decoding tests',
     'encoding': 'Functional encoding tests',
+    'api': 'Functional API tests',
+    'cli': 'Functional CLI tests',
     'type-ignore': 'Type ignore regression check',
 }
 
@@ -171,6 +177,8 @@ TEST_ORDER = [
     'encode-decode',
     'decoding',
     'encoding',
+    'cli',
+    'api',
     'type-ignore',
 ]
 
@@ -200,8 +208,8 @@ def run_test(name: str, verbose: bool = False) -> tuple[bool, str, str]:
             print(f'{Colors.DIM}  $ {cmd}{Colors.RESET}')
         returncode, stdout, stderr = run_command(cmd)
 
-    # Special case: encoding needs 100% pass rate check
-    if name == 'encoding' and returncode == 0:
+    # Special case: functional tests need 100% pass rate check
+    if name in ('encoding', 'api', 'cli') and returncode == 0:
         pass_rate_match = re.search(r'100(?:\.\d+)?%', stdout)
         if not pass_rate_match:
             return False, stdout, stderr
