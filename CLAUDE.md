@@ -42,10 +42,10 @@ This single file contains ALL core rules:
 # 1. Git state check
 git status && git diff && git diff --staged
 
-# 2. Backport review - MANDATORY AT SESSION START IF THE .claude/BACKPORT.md is older than a week
-LAST_HASH=$(grep "Last reviewed commit" .claude/BACKPORT.md | awk '{print $NF}')
-echo "=== Commits since last backport review ($LAST_HASH) ==="
-git log $LAST_HASH..HEAD --oneline
+# 2. Backport review - DISABLED (codebase diverged too much from 5.0)
+# LAST_HASH=$(grep "Last reviewed commit" .claude/BACKPORT.md | awk '{print $NF}')
+# echo "=== Commits since last backport review ($LAST_HASH) ==="
+# git log $LAST_HASH..HEAD --oneline
 
 # 3. Plan state check
 ls -la plan/
@@ -64,14 +64,7 @@ Question 1 (if modified files found):
     - label: "Discard changes", description: "Reset these files to HEAD"
     - label: "Review first", description: "Show me the diff before deciding"
 
-Question 2 (if new commits since backport review):
-  header: "Backport review"
-  question: "N commits since last backport review. Update reviewed hash?"
-  options:
-    - label: "Yes, update", description: "All commits are typing/refactoring/docs, no bug fixes"
-    - label: "Review commits", description: "Show me the commits to check for bug fixes"
-
-Question 3 (if plan files exist):
+Question 2 (if plan files exist):
   header: "Active plans"
   question: "Active plans found: [list with status]. Which plan are we working on?"
   options:
@@ -83,13 +76,14 @@ Question 3 (if plan files exist):
 - [ ] Can I state the emoji rule? (Start every line with emoji)
 - [ ] Can I state the verification rule? (Paste command output before claiming)
 - [ ] Can I state the git rule? (Fresh git status before operations)
-- [ ] Did I RUN the backport check above? (Not just read about it)
 - [ ] Did I RUN the plan state check above? (Not just read about it)
 - [ ] Will I APPLY these to my next response? (Not just "know" them)
 
 **THEN complete:** `.claude/PRE_FLIGHT_CHECKLIST.md` before starting work.
 
+<!-- DISABLED: Backport check - codebase diverged too much from 5.0
 **🐛 BACKPORT CHECK:** After fixing ANY bug, check `.claude/BACKPORT.md` and add entry if the fix applies to stable branches (5.0). Ask user if unsure whether a fix needs backporting.
+-->
 
 **⚠️ BEFORE CREATING ANY DOCUMENTATION:** Read `.claude/DOCUMENTATION_PLACEMENT_GUIDE.md` to know where to put it.
 
