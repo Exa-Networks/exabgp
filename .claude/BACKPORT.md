@@ -30,6 +30,13 @@ Bug fixes that need backporting to stable branches.
 | 2025-11 | (pending) | check.py ADD_PATH bug - used all known families instead of neighbor's configured addpath families | 5.0 | 🔴 Pending |
 | 2025-11 | (pending) | message.py register() - checked `klass.TYPE` (bytes) but dict uses `klass.ID` (int), duplicate registration check broken | 5.0 | 🔴 Pending |
 | 2025-12 | (pending) | processes.py write() - sync mode busy-loop deadlock on full pipe buffer, partial writes not tracked | 5.0 | 🔴 Pending |
+| 2025-12 | 95e5bc27 | Runtime validation - OPEN/UPDATE/Capabilities.unpack crash on truncated data | 5.0 | 🔴 Pending |
+| 2025-12 | 6c9778f4 | Runtime validation - Capability parsers crash on truncated data | 5.0 | 🔴 Pending |
+| 2025-12 | cb23fb19 | Runtime validation - VPLS/FlowSpec NLRI crash on truncated data | 5.0 | 🔴 Pending |
+| 2025-12 | 01415df7 | Runtime validation - EVPN/MUP/MVPN NLRI crash on truncated data | 5.0 | 🔴 Pending |
+| 2025-12 | 0f9e13a5 | Runtime validation - AFI/MPRNLRI/MPURNLRI crash on truncated data | 5.0 | 🔴 Pending |
+| 2025-12 | 7a906cae | Runtime validation - SR Prefix-SID TLV crash on truncated data | 5.0 | 🔴 Pending |
+| 2025-12 | 4bdc6501 | Runtime validation - SRv6 service TLV crash on truncated data | 5.0 | 🔴 Pending |
 
 ---
 

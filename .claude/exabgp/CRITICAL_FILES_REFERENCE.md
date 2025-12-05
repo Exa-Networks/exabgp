@@ -52,14 +52,15 @@ The 20% of files you'll modify 80% of the time - quick navigation guide.
 ### Adding API Command
 
 **Must modify:**
-1. `reactor/api/command/{category}.py` - Add @Command.register function
-2. `reactor/api/command/__init__.py` - Import category (if new)
-3. `reactor/api/command/registry.py` - Add metadata (optional)
+1. `reactor/api/command/{category}.py` - Add handler function
+2. `reactor/api/dispatch/v6.py` - Add to dispatch tree
+3. `reactor/api/dispatch/v4.py` - Add v4 translation (if supporting v4)
 4. `tests/unit/reactor/api/test_command_{name}.py` - Add tests
 
 **Example files to reference:**
 - `reactor/api/command/neighbor.py` - Show commands
 - `reactor/api/command/announce.py` - Complex parsing
+- `reactor/api/dispatch/v6.py` - Tree-based dispatch
 
 ### Modifying Config Syntax
 
@@ -84,7 +85,7 @@ The 20% of files you'll modify 80% of the time - quick navigation guide.
 | `protocol/family.py` add AFI/SAFI | NLRI registration, config parser | New family support |
 | `bgp/message/message.py` Message type | FSM validation, peer.py handling | Protocol correctness |
 | `bgp/fsm.py` states/transitions | reactor/peer/peer.py state handling | FSM consistency |
-| `reactor/api/command/*.py` add command | `registry.py` metadata | Command discovery |
+| `reactor/api/command/*.py` add command | `dispatch/v6.py` tree | Command routing |
 | `bgp/message/open/capability/*.py` | Neighbor negotiation logic | Capability handling |
 | `configuration/configuration.py` syntax | Documentation, examples | User-facing |
 
@@ -188,10 +189,12 @@ Breaking changes require major version bump and migration guide.
 **File:** `reactor/api/command/neighbor.py` (~300 lines)
 
 **Why:** Demonstrates:
-- @Command.register usage
+- Handler function pattern
 - Neighbor filtering
 - JSON output support
 - Multiple subcommands
+
+**Also read:** `reactor/api/dispatch/v6.py` for tree-based routing.
 
 **Read this first** when adding API commands.
 
