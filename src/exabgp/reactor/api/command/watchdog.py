@@ -19,30 +19,38 @@ def register_watchdog() -> None:
     pass
 
 
-def _extract_watchdog_name(command: str, service: str) -> str:
+def _extract_watchdog_name(command: str, service: str, action: str = '') -> str:
     """Extract watchdog name from command.
 
     command may contain:
-    - "announce watchdog <name>" (full format from dispatcher)
-    - "withdraw watchdog <name>" (full format from dispatcher)
-    - "watchdog <name>" (legacy format)
+    - "announce watchdog <name>" (legacy format from v4 dispatcher)
+    - "withdraw watchdog <name>" (legacy format from v4 dispatcher)
+    - "watchdog <name>" (v6 clean format, action passed separately)
     - "<name>" (name only)
+
+    If action is provided (v6 clean format), we know there's no prefix.
     """
     words = command.split()
-    # Skip 'announce' or 'withdraw' prefix if present
-    if words and words[0] in ('announce', 'withdraw'):
-        words = words[1:]
-    # Now first word should be 'watchdog', second is the name
-    if len(words) >= 2 and words[0] == 'watchdog':
-        return words[1]
-    elif len(words) >= 1 and words[0] != 'watchdog':
-        # Name directly provided (no watchdog prefix)
-        return words[0]
+    if action:
+        # v6 clean format: command is "watchdog <name>" or just "<name>"
+        if len(words) >= 2 and words[0] == 'watchdog':
+            return words[1]
+        elif words:
+            return words[0]
+    else:
+        # Legacy format: may have action prefix
+        if words and words[0] in ('announce', 'withdraw'):
+            words = words[1:]
+        # Now first word should be 'watchdog', second is the name
+        if len(words) >= 2 and words[0] == 'watchdog':
+            return words[1]
+        elif len(words) >= 1 and words[0] != 'watchdog':
+            return words[0]
     return service
 
 
 def announce_watchdog(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback(name: str) -> None:
         # XXX: move into Action
@@ -55,13 +63,13 @@ def announce_watchdog(
 
         await reactor.processes.answer_done_async(service)
 
-    name = _extract_watchdog_name(command, service)
+    name = _extract_watchdog_name(command, service, action)
     reactor.asynchronous.schedule(service, command, callback(name))
     return True
 
 
 def withdraw_watchdog(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback(name: str) -> None:
         # XXX: move into Action
@@ -74,6 +82,6 @@ def withdraw_watchdog(
 
         await reactor.processes.answer_done_async(service)
 
-    name = _extract_watchdog_name(command, service)
+    name = _extract_watchdog_name(command, service, action)
     reactor.asynchronous.schedule(service, command, callback(name))
     return True

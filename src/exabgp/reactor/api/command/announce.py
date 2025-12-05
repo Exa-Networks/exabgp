@@ -90,14 +90,14 @@ def register_flush_callbacks(peers: list[str], reactor: 'Reactor', sync_mode: bo
 
 
 def announce_route(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_route(cmd)
+            changes = self.api_route(cmd, action)
             if not changes:
                 error_msg = f'Could not parse route: {cmd}'
                 self.log_failure(error_msg)
@@ -141,14 +141,14 @@ def announce_route(
 
 
 def withdraw_route(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_route(cmd)
+            changes = self.api_route(cmd, action)
             if not changes:
                 error_msg = f'Could not parse route: {cmd}'
                 self.log_failure(error_msg)
@@ -200,14 +200,14 @@ def withdraw_route(
 
 
 def announce_vpls(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_vpls(cmd)
+            changes = self.api_vpls(cmd, action)
             if not changes:
                 self.log_failure(f'command could not parse vpls in : {cmd}')
                 await reactor.processes.answer_error_async(service)
@@ -240,14 +240,14 @@ def announce_vpls(
 
 
 def withdraw_vpls(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_vpls(cmd)
+            changes = self.api_vpls(cmd, action)
 
             if not changes:
                 self.log_failure(f'command could not parse vpls in : {cmd}')
@@ -284,14 +284,14 @@ def withdraw_vpls(
 
 
 def announce_attributes(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_attributes(cmd, peers)
+            changes = self.api_attributes(cmd, peers, action)
             if not changes:
                 self.log_failure(f'command could not parse route in : {cmd}')
                 await reactor.processes.answer_error_async(service)
@@ -330,14 +330,14 @@ def announce_attributes(
 
 
 def withdraw_attribute(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_attributes(cmd, peers)
+            changes = self.api_attributes(cmd, peers, action)
             if not changes:
                 self.log_failure(f'command could not parse route in : {cmd}')
                 await reactor.processes.answer_error_async(service)
@@ -380,14 +380,14 @@ def withdraw_attribute(
 
 
 def announce_flow(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_flow(cmd)
+            changes = self.api_flow(cmd, action)
             if not changes:
                 self.log_failure(f'command could not parse flow in : {cmd}')
                 await reactor.processes.answer_error_async(service)
@@ -420,14 +420,14 @@ def announce_flow(
 
 
 def withdraw_flow(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_flow(cmd)
+            changes = self.api_flow(cmd, action)
 
             if not changes:
                 self.log_failure(f'command could not parse flow in : {cmd}')
@@ -463,7 +463,9 @@ def withdraw_flow(
     return True
 
 
-def announce_eor(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def announce_eor(
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+) -> bool:
     async def callback() -> None:
         # EOR requires established peers to send to
         established = set(reactor.established_peers())
@@ -473,7 +475,7 @@ def announce_eor(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
             await reactor.processes.answer_error_async(service)
             return
 
-        result = self.api_eor(command)
+        result = self.api_eor(command, action)
         if not isinstance(result, Family):
             self.log_failure(f'Command could not parse eor : {command}')
             await reactor.processes.answer_error_async(service)
@@ -501,7 +503,7 @@ def announce_eor(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
 
 
 def announce_refresh(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         # Route-refresh requires established peers to send to
@@ -512,7 +514,7 @@ def announce_refresh(
             await reactor.processes.answer_error_async(service)
             return
 
-        refreshes = self.api_refresh(command)
+        refreshes = self.api_refresh(command, action)
         if not refreshes:
             self.log_failure(f'Command could not parse route-refresh command : {command}')
             await reactor.processes.answer_error_async(service)
@@ -540,12 +542,12 @@ def announce_refresh(
 
 
 def announce_operational(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     from exabgp.bgp.message.operational import Operational
 
     async def callback() -> None:
-        result = self.api_operational(command)
+        result = self.api_operational(command, action)
         if not result or result is True:
             self.log_failure(f'Command could not parse operational command : {command}')
             await reactor.processes.answer_error_async(service)
@@ -587,14 +589,14 @@ def announce_operational(
 
 
 def announce_ipv4(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_announce_v4(cmd)
+            changes = self.api_announce_v4(cmd, action)
             if not changes:
                 self.log_failure(f'command could not parse ipv4 in : {cmd}')
                 await reactor.processes.answer_error_async(service)
@@ -627,14 +629,14 @@ def announce_ipv4(
 
 
 def withdraw_ipv4(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_announce_v4(cmd)
+            changes = self.api_announce_v4(cmd, action)
 
             if not changes:
                 self.log_failure(f'command could not parse ipv4 in : {cmd}')
@@ -671,14 +673,14 @@ def withdraw_ipv4(
 
 
 def announce_ipv6(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_announce_v6(cmd)
+            changes = self.api_announce_v6(cmd, action)
             if not changes:
                 self.log_failure(f'command could not parse ipv6 in : {cmd}')
                 await reactor.processes.answer_error_async(service)
@@ -711,14 +713,14 @@ def announce_ipv6(
 
 
 def withdraw_ipv6(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
             # Parse sync mode and strip keywords
             cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            changes = self.api_announce_v6(cmd)
+            changes = self.api_announce_v6(cmd, action)
 
             if not changes:
                 self.log_failure(f'command could not parse ipv6 in : {cmd}')
@@ -792,9 +794,7 @@ def v6_announce(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
     Command format: <type> <spec>
     e.g., "route 10.0.0.0/24 next-hop 1.2.3.4"
 
-    Note: Current handlers expect "announce <type> <spec>" format, so we
-    prepend "announce" before calling. This will be removed when Phase 6
-    updates the api_* methods to accept the clean format.
+    Passes action='announce' to handlers for clean format parsing in api_* methods.
     """
     from exabgp.reactor.api.command import watchdog as watchdog_cmd
 
@@ -815,9 +815,8 @@ def v6_announce(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
     else:
         handler = globals()[handler_name]
 
-    # Prepend "announce" for handlers expecting full format (temporary until Phase 6)
-    full_command = f'announce {command}'
-    return handler(self, reactor, service, peers, full_command, use_json)
+    # Pass action='announce' for clean format parsing
+    return handler(self, reactor, service, peers, command, use_json, action='announce')
 
 
 def v6_withdraw(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
@@ -826,9 +825,7 @@ def v6_withdraw(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
     Command format: <type> <spec>
     e.g., "route 10.0.0.0/24"
 
-    Note: Current handlers expect "withdraw <type> <spec>" format, so we
-    prepend "withdraw" before calling. This will be removed when Phase 6
-    updates the api_* methods to accept the clean format.
+    Passes action='withdraw' to handlers for clean format parsing in api_* methods.
     """
     from exabgp.reactor.api.command import watchdog as watchdog_cmd
 
@@ -849,6 +846,5 @@ def v6_withdraw(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
     else:
         handler = globals()[handler_name]
 
-    # Prepend "withdraw" for handlers expecting full format (temporary until Phase 6)
-    full_command = f'withdraw {command}'
-    return handler(self, reactor, service, peers, full_command, use_json)
+    # Pass action='withdraw' for clean format parsing
+    return handler(self, reactor, service, peers, command, use_json, action='withdraw')
