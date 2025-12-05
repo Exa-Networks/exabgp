@@ -20,8 +20,6 @@ from exabgp.reactor.api.dispatch.common import (
     DispatchTree,
     DispatchNode,
     SELECTOR_KEY,
-    tokenise_command,
-    remaining_string,
     dispatch,
     extract_selector,
 )
@@ -38,8 +36,6 @@ __all__ = [
     'DispatchTree',
     'DispatchNode',
     'SELECTOR_KEY',
-    'tokenise_command',
-    'remaining_string',
     'dispatch',
     'extract_selector',
     # Dispatchers

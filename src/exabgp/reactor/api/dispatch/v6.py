@@ -19,13 +19,11 @@ from typing import TYPE_CHECKING
 
 from exabgp.configuration.core.parser import Tokeniser
 from exabgp.reactor.api.dispatch.common import (
+    SELECTOR_KEY,
     DispatchTree,
     Handler,
     NoMatchingPeers,
-    SELECTOR_KEY,
     dispatch,
-    remaining_string,
-    tokenise_command,
 )
 
 if TYPE_CHECKING:
@@ -158,7 +156,7 @@ def dispatch_v6(
 
     # Create tokeniser with token list
     tokeniser = Tokeniser()
-    token_list, original = tokenise_command(command)
+    token_list = command.split()
     tokeniser.replenish(token_list)
 
     # Special case: empty command or comment
@@ -176,7 +174,4 @@ def dispatch_v6(
         if not peers:
             raise NoMatchingPeers(command)
 
-    # Get remaining command string
-    remaining = remaining_string(tokeniser, original)
-
-    return handler, peers, remaining
+    return handler, peers, tokeniser.remaining_string()

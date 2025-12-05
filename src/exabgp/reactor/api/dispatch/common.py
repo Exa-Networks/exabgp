@@ -134,52 +134,6 @@ def get_commands() -> list[tuple[str, bool, list[str] | None]]:
 # =============================================================================
 
 
-def tokenise_command(command: str) -> tuple[list[str], str]:
-    """Convert command string to token list for dispatch tree traversal.
-
-    Uses simple whitespace splitting for prefix tokens (announce, flow, etc.)
-    but preserves the full original command for extracting remaining string.
-
-    The config tokeniser breaks on { } ; which doesn't work for commands
-    like "announce flow route { match { ... } }" - we'd lose everything
-    after the first {.
-
-    Instead, we split on whitespace to get dispatch tokens, and track
-    position in original string to extract remaining after dispatch.
-
-    Args:
-        command: The API command string
-
-    Returns:
-        Tuple of (token_list, original_command)
-        - token_list: List of space-separated words for dispatch tree
-        - original_command: Original command for extracting remaining
-    """
-    return command.split(), command
-
-
-def remaining_string(tokeniser: Tokeniser, original: str) -> str:
-    """Get remaining tokens as the original command substring.
-
-    Uses tokeniser.consumed to know how many words were consumed
-    during dispatch, then extracts the remaining portion of
-    the original command string.
-
-    Args:
-        tokeniser: Tokeniser with consumed count
-        original: Original command string
-
-    Returns:
-        Remaining portion of original command after consumed words
-    """
-    consumed = tokeniser.consumed
-    words = original.split()
-
-    if consumed >= len(words):
-        return ''
-    return ' '.join(words[consumed:])
-
-
 def is_selector_start(token: str) -> bool:
     """Check if a token could be the start of a peer selector.
 
