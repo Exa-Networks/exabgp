@@ -929,14 +929,18 @@ class Flow(NLRI):
         cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[Flow | NLRI, bytes]:
         """Unpack Flow NLRI from wire format, storing raw bytes."""
+        if len(bgp) < 1:
+            raise Notify(3, 10, 'Flow NLRI too short: need at least 1 byte for length')
         length, bgp = bgp[0], bgp[1:]
 
         if length & FLOW_LENGTH_EXTENDED_MASK == FLOW_LENGTH_EXTENDED_VALUE:  # bigger than 240
+            if len(bgp) < 1:
+                raise Notify(3, 10, 'Flow NLRI extended length truncated: need 1 more byte')
             extra, bgp = bgp[0], bgp[1:]
             length = ((length & FLOW_LENGTH_LOWER_MASK) << FLOW_LENGTH_EXTENDED_SHIFT) + extra
 
         if length > len(bgp):
-            raise Notify(3, 10, 'invalid length at the start of the the flow')
+            raise Notify(3, 10, f'Flow NLRI truncated: need {length} bytes, got {len(bgp)}')
 
         over = bgp[length:]
         packed = bgp[:length]
