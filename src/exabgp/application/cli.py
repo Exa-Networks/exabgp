@@ -7,7 +7,6 @@ from __future__ import annotations
 import json
 import argparse
 import os
-import re
 import sys
 import readline
 import atexit
@@ -382,23 +381,9 @@ Display Format (optional prefix):
                 # Ignore display prefix for write commands (no output to format)
                 display_override = None
 
-            # Transform noun-first CLI syntax to API syntax (before other transformations)
-            from exabgp.application.noun_first_transform import NounFirstTransform
-
-            command = NounFirstTransform.transform(command)
-
-            # Translate CLI-friendly syntax to API syntax
-            # "announce route refresh" -> "announce route-refresh"
-            command = command.replace('route refresh', 'route-refresh')
-
-            # Transform "neighbor <ip> show ..." to "show neighbor <ip> ..."
-            # Pattern: neighbor <IP> show [options]
-            neighbor_show_pattern = r'^neighbor\s+(\S+)\s+show\s*(.*)$'
-            match = re.match(neighbor_show_pattern, command)
-            if match:
-                ip = match.group(1)
-                rest = match.group(2).strip()
-                command = f'show neighbor {ip} {rest}'.strip()
+            # CLI uses v6 API format natively - no transformation needed
+            # Commands are sent directly to daemon in v6 format:
+            #   daemon shutdown, peer * announce route, peer show, etc.
 
             # Determine which encoding to use (override takes precedence)
             encoding_to_use = override_encoding if override_encoding else self.output_encoding

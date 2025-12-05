@@ -93,8 +93,8 @@ class PersistentSocketConnection:
     def _initial_ping(self) -> None:
         """Send initial synchronous ping to get daemon UUID before starting background threads"""
         try:
-            # Send ping
-            ping_cmd = f'ping {self.client_uuid} {self.client_start_time}\n'
+            # Send ping (v6 API format)
+            ping_cmd = f'session ping {self.client_uuid} {self.client_start_time}\n'
             try:
                 self.socket.sendall(ping_cmd.encode('utf-8'))  # type: ignore[union-attr]
             except (BrokenPipeError, ConnectionResetError):
@@ -502,8 +502,8 @@ class PersistentSocketConnection:
                 return
 
             try:
-                # Include client UUID and start time to track active connection
-                ping_cmd = f'ping {self.client_uuid} {self.client_start_time}\n'
+                # Include client UUID and start time to track active connection (v6 API format)
+                ping_cmd = f'session ping {self.client_uuid} {self.client_start_time}\n'
                 self.socket.sendall(ping_cmd.encode('utf-8'))
                 self.last_ping_time = time.time()
             except OSError:

@@ -7,15 +7,15 @@ Created by Thomas Mangin on 2011-01-24.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 
-import os
-import sys
-import fileinput
-
-import glob
-import shutil
-import zipapp
 import argparse
-
+import fileinput
+import glob
+import os
+import re
+import shutil
+import sys
+import tomllib
+import zipapp
 
 CHANGELOG = 'doc/CHANGELOG.rst'
 
@@ -23,8 +23,8 @@ CHANGELOG = 'doc/CHANGELOG.rst'
 class Path:
     root = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]))
     changelog = os.path.join(root, CHANGELOG)
+    pyproject = os.path.join(root, 'pyproject.toml')
     lib_exa = os.path.join(root, 'src/exabgp')
-    version = os.path.join(root, 'src/exabgp/version.py')
     debian = os.path.join(root, 'debian/changelog')
     egg = os.path.join(root, 'src/exabgp.egg-info')
     build_exabgp = os.path.join(root, 'build/src/exabgp')
@@ -43,73 +43,54 @@ class Path:
 
 
 class Version:
-    JSON = '5.0.0'
-    TEXT = '5.0.0'
-
-    template = """\
-import os
-import sys
-
-commit = "%s"
-release = "%s"
-json = "%s"
-text = "%s"
-version = os.environ.get('exabgp_version',release)
-
-# Do not change the first line as it is parsed by scripts
-
-if sys.version_info.major < 3:
-    sys.exit('exabgp requires python3.6 or later')
-if (sys.version_info.major == 3 and sys.version_info.minor < 6):
-    sys.exit('exabgp requires python3.6 or later')
-
-if __name__ == '__main__':
-    sys.stdout.write(version)
-"""
+    """Version management - reads/writes pyproject.toml as single source of truth."""
 
     @staticmethod
-    def current():
-        sys.path.append(Path.lib_exa)
-        from version import version as release
-
-        # transitional fix
-        if '-' in release:
-            release = release.split('-')[0]
-
-        return release
+    def current() -> str:
+        """Read current version from pyproject.toml."""
+        with open(Path.pyproject, 'rb') as f:
+            return tomllib.load(f)['project']['version']
 
     @staticmethod
-    def changelog():
+    def changelog() -> str:
+        """Read version from CHANGELOG.rst (for reference/validation)."""
         with open(Path.changelog) as f:
-            f.readline()
+            f.readline()  # Skip first line
             for line in f:
                 if line.lower().startswith('version '):
                     return line.split()[1].rstrip().rstrip(':').strip()
         return ''
 
     @staticmethod
-    def set(tag, commit):
-        with open(Path.version, 'w') as f:
-            f.write(Version.template % (commit, tag, Version.JSON, Version.TEXT))
-        return Version.current() == tag
+    def set(new_version: str) -> bool:
+        """Update version in pyproject.toml."""
+        with open(Path.pyproject, 'r') as f:
+            content = f.read()
+        content = re.sub(r"^version = '[^']+'", f"version = '{new_version}'", content, flags=re.MULTILINE)
+        with open(Path.pyproject, 'w') as f:
+            f.write(content)
+        return Version.current() == new_version
 
     @staticmethod
-    def latest(tags):
-        valid = [[int(_) for _ in tag.split('.')] for tag in tags if Version.valid(tag)]
-        return '.'.join(str(_) for _ in sorted(valid)[-1])
-
-    @staticmethod
-    def valid(tag):
+    def valid(tag: str) -> bool:
+        """Check if tag is a valid semantic version."""
         parts = tag.split('.')
-        return len(parts) == 3 and parts[0].isdigit() and parts[1].isdigit() and parts[2].isdigit()
+        return len(parts) == 3 and all(p.isdigit() for p in parts)
 
     @staticmethod
-    def candidates(tag):
-        latest = [int(_) for _ in tag.split('.')]
+    def latest(tags: list) -> str:
+        """Get the latest version from a list of tags."""
+        valid = [[int(p) for p in tag.split('.')] for tag in tags if Version.valid(tag)]
+        return '.'.join(str(p) for p in sorted(valid)[-1])
+
+    @staticmethod
+    def candidates(tag: str) -> list:
+        """Get valid next version candidates for a given tag."""
+        parts = [int(p) for p in tag.split('.')]
         return [
-            '.'.join([str(_) for _ in (latest[0], latest[1], latest[2] + 1)]),
-            '.'.join([str(_) for _ in (latest[0], latest[1] + 1, 0)]),
-            '.'.join([str(_) for _ in (latest[0] + 1, 0, 0)]),
+            f'{parts[0]}.{parts[1]}.{parts[2] + 1}',
+            f'{parts[0]}.{parts[1] + 1}.0',
+            f'{parts[0] + 1}.0.0',
         ]
 
 
@@ -169,11 +150,12 @@ class Git(Command):
 
     @staticmethod
     def pending():
-        # XXX: terrible please rewrite
+        # Check if only expected files are modified for a release
         commit = None
         for line in os.popen('git status').read().split('\n'):
             if 'modified:' in line:
-                if 'src/exabgp/version.py' in line or 'debian/changelog' in line or 'README' in line:
+                # Allow pyproject.toml (version), debian/changelog, and README changes
+                if 'pyproject.toml' in line or 'debian/changelog' in line or 'README' in line:
                     if commit is not False:
                         commit = True
                 else:
@@ -193,7 +175,7 @@ def release_github(args):
     print('updating Github')
 
     current = Version.current()
-    print('current version is %s (from version.py)' % current)
+    print('current version is %s (from pyproject.toml)' % current)
 
     release = Version.changelog()
     print('release version is %s (from %s)' % (release, CHANGELOG))
@@ -212,8 +194,8 @@ def release_github(args):
         print('valid versions are:', ', '.join(candidates))
         print('this release is not one of the candidates')
 
-    print('updating src/exabgp/version.py')
-    Version.set(release, Git.head_commit())
+    print('updating pyproject.toml')
+    Version.set(release)
     print('updating debian/changelog')
     Debian.set(release)
 

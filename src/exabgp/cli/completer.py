@@ -66,20 +66,16 @@ class CommandCompleter:
         # Build command tree dynamically from registry
         self.command_tree = self.registry.build_command_tree()
 
-        # Get base commands from registry (exclude internal/non-interactive commands)
-        all_commands = self.registry.get_base_commands()
-        # Filter out commands not useful in interactive CLI:
-        # - "#" (comment command - useful in scripts/API but not interactive)
-        # - "show" (no subcommands after filtering neighbor/adj-rib - use new syntax)
-        self.base_commands = [cmd for cmd in all_commands if cmd not in ('#', 'show')]
-        # Add builtin CLI commands (not in registry)
-        self.base_commands.extend(['exit', 'quit', 'q', 'clear', 'history', 'set'])
-        # Add CLI-first keywords for discoverability:
-        # - 'neighbor' for "neighbor <IP> show/announce/withdraw" syntax
-        # - 'adj-rib' for "adj-rib <in|out> show" syntax
-        self.base_commands.extend(['neighbor', 'adj-rib'])
-        # Add noun-first top-level commands
-        self.base_commands.extend(['daemon', 'session', 'system', 'rib'])
+        # v6 API: Only expose v6 top-level commands (not v4 action-first commands)
+        # CLI builtins (not API commands)
+        self.base_commands = ['exit', 'quit', 'q', 'history', 'set']
+        # v6 API top-level commands:
+        # - 'peer' for "peer <IP|*> announce/withdraw/teardown/show" syntax
+        # - 'daemon' for control commands (shutdown, reload, restart, status)
+        # - 'session' for session management (ack, sync, ping, reset, bye)
+        # - 'system' for system commands (help, version, crash, queue-status, api)
+        # - 'rib' for RIB operations (show, flush, clear)
+        self.base_commands.extend(['peer', 'daemon', 'session', 'system', 'rib'])
 
         # Cache for neighbor IPs
         self._neighbor_cache: list[str] | None = None
@@ -455,6 +451,51 @@ class CommandCompleter:
         # No matches
         return []
 
+    def _try_multi_char_abbreviation(self, text: str) -> list[str]:
+        """Try to expand multi-character abbreviations like 'dst' → 'daemon status'.
+
+        This handles cases where the user types characters spanning multiple command levels.
+        E.g., 'dst' = 'd' (daemon) + 'st' (status).
+
+        Args:
+            text: Multi-character text to expand
+
+        Returns:
+            List with single expanded command if unique match, otherwise empty
+        """
+        if len(text) < 2:
+            return []
+
+        # v6 command hierarchy for abbreviation expansion
+        v6_subcommands = {
+            'daemon': ['shutdown', 'reload', 'restart', 'status'],
+            'session': ['ack', 'sync', 'reset', 'ping', 'bye'],
+            'system': ['help', 'version', 'crash', 'queue-status', 'api'],
+            'rib': ['show', 'flush', 'clear'],
+            'peer': ['announce', 'withdraw', 'teardown', 'show'],
+        }
+
+        # Try to match first character(s) to a top-level command
+        for cmd, subcmds in v6_subcommands.items():
+            # Check if text starts with command's first letter(s)
+            for prefix_len in range(1, min(len(text), len(cmd)) + 1):
+                prefix = text[:prefix_len]
+                if cmd.startswith(prefix):
+                    # Found potential top-level match, try to match remainder
+                    remainder = text[prefix_len:]
+                    if not remainder:
+                        continue  # Need more characters for subcommand
+
+                    # Find subcommands matching the remainder
+                    matching_subcmds = [s for s in subcmds if s.startswith(remainder)]
+                    if len(matching_subcmds) == 1:
+                        # Unique match! Return the full command
+                        full_cmd = f'{cmd} {matching_subcmds[0]}'
+                        self._add_completion_metadata(full_cmd, f'Expands from "{text}"', 'command')
+                        return [full_cmd]
+
+        return []
+
     def _get_completions(self, tokens: list[str], text: str) -> list[str]:
         """
         Get list of completions based on current context
@@ -478,12 +519,29 @@ class CommandCompleter:
             # Use fuzzy filtering
             matches = self._filter_candidates(all_candidates, text)
 
+            # If no matches, try multi-character abbreviation expansion
+            # E.g., 'dst' → 'daemon status', 'ssh' → 'session shutdown'
+            if not matches and len(text) >= 2:
+                matches = self._try_multi_char_abbreviation(text)
+                if matches:
+                    return matches
+
             # Add metadata for matches
+            # v6 API top-level command descriptions
+            v6_descriptions = {
+                'peer': 'Peer operations (announce, withdraw, show, teardown)',
+                'daemon': 'Daemon control (shutdown, reload, restart, status)',
+                'session': 'Session management (ack, sync, ping, reset, bye)',
+                'system': 'System commands (help, version, crash, queue-status, api)',
+                'rib': 'RIB operations (show, flush, clear)',
+            }
             for match in matches:
                 if match == 'json':
                     self._add_completion_metadata('json', 'Display output as JSON', 'option')
                 elif match == 'text':
                     self._add_completion_metadata('text', 'Display output as text tables', 'option')
+                elif match in v6_descriptions:
+                    self._add_completion_metadata(match, v6_descriptions[match], 'command')
                 else:
                     desc = self.registry.get_command_description(match)
                     self._add_completion_metadata(match, desc, 'command')
@@ -497,9 +555,20 @@ class CommandCompleter:
             if len(tokens) == 1:
                 # Just "json " or "text " - suggest all base commands with fuzzy matching
                 matches = self._filter_candidates(self.base_commands, text)
+                # v6 API top-level command descriptions
+                v6_descriptions = {
+                    'peer': 'Peer operations (announce, withdraw, show, teardown)',
+                    'daemon': 'Daemon control (shutdown, reload, restart, status)',
+                    'session': 'Session management (ack, sync, ping, reset, bye)',
+                    'system': 'System commands (help, version, crash, queue-status, api)',
+                    'rib': 'RIB operations (show, flush, clear)',
+                }
                 for match in matches:
-                    desc = self.registry.get_command_description(match)
-                    self._add_completion_metadata(match, desc, 'command')
+                    if match in v6_descriptions:
+                        self._add_completion_metadata(match, v6_descriptions[match], 'command')
+                    else:
+                        desc = self.registry.get_command_description(match)
+                        self._add_completion_metadata(match, desc, 'command')
                 return matches
             else:
                 # "json show ..." - strip prefix and continue with rest
@@ -508,20 +577,20 @@ class CommandCompleter:
         # Expand shortcuts in tokens using CommandShortcuts
         expanded_tokens = CommandShortcuts.expand_token_list(tokens.copy())
 
-        # Handle "neighbor <ip> <command>" prefix transformations
-        if len(expanded_tokens) >= 2 and expanded_tokens[0] == 'neighbor' and self._is_ip_address(expanded_tokens[1]):
-            ip = expanded_tokens[1]
+        # Handle "peer <ip|*> <command>" prefix - v6 API syntax
+        if len(expanded_tokens) >= 2 and expanded_tokens[0] == 'peer':
+            selector = expanded_tokens[1]
+            # Check for IP address or wildcard selector
+            if self._is_ip_address(selector) or selector == '*':
+                # For "peer <selector> show", keep as v6 format
+                if len(expanded_tokens) >= 3 and expanded_tokens[2] == 'show':
+                    # "peer 127.0.0.1 show" or "peer * show" stays as-is
+                    pass
 
-            # For "show", transform to "show neighbor <ip>" before completion
-            if len(expanded_tokens) >= 3 and expanded_tokens[2] == 'show':
-                # Transform: "neighbor 127.0.0.1 show ..." → "show neighbor 127.0.0.1 ..."
-                rest = expanded_tokens[3:] if len(expanded_tokens) > 3 else []
-                expanded_tokens = ['show', 'neighbor', ip] + rest
-
-            # For "announce" and "withdraw", strip "neighbor <ip>" to complete at root level
-            elif len(expanded_tokens) >= 3 and expanded_tokens[2] in ('announce', 'withdraw'):
-                # Strip "neighbor <ip>" and continue completion from that command
-                expanded_tokens = expanded_tokens[2:]
+                # For "announce" and "withdraw", keep peer prefix for v6 API
+                elif len(expanded_tokens) >= 3 and expanded_tokens[2] in ('announce', 'withdraw'):
+                    # "peer * announce route ..." stays as-is
+                    pass
 
         # Handle noun-first command completions
         if len(expanded_tokens) >= 1:
@@ -619,79 +688,89 @@ class CommandCompleter:
                             self._add_completion_metadata(match, desc, 'option')
                         return matches
 
-            # System commands: system <help|version|crash>
+            # System commands: system <help|version|crash|queue-status|api>
             elif first_token == 'system':
                 if len(expanded_tokens) == 1:
-                    candidates = ['help', 'version', 'crash']
+                    candidates = ['help', 'version', 'crash', 'queue-status', 'api']
                     matches = self._filter_candidates(candidates, text)
                     for match in matches:
                         desc = {
                             'help': 'Show available commands',
                             'version': 'Show ExaBGP version',
                             'crash': 'Crash daemon (debug only)',
+                            'queue-status': 'Show write queue status',
+                            'api': 'API version management',
+                        }.get(match, '')
+                        self._add_completion_metadata(match, desc, 'command')
+                    return matches
+                elif len(expanded_tokens) == 2:
+                    # system api <version>
+                    if expanded_tokens[1] == 'api':
+                        candidates = ['version']
+                        matches = self._filter_candidates(candidates, text)
+                        self._add_completion_metadata('version', 'Show/set API version', 'option')
+                        return matches
+
+        # Handle "peer" completions - v6 API syntax
+        # Supports: "peer <ip|*> <action>" where action is announce/withdraw/teardown/show
+        if len(expanded_tokens) >= 1 and expanded_tokens[0] == 'peer':
+            if len(expanded_tokens) == 1:
+                # After "peer", suggest wildcard or peer IPs
+                matches = []
+                if '*'.startswith(text):
+                    matches.append('*')
+                    self._add_completion_metadata('*', 'All peers (wildcard selector)', 'option')
+
+                # Add peer IPs
+                peer_data = self._get_neighbor_data()
+                for ip, info in peer_data.items():
+                    if ip.startswith(text):
+                        matches.append(ip)
+                        self._add_completion_metadata(ip, info, 'neighbor')
+                return sorted(matches)
+
+            elif len(expanded_tokens) == 2:
+                selector = expanded_tokens[1]
+                if self._is_ip_address(selector) or selector == '*':
+                    # After "peer <selector>", suggest actions
+                    actions = ['announce', 'withdraw', 'teardown', 'show']
+                    matches = self._filter_candidates(actions, text)
+                    for match in matches:
+                        desc = {
+                            'announce': 'Announce routes to peer(s)',
+                            'withdraw': 'Withdraw routes from peer(s)',
+                            'teardown': 'Tear down BGP session',
+                            'show': 'Show peer information',
                         }.get(match, '')
                         self._add_completion_metadata(match, desc, 'command')
                     return matches
 
-        # Handle "adj-rib" completions (CLI-first syntax)
-        # Supports both: "adj-rib <in|out> show" and "neighbor <ip> adj-rib <in|out> show"
-        adj_rib_idx = -1
-        neighbor_ip = None
-
-        # Check for "neighbor <ip> adj-rib" pattern
-        if (
-            len(expanded_tokens) >= 3
-            and expanded_tokens[0] == 'neighbor'
-            and self._is_ip_address(expanded_tokens[1])
-            and expanded_tokens[2] == 'adj-rib'
-        ):
-            adj_rib_idx = 2
-            neighbor_ip = expanded_tokens[1]
-        # Check for "adj-rib" pattern
-        elif len(expanded_tokens) >= 1 and expanded_tokens[0] == 'adj-rib':
-            adj_rib_idx = 0
-
-        if adj_rib_idx >= 0:
-            tokens_after_adjrib = expanded_tokens[adj_rib_idx + 1 :]
-
-            # If exactly "adj-rib" or "neighbor <ip> adj-rib", suggest "in" and "out"
-            if len(tokens_after_adjrib) == 0:
-                candidates = ['in', 'out']
-                matches = self._filter_candidates(candidates, text)
-                for match in matches:
-                    if match == 'in':
-                        self._add_completion_metadata('in', 'Adj-RIB-In (received routes)', 'option')
-                    elif match == 'out':
-                        self._add_completion_metadata('out', 'Adj-RIB-Out (advertised routes)', 'option')
-                return matches
-
-            # If "adj-rib <in|out>" or "neighbor <ip> adj-rib <in|out>", suggest "show"
-            if len(tokens_after_adjrib) == 1 and tokens_after_adjrib[0] in ('in', 'out'):
-                if 'show'.startswith(text):
-                    self._add_completion_metadata('show', 'Show adj-rib information', 'command')
-                    return ['show']
-                return []
-
-            # For "adj-rib <in|out> show" or "neighbor <ip> adj-rib <in|out> show", transform to API syntax
-            if (
-                len(tokens_after_adjrib) >= 2
-                and tokens_after_adjrib[0] in ('in', 'out')
-                and tokens_after_adjrib[1] == 'show'
-            ):
-                direction = tokens_after_adjrib[0]
-                rest = tokens_after_adjrib[2:] if len(tokens_after_adjrib) > 2 else []
-
-                # Transform based on whether neighbor IP is present:
-                # "adj-rib in show ..." → "show adj-rib in ..."
-                # "neighbor <ip> adj-rib in show ..." → "show adj-rib in <ip> ..."
-                if neighbor_ip:
-                    expanded_tokens = ['show', 'adj-rib', direction, neighbor_ip] + rest
-                else:
-                    expanded_tokens = ['show', 'adj-rib', direction] + rest
+            elif len(expanded_tokens) >= 3:
+                selector = expanded_tokens[1]
+                action = expanded_tokens[2]
+                if (self._is_ip_address(selector) or selector == '*') and action in ('announce', 'withdraw'):
+                    # After "peer <selector> announce/withdraw", suggest subcommands
+                    if len(expanded_tokens) == 3:
+                        subcommands = (
+                            ['route', 'route-refresh', 'eor', 'flow', 'vpls']
+                            if action == 'announce'
+                            else ['route', 'flow', 'vpls']
+                        )
+                        matches = self._filter_candidates(subcommands, text)
+                        for match in matches:
+                            desc = {
+                                'route': 'IPv4/IPv6 unicast route',
+                                'route-refresh': 'Route refresh request',
+                                'eor': 'End-of-RIB marker',
+                                'flow': 'FlowSpec rule',
+                                'vpls': 'VPLS route',
+                            }.get(match, '')
+                            self._add_completion_metadata(match, desc, 'command')
+                        return matches
 
         # Check if we have "announce route <ip-prefix>" or "withdraw route <ip-prefix>"
         # In this case, suggest route attributes (next-hop, as-path, etc.)
-        # This must come BEFORE _is_neighbor_command check (which would return base commands)
+        # This must come BEFORE _is_peer_command check (which would return base commands)
         if len(expanded_tokens) >= 3 and 'route' in expanded_tokens:
             try:
                 route_idx = expanded_tokens.index('route')
@@ -704,10 +783,9 @@ class CommandCompleter:
             except ValueError:
                 pass
 
-        # Special case: "announce route" - suggest "refresh" or "neighbor" keyword only
-        # This must come BEFORE _is_neighbor_command check
-        # Note: Do NOT suggest neighbor IPs here - they are for filtering and must come BEFORE "announce"
-        # Correct syntax: "neighbor <IP> announce route <route-prefix> ..." NOT "announce route <neighbor-IP> ..."
+        # Special case: "announce route" - suggest "refresh" keyword only
+        # This must come BEFORE _is_peer_command check
+        # Note: v6 API uses "peer * announce route" syntax
         if len(expanded_tokens) >= 2 and expanded_tokens[-1] == 'route' and 'announce' in expanded_tokens:
             matches = []
 
@@ -716,17 +794,11 @@ class CommandCompleter:
                 matches.append('refresh')
                 self._add_completion_metadata('refresh', 'Send route refresh request', 'command')
 
-            # Suggest "neighbor" keyword for "neighbor <IP> announce route ..." filtering
-            if 'neighbor'.startswith(text):
-                matches.append('neighbor')
-                desc = self.registry.get_option_description('neighbor')
-                self._add_completion_metadata('neighbor', desc if desc else 'Target specific neighbor by IP', 'keyword')
-
             return sorted(matches)
 
-        # Check if completing neighbor-targeted command
-        if self._is_neighbor_command(expanded_tokens):
-            return self._complete_neighbor_command(expanded_tokens, text)
+        # Check if completing peer-targeted command
+        if self._is_peer_command(expanded_tokens):
+            return self._complete_peer_command(expanded_tokens, text)
 
         # Check for specific command patterns
         if len(expanded_tokens) >= 1:
@@ -831,7 +903,40 @@ class CommandCompleter:
             if 'neighbor' in expanded_tokens and self._is_ip_address(expanded_tokens[-1]):
                 return self._complete_neighbor_filters(text)
 
-        # Navigate command tree
+        # v6 API: Block v4 action-first commands from leaking through command tree
+        # These commands exist in the registry for backward compatibility but shouldn't
+        # be exposed in v6-only CLI. They have v6 equivalents:
+        #   show → peer show, rib show
+        #   announce/withdraw → peer * announce/withdraw
+        #   clear/flush → rib clear/flush
+        #   teardown → peer * teardown
+        #   shutdown/reload/restart → daemon shutdown/reload/restart
+        #   reset → session reset
+        #   help/version → system help/version
+        #   enable-ack/disable-ack/silence-ack → session ack enable/disable/silence
+        v4_blocked_commands = {
+            'show',
+            'announce',
+            'withdraw',
+            'clear',
+            'flush',
+            'teardown',
+            'shutdown',
+            'reload',
+            'restart',
+            'reset',
+            'help',
+            'version',
+            'crash',
+            'enable-ack',
+            'disable-ack',
+            'silence-ack',
+            '#',
+        }
+        if expanded_tokens and expanded_tokens[0] in v4_blocked_commands:
+            return []  # Block v4 commands - use v6 equivalents
+
+        # Navigate command tree (only for commands not handled above)
         current_level = self.command_tree
 
         for i, token in enumerate(expanded_tokens):
@@ -930,73 +1035,62 @@ class CommandCompleter:
 
         return []
 
-    def _is_neighbor_command(self, tokens: list[str]) -> bool:
-        """Check if command targets a specific neighbor using registry metadata"""
+    def _is_peer_command(self, tokens: list[str]) -> bool:
+        """Check if command targets a specific peer using registry metadata"""
         if not tokens:
             return False
 
         # Try progressively longer command prefixes to find a match
-        # This handles multi-word commands like "flush adj-rib out"
+        # This handles multi-word commands like "rib flush out"
         for length in range(len(tokens), 0, -1):
             potential_cmd = ' '.join(tokens[:length])
             metadata = self.registry.get_command_metadata(potential_cmd)
             if metadata and metadata.neighbor_support:
                 return True
 
-        # Fallback: check if first token suggests neighbor targeting
-        return tokens[0] in ('neighbor', 'teardown')
+        # Fallback: check if first token suggests peer targeting
+        return tokens[0] == 'peer'
 
-    def _complete_neighbor_command(self, tokens: list[str], text: str) -> list[str]:
-        """Complete neighbor-targeted commands"""
-        # Check if we should complete neighbor IP
+    def _complete_peer_command(self, tokens: list[str], text: str) -> list[str]:
+        """Complete peer-targeted commands (v6 API)"""
+        # Check if we should complete peer IP
         last_token = tokens[-1] if tokens else ''
 
-        # Check if we're at the end of a complete command (ready for neighbor spec)
-        # This handles both simple commands (teardown) and multi-word commands (flush adj-rib out)
+        # Check if we're at the end of a complete command (ready for peer spec)
+        # This handles multi-word commands like "rib flush out"
         command_str = ' '.join(tokens)
         metadata = self.registry.get_command_metadata(command_str)
 
         if metadata and metadata.neighbor_support:
-            # We're at the end of a recognized neighbor-targeted command
+            # We're at the end of a recognized peer-targeted command
             matches = []
-            if 'neighbor'.startswith(text):
-                matches.append('neighbor')
-                desc = self.registry.get_option_description('neighbor')
-                self._add_completion_metadata('neighbor', desc, 'keyword')
 
-            # Add neighbor IPs with descriptions
-            neighbor_data = self._get_neighbor_data()
-            for ip, info in neighbor_data.items():
+            # Add peer IPs with descriptions
+            peer_data = self._get_neighbor_data()
+            for ip, info in peer_data.items():
                 if ip.startswith(text):
                     matches.append(ip)
                     self._add_completion_metadata(ip, info, 'neighbor')
 
             return sorted(matches)
 
-        # If last token is 'neighbor', complete with IPs
-        if last_token == 'neighbor':
-            neighbor_data = self._get_neighbor_data()
-            matches = []
-            for ip, info in neighbor_data.items():
-                if ip.startswith(text):
-                    matches.append(ip)
-                    self._add_completion_metadata(ip, info, 'neighbor')
-            return sorted(matches)
-
-        # If last token is an IP, suggest: announce, withdraw, show, adj-rib
-        # "show" will be rewritten to "show neighbor <ip>" before sending to API
-        # "adj-rib" allows "neighbor <ip> adj-rib <in|out> show" syntax
-        if self._is_ip_address(last_token):
+        # If last token is an IP or wildcard, suggest: announce, withdraw, show, teardown
+        if self._is_ip_address(last_token) or last_token == '*':
             matches = []
 
-            # Commands valid after "neighbor <ip>"
-            allowed_commands = ['announce', 'withdraw', 'show', 'adj-rib']
+            # Commands valid after "peer <selector>"
+            allowed_commands = ['announce', 'withdraw', 'show', 'teardown']
 
             for cmd in allowed_commands:
                 if cmd.startswith(text):
                     matches.append(cmd)
-                    desc = self.registry.get_command_description(cmd)
-                    self._add_completion_metadata(cmd, desc if desc else '', 'command')
+                    desc = {
+                        'announce': 'Announce routes to peer(s)',
+                        'withdraw': 'Withdraw routes from peer(s)',
+                        'show': 'Show peer information',
+                        'teardown': 'Tear down BGP session',
+                    }.get(cmd, '')
+                    self._add_completion_metadata(cmd, desc, 'command')
 
             return sorted(matches)
 
