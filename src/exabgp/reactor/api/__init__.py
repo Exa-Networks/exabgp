@@ -115,8 +115,14 @@ class API:
             await reactor.processes.flush_write_queue_async()
             return False
 
-    def api_route(self, command: str) -> list[Change]:
-        action, line = command.split(' ', 1)
+    def api_route(self, command: str, action: str = '') -> list[Change]:
+        if action:
+            # Clean format: command is "route 10.0.0.0/24 ...", action passed separately
+            # partial() expects line to include "route ..." so use command as-is
+            line = command
+        else:
+            # Legacy format: command is "announce route 10.0.0.0/24 ..."
+            action, line = command.split(' ', 1)
 
         self.configuration.static.clear()
         if not self.configuration.partial('static', line, action):
@@ -129,9 +135,14 @@ class API:
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_announce_v4(self, command: str) -> list[Change]:
-        action, line = command.split(' ', 1)
-        _, line = line.split(' ', 1)
+    def api_announce_v4(self, command: str, action: str = '') -> list[Change]:
+        if action:
+            # Clean format: command is "ipv4 unicast ...", action passed separately
+            _, line = command.split(' ', 1)
+        else:
+            # Legacy format: command is "announce ipv4 unicast ..."
+            action, line = command.split(' ', 1)
+            _, line = line.split(' ', 1)
 
         self.configuration.static.clear()
         if not self.configuration.partial('ipv4', line, action):
@@ -144,9 +155,14 @@ class API:
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_announce_v6(self, command: str) -> list[Change]:
-        action, line = command.split(' ', 1)
-        _, line = line.split(' ', 1)
+    def api_announce_v6(self, command: str, action: str = '') -> list[Change]:
+        if action:
+            # Clean format: command is "ipv6 unicast ...", action passed separately
+            _, line = command.split(' ', 1)
+        else:
+            # Legacy format: command is "announce ipv6 unicast ..."
+            action, line = command.split(' ', 1)
+            _, line = line.split(' ', 1)
 
         self.configuration.static.clear()
         if not self.configuration.partial('ipv6', line, action):
@@ -159,8 +175,13 @@ class API:
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_flow(self, command: str) -> list[Change]:
-        action, flow, line = command.split(' ', 2)
+    def api_flow(self, command: str, action: str = '') -> list[Change]:
+        if action:
+            # Clean format: command is "flow match ...", action passed separately
+            _, line = command.split(' ', 1)
+        else:
+            # Legacy format: command is "announce flow match ..."
+            action, _, line = command.split(' ', 2)
 
         self.configuration.flow.clear()
         if not self.configuration.partial('flow', line):
@@ -173,8 +194,14 @@ class API:
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_vpls(self, command: str) -> list[Change]:
-        action, line = command.split(' ', 1)
+    def api_vpls(self, command: str, action: str = '') -> list[Change]:
+        if action:
+            # Clean format: command is "vpls ...", action passed separately
+            # partial() expects line to include "vpls ..." so use command as-is
+            line = command
+        else:
+            # Legacy format: command is "announce vpls ..."
+            action, line = command.split(' ', 1)
 
         self.configuration.l2vpn.clear()
         if not self.configuration.partial('l2vpn', line):
@@ -184,8 +211,14 @@ class API:
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_attributes(self, command: str, peers: list[str]) -> list[Change]:
-        action, line = command.split(' ', 1)
+    def api_attributes(self, command: str, peers: list[str], action: str = '') -> list[Change]:
+        if action:
+            # Clean format: command is "attribute ...", action passed separately
+            # partial() expects line to include "attribute ..." so use command as-is
+            line = command
+        else:
+            # Legacy format: command is "announce attribute ..."
+            action, line = command.split(' ', 1)
 
         self.configuration.static.clear()
         if not self.configuration.partial('static', line):
@@ -198,8 +231,13 @@ class API:
         changes = self.configuration.scope.pop_routes()
         return changes
 
-    def api_refresh(self, command: str) -> list[RouteRefresh] | None:
-        tokens = formated(command).split(' ')[2:]
+    def api_refresh(self, command: str, action: str = '') -> list[RouteRefresh] | None:
+        if action:
+            # Clean format: command is "route-refresh ipv4 unicast", action passed separately
+            tokens = formated(command).split(' ')[1:]  # skip "route-refresh"
+        else:
+            # Legacy format: command is "announce route-refresh ipv4 unicast"
+            tokens = formated(command).split(' ')[2:]  # skip "announce route-refresh"
         if len(tokens) != API_REFRESH_TOKEN_COUNT:
             return None
         afi = AFI.value(tokens.pop(0))
@@ -208,8 +246,13 @@ class API:
             return None
         return [RouteRefresh.make_route_refresh(afi, safi)]
 
-    def api_eor(self, command: str) -> bool | Family:
-        tokens = formated(command).split(' ')[2:]
+    def api_eor(self, command: str, action: str = '') -> bool | Family:
+        if action:
+            # Clean format: command is "eor [ipv4 unicast]", action passed separately
+            tokens = formated(command).split(' ')[1:]  # skip "eor"
+        else:
+            # Legacy format: command is "announce eor [ipv4 unicast]"
+            tokens = formated(command).split(' ')[2:]  # skip "announce eor"
         number = len(tokens)
 
         if not number:
@@ -228,15 +271,23 @@ class API:
 
         return Family(afi, safi)
 
-    def api_operational(self, command: str) -> bool | Operational | None:
+    def api_operational(self, command: str, action: str = '') -> bool | Operational | None:
         tokens = formated(command).split(' ')
 
-        op = tokens[1].lower()
-        what = tokens[2].lower()
+        if action:
+            # Clean format: command is "operational asm ...", action passed separately
+            op = tokens[0].lower()
+            what = tokens[1].lower()
+            rest = tokens[2:]
+        else:
+            # Legacy format: command is "announce operational asm ..."
+            op = tokens[1].lower()
+            what = tokens[2].lower()
+            rest = tokens[3:]
 
         if op != 'operational':
             return False
 
-        self.configuration.tokeniser.replenish(tokens[3:])
+        self.configuration.tokeniser.replenish(rest)
         # None or a class
         return operational(what, self.configuration.tokeniser)  # type: ignore[no-any-return]
