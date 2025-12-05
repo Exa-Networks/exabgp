@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.dns import host, domain
 
 
@@ -51,8 +52,15 @@ class HostName(Capability):
     @classmethod
     def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         assert isinstance(instance, HostName)
+        # Hostname capability: hostname_len(1) + hostname + domain_len(1) + domain
+        if len(data) < 1:
+            raise Notify(2, 0, 'Hostname capability too short: need at least 1 byte')
         l1 = data[0]
+        if len(data) < l1 + 2:
+            raise Notify(2, 0, f'Hostname capability truncated: need {l1 + 2} bytes for hostname, got {len(data)}')
         instance.host_name = data[1 : l1 + 1].decode('utf-8')
         l2 = data[l1 + 1]
+        if len(data) < l1 + 2 + l2:
+            raise Notify(2, 0, f'Hostname capability truncated: need {l1 + 2 + l2} bytes total, got {len(data)}')
         instance.domain_name = data[l1 + 2 : l1 + 2 + l2].decode('utf-8')
         return instance

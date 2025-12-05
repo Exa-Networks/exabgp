@@ -38,7 +38,12 @@ class ASN(Resource):
     @classmethod
     def unpack_asn(cls: Type[ASN], data: bytes, klass: Type[ASN]) -> ASN:
         kls = klass
-        value = unpack('!L' if len(data) == cls.SIZE_4BYTE else '!H', data)[0]
+        if len(data) == cls.SIZE_4BYTE:
+            value = unpack('!L', data)[0]
+        elif len(data) == cls.SIZE_2BYTE:
+            value = unpack('!H', data)[0]
+        else:
+            raise ValueError(f'ASN data invalid size: need {cls.SIZE_2BYTE} or {cls.SIZE_4BYTE} bytes, got {len(data)}')
         return kls(value)
 
     def __len__(self) -> int:

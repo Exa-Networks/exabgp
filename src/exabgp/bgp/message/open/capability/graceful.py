@@ -15,6 +15,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log, lazymsg
 
 # =========================================================== Graceful (Restart)
@@ -79,12 +80,18 @@ class Graceful(Capability, dict[tuple[AFI, SAFI], int]):
         if len(instance) > 0:
             log.debug(lazymsg('capability.graceful_restart.duplicate action=replace'), 'parser')
             instance.clear()
+        # Graceful Restart: restart_flags/time(2) + families(4 each)
+        if len(data) < 2:
+            raise Notify(2, 0, f'Graceful Restart capability too short: need 2 bytes minimum, got {len(data)}')
         restart = unpack('!H', data[:2])[0]
         restart_flag = restart >> 12
         restart_time = restart & Graceful.TIME_MASK
         data = data[2:]
         families: list[tuple[AFI, SAFI, int]] = []
+        # Each family entry is 4 bytes: AFI(2) + SAFI(1) + flags(1)
         while data:
+            if len(data) < 4:
+                raise Notify(2, 0, f'Graceful Restart capability truncated: need 4 bytes per family, got {len(data)}')
             afi = AFI.unpack_afi(data[:2])
             safi = SAFI.unpack_safi(data[2:3])
             flag_family = data[3]

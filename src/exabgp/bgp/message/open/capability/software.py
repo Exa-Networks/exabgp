@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.notification import Notify
 from exabgp.version import version
 
 
@@ -36,6 +37,11 @@ class Software(Capability):
     @classmethod
     def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         assert isinstance(instance, Software)
+        # Software capability: length(1) + version_string
+        if len(data) < 1:
+            raise Notify(2, 0, 'Software capability too short: need at least 1 byte')
         l1 = data[0]
+        if len(data) < l1 + 1:
+            raise Notify(2, 0, f'Software capability truncated: need {l1 + 1} bytes, got {len(data)}')
         instance.software_version = data[1 : l1 + 1].decode('utf-8')
         return instance
