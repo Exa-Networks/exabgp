@@ -338,6 +338,11 @@ class Path:
         """Get path config for CLI tests."""
         return TestPathConfig('cli', cls.CLI, has_msg_files=False)
 
+    @classmethod
+    def decoding_config(cls) -> 'TestPathConfig':
+        """Get path config for decoding tests."""
+        return TestPathConfig('decoding', cls.DECODING, has_msg_files=False)
+
 
 @dataclass
 class TestPathConfig:
@@ -2210,6 +2215,7 @@ class DecodingTests(Tests):
             return True
 
     def __init__(self) -> None:
+        self.path_config = Path.decoding_config()
         super().__init__(self.Test)
 
         for filename in Path.ALL_DECODING:
