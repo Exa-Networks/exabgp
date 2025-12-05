@@ -18,6 +18,7 @@ import subprocess
 import sys
 import time
 from argparse import Namespace, _SubParsersAction
+from dataclasses import dataclass
 from enum import Enum
 from types import FrameType
 from typing import (
@@ -280,6 +281,7 @@ class Path:
     DECODING: str = os.path.join(os.path.join(ROOT, 'qa', 'decoding'))
     ENCODING: str = os.path.join(os.path.join(ROOT, 'qa', 'encoding'))
     API: str = os.path.join(os.path.join(ROOT, 'qa', 'api'))
+    CLI: str = os.path.join(os.path.join(ROOT, 'qa', 'cli'))
 
     ALL_ETC: List[str] = glob.glob(os.path.join(ETC, '*.conf'))
     ALL_ETC.sort()
@@ -289,6 +291,8 @@ class Path:
     ALL_ENCODING.sort()
     ALL_API: List[str] = glob.glob(os.path.join(API, '*.ci'))
     ALL_API.sort()
+    ALL_CLI: List[str] = glob.glob(os.path.join(CLI, '*.ci'))
+    ALL_CLI.sort()
 
     @staticmethod
     def etc(fname: str) -> str:
@@ -299,8 +303,8 @@ class Path:
         return os.path.abspath(os.path.join(Path.ENCODING, fname) + '.' + ext)
 
     @staticmethod
-    def api_ci(fname: str) -> str:
-        return os.path.abspath(os.path.join(Path.API, fname) + '.ci')
+    def cli_ci(fname: str) -> str:
+        return os.path.abspath(os.path.join(Path.CLI, fname) + '.ci')
 
     @classmethod
     def validate(cls) -> None:
@@ -318,6 +322,46 @@ class Path:
 
         if not os.path.isfile(cls.BGP):
             sys.exit('could not find the sequence daemon')
+
+    @classmethod
+    def encoding_config(cls) -> 'TestPathConfig':
+        """Get path config for encoding tests."""
+        return TestPathConfig('encoding', cls.ENCODING, has_msg_files=True)
+
+    @classmethod
+    def api_config(cls) -> 'TestPathConfig':
+        """Get path config for API tests."""
+        return TestPathConfig('api', cls.API, has_msg_files=True)
+
+    @classmethod
+    def cli_config(cls) -> 'TestPathConfig':
+        """Get path config for CLI tests."""
+        return TestPathConfig('cli', cls.CLI, has_msg_files=False)
+
+
+@dataclass
+class TestPathConfig:
+    """Configuration for test directory paths.
+
+    Encapsulates the path configuration for a test type, allowing
+    EncodingTests and CLITests to share common logic while using
+    different directories.
+    """
+
+    name: str  # e.g., 'encoding', 'cli'
+    directory: str  # Full path to test directory
+    has_msg_files: bool  # Whether .msg files exist for this test type
+
+    @property
+    def all_ci_files(self) -> List[str]:
+        """Get all .ci files in the directory, sorted."""
+        files = glob.glob(os.path.join(self.directory, '*.ci'))
+        files.sort()
+        return files
+
+    def ci_path(self, fname: str, ext: str = 'ci') -> str:
+        """Get absolute path to a test file with given extension."""
+        return os.path.abspath(os.path.join(self.directory, fname) + '.' + ext)
 
 
 def get_python_process_names() -> tuple:
@@ -1241,11 +1285,12 @@ class Tests:
 
         # Manual debug commands
         if test:
+            test_type = self.path_config.name
             flush('Manual debug (run in separate terminals):')
             flush('  # Terminal 1 - Start server first:')
-            flush(f'  ./qa/bin/functional encoding --server {test.nick}')
+            flush(f'  ./qa/bin/functional {test_type} --server {test.nick}')
             flush('  # Terminal 2 - Then start client:')
-            flush(f'  ./qa/bin/functional encoding --client {test.nick}')
+            flush(f'  ./qa/bin/functional {test_type} --client {test.nick}')
             flush()
 
             # Show copy-pasteable exabgp command for direct debugging
@@ -1256,7 +1301,7 @@ class Tests:
             flush()
 
             flush('For intermittent failures, use --save to capture run logs:')
-            flush(f'  ./qa/bin/functional encoding --server {test.nick} --save /tmp/runs/')
+            flush(f'  ./qa/bin/functional {test_type} --server {test.nick} --save /tmp/runs/')
             flush('  # Logs saved with timing, message hashes for comparison')
             flush()
 
@@ -1336,14 +1381,15 @@ class Tests:
 
         # Add debug hints on failure
         if not is_success:
+            test_type = self.path_config.name
             flush()
             flush(f'  {yellow()}debug hints:{reset()}')
             if is_timeout:
                 flush(f'    - test timed out after {duration:.1f}s')
                 flush('    - try increasing --timeout or check for hangs')
-            flush(f'    - run single test: ./qa/bin/functional encoding {test.nick}')
-            flush(f'    - manual debug:    ./qa/bin/functional encoding --server {test.nick}')
-            flush(f'                       ./qa/bin/functional encoding --client {test.nick}')
+            flush(f'    - run single test: ./qa/bin/functional {test_type} {test.nick}')
+            flush(f'    - manual debug:    ./qa/bin/functional {test_type} --server {test.nick}')
+            flush(f'                       ./qa/bin/functional {test_type} --client {test.nick}')
             flush('    - decode packets:  ./sbin/exabgp decode "<hex>"')
 
     def _print_summary_results(
@@ -1400,13 +1446,14 @@ class Tests:
 
         # Add hint to debug failed tests individually
         if all_failed and total_run > 1:
+            test_type = self.path_config.name
             flush()
             flush('To debug failed tests, run individually:')
             for nick in all_failed:
-                flush(f'  ./qa/bin/functional encoding {nick}')
+                flush(f'  ./qa/bin/functional {test_type} {nick}')
             flush()
             flush('For intermittent failures, use --save to capture run logs:')
-            flush(f'  ./qa/bin/functional encoding {all_failed[0]} --save /tmp/runs/')
+            flush(f'  ./qa/bin/functional {test_type} {all_failed[0]} --save /tmp/runs/')
             flush()
             flush('To decode/analyze hex packets from test output:')
             flush('  ./sbin/exabgp decode "<hex>"')
@@ -1512,21 +1559,26 @@ class EncodingTests(Tests):
 
     API: Pattern[str] = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
 
-    def __init__(self) -> None:
+    def __init__(self, path_config: TestPathConfig | None = None) -> None:
+        if path_config is None:
+            path_config = Path.encoding_config()
+        self.path_config = path_config
         super().__init__(self.Test)
 
-        for filename in Path.ALL_ENCODING:
+        for filename in self.path_config.all_ci_files:
             name = os.path.basename(filename)[:-3]
             test = self.new(name)
             with open(filename, 'r') as reader:
                 content = reader.readline()
             test.conf['confs'] = [Path.etc(_) for _ in content.split()]
-            test.conf['ci'] = Path.ci(name, 'ci')
-            test.conf['msg'] = Path.ci(name, 'msg')
+            test.conf['ci'] = self.path_config.ci_path(name, 'ci')
+            if self.path_config.has_msg_files:
+                test.conf['msg'] = self.path_config.ci_path(name, 'msg')
             test.conf['port'] = Port.get()
             test.files.extend(test.conf['confs'])
             test.files.append(test.conf['ci'])
-            test.files.append(test.conf['msg'])
+            if self.path_config.has_msg_files:
+                test.files.append(test.conf['msg'])
 
             for f in test.conf['confs']:
                 with open(f) as reader:
@@ -1534,11 +1586,11 @@ class EncodingTests(Tests):
                         found = self.API.match(line)
                         if not found:
                             continue
-                        name = found.group(1)
-                        if not name.startswith('/'):
-                            name = Path.etc(name)
-                        if name not in test.files:
-                            test.files.append(name)
+                        run_name = found.group(1)
+                        if not run_name.startswith('/'):
+                            run_name = Path.etc(run_name)
+                        if run_name not in test.files:
+                            test.files.append(run_name)
 
     def client_cmd(self, nick: str, port: Optional[int] = None) -> str:
         """Generate a single-line copy-pasteable client command."""
@@ -1621,7 +1673,7 @@ class EncodingTests(Tests):
                     [
                         '>',
                         sys.argv[0],
-                        'encoding',
+                        self.path_config.name,
                         '--server',
                         test.nick,
                         '--port',
@@ -1634,7 +1686,7 @@ class EncodingTests(Tests):
                     [
                         '>',
                         sys.argv[0],
-                        'encoding',
+                        self.path_config.name,
                         '--client',
                         test.nick,
                         '--port',
@@ -1686,7 +1738,7 @@ class EncodingTests(Tests):
             # Start server
             cmd = [
                 sys.argv[0],
-                'encoding',
+                self.path_config.name,
                 '--server',
                 test.nick,
                 '--port',
@@ -1703,7 +1755,7 @@ class EncodingTests(Tests):
             client[test.nick] = Exec().run(
                 [
                     sys.argv[0],
-                    'encoding',
+                    self.path_config.name,
                     '--client',
                     test.nick,
                     '--port',
@@ -1895,7 +1947,7 @@ class EncodingTests(Tests):
             test.setup()
             cmd = [
                 sys.argv[0],
-                'encoding',
+                self.path_config.name,
                 '--server',
                 test.nick,
                 '--port',
@@ -1925,7 +1977,7 @@ class EncodingTests(Tests):
             client[test.nick] = Exec().run(
                 [
                     sys.argv[0],
-                    'encoding',
+                    self.path_config.name,
                     '--client',
                     test.nick,
                     '--port',
@@ -2087,6 +2139,20 @@ class EncodingTests(Tests):
         return success
 
 
+class APITests(EncodingTests):
+    """API tests - encoding tests that use the API (run command).
+
+    These tests are identical to encoding tests but are organized in a
+    separate directory (qa/api/) for tests that exercise the API functionality.
+    """
+
+    def __init__(self, path_config: TestPathConfig | None = None) -> None:
+        if path_config is None:
+            path_config = Path.api_config()
+        # Call EncodingTests.__init__ with the api path config
+        super().__init__(path_config)
+
+
 class DecodingTests(Tests):
     class Test(Record, Exec):  # pyright: ignore[reportUnsafeMultipleInheritance]
         """Test combining Record state with Exec process management.
@@ -2182,7 +2248,9 @@ class DecodingTests(Tests):
         if test.state != State.SUCCESS:
             self._print_debug_hints_header(test.state == State.TIMEOUT, duration)
             flush(f'    - run single test: ./qa/bin/functional decoding {test.nick}')
-            flush(f'    - decode command:  ./sbin/exabgp decode -f "{test.conf["family"]}" --{test.conf["type"]} {test.conf["packet"]}')
+            flush(
+                f'    - decode command:  ./sbin/exabgp decode -f "{test.conf["family"]}" --{test.conf["type"]} {test.conf["packet"]}'
+            )
 
     def run_selected(
         self,
@@ -2202,7 +2270,14 @@ class DecodingTests(Tests):
             if message == 'open':
                 cmd = [Path.EXABGP, 'decode', '--%s' % test.conf['type'], test.conf['packet']]
             elif message in ['update', 'nlri']:
-                cmd = [Path.EXABGP, 'decode', '-f', test.conf['family'], '--%s' % test.conf['type'], test.conf['packet']]
+                cmd = [
+                    Path.EXABGP,
+                    'decode',
+                    '-f',
+                    test.conf['family'],
+                    '--%s' % test.conf['type'],
+                    test.conf['packet'],
+                ]
             else:
                 raise ValueError(f'invalid message type: {message}')
             test.run(cmd, env=None)
@@ -2396,23 +2471,23 @@ class ParsingTests(Tests):
         return success
 
 
-class APIConf(TypedDict):
-    """Configuration for API tests"""
+class CLIConf(TypedDict):
+    """Configuration for CLI tests"""
 
     confs: List[str]  # List of config file paths
     ci: str  # Path to .ci file
 
 
-class APITests(Tests):
-    """API tests - validate JSON responses from v6 API commands.
+class CLITests(Tests):
+    """CLI tests - validate JSON responses from v6 API commands.
 
-    Unlike encoding tests (which validate BGP wire format), API tests:
+    Unlike encoding tests (which validate BGP wire format), CLI tests:
     - Start ExaBGP with a config that runs a test script
     - The test script sends v6 API commands and validates JSON responses
     - Success: exit code 0 AND 'SUCCESS' in output
     """
 
-    API_PATTERN: Pattern[str] = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
+    RUN_PATTERN: Pattern[str] = re.compile(r'^\s*run\s+(.*)\s*?;\s*?$')
 
     class Test(Record, Exec):  # pyright: ignore[reportUnsafeMultipleInheritance]
         """Test combining Record state with Exec process management."""
@@ -2423,8 +2498,8 @@ class APITests(Tests):
             self._check: bytes = b'SUCCESS'
 
         @property
-        def api_conf(self) -> 'APIConf':
-            """Typed access to API configuration"""
+        def cli_conf(self) -> 'CLIConf':
+            """Typed access to CLI configuration"""
             return self.conf  # type: ignore[return-value]
 
         def success(self) -> bool:
@@ -2434,16 +2509,19 @@ class APITests(Tests):
                     return True
             return False
 
-    def __init__(self) -> None:
+    def __init__(self, path_config: TestPathConfig | None = None) -> None:
+        if path_config is None:
+            path_config = Path.cli_config()
+        self.path_config = path_config
         super().__init__(self.Test)
 
-        for filename in Path.ALL_API:
+        for filename in self.path_config.all_ci_files:
             name = os.path.basename(filename)[:-3]
             test = self.new(name)
             with open(filename, 'r') as reader:
                 content = reader.readline()
             test.conf['confs'] = [Path.etc(_) for _ in content.split()]
-            test.conf['ci'] = Path.api_ci(name)
+            test.conf['ci'] = self.path_config.ci_path(name, 'ci')
             test.files.extend(test.conf['confs'])
             test.files.append(test.conf['ci'])
 
@@ -2451,7 +2529,7 @@ class APITests(Tests):
             for f in test.conf['confs']:
                 with open(f) as reader:
                     for line in reader:
-                        found = self.API_PATTERN.match(line)
+                        found = self.RUN_PATTERN.match(line)
                         if not found:
                             continue
                         run_name = found.group(1)
@@ -2467,7 +2545,7 @@ class APITests(Tests):
             result.append(f'> env exabgp_api_version=6 {Path.EXABGP} -d -p {confs}')
         return '\n'.join(result)
 
-    def _print_test_output(self, test: 'APITests.Test') -> None:
+    def _print_test_output(self, test: 'CLITests.Test') -> None:
         """Print test output with timing for verbose/debug mode"""
         duration = time.time() - test.start_time if test.start_time else 0
         test.collect()
@@ -2479,7 +2557,7 @@ class APITests(Tests):
         if test.state != State.SUCCESS:
             self._print_debug_hints_header(test.state == State.TIMEOUT, duration)
             confs = ' '.join(test.conf['confs'])
-            flush(f'    - run single test: ./qa/bin/functional api {test.nick}')
+            flush(f'    - run single test: ./qa/bin/functional cli {test.nick}')
             flush(f'    - run manually:    env exabgp_api_version=6 ./sbin/exabgp -d -p {confs}')
 
     def run_selected(
@@ -2739,10 +2817,8 @@ def add_test(
             success_exit = tests.run_selected(
                 parsed.timeout, save_dir=save_dir, verbose=verbose, debug_tests=debug_tests, quiet=quiet
             )
-        elif isinstance(tests, (DecodingTests, ParsingTests, APITests)):
-            success_exit = tests.run_selected(
-                parsed.timeout, verbose=verbose, debug_tests=debug_tests, quiet=quiet
-            )
+        elif isinstance(tests, (DecodingTests, ParsingTests, CLITests)):
+            success_exit = tests.run_selected(parsed.timeout, verbose=verbose, debug_tests=debug_tests, quiet=quiet)
         else:
             success_exit = tests.run_selected(parsed.timeout)
         if not quiet:
@@ -2757,8 +2833,9 @@ if __name__ == '__main__':
 
     decoding = DecodingTests()
     encoding = EncodingTests()
-    parsing = ParsingTests()
     api = APITests()
+    parsing = ParsingTests()
+    cli = CLITests()
 
     parser = argparse.ArgumentParser(description='The BGP swiss army knife of networking functional testing tool')
     subparser = parser.add_subparsers()
@@ -2789,8 +2866,28 @@ if __name__ == '__main__':
             'quiet',
         ],
     )
+    add_test(
+        subparser,
+        'api',
+        api,
+        [
+            'list',
+            'short_list',
+            'edit',
+            'dry',
+            'timeout',
+            'port',
+            'server',
+            'client',
+            'save',
+            'stress',
+            'verbose',
+            'debug',
+            'quiet',
+        ],
+    )
     add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit', 'verbose', 'debug', 'quiet'])
-    add_test(subparser, 'api', api, ['list', 'short_list', 'dry', 'edit', 'timeout', 'verbose', 'debug', 'quiet'])
+    add_test(subparser, 'cli', cli, ['list', 'short_list', 'dry', 'edit', 'timeout', 'verbose', 'debug', 'quiet'])
 
     parsed = parser.parse_args()
     if vars(parsed):
