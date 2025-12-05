@@ -328,12 +328,37 @@ reactor/protocol.py (TCP send)
 
 ---
 
+---
+
+## Functional Testing
+
+**File:** `qa/bin/functional` (~2670 lines)
+
+**When to read:** Adding functional tests, debugging test failures, extending test runner
+
+**Documentation:** `.claude/exabgp/FUNCTIONAL_TEST_RUNNER.md` - Complete guide to:
+- Test runner architecture (EncodingTests, DecodingTests, ParsingTests)
+- Test file formats (.ci, .msg, .conf, .run)
+- Adding new test types
+- CLI options and debugging
+
+**Quick reference:**
+```bash
+./qa/bin/functional encoding --list    # List encoding tests
+./qa/bin/functional encoding A         # Run specific test
+./qa/bin/functional encoding --server A  # Start server only (for debugging)
+./qa/bin/functional encoding --client A  # Start client only (for debugging)
+```
+
+---
+
 **See also:**
 - `CODEBASE_ARCHITECTURE.md` - Complete directory structure
 - `DATA_FLOW_GUIDE.md` - How files interact
 - `REGISTRY_AND_EXTENSION_PATTERNS.md` - Modification patterns
 - `BGP_CONCEPTS_TO_CODE_MAP.md` - Concept to file mapping
+- `FUNCTIONAL_TEST_RUNNER.md` - Test runner architecture
 
 ---
 
-**Updated:** 2025-11-24
+**Updated:** 2025-12-05
