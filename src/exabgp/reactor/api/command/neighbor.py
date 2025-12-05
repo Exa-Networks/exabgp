@@ -93,16 +93,20 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
             limit = words[-1]
 
     async def callback_configuration() -> None:
-        for neighbor_name in reactor.configuration.neighbors.keys():
-            neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
-            if not neighbor:
-                continue
-            if limit and limit not in neighbor_name:
-                continue
-            for line in str(neighbor).split('\n'):
-                reactor.processes.write(service, line)
-                await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
-        await reactor.processes.answer_done_async(service)
+        try:
+            for neighbor_name in reactor.configuration.neighbors.keys():
+                neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
+                if not neighbor:
+                    continue
+                if limit and limit not in neighbor_name:
+                    continue
+                for line in str(neighbor).split('\n'):
+                    reactor.processes.write(service, line)
+                    await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
+        except Exception as e:
+            await reactor.processes.answer_error_async(service, str(e))
+        else:
+            await reactor.processes.answer_done_async(service)
 
     async def callback_json() -> None:
         p = []
@@ -179,19 +183,27 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
                     reactor.processes.write(service, '')
                     await asyncio.sleep(0)
         except Exception as e:
-            reactor.processes.write(service, f'# Error: {e}')
-        await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_error_async(service, str(e))
+        else:
+            await reactor.processes.answer_done_async(service)
 
     async def callback_summary() -> None:
-        reactor.processes.write(service, NeighborTemplate.summary_header)
-        for peer_name in reactor.peers():
-            if limit and limit != str(reactor.neighbor_ip(peer_name)):
-                continue
-            for line in NeighborTemplate.summary(reactor.neighbor_cli_data(peer_name)).split('\n'):
-                if line:
-                    reactor.processes.write(service, line)
-                await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
-        await reactor.processes.answer_done_async(service)
+        try:
+            reactor.processes.write(service, NeighborTemplate.summary_header)
+            for peer_name in reactor.peers():
+                if limit and limit != str(reactor.neighbor_ip(peer_name)):
+                    continue
+                cli_data = reactor.neighbor_cli_data(peer_name)
+                if not cli_data:
+                    continue
+                for line in NeighborTemplate.summary(cli_data).split('\n'):
+                    if line:
+                        reactor.processes.write(service, line)
+                    await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
+        except Exception as e:
+            await reactor.processes.answer_error_async(service, str(e))
+        else:
+            await reactor.processes.answer_done_async(service)
 
     async def callback_list_json() -> None:
         """Simple peer list - just IP, AS, and state for each configured neighbor."""
@@ -222,22 +234,19 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
                         'state': state,
                     }
                 )
+
+            for line in json.dumps(peers).split('\n'):
+                reactor.processes.write(service, line)
+                await asyncio.sleep(0)
         except Exception as e:
-            reactor.processes.write(service, f'{{"error": "{e}"}}')
+            await reactor.processes.answer_error_async(service, str(e))
+        else:
+            await reactor.processes.answer_done_async(service)
 
-        for line in json.dumps(peers).split('\n'):
-            reactor.processes.write(service, line)
-            await asyncio.sleep(0)
-        await reactor.processes.answer_done_async(service)
-
-    # peer list: simple JSON list of peers
-    if is_peer_list and use_json:
-        reactor.asynchronous.schedule(service, line, callback_list_json())
-        return True
-
-    # Full JSON output for peer <ip> show
-    if use_json:
-        reactor.asynchronous.schedule(service, line, callback_json())
+    # Explicit display options take priority over use_json default
+    # (v6 API always has use_json=True, so we check explicit options first)
+    if configuration:
+        reactor.asynchronous.schedule(service, line, callback_configuration())
         return True
 
     if summary:
@@ -248,8 +257,14 @@ def show_neighbor(self: Command, reactor: Reactor, service: str, line: str, use_
         reactor.asynchronous.schedule(service, line, callback_extensive())
         return True
 
-    if configuration:
-        reactor.asynchronous.schedule(service, line, callback_configuration())
+    # peer list: simple JSON list of peers
+    if is_peer_list and use_json:
+        reactor.asynchronous.schedule(service, line, callback_list_json())
+        return True
+
+    # Default: Full JSON output for peer <ip> show (no explicit option)
+    if use_json:
+        reactor.asynchronous.schedule(service, line, callback_json())
         return True
 
     reactor.processes.write(service, 'usage: peer <ip> show [summary|extensive|configuration]')
