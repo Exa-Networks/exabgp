@@ -1,8 +1,49 @@
 # Plan: Eliminate Change Class - Index by Attributes
 
-**Status:** 📋 Planning
+**Status:** 🚧 In Progress (Phase 1-4 complete)
 **Created:** 2025-12-05
 **Goal:** Remove Change class, remove action storage - RIB indexes by Attributes, stores NLRIs directly
+
+---
+
+## Progress (2025-12-05)
+
+### Completed Phases
+
+**Phase 1: Update class with announces/withdraws ✅**
+- Added dual-mode `__init__`: legacy `(nlris, attrs)` and new `(announces, withdraws, attrs)`
+- Added `.announces` and `.withdraws` properties
+- Full backward compatibility with `_legacy_mode` flag
+
+**Phase 2: Update unpack_message() ✅**
+- Now creates `Update(announces, withdraws, attributes)` using new signature
+- Separates IPv4 withdrawn/announced and MP_REACH/MP_UNREACH
+
+**Phase 3: Update messages() for new mode ✅**
+- `messages()` now handles both legacy and new mode
+- In new mode: uses `v4_announces`/`v4_withdraws` lists directly
+- No reliance on `nlri.action` in new mode
+
+**Phase 4: RIB del_from_rib() without deepcopy ✅**
+- Added `_pending_withdraws` dict to `OutgoingRIB`
+- `del_from_rib()` now stores NLRI directly in `_pending_withdraws`
+- **No deepcopy required!** Eliminated the 88% CPU bottleneck
+- Added `update_cache_withdraw()` method to Cache
+- `updates()` yields withdraw Updates using new 3-arg signature
+
+### All tests pass ✅
+- Unit tests: 2678 passed
+- Functional encoding: 36/36 passed
+- Functional decoding: 18/18 passed
+- API tests: 38/38 passed
+- All 11 test suites pass
+
+### Remaining Phases (future work)
+
+- Phase 5: Update all Change creation sites to use tuples
+- Phase 6: Update cache to store tuples instead of Change
+- Phase 7: Remove action from NLRI
+- Phase 8: Delete Change class
 
 ---
 

@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import asyncio
-from copy import deepcopy
 from typing import TYPE_CHECKING, Iterator
 
 from exabgp.logger import log, lazymsg
@@ -25,6 +24,7 @@ from exabgp.rib.cache import Cache
 if TYPE_CHECKING:
     from exabgp.rib.change import Change
     from exabgp.bgp.message.update.attribute.attributes import Attributes
+    from exabgp.bgp.message.update.nlri.nlri import NLRI
     from exabgp.protocol.family import AFI, SAFI
 
 # This is needs to be an ordered dict
@@ -38,6 +38,10 @@ class OutgoingRIB(Cache):
     _new_attribute: dict[bytes, Attributes]
     _refresh_families: set[tuple[AFI, SAFI]]
     _refresh_changes: list[Change]
+
+    # New structure for withdraws - avoids deepcopy by not modifying nlri.action
+    # Indexed by family -> nlri_index -> NLRI
+    _pending_withdraws: dict[tuple[AFI, SAFI], dict[bytes, 'NLRI']]
 
     def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]]) -> None:
         Cache.__init__(self, cache, families)
@@ -61,6 +65,10 @@ class OutgoingRIB(Cache):
         # _new_attribute: attributes of one of the changes
         # makes our life easier, but could be removed
 
+        # Separate storage for withdraws - indexed by family, then nlri_index
+        # This avoids needing to deepcopy and modify nlri.action
+        self._pending_withdraws = {}
+
         self._refresh_families = set()
         self._refresh_changes = []
 
@@ -83,10 +91,11 @@ class OutgoingRIB(Cache):
         self._new_nlri = {}
         self._new_attr_af_nlri = {}
         self._new_attribute = {}
+        self._pending_withdraws = {}
         self.reset()
 
     def pending(self) -> bool:
-        return len(self._new_nlri) != 0 or len(self._refresh_changes) != 0
+        return len(self._new_nlri) != 0 or len(self._refresh_changes) != 0 or len(self._pending_withdraws) != 0
 
     def register_flush_callback(self) -> asyncio.Event:
         """Register callback to be fired when RIB is flushed to wire.
@@ -199,6 +208,7 @@ class OutgoingRIB(Cache):
 
         change_index = change.index()
         change_family = change.nlri.family().afi_safi()
+        nlri_index = change.nlri.index()
 
         attr_af_nlri = self._new_attr_af_nlri
         new_nlri = self._new_nlri
@@ -212,10 +222,15 @@ class OutgoingRIB(Cache):
                 prev_change_index,
                 None,
             )
+            # Also remove from _new_nlri since we're withdrawing it
+            new_nlri.pop(change_index, None)
 
-        change = deepcopy(change)
-        change.nlri.action = Action.WITHDRAW
-        self._update_rib(change)
+        # Store withdraw in separate structure - no deepcopy needed!
+        # The NLRI is stored directly, action is determined by which dict it's in
+        self._pending_withdraws.setdefault(change_family, {})[nlri_index] = change.nlri
+
+        # Update cache to remove the announced route
+        self.update_cache_withdraw(change)
 
     def add_to_resend(self, change: Change) -> None:
         self._refresh_changes.append(change)
@@ -245,6 +260,8 @@ class OutgoingRIB(Cache):
         self.update_cache(change)
 
     def updates(self, grouped: bool) -> Iterator[Update | RouteRefresh]:
+        from exabgp.bgp.message.update.attribute.attributes import Attributes as AttrsClass
+
         attr_af_nlri = self._new_attr_af_nlri
         new_attr = self._new_attribute
 
@@ -253,6 +270,10 @@ class OutgoingRIB(Cache):
         self._new_attr_af_nlri = {}
         self._new_attribute = {}
 
+        # Snapshot and clear pending withdraws
+        pending_withdraws = self._pending_withdraws
+        self._pending_withdraws = {}
+
         # Snapshot and clear refresh state to prevent race conditions
         # (resend() can be called during iteration and would modify these)
         refresh_families = self._refresh_families
@@ -260,7 +281,7 @@ class OutgoingRIB(Cache):
         self._refresh_families = set()
         self._refresh_changes = []
 
-        # generating Updates from what is in the RIB
+        # generating Updates from what is in the RIB (announces)
         for attr_index, per_family in attr_af_nlri.items():
             for family, changes in per_family.items():
                 if not changes:
@@ -284,6 +305,17 @@ class OutgoingRIB(Cache):
 
                 for change in changes.values():
                     yield Update([change.nlri], attributes)
+
+        # Generate Updates for pending withdraws using the new Update signature
+        # Update(announces=[], withdraws=nlris, attributes) - no nlri.action needed
+        # Yield one Update per NLRI to match original behavior
+        for family, nlris_dict in pending_withdraws.items():
+            if not nlris_dict:
+                continue
+            for nlri in nlris_dict.values():
+                # Use new 3-arg signature: (announces, withdraws, attributes)
+                # Withdraws don't need path attributes per RFC 4760
+                yield Update([], [nlri], AttrsClass())
 
         # Route Refresh - use snapshots to avoid modification during iteration
 
