@@ -75,7 +75,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -100,7 +100,26 @@ class Label(INET):
     Wire format: [mask][labels][prefix]
     Storage: _packed (CIDR), _labels_packed (label bytes)
     pack_nlri() = concatenation with computed mask
+
+    Uses class-level SAFI (always nlri_mpls) - no instance storage needed.
     """
+
+    _class_safi: ClassVar[SAFI] = SAFI.nlri_mpls
+
+    @property
+    @final
+    def safi(self) -> SAFI:
+        """Label NLRI always has SAFI nlri_mpls (class-level constant)."""
+        return self._class_safi
+
+    @safi.setter
+    def safi(self, value: SAFI) -> None:
+        """SAFI setter - ignored for Label (SAFI is class-level constant).
+
+        This setter exists for compatibility with code that assigns safi,
+        but the value is ignored since Label always has nlri_mpls.
+        """
+        pass  # Ignore - SAFI is class-level
 
     def __init__(self, packed: bytes) -> None:
         """Create a Label NLRI from packed CIDR bytes.
@@ -109,10 +128,13 @@ class Label(INET):
             packed: CIDR wire format bytes [mask_byte][truncated_ip...]
 
         AFI is inferred from mask (>32 implies IPv6).
-        SAFI defaults to nlri_mpls. Use factory methods for other families.
+        SAFI is always nlri_mpls (class-level). Use factory methods for creation.
+
+        NOTE: This __init__ is broken (INET requires afi parameter).
+        Use from_cidr() factory method instead.
         """
         INET.__init__(self, packed)
-        self.safi = SAFI.nlri_mpls  # Override unicast default from INET
+        # Note: safi is now a property, setter is a no-op
         self._labels_packed: bytes = b''  # Label bytes (empty = NOLABEL)
 
     @property
@@ -132,7 +154,7 @@ class Label(INET):
         cls,
         cidr: CIDR,
         afi: AFI,
-        safi: SAFI,
+        safi: SAFI = SAFI.nlri_mpls,  # Default to class SAFI; parameter kept for API compat
         action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
     ) -> 'Label':
@@ -141,15 +163,16 @@ class Label(INET):
         Args:
             cidr: CIDR prefix
             afi: Address Family Identifier
-            safi: Subsequent Address Family Identifier
+            safi: Ignored - Label always uses nlri_mpls (kept for API compatibility)
             action: Route action (ANNOUNCE/WITHDRAW)
             path_info: AddPath path identifier
 
         Returns:
-            New Label instance
+            New Label instance with SAFI=nlri_mpls
         """
         instance = object.__new__(cls)
-        NLRI.__init__(instance, afi, safi, action)
+        # Note: safi parameter is ignored - Label.safi is a class-level property
+        NLRI.__init__(instance, afi, cls._class_safi, action)
         instance._packed = cidr.pack_nlri()
         instance.path_info = path_info
         instance.nexthop = IP.NoNextHop

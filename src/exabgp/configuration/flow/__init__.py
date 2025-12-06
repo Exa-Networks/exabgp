@@ -118,7 +118,15 @@ def route(tokeniser: Any) -> list[Route]:
         else:
             raise ValueError(f'flow: unknown command "{command}"')
 
-    if flow_nlri.rd is not RouteDistinguisher.NORD:
-        flow_nlri.safi = SAFI.flow_vpn
+    # Recreate NLRI with correct SAFI if RD is present
+    # (avoids SAFI mutation which is incompatible with class-level SAFI)
+    if flow_nlri.rd is not RouteDistinguisher.NORD and flow_nlri.safi != SAFI.flow_vpn:
+        new_nlri = Flow.make_flow(flow_nlri.afi, SAFI.flow_vpn, flow_nlri.action)
+        # Transfer all data to new NLRI
+        new_nlri._rd_override = flow_nlri._rd_override
+        new_nlri._rules_cache = flow_nlri._rules_cache
+        new_nlri._packed_stale = True
+        new_nlri.nexthop = flow_nlri.nexthop
+        flow_route.nlri = new_nlri
 
     return [flow_route]
