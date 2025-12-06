@@ -460,7 +460,7 @@ class ParseNeighbor(Section):
         for route in neighbor.routes:
             # remove_self may well have side effects on route
             route = neighbor.remove_self(route)
-            if route.nlri.family().afi_safi() in families and neighbor.rib is not None:
+            if route.nlri.family().afi_safi() in families:
                 # This add the family to neighbor.families()
                 neighbor.rib.outgoing.add_to_rib_watchdog(route)
 
@@ -527,8 +527,7 @@ class ParseNeighbor(Section):
                 # XXX: FIXME: Ok, it works but it takes LOTS of memory ..
                 m_neighbor = deepcopy(neighbor)
                 m_neighbor.make_rib()
-                if m_neighbor.rib is not None:
-                    m_neighbor.rib.outgoing.families = {family}
+                m_neighbor.rib.outgoing.families = {family}
                 self._init_neighbor(m_neighbor, local)
         else:
             neighbor.make_rib()

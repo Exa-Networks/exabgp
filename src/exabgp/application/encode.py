@@ -141,7 +141,7 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
         neighbor = configuration.neighbors[name]
         _, negotiated_out = _negotiated(neighbor)
 
-        if neighbor.rib is None:
+        if not neighbor.rib.enabled:
             continue
 
         # Trigger route processing

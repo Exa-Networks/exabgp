@@ -38,8 +38,8 @@ class OutgoingRIB(Cache):
     # Indexed by family -> nlri_index -> (NLRI, Attributes)
     _pending_withdraws: dict[tuple[AFI, SAFI], dict[bytes, tuple['NLRI', 'Attributes']]]
 
-    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]]) -> None:
-        Cache.__init__(self, cache, families)
+    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]], enabled: bool = True) -> None:
+        Cache.__init__(self, cache, families, enabled)
 
         self._watchdog = {}
         self.families = families
@@ -90,6 +90,8 @@ class OutgoingRIB(Cache):
         self.reset()
 
     def pending(self) -> bool:
+        if not self.enabled:
+            return False
         return len(self._new_nlri) != 0 or len(self._refresh_routes) != 0 or len(self._pending_withdraws) != 0
 
     def register_flush_callback(self) -> asyncio.Event:
@@ -116,6 +118,8 @@ class OutgoingRIB(Cache):
             self._flush_callbacks.clear()
 
     def resend(self, enhanced_refresh: bool, family: tuple[AFI, SAFI] | None = None) -> None:
+        if not self.enabled:
+            return
         requested_families = set(self.families)
 
         if family is not None:
@@ -129,6 +133,8 @@ class OutgoingRIB(Cache):
             self._refresh_routes.append(route)
 
     def withdraw(self, families: set[tuple[AFI, SAFI]] | None = None) -> None:
+        if not self.enabled:
+            return
         if not families:
             families = self.families
         requested_families = set(families).intersection(self.families)
@@ -138,10 +144,14 @@ class OutgoingRIB(Cache):
             self.del_from_rib(route)
 
     def queued_routes(self) -> Iterator[Route]:
+        if not self.enabled:
+            return
         for route in self._new_nlri.values():
             yield route
 
     def replace_restart(self, previous: list[Route], new: list[Route]) -> None:
+        if not self.enabled:
+            return
         # this requires that all routes are announcements
         indexed: dict[bytes, Route] = {}
 
@@ -158,6 +168,8 @@ class OutgoingRIB(Cache):
             self.del_from_rib(indexed.pop(index))
 
     def replace_reload(self, previous: list[Route], new: list[Route]) -> None:
+        if not self.enabled:
+            return
         # this requires that all routes are announcements
         indexed: dict[bytes, Route] = {}
 
@@ -173,6 +185,8 @@ class OutgoingRIB(Cache):
             self.del_from_rib(indexed.pop(index))
 
     def add_to_rib_watchdog(self, route: Route) -> bool:
+        if not self.enabled:
+            return False
         watchdog = route.attributes.watchdog()
         withdraw = route.attributes.withdraw()
         if watchdog:
@@ -184,6 +198,8 @@ class OutgoingRIB(Cache):
         return True
 
     def announce_watchdog(self, watchdog: str) -> None:
+        if not self.enabled:
+            return
         if watchdog in self._watchdog:
             for route in list(self._watchdog[watchdog].get('-', {}).values()):
                 route.nlri.action = Action.ANNOUNCE  # pylint: disable=E1101
@@ -192,6 +208,8 @@ class OutgoingRIB(Cache):
                 self._watchdog[watchdog]['-'].pop(route.index())
 
     def withdraw_watchdog(self, watchdog: str) -> None:
+        if not self.enabled:
+            return
         if watchdog in self._watchdog:
             for route in list(self._watchdog[watchdog].get('+', {}).values()):
                 self.del_from_rib(route)
@@ -204,6 +222,8 @@ class OutgoingRIB(Cache):
     def del_from_rib(self, nlri: 'NLRI', attributes: 'Attributes | None' = None) -> None: ...
 
     def del_from_rib(self, route_or_nlri: 'Route | NLRI', attributes: 'Attributes | None' = None) -> None:
+        if not self.enabled:
+            return
         # Handle both signatures: (route) or (nlri, attributes)
         if attributes is None and hasattr(route_or_nlri, 'attributes'):
             # Legacy signature: del_from_rib(route)
@@ -247,6 +267,8 @@ class OutgoingRIB(Cache):
         self.update_cache_withdraw(nlri)
 
     def add_to_resend(self, route: Route) -> None:
+        if not self.enabled:
+            return
         self._refresh_routes.append(route)
 
     @overload
@@ -260,6 +282,8 @@ class OutgoingRIB(Cache):
         attributes_or_force: 'Attributes | bool' = False,
         force: bool = False,
     ) -> None:
+        if not self.enabled:
+            return
         from exabgp.rib.route import Route
 
         # Handle both signatures: (route, force) or (nlri, attributes, force)
@@ -303,6 +327,8 @@ class OutgoingRIB(Cache):
         self.update_cache(route)
 
     def updates(self, grouped: bool) -> Iterator[Update | RouteRefresh]:
+        if not self.enabled:
+            return
         attr_af_nlri = self._new_attr_af_nlri
         new_attr = self._new_attribute
 
