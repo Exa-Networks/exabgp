@@ -137,6 +137,9 @@ disallow_incomplete_defs = false
 follow_imports = "normal"
 ignore_missing_imports = true
 
+# Custom stubs for PEP 688 Buffer protocol (mypy doesn't fully support it yet)
+mypy_path = "stubs"
+
 # Exclude vendored code
 exclude = [
     "src/exabgp/vendoring/",

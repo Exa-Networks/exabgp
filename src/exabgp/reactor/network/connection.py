@@ -20,7 +20,7 @@ import asyncio  # noqa: F401 - Used by async methods added in Steps 2-4
 import random
 import socket
 import select
-from collections.abc import Buffer
+from exabgp.util.types import Buffer
 from typing import ClassVar, Iterator
 
 from exabgp.environment import getenv

@@ -69,7 +69,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from collections.abc import Buffer
+from exabgp.util.types import Buffer
 from struct import unpack
 from typing import TYPE_CHECKING, Any
 

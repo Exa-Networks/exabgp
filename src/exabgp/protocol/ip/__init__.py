@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import builtins
 import socket
-from collections.abc import Buffer
+from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Type
 
 from exabgp.protocol.family import AFI, SAFI

@@ -91,7 +91,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from collections.abc import Buffer
+from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:

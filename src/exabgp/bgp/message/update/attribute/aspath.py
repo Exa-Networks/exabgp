@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
-from collections.abc import Buffer
+from exabgp.util.types import Buffer
 from struct import error, unpack
 from typing import TYPE_CHECKING, ClassVar, Sequence, Type, TypeVar
 

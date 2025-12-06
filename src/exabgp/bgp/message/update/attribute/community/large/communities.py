@@ -5,7 +5,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from collections.abc import Buffer
+from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING, Iterator, Sequence
 
 if TYPE_CHECKING:
