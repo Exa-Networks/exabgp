@@ -15,7 +15,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.open.capability.negotiated import OpenContext
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.bgp.message.update.nlri import NLRI, _UNPARSED
 from exabgp.protocol.family import AFI, SAFI, Family
 
 # ================================================================= MP Unreachable NLRI (15)
@@ -41,7 +41,7 @@ class MPURNLRI(Attribute, Family):
         self._packed = packed
         self._context = context
         self._mode = self._MODE_PACKED
-        self._nlris_cache: list[NLRI] | None = None
+        self._nlris_cache: list[NLRI] = _UNPARSED
         # Initialize Family from packed data
         _afi = unpack('!H', packed[:2])[0]
         _safi = packed[2]
@@ -70,7 +70,7 @@ class MPURNLRI(Attribute, Family):
     @property
     def nlris(self) -> list[NLRI]:
         """Get the list of NLRIs, parsing from wire format if needed."""
-        if self._nlris_cache is not None:
+        if self._nlris_cache is not _UNPARSED:
             return self._nlris_cache
 
         if self._mode == self._MODE_PACKED:

@@ -11,7 +11,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.nlri import NLRI, _UNPARSED
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 
 from exabgp.bgp.message.update.nlri.inet import INET

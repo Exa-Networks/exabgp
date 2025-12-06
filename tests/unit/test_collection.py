@@ -96,7 +96,8 @@ class TestNLRICollectionLazyParsing:
 
     def test_nlris_not_parsed_until_accessed(self) -> None:
         """Test that NLRIs are parsed lazily."""
-        from exabgp.bgp.message.update.nlri.collection import NLRICollection, _UNPARSED
+        from exabgp.bgp.message.update.nlri.collection import NLRICollection
+        from exabgp.bgp.message.update.nlri import _UNPARSED
 
         packed = b'\x18\xc0\xa8\x01'
         context = create_context()

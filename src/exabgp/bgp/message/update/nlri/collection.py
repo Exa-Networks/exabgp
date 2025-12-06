@@ -18,12 +18,9 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.open.capability.negotiated import OpenContext
-from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.nlri import NLRI, _UNPARSED
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
-
-# Sentinel for unparsed NLRI cache (allows distinguishing "not parsed" from "parsed empty")
-_UNPARSED: list[NLRI] = []
 
 
 class NLRICollection:
