@@ -67,57 +67,28 @@ class Update(Message):
 
     def __init__(
         self,
-        nlris_or_announces: list[NLRI],
-        attributes_or_withdraws: Attributes | list[NLRI],
-        attributes: Attributes | None = None,
+        announces: list[NLRI],
+        withdraws: list[NLRI],
+        attributes: Attributes,
     ) -> None:
         # Update is a composite container - NLRIs and Attributes are already packed-bytes-first
         # No single _packed representation exists because messages() can generate multiple
         # wire-format messages from one Update due to size limits
-        #
-        # Supports two signatures for backward compatibility:
-        # - Update(nlris, attributes)           - legacy: single list, action on NLRI
-        # - Update(announces, withdraws, attrs) - new: separate lists, no action needed
-        if attributes is None:
-            # Legacy signature: Update(nlris, attributes)
-            if not isinstance(attributes_or_withdraws, Attributes):
-                raise TypeError('Update() legacy signature requires Attributes as second argument')
-            self._nlris: list[NLRI] = nlris_or_announces
-            self._announces: list[NLRI] = []
-            self._withdraws: list[NLRI] = []
-            self._attributes: Attributes = attributes_or_withdraws
-            self._legacy_mode = True
-        else:
-            # New signature: Update(announces, withdraws, attributes)
-            if not isinstance(attributes_or_withdraws, list):
-                raise TypeError('Update() new signature requires list[NLRI] as second argument')
-            self._nlris: list[NLRI] = []  # Will be populated on demand
-            self._announces: list[NLRI] = nlris_or_announces
-            self._withdraws: list[NLRI] = attributes_or_withdraws
-            self._attributes: Attributes = attributes
-            self._legacy_mode = False
-
-    @classmethod
-    def make_update(cls, nlris: list[NLRI], attributes: Attributes) -> 'Update':
-        return cls(nlris, attributes)
+        self._announces: list[NLRI] = announces
+        self._withdraws: list[NLRI] = withdraws
+        self._attributes: Attributes = attributes
 
     @property
     def nlris(self) -> list[NLRI]:
-        if self._legacy_mode:
-            return self._nlris
-        # New mode: combine announces and withdraws for backward compat
+        # Backward compat: combine announces and withdraws
         return self._announces + self._withdraws
 
     @property
     def announces(self) -> list[NLRI]:
-        if self._legacy_mode:
-            return [n for n in self._nlris if n.action == Action.ANNOUNCE]
         return self._announces
 
     @property
     def withdraws(self) -> list[NLRI]:
-        if self._legacy_mode:
-            return [n for n in self._nlris if n.action == Action.WITHDRAW]
         return self._withdraws
 
     @property
@@ -175,88 +146,51 @@ class Update(Message):
 
     # The routes MUST have the same attributes ...
     def messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator[bytes, None, None]:
-        # sort the nlris
-        # In legacy mode: nlris contains mixed announces/withdraws, use nlri.action to separate
-        # In new mode: v4_announces and v4_withdraws are separate lists
-
-        nlris: list = []  # Legacy mode: mixed list. New mode: unused for v4
-        v4_announces: list = []  # New mode only: IPv4 announces
-        v4_withdraws: list = []  # New mode only: IPv4 withdraws
+        # Sort and classify NLRIs into IPv4 and MP categories
+        v4_announces: list = []
+        v4_withdraws: list = []
         mp_nlris: dict[tuple, dict] = {}
 
-        if self._legacy_mode:
-            # Legacy mode: use nlri.action to determine announce/withdraw
-            for nlri in sorted(self.nlris):
-                if nlri.family().afi_safi() not in negotiated.families:
-                    continue
+        # Process announces
+        for nlri in sorted(self._announces):
+            if nlri.family().afi_safi() not in negotiated.families:
+                continue
 
-                add_v4 = nlri.afi == AFI.ipv4
-                add_v4 = add_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
+            is_v4 = nlri.afi == AFI.ipv4
+            is_v4 = is_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
+            is_v4 = is_v4 and nlri.nexthop.afi == AFI.ipv4
 
-                del_v4 = add_v4 and nlri.action == Action.WITHDRAW
+            if is_v4:
+                v4_announces.append(nlri)
+                continue
 
-                if del_v4:
-                    nlris.append(nlri)
-                    continue
+            if nlri.nexthop.afi != AFI.undefined:
+                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(Action.ANNOUNCE, []).append(nlri)
+                continue
 
-                add_v4 = add_v4 and nlri.action == Action.ANNOUNCE
-                add_v4 = add_v4 and nlri.nexthop.afi == AFI.ipv4
+            if nlri.safi in (SAFI.flow_ip, SAFI.flow_vpn):
+                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(Action.ANNOUNCE, []).append(nlri)
+                continue
 
-                if add_v4:
-                    nlris.append(nlri)
-                    continue
+            raise ValueError('unexpected nlri definition ({})'.format(nlri))
 
-                if nlri.nexthop.afi != AFI.undefined:
-                    mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
-                    continue
+        # Process withdraws
+        for nlri in sorted(self._withdraws):
+            if nlri.family().afi_safi() not in negotiated.families:
+                continue
 
-                if nlri.safi in (SAFI.flow_ip, SAFI.flow_vpn):
-                    mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
-                    continue
+            is_v4 = nlri.afi == AFI.ipv4
+            is_v4 = is_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
 
-                raise ValueError('unexpected nlri definition ({})'.format(nlri))
-        else:
-            # New mode: use separate _announces and _withdraws lists
-            # Process announces
-            for nlri in sorted(self._announces):
-                if nlri.family().afi_safi() not in negotiated.families:
-                    continue
+            if is_v4:
+                v4_withdraws.append(nlri)
+                continue
 
-                is_v4 = nlri.afi == AFI.ipv4
-                is_v4 = is_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
-                is_v4 = is_v4 and nlri.nexthop.afi == AFI.ipv4
-
-                if is_v4:
-                    v4_announces.append(nlri)
-                    continue
-
-                if nlri.nexthop.afi != AFI.undefined:
-                    mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(Action.ANNOUNCE, []).append(nlri)
-                    continue
-
-                if nlri.safi in (SAFI.flow_ip, SAFI.flow_vpn):
-                    mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(Action.ANNOUNCE, []).append(nlri)
-                    continue
-
-                raise ValueError('unexpected nlri definition ({})'.format(nlri))
-
-            # Process withdraws
-            for nlri in sorted(self._withdraws):
-                if nlri.family().afi_safi() not in negotiated.families:
-                    continue
-
-                is_v4 = nlri.afi == AFI.ipv4
-                is_v4 = is_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
-
-                if is_v4:
-                    v4_withdraws.append(nlri)
-                    continue
-
-                # MP withdraws
-                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(Action.WITHDRAW, []).append(nlri)
+            # MP withdraws
+            mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(Action.WITHDRAW, []).append(nlri)
 
         # Check if we have anything to send
-        has_v4 = nlris or v4_announces or v4_withdraws
+        has_v4 = v4_announces or v4_withdraws
         if not has_v4 and not mp_nlris:
             return
 
@@ -269,7 +203,7 @@ class Update(Message):
         include_defaults = True
 
         # Check if we only have withdraws (v4 or mp)
-        only_withdraws = not v4_announces and not nlris
+        only_withdraws = not v4_announces
         if mp_nlris and only_withdraws:
             for family, actions in mp_nlris.items():
                 afi, safi = family
@@ -303,22 +237,36 @@ class Update(Message):
         withdraws_size = 0
         announced_size = 0
 
-        if self._legacy_mode:
-            # Legacy mode: iterate over mixed nlris list, use nlri.action to separate
-            for nlri in nlris:
+        # First pack all announces
+        for nlri in v4_announces:
+            packed = nlri.pack_nlri(negotiated)
+            packed_size = len(packed)
+            if announced_size + withdraws_size + packed_size <= msg_size:
+                announced += packed
+                announced_size += packed_size
+                continue
+
+            if not withdraws and not announced:
+                log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
+                return
+
+            yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+            announced = packed
+            announced_size = packed_size
+            withdraws = b''
+            withdraws_size = 0
+
+        # Then pack all withdraws (if include_withdraw is True)
+        if include_withdraw:
+            for nlri in v4_withdraws:
                 packed = nlri.pack_nlri(negotiated)
                 packed_size = len(packed)
                 if announced_size + withdraws_size + packed_size <= msg_size:
-                    if nlri.action == Action.ANNOUNCE:
-                        announced += packed
-                        announced_size += packed_size
-                    elif include_withdraw:
-                        withdraws += packed
-                        withdraws_size += packed_size
+                    withdraws += packed
+                    withdraws_size += packed_size
                     continue
 
                 if not withdraws and not announced:
-                    # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
                     log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
                     return
 
@@ -326,65 +274,10 @@ class Update(Message):
                     yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
                 else:
                     yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
-
-                if nlri.action == Action.ANNOUNCE:
-                    announced = packed
-                    announced_size = packed_size
-                    withdraws = b''
-                    withdraws_size = 0
-                elif include_withdraw:
-                    withdraws = packed
-                    withdraws_size = packed_size
-                    announced = b''
-                    announced_size = 0
-                else:
-                    withdraws = b''
-                    withdraws_size = 0
-                    announced = b''
-                    announced_size = 0
-        else:
-            # New mode: process v4_announces and v4_withdraws separately
-            # First pack all announces
-            for nlri in v4_announces:
-                packed = nlri.pack_nlri(negotiated)
-                packed_size = len(packed)
-                if announced_size + withdraws_size + packed_size <= msg_size:
-                    announced += packed
-                    announced_size += packed_size
-                    continue
-
-                if not withdraws and not announced:
-                    log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
-                    return
-
-                yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
-                announced = packed
-                announced_size = packed_size
-                withdraws = b''
-                withdraws_size = 0
-
-            # Then pack all withdraws (if include_withdraw is True)
-            if include_withdraw:
-                for nlri in v4_withdraws:
-                    packed = nlri.pack_nlri(negotiated)
-                    packed_size = len(packed)
-                    if announced_size + withdraws_size + packed_size <= msg_size:
-                        withdraws += packed
-                        withdraws_size += packed_size
-                        continue
-
-                    if not withdraws and not announced:
-                        log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
-                        return
-
-                    if announced:
-                        yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
-                    else:
-                        yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
-                    withdraws = packed
-                    withdraws_size = packed_size
-                    announced = b''
-                    announced_size = 0
+                withdraws = packed
+                withdraws_size = packed_size
+                announced = b''
+                announced_size = 0
 
         if announced or withdraws:
             if announced:
