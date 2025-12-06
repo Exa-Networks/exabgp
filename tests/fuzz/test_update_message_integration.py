@@ -171,7 +171,7 @@ def test_messages_packs_simple_ipv4_announcement() -> None:
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = Update([nlri], attributes)
+    update = Update([nlri], [], attributes)
 
     # Generate messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -200,7 +200,7 @@ def test_messages_packs_ipv4_withdrawal() -> None:
 
     attributes = Attributes()
 
-    update = Update([nlri], attributes)
+    update = Update([], [nlri], attributes)
 
     # Generate messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -223,7 +223,7 @@ def test_messages_handles_no_nlris() -> None:
 
     # Empty NLRI list
     attributes = Attributes()
-    update = Update([], attributes)
+    update = Update([], [], attributes)
 
     # Generate messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -245,7 +245,7 @@ def test_messages_include_withdraw_flag() -> None:
     nlri = create_inet_nlri('10.0.0.0', 8, Action.WITHDRAW)
 
     attributes = Attributes()
-    update = Update([nlri], attributes)
+    update = Update([], [nlri], attributes)
 
     # Generate messages with include_withdraw=False
     messages = list(update.messages(negotiated, include_withdraw=False))
@@ -280,7 +280,7 @@ def test_messages_filters_by_negotiated_families() -> None:
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = Update([nlri_v4], attributes)
+    update = Update([nlri_v4], [], attributes)
 
     # Generate messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -318,7 +318,7 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
     original_attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     original_attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = Update([original_nlri], original_attributes)
+    update = Update([original_nlri], [], original_attributes)
 
     # Pack message
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -352,7 +352,7 @@ def test_roundtrip_ipv4_withdrawal() -> None:
     nlri = create_inet_nlri('192.168.0.0', 16, Action.WITHDRAW)
 
     attributes = Attributes()
-    update = Update([nlri], attributes)
+    update = Update([], [nlri], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -364,7 +364,7 @@ def test_roundtrip_ipv4_withdrawal() -> None:
 
     # Verify
     assert isinstance(unpacked, Update)
-    assert len(unpacked.nlris) >= 1
+    assert len(unpacked.withdraws) >= 1
     assert unpacked.nlris[0].action == Action.WITHDRAW
 
 
@@ -392,7 +392,7 @@ def test_roundtrip_multiple_nlris() -> None:
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = Update(nlris, attributes)
+    update = Update(nlris, [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -404,7 +404,7 @@ def test_roundtrip_multiple_nlris() -> None:
 
     # Verify
     assert isinstance(unpacked, Update)
-    assert len(unpacked.nlris) == 3
+    assert len(unpacked.announces) == 3
 
 
 @pytest.mark.fuzz
@@ -433,7 +433,7 @@ def test_roundtrip_with_multiple_attributes() -> None:
     attributes[Attribute.CODE.MED] = MED.from_int(100)
     attributes[Attribute.CODE.LOCAL_PREF] = LocalPreference.from_int(200)
 
-    update = Update([nlri], attributes)
+    update = Update([nlri], [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -477,8 +477,7 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    nlris = [withdraw1, withdraw2, announce1]
-    update = Update(nlris, attributes)
+    update = Update([announce1], [withdraw1, withdraw2], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -492,9 +491,9 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
     assert isinstance(unpacked, Update)
     assert len(unpacked.nlris) >= 2
 
-    actions = {nlri.action for nlri in unpacked.nlris}
-    assert Action.WITHDRAW in actions
-    assert Action.ANNOUNCE in actions
+    # Check we have both announces and withdraws
+    assert len(unpacked.announces) >= 1
+    assert len(unpacked.withdraws) >= 1
 
 
 # ==============================================================================
@@ -526,7 +525,7 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
 
-    update = Update([nlri], attributes)
+    update = Update([nlri], [], attributes)
 
     # Pack - should use MP_REACH_NLRI
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -556,7 +555,7 @@ def test_roundtrip_ipv6_announcement() -> None:
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
 
-    update = Update([nlri], attributes)
+    update = Update([nlri], [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -607,7 +606,7 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = Update([nlri_v4, nlri_v6], attributes)
+    update = Update([nlri_v4, nlri_v6], [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -648,7 +647,7 @@ def test_messages_splits_large_nlri_set() -> None:
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = Update(nlris, attributes)
+    update = Update(nlris, [], attributes)
 
     # Pack - should generate multiple messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -683,7 +682,7 @@ def test_messages_respects_negotiated_msg_size() -> None:
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = Update(nlris, attributes)
+    update = Update(nlris, [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -718,7 +717,7 @@ def test_messages_handles_large_attributes() -> None:
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([large_as_path])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = Update([nlri], attributes)
+    update = Update([nlri], [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -745,17 +744,18 @@ def test_integration_full_update_cycle() -> None:
     negotiated = create_negotiated_mock()
 
     # Create diverse NLRI set using factory method
-    nlris = []
+    withdraws = []
+    announces = []
 
     # Withdrawals
     for prefix, prefixlen in [('172.16.0.0', 12), ('192.168.0.0', 16)]:
         nlri = create_inet_nlri(prefix, prefixlen, Action.WITHDRAW)
-        nlris.append(nlri)
+        withdraws.append(nlri)
 
     # Announcements
     for prefix, prefixlen in [('10.0.0.0', 8), ('10.1.0.0', 16), ('10.2.0.0', 16)]:
         nlri = create_inet_nlri(prefix, prefixlen, Action.ANNOUNCE, nexthop='192.0.2.1')
-        nlris.append(nlri)
+        announces.append(nlri)
 
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
@@ -771,7 +771,7 @@ def test_integration_full_update_cycle() -> None:
     attributes[Attribute.CODE.MED] = MED.from_int(100)
     attributes[Attribute.CODE.LOCAL_PREF] = LocalPreference.from_int(200)
 
-    original_update = Update(nlris, attributes)
+    original_update = Update(announces, withdraws, attributes)
 
     # Pack
     messages = list(original_update.messages(negotiated, include_withdraw=True))
@@ -810,7 +810,7 @@ def test_integration_empty_attributes_for_withdrawal_only() -> None:
     # Empty attributes
     attributes = Attributes()
 
-    update = Update(nlris, attributes)
+    update = Update([], nlris, attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -822,7 +822,7 @@ def test_integration_empty_attributes_for_withdrawal_only() -> None:
 
     # Should be valid
     assert isinstance(unpacked, Update)
-    assert all(n.action == Action.WITHDRAW for n in unpacked.nlris)
+    assert len(unpacked.withdraws) >= 1
 
 
 @pytest.mark.fuzz
@@ -839,8 +839,6 @@ def test_integration_sorting_and_grouping() -> None:
     nlri2 = create_inet_nlri('172.16.0.0', 12, Action.WITHDRAW)
     nlri3 = create_inet_nlri('10.1.0.0', 16, Action.ANNOUNCE, nexthop='192.0.2.1')
 
-    nlris = [nlri1, nlri2, nlri3]
-
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
@@ -850,7 +848,7 @@ def test_integration_sorting_and_grouping() -> None:
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = Update(nlris, attributes)
+    update = Update([nlri1, nlri3], [nlri2], attributes)
 
     # Pack - should sort internally
     messages = list(update.messages(negotiated, include_withdraw=True))
