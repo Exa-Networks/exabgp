@@ -36,6 +36,7 @@ class NLRI(Family):
     action: int
     nexthop: 'IP'
     addpath: 'PathInfo'
+    _packed: bytes  # Wire format bytes (subclass-specific interpretation)
 
     # Singleton invalid NLRI (initialized after class definition)
     INVALID: ClassVar['NLRI']
@@ -54,6 +55,7 @@ class NLRI(Family):
         instance.safi = SAFI.undefined
         instance.action = Action.UNSET
         instance.addpath = PathInfo.DISABLED
+        instance._packed = b''
         return instance
 
     @classmethod
@@ -68,12 +70,14 @@ class NLRI(Family):
         instance.safi = SAFI.undefined
         instance.action = Action.UNSET
         instance.addpath = PathInfo.DISABLED
+        instance._packed = b''
         return instance
 
     def __init__(self, afi: AFI, safi: SAFI, action: int = Action.UNSET, addpath: PathInfo = PathInfo.DISABLED) -> None:
         Family.__init__(self, afi, safi)
         self.action = action
         self.addpath = addpath
+        self._packed = b''  # Subclasses set actual wire data
 
     def __copy__(self) -> 'NLRI':
         """Preserve singleton identity for INVALID and EMPTY."""
