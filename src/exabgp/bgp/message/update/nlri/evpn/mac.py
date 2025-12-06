@@ -61,7 +61,7 @@ class MAC(EVPN):
         action: Action | None = None,
         addpath: PathInfo | None = None,
     ) -> None:
-        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
+        EVPN.__init__(self, action, addpath)
         self._packed = packed
         self.nexthop = nexthop
 
@@ -88,7 +88,7 @@ class MAC(EVPN):
             + etag.pack_etag()
             + bytes([maclen])
             + mac.pack_mac()
-            + bytes([len(ip) * 8 if ip else 0])  # type: ignore[arg-type]
+            + bytes([len(ip) * 8 if ip else 0])
             + (ip.pack_ip() + label_to_use.pack_labels() if ip else label_to_use.pack_labels())
         )
         # fmt: on

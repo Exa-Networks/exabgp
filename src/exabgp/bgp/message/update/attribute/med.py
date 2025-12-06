@@ -75,7 +75,8 @@ class MED(Attribute):
     @property
     def med(self) -> int:
         """Get MED value by unpacking from bytes."""
-        return unpack('!L', self._packed)[0]
+        value: int = unpack('!L', self._packed)[0]
+        return value
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MED):

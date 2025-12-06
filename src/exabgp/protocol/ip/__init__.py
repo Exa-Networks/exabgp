@@ -198,7 +198,7 @@ class IP:
         data = IP.pton(string)
         if klass:
             return klass(data)
-        return cls.klass(string)(data)  # type: ignore[misc]
+        return cls.klass(string)(data)
 
     @classmethod
     def register(cls) -> None:
@@ -257,7 +257,7 @@ class IPRange(IP):
         self.mask = NetMask.make_netmask(mask, self.afi)
 
     @classmethod
-    def from_string(cls, ip: str, mask: int) -> IPRange:  # type: ignore[override]
+    def from_string(cls, ip: str, mask: int) -> IPRange:
         return cls(IP.pton(ip), mask)
 
     def __repr__(self) -> str:
@@ -277,7 +277,7 @@ IP.NoNextHop = IP._create_no_nexthop()
 
 class IPv4(IP):
     # Override afi as ClassVar (base class has it as instance variable)
-    afi: ClassVar[AFI] = AFI.ipv4  # type: ignore[misc]
+    afi: ClassVar[AFI] = AFI.ipv4
 
     # lowercase to match the Address API (used in configuration code)
     bits: ClassVar[int] = 32
@@ -330,7 +330,7 @@ IPv4.register()
 
 class IPv6(IP):
     # Override afi as ClassVar (base class has it as instance variable)
-    afi: ClassVar[AFI] = AFI.ipv6  # type: ignore[misc]
+    afi: ClassVar[AFI] = AFI.ipv6
 
     # lowercase to match the Address API (used in configuration code)
     bits: ClassVar[int] = 128

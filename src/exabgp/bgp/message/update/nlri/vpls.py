@@ -152,7 +152,8 @@ class VPLS(NLRI):
     def endpoint(self) -> int | None:
         """VPLS endpoint (VE ID) - unpacked from wire bytes or from builder storage."""
         if self._packed is not None:
-            return unpack('!H', self._packed[8:10])[0]
+            value: int = unpack('!H', self._packed[8:10])[0]
+            return value
         return self._endpoint
 
     @endpoint.setter
@@ -165,7 +166,8 @@ class VPLS(NLRI):
     def offset(self) -> int | None:
         """Label block offset - unpacked from wire bytes or from builder storage."""
         if self._packed is not None:
-            return unpack('!H', self._packed[10:12])[0]
+            value: int = unpack('!H', self._packed[10:12])[0]
+            return value
         return self._offset
 
     @offset.setter
@@ -178,7 +180,8 @@ class VPLS(NLRI):
     def size(self) -> int | None:
         """Label block size - unpacked from wire bytes or from builder storage."""
         if self._packed is not None:
-            return unpack('!H', self._packed[12:14])[0]
+            value: int = unpack('!H', self._packed[12:14])[0]
+            return value
         return self._size_value
 
     @size.setter
@@ -191,7 +194,8 @@ class VPLS(NLRI):
     def base(self) -> int | None:
         """Label base - unpacked from wire bytes or from builder storage."""
         if self._packed is not None:
-            return unpack('!L', b'\x00' + self._packed[14:17])[0] >> 4
+            value: int = unpack('!L', b'\x00' + self._packed[14:17])[0] >> 4
+            return value
         return self._base
 
     @base.setter
@@ -200,7 +204,7 @@ class VPLS(NLRI):
         self._base = value
         self._packed = None  # Switch to builder mode
 
-    def feedback(self, action: Action) -> str:  # type: ignore[override]
+    def feedback(self, action: Action) -> str:
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'vpls nlri next-hop missing'
         if self.endpoint is None:
@@ -232,9 +236,9 @@ class VPLS(NLRI):
             # Builder mode - pack from individual fields
             return (
                 b'\x00\x11'  # pack('!H',17)
-                + self._rd.pack_rd()  # type: ignore[union-attr]
+                + self._rd.pack_rd()
                 + pack('!HHH', self._endpoint, self._offset, self._size_value)
-                + pack('!L', (self._base << 4) | 0x1)[1:]  # type: ignore[operator]  # setting the bottom of stack
+                + pack('!L', (self._base << 4) | 0x1)[1:]  # setting the bottom of stack
             )
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:

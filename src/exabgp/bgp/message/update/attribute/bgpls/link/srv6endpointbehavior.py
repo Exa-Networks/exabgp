@@ -37,7 +37,8 @@ class Srv6EndpointBehavior(BaseLS):
     @property
     def endpoint_behavior(self) -> int:
         """Unpack and return endpoint behavior from packed bytes."""
-        return unpack('!H', self._packed[0:2])[0]
+        value: int = unpack('!H', self._packed[0:2])[0]
+        return value
 
     @property
     def flags(self) -> list[str]:

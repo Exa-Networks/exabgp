@@ -44,7 +44,7 @@ class Multicast(EVPN):
         action: Action | None = None,
         addpath: PathInfo | None = None,
     ) -> None:
-        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
+        EVPN.__init__(self, action, addpath)
         self._packed = packed
         self.nexthop = nexthop
 
@@ -59,7 +59,7 @@ class Multicast(EVPN):
         addpath: PathInfo | None = None,
     ) -> 'Multicast':
         """Factory method to create Multicast from semantic parameters."""
-        packed = rd.pack_rd() + etag.pack_etag() + bytes([len(ip) * 8]) + ip.pack_ip()  # type: ignore[arg-type]
+        packed = rd.pack_rd() + etag.pack_etag() + bytes([len(ip) * 8]) + ip.pack_ip()
         return cls(packed, nexthop, action, addpath)
 
     @property

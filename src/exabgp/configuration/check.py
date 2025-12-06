@@ -236,7 +236,7 @@ def check_message(neighbor: Neighbor, message: str) -> bool:
         sys.stdout.write(f'warning: BGP header size ({header_size}) does not match data length ({len(raw)})\n')
 
     if kind == BGP_MSG_OPEN:
-        return check_open(neighbor, raw[19:])  # type: ignore[func-returns-value,no-any-return]
+        return check_open(neighbor, raw[19:])
     if kind == BGP_MSG_UPDATE:
         return check_update(neighbor, raw)
     if kind == BGP_MSG_NOTIFICATION:

@@ -103,7 +103,7 @@ class _ParseDirection(Section):
         'operational': True,
     }
 
-    syntax = '{{\n  {};\n}}'.format(';\n  '.join(default.keys()))  # type: ignore[arg-type]
+    syntax = '{{\n  {};\n}}'.format(';\n  '.join(default.keys()))
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         Section.__init__(self, parser, scope, error)

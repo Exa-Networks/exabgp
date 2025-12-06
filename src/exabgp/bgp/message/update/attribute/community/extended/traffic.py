@@ -49,7 +49,8 @@ class TrafficRate(ExtendedCommunity):
 
     @property
     def rate(self) -> float:
-        return unpack('!f', self._packed[4:8])[0]
+        value: float = unpack('!f', self._packed[4:8])[0]
+        return value
 
     def __repr__(self) -> str:
         return 'rate-limit:%d' % self.rate
@@ -123,7 +124,8 @@ class TrafficRedirect(ExtendedCommunity):
 
     @property
     def target(self) -> int:
-        return unpack('!L', self._packed[4:8])[0]
+        value: int = unpack('!L', self._packed[4:8])[0]
+        return value
 
     def __repr__(self) -> str:
         return 'redirect:{}:{}'.format(self.asn, self.target)
@@ -153,7 +155,8 @@ class TrafficRedirectASN4(ExtendedCommunity):
 
     @property
     def target(self) -> int:
-        return unpack('!H', self._packed[6:8])[0]
+        value: int = unpack('!H', self._packed[6:8])[0]
+        return value
 
     def __str__(self) -> str:
         return 'redirect:{}:{}'.format(self.asn, self.target)
@@ -214,7 +217,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
 
     @property
     def ip(self) -> IPv4:
-        return IPv4.ntop(self._packed[2:6])  # type: ignore[return-value]
+        return IPv4.ntop(self._packed[2:6])
 
     @property
     def copy(self) -> bool:
@@ -253,7 +256,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
 
     @property
     def ip(self) -> IPv6:
-        return IPv6.ntop(self._packed[2:18])  # type: ignore[return-value]
+        return IPv6.ntop(self._packed[2:18])
 
     @property
     def copy(self) -> bool:
@@ -328,7 +331,8 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
 
     @property
     def asn(self) -> int:
-        return unpack('!H', self._packed[18:20])[0]
+        value: int = unpack('!H', self._packed[18:20])[0]
+        return value
 
     def __str__(self) -> str:
         return 'redirect %s:%d' % (self.ip, self.asn)

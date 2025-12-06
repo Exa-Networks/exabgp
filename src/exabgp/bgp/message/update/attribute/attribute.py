@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from exabgp.util.types import Buffer
 from struct import pack
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -304,11 +304,12 @@ class Attribute:
 
         # Convert to bytes for cache lookup (memoryview isn't hashable)
         if cache and data in cls.cache.get(cls.ID, {}):
-            return cls.cache[cls.ID].retrieve(data)  # type: ignore[no-any-return]
+            # Cache stores Attribute instances
+            return cast(Attribute, cls.cache[cls.ID].retrieve(data))
 
         key: tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
         if key in Attribute.registered_attributes.keys():
-            instance: Attribute = cls.klass(attribute_id, flag).unpack_attribute(data, negotiated)  # type: ignore[attr-defined]
+            instance: Attribute = cls.klass(attribute_id, flag).unpack_attribute(data, negotiated)
 
             if cache:
                 cls.cache[cls.ID].cache(data, instance)

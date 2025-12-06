@@ -69,7 +69,8 @@ class RouteTargetASN2Number(RouteTarget):
 
     @property
     def number(self) -> int:
-        return unpack('!L', self._packed[4:8])[0]
+        value: int = unpack('!L', self._packed[4:8])[0]
+        return value
 
     def __hash__(self) -> int:
         return hash((self.asn, self.number))
@@ -107,7 +108,8 @@ class RouteTargetIPNumber(RouteTarget):
 
     @property
     def number(self) -> int:
-        return unpack('!H', self._packed[6:8])[0]
+        value: int = unpack('!H', self._packed[6:8])[0]
+        return value
 
     def __hash__(self) -> int:
         return hash((self.ip, self.number))
@@ -145,7 +147,8 @@ class RouteTargetASN4Number(RouteTarget):
 
     @property
     def number(self) -> int:
-        return unpack('!H', self._packed[6:8])[0]
+        value: int = unpack('!H', self._packed[6:8])[0]
+        return value
 
     def __hash__(self) -> int:
         return hash((self.asn, self.number))

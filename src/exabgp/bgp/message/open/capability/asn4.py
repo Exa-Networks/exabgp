@@ -35,7 +35,7 @@ class ASN4(Capability, ASN):
     def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         # XXX: FIXME: if instance is not ASN(0) we have two ASN - raise
         # ASN4 extends both Capability and ASN, so the result is a Capability
-        result: ASN4 = ASN.unpack_asn(data, cls)  # type: ignore[assignment]
+        result: ASN4 = ASN.unpack_asn(data, cls)
         return result
 
     def json(self) -> str:

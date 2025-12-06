@@ -201,7 +201,7 @@ class Code:
                         keywords=[],
                     ),
                     ops=[Lt()],
-                    comparators=comparators,  # type: ignore[arg-type]
+                    comparators=comparators,
                 ),
                 body=[
                     Return(
@@ -232,7 +232,7 @@ class Code:
                         keywords=[],
                     ),
                     ops=[Gt()],
-                    comparators=comparators,  # type: ignore[arg-type]
+                    comparators=comparators,
                 ),
                 body=[
                     Return(

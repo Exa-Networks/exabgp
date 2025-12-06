@@ -101,7 +101,7 @@ class Operational(Message):
         return f'operational {self.name}'
 
     @staticmethod
-    def register(klass: TypingType[_T]) -> TypingType[_T]:  # type: ignore[override]
+    def register(klass: TypingType[_T]) -> TypingType[_T]:
         Operational.registered_operational[klass.code] = (klass.category, klass)
         return klass
 
@@ -115,20 +115,20 @@ class Operational(Message):
         if decode == 'advisory':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
-            return klass(afi, safi, data[7 : length + 4])  # type: ignore[call-arg,misc]
+            return klass(afi, safi, data[7 : length + 4])
         if decode == 'query':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack_routerid(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
-            return klass(afi, safi, routerid, sequence)  # type: ignore[call-arg,misc]
+            return klass(afi, safi, routerid, sequence)
         if decode == 'counter':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack_routerid(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
             counter = unpack('!L', data[15:19])[0]
-            return klass(afi, safi, routerid, sequence, counter)  # type: ignore[call-arg,misc]
+            return klass(afi, safi, routerid, sequence, counter)
         sys.stdout.write('ignoring ATM this kind of message\n')
         return None
 

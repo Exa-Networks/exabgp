@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from exabgp.util.types import Buffer
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Generator
+from typing import TYPE_CHECKING, Any, ClassVar, Generator, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -198,7 +198,8 @@ class AttributeCollection(dict):
         self.pop(attrid)
 
     def watchdog(self) -> Attribute | None:
-        return self.pop(Attribute.CODE.INTERNAL_WATCHDOG, None)  # type: ignore[no-any-return]
+        # Dict stores Attribute values
+        return cast(Attribute | None, self.pop(Attribute.CODE.INTERNAL_WATCHDOG, None))
 
     def withdraw(self) -> bool:
         return self.pop(Attribute.CODE.INTERNAL_WITHDRAW, None) is not None
@@ -450,7 +451,7 @@ class AttributeCollection(dict):
         key = '{}:{}'.format(as2path.index, as4path.index)
 
         # found a cache copy
-        cached = Attribute.cache.get(Attribute.CODE.AS_PATH, {}).get(key, None)  # type: ignore[call-overload]
+        cached = Attribute.cache.get(Attribute.CODE.AS_PATH, {}).get(key, None)
         if cached:
             self.add(cached, key)
             return
@@ -486,7 +487,7 @@ class AttributeCollection(dict):
         aspath = AS2Path.make_aspath(segments)
         self.add(aspath, key)
 
-    def __hash__(self) -> int:  # type: ignore[override]
+    def __hash__(self) -> int:
         # FIXME: two routes with distinct nh but other attributes equal
         # will hash to the same value until repr represents the nh (??)
         return hash(repr(self))
@@ -505,8 +506,8 @@ class AttributeCollection(dict):
 
         # we sort based on packed values since the items do not
         # necessarily implement __cmp__
-        def pack_(x: Any) -> bytes:
-            return x.pack()  # type: ignore[no-any-return]
+        def pack_(x: Attribute) -> bytes:
+            return x.pack()
 
         try:
             for key in set(self.keys()).union(set(other.keys())):
@@ -603,7 +604,8 @@ class Attributes:
             self.unpack_attributes(self._context)
         if self._parsed is None:
             raise RuntimeError('Must call unpack_attributes(negotiated) before accessing attributes')
-        return self._parsed[code]
+        # AttributeCollection stores Attribute instances
+        return cast(Attribute, self._parsed[code])
 
     def has(self, code: int) -> bool:
         """Check if attribute exists (requires prior unpack_attributes() or context)."""

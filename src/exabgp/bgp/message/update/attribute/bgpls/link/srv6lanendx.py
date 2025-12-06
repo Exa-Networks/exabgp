@@ -82,10 +82,10 @@ class Srv6(FlagLS):
             code = unpack('!H', data[0:2])[0]
             length = unpack('!H', data[2:4])[0]
 
-            if code in cls.registered_subsubtlvs:  # type: ignore[attr-defined]
-                subsubtlv = cls.registered_subsubtlvs[  # type: ignore[attr-defined]
-                    code
-                ].unpack_bgpls(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
+            if code in cls.registered_subsubtlvs:
+                subsubtlv = cls.registered_subsubtlvs[code].unpack_bgpls(
+                    data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE]
+                )
                 subtlvs.append(subsubtlv.json())
             else:
                 subsubtlv = hexstring(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
@@ -144,7 +144,7 @@ class Srv6LanEndXISIS(Srv6):
         """Register a sub-sub-TLV class for SRv6 LAN End.X ISIS."""
 
         def decorator(klass: type) -> type:
-            code = klass.TLV  # type: ignore[attr-defined]
+            code = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 LAN End.X Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass
@@ -201,7 +201,7 @@ class Srv6LanEndXOSPF(Srv6):
         """Register a sub-sub-TLV class for SRv6 LAN End.X OSPF."""
 
         def decorator(klass: type) -> type:
-            code = klass.TLV  # type: ignore[attr-defined]
+            code = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 LAN End.X Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass

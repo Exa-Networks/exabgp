@@ -37,11 +37,13 @@ class Bandwidth(ExtendedCommunity):
 
     @property
     def asn(self) -> int:
-        return unpack('!H', self._packed[2:4])[0]
+        value: int = unpack('!H', self._packed[2:4])[0]
+        return value
 
     @property
     def speed(self) -> float:
-        return unpack('!f', self._packed[4:8])[0]
+        value: float = unpack('!f', self._packed[4:8])[0]
+        return value
 
     def __repr__(self) -> str:
         return 'bandwith:%d:%0.f' % (self.asn, self.speed)

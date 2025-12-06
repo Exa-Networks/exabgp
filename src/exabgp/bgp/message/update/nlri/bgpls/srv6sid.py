@@ -65,11 +65,13 @@ class SRv6SID(BGPLS):
 
     @property
     def proto_id(self) -> int:
-        return unpack('!B', self._packed[0:1])[0]
+        value: int = unpack('!B', self._packed[0:1])[0]
+        return value
 
     @property
     def domain(self) -> int:
-        return unpack('!Q', self._packed[1:9])[0]
+        value: int = unpack('!Q', self._packed[1:9])[0]
+        return value
 
     def _parse_tlvs(self) -> tuple[list[NodeDescriptor], dict[str, Any]]:
         """Parse TLVs from packed data."""

@@ -66,7 +66,7 @@ class Prefix(EVPN):
         action: Action | None = None,
         addpath: PathInfo | None = None,
     ) -> None:
-        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
+        EVPN.__init__(self, action, addpath)
         self._packed = packed
         self.nexthop = nexthop
 

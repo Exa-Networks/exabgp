@@ -126,8 +126,8 @@ class Open(Message):
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Open:
         # OPEN header: version(1) + asn(2) + hold_time(2) + router_id(4) = 9 bytes minimum
-        if len(data) < cls.HEADER_SIZE:  # type: ignore[arg-type]
-            raise Notify(2, 0, f'OPEN message too short: need {cls.HEADER_SIZE} bytes, got {len(data)}')  # type: ignore[arg-type]
+        if len(data) < cls.HEADER_SIZE:
+            raise Notify(2, 0, f'OPEN message too short: need {cls.HEADER_SIZE} bytes, got {len(data)}')
 
         version = data[0]
         if version != Version.BGP_4:

@@ -35,11 +35,13 @@ class ConsistentHashSortOrder(ExtendedCommunity):
 
     @property
     def order(self) -> int:
-        return unpack('!I', self._packed[2:6])[0]
+        value: int = unpack('!I', self._packed[2:6])[0]
+        return value
 
     @property
     def reserved(self) -> int:
-        return unpack('!H', self._packed[6:8])[0]
+        value: int = unpack('!H', self._packed[6:8])[0]
+        return value
 
     def __repr__(self) -> str:
         return '%s:%d' % (self.DESCRIPTION, self.order)

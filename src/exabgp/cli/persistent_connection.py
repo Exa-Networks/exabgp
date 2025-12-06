@@ -96,7 +96,7 @@ class PersistentSocketConnection:
             # Send ping (v6 API format)
             ping_cmd = f'session ping {self.client_uuid} {self.client_start_time}\n'
             try:
-                self.socket.sendall(ping_cmd.encode('utf-8'))  # type: ignore[union-attr]
+                self.socket.sendall(ping_cmd.encode('utf-8'))
             except (BrokenPipeError, ConnectionResetError):
                 # Connection rejected before we could send
                 sys.stderr.write('\n')
@@ -113,7 +113,7 @@ class PersistentSocketConnection:
             # Read response synchronously
             response_buffer = ''
             while True:
-                data = self.socket.recv(4096)  # type: ignore[union-attr]
+                data = self.socket.recv(4096)
                 if not data:
                     # Connection closed by daemon
                     sys.stderr.write('\n')
@@ -202,7 +202,7 @@ class PersistentSocketConnection:
                 sys.stderr.flush()
 
             # Switch to non-blocking for background threads
-            self.socket.settimeout(0.1)  # type: ignore[union-attr]
+            self.socket.settimeout(0.1)
 
         except sock.timeout:
             sys.stderr.write('\n')
@@ -391,7 +391,7 @@ class PersistentSocketConnection:
         """Background thread: continuously read from socket"""
         while self.running:
             try:
-                data = self.socket.recv(4096)  # type: ignore[union-attr]
+                data = self.socket.recv(4096)
                 if not data:
                     # Socket closed - attempt reconnection
                     if not self._reconnect():

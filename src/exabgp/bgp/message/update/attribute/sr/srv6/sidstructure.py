@@ -32,7 +32,7 @@ from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidIn
 
 
 @Srv6SidInformation.register()
-class Srv6SidStructure:  # type: ignore[type-var]
+class Srv6SidStructure:
     TLV: ClassVar[int] = 1
     LENGTH: ClassVar[int] = 6
 

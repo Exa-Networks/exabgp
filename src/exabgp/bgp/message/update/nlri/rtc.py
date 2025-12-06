@@ -97,7 +97,7 @@ class RTC(NLRI):
         instance.nexthop = nexthop
         return instance
 
-    def feedback(self, action: Action) -> str:  # type: ignore[override]
+    def feedback(self, action: Action) -> str:
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'rtc nlri next-hop missing'
         return ''
@@ -149,14 +149,14 @@ class RTC(NLRI):
         # RTC uses negotiated in pack_nlri, so we can't use _pack_nlri_simple
         # Index should be stable regardless of negotiated, so build it directly
         if self.rt and self._packed_origin:
-            packedRT = self.rt._pack()  # type: ignore[attr-defined]  # Use internal pack without negotiated
+            packedRT = self.rt._pack()  # Use internal pack without negotiated
             return (
                 Family.index(self)
                 + pack('!B', len(self))
                 + self._packed_origin
                 + bytes([RTC.resetFlags(packedRT[0])])
                 + packedRT[1:]
-            )  # type: ignore[no-any-return]
+            )
         return Family.index(self) + pack('!B', 0)
 
     @classmethod
@@ -177,6 +177,6 @@ class RTC(NLRI):
         # community, because they do not make sense for an RTC route
         # Store origin as packed bytes directly from wire
         packed_origin = bytes(data[1:5])
-        rt = RouteTarget.unpack_attribute(bytes([RTC.resetFlags(data[5])]) + bytes(data[6:13]), negotiated)  # type: ignore[arg-type]
+        rt = RouteTarget.unpack_attribute(bytes([RTC.resetFlags(data[5])]) + bytes(data[6:13]), negotiated)
 
         return cls(packed_origin, rt, action), data[13:]

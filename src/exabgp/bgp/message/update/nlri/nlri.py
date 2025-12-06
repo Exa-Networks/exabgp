@@ -108,7 +108,7 @@ class NLRI(Family):
         raise NotImplementedError(f'{type(self).__name__} must implement __deepcopy__')
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri().hex()))  # type: ignore[call-arg]
+        return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri().hex()))
 
     def __eq__(self, other: Any) -> bool:
         return bool(self.index() == other.index())
@@ -131,7 +131,7 @@ class NLRI(Family):
     def __ge__(self, other: Any) -> bool:
         return bool(self == other or self.index() > other.index())
 
-    def feedback(self, action: int) -> None:
+    def feedback(self, action: int) -> str:
         raise RuntimeError('feedback is not implemented')
 
     def assign(self, name: str, value: Any) -> None:
@@ -142,7 +142,7 @@ class NLRI(Family):
         raise NotImplementedError('add() only implemented by Flow NLRI')
 
     def index(self) -> bytes:
-        return Family.index(self) + self.pack_nlri()  # type: ignore[call-arg]
+        return Family.index(self) + self.pack_nlri()
 
     def pack_nlri(self, negotiated: Negotiated) -> bytes:
         raise Exception('unimplemented in NLRI children class')

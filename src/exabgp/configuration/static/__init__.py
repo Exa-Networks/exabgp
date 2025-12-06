@@ -119,7 +119,7 @@ def route(tokeniser: Any) -> list[Route]:
 @ParseStatic.register('attributes', 'append-route')
 def attributes(tokeniser: Any) -> list[Route]:
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
-    ipmask = prefix(lambda: tokeniser.tokens[-1])  # type: ignore[arg-type]
+    ipmask = prefix(lambda: tokeniser.tokens[-1])
     tokeniser.afi = ipmask.afi
 
     # Create CIDR first (packed-bytes-first pattern)

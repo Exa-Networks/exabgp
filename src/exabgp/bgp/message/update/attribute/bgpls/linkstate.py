@@ -51,9 +51,9 @@ class LinkState(Attribute):
         """Register BGP-LS subclass by TLV code (different from Attribute.register)."""
 
         def register_class(klass: type) -> type:
-            if klass.TLV in cls.registered_lsids:  # type: ignore[attr-defined]
+            if klass.TLV in cls.registered_lsids:
                 raise RuntimeError('only one class can be registered per BGP link state attribute type')
-            cls.registered_lsids[klass.TLV] = klass  # type: ignore[attr-defined]
+            cls.registered_lsids[klass.TLV] = klass
             return klass
 
         def register_lsid_inner(klass: type) -> type:

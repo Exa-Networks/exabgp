@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from exabgp.util.types import Buffer
 from struct import pack
-from typing import TYPE_CHECKING, Callable, ClassVar, Type
+from typing import TYPE_CHECKING, Callable, ClassVar, Type, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -215,7 +215,8 @@ class Message:
             Parsed Message subclass instance
         """
         if message in cls.registered_message:
-            return cls.klass(message).unpack_message(data, negotiated)  # type: ignore[attr-defined,no-any-return]
+            # Registry lookup returns Type[Message] and unpack_message returns subclass
+            return cast(Message, cls.klass(message).unpack_message(data, negotiated))
         return cls.klass_unknown(message, data, negotiated)
 
     @classmethod

@@ -47,7 +47,7 @@ class Srv6Capabilities(BaseLS):
         """Register a sub-sub-TLV class for SRv6 Capabilities."""
 
         def decorator(klass: type) -> type:
-            code = klass.TLV  # type: ignore[attr-defined]
+            code = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Capabilities Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass

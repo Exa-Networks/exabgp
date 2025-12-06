@@ -76,7 +76,8 @@ class LocalPreference(Attribute):
     @property
     def localpref(self) -> int:
         """Get local preference value by unpacking from bytes."""
-        return unpack('!L', self._packed)[0]
+        value: int = unpack('!L', self._packed)[0]
+        return value
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LocalPreference):

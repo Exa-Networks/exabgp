@@ -191,9 +191,9 @@ class OutgoingRIB(Cache):
         withdraw = route.attributes.withdraw()
         if watchdog:
             if withdraw:
-                self._watchdog.setdefault(watchdog, {}).setdefault('-', {})[route.index()] = route  # type: ignore[arg-type]
+                self._watchdog.setdefault(watchdog, {}).setdefault('-', {})[route.index()] = route
                 return True
-            self._watchdog.setdefault(watchdog, {}).setdefault('+', {})[route.index()] = route  # type: ignore[arg-type]
+            self._watchdog.setdefault(watchdog, {}).setdefault('+', {})[route.index()] = route
         self.add_to_rib(route)
         return True
 
@@ -227,13 +227,13 @@ class OutgoingRIB(Cache):
         # Handle both signatures: (route) or (nlri, attributes)
         if attributes is None and hasattr(route_or_nlri, 'attributes'):
             # Legacy signature: del_from_rib(route)
-            route = route_or_nlri  # type: ignore[assignment]
+            route = route_or_nlri
             nlri = route.nlri
             attrs = route.attributes
             route_index = route.index()
         else:
             # New signature: del_from_rib(nlri, attributes)
-            nlri = route_or_nlri  # type: ignore[assignment]
+            nlri = route_or_nlri
             attrs = attributes
             route_index = self._make_index(nlri)
 
@@ -250,7 +250,7 @@ class OutgoingRIB(Cache):
         if prev_route:
             prev_route_index = prev_route.index()
             prev_route_attr_index = prev_route.attributes.index()
-            attr_af_nlri.setdefault(prev_route_attr_index, {}).setdefault(route_family, RIBdict({})).pop(  # type: ignore[arg-type]
+            attr_af_nlri.setdefault(prev_route_attr_index, {}).setdefault(route_family, RIBdict({})).pop(
                 prev_route_index,
                 None,
             )
@@ -289,12 +289,12 @@ class OutgoingRIB(Cache):
         # Handle both signatures: (route, force) or (nlri, attributes, force)
         if isinstance(attributes_or_force, bool):
             # Legacy signature: add_to_rib(route, force=False)
-            route = route_or_nlri  # type: ignore[assignment]
+            route = route_or_nlri
             # Support both positional and keyword force: add_to_rib(route, True) or add_to_rib(route, force=True)
             force = attributes_or_force or force
         else:
             # New signature: add_to_rib(nlri, attributes, force=False)
-            nlri = route_or_nlri  # type: ignore[assignment]
+            nlri = route_or_nlri
             attrs = attributes_or_force
             route = Route(nlri, attrs)
 
@@ -321,9 +321,9 @@ class OutgoingRIB(Cache):
             self._pending_withdraws[route_family].pop(nlri_index, None)
 
         # add the route to the list to be announced/withdrawn
-        attr_af_nlri.setdefault(route_attr_index, {}).setdefault(route_family, RIBdict({}))[route_index] = route  # type: ignore[arg-type]
+        attr_af_nlri.setdefault(route_attr_index, {}).setdefault(route_family, RIBdict({}))[route_index] = route
         new_nlri[route_index] = route
-        new_attr[route_attr_index] = route.attributes  # type: ignore[index]
+        new_attr[route_attr_index] = route.attributes
         self.update_cache(route)
 
     def updates(self, grouped: bool) -> Iterator[UpdateCollection | RouteRefresh]:

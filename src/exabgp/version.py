@@ -63,7 +63,8 @@ def _get_base_version() -> str:
         pyproject = os.path.join(os.path.dirname(__file__), '..', '..', 'pyproject.toml')
         if os.path.exists(pyproject):
             with open(pyproject, 'rb') as f:
-                return tomllib.load(f)['project']['version']
+                version: str = tomllib.load(f)['project']['version']
+                return version
     except Exception:
         pass
 

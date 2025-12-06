@@ -15,4 +15,4 @@ class Sequence(int):
 
     def __new__(cls) -> Sequence:
         cls._instance['next'] = cls._instance.get('next', 0) + 1
-        return cls._instance['next']  # type: ignore[return-value]
+        return cls._instance['next']

@@ -45,7 +45,7 @@ class ClientConnection:
     fd: int
     uuid: str | None = None  # From initial ping command
     last_ping: float = 0.0
-    write_queue: deque[bytes] = None  # type: ignore
+    write_queue: deque[bytes] = None
     connected_at: float = 0.0
 
     def __post_init__(self) -> None:

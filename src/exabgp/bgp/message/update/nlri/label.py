@@ -169,7 +169,7 @@ class Label(INET):
         instance.rd = None
         return instance
 
-    def feedback(self, action: Action) -> str:  # type: ignore[override]
+    def feedback(self, action: Action) -> str:
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'labelled nlri next-hop missing'
         return ''

@@ -23,7 +23,7 @@ class RTRecord(rt.RouteTarget):
 
     @classmethod
     def from_rt(cls: Type[T], route_target: rt.RouteTarget) -> T:
-        packed = route_target.pack_attribute(None)  # type: ignore[arg-type]
+        packed = route_target.pack_attribute(None)
         return cast(T, cls.unpack_attribute(packed[0:1] + bytes([cls.COMMUNITY_SUBTYPE]) + packed[2:]))
 
 

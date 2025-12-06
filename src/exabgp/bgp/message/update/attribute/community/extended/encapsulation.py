@@ -62,7 +62,8 @@ class Encapsulation(ExtendedCommunity):
 
     @property
     def tunnel_type(self) -> int:
-        return unpack('!H', self._packed[6:8])[0]
+        value: int = unpack('!H', self._packed[6:8])[0]
+        return value
 
     def __repr__(self) -> str:
         return 'encap:{}'.format(Encapsulation._string.get(self.tunnel_type, 'encap:UNKNOWN-%d' % self.tunnel_type))

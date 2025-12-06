@@ -32,7 +32,8 @@ class RsvpBw(BaseLS):
     @property
     def content(self) -> float:
         """Unpack and return the reservable bandwidth from packed bytes."""
-        return unpack('!f', self._packed)[0]
+        value: float = unpack('!f', self._packed)[0]
+        return value
 
     @classmethod
     def make_rsvpbw(cls, bandwidth: float) -> RsvpBw:

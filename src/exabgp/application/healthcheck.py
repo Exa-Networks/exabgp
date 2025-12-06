@@ -94,7 +94,7 @@ def setargs(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('--user', metavar='USER', help='set user after setting ip addresses')
     parser.add_argument('--group', metavar='GROUP', help='set group after setting ip addresses')
 
-    g = parser.add_argument_group('checking healthiness')  # type: ignore[assignment]
+    g = parser.add_argument_group('checking healthiness')
     g.add_argument('--interval', '-i', metavar='N', default=5, type=float, help='wait N seconds between each healthcheck (zero to exit after first announcement)')
     g.add_argument('--fast-interval', '-f', metavar='N', default=1, type=float, dest='fast', help='when a state change is about to occur, wait N seconds between each healthcheck')
     g.add_argument('--timeout', '-t', metavar='N', default=5, type=int, help='wait N seconds for the check command to execute')
@@ -103,7 +103,7 @@ def setargs(parser: argparse.ArgumentParser) -> None:
     g.add_argument('--disable', metavar='FILE', type=str, help='if FILE exists, the service is considered disabled')
     g.add_argument('--command', '--cmd', '-c', metavar='CMD', type=str, help='command to use for healthcheck')
 
-    g = parser.add_argument_group('advertising options')  # type: ignore[assignment]
+    g = parser.add_argument_group('advertising options')
     g.add_argument('--next-hop', '-N', metavar='IP', type=ip_address, help='self IP address to use as next hop')
     g.add_argument('--ip', metavar='IP', type=ip_network, dest='ips', action='append', default=[], help='advertise this IP address or network (CIDR notation)')
     g.add_argument('--ip-ifname', metavar='IP%IFNAME', dest='ip_ifnames', action='append', default=[], help='bind this IP address or network (CIDR) to the given physical or logical interface (i.e. 192.165.14.1%%eth0)')
@@ -131,7 +131,7 @@ def setargs(parser: argparse.ArgumentParser) -> None:
     g.add_argument('--neighbor', metavar='NEIGHBOR', type=ip_address, dest='neighbors', action='append', help='advertise the route to the selected neigbors')
     g.add_argument('--debounce', action='store_true', dest='debounce', help='announce only on state changes, instead of every iteration')
 
-    g = parser.add_argument_group('reporting')  # type: ignore[assignment]
+    g = parser.add_argument_group('reporting')
     g.add_argument('--execute', metavar='CMD', type=str, action='append', help='execute CMD on state change')
     g.add_argument('--up-execute', metavar='CMD', type=str, action='append', help='execute CMD when the service becomes available')
     g.add_argument('--down-execute', metavar='CMD', type=str, action='append', help='execute CMD when the service becomes unavailable')
@@ -362,7 +362,7 @@ def drop_privileges(user: str | None, group: str | None) -> None:
         gid = grp.getgrnam(group).gr_gid
         logger.debug(f'Dropping privileges to group {group}/{gid}')
         try:
-            os.setresgid(gid, gid, gid)  # type: ignore[attr-defined]
+            os.setresgid(gid, gid, gid)
         except AttributeError:
             os.setregid(gid, gid)
     if user is not None:
@@ -371,7 +371,7 @@ def drop_privileges(user: str | None, group: str | None) -> None:
         uid = pwd.getpwnam(user).pw_uid
         logger.debug(f'Dropping privileges to user {user}/{uid}')
         try:
-            os.setresuid(uid, uid, uid)  # type: ignore[attr-defined]
+            os.setresuid(uid, uid, uid)
         except AttributeError:
             os.setreuid(uid, uid)
 

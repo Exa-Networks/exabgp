@@ -32,7 +32,8 @@ class TeMetric(BaseLS):
     @property
     def content(self) -> int:
         """Unpack and return the TE metric from packed bytes."""
-        return unpack('!L', self._packed)[0]
+        value: int = unpack('!L', self._packed)[0]
+        return value
 
     @classmethod
     def make_temetric(cls, metric: int) -> TeMetric:

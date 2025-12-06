@@ -49,11 +49,13 @@ class L2Info(ExtendedCommunity):
 
     @property
     def mtu(self) -> int:
-        return unpack('!H', self._packed[4:6])[0]
+        value: int = unpack('!H', self._packed[4:6])[0]
+        return value
 
     @property
     def reserved(self) -> int:
-        return unpack('!H', self._packed[6:8])[0]
+        value: int = unpack('!H', self._packed[6:8])[0]
+        return value
 
     def __repr__(self) -> str:
         return 'l2info:{}:{}:{}:{}'.format(self.encaps, self.control, self.mtu, self.reserved)

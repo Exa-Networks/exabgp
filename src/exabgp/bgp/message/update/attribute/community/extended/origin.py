@@ -138,7 +138,8 @@ class OriginASN4Number(Origin):
 
     @property
     def number(self) -> int:
-        return unpack('!H', self._packed[6:8])[0]
+        value: int = unpack('!H', self._packed[6:8])[0]
+        return value
 
     def __repr__(self) -> str:
         return 'origin:{}:{}'.format(self.asn, self.number)

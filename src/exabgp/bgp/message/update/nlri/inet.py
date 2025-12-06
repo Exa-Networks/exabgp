@@ -235,7 +235,7 @@ class INET(NLRI):
         new.rd = deepcopy(self.rd, memo) if self.rd else None
         return new
 
-    def feedback(self, action: Action) -> str:  # type: ignore[override]
+    def feedback(self, action: Action) -> str:
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'inet nlri next-hop missing'
         return ''
@@ -275,7 +275,7 @@ class INET(NLRI):
 
     # The announced feature is not used by ExaBGP, is it by BAGPIPE ?
 
-    def json(self, announced: bool = True, compact: bool = False) -> str:  # type: ignore[override]
+    def json(self, announced: bool = True, compact: bool = False) -> str:
         internal = ', '.join([_ for _ in self._internal(announced) if _])
         if internal:
             return '{{ "nlri": "{}", {} }}'.format(self.cidr.prefix(), internal)

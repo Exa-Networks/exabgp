@@ -135,7 +135,7 @@ def prefix_sid(tokeniser: Any) -> PrefixSid:  # noqa: C901
 # ( [l2-service|l3-service] <SID:ipv6-addr> )
 # ( [l2-service|l3-service] <SID:ipv6-addr> <Endpoint Behavior:int> )
 # ( [l2-service|l3-service] <SID:ipv6-addr> <Endpoint Behavior:int> [<LBL:int>, <LNL:int>, <FL:int>, <AL:int>, <Tpose-len:int>, <Tpose-offset:int>] )
-def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:  # type: ignore[return]
+def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:
     value = tokeniser()
     if value != '(':
         raise Exception(f"expect '(', but received '{value}'")
@@ -178,7 +178,7 @@ def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:  # type: ignore[return]
         Srv6SidInformation(
             sid=sid,
             behavior=behavior,
-            subsubtlvs=subsubtlvs,  # type: ignore[arg-type]
+            subsubtlvs=subsubtlvs,
         ),
     )
 
@@ -186,9 +186,9 @@ def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:  # type: ignore[return]
         raise Exception(f"expect ')', but received '{value}'")
 
     if service_type == 'l3-service':
-        return PrefixSid([Srv6L3Service(subtlvs=subtlvs)])  # type: ignore[arg-type]
+        return PrefixSid([Srv6L3Service(subtlvs=subtlvs)])
     if service_type == 'l2-service':
-        return PrefixSid([Srv6L2Service(subtlvs=subtlvs)])  # type: ignore[arg-type]
+        return PrefixSid([Srv6L2Service(subtlvs=subtlvs)])
 
 
 def parse_ip_prefix(tokeninser: str) -> tuple[IPv4 | IPv6, int]:

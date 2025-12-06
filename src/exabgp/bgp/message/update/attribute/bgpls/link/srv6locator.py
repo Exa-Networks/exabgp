@@ -49,7 +49,8 @@ class Srv6Locator(FlagLS):
     @property
     def metric(self) -> int:
         """Unpack and return metric from packed bytes."""
-        return unpack('!I', self._packed[4:8])[0]
+        value: int = unpack('!I', self._packed[4:8])[0]
+        return value
 
     @property
     def subtlvs(self) -> list[object]:

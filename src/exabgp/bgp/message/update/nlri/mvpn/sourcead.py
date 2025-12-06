@@ -39,7 +39,7 @@ class SourceAD(MVPN):
         action: Action | None = None,
         addpath: int | None = None,
     ) -> None:
-        MVPN.__init__(self, afi=afi, action=action, addpath=addpath)  # type: ignore[arg-type]
+        MVPN.__init__(self, afi=afi, action=action, addpath=addpath)
         self._packed = packed
 
     @classmethod
@@ -53,13 +53,7 @@ class SourceAD(MVPN):
         addpath: int | None = None,
     ) -> 'SourceAD':
         """Factory method to create SourceAD from semantic parameters."""
-        packed = (
-            rd.pack_rd()
-            + bytes([len(source) * 8])  # type: ignore[arg-type]
-            + source.pack_ip()
-            + bytes([len(group) * 8])  # type: ignore[arg-type]
-            + group.pack_ip()
-        )
+        packed = rd.pack_rd() + bytes([len(source) * 8]) + source.pack_ip() + bytes([len(group) * 8]) + group.pack_ip()
         return cls(packed, afi, action, addpath)
 
     @property

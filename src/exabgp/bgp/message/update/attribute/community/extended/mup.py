@@ -45,11 +45,13 @@ class MUPExtendedCommunity(ExtendedCommunity):
 
     @property
     def sgid2(self) -> int:
-        return unpack('!H', self._packed[2:4])[0]
+        value: int = unpack('!H', self._packed[2:4])[0]
+        return value
 
     @property
     def sgid4(self) -> int:
-        return unpack('!L', self._packed[4:8])[0]
+        value: int = unpack('!L', self._packed[4:8])[0]
+        return value
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MUPExtendedCommunity):

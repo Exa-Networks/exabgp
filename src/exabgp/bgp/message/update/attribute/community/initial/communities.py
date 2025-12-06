@@ -74,7 +74,7 @@ class Communities(Attribute):
         """
         # Sort communities and pack
         sorted_communities = sorted(communities)
-        packed = b''.join(c.pack_attribute(None) for c in sorted_communities)  # type: ignore[arg-type]
+        packed = b''.join(c.pack_attribute(None) for c in sorted_communities)
         return cls(packed)
 
     def add(self, data: Community) -> 'Communities':
@@ -86,7 +86,7 @@ class Communities(Attribute):
         communities = list(self.communities)
         communities.append(data)
         communities.sort()
-        self._packed = b''.join(c.pack_attribute(None) for c in communities)  # type: ignore[arg-type]
+        self._packed = b''.join(c.pack_attribute(None) for c in communities)
         return self
 
     @property

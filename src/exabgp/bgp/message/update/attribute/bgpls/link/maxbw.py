@@ -30,7 +30,8 @@ class MaxBw(BaseLS):
     @property
     def content(self) -> float:
         """Unpack and return the max bandwidth from packed bytes."""
-        return unpack('!f', self._packed)[0]
+        value: float = unpack('!f', self._packed)[0]
+        return value
 
     @classmethod
     def make_maxbw(cls, bandwidth: float) -> MaxBw:

@@ -62,18 +62,18 @@ class MUP(NLRI):
 
     def __str__(self) -> str:
         return 'mup:{}:{}'.format(
-            self.registered.get(self.CODE, self).SHORT_NAME.lower(),  # type: ignore[call-overload]
+            self.registered.get(self.CODE, self).SHORT_NAME.lower(),
             '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
 
     def __repr__(self) -> str:
         return str(self)
 
-    def feedback(self, action: int) -> None:
-        return None
+    def feedback(self, action: int) -> str:
+        return ''
 
     def _prefix(self) -> str:
-        return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())  # type: ignore[call-overload]
+        return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
@@ -109,7 +109,7 @@ class MUP(NLRI):
         return new
 
     @classmethod
-    def register(cls, klass: Type[MUP]) -> Type[MUP]:  # type: ignore[override]
+    def register(cls, klass: Type[MUP]) -> Type[MUP]:
         key = '{}:{}'.format(klass.ARCHTYPE, klass.CODE)
         if key in cls.registered:
             raise RuntimeError('only one Mup registration allowed')
@@ -135,9 +135,9 @@ class MUP(NLRI):
 
         key = '{}:{}'.format(arch, code)
         if key in cls.registered:
-            klass = cls.registered[key].unpack_mup_route(bytes(data[4:end]), afi)  # type: ignore[attr-defined]
+            klass = cls.registered[key].unpack_mup_route(bytes(data[4:end]), afi)
         else:
-            klass = GenericMUP(arch, afi, code, bytes(data[4:end]))  # type: ignore[arg-type]
+            klass = GenericMUP(arch, afi, code, bytes(data[4:end]))
         klass.CODE = code
         klass.action = action
         klass.addpath = addpath
@@ -151,8 +151,8 @@ class MUP(NLRI):
 class GenericMUP(MUP):
     def __init__(self, afi: AFI, arch: int, code: int, packed: bytes) -> None:
         MUP.__init__(self, afi)
-        self.ARCHTYPE = arch  # type: ignore[misc]
-        self.CODE = code  # type: ignore[misc]
+        self.ARCHTYPE = arch
+        self.CODE = code
         self._pack(packed)
 
     def _pack(self, packed: bytes | None = None) -> bytes:

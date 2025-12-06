@@ -154,7 +154,7 @@ class Network(Message):
             attributes,
         )
 
-        return cls.extract(Network.Command.RTM_NEWROUTE, network_flags, family, neighbor)  # type: ignore[arg-type]
+        return cls.extract(Network.Command.RTM_NEWROUTE, network_flags, family, neighbor)
 
     @classmethod
     def del_route(cls) -> Iterator[Any]:

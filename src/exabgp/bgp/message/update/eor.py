@@ -32,7 +32,7 @@ class EOR(Message):
     class NLRI(_NLRI):
         PREFIX: bytes = b'\x00\x00\x00\x07\x90\x0f\x00\x03'
         MP_LENGTH: int = len(PREFIX) + 1 + 2  # len(AFI) and len(SAFI)
-        EOR: bool = True  # type: ignore[misc]  # Override class variable
+        EOR: bool = True  # Override class variable
 
         nexthop = IP.NoNextHop
 

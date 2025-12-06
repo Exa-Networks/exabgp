@@ -186,7 +186,7 @@ def _parse_neighbor_params(line: str) -> tuple[dict[str, Any], list[str]]:
 
     # Return None instead of empty list when no API processes (for test compatibility)
     if not api_processes:
-        api_processes = None  # type: ignore
+        api_processes = None
 
     # Default router-id to local-address if not provided
     if 'router-id' not in params:

@@ -105,7 +105,7 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
             ExtendedCommunities instance
         """
         sorted_communities = sorted(communities)
-        packed = b''.join(c.pack_attribute(None) for c in sorted_communities)  # type: ignore[arg-type]
+        packed = b''.join(c.pack_attribute(None) for c in sorted_communities)
         return cls(packed)
 
     def add(self, data: ExtendedCommunityBase) -> 'ExtendedCommunities':
@@ -116,7 +116,7 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         communities = list(self.communities)
         communities.append(data)
         communities.sort()
-        self._packed = b''.join(c.pack_attribute(None) for c in communities)  # type: ignore[arg-type]
+        self._packed = b''.join(c.pack_attribute(None) for c in communities)
         return self
 
     @property
@@ -186,7 +186,7 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
     def make_extended_communities_ipv6(cls, communities: Sequence[ExtendedCommunityIPv6]) -> 'ExtendedCommunitiesIPv6':
         """Create from list of ExtendedCommunityIPv6 objects."""
         sorted_communities = sorted(communities)
-        packed = b''.join(c.pack_attribute(None) for c in sorted_communities)  # type: ignore[arg-type]
+        packed = b''.join(c.pack_attribute(None) for c in sorted_communities)
         return cls(packed)
 
     def add(self, data: ExtendedCommunityIPv6) -> 'ExtendedCommunitiesIPv6':
@@ -194,7 +194,7 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
         communities = list(self.communities)
         communities.append(data)
         communities.sort()
-        self._packed = b''.join(c.pack_attribute(None) for c in communities)  # type: ignore[arg-type]
+        self._packed = b''.join(c.pack_attribute(None) for c in communities)
         return self
 
     @property
@@ -204,7 +204,7 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
         data = self._packed
         while data:
             community = ExtendedCommunityIPv6.unpack_attribute(data[:EXTENDED_COMMUNITY_IPV6_SIZE], None)
-            result.append(community)  # type: ignore[arg-type]
+            result.append(community)
             data = data[EXTENDED_COMMUNITY_IPV6_SIZE:]
         return result
 

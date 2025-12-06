@@ -101,10 +101,10 @@ class EVPN(NLRI):
         # EVPN has empty __slots__ - nothing else to copy
         return new
 
-    def feedback(self, action: int) -> None:
+    def feedback(self, action: int) -> str:
         # if self.nexthop is None and action == Action.ANNOUNCE:
         # 	raise RuntimeError('evpn nlri next-hop is missing')
-        return None
+        return ''
 
     def _prefix(self) -> str:
         return 'evpn:{}:'.format(self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower())
@@ -122,7 +122,7 @@ class EVPN(NLRI):
         return Family.index(self) + self._pack_nlri_simple()
 
     @classmethod
-    def register(cls, klass: Type[EVPN]) -> Type[EVPN]:  # type: ignore[override]
+    def register(cls, klass: Type[EVPN]) -> Type[EVPN]:
         if klass.CODE in cls.registered_evpn:
             raise RuntimeError('only one EVPN registration allowed')
         cls.registered_evpn[klass.CODE] = klass
@@ -143,7 +143,7 @@ class EVPN(NLRI):
             raise Notify(3, 10, f'EVPN NLRI truncated: need {length + 2} bytes, got {len(data)}')
 
         if code in cls.registered_evpn:
-            klass = cls.registered_evpn[code].unpack_evpn_route(bytes(data[2 : length + 2]))  # type: ignore[attr-defined]
+            klass = cls.registered_evpn[code].unpack_evpn_route(bytes(data[2 : length + 2]))
         else:
             klass = GenericEVPN(code, bytes(data[2 : length + 2]))
         klass.CODE = code
@@ -159,7 +159,7 @@ class EVPN(NLRI):
 class GenericEVPN(EVPN):
     def __init__(self, code: int, packed: bytes) -> None:
         EVPN.__init__(self)
-        self.CODE = code  # type: ignore[misc]
+        self.CODE = code
         self._pack(packed)
 
     def _pack(self, packed: bytes | None = None) -> bytes:

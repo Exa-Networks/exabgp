@@ -9,10 +9,7 @@ from __future__ import annotations
 from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
-
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
-
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 
 #   The IGP Metric TLV carries the metric for this link.  The length of
 #   this TLV is variable, depending on the metric width of the underlying
@@ -49,7 +46,8 @@ class IgpMetric(BaseLS):
         data = self._packed
         if len(data) == IGP_METRIC_SIZE_OSPF:
             # OSPF
-            return unpack('!H', data)[0]
+            value: int = unpack('!H', data)[0]
+            return value
 
         if len(data) == IGP_METRIC_SIZE_ISIS_SMALL:
             # ISIS small metrics
@@ -57,7 +55,8 @@ class IgpMetric(BaseLS):
 
         if len(data) == IGP_METRIC_SIZE_ISIS_WIDE:
             # ISIS wide metrics
-            return unpack('!L', bytes([0]) + data)[0]
+            wide_value: int = unpack('!L', bytes([0]) + data)[0]
+            return wide_value
 
         # Shouldn't reach here if unpack_bgpls validated
         raise Notify(3, 5, 'Incorrect IGP Metric Size')

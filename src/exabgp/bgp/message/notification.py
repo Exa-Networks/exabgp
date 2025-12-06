@@ -33,8 +33,8 @@ from exabgp.bgp.message.message import Message
 
 @Message.register
 class Notification(Message, Exception):
-    ID: ClassVar[int] = Message.CODE.NOTIFICATION  # type: ignore[misc]
-    TYPE: ClassVar[bytes] = bytes([Message.CODE.NOTIFICATION])  # type: ignore[misc]
+    ID: ClassVar[int] = Message.CODE.NOTIFICATION
+    TYPE: ClassVar[bytes] = bytes([Message.CODE.NOTIFICATION])
 
     # RFC 8203 / RFC 9003 - Shutdown Communication
     SHUTDOWN_COMM_MAX_LEGACY: ClassVar[int] = 128  # RFC 8203 - legacy max length

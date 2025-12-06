@@ -66,10 +66,10 @@ class MVPN(NLRI):
     def __repr__(self) -> str:
         return str(self)
 
-    def feedback(self, action: int) -> None:
+    def feedback(self, action: int) -> str:
         # if self.nexthop is None and action == Action.ANNOUNCE:
         # 	raise RuntimeError('mvpn nlri next-hop is missing')
-        return None
+        return ''
 
     def _prefix(self) -> str:
         return 'mvpn:{}:'.format(self.registered_mvpn.get(self.CODE, self).SHORT_NAME.lower())
@@ -108,7 +108,7 @@ class MVPN(NLRI):
         return new
 
     @classmethod
-    def register(cls, klass: Type[MVPN]) -> Type[MVPN]:  # type: ignore[override]
+    def register(cls, klass: Type[MVPN]) -> Type[MVPN]:
         if klass.CODE in cls.registered_mvpn:
             raise RuntimeError('only one MVPN registration allowed')
         cls.registered_mvpn[klass.CODE] = klass
@@ -137,7 +137,7 @@ class MVPN(NLRI):
             klass = cls.registered_mvpn[code].unpack_mvpn_route(bytes(data[2 : length + 2]), afi)
         else:
             klass = GenericMVPN(afi, code, bytes(data[2 : length + 2]))
-        klass.CODE = code  # type: ignore[misc]  # dynamic CODE assignment
+        klass.CODE = code  # dynamic CODE assignment
         klass.action = action
         klass.addpath = addpath
 
@@ -150,7 +150,7 @@ class MVPN(NLRI):
 class GenericMVPN(MVPN):
     def __init__(self, afi: AFI, code: int, packed: bytes) -> None:
         MVPN.__init__(self, afi)
-        self.CODE = code  # type: ignore[misc]
+        self.CODE = code
         self._pack(packed)
 
     def _pack(self, packed: bytes | None = None) -> bytes:

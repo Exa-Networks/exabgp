@@ -36,12 +36,12 @@ def __exit(memory: bool, code: int) -> None:
         from exabgp.vendoring import objgraph
 
         sys.stdout.write('memory utilisation\n\n')
-        sys.stdout.write(objgraph.show_most_common_types(limit=20))  # type: ignore[no-untyped-call]
+        sys.stdout.write(objgraph.show_most_common_types(limit=20))
         sys.stdout.write('\n\n\n')
         sys.stdout.write('generating memory utilisation graph\n\n')
         sys.stdout.write('')
-        obj = objgraph.by_type('Reactor')  # type: ignore[no-untyped-call]
-        objgraph.show_backrefs([obj], max_depth=10)  # type: ignore[no-untyped-call]
+        obj = objgraph.by_type('Reactor')
+        objgraph.show_backrefs([obj], max_depth=10)
     sys.exit(code)
 
 

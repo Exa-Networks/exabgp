@@ -172,15 +172,15 @@ class Control:
             # If we can't send the command or read the response, continue anyway
             pass
 
-        def monitor(function):  # type: ignore[no-untyped-def]
-            def wrapper(*args):  # type: ignore[no-untyped-def]
+        def monitor(function):
+            def wrapper(*args):
                 r = function(*args)
                 return r
 
             return wrapper
 
         @monitor
-        def std_reader(number):  # type: ignore[no-untyped-def]
+        def std_reader(number):
             try:
                 return os.read(standard_in, number)
             except OSError as exc:
@@ -189,7 +189,7 @@ class Control:
                 sys.exit(1)
 
         @monitor
-        def std_writer(line):  # type: ignore[no-untyped-def]
+        def std_writer(line):
             try:
                 return os.write(standard_out, line)
             except OSError as exc:
@@ -198,7 +198,7 @@ class Control:
                 sys.exit(1)
 
         @monitor
-        def fifo_reader(number):  # type: ignore[no-untyped-def]
+        def fifo_reader(number):
             if self.r_pipe is None:
                 return b''
             try:
@@ -209,7 +209,7 @@ class Control:
                 sys.exit(1)
 
         @monitor
-        def fifo_writer(line):  # type: ignore[no-untyped-def]
+        def fifo_writer(line):
             pipe, nb = None, 0
             try:
                 pipe = os.open(self.send, os.O_WRONLY | os.O_NONBLOCK | os.O_EXCL)

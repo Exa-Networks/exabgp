@@ -435,9 +435,9 @@ def large_community(tokeniser: 'Tokeniser') -> LargeCommunities:
             lc = _large_community(value)
             if lc in large_communities.communities:
                 continue
-            large_communities.add(lc)  # type: ignore[arg-type]
+            large_communities.add(lc)
     else:
-        large_communities.add(_large_community(value))  # type: ignore[arg-type]
+        large_communities.add(_large_community(value))
 
     return large_communities
 

@@ -46,7 +46,7 @@ class EthernetSegment(EVPN):
         action: Action | None = None,
         addpath: Any = None,
     ) -> None:
-        EVPN.__init__(self, action, addpath)  # type: ignore[arg-type]
+        EVPN.__init__(self, action, addpath)
         self._packed = packed
         self.nexthop = nexthop
 
@@ -61,7 +61,7 @@ class EthernetSegment(EVPN):
         addpath: Any = None,
     ) -> 'EthernetSegment':
         """Factory method to create EthernetSegment from semantic parameters."""
-        packed = rd.pack_rd() + esi.pack_esi() + bytes([len(ip) * 8]) + ip.pack_ip()  # type: ignore[arg-type]
+        packed = rd.pack_rd() + esi.pack_esi() + bytes([len(ip) * 8]) + ip.pack_ip()
         return cls(packed, nexthop, action, addpath)
 
     @property

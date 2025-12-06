@@ -45,7 +45,8 @@ class SrLabelIndex:
     @property
     def labelindex(self) -> int:
         """Label index value (unpacked from bytes 3-7)."""
-        return unpack('!I', self._packed[3:7])[0]
+        value: int = unpack('!I', self._packed[3:7])[0]
+        return value
 
     def __repr__(self) -> str:
         return '{}'.format(self.labelindex)

@@ -46,8 +46,8 @@ class GenericAttribute(Attribute):
             flag: Attribute flags
         """
         self._packed: bytes = packed
-        self.ID: int = code  # type: ignore[misc]
-        self.FLAG: int = flag  # type: ignore[misc]
+        self.ID: int = code
+        self.FLAG: int = flag
 
     @classmethod
     def from_packet(cls, code: int, flag: int, data: Buffer) -> 'GenericAttribute':

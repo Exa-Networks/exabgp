@@ -22,7 +22,8 @@ class AdminGroup(BaseLS):
     @property
     def content(self) -> int:
         """Unpack and return the admin group mask from packed bytes."""
-        return unpack('!L', self._packed[:4])[0]
+        value: int = unpack('!L', self._packed[:4])[0]
+        return value
 
     @classmethod
     def make_admingroup(cls, mask: int) -> AdminGroup:

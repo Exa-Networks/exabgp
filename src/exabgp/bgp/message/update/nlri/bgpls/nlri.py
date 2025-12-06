@@ -152,7 +152,7 @@ class BGPLS(NLRI):
         return new
 
     @classmethod
-    def register(cls, klass: Type[BGPLS]) -> Type[BGPLS]:  # type: ignore[override]
+    def register(cls, klass: Type[BGPLS]) -> Type[BGPLS]:
         if klass.CODE in cls.registered_bgpls:
             raise RuntimeError('only one BGP LINK_STATE registration allowed')
         cls.registered_bgpls[klass.CODE] = klass
@@ -180,10 +180,10 @@ class BGPLS(NLRI):
             if safi == SAFI.bgp_ls_vpn:
                 # Extract Route Distinguisher
                 rd: RouteDistinguisher | None = RouteDistinguisher.unpack_routedistinguisher(bytes(data[4:12]))
-                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bytes(data[12 : length + 4]), rd)  # type: ignore[attr-defined]
+                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bytes(data[12 : length + 4]), rd)
             else:
                 rd = None
-                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bytes(data[4 : length + 4]), rd)  # type: ignore[attr-defined]
+                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bytes(data[4 : length + 4]), rd)
         else:
             klass = GenericBGPLS(code, bytes(data[4 : length + 4]))
         klass.CODE = code
@@ -199,7 +199,7 @@ class BGPLS(NLRI):
 class GenericBGPLS(BGPLS):
     def __init__(self, code: int, packed: bytes) -> None:
         BGPLS.__init__(self)
-        self.CODE = code  # type: ignore[misc]
+        self.CODE = code
         self._pack(packed)
 
     def _pack(self, packed: bytes | None = None) -> bytes | None:

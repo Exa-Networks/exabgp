@@ -198,7 +198,7 @@ class IPVPN(Label):
         instance._rd_packed = b''  # NORD
         return instance
 
-    def feedback(self, action: Action) -> str:  # type: ignore[override]
+    def feedback(self, action: Action) -> str:
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'ip-vpn nlri next-hop missing'
         return ''

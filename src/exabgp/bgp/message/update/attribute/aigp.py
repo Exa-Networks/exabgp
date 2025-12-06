@@ -102,7 +102,8 @@ class AIGP(Attribute):
     @property
     def aigp(self) -> int:
         """Get AIGP metric value by unpacking from bytes."""
-        return unpack('!Q', self._packed[3:11])[0]
+        value: int = unpack('!Q', self._packed[3:11])[0]
+        return value
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, AIGP):

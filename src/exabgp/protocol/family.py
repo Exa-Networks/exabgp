@@ -82,8 +82,8 @@ class AFI(int):
 
     @staticmethod
     def unpack_afi(data: Buffer) -> AFI:
-        if len(data) < 2:  # type: ignore[arg-type]
-            raise ValueError(f'AFI data too short: need 2 bytes, got {len(data)}')  # type: ignore[arg-type]
+        if len(data) < 2:
+            raise ValueError(f'AFI data too short: need 2 bytes, got {len(data)}')
         # Convert to bytes for dict lookup (memoryview isn't hashable)
         key = data[:2]
         return AFI.common.get(bytes(key), AFI.from_int(int.from_bytes(key, 'big')))

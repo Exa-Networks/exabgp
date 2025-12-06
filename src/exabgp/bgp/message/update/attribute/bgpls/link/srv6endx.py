@@ -80,7 +80,7 @@ class Srv6EndX(FlagLS):
         """Register a sub-sub-TLV class for SRv6 End.X."""
 
         def decorator(klass: type) -> type:
-            code = klass.TLV  # type: ignore[attr-defined]
+            code = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 End.X Sub-TLV type')
             cls.registered_subsubtlvs[code] = klass
@@ -106,9 +106,7 @@ class Srv6EndX(FlagLS):
             length = unpack('!H', data[2:4])[0]
 
             if code in cls.registered_subsubtlvs:
-                subsubtlv = cls.registered_subsubtlvs[
-                    code
-                ].unpack_bgpls(  # type: ignore[attr-defined]
+                subsubtlv = cls.registered_subsubtlvs[code].unpack_bgpls(
                     data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE]
                 )
                 subtlvs.append(subsubtlv.json())

@@ -253,7 +253,7 @@ class ASPath(Attribute):
             first_half = type(values)(values[: cls.SEGMENT_MAX_LENGTH])
             second_half = type(values)(values[cls.SEGMENT_MAX_LENGTH :])
             return cls._segment(seg_type, first_half, asn4) + cls._segment(seg_type, second_half, asn4)
-        return bytes([seg_type, length]) + b''.join(v.pack_asn(asn4) for v in values)  # type: ignore[arg-type]
+        return bytes([seg_type, length]) + b''.join(v.pack_asn(asn4) for v in values)
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         """Pack for sending to peer.

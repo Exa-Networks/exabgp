@@ -121,7 +121,8 @@ class PMSI(Attribute):
     @property
     def raw_label(self) -> int:
         """Get raw 24-bit label value by unpacking from bytes."""
-        return unpack('!L', b'\0' + self._packed[2:5])[0]
+        value: int = unpack('!L', b'\0' + self._packed[2:5])[0]
+        return value
 
     @property
     def label(self) -> int:
@@ -170,7 +171,7 @@ class PMSI(Attribute):
         )
 
     @classmethod
-    def register(cls, klass: Type[PMSI]) -> Type[PMSI]:  # type: ignore[override]
+    def register(cls, klass: Type[PMSI]) -> Type[PMSI]:
         if klass.TUNNEL_TYPE in cls._pmsi_known:
             raise RuntimeError('only one registration for PMSI')
         cls._pmsi_known[klass.TUNNEL_TYPE] = klass

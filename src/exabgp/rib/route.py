@@ -71,5 +71,5 @@ class Route:
 
     def feedback(self) -> str:
         if self.nlri is not None:
-            return self.nlri.feedback(self.nlri.action)  # type: ignore[func-returns-value,no-any-return]
+            return self.nlri.feedback(self.nlri.action)
         return 'no check implemented for the family {} {}'.format(*self.nlri.family().afi_safi())

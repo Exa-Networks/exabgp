@@ -440,7 +440,7 @@ def converter(
 
 def decoder(function: Callable[[bytes], int], klass: Type = NumericValue) -> Callable[[bytes], BaseValue]:
     def _inner(value: bytes) -> BaseValue:
-        return klass(function(value))  # type: ignore[no-any-return]
+        return klass(function(value))
 
     return _inner
 
@@ -777,7 +777,7 @@ class Flow(NLRI):
                 klass = factory[self.afi][what]
 
                 if decoded == 'prefix':
-                    adding, bgp = klass.make(bgp)  # type: ignore[attr-defined]
+                    adding, bgp = klass.make(bgp)
                     rules.setdefault(adding.ID, []).append(adding)
                 else:
                     end: int = 0
@@ -787,14 +787,14 @@ class Flow(NLRI):
                         operator = CommonOperator.operator(byte)
                         length = CommonOperator.length(byte)
                         value, bgp = bgp[:length], bgp[length:]
-                        adding_val = klass.decoder(value)  # type: ignore[attr-defined]
-                        rules.setdefault(what, []).append(klass(operator, adding_val))  # type: ignore[arg-type,call-arg]
+                        adding_val = klass.decoder(value)
+                        rules.setdefault(what, []).append(klass(operator, adding_val))
         except (IndexError, KeyError):
             pass  # Incomplete data, return what we have
 
         return rules
 
-    def feedback(self, action: Action) -> str:  # type: ignore[override]
+    def feedback(self, action: Action) -> str:
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return 'flow nlri next-hop missing'
         return ''

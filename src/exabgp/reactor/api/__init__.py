@@ -290,4 +290,4 @@ class API:
 
         self.configuration.tokeniser.replenish(rest)
         # None or a class
-        return operational(what, self.configuration.tokeniser)  # type: ignore[no-any-return]
+        return operational(what, self.configuration.tokeniser)

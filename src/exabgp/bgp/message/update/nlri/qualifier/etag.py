@@ -31,7 +31,8 @@ class EthernetTag:
 
     @property
     def tag(self) -> int:
-        return unpack('!L', self._packed)[0]
+        value: int = unpack('!L', self._packed)[0]
+        return value
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, EthernetTag):

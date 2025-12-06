@@ -49,12 +49,12 @@ class InterfaceSet(ExtendedCommunity):
 
     @property
     def target(self) -> int:
-        raw_target = unpack('!H', self._packed[6:8])[0]
+        raw_target: int = unpack('!H', self._packed[6:8])[0]
         return raw_target & 0x3FFF
 
     @property
     def direction(self) -> int:
-        raw_target = unpack('!H', self._packed[6:8])[0]
+        raw_target: int = unpack('!H', self._packed[6:8])[0]
         return raw_target >> 14
 
     def __repr__(self) -> str:

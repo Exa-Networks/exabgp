@@ -164,7 +164,7 @@ class NextHopSelf(NextHop):
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self._attribute(negotiated.nexthopself(self._afi).ton())
 
-    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:  # type: ignore[override]
+    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:
         return negotiated.nexthopself(afi).ton()
 
     def __eq__(self, other: object) -> bool:

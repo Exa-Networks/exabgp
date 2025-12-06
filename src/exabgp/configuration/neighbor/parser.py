@@ -34,7 +34,7 @@ def inherit(tokeniser) -> list[str]:
         or tokeniser.tokens[-1] != ']'
     ):
         raise ValueError('invalid inherit list\n  Format: inherit <template> or inherit [ template1, template2, ... ]')
-    return tokeniser.tokens[2:-1]  # type: ignore[no-any-return]
+    return tokeniser.tokens[2:-1]
 
 
 def hostname(tokeniser) -> str:
@@ -83,7 +83,7 @@ def md5(tokeniser) -> str:
         raise ValueError(
             'value requires the value password as an argument (quoted or unquoted).  FreeBSD users should use "kernel" as the argument.',
         )
-    return value  # type: ignore[no-any-return]
+    return value
 
 
 def ttl(tokeniser) -> int | None:

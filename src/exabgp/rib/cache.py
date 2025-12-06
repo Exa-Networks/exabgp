@@ -110,7 +110,7 @@ class Cache:
         # Handle signatures: (route) or (nlri, attributes) or (nlri, attributes, action)
         if attributes is None:
             # Legacy signature: update_cache(route) - uses nlri.action
-            route = route_or_nlri  # type: ignore[assignment]
+            route = route_or_nlri
             nlri = route.nlri
             attrs = route.attributes
             family = nlri.family().afi_safi()
@@ -119,7 +119,7 @@ class Cache:
             actual_action = nlri.action
         else:
             # New signature: update_cache(nlri, attributes[, action])
-            nlri = route_or_nlri  # type: ignore[assignment]
+            nlri = route_or_nlri
             attrs = attributes
             family = nlri.family().afi_safi()
             index = self._make_index(nlri)
@@ -150,17 +150,17 @@ class Cache:
         if attributes is None and hasattr(route_or_nlri, 'index') and callable(route_or_nlri.index):
             # Check if it's a Route object (has index() method that returns bytes)
             try:
-                route = route_or_nlri  # type: ignore[assignment]
+                route = route_or_nlri
                 family = route.nlri.family().afi_safi()
                 index = route.index()
             except AttributeError:
                 # It's an NLRI
-                nlri = route_or_nlri  # type: ignore[assignment]
+                nlri = route_or_nlri
                 family = nlri.family().afi_safi()
                 index = self._make_index(nlri)
         else:
             # New signature: (nlri, attributes) - attributes ignored for withdraw
-            nlri = route_or_nlri  # type: ignore[assignment]
+            nlri = route_or_nlri
             family = nlri.family().afi_safi()
             index = self._make_index(nlri)
 

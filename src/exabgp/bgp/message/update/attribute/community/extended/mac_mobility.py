@@ -36,7 +36,8 @@ class MacMobility(ExtendedCommunity):
 
     @property
     def sequence(self) -> int:
-        return unpack('!I', self._packed[4:8])[0]
+        value: int = unpack('!I', self._packed[4:8])[0]
+        return value
 
     @property
     def sticky(self) -> bool:
