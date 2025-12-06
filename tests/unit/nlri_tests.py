@@ -14,7 +14,7 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.reactor.protocol import AFI, SAFI
 
-from exabgp.bgp.message.update import AttributeSet
+from exabgp.bgp.message.update import AttributeCollection
 
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.community.extended.communities import (
@@ -502,33 +502,33 @@ class TestNLRIs(unittest.TestCase):
     # tests on attributes
 
     def test4_DistinctAttributes(self) -> None:
-        atts1 = AttributeSet()
+        atts1 = AttributeCollection()
         atts1.add(LocalPreference.from_int(10))
 
-        atts2 = AttributeSet()
+        atts2 = AttributeCollection()
         atts2.add(LocalPreference.from_int(20))
 
         self.assertNotEqual(atts1, atts2)
 
     def test5_SameAttributes(self) -> None:
-        atts1 = AttributeSet()
+        atts1 = AttributeCollection()
         atts1.add(LocalPreference.from_int(10))
 
-        atts2 = AttributeSet()
+        atts2 = AttributeCollection()
         atts2.add(LocalPreference.from_int(10))
 
         self.assertEqual(hash(atts1), hash(atts2))
         self.assertEqual(atts1, atts2)
 
     def test6_SameAttributesOrderMultivalued(self) -> None:
-        atts1 = AttributeSet()
+        atts1 = AttributeCollection()
         eComs1 = ExtendedCommunities()
         eComs1.communities.append(RouteTarget.make_route_target(64512, 1))
         eComs1.communities.append(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
         eComs1.communities.append(RouteTarget.make_route_target(64512, 2))
         atts1.add(eComs1)
 
-        atts2 = AttributeSet()
+        atts2 = AttributeCollection()
         eComs2 = ExtendedCommunities()
         eComs2.communities.append(RouteTarget.make_route_target(64512, 2))
         eComs2.communities.append(RouteTarget.make_route_target(64512, 1))
@@ -541,13 +541,13 @@ class TestNLRIs(unittest.TestCase):
     def test10_Ecoms(self) -> None:
         eComs1 = ExtendedCommunities()
         eComs1.communities.append(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
-        atts1 = AttributeSet()
+        atts1 = AttributeCollection()
         atts1.add(eComs1)
 
         eComs2 = ExtendedCommunities()
         eComs2.communities.append(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
         eComs2.communities.append(RouteTarget.make_route_target(64512, 1))
-        atts2 = AttributeSet()
+        atts2 = AttributeCollection()
         atts2.add(eComs2)
 
         self.assertFalse(atts1.sameValuesAs(atts2))

@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
-from exabgp.bgp.message.update.attribute import AttributeSet, NextHop, NextHopSelf
+from exabgp.bgp.message.update.attribute import AttributeCollection, NextHop, NextHopSelf
 from exabgp.bgp.message.update.attribute.community.extended import (
     ExtendedCommunities,
     ExtendedCommunitiesIPv6,
@@ -98,7 +98,7 @@ DSCP_MAX_VALUE = 0b111111  # DSCP is a 6-bit field (0-63)
 
 
 def flow(tokeniser: 'Tokeniser') -> Route:
-    return Route(Flow.make_flow(), AttributeSet())
+    return Route(Flow.make_flow(), AttributeCollection())
 
 
 def source(tokeniser: 'Tokeniser') -> Generator[Flow4Source | Flow6Source, None, None]:

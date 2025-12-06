@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.open import Open
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.refresh import RouteRefresh
     from exabgp.bgp.message.operational import OperationalFamily
     from exabgp.bgp.fsm import FSM
@@ -356,7 +356,7 @@ class JSON:
             message_type='open',
         )
 
-    def _update(self, update_msg: 'UpdateData') -> dict[str, str]:
+    def _update(self, update_msg: 'UpdateCollection') -> dict[str, str]:
         plus: dict[tuple[Any, Any], dict[str, list[Any]]] = {}
         minus: dict[tuple[Any, Any], list[Any]] = {}
 
@@ -418,7 +418,7 @@ class JSON:
         self,
         neighbor: 'Neighbor',
         direction: str,
-        update: 'UpdateData',
+        update: 'UpdateCollection',
         header: bytes,
         body: bytes,
         negotiated: 'Negotiated',

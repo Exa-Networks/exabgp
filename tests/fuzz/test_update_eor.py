@@ -34,7 +34,7 @@ def mock_logger() -> Generator[None, None, None]:
 @pytest.mark.fuzz
 def test_eor_ipv4_unicast_4_byte() -> None:
     """Test detection of IPv4 unicast EOR marker (4 bytes of zeros)."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.family import AFI, SAFI
@@ -49,7 +49,7 @@ def test_eor_ipv4_unicast_4_byte() -> None:
     # 4-byte EOR marker for IPv4 unicast
     data = b'\x00\x00\x00\x00'
 
-    result = UpdateData.unpack_message(data, negotiated)
+    result = UpdateCollection.unpack_message(data, negotiated)
 
     # Should return an EOR object for IPv4 unicast
     assert isinstance(result, EOR)
@@ -61,7 +61,7 @@ def test_eor_ipv4_unicast_4_byte() -> None:
 @pytest.mark.fuzz
 def test_eor_not_triggered_by_similar_data() -> None:
     """Test that 4 zeros elsewhere don't trigger false EOR detection."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
 
@@ -78,7 +78,7 @@ def test_eor_not_triggered_by_similar_data() -> None:
     # This should not be detected as EOR (different length)
     # It will try to parse as normal UPDATE
     try:
-        result = UpdateData.unpack_message(data, negotiated)
+        result = UpdateCollection.unpack_message(data, negotiated)
         # If it parses, it should not be an EOR
         assert not isinstance(result, EOR)
     except Exception:
@@ -89,7 +89,7 @@ def test_eor_not_triggered_by_similar_data() -> None:
 @pytest.mark.fuzz
 def test_non_eor_empty_update() -> None:
     """Test that UPDATE with just length fields is not confused with EOR."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
 
@@ -102,14 +102,14 @@ def test_non_eor_empty_update() -> None:
     # This is the 4-byte EOR - should be detected
     data = b'\x00\x00\x00\x00'
 
-    result = UpdateData.unpack_message(data, negotiated)
+    result = UpdateCollection.unpack_message(data, negotiated)
     assert isinstance(result, EOR)
 
 
 @pytest.mark.fuzz
 def test_eor_detection_with_no_attributes_no_nlris() -> None:
     """Test EOR detection when UPDATE has no attributes and no NLRIs after parsing."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.family import AFI, SAFI
@@ -124,7 +124,7 @@ def test_eor_detection_with_no_attributes_no_nlris() -> None:
     # This is the explicit 4-byte EOR format
     data = b'\x00\x00\x00\x00'
 
-    result = UpdateData.unpack_message(data, negotiated)
+    result = UpdateCollection.unpack_message(data, negotiated)
 
     assert isinstance(result, EOR)
     assert len(result.nlris) == 1
@@ -135,7 +135,7 @@ def test_eor_detection_with_no_attributes_no_nlris() -> None:
 @pytest.mark.fuzz
 def test_normal_update_not_detected_as_eor() -> None:
     """Test that normal UPDATE messages are not detected as EOR."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.family import AFI
@@ -152,7 +152,7 @@ def test_normal_update_not_detected_as_eor() -> None:
     data = b'\x00\x00\x00\x04\x40\x01\x01\x00'
 
     try:
-        result = UpdateData.unpack_message(data, negotiated)
+        result = UpdateCollection.unpack_message(data, negotiated)
         # Should not be EOR
         assert not isinstance(result, EOR)
     except Exception:

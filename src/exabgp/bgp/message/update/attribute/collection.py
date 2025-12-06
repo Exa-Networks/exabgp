@@ -38,7 +38,7 @@ class _NOTHING:
 NOTHING: _NOTHING = _NOTHING()
 
 
-# =================================================================== AttributeSet
+# =================================================================== AttributeCollection
 #
 # Semantic container for BGP path attributes.
 # Stores parsed Attribute objects in a dict-like structure.
@@ -50,7 +50,7 @@ NOTHING: _NOTHING = _NOTHING()
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-class AttributeSet(dict):
+class AttributeCollection(dict):
     # Internal pseudo-attributes (no dedicated classes exist for these)
     INTERNAL: ClassVar[tuple[int, ...]] = (
         Attribute.CODE.INTERNAL_SPLIT,
@@ -59,8 +59,8 @@ class AttributeSet(dict):
         Attribute.CODE.INTERNAL_WITHDRAW,
     )
 
-    # The previously parsed AttributeSet
-    cached: ClassVar[AttributeSet | None] = None
+    # The previously parsed AttributeCollection
+    cached: ClassVar[AttributeCollection | None] = None
     # previously parsed attribute, from which cached was made of
     previous: ClassVar[bytes] = b''
 
@@ -96,7 +96,7 @@ class AttributeSet(dict):
     def _generate_text(self) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
             # Skip internal pseudo-attributes
-            if code in AttributeSet.INTERNAL:
+            if code in AttributeCollection.INTERNAL:
                 continue
 
             attribute = self[code]
@@ -126,7 +126,7 @@ class AttributeSet(dict):
     def _generate_json(self) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
             # Skip internal pseudo-attributes
-            if code in AttributeSet.INTERNAL:
+            if code in AttributeCollection.INTERNAL:
                 continue
 
             attribute = self[code]
@@ -235,7 +235,7 @@ class AttributeSet(dict):
         alls = set(keys + list(default) if with_default else [])
 
         for code in sorted(alls):
-            if code in AttributeSet.INTERNAL:
+            if code in AttributeCollection.INTERNAL:
                 continue
 
             if code not in keys and code in default:
@@ -274,7 +274,7 @@ class AttributeSet(dict):
         return self._idx
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Negotiated) -> AttributeSet:
+    def unpack(cls, data: bytes, negotiated: Negotiated) -> AttributeCollection:
         if cls.cached and data == cls.previous:
             return cls.cached
 
@@ -306,7 +306,7 @@ class AttributeSet(dict):
         length = data[2]
         return flag, attr, data[3 : length + 3]
 
-    def parse(self, data: bytes, negotiated: Negotiated) -> AttributeSet:
+    def parse(self, data: bytes, negotiated: Negotiated) -> AttributeCollection:
         if not data:
             return self
 
@@ -499,7 +499,7 @@ class AttributeSet(dict):
     # can't rely on __eq__ for this, because __eq__ relies on Attribute.__eq__ which does not look at attributes values
 
     def sameValuesAs(self, other: object) -> bool:
-        if not isinstance(other, AttributeSet):
+        if not isinstance(other, AttributeCollection):
             return False
 
         # we sort based on packed values since the items do not
@@ -535,14 +535,14 @@ class AttributeSet(dict):
 #
 # Wire-format path attributes container (bytes-first pattern).
 # This class stores the raw packed bytes as the canonical representation.
-# Parsing to semantic objects (AttributeSet) is lazy.
+# Parsing to semantic objects (AttributeCollection) is lazy.
 
 
 class Attributes:
     """Wire-format path attributes container (bytes-first).
 
     Stores raw packed path attributes bytes as the canonical representation.
-    Provides lazy parsing to semantic AttributeSet when needed.
+    Provides lazy parsing to semantic AttributeCollection when needed.
 
     This follows the "packed-bytes-first" pattern used by individual
     Attribute classes - the wire format is stored directly, and semantic
@@ -558,11 +558,11 @@ class Attributes:
         """
         self._packed = packed
         self._context = context
-        self._parsed: AttributeSet | None = None
+        self._parsed: AttributeCollection | None = None
 
     @classmethod
-    def from_set(cls, attr_set: AttributeSet, negotiated: 'Negotiated') -> 'Attributes':
-        """Create Attributes from semantic AttributeSet.
+    def from_set(cls, attr_set: AttributeCollection, negotiated: 'Negotiated') -> 'Attributes':
+        """Create Attributes from semantic AttributeCollection.
 
         Args:
             attr_set: Semantic attributes container.
@@ -579,21 +579,21 @@ class Attributes:
         """Raw packed path attributes bytes."""
         return self._packed
 
-    def unpack_attributes(self, negotiated: 'Negotiated | None' = None) -> AttributeSet:
-        """Lazy-unpack to semantic AttributeSet.
+    def unpack_attributes(self, negotiated: 'Negotiated | None' = None) -> AttributeCollection:
+        """Lazy-unpack to semantic AttributeCollection.
 
         Args:
             negotiated: BGP session negotiated parameters.
                        If not provided, uses stored context.
 
         Returns:
-            Unpacked AttributeSet (semantic container).
+            Unpacked AttributeCollection (semantic container).
         """
         if self._parsed is None:
             ctx = negotiated or self._context
             if ctx is None:
                 raise RuntimeError('Attributes.unpack_attributes() requires negotiated context')
-            self._parsed = AttributeSet.unpack(self._packed, ctx)
+            self._parsed = AttributeCollection.unpack(self._packed, ctx)
         return self._parsed
 
     def __getitem__(self, code: int) -> Attribute:
@@ -613,5 +613,6 @@ class Attributes:
         return self._parsed.has(code)
 
 
-# Backward compatibility alias: AttributesWire points to the new Attributes (wire container)
-AttributesWire = Attributes
+# Backward compatibility aliases
+AttributesWire = Attributes  # Old wire container name
+AttributeSet = AttributeCollection  # Old semantic container name

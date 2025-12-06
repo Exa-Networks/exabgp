@@ -947,7 +947,7 @@ async def test_protocol_send_with_api_callback(mock_peer: Any) -> None:
     length = struct.pack('!H', 19 + len(body))
     raw = marker + length + msg_type + body
 
-    with patch('exabgp.bgp.message.update.UpdateData.unpack_message') as mock_unpack:
+    with patch('exabgp.bgp.message.update.UpdateCollection.unpack_message') as mock_unpack:
         mock_update = Mock()
         mock_update.ID = Message.CODE.UPDATE
         mock_unpack.return_value = mock_update
@@ -992,7 +992,7 @@ async def test_protocol_new_update(mock_peer: Any) -> None:
 async def test_protocol_new_update_no_updates(mock_peer: Any) -> None:
     """Test new_update() with empty RIB."""
     from exabgp.reactor.protocol import Protocol
-    from exabgp.bgp.message import UpdateData
+    from exabgp.bgp.message import UpdateCollection
 
     protocol = Protocol(mock_peer)
 
@@ -1009,7 +1009,7 @@ async def test_protocol_new_update_no_updates(mock_peer: Any) -> None:
     result = await protocol.new_update(include_withdraw=False)
 
     # Should still return _UPDATE at the end
-    assert result.TYPE == UpdateData.TYPE
+    assert result.TYPE == UpdateCollection.TYPE
 
 
 # ==============================================================================

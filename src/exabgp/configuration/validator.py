@@ -1078,7 +1078,7 @@ class RouteBuilderValidator(Validator[list[Any]]):
         if self.schema is None:
             raise ValueError('No schema configured')
 
-        from exabgp.bgp.message.update.attribute import AttributeSet
+        from exabgp.bgp.message.update.attribute import AttributeCollection
         from exabgp.bgp.message.update.nlri.cidr import CIDR
         from exabgp.rib.route import Route
 
@@ -1098,7 +1098,7 @@ class RouteBuilderValidator(Validator[list[Any]]):
             # Non-prefix route (VPLS): factory returns pre-constructed NLRI
             nlri = self.schema.nlri_factory()
 
-        route = Route(nlri, AttributeSet())
+        route = Route(nlri, AttributeCollection())
 
         # Process sub-commands from schema
         from exabgp.configuration.schema import Leaf, LeafList
@@ -1190,7 +1190,7 @@ class TypeSelectorValidator(Validator[list[Any]]):
         if self.schema is None:
             raise ValueError('No schema configured')
 
-        from exabgp.bgp.message.update.attribute import AttributeSet
+        from exabgp.bgp.message.update.attribute import AttributeCollection
         from exabgp.rib.route import Route
 
         # First token selects the type/factory
@@ -1210,7 +1210,7 @@ class TypeSelectorValidator(Validator[list[Any]]):
         else:
             nlri = factory(tokeniser, self.afi)
 
-        route = Route(nlri, AttributeSet())
+        route = Route(nlri, AttributeCollection())
 
         # Process remaining tokens as attributes
         from exabgp.configuration.schema import Leaf, LeafList

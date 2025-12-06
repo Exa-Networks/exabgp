@@ -50,7 +50,7 @@ def mock_logger() -> Any:
     with (
         patch('exabgp.bgp.message.update.log') as mock_log,
         patch('exabgp.bgp.message.update.nlri.nlri.log') as mock_nlri_log,
-        patch('exabgp.bgp.message.update.attribute.attributes.log') as mock_attr_log,
+        patch('exabgp.bgp.message.update.attribute.collection.log') as mock_attr_log,
     ):
         mock_log.debug = Mock()
         mock_nlri_log.debug = Mock()
@@ -152,8 +152,8 @@ def test_messages_packs_simple_ipv4_announcement() -> None:
 
     This tests the critical messages() method that was previously UNTESTED.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -166,12 +166,12 @@ def test_messages_packs_simple_ipv4_announcement() -> None:
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData([nlri], [], attributes)
+    update = UpdateCollection([nlri], [], attributes)
 
     # Generate messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -189,8 +189,8 @@ def test_messages_packs_simple_ipv4_announcement() -> None:
 @pytest.mark.fuzz
 def test_messages_packs_ipv4_withdrawal() -> None:
     """Test that messages() generates valid UPDATE for IPv4 withdrawal."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -198,9 +198,9 @@ def test_messages_packs_ipv4_withdrawal() -> None:
     # Create a withdrawal using factory method
     nlri = create_inet_nlri('10.0.0.0', 8, Action.WITHDRAW)
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
 
-    update = UpdateData([], [nlri], attributes)
+    update = UpdateCollection([], [nlri], attributes)
 
     # Generate messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -215,15 +215,15 @@ def test_messages_packs_ipv4_withdrawal() -> None:
 @pytest.mark.fuzz
 def test_messages_handles_no_nlris() -> None:
     """Test that messages() handles UPDATE with no valid NLRIs."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock(families=[(AFI.ipv4, SAFI.unicast)])
 
     # Empty NLRI list
-    attributes = AttributeSet()
-    update = UpdateData([], [], attributes)
+    attributes = AttributeCollection()
+    update = UpdateCollection([], [], attributes)
 
     # Generate messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -235,8 +235,8 @@ def test_messages_handles_no_nlris() -> None:
 @pytest.mark.fuzz
 def test_messages_include_withdraw_flag() -> None:
     """Test that include_withdraw flag controls withdrawal inclusion."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -244,8 +244,8 @@ def test_messages_include_withdraw_flag() -> None:
     # Create a withdrawal using factory method
     nlri = create_inet_nlri('10.0.0.0', 8, Action.WITHDRAW)
 
-    attributes = AttributeSet()
-    update = UpdateData([], [nlri], attributes)
+    attributes = AttributeCollection()
+    update = UpdateCollection([], [nlri], attributes)
 
     # Generate messages with include_withdraw=False
     messages = list(update.messages(negotiated, include_withdraw=False))
@@ -260,8 +260,8 @@ def test_messages_filters_by_negotiated_families() -> None:
 
     Only routes for negotiated families should be included.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
 
@@ -275,12 +275,12 @@ def test_messages_filters_by_negotiated_families() -> None:
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData([nlri_v4], [], attributes)
+    update = UpdateCollection([nlri_v4], [], attributes)
 
     # Generate messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -300,8 +300,8 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
 
     This validates data integrity through the full UPDATE cycle.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -313,12 +313,12 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
-    original_attributes = AttributeSet()
+    original_attributes = AttributeCollection()
     original_attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     original_attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     original_attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData([original_nlri], [], original_attributes)
+    update = UpdateCollection([original_nlri], [], original_attributes)
 
     # Pack message
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -328,10 +328,10 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
     packed_data = messages[0][19:]  # Skip 19-byte BGP header
 
     # Unpack message
-    unpacked = UpdateData.unpack_message(packed_data, negotiated)
+    unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
 
     # Verify unpacked data
-    assert isinstance(unpacked, UpdateData)
+    assert isinstance(unpacked, UpdateCollection)
     assert len(unpacked.nlris) >= 1
 
     # Verify attributes were preserved
@@ -342,8 +342,8 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
 @pytest.mark.fuzz
 def test_roundtrip_ipv4_withdrawal() -> None:
     """Test pack then unpack preserves IPv4 withdrawal data."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -351,8 +351,8 @@ def test_roundtrip_ipv4_withdrawal() -> None:
     # Create withdrawal using factory method
     nlri = create_inet_nlri('192.168.0.0', 16, Action.WITHDRAW)
 
-    attributes = AttributeSet()
-    update = UpdateData([], [nlri], attributes)
+    attributes = AttributeCollection()
+    update = UpdateCollection([], [nlri], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -360,10 +360,10 @@ def test_roundtrip_ipv4_withdrawal() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = UpdateData.unpack_message(packed_data, negotiated)
+    unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
 
     # Verify
-    assert isinstance(unpacked, UpdateData)
+    assert isinstance(unpacked, UpdateCollection)
     assert len(unpacked.withdraws) >= 1
     assert unpacked.nlris[0].action == Action.WITHDRAW
 
@@ -371,8 +371,8 @@ def test_roundtrip_ipv4_withdrawal() -> None:
 @pytest.mark.fuzz
 def test_roundtrip_multiple_nlris() -> None:
     """Test pack then unpack preserves multiple NLRIs."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -387,12 +387,12 @@ def test_roundtrip_multiple_nlris() -> None:
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData(nlris, [], attributes)
+    update = UpdateCollection(nlris, [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -400,18 +400,18 @@ def test_roundtrip_multiple_nlris() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = UpdateData.unpack_message(packed_data, negotiated)
+    unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
 
     # Verify
-    assert isinstance(unpacked, UpdateData)
+    assert isinstance(unpacked, UpdateCollection)
     assert len(unpacked.announces) == 3
 
 
 @pytest.mark.fuzz
 def test_roundtrip_with_multiple_attributes() -> None:
     """Test pack then unpack preserves multiple path attributes."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -426,14 +426,14 @@ def test_roundtrip_with_multiple_attributes() -> None:
     from exabgp.bgp.message.update.attribute.localpref import LocalPreference
     from exabgp.bgp.message.open.asn import ASN
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([SEQUENCE([ASN(65001), ASN(65002)])])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
     attributes[Attribute.CODE.MED] = MED.from_int(100)
     attributes[Attribute.CODE.LOCAL_PREF] = LocalPreference.from_int(200)
 
-    update = UpdateData([nlri], [], attributes)
+    update = UpdateCollection([nlri], [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -441,10 +441,10 @@ def test_roundtrip_with_multiple_attributes() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = UpdateData.unpack_message(packed_data, negotiated)
+    unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
 
     # Verify all attributes preserved
-    assert isinstance(unpacked, UpdateData)
+    assert isinstance(unpacked, UpdateCollection)
     assert Attribute.CODE.ORIGIN in unpacked.attributes
     assert Attribute.CODE.AS_PATH in unpacked.attributes
     # NEXT_HOP is set per-NLRI, not in global attributes
@@ -455,8 +455,8 @@ def test_roundtrip_with_multiple_attributes() -> None:
 @pytest.mark.fuzz
 def test_roundtrip_mixed_announce_withdraw() -> None:
     """Test pack then unpack preserves mixed announcements and withdrawals."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -472,12 +472,12 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData([announce1], [withdraw1, withdraw2], attributes)
+    update = UpdateCollection([announce1], [withdraw1, withdraw2], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -485,10 +485,10 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = UpdateData.unpack_message(packed_data, negotiated)
+    unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
 
     # Verify both types present
-    assert isinstance(unpacked, UpdateData)
+    assert isinstance(unpacked, UpdateCollection)
     assert len(unpacked.nlris) >= 2
 
     # Check we have both announces and withdraws
@@ -507,8 +507,8 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
 
     IPv6 routes should be packed using multiprotocol extensions.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
 
@@ -521,11 +521,11 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
 
-    update = UpdateData([nlri], [], attributes)
+    update = UpdateCollection([nlri], [], attributes)
 
     # Pack - should use MP_REACH_NLRI
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -538,8 +538,8 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
 @pytest.mark.fuzz
 def test_roundtrip_ipv6_announcement() -> None:
     """Test pack then unpack preserves IPv6 announcement via MP_REACH."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
 
@@ -551,11 +551,11 @@ def test_roundtrip_ipv6_announcement() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
 
-    update = UpdateData([nlri], [], attributes)
+    update = UpdateCollection([nlri], [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -563,12 +563,12 @@ def test_roundtrip_ipv6_announcement() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = UpdateData.unpack_message(packed_data, negotiated)
+    unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
 
     # Verify
     assert unpacked is not None
     # Should have IPv6 NLRI from MP_REACH
-    if isinstance(unpacked, UpdateData):
+    if isinstance(unpacked, UpdateCollection):
         assert len(unpacked.nlris) >= 1
 
 
@@ -578,8 +578,8 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
 
     Should generate messages with both standard NLRI and MP extensions.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
 
@@ -601,12 +601,12 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData([nlri_v4, nlri_v6], [], attributes)
+    update = UpdateCollection([nlri_v4, nlri_v6], [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -626,8 +626,8 @@ def test_messages_splits_large_nlri_set() -> None:
 
     When NLRIs exceed message size limit, should generate multiple messages.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock(msg_size=1024)  # Small message size
@@ -642,12 +642,12 @@ def test_messages_splits_large_nlri_set() -> None:
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData(nlris, [], attributes)
+    update = UpdateCollection(nlris, [], attributes)
 
     # Pack - should generate multiple messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -660,8 +660,8 @@ def test_messages_splits_large_nlri_set() -> None:
 @pytest.mark.fuzz
 def test_messages_respects_negotiated_msg_size() -> None:
     """Test that messages() respects negotiated message size limit."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     # Small message size
@@ -677,12 +677,12 @@ def test_messages_respects_negotiated_msg_size() -> None:
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData(nlris, [], attributes)
+    update = UpdateCollection(nlris, [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -695,8 +695,8 @@ def test_messages_respects_negotiated_msg_size() -> None:
 @pytest.mark.fuzz
 def test_messages_handles_large_attributes() -> None:
     """Test messages() with large attributes approaching size limits."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -712,12 +712,12 @@ def test_messages_handles_large_attributes() -> None:
     # Create large AS_PATH
     large_as_path = SEQUENCE([ASN(65000 + i) for i in range(100)])
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([large_as_path])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData([nlri], [], attributes)
+    update = UpdateCollection([nlri], [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -737,8 +737,8 @@ def test_integration_full_update_cycle() -> None:
 
     Tests complete flow: create -> pack -> unpack -> verify
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -764,14 +764,14 @@ def test_integration_full_update_cycle() -> None:
     from exabgp.bgp.message.update.attribute.localpref import LocalPreference
     from exabgp.bgp.message.open.asn import ASN
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([SEQUENCE([ASN(65001), ASN(65002)])])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
     attributes[Attribute.CODE.MED] = MED.from_int(100)
     attributes[Attribute.CODE.LOCAL_PREF] = LocalPreference.from_int(200)
 
-    original_update = UpdateData(announces, withdraws, attributes)
+    original_update = UpdateCollection(announces, withdraws, attributes)
 
     # Pack
     messages = list(original_update.messages(negotiated, include_withdraw=True))
@@ -780,11 +780,11 @@ def test_integration_full_update_cycle() -> None:
     # Unpack each message
     for msg in messages:
         packed_data = msg[19:]
-        unpacked = UpdateData.unpack_message(packed_data, negotiated)
+        unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
 
         assert unpacked is not None
 
-        if isinstance(unpacked, UpdateData):
+        if isinstance(unpacked, UpdateCollection):
             # Should have NLRIs
             assert len(unpacked.nlris) >= 1
 
@@ -795,8 +795,8 @@ def test_integration_full_update_cycle() -> None:
 @pytest.mark.fuzz
 def test_integration_empty_attributes_for_withdrawal_only() -> None:
     """Test that withdrawal-only UPDATEs can have empty attributes."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -808,9 +808,9 @@ def test_integration_empty_attributes_for_withdrawal_only() -> None:
         nlris.append(nlri)
 
     # Empty attributes
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
 
-    update = UpdateData([], nlris, attributes)
+    update = UpdateCollection([], nlris, attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -818,18 +818,18 @@ def test_integration_empty_attributes_for_withdrawal_only() -> None:
 
     # Unpack
     packed_data = messages[0][19:]
-    unpacked = UpdateData.unpack_message(packed_data, negotiated)
+    unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
 
     # Should be valid
-    assert isinstance(unpacked, UpdateData)
+    assert isinstance(unpacked, UpdateCollection)
     assert len(unpacked.withdraws) >= 1
 
 
 @pytest.mark.fuzz
 def test_integration_sorting_and_grouping() -> None:
     """Test that messages() properly sorts and groups NLRIs."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock()
@@ -843,12 +843,12 @@ def test_integration_sorting_and_grouping() -> None:
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData([nlri1, nlri3], [nlri2], attributes)
+    update = UpdateCollection([nlri1, nlri3], [nlri2], attributes)
 
     # Pack - should sort internally
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -871,8 +871,8 @@ def test_messages_at_4k_boundary() -> None:
     """
     import random
 
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock(msg_size=4096)
@@ -895,12 +895,12 @@ def test_messages_at_4k_boundary() -> None:
     as_path_len = random.randint(5, 15)
     as_path = SEQUENCE([ASN(random.randint(1, 65000)) for _ in range(as_path_len)])
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([as_path])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData(nlris, [], attributes)
+    update = UpdateCollection(nlris, [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -926,8 +926,8 @@ def test_messages_at_64k_boundary() -> None:
     """
     import random
 
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
 
     negotiated = create_negotiated_mock(msg_size=65535)
@@ -951,12 +951,12 @@ def test_messages_at_64k_boundary() -> None:
     as_path_len = random.randint(10, 30)
     as_path = SEQUENCE([ASN(random.randint(1, 65000)) for _ in range(as_path_len)])
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([as_path])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData(nlris, [], attributes)
+    update = UpdateCollection(nlris, [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -979,8 +979,8 @@ def test_messages_splits_when_nlris_exceed_limit() -> None:
     """
     import random
 
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
@@ -1006,12 +1006,12 @@ def test_messages_splits_when_nlris_exceed_limit() -> None:
     random.seed(44)
     as_path = SEQUENCE([ASN(random.randint(1, 65000)) for _ in range(3)])
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([as_path])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData(announces, withdraws, attributes)
+    update = UpdateCollection(announces, withdraws, attributes)
 
     # Pack - should split into multiple messages
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -1028,8 +1028,8 @@ def test_messages_splits_when_nlris_exceed_limit() -> None:
     total_withdraws = 0
     for msg in messages:
         packed_data = msg[19:]  # Skip BGP header
-        unpacked = UpdateData.unpack_message(packed_data, negotiated)
-        if isinstance(unpacked, UpdateData):
+        unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
+        if isinstance(unpacked, UpdateCollection):
             total_announces += len(unpacked.announces)
             total_withdraws += len(unpacked.withdraws)
 
@@ -1048,8 +1048,8 @@ def test_messages_excludes_non_negotiated_families() -> None:
 
     If only IPv4 unicast is negotiated, IPv6 NLRIs should be silently dropped.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
 
@@ -1062,11 +1062,11 @@ def test_messages_excludes_non_negotiated_families() -> None:
     from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
 
-    update = UpdateData([nlri_v6], [], attributes)
+    update = UpdateCollection([nlri_v6], [], attributes)
 
     # Pack - should generate NO messages (IPv6 not negotiated)
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -1081,8 +1081,8 @@ def test_messages_mixed_families_only_sends_negotiated() -> None:
     When given both IPv4 and IPv6 NLRIs but only IPv4 is negotiated,
     only IPv4 should appear in the packed messages.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet, Attribute
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
 
@@ -1099,12 +1099,12 @@ def test_messages_mixed_families_only_sends_negotiated() -> None:
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
-    attributes = AttributeSet()
+    attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
     attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
     attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
 
-    update = UpdateData([nlri_v4, nlri_v6], [], attributes)
+    update = UpdateCollection([nlri_v4, nlri_v6], [], attributes)
 
     # Pack
     messages = list(update.messages(negotiated, include_withdraw=True))
@@ -1114,9 +1114,9 @@ def test_messages_mixed_families_only_sends_negotiated() -> None:
 
     # Unpack and verify only IPv4 present
     packed_data = messages[0][19:]  # Skip BGP header
-    unpacked = UpdateData.unpack_message(packed_data, negotiated)
+    unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
 
-    assert isinstance(unpacked, UpdateData)
+    assert isinstance(unpacked, UpdateCollection)
     # All NLRIs should be IPv4
     for nlri in unpacked.nlris:
         assert nlri.afi == AFI.ipv4, f'Found non-IPv4 NLRI: {nlri}'
@@ -1133,8 +1133,8 @@ def test_announce_ipv6_undefined_nexthop_raises_valueerror() -> None:
 
     Non-FlowSpec announces require a defined next-hop.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.protocol.ip import IP
@@ -1145,8 +1145,8 @@ def test_announce_ipv6_undefined_nexthop_raises_valueerror() -> None:
     nlri = create_inet_nlri('2001:db8::', 32, Action.ANNOUNCE, afi=AFI.ipv6)
     nlri.nexthop = IP.NoNextHop  # AFI.undefined
 
-    attributes = AttributeSet()
-    update = UpdateData([nlri], [], attributes)
+    attributes = AttributeCollection()
+    update = UpdateCollection([nlri], [], attributes)
 
     # MUST raise ValueError
     with pytest.raises(ValueError, match='unexpected nlri definition'):
@@ -1160,8 +1160,8 @@ def test_announce_ipv4_undefined_nexthop_raises_valueerror() -> None:
     IPv4 with undefined next-hop can't go to v4_announces (needs ipv4 nexthop)
     and can't go to mp_nlris (nexthop.afi == undefined).
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.protocol.ip import IP
@@ -1172,8 +1172,8 @@ def test_announce_ipv4_undefined_nexthop_raises_valueerror() -> None:
     nlri = create_inet_nlri('10.0.0.0', 8, Action.ANNOUNCE)
     nlri.nexthop = IP.NoNextHop  # AFI.undefined
 
-    attributes = AttributeSet()
-    update = UpdateData([nlri], [], attributes)
+    attributes = AttributeCollection()
+    update = UpdateCollection([nlri], [], attributes)
 
     # MUST raise ValueError
     with pytest.raises(ValueError, match='unexpected nlri definition'):
@@ -1186,8 +1186,8 @@ def test_withdraw_ipv6_undefined_nexthop_allowed() -> None:
 
     Withdraws don't need a next-hop since they're removing routes.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.protocol.ip import IP
@@ -1198,8 +1198,8 @@ def test_withdraw_ipv6_undefined_nexthop_allowed() -> None:
     nlri = create_inet_nlri('2001:db8::', 32, Action.WITHDRAW, afi=AFI.ipv6)
     nlri.nexthop = IP.NoNextHop
 
-    attributes = AttributeSet()
-    update = UpdateData([], [nlri], attributes)
+    attributes = AttributeCollection()
+    update = UpdateCollection([], [nlri], attributes)
 
     # Should NOT raise, should generate message
     messages = list(update.messages(negotiated))
@@ -1212,8 +1212,8 @@ def test_withdraw_ipv4_undefined_nexthop_allowed() -> None:
 
     Withdraws don't need a next-hop.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.protocol.ip import IP
@@ -1224,8 +1224,8 @@ def test_withdraw_ipv4_undefined_nexthop_allowed() -> None:
     nlri = create_inet_nlri('10.0.0.0', 8, Action.WITHDRAW)
     nlri.nexthop = IP.NoNextHop
 
-    attributes = AttributeSet()
-    update = UpdateData([], [nlri], attributes)
+    attributes = AttributeCollection()
+    update = UpdateCollection([], [nlri], attributes)
 
     # Should NOT raise, should generate message
     messages = list(update.messages(negotiated))

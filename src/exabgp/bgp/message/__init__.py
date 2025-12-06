@@ -19,7 +19,7 @@ from exabgp.bgp.message.scheduling import _NOP, _AWAKE, _DONE
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.open import Open
-from exabgp.bgp.message.update import Update, UpdateData
+from exabgp.bgp.message.update import Update, UpdateCollection
 from exabgp.bgp.message.update import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification
@@ -38,7 +38,7 @@ __all__ = [
     'Message',
     'Open',
     'Update',
-    'UpdateData',
+    'UpdateCollection',
     'EOR',
     'KeepAlive',
     'Notification',

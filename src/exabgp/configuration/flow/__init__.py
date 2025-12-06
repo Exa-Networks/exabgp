@@ -24,7 +24,7 @@ from exabgp.configuration.flow.route import ParseFlowScope
 
 from exabgp.rib.route import Route
 from exabgp.bgp.message.update.nlri import Flow
-from exabgp.bgp.message.update.attribute import AttributeSet
+from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
@@ -87,7 +87,7 @@ class ParseFlow(Section):
 @ParseFlow.register('route', 'append-route')
 def route(tokeniser: Any) -> list[Route]:
     flow_nlri = Flow.make_flow()
-    flow_route: Route = Route(flow_nlri, AttributeSet())
+    flow_route: Route = Route(flow_nlri, AttributeCollection())
 
     while True:
         command: str = tokeniser()

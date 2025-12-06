@@ -14,7 +14,7 @@ from exabgp.bgp.message import Action
 if TYPE_CHECKING:
     from exabgp.rib.route import Route
     from exabgp.bgp.message.update.nlri.nlri import NLRI
-    from exabgp.bgp.message.update.attribute.attributes import AttributeSet
+    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.protocol.family import AFI, SAFI
 
 
@@ -94,14 +94,14 @@ class Cache:
     @overload
     def update_cache(self, route: 'Route') -> None: ...
     @overload
-    def update_cache(self, nlri: 'NLRI', attributes: 'AttributeSet') -> None: ...
+    def update_cache(self, nlri: 'NLRI', attributes: 'AttributeCollection') -> None: ...
     @overload
-    def update_cache(self, nlri: 'NLRI', attributes: 'AttributeSet', action: int) -> None: ...
+    def update_cache(self, nlri: 'NLRI', attributes: 'AttributeCollection', action: int) -> None: ...
 
     def update_cache(
         self,
         route_or_nlri: 'Route | NLRI',
-        attributes: 'AttributeSet | None' = None,
+        attributes: 'AttributeCollection | None' = None,
         action: int | None = None,
     ) -> None:
         if not self.enabled or not self.cache:
@@ -138,9 +138,11 @@ class Cache:
     @overload
     def update_cache_withdraw(self, route: 'Route') -> None: ...
     @overload
-    def update_cache_withdraw(self, nlri: 'NLRI', attributes: 'AttributeSet | None' = None) -> None: ...
+    def update_cache_withdraw(self, nlri: 'NLRI', attributes: 'AttributeCollection | None' = None) -> None: ...
 
-    def update_cache_withdraw(self, route_or_nlri: 'Route | NLRI', attributes: 'AttributeSet | None' = None) -> None:
+    def update_cache_withdraw(
+        self, route_or_nlri: 'Route | NLRI', attributes: 'AttributeCollection | None' = None
+    ) -> None:
         if not self.enabled or not self.cache:
             return
 
