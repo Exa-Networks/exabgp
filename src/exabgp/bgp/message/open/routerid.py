@@ -6,9 +6,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
+from collections.abc import Buffer
 from typing import Type
 
-from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IPv4
 
 # ===================================================================== RouterID
@@ -16,11 +17,9 @@ from exabgp.protocol.ip import IPv4
 
 
 class RouterID(IPv4):
-    def __init__(self, ip: str, packed: bytes | None = None) -> None:
-        if IPv4.toafi(ip) != AFI.ipv4:
-            raise ValueError('wrong address family')
-        IPv4.__init__(self, ip, packed)
+    def __init__(self, ip: str) -> None:
+        IPv4.__init__(self, IPv4.pton(ip))
 
     @classmethod
-    def unpack_routerid(cls: Type[RouterID], data: bytes) -> RouterID:  # pylint: disable=W0221
-        return cls('.'.join(str(_) for _ in data), data)
+    def unpack_routerid(cls: Type[RouterID], data: Buffer) -> RouterID:
+        return cls(IPv4.ntop(data))

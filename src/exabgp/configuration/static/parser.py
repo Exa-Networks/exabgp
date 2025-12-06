@@ -7,57 +7,49 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from exabgp.configuration.core.parser import Tokeniser
 
 from struct import pack
 
-from exabgp.protocol.family import AFI
-
-from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import IPSelf
-from exabgp.protocol.ip import IPRange
-from exabgp.protocol.ip import IPv4
-
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.nlri import CIDR
-from exabgp.bgp.message.update.nlri import INET
-from exabgp.bgp.message.update.nlri import IPVPN
-
-from exabgp.bgp.message.open import ASN
-from exabgp.bgp.message.open import RouterID
-from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute import AttributeCollection
-from exabgp.bgp.message.update.attribute import NextHop
-from exabgp.bgp.message.update.attribute import NextHopSelf
-from exabgp.bgp.message.update.attribute import Origin
-from exabgp.bgp.message.update.attribute import MED
-from exabgp.bgp.message.update.attribute import AS2Path
-from exabgp.bgp.message.update.attribute import SET
-from exabgp.bgp.message.update.attribute import SEQUENCE
-from exabgp.bgp.message.update.attribute import CONFED_SET
-from exabgp.bgp.message.update.attribute import CONFED_SEQUENCE
-from exabgp.bgp.message.update.attribute import LocalPreference
-from exabgp.bgp.message.update.attribute import AtomicAggregate
-from exabgp.bgp.message.update.attribute import Aggregator
-from exabgp.bgp.message.update.attribute import Aggregator4  # noqa: F401,E261
-from exabgp.bgp.message.update.attribute import OriginatorID
-from exabgp.bgp.message.update.attribute import ClusterID
-from exabgp.bgp.message.update.attribute import ClusterList
-from exabgp.bgp.message.update.attribute import AIGP
-from exabgp.bgp.message.update.attribute import GenericAttribute
-
-from exabgp.bgp.message.update.attribute.community import Community
-from exabgp.bgp.message.update.attribute.community import Communities
-from exabgp.bgp.message.update.attribute.community import LargeCommunity
-from exabgp.bgp.message.update.attribute.community import LargeCommunities
-from exabgp.bgp.message.update.attribute.community import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
-
+from exabgp.bgp.message.open import ASN, RouterID
+from exabgp.bgp.message.update.attribute import (
+    AIGP,
+    CONFED_SEQUENCE,
+    CONFED_SET,
+    MED,
+    SEQUENCE,
+    SET,
+    Aggregator,
+    Aggregator4,  # noqa: F401,E261
+    AS2Path,
+    AtomicAggregate,
+    Attribute,
+    AttributeCollection,
+    ClusterID,
+    ClusterList,
+    GenericAttribute,
+    LocalPreference,
+    NextHop,
+    NextHopSelf,
+    Origin,
+    OriginatorID,
+)
+from exabgp.bgp.message.update.attribute.community import (
+    Communities,
+    Community,
+    ExtendedCommunities,
+    ExtendedCommunity,
+    LargeCommunities,
+    LargeCommunity,
+)
+from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
-
+from exabgp.protocol.family import AFI
+from exabgp.protocol.ip import IP, IPRange, IPSelf, IPv4
 from exabgp.rib.route import Route
 
 # IP address validation constants
@@ -324,13 +316,13 @@ def cluster_list(tokeniser: 'Tokeniser') -> ClusterList:
                 value = tokeniser()
                 if value == ']':
                     break
-                clusterids.append(ClusterID(value))
+                clusterids.append(ClusterID.from_string(value))
         else:
-            clusterids.append(ClusterID(value))
+            clusterids.append(ClusterID.from_string(value))
         if not clusterids:
             raise ValueError('cluster-list is empty\n  Format: <cluster-id> or [ <cluster-id1>, <cluster-id2>, ... ]')
         return ClusterList.make_clusterlist(clusterids)
-    except ValueError:
+    except (ValueError, OSError):
         raise ValueError(
             f"'{value}' is not a valid cluster-list\n  Format: <cluster-id> or [ <cluster-id1>, <cluster-id2>, ... ]"
         ) from None

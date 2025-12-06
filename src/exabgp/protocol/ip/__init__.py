@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import builtins
 import socket
-from typing import Any, Type, ClassVar, Iterator, TYPE_CHECKING
+from collections.abc import Buffer
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Type
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
@@ -62,23 +63,20 @@ class IP:
 
     _multicast_range: ClassVar[set[int]] = set(range(224, 240))  # 239
 
-    _string: str
-    _packed: bytes
+    _packed: Buffer
 
     # deprecate the string API in favor of top()
 
     def __init__(self) -> None:
         raise RuntimeError('You should use IP.from_string() to use IP')
 
-    def init(self, string: str, packed: bytes | None = None) -> IP:
-        # XXX: the str should not be needed
-        self._string = string
-        self._packed = IP.pton(string) if packed is None else packed
-        self.afi = IP.toafi(string)
+    def init(self, packed: Buffer) -> IP:
+        self._packed = packed
+        self.afi = IP.toafi(IP.ntop(packed))
         return self
 
     def __iter__(self) -> Iterator[str]:
-        for letter in self._string:
+        for letter in IP.ntop(self._packed):
             yield letter
 
     @staticmethod
@@ -86,11 +84,11 @@ class IP:
         return socket.inet_pton(IP.toaf(ip), ip)
 
     @staticmethod
-    def ntop(data: bytes) -> str:
+    def ntop(data: Buffer) -> str:
         return socket.inet_ntop(socket.AF_INET if len(data) == IPv4.BYTES else socket.AF_INET6, data)
 
     def top(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> str:
-        return self._string
+        return IP.ntop(self._packed)
 
     @staticmethod
     def toaf(ip: str) -> int:
@@ -139,21 +137,24 @@ class IP:
     def length(afi: AFI) -> int:
         return 4 if afi == AFI.ipv4 else 16
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         return self._packed
 
-    def pack_ip(self) -> bytes:
+    def pack_ip(self) -> Buffer:
         return self._packed
 
-    def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> Buffer:
         return self._packed
+
+    def __str__(self) -> str:
+        return 'no-nexthop' if not self._packed else IP.ntop(self._packed)
 
     def __repr__(self) -> str:
-        return self._string
+        return 'no-nexthop' if not self._packed else IP.ntop(self._packed)
 
     def decode(self, encoding: str = 'utf-8', errors: str = 'strict') -> str:
         assert encoding in ('utf-8', 'ascii')
-        return self._string
+        return 'no-nexthop' if not self._packed else IP.ntop(self._packed)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, IP):
@@ -164,16 +165,16 @@ class IP:
         return not self.__eq__(other)
 
     def __lt__(self, other: IP) -> bool:
-        return self._packed < other._packed
+        return bytes(self._packed) < bytes(other._packed)
 
     def __le__(self, other: IP) -> bool:
-        return self._packed <= other._packed
+        return bytes(self._packed) <= bytes(other._packed)
 
     def __gt__(self, other: IP) -> bool:
-        return self._packed > other._packed
+        return bytes(self._packed) > bytes(other._packed)
 
     def __ge__(self, other: IP) -> bool:
-        return self._packed >= other._packed
+        return bytes(self._packed) >= bytes(other._packed)
 
     def __hash__(self) -> int:
         return hash((self.__class__.__name__, self._packed))
@@ -193,10 +194,11 @@ class IP:
         return None
 
     @classmethod
-    def from_string(cls, string: str, packed: bytes | None = None, klass: Type[IP] | None = None) -> IP:
+    def from_string(cls, string: str, klass: Type[IP] | None = None) -> IP:
+        data = IP.pton(string)
         if klass:
-            return klass(string, packed)  # type: ignore[call-arg]
-        return cls.klass(string)(string, packed)  # type: ignore[call-arg,misc]
+            return klass(data)
+        return cls.klass(string)(data)  # type: ignore[misc]
 
     @classmethod
     def register(cls) -> None:
@@ -211,7 +213,6 @@ class IP:
         # Bypass __init__ which raises RuntimeError
         instance = object.__new__(cls)
         instance._packed = b''
-        instance._string = 'no-nexthop'
         instance.afi = AFI.undefined
         return instance
 
@@ -237,8 +238,11 @@ class IP:
         return new
 
     @classmethod
-    def unpack_ip(cls, data: bytes, klass: Type[IP] | None = None) -> IP:
-        return cls.from_string(IP.ntop(data), data, klass)
+    def unpack_ip(cls, data: Buffer) -> IP:
+        if cls is IP:
+            klass = IPv4 if len(data) == 4 else IPv6
+            return klass(data)
+        return cls(data)
 
 
 # ======================================================================== Range
@@ -248,13 +252,13 @@ class IP:
 class IPRange(IP):
     mask: NetMask
 
-    def __init__(self, ip: str, mask: int) -> None:
-        IP.init(self, ip)
-        self.mask = NetMask.make_netmask(mask, IP.toafi(ip))
+    def __init__(self, packed: Buffer, mask: int) -> None:
+        IP.init(self, packed)
+        self.mask = NetMask.make_netmask(mask, self.afi)
 
     @classmethod
     def from_string(cls, ip: str, mask: int) -> IPRange:  # type: ignore[override]
-        return cls(ip, mask)
+        return cls(IP.pton(ip), mask)
 
     def __repr__(self) -> str:
         if (self.ipv4() and self.mask == IPv4.HOST_MASK) or (self.ipv6() and self.mask == IPv6.HOST_MASK):
@@ -285,8 +289,8 @@ class IPv4(IP):
     DOT_COUNT: ClassVar[int] = 3  # Number of dots in IPv4 address format (e.g., 192.168.1.1)
     HOST_MASK: ClassVar[int] = 32  # IPv4 host prefix length (/32)
 
-    def __init__(self, string: str, packed: builtins.bytes | None = None) -> None:
-        self.init(string, packed if packed else IP.pton(string))
+    def __init__(self, packed: Buffer) -> None:
+        self.init(packed)
 
     def __len__(self) -> int:
         return 4
@@ -295,7 +299,7 @@ class IPv4(IP):
         return not self.multicast()
 
     def multicast(self) -> bool:
-        return self._packed[0] in set(range(224, 240))  # 239 is last
+        return self._packed[0] in range(224, 240)  # 239 is last
 
     def ipv4(self) -> bool:
         return True
@@ -308,16 +312,13 @@ class IPv4(IP):
         return socket.inet_pton(socket.AF_INET, ip)
 
     @staticmethod
-    def ntop(data: builtins.bytes) -> str:
+    def ntop(data: Buffer) -> str:
         return socket.inet_ntop(socket.AF_INET, data)
 
     # klass is a trick for subclasses of IP/IPv4 such as NextHop / OriginatorID
     @classmethod
-    def unpack_ipv4(cls, data: builtins.bytes, klass: Type[IPv4] | None = None) -> IPv4:
-        ip = socket.inet_ntop(socket.AF_INET, data)
-        if klass:
-            return klass(ip, data)
-        return cls(ip, data)
+    def unpack_ipv4(cls, data: Buffer) -> IPv4:
+        return cls(data)
 
 
 IPv4.register()
@@ -341,8 +342,8 @@ class IPv6(IP):
     COLON_MIN: ClassVar[int] = 2  # Minimum number of colons in IPv6 address format
     HOST_MASK: ClassVar[int] = 128  # IPv6 host prefix length (/128)
 
-    def __init__(self, string: str, packed: builtins.bytes | None = None) -> None:
-        self.init(string, packed if packed else socket.inet_pton(socket.AF_INET6, string))
+    def __init__(self, packed: Buffer) -> None:
+        self.init(packed)
 
     def __len__(self) -> int:
         return 16
@@ -364,15 +365,12 @@ class IPv6(IP):
         return socket.inet_pton(socket.AF_INET6, ip)
 
     @staticmethod
-    def ntop(data: builtins.bytes) -> str:
+    def ntop(data: Buffer) -> str:
         return socket.inet_ntop(socket.AF_INET6, data)
 
     @classmethod
-    def unpack_ipv6(cls, data: builtins.bytes, klass: Type[IPv6] | None = None) -> IPv6:
-        ip6 = socket.inet_ntop(socket.AF_INET6, data)
-        if klass:
-            return klass(ip6)
-        return cls(ip6)
+    def unpack_ipv6(cls, data: Buffer) -> IPv6:
+        return cls(data)
 
 
 IPv6.register()

@@ -305,8 +305,8 @@ def make_test_neighbor() -> Neighbor:
     neighbor = Neighbor()
     neighbor.description = 'a test neighbor'
     neighbor.router_id = RouterID('127.0.0.1')
-    neighbor.local_address = IPv4('127.0.0.1')
-    neighbor.peer_address = IPv4('127.0.0.1')
+    neighbor.local_address = IPv4.from_string('127.0.0.1')
+    neighbor.peer_address = IPv4.from_string('127.0.0.1')
     neighbor.host_name = 'localhost'
     neighbor.domain_name = 'localdomain'
     neighbor.peer_as = ASN('65500')

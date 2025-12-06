@@ -8,8 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections.abc import Buffer
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -53,10 +52,9 @@ class LocalPreference(Attribute):
         Raises:
             ValueError: If data is not exactly 4 bytes
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) != 4:
-            raise ValueError(f'LocalPreference requires exactly 4 bytes, got {len(data_bytes)}')
-        return cls(data_bytes)
+        if len(data) != 4:
+            raise ValueError(f'LocalPreference requires exactly 4 bytes, got {len(data)}')
+        return cls(data)
 
     @classmethod
     def from_int(cls, localpref: int) -> 'LocalPreference':

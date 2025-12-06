@@ -58,10 +58,9 @@ class Communities(Attribute):
         Raises:
             Notify: If data length is not a multiple of 4
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) % COMMUNITY_SIZE != 0:
-            raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data_bytes])))
-        return cls(data_bytes)
+        if len(data) % COMMUNITY_SIZE != 0:
+            raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data])))
+        return cls(data)
 
     @classmethod
     def make_communities(cls, communities: Sequence[Community]) -> 'Communities':

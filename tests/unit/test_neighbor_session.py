@@ -38,7 +38,7 @@ class TestSessionDefaults:
 
     def test_auto_discovery_when_local_set(self) -> None:
         """Test auto_discovery is False when local_address is set."""
-        session = Session(local_address=IPv4('192.168.1.1'))
+        session = Session(local_address=IPv4.from_string('192.168.1.1'))
         assert session.auto_discovery is False
 
 
@@ -52,21 +52,21 @@ class TestSessionMissing:
 
     def test_missing_router_id_auto_discovery(self) -> None:
         """Test missing returns 'router-id' in auto_discovery mode."""
-        session = Session(peer_address=IPv4('192.168.1.2'))
+        session = Session(peer_address=IPv4.from_string('192.168.1.2'))
         assert session.missing() == 'router-id'
 
     def test_missing_router_id_ipv6(self) -> None:
         """Test missing returns 'router-id' for IPv6 peer."""
         session = Session(
-            peer_address=IPv6('2001:db8::1'),
-            local_address=IPv6('2001:db8::2'),
+            peer_address=IPv6.from_string('2001:db8::1'),
+            local_address=IPv6.from_string('2001:db8::2'),
         )
         assert session.missing() == 'router-id'
 
     def test_missing_local_address_listen(self) -> None:
         """Test missing returns 'local-address' when listen set with auto_discovery."""
         session = Session(
-            peer_address=IPv4('192.168.1.2'),
+            peer_address=IPv4.from_string('192.168.1.2'),
             listen=179,
             router_id=RouterID('1.2.3.4'),
         )
@@ -75,8 +75,8 @@ class TestSessionMissing:
     def test_complete_session(self) -> None:
         """Test missing returns '' for complete session."""
         session = Session(
-            peer_address=IPv4('192.168.1.2'),
-            local_address=IPv4('192.168.1.1'),
+            peer_address=IPv4.from_string('192.168.1.2'),
+            local_address=IPv4.from_string('192.168.1.1'),
             router_id=RouterID('1.2.3.4'),
         )
         assert session.missing() == ''
@@ -88,18 +88,18 @@ class TestSessionInfer:
     def test_infer_md5_ip_from_local(self) -> None:
         """Test infer sets md5_ip from local_address."""
         session = Session(
-            peer_address=IPv4('192.168.1.2'),
-            local_address=IPv4('192.168.1.1'),
+            peer_address=IPv4.from_string('192.168.1.2'),
+            local_address=IPv4.from_string('192.168.1.1'),
         )
         assert session.md5_ip is None
 
         session.infer()
 
-        assert session.md5_ip == IPv4('192.168.1.1')
+        assert session.md5_ip == IPv4.from_string('192.168.1.1')
 
     def test_infer_no_md5_ip_auto_discovery(self) -> None:
         """Test infer does not set md5_ip in auto_discovery mode."""
-        session = Session(peer_address=IPv4('192.168.1.2'))
+        session = Session(peer_address=IPv4.from_string('192.168.1.2'))
 
         session.infer()
 
@@ -112,24 +112,24 @@ class TestSessionIpSelf:
     def test_ip_self_ipv4(self) -> None:
         """Test ip_self returns local_address for matching AFI."""
         session = Session(
-            peer_address=IPv4('192.168.1.2'),
-            local_address=IPv4('192.168.1.1'),
+            peer_address=IPv4.from_string('192.168.1.2'),
+            local_address=IPv4.from_string('192.168.1.1'),
         )
-        assert session.ip_self(AFI.ipv4) == IPv4('192.168.1.1')
+        assert session.ip_self(AFI.ipv4) == IPv4.from_string('192.168.1.1')
 
     def test_ip_self_ipv6(self) -> None:
         """Test ip_self returns local_address for IPv6."""
         session = Session(
-            peer_address=IPv6('2001:db8::2'),
-            local_address=IPv6('2001:db8::1'),
+            peer_address=IPv6.from_string('2001:db8::2'),
+            local_address=IPv6.from_string('2001:db8::1'),
         )
-        assert session.ip_self(AFI.ipv6) == IPv6('2001:db8::1')
+        assert session.ip_self(AFI.ipv6) == IPv6.from_string('2001:db8::1')
 
     def test_ip_self_fallback_to_router_id(self) -> None:
         """Test ip_self returns router_id for IPv4 when peer is IPv6."""
         session = Session(
-            peer_address=IPv6('2001:db8::2'),
-            local_address=IPv6('2001:db8::1'),
+            peer_address=IPv6.from_string('2001:db8::2'),
+            local_address=IPv6.from_string('2001:db8::1'),
             router_id=RouterID('1.2.3.4'),
         )
         # IPv4 route with IPv6 session - use router_id
@@ -138,8 +138,8 @@ class TestSessionIpSelf:
     def test_ip_self_error_mismatch(self) -> None:
         """Test ip_self raises TypeError for AFI mismatch."""
         session = Session(
-            peer_address=IPv4('192.168.1.2'),
-            local_address=IPv4('192.168.1.1'),
+            peer_address=IPv4.from_string('192.168.1.2'),
+            local_address=IPv4.from_string('192.168.1.1'),
         )
         with pytest.raises(TypeError, match='next-hop self'):
             session.ip_self(AFI.ipv6)
@@ -184,17 +184,17 @@ class TestSessionConnectionEstablished:
 
     def test_connection_established_auto_discovery(self) -> None:
         """Test connection_established sets local_address in auto_discovery."""
-        session = Session(peer_address=IPv4('192.168.1.2'))
+        session = Session(peer_address=IPv4.from_string('192.168.1.2'))
         assert session.auto_discovery is True
 
         session.connection_established('192.168.1.1')
 
-        assert session.local_address == IPv4('192.168.1.1')
+        assert session.local_address == IPv4.from_string('192.168.1.1')
         assert session.auto_discovery is False
 
     def test_connection_established_sets_router_id(self) -> None:
         """Test connection_established sets router_id for IPv4."""
-        session = Session(peer_address=IPv4('192.168.1.2'))
+        session = Session(peer_address=IPv4.from_string('192.168.1.2'))
 
         session.connection_established('192.168.1.1')
 
@@ -202,8 +202,8 @@ class TestSessionConnectionEstablished:
 
     def test_connection_established_sets_md5_ip(self) -> None:
         """Test connection_established sets md5_ip."""
-        session = Session(peer_address=IPv4('192.168.1.2'))
+        session = Session(peer_address=IPv4.from_string('192.168.1.2'))
 
         session.connection_established('192.168.1.1')
 
-        assert session.md5_ip == IPv4('192.168.1.1')
+        assert session.md5_ip == IPv4.from_string('192.168.1.1')

@@ -11,10 +11,9 @@ from typing import TYPE_CHECKING, Iterator, Sequence
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.large.community import LargeCommunity
-
-from exabgp.bgp.message.notification import Notify
 
 # Large community size constant
 LARGE_COMMUNITY_SIZE = (
@@ -57,15 +56,14 @@ class LargeCommunities(Attribute):
         Raises:
             Notify: If data length is not a multiple of 12
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) % LARGE_COMMUNITY_SIZE != 0:
-            raise Notify(3, 1, 'could not decode large community {}'.format(str([hex(_) for _ in data_bytes])))
+        if len(data) % LARGE_COMMUNITY_SIZE != 0:
+            raise Notify(3, 1, 'could not decode large community {}'.format(str([hex(_) for _ in data])))
         # Deduplicate while preserving order
         seen: set[bytes] = set()
         unique_packed = b''
         offset = 0
-        while offset < len(data_bytes):
-            chunk = data_bytes[offset : offset + LARGE_COMMUNITY_SIZE]
+        while offset < len(data):
+            chunk = data[offset : offset + LARGE_COMMUNITY_SIZE]
             if chunk not in seen:
                 seen.add(chunk)
                 unique_packed += chunk

@@ -13,10 +13,8 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.ip import IP, IPv4
-
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-
+from exabgp.protocol.ip import IP, IPv4
 
 # ============================================================== OriginatorID (9)
 
@@ -57,10 +55,9 @@ class OriginatorID(Attribute):
         Raises:
             ValueError: If data length is not 4
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) != 4:
-            raise ValueError(f'OriginatorID must be 4 bytes, got {len(data_bytes)}')
-        return cls(data_bytes)
+        if len(data) != 4:
+            raise ValueError(f'OriginatorID must be 4 bytes, got {len(data)}')
+        return cls(data)
 
     @classmethod
     def from_string(cls, ip_string: str) -> 'OriginatorID':

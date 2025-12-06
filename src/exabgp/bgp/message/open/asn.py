@@ -7,11 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack, unpack
 from typing import Type
 
 from exabgp.protocol.resource import Resource
-
 
 # =================================================================== ASN
 
@@ -36,7 +36,7 @@ class ASN(Resource):
         return pack('!L' if asn4 else '!H', self)
 
     @classmethod
-    def unpack_asn(cls: Type[ASN], data: bytes, klass: Type[ASN]) -> ASN:
+    def unpack_asn(cls: Type[ASN], data: Buffer, klass: Type[ASN]) -> ASN:
         kls = klass
         if len(data) == cls.SIZE_4BYTE:
             value = unpack('!L', data)[0]

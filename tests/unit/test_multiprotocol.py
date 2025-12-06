@@ -86,17 +86,17 @@ def test_mpreach_ipv4_unicast() -> None:
     multiple address families. For IPv4 unicast, it duplicates the
     functionality of traditional BGP UPDATE messages.
     """
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv4
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv4
 
     # Create IPv4 unicast prefix
-    cidr = CIDR.make_cidr(IPv4('10.0.0.0').pack_ip(), 24)
+    cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix.nexthop = IPv4('192.0.2.1')
+    prefix.nexthop = IPv4.from_string('192.0.2.1')
 
     # Create MP_REACH_NLRI
     mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix])
@@ -118,17 +118,17 @@ def test_mpreach_ipv6_unicast() -> None:
     IPv6 routing requires MP_REACH_NLRI as standard BGP UPDATE
     messages only support IPv4. This tests basic IPv6 prefix announcement.
     """
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv6
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv6
 
     # Create IPv6 unicast prefix
-    cidr = CIDR.make_cidr(IPv6('2001:db8::').pack_ip(), 32)
+    cidr = CIDR.make_cidr(IPv6.from_string('2001:db8::').pack_ip(), 32)
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    prefix.nexthop = IPv6('2001:db8::1')
+    prefix.nexthop = IPv6.from_string('2001:db8::1')
 
     # Create MP_REACH_NLRI
     mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv6, SAFI.unicast), [prefix])
@@ -149,15 +149,15 @@ def test_mpreach_multiple_prefixes() -> None:
     A single MP_REACH_NLRI attribute can announce multiple prefixes
     of the same address family with the same next-hop.
     """
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv4
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv4
 
     # Create multiple IPv4 unicast prefixes with same next-hop
-    nexthop = IPv4('192.0.2.1')
+    nexthop = IPv4.from_string('192.0.2.1')
     prefix_cidrs = [
         ('10.0.0.0', 24),
         ('10.1.0.0', 24),
@@ -166,7 +166,7 @@ def test_mpreach_multiple_prefixes() -> None:
 
     prefixes = []
     for ip, mask in prefix_cidrs:
-        cidr = CIDR.make_cidr(IPv4(ip).pack_ip(), mask)
+        cidr = CIDR.make_cidr(IPv4.from_string(ip).pack_ip(), mask)
         prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
         prefix.nexthop = nexthop
         prefixes.append(prefix)
@@ -185,17 +185,17 @@ def test_mpreach_pack_ipv4() -> None:
     Verifies the wire format of MP_REACH_NLRI attribute.
     Format: AFI(2) + SAFI(1) + NH_LEN(1) + NEXTHOP(var) + RESERVED(1) + NLRI(var)
     """
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv4
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv4
 
     # Create IPv4 unicast prefix
-    cidr = CIDR.make_cidr(IPv4('10.0.0.0').pack_ip(), 24)
+    cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix.nexthop = IPv4('192.0.2.1')
+    prefix.nexthop = IPv4.from_string('192.0.2.1')
 
     # Create MP_REACH_NLRI
     mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix])
@@ -226,17 +226,17 @@ def test_mpreach_nexthop_ipv6_global() -> None:
     IPv6 next-hops can be 16 bytes (global) or 32 bytes (global + link-local).
     This tests the global-only case.
     """
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv6
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv6
 
     # Create IPv6 unicast prefix with global next-hop
-    cidr = CIDR.make_cidr(IPv6('2001:db8::').pack_ip(), 32)
+    cidr = CIDR.make_cidr(IPv6.from_string('2001:db8::').pack_ip(), 32)
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    prefix.nexthop = IPv6('2001:db8::1')  # Global next-hop
+    prefix.nexthop = IPv6.from_string('2001:db8::1')  # Global next-hop
 
     # Create MP_REACH_NLRI
     mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv6, SAFI.unicast), [prefix])
@@ -257,15 +257,15 @@ def test_mpunreach_ipv4_unicast() -> None:
     MP_UNREACH_NLRI is used to withdraw previously announced prefixes.
     Unlike MP_REACH_NLRI, it doesn't include next-hop information.
     """
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv4
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv4
 
     # Create IPv4 unicast prefix to withdraw
-    cidr = CIDR.make_cidr(IPv4('10.0.0.0').pack_ip(), 24)
+    cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
     # Create MP_UNREACH_NLRI
@@ -286,15 +286,15 @@ def test_mpunreach_ipv6_unicast() -> None:
 
     IPv6 prefix withdrawals use MP_UNREACH_NLRI.
     """
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv6
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv6
 
     # Create IPv6 unicast prefix to withdraw
-    cidr = CIDR.make_cidr(IPv6('2001:db8::').pack_ip(), 32)
+    cidr = CIDR.make_cidr(IPv6.from_string('2001:db8::').pack_ip(), 32)
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
 
     # Create MP_UNREACH_NLRI
@@ -312,12 +312,12 @@ def test_mpunreach_multiple_prefixes() -> None:
     A single MP_UNREACH_NLRI can withdraw multiple prefixes
     of the same address family.
     """
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv4
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv4
 
     # Create multiple IPv4 unicast prefixes to withdraw
     prefix_cidrs = [
@@ -328,7 +328,7 @@ def test_mpunreach_multiple_prefixes() -> None:
 
     prefixes = []
     for ip, mask in prefix_cidrs:
-        cidr = CIDR.make_cidr(IPv4(ip).pack_ip(), mask)
+        cidr = CIDR.make_cidr(IPv4.from_string(ip).pack_ip(), mask)
         prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
         prefixes.append(prefix)
 
@@ -347,15 +347,15 @@ def test_mpunreach_pack_ipv4() -> None:
     Format: AFI(2) + SAFI(1) + NLRI(var)
     Note: No next-hop in MP_UNREACH_NLRI.
     """
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv4
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv4
 
     # Create IPv4 unicast prefix to withdraw
-    cidr = CIDR.make_cidr(IPv4('10.0.0.0').pack_ip(), 24)
+    cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
     # Create MP_UNREACH_NLRI
@@ -479,8 +479,8 @@ def test_mpreach_attribute_flags() -> None:
 
     MP_REACH_NLRI is an optional non-transitive attribute (type 14).
     """
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
     from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 
     # Verify attribute code and flags
     assert MPRNLRI.ID == Attribute.CODE.MP_REACH_NLRI
@@ -493,8 +493,8 @@ def test_mpunreach_attribute_flags() -> None:
 
     MP_UNREACH_NLRI is an optional non-transitive attribute (type 15).
     """
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
     from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 
     # Verify attribute code and flags
     assert MPURNLRI.ID == Attribute.CODE.MP_UNREACH_NLRI
@@ -508,21 +508,21 @@ def test_mpreach_equality() -> None:
     Two MP_REACH_NLRI attributes are equal if they have the same
     AFI, SAFI, and NLRI list.
     """
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv4
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv4
 
     # Create two identical MP_REACH_NLRI attributes
-    cidr1 = CIDR.make_cidr(IPv4('10.0.0.0').pack_ip(), 24)
+    cidr1 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix1.nexthop = IPv4('192.0.2.1')
+    prefix1.nexthop = IPv4.from_string('192.0.2.1')
 
-    cidr2 = CIDR.make_cidr(IPv4('10.0.0.0').pack_ip(), 24)
+    cidr2 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix2.nexthop = IPv4('192.0.2.1')
+    prefix2.nexthop = IPv4.from_string('192.0.2.1')
 
     mpreach1 = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix1])
     mpreach2 = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix2])
@@ -534,18 +534,18 @@ def test_mpreach_equality() -> None:
 
 def test_mpunreach_equality() -> None:
     """Test MP_UNREACH_NLRI equality comparison."""
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
-    from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IPv4
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IPv4
 
     # Create two identical MP_UNREACH_NLRI attributes
-    cidr1 = CIDR.make_cidr(IPv4('10.0.0.0').pack_ip(), 24)
+    cidr1 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
-    cidr2 = CIDR.make_cidr(IPv4('10.0.0.0').pack_ip(), 24)
+    cidr2 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
     mpunreach1 = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix1])

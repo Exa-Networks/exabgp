@@ -13,10 +13,9 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
+from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.attribute.attribute import Attribute
-
 
 # ================================================================== NextHop (3)
 
@@ -36,7 +35,7 @@ class NextHop(Attribute):
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
     NO_GENERATION: ClassVar[bool] = True
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -45,7 +44,7 @@ class NextHop(Attribute):
         Args:
             packed: Raw IP address bytes (4 for IPv4, 16 for IPv6)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'NextHop':
@@ -60,10 +59,9 @@ class NextHop(Attribute):
         Raises:
             ValueError: If data length is invalid
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) not in (4, 16):
-            raise ValueError(f'NextHop must be 4 or 16 bytes, got {len(data_bytes)}')
-        return cls(data_bytes)
+        if len(data) not in (4, 16):
+            raise ValueError(f'NextHop must be 4 or 16 bytes, got {len(data)}')
+        return cls(data)
 
     @classmethod
     def from_string(cls, ip_string: str) -> 'NextHop':

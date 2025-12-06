@@ -67,11 +67,10 @@ class Aggregator(Attribute):
         Raises:
             ValueError: If data length is invalid
         """
-        data_bytes = bytes(data)
         expected_len = 8 if asn4 else 6
-        if len(data_bytes) != expected_len:
-            raise ValueError(f'Aggregator must be {expected_len} bytes for asn4={asn4}, got {len(data_bytes)}')
-        return cls(data_bytes, asn4)
+        if len(data) != expected_len:
+            raise ValueError(f'Aggregator must be {expected_len} bytes for asn4={asn4}, got {len(data)}')
+        return cls(data, asn4)
 
     @classmethod
     def make_aggregator(cls, asn: ASN, speaker: IPv4) -> 'Aggregator':
@@ -181,10 +180,9 @@ class Aggregator4(Aggregator):
 
         AS4_AGGREGATOR always uses 4-byte ASNs.
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) != 8:
-            raise ValueError(f'AS4_AGGREGATOR must be 8 bytes, got {len(data_bytes)}')
-        return cls(data_bytes)
+        if len(data) != 8:
+            raise ValueError(f'AS4_AGGREGATOR must be 8 bytes, got {len(data)}')
+        return cls(data)
 
     @classmethod
     def make_aggregator(cls, asn: ASN, speaker: IPv4) -> 'Aggregator4':

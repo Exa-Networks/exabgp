@@ -13,18 +13,15 @@ from typing import TYPE_CHECKING, ClassVar, Sequence
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.ip import IPv4
-
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-
+from exabgp.protocol.ip import IPv4
 
 # ===================================================================
 #
 
 
 class ClusterID(IPv4):
-    def __init__(self, ip: str) -> None:
-        IPv4.__init__(self, ip)
+    pass
 
 
 @Attribute.register()
@@ -38,7 +35,7 @@ class ClusterList(Attribute):
     FLAG: ClassVar[int] = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -47,7 +44,7 @@ class ClusterList(Attribute):
         Args:
             packed: Raw cluster list bytes (concatenated 4-byte IPv4 addresses)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'ClusterList':
@@ -62,10 +59,9 @@ class ClusterList(Attribute):
         Raises:
             ValueError: If data length is not a multiple of 4
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) % 4 != 0:
-            raise ValueError(f'ClusterList must be a multiple of 4 bytes, got {len(data_bytes)}')
-        return cls(data_bytes)
+        if len(data) % 4 != 0:
+            raise ValueError(f'ClusterList must be a multiple of 4 bytes, got {len(data)}')
+        return cls(data)
 
     @classmethod
     def make_clusterlist(cls, clusters: Sequence[IPv4]) -> 'ClusterList':

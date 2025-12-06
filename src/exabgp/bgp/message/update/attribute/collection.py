@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import unpack
 from typing import TYPE_CHECKING, Any, ClassVar, Generator
 
@@ -17,10 +18,10 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, SET, AS2Path
 from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard, TreatAsWithdraw
-from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesBase
 
 # For bagpipe
 from exabgp.bgp.message.update.attribute.community import Communities
+from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesBase
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -274,7 +275,7 @@ class AttributeCollection(dict):
         return self._idx
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Negotiated) -> AttributeCollection:
+    def unpack(cls, data: Buffer, negotiated: Negotiated) -> AttributeCollection:
         if cls.cached and data == cls.previous:
             return cls.cached
 
@@ -296,7 +297,7 @@ class AttributeCollection(dict):
         return attributes
 
     @staticmethod
-    def flag_attribute_content(data: bytes) -> tuple[int, int, bytes]:
+    def flag_attribute_content(data: Buffer) -> tuple[int, int, bytes]:
         flag = Attribute.Flag(data[0])
         attr = data[1]
 

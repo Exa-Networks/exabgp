@@ -120,7 +120,7 @@ class TestConfigEncoder:
         """Test IP address encoding."""
         from exabgp.protocol.ip import IPv4
 
-        ip = IPv4('192.168.1.1')
+        ip = IPv4.from_string('192.168.1.1')
         result = json.dumps(ip, cls=ConfigEncoder)
         parsed = json.loads(result)
         assert parsed['_type'] == 'IP'
@@ -214,8 +214,8 @@ class TestConfigEncoder:
         from exabgp.protocol.ip import IPv4
 
         session = Session()
-        session.peer_address = IPv4('192.168.1.1')
-        session.local_address = IPv4('192.168.1.2')
+        session.peer_address = IPv4.from_string('192.168.1.1')
+        session.local_address = IPv4.from_string('192.168.1.2')
         session.local_as = ASN(65000)
         session.peer_as = ASN(65001)
 

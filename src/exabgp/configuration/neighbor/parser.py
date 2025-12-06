@@ -127,7 +127,7 @@ def router_id(tokeniser) -> RouterID:
     value = tokeniser()
     try:
         return RouterID(value)
-    except ValueError:
+    except (ValueError, OSError):
         raise ValueError(f"'{value}' is not a valid router-id\n  Format: IPv4 address (e.g., 192.0.2.1)") from None
 
 

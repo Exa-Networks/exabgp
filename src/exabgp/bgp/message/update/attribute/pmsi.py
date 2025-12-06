@@ -9,15 +9,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections.abc import Buffer
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
 from typing import TYPE_CHECKING, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.protocol.ip import IPv4
 
 # https://tools.ietf.org/html/rfc6514#section-5
 #
@@ -79,13 +78,12 @@ class PMSI(Attribute):
         Raises:
             ValueError: If data is malformed
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) < 5:
-            raise ValueError(f'PMSI requires at least 5 bytes, got {len(data_bytes)}')
-        tunnel_type = data_bytes[1]
+        if len(data) < 5:
+            raise ValueError(f'PMSI requires at least 5 bytes, got {len(data)}')
+        tunnel_type = data[1]
         if tunnel_type in cls._pmsi_known:
-            return cls._pmsi_known[tunnel_type](data_bytes)
-        return cls(data_bytes)
+            return cls._pmsi_known[tunnel_type](data)
+        return cls(data)
 
     @classmethod
     def make_pmsi(cls, tunnel_type: int, flags: int, label: int, tunnel: bytes, raw_label: int | None = None) -> 'PMSI':

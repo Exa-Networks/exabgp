@@ -21,7 +21,7 @@ from exabgp.bgp.message.open.capability.negotiated import OpenContext
 
 # from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
-from exabgp.bgp.message.update.nlri import NLRI, _UNPARSED
+from exabgp.bgp.message.update.nlri import _UNPARSED, NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 
@@ -39,7 +39,7 @@ class MPRNLRI(Attribute, Family):
     _MODE_PACKED = 1  # Created from wire bytes (unpack path)
     _MODE_NLRIS = 2  # Created from NLRI list (semantic path)
 
-    def __init__(self, packed: bytes, context: OpenContext) -> None:
+    def __init__(self, packed: Buffer, context: OpenContext) -> None:
         """Create MPRNLRI from wire-format bytes.
 
         Args:
@@ -227,13 +227,12 @@ class MPRNLRI(Attribute, Family):
         Validates the data and creates an MPRNLRI instance storing the wire bytes.
         NLRIs are parsed lazily when accessed via the nlris property.
         """
-        data_bytes = bytes(data)
         # MP_REACH_NLRI minimum: AFI(2) + SAFI(1) + NH_len(1) + reserved(1) = 5 bytes
-        if len(data_bytes) < 5:
-            raise Notify(3, 9, f'MP_REACH_NLRI too short: need at least 5 bytes, got {len(data_bytes)}')
+        if len(data) < 5:
+            raise Notify(3, 9, f'MP_REACH_NLRI too short: need at least 5 bytes, got {len(data)}')
 
         # -- Reading AFI/SAFI for validation
-        _afi, _safi = unpack('!HB', data_bytes[:3])
+        _afi, _safi = unpack('!HB', data[:3])
         afi, safi = AFI.from_int(_afi), SAFI.from_int(_safi)
         offset = 3
 
@@ -242,12 +241,12 @@ class MPRNLRI(Attribute, Family):
             raise Notify(3, 0, 'presented a non-negotiated family {}/{}'.format(afi, safi))
 
         # -- Reading length of next-hop
-        len_nh = data_bytes[offset]
+        len_nh = data[offset]
         offset += 1
 
         # Validate we have enough data for next-hop + reserved byte
-        if len(data_bytes) < offset + len_nh + 1:
-            raise Notify(3, 9, f'MP_REACH_NLRI truncated: need {offset + len_nh + 1} bytes, got {len(data_bytes)}')
+        if len(data) < offset + len_nh + 1:
+            raise Notify(3, 9, f'MP_REACH_NLRI truncated: need {offset + len_nh + 1} bytes, got {len(data)}')
 
         if (afi, safi) not in Family.size:
             raise Notify(3, 0, 'unsupported {} {}'.format(afi, safi))
@@ -274,27 +273,27 @@ class MPRNLRI(Attribute, Family):
             )
 
         # check the RD is well zero
-        if rd and sum([int(_) for _ in data_bytes[offset : offset + 8]]) != 0:
+        if rd and sum([int(_) for _ in data[offset : offset + 8]]) != 0:
             raise Notify(3, 0, "MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 
         offset += len_nh
 
         # Skip a reserved bit as someone had to bug us !
-        reserved = data_bytes[offset]
+        reserved = data[offset]
         offset += 1
 
         if reserved != 0:
             raise Notify(3, 0, 'the reserved bit of MP_REACH_NLRI is not zero')
 
         # Verify there's NLRI data
-        if offset >= len(data_bytes):
+        if offset >= len(data):
             raise Notify(3, 0, 'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi, safi))
 
         # Create context for lazy NLRI parsing
         context = negotiated.nlri_context(afi, safi)
 
         # Store wire bytes and context - NLRIs parsed lazily
-        return cls(data_bytes, context)
+        return cls(data, context)
 
 
 # Create empty MPRNLRI using factory method with default context

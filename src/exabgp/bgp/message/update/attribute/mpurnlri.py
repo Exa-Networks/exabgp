@@ -16,7 +16,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.open.capability.negotiated import OpenContext
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.nlri import NLRI, _UNPARSED
+from exabgp.bgp.message.update.nlri import _UNPARSED, NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
 
 # ================================================================= MP Unreachable NLRI (15)
@@ -32,7 +32,7 @@ class MPURNLRI(Attribute, Family):
     _MODE_PACKED = 1  # Created from wire bytes (unpack path)
     _MODE_NLRIS = 2  # Created from NLRI list (semantic path)
 
-    def __init__(self, packed: bytes, context: OpenContext) -> None:
+    def __init__(self, packed: Buffer, context: OpenContext) -> None:
         """Create MPURNLRI from wire-format bytes.
 
         Args:
@@ -149,13 +149,12 @@ class MPURNLRI(Attribute, Family):
         Validates the data and creates an MPURNLRI instance storing the wire bytes.
         NLRIs are parsed lazily when accessed via the nlris property.
         """
-        data_bytes = bytes(data)
         # MP_UNREACH_NLRI minimum: AFI(2) + SAFI(1) = 3 bytes
-        if len(data_bytes) < 3:
-            raise Notify(3, 9, f'MP_UNREACH_NLRI too short: need at least 3 bytes, got {len(data_bytes)}')
+        if len(data) < 3:
+            raise Notify(3, 9, f'MP_UNREACH_NLRI too short: need at least 3 bytes, got {len(data)}')
 
         # -- Reading AFI/SAFI for validation
-        _afi, _safi = unpack('!HB', data_bytes[:3])
+        _afi, _safi = unpack('!HB', data[:3])
         afi, safi = AFI.from_int(_afi), SAFI.from_int(_safi)
 
         if negotiated and (afi, safi) not in negotiated.families:
@@ -165,7 +164,7 @@ class MPURNLRI(Attribute, Family):
         context = negotiated.nlri_context(afi, safi)
 
         # Store wire bytes and context - NLRIs parsed lazily
-        return cls(data_bytes, context)
+        return cls(data, context)
 
 
 # Create empty MPURNLRI using factory method with default context

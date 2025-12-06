@@ -43,11 +43,11 @@ def create_mock_negotiated(add_path: Any = False, extended_message: Any = False)
 def create_mock_neighbor(asn: Any = 65000, router_id: Any = '1.2.3.4') -> Any:
     """Create a mock neighbor configuration."""
     neighbor = Mock(spec=Neighbor)
-    neighbor.peer_address = IPv4('192.0.2.1')
-    neighbor.local_address = IPv4('192.0.2.2')
+    neighbor.peer_address = IPv4.from_string('192.0.2.1')
+    neighbor.local_address = IPv4.from_string('192.0.2.2')
     neighbor.peer_as = asn
     neighbor.local_as = 65001
-    neighbor.router_id = IPv4(router_id)
+    neighbor.router_id = IPv4.from_string(router_id)
     neighbor.hold_time = 180
     return neighbor
 

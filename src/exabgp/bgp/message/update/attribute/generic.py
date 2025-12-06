@@ -14,8 +14,9 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from struct import pack
-from exabgp.util import hexstring
+
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.util import hexstring
 
 # ============================================================= GenericAttribute
 #
@@ -33,7 +34,7 @@ class GenericAttribute(Attribute):
 
     GENERIC: ClassVar[bool] = True
 
-    def __init__(self, packed: bytes, code: int, flag: int) -> None:
+    def __init__(self, packed: Buffer, code: int, flag: int) -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -63,7 +64,7 @@ class GenericAttribute(Attribute):
         return cls(bytes(data), code, flag)
 
     @classmethod
-    def make_generic(cls, code: int, flag: int, data: bytes) -> 'GenericAttribute':
+    def make_generic(cls, code: int, flag: int, data: Buffer) -> 'GenericAttribute':
         """Create from semantic values.
 
         Args:

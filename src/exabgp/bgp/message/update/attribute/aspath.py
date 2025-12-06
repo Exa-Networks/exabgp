@@ -88,7 +88,7 @@ class ASPath(Attribute):
         CONFED_SET.ID: CONFED_SET,
     }
 
-    def __init__(self, packed: bytes, asn4: bool = False) -> None:
+    def __init__(self, packed: Buffer, asn4: bool = False) -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -98,7 +98,7 @@ class ASPath(Attribute):
             packed: Raw attribute value bytes
             asn4: True if packed uses 4-byte ASNs, False for 2-byte
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
         self._asn4: bool = asn4
 
     @classmethod
@@ -115,10 +115,9 @@ class ASPath(Attribute):
         Raises:
             Notify: If data format is invalid
         """
-        data_bytes = bytes(data)
         # Validate by attempting to parse - will raise Notify on error
-        cls._unpack_segments_static(data_bytes, asn4)
-        return cls(data_bytes, asn4)
+        cls._unpack_segments_static(data, asn4)
+        return cls(data, asn4)
 
     @classmethod
     def make_aspath(
@@ -142,7 +141,7 @@ class ASPath(Attribute):
         return self._unpack_segments_static(self._packed, self._asn4)
 
     @property
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         """Get the original packed data, used for indexing/caching."""
         return self._packed
 
@@ -201,7 +200,7 @@ class ASPath(Attribute):
 
     @classmethod
     def _unpack_segments_static(
-        cls, data: bytes, asn4: bool
+        cls, data: Buffer, asn4: bool
     ) -> tuple[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, ...]:
         """Unpack segments from wire format."""
         unpacker = '!L' if asn4 else '!H'
@@ -333,10 +332,9 @@ class AS4Path(ASPath):
 
         AS4Path always uses 4-byte ASNs.
         """
-        data_bytes = bytes(data)
         # Validate by attempting to parse - will raise Notify on error
-        cls._unpack_segments_static(data_bytes, asn4=True)
-        return cls(data_bytes)
+        cls._unpack_segments_static(data, asn4=True)
+        return cls(data)
 
     @classmethod
     def make_aspath(

@@ -8,15 +8,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections.abc import Buffer
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-
 
 # ========================================================================== TLV
 #
@@ -53,7 +51,7 @@ class AIGP(Attribute):
     _TLV_HEADER: ClassVar[bytes] = b'\x01\x00\x0b'
     _TLV_LENGTH: ClassVar[int] = 11
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize AIGP from packed TLV bytes.
 
         NO validation - trusted internal use only.
@@ -62,7 +60,7 @@ class AIGP(Attribute):
         Args:
             packed: Raw TLV bytes (11 bytes: 1 type + 2 length + 8 value)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'AIGP':
@@ -77,18 +75,17 @@ class AIGP(Attribute):
         Raises:
             ValueError: If data is malformed
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) < 3:
-            raise ValueError(f'AIGP TLV too short: {len(data_bytes)} bytes')
-        tlv_type = data_bytes[0]
-        tlv_length = unpack('!H', data_bytes[1:3])[0]
+        if len(data) < 3:
+            raise ValueError(f'AIGP TLV too short: {len(data)} bytes')
+        tlv_type = data[0]
+        tlv_length = unpack('!H', data[1:3])[0]
         if tlv_type != 1:
             raise ValueError(f'Unknown AIGP TLV type: {tlv_type}')
         if tlv_length != cls._TLV_LENGTH:
             raise ValueError(f'Invalid AIGP TLV length: {tlv_length}')
-        if len(data_bytes) < tlv_length:
-            raise ValueError(f'AIGP data truncated: got {len(data_bytes)}, expected {tlv_length}')
-        return cls(data_bytes[:tlv_length])
+        if len(data) < tlv_length:
+            raise ValueError(f'AIGP data truncated: got {len(data)}, expected {tlv_length}')
+        return cls(data[:tlv_length])
 
     @classmethod
     def from_int(cls, value: int) -> 'AIGP':

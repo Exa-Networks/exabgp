@@ -14,12 +14,13 @@ from typing import TYPE_CHECKING, Any, Iterator, Sequence
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunityBase
-from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunityIPv6
-
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.community.extended.community import (
+    ExtendedCommunity,
+    ExtendedCommunityBase,
+    ExtendedCommunityIPv6,
+)
 
 # Extended Community size constants (RFC 4360, RFC 5701)
 EXTENDED_COMMUNITY_SIZE = 8  # Standard extended community size
@@ -89,10 +90,9 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         Raises:
             Notify: If data length is not a multiple of 8
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) % EXTENDED_COMMUNITY_SIZE != 0:
-            raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data_bytes])))
-        return cls(data_bytes)
+        if len(data) % EXTENDED_COMMUNITY_SIZE != 0:
+            raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data])))
+        return cls(data)
 
     @classmethod
     def make_extended_communities(cls, communities: Sequence[ExtendedCommunityBase]) -> 'ExtendedCommunities':
@@ -178,10 +178,9 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
     @classmethod
     def from_packet(cls, data: Buffer) -> 'ExtendedCommunitiesIPv6':
         """Validate and create from wire-format bytes."""
-        data_bytes = bytes(data)
-        if len(data_bytes) % EXTENDED_COMMUNITY_IPV6_SIZE != 0:
-            raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data_bytes])))
-        return cls(data_bytes)
+        if len(data) % EXTENDED_COMMUNITY_IPV6_SIZE != 0:
+            raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data])))
+        return cls(data)
 
     @classmethod
     def make_extended_communities_ipv6(cls, communities: Sequence[ExtendedCommunityIPv6]) -> 'ExtendedCommunitiesIPv6':

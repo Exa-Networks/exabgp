@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
-
 # =================================================================== Origin (1)
 
 
@@ -55,12 +54,12 @@ class Origin(Attribute):
         Raises:
             ValueError: If data is not exactly 1 byte or value is invalid
         """
-        data_bytes = bytes(data)
-        if len(data_bytes) != 1:
-            raise ValueError(f'Origin requires exactly 1 byte, got {len(data_bytes)}')
-        if data_bytes[0] > 2:
-            raise ValueError(f'Invalid origin value: {data_bytes[0]}')
-        return cls(data_bytes)
+        data = bytes(data)
+        if len(data) != 1:
+            raise ValueError(f'Origin requires exactly 1 byte, got {len(data)}')
+        if data[0] > 2:
+            raise ValueError(f'Invalid origin value: {data[0]}')
+        return cls(data)
 
     @classmethod
     def from_int(cls, origin: int) -> 'Origin':

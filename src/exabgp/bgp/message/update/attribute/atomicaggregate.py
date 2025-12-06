@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
-
 # ========================================================== AtomicAggregate (6)
 #
 
@@ -28,7 +27,7 @@ class AtomicAggregate(Attribute):
     DISCARD = True
     VALID_ZERO = True
 
-    def __init__(self, packed: bytes = b'') -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize AtomicAggregate from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -37,7 +36,7 @@ class AtomicAggregate(Attribute):
         Args:
             packed: Raw attribute value bytes (must be empty for AtomicAggregate)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'AtomicAggregate':
@@ -52,10 +51,9 @@ class AtomicAggregate(Attribute):
         Raises:
             ValueError: If data is not empty
         """
-        data_bytes = bytes(data)
-        if data_bytes:
-            raise ValueError(f'AtomicAggregate must be empty, got {len(data_bytes)} bytes')
-        return cls(data_bytes)
+        if data:
+            raise ValueError(f'AtomicAggregate must be empty, got {len(data)} bytes')
+        return cls(data)
 
     @classmethod
     def make_atomic_aggregate(cls) -> 'AtomicAggregate':

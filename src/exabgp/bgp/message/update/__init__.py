@@ -19,7 +19,7 @@ from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
 from exabgp.bgp.message.update.eor import EOR
-from exabgp.bgp.message.update.nlri import NLRI, NLRICollection, MPNLRICollection
+from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection, NLRICollection
 from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
@@ -650,17 +650,16 @@ class UpdateCollection(Message):
         This method is kept for backward compatibility.
         """
         # Convert to bytes for comparison and downstream parsing
-        data_bytes = bytes(data) if isinstance(data, memoryview) else data
-        length = len(data_bytes)
+        length = len(data)
 
         # Check for End-of-RIB markers (fast path)
-        if length == EOR_IPV4_UNICAST_LENGTH and data_bytes == b'\x00\x00\x00\x00':
+        if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
             return EOR(AFI.ipv4, SAFI.unicast)
-        if length == EOR_WITH_PREFIX_LENGTH and data_bytes.startswith(EOR.NLRI.PREFIX):
-            return EOR.unpack_message(data_bytes, negotiated)
+        if length == EOR_WITH_PREFIX_LENGTH and data.startswith(EOR.NLRI.PREFIX):
+            return EOR.unpack_message(data, negotiated)
 
         # Parse normally
-        return cls._parse_payload(data_bytes, negotiated)
+        return cls._parse_payload(data, negotiated)
 
 
 # Backward compatibility aliases

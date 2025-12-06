@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.notification import Notify
-
 from exabgp.util.cache import Cache
 
 # Attribute length encoding constants
@@ -220,7 +219,7 @@ class Attribute:
     # ---------------------------------------------------------------------------
 
     @classmethod
-    def _attribute(klass, value: bytes) -> bytes:
+    def _attribute(klass, value: Buffer) -> bytes:
         flag: int = klass.FLAG
         if flag & Attribute.Flag.OPTIONAL and not value:
             return b''
@@ -304,16 +303,15 @@ class Attribute:
         cache: bool = cls.caching and cls.CACHING
 
         # Convert to bytes for cache lookup (memoryview isn't hashable)
-        data_bytes = bytes(data)
-        if cache and data_bytes in cls.cache.get(cls.ID, {}):
-            return cls.cache[cls.ID].retrieve(data_bytes)  # type: ignore[no-any-return]
+        if cache and data in cls.cache.get(cls.ID, {}):
+            return cls.cache[cls.ID].retrieve(data)  # type: ignore[no-any-return]
 
         key: tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
         if key in Attribute.registered_attributes.keys():
             instance: Attribute = cls.klass(attribute_id, flag).unpack_attribute(data, negotiated)  # type: ignore[attr-defined]
 
             if cache:
-                cls.cache[cls.ID].cache(data_bytes, instance)
+                cls.cache[cls.ID].cache(data, instance)
             return instance
 
         raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))

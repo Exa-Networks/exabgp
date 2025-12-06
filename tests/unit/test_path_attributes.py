@@ -192,8 +192,8 @@ def test_origin_round_trip() -> None:
 
 def test_origin_cache_uses_factory() -> None:
     """Test that Origin cache is populated with factory-created instances."""
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Cache should have entries for all three origin values
     cache = Attribute.cache.get(Attribute.CODE.ORIGIN, {})
@@ -344,8 +344,8 @@ def test_localpref_ibgp_only() -> None:
     LOCAL_PREF must not be sent to EBGP peers.
     This is enforced by attribute flags (well-known discretionary).
     """
-    from exabgp.bgp.message.update.attribute.localpref import LocalPreference
     from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 
     # LOCAL_PREF should be well-known discretionary
     assert LocalPreference.ID == Attribute.CODE.LOCAL_PREF
@@ -384,8 +384,8 @@ def test_atomic_aggregate_presence() -> None:
     When present, indicates the route is a result of aggregation
     and some path attributes may have been lost.
     """
-    from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
     from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 
     # Create ATOMIC_AGGREGATE
     AtomicAggregate.make_atomic_aggregate()
@@ -406,8 +406,8 @@ def test_aggregator_2byte_asn() -> None:
     AGGREGATOR: ASN + IP of router that performed aggregation.
     Original format uses 2-byte ASN.
     """
-    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.protocol.ip import IPv4
 
     # Create mock negotiated WITHOUT 4-byte ASN support
@@ -416,7 +416,7 @@ def test_aggregator_2byte_asn() -> None:
 
     # Create AGGREGATOR with 2-byte ASN
     asn = ASN(65000)
-    speaker = IPv4('192.0.2.1')
+    speaker = IPv4.from_string('192.0.2.1')
     aggregator = Aggregator.make_aggregator(asn, speaker)
 
     # Verify representation
@@ -435,8 +435,8 @@ def test_aggregator_4byte_asn() -> None:
     For 4-byte ASNs, AGGREGATOR is 4-byte ASN + 4-byte IP = 8 bytes.
     Requires 4-byte ASN support negotiation.
     """
-    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.protocol.ip import IPv4
 
     # Create mock negotiated with 4-byte ASN support
@@ -445,7 +445,7 @@ def test_aggregator_4byte_asn() -> None:
 
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
-    speaker = IPv4('192.0.2.1')
+    speaker = IPv4.from_string('192.0.2.1')
     aggregator = Aggregator.make_aggregator(asn, speaker)
 
     # Verify pack (flag + type + length + 4-byte ASN + 4-byte IP)
@@ -460,8 +460,8 @@ def test_aggregator_as_trans() -> None:
     When advertising to old BGP speaker, 4-byte ASN is encoded as AS_TRANS (23456).
     Real ASN is in AS4_AGGREGATOR.
     """
-    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.protocol.ip import IPv4
 
     # Create mock negotiated WITHOUT 4-byte ASN support
@@ -470,7 +470,7 @@ def test_aggregator_as_trans() -> None:
 
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
-    speaker = IPv4('192.0.2.1')
+    speaker = IPv4.from_string('192.0.2.1')
     aggregator = Aggregator.make_aggregator(asn, speaker)
 
     # Pack for old speaker (should use AS_TRANS + AS4_AGGREGATOR)
@@ -522,8 +522,8 @@ def test_med_optional_nature() -> None:
     MED is optional: may or may not be present.
     MED is non-transitive: removed when leaving the neighboring AS.
     """
-    from exabgp.bgp.message.update.attribute.med import MED
     from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.med import MED
 
     # Verify MED is optional non-transitive
     assert MED.ID == Attribute.CODE.MED
@@ -618,8 +618,8 @@ def test_originator_id_loop_prevention() -> None:
     Route reflector checks ORIGINATOR_ID against its own router-id.
     If match, route is discarded to prevent loops.
     """
-    from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
     from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
     # Create ORIGINATOR_ID
     OriginatorID.from_string('192.0.2.1')
@@ -641,10 +641,10 @@ def test_cluster_list_single() -> None:
     Each route reflector adds its CLUSTER_ID when reflecting.
     Used for loop detection in route reflection hierarchies.
     """
-    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
+    from exabgp.bgp.message.update.attribute.clusterlist import ClusterID, ClusterList
 
     # Create single cluster
-    cluster_id = ClusterID('192.0.2.1')
+    cluster_id = ClusterID.from_string('192.0.2.1')
     cluster_list = ClusterList.make_clusterlist([cluster_id])
 
     # Verify pack (flag + type + length + value)
@@ -659,11 +659,11 @@ def test_cluster_list_multiple() -> None:
     Route may pass through multiple route reflectors.
     Each adds its CLUSTER_ID to the list.
     """
-    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
+    from exabgp.bgp.message.update.attribute.clusterlist import ClusterID, ClusterList
 
     # Create multiple clusters
-    cluster1 = ClusterID('192.0.2.1')
-    cluster2 = ClusterID('192.0.2.2')
+    cluster1 = ClusterID.from_string('192.0.2.1')
+    cluster2 = ClusterID.from_string('192.0.2.2')
     cluster_list = ClusterList.make_clusterlist([cluster1, cluster2])
 
     # Verify pack (flag + type + length + 2 ClusterIDs)
@@ -678,8 +678,8 @@ def test_cluster_list_loop_detection() -> None:
     Route reflector checks if its CLUSTER_ID is in CLUSTER_LIST.
     If present, route is discarded to prevent loops.
     """
-    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
     from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 
     # Verify CLUSTER_LIST is optional non-transitive
     assert ClusterList.ID == Attribute.CODE.CLUSTER_LIST
@@ -747,8 +747,8 @@ def test_aigp_optional_attribute() -> None:
     AIGP is optional non-transitive in some implementations,
     optional transitive in others (RFC 7311 specifies optional non-transitive).
     """
-    from exabgp.bgp.message.update.attribute.aigp import AIGP
     from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.aigp import AIGP
 
     # Verify AIGP attribute code
     assert AIGP.ID == Attribute.CODE.AIGP
@@ -916,8 +916,8 @@ def test_nexthop_empty_unpack() -> None:
 
 def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
     """Test AGGREGATOR pack/unpack roundtrip with 2-byte ASN."""
-    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.protocol.ip import IPv4
 
     negotiated = Mock()
@@ -925,7 +925,7 @@ def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
 
     # Create original
     original_asn = ASN(65000)
-    original_speaker = IPv4('192.0.2.1')
+    original_speaker = IPv4.from_string('192.0.2.1')
     original = Aggregator.make_aggregator(original_asn, original_speaker)
 
     # Pack
@@ -944,8 +944,8 @@ def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
 
 def test_aggregator_pack_unpack_roundtrip_4byte() -> None:
     """Test AGGREGATOR pack/unpack roundtrip with 4-byte ASN."""
-    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.protocol.ip import IPv4
 
     negotiated = Mock()
@@ -953,7 +953,7 @@ def test_aggregator_pack_unpack_roundtrip_4byte() -> None:
 
     # Create original with 4-byte ASN
     original_asn = ASN(4200000000)
-    original_speaker = IPv4('192.0.2.1')
+    original_speaker = IPv4.from_string('192.0.2.1')
     original = Aggregator.make_aggregator(original_asn, original_speaker)
 
     # Pack
@@ -972,33 +972,33 @@ def test_aggregator_pack_unpack_roundtrip_4byte() -> None:
 
 def test_aggregator_equality() -> None:
     """Test AGGREGATOR equality comparison."""
-    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.protocol.ip import IPv4
 
     # Create two identical aggregators
-    agg1 = Aggregator.make_aggregator(ASN(65000), IPv4('192.0.2.1'))
-    agg2 = Aggregator.make_aggregator(ASN(65000), IPv4('192.0.2.1'))
+    agg1 = Aggregator.make_aggregator(ASN(65000), IPv4.from_string('192.0.2.1'))
+    agg2 = Aggregator.make_aggregator(ASN(65000), IPv4.from_string('192.0.2.1'))
 
     # Should be equal
     assert agg1 == agg2
 
     # Different ASN
-    agg3 = Aggregator.make_aggregator(ASN(65001), IPv4('192.0.2.1'))
+    agg3 = Aggregator.make_aggregator(ASN(65001), IPv4.from_string('192.0.2.1'))
     assert agg1 != agg3
 
     # Different speaker
-    agg4 = Aggregator.make_aggregator(ASN(65000), IPv4('192.0.2.2'))
+    agg4 = Aggregator.make_aggregator(ASN(65000), IPv4.from_string('192.0.2.2'))
     assert agg1 != agg4
 
 
 def test_aggregator_json() -> None:
     """Test AGGREGATOR JSON serialization."""
-    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.protocol.ip import IPv4
 
-    agg = Aggregator.make_aggregator(ASN(65000), IPv4('192.0.2.1'))
+    agg = Aggregator.make_aggregator(ASN(65000), IPv4.from_string('192.0.2.1'))
 
     # Note: json() method has a bug (uses %d for IPv4), so we skip this test
     # or just verify the object has the method
@@ -1081,10 +1081,10 @@ def test_originator_id_inherits_ipv4() -> None:
 
 def test_cluster_list_pack_unpack_roundtrip_single() -> None:
     """Test CLUSTER_LIST pack/unpack roundtrip with single cluster."""
-    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
+    from exabgp.bgp.message.update.attribute.clusterlist import ClusterID, ClusterList
 
     # Create original
-    cluster = ClusterID('192.0.2.1')
+    cluster = ClusterID.from_string('192.0.2.1')
     original = ClusterList.make_clusterlist([cluster])
 
     # Pack
@@ -1104,12 +1104,12 @@ def test_cluster_list_pack_unpack_roundtrip_single() -> None:
 
 def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
     """Test CLUSTER_LIST pack/unpack roundtrip with multiple clusters."""
-    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
+    from exabgp.bgp.message.update.attribute.clusterlist import ClusterID, ClusterList
 
     # Create original with multiple clusters
-    cluster1 = ClusterID('192.0.2.1')
-    cluster2 = ClusterID('192.0.2.2')
-    cluster3 = ClusterID('192.0.2.3')
+    cluster1 = ClusterID.from_string('192.0.2.1')
+    cluster2 = ClusterID.from_string('192.0.2.2')
+    cluster3 = ClusterID.from_string('192.0.2.3')
     original = ClusterList.make_clusterlist([cluster1, cluster2, cluster3])
 
     # Pack
@@ -1131,11 +1131,11 @@ def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
 
 def test_cluster_list_equality() -> None:
     """Test CLUSTER_LIST equality comparison."""
-    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
+    from exabgp.bgp.message.update.attribute.clusterlist import ClusterID, ClusterList
 
     # Create two identical cluster lists
-    cl1 = ClusterList.make_clusterlist([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
-    cl2 = ClusterList.make_clusterlist([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
+    cl1 = ClusterList.make_clusterlist([ClusterID.from_string('192.0.2.1'), ClusterID.from_string('192.0.2.2')])
+    cl2 = ClusterList.make_clusterlist([ClusterID.from_string('192.0.2.1'), ClusterID.from_string('192.0.2.2')])
 
     # Should be equal
     assert cl1 == cl2
@@ -1144,22 +1144,24 @@ def test_cluster_list_equality() -> None:
 
 def test_cluster_list_length() -> None:
     """Test CLUSTER_LIST length calculation."""
-    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
+    from exabgp.bgp.message.update.attribute.clusterlist import ClusterID, ClusterList
 
     # Single cluster
-    cl_single = ClusterList.make_clusterlist([ClusterID('192.0.2.1')])
+    cl_single = ClusterList.make_clusterlist([ClusterID.from_string('192.0.2.1')])
     assert len(cl_single) == 4  # 1 cluster * 4 bytes
 
     # Multiple clusters
-    cl_multi = ClusterList.make_clusterlist([ClusterID('192.0.2.1'), ClusterID('192.0.2.2'), ClusterID('192.0.2.3')])
+    cl_multi = ClusterList.make_clusterlist(
+        [ClusterID.from_string('192.0.2.1'), ClusterID.from_string('192.0.2.2'), ClusterID.from_string('192.0.2.3')]
+    )
     assert len(cl_multi) == 12  # 3 clusters * 4 bytes
 
 
 def test_cluster_list_repr_single() -> None:
     """Test CLUSTER_LIST string representation with single cluster."""
-    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
+    from exabgp.bgp.message.update.attribute.clusterlist import ClusterID, ClusterList
 
-    cl = ClusterList.make_clusterlist([ClusterID('192.0.2.1')])
+    cl = ClusterList.make_clusterlist([ClusterID.from_string('192.0.2.1')])
     # Implementation returns "[ IP ]" format even for single cluster if _len != 1 after initialization
     repr_str = str(cl)
     assert '192.0.2.1' in repr_str
@@ -1167,9 +1169,9 @@ def test_cluster_list_repr_single() -> None:
 
 def test_cluster_list_repr_multiple() -> None:
     """Test CLUSTER_LIST string representation with multiple clusters."""
-    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
+    from exabgp.bgp.message.update.attribute.clusterlist import ClusterID, ClusterList
 
-    cl = ClusterList.make_clusterlist([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
+    cl = ClusterList.make_clusterlist([ClusterID.from_string('192.0.2.1'), ClusterID.from_string('192.0.2.2')])
     repr_str = str(cl)
 
     # Should be in bracket format
@@ -1181,9 +1183,9 @@ def test_cluster_list_repr_multiple() -> None:
 
 def test_cluster_list_json() -> None:
     """Test CLUSTER_LIST JSON serialization."""
-    from exabgp.bgp.message.update.attribute.clusterlist import ClusterList, ClusterID
+    from exabgp.bgp.message.update.attribute.clusterlist import ClusterID, ClusterList
 
-    cl = ClusterList.make_clusterlist([ClusterID('192.0.2.1'), ClusterID('192.0.2.2')])
+    cl = ClusterList.make_clusterlist([ClusterID.from_string('192.0.2.1'), ClusterID.from_string('192.0.2.2')])
     json_str = cl.json()
 
     # Should contain cluster IDs in JSON array format
@@ -1338,8 +1340,9 @@ def test_pmsi_pack_basic() -> None:
 
 def test_pmsi_pack_unpack_roundtrip() -> None:
     """Test PMSI pack/unpack roundtrip."""
-    from exabgp.bgp.message.update.attribute.pmsi import PMSI
     import struct
+
+    from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Create PMSI
     tunnel_data = b'\xc0\xa8\x01\x01'  # 192.168.1.1
@@ -1481,8 +1484,9 @@ def test_pmsi_no_tunnel_pack() -> None:
 
 def test_pmsi_no_tunnel_unpack() -> None:
     """Test PMSINoTunnel unpack via PMSI.from_packet."""
-    from exabgp.bgp.message.update.attribute.pmsi import PMSI, PMSINoTunnel
     import struct
+
+    from exabgp.bgp.message.update.attribute.pmsi import PMSI, PMSINoTunnel
 
     # Create wire data for no-tunnel PMSI
     flags = 0
@@ -1534,9 +1538,10 @@ def test_pmsi_ingress_replication_pack() -> None:
 
 def test_pmsi_ingress_replication_unpack() -> None:
     """Test PMSIIngressReplication unpack via PMSI.from_packet."""
+    import struct
+
     from exabgp.bgp.message.update.attribute.pmsi import PMSI, PMSIIngressReplication
     from exabgp.protocol.ip import IPv4
-    import struct
 
     # Create wire data for ingress replication PMSI
     ip = '192.168.1.1'
@@ -1591,8 +1596,8 @@ def test_pmsi_raw_label_handling() -> None:
 
 def test_pmsi_flags_attribute() -> None:
     """Test PMSI attribute flags."""
-    from exabgp.bgp.message.update.attribute.pmsi import PMSI
     from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Verify PMSI is optional transitive
     assert PMSI.ID == Attribute.CODE.PMSI_TUNNEL
@@ -1601,8 +1606,9 @@ def test_pmsi_flags_attribute() -> None:
 
 def test_pmsi_unknown_tunnel_type() -> None:
     """Test PMSI with unknown tunnel type."""
-    from exabgp.bgp.message.update.attribute.pmsi import PMSI
     import struct
+
+    from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Create data with unknown tunnel type (99)
     flags = 0
