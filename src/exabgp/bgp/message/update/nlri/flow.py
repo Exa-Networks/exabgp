@@ -190,7 +190,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
     @property
     def cidr(self) -> CIDR:
         """CIDR - unpacked from wire bytes on demand."""
-        return CIDR(self._packed)
+        return CIDR.from_ipv4(self._packed)
 
     @classmethod
     def make_prefix4(cls, raw: bytes, netmask: int) -> 'IPrefix4':
@@ -223,7 +223,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
     @classmethod
     def make(cls, bgp: bytes) -> tuple[IPrefix4, bytes]:
         """Unpack from wire format, storing raw bytes."""
-        cidr = CIDR(bgp)
+        cidr = CIDR.from_ipv4(bgp)
         packed = bgp[: len(cidr)]  # mask byte + truncated IP bytes
         return cls(packed), bgp[len(cidr) :]
 
@@ -257,7 +257,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
     @property
     def cidr(self) -> CIDR:
         """CIDR - unpacked from wire bytes on demand."""
-        return CIDR(self._packed)
+        return CIDR.from_ipv6(self._packed)
 
     @property
     def offset(self) -> int:
@@ -299,7 +299,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
         offset = bgp[1]
         # IPv6 FlowSpec has offset byte between mask and prefix
         # Wire format: [mask][offset][ip...], we store [mask][ip...] in _packed
-        cidr = CIDR(bgp[0:1] + bgp[2:])
+        cidr = CIDR.from_ipv6(bgp[0:1] + bgp[2:])
         packed = bgp[0:1] + bgp[2 : 2 + CIDR.size(cidr.mask)]
         return cls(packed, offset), bgp[CIDR.size(cidr.mask) + 2 :]
 

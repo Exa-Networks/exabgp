@@ -81,21 +81,21 @@ class CIDR:
 
     NOCIDR: ClassVar['CIDR']
 
-    def __init__(self, nlri: bytes) -> None:
+    def __init__(self, nlri: bytes, afi: AFI) -> None:
         """Create a CIDR from NLRI wire format bytes.
 
         Args:
             nlri: NLRI wire format bytes [mask][truncated_ip...]
+            afi: Address Family Identifier (required - cannot be reliably inferred)
 
-        The AFI is inferred from wire format using heuristic:
-        - IPv6 if mask > 32 (only IPv6 can have masks 33-128)
-        - IPv4 otherwise (masks 0-32 are ambiguous, default to IPv4)
+        The AFI parameter is required because wire format is ambiguous for
+        masks 0-32: both IPv4 /32 and IPv6 /32 have the same byte length.
+        Use from_ipv4() or from_ipv6() factory methods when AFI is known
+        from context.
 
         Raises:
             Notify: If NLRI data is too short for the mask
         """
-        # Infer AFI from wire format: mask > 32 can only be IPv6
-        afi = AFI.ipv6 if nlri[0] > CIDR_IPV4_MAX_MASK else AFI.ipv4
         prefix, mask = self.decode(afi, nlri)
         self._packed = prefix
         self._mask = mask
@@ -230,12 +230,17 @@ class CIDR:
         # return data[:4], mask
 
     @classmethod
-    def unpack_cidr(cls, data: bytes) -> 'CIDR':
+    def unpack_cidr(cls, data: bytes, afi: AFI) -> 'CIDR':
         """Unpack CIDR from NLRI wire format bytes.
 
-        Alias for CIDR(data) - kept for API compatibility.
+        Args:
+            data: NLRI wire format bytes [mask][truncated_ip...]
+            afi: Address Family Identifier (required)
+
+        Returns:
+            New CIDR instance
         """
-        return cls(data)
+        return cls(data, afi)
 
     def __len__(self) -> int:
         return CIDR.size(self.mask) + 1

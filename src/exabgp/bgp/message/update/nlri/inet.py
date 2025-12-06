@@ -102,21 +102,19 @@ PATH_INFO_SIZE: int = 4  # Path Identifier is 4 bytes (RFC 7911)
 @NLRI.register(AFI.ipv4, SAFI.multicast)
 @NLRI.register(AFI.ipv6, SAFI.multicast)
 class INET(NLRI):
-    # Maximum IPv4 prefix length - masks > 32 indicate IPv6
-    _IPV4_MAX_MASK = 32
-
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: bytes, afi: AFI, safi: SAFI = SAFI.unicast) -> None:
         """Create an INET NLRI from packed CIDR bytes.
 
         Args:
             packed: CIDR wire format bytes [mask_byte][truncated_ip...]
+            afi: Address Family Identifier (required - cannot be reliably inferred)
+            safi: Subsequent Address Family Identifier (defaults to unicast)
 
-        AFI is inferred from mask (>32 implies IPv6).
-        SAFI defaults to unicast. Use factory methods for other families.
+        The AFI parameter is required because wire format is ambiguous for
+        masks 0-32: both IPv4 /32 and IPv6 /32 have the same byte length.
+        Use factory methods (from_cidr, make_route) when creating INET instances.
         """
-        # Infer AFI from mask: > 32 can only be IPv6
-        afi = AFI.ipv6 if packed[0] > self._IPV4_MAX_MASK else AFI.ipv4
-        NLRI.__init__(self, afi, SAFI.unicast, Action.UNSET)
+        NLRI.__init__(self, afi, safi, Action.UNSET)
         self._packed = packed  # CIDR wire format
         self.path_info = PathInfo.DISABLED
         self.nexthop = IP.NoNextHop
