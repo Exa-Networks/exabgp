@@ -16,11 +16,11 @@ from exabgp.protocol.ip import IP
 from exabgp.configuration.core.error import Error
 
 if TYPE_CHECKING:
-    from exabgp.rib.change import Change
+    from exabgp.rib.route import Route
 
 
 class Scope(Error):
-    _routes: list[Change]
+    _routes: list[Route]
 
     def __init__(self) -> None:
         Error.__init__(self)
@@ -46,26 +46,26 @@ class Scope(Error):
 
     # building route list
 
-    def get_routes(self) -> list[Change]:
+    def get_routes(self) -> list[Route]:
         return self._routes
 
-    def pop_routes(self) -> list[Change]:
+    def pop_routes(self) -> list[Route]:
         routes = self._routes
         self._routes = []
         return routes
 
-    def extend_routes(self, value: list[Change]) -> None:
+    def extend_routes(self, value: list[Route]) -> None:
         self._routes.extend(value)
 
     # building nlri
 
-    def append_route(self, value: Change) -> None:
+    def append_route(self, value: Route) -> None:
         self._routes.append(value)
 
-    def get_route(self) -> Change:
+    def get_route(self) -> Route:
         return self._routes[-1]
 
-    def pop_route(self) -> Change:
+    def pop_route(self) -> Route:
         return self._routes.pop()
 
     # context

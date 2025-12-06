@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.bgp.message import Action
 
@@ -69,23 +69,23 @@ class AnnounceLabel(AnnouncePath):
         pass
 
     @staticmethod
-    def check(change: Change, afi: AFI | None) -> bool:
-        if not AnnouncePath.check(change, afi):
+    def check(route: Route, afi: AFI | None) -> bool:
+        if not AnnouncePath.check(route, afi):
             return False
 
         # has_label() confirms the NLRI type has a labels attribute
-        if change.nlri.action == Action.ANNOUNCE and change.nlri.has_label():
-            if cast(Label, change.nlri).labels is Labels.NOLABEL:
+        if route.nlri.action == Action.ANNOUNCE and route.nlri.has_label():
+            if cast(Label, route.nlri).labels is Labels.NOLABEL:
                 return False
 
         return True
 
 
 @ParseAnnounce.register('nlri-mpls', 'extend-name', 'ipv4')
-def nlri_mpls_v4(tokeniser: Tokeniser) -> list[Change]:
+def nlri_mpls_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceLabel.schema, AFI.ipv4, SAFI.nlri_mpls, AnnounceLabel.check)
 
 
 @ParseAnnounce.register('nlri-mpls', 'extend-name', 'ipv6')
-def nlri_mpls_v6(tokeniser: Tokeniser) -> list[Change]:
+def nlri_mpls_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceLabel.schema, AFI.ipv6, SAFI.nlri_mpls, AnnounceLabel.check)

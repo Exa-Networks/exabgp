@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -62,18 +62,18 @@ class AnnouncePath(AnnounceIP):
         pass
 
     @staticmethod
-    def check(change: Change, afi: AFI | None) -> bool:
-        if not AnnounceIP.check(change, afi):
+    def check(route: Route, afi: AFI | None) -> bool:
+        if not AnnounceIP.check(route, afi):
             return False
 
         return True
 
 
 @ParseAnnounce.register('unicast', 'extend-name', 'ipv4')
-def unicast_v4(tokeniser: Tokeniser) -> list[Change]:
+def unicast_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnouncePath.schema, AFI.ipv4, SAFI.unicast, AnnouncePath.check)
 
 
 @ParseAnnounce.register('unicast', 'extend-name', 'ipv6')
-def unicast_v6(tokeniser: Tokeniser) -> list[Change]:
+def unicast_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnouncePath.schema, AFI.ipv6, SAFI.unicast, AnnouncePath.check)

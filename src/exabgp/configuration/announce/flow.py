@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -287,25 +287,25 @@ class AnnounceFlow(ParseAnnounce):
         return True
 
     @staticmethod
-    def check(change: Change, afi: AFI | None) -> bool:
+    def check(route: Route, afi: AFI | None) -> bool:
         return True
 
 
 @ParseAnnounce.register('flow', 'extend-name', 'ipv4')
-def flow_ip_v4(tokeniser: Tokeniser) -> list[Change]:
+def flow_ip_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv4, SAFI.flow_ip, AnnounceFlow.check)
 
 
 @ParseAnnounce.register('flow-vpn', 'extend-name', 'ipv4')
-def flow_vpn_v4(tokeniser: Tokeniser) -> list[Change]:
+def flow_vpn_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv4, SAFI.flow_vpn, AnnounceFlow.check)
 
 
 @ParseAnnounce.register('flow', 'extend-name', 'ipv6')
-def flow_ip_v6(tokeniser: Tokeniser) -> list[Change]:
+def flow_ip_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv6, SAFI.flow_ip, AnnounceFlow.check)
 
 
 @ParseAnnounce.register('flow-vpn', 'extend-name', 'ipv6')
-def flow_vpn_v6(tokeniser: Tokeniser) -> list[Change]:
+def flow_vpn_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv6, SAFI.flow_vpn, AnnounceFlow.check)

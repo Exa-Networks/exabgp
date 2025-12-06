@@ -1,4 +1,4 @@
-"""change.py
+"""route.py
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -15,10 +15,10 @@ if TYPE_CHECKING:
     from exabgp.protocol.family import AFI, SAFI
 
 
-class Change:
+class Route:
     nlri: NLRI
     attributes: Attributes
-    _Change__index: bytes
+    _Route__index: bytes
 
     @staticmethod
     def family_prefix(family: tuple[AFI, SAFI]) -> bytes:
@@ -39,26 +39,26 @@ class Change:
         return self.__index
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Change):
+        if not isinstance(other, Route):
             return False
         return self.nlri == other.nlri and self.attributes == other.attributes
 
     def __ne__(self, other: object) -> bool:
-        if not isinstance(other, Change):
+        if not isinstance(other, Route):
             return True
         return self.nlri != other.nlri or self.attributes != other.attributes
 
     def __lt__(self, other: object) -> bool:
-        raise RuntimeError('comparing Change for ordering does not make sense')
+        raise RuntimeError('comparing Route for ordering does not make sense')
 
     def __le__(self, other: object) -> bool:
-        raise RuntimeError('comparing Change for ordering does not make sense')
+        raise RuntimeError('comparing Route for ordering does not make sense')
 
     def __gt__(self, other: object) -> bool:
-        raise RuntimeError('comparing Change for ordering does not make sense')
+        raise RuntimeError('comparing Route for ordering does not make sense')
 
     def __ge__(self, other: object) -> bool:
-        raise RuntimeError('comparing Change for ordering does not make sense')
+        raise RuntimeError('comparing Route for ordering does not make sense')
 
     def extensive(self) -> str:
         # If you change this you must change as well extensive in Update

@@ -9,34 +9,22 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from exabgp.configuration.static.route import ParseStaticRoute as ParseStaticRoute  # Re-export
-from exabgp.configuration.static.parser import prefix
-from exabgp.configuration.schema import Container
-
-from exabgp.configuration.announce.path import AnnouncePath
-from exabgp.configuration.announce.label import AnnounceLabel
-from exabgp.configuration.announce.vpn import AnnounceVPN
-
-from exabgp.protocol.ip import IP
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.nlri import CIDR
-from exabgp.bgp.message.update.nlri import INET
-from exabgp.bgp.message.update.nlri import Label
-from exabgp.bgp.message.update.nlri import IPVPN
-
 from exabgp.bgp.message.update.attribute import Attributes
+from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, Label
+from exabgp.configuration.announce.label import AnnounceLabel
+from exabgp.configuration.announce.path import AnnouncePath
+from exabgp.configuration.announce.vpn import AnnounceVPN
+from exabgp.configuration.schema import Container
+from exabgp.configuration.static.mpls import label, route_distinguisher
+from exabgp.configuration.static.parser import path_information, prefix
+from exabgp.configuration.static.route import ParseStaticRoute as ParseStaticRoute  # Re-export
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
+from exabgp.rib.route import Route
 
-from exabgp.rib.change import Change
 
-from exabgp.configuration.static.mpls import label
-from exabgp.configuration.static.mpls import route_distinguisher
-from exabgp.configuration.static.parser import path_information
-
-
-def _check_true(change: Change, afi: AFI) -> bool:
+def _check_true(route: Route, afi: AFI) -> bool:
     return True
 
 
@@ -70,10 +58,10 @@ class ParseStatic(ParseStaticRoute):
 
 
 @ParseStatic.register('route', 'append-route')
-def route(tokeniser: Any) -> list[Change]:
+def route(tokeniser: Any) -> list[Route]:
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
-    check: Callable[[Change, AFI], bool] = _check_true
+    check: Callable[[Route, AFI], bool] = _check_true
 
     # Create CIDR first (packed-bytes-first pattern)
     cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
@@ -89,7 +77,7 @@ def route(tokeniser: Any) -> list[Change]:
         nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
         check = AnnouncePath.check
 
-    change = Change(nlri, Attributes())
+    static_route = Route(nlri, Attributes())
 
     while True:
         command = tokeniser()
@@ -112,24 +100,24 @@ def route(tokeniser: Any) -> list[Change]:
         cmd_action = ParseStatic.action.get(command, '')
 
         if cmd_action == 'attribute-add':
-            change.attributes.add(ParseStatic.known[command](tokeniser))
+            static_route.attributes.add(ParseStatic.known[command](tokeniser))
         elif cmd_action == 'nlri-set':
-            change.nlri.assign(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
+            static_route.nlri.assign(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
         elif cmd_action == 'nexthop-and-attribute':
             nexthop, attribute = ParseStatic.known[command](tokeniser)
-            change.nlri.nexthop = nexthop
-            change.attributes.add(attribute)
+            static_route.nlri.nexthop = nexthop
+            static_route.attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))
 
-    if not check(change, nlri.afi):
+    if not check(static_route, nlri.afi):
         raise ValueError('invalid route (missing next-hop, label or rd ?)')
 
-    return list(ParseStatic.split(change))
+    return list(ParseStatic.split(static_route))
 
 
 @ParseStatic.register('attributes', 'append-route')
-def attributes(tokeniser: Any) -> list[Change]:
+def attributes(tokeniser: Any) -> list[Route]:
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(lambda: tokeniser.tokens[-1])  # type: ignore[arg-type]
     tokeniser.afi = ipmask.afi
@@ -186,7 +174,7 @@ def attributes(tokeniser: Any) -> list[Change]:
         else:
             raise ValueError('unknown command "{}"'.format(command))
 
-    changes = []
+    routes = []
 
     while True:
         peeked_nlri = tokeniser.peek()
@@ -204,6 +192,6 @@ def attributes(tokeniser: Any) -> list[Change]:
         if path_info:
             new_nlri.path_info = path_info
         new_nlri.nexthop = nlri.nexthop
-        changes.append(Change(new_nlri, attr))
+        routes.append(Route(new_nlri, attr))
 
-    return changes
+    return routes

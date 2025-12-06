@@ -14,14 +14,14 @@ from exabgp.bgp.message.update.attribute import NextHopSelf
 
 from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.attribute import Attributes
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 # VPLS parameter maximum value (16-bit field)
 VPLS_PARAM_MAX = 0xFFFF  # Maximum value for VPLS endpoint, size, offset, and label base
 
 
 def vpls(tokeniser):
-    return Change(VPLS.make_empty(), Attributes())
+    return Route(VPLS.make_empty(), Attributes())
 
 
 def vpls_endpoint(tokeniser):

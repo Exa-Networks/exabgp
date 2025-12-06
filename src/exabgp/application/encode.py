@@ -148,16 +148,16 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
         for _ in neighbor.rib.outgoing.updates(False):
             pass
 
-        # Get changes and encode them
-        for change in neighbor.rib.outgoing.cached_changes():
+        # Get routes and encode them
+        for route in neighbor.rib.outgoing.cached_routes():
             if cmdarg.nlri_only:
                 # Output only NLRI bytes
-                packed = change.nlri.pack_nlri(negotiated_out)
+                packed = route.nlri.pack_nlri(negotiated_out)
                 sys.stdout.write(packed.hex().upper())
                 sys.stdout.write('\n')
             else:
                 # Output full UPDATE message(s)
-                for packed in Update([change.nlri], [], change.attributes).messages(negotiated_out):
+                for packed in Update([route.nlri], [], route.attributes).messages(negotiated_out):
                     if cmdarg.no_header:
                         # Skip 19-byte BGP header (16 marker + 2 length + 1 type)
                         packed = packed[19:]

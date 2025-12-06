@@ -26,7 +26,7 @@ from exabgp.protocol.ip import IP
 from exabgp.rib import RIB
 
 if TYPE_CHECKING:
-    from exabgp.rib.change import Change
+    from exabgp.rib.route import Route
 
 
 # The definition of a neighbor (from reading the configuration)
@@ -60,7 +60,7 @@ class Neighbor:
     _nexthop: list[tuple[AFI, SAFI, AFI]]
     _addpath: list[tuple[AFI, SAFI]]
     rib: RIB | None
-    changes: list['Change']
+    routes: list['Route']
     previous: 'Neighbor' | None
     eor: deque[tuple[AFI, SAFI]]
     asm: dict[tuple[AFI, SAFI], Operational]
@@ -102,7 +102,7 @@ class Neighbor:
         self.rib = None
 
         # The routes we have parsed from the configuration
-        self.changes = []
+        self.routes = []
         self.previous = None
 
         self.eor = deque()
@@ -273,15 +273,15 @@ class Neighbor:
     def ip_self(self, afi: AFI) -> IP:
         return self.session.ip_self(afi)
 
-    def remove_self(self, changes: Change) -> Change:
-        change = deepcopy(changes)
-        if not change.nlri.nexthop.SELF:
-            return change
-        neighbor_self = self.ip_self(change.nlri.afi)
-        change.nlri.nexthop = neighbor_self
-        if Attribute.CODE.NEXT_HOP in change.attributes:
-            change.attributes[Attribute.CODE.NEXT_HOP] = NextHop(neighbor_self.pack_ip())
-        return change
+    def remove_self(self, route: 'Route') -> 'Route':
+        route_copy = deepcopy(route)
+        if not route_copy.nlri.nexthop.SELF:
+            return route_copy
+        neighbor_self = self.ip_self(route_copy.nlri.afi)
+        route_copy.nlri.nexthop = neighbor_self
+        if Attribute.CODE.NEXT_HOP in route_copy.attributes:
+            route_copy.attributes[Attribute.CODE.NEXT_HOP] = NextHop(neighbor_self.pack_ip())
+        return route_copy
 
     def __str__(self) -> str:
         return NeighborTemplate.configuration(self, False)
@@ -338,14 +338,14 @@ Neighbor {peer-address}
     summary_template: ClassVar[str] = '%-15s %-7s %9s %-12s %10d %10d'
 
     @classmethod
-    def configuration(cls, neighbor: Neighbor, with_changes: bool = True) -> str:
-        changes = ''
-        if with_changes:
+    def configuration(cls, neighbor: Neighbor, with_routes: bool = True) -> str:
+        routes_str = ''
+        if with_routes:
             assert neighbor.rib is not None, 'RIB not initialized'
-            changes += '\nstatic { '
-            for change in neighbor.rib.outgoing.queued_changes():
-                changes += f'\n\t\t{change.extensive()}'
-            changes += '\n}'
+            routes_str += '\nstatic { '
+            for route in neighbor.rib.outgoing.queued_routes():
+                routes_str += f'\n\t\t{route.extensive()}'
+            routes_str += '\n}'
 
         families = ''
         for afi, safi in neighbor.families():
@@ -494,7 +494,7 @@ Neighbor {peer-address}
             f'\t}}\n'
             f'\tadd-path {{{addpaths}\n'
             f'\t}}\n'
-            f'{apis}{changes}'
+            f'{apis}{routes_str}'
             f'}}'
         )
 

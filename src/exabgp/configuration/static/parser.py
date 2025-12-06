@@ -58,7 +58,7 @@ from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
 
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 # IP address validation constants
 EXTENDED_COMMUNITY_TARGET_PARTS = 2  # Target extended community has 2 parts (ASN:value)
@@ -107,24 +107,24 @@ def next_hop(tokeniser: 'Tokeniser', afi: AFI | None = None) -> tuple[IP | IPSel
 # action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
 
 
-def inet(tokeniser: 'Tokeniser') -> Change:
+def inet(tokeniser: 'Tokeniser') -> Route:
     ipmask = prefix(tokeniser)
     cidr = CIDR.make_cidr(ipmask.ton(), ipmask.mask)
     nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.UNSET)
 
-    return Change(nlri, Attributes())
+    return Route(nlri, Attributes())
 
 
 # XXX: using Action.ANNOUNCE should we use the following ?
 # action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
 
 
-def mpls(tokeniser: 'Tokeniser') -> Change:
+def mpls(tokeniser: 'Tokeniser') -> Route:
     ipmask = prefix(tokeniser)
     cidr = CIDR.make_cidr(ipmask.ton(), ipmask.mask)
     nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.ANNOUNCE)
 
-    return Change(nlri, Attributes())
+    return Route(nlri, Attributes())
 
 
 def attribute(tokeniser: 'Tokeniser') -> GenericAttribute:

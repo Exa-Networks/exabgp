@@ -16,7 +16,7 @@ from exabgp.protocol.family import AFI, SAFI
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.operational import OperationalFamily
-    from exabgp.rib.change import Change
+    from exabgp.rib.route import Route
 
 from exabgp.configuration.announce import AnnounceIPv4, AnnounceIPv6, AnnounceL2VPN, SectionAnnounce
 from exabgp.configuration.announce.flow import AnnounceFlow  # noqa: F401,E261,E501
@@ -69,20 +69,20 @@ class _Configuration:
         self.processes: dict[str, Any] = {}
         self.neighbors: dict[str, Any] = {}
 
-    def inject_change(self, peers: list[str], change: 'Change') -> bool:
+    def inject_route(self, peers: list[str], route: 'Route') -> bool:
         result = False
         for neighbor_name in self.neighbors:
             if neighbor_name in peers:
                 neighbor = self.neighbors[neighbor_name]
-                if change.nlri.family().afi_safi() in neighbor.families():
-                    # remove_self may well have side effects on change
-                    neighbor.rib.outgoing.add_to_rib(neighbor.remove_self(change))
+                if route.nlri.family().afi_safi() in neighbor.families():
+                    # remove_self may well have side effects on route
+                    neighbor.rib.outgoing.add_to_rib(neighbor.remove_self(route))
                     result = True
                 else:
                     log.error(
                         lazymsg(
                             'route.family.unconfigured family={family} neighbor={neighbor}',
-                            family=change.nlri.short(),
+                            family=route.nlri.short(),
                             neighbor=neighbor_name,
                         ),
                         'configuration',
@@ -620,5 +620,5 @@ class Configuration(_Configuration):
             'families': [(afi, safi) for afi, safi in neighbor.families()],
             'nexthops': [(afi, safi, nhafi) for afi, safi, nhafi in neighbor.nexthops()],
             'addpaths': [(afi, safi) for afi, safi in neighbor.addpaths()],
-            'changes': [change for change in neighbor.changes],
+            'routes': [route for route in neighbor.routes],
         }

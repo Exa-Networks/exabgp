@@ -51,7 +51,7 @@ from exabgp.protocol.family import (
     AFI,
 )
 from exabgp.protocol.ip import IP, IPv4, IPv6
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 # TypeVar for flow condition classes
 FlowConditionT = TypeVar(
@@ -97,8 +97,8 @@ MAX_RATE_LIMIT_BPS = 1000000000000  # Maximum rate limit (1 terabyte/s)
 DSCP_MAX_VALUE = 0b111111  # DSCP is a 6-bit field (0-63)
 
 
-def flow(tokeniser: 'Tokeniser') -> Change:
-    return Change(Flow.make_flow(), Attributes())
+def flow(tokeniser: 'Tokeniser') -> Route:
+    return Route(Flow.make_flow(), Attributes())
 
 
 def source(tokeniser: 'Tokeniser') -> Generator[Flow4Source | Flow6Source, None, None]:

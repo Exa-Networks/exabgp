@@ -642,8 +642,8 @@ class Peer:
         send_ka = KA(self.proto.connection.session, self.proto)
 
         # Initialize RIB with previous routes
-        previous = self.neighbor.previous.changes if self.neighbor.previous else []
-        current = self.neighbor.changes
+        previous = self.neighbor.previous.routes if self.neighbor.previous else []
+        current = self.neighbor.routes
         self.neighbor.rib.outgoing.replace_restart(previous, current)
         self.neighbor.previous = None
 
@@ -659,8 +659,8 @@ class Peer:
 
                 # Handle configuration reload
                 if self._neighbor:
-                    previous = self._neighbor.previous.changes if self._neighbor.previous else []
-                    current = self._neighbor.changes
+                    previous = self._neighbor.previous.routes if self._neighbor.previous else []
+                    current = self._neighbor.routes
                     self.neighbor.rib.outgoing.replace_reload(previous, current)
                     self._neighbor.previous = None
                     self._neighbor = None

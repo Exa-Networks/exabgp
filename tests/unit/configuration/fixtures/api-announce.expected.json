@@ -50,7 +50,6 @@
         "route_refresh": 0,
         "software_version": null
       },
-      "changes": [],
       "description": "",
       "domain_name": "",
       "families": [
@@ -74,6 +73,7 @@
       "manual_eor": false,
       "nexthops": [],
       "rate_limit": 0,
+      "routes": [],
       "session": {
         "_type": "Session",
         "connect": 0,

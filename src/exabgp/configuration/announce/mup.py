@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -102,15 +102,15 @@ class AnnounceMup(ParseAnnounce):
         return ParseAnnounce.post(self) and self._check()
 
     @staticmethod
-    def check(change: Change, afi: AFI | None) -> bool:
+    def check(route: Route, afi: AFI | None) -> bool:
         return True
 
 
 @ParseAnnounce.register('mup', 'extend-name', 'ipv4')
-def mup_ip_v4(tokeniser: Tokeniser) -> list[Change]:
+def mup_ip_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_type_selector_route(tokeniser, AnnounceMup.schema, AFI.ipv4, SAFI.mup, AnnounceMup.check)
 
 
 @ParseAnnounce.register('mup', 'extend-name', 'ipv6')
-def mup_ip_v6(tokeniser: Tokeniser) -> list[Change]:
+def mup_ip_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_type_selector_route(tokeniser, AnnounceMup.schema, AFI.ipv6, SAFI.mup, AnnounceMup.check)

@@ -18,7 +18,7 @@ from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.bgp.message.action import Action
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 from exabgp.protocol.ip import IPv4
 
 
@@ -44,11 +44,11 @@ def test_real_rib_resend():
     nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, action=Action.ANNOUNCE)
     nlri.cidr = CIDR.make_cidr(IPv4.pton('192.168.0.1'), 32)
     attrs = Attributes()
-    change = Change(nlri, attrs)
+    change = Route(nlri, attrs)
 
     # Add to cache (simulates what happens when route is announced)
     rib.update_cache(change)
-    cached = list(rib.cached_changes(list(families)))
+    cached = list(rib.cached_routes(list(families)))
     print(f'  Cached routes: {len(cached)}')
 
     # Call resend() - this is what flush adj-rib out does
@@ -108,7 +108,7 @@ def test_real_rib_concurrent_operations():
         nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, action=Action.ANNOUNCE)
         nlri.cidr = CIDR.make_cidr(IPv4.pton(f'192.168.0.{i}'), 32)
         attrs = Attributes()
-        change = Change(nlri, attrs)
+        change = Route(nlri, attrs)
         rib.update_cache(change)
         rib.add_to_rib(change)  # Also add to pending
 
@@ -128,7 +128,7 @@ def test_real_rib_concurrent_operations():
     nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, action=Action.ANNOUNCE)
     nlri.cidr = CIDR.make_cidr(IPv4.pton('192.168.0.100'), 32)
     attrs = Attributes()
-    change = Change(nlri, attrs)
+    change = Route(nlri, attrs)
     rib.update_cache(change)
     rib.add_to_rib(change)
 
