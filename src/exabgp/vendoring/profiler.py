@@ -30,7 +30,7 @@ try:
     def _get_memory(pid):
         process = psutil.Process(pid)
         try:
-            mem = float(process.get_memory_info()[0]) / (1024**2)
+            mem = float(process.memory_info()[0]) / (1024**2)
         except psutil.AccessDenied:
             mem = -1
         return mem
@@ -127,7 +127,7 @@ def memory_usage(proc=-1, interval=0.1, timeout=None):
         else:
             raise ValueError
 
-        aspec = inspect.getargspec(f)
+        aspec = inspect.getfullargspec(f)
         n_args = len(aspec.args)
         if aspec.defaults is not None:
             n_args -= len(aspec.defaults)
@@ -412,24 +412,13 @@ def magic_mprun(self, parameter_s=''):
 
     -r: return the LineProfiler object after it has completed profiling.
     """
-    try:
-        from StringIO import StringIO
-    except ImportError:  # Python 3.x
-        from io import StringIO
+    from io import StringIO
 
     # Local imports to avoid hard dependency.
-    from distutils.version import LooseVersion
-    import IPython
-
-    ipython_version = LooseVersion(IPython.__version__)
-    if ipython_version < '0.11':
-        from IPython.genutils import page
-        from IPython.ipstruct import Struct
-        from IPython.ipapi import UsageError
-    else:
-        from IPython.core.page import page
-        from IPython.utils.ipstruct import Struct
-        from IPython.core.error import UsageError
+    # IPython >= 0.11 is required (released 2011)
+    from IPython.core.page import page
+    from IPython.utils.ipstruct import Struct
+    from IPython.core.error import UsageError
 
     # Escape quote markers.
     opts_def = Struct(T=[''], f=[])
@@ -452,10 +441,7 @@ def magic_mprun(self, parameter_s=''):
         profile(func)
 
     # Add the profiler to the builtins for @profile.
-    try:
-        import builtins
-    except ImportError:  # Python 3x
-        import __builtin__ as builtins
+    import builtins
 
     if 'profile' in builtins.__dict__:
         had_profile = True
@@ -483,10 +469,7 @@ def magic_mprun(self, parameter_s=''):
     output = stdout_trap.getvalue()
     output = output.rstrip()
 
-    if ipython_version < '0.11':
-        page(output, screen_lines=self.shell.rc.screen_length)
-    else:
-        page(output)
+    page(output)
     print(
         message,
     )
@@ -610,20 +593,11 @@ if __name__ == '__main__':
     prof = LineProfiler(max_mem=options.max_mem)
     __file__ = _find_script(args[0])
     try:
-        if sys.version_info[0] < 3:
-            import __builtin__
+        import builtins
 
-            __builtin__.__dict__['profile'] = prof
-            ns = copy(locals())
-            ns['profile'] = prof  # shadow the profile decorator defined above
-            # execfile(__file__, ns, ns)
-            exec(open(__file__).read())
-        else:
-            import builtins
-
-            builtins.__dict__['profile'] = prof
-            ns = copy(locals())
-            ns['profile'] = prof  # shadow the profile decorator defined above
-            exec(compile(open(__file__).read(), __file__, 'exec'), ns, copy(globals()))
+        builtins.__dict__['profile'] = prof
+        ns = copy(locals())
+        ns['profile'] = prof  # shadow the profile decorator defined above
+        exec(compile(open(__file__).read(), __file__, 'exec'), ns, copy(globals()))
     finally:
         show_results(prof, precision=options.precision)
