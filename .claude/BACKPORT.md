@@ -37,6 +37,7 @@ Bug fixes that need backporting to stable branches.
 | 2025-12 | 0f9e13a5 | Runtime validation - AFI/MPRNLRI/MPURNLRI crash on truncated data | 5.0 | 🔴 Pending |
 | 2025-12 | 7a906cae | Runtime validation - SR Prefix-SID TLV crash on truncated data | 5.0 | 🔴 Pending |
 | 2025-12 | 4bdc6501 | Runtime validation - SRv6 service TLV crash on truncated data | 5.0 | 🔴 Pending |
+| 2025-12 | 93ccf4c2 | Runtime validation - BGP-LS NLRI crash on truncated data | 5.0 | 🔴 Pending |
 
 ---
 
