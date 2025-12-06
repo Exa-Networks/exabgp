@@ -297,7 +297,7 @@ class TestEndToEnd:
         assert neighbor.session.peer_as == 65001
         assert str(neighbor.session.router_id) == '1.2.3.4'
         assert len(neighbor.families()) == 1
-        assert neighbor.rib is not None  # RIB created
+        assert neighbor.rib.enabled  # RIB created and enabled
 
     def test_ipv6_flow(self):
         """Test IPv6 neighbor creation."""
@@ -429,8 +429,8 @@ class TestNeighborCreateCommand:
         assert (AFI.ipv4, SAFI.unicast) in families
         assert (AFI.ipv6, SAFI.unicast) in families
 
-        # Verify RIB created
-        assert neighbor.rib is not None
+        # Verify RIB created and enabled
+        assert neighbor.rib.enabled
 
     def test_create_with_api_processes_stored(self, mock_reactor):
         """Test that API processes are correctly stored in peer configuration."""

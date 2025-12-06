@@ -59,7 +59,7 @@ class Neighbor:
     _families: list[tuple[AFI, SAFI]]
     _nexthop: list[tuple[AFI, SAFI, AFI]]
     _addpath: list[tuple[AFI, SAFI]]
-    rib: RIB | None
+    rib: RIB
     routes: list['Route']
     previous: 'Neighbor' | None
     eor: deque[tuple[AFI, SAFI]]
@@ -99,7 +99,14 @@ class Neighbor:
         self._families = []
         self._nexthop = []
         self._addpath = []
-        self.rib = None
+        # Create disabled RIB with placeholder name - will be enabled by make_rib()
+        self.rib = RIB(
+            name=f'disabled-{self._GLOBAL["uid"]}',
+            adj_rib_in=True,
+            adj_rib_out=True,
+            families=set(),
+            enabled=False,
+        )
 
         # The routes we have parsed from the configuration
         self.routes = []
@@ -149,18 +156,16 @@ class Neighbor:
         return self.name()
 
     def make_rib(self) -> None:
-        self.rib = RIB(self.name(), self.adj_rib_in, self.adj_rib_out, set(self._families))
+        self.rib.enable(self.name(), self.adj_rib_in, self.adj_rib_out, set(self._families))
 
     # will resend all the routes once we reconnect
     def reset_rib(self) -> None:
-        assert self.rib is not None, 'RIB not initialized - call make_rib() first'
         self.rib.reset()
         self.messages = deque()
         self.refresh = deque()
 
     # back to square one, all the routes are removed
     def clear_rib(self) -> None:
-        assert self.rib is not None, 'RIB not initialized - call make_rib() first'
         self.rib.clear()
         self.messages = deque()
         self.refresh = deque()
@@ -341,7 +346,6 @@ Neighbor {peer-address}
     def configuration(cls, neighbor: Neighbor, with_routes: bool = True) -> str:
         routes_str = ''
         if with_routes:
-            assert neighbor.rib is not None, 'RIB not initialized'
             routes_str += '\nstatic { '
             for route in neighbor.rib.outgoing.queued_routes():
                 routes_str += f'\n\t\t{route.extensive()}'

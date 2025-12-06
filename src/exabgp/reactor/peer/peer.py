@@ -594,7 +594,6 @@ class Peer:
         assert self.proto is not None
         assert self.proto.connection is not None
         assert self.recv_timer is not None
-        assert self.neighbor.rib is not None
 
         if self._teardown:
             raise Notify(6, 3)

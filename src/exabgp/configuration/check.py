@@ -110,7 +110,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
         neighbor.session.local_as = neighbor.session.peer_as
         negotiated_in, negotiated_out = _negotiated(neighbor)
 
-        if neighbor.rib is None:
+        if not neighbor.rib.enabled:
             continue
         for _ in neighbor.rib.outgoing.updates(False):
             pass
@@ -214,8 +214,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
             except Notify as exc:
                 log.debug(lazymsg('encoding.failed error={err}', err=str(exc)), 'parser')
                 return False
-        if neighbor.rib is not None:
-            neighbor.rib.clear()
+        neighbor.rib.clear()
 
     return True
 

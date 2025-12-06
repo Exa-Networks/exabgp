@@ -393,7 +393,6 @@ class Protocol:
         This yields after each message to allow the event loop to process other tasks.
         """
         assert self.connection is not None
-        assert self.neighbor.rib is not None
         log.debug(lazymsg('update.generator.started'), self._session())
         updates = self.neighbor.rib.outgoing.updates(self.neighbor.group_updates)
         number: int = 0
@@ -415,7 +414,6 @@ class Protocol:
     async def new_update(self, include_withdraw: bool) -> Update:
         """Send BGP UPDATE messages (runs to completion)."""
         assert self.connection is not None
-        assert self.neighbor.rib is not None
         log.debug(lazymsg('update.started'), self._session())
         updates = self.neighbor.rib.outgoing.updates(self.neighbor.group_updates)
         number: int = 0

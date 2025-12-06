@@ -369,7 +369,6 @@ class Reactor:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=rib_lookup', p=peer_name), 'reactor')
             return []
-        assert peer.neighbor.rib is not None, 'RIB not initialized'
         families: list[Any] | None = None
         if advertised:
             families = peer.proto.negotiated.families if peer.proto else []
@@ -386,14 +385,12 @@ class Reactor:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=outgoing_withdraw', p=peer_name), 'reactor')
             return
-        assert peer.neighbor.rib is not None, 'RIB not initialized'
         peer.neighbor.rib.outgoing.withdraw()
 
     def neighbor_rib_in_clear(self, peer_name: str) -> None:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=incoming_clear', p=peer_name), 'reactor')
             return
-        assert peer.neighbor.rib is not None, 'RIB not initialized'
         peer.neighbor.rib.incoming.clear()
 
     # ...
@@ -401,8 +398,6 @@ class Reactor:
     def _pending_adjribout(self) -> bool:
         for peer in self.active_peers():
             rib = self._peers[peer].neighbor.rib
-            if rib is None:
-                continue
             if rib.outgoing.pending():
                 return True
         return False

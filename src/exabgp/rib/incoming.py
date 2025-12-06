@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 class IncomingRIB(Cache):
-    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]]) -> None:
-        Cache.__init__(self, cache, families)
+    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]], enabled: bool = True) -> None:
+        Cache.__init__(self, cache, families, enabled)
 
     # back to square one, all the routes are removed
     def clear(self) -> None:

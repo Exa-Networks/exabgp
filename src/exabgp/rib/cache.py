@@ -20,11 +20,13 @@ if TYPE_CHECKING:
 
 class Cache:
     cache: bool
+    enabled: bool
     families: set[tuple[AFI, SAFI]]
     _seen: dict[tuple[AFI, SAFI], dict[bytes, Route]]
 
-    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]]) -> None:
+    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]], enabled: bool = True) -> None:
         self.cache = cache
+        self.enabled = enabled
         self._seen = {}
         # self._seen[family][route-index] = route
         # nlri.index() would be a few bytes shorter than route.index() but ..
@@ -45,6 +47,8 @@ class Cache:
         families: list[tuple[AFI, SAFI]] | None = None,
         actions: tuple[int, ...] = (Action.ANNOUNCE,),
     ) -> Iterator['Route']:
+        if not self.enabled:
+            return
         # families can be None or []
         requested_families = self.families if families is None else set(families).intersection(self.families)
 
@@ -59,7 +63,7 @@ class Cache:
                     yield route
 
     def in_cache(self, route: 'Route') -> bool:
-        if not self.cache:
+        if not self.enabled or not self.cache:
             return False
 
         # Withdraws are never duplicates - they always need to be processed
@@ -100,7 +104,7 @@ class Cache:
         attributes: 'Attributes | None' = None,
         action: int | None = None,
     ) -> None:
-        if not self.cache:
+        if not self.enabled or not self.cache:
             return
 
         # Handle signatures: (route) or (nlri, attributes) or (nlri, attributes, action)
@@ -137,7 +141,7 @@ class Cache:
     def update_cache_withdraw(self, nlri: 'NLRI', attributes: 'Attributes | None' = None) -> None: ...
 
     def update_cache_withdraw(self, route_or_nlri: 'Route | NLRI', attributes: 'Attributes | None' = None) -> None:
-        if not self.cache:
+        if not self.enabled or not self.cache:
             return
 
         # Handle both signatures
