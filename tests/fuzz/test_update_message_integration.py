@@ -857,5 +857,380 @@ def test_integration_sorting_and_grouping() -> None:
     assert len(messages) >= 1
 
 
+# ==============================================================================
+# Phase 6: Message Size Boundary Tests
+# ==============================================================================
+
+
+@pytest.mark.fuzz
+def test_messages_at_4k_boundary() -> None:
+    """Test message generation right at 4096 byte boundary.
+
+    Each yielded message MUST be <= msg_size (4096).
+    Tests for off-by-one errors.
+    """
+    import random
+
+    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update.attribute import Attributes, Attribute
+    from exabgp.bgp.message.action import Action
+
+    negotiated = create_negotiated_mock(msg_size=4096)
+
+    # Create many routes to force message splitting
+    # Each /24 NLRI is 4 bytes (1 length + 3 prefix bytes)
+    # With variable AS_PATH, available space varies, so use enough routes to guarantee splitting
+    nlris = []
+    for i in range(1500):  # Enough routes to guarantee splitting
+        nlri = create_inet_nlri(f'10.{(i // 256) % 256}.{i % 256}.0', 24, Action.ANNOUNCE, nexthop='192.0.2.1')
+        nlris.append(nlri)
+
+    from exabgp.bgp.message.update.attribute.origin import Origin
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
+    from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.open.asn import ASN
+
+    # Random AS_PATH with 5-15 ASNs for realistic attribute size
+    random.seed(42)  # Reproducible
+    as_path_len = random.randint(5, 15)
+    as_path = SEQUENCE([ASN(random.randint(1, 65000)) for _ in range(as_path_len)])
+
+    attributes = Attributes()
+    attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([as_path])
+    attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
+
+    update = Update(nlris, [], attributes)
+
+    # Pack
+    messages = list(update.messages(negotiated, include_withdraw=True))
+
+    # MUST have multiple messages (forced splitting)
+    assert len(messages) > 1, f'Expected multiple messages due to size limit, got {len(messages)}'
+
+    # Each message MUST be <= 4096 bytes
+    for i, msg in enumerate(messages):
+        assert len(msg) <= 4096, f'Message {i} is {len(msg)} bytes, exceeds 4096 limit'
+
+    # Verify we're actually close to the limit (testing boundary)
+    # At least one message should be > 3500 bytes (using most of the available space)
+    max_msg_size = max(len(msg) for msg in messages)
+    assert max_msg_size > 3500, f'Messages not near boundary, max={max_msg_size}. Test may not be effective.'
+
+
+@pytest.mark.fuzz
+def test_messages_at_64k_boundary() -> None:
+    """Test message generation right at 65535 byte boundary.
+
+    With extended message capability, messages can be up to 65535 bytes.
+    """
+    import random
+
+    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update.attribute import Attributes, Attribute
+    from exabgp.bgp.message.action import Action
+
+    negotiated = create_negotiated_mock(msg_size=65535)
+
+    # Create enough routes to approach but not exceed 64K
+    # Each /24 NLRI is 4 bytes
+    nlris = []
+    for i in range(10000):  # Many routes
+        nlri = create_inet_nlri(
+            f'10.{(i // 65536) % 256}.{(i // 256) % 256}.{i % 256}', 24, Action.ANNOUNCE, nexthop='192.0.2.1'
+        )
+        nlris.append(nlri)
+
+    from exabgp.bgp.message.update.attribute.origin import Origin
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
+    from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.open.asn import ASN
+
+    # Random AS_PATH with 10-30 ASNs for realistic attribute size
+    random.seed(43)  # Reproducible, different seed
+    as_path_len = random.randint(10, 30)
+    as_path = SEQUENCE([ASN(random.randint(1, 65000)) for _ in range(as_path_len)])
+
+    attributes = Attributes()
+    attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([as_path])
+    attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
+
+    update = Update(nlris, [], attributes)
+
+    # Pack
+    messages = list(update.messages(negotiated, include_withdraw=True))
+
+    # Should have at least one message
+    assert len(messages) >= 1
+
+    # Each message MUST be <= 65535 bytes
+    for i, msg in enumerate(messages):
+        assert len(msg) <= 65535, f'Message {i} is {len(msg)} bytes, exceeds 65535 limit'
+
+
+@pytest.mark.fuzz
+def test_messages_splits_when_nlris_exceed_limit() -> None:
+    """Multiple NLRIs that exceed message size are split into multiple messages.
+
+    When NLRIs don't fit in one message, they should be split across
+    multiple UPDATE messages, each within the size limit.
+    Tests both announces and withdraws.
+    """
+    import random
+
+    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update.attribute import Attributes, Attribute
+    from exabgp.bgp.message.action import Action
+    from exabgp.bgp.message.update.attribute.origin import Origin
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
+    from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.open.asn import ASN
+
+    # Small message size to force splitting
+    negotiated = create_negotiated_mock(msg_size=300)
+
+    # Create announces - 50 NLRIs
+    announces = []
+    for i in range(50):
+        nlri = create_inet_nlri(f'10.0.{i}.0', 24, Action.ANNOUNCE, nexthop='192.0.2.1')
+        announces.append(nlri)
+
+    # Create withdraws - 50 NLRIs
+    withdraws = []
+    for i in range(50):
+        nlri = create_inet_nlri(f'10.1.{i}.0', 24, Action.WITHDRAW)
+        withdraws.append(nlri)
+
+    # Small AS_PATH to leave room for NLRIs
+    random.seed(44)
+    as_path = SEQUENCE([ASN(random.randint(1, 65000)) for _ in range(3)])
+
+    attributes = Attributes()
+    attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([as_path])
+    attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
+
+    update = Update(announces, withdraws, attributes)
+
+    # Pack - should split into multiple messages
+    messages = list(update.messages(negotiated, include_withdraw=True))
+
+    # MUST generate multiple messages (NLRIs split across them)
+    assert len(messages) >= 2, f'Expected multiple messages, got {len(messages)}'
+
+    # Each message MUST be within size limit
+    for i, msg in enumerate(messages):
+        assert len(msg) <= 300, f'Message {i} is {len(msg)} bytes, exceeds 300 limit'
+
+    # Verify we didn't lose any NLRIs - unpack and count
+    total_announces = 0
+    total_withdraws = 0
+    for msg in messages:
+        packed_data = msg[19:]  # Skip BGP header
+        unpacked = Update.unpack_message(packed_data, negotiated)
+        if isinstance(unpacked, Update):
+            total_announces += len(unpacked.announces)
+            total_withdraws += len(unpacked.withdraws)
+
+    assert total_announces == 50, f'Expected 50 announces, got {total_announces}'
+    assert total_withdraws == 50, f'Expected 50 withdraws, got {total_withdraws}'
+
+
+# ==============================================================================
+# Phase 7: Family Negotiation Filtering Tests
+# ==============================================================================
+
+
+@pytest.mark.fuzz
+def test_messages_excludes_non_negotiated_families() -> None:
+    """NLRIs for non-negotiated families produce no output.
+
+    If only IPv4 unicast is negotiated, IPv6 NLRIs should be silently dropped.
+    """
+    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update.attribute import Attributes, Attribute
+    from exabgp.bgp.message.action import Action
+    from exabgp.protocol.family import AFI, SAFI
+
+    # Only negotiate IPv4 unicast
+    negotiated = create_negotiated_mock(families=[(AFI.ipv4, SAFI.unicast)])
+
+    # Create IPv6 NLRI (not negotiated)
+    nlri_v6 = create_inet_nlri('2001:db8::', 32, Action.ANNOUNCE, afi=AFI.ipv6, nexthop='2001:db8::1')
+
+    from exabgp.bgp.message.update.attribute.origin import Origin
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
+
+    attributes = Attributes()
+    attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
+
+    update = Update([nlri_v6], [], attributes)
+
+    # Pack - should generate NO messages (IPv6 not negotiated)
+    messages = list(update.messages(negotiated, include_withdraw=True))
+
+    assert len(messages) == 0, 'Non-negotiated family should produce no messages'
+
+
+@pytest.mark.fuzz
+def test_messages_mixed_families_only_sends_negotiated() -> None:
+    """Mixed families: only negotiated family NLRIs appear in output.
+
+    When given both IPv4 and IPv6 NLRIs but only IPv4 is negotiated,
+    only IPv4 should appear in the packed messages.
+    """
+    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update.attribute import Attributes, Attribute
+    from exabgp.bgp.message.action import Action
+    from exabgp.protocol.family import AFI, SAFI
+
+    # Only negotiate IPv4 unicast
+    negotiated = create_negotiated_mock(families=[(AFI.ipv4, SAFI.unicast)])
+
+    # Create IPv4 NLRI (negotiated)
+    nlri_v4 = create_inet_nlri('10.0.0.0', 8, Action.ANNOUNCE, nexthop='192.0.2.1')
+
+    # Create IPv6 NLRI (NOT negotiated)
+    nlri_v6 = create_inet_nlri('2001:db8::', 32, Action.ANNOUNCE, afi=AFI.ipv6, nexthop='2001:db8::1')
+
+    from exabgp.bgp.message.update.attribute.origin import Origin
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
+    from exabgp.bgp.message.update.attribute.nexthop import NextHop
+
+    attributes = Attributes()
+    attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
+    attributes[Attribute.CODE.AS_PATH] = AS2Path.make_aspath([])
+    attributes[Attribute.CODE.NEXT_HOP] = NextHop.from_string('192.0.2.1')
+
+    update = Update([nlri_v4, nlri_v6], [], attributes)
+
+    # Pack
+    messages = list(update.messages(negotiated, include_withdraw=True))
+
+    # Should have message(s)
+    assert len(messages) >= 1
+
+    # Unpack and verify only IPv4 present
+    packed_data = messages[0][19:]  # Skip BGP header
+    unpacked = Update.unpack_message(packed_data, negotiated)
+
+    assert isinstance(unpacked, Update)
+    # All NLRIs should be IPv4
+    for nlri in unpacked.nlris:
+        assert nlri.afi == AFI.ipv4, f'Found non-IPv4 NLRI: {nlri}'
+
+
+# ==============================================================================
+# Phase 8: Next-hop Validation Tests for Announces
+# ==============================================================================
+
+
+@pytest.mark.fuzz
+def test_announce_ipv6_undefined_nexthop_raises_valueerror() -> None:
+    """IPv6 unicast announce with undefined next-hop MUST raise ValueError.
+
+    Non-FlowSpec announces require a defined next-hop.
+    """
+    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update.attribute import Attributes
+    from exabgp.bgp.message.action import Action
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IP
+
+    negotiated = create_negotiated_mock(families=[(AFI.ipv6, SAFI.unicast)])
+
+    # Create IPv6 NLRI with undefined next-hop
+    nlri = create_inet_nlri('2001:db8::', 32, Action.ANNOUNCE, afi=AFI.ipv6)
+    nlri.nexthop = IP.NoNextHop  # AFI.undefined
+
+    attributes = Attributes()
+    update = Update([nlri], [], attributes)
+
+    # MUST raise ValueError
+    with pytest.raises(ValueError, match='unexpected nlri definition'):
+        list(update.messages(negotiated))
+
+
+@pytest.mark.fuzz
+def test_announce_ipv4_undefined_nexthop_raises_valueerror() -> None:
+    """IPv4 announce with undefined next-hop MUST raise ValueError.
+
+    IPv4 with undefined next-hop can't go to v4_announces (needs ipv4 nexthop)
+    and can't go to mp_nlris (nexthop.afi == undefined).
+    """
+    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update.attribute import Attributes
+    from exabgp.bgp.message.action import Action
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IP
+
+    negotiated = create_negotiated_mock(families=[(AFI.ipv4, SAFI.unicast)])
+
+    # Create IPv4 NLRI with undefined next-hop
+    nlri = create_inet_nlri('10.0.0.0', 8, Action.ANNOUNCE)
+    nlri.nexthop = IP.NoNextHop  # AFI.undefined
+
+    attributes = Attributes()
+    update = Update([nlri], [], attributes)
+
+    # MUST raise ValueError
+    with pytest.raises(ValueError, match='unexpected nlri definition'):
+        list(update.messages(negotiated))
+
+
+@pytest.mark.fuzz
+def test_withdraw_ipv6_undefined_nexthop_allowed() -> None:
+    """Withdraws CAN have undefined next-hop (no error).
+
+    Withdraws don't need a next-hop since they're removing routes.
+    """
+    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update.attribute import Attributes
+    from exabgp.bgp.message.action import Action
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IP
+
+    negotiated = create_negotiated_mock(families=[(AFI.ipv6, SAFI.unicast)])
+
+    # Create IPv6 WITHDRAW with undefined next-hop
+    nlri = create_inet_nlri('2001:db8::', 32, Action.WITHDRAW, afi=AFI.ipv6)
+    nlri.nexthop = IP.NoNextHop
+
+    attributes = Attributes()
+    update = Update([], [nlri], attributes)
+
+    # Should NOT raise, should generate message
+    messages = list(update.messages(negotiated))
+    assert len(messages) >= 1
+
+
+@pytest.mark.fuzz
+def test_withdraw_ipv4_undefined_nexthop_allowed() -> None:
+    """IPv4 withdraws with undefined next-hop are allowed.
+
+    Withdraws don't need a next-hop.
+    """
+    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update.attribute import Attributes
+    from exabgp.bgp.message.action import Action
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IP
+
+    negotiated = create_negotiated_mock(families=[(AFI.ipv4, SAFI.unicast)])
+
+    # Create IPv4 WITHDRAW with undefined next-hop
+    nlri = create_inet_nlri('10.0.0.0', 8, Action.WITHDRAW)
+    nlri.nexthop = IP.NoNextHop
+
+    attributes = Attributes()
+    update = Update([], [nlri], attributes)
+
+    # Should NOT raise, should generate message
+    messages = list(update.messages(negotiated))
+    assert len(messages) >= 1
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v', '-m', 'fuzz'])
