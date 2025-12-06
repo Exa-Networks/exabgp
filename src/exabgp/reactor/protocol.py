@@ -26,7 +26,8 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities, Negotiated
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message.update.attribute import Attribute, Attributes
+from exabgp.bgp.message.update import UpdateData
+from exabgp.bgp.message.update.attribute import Attribute, AttributeSet
 from exabgp.logger import lazymsg, log
 
 # from exabgp.reactor.network.error import NotifyError
@@ -37,7 +38,7 @@ from exabgp.reactor.network.outgoing import Outgoing
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
 
-_UPDATE = Update([], [], Attributes())
+_UPDATE = UpdateData([], [], AttributeSet())
 _OPERATIONAL = Operational(0x00)
 
 
@@ -180,7 +181,7 @@ class Protocol:
         code: str = 'send-{}'.format(Message.CODE.short(raw[18]))
         self.peer.stats[code] += 1
         if self._api.get(code, False):
-            message: Update = Update.unpack_message(raw[19:], self.negotiated)
+            message: UpdateData = UpdateData.unpack_message(raw[19:], self.negotiated)
             self._to_api('send', message, raw)
 
         await self.connection.writer_async(raw)

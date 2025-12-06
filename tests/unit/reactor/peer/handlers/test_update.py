@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock
 
-from exabgp.bgp.message import Update, KeepAlive
+from exabgp.bgp.message import UpdateData, KeepAlive
 from exabgp.reactor.peer.handlers.update import UpdateHandler
 from exabgp.reactor.peer.context import PeerContext
 
@@ -25,7 +25,7 @@ class TestUpdateHandler:
     def test_can_handle_update(self, handler: UpdateHandler) -> None:
         """UpdateHandler recognizes UPDATE messages."""
         update = Mock()
-        update.TYPE = Update.TYPE
+        update.TYPE = UpdateData.TYPE
         assert handler.can_handle(update) is True
 
     def test_cannot_handle_keepalive(self, handler: UpdateHandler) -> None:
@@ -38,7 +38,7 @@ class TestUpdateHandler:
         """UpdateHandler stores NLRIs in incoming RIB."""
         nlri1, nlri2 = Mock(), Mock()
         update = Mock()
-        update.TYPE = Update.TYPE
+        update.TYPE = UpdateData.TYPE
         update.announces = [nlri1, nlri2]
         update.withdraws = []
         update.attributes = Mock()
@@ -50,7 +50,7 @@ class TestUpdateHandler:
     def test_handle_empty_nlris(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """UpdateHandler handles updates with no NLRIs."""
         update = Mock()
-        update.TYPE = Update.TYPE
+        update.TYPE = UpdateData.TYPE
         update.announces = []
         update.withdraws = []
         update.attributes = Mock()
@@ -62,7 +62,7 @@ class TestUpdateHandler:
     def test_counter_increments(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """UpdateHandler increments counter per update."""
         update = Mock()
-        update.TYPE = Update.TYPE
+        update.TYPE = UpdateData.TYPE
         update.announces = []
         update.withdraws = []
         update.attributes = Mock()
@@ -81,7 +81,7 @@ class TestUpdateHandler:
     def test_handle_is_generator(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """handle() returns a generator."""
         update = Mock()
-        update.TYPE = Update.TYPE
+        update.TYPE = UpdateData.TYPE
         update.announces = []
         update.withdraws = []
         update.attributes = Mock()
@@ -111,7 +111,7 @@ class TestUpdateHandlerAsync:
         """handle_async stores NLRIs in incoming RIB."""
         nlri1, nlri2 = Mock(), Mock()
         update = Mock()
-        update.TYPE = Update.TYPE
+        update.TYPE = UpdateData.TYPE
         update.announces = [nlri1, nlri2]
         update.withdraws = []
         update.attributes = Mock()
@@ -124,7 +124,7 @@ class TestUpdateHandlerAsync:
     async def test_handle_async_increments_counter(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """handle_async increments counter."""
         update = Mock()
-        update.TYPE = Update.TYPE
+        update.TYPE = UpdateData.TYPE
         update.announces = []
         update.withdraws = []
         update.attributes = Mock()

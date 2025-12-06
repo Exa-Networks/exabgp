@@ -93,7 +93,7 @@ def test_update_with_mandatory_attributes() -> None:
     - AS_PATH (Type 2)
     - NEXT_HOP (Type 3)
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_ipv4_prefix,
@@ -119,9 +119,9 @@ def test_update_with_mandatory_attributes() -> None:
         nlri=nlri,
     )
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
-    assert isinstance(result, Update)
+    assert isinstance(result, UpdateData)
     assert len(result.nlris) == 1
     # Verify attributes were parsed
     from exabgp.bgp.message.update.attribute import Attribute
@@ -139,7 +139,7 @@ def test_update_missing_mandatory_origin() -> None:
     This test verifies that parsing completes but the attributes structure
     shows the missing attribute.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_ipv4_prefix,
@@ -165,9 +165,9 @@ def test_update_missing_mandatory_origin() -> None:
     )
 
     # Should parse successfully (permissive parsing)
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
-    assert isinstance(result, Update)
+    assert isinstance(result, UpdateData)
     # Verify ORIGIN is missing from attributes
     from exabgp.bgp.message.update.attribute import Attribute
 
@@ -176,7 +176,7 @@ def test_update_missing_mandatory_origin() -> None:
 
 def test_update_missing_mandatory_as_path() -> None:
     """Test UPDATE with announcement but missing AS_PATH."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_ipv4_prefix,
@@ -201,9 +201,9 @@ def test_update_missing_mandatory_as_path() -> None:
         nlri=nlri,
     )
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
-    assert isinstance(result, Update)
+    assert isinstance(result, UpdateData)
     # Verify AS_PATH is missing
     from exabgp.bgp.message.update.attribute import Attribute
 
@@ -212,7 +212,7 @@ def test_update_missing_mandatory_as_path() -> None:
 
 def test_update_missing_mandatory_next_hop() -> None:
     """Test UPDATE with IPv4 announcement but missing NEXT_HOP."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_ipv4_prefix,
@@ -237,9 +237,9 @@ def test_update_missing_mandatory_next_hop() -> None:
         nlri=nlri,
     )
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
-    assert isinstance(result, Update)
+    assert isinstance(result, UpdateData)
     # NLRI will be parsed but without valid next-hop
     assert len(result.nlris) >= 1
 
@@ -253,7 +253,7 @@ def test_update_with_all_wellknown_attributes() -> None:
     - NEXT_HOP (3)
     - And others like MED, LOCAL_PREF, etc.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_ipv4_prefix,
@@ -283,9 +283,9 @@ def test_update_with_all_wellknown_attributes() -> None:
         nlri=nlri,
     )
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
-    assert isinstance(result, Update)
+    assert isinstance(result, UpdateData)
     # Verify multiple attributes were parsed
     from exabgp.bgp.message.update.attribute import Attribute
 
@@ -307,7 +307,7 @@ def test_update_attribute_order_independence() -> None:
     BGP attributes can appear in any order, though ORIGIN, AS_PATH, NEXT_HOP
     are typically sent first.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_ipv4_prefix,
@@ -340,12 +340,12 @@ def test_update_attribute_order_independence() -> None:
     data1 = create_update_message(b'', attributes1, nlri)
     data2 = create_update_message(b'', attributes2, nlri)
 
-    result1 = Update.unpack_message(data1, negotiated)
-    result2 = Update.unpack_message(data2, negotiated)
+    result1 = UpdateData.unpack_message(data1, negotiated)
+    result2 = UpdateData.unpack_message(data2, negotiated)
 
     # Both should parse successfully
-    assert isinstance(result1, Update)
-    assert isinstance(result2, Update)
+    assert isinstance(result1, UpdateData)
+    assert isinstance(result2, UpdateData)
 
     # Both should have the same attributes
     from exabgp.bgp.message.update.attribute import Attribute
@@ -362,7 +362,7 @@ def test_update_with_withdrawn_and_announced() -> None:
     This is a valid BGP UPDATE that withdraws some prefixes while
     announcing others.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.action import Action
     from tests.fuzz.update_helpers import (
         create_update_message,
@@ -384,9 +384,9 @@ def test_update_with_withdrawn_and_announced() -> None:
 
     data = create_update_message(withdrawn, attributes, nlri)
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
-    assert isinstance(result, Update)
+    assert isinstance(result, UpdateData)
     # Should have both withdrawals and announcements
     assert len(result.nlris) == 4  # 2 withdrawn + 2 announced
 
@@ -398,7 +398,7 @@ def test_update_with_withdrawn_and_announced() -> None:
 
 def test_update_attribute_length_validation() -> None:
     """Test UPDATE with various attribute lengths including edge cases."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import create_update_message, create_origin_attribute
 
     negotiated = create_negotiated_mock()
@@ -408,15 +408,15 @@ def test_update_attribute_length_validation() -> None:
 
     data = create_update_message(b'', attributes, b'')
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
     # Should handle minimal attributes
-    assert isinstance(result, Update) or result.__class__.__name__ == 'EOR'
+    assert isinstance(result, UpdateData) or result.__class__.__name__ == 'EOR'
 
 
 def test_update_with_multiple_nlri_prefixes() -> None:
     """Test UPDATE announcing multiple prefixes at once."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_ipv4_prefix,
@@ -440,9 +440,9 @@ def test_update_with_multiple_nlri_prefixes() -> None:
 
     data = create_update_message(b'', attributes, nlri)
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
-    assert isinstance(result, Update)
+    assert isinstance(result, UpdateData)
     # Should parse all 5 prefixes
     assert len(result.nlris) == 5
 
@@ -452,7 +452,7 @@ def test_update_only_withdrawals_no_attributes() -> None:
 
     When withdrawing routes, no path attributes are required.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.action import Action
     from tests.fuzz.update_helpers import create_update_message, create_ipv4_prefix
 
@@ -463,9 +463,9 @@ def test_update_only_withdrawals_no_attributes() -> None:
 
     data = create_update_message(withdrawn, b'', b'')
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
-    assert isinstance(result, Update)
+    assert isinstance(result, UpdateData)
     # Should have withdrawals
     assert len(result.nlris) == 2
     assert all(nlri.action == Action.WITHDRAW for nlri in result.nlris)
@@ -482,7 +482,7 @@ def test_update_with_mp_reach_nlri() -> None:
     MP_REACH_NLRI (Type 14) is used for multiprotocol BGP extensions.
     This test verifies that UPDATE messages can contain MP attributes.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.protocol.family import AFI, SAFI
     from tests.fuzz.update_helpers import create_update_message, create_path_attribute
 
@@ -506,7 +506,7 @@ def test_update_with_mp_reach_nlri() -> None:
     # Parsing will fail gracefully or succeed depending on NLRI validation
     # The key test is that it doesn't crash and handles the attribute
     try:
-        result = Update.unpack_message(data, negotiated)
+        result = UpdateData.unpack_message(data, negotiated)
         # Should return EOR or UPDATE
         assert result is not None
     except Exception as e:
@@ -521,7 +521,7 @@ def test_update_with_mp_unreach_nlri() -> None:
     MP_UNREACH_NLRI (Type 15) is used to withdraw multiprotocol routes.
     RFC 4760 states that UPDATE with only MP_UNREACH is valid without other attributes.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.update.eor import EOR
     from exabgp.protocol.family import AFI, SAFI
     from tests.fuzz.update_helpers import create_update_message, create_path_attribute
@@ -540,11 +540,11 @@ def test_update_with_mp_unreach_nlri() -> None:
 
     data = create_update_message(b'', attributes, b'')
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
     # Should be EOR for IPv6 unicast (no routes to withdraw means EOR)
     assert result is not None
-    assert isinstance(result, (Update, EOR))
+    assert isinstance(result, (UpdateData, EOR))
 
 
 def test_update_eor_marker_validation() -> None:
@@ -554,7 +554,7 @@ def test_update_eor_marker_validation() -> None:
     1. Empty UPDATE (4 zero bytes) - for IPv4 unicast
     2. UPDATE with MP_UNREACH_NLRI with no withdrawn routes - for other AFI/SAFI
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.update.eor import EOR
     from exabgp.protocol.family import AFI, SAFI
 
@@ -564,7 +564,7 @@ def test_update_eor_marker_validation() -> None:
     # EOR is 4 bytes of zeros
     data = b'\x00\x00\x00\x00'
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
     # Should be detected as EOR
     assert isinstance(result, EOR)
@@ -579,7 +579,7 @@ def test_update_mp_reach_and_mp_unreach_together() -> None:
     A single UPDATE can contain both MP_REACH and MP_UNREACH.
     When both have no routes, it may result in an error or EOR.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.update.eor import EOR
     from exabgp.protocol.family import AFI, SAFI
     from tests.fuzz.update_helpers import create_update_message, create_path_attribute
@@ -596,9 +596,9 @@ def test_update_mp_reach_and_mp_unreach_together() -> None:
     data = create_update_message(b'', attributes, b'')
 
     # MP_UNREACH with no routes should be EOR or valid UPDATE
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
     assert result is not None
-    assert isinstance(result, (Update, EOR))
+    assert isinstance(result, (UpdateData, EOR))
 
     # Test shows that UPDATE can handle multiprotocol attributes
     # without causing crashes
@@ -610,7 +610,7 @@ def test_update_mp_unreach_only_is_valid() -> None:
     RFC 4760: An UPDATE message that contains MP_UNREACH_NLRI is not required
     to carry any other path attributes.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.update.eor import EOR
     from exabgp.protocol.family import AFI, SAFI
     from tests.fuzz.update_helpers import create_update_message, create_path_attribute
@@ -626,11 +626,11 @@ def test_update_mp_unreach_only_is_valid() -> None:
 
     data = create_update_message(b'', attributes, b'')
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
     # Should be valid - likely EOR for IPv6 unicast
     assert result is not None
-    assert isinstance(result, (Update, EOR))
+    assert isinstance(result, (UpdateData, EOR))
 
 
 # ==============================================================================
@@ -643,7 +643,7 @@ def test_update_maximum_attributes_size() -> None:
 
     BGP messages are limited to 4096 bytes (or larger with extended message support).
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_origin_attribute,
@@ -671,7 +671,7 @@ def test_update_maximum_attributes_size() -> None:
 
     data = create_update_message(b'', attributes, b'')
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
     # Should handle large attributes
     assert result is not None
@@ -683,7 +683,7 @@ def test_update_with_extended_length_attributes() -> None:
     When attribute length exceeds 255 bytes, the Extended Length flag
     must be set and length encoded in 2 bytes.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import create_update_message, create_path_attribute
 
     negotiated = create_negotiated_mock()
@@ -702,7 +702,7 @@ def test_update_with_extended_length_attributes() -> None:
 
     data = create_update_message(b'', extended_attr, b'')
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
     # Should handle extended length
     assert result is not None
@@ -713,7 +713,7 @@ def test_update_empty_as_path_allowed() -> None:
 
     Empty AS_PATH is valid for iBGP sessions where routes are originated locally.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_ipv4_prefix,
@@ -735,9 +735,9 @@ def test_update_empty_as_path_allowed() -> None:
 
     data = create_update_message(b'', attributes, nlri)
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
-    assert isinstance(result, Update)
+    assert isinstance(result, UpdateData)
     # Empty AS_PATH should be valid
     from exabgp.bgp.message.update.attribute import Attribute
 
@@ -749,7 +749,7 @@ def test_update_with_duplicate_attributes_detected() -> None:
 
     RFC 4271: Duplicate attributes should result in TREAT_AS_WITHDRAW or error.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import create_update_message, create_origin_attribute
 
     negotiated = create_negotiated_mock()
@@ -764,7 +764,7 @@ def test_update_with_duplicate_attributes_detected() -> None:
 
     # Parsing might succeed but should handle duplicates
     # ExaBGP's behavior: last value wins or error depending on attribute
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
     # Should return result (either UPDATE or error)
     assert result is not None
@@ -772,7 +772,7 @@ def test_update_with_duplicate_attributes_detected() -> None:
 
 def test_update_zero_length_nlri_section() -> None:
     """Test UPDATE with zero-length NLRI section (only attributes)."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_origin_attribute,
@@ -787,7 +787,7 @@ def test_update_zero_length_nlri_section() -> None:
 
     data = create_update_message(b'', attributes, b'')  # Empty NLRI
 
-    result = Update.unpack_message(data, negotiated)
+    result = UpdateData.unpack_message(data, negotiated)
 
     # Should parse successfully
     # Could be EOR or UPDATE with no NLRI

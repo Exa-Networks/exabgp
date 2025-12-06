@@ -39,7 +39,7 @@ from exabgp.rib.incoming import IncomingRIB  # noqa: E402
 from exabgp.protocol.family import AFI, SAFI  # noqa: E402
 from exabgp.bgp.message.update.nlri.inet import INET  # noqa: E402
 from exabgp.bgp.message.update.nlri.cidr import CIDR  # noqa: E402
-from exabgp.bgp.message.update.attribute.attributes import Attributes  # noqa: E402
+from exabgp.bgp.message.update.attribute.attributes import AttributeSet  # noqa: E402
 from exabgp.rib.route import Route  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
 from exabgp.bgp.message import Action  # noqa: E402
@@ -62,7 +62,7 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
     nlri = INET.from_cidr(cidr, afi, SAFI.unicast, action)
 
     # Create attributes
-    attrs = Attributes()
+    attrs = AttributeSet()
 
     return Route(nlri, attrs)
 

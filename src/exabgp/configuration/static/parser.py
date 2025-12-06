@@ -29,7 +29,7 @@ from exabgp.bgp.message.update.nlri import IPVPN
 from exabgp.bgp.message.open import ASN
 from exabgp.bgp.message.open import RouterID
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute import Attributes
+from exabgp.bgp.message.update.attribute import AttributeSet
 from exabgp.bgp.message.update.attribute import NextHop
 from exabgp.bgp.message.update.attribute import NextHopSelf
 from exabgp.bgp.message.update.attribute import Origin
@@ -112,7 +112,7 @@ def inet(tokeniser: 'Tokeniser') -> Route:
     cidr = CIDR.make_cidr(ipmask.ton(), ipmask.mask)
     nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.UNSET)
 
-    return Route(nlri, Attributes())
+    return Route(nlri, AttributeSet())
 
 
 # XXX: using Action.ANNOUNCE should we use the following ?
@@ -124,7 +124,7 @@ def mpls(tokeniser: 'Tokeniser') -> Route:
     cidr = CIDR.make_cidr(ipmask.ton(), ipmask.mask)
     nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.ANNOUNCE)
 
-    return Route(nlri, Attributes())
+    return Route(nlri, AttributeSet())
 
 
 def attribute(tokeniser: 'Tokeniser') -> GenericAttribute:

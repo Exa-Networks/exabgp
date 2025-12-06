@@ -16,10 +16,7 @@ from typing import TYPE_CHECKING, Generator
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.bgp.message.update import Update, UpdateWire
-
-# Type alias for the semantic container (current Update class)
-UpdateData = Update
+from exabgp.bgp.message.update import Update, UpdateData
 
 
 class UpdateSerializer:
@@ -40,7 +37,7 @@ class UpdateSerializer:
         data: UpdateData,
         negotiated: 'Negotiated',
         include_withdraw: bool = True,
-    ) -> Generator[UpdateWire, None, None]:
+    ) -> Generator[Update, None, None]:
         """Convert UpdateData to wire-format Update messages.
 
         One UpdateData can produce multiple Update messages due to BGP
@@ -52,19 +49,19 @@ class UpdateSerializer:
             include_withdraw: Whether to include withdrawals in output.
 
         Yields:
-            UpdateWire objects containing serialized UPDATE payloads.
+            Update objects containing serialized UPDATE payloads.
         """
         # Delegate to UpdateData.messages() for the actual serialization logic.
         # This approach avoids duplicating the complex message generation code
         # while providing the new interface.
         #
         # The messages() method yields complete BGP messages (with header).
-        # We need to extract just the payload to create UpdateWire objects.
+        # We need to extract just the payload to create Update objects.
         for msg_bytes in data.messages(negotiated, include_withdraw):
             # BGP message format: marker(16) + length(2) + type(1) + payload
             # Extract payload by removing 19-byte header
             payload = msg_bytes[19:]
-            yield UpdateWire(payload)
+            yield Update(payload)
 
     @staticmethod
     def serialize_bytes(

@@ -13,7 +13,7 @@ from exabgp.util import hexstring
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import Open
 from exabgp.bgp.message import Notification
-from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update import UpdateData
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.message_type import MessageType
 from exabgp.bgp.message.direction import Direction
@@ -209,11 +209,11 @@ class Transcoder:
         message = Message.unpack(category, data, negotiated)
 
         if content == MessageType.UPDATE:
-            return self.encoder.update(neighbor, direction, cast(Update, message), header, body, negotiated)
+            return self.encoder.update(neighbor, direction, cast(UpdateData, message), header, body, negotiated)
 
         if content == MessageType.EOR:
             # EOR (End of RIB) is encoded as a special UPDATE message
-            return self.encoder.update(neighbor, direction, cast(Update, message), header, body, negotiated)
+            return self.encoder.update(neighbor, direction, cast(UpdateData, message), header, body, negotiated)
 
         if content == MessageType.REFRESH:
             return self.json.refresh(neighbor, direction, cast(RouteRefresh, message), header, body, negotiated)
