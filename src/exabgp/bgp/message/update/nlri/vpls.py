@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from struct import unpack
 from struct import pack
-from typing import Any, Iterator, cast, TYPE_CHECKING
+from typing import Any, ClassVar, Iterator, cast, final, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -40,10 +40,17 @@ unique: Iterator[int] = _unique()
 class VPLS(NLRI):
     """VPLS NLRI using packed-bytes-first pattern.
 
+    This class uses class-level AFI/SAFI constants to minimize per-instance
+    storage, preparing for eventual buffer protocol sharing.
+
     Two modes:
     - Packed mode: created from wire bytes, fields unpacked on property access
     - Builder mode: created empty for configuration, fields assigned via setters
     """
+
+    # Fixed AFI/SAFI for this single-family NLRI type
+    _class_afi: ClassVar[AFI] = AFI.l2vpn
+    _class_safi: ClassVar[SAFI] = SAFI.vpls
 
     # Wire format length (excluding 2-byte length prefix)
     PACKED_LENGTH = 17  # RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
@@ -53,9 +60,13 @@ class VPLS(NLRI):
 
         Args:
             packed: 17 bytes wire format (RD + endpoint + offset + size + base), or None for builder mode
+
+        Note: We don't call NLRI.__init__ or Family.__init__ because afi/safi are
+        class-level properties. We initialize action/addpath/nexthop directly.
         """
-        NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
+        # Skip Family.__init__ - afi/safi are class-level properties
         self.action = Action.ANNOUNCE
+        self.addpath = PathInfo.DISABLED
         self.nexthop = IP.NoNextHop
 
         self._packed: bytes | None = packed
@@ -68,6 +79,18 @@ class VPLS(NLRI):
         self._size_value: int | None = None  # '_size' would shadow Family.size ClassVar
 
         self.unique = next(unique)
+
+    @property
+    @final
+    def afi(self) -> AFI:
+        """Return class-level AFI (l2vpn) - VPLS is always L2VPN."""
+        return self._class_afi
+
+    @property
+    @final
+    def safi(self) -> SAFI:
+        """Return class-level SAFI (vpls) - VPLS is always VPLS."""
+        return self._class_safi
 
     @classmethod
     def make_vpls(
