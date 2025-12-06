@@ -6,12 +6,9 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
-
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
-
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
+from exabgp.protocol.ip import IP
 
 #   |    1030   | IPv4 Router-ID of   |   134/---    | [RFC5305]/4.3    |
 #   |           | Remote Node         |              |                  |
@@ -28,7 +25,7 @@ class RemoteTeRid(BaseLS):
     @property
     def content(self) -> str:
         """Unpack and return the IP address as a string."""
-        return IP.unpack_ip(self._packed)
+        return IP.unpack_ip(self._packed).top()
 
     @classmethod
     def make_remoteterid(cls, ip: str) -> RemoteTeRid:
