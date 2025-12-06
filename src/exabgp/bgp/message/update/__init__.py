@@ -18,7 +18,7 @@ from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
 from exabgp.bgp.message.update.eor import EOR
-from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.bgp.message.update.nlri import NLRI, NLRICollection, MPNLRICollection
 from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
@@ -28,6 +28,8 @@ __all__ = [
     'UpdateCollection',
     'UpdateWire',
     'EOR',
+    'NLRICollection',
+    'MPNLRICollection',
 ]
 
 # Update message header offsets and constants
