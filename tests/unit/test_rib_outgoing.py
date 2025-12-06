@@ -40,7 +40,7 @@ from exabgp.bgp.message.update.nlri.inet import INET  # noqa: E402
 from exabgp.bgp.message.update.nlri.cidr import CIDR  # noqa: E402
 from exabgp.bgp.message.update.attribute.attributes import Attributes  # noqa: E402
 from exabgp.bgp.message.update.attribute.origin import Origin  # noqa: E402
-from exabgp.rib.change import Change  # noqa: E402
+from exabgp.rib.route import Route  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
 from exabgp.bgp.message import Action  # noqa: E402
 
@@ -50,8 +50,8 @@ from exabgp.bgp.message import Action  # noqa: E402
 # ==============================================================================
 
 
-def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNCE) -> Change:
-    """Create a Change object for testing"""
+def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNCE) -> Route:
+    """Create a Route object for testing"""
     parts = prefix.split('/')
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else (32 if afi == AFI.ipv4 else 128)
@@ -60,11 +60,11 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
     nlri = INET.from_cidr(cidr, afi, SAFI.unicast, action)
     attrs = Attributes()
 
-    return Change(nlri, attrs)
+    return Route(nlri, attrs)
 
 
-def create_change_with_origin(prefix: str, origin: int, action: int = Action.ANNOUNCE) -> Change:
-    """Create a Change with a specific ORIGIN attribute"""
+def create_change_with_origin(prefix: str, origin: int, action: int = Action.ANNOUNCE) -> Route:
+    """Create a Route with a specific ORIGIN attribute"""
     parts = prefix.split('/')
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else 32
@@ -74,7 +74,7 @@ def create_change_with_origin(prefix: str, origin: int, action: int = Action.ANN
     attrs = Attributes()
     attrs[Origin.ID] = Origin.from_int(origin)
 
-    return Change(nlri, attrs)
+    return Route(nlri, attrs)
 
 
 def consume_updates(rib: OutgoingRIB, grouped: bool = False) -> List:

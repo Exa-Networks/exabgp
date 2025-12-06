@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.bgp.message import Action
 
@@ -69,23 +69,23 @@ class AnnounceVPN(ParseAnnounce):
         pass
 
     @staticmethod
-    def check(change: Change, afi: AFI | None) -> bool:
-        if not AnnounceLabel.check(change, afi):
+    def check(route: Route, afi: AFI | None) -> bool:
+        if not AnnounceLabel.check(route, afi):
             return False
 
         # has_rd() confirms the NLRI type has an rd attribute
-        if change.nlri.action == Action.ANNOUNCE and change.nlri.has_rd():
-            if cast(IPVPN, change.nlri).rd is RouteDistinguisher.NORD:
+        if route.nlri.action == Action.ANNOUNCE and route.nlri.has_rd():
+            if cast(IPVPN, route.nlri).rd is RouteDistinguisher.NORD:
                 return False
 
         return True
 
 
 @ParseAnnounce.register('mpls-vpn', 'extend-name', 'ipv4')
-def mpls_vpn_v4(tokeniser: Tokeniser) -> list[Change]:
+def mpls_vpn_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceVPN.schema, AFI.ipv4, SAFI.mpls_vpn, AnnounceVPN.check)
 
 
 @ParseAnnounce.register('mpls-vpn', 'extend-name', 'ipv6')
-def mpls_vpn_v6(tokeniser: Tokeniser) -> list[Change]:
+def mpls_vpn_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceVPN.schema, AFI.ipv6, SAFI.mpls_vpn, AnnounceVPN.check)

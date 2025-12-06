@@ -20,7 +20,7 @@ from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapabi
 from exabgp.bgp.neighbor.session import Session
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPRange, IPSelf
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 from exabgp.util.enumeration import TriState
 
 
@@ -111,10 +111,10 @@ def _serialize_value(obj: Any) -> Any:
             'incoming_ttl': obj.incoming_ttl,
         }
 
-    # Change (route with attributes)
-    if isinstance(obj, Change):
+    # Route (route with attributes)
+    if isinstance(obj, Route):
         return {
-            '_type': 'Change',
+            '_type': 'Route',
             'nlri': str(obj.nlri),
             'attributes': str(obj.attributes),
         }

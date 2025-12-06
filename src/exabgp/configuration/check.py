@@ -40,7 +40,7 @@ from exabgp.logger import option
 # check_neighbor
 
 from exabgp.util.od import od
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 # check_update
 
@@ -115,9 +115,9 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
         for _ in neighbor.rib.outgoing.updates(False):
             pass
 
-        for change1 in neighbor.rib.outgoing.cached_changes():
-            str1 = change1.extensive()
-            packed = list(Update([change1.nlri], [], change1.attributes).messages(negotiated_out))
+        for route1 in neighbor.rib.outgoing.cached_routes():
+            str1 = route1.extensive()
+            packed = list(Update([route1.nlri], [], route1.attributes).messages(negotiated_out))
             pack1 = packed[0]
 
             _packed = packed  # type: list[bytes]
@@ -136,8 +136,8 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                 pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
                 update = Update.unpack_message(pack1s, negotiated_in)
 
-                change2 = Change(update.nlris[0], update.attributes)
-                str2 = change2.extensive()
+                route2 = Route(update.nlris[0], update.attributes)
+                str2 = route2.extensive()
                 pack2 = list(Update([update.nlris[0]], [], update.attributes).messages(negotiated_out))[0]
 
                 _str2 = str2  # type: str
@@ -200,13 +200,13 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                 else:
                     log.debug(lazymsg('encoding.verified status=ok'), 'parser')
 
-                _change1_json: Change = change1
+                _route1_json: Route = route1
 
-                def _log_nlri(_change1_json: Change = _change1_json) -> str:
-                    return 'JSON nlri {}'.format(_change1_json.nlri.json())
+                def _log_nlri(_route1_json: Route = _route1_json) -> str:
+                    return 'JSON nlri {}'.format(_route1_json.nlri.json())
 
-                def _log_attr(_change1_json: Change = _change1_json) -> str:
-                    return 'JSON attr {}'.format(_change1_json.attributes.json())
+                def _log_attr(_route1_json: Route = _route1_json) -> str:
+                    return 'JSON attr {}'.format(_route1_json.attributes.json())
 
                 log.debug(_log_nlri, 'parser')
                 log.debug(_log_attr, 'parser')
@@ -461,13 +461,13 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
 
     log.debug(lazymsg('update.check.complete'), 'parser')  # separator
     for number in range(len(update.nlris)):
-        change = Change(update.nlris[number], update.attributes)
-        _change = change  # type: Change
+        route = Route(update.nlris[number], update.attributes)
+        _route = route  # type: Route
         log.info(
             lazymsg(
                 'update.decoded action={action} extensive={extensive}',
-                action=_change.nlri.action,
-                extensive=_change.extensive(),
+                action=_route.nlri.action,
+                extensive=_route.extensive(),
             ),
             'parser',
         )

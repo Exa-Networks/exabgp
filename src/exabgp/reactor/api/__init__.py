@@ -23,7 +23,7 @@ from exabgp.protocol.family import Family
 
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message import Operational
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.environment import getenv
 from exabgp.logger import log, lazymsg
@@ -115,7 +115,7 @@ class API:
             await reactor.processes.flush_write_queue_async()
             return False
 
-    def api_route(self, command: str, action: str = '') -> list[Change]:
+    def api_route(self, command: str, action: str = '') -> list[Route]:
         if action:
             # Clean format: command is "route 10.0.0.0/24 ...", action passed separately
             # partial() expects line to include "route ..." so use command as-is
@@ -132,10 +132,10 @@ class API:
             return []
 
         self.configuration.scope.to_context()
-        changes = self.configuration.scope.pop_routes()
-        return changes
+        routes = self.configuration.scope.pop_routes()
+        return routes
 
-    def api_announce_v4(self, command: str, action: str = '') -> list[Change]:
+    def api_announce_v4(self, command: str, action: str = '') -> list[Route]:
         if action:
             # Clean format: command is "ipv4 unicast ...", action passed separately
             _, line = command.split(' ', 1)
@@ -152,10 +152,10 @@ class API:
             return []
 
         self.configuration.scope.to_context()
-        changes = self.configuration.scope.pop_routes()
-        return changes
+        routes = self.configuration.scope.pop_routes()
+        return routes
 
-    def api_announce_v6(self, command: str, action: str = '') -> list[Change]:
+    def api_announce_v6(self, command: str, action: str = '') -> list[Route]:
         if action:
             # Clean format: command is "ipv6 unicast ...", action passed separately
             _, line = command.split(' ', 1)
@@ -172,10 +172,10 @@ class API:
             return []
 
         self.configuration.scope.to_context()
-        changes = self.configuration.scope.pop_routes()
-        return changes
+        routes = self.configuration.scope.pop_routes()
+        return routes
 
-    def api_flow(self, command: str, action: str = '') -> list[Change]:
+    def api_flow(self, command: str, action: str = '') -> list[Route]:
         if action:
             # Clean format: command is "flow match ...", action passed separately
             _, line = command.split(' ', 1)
@@ -191,10 +191,10 @@ class API:
             return []
 
         self.configuration.scope.to_context()
-        changes = self.configuration.scope.pop_routes()
-        return changes
+        routes = self.configuration.scope.pop_routes()
+        return routes
 
-    def api_vpls(self, command: str, action: str = '') -> list[Change]:
+    def api_vpls(self, command: str, action: str = '') -> list[Route]:
         if action:
             # Clean format: command is "vpls ...", action passed separately
             # partial() expects line to include "vpls ..." so use command as-is
@@ -208,10 +208,10 @@ class API:
             return []
 
         self.configuration.scope.to_context()
-        changes = self.configuration.scope.pop_routes()
-        return changes
+        routes = self.configuration.scope.pop_routes()
+        return routes
 
-    def api_attributes(self, command: str, peers: list[str], action: str = '') -> list[Change]:
+    def api_attributes(self, command: str, peers: list[str], action: str = '') -> list[Route]:
         if action:
             # Clean format: command is "attribute ...", action passed separately
             # partial() expects line to include "attribute ..." so use command as-is
@@ -228,8 +228,8 @@ class API:
             return []
 
         self.configuration.scope.to_context()
-        changes = self.configuration.scope.pop_routes()
-        return changes
+        routes = self.configuration.scope.pop_routes()
+        return routes
 
     def api_refresh(self, command: str, action: str = '') -> list[RouteRefresh] | None:
         if action:

@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -219,11 +219,11 @@ class AnnounceVPLS(ParseAnnounce):
         return self._check()
 
     @staticmethod
-    def check(change: Change, afi: AFI | None) -> bool:
+    def check(route: Route, afi: AFI | None) -> bool:
         # No check performed :-(
         return True
 
 
 @ParseAnnounce.register('vpls', 'extend-name', 'l2vpn')
-def vpls_v4(tokeniser: Tokeniser) -> list[Change]:
+def vpls_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceVPLS.schema, AFI.l2vpn, SAFI.vpls, AnnounceVPLS.check)

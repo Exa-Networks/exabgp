@@ -29,6 +29,7 @@ from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.listener import Listener
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.timing import LoopTimer
+from exabgp.rib.route import Route
 from exabgp.version import version
 
 
@@ -364,7 +365,7 @@ class Reactor:
             return {}
         return peer.cli_data()
 
-    def neighor_rib(self, peer_name: str, rib_name: str, advertised: bool = False) -> list[Any]:
+    def neighor_rib(self, peer_name: str, rib_name: str, advertised: bool = False) -> list[Route]:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=rib_lookup', p=peer_name), 'reactor')
             return []
@@ -373,7 +374,7 @@ class Reactor:
         if advertised:
             families = peer.proto.negotiated.families if peer.proto else []
         rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming
-        return list(rib.cached_changes(families))
+        return list(rib.cached_routes(families))
 
     def neighbor_rib_resend(self, peer_name: str) -> None:
         if not (peer := self._peers.get(peer_name, None)):

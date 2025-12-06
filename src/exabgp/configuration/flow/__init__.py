@@ -22,7 +22,7 @@ from exabgp.configuration.flow.route import ParseFlowMatch
 from exabgp.configuration.flow.route import ParseFlowThen
 from exabgp.configuration.flow.route import ParseFlowScope
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 from exabgp.bgp.message.update.nlri import Flow
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -85,9 +85,9 @@ class ParseFlow(Section):
 
 
 @ParseFlow.register('route', 'append-route')
-def route(tokeniser: Any) -> list[Change]:
+def route(tokeniser: Any) -> list[Route]:
     flow_nlri = Flow.make_flow()
-    change: Change = Change(flow_nlri, Attributes())
+    flow_route: Route = Route(flow_nlri, Attributes())
 
     while True:
         command: str = tokeniser()
@@ -105,14 +105,14 @@ def route(tokeniser: Any) -> list[Change]:
                 flow_nlri.add(adding)
         elif action == 'attribute-add':
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
-            change.attributes.add(handler(tokeniser))
+            flow_route.attributes.add(handler(tokeniser))
         elif action == 'nexthop-and-attribute':
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
             nexthop: Any
             attribute: Any
             nexthop, attribute = handler(tokeniser)
             flow_nlri.nexthop = nexthop
-            change.attributes.add(attribute)
+            flow_route.attributes.add(attribute)
         elif action == 'nop':
             pass  # yes nothing to do !
         else:
@@ -121,4 +121,4 @@ def route(tokeniser: Any) -> list[Change]:
     if flow_nlri.rd is not RouteDistinguisher.NORD:
         flow_nlri.safi = SAFI.flow_vpn
 
-    return [change]
+    return [flow_route]

@@ -25,7 +25,7 @@ from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.attribute import Attribute
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.schema import Container, Leaf, LeafList, ValueType
@@ -315,8 +315,8 @@ class ParseStaticRoute(Section):
         return True
 
     @staticmethod
-    def check(change: Change) -> bool:
-        nlri: NLRI = change.nlri
+    def check(route: Route) -> bool:
+        nlri: NLRI = route.nlri
         if (
             nlri.nexthop is IP.NoNextHop
             and nlri.action == Action.ANNOUNCE
@@ -327,7 +327,7 @@ class ParseStaticRoute(Section):
         return True
 
     @staticmethod
-    def split(last: Change) -> Iterator[Change]:
+    def split(last: Route) -> Iterator[Route]:
         if Attribute.CODE.INTERNAL_SPLIT not in last.attributes:
             yield last
             return
@@ -385,7 +385,7 @@ class ParseStaticRoute(Section):
                 new_nlri.rd = rd
             # next ip
             ip += increment
-            yield Change(new_nlri, last.attributes)
+            yield Route(new_nlri, last.attributes)
 
     def _split(self) -> None:
         for route in self.scope.pop_routes():

@@ -17,17 +17,17 @@ import re
 from abc import abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, Callable, Generic, TypeVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 if TYPE_CHECKING:
-    from exabgp.configuration.core.parser import Tokeniser
-    from exabgp.configuration.schema import ValueType
-    from exabgp.protocol.ip import IP, IPRange
     from exabgp.bgp.message.open.asn import ASN
-    from exabgp.bgp.message.update.attribute import Origin, MED, LocalPreference, NextHop, NextHopSelf
+    from exabgp.bgp.message.update.attribute import MED, LocalPreference, NextHop, NextHopSelf, Origin
     from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
     from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-    from exabgp.protocol.ip import IPSelf
+    from exabgp.configuration.core.parser import Tokeniser
+    from exabgp.configuration.schema import ValueType
+    from exabgp.protocol.ip import IP, IPRange, IPSelf
+    from exabgp.rib.route import Route
 
 T = TypeVar('T')
 
@@ -351,8 +351,8 @@ class IPAddressValidator(Validator['IP']):
     allow_v6: bool = True
 
     def _parse(self, value: str) -> 'IP':
-        from exabgp.protocol.ip import IP
         from exabgp.protocol.family import AFI
+        from exabgp.protocol.ip import IP
 
         try:
             ip_obj = IP.from_string(value)
@@ -526,8 +526,9 @@ class RouteDistinguisherValidator(Validator['RouteDistinguisher']):
     name: str = 'route-distinguisher'
 
     def _parse(self, value: str) -> 'RouteDistinguisher':
-        from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
         from struct import pack
+
+        from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
         separator = value.find(':')
         if separator <= 0:
@@ -600,8 +601,9 @@ class RouteTargetValidator(Validator['ExtendedCommunity']):
     name: str = 'route-target'
 
     def _parse(self, value: str) -> 'ExtendedCommunity':
-        from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
         from struct import pack
+
+        from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
         # Strip optional 'target:' prefix
         if value.startswith('target:'):
@@ -741,9 +743,9 @@ class NextHopValidator(Validator[tuple['IP | IPSelf', 'NextHop | NextHopSelf']])
     name: str = 'next-hop'
 
     def _parse(self, value: str) -> tuple['IP | IPSelf', 'NextHop | NextHopSelf']:
-        from exabgp.protocol.ip import IP, IPSelf
-        from exabgp.protocol.family import AFI
         from exabgp.bgp.message.update.attribute import NextHop, NextHopSelf
+        from exabgp.protocol.family import AFI
+        from exabgp.protocol.ip import IP, IPSelf
 
         if value.lower() == 'self':
             # Default to IPv4 when AFI context not available
@@ -914,7 +916,8 @@ class NextHopTupleValidator(Validator[tuple[Any, Any, Any]]):
 
     def validate(self, tokeniser: 'Tokeniser') -> tuple[Any, Any, Any]:
         """Parse SAFI and NextHop-AFI tokens, return 3-tuple."""
-        from exabgp.protocol.family import AFI as AFIEnum, SAFI as SAFIEnum
+        from exabgp.protocol.family import AFI as AFIEnum
+        from exabgp.protocol.family import SAFI as SAFIEnum
 
         safi = tokeniser().lower()
         if safi not in self.valid_safis:
@@ -1071,13 +1074,13 @@ class RouteBuilderValidator(Validator[list[Any]]):
         raise NotImplementedError('RouteBuilderValidator uses validate() directly')
 
     def validate(self, tokeniser: 'Tokeniser') -> list[Any]:
-        """Build Change objects from route syntax."""
+        """Build Route objects from route syntax."""
         if self.schema is None:
             raise ValueError('No schema configured')
 
-        from exabgp.rib.change import Change
         from exabgp.bgp.message.update.attribute import Attributes
         from exabgp.bgp.message.update.nlri.cidr import CIDR
+        from exabgp.rib.route import Route
 
         # Create NLRI and Change
         if self.schema.nlri_factory is None:
@@ -1095,7 +1098,7 @@ class RouteBuilderValidator(Validator[list[Any]]):
             # Non-prefix route (VPLS): factory returns pre-constructed NLRI
             nlri = self.schema.nlri_factory()
 
-        change = Change(nlri, Attributes())
+        route = Route(nlri, Attributes())
 
         # Process sub-commands from schema
         from exabgp.configuration.schema import Leaf, LeafList
@@ -1119,37 +1122,37 @@ class RouteBuilderValidator(Validator[list[Any]]):
                 action = child.action
 
                 # Apply action
-                self._apply_action(change, command, action, value)
+                self._apply_action(route, command, action, value)
 
-        return [change]
+        return [route]
 
-    def _apply_action(self, change: Any, command: str, action: str, value: Any) -> None:
-        """Apply parsed value to Change object based on action."""
+    def _apply_action(self, route: 'Route', command: str, action: str, value: Any) -> None:
+        """Apply parsed value to Route object based on action."""
         if action == 'attribute-add':
-            change.attributes.add(value)
+            route.attributes.add(value)
         elif action == 'nexthop-and-attribute':
             ip, attribute = value
             if ip:
-                change.nlri.nexthop = ip
+                route.nlri.nexthop = ip
             if attribute:
-                change.attributes.add(attribute)
+                route.attributes.add(attribute)
         elif action == 'nlri-set':
             field_name = self.schema.assign.get(command, command)
-            change.nlri.assign(field_name, value)
+            route.nlri.assign(field_name, value)
         elif action == 'nlri-add':
             # For FlowSpec: value is a list of components to add
             if isinstance(value, (list, tuple)):
                 for item in value:
-                    change.nlri.add(item)
+                    route.nlri.add(item)
             else:
-                change.nlri.add(value)
+                route.nlri.add(value)
         elif action == 'nlri-nexthop':
-            change.nlri.nexthop = value
+            route.nlri.nexthop = value
         elif action == 'nop':
             pass  # Intentionally do nothing (e.g., FlowSpec 'accept')
         elif action == 'set-command':
-            # Store as attribute on change for later processing
-            setattr(change, command.replace('-', '_'), value)
+            # Store as attribute on route for later processing
+            setattr(route, command.replace('-', '_'), value)
         else:
             raise ValueError(f"Unknown action '{action}' for command '{command}'")
 
@@ -1159,7 +1162,7 @@ class RouteBuilderValidator(Validator[list[Any]]):
 
 @dataclass
 class TypeSelectorValidator(Validator[list[Any]]):
-    """Builds Change objects from type-selector route syntax.
+    """Builds Route objects from type-selector route syntax.
 
     Used by TypeSelectorBuilder for MUP and MVPN routes where the first token
     selects the NLRI type/factory, which parses NLRI-specific fields,
@@ -1183,12 +1186,12 @@ class TypeSelectorValidator(Validator[list[Any]]):
         raise NotImplementedError('TypeSelectorValidator uses validate() directly')
 
     def validate(self, tokeniser: 'Tokeniser') -> list[Any]:
-        """Build Change objects from type-selector route syntax."""
+        """Build Route objects from type-selector route syntax."""
         if self.schema is None:
             raise ValueError('No schema configured')
 
-        from exabgp.rib.change import Change
         from exabgp.bgp.message.update.attribute import Attributes
+        from exabgp.rib.route import Route
 
         # First token selects the type/factory
         route_type = tokeniser()
@@ -1207,7 +1210,7 @@ class TypeSelectorValidator(Validator[list[Any]]):
         else:
             nlri = factory(tokeniser, self.afi)
 
-        change = Change(nlri, Attributes())
+        route = Route(nlri, Attributes())
 
         # Process remaining tokens as attributes
         from exabgp.configuration.schema import Leaf, LeafList
@@ -1240,20 +1243,20 @@ class TypeSelectorValidator(Validator[list[Any]]):
                     value = validator.validate(tokeniser)
 
                 # Apply action
-                self._apply_action(change, command, action, value, used_afi)
+                self._apply_action(route, command, action, value, used_afi)
 
-        return [change]
+        return [route]
 
-    def _apply_action(self, change: Any, command: str, action: str, value: Any, used_afi: bool = False) -> None:
-        """Apply parsed value to Change object based on action."""
+    def _apply_action(self, route: Route, command: str, action: str, value: Any, used_afi: bool = False) -> None:
+        """Apply parsed value to Route object based on action."""
         from exabgp.protocol.family import AFI
 
         if action == 'attribute-add':
-            change.attributes.add(value)
+            route.attributes.add(value)
         elif action == 'nexthop-and-attribute':
             ip, attribute = value
             if ip:
-                change.nlri.nexthop = ip
+                route.nlri.nexthop = ip
             # Only skip NextHop attribute when:
             # 1. The validator used AFI (accepts_afi=True), AND
             # 2. The AFI is IPv6 (next-hop goes in MP_REACH_NLRI only)
@@ -1262,11 +1265,11 @@ class TypeSelectorValidator(Validator[list[Any]]):
                 if used_afi and self.afi == AFI.ipv6:
                     pass  # Skip NextHop attr for AFI-aware validators with IPv6
                 else:
-                    change.attributes.add(attribute)
+                    route.attributes.add(attribute)
         elif action == 'nlri-set':
             assign = getattr(self.schema, 'assign', {})
             field_name = assign.get(command, command)
-            change.nlri.assign(field_name, value)
+            route.nlri.assign(field_name, value)
         elif action == 'nop':
             pass
         else:

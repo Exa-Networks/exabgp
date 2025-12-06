@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.bgp.message import Action
 
@@ -31,8 +31,8 @@ def _build_route(
     schema: 'RouteBuilder',
     afi: AFI,
     safi: SAFI,
-    check_func: Callable[[Change, AFI | None], bool] | None = None,
-) -> list[Change]:
+    check_func: Callable[[Route, AFI | None], bool] | None = None,
+) -> list[Route]:
     """Build route Change objects using schema-driven validation.
 
     This replaces the custom ip(), ip_label(), ip_vpn(), etc. functions
@@ -60,14 +60,14 @@ def _build_route(
         action_type=action_type,
     )
 
-    changes = validator.validate(tokeniser)
+    routes = validator.validate(tokeniser)
 
     if check_func:
-        for change in changes:
-            if not check_func(change, afi):
+        for route in routes:
+            if not check_func(route, afi):
                 raise ValueError('invalid route announcement (check failed)')
 
-    return changes
+    return routes
 
 
 def _build_type_selector_route(
@@ -75,9 +75,9 @@ def _build_type_selector_route(
     schema: 'TypeSelectorBuilder',
     afi: AFI,
     safi: SAFI,
-    check_func: Callable[[Change, AFI | None], bool] | None = None,
-) -> list[Change]:
-    """Build route Change objects using type-selector validation.
+    check_func: Callable[[Route, AFI | None], bool] | None = None,
+) -> list[Route]:
+    """Build Route objects using type-selector validation.
 
     This replaces the custom mup() and mvpn_route() functions with
     schema-driven implementation. First token selects the NLRI type/factory,
@@ -88,10 +88,10 @@ def _build_type_selector_route(
         schema: TypeSelectorBuilder schema defining valid types and attributes
         afi: Address family identifier
         safi: Subsequent address family identifier
-        check_func: Optional validation function for the Change object
+        check_func: Optional validation function for the Route object
 
     Returns:
-        List containing the built Change object
+        List containing the built Route object
 
     Raises:
         ValueError: If route fails validation check
@@ -105,11 +105,11 @@ def _build_type_selector_route(
         action_type=action_type,
     )
 
-    changes = validator.validate(tokeniser)
+    routes = validator.validate(tokeniser)
 
     if check_func:
-        for change in changes:
-            if not check_func(change, afi):
+        for route in routes:
+            if not check_func(route, afi):
                 raise ValueError('invalid route announcement (check failed)')
 
-    return changes
+    return routes

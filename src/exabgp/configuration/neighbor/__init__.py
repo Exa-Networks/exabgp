@@ -436,33 +436,33 @@ class ParseNeighbor(Section):
     def _post_routes(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         # NOTE: this may modify change but does not matter as want to modified
 
-        neighbor.changes = []
-        for change in self.scope.pop_routes():
-            # remove_self may well have side effects on change
-            neighbor.changes.append(neighbor.remove_self(change))
+        neighbor.routes = []
+        for route in self.scope.pop_routes():
+            # remove_self may well have side effects on route
+            neighbor.routes.append(neighbor.remove_self(route))
 
         # old format
         for section in ('static', 'l2vpn', 'flow'):
             routes = local.get(section, {}).get('routes', [])
             for route in routes:
                 route.nlri.action = Action.ANNOUNCE
-                # remove_self may well have side effects on change
-                neighbor.changes.append(neighbor.remove_self(route))
+                # remove_self may well have side effects on route
+                neighbor.routes.append(neighbor.remove_self(route))
 
         routes = local.get('routes', [])
         for route in routes:
             route.nlri.action = Action.ANNOUNCE
-            # remove_self may well have side effects on change
-            neighbor.changes.append(neighbor.remove_self(route))
+            # remove_self may well have side effects on route
+            neighbor.routes.append(neighbor.remove_self(route))
 
     def _init_neighbor(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         families = neighbor.families()
-        for change in neighbor.changes:
-            # remove_self may well have side effects on change
-            change = neighbor.remove_self(change)
-            if change.nlri.family().afi_safi() in families and neighbor.rib is not None:
+        for route in neighbor.routes:
+            # remove_self may well have side effects on route
+            route = neighbor.remove_self(route)
+            if route.nlri.family().afi_safi() in families and neighbor.rib is not None:
                 # This add the family to neighbor.families()
-                neighbor.rib.outgoing.add_to_rib_watchdog(change)
+                neighbor.rib.outgoing.add_to_rib_watchdog(route)
 
         for message in local.get('operational', {}).get('routes', []):
             if message.family().afi_safi() in families:
@@ -512,12 +512,12 @@ class ParseNeighbor(Section):
             return self.error.set(md5_error)
 
         # check we are not trying to announce routes without the right MP announcement
-        for change in neighbor.changes:
-            family = change.nlri.family().afi_safi()
+        for route in neighbor.routes:
+            family = route.nlri.family().afi_safi()
             if family not in families and family != (AFI.ipv4, SAFI.unicast):
                 return self.error.set(
                     'Trying to announce a route of type {},{} when we are not announcing the family to our peer'.format(
-                        *change.nlri.family().afi_safi()
+                        *route.nlri.family().afi_safi()
                     ),
                 )
 

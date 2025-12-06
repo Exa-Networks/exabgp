@@ -11,7 +11,7 @@ from typing import Iterator as TypingIterator, cast
 from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message import Action
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.protocol.family import AFI
 from exabgp.configuration.core import Section
@@ -43,7 +43,7 @@ class ParseAnnounce(Section):
         return True
 
     @staticmethod
-    def split(last: Change) -> TypingIterator[Change]:
+    def split(last: Route) -> TypingIterator[Route]:
         if Attribute.CODE.INTERNAL_SPLIT not in last.attributes:
             yield last
             return
@@ -88,7 +88,7 @@ class ParseAnnounce(Section):
             nlri.path_info = path_info
             # next ip
             ip += increment
-            yield Change(nlri, last.attributes)
+            yield Route(nlri, last.attributes)
 
     def _split(self) -> None:
         for route in self.scope.pop_routes():
@@ -101,7 +101,7 @@ class ParseAnnounce(Section):
         return True
 
     @staticmethod
-    def check(change: Change, afi: AFI | None) -> bool:
+    def check(route: Route, afi: AFI | None) -> bool:
         raise RuntimeError('need to be implemented by subclasses')
 
 

@@ -86,11 +86,11 @@ def _show_adjrib_callback(
         for key in peers:
             routes = reactor.neighor_rib(key, rib_name, advertised)
             while routes:
-                changes, routes = routes[:lines_per_yield], routes[lines_per_yield:]
+                extracted, routes = routes[:lines_per_yield], routes[lines_per_yield:]
                 if use_json:
-                    to_json(key, changes)
+                    to_json(key, extracted)
                 else:
-                    to_text(key, changes)
+                    to_text(key, extracted)
                 await asyncio.sleep(0)  # Yield control after each chunk (matches original yield True)
         await reactor.processes.answer_done_async(service)
 

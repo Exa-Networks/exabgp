@@ -40,7 +40,7 @@ from exabgp.protocol.family import AFI, SAFI  # noqa: E402
 from exabgp.bgp.message.update.nlri.inet import INET  # noqa: E402
 from exabgp.bgp.message.update.nlri.cidr import CIDR  # noqa: E402
 from exabgp.bgp.message.update.attribute.attributes import Attributes  # noqa: E402
-from exabgp.rib.change import Change  # noqa: E402
+from exabgp.rib.route import Route  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
 from exabgp.bgp.message import Action  # noqa: E402
 
@@ -50,8 +50,8 @@ from exabgp.bgp.message import Action  # noqa: E402
 # ==============================================================================
 
 
-def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNCE) -> Change:
-    """Create a Change object for testing"""
+def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNCE) -> Route:
+    """Create a Route object for testing"""
     # Parse prefix
     parts = prefix.split('/')
     ip_str = parts[0]
@@ -64,17 +64,17 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
     # Create attributes
     attrs = Attributes()
 
-    return Change(nlri, attrs)
+    return Route(nlri, attrs)
 
 
-def create_watchdog_change(prefix: str, watchdog: str, action: int = Action.ANNOUNCE) -> Change:
-    """Create a Change with watchdog attribute"""
-    change = create_change(prefix, action=action)
-    # Watchdog is stored separately, not in the change itself
-    return change
+def create_watchdog_route(prefix: str, watchdog: str, action: int = Action.ANNOUNCE) -> Route:
+    """Create a Route with watchdog attribute"""
+    route = create_change(prefix, action=action)
+    # Watchdog is stored separately, not in the route itself
+    return route
 
 
-def add_route_to_rib(rib: OutgoingRIB, prefix: str, afi: AFI = AFI.ipv4) -> Change:
+def add_route_to_rib(rib: OutgoingRIB, prefix: str, afi: AFI = AFI.ipv4) -> Route:
     """Add a route to the RIB and return the change"""
     change = create_change(prefix, afi=afi)
     rib.add_to_rib(change)
@@ -123,9 +123,9 @@ def test_delete_cached_family_no_crash():
     assert (AFI.ipv6, SAFI.unicast) not in rib._seen
 
 
-def test_cached_changes_iteration_safety():
+def test_cached_routes_iteration_safety():
     """
-    Critical Bug #2: cached_changes() doesn't snapshot .values()
+    Critical Bug #2: cached_routes() doesn't snapshot .values()
 
     Before fix: Potential RuntimeError if cache modified during iteration
     After fix: Iterator should be safe from concurrent modifications
@@ -141,7 +141,7 @@ def test_cached_changes_iteration_safety():
     consume_updates(rib)
 
     # Start iterating cached routes
-    changes_iter = rib.cached_changes([(AFI.ipv4, SAFI.unicast)])
+    changes_iter = rib.cached_routes([(AFI.ipv4, SAFI.unicast)])
 
     # Consume half
     changes = []
@@ -181,7 +181,7 @@ async def test_resend_during_updates_iteration():
     consume_updates(rib)
 
     # Verify route is cached
-    cached = list(rib.cached_changes(None))
+    cached = list(rib.cached_routes(None))
     assert len(cached) == 1
 
     # Add more routes to pending queue
@@ -204,7 +204,7 @@ async def test_resend_during_updates_iteration():
     # - Pending routes cleared and moved to snapshot
     # - _refresh_changes is empty (cleared by updates() initialization)
     assert len(rib._new_nlri) == 0
-    assert len(rib._refresh_changes) == 0
+    assert len(rib._refresh_routes) == 0
 
     # Simulate: API calls resend() while peer is still sending
     # This should append to NEW empty _refresh_changes, not affect current iteration
@@ -213,8 +213,8 @@ async def test_resend_during_updates_iteration():
     # After resend(), _refresh_changes should have ALL cached routes
     # Cache has: .1 (from first consume), .2 .3 .4 (from updates() which calls update_cache)
     # Note: updates() calls update_cache for each route as it's yielded
-    cached_count = len(list(rib.cached_changes(None)))
-    assert len(rib._refresh_changes) == cached_count
+    cached_count = len(list(rib.cached_routes(None)))
+    assert len(rib._refresh_routes) == cached_count
 
     # Consume remaining from current updates_gen
     # Should get the other 2 pending routes (total 3 including update1)
@@ -275,7 +275,7 @@ async def test_reset_during_updates():
     # RIB should be in consistent state after reset
     assert not rib.pending()
     assert len(rib._new_nlri) == 0
-    assert len(rib._refresh_changes) == 0
+    assert len(rib._refresh_routes) == 0
 
 
 @pytest.mark.asyncio
@@ -382,7 +382,7 @@ def test_empty_rib_operations():
     assert not rib.pending()
 
     # Cached changes on empty RIB
-    assert list(rib.cached_changes(None)) == []
+    assert list(rib.cached_routes(None)) == []
 
     # Withdraw on empty RIB
     rib.withdraw()
@@ -418,7 +418,7 @@ def test_single_route_rib():
     assert not rib.pending()
 
     # Verify cached
-    cached = list(rib.cached_changes(None))
+    cached = list(rib.cached_routes(None))
     assert len(cached) == 1
 
     # Resend single route
@@ -477,7 +477,7 @@ def test_large_rib_stress():
     assert elapsed_consume < 5.0
 
     # Verify all cached
-    cached = list(rib.cached_changes(None))
+    cached = list(rib.cached_routes(None))
     assert len(cached) == 10000
 
     # Test resend performance
@@ -520,7 +520,7 @@ def test_rapid_add_remove_cycles():
     assert not rib.pending()
 
     # Cache should have the route marked as withdrawn
-    cached = list(rib.cached_changes(None))
+    cached = list(rib.cached_routes(None))
     # Either empty (withdrawn) or has announce from last cycle
     assert len(cached) <= 1
 
@@ -646,7 +646,7 @@ async def test_flush_interleaving():
 
     # RIB should be consistent
     # _refresh_changes may have multiple copies of routes
-    assert isinstance(rib._refresh_changes, list)
+    assert isinstance(rib._refresh_routes, list)
 
     # Should be pending
     assert rib.pending()
@@ -656,7 +656,7 @@ async def test_flush_interleaving():
     assert len(updates) >= 1
 
     # Should be empty after consumption
-    assert len(rib._refresh_changes) == 0
+    assert len(rib._refresh_routes) == 0
 
 
 # ==============================================================================
@@ -767,7 +767,7 @@ def test_rib_size_bounds():
     consume_updates(rib)
 
     # All routes cached (no limit)
-    cached = list(rib.cached_changes(None))
+    cached = list(rib.cached_routes(None))
     assert len(cached) == 1000
 
     # Documents current behavior: unbounded growth
@@ -821,7 +821,7 @@ def test_resend_with_enhanced_refresh():
 
     # Should have both _refresh_families and _refresh_changes populated
     assert len(rib._refresh_families) == 1
-    assert len(rib._refresh_changes) == 1
+    assert len(rib._refresh_routes) == 1
 
     # Create updates generator
     # NOTE: Generator function doesn't execute until first next() call
@@ -832,14 +832,14 @@ def test_resend_with_enhanced_refresh():
 
     # At this point (after first next()), both should be cleared (moved to snapshots)
     assert len(rib._refresh_families) == 0
-    assert len(rib._refresh_changes) == 0
+    assert len(rib._refresh_routes) == 0
 
     # Call resend again during iteration (with different family to distinguish)
     rib.resend(enhanced_refresh=True, family=(AFI.ipv4, SAFI.unicast))
 
     # New resend should populate the fresh lists
     assert len(rib._refresh_families) == 1
-    assert len(rib._refresh_changes) == 1
+    assert len(rib._refresh_routes) == 1
 
     # Consume rest of current iteration
     remaining = list(updates_gen)

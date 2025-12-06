@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from exabgp.protocol.ip import IP
 
-from exabgp.rib.change import Change
+from exabgp.rib.route import Route
 
 from exabgp.bgp.message import Action
 
@@ -154,12 +154,12 @@ class AnnounceIP(ParseAnnounce):
         return ParseAnnounce.post(self) and self._check()
 
     @staticmethod
-    def check(change: Change, afi: AFI | None) -> bool:
+    def check(route: Route, afi: AFI | None) -> bool:
         if (
-            change.nlri.action == Action.ANNOUNCE
-            and change.nlri.nexthop is IP.NoNextHop
-            and change.nlri.afi == afi
-            and change.nlri.safi in (SAFI.unicast, SAFI.multicast)
+            route.nlri.action == Action.ANNOUNCE
+            and route.nlri.nexthop is IP.NoNextHop
+            and route.nlri.afi == afi
+            and route.nlri.safi in (SAFI.unicast, SAFI.multicast)
         ):
             return False
 
@@ -167,10 +167,10 @@ class AnnounceIP(ParseAnnounce):
 
 
 @ParseAnnounce.register('multicast', 'extend-name', 'ipv4')
-def multicast_v4(tokeniser: Tokeniser) -> list[Change]:
+def multicast_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceIP.schema, AFI.ipv4, SAFI.multicast)
 
 
 @ParseAnnounce.register('multicast', 'extend-name', 'ipv6')
-def multicast_v6(tokeniser: Tokeniser) -> list[Change]:
+def multicast_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceIP.schema, AFI.ipv6, SAFI.multicast)
