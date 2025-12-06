@@ -190,10 +190,11 @@ class OutgoingRIB(Cache):
         watchdog = route.attributes.watchdog()
         withdraw = route.attributes.withdraw()
         if watchdog:
+            name = watchdog.name
             if withdraw:
-                self._watchdog.setdefault(watchdog, {}).setdefault('-', {})[route.index()] = route
+                self._watchdog.setdefault(name, {}).setdefault('-', {})[route.index()] = route
                 return True
-            self._watchdog.setdefault(watchdog, {}).setdefault('+', {})[route.index()] = route
+            self._watchdog.setdefault(name, {}).setdefault('+', {})[route.index()] = route
         self.add_to_rib(route)
         return True
 

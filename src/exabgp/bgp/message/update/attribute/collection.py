@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, SET, AS2Path
 from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard, TreatAsWithdraw
+from exabgp.bgp.message.update.attribute.watchdog import Watchdog, NoWatchdog
 
 # For bagpipe
 from exabgp.bgp.message.update.attribute.community import Communities
@@ -197,9 +198,11 @@ class AttributeCollection(dict):
     def remove(self, attrid: int) -> None:
         self.pop(attrid)
 
-    def watchdog(self) -> Attribute | None:
-        # Dict stores Attribute values
-        return cast(Attribute | None, self.pop(Attribute.CODE.INTERNAL_WATCHDOG, None))
+    def watchdog(self) -> Watchdog:
+        value = self.pop(Attribute.CODE.INTERNAL_WATCHDOG, None)
+        if value is None:
+            return NoWatchdog
+        return Watchdog(str(value))
 
     def withdraw(self) -> bool:
         return self.pop(Attribute.CODE.INTERNAL_WITHDRAW, None) is not None
