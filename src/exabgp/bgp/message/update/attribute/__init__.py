@@ -13,7 +13,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.attributes import Attributes
+from exabgp.bgp.message.update.attribute.attributes import Attributes, AttributeSet, AttributesWire
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
@@ -48,6 +48,8 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 __all__ = [
     'Attribute',
     'Attributes',
+    'AttributeSet',
+    'AttributesWire',
     'GenericAttribute',
     'Origin',
     'ASPath',

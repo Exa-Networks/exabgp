@@ -527,3 +527,91 @@ class Attributes(dict):
             return True
         except KeyError:
             return False
+
+
+# Alias: AttributeSet is the semantic container (current Attributes implementation)
+# This alias enables gradual migration to the new naming convention
+# In future: Attributes will be wire container (bytes-first), AttributeSet stays semantic
+AttributeSet = Attributes
+
+
+# ======================================================================= AttributesWire
+#
+# Wire-format path attributes container (bytes-first pattern).
+# This class stores the raw packed bytes as the canonical representation.
+# Parsing to semantic objects (AttributeSet/Attributes) is lazy.
+
+
+class AttributesWire:
+    """Wire-format path attributes container (bytes-first).
+
+    Stores raw packed path attributes bytes as the canonical representation.
+    Provides lazy parsing to semantic AttributeSet when needed.
+
+    This follows the "packed-bytes-first" pattern used by individual
+    Attribute classes - the wire format is stored directly, and semantic
+    values are derived via properties.
+    """
+
+    def __init__(self, packed: bytes, context: 'Negotiated | None' = None) -> None:
+        """Create AttributesWire from packed bytes.
+
+        Args:
+            packed: Raw path attributes bytes (concatenated TLV attributes).
+            context: Optional negotiated context for parsing.
+        """
+        self._packed = packed
+        self._context = context
+        self._parsed: Attributes | None = None
+
+    @classmethod
+    def from_set(cls, attr_set: Attributes, negotiated: 'Negotiated') -> 'AttributesWire':
+        """Create AttributesWire from semantic AttributeSet.
+
+        Args:
+            attr_set: Semantic attributes container.
+            negotiated: BGP session negotiated parameters.
+
+        Returns:
+            New AttributesWire with packed bytes.
+        """
+        packed = attr_set.pack_attribute(negotiated)
+        return cls(packed, negotiated)
+
+    @property
+    def packed(self) -> bytes:
+        """Raw packed path attributes bytes."""
+        return self._packed
+
+    def unpack_attributes(self, negotiated: 'Negotiated | None' = None) -> Attributes:
+        """Lazy-unpack to semantic Attributes/AttributeSet.
+
+        Args:
+            negotiated: BGP session negotiated parameters.
+                       If not provided, uses stored context.
+
+        Returns:
+            Unpacked Attributes (semantic container).
+        """
+        if self._parsed is None:
+            ctx = negotiated or self._context
+            if ctx is None:
+                raise RuntimeError('AttributesWire.unpack_attributes() requires negotiated context')
+            self._parsed = Attributes.unpack(self._packed, ctx)
+        return self._parsed
+
+    def __getitem__(self, code: int) -> Attribute:
+        """Get attribute by code (requires prior unpack_attributes() or context)."""
+        if self._parsed is None and self._context is not None:
+            self.unpack_attributes(self._context)
+        if self._parsed is None:
+            raise RuntimeError('Must call unpack_attributes(negotiated) before accessing attributes')
+        return self._parsed[code]
+
+    def has(self, code: int) -> bool:
+        """Check if attribute exists (requires prior unpack_attributes() or context)."""
+        if self._parsed is None and self._context is not None:
+            self.unpack_attributes(self._context)
+        if self._parsed is None:
+            raise RuntimeError('Must call unpack_attributes(negotiated) before checking attributes')
+        return self._parsed.has(code)
