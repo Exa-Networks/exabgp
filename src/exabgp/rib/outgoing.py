@@ -271,7 +271,8 @@ class OutgoingRIB(Cache):
         if isinstance(attributes_or_force, bool):
             # Legacy signature: add_to_rib(change, force=False)
             change = change_or_nlri  # type: ignore[assignment]
-            force = attributes_or_force
+            # Support both positional and keyword force: add_to_rib(change, True) or add_to_rib(change, force=True)
+            force = attributes_or_force or force
         else:
             # New signature: add_to_rib(nlri, attributes, force=False)
             nlri = change_or_nlri  # type: ignore[assignment]
