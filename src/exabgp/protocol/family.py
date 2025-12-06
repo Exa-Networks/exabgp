@@ -336,12 +336,28 @@ class Family:
         (AFI.bgpls, SAFI.bgp_ls): ((4, 16), 0),
     }
 
+    # Class-level AFI/SAFI for single-family types (None = use instance storage)
+    _class_afi: ClassVar[AFI | None] = None
+    _class_safi: ClassVar[SAFI | None] = None
+
+    # Type hints for afi/safi - may be instance attributes or properties
     afi: AFI
     safi: SAFI
 
     def __init__(self, afi: int, safi: int) -> None:
-        self.afi = AFI.from_int(afi)
-        self.safi = SAFI.from_int(safi)
+        """Initialize Family with AFI and SAFI.
+
+        If the subclass defines _class_afi/_class_safi, those are used via
+        property accessors instead of setting instance attributes. This supports:
+        - Multi-family NLRI types that need instance storage for AFI
+        - Single-family NLRI types that use class-level constants
+        """
+        # Only set instance afi if no class-level afi defined
+        if self._class_afi is None:
+            self.afi = AFI.from_int(afi)
+        # Only set instance safi if no class-level safi defined
+        if self._class_safi is None:
+            self.safi = SAFI.from_int(safi)
 
     def has_label(self) -> bool:
         return self.safi.has_label()
