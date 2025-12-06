@@ -37,7 +37,7 @@ from exabgp.reactor.network.outgoing import Outgoing
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
 
-_UPDATE = Update([], Attributes())
+_UPDATE = Update([], [], Attributes())
 _OPERATIONAL = Operational(0x00)
 
 

@@ -157,7 +157,7 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
                 sys.stdout.write('\n')
             else:
                 # Output full UPDATE message(s)
-                for packed in Update([change.nlri], change.attributes).messages(negotiated_out):
+                for packed in Update([change.nlri], [], change.attributes).messages(negotiated_out):
                     if cmdarg.no_header:
                         # Skip 19-byte BGP header (16 marker + 2 length + 1 type)
                         packed = packed[19:]
