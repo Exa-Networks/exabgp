@@ -22,7 +22,7 @@ from exabgp.environment import getenv
 from exabgp.environment import getconf
 
 from exabgp.configuration.check import _negotiated
-from exabgp.bgp.message import Update
+from exabgp.bgp.message import UpdateData
 
 from exabgp.logger import log
 
@@ -157,7 +157,7 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
                 sys.stdout.write('\n')
             else:
                 # Output full UPDATE message(s)
-                for packed in Update([route.nlri], [], route.attributes).messages(negotiated_out):
+                for packed in UpdateData([route.nlri], [], route.attributes).messages(negotiated_out):
                     if cmdarg.no_header:
                         # Skip 19-byte BGP header (16 marker + 2 length + 1 type)
                         packed = packed[19:]

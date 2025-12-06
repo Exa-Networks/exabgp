@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.open import Open
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.refresh import RouteRefresh
     from exabgp.bgp.message.operational import OperationalFamily
     from exabgp.bgp.fsm import FSM
@@ -108,7 +108,7 @@ class Text:
         self,
         neighbor: 'Neighbor',
         direction: str,
-        update: 'Update',
+        update: 'UpdateData',
         header: bytes,
         body: bytes,
         negotiated: 'Negotiated',

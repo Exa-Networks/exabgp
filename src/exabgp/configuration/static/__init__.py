@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.attribute import Attributes
+from exabgp.bgp.message.update.attribute import AttributeSet
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, Label
 from exabgp.configuration.announce.label import AnnounceLabel
 from exabgp.configuration.announce.path import AnnouncePath
@@ -77,7 +77,7 @@ def route(tokeniser: Any) -> list[Route]:
         nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
         check = AnnouncePath.check
 
-    static_route = Route(nlri, Attributes())
+    static_route = Route(nlri, AttributeSet())
 
     while True:
         command = tokeniser()
@@ -132,7 +132,7 @@ def attributes(tokeniser: Any) -> list[Route]:
         nlri = Label.from_cidr(cidr, IP.toafi(ipmask.top()), SAFI.nlri_mpls, nlri_action)
     else:
         nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
-    attr = Attributes()
+    attr = AttributeSet()
 
     labels: Any = None
     rd: Any = None

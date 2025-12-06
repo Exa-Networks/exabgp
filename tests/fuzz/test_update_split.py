@@ -37,11 +37,11 @@ def test_update_split_with_random_data(data: bytes) -> None:
 
     The split() method should either parse successfully or raise Notify(3, 1).
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.notification import Notify
 
     try:
-        withdrawn, attributes, announced = Update.split(data)
+        withdrawn, attributes, announced = UpdateData.split(data)
 
         # If it parses successfully, verify the components
         assert isinstance(withdrawn, bytes)
@@ -71,7 +71,7 @@ def test_update_split_withdrawn_length_fuzzing(withdrawn_len: int) -> None:
 
     Tests validation of withdrawn routes length against actual data.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.notification import Notify
 
     # Create UPDATE with specific withdrawn length claim
@@ -85,7 +85,7 @@ def test_update_split_withdrawn_length_fuzzing(withdrawn_len: int) -> None:
     )
 
     try:
-        withdrawn, attributes, announced = Update.split(data)
+        withdrawn, attributes, announced = UpdateData.split(data)
 
         # Should only succeed if withdrawn_len == 10
         assert withdrawn_len == 10, f'Should have failed with length {withdrawn_len} != 10'
@@ -107,7 +107,7 @@ def test_update_split_attr_length_fuzzing(attr_len: int) -> None:
 
     Tests validation of path attributes length against actual data.
     """
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.notification import Notify
 
     # Create UPDATE with specific attr length claim
@@ -122,7 +122,7 @@ def test_update_split_attr_length_fuzzing(attr_len: int) -> None:
     )
 
     try:
-        withdrawn, attributes, announced = Update.split(data)
+        withdrawn, attributes, announced = UpdateData.split(data)
 
         # Should only succeed if attr_len matches or is less than actual data
         # If attr_len < 15, remaining bytes become NLRI
@@ -143,12 +143,12 @@ def test_update_split_attr_length_fuzzing(attr_len: int) -> None:
 @pytest.mark.fuzz
 def test_update_split_valid_empty_update() -> None:
     """Test minimal valid UPDATE (EOR marker)."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
 
     # Empty UPDATE: no withdrawals, no attributes, no NLRI
     data = b'\x00\x00\x00\x00'  # 4 bytes
 
-    withdrawn, attributes, announced = Update.split(data)
+    withdrawn, attributes, announced = UpdateData.split(data)
 
     assert withdrawn == b''
     assert attributes == b''
@@ -158,7 +158,7 @@ def test_update_split_valid_empty_update() -> None:
 @pytest.mark.fuzz
 def test_update_split_with_withdrawals_only() -> None:
     """Test UPDATE with only withdrawals."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
 
     # Withdrawal: 192.0.2.0/24
     prefix = create_ipv4_prefix('192.0.2.0', 24)
@@ -169,7 +169,7 @@ def test_update_split_with_withdrawals_only() -> None:
         nlri=b'',
     )
 
-    withdrawn, attributes, announced = Update.split(data)
+    withdrawn, attributes, announced = UpdateData.split(data)
 
     assert len(withdrawn) == len(prefix)
     assert len(attributes) == 0
@@ -179,7 +179,7 @@ def test_update_split_with_withdrawals_only() -> None:
 @pytest.mark.fuzz
 def test_update_split_with_attributes_and_nlri() -> None:
     """Test UPDATE with attributes and NLRI."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
 
     # Some dummy attributes (not validated by split())
     attrs = b'\x40\x01\x01\x00'  # ORIGIN attribute
@@ -193,7 +193,7 @@ def test_update_split_with_attributes_and_nlri() -> None:
         nlri=nlri,
     )
 
-    withdrawn, attributes, announced = Update.split(data)
+    withdrawn, attributes, announced = UpdateData.split(data)
 
     assert len(withdrawn) == 0
     assert len(attributes) == len(attrs)
@@ -205,7 +205,7 @@ def test_update_split_with_attributes_and_nlri() -> None:
 @settings(deadline=None)
 def test_update_split_truncation(truncate_at: int) -> None:
     """Test UPDATE truncated at various positions."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.notification import Notify
 
     # Create a valid UPDATE with known size
@@ -223,7 +223,7 @@ def test_update_split_truncation(truncate_at: int) -> None:
     data = valid_update[:truncate_at]
 
     try:
-        withdrawn, attributes, announced = Update.split(data)
+        withdrawn, attributes, announced = UpdateData.split(data)
 
         # If it succeeds, verify it's either:
         # 1. Complete message
@@ -246,7 +246,7 @@ def test_update_split_truncation(truncate_at: int) -> None:
 @pytest.mark.fuzz
 def test_update_split_length_one_byte_too_short() -> None:
     """Test withdrawn length claiming 1 byte too few."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.notification import Notify
 
     # Actual data: 10 bytes, claim: 9 bytes
@@ -259,7 +259,7 @@ def test_update_split_length_one_byte_too_short() -> None:
     )
 
     with pytest.raises(Notify) as exc_info:
-        Update.split(data)
+        UpdateData.split(data)
 
     assert exc_info.value.code == 3
     assert exc_info.value.subcode == 1
@@ -268,7 +268,7 @@ def test_update_split_length_one_byte_too_short() -> None:
 @pytest.mark.fuzz
 def test_update_split_length_one_byte_too_long() -> None:
     """Test withdrawn length claiming 1 byte too many."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.notification import Notify
 
     # Actual data: 10 bytes, claim: 11 bytes
@@ -283,13 +283,13 @@ def test_update_split_length_one_byte_too_long() -> None:
 
     # This will fail with struct.error or Notify
     with pytest.raises((Notify, struct.error)):
-        Update.split(data)
+        UpdateData.split(data)
 
 
 @pytest.mark.fuzz
 def test_update_split_total_length_mismatch() -> None:
     """Test when component lengths don't match total length."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
     from exabgp.bgp.message.notification import Notify
 
     # Claim 5 bytes of withdrawals but only provide 4 bytes + attr_len field
@@ -300,18 +300,18 @@ def test_update_split_total_length_mismatch() -> None:
 
     # Should fail with either Notify or struct.error (not enough data)
     with pytest.raises((Notify, struct.error)):
-        Update.split(data)
+        UpdateData.split(data)
 
 
 @pytest.mark.fuzz
 def test_update_split_max_valid_lengths() -> None:
     """Test with maximum valid length fields."""
-    from exabgp.bgp.message.update import Update
+    from exabgp.bgp.message.update import UpdateData
 
     # Create small UPDATE with 0-length fields
     data = b'\x00\x00\x00\x00'  # Empty UPDATE
 
-    withdrawn, attributes, announced = Update.split(data)
+    withdrawn, attributes, announced = UpdateData.split(data)
 
     assert withdrawn == b''
     assert attributes == b''

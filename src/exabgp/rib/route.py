@@ -11,20 +11,20 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.update.nlri.nlri import NLRI
-    from exabgp.bgp.message.update.attribute.attributes import Attributes
+    from exabgp.bgp.message.update.attribute.attributes import AttributeSet
     from exabgp.protocol.family import AFI, SAFI
 
 
 class Route:
     nlri: NLRI
-    attributes: Attributes
+    attributes: AttributeSet
     _Route__index: bytes
 
     @staticmethod
     def family_prefix(family: tuple[AFI, SAFI]) -> bytes:
         return b'%02x%02x' % family
 
-    def __init__(self, nlri: NLRI, attributes: Attributes) -> None:
+    def __init__(self, nlri: NLRI, attributes: AttributeSet) -> None:
         self.nlri = nlri
         self.attributes = attributes
         # Index is computed lazily on first .index() call, not at __init__ time.

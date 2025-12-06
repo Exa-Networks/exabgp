@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, Attributes
+from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeSet
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.logger import lazyformat, lazymsg, log
@@ -39,14 +39,14 @@ EOR_IPV4_UNICAST_LENGTH = 4  # Length of IPv4 unicast EOR marker
 EOR_WITH_PREFIX_LENGTH = 11  # Length of EOR with NLRI prefix
 
 
-# ======================================================================= UpdateWire
+# ======================================================================= Update (Wire)
 #
 # Wire-format BGP UPDATE message container (bytes-first pattern).
 # This class stores the raw payload bytes as the canonical representation.
 # Parsing to semantic objects (UpdateData) is lazy.
 
 
-class UpdateWire:
+class Update:
     """Wire-format BGP UPDATE message container (bytes-first).
 
     Stores raw UPDATE message payload as the canonical representation.
@@ -68,7 +68,7 @@ class UpdateWire:
                      Format: withdrawn_len(2) + withdrawn + attr_len(2) + attributes + nlri
         """
         self._payload = payload
-        self._parsed: Update | None = None
+        self._parsed: UpdateData | None = None
 
     @property
     def payload(self) -> bytes:
@@ -84,7 +84,7 @@ class UpdateWire:
         return Message.MARKER + pack('!H', 19 + len(self._payload)) + self.TYPE + self._payload
 
     @property
-    def data(self) -> 'Update':
+    def data(self) -> 'UpdateData':
         """Lazy-parse to semantic UpdateData.
 
         Returns:
@@ -94,12 +94,12 @@ class UpdateWire:
             # Note: This requires a negotiated context which we don't have here.
             # For now, this property is a placeholder - real parsing needs negotiated.
             raise NotImplementedError(
-                'UpdateWire.data requires negotiated context - use unpack_message(negotiated) instead'
+                'Update.data requires negotiated context - use unpack_message(negotiated) instead'
             )
         return self._parsed
 
-    def unpack_message(self, negotiated: 'Negotiated') -> 'Update':
-        """Unpack payload to semantic Update with negotiated context.
+    def unpack_message(self, negotiated: 'Negotiated') -> 'UpdateData':
+        """Unpack payload to semantic UpdateData with negotiated context.
 
         Args:
             negotiated: BGP session negotiated parameters.
@@ -108,7 +108,7 @@ class UpdateWire:
             Unpacked Update (semantic container).
         """
         if self._parsed is None:
-            self._parsed = Update.unpack_message(self._payload, negotiated)  # type: ignore[assignment]
+            self._parsed = UpdateData.unpack_message(self._payload, negotiated)  # type: ignore[assignment]
         return self._parsed  # type: ignore[return-value]
 
     @property
@@ -126,7 +126,7 @@ class UpdateWire:
         return self._parsed.withdraws
 
     @property
-    def attributes(self) -> Attributes:
+    def attributes(self) -> AttributeSet:
         """Get path attributes (requires prior unpack_message() call)."""
         if self._parsed is None:
             raise RuntimeError('Must call unpack_message(negotiated) before accessing attributes')
@@ -157,7 +157,13 @@ class UpdateWire:
 
 
 @Message.register
-class Update(Message):
+class UpdateData(Message):
+    """Semantic container for BGP UPDATE message data.
+
+    Holds announces, withdraws, and attributes as semantic objects.
+    Use UpdateSerializer to convert to wire-format Update messages.
+    """
+
     ID = Message.CODE.UPDATE
     TYPE = bytes([Message.CODE.UPDATE])
     EOR: ClassVar[bool] = False
@@ -166,14 +172,14 @@ class Update(Message):
         self,
         announces: list[NLRI],
         withdraws: list[NLRI],
-        attributes: Attributes,
+        attributes: AttributeSet,
     ) -> None:
-        # Update is a composite container - NLRIs and Attributes are already packed-bytes-first
+        # UpdateData is a composite container - NLRIs and Attributes are already packed-bytes-first
         # No single _packed representation exists because messages() can generate multiple
-        # wire-format messages from one Update due to size limits
+        # wire-format messages from one UpdateData due to size limits
         self._announces: list[NLRI] = announces
         self._withdraws: list[NLRI] = withdraws
-        self._attributes: Attributes = attributes
+        self._attributes: AttributeSet = attributes
 
     @property
     def nlris(self) -> list[NLRI]:
@@ -189,7 +195,7 @@ class Update(Message):
         return self._withdraws
 
     @property
-    def attributes(self) -> Attributes:
+    def attributes(self) -> AttributeSet:
         return self._attributes
 
     # message not implemented we should use messages below.
@@ -347,7 +353,7 @@ class Update(Message):
                 log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
                 return
 
-            yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+            yield self._message(UpdateData.prefix(withdraws) + UpdateData.prefix(attr) + announced)
             announced = packed
             announced_size = packed_size
             withdraws = b''
@@ -368,9 +374,9 @@ class Update(Message):
                     return
 
                 if announced:
-                    yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+                    yield self._message(UpdateData.prefix(withdraws) + UpdateData.prefix(attr) + announced)
                 else:
-                    yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
+                    yield self._message(UpdateData.prefix(withdraws) + UpdateData.prefix(b'') + announced)
                 withdraws = packed
                 withdraws_size = packed_size
                 announced = b''
@@ -378,9 +384,9 @@ class Update(Message):
 
         if announced or withdraws:
             if announced:
-                yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+                yield self._message(UpdateData.prefix(withdraws) + UpdateData.prefix(attr) + announced)
             else:
-                yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
+                yield self._message(UpdateData.prefix(withdraws) + UpdateData.prefix(b'') + announced)
 
         for family in mp_nlris.keys():
             afi, safi = family
@@ -392,7 +398,7 @@ class Update(Message):
 
             for mprnlri in mp_announce.packed_attributes(negotiated, msg_size - len(withdraws + announced)):
                 if mp_reach:
-                    yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_reach) + announced)
+                    yield self._message(UpdateData.prefix(withdraws) + UpdateData.prefix(attr + mp_reach) + announced)
                     announced = b''
                     withdraws = b''
                 mp_reach = mprnlri
@@ -404,7 +410,7 @@ class Update(Message):
                 ):
                     if mp_unreach:
                         yield self._message(
-                            Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced,
+                            UpdateData.prefix(withdraws) + UpdateData.prefix(attr + mp_unreach + mp_reach) + announced,
                         )
                         mp_reach = b''
                         announced = b''
@@ -412,7 +418,7 @@ class Update(Message):
                     mp_unreach = mpurnlri
 
             yield self._message(
-                Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced,
+                UpdateData.prefix(withdraws) + UpdateData.prefix(attr + mp_unreach + mp_reach) + announced,
             )  # yield mpr/mpur per family
             withdraws = b''
             announced = b''
@@ -437,7 +443,7 @@ class Update(Message):
         if not withdrawn:
             log.debug(lazymsg('update.withdrawn status=none'), 'routes')
 
-        attributes = Attributes.unpack(_attributes, negotiated)
+        attributes = AttributeSet.unpack(_attributes, negotiated)
 
         if not announced:
             log.debug(lazymsg('update.announced status=none'), 'routes')
@@ -506,11 +512,11 @@ class Update(Message):
                 return EOR(reach.afi, reach.safi)
             raise RuntimeError('This was not expected')
 
-        update = Update(announces, withdraws, attributes)
+        update = UpdateData(announces, withdraws, attributes)
 
         def parsed(_):
             # we need the import in the function as otherwise we have an cyclic loop
-            # as this function currently uses Update..
+            # as this function currently uses UpdateData..
             from exabgp.reactor.api.response import Response
             from exabgp.version import json as json_version
 
@@ -523,7 +529,5 @@ class Update(Message):
         return update
 
 
-# Alias: UpdateData is the semantic container (current Update implementation)
-# This alias enables gradual migration to the new naming convention
-# In future: Update will be wire container (bytes-first), UpdateData stays semantic
-UpdateData = Update
+# Backward compatibility alias: UpdateWire points to the new Update (wire container)
+UpdateWire = Update
