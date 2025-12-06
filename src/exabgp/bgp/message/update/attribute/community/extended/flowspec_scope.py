@@ -14,7 +14,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 if TYPE_CHECKING:
-    from exabgp.bgp.message.open.negotiated import Negotiated
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 # ============================================================== InterfaceSet

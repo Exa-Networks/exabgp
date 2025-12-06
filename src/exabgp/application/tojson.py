@@ -12,7 +12,7 @@ import os
 import sys
 import time
 import signal
-import thread
+import _thread
 import subprocess
 from collections import deque
 
@@ -74,7 +74,7 @@ class Application:
     transcoder: Transcoder
 
     def __init__(self) -> None:
-        thread.start_new_thread(self.reader, (os.getpid(),))
+        _thread.start_new_thread(self.reader, (os.getpid(),))
         signal.signal(signal.SIGTERM, Application._signal)
         self.sub = self.process()
         self.transcoder = Transcoder('json', 'json')
