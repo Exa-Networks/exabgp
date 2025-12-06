@@ -290,10 +290,15 @@ class OutgoingRIB(Cache):
         change_index = change.index()
         change_family = change.nlri.family().afi_safi()
         change_attr_index = change.attributes.index()
+        nlri_index = change.nlri.index()
 
         attr_af_nlri = self._new_attr_af_nlri
         new_nlri = self._new_nlri
         new_attr = self._new_attribute
+
+        # Remove any pending withdraw for this NLRI (announce cancels previous withdraw)
+        if change_family in self._pending_withdraws:
+            self._pending_withdraws[change_family].pop(nlri_index, None)
 
         # add the route to the list to be announced/withdrawn
         attr_af_nlri.setdefault(change_attr_index, {}).setdefault(change_family, RIBdict({}))[change_index] = change  # type: ignore[arg-type]
