@@ -109,7 +109,10 @@
       "Bash(poetry show:*)",
       "Bash(poetry check:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "WebSearch",
+      "Bash(uv run python:*)",
+      "Bash(tee:*)"
     ],
     "deny": []
   },

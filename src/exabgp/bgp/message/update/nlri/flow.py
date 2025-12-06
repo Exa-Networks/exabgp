@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack
 from typing import (
     TYPE_CHECKING,
@@ -957,24 +958,25 @@ class Flow(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[Flow | NLRI, bytes]:
+        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[Flow | NLRI, Buffer]:
         """Unpack Flow NLRI from wire format, storing raw bytes."""
-        if len(bgp) < 1:
+        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
+        if len(data) < 1:
             raise Notify(3, 10, 'Flow NLRI too short: need at least 1 byte for length')
-        length, bgp = bgp[0], bgp[1:]
+        length, data = data[0], data[1:]
 
         if length & FLOW_LENGTH_EXTENDED_MASK == FLOW_LENGTH_EXTENDED_VALUE:  # bigger than 240
-            if len(bgp) < 1:
+            if len(data) < 1:
                 raise Notify(3, 10, 'Flow NLRI extended length truncated: need 1 more byte')
-            extra, bgp = bgp[0], bgp[1:]
+            extra, data = data[0], data[1:]
             length = ((length & FLOW_LENGTH_LOWER_MASK) << FLOW_LENGTH_EXTENDED_SHIFT) + extra
 
-        if length > len(bgp):
-            raise Notify(3, 10, f'Flow NLRI truncated: need {length} bytes, got {len(bgp)}')
+        if length > len(data):
+            raise Notify(3, 10, f'Flow NLRI truncated: need {length} bytes, got {len(data)}')
 
-        over = bgp[length:]
-        packed = bgp[:length]
+        over = data[length:]
+        packed = bytes(data[:length])
 
         # Create Flow with packed bytes - rules will be parsed lazily
         nlri = cls(packed, afi, safi, action)

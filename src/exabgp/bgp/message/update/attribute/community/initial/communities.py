@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING, Iterator, Sequence
 
 if TYPE_CHECKING:
@@ -45,7 +46,7 @@ class Communities(Attribute):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'Communities':
+    def from_packet(cls, data: Buffer) -> 'Communities':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -57,9 +58,10 @@ class Communities(Attribute):
         Raises:
             Notify: If data length is not a multiple of 4
         """
-        if len(data) % COMMUNITY_SIZE != 0:
-            raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data])))
-        return cls(data)
+        data_bytes = bytes(data)
+        if len(data_bytes) % COMMUNITY_SIZE != 0:
+            raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data_bytes])))
+        return cls(data_bytes)
 
     @classmethod
     def make_communities(cls, communities: Sequence[Community]) -> 'Communities':
@@ -122,5 +124,5 @@ class Communities(Attribute):
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'Communities':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'Communities':
         return cls.from_packet(data)

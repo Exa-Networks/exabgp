@@ -69,6 +69,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import unpack
 from typing import TYPE_CHECKING, Any
 
@@ -297,19 +298,20 @@ class INET(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[INET, bytes]:
+        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[INET, Buffer]:
+        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # Parse path_info if AddPath is enabled
         if addpath:
-            if len(bgp) <= PATH_INFO_SIZE:
+            if len(data) <= PATH_INFO_SIZE:
                 raise ValueError('Trying to extract path-information but we do not have enough data')
-            path_info = PathInfo(bgp[:PATH_INFO_SIZE])
-            bgp = bgp[PATH_INFO_SIZE:]
+            path_info = PathInfo(bytes(data[:PATH_INFO_SIZE]))
+            data = data[PATH_INFO_SIZE:]
         else:
             path_info = PathInfo.DISABLED
 
-        mask = bgp[0]
-        bgp = bgp[1:]
+        mask = data[0]
+        data = data[1:]
 
         _, rd_size = Family.size.get((afi, safi), (0, 0))
         rd_mask = rd_size * 8
@@ -319,8 +321,8 @@ class INET(NLRI):
         if safi.has_label():
             labels_list = []
             while mask - rd_mask >= LABEL_SIZE_BITS:
-                label = int(unpack('!L', bytes([0]) + bgp[:3])[0])
-                bgp = bgp[3:]
+                label = int(unpack('!L', bytes([0]) + bytes(data[:3]))[0])
+                data = data[3:]
                 mask -= LABEL_SIZE_BITS  # 3 bytes
                 # The last 4 bits are the bottom of Stack
                 # The last bit is set for the last label
@@ -338,18 +340,18 @@ class INET(NLRI):
         rd: RouteDistinguisher | None = None
         if rd_size:
             mask -= rd_mask  # the route distinguisher
-            rd = RouteDistinguisher(bgp[:rd_size])
-            bgp = bgp[rd_size:]
+            rd = RouteDistinguisher(bytes(data[:rd_size]))
+            data = data[rd_size:]
 
         if mask < 0:
             raise Notify(3, 10, 'invalid length in NLRI prefix')
 
-        if not bgp and mask:
+        if not data and mask:
             raise Notify(3, 10, 'not enough data for the mask provided to decode the NLRI')
 
         size = CIDR.size(mask)
 
-        if len(bgp) < size:
+        if len(data) < size:
             raise Notify(
                 3,
                 10,
@@ -357,13 +359,13 @@ class INET(NLRI):
                 % (AFI(afi), int(afi), SAFI(safi), int(safi)),
             )
 
-        network, bgp = bgp[:size], bgp[size:]
+        network, data = data[:size], data[size:]
 
         # Create NLRI from CIDR
         if afi == AFI.ipv4:
-            cidr = CIDR.from_ipv4(bytes([mask]) + network)
+            cidr = CIDR.from_ipv4(bytes([mask]) + bytes(network))
         else:
-            cidr = CIDR.from_ipv6(bytes([mask]) + network)
+            cidr = CIDR.from_ipv6(bytes([mask]) + bytes(network))
         nlri = cls.from_cidr(cidr, afi, safi, action, path_info)
 
         # Set optional attributes
@@ -372,4 +374,4 @@ class INET(NLRI):
         if rd is not None:
             nlri.rd = rd
 
-        return nlri, bgp
+        return nlri, data

@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import ClassVar, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI
@@ -216,7 +217,7 @@ class Capabilities(dict[int, Capability]):
         return pack('!BBH', OPEN_EXTENDED_MARKER, OPEN_EXTENDED_MARKER, len(parameters)) + parameters
 
     @staticmethod
-    def unpack(data: bytes) -> Capabilities:
+    def unpack(data: Buffer) -> Capabilities:
         def _extended_type_length(name: str, data: bytes) -> tuple[int, bytes, bytes]:
             if len(data) < MIN_EXTENDED_PARAM_LEN:
                 raise Notify(

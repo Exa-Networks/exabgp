@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import unpack
 from typing import TYPE_CHECKING
 
@@ -71,10 +72,13 @@ class Open(Message):
     # Fixed header size: version(1) + asn(2) + hold_time(2) + router_id(4)
     HEADER_SIZE = 9
 
-    def __init__(self, packed: bytes, capabilities: Capabilities) -> None:
-        if len(packed) != self.HEADER_SIZE:
-            raise ValueError(f'Open header requires exactly {self.HEADER_SIZE} bytes, got {len(packed)}')
-        self._packed = packed
+    def __init__(self, packed: Buffer, capabilities: Capabilities) -> None:
+        # Convert to bytearray first - this gives us length and ownership
+        self._buffer = bytearray(packed)
+        if len(self._buffer) != self.HEADER_SIZE:
+            raise ValueError(f'Open header requires exactly {self.HEADER_SIZE} bytes, got {len(self._buffer)}')
+        # Two-buffer pattern: bytearray owns data, memoryview provides zero-copy slicing
+        self._packed = memoryview(self._buffer)
         self._capabilities = capabilities
 
     @classmethod
@@ -108,7 +112,7 @@ class Open(Message):
         return self._capabilities
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(self._packed + self._capabilities.pack_capabilities())
+        return self._message(bytes(self._packed) + self._capabilities.pack_capabilities())
 
     def __str__(self) -> str:
         return 'OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]' % (
@@ -120,10 +124,10 @@ class Open(Message):
         )
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Open:
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Open:
         # OPEN header: version(1) + asn(2) + hold_time(2) + router_id(4) = 9 bytes minimum
-        if len(data) < cls.HEADER_SIZE:
-            raise Notify(2, 0, f'OPEN message too short: need {cls.HEADER_SIZE} bytes, got {len(data)}')
+        if len(data) < cls.HEADER_SIZE:  # type: ignore[arg-type]
+            raise Notify(2, 0, f'OPEN message too short: need {cls.HEADER_SIZE} bytes, got {len(data)}')  # type: ignore[arg-type]
 
         version = data[0]
         if version != Version.BGP_4:

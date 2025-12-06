@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from enum import IntEnum
 from typing import TYPE_CHECKING
 
@@ -57,7 +58,7 @@ class NOP(Message):
         return 'NOP'
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> NOP:
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> NOP:
         return _NOP
 
 
@@ -75,7 +76,7 @@ class AWAKE(Message):
         return 'AWAKE'
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> AWAKE:
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> AWAKE:
         return _AWAKE
 
 
@@ -93,7 +94,7 @@ class DONE(Message):
         return 'DONE'
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> DONE:
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> DONE:
         return _DONE
 
 

@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
@@ -42,7 +43,7 @@ class Origin(Attribute):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'Origin':
+    def from_packet(cls, data: Buffer) -> 'Origin':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -54,11 +55,12 @@ class Origin(Attribute):
         Raises:
             ValueError: If data is not exactly 1 byte or value is invalid
         """
-        if len(data) != 1:
-            raise ValueError(f'Origin requires exactly 1 byte, got {len(data)}')
-        if data[0] > 2:
-            raise ValueError(f'Invalid origin value: {data[0]}')
-        return cls(data)
+        data_bytes = bytes(data)
+        if len(data_bytes) != 1:
+            raise ValueError(f'Origin requires exactly 1 byte, got {len(data_bytes)}')
+        if data_bytes[0] > 2:
+            raise ValueError(f'Invalid origin value: {data_bytes[0]}')
+        return cls(data_bytes)
 
     @classmethod
     def from_int(cls, origin: int) -> 'Origin':
@@ -106,7 +108,7 @@ class Origin(Attribute):
         return 'invalid'
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Origin:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Origin:
         # Wire data - use from_packet for validation
         return cls.from_packet(data)
 

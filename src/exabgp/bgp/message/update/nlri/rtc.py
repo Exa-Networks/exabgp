@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar
 
@@ -160,13 +161,14 @@ class RTC(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[T, bytes]:
+        cls: Type[T], afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[T, Buffer]:
+        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # Note: afi/safi parameters are ignored - RTC is always ipv4/rtc
-        length = bgp[0]
+        length = data[0]
 
         if length == 0:
-            return cls(None, None, action), bgp[1:]
+            return cls(None, None, action), data[1:]
 
         if length < 8 * 4:
             raise Exception('incorrect RT length: %d (should be >=32,<=96)' % length)
@@ -174,7 +176,7 @@ class RTC(NLRI):
         # We are reseting the flags on the RouteTarget extended
         # community, because they do not make sense for an RTC route
         # Store origin as packed bytes directly from wire
-        packed_origin = bgp[1:5]
-        rt = RouteTarget.unpack_attribute(bytes([RTC.resetFlags(bgp[5])]) + bgp[6:13], negotiated)  # type: ignore[arg-type]
+        packed_origin = bytes(data[1:5])
+        rt = RouteTarget.unpack_attribute(bytes([RTC.resetFlags(data[5])]) + bytes(data[6:13]), negotiated)  # type: ignore[arg-type]
 
-        return cls(packed_origin, rt, action), bgp[13:]
+        return cls(packed_origin, rt, action), data[13:]

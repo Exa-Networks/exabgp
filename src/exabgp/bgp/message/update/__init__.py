@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Generator
 
@@ -66,15 +67,18 @@ class Update(Message):
     TYPE = bytes([Message.CODE.UPDATE])
     EOR: bool = False  # Not an End-of-RIB marker
 
-    def __init__(self, payload: bytes, parsed: 'UpdateCollection | None' = None) -> None:
+    def __init__(self, payload: Buffer, parsed: 'UpdateCollection | None' = None) -> None:
         """Create Update from raw payload bytes.
 
         Args:
             payload: The UPDATE message payload (after BGP header).
                      Format: withdrawn_len(2) + withdrawn + attr_len(2) + attributes + nlri
+                     Can be bytes or memoryview (converted to bytes for storage).
             parsed: Optional pre-parsed UpdateCollection (used internally).
         """
-        self._payload = payload
+        # Two-buffer pattern: bytearray owns data, memoryview provides zero-copy slicing
+        self._buffer = bytearray(payload)
+        self._payload = memoryview(self._buffer)
         # Initialize with empty collection if not provided - properties always work
         self._parsed: 'UpdateCollection' = (
             parsed if parsed is not None else UpdateCollection([], [], AttributeCollection())
@@ -83,13 +87,13 @@ class Update(Message):
     @property
     def payload(self) -> bytes:
         """Raw UPDATE payload bytes."""
-        return self._payload
+        return bytes(self._payload)
 
     @property
     def withdrawn_bytes(self) -> bytes:
         """Raw bytes of withdrawn routes section."""
         withdrawn_len = unpack('!H', self._payload[:2])[0]
-        return self._payload[2 : 2 + withdrawn_len]
+        return bytes(self._payload[2 : 2 + withdrawn_len])
 
     @property
     def attribute_bytes(self) -> bytes:
@@ -97,7 +101,7 @@ class Update(Message):
         withdrawn_len = unpack('!H', self._payload[:2])[0]
         attr_offset = 2 + withdrawn_len
         attr_len = unpack('!H', self._payload[attr_offset : attr_offset + 2])[0]
-        return self._payload[attr_offset + 2 : attr_offset + 2 + attr_len]
+        return bytes(self._payload[attr_offset + 2 : attr_offset + 2 + attr_len])
 
     @property
     def nlri_bytes(self) -> bytes:
@@ -106,7 +110,7 @@ class Update(Message):
         attr_offset = 2 + withdrawn_len
         attr_len = unpack('!H', self._payload[attr_offset : attr_offset + 2])[0]
         nlri_offset = attr_offset + 2 + attr_len
-        return self._payload[nlri_offset:]
+        return bytes(self._payload[nlri_offset:])
 
     def pack_message(self, negotiated: 'Negotiated | None' = None) -> bytes:
         """Generate complete BGP message with header.
@@ -140,7 +144,7 @@ class Update(Message):
         """
         # Only parse if we have an empty placeholder
         if not self._parsed.announces and not self._parsed.withdraws and not self._parsed.attributes:
-            self._parsed = UpdateCollection._parse_payload(self._payload, negotiated)
+            self._parsed = UpdateCollection._parse_payload(bytes(self._payload), negotiated)
         return self._parsed
 
     @property
@@ -164,18 +168,19 @@ class Update(Message):
         return self._parsed.attributes
 
     @staticmethod
-    def split(data: bytes) -> tuple[bytes, bytes, bytes]:
+    def split(data: Buffer) -> tuple[memoryview, memoryview, memoryview]:
         """Split UPDATE payload into withdrawn, attributes, announced sections."""
         return UpdateCollection.split(data)
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: 'Negotiated') -> 'Update | EOR':
+    def unpack_message(cls, data: Buffer, negotiated: 'Negotiated') -> 'Update | EOR':
         """Unpack raw UPDATE payload to Update or EOR.
 
         This is the registered message handler called by Message.unpack().
 
         Args:
             data: Raw UPDATE message payload (after BGP header).
+                  Can be bytes or memoryview (zero-copy from network).
             negotiated: BGP session negotiated parameters.
 
         Returns:
@@ -199,11 +204,11 @@ class Update(Message):
         if not parsed.attributes and not parsed.announces and not parsed.withdraws:
             # Need to check what MP attributes were present before they were popped
             # Re-split to check for MP_REACH/MP_UNREACH
-            _, attr_bytes, _ = UpdateCollection.split(data)
-            if attr_bytes:
+            _, attr_view, _ = UpdateCollection.split(data)
+            if attr_view:
                 # Parse attributes again to check for MP attributes
                 # (this is inefficient but handles edge cases)
-                temp_attrs = AttributeCollection.unpack(attr_bytes, negotiated)
+                temp_attrs = AttributeCollection.unpack(bytes(attr_view), negotiated)
                 unreach = temp_attrs.get(MPURNLRI.ID)
                 reach = temp_attrs.get(MPRNLRI.ID)
                 if unreach is not None:
@@ -306,31 +311,38 @@ class UpdateCollection(Message):
         return pack('!H', len(data)) + data
 
     @staticmethod
-    def split(data: bytes) -> tuple[bytes, bytes, bytes]:
-        length = len(data)
+    def split(data: Buffer) -> tuple[memoryview, memoryview, memoryview]:
+        """Split UPDATE payload into withdrawn, attributes, announced sections.
+
+        Returns memoryview slices for zero-copy access. Converts input to memoryview
+        if not already one.
+        """
+        # Convert to memoryview for zero-copy slicing (memoryview() accepts any Buffer)
+        view = memoryview(data)
+        length = len(view)
 
         # UPDATE minimum: withdrawn_len(2) + attr_len(2) = 4 bytes
         if length < UPDATE_ATTR_LENGTH_HEADER_SIZE:
             raise Notify(3, 1, f'UPDATE message too short: need {UPDATE_ATTR_LENGTH_HEADER_SIZE} bytes, got {length}')
 
-        len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
+        len_withdrawn = unpack('!H', view[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
 
         # Verify we have enough data for withdrawn routes + attr length field
         if length < UPDATE_ATTR_LENGTH_HEADER_SIZE + len_withdrawn:
             raise Notify(3, 1, f'UPDATE withdrawn length {len_withdrawn} exceeds available data')
 
-        withdrawn = data[UPDATE_WITHDRAWN_LENGTH_OFFSET : len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET]
+        withdrawn = view[UPDATE_WITHDRAWN_LENGTH_OFFSET : len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET]
 
         start_attributes = len_withdrawn + UPDATE_ATTR_LENGTH_HEADER_SIZE
-        len_attributes = unpack('!H', data[len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET : start_attributes])[0]
+        len_attributes = unpack('!H', view[len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET : start_attributes])[0]
 
         # Verify we have enough data for attributes
         if length < start_attributes + len_attributes:
             raise Notify(3, 1, f'UPDATE attributes length {len_attributes} exceeds available data')
 
         start_announced = len_withdrawn + len_attributes + UPDATE_ATTR_LENGTH_HEADER_SIZE
-        attributes = data[start_attributes:start_announced]
-        announced = data[start_announced:]
+        attributes = view[start_attributes:start_announced]
+        announced = view[start_announced:]
 
         if (
             UPDATE_WITHDRAWN_LENGTH_OFFSET
@@ -559,14 +571,18 @@ class UpdateCollection(Message):
         Returns:
             UpdateCollection with parsed announces, withdraws, and attributes.
         """
-        withdrawn_bytes, _attributes, announced_bytes = cls.split(data)
+        withdrawn_view, attr_view, announced_view = cls.split(data)
 
-        if not withdrawn_bytes:
+        if not withdrawn_view:
             log.debug(lazymsg('update.withdrawn status=none'), 'routes')
 
-        attributes = AttributeCollection.unpack(_attributes, negotiated)
+        # Convert memoryview slices to bytes for downstream parsing
+        # (NLRI.unpack_nlri and AttributeCollection.unpack still use bytes)
+        withdrawn_bytes = bytes(withdrawn_view)
+        announced_bytes = bytes(announced_view)
+        attributes = AttributeCollection.unpack(bytes(attr_view), negotiated)
 
-        if not announced_bytes:
+        if not announced_view:
             log.debug(lazymsg('update.announced status=none'), 'routes')
 
         # Is the peer going to send us some Path Information with the route (AddPath)
@@ -626,23 +642,25 @@ class UpdateCollection(Message):
         return cls(announces, withdraws, attributes)
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> 'UpdateCollection | EOR':
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> 'UpdateCollection | EOR':
         """Parse raw UPDATE payload bytes into UpdateCollection or EOR.
 
         Deprecated: Use Update.unpack_message() for the registered handler.
 
         This method is kept for backward compatibility.
         """
-        length = len(data)
+        # Convert to bytes for comparison and downstream parsing
+        data_bytes = bytes(data) if isinstance(data, memoryview) else data
+        length = len(data_bytes)
 
         # Check for End-of-RIB markers (fast path)
-        if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
+        if length == EOR_IPV4_UNICAST_LENGTH and data_bytes == b'\x00\x00\x00\x00':
             return EOR(AFI.ipv4, SAFI.unicast)
-        if length == EOR_WITH_PREFIX_LENGTH and data.startswith(EOR.NLRI.PREFIX):
-            return EOR.unpack_message(data, negotiated)
+        if length == EOR_WITH_PREFIX_LENGTH and data_bytes.startswith(EOR.NLRI.PREFIX):
+            return EOR.unpack_message(data_bytes, negotiated)
 
         # Parse normally
-        return cls._parse_payload(data, negotiated)
+        return cls._parse_payload(data_bytes, negotiated)
 
 
 # Backward compatibility aliases

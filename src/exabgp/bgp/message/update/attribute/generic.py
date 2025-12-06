@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING, ClassVar, Type
 
 if TYPE_CHECKING:
@@ -48,7 +49,7 @@ class GenericAttribute(Attribute):
         self.FLAG: int = flag  # type: ignore[misc]
 
     @classmethod
-    def from_packet(cls, code: int, flag: int, data: bytes) -> 'GenericAttribute':
+    def from_packet(cls, code: int, flag: int, data: Buffer) -> 'GenericAttribute':
         """Create from wire-format bytes.
 
         Args:
@@ -59,7 +60,7 @@ class GenericAttribute(Attribute):
         Returns:
             GenericAttribute instance
         """
-        return cls(data, code, flag)
+        return cls(bytes(data), code, flag)
 
     @classmethod
     def make_generic(cls, code: int, flag: int, data: bytes) -> 'GenericAttribute':
@@ -112,7 +113,7 @@ class GenericAttribute(Attribute):
         return bytes([flag, self.ID]) + len_value + self._packed
 
     @classmethod
-    def unpack_attribute(cls: Type['GenericAttribute'], code: int, flag: int, data: bytes) -> 'GenericAttribute':
+    def unpack_attribute(cls: Type['GenericAttribute'], code: int, flag: int, data: Buffer) -> 'GenericAttribute':
         return cls.from_packet(code, flag, data)
 
     def json(self) -> str:

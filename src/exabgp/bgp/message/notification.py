@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import string
+from collections.abc import Buffer
 from typing import ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -99,11 +100,14 @@ class Notification(Message, Exception):
         (7, 2): 'Malformed Message Subtype',
     }
 
-    def __init__(self, packed: bytes) -> None:
-        if len(packed) < 2:
-            raise ValueError(f'Notification requires at least 2 bytes, got {len(packed)}')
+    def __init__(self, packed: Buffer) -> None:
+        # Convert to bytearray first - this gives us length and ownership
+        self._buffer = bytearray(packed)
+        if len(self._buffer) < 2:
+            raise ValueError(f'Notification requires at least 2 bytes, got {len(self._buffer)}')
         Exception.__init__(self)
-        self._packed = packed
+        # Two-buffer pattern: bytearray owns data, memoryview provides zero-copy slicing
+        self._packed = memoryview(self._buffer)
 
     @classmethod
     def make_notification(cls, code: int, subcode: int, data: bytes = b'') -> 'Notification':
@@ -119,7 +123,7 @@ class Notification(Message, Exception):
 
     @property
     def raw_data(self) -> bytes:
-        return self._packed[2:]
+        return bytes(self._packed[2:])
 
     @property
     def data(self) -> bytes:
@@ -168,7 +172,7 @@ class Notification(Message, Exception):
         return f'{code_str} / {subcode_str}{data_str}'
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Notification:
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Notification:
         return cls(data)
 
 

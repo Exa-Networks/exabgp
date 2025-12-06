@@ -1,0 +1,151 @@
+============================================================
+ExaBGP RIB Benchmark Suite
+============================================================
+
+============================================================
+Route count: 1,000
+============================================================
+
+add_to_rib:
+  Routes: 1,000
+  Time: 0.0039s
+  Memory: 0.01 MB
+  Throughput: 254,739 ops/sec
+
+del_from_rib:
+  Routes: 1,000
+  Time: 0.0024s
+  Memory: 1.79 MB
+  Throughput: 414,136 ops/sec
+
+in_cache (hits=0.001s, misses=0.001s):
+  Routes: 1,000
+  Time: 0.0016s
+  Memory: 0.00 MB
+  Throughput: 1,234,282 ops/sec
+
+updates() iteration:
+  Routes: 1,000
+  Time: 0.0000s
+  Memory: 0.00 MB
+  Throughput: 95,997,034 ops/sec
+
+============================================================
+Route count: 10,000
+============================================================
+
+add_to_rib:
+  Routes: 10,000
+  Time: 0.0372s
+  Memory: 0.03 MB
+  Throughput: 268,950 ops/sec
+
+del_from_rib:
+  Routes: 10,000
+  Time: 0.0231s
+  Memory: 17.90 MB
+  Throughput: 431,966 ops/sec
+
+in_cache (hits=0.005s, misses=0.011s):
+  Routes: 10,000
+  Time: 0.0166s
+  Memory: 0.00 MB
+  Throughput: 1,201,454 ops/sec
+
+updates() iteration:
+  Routes: 10,000
+  Time: 0.0001s
+  Memory: 0.00 MB
+  Throughput: 196,722,667 ops/sec
+
+============================================================
+Route count: 100,000
+============================================================
+
+add_to_rib:
+  Routes: 100,000
+  Time: 0.3794s
+  Memory: 0.26 MB
+  Throughput: 263,559 ops/sec
+
+del_from_rib:
+  Routes: 100,000
+  Time: 0.2296s
+  Memory: 178.98 MB
+  Throughput: 435,633 ops/sec
+
+in_cache (hits=0.054s, misses=0.108s):
+  Routes: 100,000
+  Time: 0.1623s
+  Memory: 0.00 MB
+  Throughput: 1,232,588 ops/sec
+
+updates() iteration:
+  Routes: 100,000
+  Time: 0.0006s
+  Memory: 0.00 MB
+  Throughput: 176,821,528 ops/sec
+
+============================================================
+Route Object Memory Analysis
+============================================================
+
+1000 Route objects: 1010.9 KB
+Per object: 1035.1 bytes
+
+Route class:
+  Has __slots__: False
+  Has __dict__: True
+  __dict__ size: 96 bytes
+
+Index computation:
+  route.index() = b'01010101disabled\x18\n\x00\x00'
+  Length: 20 bytes
+  attributes.index() length: 49 chars
+
+============================================================
+Deepcopy vs Shallow Copy Analysis
+============================================================
+
+Deepcopy 10K times: 0.1235s (12.4 µs/op)
+Shallow copy 10K times: 0.0042s (0.4 µs/op)
+Speedup: 29.1x
+
+Memory for 1000 copies:
+  Deepcopy: 1574.9 KB
+  Shallow: 297.9 KB
+  Savings: 1277.0 KB (81%)
+
+============================================================
+CPU Profile (cProfile) - 10,000 routes
+============================================================
+
+Top 20 functions by cumulative time:
+         940145 function calls in 0.175 seconds
+
+   Ordered by: cumulative time
+   List reduced from 44 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.002    0.002    0.175    0.175 /Users/thomas/Code/github.com/exa-networks/exabgp/main/lab/rib/benchmark_rib.py:318(workload)
+    10000    0.006    0.000    0.106    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/rib/outgoing.py:279(add_to_rib)
+    10000    0.010    0.000    0.098    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/rib/outgoing.py:308(_update_rib)
+    10000    0.013    0.000    0.067    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/rib/outgoing.py:224(del_from_rib)
+    60000    0.009    0.000    0.050    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/protocol/family.py:396(family)
+    60000    0.015    0.000    0.041    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/protocol/family.py:347(__init__)
+    10000    0.008    0.000    0.036    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/rib/cache.py:143(update_cache_withdraw)
+    10000    0.005    0.000    0.033    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/bgp/message/update/attribute/collection.py:267(index)
+    10000    0.003    0.000    0.025    0.000 {method 'join' of 'str' objects}
+    30000    0.012    0.000    0.022    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/bgp/message/update/attribute/collection.py:96(_generate_text)
+    40000    0.008    0.000    0.022    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/bgp/message/update/nlri/inet.py:230(index)
+    30000    0.006    0.000    0.020    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/rib/route.py:36(index)
+    10000    0.008    0.000    0.019    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/rib/cache.py:101(update_cache)
+    10000    0.004    0.000    0.017    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/rib/cache.py:88(_make_index)
+    40000    0.011    0.000    0.014    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/protocol/family.py:405(index)
+    60000    0.010    0.000    0.013    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/protocol/family.py:110(from_int)
+    60000    0.009    0.000    0.012    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/protocol/family.py:252(from_int)
+   140000    0.008    0.000    0.008    0.000 {method 'get' of 'dict' objects}
+    30000    0.005    0.000    0.005    0.000 {method 'format' of 'str' objects}
+    10000    0.002    0.000    0.004    0.000 /Users/thomas/Code/github.com/exa-networks/exabgp/main/src/exabgp/bgp/message/update/attribute/localpref.py:95(__repr__)
+
+

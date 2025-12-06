@@ -20,7 +20,7 @@ import asyncio  # noqa: F401 - Used by async methods added in Steps 2-4
 import random
 import socket
 import select
-from struct import unpack
+from collections.abc import Buffer
 from typing import ClassVar, Iterator
 
 from exabgp.environment import getenv
@@ -144,41 +144,52 @@ class Connection:
                 ready = True
         return ready
 
-    def _reader(self, number: int) -> Iterator[bytes]:
+    def _reader(self, number: int) -> Iterator[memoryview]:
+        """Read exactly 'number' bytes from socket using zero-copy buffer.
+
+        Uses recv_into() to write directly to a pre-allocated buffer,
+        avoiding intermediate allocations. Returns a memoryview for
+        zero-copy slicing by downstream consumers.
+        """
         # The function must not be called if it does not return with no data with a smaller size as parameter
         if not self.io:
             self.close()
             raise NotConnected('Trying to read on a closed TCP connection')
         if number == 0:
-            yield b''
+            yield memoryview(b'')
             return
 
         while not self.reading():
-            yield b''
-        data = b''
+            yield memoryview(b'')
+
+        # Pre-allocate buffer for the entire read
+        buffer = bytearray(number)
+        view = memoryview(buffer)
+        offset = 0
         reported = ''
+
         while True:
             try:
                 while True:
                     if self.defensive and random.randint(0, 2):
                         raise OSError(errno.EAGAIN, 'raising network error on purpose')
 
-                    read = self.io.recv(number)
-                    if not read:
+                    # Use recv_into for zero-copy read directly into buffer
+                    nbytes = self.io.recv_into(view[offset:])
+                    if not nbytes:
                         self.close()
                         log.warning(
                             lazymsg('tcp.session.lost name={n} peer={p}', n=self.name(), p=self.peer), self.session()
                         )
                         raise LostConnection('the TCP connection was closed by the remote end')
-                    data += read
 
-                    number -= len(read)
-                    if not number:
-                        log.debug(lazyformat('received TCP payload', data), self.session())
-                        yield data
+                    offset += nbytes
+                    if offset >= number:
+                        log.debug(lazyformat('received TCP payload', bytes(view)), self.session())
+                        yield view
                         return
 
-                    yield b''
+                    yield memoryview(b'')
             except socket.timeout as exc:
                 self.close()
                 log.warning(lazymsg('tcp.timeout name={n} peer={p}', n=self.name(), p=self.peer), self.session())
@@ -197,7 +208,7 @@ class Connection:
                             ),
                             self.session(),
                         )
-                    yield b''
+                    yield memoryview(b'')
                 elif exc.args[0] in error.fatal:
                     self.close()
                     raise LostConnection(f'issue reading on the socket: {errstr(exc)}') from None
@@ -208,42 +219,44 @@ class Connection:
                     )
                     raise NetworkError(f'Problem while reading data from the network ({errstr(exc)})') from None
 
-    async def _reader_async(self, number: int) -> bytes:
-        """Read exactly 'number' bytes from socket (async version)
+    async def _reader_async(self, number: int) -> memoryview:
+        """Read exactly 'number' bytes from socket using zero-copy buffer (async version).
 
-        Uses asyncio for I/O operations.
-        Async version of _reader() for hybrid event loop integration.
+        Uses asyncio.sock_recv_into() to write directly to a pre-allocated buffer,
+        avoiding intermediate allocations. Returns a memoryview for zero-copy
+        slicing by downstream consumers.
 
-        NOTE: asyncio.sock_recv() properly integrates with the event loop's
-        I/O polling, so we don't need manual polling or busy-waiting.
-        The event loop handles yielding control automatically while waiting
-        for data, so no explicit timeout is needed here - BGP keepalive
-        mechanism handles dead connection detection.
+        NOTE: asyncio event loop properly integrates with I/O polling,
+        so we don't need manual polling or busy-waiting. The event loop
+        handles yielding control automatically while waiting for data.
         """
         if not self.io:
             self.close()
             raise NotConnected('Trying to read on a closed TCP connection')
         if number == 0:
-            return b''
+            return memoryview(b'')
 
         loop = asyncio.get_event_loop()
-        data = b''
 
-        while number > 0:
+        # Pre-allocate buffer for the entire read
+        buffer = bytearray(number)
+        view = memoryview(buffer)
+        offset = 0
+
+        while offset < number:
             try:
-                # asyncio.sock_recv() handles I/O waiting automatically via event loop
+                # asyncio.sock_recv_into() handles I/O waiting automatically via event loop
                 # This yields control to other tasks while waiting for data
-                read = await loop.sock_recv(self.io, number)
+                nbytes = await loop.sock_recv_into(self.io, view[offset:])
 
-                if not read:
+                if not nbytes:
                     self.close()
                     log.warning(
                         lazymsg('tcp.session.lost name={n} peer={p}', n=self.name(), p=self.peer), self.session()
                     )
                     raise LostConnection('the TCP connection was closed by the remote end')
 
-                data += read
-                number -= len(read)
+                offset += nbytes
 
             except socket.timeout as exc:
                 self.close()
@@ -259,8 +272,8 @@ class Connection:
                     )
                     raise NetworkError(f'Problem while reading data from the network ({errstr(exc)})') from None
 
-        log.debug(lazyformat('received TCP payload', data), self.session())
-        return data
+        log.debug(lazyformat('received TCP payload', bytes(view)), self.session())
+        return view
 
     def writer(self, data: bytes) -> Iterator[bool]:
         if not self.io:
@@ -360,76 +373,82 @@ class Connection:
                 log.critical(lazymsg('tcp.write.error name={n} peer={p}', n=self.name(), p=self.peer), self.session())
                 raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})') from None
 
-    def reader(self) -> Iterator[tuple[int, int, bytes, bytes, NotifyError | None]]:
+    def reader(self) -> Iterator[tuple[int, int, Buffer, Buffer, NotifyError | None]]:
+        """Read BGP message header and body with zero-copy buffers.
+
+        Returns memoryview for header and body to enable zero-copy slicing
+        by downstream message parsers.
+        """
         # _reader returns the whole number requested or nothing and then stops
         for header in self._reader(Message.HEADER_LEN):
             if not header:
-                yield 0, 0, b'', b'', None
+                yield 0, 0, memoryview(b''), memoryview(b''), None
 
-        if not header.startswith(Message.MARKER):
+        if not bytes(header[:16]) == Message.MARKER:
             report = 'The packet received does not contain a BGP marker'
-            yield 0, 0, header, b'', NotifyError(1, 1, report)
+            yield 0, 0, header, memoryview(b''), NotifyError(1, 1, report)
             return
 
         msg = header[18]
-        length = unpack('!H', header[16:18])[0]
+        length = int.from_bytes(header[16:18], 'big')
 
         if length < Message.HEADER_LEN or length > self.msg_size:
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-            yield length, 0, header, b'', NotifyError(1, 2, report)
+            yield length, 0, header, memoryview(b''), NotifyError(1, 2, report)
             return
 
         validator = Message.Length.get(msg, _default_length_validator)
         if not validator(length):
             # MUST send the faulty length back
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-            yield length, 0, header, b'', NotifyError(1, 2, report)
+            yield length, 0, header, memoryview(b''), NotifyError(1, 2, report)
             return
 
         number = length - Message.HEADER_LEN
 
         if not number:
-            yield length, msg, header, b'', None
+            yield length, msg, header, memoryview(b''), None
             return
 
         for body in self._reader(number):
             if not body:
-                yield 0, 0, b'', b'', None
+                yield 0, 0, memoryview(b''), memoryview(b''), None
 
         yield length, msg, header, body, None
 
-    async def reader_async(self) -> tuple[int, int, bytes, bytes, NotifyError | None]:
-        """Read BGP message header and body (async version)
+    async def reader_async(self) -> tuple[int, int, Buffer, Buffer, NotifyError | None]:
+        """Read BGP message header and body with zero-copy buffers (async version).
 
-        Uses asyncio for I/O operations.
-        Async version of reader() for hybrid event loop integration.
+        Uses asyncio for I/O operations with recv_into() for zero-copy reads.
+        Returns memoryview for header and body to enable zero-copy slicing
+        by downstream message parsers.
 
         Returns: (length, msg_type, header, body, error)
         """
         # Read BGP header (19 bytes)
         header = await self._reader_async(Message.HEADER_LEN)
 
-        if not header.startswith(Message.MARKER):
+        if not bytes(header[:16]) == Message.MARKER:
             report = 'The packet received does not contain a BGP marker'
-            return 0, 0, header, b'', NotifyError(1, 1, report)
+            return 0, 0, header, memoryview(b''), NotifyError(1, 1, report)
 
         msg = header[18]
-        length = unpack('!H', header[16:18])[0]
+        length = int.from_bytes(header[16:18], 'big')
 
         if length < Message.HEADER_LEN or length > self.msg_size:
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-            return length, 0, header, b'', NotifyError(1, 2, report)
+            return length, 0, header, memoryview(b''), NotifyError(1, 2, report)
 
         validator = Message.Length.get(msg, _default_length_validator)
         if not validator(length):
             # MUST send the faulty length back
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-            return length, 0, header, b'', NotifyError(1, 2, report)
+            return length, 0, header, memoryview(b''), NotifyError(1, 2, report)
 
         number = length - Message.HEADER_LEN
 
         if not number:
-            return length, msg, header, b'', None
+            return length, msg, header, memoryview(b''), None
 
         # Read body
         body = await self._reader_async(number)

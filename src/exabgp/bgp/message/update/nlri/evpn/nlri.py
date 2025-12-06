@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack
 from typing import TYPE_CHECKING, Any, ClassVar, Type
 
@@ -129,26 +130,27 @@ class EVPN(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: PathInfo | None, negotiated: Negotiated
-    ) -> tuple[EVPN, bytes]:
+        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: PathInfo | None, negotiated: Negotiated
+    ) -> tuple[EVPN, Buffer]:
+        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # EVPN NLRI: route_type(1) + length(1) + route_data(length)
-        if len(bgp) < 2:
-            raise Notify(3, 10, f'EVPN NLRI too short: need at least 2 bytes, got {len(bgp)}')
-        code = bgp[0]
-        length = bgp[1]
+        if len(data) < 2:
+            raise Notify(3, 10, f'EVPN NLRI too short: need at least 2 bytes, got {len(data)}')
+        code = data[0]
+        length = data[1]
 
-        if len(bgp) < length + 2:
-            raise Notify(3, 10, f'EVPN NLRI truncated: need {length + 2} bytes, got {len(bgp)}')
+        if len(data) < length + 2:
+            raise Notify(3, 10, f'EVPN NLRI truncated: need {length + 2} bytes, got {len(data)}')
 
         if code in cls.registered_evpn:
-            klass = cls.registered_evpn[code].unpack_evpn_route(bgp[2 : length + 2])  # type: ignore[attr-defined]
+            klass = cls.registered_evpn[code].unpack_evpn_route(bytes(data[2 : length + 2]))  # type: ignore[attr-defined]
         else:
-            klass = GenericEVPN(code, bgp[2 : length + 2])
+            klass = GenericEVPN(code, bytes(data[2 : length + 2]))
         klass.CODE = code
         klass.action = action
         klass.addpath = addpath
 
-        return klass, bgp[length + 2 :]
+        return klass, data[length + 2 :]
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())

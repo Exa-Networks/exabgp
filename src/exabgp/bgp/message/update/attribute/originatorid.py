@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
@@ -44,7 +45,7 @@ class OriginatorID(Attribute):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'OriginatorID':
+    def from_packet(cls, data: Buffer) -> 'OriginatorID':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -56,9 +57,10 @@ class OriginatorID(Attribute):
         Raises:
             ValueError: If data length is not 4
         """
-        if len(data) != 4:
-            raise ValueError(f'OriginatorID must be 4 bytes, got {len(data)}')
-        return cls(data)
+        data_bytes = bytes(data)
+        if len(data_bytes) != 4:
+            raise ValueError(f'OriginatorID must be 4 bytes, got {len(data_bytes)}')
+        return cls(data_bytes)
 
     @classmethod
     def from_string(cls, ip_string: str) -> 'OriginatorID':
@@ -110,5 +112,5 @@ class OriginatorID(Attribute):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'OriginatorID':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'OriginatorID':
         return cls.from_packet(data)

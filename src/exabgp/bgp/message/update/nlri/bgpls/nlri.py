@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack
 from struct import unpack
 from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar
@@ -159,36 +160,37 @@ class BGPLS(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls: Type[T], afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: PathInfo | None, negotiated
-    ) -> tuple[T, bytes]:
+        cls: Type[T], afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: PathInfo | None, negotiated
+    ) -> tuple[T, Buffer]:
+        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # BGP-LS NLRI header: type(2) + length(2) = 4 bytes minimum
-        if len(bgp) < 4:
-            raise Notify(3, 10, f'BGP-LS NLRI too short: need at least 4 bytes, got {len(bgp)}')
-        code, length = unpack('!HH', bgp[:4])
+        if len(data) < 4:
+            raise Notify(3, 10, f'BGP-LS NLRI too short: need at least 4 bytes, got {len(data)}')
+        code, length = unpack('!HH', bytes(data[:4]))
 
         # For VPN, need 8 more bytes for RD
         if safi == SAFI.bgp_ls_vpn:
-            if len(bgp) < 12:
-                raise Notify(3, 10, f'BGP-LS VPN NLRI too short: need at least 12 bytes, got {len(bgp)}')
+            if len(data) < 12:
+                raise Notify(3, 10, f'BGP-LS VPN NLRI too short: need at least 12 bytes, got {len(data)}')
 
-        if len(bgp) < length + 4:
-            raise Notify(3, 10, f'BGP-LS NLRI truncated: need {length + 4} bytes, got {len(bgp)}')
+        if len(data) < length + 4:
+            raise Notify(3, 10, f'BGP-LS NLRI truncated: need {length + 4} bytes, got {len(data)}')
 
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:
                 # Extract Route Distinguisher
-                rd: RouteDistinguisher | None = RouteDistinguisher.unpack_routedistinguisher(bgp[4:12])
-                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bgp[12 : length + 4], rd)  # type: ignore[attr-defined]
+                rd: RouteDistinguisher | None = RouteDistinguisher.unpack_routedistinguisher(bytes(data[4:12]))
+                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bytes(data[12 : length + 4]), rd)  # type: ignore[attr-defined]
             else:
                 rd = None
-                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bgp[4 : length + 4], rd)  # type: ignore[attr-defined]
+                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bytes(data[4 : length + 4]), rd)  # type: ignore[attr-defined]
         else:
-            klass = GenericBGPLS(code, bgp[4 : length + 4])
+            klass = GenericBGPLS(code, bytes(data[4 : length + 4]))
         klass.CODE = code
         klass.action = action
         klass.addpath = addpath
 
-        return klass, bgp[length + 4 :]
+        return klass, data[length + 4 :]
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())

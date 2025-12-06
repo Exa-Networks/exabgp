@@ -91,6 +91,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
@@ -328,8 +329,8 @@ class IPVPN(Label):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple['IPVPN', bytes]:
+        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple['IPVPN', Buffer]:
         """Unpack IPVPN NLRI from wire format.
 
         Uses SAFI to determine RD presence (exact, not heuristic).
@@ -337,17 +338,19 @@ class IPVPN(Label):
         """
         from struct import unpack
 
+        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
+
         # Parse path_info if AddPath is enabled
         if addpath:
-            if len(bgp) <= PATH_INFO_SIZE:
+            if len(data) <= PATH_INFO_SIZE:
                 raise ValueError('Trying to extract path-information but we do not have enough data')
-            path_info = PathInfo(bgp[:PATH_INFO_SIZE])
-            bgp = bgp[PATH_INFO_SIZE:]
+            path_info = PathInfo(bytes(data[:PATH_INFO_SIZE]))
+            data = data[PATH_INFO_SIZE:]
         else:
             path_info = PathInfo.DISABLED
 
-        mask = bgp[0]
-        bgp = bgp[1:]
+        mask = data[0]
+        data = data[1:]
 
         # Get RD size from Family.size (exact, not heuristic)
         _, rd_size = Family.size.get((afi, safi), (0, 0))
@@ -357,8 +360,8 @@ class IPVPN(Label):
         labels_list: list[int] = []
         if safi.has_label():
             while mask - rd_bits >= LABEL_SIZE_BITS:
-                label = int(unpack('!L', bytes([0]) + bgp[:3])[0])
-                bgp = bgp[3:]
+                label = int(unpack('!L', bytes([0]) + bytes(data[:3]))[0])
+                data = data[3:]
                 mask -= LABEL_SIZE_BITS
                 labels_list.append(label >> 4)
                 if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
@@ -372,24 +375,24 @@ class IPVPN(Label):
         rd_packed = b''
         if rd_size:
             mask -= rd_bits
-            rd_packed = bgp[:rd_size]
-            bgp = bgp[rd_size:]
+            rd_packed = bytes(data[:rd_size])
+            data = data[rd_size:]
 
         if mask < 0:
             raise Notify(3, 10, 'invalid length in NLRI prefix')
 
-        if not bgp and mask:
+        if not data and mask:
             raise Notify(3, 10, 'not enough data for the mask provided')
 
         # Parse prefix
         size = CIDR.size(mask)
-        if len(bgp) < size:
+        if len(data) < size:
             raise Notify(3, 10, f'could not decode IPVPN NLRI with family {AFI.from_int(afi)} {SAFI.from_int(safi)}')
 
-        network, bgp = bgp[:size], bgp[size:]
+        network, data = data[:size], data[size:]
 
         # Create NLRI - _packed stores CIDR only
-        cidr_packed = bytes([mask]) + network
+        cidr_packed = bytes([mask]) + bytes(network)
         instance = object.__new__(cls)
         NLRI.__init__(instance, afi, safi, action)
         instance._packed = cidr_packed
@@ -398,4 +401,4 @@ class IPVPN(Label):
         instance.labels = Labels.make_labels(labels_list) if labels_list else Labels.NOLABEL
         instance._rd_packed = rd_packed
 
-        return instance, bgp
+        return instance, data

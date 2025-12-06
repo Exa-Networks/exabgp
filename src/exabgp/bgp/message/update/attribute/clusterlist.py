@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING, ClassVar, Sequence
 
 if TYPE_CHECKING:
@@ -49,7 +50,7 @@ class ClusterList(Attribute):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'ClusterList':
+    def from_packet(cls, data: Buffer) -> 'ClusterList':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -61,9 +62,10 @@ class ClusterList(Attribute):
         Raises:
             ValueError: If data length is not a multiple of 4
         """
-        if len(data) % 4 != 0:
-            raise ValueError(f'ClusterList must be a multiple of 4 bytes, got {len(data)}')
-        return cls(data)
+        data_bytes = bytes(data)
+        if len(data_bytes) % 4 != 0:
+            raise ValueError(f'ClusterList must be a multiple of 4 bytes, got {len(data_bytes)}')
+        return cls(data_bytes)
 
     @classmethod
     def make_clusterlist(cls, clusters: Sequence[IPv4]) -> 'ClusterList':
@@ -112,5 +114,5 @@ class ClusterList(Attribute):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'ClusterList':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'ClusterList':
         return cls.from_packet(data)

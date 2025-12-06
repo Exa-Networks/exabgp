@@ -44,9 +44,10 @@ def test_update_split_with_random_data(data: bytes) -> None:
         withdrawn, attributes, announced = UpdateCollection.split(data)
 
         # If it parses successfully, verify the components
-        assert isinstance(withdrawn, bytes)
-        assert isinstance(attributes, bytes)
-        assert isinstance(announced, bytes)
+        # split() now returns memoryview slices for zero-copy
+        assert isinstance(withdrawn, (bytes, memoryview))
+        assert isinstance(attributes, (bytes, memoryview))
+        assert isinstance(announced, (bytes, memoryview))
 
         # Verify the lengths add up
         # Format: 2 (withdrawn_len) + withdrawn + 2 (attr_len) + attributes + announced

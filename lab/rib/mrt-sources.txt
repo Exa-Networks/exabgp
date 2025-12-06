@@ -1,0 +1,43 @@
+Good sources for full MRT dumps from transit providers:
+
+  RIPE RIS (Routing Information Service)
+
+  https://data.ris.ripe.net/
+  - Full table dumps from 20+ global collectors
+  - Example: https://data.ris.ripe.net/rrc00/latest-bview.gz
+  - Updates every 8 hours
+
+  RouteViews (University of Oregon)
+
+  http://archive.routeviews.org/
+  - Multiple collectors including large transit providers
+  - Example: http://archive.routeviews.org/bgpdata/2025.12/RIBS/
+  - Full tables from AS6447, AS3356 (Lumen), etc.
+
+  Isolario
+
+  https://www.isolario.it/Isolario_MRT_dumps/
+  - European collector with full feeds
+
+  Quick Download Example
+
+  # RIPE RIS - Amsterdam collector (rrc00)
+  curl -O https://data.ris.ripe.net/rrc00/latest-bview.gz
+
+  # RouteViews - route-views2 (large collector)
+  curl -O http://archive.routeviews.org/bgpdata/2025.12/RIBS/rib.20251205.0000.bz2
+
+  Using with ExaBGP
+
+  ExaBGP doesn't read MRT directly. Options:
+  1. bgpdump - convert MRT to text, then feed to ExaBGP
+  2. mrt2exabgp - Python tool specifically for ExaBGP
+  3. gobgp - can replay MRT files
+
+  # Install bgpdump (macOS)
+  brew install libbgpdump
+
+  # Convert to text
+  bgpdump -m rib.20251205.0000.bz2 > routes.txt
+
+  Current full table is ~1M IPv4 + ~250K IPv6 prefixes.

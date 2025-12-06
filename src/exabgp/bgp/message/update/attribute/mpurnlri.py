@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import unpack
 from typing import Generator
 
@@ -142,18 +143,19 @@ class MPURNLRI(Attribute, Family):
         return 'MP_UNREACH_NLRI for %s %s with %d NLRI(s)' % (self.afi, self.safi, len(self.nlris))
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> MPURNLRI:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> MPURNLRI:
         """Unpack MPURNLRI from wire format.
 
         Validates the data and creates an MPURNLRI instance storing the wire bytes.
         NLRIs are parsed lazily when accessed via the nlris property.
         """
+        data_bytes = bytes(data)
         # MP_UNREACH_NLRI minimum: AFI(2) + SAFI(1) = 3 bytes
-        if len(data) < 3:
-            raise Notify(3, 9, f'MP_UNREACH_NLRI too short: need at least 3 bytes, got {len(data)}')
+        if len(data_bytes) < 3:
+            raise Notify(3, 9, f'MP_UNREACH_NLRI too short: need at least 3 bytes, got {len(data_bytes)}')
 
         # -- Reading AFI/SAFI for validation
-        _afi, _safi = unpack('!HB', data[:3])
+        _afi, _safi = unpack('!HB', data_bytes[:3])
         afi, safi = AFI.from_int(_afi), SAFI.from_int(_safi)
 
         if negotiated and (afi, safi) not in negotiated.families:
@@ -163,7 +165,7 @@ class MPURNLRI(Attribute, Family):
         context = negotiated.nlri_context(afi, safi)
 
         # Store wire bytes and context - NLRIs parsed lazily
-        return cls(data, context)
+        return cls(data_bytes, context)
 
 
 # Create empty MPURNLRI using factory method with default context

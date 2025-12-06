@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import sys
+from collections.abc import Buffer
 from struct import pack
 from struct import unpack
 from typing import ClassVar, Type as TypingType, TypeVar, TYPE_CHECKING
@@ -90,8 +91,8 @@ class Operational(Message):
         Message.__init__(self)
         self.what: Type = Type(what)
 
-    def _message(self, data: bytes) -> bytes:
-        return Message._message(self, self.what.pack() + pack('!H', len(data)) + data)
+    def _message(self, data: Buffer) -> bytes:
+        return Message._message(self, self.what.pack() + pack('!H', len(data)) + bytes(data))
 
     def __str__(self) -> str:
         return self.extensive()
@@ -105,7 +106,7 @@ class Operational(Message):
         return klass
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Operational | None:  # pylint: disable=W0613
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Operational | None:  # pylint: disable=W0613
         what = Type(unpack('!H', data[0:2])[0])
         length = unpack('!H', data[2:4])[0]
 
@@ -114,8 +115,7 @@ class Operational(Message):
         if decode == 'advisory':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
-            data = data[7 : length + 4]
-            return klass(afi, safi, data)  # type: ignore[call-arg,misc]
+            return klass(afi, safi, data[7 : length + 4])  # type: ignore[call-arg,misc]
         if decode == 'query':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
@@ -140,16 +140,16 @@ class Operational(Message):
 class OperationalFamily(Operational):
     has_family: ClassVar[bool] = True
 
-    def __init__(self, what: int, afi: int | AFI, safi: int | SAFI, data: bytes = b'') -> None:
+    def __init__(self, what: int, afi: int | AFI, safi: int | SAFI, data: Buffer = b'') -> None:
         Operational.__init__(self, what)
         self.afi: AFI = AFI.from_int(afi)
         self.safi: SAFI = SAFI.from_int(safi)
-        self.data: bytes = data
+        self.data: Buffer = data
 
     def family(self) -> tuple[AFI, SAFI]:
         return (self.afi, self.safi)
 
-    def _message(self, data: bytes) -> bytes:
+    def _message(self, data: Buffer) -> bytes:
         return Operational._message(self, self.afi.pack_afi() + self.safi.pack_safi() + data)
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
@@ -171,7 +171,7 @@ class SequencedOperationalFamily(OperationalFamily):
         safi: int | SAFI,
         routerid: RouterID | None,
         sequence: int | None,
-        data: bytes = b'',
+        data: Buffer = b'',
     ) -> None:
         OperationalFamily.__init__(self, what, afi, safi, data)
         self.routerid: RouterID | None = routerid if routerid else None
@@ -211,8 +211,8 @@ class NS:
         is_fault: ClassVar[bool] = True
         ERROR_SUBCODE: ClassVar[bytes]
 
-        def __init__(self, afi: int | AFI, safi: int | SAFI, sequence: bytes) -> None:
-            OperationalFamily.__init__(self, Operational.CODE.NS, afi, safi, sequence + self.ERROR_SUBCODE)
+        def __init__(self, afi: int | AFI, safi: int | SAFI, sequence: Buffer) -> None:
+            OperationalFamily.__init__(self, Operational.CODE.NS, afi, safi, bytes(sequence) + self.ERROR_SUBCODE)
 
         def extensive(self) -> str:
             return f'operational NS {self.name} {self.afi}/{self.safi}'

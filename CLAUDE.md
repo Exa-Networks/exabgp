@@ -322,6 +322,10 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
     - **Read when:** Working with configuration, environment variables, reactor/daemon/logging/API settings
     - **Contains:** All exabgp_* variables, tcp.attempts, bgp.*, daemon.*, log.*, api.*, reactor.*, cache.*, debugging options
 
+12. **`.claude/exabgp/PEP688_BUFFER_PROTOCOL.md`** - Python 3.12 Buffer protocol reference
+    - **Read when:** Working with wire data, bytes/memoryview handling, type annotations for binary data
+    - **Contains:** `collections.abc.Buffer` usage, zero-copy patterns, when to convert to bytes
+
 **Quick reference:**
 - Adding NLRI type → Read #3, then #1
 - Understanding message flow → Read #2
@@ -331,6 +335,7 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
 - Adding CLI commands → Read #6, #8, #3
 - Understanding API protocol → Read #9, #10
 - Environment variables/configuration → Read #11
+- Working with wire data/bytes/memoryview → Read #12 (PEP 688)
 
 ---
 

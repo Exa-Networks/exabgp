@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import error, unpack
 from typing import Generator, TYPE_CHECKING
 
@@ -48,10 +49,13 @@ class RouteRefresh(Message):
     start = 1
     end = 2
 
-    def __init__(self, packed: bytes) -> None:
-        if len(packed) != 4:
-            raise ValueError(f'RouteRefresh requires exactly 4 bytes, got {len(packed)}')
-        self._packed = packed
+    def __init__(self, packed: Buffer) -> None:
+        # Convert to bytearray first - this gives us length and ownership
+        self._buffer = bytearray(packed)
+        if len(self._buffer) != 4:
+            raise ValueError(f'RouteRefresh requires exactly 4 bytes, got {len(self._buffer)}')
+        # Two-buffer pattern: bytearray owns data, memoryview provides zero-copy slicing
+        self._packed = memoryview(self._buffer)
 
     @classmethod
     def make_route_refresh(cls, afi: int, safi: int, reserved: int = 0) -> 'RouteRefresh':
@@ -89,7 +93,7 @@ class RouteRefresh(Message):
     # 	return self._families[:]
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> RouteRefresh:
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> RouteRefresh:
         try:
             afi, reserved, safi = unpack('!HBB', data)
         except error:

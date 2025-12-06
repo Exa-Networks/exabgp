@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import unpack
 from typing import TYPE_CHECKING, Generator
 
@@ -220,18 +221,19 @@ class MPRNLRI(Attribute, Family):
         return 'MP_REACH_NLRI for %s %s with %d NLRI(s)' % (self.afi, self.safi, len(self.nlris))
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> MPRNLRI:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> MPRNLRI:
         """Unpack MPRNLRI from wire format.
 
         Validates the data and creates an MPRNLRI instance storing the wire bytes.
         NLRIs are parsed lazily when accessed via the nlris property.
         """
+        data_bytes = bytes(data)
         # MP_REACH_NLRI minimum: AFI(2) + SAFI(1) + NH_len(1) + reserved(1) = 5 bytes
-        if len(data) < 5:
-            raise Notify(3, 9, f'MP_REACH_NLRI too short: need at least 5 bytes, got {len(data)}')
+        if len(data_bytes) < 5:
+            raise Notify(3, 9, f'MP_REACH_NLRI too short: need at least 5 bytes, got {len(data_bytes)}')
 
         # -- Reading AFI/SAFI for validation
-        _afi, _safi = unpack('!HB', data[:3])
+        _afi, _safi = unpack('!HB', data_bytes[:3])
         afi, safi = AFI.from_int(_afi), SAFI.from_int(_safi)
         offset = 3
 
@@ -240,12 +242,12 @@ class MPRNLRI(Attribute, Family):
             raise Notify(3, 0, 'presented a non-negotiated family {}/{}'.format(afi, safi))
 
         # -- Reading length of next-hop
-        len_nh = data[offset]
+        len_nh = data_bytes[offset]
         offset += 1
 
         # Validate we have enough data for next-hop + reserved byte
-        if len(data) < offset + len_nh + 1:
-            raise Notify(3, 9, f'MP_REACH_NLRI truncated: need {offset + len_nh + 1} bytes, got {len(data)}')
+        if len(data_bytes) < offset + len_nh + 1:
+            raise Notify(3, 9, f'MP_REACH_NLRI truncated: need {offset + len_nh + 1} bytes, got {len(data_bytes)}')
 
         if (afi, safi) not in Family.size:
             raise Notify(3, 0, 'unsupported {} {}'.format(afi, safi))
@@ -272,27 +274,27 @@ class MPRNLRI(Attribute, Family):
             )
 
         # check the RD is well zero
-        if rd and sum([int(_) for _ in data[offset : offset + 8]]) != 0:
+        if rd and sum([int(_) for _ in data_bytes[offset : offset + 8]]) != 0:
             raise Notify(3, 0, "MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 
         offset += len_nh
 
         # Skip a reserved bit as someone had to bug us !
-        reserved = data[offset]
+        reserved = data_bytes[offset]
         offset += 1
 
         if reserved != 0:
             raise Notify(3, 0, 'the reserved bit of MP_REACH_NLRI is not zero')
 
         # Verify there's NLRI data
-        if offset >= len(data):
+        if offset >= len(data_bytes):
             raise Notify(3, 0, 'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi, safi))
 
         # Create context for lazy NLRI parsing
         context = negotiated.nlri_context(afi, safi)
 
         # Store wire bytes and context - NLRIs parsed lazily
-        return cls(data, context)
+        return cls(data_bytes, context)
 
 
 # Create empty MPRNLRI using factory method with default context

@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -26,10 +27,14 @@ class KeepAlive(Message):
     ID = Message.CODE.KEEPALIVE
     TYPE = bytes([Message.CODE.KEEPALIVE])
 
-    def __init__(self, packed: bytes = b'') -> None:
+    def __init__(self, packed: Buffer = b'') -> None:
         if packed:
-            raise ValueError(f'KeepAlive must have empty payload, got {len(packed)} bytes')
-        self._packed = packed
+            # Convert to bytes only on error path for the message
+            raise ValueError(f'KeepAlive must have empty payload, got {len(bytes(packed))} bytes')
+        # Two-buffer pattern: bytearray owns data, memoryview provides zero-copy slicing
+        # For KeepAlive this is always empty
+        self._buffer = bytearray()
+        self._packed = memoryview(self._buffer)
 
     @classmethod
     def make_keepalive(cls) -> 'KeepAlive':
@@ -42,9 +47,9 @@ class KeepAlive(Message):
         return 'KEEPALIVE'
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> KeepAlive:  # pylint: disable=W0613
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> KeepAlive:  # pylint: disable=W0613
         # This can not happen at decode time as we check the length of the KEEPALIVE message
         # But could happen when calling the function programmatically
         if data:
-            raise Notify(1, 2, 'Keepalive can not have any payload but contains %s' % hexstring(data))
+            raise Notify(1, 2, 'Keepalive can not have any payload but contains %s' % hexstring(bytes(data)))
         return cls(data)

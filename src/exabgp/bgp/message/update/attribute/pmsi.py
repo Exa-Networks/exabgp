@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack
 from struct import unpack
 from typing import TYPE_CHECKING, ClassVar, Type
@@ -66,7 +67,7 @@ class PMSI(Attribute):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'PMSI':
+    def from_packet(cls, data: Buffer) -> 'PMSI':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -78,12 +79,13 @@ class PMSI(Attribute):
         Raises:
             ValueError: If data is malformed
         """
-        if len(data) < 5:
-            raise ValueError(f'PMSI requires at least 5 bytes, got {len(data)}')
-        tunnel_type = data[1]
+        data_bytes = bytes(data)
+        if len(data_bytes) < 5:
+            raise ValueError(f'PMSI requires at least 5 bytes, got {len(data_bytes)}')
+        tunnel_type = data_bytes[1]
         if tunnel_type in cls._pmsi_known:
-            return cls._pmsi_known[tunnel_type](data)
-        return cls(data)
+            return cls._pmsi_known[tunnel_type](data_bytes)
+        return cls(data_bytes)
 
     @classmethod
     def make_pmsi(cls, tunnel_type: int, flags: int, label: int, tunnel: bytes, raw_label: int | None = None) -> 'PMSI':
@@ -177,7 +179,7 @@ class PMSI(Attribute):
         return klass
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> PMSI:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> PMSI:
         return cls.from_packet(data)
 
 

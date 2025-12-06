@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack
 from struct import unpack
 from typing import TYPE_CHECKING, ClassVar
@@ -64,7 +65,7 @@ class AIGP(Attribute):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'AIGP':
+    def from_packet(cls, data: Buffer) -> 'AIGP':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -76,17 +77,18 @@ class AIGP(Attribute):
         Raises:
             ValueError: If data is malformed
         """
-        if len(data) < 3:
-            raise ValueError(f'AIGP TLV too short: {len(data)} bytes')
-        tlv_type = data[0]
-        tlv_length = unpack('!H', data[1:3])[0]
+        data_bytes = bytes(data)
+        if len(data_bytes) < 3:
+            raise ValueError(f'AIGP TLV too short: {len(data_bytes)} bytes')
+        tlv_type = data_bytes[0]
+        tlv_length = unpack('!H', data_bytes[1:3])[0]
         if tlv_type != 1:
             raise ValueError(f'Unknown AIGP TLV type: {tlv_type}')
         if tlv_length != cls._TLV_LENGTH:
             raise ValueError(f'Invalid AIGP TLV length: {tlv_length}')
-        if len(data) < tlv_length:
-            raise ValueError(f'AIGP data truncated: got {len(data)}, expected {tlv_length}')
-        return cls(data[:tlv_length])
+        if len(data_bytes) < tlv_length:
+            raise ValueError(f'AIGP data truncated: got {len(data_bytes)}, expected {tlv_length}')
+        return cls(data_bytes[:tlv_length])
 
     @classmethod
     def from_int(cls, value: int) -> 'AIGP':
@@ -124,7 +126,7 @@ class AIGP(Attribute):
         return f'0x{self.aigp:016x}'
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> AIGP | None:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> AIGP | None:
         if not negotiated.aigp:
             # AIGP must only be accepted on configured sessions
             return None

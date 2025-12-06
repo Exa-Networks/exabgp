@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack
 from struct import unpack
 from typing import TYPE_CHECKING
@@ -39,7 +40,7 @@ class MED(Attribute):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'MED':
+    def from_packet(cls, data: Buffer) -> 'MED':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -51,9 +52,10 @@ class MED(Attribute):
         Raises:
             ValueError: If data is not exactly 4 bytes
         """
-        if len(data) != 4:
-            raise ValueError(f'MED requires exactly 4 bytes, got {len(data)}')
-        return cls(data)
+        data_bytes = bytes(data)
+        if len(data_bytes) != 4:
+            raise ValueError(f'MED requires exactly 4 bytes, got {len(data_bytes)}')
+        return cls(data_bytes)
 
     @classmethod
     def from_int(cls, med: int) -> 'MED':
@@ -98,6 +100,6 @@ class MED(Attribute):
         return hash(self.med)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> MED:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> MED:
         # Wire data - use from_packet for validation
         return cls.from_packet(data)

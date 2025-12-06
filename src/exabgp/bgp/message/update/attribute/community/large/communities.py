@@ -5,6 +5,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING, Iterator, Sequence
 
 if TYPE_CHECKING:
@@ -44,7 +45,7 @@ class LargeCommunities(Attribute):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'LargeCommunities':
+    def from_packet(cls, data: Buffer) -> 'LargeCommunities':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -56,14 +57,15 @@ class LargeCommunities(Attribute):
         Raises:
             Notify: If data length is not a multiple of 12
         """
-        if len(data) % LARGE_COMMUNITY_SIZE != 0:
-            raise Notify(3, 1, 'could not decode large community {}'.format(str([hex(_) for _ in data])))
+        data_bytes = bytes(data)
+        if len(data_bytes) % LARGE_COMMUNITY_SIZE != 0:
+            raise Notify(3, 1, 'could not decode large community {}'.format(str([hex(_) for _ in data_bytes])))
         # Deduplicate while preserving order
         seen: set[bytes] = set()
         unique_packed = b''
         offset = 0
-        while offset < len(data):
-            chunk = data[offset : offset + LARGE_COMMUNITY_SIZE]
+        while offset < len(data_bytes):
+            chunk = data_bytes[offset : offset + LARGE_COMMUNITY_SIZE]
             if chunk not in seen:
                 seen.add(chunk)
                 unique_packed += chunk
@@ -132,5 +134,5 @@ class LargeCommunities(Attribute):
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'LargeCommunities':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'LargeCommunities':
         return cls.from_packet(data)

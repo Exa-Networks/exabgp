@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
+from collections.abc import Buffer
 from struct import error, unpack
 from typing import TYPE_CHECKING, ClassVar, Sequence, Type, TypeVar
 
@@ -101,7 +102,7 @@ class ASPath(Attribute):
         self._asn4: bool = asn4
 
     @classmethod
-    def from_packet(cls, data: bytes, asn4: bool) -> 'ASPath':
+    def from_packet(cls, data: Buffer, asn4: bool) -> 'ASPath':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -114,9 +115,10 @@ class ASPath(Attribute):
         Raises:
             Notify: If data format is invalid
         """
+        data_bytes = bytes(data)
         # Validate by attempting to parse - will raise Notify on error
-        cls._unpack_segments_static(data, asn4)
-        return cls(data, asn4)
+        cls._unpack_segments_static(data_bytes, asn4)
+        return cls(data_bytes, asn4)
 
     @classmethod
     def make_aspath(
@@ -293,8 +295,8 @@ class ASPath(Attribute):
         return message
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'ASPath | None':
-        if not data:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'ASPath | None':
+        if not bytes(data):
             return None
         return cls.from_packet(data, negotiated.asn4)
 
@@ -326,14 +328,15 @@ class AS4Path(ASPath):
         super().__init__(packed, asn4=True)
 
     @classmethod
-    def from_packet(cls, data: bytes, asn4: bool = True) -> 'AS4Path':
+    def from_packet(cls, data: Buffer, asn4: bool = True) -> 'AS4Path':
         """Validate and create from wire-format bytes.
 
         AS4Path always uses 4-byte ASNs.
         """
+        data_bytes = bytes(data)
         # Validate by attempting to parse - will raise Notify on error
-        cls._unpack_segments_static(data, asn4=True)
-        return cls(data)
+        cls._unpack_segments_static(data_bytes, asn4=True)
+        return cls(data_bytes)
 
     @classmethod
     def make_aspath(
@@ -348,8 +351,8 @@ class AS4Path(ASPath):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'AS4Path | None':
-        if not data:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'AS4Path | None':
+        if not bytes(data):
             return None
         return cls.from_packet(data)
 

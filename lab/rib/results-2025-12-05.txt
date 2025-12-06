@@ -1,0 +1,174 @@
+============================================================
+ExaBGP RIB Benchmark Results - 2025-12-05
+============================================================
+
+System: macOS (Darwin)
+Python: 3.12
+Command: uv run python benchmark/benchmark_rib.py
+
+============================================================
+Route count: 1,000
+============================================================
+
+add_to_rib:
+  Routes: 1,000
+  Time: 0.0029s
+  Memory: 0.01 MB
+  Throughput: 339,093 ops/sec
+
+del_from_rib (deepcopy):
+  Routes: 1,000
+  Time: 0.0149s
+  Memory: 1.55 MB
+  Throughput: 67,225 ops/sec
+
+in_cache (hits=0.000s, misses=0.001s):
+  Routes: 1,000
+  Time: 0.0016s
+  Memory: 0.00 MB
+  Throughput: 1,265,823 ops/sec
+
+updates() iteration:
+  Routes: 1,000
+  Time: 0.0000s
+  Memory: 0.00 MB
+  Throughput: 149,992,419 ops/sec
+
+============================================================
+Route count: 10,000
+============================================================
+
+add_to_rib:
+  Routes: 10,000
+  Time: 0.0300s
+  Memory: 0.02 MB
+  Throughput: 333,757 ops/sec
+
+del_from_rib (deepcopy):
+  Routes: 10,000
+  Time: 0.1485s
+  Memory: 15.46 MB
+  Throughput: 67,357 ops/sec
+
+in_cache (hits=0.005s, misses=0.011s):
+  Routes: 10,000
+  Time: 0.0158s
+  Memory: 0.00 MB
+  Throughput: 1,268,690 ops/sec
+
+updates() iteration:
+  Routes: 10,000
+  Time: 0.0000s
+  Memory: 0.00 MB
+  Throughput: 609,124,499 ops/sec
+
+============================================================
+Route count: 100,000
+============================================================
+
+add_to_rib:
+  Routes: 100,000
+  Time: 0.3017s
+  Memory: 0.23 MB
+  Throughput: 331,464 ops/sec
+
+del_from_rib (deepcopy):
+  Routes: 100,000
+  Time: 1.4978s
+  Memory: 154.57 MB
+  Throughput: 66,766 ops/sec
+
+in_cache (hits=0.051s, misses=0.107s):
+  Routes: 100,000
+  Time: 0.1589s
+  Memory: 0.00 MB
+  Throughput: 1,258,584 ops/sec
+
+updates() iteration:
+  Routes: 100,000
+  Time: 0.0002s
+  Memory: 0.00 MB
+  Throughput: 613,651,243 ops/sec
+
+============================================================
+Change Object Memory Analysis
+============================================================
+
+1000 Change objects: 1010.9 KB
+Per object: 1035.1 bytes
+
+Change class:
+  Has __slots__: False
+  Has __dict__: True
+  __dict__ size: 96 bytes
+
+Index computation:
+  change.index() = b'01010101disabled\x18\n\x00\x00'
+  Length: 20 bytes
+  attributes.index() length: 49 chars
+
+============================================================
+Deepcopy vs Shallow Copy Analysis
+============================================================
+
+Deepcopy 10K times: 0.1256s (12.6 µs/op)
+Shallow copy 10K times: 0.0044s (0.4 µs/op)
+Speedup: 28.7x
+
+Memory for 1000 copies:
+  Deepcopy: 1574.9 KB
+  Shallow: 297.9 KB
+  Savings: 1277.0 KB (81%)
+
+============================================================
+CPU Profile (cProfile) - 10,000 routes
+============================================================
+
+Top 20 functions by cumulative time:
+         4519876 function calls (4009876 primitive calls) in 0.736 seconds
+
+   Ordered by: cumulative time
+   List reduced from 59 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.003    0.003    0.736    0.736 benchmark_rib.py:322(workload)
+    10000    0.019    0.000    0.642    0.000 rib/outgoing.py:197(del_from_rib)
+440000/10000    0.240    0.000    0.564    0.000 copy.py:118(deepcopy)
+60000/10000    0.058    0.000    0.540    0.000 copy.py:247(_reconstruct)
+40000/10000    0.030    0.000    0.507    0.000 copy.py:217(_deepcopy_dict)
+    10000    0.022    0.000    0.182    0.000 nlri/nlri.py:87(__deepcopy__)
+    20000    0.020    0.000    0.127    0.000 rib/outgoing.py:231(_update_rib)
+    10000    0.004    0.000    0.091    0.000 rib/outgoing.py:223(add_to_rib)
+   140000    0.019    0.000    0.068    0.000 copy.py:252(<genexpr>)
+  1080000    0.064    0.000    0.064    0.000 {method 'get' of 'dict' objects}
+    60000    0.010    0.000    0.052    0.000 protocol/family.py:378(family)
+    60000    0.015    0.000    0.042    0.000 protocol/family.py:340(__init__)
+    29960    0.007    0.000    0.034    0.000 attribute/attributes.py:265(index)
+   110000    0.022    0.000    0.033    0.000 copy.py:231(_keep_alive)
+    20000    0.010    0.000    0.032    0.000 rib/cache.py:78(update_cache)
+   670000    0.027    0.000    0.027    0.000 {built-in method builtins.id}
+    10000    0.003    0.000    0.025    0.000 {method 'join' of 'str' objects}
+    59960    0.008    0.000    0.022    0.000 rib/change.py:36(index)
+    30000    0.011    0.000    0.022    0.000 attribute/attributes.py:94(_generate_text)
+    60000    0.015    0.000    0.015    0.000 {method '__reduce_ex__' of 'object' objects}
+
+============================================================
+Key Findings
+============================================================
+
+1. BOTTLENECK: deepcopy() in del_from_rib() - 88% of withdrawal time
+2. Change class lacks __slots__ - 96 bytes wasted per object
+3. add_to_rib is fast (331K ops/sec) - no optimization needed
+4. in_cache is fast (1.26M ops/sec) - no optimization needed
+5. updates() is extremely fast - not a bottleneck
+
+============================================================
+Recommended Optimizations
+============================================================
+
+Priority 1: Replace deepcopy with shallow copy in del_from_rib()
+  - Expected speedup: 28x
+  - Expected memory savings: 81%
+
+Priority 2: Add __slots__ to Change class
+  - Expected memory reduction: ~70% per object

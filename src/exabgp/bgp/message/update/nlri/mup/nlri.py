@@ -6,6 +6,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack
 from typing import TYPE_CHECKING, Any, ClassVar, Type
 
@@ -117,30 +118,31 @@ class MUP(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[MUP, bytes]:
+        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[MUP, Buffer]:
+        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # MUP NLRI: arch_type(1) + route_type(2) + length(1) + route_data(length)
-        if len(bgp) < 4:
-            raise Notify(3, 10, f'MUP NLRI too short: need at least 4 bytes, got {len(bgp)}')
-        arch = bgp[0]
-        code = int.from_bytes(bgp[1:3], 'big')
-        length = bgp[3]
+        if len(data) < 4:
+            raise Notify(3, 10, f'MUP NLRI too short: need at least 4 bytes, got {len(data)}')
+        arch = data[0]
+        code = int.from_bytes(bytes(data[1:3]), 'big')
+        length = data[3]
 
         # arch and code byte size is 4 byte
         end = length + 4
-        if len(bgp) < end:
-            raise Notify(3, 10, f'MUP NLRI truncated: need {end} bytes, got {len(bgp)}')
+        if len(data) < end:
+            raise Notify(3, 10, f'MUP NLRI truncated: need {end} bytes, got {len(data)}')
 
         key = '{}:{}'.format(arch, code)
         if key in cls.registered:
-            klass = cls.registered[key].unpack_mup_route(bgp[4:end], afi)  # type: ignore[attr-defined]
+            klass = cls.registered[key].unpack_mup_route(bytes(data[4:end]), afi)  # type: ignore[attr-defined]
         else:
-            klass = GenericMUP(arch, afi, code, bgp[4:end])  # type: ignore[arg-type]
+            klass = GenericMUP(arch, afi, code, bytes(data[4:end]))  # type: ignore[arg-type]
         klass.CODE = code
         klass.action = action
         klass.addpath = addpath
 
-        return klass, bgp[end:]
+        return klass, data[end:]
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())

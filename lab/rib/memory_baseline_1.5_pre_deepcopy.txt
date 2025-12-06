@@ -1,0 +1,37 @@
+======================================================================
+ExaBGP Memory Baseline (Pre-Deepcopy Removal - ac803ba3)
+======================================================================
+
+Class Configuration:
+----------------------------------------------------------------------
+  Change:
+    __slots__: False
+    __dict__:  True
+    dict size: 296 bytes
+  INET:
+    __slots__: False
+    __dict__:  True
+    dict size: 296 bytes
+  Attributes:
+    __slots__: False
+    __dict__:  True
+
+Change Object Memory:
+----------------------------------------------------------------------
+  1,000 changes: 1.00 MB (1045.0 bytes/change)
+  10,000 changes: 9.87 MB (1034.5 bytes/change)
+
+RIB Operations Memory (100,000 changes):
+----------------------------------------------------------------------
+  Empty RIB:                  0.00 MB
+  After add_to_rib:          13.70 MB  (143.6 bytes/change)
+  After cache (updates):     13.70 MB  (143.6 bytes/change)
+  After del_from_rib:        38.86 MB  (407.4 bytes/change)
+  After withdraw updates:    38.86 MB
+
+Summary:
+----------------------------------------------------------------------
+  Change objects (100K):   98.61 MB (1034.0 bytes/change)
+  RIB overhead (100K):     13.70 MB (143.6 bytes/change)
+  Total per change:        1177.6 bytes
+  Total for 100K changes:  112.31 MB

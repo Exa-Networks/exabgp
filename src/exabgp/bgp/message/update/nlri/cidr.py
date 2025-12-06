@@ -54,16 +54,18 @@ Wire Format (_packed):
 """
 
 from __future__ import annotations
-from typing import ClassVar, TYPE_CHECKING
+
+from collections.abc import Buffer
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 import math
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.notification import Notify
 
 # CIDR netmask constants
 CIDR_IPV4_MAX_MASK = 32  # Maximum valid IPv4 mask
@@ -81,7 +83,7 @@ class CIDR:
 
     NOCIDR: ClassVar['CIDR']
 
-    def __init__(self, nlri: bytes, afi: AFI) -> None:
+    def __init__(self, nlri: Buffer, afi: AFI) -> None:
         """Create a CIDR from NLRI wire format bytes.
 
         Args:
@@ -109,7 +111,7 @@ class CIDR:
         return instance
 
     @classmethod
-    def from_ipv4(cls, nlri: bytes) -> 'CIDR':
+    def from_ipv4(cls, nlri: Buffer) -> 'CIDR':
         """Create CIDR from IPv4 NLRI wire format.
 
         Use this when AFI is known to be IPv4.
@@ -121,7 +123,7 @@ class CIDR:
         return instance
 
     @classmethod
-    def from_ipv6(cls, nlri: bytes) -> 'CIDR':
+    def from_ipv6(cls, nlri: Buffer) -> 'CIDR':
         """Create CIDR from IPv6 NLRI wire format.
 
         Use this when AFI is known to be IPv6.
@@ -133,7 +135,7 @@ class CIDR:
         return instance
 
     @classmethod
-    def make_cidr(cls, packed: bytes, mask: int) -> 'CIDR':
+    def make_cidr(cls, packed: Buffer, mask: int) -> 'CIDR':
         """Factory method to create a CIDR from packed IP bytes and mask.
 
         Args:
@@ -217,7 +219,7 @@ class CIDR:
         return bytes([self.mask]) + bytes(self._packed[: CIDR.size(self.mask)])
 
     @staticmethod
-    def decode(afi: AFI, bgp: bytes) -> tuple[bytes, int]:
+    def decode(afi: AFI, bgp: Buffer) -> tuple[bytes, int]:
         mask = bgp[0]
         size = CIDR.size(mask)
 
@@ -230,7 +232,7 @@ class CIDR:
         # return data[:4], mask
 
     @classmethod
-    def unpack_cidr(cls, data: bytes, afi: AFI) -> 'CIDR':
+    def unpack_cidr(cls, data: Buffer, afi: AFI) -> 'CIDR':
         """Unpack CIDR from NLRI wire format bytes.
 
         Args:

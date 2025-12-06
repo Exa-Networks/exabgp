@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Buffer
 from typing import TYPE_CHECKING, Any, Iterator, Sequence
 
 if TYPE_CHECKING:
@@ -76,7 +77,7 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'ExtendedCommunities':
+    def from_packet(cls, data: Buffer) -> 'ExtendedCommunities':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -88,9 +89,10 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         Raises:
             Notify: If data length is not a multiple of 8
         """
-        if len(data) % EXTENDED_COMMUNITY_SIZE != 0:
-            raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data])))
-        return cls(data)
+        data_bytes = bytes(data)
+        if len(data_bytes) % EXTENDED_COMMUNITY_SIZE != 0:
+            raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data_bytes])))
+        return cls(data_bytes)
 
     @classmethod
     def make_extended_communities(cls, communities: Sequence[ExtendedCommunityBase]) -> 'ExtendedCommunities':
@@ -151,7 +153,7 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'ExtendedCommunities':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'ExtendedCommunities':
         return cls.from_packet(data)
 
 
@@ -174,11 +176,12 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'ExtendedCommunitiesIPv6':
+    def from_packet(cls, data: Buffer) -> 'ExtendedCommunitiesIPv6':
         """Validate and create from wire-format bytes."""
-        if len(data) % EXTENDED_COMMUNITY_IPV6_SIZE != 0:
-            raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data])))
-        return cls(data)
+        data_bytes = bytes(data)
+        if len(data_bytes) % EXTENDED_COMMUNITY_IPV6_SIZE != 0:
+            raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data_bytes])))
+        return cls(data_bytes)
 
     @classmethod
     def make_extended_communities_ipv6(cls, communities: Sequence[ExtendedCommunityIPv6]) -> 'ExtendedCommunitiesIPv6':
@@ -230,5 +233,5 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'ExtendedCommunitiesIPv6':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'ExtendedCommunitiesIPv6':
         return cls.from_packet(data)

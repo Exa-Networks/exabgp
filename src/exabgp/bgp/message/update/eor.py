@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -80,7 +81,7 @@ class EOR(Message):
         return 'EOR'
 
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: 'Negotiated') -> 'EOR':
+    def unpack_message(cls, data: Buffer, negotiated: 'Negotiated') -> 'EOR':
         header_length = len(EOR.NLRI.PREFIX)
         return cls(
             AFI.unpack_afi(data[header_length : header_length + 2]),

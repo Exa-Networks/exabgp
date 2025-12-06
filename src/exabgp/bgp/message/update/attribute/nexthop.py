@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
@@ -47,7 +48,7 @@ class NextHop(Attribute):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'NextHop':
+    def from_packet(cls, data: Buffer) -> 'NextHop':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -59,9 +60,10 @@ class NextHop(Attribute):
         Raises:
             ValueError: If data length is invalid
         """
-        if len(data) not in (4, 16):
-            raise ValueError(f'NextHop must be 4 or 16 bytes, got {len(data)}')
-        return cls(data)
+        data_bytes = bytes(data)
+        if len(data_bytes) not in (4, 16):
+            raise ValueError(f'NextHop must be 4 or 16 bytes, got {len(data_bytes)}')
+        return cls(data_bytes)
 
     @classmethod
     def from_string(cls, ip_string: str) -> 'NextHop':
@@ -126,8 +128,8 @@ class NextHop(Attribute):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'NextHop | IP':
-        if not data:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NextHop | IP':
+        if not bytes(data):
             return IP.NoNextHop
         return cls.from_packet(data)
 

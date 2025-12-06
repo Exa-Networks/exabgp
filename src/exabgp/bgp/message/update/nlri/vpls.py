@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import unpack
 from struct import pack
 from typing import Any, ClassVar, Iterator, cast, TYPE_CHECKING
@@ -302,17 +303,18 @@ class VPLS(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[VPLS, bytes]:
+        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[VPLS, Buffer]:
+        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # Wire format: length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3) = 19 bytes
-        if len(bgp) < 2:
-            raise Notify(3, 10, f'VPLS NLRI too short: need at least 2 bytes, got {len(bgp)}')
-        (length,) = unpack('!H', bgp[0:2])
-        if len(bgp) != length + 2:
+        if len(data) < 2:
+            raise Notify(3, 10, f'VPLS NLRI too short: need at least 2 bytes, got {len(data)}')
+        (length,) = unpack('!H', bytes(data[0:2]))
+        if len(data) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
 
         # Create VPLS from packed wire format (17 bytes, excluding length prefix)
-        packed = bgp[2 : 2 + length]
+        packed = bytes(data[2 : 2 + length])
         nlri = cls(packed)
         nlri.action = action
-        return nlri, bgp[2 + length :]
+        return nlri, data[2 + length :]

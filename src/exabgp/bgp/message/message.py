@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack
 from typing import TYPE_CHECKING, Callable, ClassVar, Type
 
@@ -178,9 +179,10 @@ class Message:
     def string(code: int | None) -> str:
         return _MessageCode.long_names.get(code, 'unknown')
 
-    def _message(self, message: bytes) -> bytes:
+    def _message(self, message: Buffer) -> bytes:
+        # Accept Buffer (bytes or memoryview), convert to bytes for output
         message_len: bytes = pack('!H', 19 + len(message))
-        return self.MARKER + message_len + self.TYPE + message
+        return self.MARKER + message_len + self.TYPE + bytes(message)
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
         raise NotImplementedError('message not implemented in subclasses')
@@ -201,7 +203,17 @@ class Message:
         raise Notify(2, 4, f'can not handle message {what}')
 
     @classmethod
-    def unpack(cls, message: int, data: bytes, negotiated: Negotiated) -> Message:
+    def unpack(cls, message: int, data: Buffer, negotiated: Negotiated) -> Message:
+        """Unpack a BGP message from wire format.
+
+        Args:
+            message: BGP message type code
+            data: Message body as Buffer (bytes, memoryview, etc. - PEP 688)
+            negotiated: Negotiated capabilities for this session
+
+        Returns:
+            Parsed Message subclass instance
+        """
         if message in cls.registered_message:
             return cls.klass(message).unpack_message(data, negotiated)  # type: ignore[attr-defined,no-any-return]
         return cls.klass_unknown(message, data, negotiated)

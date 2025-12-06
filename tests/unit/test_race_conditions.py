@@ -179,8 +179,8 @@ class TestConnectionResetDuringIO:
         mock_sock.fileno.return_value = 8
         conn.io = mock_sock
 
-        # Mock recv to return empty (connection closed)
-        mock_sock.recv.return_value = b''
+        # Mock recv_into to return 0 (connection closed)
+        mock_sock.recv_into.return_value = 0
 
         # Create reader generator
         reader_gen = conn._reader(19)  # BGP header size
@@ -211,8 +211,8 @@ class TestConnectionResetDuringIO:
         # Start reader
         reader_gen = conn._reader(100)
 
-        # Mock recv to block (would wait for data)
-        mock_sock.recv.return_value = b''
+        # Mock recv_into to block (would wait for data)
+        mock_sock.recv_into.return_value = 0
 
         with patch('select.poll') as mock_poll:
             mock_poller = MagicMock()
@@ -356,8 +356,8 @@ class TestPollingStateRaces:
         mock_sock.fileno.return_value = 16
         conn.io = mock_sock
 
-        # Mock recv to raise socket error
-        mock_sock.recv.side_effect = OSError(errno.ECONNRESET, 'Connection reset')
+        # Mock recv_into to raise socket error
+        mock_sock.recv_into.side_effect = OSError(errno.ECONNRESET, 'Connection reset')
 
         reader_gen = conn._reader(10)
 
@@ -456,11 +456,16 @@ class TestMessageQueueOrderingRaces:
         msg_type = b'\x04'  # KEEPALIVE
         bgp_msg = marker + length + msg_type
 
-        # Mock recv to return message in parts
-        mock_sock.recv.side_effect = [
-            bgp_msg[:10],  # First 10 bytes
-            bgp_msg[10:],  # Remaining 9 bytes
-        ]
+        # Mock recv_into to return message in parts
+        chunks = [bgp_msg[:10], bgp_msg[10:]]
+        chunk_iter = iter(chunks)
+
+        def recv_into_side_effect(buffer: memoryview) -> int:
+            data = next(chunk_iter)
+            buffer[: len(data)] = data
+            return len(data)
+
+        mock_sock.recv_into.side_effect = recv_into_side_effect
 
         # Create reader for BGP message
         reader_gen = conn.reader()
@@ -474,8 +479,8 @@ class TestMessageQueueOrderingRaces:
 
                     # Read should assemble complete message
                     result = next(reader_gen)
-                    # First yield is waiting for header
-                    while result == (0, 0, b'', b'', None):
+                    # First yield is waiting for header (empty memoryview)
+                    while result[0] == 0:
                         result = next(reader_gen)
 
                     # Verify we got a complete message structure
@@ -497,10 +502,17 @@ class TestMessageQueueOrderingRaces:
         # Test data larger than typical read
         test_data = b'A' * 100
 
-        # Mock recv to return data in chunks
+        # Mock recv_into to return data in chunks
         chunk_size = 10
         chunks = [test_data[i : i + chunk_size] for i in range(0, len(test_data), chunk_size)]
-        mock_sock.recv.side_effect = chunks
+        chunk_iter = iter(chunks)
+
+        def recv_into_side_effect(buffer: memoryview) -> int:
+            data = next(chunk_iter)
+            buffer[: len(data)] = data
+            return len(data)
+
+        mock_sock.recv_into.side_effect = recv_into_side_effect
 
         reader_gen = conn._reader(100)
 

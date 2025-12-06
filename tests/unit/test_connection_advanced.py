@@ -46,7 +46,7 @@ class TestGeneratorBasedReader:
         assert 'closed TCP connection' in str(exc_info.value)
 
     def test_reader_zero_bytes_yields_empty(self) -> None:
-        """Test _reader(0) yields empty bytes immediately"""
+        """Test _reader(0) yields empty memoryview immediately"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
         conn.io = Mock()
 
@@ -54,11 +54,11 @@ class TestGeneratorBasedReader:
         result = next(gen)
 
         assert result == b''
-        # Should not call recv for zero bytes
-        conn.io.recv.assert_not_called()
+        # Should not call recv_into for zero bytes
+        conn.io.recv_into.assert_not_called()
 
     def test_reader_waits_for_socket_ready(self) -> None:
-        """Test _reader() yields empty bytes while waiting for data"""
+        """Test _reader() yields empty memoryview while waiting for data"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -68,12 +68,18 @@ class TestGeneratorBasedReader:
         # Create a mock poller that returns not ready first, then ready
         poll_results = [[], [(5, 1)]]  # First not ready, then POLLIN
 
+        def recv_into_side_effect(buffer: memoryview) -> int:
+            """Mock recv_into: writes data to buffer and returns bytes written"""
+            data = b'test'
+            buffer[: len(data)] = data
+            return len(data)
+
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
             mock_poller.poll.side_effect = poll_results
             mock_poll.return_value = mock_poller
 
-            mock_sock.recv.return_value = b'test'
+            mock_sock.recv_into.side_effect = recv_into_side_effect
 
             with patch('exabgp.reactor.network.connection.log'):
                 gen = conn._reader(4)
@@ -87,7 +93,7 @@ class TestGeneratorBasedReader:
                 assert result == b'test'
 
     def test_reader_assembles_partial_reads(self) -> None:
-        """Test _reader() assembles data from multiple recv() calls"""
+        """Test _reader() assembles data from multiple recv_into() calls"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -95,8 +101,16 @@ class TestGeneratorBasedReader:
         conn.io = mock_sock
 
         # Simulate partial reads: request 10 bytes, get 4, then 6
-        recv_results = [b'test', b'data12']
-        mock_sock.recv.side_effect = recv_results
+        chunks = [b'test', b'data12']
+        chunk_iter = iter(chunks)
+
+        def recv_into_side_effect(buffer: memoryview) -> int:
+            """Mock recv_into: writes data to buffer and returns bytes written"""
+            data = next(chunk_iter)
+            buffer[: len(data)] = data
+            return len(data)
+
+        mock_sock.recv_into.side_effect = recv_into_side_effect
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -114,7 +128,7 @@ class TestGeneratorBasedReader:
                         break
 
                 assert result == b'testdata12'
-                assert mock_sock.recv.call_count == 2
+                assert mock_sock.recv_into.call_count == 2
 
     def test_reader_handles_blocking_error(self) -> None:
         """Test _reader() handles EAGAIN/EWOULDBLOCK errors"""
@@ -125,10 +139,17 @@ class TestGeneratorBasedReader:
         conn.io = mock_sock
 
         # First call raises EAGAIN, second succeeds
-        mock_sock.recv.side_effect = [
-            OSError(errno.EAGAIN, 'Would block'),
-            b'data',
-        ]
+        call_count = [0]
+
+        def recv_into_side_effect(buffer: memoryview) -> int:
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise OSError(errno.EAGAIN, 'Would block')
+            data = b'data'
+            buffer[: len(data)] = data
+            return len(data)
+
+        mock_sock.recv_into.side_effect = recv_into_side_effect
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -151,13 +172,13 @@ class TestGeneratorBasedReader:
                     assert result == b'data'
 
     def test_reader_raises_lost_connection_on_empty_recv(self) -> None:
-        """Test _reader() raises LostConnection when recv returns empty"""
+        """Test _reader() raises LostConnection when recv_into returns 0"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
-        mock_sock.recv.return_value = b''  # Connection closed
+        mock_sock.recv_into.return_value = 0  # Connection closed (recv_into returns 0)
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -180,7 +201,7 @@ class TestGeneratorBasedReader:
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
-        mock_sock.recv.side_effect = socket.timeout('timed out')
+        mock_sock.recv_into.side_effect = socket.timeout('timed out')
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -203,7 +224,7 @@ class TestGeneratorBasedReader:
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
-        mock_sock.recv.side_effect = OSError(errno.ECONNRESET, 'Connection reset')
+        mock_sock.recv_into.side_effect = OSError(errno.ECONNRESET, 'Connection reset')
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -646,8 +667,15 @@ class TestBufferManagement:
 
         # Simulate receiving header in 1-byte chunks
         header_bytes = Message.MARKER + struct.pack('!H', 19) + b'\x04'
-        recv_results = [bytes([b]) for b in header_bytes]
-        mock_sock.recv.side_effect = recv_results
+        chunks = [bytes([b]) for b in header_bytes]
+        chunk_iter = iter(chunks)
+
+        def recv_into_side_effect(buffer: memoryview) -> int:
+            data = next(chunk_iter)
+            buffer[: len(data)] = data
+            return len(data)
+
+        mock_sock.recv_into.side_effect = recv_into_side_effect
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -664,10 +692,10 @@ class TestBufferManagement:
                         break
 
                 assert result == header_bytes
-                assert mock_sock.recv.call_count == 19
+                assert mock_sock.recv_into.call_count == 19
 
     def test_reader_handles_variable_chunk_sizes(self) -> None:
-        """Test _reader() handles variable-size recv() chunks"""
+        """Test _reader() handles variable-size recv_into() chunks"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -675,14 +703,21 @@ class TestBufferManagement:
         conn.io = mock_sock
 
         # Simulate variable chunk sizes: 5, 3, 7, 4, 1 bytes (total 20)
-        recv_results = [
+        chunks = [
             b'12345',
             b'678',
             b'abcdefg',
             b'hijk',
             b'l',
         ]
-        mock_sock.recv.side_effect = recv_results
+        chunk_iter = iter(chunks)
+
+        def recv_into_side_effect(buffer: memoryview) -> int:
+            data = next(chunk_iter)
+            buffer[: len(data)] = data
+            return len(data)
+
+        mock_sock.recv_into.side_effect = recv_into_side_effect
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -699,7 +734,7 @@ class TestBufferManagement:
                         break
 
                 assert result == b'12345678abcdefghijkl'
-                assert mock_sock.recv.call_count == 5
+                assert mock_sock.recv_into.call_count == 5
 
     def test_writer_handles_incremental_sends(self) -> None:
         """Test writer() handles incremental send() results"""
@@ -740,7 +775,12 @@ class TestBufferManagement:
 
         # Request exactly what's available
         data = b'exactly100bytes' * 6 + b'exactly10b'  # 100 bytes
-        mock_sock.recv.return_value = data
+
+        def recv_into_side_effect(buffer: memoryview) -> int:
+            buffer[: len(data)] = data
+            return len(data)
+
+        mock_sock.recv_into.side_effect = recv_into_side_effect
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -1132,7 +1172,7 @@ class TestErrorPropagation:
 
         error = OSError(errno.ECONNREFUSED, 'Connection refused')
         error.errno = errno.ECONNREFUSED
-        mock_sock.recv.side_effect = error
+        mock_sock.recv_into.side_effect = error
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -1153,7 +1193,7 @@ class TestErrorPropagation:
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
-        mock_sock.recv.return_value = b''  # Connection closed
+        mock_sock.recv_into.return_value = 0  # Connection closed (recv_into returns 0)
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()
@@ -1346,7 +1386,7 @@ class TestEdgeCasesAndDefensiveMode:
         # Create an undefined socket error (not in block or fatal lists)
         error = OSError(999, 'Undefined error')
         error.errno = 999
-        mock_sock.recv.side_effect = error
+        mock_sock.recv_into.side_effect = error
 
         with patch('select.poll') as mock_poll:
             mock_poller = Mock()

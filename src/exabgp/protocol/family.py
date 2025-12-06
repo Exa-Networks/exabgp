@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack
 from typing import ClassVar
 
@@ -80,10 +81,12 @@ class AFI(int):
         return self.name()
 
     @staticmethod
-    def unpack_afi(data: bytes) -> AFI:
-        if len(data) < 2:
-            raise ValueError(f'AFI data too short: need 2 bytes, got {len(data)}')
-        return AFI.common.get(data[:2], AFI.from_int(int.from_bytes(data[:2], 'big')))
+    def unpack_afi(data: Buffer) -> AFI:
+        if len(data) < 2:  # type: ignore[arg-type]
+            raise ValueError(f'AFI data too short: need 2 bytes, got {len(data)}')  # type: ignore[arg-type]
+        # Convert to bytes for dict lookup (memoryview isn't hashable)
+        key = bytes(data[:2])
+        return AFI.common.get(key, AFI.from_int(int.from_bytes(key, 'big')))
 
     @classmethod
     def value(cls, name: str) -> AFI | None:
@@ -236,8 +239,10 @@ class SAFI(int):
         return self.name()
 
     @staticmethod
-    def unpack_safi(data: bytes) -> SAFI:
-        return SAFI.common.get(data, SAFI(data[0] if data else 0))
+    def unpack_safi(data: Buffer) -> SAFI:
+        # Convert to bytes for dict lookup (memoryview isn't hashable)
+        key = bytes(data)
+        return SAFI.common.get(key, SAFI(key[0] if key else 0))
 
     @classmethod
     def value(cls, name: str) -> SAFI | None:

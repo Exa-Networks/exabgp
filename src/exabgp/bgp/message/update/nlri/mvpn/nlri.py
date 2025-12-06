@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Buffer
 from struct import pack
 from typing import TYPE_CHECKING, Any, ClassVar, Type
 
@@ -120,26 +121,27 @@ class MVPN(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[MVPN, bytes]:
+        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[MVPN, Buffer]:
+        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # MVPN NLRI: route_type(1) + length(1) + route_data(length)
-        if len(bgp) < 2:
-            raise Notify(3, 10, f'MVPN NLRI too short: need at least 2 bytes, got {len(bgp)}')
-        code = bgp[0]
-        length = bgp[1]
+        if len(data) < 2:
+            raise Notify(3, 10, f'MVPN NLRI too short: need at least 2 bytes, got {len(data)}')
+        code = data[0]
+        length = data[1]
 
-        if len(bgp) < length + 2:
-            raise Notify(3, 10, f'MVPN NLRI truncated: need {length + 2} bytes, got {len(bgp)}')
+        if len(data) < length + 2:
+            raise Notify(3, 10, f'MVPN NLRI truncated: need {length + 2} bytes, got {len(data)}')
 
         if code in cls.registered_mvpn:
-            klass = cls.registered_mvpn[code].unpack_mvpn_route(bgp[2 : length + 2], afi)
+            klass = cls.registered_mvpn[code].unpack_mvpn_route(bytes(data[2 : length + 2]), afi)
         else:
-            klass = GenericMVPN(afi, code, bgp[2 : length + 2])
+            klass = GenericMVPN(afi, code, bytes(data[2 : length + 2]))
         klass.CODE = code  # type: ignore[misc]  # dynamic CODE assignment
         klass.action = action
         klass.addpath = addpath
 
-        return klass, bgp[length + 2 :]
+        return klass, data[length + 2 :]
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())

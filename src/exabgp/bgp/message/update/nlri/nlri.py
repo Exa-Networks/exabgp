@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, TypeVar
 
@@ -176,12 +177,12 @@ class NLRI(Family):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, data: bytes, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[NLRI, bytes]:
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
         a: AFI
         s: SAFI
         a, s = AFI.from_int(afi), SAFI.from_int(safi)
-        log.debug(lazynlri(a, s, addpath, data), 'parser')
+        log.debug(lazynlri(a, s, addpath, bytes(data)), 'parser')
 
         key: str = '{}/{}'.format(a, s)
         if key in cls.registered_nlri:

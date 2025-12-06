@@ -1,0 +1,44 @@
+======================================================================
+ExaBGP Memory Baseline Measurement
+======================================================================
+
+Class Configuration:
+----------------------------------------------------------------------
+  Route:
+    __slots__: False
+    __dict__:  True
+    dict size: 296 bytes
+  INET:
+    __slots__: False
+    __dict__:  True
+    dict size: 296 bytes
+  AttributeCollection:
+    __slots__: False
+    __dict__:  True
+
+Route Object Memory:
+----------------------------------------------------------------------
+  1,000 routes: 1.00 MB (1045.0 bytes/route)
+  10,000 routes: 9.87 MB (1034.5 bytes/route)
+
+RIB Operations Memory (100,000 routes):
+----------------------------------------------------------------------
+  Empty RIB:                  0.00 MB
+  After add_to_rib:          13.73 MB  (144.0 bytes/route)
+  After cache (updates):     13.73 MB  (144.0 bytes/route)
+  After del_from_rib:        13.73 MB  (144.0 bytes/route)
+  After withdraw updates:    13.80 MB
+
+Summary:
+----------------------------------------------------------------------
+  Route objects (100K):    98.61 MB (1034.0 bytes/route)
+  RIB overhead (100K):     13.73 MB (144.0 bytes/route)
+  Total per route:         1178.0 bytes
+  Total for 100K routes:   112.34 MB
+
+Projection with __slots__:
+----------------------------------------------------------------------
+  Expected savings:        ~104 bytes/route
+  Projected per route:     930.0 bytes
+  Projected for 100K:      88.69 MB
+  Reduction:               10%

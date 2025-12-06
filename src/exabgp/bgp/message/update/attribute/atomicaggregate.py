@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Buffer
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -39,7 +40,7 @@ class AtomicAggregate(Attribute):
         self._packed: bytes = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'AtomicAggregate':
+    def from_packet(cls, data: Buffer) -> 'AtomicAggregate':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -51,9 +52,10 @@ class AtomicAggregate(Attribute):
         Raises:
             ValueError: If data is not empty
         """
-        if data:
-            raise ValueError(f'AtomicAggregate must be empty, got {len(data)} bytes')
-        return cls(data)
+        data_bytes = bytes(data)
+        if data_bytes:
+            raise ValueError(f'AtomicAggregate must be empty, got {len(data_bytes)} bytes')
+        return cls(data_bytes)
 
     @classmethod
     def make_atomic_aggregate(cls) -> 'AtomicAggregate':
@@ -86,7 +88,7 @@ class AtomicAggregate(Attribute):
         return 0
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> AtomicAggregate:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> AtomicAggregate:
         # Wire data - use from_packet for validation
         return cls.from_packet(data)
 
