@@ -60,13 +60,10 @@ class VPLS(NLRI):
 
         Args:
             packed: 17 bytes wire format (RD + endpoint + offset + size + base), or None for builder mode
-
-        Note: We don't call NLRI.__init__ or Family.__init__ because afi/safi are
-        class-level properties. We initialize action/addpath/nexthop directly.
         """
-        # Skip Family.__init__ - afi/safi are class-level properties
+        # Family.__init__ detects afi/safi properties and skips setting them
+        NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
         self.action = Action.ANNOUNCE
-        self.addpath = PathInfo.DISABLED
         self.nexthop = IP.NoNextHop
 
         self._packed: bytes | None = packed

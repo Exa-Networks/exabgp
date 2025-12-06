@@ -19,7 +19,6 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended import RouteTarget
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 
@@ -57,14 +56,9 @@ class RTC(NLRI):
             packed_origin: 4 bytes packed origin ASN, or None for wildcard
             rt: RouteTarget or None for wildcard
             action: Route action (ANNOUNCE/WITHDRAW)
-
-        Note: We don't call NLRI.__init__ or Family.__init__ because afi/safi are
-        class-level properties. We initialize action/addpath/nexthop directly.
         """
-        # Skip Family.__init__ - afi/safi are class-level properties
-        self.action = action
-        self.addpath = PathInfo.DISABLED
-        self._packed = b''  # RTC doesn't use _packed for CIDR storage
+        # Family.__init__ detects afi/safi properties and skips setting them
+        NLRI.__init__(self, AFI.ipv4, SAFI.rtc, action)
         self._packed_origin: bytes | None = packed_origin
         self.rt = rt
         self.nexthop = IP.NoNextHop

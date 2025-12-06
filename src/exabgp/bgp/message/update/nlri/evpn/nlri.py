@@ -57,10 +57,10 @@ class EVPN(NLRI):
     SHORT_NAME: ClassVar[str] = 'unknown'
 
     def __init__(self, action: Action = Action.UNSET, addpath: PathInfo | None = None) -> None:
-        # Skip Family.__init__ - afi/safi are class-level properties
-        self.action = action
+        # Family.__init__ detects afi/safi properties and skips setting them
+        NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
         self.addpath = addpath if addpath is not None else PathInfo.DISABLED
-        self._packed: bytes = b''
+        self._packed = b''
 
     @property
     @final
