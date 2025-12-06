@@ -17,7 +17,7 @@ from exabgp.bgp.message.update.nlri import INET  # noqa
 
 from exabgp.protocol.ip import IPv4
 
-from exabgp.bgp.message import UpdateData
+from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import Version
@@ -380,13 +380,13 @@ class TestUpdateDecoding(unittest.TestCase):
         for asn4, body in bodies:
             if asn4:
                 continue
-            UpdateData.unpack_message(bytes(body), self.negotiated[asn4])
+            UpdateCollection.unpack_message(bytes(body), self.negotiated[asn4])
 
     def test_decoding_udpate_asn4(self) -> None:
         for asn4, body in bodies:
             if not asn4:
                 continue
-            UpdateData.unpack_message(bytes(body), self.negotiated[asn4])
+            UpdateCollection.unpack_message(bytes(body), self.negotiated[asn4])
 
 
 if __name__ == '__main__':

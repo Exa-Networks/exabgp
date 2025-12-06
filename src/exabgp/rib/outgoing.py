@@ -10,14 +10,14 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Iterator, overload
 
-from exabgp.bgp.message import Action, UpdateData
+from exabgp.bgp.message import Action, UpdateCollection
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.rib.cache import Cache
 
 if TYPE_CHECKING:
-    from exabgp.bgp.message.update.attribute.attributes import AttributeSet
+    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.update.nlri.nlri import NLRI
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.rib.route import Route
@@ -30,13 +30,13 @@ class OutgoingRIB(Cache):
     _watchdog: dict[str, dict[str, dict[bytes, Route]]]
     _new_nlri: dict[bytes, Route]
     _new_attr_af_nlri: dict[bytes, dict[tuple[AFI, SAFI], dict[bytes, Route]]]
-    _new_attribute: dict[bytes, AttributeSet]
+    _new_attribute: dict[bytes, AttributeCollection]
     _refresh_families: set[tuple[AFI, SAFI]]
     _refresh_routes: list[Route]
 
     # New structure for withdraws - avoids deepcopy by not modifying nlri.action
-    # Indexed by family -> nlri_index -> (NLRI, AttributeSet)
-    _pending_withdraws: dict[tuple[AFI, SAFI], dict[bytes, tuple['NLRI', 'AttributeSet']]]
+    # Indexed by family -> nlri_index -> (NLRI, AttributeCollection)
+    _pending_withdraws: dict[tuple[AFI, SAFI], dict[bytes, tuple['NLRI', 'AttributeCollection']]]
 
     def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]], enabled: bool = True) -> None:
         Cache.__init__(self, cache, families, enabled)
@@ -219,9 +219,9 @@ class OutgoingRIB(Cache):
     @overload
     def del_from_rib(self, route: 'Route') -> None: ...
     @overload
-    def del_from_rib(self, nlri: 'NLRI', attributes: 'AttributeSet | None' = None) -> None: ...
+    def del_from_rib(self, nlri: 'NLRI', attributes: 'AttributeCollection | None' = None) -> None: ...
 
-    def del_from_rib(self, route_or_nlri: 'Route | NLRI', attributes: 'AttributeSet | None' = None) -> None:
+    def del_from_rib(self, route_or_nlri: 'Route | NLRI', attributes: 'AttributeCollection | None' = None) -> None:
         if not self.enabled:
             return
         # Handle both signatures: (route) or (nlri, attributes)
@@ -258,8 +258,8 @@ class OutgoingRIB(Cache):
             new_nlri.pop(route_index, None)
 
         # Store withdraw in separate structure - no deepcopy needed!
-        # Store (NLRI, AttributeSet) tuple, action is determined by which dict it's in
-        from exabgp.bgp.message.update.attribute.attributes import AttributeSet as AttrsClass
+        # Store (NLRI, AttributeCollection) tuple, action is determined by which dict it's in
+        from exabgp.bgp.message.update.attribute.collection import AttributeCollection as AttrsClass
 
         self._pending_withdraws.setdefault(route_family, {})[nlri_index] = (nlri, attrs if attrs else AttrsClass())
 
@@ -274,12 +274,12 @@ class OutgoingRIB(Cache):
     @overload
     def add_to_rib(self, route: 'Route', force: bool = False) -> None: ...
     @overload
-    def add_to_rib(self, nlri: 'NLRI', attributes: 'AttributeSet', force: bool = False) -> None: ...
+    def add_to_rib(self, nlri: 'NLRI', attributes: 'AttributeCollection', force: bool = False) -> None: ...
 
     def add_to_rib(
         self,
         route_or_nlri: 'Route | NLRI',
-        attributes_or_force: 'AttributeSet | bool' = False,
+        attributes_or_force: 'AttributeCollection | bool' = False,
         force: bool = False,
     ) -> None:
         if not self.enabled:
@@ -326,7 +326,7 @@ class OutgoingRIB(Cache):
         new_attr[route_attr_index] = route.attributes  # type: ignore[index]
         self.update_cache(route)
 
-    def updates(self, grouped: bool) -> Iterator[UpdateData | RouteRefresh]:
+    def updates(self, grouped: bool) -> Iterator[UpdateCollection | RouteRefresh]:
         if not self.enabled:
             return
         attr_af_nlri = self._new_attr_af_nlri
@@ -363,33 +363,33 @@ class OutgoingRIB(Cache):
 
                 if family == (AFI.ipv4, SAFI.unicast) and grouped:
                     if announces:
-                        yield UpdateData(announces, [], attributes)
+                        yield UpdateCollection(announces, [], attributes)
                     if withdraws:
-                        yield UpdateData([], withdraws, attributes)
+                        yield UpdateCollection([], withdraws, attributes)
                     continue
 
                 if family == (AFI.ipv4, SAFI.mcast_vpn) and grouped:
                     if announces:
-                        yield UpdateData(announces, [], attributes)
+                        yield UpdateCollection(announces, [], attributes)
                     if withdraws:
-                        yield UpdateData([], withdraws, attributes)
+                        yield UpdateCollection([], withdraws, attributes)
                     continue
                 if family == (AFI.ipv6, SAFI.mcast_vpn) and grouped:
                     if announces:
-                        yield UpdateData(announces, [], attributes)
+                        yield UpdateCollection(announces, [], attributes)
                     if withdraws:
-                        yield UpdateData([], withdraws, attributes)
+                        yield UpdateCollection([], withdraws, attributes)
                     continue
 
                 # Non-grouped: one Update per NLRI
                 for route in routes.values():
                     if route.nlri.action == Action.WITHDRAW:
-                        yield UpdateData([], [route.nlri], attributes)
+                        yield UpdateCollection([], [route.nlri], attributes)
                     else:
-                        yield UpdateData([route.nlri], [], attributes)
+                        yield UpdateCollection([route.nlri], [], attributes)
 
         # Generate Updates for pending withdraws using the new Update signature
-        # UpdateData(announces=[], withdraws=nlris, attributes) - no nlri.action needed
+        # UpdateCollection(announces=[], withdraws=nlris, attributes) - no nlri.action needed
         # Yield one Update per NLRI to match original behavior
         for family, nlri_attr_dict in pending_withdraws.items():
             if not nlri_attr_dict:
@@ -397,7 +397,7 @@ class OutgoingRIB(Cache):
             for nlri, attrs in nlri_attr_dict.values():
                 # Use new 3-arg signature: (announces, withdraws, attributes)
                 # Withdraws include attributes for proper BGP encoding (e.g., FlowSpec rate-limit)
-                yield UpdateData([], [nlri], attrs)
+                yield UpdateCollection([], [nlri], attrs)
 
         # Route Refresh - use snapshots to avoid modification during iteration
 
@@ -405,7 +405,7 @@ class OutgoingRIB(Cache):
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.start)
 
         for route in refresh_routes:
-            yield UpdateData([route.nlri], [], route.attributes)
+            yield UpdateCollection([route.nlri], [], route.attributes)
 
         for afi, safi in refresh_families:
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.end)

@@ -17,7 +17,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.message import Message
-from exabgp.bgp.message.update.attribute import AttributeSet
+from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.nlri import NLRI as _NLRI
 
 # =================================================================== End-Of-RIB
@@ -71,7 +71,7 @@ class EOR(Message):
         self.nlris = [
             EOR.NLRI(afi, safi, action),
         ]
-        self.attributes = AttributeSet()
+        self.attributes = AttributeCollection()
 
     def pack_message(self, negotiated: 'Negotiated') -> bytes:
         return self._message(self.nlris[0].pack_nlri(negotiated))

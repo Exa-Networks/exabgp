@@ -16,7 +16,7 @@ from typing import Callable, TYPE_CHECKING
 
 from exabgp.environment import getenv
 
-from exabgp.bgp.message import Update, UpdateData
+from exabgp.bgp.message import Update, UpdateCollection
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
 from exabgp.bgp.message.open import ASN
@@ -117,7 +117,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
 
         for route1 in neighbor.rib.outgoing.cached_routes():
             str1 = route1.extensive()
-            packed = list(UpdateData([route1.nlri], [], route1.attributes).messages(negotiated_out))
+            packed = list(UpdateCollection([route1.nlri], [], route1.attributes).messages(negotiated_out))
             pack1 = packed[0]
 
             _packed = packed  # type: list[bytes]
@@ -134,11 +134,11 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                 log.debug(lazymsg('check.update.processing'), 'parser')  # separator
 
                 pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
-                update = UpdateData.unpack_message(pack1s, negotiated_in)
+                update = UpdateCollection.unpack_message(pack1s, negotiated_in)
 
                 route2 = Route(update.nlris[0], update.attributes)
                 str2 = route2.extensive()
-                pack2 = list(UpdateData([update.nlris[0]], [], update.attributes).messages(negotiated_out))[0]
+                pack2 = list(UpdateCollection([update.nlris[0]], [], update.attributes).messages(negotiated_out))[0]
 
                 _str2 = str2  # type: str
                 _pack2 = pack2  # type: bytes
@@ -389,7 +389,7 @@ def _make_update(neighbor: Neighbor, raw: bytes) -> Update | None:
 
         try:
             # This does not take the BGP header - let's assume we will not break that :)
-            update = UpdateData.unpack_message(injected, negotiated_in)
+            update = UpdateCollection.unpack_message(injected, negotiated_in)
         except Notify:
             import traceback
 

@@ -38,7 +38,7 @@ from exabgp.rib.outgoing import OutgoingRIB  # noqa: E402
 from exabgp.protocol.family import AFI, SAFI  # noqa: E402
 from exabgp.bgp.message.update.nlri.inet import INET  # noqa: E402
 from exabgp.bgp.message.update.nlri.cidr import CIDR  # noqa: E402
-from exabgp.bgp.message.update.attribute.attributes import AttributeSet  # noqa: E402
+from exabgp.bgp.message.update.attribute.collection import AttributeCollection  # noqa: E402
 from exabgp.bgp.message.update.attribute.origin import Origin  # noqa: E402
 from exabgp.rib.route import Route  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
@@ -58,7 +58,7 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
 
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, afi, SAFI.unicast, action)
-    attrs = AttributeSet()
+    attrs = AttributeCollection()
 
     return Route(nlri, attrs)
 
@@ -71,7 +71,7 @@ def create_change_with_origin(prefix: str, origin: int, action: int = Action.ANN
 
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, action)
-    attrs = AttributeSet()
+    attrs = AttributeCollection()
     attrs[Origin.ID] = Origin.from_int(origin)
 
     return Route(nlri, attrs)

@@ -1,9 +1,9 @@
 """Tests for Update/Attributes refactoring.
 
 Tests the new class hierarchy:
-- UpdateData (renamed from Update) - semantic container
+- UpdateCollection (renamed from Update) - semantic container
 - Update (new) - wire container (bytes-first)
-- AttributeSet (renamed from Attributes) - semantic container
+- AttributeCollection (renamed from Attributes) - semantic container
 - Attributes (new) - wire container (bytes-first)
 - UpdateSerializer - generation logic
 
@@ -16,34 +16,34 @@ import pytest
 
 
 # ==============================================================================
-# Phase 1: Test aliases work (UpdateData, AttributeSet)
+# Phase 1: Test aliases work (UpdateCollection, AttributeCollection)
 # ==============================================================================
 
 
 def test_update_data_alias_exists() -> None:
-    """Test that UpdateData alias is available."""
-    from exabgp.bgp.message.update import UpdateData
+    """Test that UpdateCollection alias is available."""
+    from exabgp.bgp.message.update import UpdateCollection
 
-    # UpdateData should be the semantic container (current Update class)
-    assert UpdateData is not None
+    # UpdateCollection should be the semantic container (current Update class)
+    assert UpdateCollection is not None
 
 
 def test_attribute_set_alias_exists() -> None:
-    """Test that AttributeSet alias is available."""
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    """Test that AttributeCollection alias is available."""
+    from exabgp.bgp.message.update.attribute import AttributeCollection
 
-    # AttributeSet should be the semantic container (current Attributes class)
-    assert AttributeSet is not None
+    # AttributeCollection should be the semantic container (current Attributes class)
+    assert AttributeCollection is not None
 
 
 def test_update_data_can_be_constructed() -> None:
-    """Test that UpdateData can be instantiated with standard arguments."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    """Test that UpdateCollection can be instantiated with standard arguments."""
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
 
-    # Create an UpdateData with empty announces/withdraws
-    attrs = AttributeSet()
-    update = UpdateData(announces=[], withdraws=[], attributes=attrs)
+    # Create an UpdateCollection with empty announces/withdraws
+    attrs = AttributeCollection()
+    update = UpdateCollection(announces=[], withdraws=[], attributes=attrs)
 
     assert update.announces == []
     assert update.withdraws == []
@@ -51,18 +51,18 @@ def test_update_data_can_be_constructed() -> None:
 
 
 def test_attribute_set_is_dict() -> None:
-    """Test that AttributeSet inherits from dict."""
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    """Test that AttributeCollection inherits from dict."""
+    from exabgp.bgp.message.update.attribute import AttributeCollection
 
-    attrs = AttributeSet()
+    attrs = AttributeCollection()
     assert isinstance(attrs, dict)
 
 
 def test_attribute_set_has_method() -> None:
-    """Test AttributeSet.has() method works."""
-    from exabgp.bgp.message.update.attribute import AttributeSet, Origin
+    """Test AttributeCollection.has() method works."""
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Origin
 
-    attrs = AttributeSet()
+    attrs = AttributeCollection()
     attrs.add(Origin.from_int(Origin.IGP))
 
     assert attrs.has(1)  # ORIGIN code
@@ -133,11 +133,11 @@ def test_attributes_wire_from_packed() -> None:
 
 
 def test_attributes_wire_from_set() -> None:
-    """Test AttributesWire.from_set() creates wire container from AttributeSet."""
-    from exabgp.bgp.message.update.attribute import AttributesWire, AttributeSet, Origin
+    """Test AttributesWire.from_set() creates wire container from AttributeCollection."""
+    from exabgp.bgp.message.update.attribute import AttributesWire, AttributeCollection, Origin
     from unittest.mock import Mock
 
-    attr_set = AttributeSet()
+    attr_set = AttributeCollection()
     attr_set.add(Origin.from_int(Origin.IGP))
 
     # Create mock negotiated - use same ASN for iBGP (simpler case)
@@ -156,14 +156,14 @@ def test_attributes_wire_from_set() -> None:
 
 
 def test_attributes_wire_unpack_attributes_lazy() -> None:
-    """Test AttributesWire.unpack_attributes() returns AttributeSet."""
-    from exabgp.bgp.message.update.attribute import AttributesWire, AttributeSet
+    """Test AttributesWire.unpack_attributes() returns AttributeCollection."""
+    from exabgp.bgp.message.update.attribute import AttributesWire, AttributeCollection
     from unittest.mock import Mock, patch
 
     # ORIGIN attribute
     packed = bytes([0x40, 0x01, 0x01, 0x00])
 
-    with patch('exabgp.bgp.message.update.attribute.attributes.log'):
+    with patch('exabgp.bgp.message.update.attribute.collection.log'):
         attrs = AttributesWire(packed)
 
         negotiated = Mock()
@@ -174,32 +174,31 @@ def test_attributes_wire_unpack_attributes_lazy() -> None:
 
         unpacked = attrs.unpack_attributes(negotiated)
 
-        assert isinstance(unpacked, AttributeSet)
+        assert isinstance(unpacked, AttributeCollection)
         assert 1 in unpacked  # ORIGIN code
 
 
 # ==============================================================================
-# Phase 3: Test UpdateSerializer
+# Phase 3: Test UpdateCollection.pack_messages()
 # ==============================================================================
 
 
-def test_serializer_class_exists() -> None:
-    """Test that UpdateSerializer class exists."""
-    from exabgp.bgp.message.update.serializer import UpdateSerializer
+def test_pack_messages_method_exists() -> None:
+    """Test that UpdateCollection.pack_messages() method exists."""
+    from exabgp.bgp.message.update import UpdateCollection
 
-    assert UpdateSerializer is not None
+    assert hasattr(UpdateCollection, 'pack_messages')
 
 
-def test_serializer_serialize_method() -> None:
-    """Test UpdateSerializer.serialize() returns iterator of UpdateWire."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
-    from exabgp.bgp.message.update.serializer import UpdateSerializer
+def test_pack_messages_returns_update_objects() -> None:
+    """Test UpdateCollection.pack_messages() returns iterator of Update."""
+    from exabgp.bgp.message.update import UpdateCollection, Update
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from unittest.mock import Mock
 
-    # Create UpdateData
-    attrs = AttributeSet()
-    update_data = UpdateData(announces=[], withdraws=[], attributes=attrs)
+    # Create UpdateCollection
+    attrs = AttributeCollection()
+    update_data = UpdateCollection(announces=[], withdraws=[], attributes=attrs)
 
     # Create mock negotiated
     negotiated = Mock()
@@ -209,23 +208,24 @@ def test_serializer_serialize_method() -> None:
     negotiated.msg_size = 4096
     negotiated.families = []
 
-    result = list(UpdateSerializer.serialize(update_data, negotiated))
+    result = list(update_data.pack_messages(negotiated))
 
     # With empty announces/withdraws, may return nothing or EOR
     # The test is that it doesn't crash and returns an iterator
     assert isinstance(result, list)
+    for item in result:
+        assert isinstance(item, Update)
 
 
-def test_serializer_serialize_bytes_method() -> None:
-    """Test UpdateSerializer.serialize_bytes() returns iterator of bytes."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
-    from exabgp.bgp.message.update.serializer import UpdateSerializer
+def test_messages_returns_bytes() -> None:
+    """Test UpdateCollection.messages() returns iterator of bytes."""
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from unittest.mock import Mock
 
-    # Create UpdateData
-    attrs = AttributeSet()
-    update_data = UpdateData(announces=[], withdraws=[], attributes=attrs)
+    # Create UpdateCollection
+    attrs = AttributeCollection()
+    update_data = UpdateCollection(announces=[], withdraws=[], attributes=attrs)
 
     # Create mock negotiated
     negotiated = Mock()
@@ -235,7 +235,7 @@ def test_serializer_serialize_bytes_method() -> None:
     negotiated.msg_size = 4096
     negotiated.families = []
 
-    result = list(UpdateSerializer.serialize_bytes(update_data, negotiated))
+    result = list(update_data.messages(negotiated))
 
     # Check each item is bytes
     for item in result:
@@ -248,18 +248,18 @@ def test_serializer_serialize_bytes_method() -> None:
 
 
 def test_update_data_messages_still_works() -> None:
-    """Test that UpdateData.messages() still works (backward compatibility).
+    """Test that UpdateCollection.messages() still works (backward compatibility).
 
     Note: In the incremental implementation (Phase 1), messages() continues
     to work without deprecation warning. Deprecation will be added in Phase 2
     when the canonical names are swapped.
     """
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from unittest.mock import Mock
 
-    attrs = AttributeSet()
-    update_data = UpdateData(announces=[], withdraws=[], attributes=attrs)
+    attrs = AttributeCollection()
+    update_data = UpdateCollection(announces=[], withdraws=[], attributes=attrs)
 
     negotiated = Mock()
     negotiated.local_as = 65000

@@ -29,7 +29,7 @@ def mock_logger() -> Generator[None, None, None]:
         patch('exabgp.bgp.message.update.log') as mock_log,
         patch('exabgp.bgp.message.update.log') as mock_log,
         patch('exabgp.bgp.message.update.nlri.nlri.log') as mock_nlri_log,
-        patch('exabgp.bgp.message.update.attribute.attributes.log') as mock_attr_log,
+        patch('exabgp.bgp.message.update.attribute.collection.log') as mock_attr_log,
     ):
         mock_log.debug = Mock()
         mock_log.debug = Mock()
@@ -54,7 +54,7 @@ def create_negotiated_mock() -> Any:
 @pytest.mark.fuzz
 def test_unpack_simple_withdrawal() -> None:
     """Test unpacking UPDATE with only withdrawals."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import create_withdrawal_update
 
     negotiated = create_negotiated_mock()
@@ -62,10 +62,10 @@ def test_unpack_simple_withdrawal() -> None:
     # Create UPDATE withdrawing 192.0.2.0/24
     data = create_withdrawal_update([('192.0.2.0', 24)])
 
-    result = UpdateData.unpack_message(data, negotiated)
+    result = UpdateCollection.unpack_message(data, negotiated)
 
     # Should return Update object with nlris
-    assert isinstance(result, UpdateData)
+    assert isinstance(result, UpdateCollection)
     assert len(result.nlris) >= 1
     # Should be withdrawal action
     from exabgp.bgp.message.action import Action
@@ -76,7 +76,7 @@ def test_unpack_simple_withdrawal() -> None:
 @pytest.mark.fuzz
 def test_unpack_empty_update_is_eor() -> None:
     """Test that empty UPDATE is detected as EOR."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.eor import EOR
 
     negotiated = create_negotiated_mock()
@@ -84,7 +84,7 @@ def test_unpack_empty_update_is_eor() -> None:
     # Empty UPDATE (EOR marker)
     data = b'\x00\x00\x00\x00'
 
-    result = UpdateData.unpack_message(data, negotiated)
+    result = UpdateCollection.unpack_message(data, negotiated)
 
     assert isinstance(result, EOR)
 
@@ -92,8 +92,8 @@ def test_unpack_empty_update_is_eor() -> None:
 @pytest.mark.fuzz
 def test_unpack_with_minimal_attributes() -> None:
     """Test UPDATE with minimal valid attributes (ORIGIN only)."""
-    from exabgp.bgp.message.update import UpdateData
-    from exabgp.bgp.message.update.attribute import AttributeSet
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection
     from tests.fuzz.update_helpers import create_update_message, create_origin_attribute
 
     negotiated = create_negotiated_mock()
@@ -107,18 +107,18 @@ def test_unpack_with_minimal_attributes() -> None:
         nlri=b'',
     )
 
-    result = UpdateData.unpack_message(data, negotiated)
+    result = UpdateCollection.unpack_message(data, negotiated)
 
     # Should return Update object
-    assert isinstance(result, UpdateData)
+    assert isinstance(result, UpdateCollection)
     # Should have attributes
-    assert isinstance(result.attributes, AttributeSet)
+    assert isinstance(result.attributes, AttributeCollection)
 
 
 @pytest.mark.fuzz
 def test_split_integration_with_unpack() -> None:
     """Test that split() output integrates correctly with unpack_message()."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import create_update_message, create_ipv4_prefix
 
     negotiated = create_negotiated_mock()
@@ -133,22 +133,22 @@ def test_split_integration_with_unpack() -> None:
     )
 
     # First verify split() works
-    w, a, n = UpdateData.split(data)
+    w, a, n = UpdateCollection.split(data)
     assert len(w) == len(withdrawn)
     assert len(a) == 0
     assert len(n) == 0
 
     # Now verify unpack_message() can process it
-    result = UpdateData.unpack_message(data, negotiated)
+    result = UpdateCollection.unpack_message(data, negotiated)
 
-    assert isinstance(result, UpdateData)
+    assert isinstance(result, UpdateCollection)
     assert len(result.nlris) >= 1
 
 
 @pytest.mark.fuzz
 def test_unpack_with_multiple_withdrawals() -> None:
     """Test UPDATE with multiple withdrawn routes."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import create_withdrawal_update
 
     negotiated = create_negotiated_mock()
@@ -162,9 +162,9 @@ def test_unpack_with_multiple_withdrawals() -> None:
 
     data = create_withdrawal_update(prefixes)
 
-    result = UpdateData.unpack_message(data, negotiated)
+    result = UpdateCollection.unpack_message(data, negotiated)
 
-    assert isinstance(result, UpdateData)
+    assert isinstance(result, UpdateCollection)
     # Should have multiple NLRI entries
     assert len(result.nlris) == len(prefixes)
 
@@ -172,7 +172,7 @@ def test_unpack_with_multiple_withdrawals() -> None:
 @pytest.mark.fuzz
 def test_unpack_handles_split_validation() -> None:
     """Test that unpack_message() properly handles split() validation errors."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
 
     negotiated = create_negotiated_mock()
@@ -181,7 +181,7 @@ def test_unpack_handles_split_validation() -> None:
     data = b'\x00\x05\x00\x00'  # Claims 5 bytes of withdrawals but has none
 
     with pytest.raises(Notify) as exc_info:
-        UpdateData.unpack_message(data, negotiated)
+        UpdateCollection.unpack_message(data, negotiated)
 
     # Should raise Notify from split()
     assert exc_info.value.code == 3
@@ -191,7 +191,7 @@ def test_unpack_handles_split_validation() -> None:
 @pytest.mark.fuzz
 def test_unpack_preserves_data_integrity() -> None:
     """Test that data flows correctly through split() to unpack_message()."""
-    from exabgp.bgp.message.update import UpdateData
+    from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import create_ipv4_prefix, create_update_message
 
     negotiated = create_negotiated_mock()
@@ -206,13 +206,13 @@ def test_unpack_preserves_data_integrity() -> None:
     )
 
     # Verify split extracts the data correctly
-    withdrawn, attrs, announced = UpdateData.split(data)
+    withdrawn, attrs, announced = UpdateCollection.split(data)
     assert withdrawn == test_prefix
 
     # Verify unpack_message processes the same data
-    result = UpdateData.unpack_message(data, negotiated)
+    result = UpdateCollection.unpack_message(data, negotiated)
 
-    assert isinstance(result, UpdateData)
+    assert isinstance(result, UpdateCollection)
     # The withdrawn prefix should be in the result
     assert len(result.nlris) >= 1
 
