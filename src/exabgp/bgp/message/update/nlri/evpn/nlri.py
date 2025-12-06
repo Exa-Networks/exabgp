@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, ClassVar, Type, final
+from typing import TYPE_CHECKING, Any, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -45,11 +45,14 @@ class EVPN(NLRI):
     storage, preparing for eventual buffer protocol sharing.
     """
 
+    # EVPN has no additional instance attributes beyond NLRI base class
+    __slots__ = ()
+
     registered_evpn: ClassVar[dict[int, Type[EVPN]]] = dict()
 
-    # Fixed AFI/SAFI for this single-family NLRI type
-    _class_afi: ClassVar[AFI] = AFI.l2vpn
-    _class_safi: ClassVar[SAFI] = SAFI.evpn
+    # Fixed AFI/SAFI for this single-family NLRI type (class attributes shadow slots)
+    afi: ClassVar[AFI] = AFI.l2vpn
+    safi: ClassVar[SAFI] = SAFI.evpn
 
     # NEED to be defined in the subclasses
     CODE: ClassVar[int] = -1
@@ -61,18 +64,6 @@ class EVPN(NLRI):
         NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
         self.addpath = addpath if addpath is not None else PathInfo.DISABLED
         self._packed = b''
-
-    @property
-    @final
-    def afi(self) -> AFI:
-        """Return class-level AFI (l2vpn) - EVPN is always L2VPN."""
-        return self._class_afi
-
-    @property
-    @final
-    def safi(self) -> SAFI:
-        """Return class-level SAFI (evpn) - EVPN is always EVPN."""
-        return self._class_safi
 
     def __hash__(self) -> int:
         return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed.hex()))
@@ -93,6 +84,21 @@ class EVPN(NLRI):
 
     def __repr__(self) -> str:
         return str(self)
+
+    def __copy__(self) -> 'EVPN':
+        new = self.__class__.__new__(self.__class__)
+        # Family/NLRI slots (afi/safi are class-level)
+        self._copy_nlri_slots(new)
+        # EVPN has empty __slots__ - nothing else to copy
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'EVPN':
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        # Family/NLRI slots (afi/safi are class-level)
+        self._deepcopy_nlri_slots(new, memo)
+        # EVPN has empty __slots__ - nothing else to copy
+        return new
 
     def feedback(self, action: int) -> None:
         # if self.nexthop is None and action == Action.ANNOUNCE:

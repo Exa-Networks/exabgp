@@ -681,6 +681,8 @@ class Flow(NLRI):
     - Builder mode: created empty for config, rules added via add()
     """
 
+    __slots__ = ('_rules_cache', '_packed_stale', '_rd_override')
+
     nexthop: Any
 
     def __init__(self, packed: bytes, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
@@ -907,6 +909,35 @@ class Flow(NLRI):
 
     def __str__(self) -> str:
         return self.extensive()
+
+    def __copy__(self) -> 'Flow':
+        new = self.__class__.__new__(self.__class__)
+        # Family slots (afi/safi)
+        new.afi = self.afi
+        new.safi = self.safi
+        # NLRI slots
+        self._copy_nlri_slots(new)
+        # Flow slots
+        new._rules_cache = self._rules_cache
+        new._packed_stale = self._packed_stale
+        new._rd_override = self._rd_override
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'Flow':
+        from copy import deepcopy
+
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        # Family slots (afi/safi) - immutable enums
+        new.afi = self.afi
+        new.safi = self.safi
+        # NLRI slots
+        self._deepcopy_nlri_slots(new, memo)
+        # Flow slots
+        new._rules_cache = deepcopy(self._rules_cache, memo)
+        new._packed_stale = self._packed_stale
+        new._rd_override = deepcopy(self._rd_override, memo) if self._rd_override else None
+        return new
 
     def json(self, compact: bool = False) -> str:
         string: list[str] = []

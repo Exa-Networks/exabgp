@@ -70,22 +70,18 @@ Class Hierarchy:
 from __future__ import annotations
 
 from struct import unpack
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.ip import IP
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.nlri.qualifier import Labels
-from exabgp.bgp.message.update.nlri.qualifier import PathInfo
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
+from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.ip import IP
 
 # INET NLRI label constants (RFC 3107)
 LABEL_SIZE_BITS: int = 24  # Each MPLS label is 24 bits (3 bytes)
@@ -102,6 +98,8 @@ PATH_INFO_SIZE: int = 4  # Path Identifier is 4 bytes (RFC 7911)
 @NLRI.register(AFI.ipv4, SAFI.multicast)
 @NLRI.register(AFI.ipv6, SAFI.multicast)
 class INET(NLRI):
+    __slots__ = ('path_info', 'labels', 'rd')
+
     def __init__(self, packed: bytes, afi: AFI, safi: SAFI = SAFI.unicast) -> None:
         """Create an INET NLRI from packed CIDR bytes.
 
@@ -206,6 +204,35 @@ class INET(NLRI):
         else:
             addpath = self.path_info.pack_path()
         return hash(addpath + self._pack_nlri_simple())
+
+    def __copy__(self) -> 'INET':
+        new = self.__class__.__new__(self.__class__)
+        # Family slots (afi, safi)
+        new.afi = self.afi
+        new.safi = self.safi
+        # NLRI slots
+        self._copy_nlri_slots(new)
+        # INET slots
+        new.path_info = self.path_info
+        new.labels = self.labels
+        new.rd = self.rd
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'INET':
+        from copy import deepcopy
+
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        # Family slots (afi, safi) - immutable enums
+        new.afi = self.afi
+        new.safi = self.safi
+        # NLRI slots
+        self._deepcopy_nlri_slots(new, memo)
+        # INET slots
+        new.path_info = self.path_info  # Typically shared singleton
+        new.labels = deepcopy(self.labels, memo) if self.labels else None
+        new.rd = deepcopy(self.rd, memo) if self.rd else None
+        return new
 
     def feedback(self, action: Action) -> str:  # type: ignore[override]
         if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:

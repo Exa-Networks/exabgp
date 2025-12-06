@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, Type, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -89,6 +89,9 @@ T = TypeVar('T', bound='BGPLS')
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls)
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls_vpn)
 class BGPLS(NLRI):
+    # BGPLS has no additional instance attributes beyond NLRI base class
+    __slots__ = ()
+
     registered_bgpls: ClassVar[dict[int, Type[BGPLS]]] = dict()
 
     CODE: ClassVar[int] = -1
@@ -125,6 +128,27 @@ class BGPLS(NLRI):
             self.registered_bgpls.get(self.CODE, self).SHORT_NAME.lower(),
             '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
+
+    def __copy__(self) -> 'BGPLS':
+        new = self.__class__.__new__(self.__class__)
+        # Family slots (afi/safi)
+        new.afi = self.afi
+        new.safi = self.safi
+        # NLRI slots
+        self._copy_nlri_slots(new)
+        # BGPLS has empty __slots__ - nothing else to copy
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'BGPLS':
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        # Family slots (afi/safi) - immutable enums
+        new.afi = self.afi
+        new.safi = self.safi
+        # NLRI slots
+        self._deepcopy_nlri_slots(new, memo)
+        # BGPLS has empty __slots__ - nothing else to copy
+        return new
 
     @classmethod
     def register(cls, klass: Type[BGPLS]) -> Type[BGPLS]:  # type: ignore[override]

@@ -8,9 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from struct import unpack
 from typing import ClassVar
-
 
 # ======================================================================== AFI
 # https://www.iana.org/assignments/address-family-numbers/
@@ -85,7 +83,7 @@ class AFI(int):
     def unpack_afi(data: bytes) -> AFI:
         if len(data) < 2:
             raise ValueError(f'AFI data too short: need 2 bytes, got {len(data)}')
-        return AFI.common.get(data[:2], AFI(unpack('!H', data[:2])[0]))
+        return AFI.common.get(data[:2], AFI.from_int(int.from_bytes(data[:2], 'big')))
 
     @classmethod
     def value(cls, name: str) -> AFI | None:
@@ -113,11 +111,11 @@ class AFI(int):
 
 
 # Initialize AFI class attributes after class definition
-AFI.undefined = AFI(AFI.UNDEFINED)
-AFI.ipv4 = AFI(AFI.IPv4)
-AFI.ipv6 = AFI(AFI.IPv6)
-AFI.l2vpn = AFI(AFI.L2VPN)
-AFI.bgpls = AFI(AFI.BGPLS)
+AFI.undefined = AFI.from_int(AFI.UNDEFINED)
+AFI.ipv4 = AFI.from_int(AFI.IPv4)
+AFI.ipv6 = AFI.from_int(AFI.IPv6)
+AFI.l2vpn = AFI.from_int(AFI.L2VPN)
+AFI.bgpls = AFI.from_int(AFI.BGPLS)
 
 AFI.common = {
     AFI.undefined.pack_afi(): AFI.undefined,
@@ -255,20 +253,20 @@ class SAFI(int):
 
 
 # Initialize SAFI class attributes after class definition
-SAFI.undefined = SAFI(SAFI.UNDEFINED)
-SAFI.unicast = SAFI(SAFI.UNICAST)
-SAFI.multicast = SAFI(SAFI.MULTICAST)
-SAFI.nlri_mpls = SAFI(SAFI.NLRI_MPLS)
-SAFI.vpls = SAFI(SAFI.VPLS)
-SAFI.evpn = SAFI(SAFI.EVPN)
-SAFI.bgp_ls = SAFI(SAFI.BGPLS)
-SAFI.bgp_ls_vpn = SAFI(SAFI.BGPLS_VPN)
-SAFI.mup = SAFI(SAFI.MUP)
-SAFI.mpls_vpn = SAFI(SAFI.MPLS_VPN)
-SAFI.mcast_vpn = SAFI(SAFI.MCAST_VPN)
-SAFI.rtc = SAFI(SAFI.RTC)
-SAFI.flow_ip = SAFI(SAFI.FLOW_IP)
-SAFI.flow_vpn = SAFI(SAFI.FLOW_VPN)
+SAFI.undefined = SAFI.from_int(SAFI.UNDEFINED)
+SAFI.unicast = SAFI.from_int(SAFI.UNICAST)
+SAFI.multicast = SAFI.from_int(SAFI.MULTICAST)
+SAFI.nlri_mpls = SAFI.from_int(SAFI.NLRI_MPLS)
+SAFI.vpls = SAFI.from_int(SAFI.VPLS)
+SAFI.evpn = SAFI.from_int(SAFI.EVPN)
+SAFI.bgp_ls = SAFI.from_int(SAFI.BGPLS)
+SAFI.bgp_ls_vpn = SAFI.from_int(SAFI.BGPLS_VPN)
+SAFI.mup = SAFI.from_int(SAFI.MUP)
+SAFI.mpls_vpn = SAFI.from_int(SAFI.MPLS_VPN)
+SAFI.mcast_vpn = SAFI.from_int(SAFI.MCAST_VPN)
+SAFI.rtc = SAFI.from_int(SAFI.RTC)
+SAFI.flow_ip = SAFI.from_int(SAFI.FLOW_IP)
+SAFI.flow_vpn = SAFI.from_int(SAFI.FLOW_VPN)
 
 SAFI.common = {
     SAFI.undefined.pack_safi(): SAFI.undefined,
@@ -313,6 +311,10 @@ SAFI.cache = dict([(inst, inst) for (_, inst) in SAFI.codes.items()])
 
 
 class Family:
+    # afi/safi storage for standalone Family instances and multi-family NLRI types
+    # Single-family NLRI types override these with read-only properties
+    __slots__ = ('afi', 'safi')
+
     size: ClassVar[dict[tuple[AFI, SAFI], tuple[tuple[int, ...], int]]] = {
         # family                   next-hop   RD
         (AFI.ipv4, SAFI.unicast): ((4,), 0),
@@ -336,28 +338,29 @@ class Family:
         (AFI.bgpls, SAFI.bgp_ls): ((4, 16), 0),
     }
 
-    # Class-level AFI/SAFI for single-family types (None = use instance storage)
-    _class_afi: ClassVar[AFI | None] = None
-    _class_safi: ClassVar[SAFI | None] = None
-
-    # Type hints for afi/safi - may be instance attributes or properties
+    # Type hints for afi/safi - may be instance attributes (slots) or class attributes
+    # Single-family types define afi/safi as class attributes, making them read-only
+    # Multi-family types use the inherited __slots__ for instance storage
     afi: AFI
     safi: SAFI
 
     def __init__(self, afi: int, safi: int) -> None:
         """Initialize Family with AFI and SAFI.
 
-        If the subclass defines _class_afi/_class_safi, those are used via
-        property accessors instead of setting instance attributes. This supports:
-        - Multi-family NLRI types that need instance storage for AFI
-        - Single-family NLRI types that use class-level constants
+        Single-family subclasses (VPLS, RTC, EVPN, etc.) define afi/safi as class
+        attributes which shadow the slots, making them read-only constants.
+        Multi-family subclasses (INET, Flow, etc.) use the inherited slots.
         """
-        # Only set instance afi if no class-level afi defined
-        if self._class_afi is None:
+        # Try to set instance attributes - will work for multi-family types
+        # but be ignored for single-family types with class-level afi/safi
+        try:
             self.afi = AFI.from_int(afi)
-        # Only set instance safi if no class-level safi defined
-        if self._class_safi is None:
+        except AttributeError:
+            pass  # Single-family type with read-only class attribute
+        try:
             self.safi = SAFI.from_int(safi)
+        except AttributeError:
+            pass  # Single-family type with read-only class attribute
 
     def has_label(self) -> bool:
         return self.safi.has_label()

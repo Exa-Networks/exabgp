@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -40,9 +40,11 @@ class RTC(NLRI):
     is not yet implemented - only full RTC constraints are supported.
     """
 
-    # Fixed AFI/SAFI for this single-family NLRI type
-    _class_afi: ClassVar[AFI] = AFI.ipv4
-    _class_safi: ClassVar[SAFI] = SAFI.rtc
+    __slots__ = ('_packed_origin', 'rt')
+
+    # Fixed AFI/SAFI for this single-family NLRI type (class attributes shadow slots)
+    afi: ClassVar[AFI] = AFI.ipv4
+    safi: ClassVar[SAFI] = SAFI.rtc
 
     def __init__(
         self,
@@ -62,18 +64,6 @@ class RTC(NLRI):
         self._packed_origin: bytes | None = packed_origin
         self.rt = rt
         self.nexthop = IP.NoNextHop
-
-    @property
-    @final
-    def afi(self) -> AFI:
-        """Return class-level AFI (ipv4) - RTC is always IPv4."""
-        return self._class_afi
-
-    @property
-    @final
-    def safi(self) -> SAFI:
-        """Return class-level SAFI (rtc) - RTC is always RTC."""
-        return self._class_safi
 
     @property
     def origin(self) -> ASN:
@@ -119,6 +109,27 @@ class RTC(NLRI):
 
     def __repr__(self) -> str:
         return str(self)
+
+    def __copy__(self) -> 'RTC':
+        new = self.__class__.__new__(self.__class__)
+        # Family/NLRI slots (afi/safi are class-level)
+        self._copy_nlri_slots(new)
+        # RTC slots
+        new._packed_origin = self._packed_origin
+        new.rt = self.rt
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'RTC':
+        from copy import deepcopy
+
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        # Family/NLRI slots (afi/safi are class-level)
+        self._deepcopy_nlri_slots(new, memo)
+        # RTC slots
+        new._packed_origin = self._packed_origin  # bytes - immutable
+        new.rt = deepcopy(self.rt, memo) if self.rt else None
+        return new
 
     @staticmethod
     def resetFlags(char: int) -> int:

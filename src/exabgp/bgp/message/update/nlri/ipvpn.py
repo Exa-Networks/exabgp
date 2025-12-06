@@ -91,24 +91,24 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, final
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import (
-    PATH_INFO_SIZE,
-    LABEL_SIZE_BITS,
     LABEL_BOTTOM_OF_STACK_BIT,
-    LABEL_WITHDRAW_VALUE,
     LABEL_NEXTHOP_VALUE,
+    LABEL_SIZE_BITS,
+    LABEL_WITHDRAW_VALUE,
+    PATH_INFO_SIZE,
 )
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
-from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 
@@ -132,22 +132,11 @@ class IPVPN(Label):
     Uses class-level SAFI (always mpls_vpn) - no instance storage needed.
     """
 
-    _class_safi: ClassVar[SAFI] = SAFI.mpls_vpn
+    __slots__ = ('_rd_packed',)
 
-    @property
-    @final
-    def safi(self) -> SAFI:
-        """IPVPN NLRI always has SAFI mpls_vpn (class-level constant)."""
-        return self._class_safi
-
-    @safi.setter
-    def safi(self, value: SAFI) -> None:
-        """SAFI setter - ignored for IPVPN (SAFI is class-level constant).
-
-        This setter exists for compatibility with code that assigns safi,
-        but the value is ignored since IPVPN always has mpls_vpn.
-        """
-        pass  # Ignore - SAFI is class-level
+    # Fixed SAFI for IPVPN NLRI (class attribute shadows slot)
+    # AFI varies (ipv4/ipv6) and is set at instance level by INET
+    safi: ClassVar[SAFI] = SAFI.mpls_vpn
 
     def __init__(self, packed: bytes) -> None:
         """Create an IPVPN NLRI from packed CIDR bytes.
@@ -200,7 +189,7 @@ class IPVPN(Label):
         """
         instance = object.__new__(cls)
         # Note: safi parameter is ignored - IPVPN.safi is a class-level property
-        NLRI.__init__(instance, afi, cls._class_safi, action)
+        NLRI.__init__(instance, afi, cls.safi, action)
         instance._packed = cidr.pack_nlri()
         instance.path_info = path_info
         instance.nexthop = IP.NoNextHop
@@ -261,6 +250,41 @@ class IPVPN(Label):
         else:
             addpath = self.path_info.pack_path()
         return hash(addpath + self._pack_nlri_simple())
+
+    def __copy__(self) -> 'IPVPN':
+        new = self.__class__.__new__(self.__class__)
+        # Family slots (afi - safi is class-level)
+        new.afi = self.afi
+        # NLRI slots
+        self._copy_nlri_slots(new)
+        # INET slots
+        new.path_info = self.path_info
+        new.labels = self.labels
+        new.rd = self.rd
+        # Label slots
+        new._labels_packed = self._labels_packed
+        # IPVPN slots
+        new._rd_packed = self._rd_packed
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'IPVPN':
+        from copy import deepcopy
+
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        # Family slots (afi - safi is class-level)
+        new.afi = self.afi
+        # NLRI slots
+        self._deepcopy_nlri_slots(new, memo)
+        # INET slots
+        new.path_info = self.path_info
+        new.labels = deepcopy(self.labels, memo) if self.labels else None
+        new.rd = deepcopy(self.rd, memo) if self.rd else None
+        # Label slots
+        new._labels_packed = self._labels_packed  # bytes - immutable
+        # IPVPN slots
+        new._rd_packed = self._rd_packed  # bytes - immutable
+        return new
 
     @classmethod
     def has_rd(cls) -> bool:
@@ -360,7 +384,7 @@ class IPVPN(Label):
         # Parse prefix
         size = CIDR.size(mask)
         if len(bgp) < size:
-            raise Notify(3, 10, f'could not decode IPVPN NLRI with family {AFI(afi)} {SAFI(safi)}')
+            raise Notify(3, 10, f'could not decode IPVPN NLRI with family {AFI.from_int(afi)} {SAFI.from_int(safi)}')
 
         network, bgp = bgp[:size], bgp[size:]
 

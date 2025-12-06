@@ -75,7 +75,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, final
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -104,22 +104,11 @@ class Label(INET):
     Uses class-level SAFI (always nlri_mpls) - no instance storage needed.
     """
 
-    _class_safi: ClassVar[SAFI] = SAFI.nlri_mpls
+    __slots__ = ('_labels_packed',)
 
-    @property
-    @final
-    def safi(self) -> SAFI:
-        """Label NLRI always has SAFI nlri_mpls (class-level constant)."""
-        return self._class_safi
-
-    @safi.setter
-    def safi(self, value: SAFI) -> None:
-        """SAFI setter - ignored for Label (SAFI is class-level constant).
-
-        This setter exists for compatibility with code that assigns safi,
-        but the value is ignored since Label always has nlri_mpls.
-        """
-        pass  # Ignore - SAFI is class-level
+    # Fixed SAFI for Label NLRI (class attribute shadows slot)
+    # AFI varies (ipv4/ipv6) and is set at instance level by INET
+    safi: ClassVar[SAFI] = SAFI.nlri_mpls
 
     def __init__(self, packed: bytes) -> None:
         """Create a Label NLRI from packed CIDR bytes.
@@ -171,8 +160,8 @@ class Label(INET):
             New Label instance with SAFI=nlri_mpls
         """
         instance = object.__new__(cls)
-        # Note: safi parameter is ignored - Label.safi is a class-level property
-        NLRI.__init__(instance, afi, cls._class_safi, action)
+        # Note: safi parameter is ignored - Label.safi is a class-level constant
+        NLRI.__init__(instance, afi, cls.safi, action)
         instance._packed = cidr.pack_nlri()
         instance.path_info = path_info
         instance.nexthop = IP.NoNextHop
@@ -208,6 +197,37 @@ class Label(INET):
         else:
             addpath = self.path_info.pack_path()
         return hash(addpath + self._pack_nlri_simple())
+
+    def __copy__(self) -> 'Label':
+        new = self.__class__.__new__(self.__class__)
+        # Family slots (afi - safi is class-level)
+        new.afi = self.afi
+        # NLRI slots
+        self._copy_nlri_slots(new)
+        # INET slots
+        new.path_info = self.path_info
+        new.labels = self.labels
+        new.rd = self.rd
+        # Label slots
+        new._labels_packed = self._labels_packed
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'Label':
+        from copy import deepcopy
+
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        # Family slots (afi - safi is class-level)
+        new.afi = self.afi
+        # NLRI slots
+        self._deepcopy_nlri_slots(new, memo)
+        # INET slots
+        new.path_info = self.path_info
+        new.labels = deepcopy(self.labels, memo) if self.labels else None
+        new.rd = deepcopy(self.rd, memo) if self.rd else None
+        # Label slots
+        new._labels_packed = self._labels_packed  # bytes - immutable
+        return new
 
     def prefix(self) -> str:
         return '{}{}'.format(INET.prefix(self), self.labels)

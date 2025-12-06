@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from struct import unpack
 from struct import pack
-from typing import Any, ClassVar, Iterator, cast, final, TYPE_CHECKING
+from typing import Any, ClassVar, Iterator, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -48,9 +48,11 @@ class VPLS(NLRI):
     - Builder mode: created empty for configuration, fields assigned via setters
     """
 
-    # Fixed AFI/SAFI for this single-family NLRI type
-    _class_afi: ClassVar[AFI] = AFI.l2vpn
-    _class_safi: ClassVar[SAFI] = SAFI.vpls
+    __slots__ = ('_rd', '_endpoint', '_base', '_offset', '_size_value', 'unique')
+
+    # Fixed AFI/SAFI for this single-family NLRI type (class attributes shadow slots)
+    afi: ClassVar[AFI] = AFI.l2vpn
+    safi: ClassVar[SAFI] = SAFI.vpls
 
     # Wire format length (excluding 2-byte length prefix)
     PACKED_LENGTH = 17  # RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
@@ -76,18 +78,6 @@ class VPLS(NLRI):
         self._size_value: int | None = None  # '_size' would shadow Family.size ClassVar
 
         self.unique = next(unique)
-
-    @property
-    @final
-    def afi(self) -> AFI:
-        """Return class-level AFI (l2vpn) - VPLS is always L2VPN."""
-        return self._class_afi
-
-    @property
-    @final
-    def safi(self) -> SAFI:
-        """Return class-level SAFI (vpls) - VPLS is always VPLS."""
-        return self._class_safi
 
     @classmethod
     def make_vpls(
@@ -280,6 +270,35 @@ class VPLS(NLRI):
 
     def __str__(self) -> str:
         return self.extensive()
+
+    def __copy__(self) -> 'VPLS':
+        new = self.__class__.__new__(self.__class__)
+        # Family/NLRI slots (afi/safi are class-level)
+        self._copy_nlri_slots(new)
+        # VPLS slots
+        new._rd = self._rd
+        new._endpoint = self._endpoint
+        new._base = self._base
+        new._offset = self._offset
+        new._size_value = self._size_value
+        new.unique = self.unique
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'VPLS':
+        from copy import deepcopy
+
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        # Family/NLRI slots (afi/safi are class-level)
+        self._deepcopy_nlri_slots(new, memo)
+        # VPLS slots
+        new._rd = deepcopy(self._rd, memo) if self._rd else None
+        new._endpoint = self._endpoint
+        new._base = self._base
+        new._offset = self._offset
+        new._size_value = self._size_value
+        new.unique = self.unique
+        return new
 
     @classmethod
     def unpack_nlri(

@@ -31,6 +31,9 @@ from exabgp.bgp.message.update.nlri import NLRI
 @NLRI.register(AFI.ipv4, SAFI.mcast_vpn)
 @NLRI.register(AFI.ipv6, SAFI.mcast_vpn)
 class MVPN(NLRI):
+    # MVPN has no additional instance attributes beyond NLRI base class
+    __slots__ = ()
+
     registered_mvpn: ClassVar[dict[int, Type[MVPN]]] = dict()
 
     # NEED to be defined in the subclasses
@@ -81,6 +84,27 @@ class MVPN(NLRI):
 
     def index(self) -> bytes:
         return Family.index(self) + self._pack_nlri_simple()
+
+    def __copy__(self) -> 'MVPN':
+        new = self.__class__.__new__(self.__class__)
+        # Family slots (afi/safi)
+        new.afi = self.afi
+        new.safi = self.safi
+        # NLRI slots
+        self._copy_nlri_slots(new)
+        # MVPN has empty __slots__ - nothing else to copy
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'MVPN':
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        # Family slots (afi/safi) - immutable enums
+        new.afi = self.afi
+        new.safi = self.safi
+        # NLRI slots
+        self._deepcopy_nlri_slots(new, memo)
+        # MVPN has empty __slots__ - nothing else to copy
+        return new
 
     @classmethod
     def register(cls, klass: Type[MVPN]) -> Type[MVPN]:  # type: ignore[override]

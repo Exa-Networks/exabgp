@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 
 class Route:
+    __slots__ = ('nlri', 'attributes', '_Route__index')
+
     nlri: NLRI
     attributes: AttributeCollection
     _Route__index: bytes

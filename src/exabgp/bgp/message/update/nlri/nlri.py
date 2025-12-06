@@ -34,22 +34,20 @@ _UNPARSED: list['NLRI'] = []
 class NLRI(Family):
     """Base class for all NLRI types.
 
-    Subclasses can define class-level AFI/SAFI via _class_afi/_class_safi ClassVars
-    and corresponding @property accessors. Family.__init__ will detect these and
-    skip instance attribute assignment.
+    Single-family types (VPLS, RTC, EVPN): Define afi/safi as class attributes,
+    which shadow the inherited slots and make them read-only.
 
-    Single-family types: Set _class_afi and _class_safi, define afi/safi properties
-    Multi-family types: Leave _class_afi as None, use instance afi attribute
+    Multi-family types (INET, Flow): Use inherited slots for instance storage.
     """
+
+    # Slots for NLRI base class (subclasses add their own slots)
+    # afi/safi inherited from Family.__slots__
+    __slots__ = ('action', 'nexthop', 'addpath', '_packed')
 
     EOR: ClassVar[bool] = False
 
     registered_nlri: ClassVar[dict[str, Type[NLRI]]] = dict()
     registered_families: ClassVar[list[tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
-
-    # Inherited from Family, redeclared for documentation:
-    # _class_afi: ClassVar[AFI | None] = None  # Set by single-family subclasses
-    # _class_safi: ClassVar[SAFI | None] = None  # Set by single-family subclasses
 
     action: int
     nexthop: 'IP'
@@ -78,25 +76,35 @@ class NLRI(Family):
         self.addpath = addpath
         self._packed = b''  # Subclasses set actual wire data
 
+    def _copy_nlri_slots(self, new: 'NLRI') -> None:
+        """Copy NLRI base class slots to new instance."""
+        # NLRI.__slots__ = ('action', 'nexthop', 'addpath', '_packed')
+        new.action = self.action
+        new.nexthop = self.nexthop
+        new.addpath = self.addpath
+        new._packed = self._packed
+
+    def _deepcopy_nlri_slots(self, new: 'NLRI', memo: dict[Any, Any]) -> None:
+        """Deep copy NLRI base class slots to new instance."""
+        # NLRI.__slots__ = ('action', 'nexthop', 'addpath', '_packed')
+        new.action = self.action  # int - immutable
+        new.nexthop = deepcopy(self.nexthop, memo)
+        new.addpath = self.addpath  # PathInfo - typically shared singleton
+        new._packed = self._packed  # bytes - immutable
+
     def __copy__(self) -> 'NLRI':
         """Preserve singleton identity for INVALID and EMPTY."""
         if self is NLRI.INVALID or self is NLRI.EMPTY:
             return self
-        # Regular NLRI: create a shallow copy
-        new = self.__class__.__new__(self.__class__)
-        new.__dict__.update(self.__dict__)
-        return new
+        # Subclasses should override and call _copy_nlri_slots
+        raise NotImplementedError(f'{type(self).__name__} must implement __copy__')
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'NLRI':
         """Preserve singleton identity for INVALID and EMPTY."""
         if self is NLRI.INVALID or self is NLRI.EMPTY:
             return self
-        # Regular NLRI: create a deep copy
-        new = self.__class__.__new__(self.__class__)
-        memo[id(self)] = new
-        for k, v in self.__dict__.items():
-            setattr(new, k, deepcopy(v, memo))
-        return new
+        # Subclasses should override and call _deepcopy_nlri_slots
+        raise NotImplementedError(f'{type(self).__name__} must implement __deepcopy__')
 
     def __hash__(self) -> int:
         return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri().hex()))  # type: ignore[call-arg]

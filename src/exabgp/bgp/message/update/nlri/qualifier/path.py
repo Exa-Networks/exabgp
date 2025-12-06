@@ -14,6 +14,8 @@ from typing import Any, ClassVar
 
 
 class PathInfo:
+    __slots__ = ('_packed', '_disabled')
+
     LENGTH = 4  # Path info is always 4 bytes
     NOPATH: ClassVar['PathInfo']
     DISABLED: ClassVar['PathInfo']
