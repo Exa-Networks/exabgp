@@ -301,5 +301,55 @@ class TestINETCreationVariants:
         assert nlri.safi == SAFI.multicast
 
 
+class TestNLRIPackedBaseClass:
+    """Test _packed attribute inheritance from NLRI base class."""
+
+    def test_nlri_base_has_packed_attribute(self) -> None:
+        """Test that NLRI base class defines _packed attribute."""
+        from exabgp.bgp.message.update.nlri.nlri import NLRI
+
+        # NLRI base class should have _packed as a type annotation
+        assert '_packed' in NLRI.__annotations__
+        # Due to PEP 563 (from __future__ import annotations), the type is stored as string
+        assert NLRI.__annotations__['_packed'] in (bytes, 'bytes')
+
+    def test_inet_inherits_packed_from_nlri(self) -> None:
+        """Test that INET uses _packed correctly."""
+        cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+
+        # _packed should be set after creation
+        assert hasattr(nlri, '_packed')
+        assert isinstance(nlri._packed, bytes)
+        assert len(nlri._packed) > 0
+
+    def test_nlri_singletons_have_packed(self) -> None:
+        """Test that NLRI singletons have _packed initialized."""
+        from exabgp.bgp.message.update.nlri.nlri import NLRI
+
+        # INVALID and EMPTY singletons should have _packed = b''
+        assert hasattr(NLRI.INVALID, '_packed')
+        assert NLRI.INVALID._packed == b''
+        assert hasattr(NLRI.EMPTY, '_packed')
+        assert NLRI.EMPTY._packed == b''
+
+    def test_label_has_packed(self) -> None:
+        """Test that Label NLRI uses _packed correctly."""
+        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
+        nlri = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
+
+        assert hasattr(nlri, '_packed')
+        assert isinstance(nlri._packed, bytes)
+
+    def test_packed_decodes_correctly(self) -> None:
+        """Test that _packed bytes decode back to original CIDR."""
+        cidr = CIDR.make_cidr(IP.pton('192.168.100.0'), 24)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+
+        # The cidr property should decode _packed back correctly
+        decoded_cidr = nlri.cidr
+        assert decoded_cidr.prefix() == '192.168.100.0/24'
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
