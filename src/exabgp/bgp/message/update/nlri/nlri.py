@@ -26,6 +26,10 @@ from exabgp.logger import lazynlri
 
 T = TypeVar('T', bound='NLRI')
 
+# Sentinel for unparsed NLRI cache (distinguishes "not parsed" from "parsed empty")
+# Use `is _UNPARSED` / `is not _UNPARSED` for comparison
+_UNPARSED: list['NLRI'] = []
+
 
 class NLRI(Family):
     """Base class for all NLRI types.
