@@ -25,6 +25,8 @@ from exabgp.protocol.ip import IP
 
 __all__ = [
     'Update',
+    'UpdateData',
+    'UpdateWire',
     'EOR',
 ]
 
@@ -35,6 +37,101 @@ UPDATE_ATTR_LENGTH_HEADER_SIZE = 4  # Size of withdrawn length (2) + attr length
 # EOR (End-of-RIB) message length constants
 EOR_IPV4_UNICAST_LENGTH = 4  # Length of IPv4 unicast EOR marker
 EOR_WITH_PREFIX_LENGTH = 11  # Length of EOR with NLRI prefix
+
+
+# ======================================================================= UpdateWire
+#
+# Wire-format BGP UPDATE message container (bytes-first pattern).
+# This class stores the raw payload bytes as the canonical representation.
+# Parsing to semantic objects (UpdateData) is lazy.
+
+
+class UpdateWire:
+    """Wire-format BGP UPDATE message container (bytes-first).
+
+    Stores raw UPDATE message payload as the canonical representation.
+    Provides lazy parsing to semantic UpdateData when needed.
+
+    This follows the "packed-bytes-first" pattern used by individual
+    Attribute classes - the wire format is stored directly, and semantic
+    values are derived via properties.
+    """
+
+    ID = Message.CODE.UPDATE
+    TYPE = bytes([Message.CODE.UPDATE])
+
+    def __init__(self, payload: bytes) -> None:
+        """Create UpdateWire from raw payload bytes.
+
+        Args:
+            payload: The UPDATE message payload (after BGP header).
+                     Format: withdrawn_len(2) + withdrawn + attr_len(2) + attributes + nlri
+        """
+        self._payload = payload
+        self._parsed: Update | None = None
+
+    @property
+    def payload(self) -> bytes:
+        """Raw UPDATE payload bytes."""
+        return self._payload
+
+    def to_bytes(self) -> bytes:
+        """Generate complete BGP message with header.
+
+        Returns:
+            Complete BGP UPDATE message: marker(16) + length(2) + type(1) + payload
+        """
+        return Message.MARKER + pack('!H', 19 + len(self._payload)) + self.TYPE + self._payload
+
+    @property
+    def data(self) -> 'Update':
+        """Lazy-parse to semantic UpdateData.
+
+        Returns:
+            Parsed Update (semantic container) with announces, withdraws, attributes.
+        """
+        if self._parsed is None:
+            # Note: This requires a negotiated context which we don't have here.
+            # For now, this property is a placeholder - real parsing needs negotiated.
+            raise NotImplementedError(
+                'UpdateWire.data requires negotiated context - use unpack_message(negotiated) instead'
+            )
+        return self._parsed
+
+    def unpack_message(self, negotiated: 'Negotiated') -> 'Update':
+        """Unpack payload to semantic Update with negotiated context.
+
+        Args:
+            negotiated: BGP session negotiated parameters.
+
+        Returns:
+            Unpacked Update (semantic container).
+        """
+        if self._parsed is None:
+            self._parsed = Update.unpack_message(self._payload, negotiated)  # type: ignore[assignment]
+        return self._parsed  # type: ignore[return-value]
+
+    @property
+    def announces(self) -> list[NLRI]:
+        """Get announced NLRIs (requires prior unpack_message() call)."""
+        if self._parsed is None:
+            raise RuntimeError('Must call unpack_message(negotiated) before accessing announces')
+        return self._parsed.announces
+
+    @property
+    def withdraws(self) -> list[NLRI]:
+        """Get withdrawn NLRIs (requires prior unpack_message() call)."""
+        if self._parsed is None:
+            raise RuntimeError('Must call unpack_message(negotiated) before accessing withdraws')
+        return self._parsed.withdraws
+
+    @property
+    def attributes(self) -> Attributes:
+        """Get path attributes (requires prior unpack_message() call)."""
+        if self._parsed is None:
+            raise RuntimeError('Must call unpack_message(negotiated) before accessing attributes')
+        return self._parsed.attributes
+
 
 # ======================================================================= Update
 
@@ -424,3 +521,9 @@ class Update(Message):
         log.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
 
         return update
+
+
+# Alias: UpdateData is the semantic container (current Update implementation)
+# This alias enables gradual migration to the new naming convention
+# In future: Update will be wire container (bytes-first), UpdateData stays semantic
+UpdateData = Update
