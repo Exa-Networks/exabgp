@@ -6,11 +6,9 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from exabgp.protocol.ip import IP
-
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
+from exabgp.protocol.ip import IP
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -31,7 +29,7 @@ class OspfForwardingAddress(BaseLS):
     @property
     def content(self) -> str:
         """Unpack and return IP address string from packed bytes."""
-        return IP.unpack_ip(self._packed)
+        return IP.unpack_ip(self._packed).top()
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> OspfForwardingAddress:

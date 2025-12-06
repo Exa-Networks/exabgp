@@ -39,7 +39,7 @@ def get_completion_dest(shell: str) -> Path:
         'fish': home / '.config/fish/completions/exabgp.fish',
     }
 
-    return paths.get(shell, paths['bash'])
+    return paths.get(shell) or paths['bash']
 
 
 def get_activation_message(shell: str) -> str:
@@ -53,7 +53,7 @@ Then run: exec zsh""",
         'fish': 'Restart fish or run: exec fish',
     }
 
-    return messages.get(shell, messages['bash'])
+    return messages.get(shell) or messages['bash']
 
 
 def generate_bash_completion() -> str:
