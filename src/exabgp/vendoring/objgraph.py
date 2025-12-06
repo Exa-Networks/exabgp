@@ -40,11 +40,8 @@ import tempfile
 import sys
 import itertools
 
-try:
-    from types import InstanceType
-except ImportError:
-    # Python 3.x compatibility
-    InstanceType = None
+# Python 3: InstanceType doesn't exist, use sentinel value for comparison
+InstanceType = type(None)
 
 
 __author__ = 'Marius Gedminas (marius@gedmin.as)'
@@ -54,17 +51,11 @@ __version__ = '2.0.1'
 __date__ = '2015-07-28'
 
 
-try:
-    basestring
-except NameError:
-    # Python 3.x compatibility
-    basestring = str
+# Python 3: basestring doesn't exist
+basestring = str
 
-try:
-    iteritems = dict.iteritems
-except AttributeError:
-    # Python 3.x compatibility
-    iteritems = dict.items
+# Python 3: dict.iteritems doesn't exist
+iteritems = dict.items
 
 
 def count(typename, objects=None):
@@ -603,7 +594,8 @@ def is_proper_module(obj):
 
     .. versionadded:: 1.8
     """
-    return inspect.ismodule(obj) and obj is sys.modules.get(getattr(obj, '__name__', None))
+    name = getattr(obj, '__name__', None)
+    return inspect.ismodule(obj) and name is not None and obj is sys.modules.get(name)
 
 
 #
