@@ -28,10 +28,24 @@ T = TypeVar('T', bound='NLRI')
 
 
 class NLRI(Family):
+    """Base class for all NLRI types.
+
+    Subclasses can define class-level AFI/SAFI via _class_afi/_class_safi ClassVars
+    and corresponding @property accessors. Family.__init__ will detect these and
+    skip instance attribute assignment.
+
+    Single-family types: Set _class_afi and _class_safi, define afi/safi properties
+    Multi-family types: Leave _class_afi as None, use instance afi attribute
+    """
+
     EOR: ClassVar[bool] = False
 
     registered_nlri: ClassVar[dict[str, Type[NLRI]]] = dict()
     registered_families: ClassVar[list[tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
+
+    # Inherited from Family, redeclared for documentation:
+    # _class_afi: ClassVar[AFI | None] = None  # Set by single-family subclasses
+    # _class_safi: ClassVar[SAFI | None] = None  # Set by single-family subclasses
 
     action: int
     nexthop: 'IP'
@@ -44,27 +58,8 @@ class NLRI(Family):
     EMPTY: ClassVar['NLRI']
 
     @classmethod
-    def _create_invalid(cls) -> 'NLRI':
-        """Create the invalid NLRI singleton. Called once at module load.
-
-        Used for "treat as withdraw" semantics when parsing fails.
-        """
-        # Bypass normal __init__
-        instance = object.__new__(cls)
-        instance.afi = AFI.undefined
-        instance.safi = SAFI.undefined
-        instance.action = Action.UNSET
-        instance.addpath = PathInfo.DISABLED
-        instance._packed = b''
-        return instance
-
-    @classmethod
-    def _create_empty(cls) -> 'NLRI':
-        """Create the empty NLRI singleton. Called once at module load.
-
-        Used when intentionally clearing an NLRI reference (e.g., after splitting routes).
-        """
-        # Bypass normal __init__
+    def _create_singleton(cls, name: str) -> 'NLRI':
+        """Create a singleton NLRI (INVALID or EMPTY). Called once at module load."""
         instance = object.__new__(cls)
         instance.afi = AFI.undefined
         instance.safi = SAFI.undefined
@@ -183,5 +178,5 @@ class NLRI(Family):
 
 
 # Initialize the NLRI singletons
-NLRI.INVALID = NLRI._create_invalid()
-NLRI.EMPTY = NLRI._create_empty()
+NLRI.INVALID = NLRI._create_singleton('INVALID')
+NLRI.EMPTY = NLRI._create_singleton('EMPTY')
