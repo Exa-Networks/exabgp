@@ -129,7 +129,7 @@ class NextHop(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NextHop | IP':
-        if not bytes(data):
+        if not data:
             return IP.NoNextHop
         return cls.from_packet(data)
 

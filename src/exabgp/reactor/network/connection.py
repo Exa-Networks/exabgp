@@ -384,7 +384,7 @@ class Connection:
             if not header:
                 yield 0, 0, memoryview(b''), memoryview(b''), None
 
-        if not bytes(header[:16]) == Message.MARKER:
+        if header[:16] != Message.MARKER:
             report = 'The packet received does not contain a BGP marker'
             yield 0, 0, header, memoryview(b''), NotifyError(1, 1, report)
             return
@@ -428,7 +428,7 @@ class Connection:
         # Read BGP header (19 bytes)
         header = await self._reader_async(Message.HEADER_LEN)
 
-        if not bytes(header[:16]) == Message.MARKER:
+        if header[:16] != Message.MARKER:
             report = 'The packet received does not contain a BGP marker'
             return 0, 0, header, memoryview(b''), NotifyError(1, 1, report)
 
