@@ -117,7 +117,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
 
         for change1 in neighbor.rib.outgoing.cached_changes():
             str1 = change1.extensive()
-            packed = list(Update([change1.nlri], change1.attributes).messages(negotiated_out))
+            packed = list(Update([change1.nlri], [], change1.attributes).messages(negotiated_out))
             pack1 = packed[0]
 
             _packed = packed  # type: list[bytes]
@@ -138,7 +138,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
 
                 change2 = Change(update.nlris[0], update.attributes)
                 str2 = change2.extensive()
-                pack2 = list(Update([update.nlris[0]], update.attributes).messages(negotiated_out))[0]
+                pack2 = list(Update([update.nlris[0]], [], update.attributes).messages(negotiated_out))[0]
 
                 _str2 = str2  # type: str
                 _pack2 = pack2  # type: bytes

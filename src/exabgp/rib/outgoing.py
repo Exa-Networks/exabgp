@@ -290,15 +290,10 @@ class OutgoingRIB(Cache):
         change_index = change.index()
         change_family = change.nlri.family().afi_safi()
         change_attr_index = change.attributes.index()
-        nlri_index = change.nlri.index()
 
         attr_af_nlri = self._new_attr_af_nlri
         new_nlri = self._new_nlri
         new_attr = self._new_attribute
-
-        # Remove any pending withdraw for this NLRI (announce cancels previous withdraw)
-        if change_family in self._pending_withdraws:
-            self._pending_withdraws[change_family].pop(nlri_index, None)
 
         # add the route to the list to be announced/withdrawn
         attr_af_nlri.setdefault(change_attr_index, {}).setdefault(change_family, RIBdict({}))[change_index] = change  # type: ignore[arg-type]
@@ -326,7 +321,8 @@ class OutgoingRIB(Cache):
         self._refresh_families = set()
         self._refresh_changes = []
 
-        # generating Updates from what is in the RIB (announces)
+        # generating Updates from what is in the RIB
+        # Changes in _new_attr_af_nlri may be announces OR withdraws (based on nlri.action)
         for attr_index, per_family in attr_af_nlri.items():
             for family, changes in per_family.items():
                 if not changes:
@@ -334,22 +330,36 @@ class OutgoingRIB(Cache):
 
                 attributes = new_attr[attr_index]
 
+                # Separate announces and withdraws based on nlri.action
+                announces = [c.nlri for c in changes.values() if c.nlri.action == Action.ANNOUNCE]
+                withdraws = [c.nlri for c in changes.values() if c.nlri.action == Action.WITHDRAW]
+
                 if family == (AFI.ipv4, SAFI.unicast) and grouped:
-                    nlris = [change.nlri for change in changes.values()]
-                    yield Update(nlris, attributes)
+                    if announces:
+                        yield Update(announces, [], attributes)
+                    if withdraws:
+                        yield Update([], withdraws, attributes)
                     continue
 
                 if family == (AFI.ipv4, SAFI.mcast_vpn) and grouped:
-                    nlris = [change.nlri for change in changes.values()]
-                    yield Update(nlris, attributes)
+                    if announces:
+                        yield Update(announces, [], attributes)
+                    if withdraws:
+                        yield Update([], withdraws, attributes)
                     continue
                 if family == (AFI.ipv6, SAFI.mcast_vpn) and grouped:
-                    nlris = [change.nlri for change in changes.values()]
-                    yield Update(nlris, attributes)
+                    if announces:
+                        yield Update(announces, [], attributes)
+                    if withdraws:
+                        yield Update([], withdraws, attributes)
                     continue
 
+                # Non-grouped: one Update per NLRI
                 for change in changes.values():
-                    yield Update([change.nlri], attributes)
+                    if change.nlri.action == Action.WITHDRAW:
+                        yield Update([], [change.nlri], attributes)
+                    else:
+                        yield Update([change.nlri], [], attributes)
 
         # Generate Updates for pending withdraws using the new Update signature
         # Update(announces=[], withdraws=nlris, attributes) - no nlri.action needed
@@ -368,7 +378,7 @@ class OutgoingRIB(Cache):
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.start)
 
         for change in refresh_changes:
-            yield Update([change.nlri], change.attributes)
+            yield Update([change.nlri], [], change.attributes)
 
         for afi, safi in refresh_families:
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.end)
