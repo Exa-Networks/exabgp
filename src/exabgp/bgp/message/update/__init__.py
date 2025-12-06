@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar, Generator
+from typing import TYPE_CHECKING, Generator
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -46,7 +46,8 @@ EOR_WITH_PREFIX_LENGTH = 11  # Length of EOR with NLRI prefix
 # Parsing to semantic objects (UpdateCollection) is lazy.
 
 
-class Update:
+@Message.register
+class Update(Message):
     """Wire-format BGP UPDATE message container (bytes-first).
 
     Stores raw UPDATE message payload as the canonical representation.
@@ -55,82 +56,173 @@ class Update:
     This follows the "packed-bytes-first" pattern used by individual
     Attribute classes - the wire format is stored directly, and semantic
     values are derived via properties.
+
+    This is the registered BGP UPDATE message handler.
     """
 
     ID = Message.CODE.UPDATE
     TYPE = bytes([Message.CODE.UPDATE])
+    EOR: bool = False  # Not an End-of-RIB marker
 
-    def __init__(self, payload: bytes) -> None:
-        """Create UpdateWire from raw payload bytes.
+    def __init__(self, payload: bytes, parsed: 'UpdateCollection | None' = None) -> None:
+        """Create Update from raw payload bytes.
 
         Args:
             payload: The UPDATE message payload (after BGP header).
                      Format: withdrawn_len(2) + withdrawn + attr_len(2) + attributes + nlri
+            parsed: Optional pre-parsed UpdateCollection (used internally).
         """
         self._payload = payload
-        self._parsed: UpdateCollection | None = None
+        # Initialize with empty collection if not provided - properties always work
+        self._parsed: 'UpdateCollection' = (
+            parsed if parsed is not None else UpdateCollection([], [], AttributeCollection())
+        )
 
     @property
     def payload(self) -> bytes:
         """Raw UPDATE payload bytes."""
         return self._payload
 
-    def to_bytes(self) -> bytes:
+    @property
+    def withdrawn_bytes(self) -> bytes:
+        """Raw bytes of withdrawn routes section."""
+        withdrawn_len = unpack('!H', self._payload[:2])[0]
+        return self._payload[2 : 2 + withdrawn_len]
+
+    @property
+    def attribute_bytes(self) -> bytes:
+        """Raw bytes of path attributes section."""
+        withdrawn_len = unpack('!H', self._payload[:2])[0]
+        attr_offset = 2 + withdrawn_len
+        attr_len = unpack('!H', self._payload[attr_offset : attr_offset + 2])[0]
+        return self._payload[attr_offset + 2 : attr_offset + 2 + attr_len]
+
+    @property
+    def nlri_bytes(self) -> bytes:
+        """Raw bytes of announced NLRI section."""
+        withdrawn_len = unpack('!H', self._payload[:2])[0]
+        attr_offset = 2 + withdrawn_len
+        attr_len = unpack('!H', self._payload[attr_offset : attr_offset + 2])[0]
+        nlri_offset = attr_offset + 2 + attr_len
+        return self._payload[nlri_offset:]
+
+    def pack_message(self, negotiated: 'Negotiated | None' = None) -> bytes:
         """Generate complete BGP message with header.
+
+        Args:
+            negotiated: Unused, kept for API compatibility with Message.pack_message().
 
         Returns:
             Complete BGP UPDATE message: marker(16) + length(2) + type(1) + payload
         """
-        return Message.MARKER + pack('!H', 19 + len(self._payload)) + self.TYPE + self._payload
+        return self._message(self._payload)
 
     @property
     def data(self) -> 'UpdateCollection':
-        """Lazy-parse to semantic UpdateCollection.
+        """Access parsed UpdateCollection.
 
         Returns:
-            Parsed Update (semantic container) with announces, withdraws, attributes.
+            Parsed UpdateCollection (semantic container) with announces, withdraws, attributes.
+            Returns empty collection if parse() was not called.
         """
-        if self._parsed is None:
-            # Note: This requires a negotiated context which we don't have here.
-            # For now, this property is a placeholder - real parsing needs negotiated.
-            raise NotImplementedError(
-                'Update.data requires negotiated context - use unpack_message(negotiated) instead'
-            )
         return self._parsed
 
-    def unpack_message(self, negotiated: 'Negotiated') -> 'UpdateCollection':
-        """Unpack payload to semantic UpdateCollection with negotiated context.
+    def parse(self, negotiated: 'Negotiated') -> 'UpdateCollection':
+        """Parse payload to semantic UpdateCollection with negotiated context.
 
         Args:
             negotiated: BGP session negotiated parameters.
 
         Returns:
-            Unpacked Update (semantic container).
+            Parsed UpdateCollection (semantic container).
         """
-        if self._parsed is None:
-            self._parsed = UpdateCollection.unpack_message(self._payload, negotiated)  # type: ignore[assignment]
-        return self._parsed  # type: ignore[return-value]
+        # Only parse if we have an empty placeholder
+        if not self._parsed.announces and not self._parsed.withdraws and not self._parsed.attributes:
+            self._parsed = UpdateCollection._parse_payload(self._payload, negotiated)
+        return self._parsed
+
+    @property
+    def nlris(self) -> list[NLRI]:
+        """Get all NLRIs (announces + withdraws)."""
+        return self._parsed.nlris
 
     @property
     def announces(self) -> list[NLRI]:
-        """Get announced NLRIs (requires prior unpack_message() call)."""
-        if self._parsed is None:
-            raise RuntimeError('Must call unpack_message(negotiated) before accessing announces')
+        """Get announced NLRIs."""
         return self._parsed.announces
 
     @property
     def withdraws(self) -> list[NLRI]:
-        """Get withdrawn NLRIs (requires prior unpack_message() call)."""
-        if self._parsed is None:
-            raise RuntimeError('Must call unpack_message(negotiated) before accessing withdraws')
+        """Get withdrawn NLRIs."""
         return self._parsed.withdraws
 
     @property
     def attributes(self) -> AttributeCollection:
-        """Get path attributes (requires prior unpack_message() call)."""
-        if self._parsed is None:
-            raise RuntimeError('Must call unpack_message(negotiated) before accessing attributes')
+        """Get path attributes."""
         return self._parsed.attributes
+
+    @staticmethod
+    def split(data: bytes) -> tuple[bytes, bytes, bytes]:
+        """Split UPDATE payload into withdrawn, attributes, announced sections."""
+        return UpdateCollection.split(data)
+
+    @classmethod
+    def unpack_message(cls, data: bytes, negotiated: 'Negotiated') -> 'Update | EOR':
+        """Unpack raw UPDATE payload to Update or EOR.
+
+        This is the registered message handler called by Message.unpack().
+
+        Args:
+            data: Raw UPDATE message payload (after BGP header).
+            negotiated: BGP session negotiated parameters.
+
+        Returns:
+            Update (wire container with lazy parsing) or EOR.
+        """
+        log.debug(lazyformat('parsing UPDATE', data), 'parser')
+
+        length = len(data)
+
+        # Check for End-of-RIB markers (fast path)
+        if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
+            return EOR(AFI.ipv4, SAFI.unicast)
+        if length == EOR_WITH_PREFIX_LENGTH and data.startswith(EOR.NLRI.PREFIX):
+            return EOR.unpack_message(data, negotiated)
+
+        # Create wire container and parse
+        update = cls(data)
+        parsed = update.parse(negotiated)
+
+        # Check if this is actually an EOR after parsing (empty update with MP attributes)
+        if not parsed.attributes and not parsed.announces and not parsed.withdraws:
+            # Need to check what MP attributes were present before they were popped
+            # Re-split to check for MP_REACH/MP_UNREACH
+            _, attr_bytes, _ = UpdateCollection.split(data)
+            if attr_bytes:
+                # Parse attributes again to check for MP attributes
+                # (this is inefficient but handles edge cases)
+                temp_attrs = AttributeCollection.unpack(attr_bytes, negotiated)
+                unreach = temp_attrs.get(MPURNLRI.ID)
+                reach = temp_attrs.get(MPRNLRI.ID)
+                if unreach is not None:
+                    return EOR(unreach.afi, unreach.safi)
+                if reach is not None:
+                    return EOR(reach.afi, reach.safi)
+            # No MP attributes - this is IPv4 unicast EOR
+            return EOR(AFI.ipv4, SAFI.unicast)
+
+        def log_parsed(_: object) -> str:
+            # we need the import in the function as otherwise we have an cyclic loop
+            from exabgp.reactor.api.response import Response
+            from exabgp.version import json as json_version
+
+            return 'json {}'.format(
+                Response.JSON(json_version).update(negotiated.neighbor, 'receive', update._parsed, b'', b'', negotiated)
+            )
+
+        log.debug(lazyformat('decoded UPDATE', '', log_parsed), 'parser')
+
+        return update
 
 
 # ======================================================================= Update
@@ -156,17 +248,20 @@ class Update:
 # +---------------------------+
 
 
-@Message.register
 class UpdateCollection(Message):
     """Semantic container for BGP UPDATE message data.
 
     Holds announces, withdraws, and attributes as semantic objects.
-    Use UpdateSerializer to convert to wire-format Update messages.
+    Used as a builder to construct UPDATE messages from semantic data.
+
+    Note: This class inherits from Message for backward compatibility
+    (uses _message() method) but is NOT registered as the UPDATE handler.
+    The Update class is the registered handler.
     """
 
     ID = Message.CODE.UPDATE
     TYPE = bytes([Message.CODE.UPDATE])
-    EOR: ClassVar[bool] = False
+    EOR: bool = False
 
     def __init__(
         self,
@@ -450,25 +545,26 @@ class UpdateCollection(Message):
     # These exceptions are caught by the caller in reactor/protocol.py:read_message() which
     # wraps them in a Notify(1, 0) to signal a malformed message to the peer.
     @classmethod
-    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> Update | EOR:  # type: ignore[valid-type]
-        log.debug(lazyformat('parsing UPDATE', data), 'parser')
+    def _parse_payload(cls, data: bytes, negotiated: Negotiated) -> 'UpdateCollection':
+        """Parse raw UPDATE payload bytes into semantic UpdateCollection.
 
-        length = len(data)
+        This is an internal method called by Update.parse().
 
-        # This could be speed up massively by changing the order of the IF
-        if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
-            return EOR(AFI.ipv4, SAFI.unicast)  # pylint: disable=E1101
-        if length == EOR_WITH_PREFIX_LENGTH and data.startswith(EOR.NLRI.PREFIX):
-            return EOR.unpack_message(data, negotiated)
+        Args:
+            data: Raw UPDATE message payload (after BGP header).
+            negotiated: BGP session negotiated parameters.
 
-        withdrawn, _attributes, announced = cls.split(data)
+        Returns:
+            UpdateCollection with parsed announces, withdraws, and attributes.
+        """
+        withdrawn_bytes, _attributes, announced_bytes = cls.split(data)
 
-        if not withdrawn:
+        if not withdrawn_bytes:
             log.debug(lazymsg('update.withdrawn status=none'), 'routes')
 
         attributes = AttributeCollection.unpack(_attributes, negotiated)
 
-        if not announced:
+        if not announced_bytes:
             log.debug(lazymsg('update.announced status=none'), 'routes')
 
         # Is the peer going to send us some Path Information with the route (AddPath)
@@ -501,20 +597,20 @@ class UpdateCollection(Message):
         announces: list[NLRI] = []
         withdraws: list[NLRI] = []
 
-        while withdrawn:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn, Action.WITHDRAW, addpath, negotiated)
+        while withdrawn_bytes:
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn_bytes, Action.WITHDRAW, addpath, negotiated)
             log.debug(lazymsg('withdrawn NLRI {nlri}', nlri=nlri), 'routes')
-            withdrawn = left
+            withdrawn_bytes = left
             if nlri is not NLRI.INVALID:
                 withdraws.append(nlri)
 
-        while announced:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced, Action.ANNOUNCE, addpath, negotiated)
+        while announced_bytes:
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced_bytes, Action.ANNOUNCE, addpath, negotiated)
             if nlri is not NLRI.INVALID:
                 nlri.nexthop = nexthop
                 log.debug(lazymsg('announced NLRI {nlri}', nlri=nlri), 'routes')
                 announces.append(nlri)
-            announced = left
+            announced_bytes = left
 
         unreach = attributes.pop(MPURNLRI.ID, None)
         reach = attributes.pop(MPRNLRI.ID, None)
@@ -525,31 +621,26 @@ class UpdateCollection(Message):
         if reach is not None:
             announces.extend(reach.nlris)
 
-        if not attributes and not announces and not withdraws:
-            # Careful do not use == or != as the comparaison does not work
-            if unreach is None and reach is None:
-                return EOR(AFI.ipv4, SAFI.unicast)
-            if unreach is not None:
-                return EOR(unreach.afi, unreach.safi)
-            if reach is not None:
-                return EOR(reach.afi, reach.safi)
-            raise RuntimeError('This was not expected')
+        return cls(announces, withdraws, attributes)
 
-        update = UpdateCollection(announces, withdraws, attributes)
+    @classmethod
+    def unpack_message(cls, data: bytes, negotiated: Negotiated) -> 'UpdateCollection | EOR':
+        """Parse raw UPDATE payload bytes into UpdateCollection or EOR.
 
-        def parsed(_):
-            # we need the import in the function as otherwise we have an cyclic loop
-            # as this function currently uses UpdateCollection..
-            from exabgp.reactor.api.response import Response
-            from exabgp.version import json as json_version
+        Deprecated: Use Update.unpack_message() for the registered handler.
 
-            return 'json {}'.format(
-                Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, b'', b'', negotiated)
-            )
+        This method is kept for backward compatibility.
+        """
+        length = len(data)
 
-        log.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
+        # Check for End-of-RIB markers (fast path)
+        if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
+            return EOR(AFI.ipv4, SAFI.unicast)
+        if length == EOR_WITH_PREFIX_LENGTH and data.startswith(EOR.NLRI.PREFIX):
+            return EOR.unpack_message(data, negotiated)
 
-        return update
+        # Parse normally
+        return cls._parse_payload(data, negotiated)
 
 
 # Backward compatibility aliases

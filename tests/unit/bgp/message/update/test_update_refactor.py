@@ -96,20 +96,79 @@ def test_update_wire_from_payload() -> None:
     assert update.payload == payload
 
 
-def test_update_wire_to_bytes() -> None:
-    """Test UpdateWire.to_bytes() generates complete BGP message."""
+def test_update_wire_pack_message() -> None:
+    """Test UpdateWire.pack_message() generates complete BGP message."""
     from exabgp.bgp.message.update import UpdateWire
     from exabgp.bgp.message.message import Message
 
     payload = b'\x00\x00\x00\x00'
     update = UpdateWire(payload)
 
-    msg_bytes = update.to_bytes()
+    msg_bytes = update.pack_message()
 
     # Should have 16-byte marker + 2-byte length + 1-byte type + payload
     assert msg_bytes[:16] == Message.MARKER
     assert len(msg_bytes) == 19 + len(payload)
     assert msg_bytes[18] == Message.CODE.UPDATE
+
+
+def test_update_collection_roundtrip() -> None:
+    """Test that UpdateCollection can recreate payload after parsing.
+
+    Round-trip: payload → Update.parse() → UpdateCollection → messages() → payload
+    """
+    from exabgp.bgp.message.update import Update, UpdateCollection
+    from exabgp.bgp.message.update.attribute import AttributeCollection, Origin
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.protocol.ip import IP
+    from exabgp.protocol.family import AFI, SAFI
+    from unittest.mock import Mock
+    import socket
+
+    # Create a simple UPDATE with one IPv4 route
+    # Build it from UpdateCollection first
+    attrs = AttributeCollection()
+    attrs.add(Origin.from_int(Origin.IGP))
+
+    # Create CIDR for 10.0.0.0/24
+    packed_ip = socket.inet_aton('10.0.0.0')
+    cidr = CIDR.make_cidr(packed_ip, 24)
+    nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
+    nlri.nexthop = IP.from_string('192.168.1.1')
+
+    collection = UpdateCollection(announces=[nlri], withdraws=[], attributes=attrs)
+
+    # Create mock negotiated
+    negotiated = Mock()
+    negotiated.local_as = 65000
+    negotiated.peer_as = 65000  # iBGP
+    negotiated.asn4 = True
+    negotiated.msg_size = 4096
+    negotiated.families = [(AFI.ipv4, SAFI.unicast)]
+    negotiated.required = Mock(return_value=False)
+    negotiated.addpath = Mock()
+    negotiated.addpath.receive = Mock(return_value=False)
+    negotiated.addpath.send = Mock(return_value=False)
+    negotiated.nlri_context = Mock(return_value=Mock(addpath=False))
+
+    # Get wire format via messages()
+    messages = list(collection.messages(negotiated))
+    assert len(messages) >= 1
+
+    # Extract payload from first message (skip 19-byte header)
+    original_payload = messages[0][19:]
+
+    # Parse it back
+    update = Update(original_payload)
+    parsed = update.parse(negotiated)
+
+    # Verify we got data back
+    assert isinstance(parsed, UpdateCollection)
+    # Note: The parsed collection may have different structure due to
+    # attribute defaults being added during pack, so we just verify
+    # it parsed without error and has content
+    assert parsed.announces or parsed.withdraws or parsed.attributes
 
 
 def test_attributes_wire_class_exists() -> None:

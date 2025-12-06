@@ -181,8 +181,10 @@ class Protocol:
         code: str = 'send-{}'.format(Message.CODE.short(raw[18]))
         self.peer.stats[code] += 1
         if self._api.get(code, False):
-            message: UpdateCollection = UpdateCollection.unpack_message(raw[19:], self.negotiated)
-            self._to_api('send', message, raw)
+            # Parse the raw bytes to get an Update for API
+            update = Update(raw[19:])
+            update.parse(self.negotiated)
+            self._to_api('send', update, raw)
 
         await self.connection.writer_async(raw)
 
