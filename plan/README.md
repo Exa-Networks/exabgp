@@ -1,62 +1,27 @@
 # ExaBGP Plans Directory
 
+## Current Plans
+
+| Plan | Status | Description |
+|------|--------|-------------|
+| `todo.md` | 🔄 Active | Master TODO list with project tracking |
+| `coverage.md` | 🔄 Active | Test coverage improvement (59.71% → 60%) |
+| `byte-interning.md` | 🔄 Partial | LRU caching for NLRI qualifiers |
+| `addpath-nlri.md` | 📋 Planning | ADD-PATH for more NLRI types |
+| `architecture.md` | 📋 Planning | Circular dependency fixes |
+| `code-quality.md` | 📋 Planning | Misc improvements (low priority) |
+| `family-tuple.md` | 📋 Planning | FamilyTuple type alias |
+| `rib-improvement-proposals.md` | 📋 Discussion | RIB improvement ideas |
+| `runtime-validation-plan.md` | 📋 Planning | Runtime validation |
+| `security-validation.md` | 📋 Planning | Security validation |
+
 ## Naming Convention
-
-### Directory Structure
-
-```
-plan/
-├── README.md                    # This file - naming conventions
-├── todo.md                      # Master TODO list with references
-│
-├── # Active multi-file projects (directories)
-├── type-safety/                 # Type annotations project
-│   ├── README.md                # Project overview
-│   ├── progress.md              # Current progress
-│   └── *.md                     # Sub-plans
-│
-├── packed-bytes/                # Packed-bytes-first refactoring
-│   ├── README.md
-│   └── progress.md
-│
-├── runtime-validation/          # Security: input validation
-│   ├── README.md
-│   └── *.md
-│
-├── comment-cleanup/             # XXX comment resolution (✅ Complete)
-│   ├── README.md
-│   └── TODO.md
-│
-├── # Single-file plans (standalone .md files)
-├── coverage.md                  # Test coverage improvement
-├── python312-buffer.md          # Python 3.12 migration
-├── addpath-nlri.md              # AddPath feature expansion
-├── architecture.md              # Circular dependency fixes
-├── security-validation.md       # Config parser validation
-├── code-quality.md              # Low-priority improvements
-└── family-tuple.md              # FamilyTuple standardization
-```
 
 ### Naming Rules
 
-1. **Directories** - For multi-file projects with sub-plans
-   - Use kebab-case: `type-safety/`, `packed-bytes/`
-   - MUST contain `README.md` with overview
-   - May contain `progress.md` for tracking
-   - Sub-plans use UPPER_SNAKE_CASE: `MYPY_STATUS.md`
-
-2. **Single files** - For standalone plans
-   - Use kebab-case: `coverage.md`, `addpath-nlri.md`
-   - Short, descriptive names (2-3 words max)
-   - No prefixes like `PLAN_` or `TODO_`
-
-3. **Progress/Status files**
-   - `progress.md` - Current state tracking (in directories)
-   - `TODO.md` - Remaining work items (in directories)
-
-4. **Archive directories**
-   - `archive/` subdirectory for historical docs
-   - Preserve for context, mark as historical
+1. **Single files** - kebab-case: `coverage.md`, `addpath-nlri.md`
+2. **Short names** - 2-3 words max, descriptive
+3. **No prefixes** - Don't use `PLAN_` or `TODO_`
 
 ### File Template
 
@@ -64,54 +29,23 @@ plan/
 # [Title]
 
 **Status:** [emoji] [Active|Planning|Completed|On Hold]
-**Started:** YYYY-MM-DD
-**Last Updated:** YYYY-MM-DD
-**See also:** [related files]
+**Created:** YYYY-MM-DD
+**Updated:** YYYY-MM-DD
 
 ## Goal
 
 [1-2 sentence summary]
 
-## Scope
-
-[What's included/excluded]
-
 ## Progress
 
-| Item | Status |
-|------|--------|
-| ... | ... |
+- [x] Completed item
+- [ ] Pending item
 
 ## Files to Modify
 
-[List of affected files]
-
-## Risks
-
-[Known risks and mitigations]
-
-## Recent Failures
-
-| Date | Test | Error | Root Cause | Status |
-|------|------|-------|------------|--------|
-| 2025-12-04 | test_example | AssertionError: ... | Off-by-one | ✅ Fixed |
-
-## Blockers
-
-| Blocker | Discovered | Status | Notes |
-|---------|------------|--------|-------|
-| Need API change | 2025-12-03 | 🔴 Blocking | Discuss with team |
-
-## Resume Point
-
-**Last worked:** YYYY-MM-DD
-**Last commit:** [hash or "uncommitted"]
-**Session ended:** Mid-task / Clean break / Blocked
-
-**To resume:**
-1. [Exact next step to take]
-2. [Context needed]
-3. [Watch out for: potential issues]
+| File | Change |
+|------|--------|
+| ... | ... |
 ```
 
 ### Status Emojis
@@ -120,10 +54,9 @@ plan/
 |-------|---------|
 | 🔄 | Active - work in progress |
 | 📋 | Planning - not started |
-| ✅ | Completed |
+| ✅ | Completed (delete when done) |
 | ⏸️ | On Hold |
-| ❌ | Cancelled |
 
 ---
 
-**Last Updated:** 2025-12-04
+**Updated:** 2025-12-06

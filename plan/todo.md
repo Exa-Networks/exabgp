@@ -1,6 +1,6 @@
 # ExaBGP Quality Improvement TODO
 
-**Updated:** 2025-12-05
+**Updated:** 2025-12-06
 **Naming convention:** See `plan/README.md`
 
 ---
@@ -57,16 +57,6 @@ MyPy errors: 89 (92% reduction from 1,149 baseline)
 
 ## Future Projects
 
-### Python 3.12+ Migration
-
-**Status:** 📋 Planning
-**See:** `plan/python312-buffer.md`
-
-Migrate to Python 3.12+ and use `memoryview` for zero-copy parsing.
-**Prerequisite:** Complete packed-bytes refactoring.
-
----
-
 ### Security Validation
 
 **Status:** 📋 Planning
@@ -113,10 +103,10 @@ Extend ADD-PATH to additional NLRI types (BGP-LS, FlowSpec, VPLS, EVPN, MVPN, MU
 | Plan | Status | Description |
 |------|--------|-------------|
 | `type-safety/` | 🔄 Active | Type annotations project |
-| `packed-bytes/` | 🔄 Active | Packed-bytes-first refactoring |
+| `packed-bytes/` | ✅ Complete | Packed-bytes-first refactoring |
 | `coverage.md` | 🔄 Active | Test coverage improvement |
 | `runtime-validation/` | 🔄 Active | Parsing crash prevention |
-| `python312-buffer.md` | 📋 Planning | Python 3.12 migration |
+| `python312-buffer.md` | ✅ Complete | Python 3.12 buffer protocol |
 | `security-validation.md` | 📋 Planning | Config/API validation |
 | `addpath-nlri.md` | 📋 Planning | AddPath for more NLRI types |
 | `architecture.md` | 📋 Planning | Circular dependency fixes |
@@ -126,6 +116,76 @@ Extend ADD-PATH to additional NLRI types (BGP-LS, FlowSpec, VPLS, EVPN, MVPN, MU
 ---
 
 ## Completed (2025)
+
+### Buffer/Wire Architecture Refactoring ✅ (2025-12-06)
+
+Major refactoring to implement packed-bytes-first pattern across the codebase:
+
+**Update/Attributes Wire Separation:**
+- `Update` is now wire container (bytes-first), registered as UPDATE handler
+- `UpdateCollection` is semantic container (NLRI lists + attributes)
+- `Attributes` is wire container, `AttributeCollection` is semantic container
+- Commits: `5c409647`, `26180d8b`, `5981faf1`, `97ab5e52`
+
+**NLRI Buffer-Ready Architecture:**
+- Class-level AFI/SAFI for single-family types (EVPN, VPLS, RTC, Label, IPVPN)
+- `_packed` attribute in NLRI base class
+- `NLRICollection` and `MPNLRICollection` wire containers with lazy parsing
+- `_UNPARSED` sentinel for deferred parsing
+- Commits: `e0ef3b95`, `89856617`, `4dac25e9`, `ca97b8dc`, `dff7a853`, `52b65211`, `b1b384d1`
+
+**Memory Optimizations:**
+- `__slots__` on NLRI and Route classes (68% per-object reduction)
+- Eliminated `deepcopy` in `del_from_rib()` (6.5x faster withdrawals)
+- Commit: `3808601e`
+
+**Buffer Type Standardization:**
+- All message/attribute/NLRI classes accept `Buffer` (PEP 688)
+- Two-buffer pattern: message owns buffer, slices are zero-copy
+- Removed unnecessary `bytes()` conversions
+- Commits: `f111d137`, `45d1ef62`, `89fa615b`
+
+**CIDR/INET Fix:**
+- Fixed /32 IPv6 misclassification by requiring explicit AFI
+- Commit: `c12dae82`
+
+### Change Class Refactoring ✅ (2025-12-06)
+
+**Renamed Change → Route** (commit `ab2bdb45`):
+- Renamed `src/exabgp/rib/change.py` → `route.py`
+- Renamed class `Change` → `Route` across 36 files
+- Better semantics: represents a BGP route (NLRI + attributes), not a change operation
+
+**RIB Performance Optimization** (phases from `eliminate-change-class.md`):
+- Phase 1-3: `UpdateCollection` with announces/withdraws separation
+- Phase 4: `del_from_rib()` without deepcopy - **6.5x faster withdrawals**
+- Phase 5-6: Overloaded RIB/Cache signatures accept `(nlri, attrs)` directly
+- Phase 7: Keep `Route` class for configuration parsing (clean abstraction)
+
+**Neighbor.rib refactor** (commit `6deae33b`):
+- Made `Neighbor.rib` non-Optional with enabled flag
+- Removed 14 `rib is not None` checks across codebase
+- `RIB.enable()` activates with proper settings, reuses cached RIB on reload
+
+---
+
+### Python 3.12+ Buffer Protocol ✅ (2025-12-06)
+
+Full implementation of zero-copy buffer handling:
+
+- **Phase 1:** Python 3.12 minimum (pyproject.toml)
+- **Phase 2:** Network layer uses `recv_into()`, returns `memoryview`
+- **Phase 2.5:** Two-buffer architecture in Message classes
+- **Phase 3:** `UpdateCollection.split()` returns `tuple[memoryview, memoryview, memoryview]`
+- **Phase 4:** All NLRI `unpack_nlri()` methods accept `Buffer`, use `memoryview` internally
+- **Phase 5:** `AttributeCollection.unpack()` accepts `Buffer`
+- **Phase 6:** NLRI stores `bytes` (Option A - convert at boundary)
+
+**Memory optimizations:**
+- `__slots__` on NLRI and Route classes (68% per-object reduction)
+- Eliminated `deepcopy` in `del_from_rib()` (6.5x faster withdrawals)
+
+---
 
 ### API Dispatch Refactoring ✅
 - Tree-based dictionary dispatch for v6 API
