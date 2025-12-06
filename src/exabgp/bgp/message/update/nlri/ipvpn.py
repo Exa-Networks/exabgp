@@ -91,7 +91,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -128,7 +128,26 @@ class IPVPN(Label):
     Wire format: [mask][labels][rd][prefix]
     Storage: _packed (CIDR), _labels_packed (labels bytes), _rd_packed (RD bytes)
     pack_nlri() = concatenation of all parts with computed mask
+
+    Uses class-level SAFI (always mpls_vpn) - no instance storage needed.
     """
+
+    _class_safi: ClassVar[SAFI] = SAFI.mpls_vpn
+
+    @property
+    @final
+    def safi(self) -> SAFI:
+        """IPVPN NLRI always has SAFI mpls_vpn (class-level constant)."""
+        return self._class_safi
+
+    @safi.setter
+    def safi(self, value: SAFI) -> None:
+        """SAFI setter - ignored for IPVPN (SAFI is class-level constant).
+
+        This setter exists for compatibility with code that assigns safi,
+        but the value is ignored since IPVPN always has mpls_vpn.
+        """
+        pass  # Ignore - SAFI is class-level
 
     def __init__(self, packed: bytes) -> None:
         """Create an IPVPN NLRI from packed CIDR bytes.
@@ -137,10 +156,13 @@ class IPVPN(Label):
             packed: CIDR wire format bytes [mask_byte][truncated_ip...]
 
         AFI is inferred from mask (>32 implies IPv6).
-        SAFI defaults to mpls_vpn. Use factory methods for other families.
+        SAFI is always mpls_vpn (class-level). Use factory methods for creation.
+
+        NOTE: This __init__ is broken (Label.__init__ is also broken).
+        Use from_cidr() factory method instead.
         """
         Label.__init__(self, packed)
-        self.safi = SAFI.mpls_vpn  # Override nlri_mpls default from Label
+        # Note: safi is now a property, setter is a no-op
         self._rd_packed: bytes = b''  # RD bytes (empty = NORD)
 
     @property
@@ -160,7 +182,7 @@ class IPVPN(Label):
         cls,
         cidr: CIDR,
         afi: AFI,
-        safi: SAFI,
+        safi: SAFI = SAFI.mpls_vpn,  # Default to class SAFI; parameter kept for API compat
         action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
     ) -> 'IPVPN':
@@ -169,15 +191,16 @@ class IPVPN(Label):
         Args:
             cidr: CIDR prefix
             afi: Address Family Identifier
-            safi: Subsequent Address Family Identifier
+            safi: Ignored - IPVPN always uses mpls_vpn (kept for API compatibility)
             action: Route action (ANNOUNCE/WITHDRAW)
             path_info: AddPath path identifier
 
         Returns:
-            New IPVPN instance
+            New IPVPN instance with SAFI=mpls_vpn
         """
         instance = object.__new__(cls)
-        NLRI.__init__(instance, afi, safi, action)
+        # Note: safi parameter is ignored - IPVPN.safi is a class-level property
+        NLRI.__init__(instance, afi, cls._class_safi, action)
         instance._packed = cidr.pack_nlri()
         instance.path_info = path_info
         instance.nexthop = IP.NoNextHop

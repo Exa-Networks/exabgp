@@ -26,6 +26,7 @@ from exabgp.configuration.static.mpls import route_distinguisher
 
 __all__ = ['ParseFlowRoute', 'ParseFlowMatch', 'ParseFlowThen', 'ParseFlowScope']
 
+from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.configuration.flow.parser import flow
 from exabgp.configuration.flow.parser import next_hop
 
@@ -102,8 +103,17 @@ class ParseFlowRoute(Section):
 
     def post(self) -> bool:
         route: Any = self.scope.get_route()
-        if route.nlri.rd is not RouteDistinguisher.NORD:
-            route.nlri.safi = SAFI.flow_vpn
+        # Recreate NLRI with correct SAFI if RD is present
+        # (avoids SAFI mutation which is incompatible with class-level SAFI)
+        if route.nlri.rd is not RouteDistinguisher.NORD and route.nlri.safi != SAFI.flow_vpn:
+            old_nlri = route.nlri
+            new_nlri = Flow.make_flow(old_nlri.afi, SAFI.flow_vpn, old_nlri.action)
+            # Transfer all data to new NLRI
+            new_nlri._rd_override = old_nlri._rd_override
+            new_nlri._rules_cache = old_nlri._rules_cache
+            new_nlri._packed_stale = True
+            new_nlri.nexthop = old_nlri.nexthop
+            route.nlri = new_nlri
         return True
 
     def _check(self, change: Any) -> bool:

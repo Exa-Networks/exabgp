@@ -20,9 +20,9 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
+from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.qualifier import Labels
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.attribute import Attribute
 
 from exabgp.rib.route import Route
@@ -298,14 +298,79 @@ class ParseStaticRoute(Section):
         routes = self.scope.pop_routes()
         if routes:
             for route in routes:
-                # Cast to INET to access rd/labels attributes (verified by has_rd/has_label)
-                inet_nlri = cast(INET, route.nlri)
-                if route.nlri.has_rd() and inet_nlri.rd is not RouteDistinguisher.NORD:
-                    route.nlri.safi = SAFI.mpls_vpn
-                elif route.nlri.has_label() and inet_nlri.labels is not Labels.NOLABEL:
-                    route.nlri.safi = SAFI.nlri_mpls
+                # Recreate NLRI with correct type based on actual RD/labels presence
+                # instead of mutating SAFI after creation
+                route.nlri = self._normalize_nlri_type(route.nlri)
                 self.scope.append_route(route)
         return True
+
+    @staticmethod
+    def _normalize_nlri_type(nlri: NLRI) -> NLRI:
+        """Ensure NLRI has the correct type based on RD/labels presence.
+
+        Parser creates IPVPN instances which can hold all data (RD, labels, cidr).
+        This method checks what's actually present and recreates with the minimal
+        type needed: IPVPN (has RD), Label (has labels only), or INET (neither).
+
+        This avoids SAFI mutation which is incompatible with class-level SAFI.
+        """
+        # Check if this is an INET-family NLRI (INET, Label, or IPVPN)
+        if not isinstance(nlri, INET):
+            return nlri
+
+        # Cast to IPVPN to access rd/labels (IPVPN is parent of all created by mpls())
+        ipvpn_nlri = cast(IPVPN, nlri)
+
+        # Check actual data presence via _rd_packed/_labels_packed attributes
+        # (not has_rd()/has_label() which check SAFI capability, not actual data)
+        has_rd = hasattr(ipvpn_nlri, '_rd_packed') and ipvpn_nlri._rd_packed
+        has_label = hasattr(ipvpn_nlri, '_labels_packed') and ipvpn_nlri._labels_packed
+
+        # Determine target type and SAFI
+        if has_rd:
+            # IPVPN: has RD (and likely labels)
+            target_cls = IPVPN
+            target_safi = SAFI.mpls_vpn
+            # Early return if already correct type AND safi
+            if isinstance(nlri, IPVPN) and nlri.safi == target_safi:
+                return nlri
+        elif has_label:
+            # Label: has labels but no RD
+            target_cls = Label
+            target_safi = SAFI.nlri_mpls
+            # Early return if already correct type AND safi (and not IPVPN subclass)
+            if isinstance(nlri, Label) and not isinstance(nlri, IPVPN) and nlri.safi == target_safi:
+                return nlri
+        else:
+            # INET: no RD, no labels - determine SAFI from IP prefix
+            target_cls = INET
+            # Determine SAFI based on IP range (multicast vs unicast)
+            # IPVPN/Label have class-level SAFI that's not the intended value
+            cidr = ipvpn_nlri.cidr
+            target_safi = IP.tosafi(cidr.prefix().split('/')[0])
+            # Early return if already correct type
+            if type(nlri) is INET:  # noqa: E721 - exact type check
+                return nlri
+
+        # Create new NLRI with correct type
+        new_nlri = target_cls.from_cidr(
+            ipvpn_nlri.cidr,
+            ipvpn_nlri.afi,
+            target_safi,
+            ipvpn_nlri.action,
+            ipvpn_nlri.path_info,
+        )
+        new_nlri.nexthop = ipvpn_nlri.nexthop
+
+        # Copy labels if target supports them
+        if has_label and hasattr(new_nlri, 'labels'):
+            new_nlri.labels = ipvpn_nlri.labels
+
+        # Copy RD if target supports it
+        if has_rd and hasattr(new_nlri, 'rd'):
+            new_nlri.rd = ipvpn_nlri.rd
+
+        return new_nlri
 
     def _check(self) -> bool:
         change = self.scope.get(self.name)
@@ -359,9 +424,6 @@ class ParseStaticRoute(Section):
 
         # Extract data from original NLRI before clearing
         # Check NLRI class type rather than SAFI (SAFI may be unicast even for VPN routes)
-        from exabgp.bgp.message.update.nlri.label import Label
-        from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
-
         klass = nlri.__class__
         nexthop = nlri.nexthop
         path_info = nlri.path_info if safi.has_path() else None
