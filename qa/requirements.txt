@@ -58,5 +58,5 @@ typing-extensions==4.15.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   mypy
     #   pytest-asyncio
-urllib3==2.5.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+urllib3==2.6.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests
