@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Generator, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Generator, Iterator
 
 from exabgp.util.types import Buffer
 
@@ -301,6 +301,21 @@ class AttributeCollection(dict):
 
         return attributes
 
+    @classmethod
+    def from_attributes(cls, attrs: 'Attributes', negotiated: Negotiated) -> 'AttributeCollection':
+        """Create AttributeCollection from wire Attributes for modification.
+
+        This is the bridge from wire container to semantic container.
+
+        Args:
+            attrs: Wire-format Attributes container.
+            negotiated: BGP session negotiated parameters.
+
+        Returns:
+            New AttributeCollection with parsed attributes.
+        """
+        return cls.unpack(attrs.packed, negotiated)
+
     @staticmethod
     def flag_attribute_content(data: Buffer) -> tuple[int, int, Buffer]:
         flag = Attribute.Flag(data[0])
@@ -567,7 +582,6 @@ class Attributes:
         """
         self._packed = packed
         self._context = context
-        self._parsed: AttributeCollection | None = None
 
     @classmethod
     def from_set(cls, attr_set: AttributeCollection, negotiated: 'Negotiated') -> 'Attributes':
@@ -589,7 +603,7 @@ class Attributes:
         return self._packed
 
     def unpack_attributes(self, negotiated: 'Negotiated | None' = None) -> AttributeCollection:
-        """Lazy-unpack to semantic AttributeCollection.
+        """Unpack to semantic AttributeCollection.
 
         Args:
             negotiated: BGP session negotiated parameters.
@@ -598,29 +612,83 @@ class Attributes:
         Returns:
             Unpacked AttributeCollection (semantic container).
         """
-        if self._parsed is None:
-            ctx = negotiated or self._context
-            if ctx is None:
-                raise RuntimeError('Attributes.unpack_attributes() requires negotiated context')
-            self._parsed = AttributeCollection.unpack(self._packed, ctx)
-        return self._parsed
+        ctx = negotiated or self._context
+        if ctx is None:
+            raise RuntimeError('Attributes.unpack_attributes() requires negotiated context')
+        return AttributeCollection.unpack(self._packed, ctx)
 
     def __getitem__(self, code: int) -> Attribute:
-        """Get attribute by code (requires prior unpack_attributes() or context)."""
-        if self._parsed is None and self._context is not None:
-            self.unpack_attributes(self._context)
-        if self._parsed is None:
-            raise RuntimeError('Must call unpack_attributes(negotiated) before accessing attributes')
-        # AttributeCollection stores Attribute instances
-        return cast(Attribute, self._parsed[code])
+        """Get attribute by code."""
+        for attr in self:
+            if attr.ID == code:
+                return attr
+        raise KeyError(code)
 
     def has(self, code: int) -> bool:
-        """Check if attribute exists (requires prior unpack_attributes() or context)."""
-        if self._parsed is None and self._context is not None:
-            self.unpack_attributes(self._context)
-        if self._parsed is None:
-            raise RuntimeError('Must call unpack_attributes(negotiated) before checking attributes')
-        return self._parsed.has(code)
+        """Check if attribute exists."""
+        for attr in self:
+            if attr.ID == code:
+                return True
+        return False
+
+    def __iter__(self) -> Iterator[Attribute]:
+        """Iterate over Attribute objects with buffer slices.
+
+        Yields Attribute instances that store slices of self._packed.
+        Each attribute parses its value lazily via properties - no upfront
+        parsing cost.
+
+        Yields:
+            Attribute instances (MED, LocalPreference, Origin, etc.)
+            Each stores a memoryview/slice of the buffer for lazy parsing.
+
+        Note:
+            Requires self._context to be set. If not set, raises RuntimeError.
+            Invalid attributes are skipped (logged but not yielded).
+        """
+        if self._context is None:
+            raise RuntimeError('Attributes.__iter__() requires negotiated context')
+
+        data: Buffer = self._packed
+        while data:
+            flag = data[0]
+            code = data[1]
+
+            if flag & Attribute.Flag.EXTENDED_LENGTH:
+                length = unpack('!H', data[2:4])[0]
+                offset = 4
+            else:
+                length = data[2]
+                offset = 3
+
+            # Pass buffer slice to attribute - it stores and parses lazily
+            value_slice = data[offset : offset + length]
+
+            try:
+                # Attribute.unpack creates instance with buffer slice
+                # Properties parse dynamically when accessed
+                attr = Attribute.unpack(code, flag, value_slice, self._context)
+                if attr is not None:
+                    yield attr
+            except (Notify, ValueError):
+                # Skip invalid attributes
+                pass
+
+            data = data[offset + length :]
+
+    def to_collection(self) -> AttributeCollection:
+        """Convert to AttributeCollection for modification.
+
+        Creates a semantic container from wire bytes. Use this when you
+        need to add/remove/modify attributes.
+
+        Returns:
+            AttributeCollection with parsed attributes.
+
+        Note:
+            Requires self._context to be set.
+        """
+        return self.unpack_attributes()
 
 
 # Backward compatibility aliases

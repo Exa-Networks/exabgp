@@ -892,6 +892,31 @@ Full removal requires:
 - ParseStaticRoute Section parser still uses legacy mode
 - FlowSpec builder pattern (rules added incrementally)
 
+### 2025-12-07 - Pack Function Audit
+
+**Objective:** Ensure all `pack_*` functions do pure serialization (no data parsing/transformation).
+
+**Audit Results:**
+
+| Function | Status | Notes |
+|----------|--------|-------|
+| `AttributeCollection.pack_attribute()` | ✅ OK | Factory pattern - creating defaults is normal |
+| `ASPath.pack_attribute()` | 📝 Future | Needs refactoring (ASN format conversion, AS_TRANS, AS4_PATH creation). TODO added. |
+| `Flow._pack_from_rules()` | 📝 Future | Complex - uses Settings pattern. Should adopt Collection pattern. TODO added. |
+| `UpdateCollection.messages()` | ✅ OK | Message assembly/fragmentation - name already reflects purpose |
+
+**Key Understanding:**
+
+1. **Collection pattern (AttributeCollection)** - Factory methods that generate defaults during packing are acceptable. This is the Collection pattern.
+
+2. **Settings pattern (Flow)** - Already uses `FlowSettings` for construction. Future work should add `FlowRuleCollection` for rule preparation.
+
+3. **ASPath transformation** - Format conversion (2-byte ↔ 4-byte ASN) is inherently tied to peer capability. Marked for later refactoring.
+
+**Files Modified:**
+- `src/exabgp/bgp/message/update/attribute/aspath.py` - Added TODO refactor note
+- `src/exabgp/bgp/message/update/nlri/flow.py` - Added Collection pattern TODO note
+
 ---
 
 **Updated:** 2025-12-07

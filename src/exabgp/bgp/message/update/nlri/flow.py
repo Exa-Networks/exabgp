@@ -892,7 +892,14 @@ class Flow(NLRI):
         )
 
     def _pack_from_rules(self) -> Buffer:
-        """Recompute wire format from rules dict."""
+        """Recompute wire format from rules dict.
+
+        TODO: REFACTOR - This method modifies rule operations in-place (EOL bits)
+        and does computation in addition to serialization. Flow already uses the
+        Settings pattern (FlowSettings) for construction. Should adopt the Collection
+        pattern (like AttributeCollection) where a FlowRuleCollection handles rule
+        preparation, and _pack_from_rules() becomes pure serialization.
+        """
         ordered_rules: list[Buffer] = []
         # the order is a RFC requirement
         for ID in sorted(self.rules.keys()):

@@ -262,6 +262,11 @@ class ASPath(Attribute):
         - If peer supports ASN4: send with 4-byte ASNs
         - If peer doesn't support ASN4: send with 2-byte ASNs, use AS_TRANS for large ASNs,
           and add AS4_PATH attribute for the real values
+
+        TODO: REFACTOR - This method does data transformation (ASN format conversion,
+        AS_TRANS generation, AS4_PATH creation) in addition to serialization.
+        Should extract transformation to a separate method (e.g., prepare_for_peer())
+        so pack_attribute() becomes pure serialization.
         """
         if negotiated.asn4:
             # Peer supports ASN4, ensure we pack with 4-byte format

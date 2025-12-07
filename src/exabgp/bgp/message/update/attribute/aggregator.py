@@ -130,6 +130,11 @@ class Aggregator(Attribute):
         - If peer supports ASN4: send with 4-byte ASN
         - If peer doesn't support ASN4 AND ASN fits in 2 bytes: send with 2-byte ASN
         - If peer doesn't support ASN4 AND ASN doesn't fit: use AS_TRANS + add AS4_AGGREGATOR
+
+        TODO: REFACTOR - This method does data transformation (ASN format conversion,
+        AS_TRANS generation, AS4_AGGREGATOR creation) in addition to serialization.
+        Should extract transformation to a separate method (e.g., prepare_for_peer())
+        so pack_attribute() becomes pure serialization.
         """
         asn = self.asn
         speaker_packed = self._packed[-4:]  # IPv4 is always last 4 bytes
