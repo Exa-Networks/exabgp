@@ -12,6 +12,7 @@ from typing import Any, Callable
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, Label
+from exabgp.bgp.message.update.nlri.settings import INETSettings
 from exabgp.configuration.announce.label import AnnounceLabel
 from exabgp.configuration.announce.path import AnnouncePath
 from exabgp.configuration.announce.vpn import AnnounceVPN
@@ -59,26 +60,40 @@ class ParseStatic(ParseStaticRoute):
 
 @ParseStatic.register('route', 'append-route')
 def route(tokeniser: Any) -> list[Route]:
+    """Parse static route using deferred NLRI construction (Settings pattern).
+
+    Collects all values during parsing, then creates immutable NLRI at the end.
+    """
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(tokeniser)
-    check: Callable[[Route, AFI], bool] = _check_true
 
-    # Create CIDR first (packed-bytes-first pattern)
-    cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
+    # Create settings and populate initial values
+    settings = INETSettings()
+    settings.cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
+    settings.afi = IP.toafi(ipmask.top())
+    settings.action = nlri_action
+    attributes = AttributeCollection()
 
-    nlri: INET
-    if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-        nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), SAFI.mpls_vpn, nlri_action)
+    # Determine NLRI class from tokens (look-ahead)
+    has_rd = 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens
+    has_label = 'label' in tokeniser.tokens
+
+    nlri_class: type[INET]
+    check: Callable[[Route, AFI], bool]
+    if has_rd:
+        nlri_class = IPVPN
+        settings.safi = SAFI.mpls_vpn
         check = AnnounceVPN.check
-    elif 'label' in tokeniser.tokens:
-        nlri = Label.from_cidr(cidr, IP.toafi(ipmask.top()), SAFI.nlri_mpls, nlri_action)
+    elif has_label:
+        nlri_class = Label
+        settings.safi = SAFI.nlri_mpls
         check = AnnounceLabel.check
     else:
-        nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
+        nlri_class = INET
+        settings.safi = IP.tosafi(ipmask.top())
         check = AnnouncePath.check
 
-    static_route = Route(nlri, AttributeCollection())
-
+    # Parse all tokens - collect into settings
     while True:
         command = tokeniser()
 
@@ -86,29 +101,33 @@ def route(tokeniser: Any) -> list[Route]:
             break
 
         if command == 'label':
-            nlri.labels = label(tokeniser)
+            settings.labels = label(tokeniser)
             continue
 
         if command == 'rd' or command == 'route-distinguisher':
-            nlri.rd = route_distinguisher(tokeniser)
+            settings.rd = route_distinguisher(tokeniser)
             continue
 
         if command == 'path-information':
-            nlri.path_info = path_information(tokeniser)
+            settings.path_info = path_information(tokeniser)
             continue
 
         cmd_action = ParseStatic.action.get(command, '')
 
         if cmd_action == 'attribute-add':
-            static_route.attributes.add(ParseStatic.known[command](tokeniser))
+            attributes.add(ParseStatic.known[command](tokeniser))
         elif cmd_action == 'nlri-set':
-            static_route.nlri.assign(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
+            settings.set(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
         elif cmd_action == 'nexthop-and-attribute':
             nexthop, attribute = ParseStatic.known[command](tokeniser)
-            static_route.nlri.nexthop = nexthop
-            static_route.attributes.add(attribute)
+            settings.nexthop = nexthop
+            attributes.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))
+
+    # Create immutable NLRI from validated settings
+    nlri = nlri_class.from_settings(settings)
+    static_route = Route(nlri, attributes)
 
     if not check(static_route, nlri.afi):
         raise ValueError('invalid route (missing next-hop, label or rd ?)')
@@ -118,26 +137,38 @@ def route(tokeniser: Any) -> list[Route]:
 
 @ParseStatic.register('attributes', 'append-route')
 def attributes(tokeniser: Any) -> list[Route]:
+    """Parse attributes with multiple NLRIs using deferred construction (Settings pattern).
+
+    Collects shared settings first, then creates immutable NLRIs for each prefix.
+    """
+    from copy import copy
+
     nlri_action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
     ipmask = prefix(lambda: tokeniser.tokens[-1])
     tokeniser.afi = ipmask.afi
 
-    # Create CIDR first (packed-bytes-first pattern)
-    cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
-
-    nlri: INET
-    if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-        nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), SAFI.mpls_vpn, nlri_action)
-    elif 'label' in tokeniser.tokens:
-        nlri = Label.from_cidr(cidr, IP.toafi(ipmask.top()), SAFI.nlri_mpls, nlri_action)
-    else:
-        nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), nlri_action)
+    # Create template settings with initial values
+    template_settings = INETSettings()
+    template_settings.afi = IP.toafi(ipmask.top())
+    template_settings.action = nlri_action
     attr = AttributeCollection()
 
-    labels: Any = None
-    rd: Any = None
-    path_info: Any = None
+    # Determine NLRI class from tokens (look-ahead)
+    has_rd = 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens
+    has_label = 'label' in tokeniser.tokens
 
+    nlri_class: type[INET]
+    if has_rd:
+        nlri_class = IPVPN
+        template_settings.safi = SAFI.mpls_vpn
+    elif has_label:
+        nlri_class = Label
+        template_settings.safi = SAFI.nlri_mpls
+    else:
+        nlri_class = INET
+        template_settings.safi = IP.tosafi(ipmask.top())
+
+    # Parse shared attributes - collect into template settings
     while True:
         command = tokeniser()
 
@@ -148,15 +179,15 @@ def attributes(tokeniser: Any) -> list[Route]:
             break
 
         if command == 'label':
-            labels = label(tokeniser)
+            template_settings.labels = label(tokeniser)
             continue
 
         if command == 'path-information':
-            path_info = path_information(tokeniser)
+            template_settings.path_info = path_information(tokeniser)
             continue
 
         if command == 'rd' or command == 'route-distinguisher':
-            rd = route_distinguisher(tokeniser)
+            template_settings.rd = route_distinguisher(tokeniser)
             continue
 
         cmd_action = ParseStatic.action.get(command, '')
@@ -166,14 +197,15 @@ def attributes(tokeniser: Any) -> list[Route]:
         if cmd_action == 'attribute-add':
             attr.add(ParseStatic.known[command](tokeniser))
         elif cmd_action == 'nlri-set':
-            nlri.assign(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
+            template_settings.set(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
         elif cmd_action == 'nexthop-and-attribute':
             nexthop, attribute = ParseStatic.known[command](tokeniser)
-            nlri.nexthop = nexthop
+            template_settings.nexthop = nexthop
             attr.add(attribute)
         else:
             raise ValueError('unknown command "{}"'.format(command))
 
+    # Create routes for each NLRI prefix using template settings
     routes = []
 
     while True:
@@ -182,16 +214,13 @@ def attributes(tokeniser: Any) -> list[Route]:
             break
 
         ipmask = prefix(tokeniser)
-        # Create new NLRI of same type (nlri is typed as INET, all subclasses share same interface)
-        new_cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
-        new_nlri: INET = nlri.__class__.from_cidr(new_cidr, nlri.afi, nlri.safi, Action.UNSET)
-        if labels:
-            new_nlri.labels = labels
-        if rd:
-            new_nlri.rd = rd
-        if path_info:
-            new_nlri.path_info = path_info
-        new_nlri.nexthop = nlri.nexthop
+        # Copy template settings and update with new CIDR
+        settings = copy(template_settings)
+        settings.cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
+        settings.action = Action.UNSET
+
+        # Create immutable NLRI from settings
+        new_nlri = nlri_class.from_settings(settings)
         routes.append(Route(new_nlri, attr))
 
     return routes

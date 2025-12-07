@@ -698,9 +698,40 @@ Each phase is independently deployable:
 **Phase 2 COMPLETE!**
 
 **Resume Point:**
-- Phase 3: Update other configuration parsers (static routes, FlowSpec, etc.)
-- Then Phase 4: TypeSelectorValidator for MUP/MVPN
-- Then Phase 5: Remove mutation support from NLRI classes
+- ~~Phase 3: Update other configuration parsers (static routes, FlowSpec, etc.)~~
+- ~~Then Phase 4: TypeSelectorValidator for MUP/MVPN~~
+- ~~Then Phase 5: Remove mutation support from NLRI classes~~
+
+### 2025-12-07 - Phase 3: Static Route Refactoring
+
+**Completed:**
+- ✅ Updated `route()` function in `static/__init__.py` to use Settings pattern
+  - Creates `INETSettings` at start with initial values
+  - Collects values during parsing (labels, rd, path_info, nexthop)
+  - Determines NLRI class (INET/Label/IPVPN) based on token look-ahead
+  - Creates immutable NLRI via `from_settings()` at end
+- ✅ Updated `attributes()` function in `static/__init__.py` to use Settings pattern
+  - Creates template `INETSettings` with shared attributes
+  - Copies template for each NLRI prefix in the loop
+  - Creates immutable NLRI via `from_settings()` for each
+- ✅ All tests pass (11 suites, 43.5s)
+
+**Files modified:**
+- `src/exabgp/configuration/static/__init__.py` - Updated route() and attributes() functions
+
+**Phase 3 Summary:**
+
+| Component | Status |
+|-----------|--------|
+| route() function | ✅ Uses INETSettings + from_settings() |
+| attributes() function | ✅ Uses INETSettings + from_settings() |
+| Static route parsing | ✅ No mutation after NLRI creation |
+
+**Phase 3 COMPLETE!**
+
+**Resume Point:**
+- Phase 4: TypeSelectorValidator for MUP/MVPN (if needed)
+- Phase 5: Remove mutation support from NLRI classes
 
 ---
 
