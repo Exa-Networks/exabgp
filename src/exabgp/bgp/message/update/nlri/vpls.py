@@ -53,14 +53,14 @@ class VPLS(NLRI):
     afi: ClassVar[AFI] = AFI.l2vpn
     safi: ClassVar[SAFI] = SAFI.vpls
 
-    # Wire format length (excluding 2-byte length prefix)
-    PACKED_LENGTH = 17  # RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
+    # Wire format length (including 2-byte length prefix)
+    PACKED_LENGTH = 19  # length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
 
     def __init__(self, packed: bytes | None) -> None:
         """Create a VPLS NLRI from packed wire-format bytes or empty for configuration.
 
         Args:
-            packed: 17 bytes wire format (RD + endpoint + offset + size + base), or None for builder mode
+            packed: 19 bytes wire format (length + RD + endpoint + offset + size + base), or None for builder mode
         """
         # Family.__init__ detects afi/safi properties and skips setting them
         NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
@@ -104,7 +104,8 @@ class VPLS(NLRI):
             New VPLS instance with packed wire format
         """
         packed = (
-            bytes(rd.pack_rd())
+            b'\x00\x11'  # length prefix (17)
+            + bytes(rd.pack_rd())
             + pack('!HHH', endpoint, offset, size)
             + pack('!L', (base << 4) | 0x1)[1:]  # 3 bytes with BOS bit
         )
@@ -137,7 +138,7 @@ class VPLS(NLRI):
     def rd(self) -> RouteDistinguisher | None:
         """Route Distinguisher - unpacked from wire bytes or from builder storage."""
         if self._packed is not None:
-            return RouteDistinguisher(self._packed[0:8])
+            return RouteDistinguisher(self._packed[2:10])
         return self._rd
 
     @rd.setter
@@ -150,7 +151,7 @@ class VPLS(NLRI):
     def endpoint(self) -> int | None:
         """VPLS endpoint (VE ID) - unpacked from wire bytes or from builder storage."""
         if self._packed is not None:
-            value: int = unpack('!H', self._packed[8:10])[0]
+            value: int = unpack('!H', self._packed[10:12])[0]
             return value
         return self._endpoint
 
@@ -164,7 +165,7 @@ class VPLS(NLRI):
     def offset(self) -> int | None:
         """Label block offset - unpacked from wire bytes or from builder storage."""
         if self._packed is not None:
-            value: int = unpack('!H', self._packed[10:12])[0]
+            value: int = unpack('!H', self._packed[12:14])[0]
             return value
         return self._offset
 
@@ -178,7 +179,7 @@ class VPLS(NLRI):
     def size(self) -> int | None:
         """Label block size - unpacked from wire bytes or from builder storage."""
         if self._packed is not None:
-            value: int = unpack('!H', self._packed[12:14])[0]
+            value: int = unpack('!H', self._packed[14:16])[0]
             return value
         return self._size_value
 
@@ -192,7 +193,7 @@ class VPLS(NLRI):
     def base(self) -> int | None:
         """Label base - unpacked from wire bytes or from builder storage."""
         if self._packed is not None:
-            value: int = unpack('!L', b'\x00' + self._packed[14:17])[0] >> 4
+            value: int = unpack('!L', b'\x00' + self._packed[16:19])[0] >> 4
             return value
         return self._base
 
@@ -228,8 +229,8 @@ class VPLS(NLRI):
     def _pack_nlri_simple(self) -> Buffer:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         if self._packed is not None:
-            # Packed mode - use stored wire bytes
-            return b'\x00\x11' + self._packed
+            # Packed mode - use stored wire bytes (includes length prefix)
+            return self._packed
         else:
             # Builder mode - pack from individual fields
             return (
@@ -305,9 +306,8 @@ class VPLS(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[VPLS, Buffer]:
-        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # Wire format: length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3) = 19 bytes
         if len(data) < 2:
             raise Notify(3, 10, f'VPLS NLRI too short: need at least 2 bytes, got {len(data)}')
@@ -315,8 +315,8 @@ class VPLS(NLRI):
         if len(data) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
 
-        # Create VPLS from packed wire format (17 bytes, excluding length prefix)
-        packed = bytes(data[2 : 2 + length])
+        # Create VPLS from packed wire format (19 bytes, including length prefix)
+        packed = bytes(data[0 : 2 + length])
         nlri = cls(packed)
         nlri.action = action
         return nlri, data[2 + length :]
