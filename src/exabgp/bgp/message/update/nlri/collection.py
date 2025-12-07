@@ -9,10 +9,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import unpack
-from typing import TYPE_CHECKING
+from struct import pack
+from typing import TYPE_CHECKING, Generator
 
 if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.attribute.attribute import Attribute
     from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
     from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 
@@ -20,7 +22,6 @@ from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.open.capability.negotiated import OpenContext
 from exabgp.bgp.message.update.nlri.nlri import _UNPARSED, NLRI
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
 
@@ -140,155 +141,213 @@ class NLRICollection:
 
 
 class MPNLRICollection:
-    """Wire-format MP_REACH/MP_UNREACH NLRI container.
+    """Unified semantic container for MP_REACH/MP_UNREACH NLRIs.
 
-    Dual-mode:
-    - Wire mode: __init__(packed, context, is_reach) - stores bytes, lazy parsing
-    - Semantic mode: from_reach(mprnlri) / from_unreach(mpurnlri)
+    Stores NLRIs and attributes dict. Generates MPRNLRI or MPURNLRI
+    wire format based on action (reach vs unreach).
 
-    This class follows the packed-bytes-first pattern where wire format
-    is the canonical representation and semantic values are derived lazily.
+    Constructor signature: __init__(nlris, attributes, context)
     """
 
-    _MODE_PACKED = 1  # Created from wire bytes (unpack path)
-    _MODE_SEMANTIC = 2  # Created from MPRNLRI/MPURNLRI (semantic path)
+    # Attribute flags and IDs for wire format generation
+    _FLAG_OPTIONAL = 0x80
+    _CODE_MP_REACH_NLRI = 14
+    _CODE_MP_UNREACH_NLRI = 15
 
-    def __init__(self, packed: bytes, context: OpenContext, is_reach: bool = True) -> None:
-        """Create MPNLRICollection from wire-format bytes.
+    def __init__(
+        self,
+        nlris: list[NLRI],
+        attributes: 'dict[int, Attribute]',
+        context: OpenContext,
+    ) -> None:
+        """Create MPNLRICollection from semantic data.
 
         Args:
-            packed: Wire-format payload for MP_REACH or MP_UNREACH attribute.
-                    MP_REACH format: AFI(2) + SAFI(1) + NH_len(1) + NH + reserved(1) + NLRI
-                    MP_UNREACH format: AFI(2) + SAFI(1) + NLRI
-            context: OpenContext with AFI/SAFI and parsing options.
-            is_reach: True for MP_REACH_NLRI, False for MP_UNREACH_NLRI.
+            nlris: List of NLRI objects.
+            attributes: Dict of attributes indexed by Attribute.CODE (int).
+            context: OpenContext with AFI/SAFI and negotiated parameters.
         """
-        self._packed = packed
+        self._nlris = nlris
+        self._attributes = attributes
         self._context = context
-        self._is_reach = is_reach
-        self._mode = self._MODE_PACKED
-        self._nlris_cache: list[NLRI] = _UNPARSED
-        self._mp_attr: 'MPRNLRI | MPURNLRI | None' = None
-
-        # Parse AFI/SAFI from wire header
-        if len(packed) >= 3:
-            _afi = unpack('!H', packed[:2])[0]
-            _safi = packed[2]
-            self._afi = AFI.from_int(_afi)
-            self._safi = SAFI.from_int(_safi)
-        else:
-            self._afi = context.afi
-            self._safi = context.safi
 
     @classmethod
-    def from_reach(cls, mprnlri: 'MPRNLRI') -> 'MPNLRICollection':
-        """Create MPNLRICollection from MPRNLRI attribute.
+    def from_wire(
+        cls,
+        mprnlri: 'MPRNLRI | None',
+        mpurnlri: 'MPURNLRI | None',
+        attributes: 'dict[int, Attribute]',
+        context: OpenContext,
+    ) -> 'MPNLRICollection':
+        """Create from wire containers (reach and/or unreach).
 
         Args:
-            mprnlri: Parsed MPRNLRI attribute object.
+            mprnlri: MPRNLRI wire container (or None).
+            mpurnlri: MPURNLRI wire container (or None).
+            attributes: Dict of attributes indexed by Attribute.CODE.
+            context: OpenContext with AFI/SAFI.
 
         Returns:
-            MPNLRICollection in semantic mode.
+            MPNLRICollection with NLRIs from both containers.
         """
-        context = mprnlri._context
-        instance = cls(mprnlri._packed, context, is_reach=True)
-        instance._mode = cls._MODE_SEMANTIC
-        instance._mp_attr = mprnlri
-        instance._afi = mprnlri.afi
-        instance._safi = mprnlri.safi
-        return instance
-
-    @classmethod
-    def from_unreach(cls, mpurnlri: 'MPURNLRI') -> 'MPNLRICollection':
-        """Create MPNLRICollection from MPURNLRI attribute.
-
-        Args:
-            mpurnlri: Parsed MPURNLRI attribute object.
-
-        Returns:
-            MPNLRICollection in semantic mode.
-        """
-        context = mpurnlri._context
-        instance = cls(mpurnlri._packed, context, is_reach=False)
-        instance._mode = cls._MODE_SEMANTIC
-        instance._mp_attr = mpurnlri
-        instance._afi = mpurnlri.afi
-        instance._safi = mpurnlri.safi
-        return instance
-
-    @property
-    def packed(self) -> bytes:
-        """Raw MP attribute payload bytes."""
-        return self._packed
+        nlris: list[NLRI] = []
+        if mprnlri is not None:
+            # Use list() to iterate without calling __len__
+            nlris.extend(list(mprnlri))
+        if mpurnlri is not None:
+            nlris.extend(list(mpurnlri))
+        return cls(nlris, attributes, context)
 
     @property
     def nlris(self) -> list[NLRI]:
-        """Get the list of NLRIs, parsing from wire format if needed."""
-        if self._nlris_cache is not _UNPARSED:
-            return self._nlris_cache
+        """Get NLRIs in this collection."""
+        return self._nlris
 
-        # Semantic mode: delegate to MP attribute
-        if self._mode == self._MODE_SEMANTIC and self._mp_attr is not None:
-            self._nlris_cache = self._mp_attr.nlris
-            return self._nlris_cache
-
-        # Wire mode: parse from packed bytes
-        if self._mode == self._MODE_PACKED:
-            self._nlris_cache: list[NLRI] = self._parse_nlris()
-            return self._nlris_cache
-
-        return []
-
-    def _parse_nlris(self) -> list[NLRI]:
-        """Parse NLRIs from wire format.
-
-        Delegates to MPRNLRI or MPURNLRI unpack for proper parsing.
-        """
-        from exabgp.bgp.message.open.capability.negotiated import Negotiated
-        from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
-        from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
-
-        if not self._packed:
-            return []
-
-        # Use the appropriate MP attribute parser
-        if self._is_reach:
-            mp = MPRNLRI.unpack_attribute(self._packed, Negotiated.UNSET)
-            self._mp_attr = mp
-            return mp.nlris
-        else:
-            mp = MPURNLRI.unpack_attribute(self._packed, Negotiated.UNSET)
-            self._mp_attr = mp
-            return mp.nlris
+    @property
+    def attributes(self) -> 'dict[int, Attribute]':
+        """Get attributes dict indexed by Attribute.CODE."""
+        return self._attributes
 
     @property
     def afi(self) -> AFI:
-        """Address Family Identifier from MP attribute header."""
-        return self._afi
+        """Address Family Identifier from context."""
+        return self._context.afi
 
     @property
     def safi(self) -> SAFI:
-        """Subsequent Address Family Identifier from MP attribute header."""
-        return self._safi
+        """Subsequent Address Family Identifier from context."""
+        return self._context.safi
 
-    @property
-    def nexthop(self) -> IP | None:
-        """Next-hop IP address (only for MP_REACH)."""
-        if not self._is_reach:
-            return None
+    def _attribute_header(self, code: int, length: int) -> bytes:
+        """Build attribute header (flag + code + length)."""
+        flag = self._FLAG_OPTIONAL
+        if length > 255:
+            # Extended length
+            flag |= 0x10
+            return bytes([flag, code]) + pack('!H', length)
+        return bytes([flag, code, length])
 
-        # Get nexthop from first NLRI if available
-        nlris = self.nlris
-        if nlris and hasattr(nlris[0], 'nexthop'):
-            nh = nlris[0].nexthop
-            if nh is not IP.NoNextHop:
-                return nh
-        return None
+    def _attr_len(self, payload_len: int) -> int:
+        """Calculate total attribute length including header."""
+        return payload_len + (4 if payload_len > 255 else 3)
+
+    def packed_reach_attributes(
+        self,
+        negotiated: 'Negotiated',
+        maximum: int = 4096,
+    ) -> 'Generator[bytes, None, None]':
+        """Generate MP_REACH_NLRI wire-format attributes.
+
+        Groups NLRIs by nexthop, handles fragmentation.
+
+        Args:
+            negotiated: BGP session parameters.
+            maximum: Maximum bytes per attribute (default 4096).
+
+        Yields:
+            Wire-format attribute bytes (with flags/type/length header).
+        """
+        from exabgp.protocol.family import Family
+        from exabgp.protocol.ip import IP
+
+        # Filter NLRIs for this family and group by nexthop
+        mpnlri: dict[bytes, list[bytes]] = {}
+        family_key = (self._context.afi, self._context.safi)
+
+        for nlri in self._nlris:
+            if nlri.family().afi_safi() != family_key:
+                continue
+
+            # Encode nexthop
+            if nlri.nexthop is IP.NoNextHop:
+                nexthop = b''
+            else:
+                _, rd_size = Family.size.get(family_key, (0, 0))
+                nh_rd = bytes([0]) * rd_size if rd_size else b''
+                try:
+                    nexthop = nh_rd + nlri.nexthop.ton(negotiated, nlri.afi)
+                except TypeError:
+                    # Fallback for invalid nexthop
+                    nexthop = bytes([0]) * 4
+
+            mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
+
+        # Generate attributes for each nexthop group
+        afi_bytes = self._context.afi.pack_afi()
+        safi_bytes = self._context.safi.pack_safi()
+
+        for nexthop, packed_nlris in mpnlri.items():
+            # Build header: AFI(2) + SAFI(1) + NH_len(1) + NH + reserved(1)
+            header = afi_bytes + safi_bytes + bytes([len(nexthop)]) + nexthop + bytes([0])
+            header_length = len(header)
+            payload = header
+
+            for packed_nlri in packed_nlris:
+                # Check if adding this NLRI would exceed maximum
+                if self._attr_len(len(payload) + len(packed_nlri)) > maximum:
+                    if len(payload) == header_length:
+                        raise RuntimeError('NLRI too large for attribute size limit')
+                    # Yield current payload and start new one
+                    yield self._attribute_header(self._CODE_MP_REACH_NLRI, len(payload)) + payload
+                    payload = header + packed_nlri
+                else:
+                    payload = payload + packed_nlri
+
+            # Yield final payload for this nexthop
+            if len(payload) > header_length:
+                yield self._attribute_header(self._CODE_MP_REACH_NLRI, len(payload)) + payload
+
+    def packed_unreach_attributes(
+        self,
+        negotiated: 'Negotiated',
+        maximum: int = 4096,
+    ) -> 'Generator[bytes, None, None]':
+        """Generate MP_UNREACH_NLRI wire-format attributes.
+
+        Handles fragmentation only (no nexthop grouping).
+
+        Args:
+            negotiated: BGP session parameters.
+            maximum: Maximum bytes per attribute (default 4096).
+
+        Yields:
+            Wire-format attribute bytes (with flags/type/length header).
+        """
+        # Filter and pack NLRIs for this family
+        family_key = (self._context.afi, self._context.safi)
+        packed_nlris: list[bytes] = []
+
+        for nlri in self._nlris:
+            if nlri.family().afi_safi() != family_key:
+                continue
+            packed_nlris.append(nlri.pack_nlri(negotiated))
+
+        if not packed_nlris:
+            return
+
+        # Build header: AFI(2) + SAFI(1)
+        header = self._context.afi.pack_afi() + self._context.safi.pack_safi()
+        header_length = len(header)
+        payload = header
+
+        for packed_nlri in packed_nlris:
+            # Check if adding this NLRI would exceed maximum
+            if self._attr_len(len(payload) + len(packed_nlri)) > maximum:
+                if len(payload) == header_length:
+                    raise RuntimeError('NLRI too large for attribute size limit')
+                # Yield current payload and start new one
+                yield self._attribute_header(self._CODE_MP_UNREACH_NLRI, len(payload)) + payload
+                payload = header + packed_nlri
+            else:
+                payload = payload + packed_nlri
+
+        # Yield final payload
+        if len(payload) > header_length:
+            yield self._attribute_header(self._CODE_MP_UNREACH_NLRI, len(payload)) + payload
 
     def __len__(self) -> int:
         """Return number of NLRIs in collection."""
-        return len(self.nlris)
+        return len(self._nlris)
 
     def __repr__(self) -> str:
-        reach_type = 'REACH' if self._is_reach else 'UNREACH'
-        return f'MPNLRICollection({reach_type}, {self._afi}/{self._safi}, {len(self)} NLRIs)'
+        return f'MPNLRICollection({self._context.afi}/{self._context.safi}, {len(self)} NLRIs)'

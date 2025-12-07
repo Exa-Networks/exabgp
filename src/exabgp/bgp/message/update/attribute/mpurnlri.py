@@ -8,29 +8,31 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import Generator
+from typing import Iterator
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.open.capability.negotiated import OpenContext
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.nlri import _UNPARSED, NLRI
-from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.types import Buffer
 
 # ================================================================= MP Unreachable NLRI (15)
 
 
 @Attribute.register()
-class MPURNLRI(Attribute, Family):
+class MPURNLRI(Attribute):
+    """Wire-format MP_UNREACH_NLRI attribute container.
+
+    Stores raw wire bytes and yields NLRIs lazily via __iter__.
+    For semantic operations (building/packing), use MPNLRICollection.
+    """
+
     FLAG = Attribute.Flag.OPTIONAL
     ID = Attribute.CODE.MP_UNREACH_NLRI
     NO_DUPLICATE = True
-
-    # Mode indicators
-    _MODE_PACKED = 1  # Created from wire bytes (unpack path)
-    _MODE_NLRIS = 2  # Created from NLRI list (semantic path)
 
     def __init__(self, packed: Buffer, context: OpenContext) -> None:
         """Create MPURNLRI from wire-format bytes.
@@ -41,50 +43,28 @@ class MPURNLRI(Attribute, Family):
         """
         self._packed = packed
         self._context = context
-        self._mode = self._MODE_PACKED
-        self._nlris_cache: list[NLRI] = _UNPARSED
-        # Initialize Family from packed data
-        _afi = unpack('!H', packed[:2])[0]
-        _safi = packed[2]
-        Family.__init__(self, AFI.from_int(_afi), SAFI.from_int(_safi))
-
-    @classmethod
-    def make_mpurnlri(cls, context: OpenContext, nlris: list[NLRI]) -> 'MPURNLRI':
-        """Create MPURNLRI from semantic data (NLRI list).
-
-        Args:
-            context: Parsing context containing AFI/SAFI and negotiated parameters
-            nlris: List of NLRI objects to include
-
-        Returns:
-            MPURNLRI instance in semantic mode
-        """
-        # Create minimal packed header just for Family init
-        # Full packing happens in packed_attributes()
-        header = context.afi.pack_afi() + context.safi.pack_safi()
-        instance = cls(header, context)
-        # Switch to semantic mode
-        instance._mode = cls._MODE_NLRIS
-        instance._nlris_cache: list[NLRI] = nlris
-        return instance
 
     @property
-    def nlris(self) -> list[NLRI]:
-        """Get the list of NLRIs, parsing from wire format if needed."""
-        if self._nlris_cache is not _UNPARSED:
-            return self._nlris_cache
+    def afi(self) -> AFI:
+        """Address Family Identifier."""
+        return AFI.from_int(unpack('!H', self._packed[:2])[0])
 
-        if self._mode == self._MODE_PACKED:
-            self._nlris_cache = self._parse_nlris()
-            return self._nlris_cache
+    @property
+    def safi(self) -> SAFI:
+        """Subsequent Address Family Identifier."""
+        return SAFI.from_int(self._packed[2])
 
-        return []
+    @property
+    def packed(self) -> bytes:
+        """Raw wire-format bytes."""
+        return bytes(self._packed)
 
-    def _parse_nlris(self) -> list[NLRI]:
-        """Parse NLRIs from wire format using stored context."""
-        nlris: list[NLRI] = []
+    def __iter__(self) -> Iterator[NLRI]:
+        """Yield NLRIs from wire format.
 
-        # Skip AFI/SAFI (already parsed in __init__)
+        Generator that yields NLRIs one by one, parsing lazily.
+        """
+        # Skip AFI/SAFI header
         nlri_data = self._packed[3:]
 
         while nlri_data:
@@ -92,62 +72,34 @@ class MPURNLRI(Attribute, Family):
                 self.afi, self.safi, nlri_data, Action.WITHDRAW, self._context.addpath, Negotiated.UNSET
             )
             if nlri_result is not NLRI.INVALID:
-                nlris.append(nlri_result)
-            nlri_data = data_result
+                yield nlri_result
 
-        return nlris
+            if data_result == nlri_data:
+                raise RuntimeError('sub-calls should consume data')
+
+            nlri_data = data_result
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MPURNLRI):
             return False
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.nlris == other.nlris
+        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def packed_attributes(
-        self, negotiated: Negotiated, maximum: int = Negotiated.FREE_SIZE
-    ) -> Generator[bytes, None, None]:
-        if not self.nlris:
-            return
-
-        # we changed the API to nrli.pack from addpath to negotiated but not pack itself
-
-        packed_nlris: list[bytes] = []
-        for nlri in self.nlris:
-            if nlri.family().afi_safi() != self.family().afi_safi():  # nlri is not part of specified family
-                continue
-            packed_nlris.append(nlri.pack_nlri(negotiated))
-
-        payload = self.afi.pack_afi() + self.safi.pack_safi()
-        header_length = len(payload)
-        for packed in packed_nlris:
-            if self._len(payload + packed) > maximum:
-                if len(payload) == header_length or len(payload) > maximum:
-                    raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
-                yield self._attribute(payload)
-                payload = self.afi.pack_afi() + self.safi.pack_safi() + packed
-                continue
-            payload = payload + packed
-        if len(payload) == header_length or len(payload) > maximum:
-            raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
-        yield self._attribute(payload)
-
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        return b''.join(self.packed_attributes(negotiated))
-
     def __len__(self) -> int:
-        raise RuntimeError('we can not give you the size of an MPURNLRI - was it with our witout addpath ?')
+        # Return 0 to indicate unknown length - use list(mpurnlri) to iterate
+        return 0
 
     def __repr__(self) -> str:
-        return 'MP_UNREACH_NLRI for %s %s with %d NLRI(s)' % (self.afi, self.safi, len(self.nlris))
+        return 'MP_UNREACH_NLRI for %s %s' % (self.afi, self.safi)
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> MPURNLRI:
         """Unpack MPURNLRI from wire format.
 
         Validates the data and creates an MPURNLRI instance storing the wire bytes.
-        NLRIs are parsed lazily when accessed via the nlris property.
+        NLRIs are parsed lazily when iterating over the instance.
         """
         # MP_UNREACH_NLRI minimum: AFI(2) + SAFI(1) = 3 bytes
         if len(data) < 3:
@@ -167,7 +119,8 @@ class MPURNLRI(Attribute, Family):
         return cls(data, context)
 
 
-# Create empty MPURNLRI using factory method with default context
+# Create empty MPURNLRI with minimal packed structure
+# AFI(2) + SAFI(1) = 3 bytes minimum
 _EMPTY_CONTEXT = OpenContext.make_open_context(
     afi=AFI.undefined,
     safi=SAFI.undefined,
@@ -175,4 +128,5 @@ _EMPTY_CONTEXT = OpenContext.make_open_context(
     asn4=False,
     msg_size=4096,
 )
-EMPTY_MPURNLRI = MPURNLRI.make_mpurnlri(_EMPTY_CONTEXT, [])
+_EMPTY_PACKED = AFI.undefined.pack_afi() + SAFI.undefined.pack_safi()
+EMPTY_MPURNLRI = MPURNLRI(_EMPTY_PACKED, _EMPTY_CONTEXT)

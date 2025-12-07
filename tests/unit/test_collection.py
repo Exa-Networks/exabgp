@@ -211,149 +211,173 @@ class TestNLRICollectionRoundtrip:
         assert repacked == original_packed
 
 
-class TestMPNLRICollectionFromBytes:
-    """Test MPNLRICollection wire mode (from packed bytes)."""
+class TestMPNLRICollectionSemantic:
+    """Test MPNLRICollection semantic mode (from NLRI list)."""
 
-    def test_create_reach_from_bytes(self) -> None:
-        """Test creating MPNLRICollection for MP_REACH from wire bytes."""
+    def test_create_from_nlris(self) -> None:
+        """Test creating MPNLRICollection from NLRI list."""
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
-
-        # MP_REACH_NLRI format: AFI(2) + SAFI(1) + NH_len(1) + NH + reserved(1) + NLRI
-        # IPv6 unicast with 16-byte next-hop and one prefix
-        afi_bytes = b'\x00\x02'  # AFI.ipv6
-        safi_byte = b'\x01'  # SAFI.unicast
-        nh_len = b'\x10'  # 16 bytes
-        nexthop = b'\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'  # 2001:db8::1
-        reserved = b'\x00'
-        nlri = b'\x40\x20\x01\x0d\xb8\x00\x00\x00\x00'  # 2001:db8::/64
-
-        packed = afi_bytes + safi_byte + nh_len + nexthop + reserved + nlri
-        context = create_context(AFI.ipv6, SAFI.unicast)
-
-        collection = MPNLRICollection(packed, context, is_reach=True)
-
-        assert collection.afi == AFI.ipv6
-        assert collection.safi == SAFI.unicast
-        assert collection.packed == packed
-
-    def test_create_unreach_from_bytes(self) -> None:
-        """Test creating MPNLRICollection for MP_UNREACH from wire bytes."""
-        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
-
-        # MP_UNREACH_NLRI format: AFI(2) + SAFI(1) + NLRI
-        afi_bytes = b'\x00\x02'  # AFI.ipv6
-        safi_byte = b'\x01'  # SAFI.unicast
-        nlri = b'\x40\x20\x01\x0d\xb8\x00\x00\x00\x00'  # 2001:db8::/64
-
-        packed = afi_bytes + safi_byte + nlri
-        context = create_context(AFI.ipv6, SAFI.unicast)
-
-        collection = MPNLRICollection(packed, context, is_reach=False)
-
-        assert collection.afi == AFI.ipv6
-        assert collection.safi == SAFI.unicast
-        assert collection.nexthop is None  # UNREACH has no nexthop
-
-
-class TestMPNLRICollectionFromSemantic:
-    """Test MPNLRICollection semantic mode (from MPRNLRI/MPURNLRI)."""
-
-    def test_from_reach(self) -> None:
-        """Test creating MPNLRICollection from MPRNLRI."""
-        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
-        from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 
         context = create_context(AFI.ipv6, SAFI.unicast)
         cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
         nlri.nexthop = IP.from_string('2001:db8::1')
 
-        mprnlri = MPRNLRI.make_mprnlri(context, [nlri])
-        collection = MPNLRICollection.from_reach(mprnlri)
+        collection = MPNLRICollection([nlri], {}, context)
 
         assert collection.afi == AFI.ipv6
         assert collection.safi == SAFI.unicast
         assert len(collection.nlris) == 1
 
-    def test_from_unreach(self) -> None:
-        """Test creating MPNLRICollection from MPURNLRI."""
+    def test_from_wire_with_mprnlri(self) -> None:
+        """Test creating MPNLRICollection from MPRNLRI wire container."""
+        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
+        from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+
+        # Create a mock MPRNLRI from wire format
+        # MP_REACH_NLRI format: AFI(2) + SAFI(1) + NH_len(1) + NH + reserved(1) + NLRI
+        afi_bytes = b'\x00\x02'  # AFI.ipv6
+        safi_byte = b'\x01'  # SAFI.unicast
+        nh_len = b'\x10'  # 16 bytes
+        nexthop = b'\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'
+        reserved = b'\x00'
+        nlri = b'\x20\x20\x01\x0d\xb8'  # 2001:db8::/32
+
+        packed = afi_bytes + safi_byte + nh_len + nexthop + reserved + nlri
+        context = create_context(AFI.ipv6, SAFI.unicast)
+
+        mprnlri = MPRNLRI(packed, context)
+        collection = MPNLRICollection.from_wire(mprnlri, None, {}, context)
+
+        assert collection.afi == AFI.ipv6
+        assert collection.safi == SAFI.unicast
+        assert len(collection.nlris) == 1
+
+    def test_from_wire_with_mpurnlri(self) -> None:
+        """Test creating MPNLRICollection from MPURNLRI wire container."""
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
         from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+
+        # MP_UNREACH_NLRI format: AFI(2) + SAFI(1) + NLRI
+        afi_bytes = b'\x00\x02'  # AFI.ipv6
+        safi_byte = b'\x01'  # SAFI.unicast
+        nlri = b'\x20\x20\x01\x0d\xb8'  # 2001:db8::/32
+
+        packed = afi_bytes + safi_byte + nlri
+        context = create_context(AFI.ipv6, SAFI.unicast)
+
+        mpurnlri = MPURNLRI(packed, context)
+        collection = MPNLRICollection.from_wire(None, mpurnlri, {}, context)
+
+        assert collection.afi == AFI.ipv6
+        assert collection.safi == SAFI.unicast
+        assert len(collection.nlris) == 1
+
+
+class TestMPNLRICollectionPacking:
+    """Test MPNLRICollection packing methods."""
+
+    def test_packed_reach_attributes_single_nexthop(self) -> None:
+        """Test packed_reach_attributes with single nexthop."""
+        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
+        from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+        context = create_context(AFI.ipv6, SAFI.unicast)
+        cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
+        nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
+        nlri.nexthop = IP.from_string('2001:db8::1')
+
+        collection = MPNLRICollection([nlri], {}, context)
+
+        attrs = list(collection.packed_reach_attributes(Negotiated.UNSET))
+        assert len(attrs) == 1
+        # First 3 bytes after header should be AFI(2) + SAFI(1)
+        # Header is flag(1) + code(1) + len(1 or 2)
+        attr = attrs[0]
+        assert attr[0] & 0x80  # Optional flag set
+        assert attr[1] == 14  # MP_REACH_NLRI code
+
+    def test_packed_unreach_attributes(self) -> None:
+        """Test packed_unreach_attributes generates valid wire format."""
+        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
+        from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
         context = create_context(AFI.ipv6, SAFI.unicast)
         cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
 
-        mpurnlri = MPURNLRI.make_mpurnlri(context, [nlri])
-        collection = MPNLRICollection.from_unreach(mpurnlri)
+        collection = MPNLRICollection([nlri], {}, context)
 
-        assert collection.afi == AFI.ipv6
-        assert collection.safi == SAFI.unicast
-        assert len(collection.nlris) == 1
+        attrs = list(collection.packed_unreach_attributes(Negotiated.UNSET))
+        assert len(attrs) == 1
+        attr = attrs[0]
+        assert attr[0] & 0x80  # Optional flag set
+        assert attr[1] == 15  # MP_UNREACH_NLRI code
 
 
 class TestMPNLRICollectionAFISAFI:
-    """Test AFI/SAFI extraction from MPNLRICollection."""
+    """Test AFI/SAFI access from MPNLRICollection."""
 
-    def test_afi_safi_from_reach_header(self) -> None:
-        """Test extracting AFI/SAFI from MP_REACH wire format."""
+    def test_afi_safi_from_context(self) -> None:
+        """Test AFI/SAFI comes from context."""
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 
-        # IPv4 multicast MP_REACH
-        afi_bytes = b'\x00\x01'  # AFI.ipv4
-        safi_byte = b'\x02'  # SAFI.multicast
-        nh_len = b'\x04'  # 4 bytes
-        nexthop = b'\x0a\x00\x00\x01'  # 10.0.0.1
-        reserved = b'\x00'
-        nlri = b'\x18\xc0\xa8\x01'  # 192.168.1.0/24
-
-        packed = afi_bytes + safi_byte + nh_len + nexthop + reserved + nlri
         context = create_context(AFI.ipv4, SAFI.multicast)
-
-        collection = MPNLRICollection(packed, context, is_reach=True)
+        collection = MPNLRICollection([], {}, context)
 
         assert collection.afi == AFI.ipv4
         assert collection.safi == SAFI.multicast
 
-    def test_afi_safi_from_unreach_header(self) -> None:
-        """Test extracting AFI/SAFI from MP_UNREACH wire format."""
+    def test_afi_safi_ipv6_unicast(self) -> None:
+        """Test IPv6 unicast AFI/SAFI."""
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
-
-        # IPv6 multicast MP_UNREACH
-        afi_bytes = b'\x00\x02'  # AFI.ipv6
-        safi_byte = b'\x02'  # SAFI.multicast
-        nlri = b'\x40\x20\x01\x0d\xb8\x00\x00\x00\x00'  # 2001:db8::/64
-
-        packed = afi_bytes + safi_byte + nlri
-        context = create_context(AFI.ipv6, SAFI.multicast)
-
-        collection = MPNLRICollection(packed, context, is_reach=False)
-
-        assert collection.afi == AFI.ipv6
-        assert collection.safi == SAFI.multicast
-
-
-class TestNLRICollectionIPv6:
-    """Test NLRICollection with IPv6 prefixes (via MP attributes)."""
-
-    def test_ipv6_collection_via_mpnlri(self) -> None:
-        """Test IPv6 NLRIs are handled via MPNLRICollection.
-
-        Uses semantic mode (from_unreach) since wire parsing requires
-        a negotiated session with the family configured.
-        """
-        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
-        from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
-
-        # Create NLRI semantically
-        cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 64)
-        nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
 
         context = create_context(AFI.ipv6, SAFI.unicast)
-        mpurnlri = MPURNLRI.make_mpurnlri(context, [nlri])
-        collection = MPNLRICollection.from_unreach(mpurnlri)
+        collection = MPNLRICollection([], {}, context)
 
-        nlris = collection.nlris
+        assert collection.afi == AFI.ipv6
+        assert collection.safi == SAFI.unicast
+
+
+class TestMPRNLRIIterator:
+    """Test MPRNLRI __iter__ method."""
+
+    def test_mprnlri_iter_yields_nlris(self) -> None:
+        """Test that MPRNLRI.__iter__ yields NLRIs."""
+        from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+
+        # MP_REACH_NLRI with one IPv6 prefix
+        afi_bytes = b'\x00\x02'  # AFI.ipv6
+        safi_byte = b'\x01'  # SAFI.unicast
+        nh_len = b'\x10'  # 16 bytes
+        nexthop = b'\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'
+        reserved = b'\x00'
+        nlri_data = b'\x20\x20\x01\x0d\xb8'  # 2001:db8::/32
+
+        packed = afi_bytes + safi_byte + nh_len + nexthop + reserved + nlri_data
+        context = create_context(AFI.ipv6, SAFI.unicast)
+
+        mprnlri = MPRNLRI(packed, context)
+        nlris = list(mprnlri)
+
+        assert len(nlris) == 1
+        assert nlris[0].afi == AFI.ipv6
+
+    def test_mpurnlri_iter_yields_nlris(self) -> None:
+        """Test that MPURNLRI.__iter__ yields NLRIs."""
+        from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+
+        # MP_UNREACH_NLRI with one IPv6 prefix
+        afi_bytes = b'\x00\x02'  # AFI.ipv6
+        safi_byte = b'\x01'  # SAFI.unicast
+        nlri_data = b'\x20\x20\x01\x0d\xb8'  # 2001:db8::/32
+
+        packed = afi_bytes + safi_byte + nlri_data
+        context = create_context(AFI.ipv6, SAFI.unicast)
+
+        mpurnlri = MPURNLRI(packed, context)
+        nlris = list(mpurnlri)
+
         assert len(nlris) == 1
         assert nlris[0].afi == AFI.ipv6
 

@@ -8,9 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
-from exabgp.util.types import Buffer
 from struct import error, unpack
 from typing import TYPE_CHECKING, ClassVar, Sequence, Type, TypeVar
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -141,7 +142,7 @@ class ASPath(Attribute):
         return self._unpack_segments_static(self._packed, self._asn4)
 
     @property
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         """Get the original packed data, used for indexing/caching."""
         return self._packed
 

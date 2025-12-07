@@ -501,10 +501,15 @@ class UpdateCollection(Message):
             mp_reach = b''
             mp_unreach = b''
             context = negotiated.nlri_context(afi, safi)
-            mp_announce = MPRNLRI.make_mprnlri(context, mp_nlris[family].get(Action.ANNOUNCE, []))
-            mp_withdraw = MPURNLRI.make_mpurnlri(context, mp_nlris[family].get(Action.WITHDRAW, []))
 
-            for mprnlri in mp_announce.packed_attributes(negotiated, msg_size - len(withdraws + announced)):
+            # Use MPNLRICollection for reach/unreach attribute generation
+            announce_nlris = mp_nlris[family].get(Action.ANNOUNCE, [])
+            withdraw_nlris = mp_nlris[family].get(Action.WITHDRAW, [])
+
+            mp_announce = MPNLRICollection(announce_nlris, {}, context)
+            mp_withdraw = MPNLRICollection(withdraw_nlris, {}, context)
+
+            for mprnlri in mp_announce.packed_reach_attributes(negotiated, msg_size - len(withdraws + announced)):
                 if mp_reach:
                     yield self._message(
                         UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(attr + mp_reach) + announced
@@ -514,7 +519,7 @@ class UpdateCollection(Message):
                 mp_reach = mprnlri
 
             if include_withdraw:
-                for mpurnlri in mp_withdraw.packed_attributes(
+                for mpurnlri in mp_withdraw.packed_unreach_attributes(
                     negotiated,
                     msg_size - len(withdraws + announced + mp_reach),
                 ):
@@ -633,10 +638,10 @@ class UpdateCollection(Message):
         reach = attributes.pop(MPRNLRI.ID, None)
 
         if unreach is not None:
-            withdraws.extend(unreach.nlris)
+            withdraws.extend(unreach)  # Uses __iter__
 
         if reach is not None:
-            announces.extend(reach.nlris)
+            announces.extend(reach)  # Uses __iter__
 
         return cls(announces, withdraws, attributes)
 

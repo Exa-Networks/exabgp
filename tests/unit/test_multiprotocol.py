@@ -80,14 +80,13 @@ def mock_logger() -> Any:
 
 
 def test_mpreach_ipv4_unicast() -> None:
-    """Test MP_REACH_NLRI for IPv4 unicast.
+    """Test MPNLRICollection for IPv4 unicast.
 
-    MP_REACH_NLRI allows BGP to carry reachability information for
-    multiple address families. For IPv4 unicast, it duplicates the
-    functionality of traditional BGP UPDATE messages.
+    MPNLRICollection is the semantic container that stores NLRIs
+    and can generate MP_REACH_NLRI wire format.
     """
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
@@ -98,28 +97,27 @@ def test_mpreach_ipv4_unicast() -> None:
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     prefix.nexthop = IPv4.from_string('192.0.2.1')
 
-    # Create MP_REACH_NLRI
-    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix])
+    # Create MPNLRICollection
+    collection = MPNLRICollection([prefix], {}, make_context(AFI.ipv4, SAFI.unicast))
 
     # Verify family
-    assert mpreach.afi == AFI.ipv4
-    assert mpreach.safi == SAFI.unicast
-    assert len(mpreach.nlris) == 1
+    assert collection.afi == AFI.ipv4
+    assert collection.safi == SAFI.unicast
+    assert len(collection.nlris) == 1
 
     # Verify representation
-    assert 'MP_REACH_NLRI' in str(mpreach)
-    assert 'ipv4' in str(mpreach).lower()
-    assert 'unicast' in str(mpreach).lower()
+    assert 'MPNLRICollection' in str(collection)
+    assert 'ipv4' in str(collection).lower()
 
 
 def test_mpreach_ipv6_unicast() -> None:
-    """Test MP_REACH_NLRI for IPv6 unicast.
+    """Test MPNLRICollection for IPv6 unicast.
 
     IPv6 routing requires MP_REACH_NLRI as standard BGP UPDATE
     messages only support IPv4. This tests basic IPv6 prefix announcement.
     """
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
@@ -130,27 +128,27 @@ def test_mpreach_ipv6_unicast() -> None:
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
     prefix.nexthop = IPv6.from_string('2001:db8::1')
 
-    # Create MP_REACH_NLRI
-    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv6, SAFI.unicast), [prefix])
+    # Create MPNLRICollection
+    collection = MPNLRICollection([prefix], {}, make_context(AFI.ipv6, SAFI.unicast))
 
     # Verify family
-    assert mpreach.afi == AFI.ipv6
-    assert mpreach.safi == SAFI.unicast
-    assert len(mpreach.nlris) == 1
+    assert collection.afi == AFI.ipv6
+    assert collection.safi == SAFI.unicast
+    assert len(collection.nlris) == 1
 
     # Verify representation
-    assert 'MP_REACH_NLRI' in str(mpreach)
-    assert 'ipv6' in str(mpreach).lower()
+    assert 'MPNLRICollection' in str(collection)
+    assert 'ipv6' in str(collection).lower()
 
 
 def test_mpreach_multiple_prefixes() -> None:
-    """Test MP_REACH_NLRI with multiple prefixes.
+    """Test MPNLRICollection with multiple prefixes.
 
-    A single MP_REACH_NLRI attribute can announce multiple prefixes
+    A single MPNLRICollection can hold multiple prefixes
     of the same address family with the same next-hop.
     """
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
@@ -171,22 +169,23 @@ def test_mpreach_multiple_prefixes() -> None:
         prefix.nexthop = nexthop
         prefixes.append(prefix)
 
-    # Create MP_REACH_NLRI with multiple prefixes
-    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), prefixes)
+    # Create MPNLRICollection with multiple prefixes
+    collection = MPNLRICollection(prefixes, {}, make_context(AFI.ipv4, SAFI.unicast))
 
     # Verify all prefixes are included
-    assert len(mpreach.nlris) == 3
-    assert '3 NLRI' in str(mpreach)
+    assert len(collection.nlris) == 3
+    assert '3 NLRIs' in str(collection)
 
 
 def test_mpreach_pack_ipv4() -> None:
-    """Test MP_REACH_NLRI pack() for IPv4.
+    """Test MPNLRICollection packed_reach_attributes() for IPv4.
 
     Verifies the wire format of MP_REACH_NLRI attribute.
     Format: AFI(2) + SAFI(1) + NH_LEN(1) + NEXTHOP(var) + RESERVED(1) + NLRI(var)
     """
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
@@ -197,19 +196,15 @@ def test_mpreach_pack_ipv4() -> None:
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     prefix.nexthop = IPv4.from_string('192.0.2.1')
 
-    # Create MP_REACH_NLRI
-    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix])
+    # Create MPNLRICollection
+    collection = MPNLRICollection([prefix], {}, make_context(AFI.ipv4, SAFI.unicast))
 
-    # Create mock negotiated
-    negotiated = Mock()
-    negotiated.families = [(AFI.ipv4, SAFI.unicast)]
-    negotiated.addpath = Mock()
-    negotiated.addpath.send = Mock(return_value=False)
-
-    # Pack the attribute
-    packed = mpreach.pack_attribute(negotiated)
+    # Pack the attribute using packed_reach_attributes
+    packed_list = list(collection.packed_reach_attributes(Negotiated.UNSET))
 
     # Verify it produces bytes
+    assert len(packed_list) == 1
+    packed = packed_list[0]
     assert isinstance(packed, bytes)
     assert len(packed) > 0
 
@@ -221,13 +216,13 @@ def test_mpreach_pack_ipv4() -> None:
 
 
 def test_mpreach_nexthop_ipv6_global() -> None:
-    """Test MP_REACH_NLRI with IPv6 global next-hop.
+    """Test MPNLRICollection with IPv6 global next-hop.
 
     IPv6 next-hops can be 16 bytes (global) or 32 bytes (global + link-local).
     This tests the global-only case.
     """
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
@@ -238,12 +233,12 @@ def test_mpreach_nexthop_ipv6_global() -> None:
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
     prefix.nexthop = IPv6.from_string('2001:db8::1')  # Global next-hop
 
-    # Create MP_REACH_NLRI
-    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv6, SAFI.unicast), [prefix])
+    # Create MPNLRICollection
+    collection = MPNLRICollection([prefix], {}, make_context(AFI.ipv6, SAFI.unicast))
 
     # Verify next-hop is set
     assert prefix.nexthop is not None
-    assert len(mpreach.nlris) == 1
+    assert len(collection.nlris) == 1
 
 
 # ==============================================================================
@@ -252,13 +247,13 @@ def test_mpreach_nexthop_ipv6_global() -> None:
 
 
 def test_mpunreach_ipv4_unicast() -> None:
-    """Test MP_UNREACH_NLRI for IPv4 unicast.
+    """Test MPNLRICollection for IPv4 unicast withdrawals.
 
     MP_UNREACH_NLRI is used to withdraw previously announced prefixes.
     Unlike MP_REACH_NLRI, it doesn't include next-hop information.
     """
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
@@ -268,26 +263,26 @@ def test_mpunreach_ipv4_unicast() -> None:
     cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
-    # Create MP_UNREACH_NLRI
-    mpunreach = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix])
+    # Create MPNLRICollection
+    collection = MPNLRICollection([prefix], {}, make_context(AFI.ipv4, SAFI.unicast))
 
     # Verify family
-    assert mpunreach.afi == AFI.ipv4
-    assert mpunreach.safi == SAFI.unicast
-    assert len(mpunreach.nlris) == 1
+    assert collection.afi == AFI.ipv4
+    assert collection.safi == SAFI.unicast
+    assert len(collection.nlris) == 1
 
     # Verify representation
-    assert 'MP_UNREACH_NLRI' in str(mpunreach)
-    assert 'ipv4' in str(mpunreach).lower()
+    assert 'MPNLRICollection' in str(collection)
+    assert 'ipv4' in str(collection).lower()
 
 
 def test_mpunreach_ipv6_unicast() -> None:
-    """Test MP_UNREACH_NLRI for IPv6 unicast.
+    """Test MPNLRICollection for IPv6 unicast withdrawals.
 
     IPv6 prefix withdrawals use MP_UNREACH_NLRI.
     """
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
@@ -297,23 +292,22 @@ def test_mpunreach_ipv6_unicast() -> None:
     cidr = CIDR.make_cidr(IPv6.from_string('2001:db8::').pack_ip(), 32)
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
 
-    # Create MP_UNREACH_NLRI
-    mpunreach = MPURNLRI.make_mpurnlri(make_context(AFI.ipv6, SAFI.unicast), [prefix])
+    # Create MPNLRICollection
+    collection = MPNLRICollection([prefix], {}, make_context(AFI.ipv6, SAFI.unicast))
 
     # Verify family
-    assert mpunreach.afi == AFI.ipv6
-    assert mpunreach.safi == SAFI.unicast
-    assert len(mpunreach.nlris) == 1
+    assert collection.afi == AFI.ipv6
+    assert collection.safi == SAFI.unicast
+    assert len(collection.nlris) == 1
 
 
 def test_mpunreach_multiple_prefixes() -> None:
-    """Test MP_UNREACH_NLRI with multiple prefix withdrawals.
+    """Test MPNLRICollection with multiple prefix withdrawals.
 
-    A single MP_UNREACH_NLRI can withdraw multiple prefixes
-    of the same address family.
+    A single MPNLRICollection can hold multiple prefixes for withdrawal.
     """
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
@@ -332,23 +326,24 @@ def test_mpunreach_multiple_prefixes() -> None:
         prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
         prefixes.append(prefix)
 
-    # Create MP_UNREACH_NLRI with multiple prefixes
-    mpunreach = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), prefixes)
+    # Create MPNLRICollection with multiple prefixes
+    collection = MPNLRICollection(prefixes, {}, make_context(AFI.ipv4, SAFI.unicast))
 
     # Verify all prefixes are included
-    assert len(mpunreach.nlris) == 3
-    assert '3 NLRI' in str(mpunreach)
+    assert len(collection.nlris) == 3
+    assert '3 NLRIs' in str(collection)
 
 
 def test_mpunreach_pack_ipv4() -> None:
-    """Test MP_UNREACH_NLRI pack() for IPv4.
+    """Test MPNLRICollection packed_unreach_attributes() for IPv4.
 
     Verifies the wire format of MP_UNREACH_NLRI attribute.
     Format: AFI(2) + SAFI(1) + NLRI(var)
     Note: No next-hop in MP_UNREACH_NLRI.
     """
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
@@ -358,19 +353,15 @@ def test_mpunreach_pack_ipv4() -> None:
     cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
-    # Create MP_UNREACH_NLRI
-    mpunreach = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix])
+    # Create MPNLRICollection
+    collection = MPNLRICollection([prefix], {}, make_context(AFI.ipv4, SAFI.unicast))
 
-    # Create mock negotiated
-    negotiated = Mock()
-    negotiated.families = [(AFI.ipv4, SAFI.unicast)]
-    negotiated.addpath = Mock()
-    negotiated.addpath.send = Mock(return_value=False)
-
-    # Pack the attribute
-    packed = mpunreach.pack_attribute(negotiated)
+    # Pack the attribute using packed_unreach_attributes
+    packed_list = list(collection.packed_unreach_attributes(Negotiated.UNSET))
 
     # Verify it produces bytes
+    assert len(packed_list) == 1
+    packed = packed_list[0]
     assert isinstance(packed, bytes)
     assert len(packed) > 0
 
@@ -386,7 +377,7 @@ def test_mpunreach_pack_ipv4() -> None:
 
 
 def test_mpreach_afi_safi_combinations() -> None:
-    """Test MP_REACH_NLRI supports various AFI/SAFI combinations.
+    """Test MPNLRICollection supports various AFI/SAFI combinations.
 
     BGP multiprotocol extensions support many address family combinations:
     - IPv4 unicast, multicast
@@ -394,7 +385,7 @@ def test_mpreach_afi_safi_combinations() -> None:
     - VPNv4, VPNv6
     - And many others
     """
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.protocol.family import AFI, SAFI
 
     # Test various AFI/SAFI combinations
@@ -406,17 +397,17 @@ def test_mpreach_afi_safi_combinations() -> None:
     ]
 
     for afi, safi, description in test_cases:
-        # Create MP_REACH_NLRI with this family
-        mpreach = MPRNLRI.make_mprnlri(make_context(afi, safi), [])
+        # Create MPNLRICollection with this family
+        collection = MPNLRICollection([], {}, make_context(afi, safi))
 
         # Verify family is correctly set
-        assert mpreach.afi == afi, f'AFI mismatch for {description}'
-        assert mpreach.safi == safi, f'SAFI mismatch for {description}'
+        assert collection.afi == afi, f'AFI mismatch for {description}'
+        assert collection.safi == safi, f'SAFI mismatch for {description}'
 
 
 def test_mpunreach_afi_safi_combinations() -> None:
-    """Test MP_UNREACH_NLRI supports various AFI/SAFI combinations."""
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    """Test MPNLRICollection supports various AFI/SAFI combinations for withdrawals."""
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.protocol.family import AFI, SAFI
 
     # Test various AFI/SAFI combinations
@@ -428,12 +419,12 @@ def test_mpunreach_afi_safi_combinations() -> None:
     ]
 
     for afi, safi, description in test_cases:
-        # Create MP_UNREACH_NLRI with this family
-        mpunreach = MPURNLRI.make_mpurnlri(make_context(afi, safi), [])
+        # Create MPNLRICollection with this family
+        collection = MPNLRICollection([], {}, make_context(afi, safi))
 
         # Verify family is correctly set
-        assert mpunreach.afi == afi, f'AFI mismatch for {description}'
-        assert mpunreach.safi == safi, f'SAFI mismatch for {description}'
+        assert collection.afi == afi, f'AFI mismatch for {description}'
+        assert collection.safi == safi, f'SAFI mismatch for {description}'
 
 
 # ==============================================================================
@@ -442,36 +433,36 @@ def test_mpunreach_afi_safi_combinations() -> None:
 
 
 def test_mpreach_empty_nlri_eor() -> None:
-    """Test MP_REACH_NLRI with empty NLRI list (End-of-RIB marker).
+    """Test MPNLRICollection with empty NLRI list (End-of-RIB marker).
 
     EOR (End-of-RIB) is signaled by an MP_UNREACH_NLRI with no withdrawn routes.
     It indicates that all routes for a given AFI/SAFI have been sent.
     """
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.protocol.family import AFI, SAFI
 
-    # Create MP_REACH_NLRI with empty NLRI list
-    mpreach = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [])
+    # Create MPNLRICollection with empty NLRI list
+    collection = MPNLRICollection([], {}, make_context(AFI.ipv4, SAFI.unicast))
 
     # Verify it's empty
-    assert len(mpreach.nlris) == 0
-    assert '0 NLRI' in str(mpreach)
+    assert len(collection.nlris) == 0
+    assert '0 NLRIs' in str(collection)
 
 
 def test_mpunreach_empty_nlri() -> None:
-    """Test MP_UNREACH_NLRI with empty NLRI list.
+    """Test MPNLRICollection with empty NLRI list for withdrawals.
 
     An empty MP_UNREACH_NLRI can be used as an EOR marker.
     """
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.protocol.family import AFI, SAFI
 
-    # Create MP_UNREACH_NLRI with empty NLRI list
-    mpunreach = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [])
+    # Create MPNLRICollection with empty NLRI list
+    collection = MPNLRICollection([], {}, make_context(AFI.ipv4, SAFI.unicast))
 
     # Verify it's empty
-    assert len(mpunreach.nlris) == 0
-    assert '0 NLRI' in str(mpunreach)
+    assert len(collection.nlris) == 0
+    assert '0 NLRIs' in str(collection)
 
 
 def test_mpreach_attribute_flags() -> None:
@@ -503,19 +494,18 @@ def test_mpunreach_attribute_flags() -> None:
 
 
 def test_mpreach_equality() -> None:
-    """Test MP_REACH_NLRI equality comparison.
+    """Test MPNLRICollection equality comparison.
 
-    Two MP_REACH_NLRI attributes are equal if they have the same
-    AFI, SAFI, and NLRI list.
+    Two MPNLRICollections are equal if they have the same AFI, SAFI, and NLRI list.
     """
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.protocol.ip import IPv4
 
-    # Create two identical MP_REACH_NLRI attributes
+    # Create two identical MPNLRICollections
     cidr1 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     prefix1.nexthop = IPv4.from_string('192.0.2.1')
@@ -524,33 +514,33 @@ def test_mpreach_equality() -> None:
     prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     prefix2.nexthop = IPv4.from_string('192.0.2.1')
 
-    mpreach1 = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix1])
-    mpreach2 = MPRNLRI.make_mprnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix2])
+    collection1 = MPNLRICollection([prefix1], {}, make_context(AFI.ipv4, SAFI.unicast))
+    collection2 = MPNLRICollection([prefix2], {}, make_context(AFI.ipv4, SAFI.unicast))
 
     # Verify equality (implementation may vary based on NLRI equality)
-    assert mpreach1.afi == mpreach2.afi
-    assert mpreach1.safi == mpreach2.safi
+    assert collection1.afi == collection2.afi
+    assert collection1.safi == collection2.safi
 
 
 def test_mpunreach_equality() -> None:
-    """Test MP_UNREACH_NLRI equality comparison."""
+    """Test MPNLRICollection equality comparison for withdrawals."""
     from exabgp.bgp.message import Action
-    from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.protocol.ip import IPv4
 
-    # Create two identical MP_UNREACH_NLRI attributes
+    # Create two identical MPNLRICollections
     cidr1 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
     cidr2 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
 
-    mpunreach1 = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix1])
-    mpunreach2 = MPURNLRI.make_mpurnlri(make_context(AFI.ipv4, SAFI.unicast), [prefix2])
+    collection1 = MPNLRICollection([prefix1], {}, make_context(AFI.ipv4, SAFI.unicast))
+    collection2 = MPNLRICollection([prefix2], {}, make_context(AFI.ipv4, SAFI.unicast))
 
     # Verify equality (implementation may vary based on NLRI equality)
-    assert mpunreach1.afi == mpunreach2.afi
-    assert mpunreach1.safi == mpunreach2.safi
+    assert collection1.afi == collection2.afi
+    assert collection1.safi == collection2.safi

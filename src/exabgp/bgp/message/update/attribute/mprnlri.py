@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Iterator
 
 from exabgp.util.types import Buffer
 
@@ -19,12 +19,9 @@ from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.open.capability.negotiated import OpenContext
-
-# from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
-from exabgp.bgp.message.update.nlri import _UNPARSED, NLRI
+from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.protocol.ip import IP
 
 # ==================================================== MP Reachable NLRI (14)
 #
@@ -32,13 +29,15 @@ from exabgp.protocol.ip import IP
 
 @Attribute.register()
 class MPRNLRI(Attribute, Family):
+    """Wire-format MP_REACH_NLRI attribute container.
+
+    Stores raw wire bytes and yields NLRIs lazily via __iter__.
+    For semantic operations (building/packing), use MPNLRICollection.
+    """
+
     FLAG = Attribute.Flag.OPTIONAL
     ID = Attribute.CODE.MP_REACH_NLRI
     NO_DUPLICATE = True
-
-    # Mode indicators
-    _MODE_PACKED = 1  # Created from wire bytes (unpack path)
-    _MODE_NLRIS = 2  # Created from NLRI list (semantic path)
 
     def __init__(self, packed: Buffer, context: OpenContext) -> None:
         """Create MPRNLRI from wire-format bytes.
@@ -49,48 +48,21 @@ class MPRNLRI(Attribute, Family):
         """
         self._packed = packed
         self._context = context
-        self._mode = self._MODE_PACKED
-        self._nlris_cache: list[NLRI] = _UNPARSED
         # Initialize Family from packed data
         _afi = unpack('!H', packed[:2])[0]
         _safi = packed[2]
         Family.__init__(self, AFI.from_int(_afi), SAFI.from_int(_safi))
 
-    @classmethod
-    def make_mprnlri(cls, context: OpenContext, nlris: list[NLRI]) -> 'MPRNLRI':
-        """Create MPRNLRI from semantic data (NLRI list).
-
-        Args:
-            context: Parsing context containing AFI/SAFI and negotiated parameters
-            nlris: List of NLRI objects to include
-
-        Returns:
-            MPRNLRI instance in semantic mode
-        """
-        # Create minimal packed header just for Family init
-        # Full packing happens in packed_attributes()
-        header = context.afi.pack_afi() + context.safi.pack_safi()
-        instance = cls(header + b'\x00\x00', context)
-        # Switch to semantic mode
-        instance._mode = cls._MODE_NLRIS
-        instance._nlris_cache: list[NLRI] = nlris
-        return instance
-
     @property
-    def nlris(self) -> list[NLRI]:
-        """Get the list of NLRIs, parsing from wire format if needed."""
-        if self._nlris_cache is not _UNPARSED:
-            return self._nlris_cache
+    def packed(self) -> bytes:
+        """Raw wire-format bytes."""
+        return bytes(self._packed)
 
-        if self._mode == self._MODE_PACKED:
-            self._nlris_cache = self._parse_nlris()
-            return self._nlris_cache
+    def __iter__(self) -> Iterator[NLRI]:
+        """Yield NLRIs from wire format.
 
-        return []
-
-    def _parse_nlris(self) -> list[NLRI]:
-        """Parse NLRIs from wire format using stored context."""
-        nlris: list[NLRI] = []
+        Generator that yields NLRIs one by one, parsing lazily.
+        """
         data = self._packed
 
         # -- Reading AFI/SAFI (already done in __init__ for Family)
@@ -120,113 +92,42 @@ class MPRNLRI(Attribute, Family):
         nlri_data = data[offset:]
 
         while nlri_data:
-            if nexthops:
-                for nexthop in nexthops:
-                    nlri_result, left_result = NLRI.unpack_nlri(
-                        self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._context.addpath, Negotiated.UNSET
-                    )
-                    if nlri_result is not NLRI.INVALID:
-                        nlri_result.nexthop = NextHop.unpack_attribute(nexthop, Negotiated.UNSET)
-                        nlris.append(nlri_result)
-            else:
-                nlri_result, left_result = NLRI.unpack_nlri(
-                    self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._context.addpath, Negotiated.UNSET
-                )
-                if nlri_result is not NLRI.INVALID:
-                    nlris.append(nlri_result)
+            nlri_result, left_result = NLRI.unpack_nlri(
+                self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._context.addpath, Negotiated.UNSET
+            )
+
+            if nlri_result is not NLRI.INVALID:
+                # Assign nexthop from first parsed nexthop (if any)
+                if nexthops:
+                    nlri_result.nexthop = NextHop.unpack_attribute(nexthops[0], Negotiated.UNSET)
+                yield nlri_result
 
             if left_result == nlri_data:
                 raise RuntimeError('sub-calls should consume data')
 
             nlri_data = left_result
 
-        return nlris
-
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MPRNLRI):
             return False
-        return self.ID == other.ID and self.FLAG == other.FLAG and self.nlris == other.nlris
+        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def packed_attributes(
-        self, negotiated: Negotiated, maximum: int = Negotiated.FREE_SIZE
-    ) -> Generator[bytes, None, None]:
-        if not self.nlris:
-            return
-
-        # addpath = negotiated.addpath.send(self.afi,self.safi)
-        # nexthopself = negotiated.nexthopself(self.afi)
-        mpnlri: dict[bytes, list] = {}
-        for nlri in self.nlris:
-            if nlri.family().afi_safi() != self.family().afi_safi():  # nlri is not part of specified family
-                continue
-            if nlri.nexthop is IP.NoNextHop:
-                # EOR and Flow may not have any next_hop
-                nexthop = b''
-            else:
-                _, rd_size = Family.size.get(self.family().afi_safi(), (0, 0))
-                nh_rd = bytes([0]) * rd_size if rd_size else b''
-                try:
-                    # TODO: remove nlri.afi as it should be in the nexthop already
-                    nexthop = nh_rd + nlri.nexthop.ton(negotiated, nlri.afi)
-                except TypeError:
-                    # we could not match "next-hop self" with the BGP AFI of the BGP sesion
-                    # attempting invalid IPv4 next-hop (0.0.0.0) to try to not kill the session
-                    # and preserve some form of backward compatibility (for some vendors)
-                    # the next-hop may have been IPv6 but not valided as the RFC says
-                    #
-                    # An UPDATE message that carries no NLRI, other than the one encoded in
-                    # the MP_REACH_NLRI attribute, SHOULD NOT carry the NEXT_HOP attribute.
-                    # If such a message contains the NEXT_HOP attribute, the BGP speaker
-                    # that receives the message SHOULD ignore this attribute.
-                    #
-                    # Some vendors may have therefore not valided the next-hop
-                    # and accepted invalid IPv6 next-hop in the past
-                    nexthop = bytes([0]) * 4
-
-            # mpunli[nexthop] = nlri
-            mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
-
-        for nexthop, nlris in mpnlri.items():
-            payload = self.afi.pack_afi() + self.safi.pack_safi() + bytes([len(nexthop)]) + nexthop + bytes([0])
-            header_length = len(payload)
-            for nlri in nlris:
-                if self._len(payload + nlri) > maximum:
-                    if len(payload) == header_length or len(payload) > maximum:
-                        raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
-                    yield self._attribute(payload)
-                    payload = (
-                        self.afi.pack_afi()
-                        + self.safi.pack_safi()
-                        + bytes([len(nexthop)])
-                        + nexthop
-                        + bytes([0])
-                        + nlri
-                    )
-                    continue
-                payload = payload + nlri
-            if len(payload) == header_length or len(payload) > maximum:
-                raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
-            yield self._attribute(payload)
-
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        return b''.join(self.packed_attributes(negotiated))
-
     def __len__(self) -> int:
-        raise RuntimeError('we can not give you the size of an MPRNLRI - was it with our witout addpath ?')
-        # return len(self.pack(False))
+        # Return 0 to indicate unknown length - use list(mprnlri) to iterate
+        return 0
 
     def __repr__(self) -> str:
-        return 'MP_REACH_NLRI for %s %s with %d NLRI(s)' % (self.afi, self.safi, len(self.nlris))
+        return 'MP_REACH_NLRI for %s %s' % (self.afi, self.safi)
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> MPRNLRI:
         """Unpack MPRNLRI from wire format.
 
         Validates the data and creates an MPRNLRI instance storing the wire bytes.
-        NLRIs are parsed lazily when accessed via the nlris property.
+        NLRIs are parsed lazily when iterating over the instance.
         """
         # MP_REACH_NLRI minimum: AFI(2) + SAFI(1) + NH_len(1) + reserved(1) = 5 bytes
         if len(data) < 5:
@@ -297,7 +198,8 @@ class MPRNLRI(Attribute, Family):
         return cls(data, context)
 
 
-# Create empty MPRNLRI using factory method with default context
+# Create empty MPRNLRI with minimal packed structure
+# AFI(2) + SAFI(1) + NH_LEN(1)=0 + RESERVED(1)=0 = 5 bytes minimum
 _EMPTY_CONTEXT = OpenContext.make_open_context(
     afi=AFI.undefined,
     safi=SAFI.undefined,
@@ -305,4 +207,5 @@ _EMPTY_CONTEXT = OpenContext.make_open_context(
     asn4=False,
     msg_size=4096,
 )
-EMPTY_MPRNLRI = MPRNLRI.make_mprnlri(_EMPTY_CONTEXT, [])
+_EMPTY_PACKED = AFI.undefined.pack_afi() + SAFI.undefined.pack_safi() + bytes([0, 0])
+EMPTY_MPRNLRI = MPRNLRI(_EMPTY_PACKED, _EMPTY_CONTEXT)
