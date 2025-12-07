@@ -123,6 +123,10 @@ class VPLS(NLRI):
     ) -> 'VPLS':
         """Factory method for configuration - creates empty VPLS for field assignment.
 
+        DEPRECATED: Use from_settings() with VPLSSettings instead for immutable
+        NLRI construction. This method creates a mutable VPLS that requires
+        subsequent assign() calls, which will be removed in a future version.
+
         Args:
             action: Route action (ANNOUNCE or WITHDRAW)
             addpath: ADD-PATH path identifier
@@ -264,6 +268,16 @@ class VPLS(NLRI):
         return ''
 
     def assign(self, name: str, value: Any) -> None:
+        """Assign a value to an NLRI field (builder mode).
+
+        DEPRECATED: Use from_settings() with VPLSSettings instead for immutable
+        NLRI construction. This method mutates the NLRI after construction,
+        which will be removed in a future version.
+
+        Args:
+            name: Field name to set (nexthop, rd, endpoint, offset, size, base)
+            value: Value to assign
+        """
         setattr(self, name, value)
 
     def _pack_nlri_simple(self) -> Buffer:

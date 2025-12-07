@@ -777,7 +777,43 @@ Key findings:
 **Phase 4 COMPLETE!**
 
 **Resume Point:**
-- Phase 5: Remove mutation support from NLRI classes
+- ~~Phase 5: Remove mutation support from NLRI classes~~
+
+### 2025-12-07 - Phase 5: Deprecate Mutation (Partial)
+
+**Analysis:**
+Full removal of mutation requires updating many configuration paths:
+- `l2vpn/vpls.py` Section parser still uses block syntax with `make_empty()` + `assign()`
+- `announce/path.py`, `announce/vpn.py`, `announce/label.py` use `nlri-set` with legacy mode
+- `static/route.py`, `flow/route.py` Section parsers use `nlri-set`
+
+**Completed:**
+- ✅ Updated `l2vpn/vpls.py` schema to use Settings mode (nlri_class + settings_class)
+- ✅ Marked `VPLS.make_empty()` as DEPRECATED in docstring
+- ✅ Marked `VPLS.assign()` as DEPRECATED in docstring
+- ✅ All tests pass (11 suites, 43.5s)
+
+**Files modified:**
+- `src/exabgp/configuration/l2vpn/vpls.py` - Updated schema to use Settings mode
+- `src/exabgp/bgp/message/update/nlri/vpls.py` - Added deprecation docs to make_empty() and assign()
+
+**What Still Uses Mutation:**
+1. Block syntax `vpls site5 { ... }` via `ParseVPLS.pre()` → `l2vpn/parser.py:vpls()` → `make_empty()`
+2. Section parser `nlri-set` actions → `scope.nlri_assign()` → `assign()`
+3. Legacy mode in RouteBuilderValidator (`_validate_legacy`)
+4. Unit tests in `tests/unit/test_vpls.py` that test the legacy pattern
+
+**Phase 5 Status: PARTIAL**
+
+Full removal requires:
+- Update `announce/path.py`, `announce/vpn.py`, `announce/label.py` to use Settings
+- Update Section parser to use Settings when available
+- Update `l2vpn/parser.py` to not create empty VPLS
+- Update unit tests to use Settings pattern only
+
+**Resume Point:**
+- Continue Phase 5 in future: Update remaining schemas and remove mutation methods
+- All current code paths work, mutation is documented as deprecated
 
 ---
 

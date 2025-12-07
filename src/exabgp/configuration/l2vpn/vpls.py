@@ -12,6 +12,7 @@ from exabgp.configuration.schema import RouteBuilder, Leaf, LeafList, ValueType
 from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.bgp.message.update.nlri import VPLS as VPLS_NLRI
+from exabgp.bgp.message.update.nlri.settings import VPLSSettings
 
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import origin
@@ -39,18 +40,14 @@ from exabgp.configuration.l2vpn.parser import vpls_base
 from exabgp.configuration.l2vpn.parser import next_hop
 
 
-def _vpls_nlri_factory():
-    """Factory for VPLS NLRI with default None values."""
-    return VPLS_NLRI.make_empty()
-
-
 class ParseVPLS(Section):
-    # Schema definition for VPLS configuration using RouteBuilder
-    # nlri_factory returns VPLS NLRI with None values, filled via nlri-set actions
+    # Schema definition for VPLS configuration using RouteBuilder with Settings mode
+    # nlri_class + settings_class enables deferred construction (no NLRI mutation)
     # prefix_parser is None since VPLS has no prefix
     schema = RouteBuilder(
         description='VPLS configuration',
-        nlri_factory=_vpls_nlri_factory,
+        nlri_class=VPLS_NLRI,
+        settings_class=VPLSSettings,
         prefix_parser=None,
         assign={
             'next-hop': 'nexthop',
