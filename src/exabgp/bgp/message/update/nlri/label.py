@@ -239,7 +239,8 @@ class Label(INET):
             addpath = b'disabled'
         else:
             addpath = self.path_info.pack_path()
-        return hash(addpath + self._pack_nlri_simple())
+        mask = bytes([len(self._labels_packed) * 8 + self.cidr.mask])
+        return hash(addpath + mask + self._labels_packed + self.cidr.pack_ip())
 
     def __copy__(self) -> 'Label':
         new = self.__class__.__new__(self.__class__)
@@ -275,11 +276,6 @@ class Label(INET):
     def prefix(self) -> str:
         return '{}{}'.format(INET.prefix(self), self.labels)
 
-    def _pack_nlri_simple(self) -> Buffer:
-        """Pack NLRI without negotiated-dependent data (no addpath)."""
-        mask = bytes([len(self._labels_packed) * 8 + self.cidr.mask])
-        return mask + self._labels_packed + self.cidr.pack_ip()
-
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         if negotiated.addpath.send(self.afi, self.safi):
             # ADD-PATH negotiated: MUST send 4-byte path ID
@@ -289,7 +285,8 @@ class Label(INET):
                 addpath = self.path_info.pack_path()
         else:
             addpath = b''
-        return addpath + self._pack_nlri_simple()
+        mask = bytes([len(self._labels_packed) * 8 + self.cidr.mask])
+        return addpath + mask + self._labels_packed + self.cidr.pack_ip()
 
     def index(self) -> Buffer:
         if self.path_info is PathInfo.NOPATH:

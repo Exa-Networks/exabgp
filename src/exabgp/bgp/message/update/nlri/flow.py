@@ -847,7 +847,12 @@ class Flow(NLRI):
         return ''
 
     def __len__(self) -> int:
-        return len(self._pack_nlri_simple())
+        # If packed is valid (not stale), use it; otherwise recompute
+        if not self._packed_stale and self._packed:
+            packed = self._encode_length(self._packed)
+        else:
+            packed = self._pack_from_rules()
+        return len(packed)
 
     def add(self, rule: Any) -> bool:  # Any is FlowRule
         """Add a rule to the Flow NLRI.
@@ -872,19 +877,6 @@ class Flow(NLRI):
         self.rules.setdefault(ID, []).append(rule)
         self._packed_stale = True  # Mark packed as stale after modification
         return True
-
-    def _pack_nlri_simple(self) -> Buffer:
-        """Pack NLRI without negotiated-dependent data (no addpath).
-
-        Returns stored _packed bytes with length prefix if not stale,
-        otherwise recomputes from rules.
-        """
-        # If packed is valid (not stale), return with length prefix
-        if not self._packed_stale and self._packed:
-            return self._encode_length(self._packed)
-
-        # Recompute from rules
-        return self._pack_from_rules()
 
     def _encode_length(self, components: Buffer) -> Buffer:
         """Encode length prefix for wire format."""
@@ -929,10 +921,16 @@ class Flow(NLRI):
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for FlowSpec but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(self.afi, self.safi)
-        return self._pack_nlri_simple()
+        if not self._packed_stale and self._packed:
+            return self._encode_length(self._packed)
+        return self._pack_from_rules()
 
     def index(self) -> Buffer:
-        return bytes(Family.index(self)) + self._pack_nlri_simple()
+        if not self._packed_stale and self._packed:
+            packed = self._encode_length(self._packed)
+        else:
+            packed = self._pack_from_rules()
+        return bytes(Family.index(self)) + packed
 
     def _rules(self) -> str:
         string: list[str] = []

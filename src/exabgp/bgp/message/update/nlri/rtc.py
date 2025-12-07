@@ -147,7 +147,7 @@ class RTC(NLRI):
         return pack('!B', 0)
 
     def index(self) -> Buffer:
-        # RTC uses negotiated in pack_nlri, so we can't use _pack_nlri_simple
+        # RTC uses negotiated in pack_nlri for RT encoding
         # Index should be stable regardless of negotiated, so build it directly
         if self.rt and self._packed_origin:
             packedRT = self.rt._pack()  # Use internal pack without negotiated

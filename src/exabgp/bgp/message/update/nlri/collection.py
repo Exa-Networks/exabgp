@@ -86,11 +86,11 @@ class NLRICollection:
         if self._nlris_cache is _UNPARSED:
             return b''
 
-        # Pack each NLRI using its _pack_nlri_simple method (no addpath)
+        # Pack each NLRI using its _packed attribute (no addpath)
         # AddPath handling would be done at UPDATE message level
         packed = b''
         for nlri in self._nlris_cache:
-            packed += bytes(nlri._pack_nlri_simple())
+            packed += nlri._packed
         return packed
 
     @property

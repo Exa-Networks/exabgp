@@ -85,6 +85,16 @@ class NLRI(Family):
 
     def _copy_nlri_slots(self, new: 'NLRI') -> None:
         """Copy NLRI base class slots to new instance."""
+        # Family.__slots__ = ('afi', 'safi')
+        # Single-family types have read-only class-level afi/safi - skip those
+        try:
+            new.afi = self.afi
+        except AttributeError:
+            pass  # Read-only class attribute
+        try:
+            new.safi = self.safi
+        except AttributeError:
+            pass  # Read-only class attribute
         # NLRI.__slots__ = ('action', 'nexthop', 'addpath', '_packed')
         new.action = self.action
         new.nexthop = self.nexthop
@@ -93,6 +103,16 @@ class NLRI(Family):
 
     def _deepcopy_nlri_slots(self, new: 'NLRI', memo: dict[Any, Any]) -> None:
         """Deep copy NLRI base class slots to new instance."""
+        # Family.__slots__ = ('afi', 'safi') - singletons, no deepcopy needed
+        # Single-family types have read-only class-level afi/safi - skip those
+        try:
+            new.afi = self.afi
+        except AttributeError:
+            pass  # Read-only class attribute
+        try:
+            new.safi = self.safi
+        except AttributeError:
+            pass  # Read-only class attribute
         # NLRI.__slots__ = ('action', 'nexthop', 'addpath', '_packed')
         new.action = self.action  # int - immutable
         new.nexthop = deepcopy(self.nexthop, memo)

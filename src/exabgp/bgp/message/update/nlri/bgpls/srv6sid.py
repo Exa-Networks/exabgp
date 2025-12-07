@@ -154,10 +154,6 @@ class SRv6SID(BGPLS):
 
         return cls(data[:length])
 
-    def _pack_nlri_simple(self) -> Buffer:
-        """Pack NLRI without negotiated-dependent data (no addpath)."""
-        return self._packed
-
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, SAFI.bgp_ls)

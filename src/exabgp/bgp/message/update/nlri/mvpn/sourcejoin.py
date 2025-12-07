@@ -35,9 +35,18 @@ class SourceJoin(MVPN):
     NAME: ClassVar[str] = 'C-Multicast Source Tree Join route'
     SHORT_NAME: ClassVar[str] = 'Source-Join'
 
+    # Wire format offsets (after 2-byte type+length header)
+    HEADER_SIZE = 2  # type(1) + length(1)
+
     def __init__(self, packed: Buffer, afi: AFI) -> None:
+        """Create SourceJoin from complete wire format bytes.
+
+        Args:
+            packed: Complete wire format (type + length + payload)
+            afi: Address Family Identifier
+        """
         MVPN.__init__(self, afi=afi)
-        self._packed = packed
+        self._packed = bytes(packed)  # Ensure bytes for storage
 
     @classmethod
     def make_sourcejoin(
@@ -49,7 +58,7 @@ class SourceJoin(MVPN):
         source_as: int,
     ) -> 'SourceJoin':
         """Factory method to create SourceJoin from semantic parameters."""
-        packed = (
+        payload = (
             bytes(rd.pack_rd())
             + pack('!I', source_as)
             + bytes([len(source) * 8])
@@ -57,25 +66,27 @@ class SourceJoin(MVPN):
             + bytes([len(group) * 8])
             + group.pack_ip()
         )
+        # Prepend type + length header
+        packed = bytes([cls.CODE, len(payload)]) + payload
         return cls(packed, afi)
 
     @property
     def rd(self) -> RouteDistinguisher:
-        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[2:10])
 
     @property
     def source_as(self) -> int:
-        return int.from_bytes(self._packed[8:12], 'big')
+        return int.from_bytes(self._packed[10:14], 'big')
 
     @property
     def source(self) -> IP:
-        cursor = 12
+        cursor = 14  # 2 (header) + 8 (RD) + 4 (source_as)
         sourceiplen = int(self._packed[cursor] / 8)
         return IP.unpack_ip(self._packed[cursor + 1 : cursor + 1 + sourceiplen])
 
     @property
     def group(self) -> IP:
-        cursor = 12
+        cursor = 14  # 2 (header) + 8 (RD) + 4 (source_as)
         sourceiplen = int(self._packed[cursor] / 8)
         cursor += 1 + sourceiplen
         groupiplen = int(self._packed[cursor] / 8)
@@ -100,14 +111,21 @@ class SourceJoin(MVPN):
         return hash((self.rd, self.source, self.group, self.source_as))
 
     @classmethod
-    def unpack_mvpn(cls, data: bytes, afi: AFI) -> 'MVPN':
-        datalen = len(data)
+    def unpack_mvpn(cls, packed: bytes, afi: AFI) -> 'MVPN':
+        """Unpack SourceJoin from complete wire format bytes.
+
+        Args:
+            packed: Complete wire format (type + length + payload)
+            afi: Address Family Identifier
+        """
+        # packed includes header, payload starts at offset 2
+        datalen = len(packed) - cls.HEADER_SIZE
         if datalen not in (MVPN_SOURCEJOIN_IPV4_LENGTH, MVPN_SOURCEJOIN_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Invalid C-Multicast Route length ({datalen} bytes).')
 
-        # Validate source IP length
-        cursor = 12  # After RD (8) + Source AS (4)
-        sourceiplen = int(data[cursor] / 8)
+        # Validate source IP length (offset +2 for header)
+        cursor = 14  # 2 (header) + 8 (RD) + 4 (Source AS)
+        sourceiplen = int(packed[cursor] / 8)
         cursor += 1
         if sourceiplen != IPv4.BYTES and sourceiplen != IPv6.BYTES:
             raise Notify(
@@ -118,7 +136,7 @@ class SourceJoin(MVPN):
         cursor += sourceiplen
 
         # Validate group IP length
-        groupiplen = int(data[cursor] / 8)
+        groupiplen = int(packed[cursor] / 8)
         if groupiplen != IPv4.BYTES and groupiplen != IPv6.BYTES:
             raise Notify(
                 3,
@@ -126,7 +144,7 @@ class SourceJoin(MVPN):
                 f'Invalid C-Multicast Route length ({groupiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
 
-        return cls(data, afi)
+        return cls(packed, afi)
 
     def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE

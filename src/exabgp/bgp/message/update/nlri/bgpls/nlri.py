@@ -102,23 +102,22 @@ class BGPLS(NLRI):
         NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
         self._packed = b''
 
-    def _pack_nlri_simple(self) -> Buffer:
-        """Pack NLRI without negotiated-dependent data (no addpath)."""
-        return pack('!BB', self.CODE, len(self._packed)) + self._packed
-
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, self.safi)
-        return self._pack_nlri_simple()
+        # Wire format: [code(1)][length(1)][payload]
+        return pack('!BB', self.CODE, len(self._packed)) + self._packed
 
     def index(self) -> Buffer:
-        return bytes(Family.index(self)) + self._pack_nlri_simple()
+        # Wire format: [family][code(1)][length(1)][payload]
+        return bytes(Family.index(self)) + pack('!BB', self.CODE, len(self._packed)) + self._packed
 
     def __len__(self) -> int:
         return len(self._packed) + 2
 
     def __hash__(self) -> int:
-        return hash((self.afi, self.safi, self.CODE, self._pack_nlri_simple()))
+        packed = pack('!BB', self.CODE, len(self._packed)) + self._packed
+        return hash((self.afi, self.safi, self.CODE, packed))
 
     def __str__(self) -> str:
         return 'bgp-ls:{}:{}'.format(
@@ -188,7 +187,8 @@ class BGPLS(NLRI):
         return klass, data[length + 4 :]
 
     def _raw(self) -> str:
-        return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())
+        packed = pack('!BB', self.CODE, len(self._packed)) + self._packed
+        return ''.join('{:02X}'.format(_) for _ in packed)
 
 
 class GenericBGPLS(BGPLS):

@@ -16,7 +16,6 @@ from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, R
 from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP
-from exabgp.util.types import Buffer
 
 # EVPN MAC address and IP address length constants (in bits)
 MAC_ADDRESS_LEN_BITS = 48  # Standard MAC address length in bits
@@ -147,7 +146,7 @@ class MAC(EVPN):
         label_start = 32 + iplen_bytes
         return Labels.unpack_labels(self._packed[label_start : label_start + 3])
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         # Note: Per RFC 7432 Section 7.2, the route key for Type 2 should only include
         # etag, mac, and ip (ESI and labels are attributes, not key). However, this
         # implementation uses full packed bytes for index. The __eq__ method correctly

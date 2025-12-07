@@ -298,7 +298,8 @@ class IPVPN(Label):
             addpath = b'disabled'
         else:
             addpath = self.path_info.pack_path()
-        return hash(addpath + self._pack_nlri_simple())
+        mask = len(self._labels_packed) * 8 + len(self._rd_packed) * 8 + self.cidr.mask
+        return hash(addpath + bytes([mask]) + self._labels_packed + self._rd_packed + self.cidr.pack_ip())
 
     def __copy__(self) -> 'IPVPN':
         new = self.__class__.__new__(self.__class__)
@@ -339,15 +340,6 @@ class IPVPN(Label):
     def has_rd(cls) -> bool:
         return True
 
-    def _pack_nlri_simple(self) -> Buffer:
-        """Pack NLRI without negotiated-dependent data (no addpath).
-
-        Wire format: [mask][labels][rd][prefix]
-        Simple concatenation of stored bytes.
-        """
-        mask = len(self._labels_packed) * 8 + len(self._rd_packed) * 8 + self.cidr.mask
-        return bytes([mask]) + self._labels_packed + self._rd_packed + self.cidr.pack_ip()
-
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         if negotiated.addpath.send(self.afi, self.safi):
             if self.path_info is PathInfo.DISABLED:
@@ -356,7 +348,9 @@ class IPVPN(Label):
                 addpath = self.path_info.pack_path()
         else:
             addpath = b''
-        return bytes(addpath) + self._pack_nlri_simple()
+        # Wire format: [addpath][mask][labels][rd][prefix]
+        mask = len(self._labels_packed) * 8 + len(self._rd_packed) * 8 + self.cidr.mask
+        return bytes(addpath) + bytes([mask]) + self._labels_packed + self._rd_packed + self.cidr.pack_ip()
 
     def index(self) -> Buffer:
         if self.path_info is PathInfo.NOPATH:

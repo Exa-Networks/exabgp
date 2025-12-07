@@ -32,9 +32,18 @@ class SourceAD(MVPN):
     NAME: ClassVar[str] = 'Source Active A-D Route'
     SHORT_NAME: ClassVar[str] = 'SourceAD'
 
+    # Wire format offsets (after 2-byte type+length header)
+    HEADER_SIZE = 2  # type(1) + length(1)
+
     def __init__(self, packed: Buffer, afi: AFI) -> None:
+        """Create SourceAD from complete wire format bytes.
+
+        Args:
+            packed: Complete wire format (type + length + payload)
+            afi: Address Family Identifier
+        """
         MVPN.__init__(self, afi=afi)
-        self._packed = packed
+        self._packed = bytes(packed)  # Ensure bytes for storage
 
     @classmethod
     def make_sourcead(
@@ -45,28 +54,30 @@ class SourceAD(MVPN):
         group: IP,
     ) -> 'SourceAD':
         """Factory method to create SourceAD from semantic parameters."""
-        packed = (
+        payload = (
             bytes(rd.pack_rd())
             + bytes([len(source) * 8])
             + source.pack_ip()
             + bytes([len(group) * 8])
             + group.pack_ip()
         )
+        # Prepend type + length header
+        packed = bytes([cls.CODE, len(payload)]) + payload
         return cls(packed, afi)
 
     @property
     def rd(self) -> RouteDistinguisher:
-        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[2:10])
 
     @property
     def source(self) -> IP:
-        sourceiplen = int(self._packed[8] / 8)
-        return IP.unpack_ip(self._packed[9 : 9 + sourceiplen])
+        sourceiplen = int(self._packed[10] / 8)
+        return IP.unpack_ip(self._packed[11 : 11 + sourceiplen])
 
     @property
     def group(self) -> IP:
-        sourceiplen = int(self._packed[8] / 8)
-        cursor = 9 + sourceiplen
+        sourceiplen = int(self._packed[10] / 8)
+        cursor = 11 + sourceiplen
         groupiplen = int(self._packed[cursor] / 8)
         return IP.unpack_ip(self._packed[cursor + 1 : cursor + 1 + groupiplen])
 
@@ -89,14 +100,21 @@ class SourceAD(MVPN):
         return hash((self.rd, self.source, self.group))
 
     @classmethod
-    def unpack_mvpn(cls, data: bytes, afi: AFI) -> 'MVPN':
-        datalen = len(data)
+    def unpack_mvpn(cls, packed: bytes, afi: AFI) -> 'MVPN':
+        """Unpack SourceAD from complete wire format bytes.
+
+        Args:
+            packed: Complete wire format (type + length + payload)
+            afi: Address Family Identifier
+        """
+        # packed includes header, payload starts at offset 2
+        datalen = len(packed) - cls.HEADER_SIZE
         if datalen not in (MVPN_SOURCEAD_IPV4_LENGTH, MVPN_SOURCEAD_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Unsupported Source Active A-D route length ({datalen} bytes).')
 
-        # Validate source IP length
-        cursor = 8
-        sourceiplen = int(data[cursor] / 8)
+        # Validate source IP length (offset +2 for header)
+        cursor = 10  # 2 (header) + 8 (RD)
+        sourceiplen = int(packed[cursor] / 8)
         cursor += 1
         if sourceiplen != IPv4.BYTES and sourceiplen != IPv6.BYTES:
             raise Notify(
@@ -107,7 +125,7 @@ class SourceAD(MVPN):
         cursor += sourceiplen
 
         # Validate group IP length
-        groupiplen = int(data[cursor] / 8)
+        groupiplen = int(packed[cursor] / 8)
         if groupiplen != IPv4.BYTES and groupiplen != IPv6.BYTES:
             raise Notify(
                 3,
@@ -121,7 +139,7 @@ class SourceAD(MVPN):
         # potentially extended locally on a router) MUST NOT be advertised by a
         # router and MUST be discarded if received.
 
-        return cls(data, afi)
+        return cls(packed, afi)
 
     def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE

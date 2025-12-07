@@ -80,17 +80,15 @@ class MUP(NLRI):
     def _prefix(self) -> str:
         return 'mup:{}:'.format(self.SHORT_NAME.lower())
 
-    def _pack_nlri_simple(self) -> bytes:
-        """Pack NLRI without negotiated-dependent data (no addpath)."""
-        return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
-
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for MUP but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(self.afi, SAFI.mup)
-        return self._pack_nlri_simple()
+        # Wire format: [arch_type(1)][route_type(2)][length(1)][payload]
+        return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 
     def index(self) -> Buffer:
-        return bytes(Family.index(self)) + self._pack_nlri_simple()
+        # Wire format: [family][arch_type(1)][route_type(2)][length(1)][payload]
+        return bytes(Family.index(self)) + pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 
     def __copy__(self) -> 'MUP':
         new = self.__class__.__new__(self.__class__)
@@ -153,7 +151,8 @@ class MUP(NLRI):
         return mup, data[end:]
 
     def _raw(self) -> str:
-        return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())
+        packed = pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
+        return ''.join('{:02X}'.format(_) for _ in packed)
 
 
 class GenericMUP(MUP):

@@ -242,7 +242,7 @@ class INET(NLRI):
             addpath = b'disabled'
         else:
             addpath = bytes(self.path_info.pack_path())
-        return hash(addpath + self._pack_nlri_simple())
+        return hash(addpath + self._packed)
 
     def __copy__(self) -> 'INET':
         new = self.__class__.__new__(self.__class__)
@@ -278,10 +278,6 @@ class INET(NLRI):
             return 'inet nlri next-hop missing'
         return ''
 
-    def _pack_nlri_simple(self) -> Buffer:
-        """Pack NLRI without negotiated-dependent data (no addpath)."""
-        return self._packed
-
     def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
         if negotiated.addpath.send(self.afi, self.safi):
             # ADD-PATH negotiated: MUST send 4-byte path ID
@@ -291,9 +287,9 @@ class INET(NLRI):
                 addpath = self.path_info.pack_path()
         else:
             addpath = b''
-        return bytes(addpath) + self._pack_nlri_simple()
+        return bytes(addpath) + self._packed
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         if self.path_info is PathInfo.NOPATH:
             addpath = b'no-pi'
         elif self.path_info is PathInfo.DISABLED:

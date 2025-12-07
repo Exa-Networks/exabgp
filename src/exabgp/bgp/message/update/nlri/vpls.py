@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
 from exabgp.util.types import Buffer
 
@@ -40,9 +40,10 @@ unique: Iterator[int] = _unique()
 class VPLS(NLRI):
     """VPLS NLRI using packed-bytes-first pattern.
 
-    This class uses class-level AFI/SAFI constants to minimize per-instance
-    storage. All instances are immutable - created from wire bytes with
-    fields unpacked lazily on property access.
+    _packed stores wire format:
+    [length(2)][RD(8)][endpoint(2)][offset(2)][size(2)][base(3)] = 19 bytes
+
+    AFI/SAFI set via Family parent class in __init__.
 
     Factory methods:
     - make_vpls(): Create from components (packs to wire format)
@@ -52,26 +53,21 @@ class VPLS(NLRI):
 
     __slots__ = ('unique',)
 
-    # Fixed AFI/SAFI for this single-family NLRI type (class attributes shadow slots)
-    afi: ClassVar[AFI] = AFI.l2vpn
-    safi: ClassVar[SAFI] = SAFI.vpls
-
     # Wire format length (including 2-byte length prefix)
     PACKED_LENGTH = 19  # length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Create a VPLS NLRI from packed wire-format bytes.
 
         Args:
-            packed: 19 bytes wire format (length + RD + endpoint + offset + size + base)
+            packed: 19 bytes: [length(2)][RD(8)][endpoint(2)][offset(2)][size(2)][base(3)]
 
         Note: action defaults to UNSET, set after creation (announce/withdraw).
         """
-        # Family.__init__ detects afi/safi properties and skips setting them
         NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
         self.nexthop = IP.NoNextHop
 
-        self._packed: bytes = packed
+        self._packed: bytes = bytes(packed)  # Ensure bytes for storage
         self.unique = next(unique)
 
     @classmethod
@@ -157,26 +153,22 @@ class VPLS(NLRI):
     @property
     def endpoint(self) -> int:
         """VPLS endpoint (VE ID) - unpacked from wire bytes."""
-        value: int = unpack('!H', self._packed[10:12])[0]
-        return value
+        return unpack('!H', self._packed[10:12])[0]
 
     @property
     def offset(self) -> int:
         """Label block offset - unpacked from wire bytes."""
-        value: int = unpack('!H', self._packed[12:14])[0]
-        return value
+        return unpack('!H', self._packed[12:14])[0]
 
     @property
     def size(self) -> int:
         """Label block size - unpacked from wire bytes."""
-        value: int = unpack('!H', self._packed[14:16])[0]
-        return value
+        return unpack('!H', self._packed[14:16])[0]
 
     @property
     def base(self) -> int:
         """Label base - unpacked from wire bytes."""
-        value: int = unpack('!L', b'\x00' + self._packed[16:19])[0] >> 4
-        return value
+        return unpack('!L', b'\x00' + self._packed[16:19])[0] >> 4
 
     def feedback(self, action: Action) -> str:
         """Validate VPLS NLRI and return error message if invalid.
@@ -192,17 +184,13 @@ class VPLS(NLRI):
             return 'vpls nlri size inconsistency'
         return ''
 
-    def _pack_nlri_simple(self) -> Buffer:
-        """Pack NLRI without negotiated-dependent data (no addpath)."""
-        return self._packed
-
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for VPLS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.l2vpn, SAFI.vpls)
-        return self._pack_nlri_simple()
+        return self._packed
 
-    def index(self) -> Buffer:
-        return Family.index(self) + self._pack_nlri_simple()
+    def index(self) -> bytes:
+        return Family.index(self) + self._packed
 
     def json(self, compact: bool | None = None) -> str:
         # Note: The unique key for VPLS is the combination of all fields (rd, endpoint, base, offset, size).
@@ -259,7 +247,7 @@ class VPLS(NLRI):
         if len(data) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
 
-        # Create VPLS from packed wire format (19 bytes, including length prefix)
+        # Store wire format directly
         packed = bytes(data[0 : 2 + length])
         nlri = cls(packed)
         nlri.action = action

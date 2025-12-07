@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.update.nlri.nlri import NLRI
     from exabgp.protocol.family import AFI, SAFI
-    from exabgp.util.types import Buffer
 
 
 class Route:
@@ -36,7 +35,7 @@ class Route:
         # The lazy evaluation ensures the index is computed only when all NLRI fields are set.
         self.__index = b''
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         if not self.__index:
             self.__index = b'%02x%02x' % self.nlri.family().afi_safi() + self.nlri.index()
         return self.__index
