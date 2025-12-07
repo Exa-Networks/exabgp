@@ -21,7 +21,6 @@ from exabgp.bgp.message.update.collection import (
     EOR_IPV4_UNICAST_LENGTH,
     EOR_WITH_PREFIX_LENGTH,
     UpdateCollection,
-    UpdateData,
 )
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.update.nlri import MPNLRICollection, NLRICollection
@@ -32,7 +31,6 @@ __all__ = [
     'Update',
     'UpdateCollection',
     'UpdateWire',
-    'UpdateData',
     'EOR',
     'NLRICollection',
     'MPNLRICollection',

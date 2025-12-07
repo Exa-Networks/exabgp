@@ -472,7 +472,3 @@ class UpdateCollection(Message):
 
         # Parse normally
         return cls._parse_payload(data, negotiated)
-
-
-# Backward compatibility alias
-UpdateData = UpdateCollection
