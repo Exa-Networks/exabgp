@@ -54,7 +54,7 @@ class EthernetAD(EVPN):
         esi: ESI,
         etag: EthernetTag,
         label: Labels | None,
-        action: Action = Action.ANNOUNCE,
+        action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'EthernetAD':
         """Factory method to create EthernetAD from semantic parameters.

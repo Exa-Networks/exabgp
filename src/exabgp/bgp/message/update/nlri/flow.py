@@ -709,7 +709,7 @@ class Flow(NLRI):
         cls,
         afi: AFI = AFI.ipv4,
         safi: SAFI = SAFI.flow_ip,
-        action: Action = Action.ANNOUNCE,
+        action: Action = Action.UNSET,
     ) -> 'Flow':
         """Factory method to create an empty Flow NLRI for building rules.
 

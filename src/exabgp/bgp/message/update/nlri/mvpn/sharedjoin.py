@@ -3,7 +3,6 @@ from __future__ import annotations
 from struct import pack
 from typing import ClassVar
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -36,14 +35,8 @@ class SharedJoin(MVPN):
     NAME: ClassVar[str] = 'C-Multicast Shared Tree Join route'
     SHORT_NAME: ClassVar[str] = 'Shared-Join'
 
-    def __init__(
-        self,
-        packed: Buffer,
-        afi: AFI,
-        action: Action = Action.UNSET,
-        addpath: int | None = None,
-    ) -> None:
-        MVPN.__init__(self, afi=afi, action=action, addpath=addpath)
+    def __init__(self, packed: Buffer, afi: AFI) -> None:
+        MVPN.__init__(self, afi=afi)
         self._packed = packed
 
     @classmethod
@@ -54,8 +47,6 @@ class SharedJoin(MVPN):
         source: IP,
         group: IP,
         source_as: int,
-        action: Action | None = None,
-        addpath: int | None = None,
     ) -> 'SharedJoin':
         """Factory method to create SharedJoin from semantic parameters."""
         packed = (
@@ -66,7 +57,7 @@ class SharedJoin(MVPN):
             + bytes([len(group) * 8])
             + group.pack_ip()
         )
-        return cls(packed, afi, action, addpath)
+        return cls(packed, afi)
 
     @property
     def rd(self) -> RouteDistinguisher:

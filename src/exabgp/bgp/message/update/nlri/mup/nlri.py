@@ -47,8 +47,12 @@ class MUP(NLRI):
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
 
-    def __init__(self, afi: AFI, action: Action = Action.ANNOUNCE) -> None:
-        NLRI.__init__(self, afi, SAFI.mup, action)
+    def __init__(self, afi: AFI) -> None:
+        """Create a MUP NLRI.
+
+        Note: action defaults to UNSET, set after creation (announce/withdraw).
+        """
+        NLRI.__init__(self, afi, SAFI.mup)
         self._packed: bytes = b''
 
     def __hash__(self) -> int:

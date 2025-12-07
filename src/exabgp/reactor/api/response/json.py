@@ -367,9 +367,14 @@ class JSON:
                 nexthop = str(nlri.nexthop)
             except (AttributeError, TypeError, ValueError):
                 nexthop = 'null'
-            if nlri.action == Action.ANNOUNCE:  # pylint: disable=E1101
+            if nlri.EOR:
+                # EOR is neither announce nor withdraw - skip action check
                 plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)
-            if nlri.action == Action.WITHDRAW:  # pylint: disable=E1101
+            elif nlri.action == Action.UNSET:  # pylint: disable=E1101
+                raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {nlri}')
+            elif nlri.action == Action.ANNOUNCE:  # pylint: disable=E1101
+                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)
+            elif nlri.action == Action.WITHDRAW:  # pylint: disable=E1101
                 minus.setdefault(nlri.family().afi_safi(), []).append(nlri)
 
         add = []

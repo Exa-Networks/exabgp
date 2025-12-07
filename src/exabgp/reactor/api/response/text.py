@@ -121,6 +121,8 @@ class Text:
         for nlri in update.nlris:
             if nlri.EOR:
                 r += f'{prefix} route {nlri.extensive()}\n'
+            elif nlri.action == Action.UNSET:  # pylint: disable=E1101
+                raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {nlri}')
             elif nlri.action == Action.ANNOUNCE:  # pylint: disable=E1101
                 if nlri.nexthop:
                     r += f'{prefix} announced {nlri.extensive()}{attributes}\n'

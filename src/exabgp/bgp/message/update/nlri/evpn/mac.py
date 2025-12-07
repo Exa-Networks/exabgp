@@ -75,7 +75,7 @@ class MAC(EVPN):
         maclen: int,
         label: Labels | None,
         ip: IP | None,
-        action: Action = Action.ANNOUNCE,
+        action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'MAC':
         """Factory method to create MAC from semantic parameters.

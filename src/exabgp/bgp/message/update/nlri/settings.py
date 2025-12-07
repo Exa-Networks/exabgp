@@ -52,7 +52,7 @@ class VPLSSettings:
     offset: int | None = None
     size: int | None = None
     nexthop: IP = field(default_factory=lambda: IP.NoNextHop)
-    action: Action = field(default=Action.ANNOUNCE)
+    action: Action = field(default=Action.UNSET)
 
     def set(self, name: str, value: Any) -> None:
         """Set a field with validation.
@@ -126,7 +126,7 @@ class INETSettings:
     cidr: 'CIDR | None' = None
     afi: AFI | None = None
     safi: SAFI | None = None
-    action: Action = field(default=Action.ANNOUNCE)
+    action: Action = field(default=Action.UNSET)
     nexthop: IP = field(default_factory=lambda: IP.NoNextHop)
     path_info: PathInfo = field(default_factory=lambda: PathInfo.DISABLED)
     labels: 'Labels | None' = None
@@ -177,7 +177,7 @@ class FlowSettings:
 
     afi: AFI | None = None
     safi: SAFI | None = None
-    action: Action = field(default=Action.ANNOUNCE)
+    action: Action = field(default=Action.UNSET)
     nexthop: IP = field(default_factory=lambda: IP.NoNextHop)
     rules: dict = field(default_factory=dict)  # dict[int, list[FlowRule]]
     rd: 'RouteDistinguisher | None' = None

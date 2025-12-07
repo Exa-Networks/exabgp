@@ -96,23 +96,26 @@ def __init__(self, packed: bytes) -> None:
 
     Args:
         packed: N bytes wire format (ALWAYS required)
+
+    Note: action defaults to UNSET, set after creation (announce/withdraw).
     """
     NLRI.__init__(self, AFI.xxx, SAFI.yyy)
-    self.action = Action.ANNOUNCE
     self.nexthop = IP.NoNextHop
 
     self._packed: bytes = packed  # ALWAYS required, never None
 ```
 
 **No builder mode storage needed** - `_packed` is always present.
+**Do NOT set `self.action`** - it defaults to `Action.UNSET` from base class, set after creation.
 
 #### 3.4 Add Factory Method
 ```python
 @classmethod
-def make_xxx(cls, field1, field2, ..., action=Action.ANNOUNCE, addpath=PathInfo.DISABLED) -> 'ClassName':
+def make_xxx(cls, field1, field2, ...) -> 'ClassName':
     """Factory method to create from components.
 
     Used by configuration parsing - packs fields immediately.
+    Note: action defaults to UNSET - caller must set after creation.
     """
     packed = (
         pack('!H', length)  # Include length prefix!
@@ -120,13 +123,11 @@ def make_xxx(cls, field1, field2, ..., action=Action.ANNOUNCE, addpath=PathInfo.
         + pack('!H', field2)
         # ...
     )
-    instance = cls(packed)
-    instance.action = action
-    instance.addpath = addpath
-    return instance
+    return cls(packed)
 ```
 
 **No `make_empty()` needed** - configuration uses `make_xxx()` with all fields.
+**Do NOT accept action parameter** - caller sets `nlri.action = action` after creation.
 
 #### 3.5 Convert Fields to @property Methods (CRITICAL)
 

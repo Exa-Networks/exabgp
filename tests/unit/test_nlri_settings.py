@@ -31,7 +31,7 @@ class TestVPLSSettings:
         assert settings.base is None
         assert settings.offset is None
         assert settings.size is None
-        assert settings.action == Action.ANNOUNCE
+        assert settings.action == Action.UNSET
         assert settings.nexthop is IP.NoNextHop
 
     def test_validate_missing_rd(self) -> None:
@@ -185,11 +185,11 @@ class TestVPLSSettings:
             settings.set('base', 0x100000)
 
     def test_action_default(self) -> None:
-        """Default action is ANNOUNCE"""
+        """Default action is UNSET"""
         from exabgp.bgp.message.update.nlri.settings import VPLSSettings
 
         settings = VPLSSettings()
-        assert settings.action == Action.ANNOUNCE
+        assert settings.action == Action.UNSET
 
     def test_action_withdraw(self) -> None:
         """Action can be set to WITHDRAW"""
@@ -331,7 +331,7 @@ class TestINETSettings:
         assert settings.cidr is None
         assert settings.afi is None
         assert settings.safi is None
-        assert settings.action == Action.ANNOUNCE
+        assert settings.action == Action.UNSET
         assert settings.nexthop is IP.NoNextHop
         assert settings.path_info is PathInfo.DISABLED
         assert settings.labels is None
@@ -431,11 +431,11 @@ class TestINETSettings:
         assert settings.safi == SAFI.unicast
 
     def test_action_default(self) -> None:
-        """Default action is ANNOUNCE"""
+        """Default action is UNSET"""
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
         settings = INETSettings()
-        assert settings.action == Action.ANNOUNCE
+        assert settings.action == Action.UNSET
 
 
 class TestINETFromSettings:
@@ -683,7 +683,7 @@ class TestFlowSettings:
         settings = FlowSettings()
         assert settings.afi is None
         assert settings.safi is None
-        assert settings.action == Action.ANNOUNCE
+        assert settings.action == Action.UNSET
         assert settings.nexthop is IP.NoNextHop
         assert settings.rules == {}
         assert settings.rd is None

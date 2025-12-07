@@ -166,7 +166,7 @@ class INET(NLRI):
         safi: SAFI,
         packed: bytes,
         mask: int,
-        action: Action = Action.ANNOUNCE,
+        action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
         nexthop: 'IP | None' = None,
     ) -> 'INET':

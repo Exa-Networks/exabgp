@@ -38,7 +38,7 @@ class NLRICollection:
     _MODE_PACKED = 1  # Created from wire bytes (unpack path)
     _MODE_NLRIS = 2  # Created from NLRI list (semantic path)
 
-    def __init__(self, packed: bytes, context: OpenContext, action: Action = Action.ANNOUNCE) -> None:
+    def __init__(self, packed: bytes, context: OpenContext, action: Action = Action.UNSET) -> None:
         """Create NLRICollection from wire-format bytes.
 
         Args:

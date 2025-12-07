@@ -79,7 +79,7 @@ class RTC(NLRI):
         cls,
         origin: ASN,
         rt: RouteTarget | None,
-        action: Action = Action.ANNOUNCE,
+        action: Action = Action.UNSET,
         nexthop: Any = IP.NoNextHop,
     ) -> 'RTC':
         """Factory method to create an RTC NLRI.

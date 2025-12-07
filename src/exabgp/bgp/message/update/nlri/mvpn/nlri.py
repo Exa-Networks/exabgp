@@ -39,8 +39,8 @@ class MVPN(NLRI):
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
 
-    def __init__(self, afi: AFI, action: Action = Action.UNSET, addpath: int | None = None) -> None:
-        NLRI.__init__(self, afi=afi, safi=SAFI.mcast_vpn, action=action)
+    def __init__(self, afi: AFI) -> None:
+        NLRI.__init__(self, afi=afi, safi=SAFI.mcast_vpn)
 
     def __hash__(self) -> int:
         return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed.hex()))

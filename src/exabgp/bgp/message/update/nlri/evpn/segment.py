@@ -56,7 +56,7 @@ class EthernetSegment(EVPN):
         rd: RouteDistinguisher,
         esi: ESI,
         ip: IP,
-        action: Action = Action.ANNOUNCE,
+        action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'EthernetSegment':
         """Factory method to create EthernetSegment from semantic parameters.

@@ -41,7 +41,7 @@ class TestVPLSCreation:
         assert vpls.base == 262145
         assert vpls.offset == 1
         assert vpls.size == 8
-        assert vpls.action == Action.ANNOUNCE
+        assert vpls.action == Action.UNSET
         assert vpls.nexthop is IP.NoNextHop
 
     def test_create_vpls_various_values(self) -> None:

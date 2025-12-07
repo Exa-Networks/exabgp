@@ -79,7 +79,7 @@ class Prefix(EVPN):
         ip: IP,
         iplen: int,
         gwip: IP,
-        action: Action = Action.ANNOUNCE,
+        action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'Prefix':
         """Factory method to create Prefix from semantic parameters.

@@ -1314,6 +1314,9 @@ class TypeSelectorValidator(Validator[list[Any]]):
         else:
             nlri = factory(tokeniser, self.afi)
 
+        # Set action after factory (action defaults to UNSET, must be set)
+        nlri.action = self.action_type
+
         route = Route(nlri, AttributeCollection())
 
         # Process remaining tokens as attributes

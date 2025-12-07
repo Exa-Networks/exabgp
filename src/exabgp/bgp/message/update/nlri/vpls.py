@@ -64,10 +64,11 @@ class VPLS(NLRI):
 
         Args:
             packed: 19 bytes wire format (length + RD + endpoint + offset + size + base)
+
+        Note: action defaults to UNSET, set after creation (announce/withdraw).
         """
         # Family.__init__ detects afi/safi properties and skips setting them
         NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
-        self.action = Action.ANNOUNCE
         self.nexthop = IP.NoNextHop
 
         self._packed: bytes = packed
@@ -81,7 +82,7 @@ class VPLS(NLRI):
         base: int,
         offset: int,
         size: int,
-        action: Action = Action.ANNOUNCE,
+        action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'VPLS':
         """Factory method to create a VPLS NLRI from components.

@@ -98,7 +98,11 @@ DSCP_MAX_VALUE = 0b111111  # DSCP is a 6-bit field (0-63)
 
 
 def flow(tokeniser: 'Tokeniser') -> Route:
-    return Route(Flow.make_flow(), AttributeCollection())
+    from exabgp.bgp.message import Action
+
+    nlri = Flow.make_flow()
+    nlri.action = Action.ANNOUNCE  # Flow routes are always announcements
+    return Route(nlri, AttributeCollection())
 
 
 def source(tokeniser: 'Tokeniser') -> Generator[Flow4Source | Flow6Source, None, None]:

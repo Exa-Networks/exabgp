@@ -57,12 +57,11 @@ class EVPN(NLRI):
             packed: Complete wire format bytes (type + length + payload)
 
         Note: action, addpath, and nexthop are NOT part of NLRI wire format.
+        - action defaults to UNSET, set after creation (announce/withdraw)
         - nexthop is in MP_REACH_NLRI attribute (RFC 4760)
         - addpath is a prefix when negotiated (RFC 7911)
-        Set these after construction or use factory methods.
         """
         NLRI.__init__(self, AFI.l2vpn, SAFI.evpn)
-        self.action = Action.ANNOUNCE
         self.nexthop = IP.NoNextHop
         self._packed = packed  # Complete wire format: type(1) + length(1) + payload
 

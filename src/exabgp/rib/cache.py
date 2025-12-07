@@ -67,6 +67,8 @@ class Cache:
             return False
 
         # Withdraws are never duplicates - they always need to be processed
+        if route.nlri.action == Action.UNSET:
+            raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
         if route.nlri.action == Action.WITHDRAW:
             return False
 
@@ -126,6 +128,8 @@ class Cache:
             # Use explicit action if provided, otherwise fall back to nlri.action
             actual_action = action if action is not None else nlri.action
 
+        if actual_action == Action.UNSET:
+            raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {nlri}')
         if actual_action == Action.ANNOUNCE:
             # Store as Route for backward compatibility with cached_routes()
             from exabgp.rib.route import Route

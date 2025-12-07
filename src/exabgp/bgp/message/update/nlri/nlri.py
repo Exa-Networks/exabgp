@@ -68,8 +68,16 @@ class NLRI(Family):
         instance._packed = b''
         return instance
 
-    # XXX: TODO: we need to change the API to pass packed here
     def __init__(self, afi: AFI, safi: SAFI, action: int = Action.UNSET, addpath: PathInfo = PathInfo.DISABLED) -> None:
+        """Initialize NLRI base class.
+
+        Args:
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            action: UNSET by default - MUST be set to ANNOUNCE or WITHDRAW after creation.
+                    Code checking action should raise an error if it encounters UNSET.
+            addpath: Path identifier for ADD-PATH (RFC 7911), DISABLED by default
+        """
         Family.__init__(self, afi, safi)
         self.action = action
         self.addpath = addpath

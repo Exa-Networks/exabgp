@@ -238,7 +238,9 @@ def mvpn_sharedjoin(tokeniser: Any, afi: AFI, action: Any) -> SharedJoin:
     if asnum > ASN_MAX_VALUE:
         raise Exception(f"expect source-as to be a integer in the range 0-{ASN_MAX_VALUE}, but received '{value}'")
 
-    return SharedJoin.make_sharedjoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
+    nlri = SharedJoin.make_sharedjoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum)
+    nlri.action = action
+    return nlri
 
 
 # source-join source <ip> group <ip> rd <rd> source-as <source-as>
@@ -269,7 +271,9 @@ def mvpn_sourcejoin(tokeniser: Any, afi: AFI, action: Any) -> SourceJoin:
     if asnum > ASN_MAX_VALUE:
         raise Exception(f"expect source-as to be a integer in the range 0-{ASN_MAX_VALUE}, but received '{value}'")
 
-    return SourceJoin.make_sourcejoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum, action=action)
+    nlri = SourceJoin.make_sourcejoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum)
+    nlri.action = action
+    return nlri
 
 
 #'source-ad source <ip address> group <ip address> rd <rd>'
@@ -292,7 +296,9 @@ def mvpn_sourcead(tokeniser: Any, afi: AFI, action: Any) -> SourceAD:
     tokeniser.consume('rd')
     rd = route_distinguisher(tokeniser)
 
-    return SourceAD.make_sourcead(rd=rd, afi=afi, source=sourceip, group=groupip, action=action)
+    nlri = SourceAD.make_sourcead(rd=rd, afi=afi, source=sourceip, group=groupip)
+    nlri.action = action
+    return nlri
 
 
 # 'mup-isd <ip prefix> rd <rd>',

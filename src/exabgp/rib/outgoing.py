@@ -358,7 +358,10 @@ class OutgoingRIB(Cache):
 
                 attributes = new_attr[attr_index]
 
-                # Separate announces and withdraws based on nlri.action
+                # Validate and separate announces and withdraws based on nlri.action
+                for route in routes.values():
+                    if route.nlri.action == Action.UNSET:
+                        raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
                 announces = [route.nlri for route in routes.values() if route.nlri.action == Action.ANNOUNCE]
                 withdraws = [route.nlri for route in routes.values() if route.nlri.action == Action.WITHDRAW]
 
@@ -384,6 +387,8 @@ class OutgoingRIB(Cache):
 
                 # Non-grouped: one Update per NLRI
                 for route in routes.values():
+                    if route.nlri.action == Action.UNSET:
+                        raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
                     if route.nlri.action == Action.WITHDRAW:
                         yield UpdateCollection([], [route.nlri], attributes)
                     else:

@@ -86,7 +86,10 @@ class ParseFlow(Section):
 
 @ParseFlow.register('route', 'append-route')
 def route(tokeniser: Any) -> list[Route]:
+    from exabgp.bgp.message import Action
+
     flow_nlri = Flow.make_flow()
+    flow_nlri.action = Action.ANNOUNCE  # Flow routes are always announcements
     flow_route: Route = Route(flow_nlri, AttributeCollection())
 
     while True:

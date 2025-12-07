@@ -55,7 +55,7 @@ class Multicast(EVPN):
         rd: RouteDistinguisher,
         etag: EthernetTag,
         ip: IP,
-        action: Action = Action.ANNOUNCE,
+        action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'Multicast':
         """Factory method to create Multicast from semantic parameters.
