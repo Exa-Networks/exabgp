@@ -1272,6 +1272,11 @@ class TypeSelectorValidator(Validator[list[Any]]):
 
     The factory function creates the NLRI and parses its specific fields.
     Then this validator processes remaining tokens as attributes.
+
+    Note: Unlike RouteBuilderValidator, TypeSelector uses factory mode where
+    the NLRI is fully constructed by the factory. Post-factory attributes
+    (next-hop, extended-community) are then applied. This pattern does not
+    require deferred construction since factories create complete NLRIs.
     """
 
     name: str = 'type-selector'
@@ -1347,7 +1352,12 @@ class TypeSelectorValidator(Validator[list[Any]]):
         return [route]
 
     def _apply_action(self, route: Route, command: str, action: str, value: Any, used_afi: bool = False) -> None:
-        """Apply parsed value to Route object based on action."""
+        """Apply parsed value to Route object based on action.
+
+        Note: 'nlri-set' action is not supported for TypeSelector - factories
+        should create complete NLRIs. Use Settings pattern with RouteBuilder
+        for types that need deferred NLRI construction.
+        """
         from exabgp.protocol.family import AFI
 
         if action == 'attribute-add':
@@ -1365,10 +1375,6 @@ class TypeSelectorValidator(Validator[list[Any]]):
                     pass  # Skip NextHop attr for AFI-aware validators with IPv6
                 else:
                     route.attributes.add(attribute)
-        elif action == 'nlri-set':
-            assign = getattr(self.schema, 'assign', {})
-            field_name = assign.get(command, command)
-            route.nlri.assign(field_name, value)
         elif action == 'nop':
             pass
         else:

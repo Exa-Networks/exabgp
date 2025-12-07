@@ -495,6 +495,13 @@ Phase 5: Remove Mutation (breaking)
 
 ### Before Each Phase
 
+0. **Verify RFC documentation exists**
+   ```bash
+   # Check if wire format is documented
+   grep -n "RFC\|wire format\|Wire format" src/exabgp/bgp/message/update/nlri/<module>.py
+   ```
+   If NOT documented: Read RFC, add wire format diagram to code BEFORE changes.
+
 1. **Identify affected code** - list files, functions, classes
 2. **Find existing tests:**
    ```bash
@@ -730,7 +737,46 @@ Each phase is independently deployable:
 **Phase 3 COMPLETE!**
 
 **Resume Point:**
-- Phase 4: TypeSelectorValidator for MUP/MVPN (if needed)
+- ~~Phase 4: TypeSelectorValidator for MUP/MVPN (if needed)~~
+- Phase 5: Remove mutation support from NLRI classes
+
+### 2025-12-07 - Phase 4: TypeSelectorValidator Cleanup
+
+**Analysis:**
+TypeSelectorValidator uses factory mode - factories create complete NLRIs directly.
+This differs from RouteBuilder where NLRI is built incrementally.
+
+Key findings:
+- MUP factories (srv6_mup_isd, etc.) create fully-constructed NLRIs
+- MVPN factories similarly create complete NLRIs
+- MUP schema had broken `label` field with `nlri-set` action - MUP NLRI has no label slot
+- Per draft-mpmz-bess-mup-safi: MPLS labels are carried via Extended Community, NOT in NLRI
+
+**Completed:**
+- ✅ Removed broken `label` field from MUP schema (was using `nlri-set` but MUP has no label)
+- ✅ Added `settings_class` and `assign` fields to TypeSelectorBuilder (for future use)
+- ✅ Updated TypeSelectorValidator to remove unsupported `nlri-set` action
+- ✅ Added documentation to `mup/__init__.py` explaining MUP NLRI format and label handling
+- ✅ All tests pass (11 suites, 43.7s)
+
+**Files modified:**
+- `src/exabgp/configuration/announce/mup.py` - Removed broken label field
+- `src/exabgp/configuration/schema.py` - Added settings_class, assign to TypeSelectorBuilder
+- `src/exabgp/configuration/validator.py` - Removed nlri-set from TypeSelectorValidator
+- `src/exabgp/bgp/message/update/nlri/mup/__init__.py` - Added MUP format documentation
+
+**Phase 4 Summary:**
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| MUP schema | ✅ Fixed | Removed broken label nlri-set |
+| TypeSelectorBuilder | ✅ Updated | Added settings_class for future |
+| TypeSelectorValidator | ✅ Cleaned | No nlri-set support (factories create complete NLRIs) |
+| MUP documentation | ✅ Added | NLRI format and label handling |
+
+**Phase 4 COMPLETE!**
+
+**Resume Point:**
 - Phase 5: Remove mutation support from NLRI classes
 
 ---

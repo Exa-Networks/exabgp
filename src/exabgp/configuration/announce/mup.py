@@ -23,7 +23,6 @@ from exabgp.configuration.schema import TypeSelectorBuilder, Leaf, LeafList, Val
 from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.static.parser import next_hop
-from exabgp.configuration.static.mpls import label
 from exabgp.configuration.static.mpls import prefix_sid_srv6
 from exabgp.configuration.static.mpls import srv6_mup_isd
 from exabgp.configuration.static.mpls import srv6_mup_dsd
@@ -35,6 +34,7 @@ from exabgp.configuration.static.parser import extended_community
 class AnnounceMup(ParseAnnounce):
     # Schema for MUP routes using TypeSelectorBuilder
     # First token selects type (mup-isd, mup-dsd, etc.), factory parses NLRI fields
+    # Note: MUP factories create complete NLRIs - no post-factory NLRI mutation needed
     schema = TypeSelectorBuilder(
         description='MUP route announcement',
         type_factories={
@@ -50,12 +50,6 @@ class AnnounceMup(ParseAnnounce):
                 description='Next hop IP address',
                 action='nexthop-and-attribute',
                 validator=LegacyParserValidator(parser_func=next_hop, name='next-hop', accepts_afi=True),
-            ),
-            'label': Leaf(
-                type=ValueType.LABEL,
-                description='MPLS label',
-                action='nlri-set',
-                validator=LegacyParserValidator(parser_func=label, name='label'),
             ),
             'bgp-prefix-sid-srv6': Leaf(
                 type=ValueType.STRING,

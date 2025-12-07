@@ -485,7 +485,12 @@ class TypeSelectorBuilder(Container):
     Used for MUP and MVPN routes where first token selects the NLRI constructor,
     which parses NLRI-specific fields, then common attributes follow.
 
-    Example:
+    Supports two modes:
+    1. Factory mode (type_factories): Factory creates NLRI, attributes applied after
+    2. Settings mode (settings_class): For types needing deferred construction
+       (currently unused - factories create complete NLRIs)
+
+    Example (factory mode):
         TypeSelectorBuilder(
             type_factories={
                 'mup-isd': srv6_mup_isd,
@@ -502,10 +507,14 @@ class TypeSelectorBuilder(Container):
         type_factories: Dict mapping type name to factory function
         factory_needs_action: If True, factory is called with (tokeniser, afi, action)
                               If False, factory is called with (tokeniser, afi)
+        settings_class: Optional Settings dataclass for deferred construction
+        assign: Dict mapping command names to NLRI field names for nlri-set actions
     """
 
     type_factories: dict[str, Callable[..., Any]] = field(default_factory=dict)
     factory_needs_action: bool = False
+    settings_class: type | None = None  # Settings dataclass (for future use)
+    assign: dict[str, str] = field(default_factory=dict)  # Command -> NLRI field mapping
 
     @property
     def definition(self) -> list[str]:
