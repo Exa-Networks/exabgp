@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import error, unpack
-from typing import Generator, TYPE_CHECKING
+from typing import TYPE_CHECKING, Generator
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -50,12 +51,9 @@ class RouteRefresh(Message):
     end = 2
 
     def __init__(self, packed: Buffer) -> None:
-        # Convert to bytearray first - this gives us length and ownership
-        self._buffer = bytearray(packed)
-        if len(self._buffer) != 4:
-            raise ValueError(f'RouteRefresh requires exactly 4 bytes, got {len(self._buffer)}')
-        # Two-buffer pattern: bytearray owns data, memoryview provides zero-copy slicing
-        self._packed = memoryview(self._buffer)
+        if len(packed) != 4:
+            raise ValueError(f'RouteRefresh requires exactly 4 bytes, got {len(packed)}')
+        self._packed = packed
 
     @classmethod
     def make_route_refresh(cls, afi: int, safi: int, reserved: int = 0) -> 'RouteRefresh':

@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import unpack
 from typing import TYPE_CHECKING, Generator
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -72,7 +73,7 @@ class MPRNLRI(Attribute, Family):
         instance = cls(header + b'\x00\x00', context)
         # Switch to semantic mode
         instance._mode = cls._MODE_NLRIS
-        instance._nlris_cache = nlris
+        instance._nlris_cache: list[NLRI] = nlris
         return instance
 
     @property

@@ -68,7 +68,7 @@ def prefix(tokeniser: 'Tokeniser') -> IPRange:
             mask = 128
 
     tokeniser.afi = IP.toafi(ip)
-    iprange = IPRange.from_string(ip, mask)
+    iprange = IPRange(IP.pton(ip), mask)
 
     if iprange.address() & iprange.mask.hostmask() != 0:
         raise ValueError(

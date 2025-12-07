@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.ip import IP, IPv4, IPv6
 from exabgp.protocol.family import AFI
-from exabgp.bgp.message import Action
+from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.util.types import Buffer
 
 # +-----------------------------------+
 # |      RD   (8 octets)              |
@@ -26,7 +27,7 @@ MVPN_SOURCEAD_IPV4_LENGTH: int = 18  # 8 (RD) + 1 (source len) + 4 (IPv4) + 1 (g
 MVPN_SOURCEAD_IPV6_LENGTH: int = 42  # 8 (RD) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
 
 
-@MVPN.register
+@MVPN.register_mvpn
 class SourceAD(MVPN):
     CODE: ClassVar[int] = 5
     NAME: ClassVar[str] = 'Source Active A-D Route'
@@ -34,13 +35,13 @@ class SourceAD(MVPN):
 
     def __init__(
         self,
-        packed: bytes,
+        packed: Buffer,
         afi: AFI,
-        action: Action | None = None,
+        action: Action,
         addpath: int | None = None,
     ) -> None:
         MVPN.__init__(self, afi=afi, action=action, addpath=addpath)
-        self._packed = packed
+        self._packed_mvpn = packed
 
     @classmethod
     def make_sourcead(
@@ -53,7 +54,13 @@ class SourceAD(MVPN):
         addpath: int | None = None,
     ) -> 'SourceAD':
         """Factory method to create SourceAD from semantic parameters."""
-        packed = rd.pack_rd() + bytes([len(source) * 8]) + source.pack_ip() + bytes([len(group) * 8]) + group.pack_ip()
+        packed = (
+            bytes(rd.pack_rd())
+            + bytes([len(source) * 8])
+            + source.pack_ip()
+            + bytes([len(group) * 8])
+            + group.pack_ip()
+        )
         return cls(packed, afi, action, addpath)
 
     @property
@@ -91,7 +98,7 @@ class SourceAD(MVPN):
         return hash((self.rd, self.source, self.group))
 
     @classmethod
-    def unpack_mvpn_route(cls, data: bytes, afi: AFI) -> SourceAD:
+    def unpack_mvpn(cls, data: bytes, afi: AFI) -> 'MVPN':
         datalen = len(data)
         if datalen not in (MVPN_SOURCEAD_IPV4_LENGTH, MVPN_SOURCEAD_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Unsupported Source Active A-D route length ({datalen} bytes).')

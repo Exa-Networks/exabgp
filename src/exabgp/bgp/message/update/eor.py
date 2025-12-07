@@ -7,19 +7,19 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.ip import IP
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import AttributeCollection
-from exabgp.bgp.message.update.nlri import NLRI as _NLRI
+from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
 
 # =================================================================== End-Of-RIB
 # not technically a different message type but easier to treat as one
@@ -29,7 +29,7 @@ class EOR(Message):
     ID = Message.CODE.UPDATE
     TYPE = bytes([Message.CODE.UPDATE])
 
-    class NLRI(_NLRI):
+    class EOR_NLRI(NLRI):
         PREFIX: bytes = b'\x00\x00\x00\x07\x90\x0f\x00\x03'
         MP_LENGTH: int = len(PREFIX) + 1 + 2  # len(AFI) and len(SAFI)
         EOR: bool = True  # Override class variable
@@ -37,18 +37,18 @@ class EOR(Message):
         nexthop = IP.NoNextHop
 
         def __init__(self, afi: AFI, safi: SAFI, action: Action) -> None:
-            _NLRI.__init__(self, afi, safi, action)
+            NLRI.__init__(self, afi, safi, action)
             self.action = action
             self.afi = afi
             self.safi = safi
 
-        def _pack_nlri_simple(self) -> bytes:
+        def _pack_nlri_simple(self) -> Buffer:
             """Pack NLRI without negotiated-dependent data (no addpath)."""
             if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
                 return b'\x00\x00\x00\x00'
             return self.PREFIX + self.afi.pack_afi() + self.safi.pack_safi()
 
-        def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
+        def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
             # EOR (End-of-RIB) marker - addpath not applicable
             return self._pack_nlri_simple()
 
@@ -70,7 +70,7 @@ class EOR(Message):
     def __init__(self, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
         Message.__init__(self)
         self.nlris = [
-            EOR.NLRI(afi, safi, action),
+            EOR.EOR_NLRI(afi, safi, action),
         ]
         self.attributes = AttributeCollection()
 
@@ -82,7 +82,7 @@ class EOR(Message):
 
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: 'Negotiated') -> 'EOR':
-        header_length = len(EOR.NLRI.PREFIX)
+        header_length = len(EOR.EOR_NLRI.PREFIX)
         return cls(
             AFI.unpack_afi(data[header_length : header_length + 2]),
             SAFI.unpack_safi(data[header_length + 2 : header_length + 3]),

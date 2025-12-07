@@ -3,12 +3,13 @@ from __future__ import annotations
 from struct import pack
 from typing import ClassVar
 
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.ip import IP, IPv4, IPv6
 from exabgp.protocol.family import AFI
-from exabgp.bgp.message import Action
+from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.util.types import Buffer
 
 # +-----------------------------------+
 # |      RD   (8 octets)              |
@@ -29,7 +30,7 @@ MVPN_SHAREDJOIN_IPV4_LENGTH: int = 22  # 8 (RD) + 4 (Source AS) + 1 (source len)
 MVPN_SHAREDJOIN_IPV6_LENGTH: int = 46  # 8 (RD) + 4 (Source AS) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
 
 
-@MVPN.register
+@MVPN.register_mvpn
 class SharedJoin(MVPN):
     CODE: ClassVar[int] = 6
     NAME: ClassVar[str] = 'C-Multicast Shared Tree Join route'
@@ -37,9 +38,9 @@ class SharedJoin(MVPN):
 
     def __init__(
         self,
-        packed: bytes,
+        packed: Buffer,
         afi: AFI,
-        action: Action | None = None,
+        action: Action,
         addpath: int | None = None,
     ) -> None:
         MVPN.__init__(self, afi=afi, action=action, addpath=addpath)
@@ -58,7 +59,7 @@ class SharedJoin(MVPN):
     ) -> 'SharedJoin':
         """Factory method to create SharedJoin from semantic parameters."""
         packed = (
-            rd.pack_rd()
+            bytes(rd.pack_rd())
             + pack('!I', source_as)
             + bytes([len(source) * 8])
             + source.pack_ip()
@@ -108,7 +109,7 @@ class SharedJoin(MVPN):
         return hash((self.rd, self.source, self.group, self.source_as))
 
     @classmethod
-    def unpack_mvpn_route(cls, data: bytes, afi: AFI) -> SharedJoin:
+    def unpack_mvpn(cls, data: bytes, afi: AFI) -> 'MVPN':
         datalen = len(data)
         if datalen not in (MVPN_SHAREDJOIN_IPV4_LENGTH, MVPN_SHAREDJOIN_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Invalid C-Multicast Route length ({datalen} bytes).')

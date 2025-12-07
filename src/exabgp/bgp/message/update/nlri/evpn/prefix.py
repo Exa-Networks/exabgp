@@ -13,19 +13,14 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier import Labels
-from exabgp.bgp.message.update.nlri.qualifier import ESI
-from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
-
+from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
-from exabgp.bgp.message import Action
-
-from exabgp.bgp.message.notification import Notify
-
+from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # ------------ EVPN Prefix Advertisement NLRI ------------
 # As described here:
@@ -53,7 +48,7 @@ from exabgp.bgp.message.notification import Notify
 # https://tools.ietf.org/html/draft-rabadan-l2vpn-evpn-prefix-advertisement-03
 
 
-@EVPN.register
+@EVPN.register_evpn_route
 class Prefix(EVPN):
     CODE: ClassVar[int] = 5
     NAME: ClassVar[str] = 'IP Prefix Advertisement'
@@ -61,10 +56,10 @@ class Prefix(EVPN):
 
     def __init__(
         self,
-        packed: bytes,
-        nexthop: IP = IP.NoNextHop,
-        action: Action | None = None,
+        packed: Buffer,
+        action: Action,
         addpath: PathInfo | None = None,
+        nexthop: IP = IP.NoNextHop,
     ) -> None:
         EVPN.__init__(self, action, addpath)
         self._packed = packed
@@ -96,7 +91,7 @@ class Prefix(EVPN):
         """
         label_to_use = label if label else Labels.NOLABEL
         packed = (
-            rd.pack_rd()
+            bytes(rd.pack_rd())
             + esi.pack_esi()
             + etag.pack_etag()
             + bytes([iplen])
@@ -180,7 +175,7 @@ class Prefix(EVPN):
         return hash('{}:{}:{}:{}'.format(self.rd, self.etag, self.ip, self.iplen))
 
     @classmethod
-    def unpack_evpn_route(cls, exdata: bytes) -> Prefix:
+    def unpack_evpn(cls, exdata: Buffer) -> EVPN:
         # Get the data length to understand if addresses are IPv4 or IPv6
         datalen = len(exdata)
 

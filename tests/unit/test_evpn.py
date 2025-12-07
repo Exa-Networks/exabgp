@@ -8,26 +8,24 @@ Tests cover all EVPN route types defined in RFC 7432:
 - Route Type 5: IP Prefix Advertisement (Prefix)
 """
 
-import pytest
 from unittest.mock import Mock
 
-from exabgp.protocol.ip import IP
+import pytest
+
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier import Labels
-from exabgp.bgp.message.update.nlri.qualifier import ESI
-from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
-from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
 from exabgp.bgp.message.update.nlri.evpn.ethernetad import EthernetAD
 from exabgp.bgp.message.update.nlri.evpn.mac import MAC
 from exabgp.bgp.message.update.nlri.evpn.multicast import Multicast
-from exabgp.bgp.message.update.nlri.evpn.segment import EthernetSegment
-from exabgp.bgp.message.update.nlri.evpn.prefix import Prefix
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
-from exabgp.protocol.family import AFI, SAFI
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.evpn.prefix import Prefix
+from exabgp.bgp.message.update.nlri.evpn.segment import EthernetSegment
 from exabgp.bgp.message.update.nlri.nlri import Action
+from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
 
 
 def create_negotiated() -> Negotiated:
@@ -270,7 +268,7 @@ class TestMAC:
         packed = rd.pack_rd() + esi.pack_esi() + etag.pack_etag() + bytes([64])  # Invalid: > 48
 
         with pytest.raises(Notify):
-            MAC.unpack_evpn_route(packed + mac.pack_mac() + bytes([0]) + Labels.make_labels([100], True).pack_labels())
+            MAC.unpack_evpn(packed + mac.pack_mac() + bytes([0]) + Labels.make_labels([100], True).pack_labels())
 
     def test_mac_string_representation(self) -> None:
         """Test string representation of MAC route"""
@@ -505,7 +503,7 @@ class TestEthernetSegment:
         packed = rd.pack_rd() + esi.pack_esi() + bytes([64])  # Invalid: not 32 or 128
 
         with pytest.raises(Notify):
-            EthernetSegment.unpack_evpn_route(packed + bytes([0] * 8))
+            EthernetSegment.unpack_evpn(packed + bytes([0] * 8))
 
     def test_segment_string_representation(self) -> None:
         """Test string representation of EthernetSegment route"""

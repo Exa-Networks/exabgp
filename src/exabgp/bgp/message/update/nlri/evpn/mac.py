@@ -9,18 +9,14 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier import Labels
-from exabgp.bgp.message.update.nlri.qualifier import ESI
-from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
-from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
-
-from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
-from exabgp.bgp.message import Action
-
-from exabgp.bgp.message.notification import Notify
+from exabgp.util.types import Buffer
 
 # EVPN MAC address and IP address length constants (in bits)
 MAC_ADDRESS_LEN_BITS = 48  # Standard MAC address length in bits
@@ -48,7 +44,7 @@ IPV6_ADDRESS_LEN_BITS = 128  # IPv6 address length in bits
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register
+@EVPN.register_evpn_route
 class MAC(EVPN):
     CODE: ClassVar[int] = 2
     NAME: ClassVar[str] = 'MAC/IP advertisement'
@@ -57,9 +53,9 @@ class MAC(EVPN):
     def __init__(
         self,
         packed: bytes,
-        nexthop: IP = IP.NoNextHop,
-        action: Action | None = None,
+        action: Action,
         addpath: PathInfo | None = None,
+        nexthop: IP = IP.NoNextHop,
     ) -> None:
         EVPN.__init__(self, action, addpath)
         self._packed = packed
@@ -83,13 +79,13 @@ class MAC(EVPN):
         label_to_use = label if label else Labels.NOLABEL
         # fmt: off
         packed = (
-            rd.pack_rd()
+            bytes(rd.pack_rd())
             + esi.pack_esi()
             + etag.pack_etag()
             + bytes([maclen])
             + mac.pack_mac()
             + bytes([len(ip) * 8 if ip else 0])
-            + (ip.pack_ip() + label_to_use.pack_labels() if ip else label_to_use.pack_labels())
+            + (bytes(ip.pack_ip()) + label_to_use.pack_labels() if ip else label_to_use.pack_labels())
         )
         # fmt: on
         return cls(packed, nexthop, action, addpath)
@@ -129,7 +125,7 @@ class MAC(EVPN):
         label_start = 30 + iplen_bytes
         return Labels.unpack_labels(self._packed[label_start : label_start + 3])
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         # Note: Per RFC 7432 Section 7.2, the route key for Type 2 should only include
         # etag, mac, and ip (ESI and labels are attributes, not key). However, this
         # implementation uses full packed bytes for index. The __eq__ method correctly
@@ -167,7 +163,7 @@ class MAC(EVPN):
         return hash((self.rd, self.etag, self.mac, self.ip))
 
     @classmethod
-    def unpack_evpn_route(cls, data: bytes) -> MAC:
+    def unpack_evpn(cls, data: Buffer) -> EVPN:
         # Validate the data before creating the instance
         datalen = len(data)
         maclength = data[22]

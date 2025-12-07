@@ -112,7 +112,8 @@
       "Bash(git commit:*)",
       "WebSearch",
       "Bash(uv run python:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(uv run mypy:*)"
     ],
     "deny": []
   },

@@ -6,15 +6,18 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
-from exabgp.protocol.ip import IP
+from struct import pack
+from typing import TYPE_CHECKING, Any, ClassVar
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+from exabgp.bgp.message import Action
+from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
-
-from exabgp.bgp.message.update.nlri.mup.nlri import MUP
-
-from struct import pack
-
+from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # +-----------------------------------+
 # |           RD  (8 octets)          |
@@ -25,7 +28,7 @@ from struct import pack
 # +-----------------------------------+
 
 
-@MUP.register
+@MUP.register_mup_route
 class InterworkSegmentDiscoveryRoute(MUP):
     ARCHTYPE: ClassVar[int] = 1
     CODE: ClassVar[int] = 1
@@ -51,7 +54,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
             offset += 1
 
         prefix_ip_packed = prefix_ip.pack_ip()
-        packed = rd.pack_rd() + pack('!B', prefix_ip_len) + prefix_ip_packed[0:offset]
+        packed = bytes(rd.pack_rd()) + pack('!B', prefix_ip_len) + prefix_ip_packed[0:offset]
         return cls(packed, afi)
 
     @property
@@ -68,10 +71,10 @@ class InterworkSegmentDiscoveryRoute(MUP):
         ip = self._packed[9:]
         padding = size - len(ip)
         if padding > 0:
-            ip = ip + bytes(padding)
+            ip = bytes(ip) + bytes(padding)
         return IP.unpack_ip(ip)
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         return MUP.index(self)
 
     def __eq__(self, other: Any) -> bool:
@@ -92,8 +95,11 @@ class InterworkSegmentDiscoveryRoute(MUP):
         return hash((self.rd, self.prefix_ip_len, self.prefix_ip))
 
     @classmethod
-    def unpack_mup_route(cls, data: bytes, afi: AFI) -> InterworkSegmentDiscoveryRoute:
-        return cls(data, afi)
+    def unpack_mup_route(
+        cls, data: bytes, afi: AFI, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[MUP, Buffer]:
+        # XXX: Most likely buggy as we do not have the end of the MUP for the next iteration
+        return cls(data, afi), b''
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)

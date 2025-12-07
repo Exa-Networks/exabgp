@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.util.types import Buffer
+
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI
 # (since draft-ietf-l2vpn-evpn-05)
 
@@ -19,13 +21,13 @@ class ESI:
     DEFAULT = bytes([0x00] * LENGTH)  # All zeros
     MAX = bytes([0xFF] * LENGTH)  # All ones
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         if len(packed) != self.LENGTH:
             raise ValueError(f'ESI requires exactly {self.LENGTH} bytes, got {len(packed)}')
         self._packed = packed
 
     @classmethod
-    def make_esi(cls, esi_bytes: bytes) -> 'ESI':
+    def make_esi(cls, esi_bytes: Buffer) -> 'ESI':
         """Create ESI from bytes."""
         return cls(esi_bytes)
 
@@ -35,7 +37,7 @@ class ESI:
         return cls(cls.DEFAULT)
 
     @property
-    def esi(self) -> bytes:
+    def esi(self) -> Buffer:
         return self._packed
 
     def __eq__(self, other: object) -> bool:
@@ -63,7 +65,7 @@ class ESI:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def pack_esi(self) -> bytes:
+    def pack_esi(self) -> Buffer:
         return self._packed
 
     def __len__(self) -> int:
@@ -73,7 +75,7 @@ class ESI:
         return hash(self._packed)
 
     @classmethod
-    def unpack_esi(cls, data: bytes) -> 'ESI':
+    def unpack_esi(cls, data: Buffer) -> 'ESI':
         return cls(data[: cls.LENGTH])
 
     def json(self, compact: bool = False) -> str:

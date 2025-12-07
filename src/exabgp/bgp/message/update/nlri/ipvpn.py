@@ -91,8 +91,9 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING, Any, ClassVar
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -291,7 +292,7 @@ class IPVPN(Label):
     def has_rd(cls) -> bool:
         return True
 
-    def _pack_nlri_simple(self) -> bytes:
+    def _pack_nlri_simple(self) -> Buffer:
         """Pack NLRI without negotiated-dependent data (no addpath).
 
         Wire format: [mask][labels][rd][prefix]
@@ -300,7 +301,7 @@ class IPVPN(Label):
         mask = len(self._labels_packed) * 8 + len(self._rd_packed) * 8 + self.cidr.mask
         return bytes([mask]) + self._labels_packed + self._rd_packed + self.cidr.pack_ip()
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         if negotiated.addpath.send(self.afi, self.safi):
             if self.path_info is PathInfo.DISABLED:
                 addpath = PathInfo.NOPATH.pack_path()
@@ -308,9 +309,9 @@ class IPVPN(Label):
                 addpath = self.path_info.pack_path()
         else:
             addpath = b''
-        return addpath + self._pack_nlri_simple()
+        return bytes(addpath) + self._pack_nlri_simple()
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         if self.path_info is PathInfo.NOPATH:
             addpath = b'no-pi'
         elif self.path_info is PathInfo.DISABLED:
@@ -329,8 +330,8 @@ class IPVPN(Label):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple['IPVPN', Buffer]:
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
         """Unpack IPVPN NLRI from wire format.
 
         Uses SAFI to determine RD presence (exact, not heuristic).

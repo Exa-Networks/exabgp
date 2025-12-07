@@ -6,15 +6,18 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
-from exabgp.protocol.ip import IP
+from typing import TYPE_CHECKING, Any, ClassVar
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
-
-from exabgp.bgp.message.update.nlri.mup.nlri import MUP
-
-from exabgp.bgp.message.notification import Notify
-
+from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # +-----------------------------------+
 # |           RD  (8 octets)          |
@@ -23,7 +26,7 @@ from exabgp.bgp.message.notification import Notify
 # +-----------------------------------+
 
 
-@MUP.register
+@MUP.register_mup_route
 class DirectSegmentDiscoveryRoute(MUP):
     ARCHTYPE: ClassVar[int] = 1
     CODE: ClassVar[int] = 2
@@ -42,7 +45,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         afi: AFI,
     ) -> 'DirectSegmentDiscoveryRoute':
         """Factory method to create DSD from semantic parameters."""
-        packed = rd.pack_rd() + ip.pack_ip()
+        packed = bytes(rd.pack_rd()) + ip.pack_ip()
         return cls(packed, afi)
 
     @property
@@ -55,7 +58,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         size = data_len - 8
         return IP.unpack_ip(self._packed[8 : 8 + size])
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         return MUP.index(self)
 
     def __eq__(self, other: Any) -> bool:
@@ -75,12 +78,14 @@ class DirectSegmentDiscoveryRoute(MUP):
         return hash((self.rd, self.ip))
 
     @classmethod
-    def unpack_mup_route(cls, data: bytes, afi: AFI) -> DirectSegmentDiscoveryRoute:
+    def unpack_mup_route(
+        cls, data: bytes, afi: AFI, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[MUP, Buffer]:
         data_len = len(data)
         size = data_len - 8
         if size not in [4, 16]:
             raise Notify(3, 5, 'Invalid IP size, expect 4 or 16 octets. accuracy size %d' % size)
-        return cls(data, afi)
+        return cls(data[:size], afi), data[size:]
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)

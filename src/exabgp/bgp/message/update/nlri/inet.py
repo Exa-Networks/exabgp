@@ -69,9 +69,10 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import unpack
 from typing import TYPE_CHECKING, Any
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -203,7 +204,7 @@ class INET(NLRI):
         elif self.path_info is PathInfo.DISABLED:
             addpath = b'disabled'
         else:
-            addpath = self.path_info.pack_path()
+            addpath = bytes(self.path_info.pack_path())
         return hash(addpath + self._pack_nlri_simple())
 
     def __copy__(self) -> 'INET':
@@ -240,7 +241,7 @@ class INET(NLRI):
             return 'inet nlri next-hop missing'
         return ''
 
-    def _pack_nlri_simple(self) -> bytes:
+    def _pack_nlri_simple(self) -> Buffer:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         return self._packed
 
@@ -253,16 +254,16 @@ class INET(NLRI):
                 addpath = self.path_info.pack_path()
         else:
             addpath = b''
-        return addpath + self._pack_nlri_simple()
+        return bytes(addpath) + self._pack_nlri_simple()
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         if self.path_info is PathInfo.NOPATH:
             addpath = b'no-pi'
         elif self.path_info is PathInfo.DISABLED:
             addpath = b'disabled'
         else:
             addpath = self.path_info.pack_path()
-        return Family.index(self) + addpath + self._packed
+        return bytes(Family.index(self)) + addpath + self._packed
 
     def prefix(self) -> str:
         return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
@@ -275,6 +276,7 @@ class INET(NLRI):
 
     # The announced feature is not used by ExaBGP, is it by BAGPIPE ?
 
+    # XXX: need to review this API
     def json(self, announced: bool = True, compact: bool = False) -> str:
         internal = ', '.join([_ for _ in self._internal(announced) if _])
         if internal:

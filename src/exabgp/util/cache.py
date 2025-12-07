@@ -8,13 +8,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import time
-from typing import TypeVar, Generic
+from typing import TypeVar
 
 KT = TypeVar('KT')
 VT = TypeVar('VT')
 
 
-class Cache(dict, Generic[KT, VT]):
+class Cache(dict[KT, VT]):
     ordered: list[KT]
     min_items: int
     max_items: int

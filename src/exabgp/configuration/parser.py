@@ -10,8 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import IPRange
+from exabgp.protocol.ip import IP, IPRange
 
 if TYPE_CHECKING:
     from exabgp.configuration.core import Tokeniser
@@ -107,7 +106,7 @@ def peer_ip(tokeniser: Tokeniser) -> IPRange:
         mask = 128 if ':' in value else 32
 
     try:
-        return IPRange.from_string(value, mask)
+        return IPRange(IP.pton(value), mask)
     except (OSError, IndexError, ValueError):
         raise ValueError(
             f"'{value}' is not a valid IP address\n  Format: <ip> or <ip>/<prefix> (e.g., 192.0.2.1 or 2001:db8::1/64)"

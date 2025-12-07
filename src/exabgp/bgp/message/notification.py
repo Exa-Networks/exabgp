@@ -8,17 +8,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import string
+from typing import TYPE_CHECKING, ClassVar
+
 from exabgp.util.types import Buffer
-from typing import ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.util import hexbytes
-from exabgp.util import hexstring
-
 from exabgp.bgp.message.message import Message
-
+from exabgp.util import hexbytes, hexstring
 
 # ================================================================== Notification
 # A Notification received from our peer.
@@ -102,12 +100,10 @@ class Notification(Message, Exception):
 
     def __init__(self, packed: Buffer) -> None:
         # Convert to bytearray first - this gives us length and ownership
-        self._buffer = bytearray(packed)
-        if len(self._buffer) < 2:
-            raise ValueError(f'Notification requires at least 2 bytes, got {len(self._buffer)}')
+        if len(packed) < 2:
+            raise ValueError(f'Notification requires at least 2 bytes, got {len(packed)}')
         Exception.__init__(self)
-        # Two-buffer pattern: bytearray owns data, memoryview provides zero-copy slicing
-        self._packed = memoryview(self._buffer)
+        self._packed = packed
 
     @classmethod
     def make_notification(cls, code: int, subcode: int, data: bytes = b'') -> 'Notification':

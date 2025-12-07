@@ -11,15 +11,16 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
+
+from exabgp.util.types import Buffer
 
 
 class EthernetTag:
     MAX = pow(2, 32) - 1
     LENGTH = 4
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         if len(packed) != self.LENGTH:
             raise ValueError(f'EthernetTag requires exactly {self.LENGTH} bytes, got {len(packed)}')
         self._packed = packed
@@ -57,7 +58,7 @@ class EthernetTag:
     def __repr__(self) -> str:
         return repr(self.tag)
 
-    def pack_etag(self) -> bytes:
+    def pack_etag(self) -> Buffer:
         return self._packed
 
     def __len__(self) -> int:
@@ -67,7 +68,7 @@ class EthernetTag:
         return hash(self._packed)
 
     @classmethod
-    def unpack_etag(cls, data: bytes) -> 'EthernetTag':
+    def unpack_etag(cls, data: Buffer) -> 'EthernetTag':
         return cls(data[: cls.LENGTH])
 
     def json(self, compact: bool = False) -> str:

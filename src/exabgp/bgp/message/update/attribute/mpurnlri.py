@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import unpack
 from typing import Generator
 
@@ -18,6 +17,7 @@ from exabgp.bgp.message.open.capability.negotiated import OpenContext
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.nlri import _UNPARSED, NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.util.types import Buffer
 
 # ================================================================= MP Unreachable NLRI (15)
 
@@ -65,7 +65,7 @@ class MPURNLRI(Attribute, Family):
         instance = cls(header, context)
         # Switch to semantic mode
         instance._mode = cls._MODE_NLRIS
-        instance._nlris_cache = nlris
+        instance._nlris_cache: list[NLRI] = nlris
         return instance
 
     @property

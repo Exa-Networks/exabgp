@@ -7,23 +7,20 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, TypeVar
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.protocol.ip import IP
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-
-from exabgp.logger import log
-from exabgp.logger import lazynlri
+from exabgp.logger import lazynlri, log
+from exabgp.protocol.family import AFI, SAFI, Family
 
 T = TypeVar('T', bound='NLRI')
 
@@ -53,7 +50,7 @@ class NLRI(Family):
     action: int
     nexthop: 'IP'
     addpath: 'PathInfo'
-    _packed: bytes  # Wire format bytes (subclass-specific interpretation)
+    _packed: Buffer  # Wire format bytes (subclass-specific interpretation)
 
     # Singleton invalid NLRI (initialized after class definition)
     INVALID: ClassVar['NLRI']
@@ -71,6 +68,7 @@ class NLRI(Family):
         instance._packed = b''
         return instance
 
+    # XXX: TODO: we need to change the API to pass packed here
     def __init__(self, afi: AFI, safi: SAFI, action: int = Action.UNSET, addpath: PathInfo = PathInfo.DISABLED) -> None:
         Family.__init__(self, afi, safi)
         self.action = action
@@ -108,7 +106,7 @@ class NLRI(Family):
         raise NotImplementedError(f'{type(self).__name__} must implement __deepcopy__')
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri().hex()))
+        return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri(Negotiated.UNSET).hex()))
 
     def __eq__(self, other: Any) -> bool:
         return bool(self.index() == other.index())
@@ -131,7 +129,7 @@ class NLRI(Family):
     def __ge__(self, other: Any) -> bool:
         return bool(self == other or self.index() > other.index())
 
-    def feedback(self, action: int) -> str:
+    def feedback(self, action: Action) -> str:
         raise RuntimeError('feedback is not implemented')
 
     def assign(self, name: str, value: Any) -> None:
@@ -141,10 +139,10 @@ class NLRI(Family):
         """Add data to NLRI. Only implemented by Flow NLRI."""
         raise NotImplementedError('add() only implemented by Flow NLRI')
 
-    def index(self) -> bytes:
-        return Family.index(self) + self.pack_nlri()
+    def index(self) -> Buffer:
+        return bytes(Family.index(self)) + self.pack_nlri(Negotiated.UNSET)
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         raise Exception('unimplemented in NLRI children class')
 
     def json(self, compact: bool = False) -> str:

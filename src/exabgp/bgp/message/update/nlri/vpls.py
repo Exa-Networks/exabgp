@@ -8,23 +8,21 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from struct import pack, unpack
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, cast
+
 from exabgp.util.types import Buffer
-from struct import unpack
-from struct import pack
-from typing import Any, ClassVar, Iterator, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
-from exabgp.protocol.ip import IP
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.ip import IP
 
 
 def _unique() -> Iterator[int]:
@@ -106,7 +104,7 @@ class VPLS(NLRI):
             New VPLS instance with packed wire format
         """
         packed = (
-            rd.pack_rd()
+            bytes(rd.pack_rd())
             + pack('!HHH', endpoint, offset, size)
             + pack('!L', (base << 4) | 0x1)[1:]  # 3 bytes with BOS bit
         )
@@ -227,7 +225,7 @@ class VPLS(NLRI):
     def assign(self, name: str, value: Any) -> None:
         setattr(self, name, value)
 
-    def _pack_nlri_simple(self) -> bytes:
+    def _pack_nlri_simple(self) -> Buffer:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         if self._packed is not None:
             # Packed mode - use stored wire bytes
@@ -241,12 +239,12 @@ class VPLS(NLRI):
                 + pack('!L', (self._base << 4) | 0x1)[1:]  # setting the bottom of stack
             )
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for VPLS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.l2vpn, SAFI.vpls)
         return self._pack_nlri_simple()
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         return Family.index(self) + self._pack_nlri_simple()
 
     def json(self, compact: bool | None = None) -> str:

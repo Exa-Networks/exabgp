@@ -18,9 +18,10 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.open.capability.negotiated import OpenContext
-from exabgp.bgp.message.update.nlri.nlri import NLRI, _UNPARSED
+from exabgp.bgp.message.update.nlri.nlri import _UNPARSED, NLRI
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 
 class NLRICollection:
@@ -68,11 +69,11 @@ class NLRICollection:
         instance = cls(b'', context, action)
         # Switch to semantic mode
         instance._mode = cls._MODE_NLRIS
-        instance._nlris_cache = nlris
+        instance._nlris_cache: list[NLRI] = nlris
         return instance
 
     @property
-    def packed(self) -> bytes:
+    def packed(self) -> Buffer:
         """Raw NLRI bytes.
 
         In wire mode: returns the stored wire bytes.
@@ -89,7 +90,7 @@ class NLRICollection:
         # AddPath handling would be done at UPDATE message level
         packed = b''
         for nlri in self._nlris_cache:
-            packed += nlri._pack_nlri_simple()
+            packed += bytes(nlri._pack_nlri_simple())
         return packed
 
     @property
@@ -233,7 +234,7 @@ class MPNLRICollection:
 
         # Wire mode: parse from packed bytes
         if self._mode == self._MODE_PACKED:
-            self._nlris_cache = self._parse_nlris()
+            self._nlris_cache: list[NLRI] = self._parse_nlris()
             return self._nlris_cache
 
         return []

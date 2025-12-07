@@ -7,21 +7,21 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import unpack
 from typing import TYPE_CHECKING
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
-
-from exabgp.bgp.message.open.version import Version
 from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.version import Version
 
 __all__ = [
     'Open',
@@ -74,11 +74,9 @@ class Open(Message):
 
     def __init__(self, packed: Buffer, capabilities: Capabilities) -> None:
         # Convert to bytearray first - this gives us length and ownership
-        self._buffer = bytearray(packed)
-        if len(self._buffer) != self.HEADER_SIZE:
-            raise ValueError(f'Open header requires exactly {self.HEADER_SIZE} bytes, got {len(self._buffer)}')
-        # Two-buffer pattern: bytearray owns data, memoryview provides zero-copy slicing
-        self._packed = memoryview(self._buffer)
+        if len(packed) != self.HEADER_SIZE:
+            raise ValueError(f'Open header requires exactly {self.HEADER_SIZE} bytes, got {len(packed)}')
+        self._packed = packed
         self._capabilities = capabilities
 
     @classmethod

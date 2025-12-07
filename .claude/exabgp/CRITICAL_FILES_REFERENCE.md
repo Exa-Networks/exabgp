@@ -98,14 +98,14 @@ These signatures are part of the public API - changes break compatibility:
 ### NLRI Interface
 ```python
 class NLRI:
-    def pack_nlri(self, negotiated: Negotiated) -> bytes: pass
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer: pass
 
     @classmethod
     def unpack_nlri(
         cls, afi, safi, data, action, addpath, negotiated
     ) -> NLRI: pass
 
-    def index(self) -> bytes: pass
+    def index(self) -> Buffer: pass
 ```
 **Location:** `bgp/message/update/nlri/nlri.py:67, 89`
 

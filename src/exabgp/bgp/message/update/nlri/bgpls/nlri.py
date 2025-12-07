@@ -7,24 +7,20 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
 from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
-
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
-
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.protocol.family import AFI, SAFI, Family
 
 # https://tools.ietf.org/html/rfc7752#section-3.2
 #
@@ -106,17 +102,17 @@ class BGPLS(NLRI):
         NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
         self._packed = b''
 
-    def _pack_nlri_simple(self) -> bytes:
+    def _pack_nlri_simple(self) -> Buffer:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, self.safi)
         return self._pack_nlri_simple()
 
-    def index(self) -> bytes:
-        return Family.index(self) + self._pack_nlri_simple()
+    def index(self) -> Buffer:
+        return bytes(Family.index(self)) + self._pack_nlri_simple()
 
     def __len__(self) -> int:
         return len(self._packed) + 2
@@ -152,7 +148,7 @@ class BGPLS(NLRI):
         return new
 
     @classmethod
-    def register(cls, klass: Type[BGPLS]) -> Type[BGPLS]:
+    def register_bgpls(cls, klass: Type[BGPLS]) -> Type[BGPLS]:
         if klass.CODE in cls.registered_bgpls:
             raise RuntimeError('only one BGP LINK_STATE registration allowed')
         cls.registered_bgpls[klass.CODE] = klass
@@ -160,9 +156,8 @@ class BGPLS(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls: Type[T], afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: PathInfo | None, negotiated
-    ) -> tuple[T, Buffer]:
-        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
         # BGP-LS NLRI header: type(2) + length(2) = 4 bytes minimum
         if len(data) < 4:
             raise Notify(3, 10, f'BGP-LS NLRI too short: need at least 4 bytes, got {len(data)}')
@@ -186,7 +181,7 @@ class BGPLS(NLRI):
                 klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bytes(data[4 : length + 4]), rd)
         else:
             klass = GenericBGPLS(code, bytes(data[4 : length + 4]))
-        klass.CODE = code
+
         klass.action = action
         klass.addpath = addpath
 
@@ -197,19 +192,12 @@ class BGPLS(NLRI):
 
 
 class GenericBGPLS(BGPLS):
+    CODE: int
+
     def __init__(self, code: int, packed: bytes) -> None:
         BGPLS.__init__(self)
         self.CODE = code
-        self._pack(packed)
-
-    def _pack(self, packed: bytes | None = None) -> bytes | None:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-        return None
+        self._packed = packed
 
     def json(self, compact: bool = False) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())

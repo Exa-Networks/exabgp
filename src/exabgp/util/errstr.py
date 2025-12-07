@@ -12,7 +12,9 @@ import errno
 
 def errstr(exc: BaseException) -> str:
     try:
-        code = exc.args[0] if exc.args else exc.errno
+        code: int = exc.args[0] if exc.args else getattr(exc, 'errno', 256)
+        if code == 256:
+            return f'[Errno unknown] {exc!s}'
         return f'[Errno {errno.errorcode.get(code, str(code))}] {exc!s}'
     except KeyError:
         return f'[Errno unknown (key)] {exc!s}'

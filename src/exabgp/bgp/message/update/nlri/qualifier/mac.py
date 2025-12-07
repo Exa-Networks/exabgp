@@ -7,15 +7,17 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
 from typing import Type
 
+from exabgp.util.types import Buffer
 
 # ========================================================================== MAC
 #
 
 
 class MAC:
-    def __init__(self, mac: str | None = None, packed: bytes | None = None) -> None:
+    def __init__(self, mac: str | None = None, packed: Buffer | None = None) -> None:
         self.mac: str | None = mac
         if packed:
             self._packed: bytes = packed
@@ -47,7 +49,7 @@ class MAC:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def pack_mac(self) -> bytes:
+    def pack_mac(self) -> Buffer:
         return self._packed
 
     # Orange code was returning 10 !
@@ -60,7 +62,7 @@ class MAC:
         return hash(self._packed)
 
     @classmethod
-    def unpack_mac(cls: Type[MAC], data: bytes) -> MAC:
+    def unpack_mac(cls: Type[MAC], data: Buffer) -> MAC:
         return cls(':'.join('{:02X}'.format(_) for _ in data[:6]), data[:6])
 
     def json(self, compact: bool = False) -> str:

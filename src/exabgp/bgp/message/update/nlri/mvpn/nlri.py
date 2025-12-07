@@ -1,20 +1,17 @@
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import pack
 from typing import TYPE_CHECKING, Any, ClassVar, Type
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
-
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
-
 from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.protocol.family import AFI, SAFI, Family
 
 # https://datatracker.ietf.org/doc/html/rfc6514
 
@@ -44,7 +41,6 @@ class MVPN(NLRI):
 
     def __init__(self, afi: AFI, action: Action = Action.UNSET, addpath: int | None = None) -> None:
         NLRI.__init__(self, afi=afi, safi=SAFI.mcast_vpn, action=action)
-        self._packed: bytes = b''
 
     def __hash__(self) -> int:
         return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed.hex()))
@@ -66,7 +62,7 @@ class MVPN(NLRI):
     def __repr__(self) -> str:
         return str(self)
 
-    def feedback(self, action: int) -> str:
+    def feedback(self, action: Action) -> str:
         # if self.nexthop is None and action == Action.ANNOUNCE:
         # 	raise RuntimeError('mvpn nlri next-hop is missing')
         return ''
@@ -74,17 +70,17 @@ class MVPN(NLRI):
     def _prefix(self) -> str:
         return 'mvpn:{}:'.format(self.registered_mvpn.get(self.CODE, self).SHORT_NAME.lower())
 
-    def _pack_nlri_simple(self) -> bytes:
+    def _pack_nlri_simple(self) -> Buffer:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for MVPN but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(self.afi, SAFI.mcast_vpn)
         return self._pack_nlri_simple()
 
-    def index(self) -> bytes:
-        return Family.index(self) + self._pack_nlri_simple()
+    def index(self) -> Buffer:
+        return bytes(Family.index(self)) + self._pack_nlri_simple()
 
     def __copy__(self) -> 'MVPN':
         new = self.__class__.__new__(self.__class__)
@@ -108,19 +104,19 @@ class MVPN(NLRI):
         return new
 
     @classmethod
-    def register(cls, klass: Type[MVPN]) -> Type[MVPN]:
+    def register_mvpn(cls, klass: Type[MVPN]) -> Type[MVPN]:
         if klass.CODE in cls.registered_mvpn:
             raise RuntimeError('only one MVPN registration allowed')
         cls.registered_mvpn[klass.CODE] = klass
         return klass
 
     @classmethod
-    def unpack_mvpn_route(cls, data: bytes, afi: AFI) -> 'MVPN':
+    def unpack_mvpn(cls, data: bytes, afi: AFI) -> 'MVPN':
         """Unpack MVPN route from bytes. Must be implemented by subclasses."""
-        raise NotImplementedError('unpack_mvpn_route must be implemented by subclasses')
+        raise NotImplementedError('unpack_mvpn must be implemented by subclasses')
 
     @classmethod
-    def unpack_nlri(
+    def unpack_mvpn_nlri(
         cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[MVPN, Buffer]:
         data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
@@ -134,10 +130,10 @@ class MVPN(NLRI):
             raise Notify(3, 10, f'MVPN NLRI truncated: need {length + 2} bytes, got {len(data)}')
 
         if code in cls.registered_mvpn:
-            klass = cls.registered_mvpn[code].unpack_mvpn_route(bytes(data[2 : length + 2]), afi)
+            klass = cls.registered_mvpn[code].unpack_mvpn(bytes(data[2 : length + 2]), afi)
         else:
             klass = GenericMVPN(afi, code, bytes(data[2 : length + 2]))
-        klass.CODE = code  # dynamic CODE assignment
+
         klass.action = action
         klass.addpath = addpath
 
@@ -148,19 +144,12 @@ class MVPN(NLRI):
 
 
 class GenericMVPN(MVPN):
-    def __init__(self, afi: AFI, code: int, packed: bytes) -> None:
+    CODE: int
+
+    def __init__(self, afi: AFI, code: int, packed: Buffer) -> None:
         MVPN.__init__(self, afi)
         self.CODE = code
-        self._pack(packed)
-
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-        return b''
+        self._packed = packed
 
     def json(self, compact: bool | None = None) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())

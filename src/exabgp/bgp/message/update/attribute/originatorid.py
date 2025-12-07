@@ -7,8 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING, ClassVar
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -84,7 +85,7 @@ class OriginatorID(Attribute):
         """Get packed bytes (IP interface compatibility)."""
         return self._packed
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         """Get the packed data for indexing/caching."""
         return self._packed
 

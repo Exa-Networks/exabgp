@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import unpack
 from typing import TYPE_CHECKING, Any, ClassVar, Generator, cast
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -18,7 +19,6 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, SET, AS2Path
 from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard, TreatAsWithdraw
-from exabgp.bgp.message.update.attribute.watchdog import Watchdog, NoWatchdog
 
 # For bagpipe
 from exabgp.bgp.message.update.attribute.community import Communities
@@ -26,6 +26,7 @@ from exabgp.bgp.message.update.attribute.community.extended.communities import E
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.origin import Origin
+from exabgp.bgp.message.update.attribute.watchdog import NoWatchdog, Watchdog
 from exabgp.logger import lazyattribute, lazymsg, log
 
 
@@ -301,7 +302,7 @@ class AttributeCollection(dict):
         return attributes
 
     @staticmethod
-    def flag_attribute_content(data: Buffer) -> tuple[int, int, bytes]:
+    def flag_attribute_content(data: Buffer) -> tuple[int, int, Buffer]:
         flag = Attribute.Flag(data[0])
         attr = data[1]
 
@@ -509,8 +510,11 @@ class AttributeCollection(dict):
 
         # we sort based on packed values since the items do not
         # necessarily implement __cmp__
-        def pack_(x: Attribute) -> bytes:
-            return x.pack()
+        def pack_(attr: Attribute) -> bytes:
+            # XXX: This is pure guesswork
+            collection = AttributeCollection()
+            collection.add(attr)
+            return bytes(collection.pack_attribute(Negotiated.UNSET))
 
         try:
             for key in set(self.keys()).union(set(other.keys())):

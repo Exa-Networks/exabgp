@@ -7,23 +7,18 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import pack
-from typing import TYPE_CHECKING, Any, ClassVar, Type
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
-
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
-
 from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.util.types import Buffer
 
 # https://tools.ietf.org/html/rfc7432
 
@@ -49,11 +44,7 @@ class EVPN(NLRI):
     # EVPN has no additional instance attributes beyond NLRI base class
     __slots__ = ()
 
-    registered_evpn: ClassVar[dict[int, Type[EVPN]]] = dict()
-
-    # Fixed AFI/SAFI for this single-family NLRI type (class attributes shadow slots)
-    afi: ClassVar[AFI] = AFI.l2vpn
-    safi: ClassVar[SAFI] = SAFI.evpn
+    registered_evpn: ClassVar[dict[int, type[EVPN]]] = dict()
 
     # NEED to be defined in the subclasses
     CODE: ClassVar[int] = -1
@@ -109,20 +100,26 @@ class EVPN(NLRI):
     def _prefix(self) -> str:
         return 'evpn:{}:'.format(self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower())
 
-    def _pack_nlri_simple(self) -> bytes:
+    def _pack_nlri_simple(self) -> Buffer:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for EVPN (AFI 25, SAFI 70) but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.l2vpn, SAFI.evpn)
         return self._pack_nlri_simple()
 
-    def index(self) -> bytes:
-        return Family.index(self) + self._pack_nlri_simple()
+    def index(self) -> Buffer:
+        return bytes(Family.index(self)) + bytes(self._pack_nlri_simple())
 
     @classmethod
-    def register(cls, klass: Type[EVPN]) -> Type[EVPN]:
+    def unpack_evpn_route(cls, data: Buffer) -> EVPN:
+        """Unpack route-type-specific data. Override in subclasses."""
+        raise NotImplementedError(f'{cls.__name__} must implement unpack_evpn')
+
+    @classmethod
+    def register_evpn_route(cls, klass: type[EVPN]) -> type[EVPN]:
+        """Register an EVPN route type subclass by its CODE."""
         if klass.CODE in cls.registered_evpn:
             raise RuntimeError('only one EVPN registration allowed')
         cls.registered_evpn[klass.CODE] = klass
@@ -130,9 +127,8 @@ class EVPN(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: PathInfo | None, negotiated: Negotiated
-    ) -> tuple[EVPN, Buffer]:
-        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
         # EVPN NLRI: route_type(1) + length(1) + route_data(length)
         if len(data) < 2:
             raise Notify(3, 10, f'EVPN NLRI too short: need at least 2 bytes, got {len(data)}')
@@ -143,33 +139,31 @@ class EVPN(NLRI):
             raise Notify(3, 10, f'EVPN NLRI truncated: need {length + 2} bytes, got {len(data)}')
 
         if code in cls.registered_evpn:
-            klass = cls.registered_evpn[code].unpack_evpn_route(bytes(data[2 : length + 2]))
+            nlri = cls.registered_evpn[code].unpack_evpn(bytes(data[2 : length + 2]))
         else:
-            klass = GenericEVPN(code, bytes(data[2 : length + 2]))
-        klass.CODE = code
-        klass.action = action
-        klass.addpath = addpath
+            nlri = GenericEVPN(code, bytes(data[2 : length + 2]))
+        nlri.action = action
+        nlri.addpath = addpath
 
-        return klass, data[length + 2 :]
+        return nlri, data[length + 2 :]
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())
 
 
 class GenericEVPN(EVPN):
+    """Generic EVPN for unrecognized route types."""
+
+    __slots__ = ('_code',)
+
     def __init__(self, code: int, packed: bytes) -> None:
         EVPN.__init__(self)
-        self.CODE = code
-        self._pack(packed)
+        self._code = code
+        self._packed = packed
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
-
-        if packed:
-            self._packed = packed
-            return packed
-        return b''
+    @property
+    def CODE(self) -> int:  # type: ignore[override]
+        return self._code
 
     def json(self, compact: bool | None = None) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())

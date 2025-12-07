@@ -37,7 +37,7 @@ def measure_route_objects(n: int) -> tuple[float, float]:
     """Measure memory for N Route objects."""
     gc.collect()
     tracemalloc.start()
-    routes = [create_route(i) for i in range(n)]
+    _routes = [create_route(i) for i in range(n)]
     current, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     return peak / 1024 / 1024, peak / n
@@ -137,9 +137,15 @@ def main():
     n = 100000
     mem = measure_rib_operations(n)
     print(f'  Empty RIB:              {mem["rib_empty"] / 1024 / 1024:8.2f} MB')
-    print(f'  After add_to_rib:       {mem["after_add"] / 1024 / 1024:8.2f} MB  ({mem["after_add"] / n:.1f} bytes/route)')
-    print(f'  After cache (updates):  {mem["after_cache"] / 1024 / 1024:8.2f} MB  ({mem["after_cache"] / n:.1f} bytes/route)')
-    print(f'  After del_from_rib:     {mem["after_del"] / 1024 / 1024:8.2f} MB  ({mem["after_del"] / n:.1f} bytes/route)')
+    print(
+        f'  After add_to_rib:       {mem["after_add"] / 1024 / 1024:8.2f} MB  ({mem["after_add"] / n:.1f} bytes/route)'
+    )
+    print(
+        f'  After cache (updates):  {mem["after_cache"] / 1024 / 1024:8.2f} MB  ({mem["after_cache"] / n:.1f} bytes/route)'
+    )
+    print(
+        f'  After del_from_rib:     {mem["after_del"] / 1024 / 1024:8.2f} MB  ({mem["after_del"] / n:.1f} bytes/route)'
+    )
     print(f'  After withdraw updates: {mem["after_withdraw_updates"] / 1024 / 1024:8.2f} MB')
     print()
 
@@ -147,7 +153,7 @@ def main():
     print('Summary:')
     print('-' * 70)
     route_mem_mb, route_mem_per = measure_route_objects(100000)
-    rib_overhead = mem["after_cache"] / n
+    rib_overhead = mem['after_cache'] / n
     total_per_route = route_mem_per + rib_overhead
     print(f'  Route objects (100K):    {route_mem_mb:.2f} MB ({route_mem_per:.1f} bytes/route)')
     print(f'  RIB overhead (100K):     {mem["after_cache"] / 1024 / 1024:.2f} MB ({rib_overhead:.1f} bytes/route)')

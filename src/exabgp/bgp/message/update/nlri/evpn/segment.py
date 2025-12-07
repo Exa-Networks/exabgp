@@ -9,15 +9,12 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from exabgp.protocol.ip import IP
-
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier import ESI
-
-from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message import Action
-
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+from exabgp.bgp.message.update.nlri.qualifier import ESI, RouteDistinguisher
+from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
@@ -33,7 +30,7 @@ from exabgp.bgp.message.notification import Notify
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register
+@EVPN.register_evpn_route
 class EthernetSegment(EVPN):
     CODE: ClassVar[int] = 4
     NAME: ClassVar[str] = 'Ethernet Segment'
@@ -41,10 +38,10 @@ class EthernetSegment(EVPN):
 
     def __init__(
         self,
-        packed: bytes,
-        nexthop: IP = IP.NoNextHop,
-        action: Action | None = None,
+        packed: Buffer,
+        action: Action,
         addpath: Any = None,
+        nexthop: IP = IP.NoNextHop,
     ) -> None:
         EVPN.__init__(self, action, addpath)
         self._packed = packed
@@ -61,7 +58,7 @@ class EthernetSegment(EVPN):
         addpath: Any = None,
     ) -> 'EthernetSegment':
         """Factory method to create EthernetSegment from semantic parameters."""
-        packed = rd.pack_rd() + esi.pack_esi() + bytes([len(ip) * 8]) + ip.pack_ip()
+        packed = bytes(rd.pack_rd()) + esi.pack_esi() + bytes([len(ip) * 8]) + ip.pack_ip()
         return cls(packed, nexthop, action, addpath)
 
     @property
@@ -97,7 +94,7 @@ class EthernetSegment(EVPN):
         return hash((self.rd, self.ip))
 
     @classmethod
-    def unpack_evpn_route(cls, data: bytes) -> EthernetSegment:
+    def unpack_evpn(cls, data: Buffer) -> EVPN:
         iplen = data[18]
 
         if iplen not in (32, 128):

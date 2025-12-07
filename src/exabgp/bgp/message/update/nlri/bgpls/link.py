@@ -14,18 +14,17 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
-from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
+from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
+from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
+from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.neighaddr import NeighAddr
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
-from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
-
-from exabgp.logger import log, lazymsg
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.logger import lazymsg, log
+from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # BGP-LS Link TLV type codes (RFC 7752)
 TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
@@ -72,7 +71,7 @@ TLV_MULTI_TOPO_ID: int = 263  # Multi-Topology Identifier TLV
 #   +-----------+---------------------+--------------+------------------+
 
 
-@BGPLS.register
+@BGPLS.register_bgpls
 class LINK(BGPLS):
     CODE: ClassVar[int] = 2
     NAME: ClassVar[str] = 'bgpls-link'
@@ -232,7 +231,7 @@ class LINK(BGPLS):
     def __hash__(self) -> int:
         return hash((self.CODE, self.domain, self.proto_id, tuple(self.topology_ids), self.route_d))
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         return self._packed
 
     def json(self, compact: bool = False) -> str:

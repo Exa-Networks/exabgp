@@ -9,16 +9,12 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from exabgp.bgp.message import Action
+from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP
-
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier import Labels
-from exabgp.bgp.message.update.nlri.qualifier import ESI
-from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
-
-from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
-from exabgp.bgp.message import Action
+from exabgp.util.types import Buffer
 
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
@@ -33,7 +29,7 @@ from exabgp.bgp.message import Action
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register
+@EVPN.register_evpn_route
 class EthernetAD(EVPN):
     CODE: ClassVar[int] = 1
     NAME: ClassVar[str] = 'Ethernet Auto-Discovery'
@@ -41,10 +37,10 @@ class EthernetAD(EVPN):
 
     def __init__(
         self,
-        packed: bytes,
-        nexthop: IP = IP.NoNextHop,
-        action: Action | None = None,
+        packed: Buffer,
+        action: Action,
         addpath: PathInfo | None = None,
+        nexthop: IP = IP.NoNextHop,
     ) -> None:
         EVPN.__init__(self, action, addpath)
         self._packed = packed
@@ -63,7 +59,7 @@ class EthernetAD(EVPN):
     ) -> 'EthernetAD':
         """Factory method to create EthernetAD from semantic parameters."""
         label_to_use = label if label else Labels.NOLABEL
-        packed = rd.pack_rd() + esi.pack_esi() + etag.pack_etag() + label_to_use.pack_labels()
+        packed = bytes(rd.pack_rd()) + esi.pack_esi() + etag.pack_etag() + label_to_use.pack_labels()
         return cls(packed, nexthop, action, addpath)
 
     @property
@@ -103,7 +99,7 @@ class EthernetAD(EVPN):
         return hash((self.rd, self.etag))
 
     @classmethod
-    def unpack_evpn_route(cls, data: bytes) -> EthernetAD:
+    def unpack_evpn(cls, data: Buffer) -> EVPN:
         return cls(data)
 
     def json(self, compact: bool | None = None) -> str:

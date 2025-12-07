@@ -87,6 +87,7 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # ====================================================== MPLS
 # RFC 3107
@@ -232,12 +233,12 @@ class Label(INET):
     def prefix(self) -> str:
         return '{}{}'.format(INET.prefix(self), self.labels)
 
-    def _pack_nlri_simple(self) -> bytes:
+    def _pack_nlri_simple(self) -> Buffer:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         mask = bytes([len(self._labels_packed) * 8 + self.cidr.mask])
         return mask + self._labels_packed + self.cidr.pack_ip()
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         if negotiated.addpath.send(self.afi, self.safi):
             # ADD-PATH negotiated: MUST send 4-byte path ID
             if self.path_info is PathInfo.DISABLED:
@@ -248,7 +249,7 @@ class Label(INET):
             addpath = b''
         return addpath + self._pack_nlri_simple()
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         if self.path_info is PathInfo.NOPATH:
             addpath = b'no-pi'
         elif self.path_info is PathInfo.DISABLED:

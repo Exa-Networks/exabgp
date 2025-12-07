@@ -7,39 +7,36 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import pack
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
-    Protocol as TypingProtocol,
     Type,
 )
+from typing import (
+    Protocol as TypingProtocol,
+)
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.ip import IP
-from exabgp.protocol.ip.port import Port
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-
-from exabgp.protocol import Protocol
-from exabgp.protocol.resource import BaseValue, NumericValue
-from exabgp.protocol.ip.icmp import ICMPType
-from exabgp.protocol.ip.icmp import ICMPCode
-from exabgp.protocol.ip.fragment import Fragment
-from exabgp.protocol.ip.tcp.flag import TCPFlag
-
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-
+from exabgp.protocol import Protocol
+from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.ip import IP
+from exabgp.protocol.ip.fragment import Fragment
+from exabgp.protocol.ip.icmp import ICMPCode, ICMPType
+from exabgp.protocol.ip.port import Port
+from exabgp.protocol.ip.tcp.flag import TCPFlag
+from exabgp.protocol.resource import BaseValue, NumericValue
 
 # =================================================================== Flow Components
 
@@ -73,9 +70,13 @@ class IComponent:
     # should have an interface for serialisation and put it here
     FLAG: ClassVar[bool] = False
 
-    def pack(self) -> bytes:
+    def pack(self) -> Buffer:
         """Pack the component to wire format. Must be overridden by subclasses."""
         raise NotImplementedError(f'{self.__class__.__name__} must implement pack()')
+
+    def make(cls, bgp: Buffer) -> tuple[IComponent, Buffer]:
+        """Pack the component to wire format. Must be overridden by subclasses."""
+        raise NotImplementedError(f'{cls.__class__.__name__} must implement make()')
 
 
 class CommonOperator:
@@ -207,11 +208,11 @@ class IPrefix4(IPrefix, IComponent, IPv4):
         packed = bytes([netmask]) + raw[: CIDR.size(netmask)]
         return cls(packed)
 
-    def pack(self) -> bytes:
+    def pack(self) -> Buffer:
         """Pack to wire format: [ID][mask][truncated_ip...]"""
         return bytes([self.ID]) + self._packed
 
-    def pack_prefix(self) -> bytes:
+    def pack_prefix(self) -> Buffer:
         """Alias for pack() - backwards compatibility."""
         return self.pack()
 
@@ -222,7 +223,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
         return str(self.cidr)
 
     @classmethod
-    def make(cls, bgp: bytes) -> tuple[IPrefix4, bytes]:
+    def make(cls, bgp: Buffer) -> tuple[IComponent, Buffer]:
         """Unpack from wire format, storing raw bytes."""
         cidr = CIDR.from_ipv4(bgp)
         packed = bgp[: len(cidr)]  # mask byte + truncated IP bytes
@@ -295,13 +296,13 @@ class IPrefix6(IPrefix, IComponent, IPv6):
         return '{}/{}'.format(self.cidr, self._offset)
 
     @classmethod
-    def make(cls, bgp: bytes) -> tuple[IPrefix6, bytes]:
+    def make(cls, bgp: Buffer) -> tuple[IComponent, Buffer]:
         """Unpack from wire format, storing raw bytes and offset."""
         offset = bgp[1]
         # IPv6 FlowSpec has offset byte between mask and prefix
         # Wire format: [mask][offset][ip...], we store [mask][ip...] in _packed
-        cidr = CIDR.from_ipv6(bgp[0:1] + bgp[2:])
-        packed = bgp[0:1] + bgp[2 : 2 + CIDR.size(cidr.mask)]
+        cidr = CIDR.from_ipv6(bytes(bgp[0:1]) + bgp[2:])
+        packed = bytes(bgp[0:1]) + bgp[2 : 2 + CIDR.size(cidr.mask)]
         return cls(packed, offset), bgp[CIDR.size(cidr.mask) + 2 :]
 
 
@@ -316,17 +317,17 @@ class IOperation(IComponent):
         self.value = value
         self.first = None  # handled by pack/str
 
-    def pack(self) -> bytes:
+    def pack(self) -> Buffer:
         """Pack to wire format: [operator][value...]"""
         length, value = self.encode(self.value)
         op = self.operations | _len_to_bit(length)
         return bytes([op]) + value
 
-    def pack_operation(self) -> bytes:
+    def pack_operation(self) -> Buffer:
         """Alias for pack() - backwards compatibility."""
         return self.pack()
 
-    def encode(self, value: BaseValue) -> tuple[int, bytes]:
+    def encode(self, value: BaseValue) -> tuple[int, Buffer]:
         raise NotImplementedError('this method must be implemented by subclasses')
 
     # def decode (self, value):
@@ -777,6 +778,7 @@ class Flow(NLRI):
                 klass = factory[self.afi][what]
 
                 if decoded == 'prefix':
+                    # XXX: That will bomb
                     adding, bgp = klass.make(bgp)
                     rules.setdefault(adding.ID, []).append(adding)
                 else:
@@ -802,7 +804,7 @@ class Flow(NLRI):
     def __len__(self) -> int:
         return len(self._pack_nlri_simple())
 
-    def add(self, rule: FlowRule) -> bool:
+    def add(self, rule: Any) -> bool:  # Any is FlowRule
         """Add a rule to the Flow NLRI.
 
         Adding rules marks _packed as stale, requiring recomputation on next pack.
@@ -826,7 +828,7 @@ class Flow(NLRI):
         self._packed_stale = True  # Mark packed as stale after modification
         return True
 
-    def _pack_nlri_simple(self) -> bytes:
+    def _pack_nlri_simple(self) -> Buffer:
         """Pack NLRI without negotiated-dependent data (no addpath).
 
         Returns stored _packed bytes with length prefix if not stale,
@@ -839,7 +841,7 @@ class Flow(NLRI):
         # Recompute from rules
         return self._pack_from_rules()
 
-    def _encode_length(self, components: bytes) -> bytes:
+    def _encode_length(self, components: Buffer) -> Buffer:
         """Encode length prefix for wire format."""
         lc = len(components)
         if lc < FLOW_LENGTH_COMPACT_MAX:
@@ -852,9 +854,9 @@ class Flow(NLRI):
             'my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can',
         )
 
-    def _pack_from_rules(self) -> bytes:
+    def _pack_from_rules(self) -> Buffer:
         """Recompute wire format from rules dict."""
-        ordered_rules: list[bytes] = []
+        ordered_rules: list[Buffer] = []
         # the order is a RFC requirement
         for ID in sorted(self.rules.keys()):
             rules = self.rules[ID]
@@ -871,7 +873,7 @@ class Flow(NLRI):
 
         # Use rd_override if set (from rd setter), otherwise use rd property
         rd_to_use = self._rd_override or self.rd
-        components = rd_to_use.pack_rd() + b''.join(ordered_rules)
+        components = bytes(rd_to_use.pack_rd()) + b''.join(ordered_rules)
 
         # Update _packed and clear stale flag
         self._packed = components
@@ -879,13 +881,13 @@ class Flow(NLRI):
 
         return self._encode_length(components)
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for FlowSpec but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(self.afi, self.safi)
         return self._pack_nlri_simple()
 
-    def index(self) -> bytes:
-        return Family.index(self) + self._pack_nlri_simple()
+    def index(self) -> Buffer:
+        return bytes(Family.index(self)) + self._pack_nlri_simple()
 
     def _rules(self) -> str:
         string: list[str] = []
@@ -958,10 +960,9 @@ class Flow(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[Flow | NLRI, Buffer]:
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
         """Unpack Flow NLRI from wire format, storing raw bytes."""
-        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         if len(data) < 1:
             raise Notify(3, 10, 'Flow NLRI too short: need at least 1 byte for length')
         length, data = data[0], data[1:]

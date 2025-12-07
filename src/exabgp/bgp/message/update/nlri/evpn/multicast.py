@@ -9,13 +9,12 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from exabgp.bgp.message import Action
+from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+from exabgp.bgp.message.update.nlri.qualifier import EthernetTag, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
-
-from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
-from exabgp.bgp.message import Action
+from exabgp.util.types import Buffer
 
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
@@ -31,7 +30,7 @@ from exabgp.bgp.message import Action
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register
+@EVPN.register_evpn_route
 class Multicast(EVPN):
     CODE: ClassVar[int] = 3
     NAME: ClassVar[str] = 'Inclusive Multicast Ethernet Tag'
@@ -40,8 +39,8 @@ class Multicast(EVPN):
     def __init__(
         self,
         packed: bytes,
+        action: Action,
         nexthop: IP = IP.NoNextHop,
-        action: Action | None = None,
         addpath: PathInfo | None = None,
     ) -> None:
         EVPN.__init__(self, action, addpath)
@@ -59,7 +58,7 @@ class Multicast(EVPN):
         addpath: PathInfo | None = None,
     ) -> 'Multicast':
         """Factory method to create Multicast from semantic parameters."""
-        packed = rd.pack_rd() + etag.pack_etag() + bytes([len(ip) * 8]) + ip.pack_ip()
+        packed = bytes(rd.pack_rd()) + etag.pack_etag() + bytes([len(ip) * 8]) + ip.pack_ip()
         return cls(packed, nexthop, action, addpath)
 
     @property
@@ -90,7 +89,7 @@ class Multicast(EVPN):
         return hash((self.afi, self.safi, self.CODE, self.rd, self.etag, self.ip))
 
     @classmethod
-    def unpack_evpn_route(cls, data: bytes) -> Multicast:
+    def unpack_evpn(cls, data: Buffer) -> EVPN:
         iplen = data[12]
         if iplen not in (4 * 8, 16 * 8):
             raise Exception('IP len is %d, but EVPN route currently support only IPv4' % iplen)

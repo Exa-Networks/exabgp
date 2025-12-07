@@ -14,12 +14,12 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
-from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
+from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -44,7 +44,7 @@ NODE_DESCRIPTOR_TYPE: int = 256  # Local Node Descriptors TLV type
 # ===================================================================== DOMAIN
 
 
-@BGPLS.register
+@BGPLS.register_bgpls
 class NODE(BGPLS):
     CODE: ClassVar[int] = 1
     NAME: ClassVar[str] = 'bgpls-node'
@@ -159,5 +159,5 @@ class NODE(BGPLS):
     def __hash__(self) -> int:
         return hash((self.proto_id, self.domain, tuple(self.node_ids), self.route_d))
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         return self._packed

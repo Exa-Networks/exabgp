@@ -6,13 +6,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
+from struct import pack, unpack
 from typing import ClassVar
 
-from struct import pack
-from struct import unpack
-
 from exabgp.util import hexstring
-
+from exabgp.util.types import Buffer
 
 # =========================================================== RouteDistinguisher
 # RFC 4364
@@ -27,14 +26,14 @@ class RouteDistinguisher:
     TYPE_AS4_ADMIN = 2  # Type 2: 4-byte AS administrator + 2-byte assigned number
     LENGTH = 8  # Route Distinguisher is always 8 bytes
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         # Allow empty bytes for NORD singleton
         if packed and len(packed) != self.LENGTH:
             raise ValueError(f'RouteDistinguisher requires exactly {self.LENGTH} bytes, got {len(packed)}')
         self._packed = packed
 
     @property
-    def rd(self) -> bytes:
+    def rd(self) -> Buffer:
         """Backward compatibility property."""
         return self._packed
 
@@ -55,7 +54,7 @@ class RouteDistinguisher:
     def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
 
-    def pack_rd(self) -> bytes:
+    def pack_rd(self) -> Buffer:
         return self._packed
 
     def __len__(self) -> int:
@@ -87,7 +86,7 @@ class RouteDistinguisher:
         return ' rd {}'.format(self._str())
 
     @classmethod
-    def unpack_routedistinguisher(cls, data: bytes) -> 'RouteDistinguisher':
+    def unpack_routedistinguisher(cls, data: Buffer) -> 'RouteDistinguisher':
         return cls(data[: cls.LENGTH])
 
     @classmethod

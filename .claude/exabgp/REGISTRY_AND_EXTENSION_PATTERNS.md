@@ -79,7 +79,7 @@ class NewNLRI(NLRI):
         self.field1 = field1
         self.field2 = field2
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         """
         Unique identifier for this NLRI (used for deduplication)
         Usually returns packed representation

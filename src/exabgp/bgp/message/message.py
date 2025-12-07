@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import pack
 from typing import TYPE_CHECKING, Callable, ClassVar, Type, cast
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -184,7 +185,7 @@ class Message:
         message_len: bytes = pack('!H', 19 + len(message))
         return self.MARKER + message_len + self.TYPE + bytes(message)
 
-    def pack_message(self, negotiated: Negotiated) -> bytes:
+    def pack_message(self, negotiated: Negotiated) -> Buffer:
         raise NotImplementedError('message not implemented in subclasses')
 
     @classmethod

@@ -6,15 +6,18 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
-from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import Family
-
-from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from struct import pack
+from typing import TYPE_CHECKING, Any, ClassVar
 
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+from exabgp.bgp.message import Action
+from exabgp.bgp.message.update.nlri.mup.nlri import MUP
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.protocol.family import AFI, Family
+from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # +-----------------------------------+
 # |           RD  (8 octets)          |
@@ -42,7 +45,7 @@ from struct import pack
 #   +-----------------------------------+
 
 
-@MUP.register
+@MUP.register_mup_route
 class Type1SessionTransformedRoute(MUP):
     ARCHTYPE: ClassVar[int] = 1
     CODE: ClassVar[int] = 3
@@ -75,7 +78,7 @@ class Type1SessionTransformedRoute(MUP):
 
         prefix_ip_packed = prefix_ip.pack_ip()
         packed = (
-            rd.pack_rd()
+            bytes(rd.pack_rd())
             + pack('!B', prefix_ip_len)
             + prefix_ip_packed[0:offset]
             + pack('!IB', teid, qfi)
@@ -108,7 +111,7 @@ class Type1SessionTransformedRoute(MUP):
         ip_size = 4 if self.afi != AFI.ipv6 else 16
         ip_padding = ip_size - ip_offset
         if ip_padding > 0:
-            ip = ip + bytes(ip_padding)
+            ip = bytes(ip) + bytes(ip_padding)
         return IP.unpack_ip(ip)
 
     def _get_teid_qfi_offset(self) -> int:
@@ -197,11 +200,11 @@ class Type1SessionTransformedRoute(MUP):
 
     def pack_index(self) -> bytes:
         # removed teid, qfi, endpointip
-        packed = self.rd.pack_rd() + pack('!B', self.prefix_ip_len) + self.prefix_ip.pack_ip()
+        packed = bytes(self.rd.pack_rd()) + pack('!B', self.prefix_ip_len) + self.prefix_ip.pack_ip()
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(packed)) + packed
 
-    def index(self) -> bytes:
-        return Family.index(self) + self.pack_index()
+    def index(self) -> Buffer:
+        return bytes(Family.index(self)) + self.pack_index()
 
     def __hash__(self) -> int:
         return hash(
@@ -219,7 +222,9 @@ class Type1SessionTransformedRoute(MUP):
         )
 
     @classmethod
-    def unpack_mup_route(cls, data: bytes, afi: AFI) -> Type1SessionTransformedRoute:
+    def unpack_mup_route(
+        cls, data: bytes, afi: AFI, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[MUP, Buffer]:
         # Validate endpoint_ip_len before creating instance
         prefix_ip_len = data[8]
         ip_offset = prefix_ip_len // 8
@@ -245,7 +250,7 @@ class Type1SessionTransformedRoute(MUP):
             if source_ip_len not in [32, 128]:
                 raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
 
-        return cls(data, afi)
+        return cls(data, afi), data[size:]
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)

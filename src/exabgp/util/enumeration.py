@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from enum import IntEnum
-from typing import Type
 
 
 class TriState(IntEnum):
@@ -68,5 +67,5 @@ class Enumeration:
 
 
 # Taken from Vincent Bernat
-def enum(*sequential: str) -> Type:
+def enum(*sequential: str) -> type[object]:
     return type(str('Enum'), (), dict(zip(sequential, sequential)))

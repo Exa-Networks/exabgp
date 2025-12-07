@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import builtins
 import socket
-from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Type
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -39,10 +39,10 @@ class IPSelf:
     def top(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> str:
         return negotiated.nexthopself(afi).top()
 
-    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> Buffer:
         return negotiated.nexthopself(afi).ton()
 
-    def pack(self, negotiated: Negotiated) -> bytes:
+    def pack(self, negotiated: Negotiated) -> Buffer:
         return negotiated.nexthopself(self.afi).ton()
 
     def index(self) -> str:
@@ -133,6 +133,9 @@ class IP:
             value += char
         return value
 
+    def __len__(self):
+        return IP.length(self.afi)
+
     @staticmethod
     def length(afi: AFI) -> int:
         return 4 if afi == AFI.ipv4 else 16
@@ -194,7 +197,7 @@ class IP:
         return None
 
     @classmethod
-    def from_string(cls, string: str, klass: Type[IP] | None = None) -> IP:
+    def from_string(cls, string: str, klass: Type['IP'] = 'IP') -> 'IP':
         data = IP.pton(string)
         if klass:
             return klass(data)
@@ -257,8 +260,8 @@ class IPRange(IP):
         self.mask = NetMask.make_netmask(mask, self.afi)
 
     @classmethod
-    def from_string(cls, ip: str, mask: int) -> IPRange:
-        return cls(IP.pton(ip), mask)
+    def from_string(cls, string: str, klass: Type['IP'] = 'IP') -> 'IP':
+        raise NotImplementedError(f'{cls.__name__}.from_string() not implemented')
 
     def __repr__(self) -> str:
         if (self.ipv4() and self.mask == IPv4.HOST_MASK) or (self.ipv6() and self.mask == IPv6.HOST_MASK):

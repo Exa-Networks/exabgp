@@ -8,9 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -136,7 +137,7 @@ class RTC(NLRI):
     def resetFlags(char: int) -> int:
         return char & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL)
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for RTC but not yet implemented
         # We reset ext com flag bits from the first byte in the packed RT
         # because in an RTC route these flags never appear.
@@ -145,7 +146,7 @@ class RTC(NLRI):
             return pack('!B', len(self)) + self._packed_origin + bytes([RTC.resetFlags(packedRT[0])]) + packedRT[1:]
         return pack('!B', 0)
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         # RTC uses negotiated in pack_nlri, so we can't use _pack_nlri_simple
         # Index should be stable regardless of negotiated, so build it directly
         if self.rt and self._packed_origin:

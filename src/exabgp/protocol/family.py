@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import pack
 from typing import ClassVar
+
+from exabgp.util.types import Buffer
 
 # ======================================================================== AFI
 # https://www.iana.org/assignments/address-family-numbers/
@@ -410,7 +411,7 @@ class Family:
     def extensive(self) -> str:
         return f'afi {self.afi} safi {self.safi}'
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         return f'{self.afi:02x}{self.safi:02x}'.encode()
 
     def __repr__(self) -> str:

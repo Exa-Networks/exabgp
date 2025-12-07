@@ -6,8 +6,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
 from typing import Any, ClassVar
 
+from exabgp.util.types import Buffer
 
 # ===================================================================== PathInfo
 # RFC draft-ietf-idr-add-paths-09
@@ -20,7 +22,7 @@ class PathInfo:
     NOPATH: ClassVar['PathInfo']
     DISABLED: ClassVar['PathInfo']
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         if packed and len(packed) != self.LENGTH:
             raise ValueError(f'PathInfo requires exactly {self.LENGTH} bytes, got {len(packed)}')
         self._packed = packed
@@ -39,7 +41,7 @@ class PathInfo:
         return cls(packed)
 
     @property
-    def path_info(self) -> bytes:
+    def path_info(self) -> Buffer:
         return self._packed
 
     def __eq__(self, other: object) -> bool:
@@ -78,7 +80,7 @@ class PathInfo:
         # NOPATH: ADD-PATH enabled but no specific ID set - wire format is 0.0.0.0
         return ' path-information 0.0.0.0'
 
-    def pack_path(self) -> bytes:
+    def pack_path(self) -> Buffer:
         if self._disabled:
             return b''
         if self._packed:

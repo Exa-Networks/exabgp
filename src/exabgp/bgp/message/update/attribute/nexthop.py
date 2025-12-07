@@ -7,8 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING, ClassVar
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -85,15 +86,15 @@ class NextHop(Attribute):
         """Get string representation of the IP address."""
         return IP.ntop(self._packed)
 
-    def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> Buffer:
         """Get packed bytes representation."""
         return self._packed
 
-    def pack_ip(self) -> bytes:
+    def pack_ip(self) -> Buffer:
         """Get packed bytes (IP interface compatibility)."""
         return self._packed
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         """Get the packed data for indexing/caching."""
         return self._packed
 
@@ -126,7 +127,7 @@ class NextHop(Attribute):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NextHop | IP':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NLRI':
         if not data:
             return IP.NoNextHop
         return cls.from_packet(data)
@@ -164,7 +165,7 @@ class NextHopSelf(NextHop):
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self._attribute(negotiated.nexthopself(self._afi).ton())
 
-    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> bytes:
+    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> Buffer:
         return negotiated.nexthopself(afi).ton()
 
     def __eq__(self, other: object) -> bool:

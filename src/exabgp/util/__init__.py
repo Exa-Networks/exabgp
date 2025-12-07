@@ -10,14 +10,16 @@ from __future__ import annotations
 import string
 from typing import Iterator, TypeVar
 
+from exabgp.util.types import Buffer
+
 # Hexadecimal string prefix length
 HEX_PREFIX_LENGTH: int = 2  # Length of '0x' prefix
 
 T = TypeVar('T', str, bytes)
 
 
-def hexstring(value: bytes) -> str:
-    def spaced(value: bytes) -> Iterator[str]:
+def hexstring(value: Buffer) -> str:
+    def spaced(value: Buffer) -> Iterator[str]:
         for v in value:
             yield '{:02X}'.format(v)
 

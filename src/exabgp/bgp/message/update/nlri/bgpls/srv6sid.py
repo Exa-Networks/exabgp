@@ -14,13 +14,13 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
-from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
-from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
+from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.util import hexstring
+from exabgp.util.types import Buffer
 
 # BGP-LS SRv6 SID TLV type codes (RFC 9514)
 TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
@@ -48,7 +48,7 @@ MIN_TLV_HEADER_SIZE: int = 2  # Type (2 bytes) + Length (2 bytes) = 4 bytes, che
 #                        Figure 5: SRv6 SID NLRI Format
 
 
-@BGPLS.register
+@BGPLS.register_bgpls
 class SRv6SID(BGPLS):
     CODE: ClassVar[int] = 6
     NAME: ClassVar[str] = 'bgpls-srv6sid'
@@ -154,11 +154,11 @@ class SRv6SID(BGPLS):
 
         return cls(data[:length])
 
-    def _pack_nlri_simple(self) -> bytes:
+    def _pack_nlri_simple(self) -> Buffer:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         return self._packed
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, SAFI.bgp_ls)
         return self._packed

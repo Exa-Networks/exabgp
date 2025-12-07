@@ -410,7 +410,7 @@ class IPPrefixValidator(Validator['IPRange']):
                 ip_str = value
                 mask = 128 if ':' in value else 32
 
-            iprange = IPRange.from_string(ip_str, mask)
+            iprange = IPRange(IP.pton(ip_str), mask)
 
             # Validate host bits are zero
             if iprange.address() & iprange.mask.hostmask() != 0:
@@ -450,7 +450,7 @@ class IPRangeValidator(Validator['IPRange']):
                 ip_str = value
                 mask = 128 if ':' in value else 32
 
-            return IPRange.from_string(ip_str, mask)
+            return IPRange(IP.pton(ip_str), mask)
         except (OSError, IndexError, ValueError):
             raise ValueError(
                 f"'{value}' is not a valid IP address or range\n"

@@ -6,11 +6,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from __future__ import annotations
+
+from struct import pack, unpack
 from typing import ClassVar
 
-from struct import pack
-from struct import unpack
-
+from exabgp.util.types import Buffer
 
 # ======================================================================= Labels
 # RFC 3107
@@ -25,7 +25,7 @@ class Labels:
 
     NOLABEL: ClassVar['Labels']
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         if len(packed) % 3 != 0:
             raise ValueError(f'Labels packed data must be multiple of 3 bytes, got {len(packed)}')
         self._packed = packed
@@ -84,7 +84,7 @@ class Labels:
     def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing Labels for ordering does not make sense')
 
-    def pack_labels(self) -> bytes:
+    def pack_labels(self) -> Buffer:
         return self._packed
 
     def __len__(self) -> int:
@@ -128,7 +128,7 @@ class Labels:
         return '[ ]'
 
     @classmethod
-    def unpack_labels(cls, data: bytes) -> 'Labels':
+    def unpack_labels(cls, data: Buffer) -> 'Labels':
         """Unpack labels from data, stopping at bottom-of-stack bit."""
         packed_parts = []
         while len(data) >= 3:

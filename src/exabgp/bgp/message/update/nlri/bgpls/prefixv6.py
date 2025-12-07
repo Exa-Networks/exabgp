@@ -13,15 +13,15 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
-from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
+from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
+from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
-from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.ip import IP
-from exabgp.logger import log, lazymsg
+from exabgp.util.types import Buffer
 
 # BGP-LS Prefix TLV type codes (RFC 7752)
 TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
@@ -45,7 +45,7 @@ TLV_IP_REACHABILITY: int = 265  # IP Reachability Information TLV
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-@BGPLS.register
+@BGPLS.register_bgpls
 class PREFIXv6(BGPLS):
     CODE: ClassVar[int] = 4
     NAME: ClassVar[str] = 'bgpls-prefix-v6'
@@ -177,5 +177,5 @@ class PREFIXv6(BGPLS):
 
         return f'{{ {content} }}'
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         return self._packed

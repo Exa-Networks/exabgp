@@ -6,19 +6,19 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import pack
-from typing import TYPE_CHECKING, Any, ClassVar, Type
+from typing import TYPE_CHECKING, Any, ClassVar
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.util.types import Buffer
 
 # https://datatracker.ietf.org/doc/draft-mpmz-bess-mup-safi/02/
 
@@ -39,7 +39,9 @@ class MUP(NLRI):
     # MUP has no additional instance attributes beyond NLRI base class
     __slots__ = ()
 
-    registered: ClassVar[dict[str, Type[MUP]]] = dict()
+    # Registry for MUP route types, keyed by "archtype:code" string
+    # Values are MUP subclasses that implement unpack_mup_route classmethod
+    registered_mup: ClassVar[dict[str, type[MUP]]] = dict()
 
     # NEED to be defined in the subclasses
     ARCHTYPE: ClassVar[int] = 0
@@ -61,31 +63,32 @@ class MUP(NLRI):
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
     def __str__(self) -> str:
+        # Use the class's own SHORT_NAME since it's defined on all MUP subclasses
         return 'mup:{}:{}'.format(
-            self.registered.get(self.CODE, self).SHORT_NAME.lower(),
+            self.SHORT_NAME.lower(),
             '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
 
     def __repr__(self) -> str:
         return str(self)
 
-    def feedback(self, action: int) -> str:
+    def feedback(self, action: Action) -> str:
         return ''
 
     def _prefix(self) -> str:
-        return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())
+        return 'mup:{}:'.format(self.SHORT_NAME.lower())
 
     def _pack_nlri_simple(self) -> bytes:
         """Pack NLRI without negotiated-dependent data (no addpath)."""
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 
-    def pack_nlri(self, negotiated: Negotiated) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for MUP but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(self.afi, SAFI.mup)
         return self._pack_nlri_simple()
 
-    def index(self) -> bytes:
-        return Family.index(self) + self._pack_nlri_simple()
+    def index(self) -> Buffer:
+        return bytes(Family.index(self)) + self._pack_nlri_simple()
 
     def __copy__(self) -> 'MUP':
         new = self.__class__.__new__(self.__class__)
@@ -109,18 +112,18 @@ class MUP(NLRI):
         return new
 
     @classmethod
-    def register(cls, klass: Type[MUP]) -> Type[MUP]:
+    def register_mup_route(cls, klass: type[MUP]) -> type[MUP]:
+        """Register a MUP route type subclass by its ARCHTYPE:CODE key."""
         key = '{}:{}'.format(klass.ARCHTYPE, klass.CODE)
-        if key in cls.registered:
-            raise RuntimeError('only one Mup registration allowed')
-        cls.registered[key] = klass
+        if key in cls.registered_mup:
+            raise RuntimeError('only one MUP registration allowed')
+        cls.registered_mup[key] = klass
         return klass
 
     @classmethod
-    def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    def unpack_mup_route(
+        cls, data: bytes, afi: AFI, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[MUP, Buffer]:
-        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # MUP NLRI: arch_type(1) + route_type(2) + length(1) + route_data(length)
         if len(data) < 4:
             raise Notify(3, 10, f'MUP NLRI too short: need at least 4 bytes, got {len(data)}')
@@ -134,36 +137,42 @@ class MUP(NLRI):
             raise Notify(3, 10, f'MUP NLRI truncated: need {end} bytes, got {len(data)}')
 
         key = '{}:{}'.format(arch, code)
-        if key in cls.registered:
-            klass = cls.registered[key].unpack_mup_route(bytes(data[4:end]), afi)
-        else:
-            klass = GenericMUP(arch, afi, code, bytes(data[4:end]))
-        klass.CODE = code
-        klass.action = action
-        klass.addpath = addpath
+        if key in cls.registered_mup:
+            registered_cls = cls.registered_mup[key]
+            # Subclass returns (mup, b'') consuming trimmed data; we return (mup, remaining)
+            mup_instance, remain = registered_cls.unpack_mup_route(bytes(data[4:end]), afi, action, addpath, negotiated)
+            return mup_instance, remain
 
-        return klass, data[end:]
+        # XXX: This code is totally buggy as the Generic MUP should give us its end
+        # XXX: Never worked, not my code, to be fixed another day
+        mup = GenericMUP(afi, arch, code, bytes(data[4:end]))
+        mup.action = action
+        mup.addpath = addpath
+        return mup, b''
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())
 
 
 class GenericMUP(MUP):
+    """Generic MUP for unrecognized route types."""
+
+    # Instance variables for arch/code since GenericMUP can have any values
+    __slots__ = ('_arch', '_code')
+
     def __init__(self, afi: AFI, arch: int, code: int, packed: bytes) -> None:
         MUP.__init__(self, afi)
-        self.ARCHTYPE = arch
-        self.CODE = code
-        self._pack(packed)
+        self._arch = arch
+        self._code = code
+        self._packed = packed
 
-    def _pack(self, packed: bytes | None = None) -> bytes:
-        if self._packed:
-            return self._packed
+    @property
+    def ARCHTYPE(self) -> int:  # type: ignore[override]
+        return self._arch
 
-        if packed:
-            self._packed = packed
-            return packed
-
-        return b''
+    @property
+    def CODE(self) -> int:  # type: ignore[override]
+        return self._code
 
     def json(self, compact: bool | None = None) -> str:
         return '{ "arch": %d, "code": %d, "raw": "%s" }' % (self.ARCHTYPE, self.CODE, self._raw())
