@@ -334,6 +334,10 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
     - **Read when:** Working with NLRI/attribute pack/unpack, reviewing wire format, debugging protocol issues
     - **Contains:** Wire format diagrams, byte layouts, TLV codes, validation rules, all RFCs in one place
 
+15. **`.claude/exabgp/NLRI_CLASS_HIERARCHY.md`** - NLRI class inheritance and slot storage
+    - **Read when:** Modifying NLRI `__init__` methods, refactoring NLRI classes, understanding slot inheritance
+    - **Contains:** Class hierarchy diagram, slot definitions per class, ClassVar vs instance var, factory patterns
+
 **Quick reference:**
 - Adding NLRI type → Read #3, then #1
 - Understanding message flow → Read #2
@@ -346,6 +350,7 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
 - Working with wire data/bytes/memoryview → Read #12 (PEP 688)
 - Converting NLRI to packed-bytes-first → Read #13, reference VPLS implementation
 - Wire format/pack/unpack debugging → Read #14
+- Modifying NLRI __init__ or slots → Read #15
 
 ---
 
