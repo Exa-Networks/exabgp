@@ -18,6 +18,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import Labels
+from exabgp.bgp.message.update.nlri.settings import INETSettings
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.path import AnnouncePath
@@ -34,10 +35,11 @@ from exabgp.configuration.static.mpls import label
 
 
 class AnnounceLabel(AnnouncePath):
-    # Schema extends AnnouncePath with label using RouteBuilder
+    # Schema extends AnnouncePath with label using RouteBuilder (Settings mode)
     schema = RouteBuilder(
         description='MPLS labeled route announcement',
-        nlri_factory=Label,
+        nlri_class=Label,
+        settings_class=INETSettings,
         prefix_parser=prefix,
         assign={
             **AnnouncePath.schema.assign,

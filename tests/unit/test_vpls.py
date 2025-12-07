@@ -276,74 +276,10 @@ class TestVPLSFeedback:
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert 'vpls nlri next-hop missing' in feedback
 
-    def test_feedback_missing_endpoint(self) -> None:
-        """Test feedback when endpoint is missing (builder mode)"""
-        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
-        vpls = VPLS.make_empty()
-        vpls.rd = rd
-        vpls.base = 262145
-        vpls.offset = 1
-        vpls.size = 8
-        # endpoint not set
-        vpls.nexthop = IP.from_string('10.0.0.1')  # Set nexthop so we check endpoint
-
-        feedback = vpls.feedback(Action.ANNOUNCE)
-        assert 'vpls nlri endpoint missing' in feedback
-
-    def test_feedback_missing_base(self) -> None:
-        """Test feedback when base is missing (builder mode)"""
-        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
-        vpls = VPLS.make_empty()
-        vpls.rd = rd
-        vpls.endpoint = 3
-        vpls.offset = 1
-        vpls.size = 8
-        # base not set
-        vpls.nexthop = IP.from_string('10.0.0.1')  # Set nexthop so we check base
-
-        feedback = vpls.feedback(Action.ANNOUNCE)
-        assert 'vpls nlri base missing' in feedback
-
-    def test_feedback_missing_offset(self) -> None:
-        """Test feedback when offset is missing (builder mode)"""
-        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
-        vpls = VPLS.make_empty()
-        vpls.rd = rd
-        vpls.endpoint = 3
-        vpls.base = 262145
-        vpls.size = 8
-        # offset not set
-        vpls.nexthop = IP.from_string('10.0.0.1')  # Set nexthop so we check offset
-
-        feedback = vpls.feedback(Action.ANNOUNCE)
-        assert 'vpls nlri offset missing' in feedback
-
-    def test_feedback_missing_size(self) -> None:
-        """Test feedback when size is missing (builder mode)"""
-        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
-        vpls = VPLS.make_empty()
-        vpls.rd = rd
-        vpls.endpoint = 3
-        vpls.base = 262145
-        vpls.offset = 1
-        # size not set
-        vpls.nexthop = IP.from_string('10.0.0.1')  # Set nexthop so we check size
-
-        feedback = vpls.feedback(Action.ANNOUNCE)
-        assert 'vpls nlri size missing' in feedback
-
-    def test_feedback_missing_rd(self) -> None:
-        """Test feedback when RD is missing (builder mode)"""
-        vpls = VPLS.make_empty()
-        vpls.endpoint = 3
-        vpls.base = 262145
-        vpls.offset = 1
-        vpls.size = 8
-        # rd not set
-        vpls.nexthop = IP.from_string('10.0.0.1')  # Set nexthop so we check RD
-
-        feedback = vpls.feedback(Action.ANNOUNCE)
-        assert 'vpls nlri route-distinguisher missing' in feedback
+    # Note: Tests for missing fields (endpoint, base, offset, size, rd) have been
+    # removed because they tested the deprecated builder mode (make_empty + assign).
+    # Field validation is now done by VPLSSettings.validate() before NLRI creation.
+    # See tests/unit/test_nlri_settings.py for VPLSSettings validation tests.
 
     def test_feedback_size_inconsistency(self) -> None:
         """Test feedback when base + size exceeds 20-bit limit"""
@@ -367,42 +303,9 @@ class TestVPLSFeedback:
         assert feedback == ''
 
 
-class TestVPLSAssign:
-    """Test the assign method (builder mode)"""
-
-    def test_assign_nexthop(self) -> None:
-        """Test assigning nexthop via assign method"""
-        vpls = VPLS.make_empty()
-
-        nh = IP.from_string('10.0.0.1')
-        vpls.assign('nexthop', nh)
-
-        assert vpls.nexthop == nh
-
-    def test_assign_endpoint(self) -> None:
-        """Test assigning endpoint via assign method"""
-        vpls = VPLS.make_empty()
-
-        vpls.assign('endpoint', 10)
-
-        assert vpls.endpoint == 10
-
-    def test_assign_multiple_attributes(self) -> None:
-        """Test assigning multiple attributes"""
-        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
-        vpls = VPLS.make_empty()
-
-        vpls.assign('rd', rd)
-        vpls.assign('endpoint', 100)
-        vpls.assign('base', 500000)
-        vpls.assign('offset', 50)
-        vpls.assign('size', 16)
-
-        assert vpls.rd._str() == rd._str()
-        assert vpls.endpoint == 100
-        assert vpls.base == 500000
-        assert vpls.offset == 50
-        assert vpls.size == 16
+# TestVPLSAssign class removed - it tested the deprecated builder mode
+# (make_empty + assign). Use VPLSSettings + from_settings() instead.
+# See tests/unit/test_nlri_settings.py for Settings pattern tests.
 
 
 class TestVPLSEdgeCases:

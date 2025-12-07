@@ -18,6 +18,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri import IPVPN
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.settings import INETSettings
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.label import AnnounceLabel
@@ -34,10 +35,11 @@ from exabgp.configuration.static.mpls import route_distinguisher
 
 
 class AnnounceVPN(ParseAnnounce):
-    # Schema extends AnnounceLabel with route-distinguisher using RouteBuilder
+    # Schema extends AnnounceLabel with route-distinguisher using RouteBuilder (Settings mode)
     schema = RouteBuilder(
         description='VPN route announcement',
-        nlri_factory=IPVPN,
+        nlri_class=IPVPN,
+        settings_class=INETSettings,
         prefix_parser=prefix,
         assign={
             **AnnounceLabel.schema.assign,

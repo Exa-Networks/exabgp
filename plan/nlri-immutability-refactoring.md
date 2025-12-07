@@ -853,12 +853,44 @@ Full removal requires:
 1. ~~Block syntax `vpls site5 { ... }` via `ParseVPLS.pre()`~~ ✅ Fixed
 2. ~~Section parser `nlri-set` actions → `scope.nlri_assign()`~~ ✅ Fixed (settings mode)
 3. Legacy mode in RouteBuilderValidator (`_validate_legacy`) - for non-VPLS types
-4. Unit tests in `tests/unit/test_vpls.py` that test the legacy pattern
+4. ~~Unit tests in `tests/unit/test_vpls.py` that test the legacy pattern~~ ✅ Removed
 
-**Resume Point:**
-- Update `announce/path.py`, `announce/vpn.py`, `announce/label.py` to use Settings
-- Update unit tests to use Settings pattern only
-- Remove deprecated `make_empty()` and `assign()` methods from VPLS
+### 2025-12-07 - Phase 5 Continued: Full VPLS Immutability
+
+**Completed:**
+- ✅ Updated `announce/path.py` to use Settings mode (`nlri_class=INET, settings_class=INETSettings`)
+- ✅ Updated `announce/label.py` to use Settings mode (`nlri_class=Label, settings_class=INETSettings`)
+- ✅ Updated `announce/vpn.py` to use Settings mode (`nlri_class=IPVPN, settings_class=INETSettings`)
+- ✅ Removed builder mode tests from `test_vpls.py` (TestVPLSAssign class, feedback tests for missing fields)
+- ✅ Removed `make_empty()` method from VPLS
+- ✅ Removed `assign()` override from VPLS
+- ✅ Removed builder mode slots from VPLS (`_rd`, `_endpoint`, `_base`, `_offset`, `_size_value`)
+- ✅ Simplified VPLS properties to always use packed bytes (no fallback to builder storage)
+- ✅ Removed property setters from VPLS (rd, endpoint, base, offset, size)
+- ✅ Simplified `_pack_nlri_simple()` to just return `self._packed`
+- ✅ Simplified `feedback()` to only check nexthop and size consistency
+- ✅ Updated `__copy__` and `__deepcopy__` to not copy removed slots
+- ✅ All tests pass (11 suites, 42.9s)
+
+**Files modified:**
+- `src/exabgp/configuration/announce/path.py` - Use Settings mode
+- `src/exabgp/configuration/announce/label.py` - Use Settings mode
+- `src/exabgp/configuration/announce/vpn.py` - Use Settings mode
+- `src/exabgp/bgp/message/update/nlri/vpls.py` - Full immutability (no builder mode)
+- `tests/unit/test_vpls.py` - Removed builder mode tests
+
+**Phase 5 COMPLETE for VPLS!**
+
+**VPLS is now fully immutable:**
+- All instances created with packed bytes
+- No mutation after construction
+- Properties unpack lazily from wire bytes
+- `make_vpls()` and `from_settings()` are the only factory methods
+
+**What Still Uses Mutation (non-VPLS):**
+- INET/Label/IPVPN still support mutation via base class `assign()` for ParseStaticRoute
+- ParseStaticRoute Section parser still uses legacy mode
+- FlowSpec builder pattern (rules added incrementally)
 
 ---
 

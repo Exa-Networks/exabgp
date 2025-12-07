@@ -14,6 +14,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.settings import INETSettings
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.ip import AnnounceIP
@@ -28,10 +29,11 @@ from exabgp.configuration.static.parser import prefix
 
 
 class AnnouncePath(AnnounceIP):
-    # Schema extends AnnounceIP with path-information using RouteBuilder
+    # Schema extends AnnounceIP with path-information using RouteBuilder (Settings mode)
     schema = RouteBuilder(
         description='IP route announcement with path information',
-        nlri_factory=INET,
+        nlri_class=INET,
+        settings_class=INETSettings,
         prefix_parser=prefix,
         assign={
             'path-information': 'path_info',
