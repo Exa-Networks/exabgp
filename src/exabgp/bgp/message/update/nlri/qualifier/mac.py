@@ -17,12 +17,12 @@ from exabgp.util.types import Buffer
 
 
 class MAC:
-    def __init__(self, mac: str | None = None, packed: Buffer | None = None) -> None:
-        self.mac: str | None = mac
+    def __init__(self, mac: str = '', packed: Buffer = b'') -> None:
+        self.mac: str = mac
         if packed:
             self._packed: bytes = packed
         else:
-            assert mac is not None, 'Either mac or packed must be provided'
+            assert mac != '', 'Either mac or packed must be provided'
             self._packed = b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))
 
     def __eq__(self, other: object) -> bool:

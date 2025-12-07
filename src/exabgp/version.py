@@ -103,7 +103,7 @@ if sys.version_info.major == REQUIRED_PYTHON_MAJOR and sys.version_info.minor < 
     sys.exit('exabgp requires python3.12 or later')
 
 
-def latest_github():
+def latest_github() -> str:
     import json as json_lib
     import urllib.request
 
@@ -118,7 +118,7 @@ def latest_github():
     return latest[0]['tag_name']
 
 
-def time_based():
+def time_based() -> str:
     import datetime
 
     return datetime.date.today().isoformat().replace('-', '.')
