@@ -48,17 +48,15 @@ from exabgp.configuration.l2vpn.parser import vpls_offset
 from exabgp.configuration.l2vpn.parser import vpls_base
 from exabgp.configuration.l2vpn.parser import next_hop
 
-
-def _vpls_factory() -> VPLS:
-    """Factory function for VPLS NLRI with empty fields."""
-    return VPLS.make_empty()
+from exabgp.bgp.message.update.nlri.settings import VPLSSettings
 
 
 class AnnounceVPLS(ParseAnnounce):
-    # Schema for VPLS routes using RouteBuilder (no prefix)
+    # Schema for VPLS routes using RouteBuilder with settings mode (deferred construction)
     schema = RouteBuilder(
         description='VPLS route announcement',
-        nlri_factory=_vpls_factory,
+        nlri_class=VPLS,
+        settings_class=VPLSSettings,
         prefix_parser=None,  # VPLS has no prefix
         assign={
             'next-hop': 'nexthop',

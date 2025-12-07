@@ -430,19 +430,29 @@ class RouteBuilder(Container):
     The nlri_factory creates the NLRI, prefix_parser parses the prefix,
     and children define the attribute/nlri sub-commands.
 
-    Example:
+    Supports two modes:
+    1. Legacy mode (nlri_factory only): Creates NLRI immediately, mutates via assign()
+    2. Settings mode (nlri_class + settings_class): Collects values into Settings,
+       creates immutable NLRI via from_settings() at end
+
+    Example (legacy):
         RouteBuilder(
             nlri_factory=INET,
             prefix_parser=prefix,
-            children={
-                'next-hop': Leaf(type=ValueType.NEXT_HOP, action='nexthop-and-attribute'),
-                'origin': Leaf(type=ValueType.ORIGIN, action='attribute-add'),
-                ...
-            },
+            children={...},
+        )
+
+    Example (settings - preferred for immutable NLRI):
+        RouteBuilder(
+            nlri_class=VPLS,
+            settings_class=VPLSSettings,
+            children={...},
         )
 
     Attributes:
-        nlri_factory: Callable to create NLRI object (e.g., INET, VPLS)
+        nlri_factory: Callable to create NLRI object (legacy mutation mode)
+        nlri_class: NLRI class with from_settings() method (settings mode)
+        settings_class: Settings dataclass for deferred construction (settings mode)
         prefix_parser: Callable to parse the prefix/route target
         assign: Dict mapping command names to NLRI field names for nlri-set actions
         factory_with_afi: If True, factory is called with (afi, safi, action) even without prefix
@@ -450,6 +460,8 @@ class RouteBuilder(Container):
     """
 
     nlri_factory: Callable[..., Any] | None = None
+    nlri_class: type | None = None  # NLRI class with from_settings()
+    settings_class: type | None = None  # Settings dataclass
     prefix_parser: Callable[..., Any] | None = None
     assign: dict[str, str] = field(default_factory=dict)
     factory_with_afi: bool = False

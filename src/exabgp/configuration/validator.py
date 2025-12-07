@@ -1056,6 +1056,11 @@ class RouteBuilderValidator(Validator[list[Any]]):
     This validator is typically created by the Section when processing
     a RouteBuilder schema, configured with the AFI/SAFI context.
 
+    Supports two modes:
+    1. Legacy mode (nlri_factory only): Creates NLRI immediately, mutates via assign()
+    2. Settings mode (nlri_class + settings_class): Collects values into Settings,
+       creates immutable NLRI via from_settings() at end
+
     For prefix-based routes (IP), prefix_parser parses the prefix and nlri_factory
     is called with (afi, safi, action_type).
 
@@ -1078,8 +1083,104 @@ class RouteBuilderValidator(Validator[list[Any]]):
         if self.schema is None:
             raise ValueError('No schema configured')
 
+        # Check for settings mode (deferred construction)
+        if self.schema.settings_class is not None and self.schema.nlri_class is not None:
+            return self._validate_with_settings(tokeniser)
+
+        # Legacy mode (immediate NLRI creation with mutation)
+        return self._validate_legacy(tokeniser)
+
+    def _validate_with_settings(self, tokeniser: 'Tokeniser') -> list[Any]:
+        """Build Route using Settings pattern (deferred NLRI construction).
+
+        Creates a Settings object, collects values during parsing, then
+        creates immutable NLRI via from_settings() at the end.
+        """
         from exabgp.bgp.message.update.attribute import AttributeCollection
         from exabgp.bgp.message.update.nlri.cidr import CIDR
+        from exabgp.configuration.schema import Leaf, LeafList
+        from exabgp.rib.route import Route
+
+        # Create settings instance
+        settings = self.schema.settings_class()
+        settings.action = self.action_type
+        attributes = AttributeCollection()
+
+        # Parse prefix if present (for INET-family routes)
+        if self.schema.prefix_parser:
+            ipmask = self.schema.prefix_parser(tokeniser)
+            settings.cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
+            settings.afi = self.afi
+            settings.safi = self.safi
+
+        # Process sub-commands from schema - collect into settings
+        while True:
+            command = tokeniser()
+            if not command:
+                break
+
+            child = self.schema.children.get(command)
+            if child is None:
+                valid = ', '.join(sorted(self.schema.children.keys()))
+                raise ValueError(f"Unknown command '{command}'\n  Valid options: {valid}")
+
+            # Get validator and parse value
+            if isinstance(child, (Leaf, LeafList)):
+                validator = child.get_validator()
+                if validator is None:
+                    raise ValueError(f"No validator for '{command}'")
+                value = validator.validate(tokeniser)
+                action = child.action
+
+                # Apply action - collect into settings or attributes
+                self._apply_settings_action(settings, attributes, command, action, value)
+
+        # Create immutable NLRI from validated settings
+        nlri = self.schema.nlri_class.from_settings(settings)
+
+        return [Route(nlri, attributes)]
+
+    def _apply_settings_action(self, settings: Any, attributes: Any, command: str, action: str, value: Any) -> None:
+        """Apply parsed value to Settings object based on action."""
+        if action == 'attribute-add':
+            attributes.add(value)
+        elif action == 'nexthop-and-attribute':
+            ip, attribute = value
+            if ip:
+                settings.nexthop = ip
+            if attribute:
+                attributes.add(attribute)
+        elif action == 'nlri-set':
+            field_name = self.schema.assign.get(command, command)
+            settings.set(field_name, value)
+        elif action == 'nlri-add':
+            # For FlowSpec: value is a list of components to add
+            if isinstance(value, (list, tuple)):
+                for item in value:
+                    if hasattr(settings, 'add_rule'):
+                        settings.add_rule(item)
+                    elif hasattr(settings, 'rules'):
+                        settings.rules.append(item)
+            else:
+                if hasattr(settings, 'add_rule'):
+                    settings.add_rule(value)
+                elif hasattr(settings, 'rules'):
+                    settings.rules.append(value)
+        elif action == 'nlri-nexthop':
+            settings.nexthop = value
+        elif action == 'nop':
+            pass  # Intentionally do nothing (e.g., FlowSpec 'accept')
+        elif action == 'set-command':
+            # Store on settings for later processing
+            setattr(settings, command.replace('-', '_'), value)
+        else:
+            raise ValueError(f"Unknown action '{action}' for command '{command}'")
+
+    def _validate_legacy(self, tokeniser: 'Tokeniser') -> list[Any]:
+        """Build Route using legacy pattern (immediate NLRI creation with mutation)."""
+        from exabgp.bgp.message.update.attribute import AttributeCollection
+        from exabgp.bgp.message.update.nlri.cidr import CIDR
+        from exabgp.configuration.schema import Leaf, LeafList
         from exabgp.rib.route import Route
 
         # Create NLRI and Change
@@ -1101,8 +1202,6 @@ class RouteBuilderValidator(Validator[list[Any]]):
         route = Route(nlri, AttributeCollection())
 
         # Process sub-commands from schema
-        from exabgp.configuration.schema import Leaf, LeafList
-
         while True:
             command = tokeniser()
             if not command:
@@ -1127,7 +1226,7 @@ class RouteBuilderValidator(Validator[list[Any]]):
         return [route]
 
     def _apply_action(self, route: 'Route', command: str, action: str, value: Any) -> None:
-        """Apply parsed value to Route object based on action."""
+        """Apply parsed value to Route object based on action (legacy mode)."""
         if action == 'attribute-add':
             route.attributes.add(value)
         elif action == 'nexthop-and-attribute':

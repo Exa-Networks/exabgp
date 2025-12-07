@@ -663,8 +663,44 @@ Each phase is independently deployable:
 - `tests/unit/test_nlri_settings.py` - Added 7 tests (52 total)
 
 **Resume Point:**
-- Phase 1 COMPLETE - all Settings classes and from_settings() methods implemented
-- Next: Phase 2 - Update RouteBuilderValidator to use Settings pattern
+- ~~Phase 1 COMPLETE - all Settings classes and from_settings() methods implemented~~
+- ~~Next: Phase 2 - Update RouteBuilderValidator to use Settings pattern~~
+
+### 2025-12-07 - Phase 2: RouteBuilderValidator Refactoring
+
+**Completed:**
+- ✅ Added `nlri_class` and `settings_class` fields to `RouteBuilder` dataclass in `schema.py`
+  - Supports two modes: legacy (nlri_factory) and settings (nlri_class + settings_class)
+- ✅ Updated `RouteBuilderValidator` in `validator.py` with new `_validate_with_settings()` method
+  - Creates Settings instance at start
+  - Collects values via `settings.set()` for `nlri-set` action
+  - Creates immutable NLRI via `from_settings()` at end
+  - Legacy path preserved in `_validate_legacy()` for backwards compatibility
+- ✅ Updated `AnnounceVPLS.schema` to use settings mode:
+  - `nlri_class=VPLS`
+  - `settings_class=VPLSSettings`
+  - Removed `nlri_factory=_vpls_factory`
+- ✅ All tests pass (11 suites, 44.4s)
+
+**Files modified:**
+- `src/exabgp/configuration/schema.py` - Added nlri_class, settings_class fields to RouteBuilder
+- `src/exabgp/configuration/validator.py` - Added _validate_with_settings(), _apply_settings_action()
+- `src/exabgp/configuration/announce/vpls.py` - Updated schema to use settings mode
+
+**Phase 2 Summary:**
+
+| Component | Status |
+|-----------|--------|
+| RouteBuilder schema | ✅ Updated with nlri_class, settings_class |
+| RouteBuilderValidator | ✅ Supports both legacy and settings modes |
+| VPLS announce config | ✅ Uses settings mode (no mutation) |
+
+**Phase 2 COMPLETE!**
+
+**Resume Point:**
+- Phase 3: Update other configuration parsers (static routes, FlowSpec, etc.)
+- Then Phase 4: TypeSelectorValidator for MUP/MVPN
+- Then Phase 5: Remove mutation support from NLRI classes
 
 ---
 
