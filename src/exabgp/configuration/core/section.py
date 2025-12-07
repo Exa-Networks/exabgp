@@ -187,20 +187,44 @@ class Section(Error):
             elif action == 'extend-command':
                 self.scope.extend(command, insert)
             elif action == 'attribute-add':
-                self.scope.attribute_add(name, insert)
+                # Settings mode: add to standalone attributes collection
+                # Legacy mode: add to route's attributes
+                if self.scope.in_settings_mode():
+                    self.scope.settings_attribute_add(name, insert)
+                else:
+                    self.scope.attribute_add(name, insert)
+            elif action == 'settings-set':
+                # Settings mode: set field on settings object
+                self.scope.settings_set(name, self.assign[command], insert)
             elif action == 'nlri-set':
-                self.scope.nlri_assign(name, self.assign[command], insert)
+                # Settings mode: set field on settings object
+                # Legacy mode: mutate NLRI via assign()
+                if self.scope.in_settings_mode():
+                    self.scope.settings_set(name, self.assign[command], insert)
+                else:
+                    self.scope.nlri_assign(name, self.assign[command], insert)
             elif action == 'nlri-add':
                 for adding in insert:
                     self.scope.nlri_add(name, command, adding)
             elif action == 'nlri-nexthop':
-                self.scope.nlri_nexthop(name, insert)
+                # Settings mode: set nexthop on settings object
+                # Legacy mode: set nexthop on NLRI directly
+                if self.scope.in_settings_mode():
+                    self.scope.get_settings().nexthop = insert
+                else:
+                    self.scope.nlri_nexthop(name, insert)
             elif action == 'nexthop-and-attribute':
                 ip, attribute = insert
                 if ip:
-                    self.scope.nlri_nexthop(name, ip)
+                    if self.scope.in_settings_mode():
+                        self.scope.get_settings().nexthop = ip
+                    else:
+                        self.scope.nlri_nexthop(name, ip)
                 if attribute:
-                    self.scope.attribute_add(name, attribute)
+                    if self.scope.in_settings_mode():
+                        self.scope.settings_attribute_add(name, attribute)
+                    else:
+                        self.scope.attribute_add(name, attribute)
             elif action == 'append-route':
                 self.scope.extend_routes(insert)
             elif action == 'nop':

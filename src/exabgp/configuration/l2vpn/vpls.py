@@ -32,12 +32,14 @@ from exabgp.configuration.static.parser import withdraw
 
 from exabgp.configuration.static.mpls import route_distinguisher
 
-from exabgp.configuration.l2vpn.parser import vpls
 from exabgp.configuration.l2vpn.parser import vpls_endpoint
 from exabgp.configuration.l2vpn.parser import vpls_size
 from exabgp.configuration.l2vpn.parser import vpls_offset
 from exabgp.configuration.l2vpn.parser import vpls_base
 from exabgp.configuration.l2vpn.parser import next_hop
+
+from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.rib.route import Route
 
 
 class ParseVPLS(Section):
@@ -281,14 +283,28 @@ class ParseVPLS(Section):
         pass
 
     def pre(self):
-        self.scope.append_route(vpls(self.parser.tokeniser))
+        # Settings mode: create VPLSSettings and AttributeCollection for deferred NLRI construction
+        settings = VPLSSettings()
+        attributes = AttributeCollection()
+        self.scope.set_settings(settings, attributes)
         return True
 
     def post(self):
-        return self._check()
+        # Create immutable VPLS from validated settings
+        settings = self.scope.get_settings()
+        attributes = self.scope.get_settings_attributes()
 
-    def _check(self):
-        feedback = self.scope.get_route().feedback()
+        # Validate settings before creating NLRI
+        feedback = settings.validate()
         if feedback:
+            self.scope.clear_settings()
             return self.error.set(feedback)
+
+        # Create NLRI from settings (no mutation after this point)
+        nlri = VPLS_NLRI.from_settings(settings)
+        route = Route(nlri, attributes)
+
+        # Append route and clear settings
+        self.scope.append_route(route)
+        self.scope.clear_settings()
         return True

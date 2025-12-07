@@ -31,6 +31,9 @@ class Scope(Error):
         }
         self._routes = []
         self._current: dict[str, Any] = self._all
+        # Settings mode: deferred NLRI construction
+        self._settings: Any = None  # Settings dataclass for current route
+        self._attributes: Any = None  # AttributeCollection for settings mode
 
     def __repr__(self) -> str:
         return pprint.pformat(self.__dict__, indent=3)
@@ -43,6 +46,8 @@ class Scope(Error):
         }
         self._routes = []
         self._current = self._all
+        self._settings = None
+        self._attributes = None
 
     # building route list
 
@@ -120,6 +125,44 @@ class Scope(Error):
 
     def nlri_nexthop(self, name: str, data: Any) -> None:
         self.get_route().nlri.nexthop = data
+
+    # Settings mode: deferred NLRI construction
+
+    def set_settings(self, settings: Any, attributes: Any) -> None:
+        """Store settings and attributes for deferred NLRI construction."""
+        self._settings = settings
+        self._attributes = attributes
+
+    def get_settings(self) -> Any:
+        """Get the current settings object."""
+        return self._settings
+
+    def get_settings_attributes(self) -> Any:
+        """Get the attributes collection for settings mode."""
+        return self._attributes
+
+    def settings_set(self, name: str, field: str, data: Any) -> None:
+        """Set a field on the settings object."""
+        if self._settings is None:
+            raise RuntimeError('No settings object - call set_settings() first')
+        self._settings.set(field, data)
+
+    def settings_attribute_add(self, name: str, data: Any) -> None:
+        """Add an attribute in settings mode."""
+        if self._attributes is None:
+            raise RuntimeError('No attributes object - call set_settings() first')
+        self._attributes.add(data)
+        if name not in self._added:
+            self._added.add(name)
+
+    def clear_settings(self) -> None:
+        """Clear settings after route creation."""
+        self._settings = None
+        self._attributes = None
+
+    def in_settings_mode(self) -> bool:
+        """Check if we're in settings mode (deferred NLRI construction)."""
+        return self._settings is not None
 
     def append(self, name: str, data: Any) -> None:
         self._current.setdefault(name, []).append(data)

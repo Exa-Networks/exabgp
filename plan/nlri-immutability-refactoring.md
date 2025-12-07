@@ -807,13 +807,58 @@ Full removal of mutation requires updating many configuration paths:
 
 Full removal requires:
 - Update `announce/path.py`, `announce/vpn.py`, `announce/label.py` to use Settings
-- Update Section parser to use Settings when available
-- Update `l2vpn/parser.py` to not create empty VPLS
+- ~~Update Section parser to use Settings when available~~ ✅ Done
+- ~~Update `l2vpn/parser.py` to not create empty VPLS~~ ✅ Done
 - Update unit tests to use Settings pattern only
 
+### 2025-12-07 - Phase 5 Continued: Section-Based VPLS Migration
+
+**Completed:**
+- ✅ Added settings mode support to `Scope` class:
+  - `set_settings()`, `get_settings()`, `get_settings_attributes()` for storage
+  - `settings_set()` for field assignment
+  - `settings_attribute_add()` for attribute collection
+  - `in_settings_mode()` for mode detection
+  - `clear_settings()` for cleanup after route creation
+- ✅ Updated `Section.command()` to route actions based on mode:
+  - `nlri-set` → `settings_set()` in settings mode, `nlri_assign()` in legacy
+  - `attribute-add` → `settings_attribute_add()` in settings mode
+  - `nlri-nexthop` and `nexthop-and-attribute` also support settings mode
+  - Added new `settings-set` action type for explicit settings mode
+- ✅ Updated `ParseVPLS`:
+  - `pre()` creates `VPLSSettings` and `AttributeCollection`, stores in scope
+  - `post()` validates settings, creates `VPLS.from_settings()`, wraps in `Route`
+  - No more `vpls()` factory call with `make_empty()`
+- ✅ Removed unused `vpls()` factory from `l2vpn/parser.py`
+- ✅ All tests pass (11 suites, 45.5s)
+
+**Files modified:**
+- `src/exabgp/configuration/core/scope.py` - Added settings mode methods
+- `src/exabgp/configuration/core/section.py` - Updated command() for settings mode
+- `src/exabgp/configuration/l2vpn/vpls.py` - Updated pre()/post() for settings mode
+- `src/exabgp/configuration/l2vpn/parser.py` - Removed vpls() factory
+
+**Phase 5 Continued Summary:**
+
+| Component | Status |
+|-----------|--------|
+| Scope class | ✅ Settings mode methods added |
+| Section.command() | ✅ Routes actions based on mode |
+| ParseVPLS | ✅ Uses VPLSSettings + from_settings() |
+| vpls() factory | ✅ Removed (no longer needed) |
+
+**VPLS now has NO mutation after NLRI creation!**
+
+**What Still Uses Mutation:**
+1. ~~Block syntax `vpls site5 { ... }` via `ParseVPLS.pre()`~~ ✅ Fixed
+2. ~~Section parser `nlri-set` actions → `scope.nlri_assign()`~~ ✅ Fixed (settings mode)
+3. Legacy mode in RouteBuilderValidator (`_validate_legacy`) - for non-VPLS types
+4. Unit tests in `tests/unit/test_vpls.py` that test the legacy pattern
+
 **Resume Point:**
-- Continue Phase 5 in future: Update remaining schemas and remove mutation methods
-- All current code paths work, mutation is documented as deprecated
+- Update `announce/path.py`, `announce/vpn.py`, `announce/label.py` to use Settings
+- Update unit tests to use Settings pattern only
+- Remove deprecated `make_empty()` and `assign()` methods from VPLS
 
 ---
 
