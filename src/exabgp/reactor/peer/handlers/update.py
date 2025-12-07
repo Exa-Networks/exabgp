@@ -39,20 +39,21 @@ class UpdateHandler(MessageHandler):
         Stores all NLRIs in the incoming RIB cache.
         """
         update = cast(Update, message)
+        parsed = update.data  # Already parsed by unpack_message
         self._number += 1
 
         log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
 
         # Process announces - pass action explicitly
-        for nlri in update.announces:
-            ctx.neighbor.rib.incoming.update_cache(nlri, update.attributes, Action.ANNOUNCE)
+        for nlri in parsed.announces:
+            ctx.neighbor.rib.incoming.update_cache(nlri, parsed.attributes, Action.ANNOUNCE)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
             )
 
         # Process withdraws - use dedicated method
-        for nlri in update.withdraws:
+        for nlri in parsed.withdraws:
             ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
@@ -68,20 +69,21 @@ class UpdateHandler(MessageHandler):
         Same logic as sync - no async I/O needed for inbound processing.
         """
         update = cast(Update, message)
+        parsed = update.data  # Already parsed by unpack_message
         self._number += 1
 
         log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
 
         # Process announces - pass action explicitly
-        for nlri in update.announces:
-            ctx.neighbor.rib.incoming.update_cache(nlri, update.attributes, Action.ANNOUNCE)
+        for nlri in parsed.announces:
+            ctx.neighbor.rib.incoming.update_cache(nlri, parsed.attributes, Action.ANNOUNCE)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
             )
 
         # Process withdraws - use dedicated method
-        for nlri in update.withdraws:
+        for nlri in parsed.withdraws:
             ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),

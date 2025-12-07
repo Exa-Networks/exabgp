@@ -68,21 +68,18 @@ class Update(Message):
     TYPE = bytes([Message.CODE.UPDATE])
     EOR: bool = False  # Not an End-of-RIB marker
 
-    def __init__(self, packed: Buffer, parsed: 'UpdateCollection | None' = None) -> None:
+    def __init__(self, packed: Buffer, negotiated: 'Negotiated | None' = None) -> None:
         """Create Update from raw payload bytes.
 
         Args:
-            payload: The UPDATE message payload (after BGP header).
-                     Format: withdrawn_len(2) + withdrawn + attr_len(2) + attributes + nlri
-                     Can be bytes or memoryview (converted to bytes for storage).
-            parsed: Optional pre-parsed UpdateCollection (used internally).
+            packed: The UPDATE message payload (after BGP header).
+                    Format: withdrawn_len(2) + withdrawn + attr_len(2) + attributes + nlri
+                    Can be bytes or memoryview (converted to bytes for storage).
+            negotiated: Optional BGP session negotiated parameters for parsing context.
         """
-        # Two-buffer pattern: bytearray owns data, memoryview provides zero-copy slicing
         self._packed = packed
-        # Initialize with empty collection if not provided - properties always work
-        self._parsed: 'UpdateCollection' = (
-            parsed if parsed is not None else UpdateCollection([], [], AttributeCollection())
-        )
+        self._negotiated = negotiated
+        self._parsed: 'UpdateCollection | None' = None
 
     @property
     def payload(self) -> bytes:
@@ -129,43 +126,35 @@ class Update(Message):
 
         Returns:
             Parsed UpdateCollection (semantic container) with announces, withdraws, attributes.
-            Returns empty collection if parse() was not called.
+
+        Raises:
+            ValueError: If parse() was not called and no negotiated context available.
         """
+        if self._parsed is None:
+            if self._negotiated is None:
+                raise ValueError('Cannot access data: Update not parsed and no negotiated context stored')
+            self._parsed = UpdateCollection._parse_payload(bytes(self._packed), self._negotiated)
         return self._parsed
 
-    def parse(self, negotiated: 'Negotiated') -> 'UpdateCollection':
+    def parse(self, negotiated: 'Negotiated | None' = None) -> 'UpdateCollection':
         """Parse payload to semantic UpdateCollection with negotiated context.
 
         Args:
-            negotiated: BGP session negotiated parameters.
+            negotiated: BGP session negotiated parameters. If not provided,
+                       uses the negotiated context stored at construction time.
 
         Returns:
             Parsed UpdateCollection (semantic container).
+
+        Raises:
+            ValueError: If no negotiated context available (neither passed nor stored).
         """
-        # Only parse if we have an empty placeholder
-        if not self._parsed.announces and not self._parsed.withdraws and not self._parsed.attributes:
-            self._parsed = UpdateCollection._parse_payload(bytes(self._packed), negotiated)
+        if self._parsed is None:
+            neg = negotiated or self._negotiated
+            if neg is None:
+                raise ValueError('Cannot parse Update: no negotiated context provided or stored')
+            self._parsed = UpdateCollection._parse_payload(bytes(self._packed), neg)
         return self._parsed
-
-    @property
-    def nlris(self) -> list[NLRI]:
-        """Get all NLRIs (announces + withdraws)."""
-        return self._parsed.nlris
-
-    @property
-    def announces(self) -> list[NLRI]:
-        """Get announced NLRIs."""
-        return self._parsed.announces
-
-    @property
-    def withdraws(self) -> list[NLRI]:
-        """Get withdrawn NLRIs."""
-        return self._parsed.withdraws
-
-    @property
-    def attributes(self) -> AttributeCollection:
-        """Get path attributes."""
-        return self._parsed.attributes
 
     @staticmethod
     def split(data: Buffer) -> tuple[Buffer, Buffer, Buffer]:
@@ -196,9 +185,9 @@ class Update(Message):
         if length == EOR_WITH_PREFIX_LENGTH and bytes(data).startswith(EOR.NLRI.PREFIX):
             return EOR.unpack_message(data, negotiated)
 
-        # Create wire container and parse
-        update = cls(data)
-        parsed = update.parse(negotiated)
+        # Create wire container with negotiated context and parse
+        update = cls(data, negotiated)
+        parsed = update.parse()
 
         # Check if this is actually an EOR after parsing (empty update with MP attributes)
         if not parsed.attributes and not parsed.announces and not parsed.withdraws:
@@ -557,7 +546,7 @@ class UpdateCollection(Message):
             # BGP message format: marker(16) + length(2) + type(1) + payload
             # Extract payload by removing 19-byte header
             payload = msg_bytes[19:]
-            yield Update(payload)
+            yield Update(payload, negotiated)
 
     # Note: This method can raise ValueError, IndexError, TypeError, struct.error (from unpack).
     # These exceptions are caught by the caller in reactor/protocol.py:read_message() which

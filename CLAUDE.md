@@ -338,6 +338,14 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
     - **Read when:** Modifying NLRI `__init__` methods, refactoring NLRI classes, understanding slot inheritance
     - **Contains:** Class hierarchy diagram, slot definitions per class, ClassVar vs instance var, factory patterns
 
+16. **`.claude/exabgp/WIRE_SEMANTIC_SEPARATION.md`** - Wire vs Semantic container design
+    - **Read when:** Modifying Update, Attribute, NLRI or their Collection counterparts
+    - **Contains:** Immutability rules, `_negotiated` storage, transformation flow, common mistakes
+
+17. **`.claude/exabgp/COLLECTION_PATTERN.md`** - Collection pattern reference
+    - **Read when:** Working with UpdateCollection, AttributeCollection, NLRICollection
+    - **Contains:** Wire vs Semantic containers, factory patterns, iterator patterns, when to use each
+
 **Quick reference:**
 - Adding NLRI type → Read #3, then #1
 - Understanding message flow → Read #2
@@ -351,6 +359,8 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
 - Converting NLRI to packed-bytes-first → Read #13, reference VPLS implementation
 - Wire format/pack/unpack debugging → Read #14
 - Modifying NLRI __init__ or slots → Read #15
+- Modifying Update/Attribute/Collection classes → Read #16, #17
+- Understanding wire vs semantic separation → Read #16
 
 ---
 
@@ -427,4 +437,4 @@ Before ending session:
 
 ---
 
-**Updated:** 2025-12-04
+**Updated:** 2025-12-07

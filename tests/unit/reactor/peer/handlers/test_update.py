@@ -37,11 +37,13 @@ class TestUpdateHandler:
     def test_handle_stores_nlris(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """UpdateHandler stores NLRIs in incoming RIB."""
         nlri1, nlri2 = Mock(), Mock()
+        parsed = Mock()
+        parsed.announces = [nlri1, nlri2]
+        parsed.withdraws = []
+        parsed.attributes = Mock()
         update = Mock()
         update.TYPE = UpdateCollection.TYPE
-        update.announces = [nlri1, nlri2]
-        update.withdraws = []
-        update.attributes = Mock()
+        update.data = parsed
 
         list(handler.handle(mock_context, update))
 
@@ -49,11 +51,13 @@ class TestUpdateHandler:
 
     def test_handle_empty_nlris(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """UpdateHandler handles updates with no NLRIs."""
+        parsed = Mock()
+        parsed.announces = []
+        parsed.withdraws = []
+        parsed.attributes = Mock()
         update = Mock()
         update.TYPE = UpdateCollection.TYPE
-        update.announces = []
-        update.withdraws = []
-        update.attributes = Mock()
+        update.data = parsed
 
         list(handler.handle(mock_context, update))
 
@@ -61,11 +65,13 @@ class TestUpdateHandler:
 
     def test_counter_increments(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """UpdateHandler increments counter per update."""
+        parsed = Mock()
+        parsed.announces = []
+        parsed.withdraws = []
+        parsed.attributes = Mock()
         update = Mock()
         update.TYPE = UpdateCollection.TYPE
-        update.announces = []
-        update.withdraws = []
-        update.attributes = Mock()
+        update.data = parsed
 
         list(handler.handle(mock_context, update))
         list(handler.handle(mock_context, update))
@@ -80,11 +86,13 @@ class TestUpdateHandler:
 
     def test_handle_is_generator(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """handle() returns a generator."""
+        parsed = Mock()
+        parsed.announces = []
+        parsed.withdraws = []
+        parsed.attributes = Mock()
         update = Mock()
         update.TYPE = UpdateCollection.TYPE
-        update.announces = []
-        update.withdraws = []
-        update.attributes = Mock()
+        update.data = parsed
 
         result = handler.handle(mock_context, update)
         # Should be a generator
@@ -110,11 +118,13 @@ class TestUpdateHandlerAsync:
     async def test_handle_async_stores_nlris(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """handle_async stores NLRIs in incoming RIB."""
         nlri1, nlri2 = Mock(), Mock()
+        parsed = Mock()
+        parsed.announces = [nlri1, nlri2]
+        parsed.withdraws = []
+        parsed.attributes = Mock()
         update = Mock()
         update.TYPE = UpdateCollection.TYPE
-        update.announces = [nlri1, nlri2]
-        update.withdraws = []
-        update.attributes = Mock()
+        update.data = parsed
 
         await handler.handle_async(mock_context, update)
 
@@ -123,11 +133,13 @@ class TestUpdateHandlerAsync:
     @pytest.mark.asyncio
     async def test_handle_async_increments_counter(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """handle_async increments counter."""
+        parsed = Mock()
+        parsed.announces = []
+        parsed.withdraws = []
+        parsed.attributes = Mock()
         update = Mock()
         update.TYPE = UpdateCollection.TYPE
-        update.announces = []
-        update.withdraws = []
-        update.attributes = Mock()
+        update.data = parsed
 
         await handler.handle_async(mock_context, update)
         await handler.handle_async(mock_context, update)

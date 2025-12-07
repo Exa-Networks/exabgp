@@ -1,15 +1,16 @@
 # Collection Pattern Reference
 
 **Purpose:** Document the Wire Container vs Semantic Container pattern used in ExaBGP.
+**Related:** `WIRE_SEMANTIC_SEPARATION.md` (comprehensive design), `PACKED_BYTES_FIRST_PATTERN.md`
 
 ---
 
 ## Overview
 
-The codebase uses two complementary patterns for data containers:
+ExaBGP uses two complementary container patterns:
 
-1. **Wire Container** - stores raw `_packed` bytes, yields objects with buffer slices
-2. **Semantic Container (Collection)** - stores parsed objects, used for building/modification
+1. **Wire Container** - immutable, stores `_packed` bytes + `_negotiated` capabilities
+2. **Semantic Container (Collection)** - mutable, stores parsed objects, used for building/modification
 
 ---
 
@@ -17,71 +18,86 @@ The codebase uses two complementary patterns for data containers:
 
 ### Wire Container Pattern
 
-**Purpose:** Efficient storage and transmission of wire-format data.
+**Purpose:** Immutable storage of wire-format data for efficient transmission.
 
 ```python
 class WireContainer:
-    """Stores raw bytes, provides lazy access to semantic values."""
+    """Immutable container for wire-format data."""
 
-    def __init__(self, packed: bytes, context: Context | None = None) -> None:
-        self._packed = packed      # Canonical representation
-        self._context = context    # For lazy parsing
-        self._parsed = None        # Cache for semantic container
+    __slots__ = ('_packed', '_negotiated')
+
+    def __init__(self, packed: bytes, negotiated: Negotiated) -> None:
+        self._packed = packed          # Canonical wire representation
+        self._negotiated = negotiated  # Capabilities that created this
 
     @property
     def packed(self) -> bytes:
-        """Raw wire bytes."""
+        """Raw wire bytes - read only."""
         return self._packed
 
-    def __iter__(self) -> Iterator[Item]:
-        """Iterate over items by parsing _packed lazily.
+    def pack_message(self) -> bytes:
+        """Return wire bytes with header - no processing."""
+        return self._header + self._packed
 
-        Yields Item objects that store buffer slices.
-        Each item parses its data dynamically via properties.
+    def parse(self) -> SemanticContainer:
+        """Convert to semantic container for modification.
+
+        Returns FRESH container each call - no caching.
+        Uses stored _negotiated for correct parsing.
         """
-        ...
-
-    def to_collection(self) -> SemanticContainer:
-        """Convert to semantic container for modification."""
-        if self._parsed is None:
-            self._parsed = SemanticContainer.from_wire(self._packed, self._context)
-        return self._parsed
+        return SemanticContainer._parse(self._packed, self._negotiated)
 ```
 
-### Collection Pattern (Semantic Container)
+**Key properties:**
+- Immutable after creation
+- Stores originating capabilities (`_negotiated`)
+- `pack()` returns `_packed` directly (zero-copy)
+- `parse()` returns fresh collection (no caching)
+- No semantic delegation properties
 
-**Purpose:** Building, modifying, and generating wire format from semantic data.
+### Semantic Container (Collection) Pattern
+
+**Purpose:** Mutable container for building, modifying, and transforming data.
 
 ```python
 class SemanticContainer:
-    """Stores semantic objects, provides factory methods for creation."""
+    """Mutable container for semantic data."""
 
-    def __init__(self) -> None:
-        self._items: dict[int, Item] = {}
+    def __init__(self, items: list[Item], attributes: dict) -> None:
+        self._items = items        # Mutable list
+        self._attributes = attributes  # Mutable dict
 
     def add(self, item: Item) -> None:
         """Add item to collection."""
-        self._items[item.ID] = item
+        self._items.append(item)
 
-    def pack(self, context: Context) -> bytes:
-        """Generate wire format from semantic data.
+    def remove(self, item: Item) -> None:
+        """Remove item from collection."""
+        self._items.remove(item)
 
-        This is a FACTORY operation - may generate defaults,
-        transform data based on context, fragment messages.
-        This is acceptable for Collection pattern.
+    def pack(self, negotiated: Negotiated) -> WireContainer:
+        """Create wire container for target peer capabilities.
+
+        This is a FACTORY operation - may:
+        - Generate defaults (ORIGIN, AS_PATH, LOCAL_PREF)
+        - Transform for target capabilities (ASN format)
+        - Fragment into multiple messages
         """
-        result = b''
-        for code in sorted(self._items):
-            result += self._items[code].pack(context)
-        return result
+        wire_bytes = self._serialize(negotiated)
+        return WireContainer(wire_bytes, negotiated)
 
     @classmethod
-    def from_wire(cls, data: bytes, context: Context) -> 'SemanticContainer':
+    def _parse(cls, data: bytes, negotiated: Negotiated) -> 'SemanticContainer':
         """Parse wire bytes into semantic container."""
-        instance = cls()
-        # Parse and add items
-        return instance
+        # Parse items from data
+        return cls(items, attributes)
 ```
+
+**Key properties:**
+- Mutable - add/remove/modify allowed
+- `pack()` is a factory - creates NEW wire container
+- Handles capability transformation
+- May generate defaults or fragment messages
 
 ---
 
@@ -89,11 +105,12 @@ class SemanticContainer:
 
 | Aspect | Wire Container | Semantic Container (Collection) |
 |--------|---------------|--------------------------------|
-| Storage | `_packed` bytes | Dict of objects |
-| Primary use | Receiving, forwarding | Building, modifying |
-| pack() behavior | Return `_packed` | Factory - may generate/transform |
-| Iteration | Parse `_packed` lazily, yield objects with slices | Iterate dict |
-| Modification | Create new Collection | Direct add/remove |
+| **Mutability** | Immutable | Mutable |
+| **Storage** | `_packed` bytes + `_negotiated` | Dict/list of objects |
+| **Primary use** | Receiving, forwarding, sending | Building, modifying |
+| **pack() behavior** | Return `_packed` directly | Factory - create new Wire |
+| **parse() behavior** | Return fresh Collection | N/A (is the parsed form) |
+| **Caching** | None - no `_parsed` cache | None |
 
 ---
 
@@ -113,98 +130,172 @@ This is acceptable because:
 
 ---
 
+## Transformation Flow
+
+```
+Peer A                                    Peer B
+(caps_a)                                  (caps_b)
+   |                                         ^
+   v                                         |
+wire_bytes_a                            wire_bytes_b
+   |                                         ^
+   v                                         |
+WireContainer                           WireContainer
+(_packed, _negotiated_a)                (_packed, _negotiated_b)
+   |                                         ^
+   | .parse()                                | .pack(negotiated_b)
+   v                                         |
+Collection  ─────────────────────────>  Collection
+(mutable)         modify if needed      (same or copy)
+```
+
+---
+
 ## Existing Implementations
 
 | Wire Container | Semantic Container | Status |
 |---------------|-------------------|--------|
-| `Attributes` | `AttributeCollection` | Implemented |
-| `Update` | `UpdateCollection` | Implemented |
-| `Flow` | `FlowRuleCollection` | TODO - Flow uses Settings, needs Collection |
-| `MPRNLRI` (dual-mode) | `MPRNLRI` (dual-mode) | Implemented |
-| `MPURNLRI` (dual-mode) | `MPURNLRI` (dual-mode) | Implemented |
+| `Update` | `UpdateCollection` | **Needs refactoring** - has `_parsed` cache |
+| `Attribute` subclasses | `AttributeCollection` | Mostly compliant |
+| `NLRI` subclasses | `NLRICollection`/`MPNLRICollection` | Mostly compliant |
+| `MPRNLRI` | `MPNLRICollection` | Dual-mode |
+| `MPURNLRI` | `MPNLRICollection` | Dual-mode |
+
+See `plan/wire-semantic-separation.md` for refactoring details.
 
 ---
 
 ## Pattern Application Examples
 
-### Attributes / AttributeCollection
-
-```
-Wire Format:           Semantic Format:
-Attributes             AttributeCollection
-(_packed bytes)        (dict of Attribute objects)
-    |                        ^
-    |                        |
-    +---> __iter__() --------+  (yields Attribute with buffer slice)
-    |
-    +---> to_collection() ---+  (full parse to dict)
-    |
-from_set() <-----------------+  (pack collection to bytes)
-```
-
-**Attributes (Wire Container):**
-- `__init__(packed, context)` - stores raw bytes
-- `__iter__()` - yields Attribute objects with buffer slices
-- `to_collection()` - converts to AttributeCollection for modification
-- `packed` property - returns raw bytes
-
-**AttributeCollection (Semantic Container):**
-- `add(attribute)` - add attribute to dict
-- `pack_attribute(negotiated)` - factory that generates wire format with defaults
-- `from_attributes(attrs, negotiated)` - create from wire Attributes
-
 ### Update / UpdateCollection
 
+```
+Wire Format:              Semantic Format:
+Update                    UpdateCollection
+(_packed bytes)           (announces, withdraws, attributes)
+(_negotiated)
+    |                           ^
+    |                           |
+    +---> .parse() -------------+  (returns fresh collection)
+    |
+    +---> .pack_message() -----> bytes (just adds header)
+
+                                |
+    <--- .pack(negotiated) -----+  (factory creates new Update)
+```
+
 **Update (Wire Container):**
-- `__init__(packed)` - stores raw UPDATE payload
-- `parse(negotiated)` - lazy parse to UpdateCollection
-- `pack_message()` - return packed bytes with header
+- `__init__(packed, negotiated)` - stores raw bytes + capabilities
+- `parse()` - returns fresh UpdateCollection (no caching)
+- `pack_message()` - returns packed bytes with header
 
 **UpdateCollection (Semantic Container):**
-- `__init__(announces, withdraws, attributes)` - stores semantic data
-- `messages(negotiated)` - factory that generates wire format with fragmentation
-- `pack_messages()` - yields Update wire containers
+- `add_announce(nlri)` - add to announces list
+- `pack(negotiated)` - factory creates new Update wire container
+- `pack_messages(negotiated)` - iterator for fragmented messages
 
-### Flow (Needs Collection)
+### Attributes / AttributeCollection
 
-**Current state:**
-- `Flow` is dual-mode (stores `_packed` OR builds from rules)
-- `FlowSettings` for deferred construction
-- `_pack_from_rules()` does factory work (EOL bits, ordering)
+**Attribute subclasses (Wire Container):**
+- `__init__(packed)` - stores raw bytes
+- `@property` methods - parse from `_packed` on access
+- `pack()` - returns `_packed`
 
-**TODO:**
-- Create `FlowRuleCollection` for rule preparation
-- Move factory logic from `_pack_from_rules()` to Collection
+**AttributeCollection (Semantic Container):**
+- `dict` subclass - mutable attribute storage
+- `add(attribute)` - add attribute to dict
+- `pack_attribute(negotiated)` - factory generates wire format with defaults
 
 ---
 
-## Iterator Pattern
+## Common Mistakes
 
-The Wire Container iterator yields objects that store buffer slices:
+### 1. Caching Parsed Data in Wire Container
 
 ```python
-def __iter__(self) -> Iterator[Attribute]:
-    """Iterate over Attribute objects with buffer slices."""
-    data = memoryview(self._packed)  # Zero-copy slicing
-    while data:
-        flag, code = data[0], data[1]
-        # ... extract length and offset ...
+# WRONG - Wire container caches semantic data
+class Update:
+    def __init__(self, packed, negotiated):
+        self._packed = packed
+        self._parsed = None  # Violates immutability
 
-        value_slice = data[offset:offset + length]
-
-        # Attribute stores slice, parses on property access
-        attr = Attribute.unpack(code, flag, value_slice, self._context)
-        yield attr
-
-        data = data[offset + length:]
+    def parse(self, negotiated):
+        if self._parsed is None:
+            self._parsed = UpdateCollection._parse(...)
+        return self._parsed
 ```
 
-**Key principle:** Objects store buffer slices, parse on property access:
+### 2. Delegation Properties on Wire Container
+
+```python
+# WRONG - Wire container delegates to parsed data
+class Update:
+    @property
+    def announces(self):
+        return self._parsed.announces  # Should not exist on Wire
+
+# CORRECT - Callers explicitly parse
+collection = update.parse()
+for nlri in collection.announces:
+    ...
+```
+
+### 3. Missing Negotiated in Wire Container
+
+```python
+# WRONG - No way to know how to parse
+class Update:
+    def __init__(self, packed):
+        self._packed = packed
+
+    def parse(self, negotiated):  # Caller must provide
+        ...
+
+# CORRECT - Store originating capabilities
+class Update:
+    def __init__(self, packed, negotiated):
+        self._packed = packed
+        self._negotiated = negotiated
+
+    def parse(self):  # Uses stored capabilities
+        return UpdateCollection._parse(self._packed, self._negotiated)
+```
+
+---
+
+## Iterator Pattern for Wire Containers
+
+Wire containers may iterate over items by parsing `_packed` lazily:
+
+```python
+class Attributes:
+    """Wire container for path attributes."""
+
+    def __init__(self, packed: bytes, negotiated: Negotiated) -> None:
+        self._packed = packed
+        self._negotiated = negotiated
+
+    def __iter__(self) -> Iterator[Attribute]:
+        """Iterate over Attribute objects by parsing _packed."""
+        data = memoryview(self._packed)
+        while data:
+            flag, code = data[0], data[1]
+            # Extract length and slice
+            attr_slice = data[offset:offset + length]
+
+            # Each Attribute stores its slice
+            attr = Attribute.unpack(code, flag, attr_slice, self._negotiated)
+            yield attr
+
+            data = data[offset + length:]
+```
+
+Each yielded object stores a buffer slice and parses on property access:
 
 ```python
 class MED(Attribute):
     def __init__(self, packed: Buffer) -> None:
-        self._packed = packed  # Stores slice, no parsing
+        self._packed = packed  # Stores slice
 
     @property
     def med(self) -> int:
@@ -218,14 +309,24 @@ class MED(Attribute):
 **Use Wire Container when:**
 - Receiving data from network
 - Forwarding data without modification
+- Sending to peer with same capabilities
 - Memory efficiency is critical
-- Only need to access a few fields
 
 **Use Collection when:**
 - Building new messages
 - Modifying existing data
 - Need to add/remove items
+- Sending to peer with different capabilities
 - Generating wire format with defaults/transformation
+
+---
+
+## Related Documentation
+
+- `WIRE_SEMANTIC_SEPARATION.md` - Comprehensive design principles
+- `PACKED_BYTES_FIRST_PATTERN.md` - NLRI implementation details
+- `BUFFER_SHARING_AND_CACHING.md` - Memory optimization
+- `plan/wire-semantic-separation.md` - Refactoring plan
 
 ---
 

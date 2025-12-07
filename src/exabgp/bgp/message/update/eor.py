@@ -28,6 +28,7 @@ from exabgp.protocol.ip import IP
 class EOR(Message):
     ID = Message.CODE.UPDATE
     TYPE = bytes([Message.CODE.UPDATE])
+    EOR: bool = True  # End-of-RIB marker (Update has EOR = False)
 
     class EOR_NLRI(NLRI):
         PREFIX: bytes = b'\x00\x00\x00\x07\x90\x0f\x00\x03'

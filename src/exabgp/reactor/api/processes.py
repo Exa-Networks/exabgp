@@ -1270,9 +1270,19 @@ class Processes:
     def _update(
         self, peer: 'Peer', direction: str, update: 'Update', negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
+        # Encoders expect UpdateCollection (semantic container), not Update (wire container)
+        # Both Update and EOR have TYPE == Update.TYPE, but EOR has .nlris/.attributes directly
+        # Check for EOR flag to distinguish (EOR.EOR == True, Update.EOR == False)
+        if update.EOR:
+            # EOR has .nlris and .attributes directly, compatible with encoder interface
+            update_collection = update  # type: ignore[assignment]
+        else:
+            update_collection = update.data  # type: ignore[union-attr]
         for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
             self.write(
-                process, self._encoder[process].update(peer.neighbor, direction, update, header, body, negotiated), peer
+                process,
+                self._encoder[process].update(peer.neighbor, direction, update_collection, header, body, negotiated),
+                peer,
             )
 
     @register_process(Message.CODE.NOTIFICATION)

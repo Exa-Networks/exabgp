@@ -257,10 +257,14 @@ class Protocol:
             # raise Notify(5,0,'unknown message received')
 
         if message.TYPE == Update.TYPE:
-            update = cast(Update, message)
-            if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in update.attributes:
-                for nlri in update.nlris:
-                    nlri.action = Action.WITHDRAW
+            # Both Update and EOR have TYPE == Update.TYPE
+            # Update: use .data to get parsed collection
+            # EOR: has .attributes and .nlris directly
+            if isinstance(message, Update):
+                parsed_update = message.data  # Already parsed by unpack_message
+                if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in parsed_update.attributes:
+                    for nlri in parsed_update.nlris:
+                        nlri.action = Action.WITHDRAW
 
         if for_api:
             if consolidate:
@@ -273,7 +277,7 @@ class Protocol:
         if message.TYPE == Notification.TYPE:
             raise cast(Notification, message)
 
-        if message.TYPE == Update.TYPE and Attribute.CODE.INTERNAL_DISCARD in cast(Update, message).attributes:
+        if isinstance(message, Update) and Attribute.CODE.INTERNAL_DISCARD in message.data.attributes:
             return _NOP
         else:
             return message
