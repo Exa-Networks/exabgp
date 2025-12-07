@@ -427,4 +427,12 @@ For these cases, document why packed-first doesn't apply.
 
 ---
 
+## Related Documentation
+
+- `.claude/exabgp/BUFFER_SHARING_AND_CACHING.md` - How buffer sharing and caching complement packed-bytes-first
+- `.claude/exabgp/PEP688_BUFFER_PROTOCOL.md` - Python 3.12 Buffer protocol details
+- `.claude/exabgp/NLRI_CLASS_HIERARCHY.md` - Class hierarchy and slot inheritance
+
+---
+
 **Updated:** 2025-12-07
