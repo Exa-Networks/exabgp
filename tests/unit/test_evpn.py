@@ -768,12 +768,17 @@ class TestEVPNIntegration:
         assert hasattr(unpacked, 'addpath')
 
     def test_evpn_with_nexthop(self) -> None:
-        """Test EVPN routes with next hop"""
+        """Test EVPN routes with next hop.
+
+        Per RFC 4760, nexthop is NOT part of NLRI wire format - it's in MP_REACH_NLRI attribute.
+        So nexthop is set after NLRI creation, not in the constructor.
+        """
         rd = RouteDistinguisher.make_from_elements('43.43.43.43', 430)
         etag = EthernetTag.make_etag(4300)
         ip = IP.from_string('192.168.1.1')
         nexthop = IP.from_string('192.168.1.254')
 
-        route = Multicast.make_multicast(rd, etag, ip, nexthop=nexthop)
+        route = Multicast.make_multicast(rd, etag, ip)
+        route.nexthop = nexthop  # Set after creation (per RFC 4760)
 
         assert route.nexthop == nexthop

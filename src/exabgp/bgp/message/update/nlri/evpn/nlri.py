@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import pack
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
@@ -16,8 +15,8 @@ if TYPE_CHECKING:
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
-from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
 # https://tools.ietf.org/html/rfc7432
@@ -51,17 +50,27 @@ class EVPN(NLRI):
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
 
-    def __init__(self, action: Action = Action.UNSET, addpath: PathInfo | None = None) -> None:
-        # Family.__init__ detects afi/safi properties and skips setting them
-        NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
-        self.addpath = addpath if addpath is not None else PathInfo.DISABLED
-        self._packed = b''
+    def __init__(self, packed: bytes) -> None:
+        """Create an EVPN NLRI from packed wire-format bytes.
+
+        Args:
+            packed: Complete wire format bytes (type + length + payload)
+
+        Note: action, addpath, and nexthop are NOT part of NLRI wire format.
+        - nexthop is in MP_REACH_NLRI attribute (RFC 4760)
+        - addpath is a prefix when negotiated (RFC 7911)
+        Set these after construction or use factory methods.
+        """
+        NLRI.__init__(self, AFI.l2vpn, SAFI.evpn)
+        self.action = Action.ANNOUNCE
+        self.nexthop = IP.NoNextHop
+        self._packed = packed  # Complete wire format: type(1) + length(1) + payload
 
     def __hash__(self) -> int:
         return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed.hex()))
 
     def __len__(self) -> int:
-        return len(self._packed) + 2
+        return len(self._packed)  # _packed includes type(1) + length(1) header
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, EVPN):
@@ -69,9 +78,10 @@ class EVPN(NLRI):
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
     def __str__(self) -> str:
+        # _packed[2:] is the payload (skip type + length header)
         return 'evpn:{}:{}'.format(
             self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower(),
-            '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
+            '0x' + ''.join('{:02x}'.format(_) for _ in self._packed[2:]),
         )
 
     def __repr__(self) -> str:
@@ -101,8 +111,8 @@ class EVPN(NLRI):
         return 'evpn:{}:'.format(self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower())
 
     def _pack_nlri_simple(self) -> Buffer:
-        """Pack NLRI without negotiated-dependent data (no addpath)."""
-        return pack('!BB', self.CODE, len(self._packed)) + self._packed
+        """Pack NLRI - returns stored wire bytes directly (zero-copy)."""
+        return self._packed
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for EVPN (AFI 25, SAFI 70) but not yet implemented
@@ -134,36 +144,47 @@ class EVPN(NLRI):
             raise Notify(3, 10, f'EVPN NLRI too short: need at least 2 bytes, got {len(data)}')
         code = data[0]
         length = data[1]
+        total_length = 2 + length  # header (2) + payload
 
-        if len(data) < length + 2:
-            raise Notify(3, 10, f'EVPN NLRI truncated: need {length + 2} bytes, got {len(data)}')
+        if len(data) < total_length:
+            raise Notify(3, 10, f'EVPN NLRI truncated: need {total_length} bytes, got {len(data)}')
+
+        # Store COMPLETE wire format including type + length header (zero-copy pattern)
+        packed = bytes(data[0:total_length])
 
         if code in cls.registered_evpn:
-            nlri = cls.registered_evpn[code].unpack_evpn(bytes(data[2 : length + 2]))
+            nlri = cls.registered_evpn[code].unpack_evpn(packed)
         else:
-            nlri = GenericEVPN(code, bytes(data[2 : length + 2]))
+            nlri = GenericEVPN(packed)
         nlri.action = action
         nlri.addpath = addpath
 
-        return nlri, data[length + 2 :]
+        return nlri, data[total_length:]
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())
 
 
 class GenericEVPN(EVPN):
-    """Generic EVPN for unrecognized route types."""
+    """Generic EVPN for unrecognized route types.
 
-    __slots__ = ('_code',)
+    Stores complete wire format including type + length header.
+    """
 
-    def __init__(self, code: int, packed: bytes) -> None:
-        EVPN.__init__(self)
-        self._code = code
-        self._packed = packed
+    __slots__ = ()  # No extra storage needed - CODE extracted from _packed
+
+    def __init__(self, packed: bytes) -> None:
+        """Create a GenericEVPN from complete wire format bytes.
+
+        Args:
+            packed: Complete wire format bytes (type + length + payload)
+        """
+        EVPN.__init__(self, packed)
 
     @property
     def CODE(self) -> int:  # type: ignore[override]
-        return self._code
+        """Route type code - extracted from wire bytes."""
+        return self._packed[0]
 
     def json(self, compact: bool | None = None) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())

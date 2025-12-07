@@ -14,7 +14,6 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP
-from exabgp.util.types import Buffer
 
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
@@ -32,20 +31,23 @@ from exabgp.util.types import Buffer
 
 @EVPN.register_evpn_route
 class Multicast(EVPN):
+    """EVPN Route Type 3: Inclusive Multicast Ethernet Tag.
+
+    Wire format: type(1) + length(1) + RD(8) + ETag(4) + IPlen(1) + IP(4/16)
+    Uses packed-bytes-first pattern for zero-copy routing.
+    """
+
     CODE: ClassVar[int] = 3
     NAME: ClassVar[str] = 'Inclusive Multicast Ethernet Tag'
     SHORT_NAME: ClassVar[str] = 'Multicast'
 
-    def __init__(
-        self,
-        packed: bytes,
-        action: Action = Action.UNSET,
-        nexthop: IP = IP.NoNextHop,
-        addpath: PathInfo | None = None,
-    ) -> None:
-        EVPN.__init__(self, action, addpath)
-        self._packed = packed
-        self.nexthop = nexthop
+    def __init__(self, packed: bytes) -> None:
+        """Create Multicast from complete wire-format bytes.
+
+        Args:
+            packed: Complete wire format (type + length + payload)
+        """
+        EVPN.__init__(self, packed)
 
     @classmethod
     def make_multicast(
@@ -53,26 +55,40 @@ class Multicast(EVPN):
         rd: RouteDistinguisher,
         etag: EthernetTag,
         ip: IP,
-        nexthop: IP = IP.NoNextHop,
-        action: Action | None = None,
-        addpath: PathInfo | None = None,
+        action: Action = Action.ANNOUNCE,
+        addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'Multicast':
-        """Factory method to create Multicast from semantic parameters."""
-        packed = bytes(rd.pack_rd()) + etag.pack_etag() + bytes([len(ip) * 8]) + ip.pack_ip()
-        return cls(packed, action, nexthop, addpath)
+        """Factory method to create Multicast from semantic parameters.
+
+        Packs fields into wire format immediately (packed-bytes-first pattern).
+        Note: nexthop is not part of NLRI - set separately after creation.
+        """
+        payload = bytes(rd.pack_rd()) + etag.pack_etag() + bytes([len(ip) * 8]) + ip.pack_ip()
+        # Include type + length header for zero-copy pack
+        packed = bytes([cls.CODE, len(payload)]) + payload
+        instance = cls(packed)
+        instance.action = action
+        instance.addpath = addpath
+        return instance
+
+    # Wire format offsets (after 2-byte type+length header):
+    # RD: 2-10, ETag: 10-14, IPlen: 14, IP: 15+
 
     @property
     def rd(self) -> RouteDistinguisher:
-        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+        """Route Distinguisher - unpacked from wire bytes."""
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[2:10])
 
     @property
     def etag(self) -> EthernetTag:
-        return EthernetTag.unpack_etag(self._packed[8:12])
+        """Ethernet Tag - unpacked from wire bytes."""
+        return EthernetTag.unpack_etag(self._packed[10:14])
 
     @property
     def ip(self) -> IP:
-        iplen = self._packed[12]
-        return IP.unpack_ip(self._packed[13 : 13 + iplen // 8])
+        """Originating Router IP - unpacked from wire bytes."""
+        iplen = self._packed[14]
+        return IP.unpack_ip(self._packed[15 : 15 + iplen // 8])
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -89,11 +105,20 @@ class Multicast(EVPN):
         return hash((self.afi, self.safi, self.CODE, self.rd, self.etag, self.ip))
 
     @classmethod
-    def unpack_evpn(cls, data: Buffer) -> EVPN:
-        iplen = data[12]
+    def unpack_evpn(cls, packed: bytes) -> EVPN:
+        """Unpack Multicast from complete wire format bytes.
+
+        Args:
+            packed: Complete wire format (type + length + payload)
+
+        Returns:
+            Multicast instance with stored wire bytes
+        """
+        # IPlen is at offset 14 (after 2-byte header + 8-byte RD + 4-byte ETag)
+        iplen = packed[14]
         if iplen not in (4 * 8, 16 * 8):
-            raise Exception('IP len is %d, but EVPN route currently support only IPv4' % iplen)
-        return cls(data)
+            raise Exception('IP len is %d, but EVPN route currently support only IPv4 or IPv6' % iplen)
+        return cls(packed)
 
     def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE

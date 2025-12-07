@@ -46,20 +46,24 @@ IPV6_ADDRESS_LEN_BITS = 128  # IPv6 address length in bits
 
 @EVPN.register_evpn_route
 class MAC(EVPN):
+    """EVPN Route Type 2: MAC/IP Advertisement.
+
+    Wire format: type(1) + length(1) + RD(8) + ESI(10) + ETag(4) + MAClen(1) + MAC(6)
+                 + IPlen(1) + IP(0/4/16) + Label(3+)
+    Uses packed-bytes-first pattern for zero-copy routing.
+    """
+
     CODE: ClassVar[int] = 2
     NAME: ClassVar[str] = 'MAC/IP advertisement'
     SHORT_NAME: ClassVar[str] = 'MACAdv'
 
-    def __init__(
-        self,
-        packed: bytes,
-        action: Action = Action.UNSET,
-        addpath: PathInfo | None = None,
-        nexthop: IP = IP.NoNextHop,
-    ) -> None:
-        EVPN.__init__(self, action, addpath)
-        self._packed = packed
-        self.nexthop = nexthop
+    def __init__(self, packed: bytes) -> None:
+        """Create MAC from complete wire-format bytes.
+
+        Args:
+            packed: Complete wire format (type + length + payload)
+        """
+        EVPN.__init__(self, packed)
 
     @classmethod
     def make_mac(
@@ -71,14 +75,17 @@ class MAC(EVPN):
         maclen: int,
         label: Labels | None,
         ip: IP | None,
-        nexthop: IP = IP.NoNextHop,
-        action: Action | None = None,
-        addpath: PathInfo | None = None,
+        action: Action = Action.ANNOUNCE,
+        addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'MAC':
-        """Factory method to create MAC from semantic parameters."""
+        """Factory method to create MAC from semantic parameters.
+
+        Packs fields into wire format immediately (packed-bytes-first pattern).
+        Note: nexthop is not part of NLRI - set separately after creation.
+        """
         label_to_use = label if label else Labels.NOLABEL
         # fmt: off
-        packed = (
+        payload = (
             bytes(rd.pack_rd())
             + esi.pack_esi()
             + etag.pack_etag()
@@ -88,41 +95,56 @@ class MAC(EVPN):
             + (bytes(ip.pack_ip()) + label_to_use.pack_labels() if ip else label_to_use.pack_labels())
         )
         # fmt: on
-        return cls(packed, nexthop, action, addpath)
+        # Include type + length header for zero-copy pack
+        packed = bytes([cls.CODE, len(payload)]) + payload
+        instance = cls(packed)
+        instance.action = action
+        instance.addpath = addpath
+        return instance
+
+    # Wire format offsets (after 2-byte type+length header):
+    # RD: 2-10, ESI: 10-20, ETag: 20-24, MAClen: 24, MAC: 25-31, IPlen: 31, IP: 32+, Label: after IP
 
     @property
     def rd(self) -> RouteDistinguisher:
-        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+        """Route Distinguisher - unpacked from wire bytes."""
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[2:10])
 
     @property
     def esi(self) -> ESI:
-        return ESI.unpack_esi(self._packed[8:18])
+        """Ethernet Segment Identifier - unpacked from wire bytes."""
+        return ESI.unpack_esi(self._packed[10:20])
 
     @property
     def etag(self) -> EthernetTag:
-        return EthernetTag.unpack_etag(self._packed[18:22])
+        """Ethernet Tag - unpacked from wire bytes."""
+        return EthernetTag.unpack_etag(self._packed[20:24])
 
     @property
     def maclen(self) -> int:
-        return self._packed[22]
+        """MAC address length in bits - unpacked from wire bytes."""
+        return self._packed[24]
 
     @property
     def mac(self) -> MACQUAL:
-        return MACQUAL.unpack_mac(self._packed[23:29])
+        """MAC address - unpacked from wire bytes."""
+        return MACQUAL.unpack_mac(self._packed[25:31])
 
     @property
     def ip(self) -> IP | None:
-        iplen_bits = self._packed[29]
+        """IP address - unpacked from wire bytes (None if not present)."""
+        iplen_bits = self._packed[31]
         if iplen_bits == 0:
             return None
         iplen_bytes = iplen_bits // 8
-        return IP.unpack_ip(self._packed[30 : 30 + iplen_bytes])
+        return IP.unpack_ip(self._packed[32 : 32 + iplen_bytes])
 
     @property
     def label(self) -> Labels:
-        iplen_bits = self._packed[29]
+        """MPLS Labels - unpacked from wire bytes."""
+        iplen_bits = self._packed[31]
         iplen_bytes = iplen_bits // 8 if iplen_bits else 0
-        label_start = 30 + iplen_bytes
+        label_start = 32 + iplen_bytes
         return Labels.unpack_labels(self._packed[label_start : label_start + 3])
 
     def index(self) -> Buffer:
@@ -163,29 +185,39 @@ class MAC(EVPN):
         return hash((self.rd, self.etag, self.mac, self.ip))
 
     @classmethod
-    def unpack_evpn(cls, data: Buffer) -> EVPN:
+    def unpack_evpn(cls, packed: bytes) -> EVPN:
+        """Unpack MAC from complete wire format bytes.
+
+        Args:
+            packed: Complete wire format (type + length + payload)
+
+        Returns:
+            MAC instance with stored wire bytes
+        """
         # Validate the data before creating the instance
-        datalen = len(data)
-        maclength = data[22]
+        # Offsets include 2-byte header: MAClen at 24, IPlen at 31
+        datalen = len(packed)
+        maclength = packed[24]
 
         if maclength > MAC_ADDRESS_LEN_BITS or maclength < 0:
             raise Notify(3, 5, 'invalid MAC Address length in {}'.format(cls.NAME))
 
-        end = 29  # After MAC address (8+10+4+1+6)
-        length = data[end]
-        iplen = length / 8
+        iplen_byte = 31  # After MAC address (2+8+10+4+1+6 = 31)
+        iplen_bits = packed[iplen_byte]
+        iplen = iplen_bits / 8
 
-        if datalen in [33, 36]:  # No IP information (1 or 2 labels)
+        # Total lengths include 2-byte header, so add 2 to previous payload lengths
+        if datalen in [35, 38]:  # No IP information (1 or 2 labels): 33+2, 36+2
             if iplen != 0:
                 raise Notify(3, 5, 'IP length is given as %d, but current MAC route has no IP information' % iplen)
-        elif datalen in [37, 40]:  # Using IPv4 addresses (1 or 2 labels)
+        elif datalen in [39, 42]:  # Using IPv4 addresses (1 or 2 labels): 37+2, 40+2
             if iplen > IPV4_ADDRESS_LEN_BITS or iplen < 0:
                 raise Notify(
                     3,
                     5,
                     'IP field length is given as %d, but current MAC route is IPv4 and valus is out of range' % iplen,
                 )
-        elif datalen in [49, 52]:  # Using IPv6 addresses (1 or 2 labels)
+        elif datalen in [51, 54]:  # Using IPv6 addresses (1 or 2 labels): 49+2, 52+2
             if iplen > IPV6_ADDRESS_LEN_BITS or iplen < 0:
                 raise Notify(
                     3,
@@ -199,7 +231,7 @@ class MAC(EVPN):
                 'Data field length is given as %d, but does not match one of the expected lengths' % datalen,
             )
 
-        return cls(data)
+        return cls(packed)
 
     def json(self, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE

@@ -20,7 +20,6 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP
-from exabgp.util.types import Buffer
 
 # ------------ EVPN Prefix Advertisement NLRI ------------
 # As described here:
@@ -50,20 +49,25 @@ from exabgp.util.types import Buffer
 
 @EVPN.register_evpn_route
 class Prefix(EVPN):
+    """EVPN Route Type 5: IP Prefix Advertisement.
+
+    Wire format: type(1) + length(1) + RD(8) + ESI(10) + ETag(4) + IPlen(1)
+                 + IP(4/16) + GwIP(4/16) + Label(3)
+    Total: 36 bytes for IPv4, 60 bytes for IPv6 (including 2-byte header)
+    Uses packed-bytes-first pattern for zero-copy routing.
+    """
+
     CODE: ClassVar[int] = 5
     NAME: ClassVar[str] = 'IP Prefix Advertisement'
     SHORT_NAME: ClassVar[str] = 'PrfxAdv'
 
-    def __init__(
-        self,
-        packed: Buffer,
-        action: Action = Action.UNSET,
-        addpath: PathInfo | None = None,
-        nexthop: IP = IP.NoNextHop,
-    ) -> None:
-        EVPN.__init__(self, action, addpath)
-        self._packed = packed
-        self.nexthop = nexthop
+    def __init__(self, packed: bytes) -> None:
+        """Create Prefix from complete wire-format bytes.
+
+        Args:
+            packed: Complete wire format (type + length + payload)
+        """
+        EVPN.__init__(self, packed)
 
     @classmethod
     def make_prefix(
@@ -75,11 +79,13 @@ class Prefix(EVPN):
         ip: IP,
         iplen: int,
         gwip: IP,
-        nexthop: IP = IP.NoNextHop,
-        action: Action | None = None,
-        addpath: PathInfo | None = None,
+        action: Action = Action.ANNOUNCE,
+        addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'Prefix':
         """Factory method to create Prefix from semantic parameters.
+
+        Packs fields into wire format immediately (packed-bytes-first pattern).
+        Note: nexthop is not part of NLRI - set separately after creation.
 
         rd: a RouteDistinguisher
         esi: an EthernetSegmentIdentifier
@@ -90,7 +96,7 @@ class Prefix(EVPN):
         gwip: an IP address (dotted quad string notation)
         """
         label_to_use = label if label else Labels.NOLABEL
-        packed = (
+        payload = (
             bytes(rd.pack_rd())
             + esi.pack_esi()
             + etag.pack_etag()
@@ -99,48 +105,64 @@ class Prefix(EVPN):
             + gwip.pack_ip()
             + label_to_use.pack_labels()
         )
-        return cls(packed, nexthop, action, addpath)
+        # Include type + length header for zero-copy pack
+        packed = bytes([cls.CODE, len(payload)]) + payload
+        instance = cls(packed)
+        instance.action = action
+        instance.addpath = addpath
+        return instance
+
+    # Wire format offsets (after 2-byte type+length header):
+    # RD: 2-10, ESI: 10-20, ETag: 20-24, IPlen: 24, IP: 25+, GwIP: after IP, Label: after GwIP
+    # Total: 36 bytes for IPv4, 60 bytes for IPv6
 
     @property
     def rd(self) -> RouteDistinguisher:
-        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+        """Route Distinguisher - unpacked from wire bytes."""
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[2:10])
 
     @property
     def esi(self) -> ESI:
-        return ESI.unpack_esi(self._packed[8:18])
+        """Ethernet Segment Identifier - unpacked from wire bytes."""
+        return ESI.unpack_esi(self._packed[10:20])
 
     @property
     def etag(self) -> EthernetTag:
-        return EthernetTag.unpack_etag(self._packed[18:22])
+        """Ethernet Tag - unpacked from wire bytes."""
+        return EthernetTag.unpack_etag(self._packed[20:24])
 
     @property
     def iplen(self) -> int:
-        return self._packed[22]
+        """IP prefix length - unpacked from wire bytes."""
+        return self._packed[24]
 
     @property
     def ip(self) -> IP:
+        """IP prefix - unpacked from wire bytes."""
         # IP address is either 4 or 16 bytes based on total length
         datalen = len(self._packed)
-        if datalen == 34:  # IPv4: 8+10+4+1+4+4+3
-            return IP.unpack_ip(self._packed[23:27])
-        else:  # IPv6: 8+10+4+1+16+16+3 = 58
-            return IP.unpack_ip(self._packed[23:39])
+        if datalen == 36:  # IPv4: 2+8+10+4+1+4+4+3
+            return IP.unpack_ip(self._packed[25:29])
+        else:  # IPv6: 2+8+10+4+1+16+16+3 = 60
+            return IP.unpack_ip(self._packed[25:41])
 
     @property
     def gwip(self) -> IP:
+        """Gateway IP - unpacked from wire bytes."""
         datalen = len(self._packed)
-        if datalen == 34:  # IPv4
-            return IP.unpack_ip(self._packed[27:31])
+        if datalen == 36:  # IPv4
+            return IP.unpack_ip(self._packed[29:33])
         else:  # IPv6
-            return IP.unpack_ip(self._packed[39:55])
+            return IP.unpack_ip(self._packed[41:57])
 
     @property
     def label(self) -> Labels:
+        """MPLS Labels - unpacked from wire bytes."""
         datalen = len(self._packed)
-        if datalen == 34:  # IPv4
-            return Labels.unpack_labels(self._packed[31:34])
+        if datalen == 36:  # IPv4
+            return Labels.unpack_labels(self._packed[33:36])
         else:  # IPv6
-            return Labels.unpack_labels(self._packed[55:58])
+            return Labels.unpack_labels(self._packed[57:60])
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Prefix):
@@ -175,19 +197,28 @@ class Prefix(EVPN):
         return hash('{}:{}:{}:{}'.format(self.rd, self.etag, self.ip, self.iplen))
 
     @classmethod
-    def unpack_evpn(cls, exdata: Buffer) -> EVPN:
-        # Get the data length to understand if addresses are IPv4 or IPv6
-        datalen = len(exdata)
+    def unpack_evpn(cls, packed: bytes) -> EVPN:
+        """Unpack Prefix from complete wire format bytes.
 
-        if datalen not in (34, 58):  # 34 for IPv4, 58 for IPv6
+        Args:
+            packed: Complete wire format (type + length + payload)
+
+        Returns:
+            Prefix instance with stored wire bytes
+        """
+        # Get the data length to understand if addresses are IPv4 or IPv6
+        # Lengths include 2-byte header: 36 for IPv4 (34+2), 60 for IPv6 (58+2)
+        datalen = len(packed)
+
+        if datalen not in (36, 60):  # 36 for IPv4, 60 for IPv6
             raise Notify(
                 3,
                 5,
-                'Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6(34 or 58)'
+                'Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6 (36 or 60)'
                 % datalen,
             )
 
-        return cls(exdata)
+        return cls(packed)
 
     def json(self, compact: bool = False) -> str:
         content = ' "code": %d, ' % self.CODE

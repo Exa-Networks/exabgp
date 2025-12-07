@@ -1,6 +1,6 @@
 # Plan: Convert NLRI Classes to Packed-Bytes-First Pattern
 
-**Status:** 🔄 Ready to start
+**Status:** 🔄 In Progress (EVPN complete)
 **Priority:** 🟡 Medium
 **Command:** `/convert-nlri <nlri-name>`
 **Reference:** `.claude/exabgp/PACKED_BYTES_FIRST_PATTERN.md`
@@ -56,13 +56,13 @@ Configuration parser refactoring status:
 
 | Class | File | Has Tests | Converted | Notes |
 |-------|------|-----------|-----------|-------|
-| EVPN (base) | `evpn/nlri.py` | ❌ | ❌ | Base class |
-| GenericEVPN | `evpn/nlri.py` | ❌ | ❌ | Fallback handler |
-| MAC | `evpn/mac.py` | ❌ | ❌ | Type 2 |
-| EthernetAD | `evpn/ethernetad.py` | ❌ | ❌ | Type 1 |
-| Multicast | `evpn/multicast.py` | ❌ | ❌ | Type 3 |
-| EthernetSegment | `evpn/segment.py` | ❌ | ❌ | Type 4 |
-| Prefix | `evpn/prefix.py` | ❌ | ❌ | Type 5 |
+| EVPN (base) | `evpn/nlri.py` | ✅ | ✅ | Zero-copy `_pack_nlri_simple()` |
+| GenericEVPN | `evpn/nlri.py` | ✅ | ✅ | CODE from `_packed[0]` |
+| EthernetAD | `evpn/ethernetad.py` | ✅ | ✅ | Type 1 |
+| MAC | `evpn/mac.py` | ✅ | ✅ | Type 2 |
+| Multicast | `evpn/multicast.py` | ✅ | ✅ | Type 3 |
+| EthernetSegment | `evpn/segment.py` | ✅ | ✅ | Type 4 |
+| Prefix | `evpn/prefix.py` | ✅ | ✅ | Type 5 |
 
 ### MVPN Classes
 
@@ -154,6 +154,30 @@ The command will:
   - Removed builder mode slots and simplified properties
   - All 11 tests pass
 - VPLS is now fully immutable and ready as reference implementation
+
+### 2025-12-07 - EVPN Conversion Complete
+- Converted all 7 EVPN classes to packed-bytes-first pattern
+- Key changes:
+  - EVPN base: `_packed` now stores type(1) + length(1) + payload
+  - `_pack_nlri_simple()` returns `self._packed` directly (zero-copy)
+  - All property methods offset by +2 to skip header
+  - Factory methods (`make_xxx()`) include type + length header
+  - `unpack_nlri()` stores complete wire format including header
+- GenericEVPN: CODE extracted from `_packed[0]`, no extra storage
+- All 47 EVPN unit tests pass
+- All 11 test suites pass (ruff, unit, config, encoding, decoding, etc.)
+
+### 2025-12-07 - EVPN __init__ Simplified per RFC
+- Per RFC 4760: nexthop is in MP_REACH_NLRI attribute, NOT in NLRI wire format
+- Per RFC 7911: addpath is a prefix when negotiated, not part of NLRI structure
+- Simplified all EVPN `__init__` signatures to match VPLS pattern:
+  - Before: `__init__(packed, action=..., addpath=..., nexthop=...)`
+  - After: `__init__(packed: bytes)` - only packed wire bytes
+- Factory methods set action/addpath after construction
+- nexthop set separately after NLRI creation (like VPLS)
+- Removed unused IP/Any imports
+- Updated test to reflect RFC-compliant pattern
+- All 11 test suites pass
 
 ---
 
