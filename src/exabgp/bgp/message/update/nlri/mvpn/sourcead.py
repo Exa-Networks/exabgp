@@ -37,11 +37,11 @@ class SourceAD(MVPN):
         self,
         packed: Buffer,
         afi: AFI,
-        action: Action,
+        action: Action = Action.UNSET,
         addpath: int | None = None,
     ) -> None:
         MVPN.__init__(self, afi=afi, action=action, addpath=addpath)
-        self._packed_mvpn = packed
+        self._packed = packed
 
     @classmethod
     def make_sourcead(

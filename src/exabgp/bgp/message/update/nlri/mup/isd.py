@@ -14,8 +14,9 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.family import AFI
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
@@ -95,10 +96,10 @@ class InterworkSegmentDiscoveryRoute(MUP):
         return hash((self.rd, self.prefix_ip_len, self.prefix_ip))
 
     @classmethod
-    def unpack_mup_route(
-        cls, data: bytes, afi: AFI, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[MUP, Buffer]:
-        # XXX: Most likely buggy as we do not have the end of the MUP for the next iteration
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
+        # Parent handles remaining data; we consume all provided data
         return cls(data, afi), b''
 
     def json(self, compact: bool | None = None) -> str:

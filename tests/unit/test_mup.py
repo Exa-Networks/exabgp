@@ -784,17 +784,17 @@ class TestMUPGeneric:
 
     def test_mup_registration(self) -> None:
         """Test that all MUP route types are registered"""
-        assert '1:1' in MUP.registered  # ISD
-        assert '1:2' in MUP.registered  # DSD
-        assert '1:3' in MUP.registered  # T1ST
-        assert '1:4' in MUP.registered  # T2ST
+        assert '1:1' in MUP.registered_mup  # ISD
+        assert '1:2' in MUP.registered_mup  # DSD
+        assert '1:3' in MUP.registered_mup  # T1ST
+        assert '1:4' in MUP.registered_mup  # T2ST
 
     def test_mup_registered_classes(self) -> None:
         """Test that registered classes are correct"""
-        assert MUP.registered['1:1'] == InterworkSegmentDiscoveryRoute
-        assert MUP.registered['1:2'] == DirectSegmentDiscoveryRoute
-        assert MUP.registered['1:3'] == Type1SessionTransformedRoute
-        assert MUP.registered['1:4'] == Type2SessionTransformedRoute
+        assert MUP.registered_mup['1:1'] == InterworkSegmentDiscoveryRoute
+        assert MUP.registered_mup['1:2'] == DirectSegmentDiscoveryRoute
+        assert MUP.registered_mup['1:3'] == Type1SessionTransformedRoute
+        assert MUP.registered_mup['1:4'] == Type2SessionTransformedRoute
 
     def test_mup_unpack_unknown_route_type(self) -> None:
         """Test unpacking unknown MUP route type"""

@@ -127,7 +127,7 @@ class NextHop(Attribute):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NLRI':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NextHop':
         if not data:
             return IP.NoNextHop
         return cls.from_packet(data)

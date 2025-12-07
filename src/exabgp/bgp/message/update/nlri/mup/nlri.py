@@ -9,8 +9,6 @@ from __future__ import annotations
 from struct import pack
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from exabgp.util.types import Buffer
-
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
@@ -121,9 +119,9 @@ class MUP(NLRI):
         return klass
 
     @classmethod
-    def unpack_mup_route(
-        cls, data: bytes, afi: AFI, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[MUP, Buffer]:
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
         # MUP NLRI: arch_type(1) + route_type(2) + length(1) + route_data(length)
         if len(data) < 4:
             raise Notify(3, 10, f'MUP NLRI too short: need at least 4 bytes, got {len(data)}')
@@ -139,16 +137,16 @@ class MUP(NLRI):
         key = '{}:{}'.format(arch, code)
         if key in cls.registered_mup:
             registered_cls = cls.registered_mup[key]
-            # Subclass returns (mup, b'') consuming trimmed data; we return (mup, remaining)
-            mup_instance, remain = registered_cls.unpack_mup_route(bytes(data[4:end]), afi, action, addpath, negotiated)
-            return mup_instance, remain
+            # Subclass processes trimmed data; we return (mup, remaining from original buffer)
+            # Call unpack_mup_route if defined, otherwise fall back to unpack_nlri
+            mup_instance, _ = registered_cls.unpack_nlri(afi, safi, bytes(data[4:end]), action, addpath, negotiated)
+            return mup_instance, data[end:]
 
-        # XXX: This code is totally buggy as the Generic MUP should give us its end
-        # XXX: Never worked, not my code, to be fixed another day
+        # Generic MUP for unrecognized route types
         mup = GenericMUP(afi, arch, code, bytes(data[4:end]))
         mup.action = action
         mup.addpath = addpath
-        return mup, b''
+        return mup, data[end:]
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self._pack_nlri_simple())

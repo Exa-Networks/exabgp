@@ -53,7 +53,7 @@ class MAC(EVPN):
     def __init__(
         self,
         packed: bytes,
-        action: Action,
+        action: Action = Action.UNSET,
         addpath: PathInfo | None = None,
         nexthop: IP = IP.NoNextHop,
     ) -> None:

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.update.nlri.nlri import NLRI
     from exabgp.protocol.family import AFI, SAFI
+    from exabgp.util.types import Buffer
 
 
 class Route:

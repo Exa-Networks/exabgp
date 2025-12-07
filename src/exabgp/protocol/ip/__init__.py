@@ -197,7 +197,7 @@ class IP:
         return None
 
     @classmethod
-    def from_string(cls, string: str, klass: Type['IP'] = 'IP') -> 'IP':
+    def from_string(cls, string: str, klass: Type['IP'] | None = None) -> 'IP':
         data = IP.pton(string)
         if klass:
             return klass(data)

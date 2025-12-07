@@ -14,8 +14,9 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.family import AFI, Family
+from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
@@ -222,9 +223,9 @@ class Type1SessionTransformedRoute(MUP):
         )
 
     @classmethod
-    def unpack_mup_route(
-        cls, data: bytes, afi: AFI, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[MUP, Buffer]:
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
         # Validate endpoint_ip_len before creating instance
         prefix_ip_len = data[8]
         ip_offset = prefix_ip_len // 8
@@ -250,7 +251,8 @@ class Type1SessionTransformedRoute(MUP):
             if source_ip_len not in [32, 128]:
                 raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
 
-        return cls(data, afi), data[size:]
+        # Parent handles remaining data; we consume all provided data
+        return cls(data, afi), b''
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)

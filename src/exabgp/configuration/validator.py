@@ -400,7 +400,7 @@ class IPPrefixValidator(Validator['IPRange']):
     name: str = 'ip-prefix'
 
     def _parse(self, value: str) -> 'IPRange':
-        from exabgp.protocol.ip import IPRange
+        from exabgp.protocol.ip import IP, IPRange
 
         try:
             if '/' in value:
@@ -440,7 +440,7 @@ class IPRangeValidator(Validator['IPRange']):
     name: str = 'ip-range'
 
     def _parse(self, value: str) -> 'IPRange':
-        from exabgp.protocol.ip import IPRange
+        from exabgp.protocol.ip import IP, IPRange
 
         try:
             if '/' in value:

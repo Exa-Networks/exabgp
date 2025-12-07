@@ -30,7 +30,7 @@ MVPN_SOURCEJOIN_IPV4_LENGTH: int = 22  # 8 (RD) + 4 (Source AS) + 1 (source len)
 MVPN_SOURCEJOIN_IPV6_LENGTH: int = 46  # 8 (RD) + 4 (Source AS) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
 
 
-@MVPN.register
+@MVPN.register_mvpn
 class SourceJoin(MVPN):
     CODE: ClassVar[int] = 7
     NAME: ClassVar[str] = 'C-Multicast Source Tree Join route'
@@ -40,7 +40,7 @@ class SourceJoin(MVPN):
         self,
         packed: Buffer,
         afi: AFI,
-        action: Action,
+        action: Action = Action.UNSET,
         addpath: int | None = None,
     ) -> None:
         MVPN.__init__(self, afi=afi, action=action, addpath=addpath)

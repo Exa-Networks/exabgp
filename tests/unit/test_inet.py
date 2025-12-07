@@ -311,7 +311,8 @@ class TestNLRIPackedBaseClass:
         # NLRI base class should have _packed as a type annotation
         assert '_packed' in NLRI.__annotations__
         # Due to PEP 563 (from __future__ import annotations), the type is stored as string
-        assert NLRI.__annotations__['_packed'] in (bytes, 'bytes')
+        # Buffer is a type alias for bytes | memoryview
+        assert NLRI.__annotations__['_packed'] in (bytes, 'bytes', 'Buffer')
 
     def test_inet_inherits_packed_from_nlri(self) -> None:
         """Test that INET uses _packed correctly."""

@@ -14,8 +14,9 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.family import AFI
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
@@ -143,9 +144,9 @@ class Type2SessionTransformedRoute(MUP):
         )
 
     @classmethod
-    def unpack_mup_route(
-        cls, data: bytes, afi: AFI, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[MUP, Buffer]:
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
         afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
         endpoint_len = data[8]
 
@@ -160,7 +161,8 @@ class Type2SessionTransformedRoute(MUP):
                     'endpoint length is too large %d (max %d for Ipv6)' % (endpoint_len, MUP_T2ST_IPV6_MAX_ENDPOINT)
                 )
 
-        return cls(data, afi), data[endpoint_len:]
+        # Parent handles remaining data; we consume all provided data
+        return cls(data, afi), b''
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)

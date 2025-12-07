@@ -116,10 +116,9 @@ class MVPN(NLRI):
         raise NotImplementedError('unpack_mvpn must be implemented by subclasses')
 
     @classmethod
-    def unpack_mvpn_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[MVPN, Buffer]:
-        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
         # MVPN NLRI: route_type(1) + length(1) + route_data(length)
         if len(data) < 2:
             raise Notify(3, 10, f'MVPN NLRI too short: need at least 2 bytes, got {len(data)}')

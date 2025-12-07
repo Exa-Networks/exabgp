@@ -39,7 +39,7 @@ class Multicast(EVPN):
     def __init__(
         self,
         packed: bytes,
-        action: Action,
+        action: Action = Action.UNSET,
         nexthop: IP = IP.NoNextHop,
         addpath: PathInfo | None = None,
     ) -> None:
@@ -59,7 +59,7 @@ class Multicast(EVPN):
     ) -> 'Multicast':
         """Factory method to create Multicast from semantic parameters."""
         packed = bytes(rd.pack_rd()) + etag.pack_etag() + bytes([len(ip) * 8]) + ip.pack_ip()
-        return cls(packed, nexthop, action, addpath)
+        return cls(packed, action, nexthop, addpath)
 
     @property
     def rd(self) -> RouteDistinguisher:

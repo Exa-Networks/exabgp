@@ -39,7 +39,7 @@ class EthernetSegment(EVPN):
     def __init__(
         self,
         packed: Buffer,
-        action: Action,
+        action: Action = Action.UNSET,
         addpath: Any = None,
         nexthop: IP = IP.NoNextHop,
     ) -> None:

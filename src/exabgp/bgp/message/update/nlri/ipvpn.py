@@ -339,8 +339,6 @@ class IPVPN(Label):
         """
         from struct import unpack
 
-        data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
-
         # Parse path_info if AddPath is enabled
         if addpath:
             if len(data) <= PATH_INFO_SIZE:

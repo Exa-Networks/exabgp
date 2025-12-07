@@ -57,7 +57,7 @@ class Prefix(EVPN):
     def __init__(
         self,
         packed: Buffer,
-        action: Action,
+        action: Action = Action.UNSET,
         addpath: PathInfo | None = None,
         nexthop: IP = IP.NoNextHop,
     ) -> None:

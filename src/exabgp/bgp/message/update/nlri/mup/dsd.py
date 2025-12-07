@@ -14,8 +14,9 @@ if TYPE_CHECKING:
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.family import AFI
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
@@ -78,14 +79,15 @@ class DirectSegmentDiscoveryRoute(MUP):
         return hash((self.rd, self.ip))
 
     @classmethod
-    def unpack_mup_route(
-        cls, data: bytes, afi: AFI, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[MUP, Buffer]:
+    def unpack_nlri(
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+    ) -> tuple[NLRI, Buffer]:
         data_len = len(data)
-        size = data_len - 8
-        if size not in [4, 16]:
-            raise Notify(3, 5, 'Invalid IP size, expect 4 or 16 octets. accuracy size %d' % size)
-        return cls(data[:size], afi), data[size:]
+        ip_size = data_len - 8  # IP is after 8-byte RD
+        if ip_size not in [4, 16]:
+            raise Notify(3, 5, 'Invalid IP size, expect 4 or 16 octets. got %d' % ip_size)
+        # Store full NLRI (RD + IP), return empty remaining since parent handles that
+        return cls(data, afi), b''
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)
