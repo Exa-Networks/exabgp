@@ -97,6 +97,7 @@ from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.nlri.settings import INETSettings
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
@@ -197,6 +198,52 @@ class IPVPN(Label):
         instance.nexthop = IP.NoNextHop
         instance._labels_packed = b''  # NOLABEL
         instance._rd_packed = b''  # NORD
+        return instance
+
+    @classmethod
+    def from_settings(cls, settings: 'INETSettings') -> 'IPVPN':
+        """Create IPVPN NLRI from validated settings.
+
+        This factory method validates settings and creates an immutable IPVPN
+        instance with labels and route distinguisher. Use this for deferred
+        construction where all values are collected during parsing, then
+        validated and used to create the NLRI.
+
+        Args:
+            settings: INETSettings with all required fields set (including labels and rd)
+
+        Returns:
+            Immutable IPVPN NLRI instance
+
+        Raises:
+            ValueError: If settings validation fails
+        """
+        error = settings.validate()
+        if error:
+            raise ValueError(error)
+
+        # Assertions for type narrowing after validation
+        assert settings.cidr is not None
+        assert settings.afi is not None
+        assert settings.safi is not None
+
+        instance = cls.from_cidr(
+            cidr=settings.cidr,
+            afi=settings.afi,
+            safi=settings.safi,
+            action=settings.action,
+            path_info=settings.path_info,
+        )
+        instance.nexthop = settings.nexthop
+
+        # Set labels if provided
+        if settings.labels is not None:
+            instance.labels = settings.labels
+
+        # Set rd if provided
+        if settings.rd is not None:
+            instance.rd = settings.rd
+
         return instance
 
     def feedback(self, action: Action) -> str:

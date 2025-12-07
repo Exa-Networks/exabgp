@@ -79,6 +79,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.nlri.settings import INETSettings
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -168,6 +169,47 @@ class Label(INET):
         instance.nexthop = IP.NoNextHop
         instance._labels_packed = b''  # NOLABEL
         instance.rd = None
+        return instance
+
+    @classmethod
+    def from_settings(cls, settings: 'INETSettings') -> 'Label':
+        """Create Label NLRI from validated settings.
+
+        This factory method validates settings and creates an immutable Label
+        instance with labels. Use this for deferred construction where all values
+        are collected during parsing, then validated and used to create the NLRI.
+
+        Args:
+            settings: INETSettings with all required fields set (including labels)
+
+        Returns:
+            Immutable Label NLRI instance
+
+        Raises:
+            ValueError: If settings validation fails
+        """
+        error = settings.validate()
+        if error:
+            raise ValueError(error)
+
+        # Assertions for type narrowing after validation
+        assert settings.cidr is not None
+        assert settings.afi is not None
+        assert settings.safi is not None
+
+        instance = cls.from_cidr(
+            cidr=settings.cidr,
+            afi=settings.afi,
+            safi=settings.safi,
+            action=settings.action,
+            path_info=settings.path_info,
+        )
+        instance.nexthop = settings.nexthop
+
+        # Set labels if provided
+        if settings.labels is not None:
+            instance.labels = settings.labels
+
         return instance
 
     def feedback(self, action: Action) -> str:

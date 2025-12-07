@@ -15,6 +15,7 @@ from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.nlri.settings import VPLSSettings
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
@@ -132,6 +133,45 @@ class VPLS(NLRI):
         instance = cls(None)
         instance.action = action
         instance.addpath = addpath
+        return instance
+
+    @classmethod
+    def from_settings(cls, settings: 'VPLSSettings') -> 'VPLS':
+        """Create VPLS NLRI from validated settings.
+
+        This factory method validates settings and creates an immutable VPLS
+        instance. Use this for deferred construction where all values are
+        collected during parsing, then validated and used to create the NLRI.
+
+        Args:
+            settings: VPLSSettings with all required fields set
+
+        Returns:
+            Immutable VPLS NLRI instance
+
+        Raises:
+            ValueError: If settings validation fails
+        """
+        error = settings.validate()
+        if error:
+            raise ValueError(error)
+
+        # Delegate to make_vpls which creates packed bytes
+        assert settings.rd is not None
+        assert settings.endpoint is not None
+        assert settings.base is not None
+        assert settings.offset is not None
+        assert settings.size is not None
+
+        instance = cls.make_vpls(
+            rd=settings.rd,
+            endpoint=settings.endpoint,
+            base=settings.base,
+            offset=settings.offset,
+            size=settings.size,
+            action=settings.action,
+        )
+        instance.nexthop = settings.nexthop
         return instance
 
     @property

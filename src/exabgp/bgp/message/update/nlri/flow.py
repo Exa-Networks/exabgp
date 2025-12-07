@@ -23,6 +23,7 @@ from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.nlri.settings import FlowSettings
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
@@ -727,6 +728,50 @@ class Flow(NLRI):
         packed = RouteDistinguisher.NORD.pack_rd() if safi in (SAFI.flow_vpn,) else b''
         instance = cls(packed, afi, safi, action)
         instance._rules_cache = {}  # Enable builder mode with empty rules
+        return instance
+
+    @classmethod
+    def from_settings(cls, settings: 'FlowSettings') -> 'Flow':
+        """Create Flow NLRI from validated settings.
+
+        This factory method validates settings and creates an immutable Flow
+        instance. Use this for deferred construction where all values are
+        collected during parsing, then validated and used to create the NLRI.
+
+        Args:
+            settings: FlowSettings with all required fields set
+
+        Returns:
+            Immutable Flow NLRI instance
+
+        Raises:
+            ValueError: If settings validation fails
+        """
+        error = settings.validate()
+        if error:
+            raise ValueError(error)
+
+        # Assertions for type narrowing after validation
+        assert settings.afi is not None
+        assert settings.safi is not None
+
+        instance = cls.make_flow(
+            afi=settings.afi,
+            safi=settings.safi,
+            action=settings.action,
+        )
+        instance.nexthop = settings.nexthop
+
+        # Set rules if provided
+        if settings.rules:
+            instance._rules_cache = settings.rules.copy()
+            instance._packed_stale = True  # Mark for recomputation
+
+        # Set rd if provided
+        if settings.rd is not None:
+            instance._rd_override = settings.rd
+            instance._packed_stale = True
+
         return instance
 
     @property
