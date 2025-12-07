@@ -4,15 +4,87 @@
 
 ---
 
-## Core Principle
+## Core Principles
+
+### 1. Never refactor without tests
 
 **Never refactor code without first ensuring adequate test coverage.**
 
 Refactoring without tests is like performing surgery without monitoring vital signs - you won't know if you've killed the patient until it's too late.
 
+### 2. Understand the specification first
+
+**Before modifying BGP/protocol code, read the relevant RFC.**
+
+If the wire format or protocol behavior is not documented in the `__init__.py` or module docstring, you MUST:
+1. Identify the relevant RFC(s)
+2. Read the packet format section
+3. Understand the field layouts and semantics
+4. Document what you learned in the code
+
+This applies to:
+- NLRI types (wire format, field sizes, encoding)
+- Attributes (type codes, flags, encoding)
+- Capabilities (negotiation, parameters)
+- Messages (OPEN, UPDATE, NOTIFICATION, KEEPALIVE)
+
 ---
 
-## The Protocol: Test-Verify-Refactor-Verify
+## The Protocol: RFC-Test-Verify-Refactor-Verify
+
+### Step 0: Check RFC Documentation
+
+Before touching any protocol code:
+
+```bash
+# Check if wire format is documented in the module
+head -100 src/exabgp/bgp/message/update/nlri/<module>.py
+grep -n "RFC\|wire format\|Wire format\|packet format" src/exabgp/bgp/message/update/nlri/<module>.py
+```
+
+**If NOT documented:**
+1. Look up the RFC using `.claude/exabgp/BGP_CONCEPTS_TO_CODE_MAP.md`
+2. Use WebSearch to find the RFC packet format section
+3. Document the wire format in the code BEFORE making changes
+
+**Common RFCs:**
+| Feature | RFC |
+|---------|-----|
+| BGP-4 base | RFC 4271 |
+| MP-BGP (AFI/SAFI) | RFC 4760 |
+| VPLS | RFC 4761, RFC 4762 |
+| EVPN | RFC 7432 |
+| FlowSpec | RFC 5575, RFC 8955 |
+| BGP-LS | RFC 7752 |
+| Add-Path | RFC 7911 |
+| Large Communities | RFC 8092 |
+
+**Example wire format documentation:**
+```python
+"""VPLS NLRI (RFC 4761 Section 3.2.2)
+
+Wire format (19 bytes total):
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |           Length (2)          |    Route Distinguisher (8)    |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    ... RD continued ...                       |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |          VE ID (2)            |      Label Block Offset (2)   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |      Label Block Size (2)     |       Label Base (3)          |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Byte offsets (including 2-byte length prefix):
+  [0:2]   - Length (always 17 for VPLS)
+  [2:10]  - Route Distinguisher
+  [10:12] - VE ID (endpoint)
+  [12:14] - Label Block Offset
+  [14:16] - Label Block Size
+  [16:19] - Label Base (20 bits) + flags (4 bits)
+"""
+```
 
 ### Step 1: Identify What You're Changing
 
@@ -130,6 +202,12 @@ Copy this for each refactoring task:
 ```markdown
 ## Pre-Refactoring Checklist: [Feature/File Name]
 
+### 0. RFC/Specification (for protocol code)
+- [ ] Is wire format documented in the code? Yes/No
+- [ ] If No: RFC identified: ___
+- [ ] If No: Wire format documented in code: Yes/No
+- [ ] Byte offsets verified against RFC: Yes/No
+
 ### 1. Scope
 - [ ] Files to modify: ___
 - [ ] Functions/classes affected: ___
@@ -170,6 +248,8 @@ Copy this for each refactoring task:
 3. **"I'll add tests later"** → No. Tests come BEFORE refactoring.
 4. **"It's a simple change"** → Simple changes break things. Test anyway.
 5. **"Tests are slow"** → Run them anyway. Faster than debugging production.
+6. **Wire format not documented** → Read RFC, document in code BEFORE changing
+7. **Byte offsets unclear** → Draw the packet diagram, verify against RFC
 
 ---
 
