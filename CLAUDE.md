@@ -29,7 +29,7 @@ This single file contains ALL core rules:
 | Task Type | Load Protocol |
 |-----------|---------------|
 | Git work (commit/push) | GIT_VERIFICATION_PROTOCOL.md |
-| Refactoring code | MANDATORY_REFACTORING_PROTOCOL.md |
+| Refactoring code | TESTING_BEFORE_REFACTORING_PROTOCOL.md, then MANDATORY_REFACTORING_PROTOCOL.md |
 | Test failures | FUNCTIONAL_TEST_DEBUGGING_GUIDE.md |
 | Error recovery | ERROR_RECOVERY_PROTOCOL.md |
 | Creating docs | DOCUMENTATION_PLACEMENT_GUIDE.md |
@@ -326,6 +326,10 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
     - **Read when:** Working with wire data, bytes/memoryview handling, type annotations for binary data
     - **Contains:** `collections.abc.Buffer` usage, zero-copy patterns, when to convert to bytes
 
+13. **`.claude/exabgp/PACKED_BYTES_FIRST_PATTERN.md`** - Packed-bytes-first NLRI pattern
+    - **Read when:** Converting NLRI classes to store wire bytes, optimizing memory allocation
+    - **Contains:** Pattern explanation, implementation steps, conversion checklist, VPLS reference
+
 **Quick reference:**
 - Adding NLRI type → Read #3, then #1
 - Understanding message flow → Read #2
@@ -336,6 +340,7 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
 - Understanding API protocol → Read #9, #10
 - Environment variables/configuration → Read #11
 - Working with wire data/bytes/memoryview → Read #12 (PEP 688)
+- Converting NLRI to packed-bytes-first → Read #13, reference VPLS implementation
 
 ---
 
