@@ -48,18 +48,32 @@ grep -n "RFC\|wire format\|Wire format\|packet format" src/exabgp/bgp/message/up
 3. Document the wire format in the code BEFORE making changes
 
 **Common RFCs:**
-| Feature | RFC |
-|---------|-----|
-| BGP-4 base | RFC 4271 |
-| MP-BGP (AFI/SAFI) | RFC 4760 |
-| VPLS | RFC 4761, RFC 4762 |
-| EVPN | RFC 7432 |
-| FlowSpec | RFC 5575, RFC 8955 |
-| BGP-LS | RFC 7752 |
-| Add-Path | RFC 7911 |
-| Large Communities | RFC 8092 |
+| Feature | RFC | ExaBGP Location |
+|---------|-----|-----------------|
+| BGP-4 base | RFC 4271 | `bgp/message/*.py`, `bgp/fsm.py` |
+| MP-BGP (AFI/SAFI) | RFC 4760 | `nlri/*.py`, `attribute/mprnlri.py` |
+| VPLS | RFC 4761, RFC 4762 | `nlri/vpls.py` |
+| EVPN | RFC 7432 | `nlri/evpn/` |
+| FlowSpec | RFC 5575, RFC 8955 | `nlri/flow.py` |
+| BGP-LS | RFC 7752 | `nlri/bgpls/` |
+| Add-Path | RFC 7911 | `capability/addpath.py` |
+| Large Communities | RFC 8092 | `attribute/community/large.py` |
+| MVPN | RFC 6514 | `nlri/mvpn/` |
+| RTC (Route Target Constraint) | RFC 4684 | `nlri/rtc.py` |
+| MUP (Mobile User Plane) | draft-ietf-dmm-srv6-mobile-uplane | `nlri/mup/` |
+| Route Refresh | RFC 2918 | `message/refresh.py` |
+| Graceful Restart | RFC 4724 | `capability/graceful.py` |
+| 4-byte ASN | RFC 6793 | `capability/asn4.py` |
+| Extended Communities | RFC 4360 | `attribute/community/extended/` |
+| PMSI Tunnel | RFC 6514 | `attribute/pmsi.py` |
+| AIGP | RFC 7311 | `attribute/aigp.py` |
+| SRv6 | RFC 9252 | `nlri/bgpls/srv6sid.py` |
+| Segment Routing | RFC 8669 | `attribute/sr/` |
+| IP VPN (VPNv4/v6) | RFC 4364 | `nlri/ipvpn.py` |
 
 **Example wire format documentation:**
+
+**Example 1: VPLS NLRI**
 ```python
 """VPLS NLRI (RFC 4761 Section 3.2.2)
 
@@ -83,6 +97,67 @@ Byte offsets (including 2-byte length prefix):
   [12:14] - Label Block Offset
   [14:16] - Label Block Size
   [16:19] - Label Base (20 bits) + flags (4 bits)
+"""
+```
+
+**Example 2: EVPN MAC/IP Advertisement (Route Type 2)**
+```python
+"""EVPN MAC/IP Advertisement Route (RFC 7432 Section 7.2)
+
+Wire format (variable length, 33+ bytes):
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Route Type(1) |    Length(1)  |  Route Distinguisher (8)      |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    ... RD continued ...                       |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |          Ethernet Segment Identifier (10 bytes)               |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    ... ESI continued ...                      |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    Ethernet Tag ID (4)                        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | MAC Addr Len  |           MAC Address (6 bytes)               |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    ... MAC continued ...                      |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | IP Addr Len   |           IP Address (0, 4, or 16 bytes)      |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |           MPLS Label 1 (3)    |    MPLS Label 2 (0 or 3)      |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Byte offsets:
+  [0]     - Route Type (always 2)
+  [1]     - Length of following fields
+  [2:10]  - Route Distinguisher
+  [10:20] - Ethernet Segment Identifier
+  [20:24] - Ethernet Tag ID
+  [24]    - MAC Address Length (always 48 = 6 bytes)
+  [25:31] - MAC Address
+  [31]    - IP Address Length (0, 32, or 128 bits)
+  [32:N]  - IP Address (if present)
+  [N:N+3] - MPLS Label 1
+  [N+3:]  - MPLS Label 2 (optional, for IP-VRF)
+"""
+```
+
+**Example 3: Simple NLRI (IPv4 prefix)**
+```python
+"""IPv4 Unicast NLRI (RFC 4271 Section 4.3)
+
+Wire format (1-5 bytes):
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-...-+-+-+-+-+-+-+-+-+-+-+
+   |   Length (1)  |       Prefix (variable, 0-4 bytes)           |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-...-+-+-+-+-+-+-+-+-+-+-+
+
+Length field: prefix length in bits (0-32)
+Prefix bytes: ceil(length / 8) bytes, containing the prefix
+
+Examples:
+  10.0.0.0/8  -> 08 0a           (1 byte prefix)
+  10.0.0.0/24 -> 18 0a 00 00     (3 bytes prefix)
+  0.0.0.0/0   -> 00              (0 bytes prefix - default route)
 """
 ```
 
@@ -280,6 +355,69 @@ This protocol integrates with:
 
 ---
 
+## Source-to-Test Mapping
+
+Quick reference for finding tests for specific source modules:
+
+| Source Module | Test File(s) | Notes |
+|--------------|--------------|-------|
+| `nlri/inet.py` | `test_inet.py` | IPv4/IPv6 unicast |
+| `nlri/ipvpn.py` | `test_ipvpn.py` | VPNv4/VPNv6 |
+| `nlri/vpls.py` | `test_vpls.py`, `test_l2vpn.py` | L2VPN VPLS |
+| `nlri/evpn/` | `test_evpn.py` | All EVPN route types |
+| `nlri/flow.py` | `test_flow.py`, `test_flowspec.py` | FlowSpec |
+| `nlri/bgpls/` | `test_bgpls.py`, `test_bgpls_*.py` | BGP-LS |
+| `nlri/mvpn/` | `test_mvpn.py` | Multicast VPN |
+| `nlri/mup/` | `test_mup.py` | Mobile User Plane |
+| `nlri/rtc.py` | `test_rtc.py` | Route Target Constraint |
+| `nlri/label.py` | `test_label.py` | MPLS labels |
+| `attribute/aspath.py` | `test_aspath.py` | AS_PATH |
+| `attribute/community/` | `test_communities.py` | All community types |
+| `attribute/*.py` | `test_attributes.py`, `test_path_attributes.py` | General attributes |
+| `attribute/sr/` | `test_sr_attributes.py` | Segment Routing |
+| `message/open/` | `test_open.py`, `test_open_capabilities.py` | OPEN message |
+| `message/update/` | `test_update_message.py` | UPDATE message |
+| `message/notification.py` | `test_notification.py`, `test_notification_comprehensive.py` | NOTIFICATION |
+| `message/keepalive.py` | `test_keepalive.py` | KEEPALIVE |
+| `message/refresh.py` | `test_route_refresh.py` | ROUTE-REFRESH |
+| `bgp/fsm.py` | `test_fsm_comprehensive.py` | State machine |
+| `reactor/peer.py` | `test_peer_state_machine.py` | Peer handling |
+| `reactor/api/` | `test_reactor_api_*.py` | API commands |
+| `rib/` | `test_rib_*.py` | RIB operations |
+| `configuration/` | `configuration/test_*.py` | Config parsing |
+| `cli/` | `cli/test_*.py`, `test_cli_*.py` | CLI |
+
+---
+
+## Measuring Test Coverage
+
+Use pytest-cov to measure actual test coverage:
+
+```bash
+# Coverage for a specific module
+env exabgp_log_enable=false uv run pytest tests/unit/test_vpls.py -v \
+    --cov=src/exabgp/bgp/message/update/nlri/vpls \
+    --cov-report=term-missing
+
+# Coverage for entire NLRI package
+env exabgp_log_enable=false uv run pytest tests/unit/ -v \
+    --cov=src/exabgp/bgp/message/update/nlri \
+    --cov-report=term-missing
+
+# Generate HTML coverage report
+env exabgp_log_enable=false uv run pytest tests/unit/ -v \
+    --cov=src/exabgp/bgp/message/update/nlri \
+    --cov-report=html
+# Open htmlcov/index.html in browser
+```
+
+**Coverage thresholds:**
+- Critical protocol code (pack/unpack): aim for 90%+
+- Public methods: 100% coverage required
+- Edge cases: explicitly test boundary conditions
+
+---
+
 ## Quick Reference
 
 ```bash
@@ -299,3 +437,7 @@ env exabgp_log_enable=false uv run pytest tests/unit/ -k "vpls" -v
 ---
 
 **Remember:** The best time to write tests is before you need them. The second best time is now.
+
+---
+
+**Updated:** 2025-12-07
