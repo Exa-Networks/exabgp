@@ -45,8 +45,8 @@ class IPSelf:
     def pack(self, negotiated: Negotiated) -> Buffer:
         return negotiated.nexthopself(self.afi).ton()
 
-    def index(self) -> str:
-        return 'self-' + self.afi.name()
+    def index(self) -> bytes:
+        return b'self-' + self.afi.name().encode()
 
 
 class IP:
@@ -140,7 +140,7 @@ class IP:
     def length(afi: AFI) -> int:
         return 4 if afi == AFI.ipv4 else 16
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         return self._packed
 
     def pack_ip(self) -> Buffer:

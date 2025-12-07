@@ -932,7 +932,7 @@ class Flow(NLRI):
             return self._encode_length(self._packed)
         return self._pack_from_rules()
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         if not self._packed_stale and self._packed:
             packed = self._encode_length(self._packed)
         else:

@@ -411,7 +411,7 @@ class Family:
     def extensive(self) -> str:
         return f'afi {self.afi} safi {self.safi}'
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         return f'{self.afi:02x}{self.safi:02x}'.encode()
 
     def __repr__(self) -> str:

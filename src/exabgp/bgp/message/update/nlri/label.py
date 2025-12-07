@@ -288,7 +288,7 @@ class Label(INET):
         mask = bytes([len(self._labels_packed) * 8 + self.cidr.mask])
         return addpath + mask + self._labels_packed + self.cidr.pack_ip()
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         if self.path_info is PathInfo.NOPATH:
             addpath = b'no-pi'
         elif self.path_info is PathInfo.DISABLED:

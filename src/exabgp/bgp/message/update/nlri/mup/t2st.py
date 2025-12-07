@@ -109,7 +109,7 @@ class Type2SessionTransformedRoute(MUP):
             return int.from_bytes(self._packed[end:], 'big')
         return 0
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         return MUP.index(self)
 
     def __eq__(self, other: Any) -> bool:

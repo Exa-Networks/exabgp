@@ -92,7 +92,7 @@ class AttributeCollection(dict):
     }
 
     _str: str
-    _idx: str
+    _idx: bytes
     _json: str
     cacheable: bool
 
@@ -164,7 +164,7 @@ class AttributeCollection(dict):
         dict.__init__(self)
         # cached representation of the object
         self._str = ''
-        self._idx = ''
+        self._idx = b''
         self._json = ''
         # The parsed attributes have no mp routes and/or those are last
         self.cacheable = True
@@ -270,13 +270,14 @@ class AttributeCollection(dict):
             self._str = ''.join(self._generate_text())
         return self._str
 
-    def index(self) -> str:
+    def index(self) -> bytes:
         # Note: Using hash instead of string would save memory but risks collisions
         # since index() is used for equality comparisons. See lab/benchmark_attr_index.py
         if not self._idx:
             idx = ''.join(self._generate_text())
             nexthop = str(self.get(Attribute.CODE.NEXT_HOP, 'missing'))
-            self._idx = '{} next-hop {}'.format(idx, nexthop) if nexthop else idx
+            text = '{} next-hop {}'.format(idx, nexthop) if nexthop else idx
+            self._idx = text.encode()
         return self._idx
 
     @classmethod

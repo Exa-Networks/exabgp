@@ -83,9 +83,9 @@ class GenericAttribute(Attribute):
         return self._packed
 
     @property
-    def index(self) -> str:
+    def index(self) -> bytes:
         """Get the index (empty for generic attributes)."""
-        return ''
+        return b''
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, GenericAttribute):

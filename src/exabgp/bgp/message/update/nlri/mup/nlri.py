@@ -86,7 +86,7 @@ class MUP(NLRI):
         # Wire format: [arch_type(1)][route_type(2)][length(1)][payload]
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         # Wire format: [family][arch_type(1)][route_type(2)][length(1)][payload]
         return bytes(Family.index(self)) + pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 

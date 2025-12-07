@@ -204,7 +204,7 @@ class Type1SessionTransformedRoute(MUP):
         packed = bytes(self.rd.pack_rd()) + pack('!B', self.prefix_ip_len) + self.prefix_ip.pack_ip()
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(packed)) + packed
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         return bytes(Family.index(self)) + self.pack_index()
 
     def __hash__(self) -> int:

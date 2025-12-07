@@ -352,7 +352,7 @@ class IPVPN(Label):
         mask = len(self._labels_packed) * 8 + len(self._rd_packed) * 8 + self.cidr.mask
         return bytes(addpath) + bytes([mask]) + self._labels_packed + self._rd_packed + self.cidr.pack_ip()
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         if self.path_info is PathInfo.NOPATH:
             addpath = b'no-pi'
         elif self.path_info is PathInfo.DISABLED:

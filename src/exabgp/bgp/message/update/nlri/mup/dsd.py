@@ -59,7 +59,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         size = data_len - 8
         return IP.unpack_ip(self._packed[8 : 8 + size])
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         return MUP.index(self)
 
     def __eq__(self, other: Any) -> bool:

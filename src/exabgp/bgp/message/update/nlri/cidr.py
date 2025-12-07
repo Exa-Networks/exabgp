@@ -209,8 +209,8 @@ class CIDR:
     def prefix(self) -> str:
         return '{}/{}'.format(self.top(), self.mask)
 
-    def index(self) -> str:
-        return str(self.mask) + str(self._packed[: CIDR.size(self.mask)])
+    def index(self) -> bytes:
+        return bytes([self.mask]) + self._packed[: CIDR.size(self.mask)]
 
     def pack_ip(self) -> bytes:
         return bytes(self._packed[: CIDR.size(self.mask)])

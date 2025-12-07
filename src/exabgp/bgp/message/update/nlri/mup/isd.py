@@ -75,7 +75,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
             ip = bytes(ip) + bytes(padding)
         return IP.unpack_ip(ip)
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         return MUP.index(self)
 
     def __eq__(self, other: Any) -> bool:

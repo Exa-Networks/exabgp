@@ -146,7 +146,7 @@ class RTC(NLRI):
             return pack('!B', len(self)) + self._packed_origin + bytes([RTC.resetFlags(packedRT[0])]) + packedRT[1:]
         return pack('!B', 0)
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         # RTC uses negotiated in pack_nlri for RT encoding
         # Index should be stable regardless of negotiated, so build it directly
         if self.rt and self._packed_origin:

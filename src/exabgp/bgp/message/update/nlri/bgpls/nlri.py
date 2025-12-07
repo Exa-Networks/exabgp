@@ -108,7 +108,7 @@ class BGPLS(NLRI):
         # Wire format: [code(1)][length(1)][payload]
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         # Wire format: [family][code(1)][length(1)][payload]
         return bytes(Family.index(self)) + pack('!BB', self.CODE, len(self._packed)) + self._packed
 

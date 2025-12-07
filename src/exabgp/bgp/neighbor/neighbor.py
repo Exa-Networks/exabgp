@@ -150,10 +150,10 @@ class Neighbor:
         return f'neighbor-{self.uid}'
 
     # This set must be unique between peer, not full draft-ietf-idr-bgp-multisession-07
-    def index(self) -> str:
+    def index(self) -> bytes:
         if self.session.listen != 0:
-            return f'peer-ip {self.session.peer_address} listen {self.session.listen}'
-        return self.name()
+            return f'peer-ip {self.session.peer_address} listen {self.session.listen}'.encode()
+        return self.name().encode()
 
     def make_rib(self) -> None:
         self.rib.enable(self.name(), self.adj_rib_in, self.adj_rib_out, set(self._families))

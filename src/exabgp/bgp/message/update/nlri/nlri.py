@@ -167,7 +167,7 @@ class NLRI(Family):
         """Add data to NLRI. Only implemented by Flow NLRI."""
         raise NotImplementedError('add() only implemented by Flow NLRI')
 
-    def index(self) -> Buffer:
+    def index(self) -> bytes:
         return bytes(Family.index(self)) + self.pack_nlri(Negotiated.UNSET)
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
