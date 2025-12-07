@@ -330,6 +330,10 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
     - **Read when:** Converting NLRI classes to store wire bytes, optimizing memory allocation
     - **Contains:** Pattern explanation, implementation steps, conversion checklist, VPLS reference
 
+14. **`doc/RFC_WIRE_FORMAT_REFERENCE.md`** - RFC wire format quick reference
+    - **Read when:** Working with NLRI/attribute pack/unpack, reviewing wire format, debugging protocol issues
+    - **Contains:** Wire format diagrams, byte layouts, TLV codes, validation rules, all RFCs in one place
+
 **Quick reference:**
 - Adding NLRI type → Read #3, then #1
 - Understanding message flow → Read #2
@@ -341,6 +345,7 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
 - Environment variables/configuration → Read #11
 - Working with wire data/bytes/memoryview → Read #12 (PEP 688)
 - Converting NLRI to packed-bytes-first → Read #13, reference VPLS implementation
+- Wire format/pack/unpack debugging → Read #14
 
 ---
 

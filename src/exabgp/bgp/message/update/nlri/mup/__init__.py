@@ -26,6 +26,10 @@ Per draft-mpmz-bess-mup-safi: "In case of MPLS or SR-MPLS, an 'IP/UDP Payload
 PseudoWire' label for GTP is encoded in an Extended Community..."
 Use the MUP Extended Community (type 0x0c) for label signaling.
 
+AFI/SAFI: IPv4 (1) or IPv6 (2) / MUP (69)
+
+Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#mup-draft-mpmz-bess-mup-safi
+
 Created by Takeru Hayasaka on 2023-01-21.
 Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 """

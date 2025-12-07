@@ -1,4 +1,36 @@
-"""__init__.py
+"""extended/__init__.py
+
+BGP Extended Communities (Attribute Code 16).
+
+Reference: RFC 4360 - BGP Extended Communities Attribute
+           https://datatracker.ietf.org/doc/html/rfc4360
+
+Extended Community Format (8 bytes):
++-----------------------------------+
+|    Type (1 octet)                 |  High bit: 0=IANA, 1=transitive
++-----------------------------------+
+|    Sub-Type (1 octet)             |
++-----------------------------------+
+|    Value (6 octets)               |
++-----------------------------------+
+
+Common Extended Community Types:
+| Type | Sub | Name                    | Class                |
+|------|-----|-------------------------|----------------------|
+| 0x00 | 0x02| Route Target (2-byte)   | RouteTargetASN2Number|
+| 0x01 | 0x02| Route Target (IPv4)     | RouteTargetIPNumber  |
+| 0x02 | 0x02| Route Target (4-byte)   | RouteTargetASN4Number|
+| 0x00 | 0x03| Route Origin            | OriginASNIP          |
+| 0x03 | 0x0c| Encapsulation           | Encapsulation        |
+| 0x06 | 0x00| MAC Mobility (EVPN)     | MacMobility          |
+| 0x06 | 0x04| ESI Label (EVPN)        | -                    |
+| 0x80 | 0x06| FlowSpec Traffic Rate   | TrafficRate          |
+| 0x80 | 0x07| FlowSpec Traffic Action | TrafficAction        |
+| 0x80 | 0x08| FlowSpec Redirect       | TrafficRedirect      |
+| 0x80 | 0x09| FlowSpec Traffic Mark   | TrafficMark          |
+| 0x0c | -   | MUP Extended Community  | MUPExtendedCommunity |
+
+Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#extended-community-rfc-4360
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

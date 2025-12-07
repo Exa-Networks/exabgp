@@ -1,5 +1,12 @@
 """prefix/__init__.py
 
+BGP-LS Prefix Attribute TLVs.
+
+Reference: RFC 7752 Section 3.3.3 - Prefix Attribute TLVs
+           https://tools.ietf.org/html/rfc7752#section-3.3.3
+
+Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#prefix-attribute-tlvs
+
 Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """

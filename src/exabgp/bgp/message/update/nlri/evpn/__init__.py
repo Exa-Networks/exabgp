@@ -1,5 +1,30 @@
 """evpn/__init__.py
 
+BGP EVPN (Ethernet VPN) NLRI Implementation.
+
+Reference: RFC 7432 - BGP MPLS-Based Ethernet VPN
+           https://datatracker.ietf.org/doc/html/rfc7432
+
+EVPN NLRI Format (Section 7):
++-----------------------------------+
+|    Route Type (1 octet)           |
++-----------------------------------+
+|    Length (1 octet)               |
++-----------------------------------+
+|    Route Type specific (variable) |
++-----------------------------------+
+
+Route Types (Section 7.1-7.5):
+- Type 1: Ethernet Auto-Discovery - EthernetAD
+- Type 2: MAC/IP Advertisement - MAC
+- Type 3: Inclusive Multicast Ethernet Tag - Multicast
+- Type 4: Ethernet Segment - EthernetSegment
+- Type 5: IP Prefix Route - Prefix (RFC 9136)
+
+AFI/SAFI: L2VPN (25) / EVPN (70)
+
+Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#evpn-rfc-7432
+
 Created by Thomas Mangin on 2014-06-27.
 Copyright (c) 2014-2017 Orange. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)

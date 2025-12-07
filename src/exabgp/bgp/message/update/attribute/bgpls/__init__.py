@@ -1,5 +1,28 @@
 """bgpls/__init__.py
 
+BGP-LS Attribute (Attribute Code 29).
+
+Reference: RFC 7752 - North-Bound Distribution of Link-State and TE Information Using BGP
+           https://datatracker.ietf.org/doc/html/rfc7752
+           RFC 9552 - Distribution of Link-State and TE Information Using BGP (obsoletes 7752)
+           https://datatracker.ietf.org/doc/html/rfc9552
+
+BGP-LS Attribute TLV Format:
++-----------------------------------+
+|    Type (2 octets)                |
++-----------------------------------+
+|    Length (2 octets)              |
++-----------------------------------+
+|    Value (variable)               |
++-----------------------------------+
+
+Attribute Categories:
+- Node Attributes: TLVs 1024-1029, 1034-1035 (node/)
+- Link Attributes: TLVs 1028-1031, 1088-1100 (link/)
+- Prefix Attributes: TLVs 1152-1158, 1170-1171 (prefix/)
+
+Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#bgp-ls-attribute-tlvs-rfc-7752
+
 Created by Evelio Vila 2016-12-01
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """

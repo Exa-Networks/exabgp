@@ -316,7 +316,8 @@ RIB
 - `DATA_FLOW_GUIDE.md` - How BGP messages flow
 - `REGISTRY_AND_EXTENSION_PATTERNS.md` - Adding new types
 - `CRITICAL_FILES_REFERENCE.md` - Most important files
+- `doc/RFC_WIRE_FORMAT_REFERENCE.md` - Detailed wire format diagrams and byte layouts
 
 ---
 
-**Updated:** 2025-11-24
+**Updated:** 2025-12-07

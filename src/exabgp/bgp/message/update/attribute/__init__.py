@@ -1,5 +1,45 @@
 """attribute/__init__.py
 
+BGP Path Attributes Package.
+
+Reference: RFC 4271 - A Border Gateway Protocol 4 (BGP-4)
+           https://datatracker.ietf.org/doc/html/rfc4271
+
+Path Attribute Header Format (RFC 4271 Section 4.3):
++-----------------------------------+
+|    Attr. Flags (1 octet)          |
++-----------------------------------+
+|    Attr. Type Code (1 octet)      |
++-----------------------------------+
+|    Attr. Length (1 or 2 octets)   |
++-----------------------------------+
+|    Attr. Value (variable)         |
++-----------------------------------+
+
+Attribute Types:
+| Code | Name               | Category           | Class            |
+|------|--------------------|-------------------|------------------|
+| 1    | ORIGIN             | Well-known Mand.  | Origin           |
+| 2    | AS_PATH            | Well-known Mand.  | ASPath           |
+| 3    | NEXT_HOP           | Well-known Mand.  | NextHop          |
+| 4    | MULTI_EXIT_DISC    | Optional          | MED              |
+| 5    | LOCAL_PREF         | Well-known Disc.  | LocalPreference  |
+| 6    | ATOMIC_AGGREGATE   | Well-known Disc.  | AtomicAggregate  |
+| 7    | AGGREGATOR         | Optional Trans.   | Aggregator       |
+| 8    | COMMUNITY          | Optional Trans.   | Communities      |
+| 9    | ORIGINATOR_ID      | Optional Non-Tr.  | OriginatorID     |
+| 10   | CLUSTER_LIST       | Optional Non-Tr.  | ClusterList      |
+| 14   | MP_REACH_NLRI      | Optional Non-Tr.  | MPRNLRI          |
+| 15   | MP_UNREACH_NLRI    | Optional Non-Tr.  | MPURNLRI         |
+| 16   | EXTENDED_COMMUNITY | Optional Trans.   | ExtendedCommunities |
+| 22   | PMSI_TUNNEL        | Optional Trans.   | PMSI             |
+| 26   | AIGP               | Optional Non-Tr.  | AIGP             |
+| 29   | BGP-LS             | Optional Non-Tr.  | LinkState        |
+| 32   | LARGE_COMMUNITY    | Optional Trans.   | LargeCommunities |
+| 40   | PREFIX_SID         | Optional Trans.   | PrefixSid        |
+
+Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#path-attributes-rfc-4271
+
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
