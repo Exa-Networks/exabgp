@@ -236,6 +236,15 @@ uv run pytest tests/unit/specific_test.py::test_function -v
   - Example: `return cast(int, value)` without check ❌
   - Prefer assertions/raises over fallback cast: `raise TypeError(...)` not `return cast(T, value)`
 
+✅ **Preferred: Programmatic Code Changes**
+- Prefer writing Python scripts to perform bulk code changes over manual editing
+- For repetitive changes (rename across files, update patterns, migrate APIs):
+  - Write a script that reads, transforms, and writes files
+  - Test the script on a subset first
+  - Run once to apply all changes consistently
+- Benefits: reproducible, auditable, less error-prone than manual edits
+- Example: migrating 44 tests from `.labels = X` to `labels=X` parameter
+
 ❌ **Prohibited:**
 - `Union[int, str]` instead of `int | str`
 - Adding mypy suppressions or relaxed settings
@@ -255,7 +264,15 @@ uv run ruff format src && uv run ruff check src  # Must pass
 
 ### 1. Read this file (you just did) ✅
 
-### 2. Check git state
+### 2. Read CODING_STANDARDS.md (MANDATORY every session)
+
+```bash
+# Read .claude/CODING_STANDARDS.md
+```
+
+This file contains Python style requirements, type annotation rules, and project-specific conventions that MUST be followed.
+
+### 3. Check git state
 
 ```bash
 git status && git diff && git diff --staged
@@ -263,7 +280,7 @@ git status && git diff && git diff --staged
 
 If ANY modified/staged files: ASK user how to handle before starting work.
 
-### 3. Check plan state
+### 4. Check plan state
 
 ```bash
 ls -la plan/
@@ -276,7 +293,7 @@ ls -la plan/
 
 **If working on a plan:** Keep it updated throughout the session (see Plan Update Triggers below).
 
-### 4. Load contextual protocols based on task
+### 5. Load contextual protocols based on task
 
 **Use decision tree below to determine which additional protocols to read.**
 
@@ -289,7 +306,7 @@ ls -la plan/
 | Error recovery / mistakes | ERROR_RECOVERY_PROTOCOL.md | 2.9 KB |
 | Feature development | *(covered in this file - see below)* | - |
 
-### 5. Use decision tree if uncertain
+### 6. Use decision tree if uncertain
 
 See README.md "What Do You Want to Do?" table
 
@@ -462,4 +479,4 @@ Before ending ANY session where you worked on a plan:
 
 ---
 
-**Updated:** 2025-12-04
+**Updated:** 2025-12-08
