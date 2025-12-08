@@ -97,7 +97,8 @@ class SourceAD(MVPN):
         return f'{self._prefix()}:{self.rd._str()}:{self.source!s}:{self.group!s}'
 
     def __hash__(self) -> int:
-        return hash((self.rd, self.source, self.group))
+        # Direct _packed hash - include afi since MVPN supports both IPv4 and IPv6
+        return hash((self.afi, self._packed))
 
     @classmethod
     def unpack_mvpn(cls, packed: bytes, afi: AFI) -> 'MVPN':

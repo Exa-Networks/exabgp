@@ -161,13 +161,10 @@ class PREFIXv6(BGPLS):
         return cls(data, route_d=rd)
 
     def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, PREFIXv6)
-            and self.CODE == other.CODE
-            and self.domain == other.domain
-            and self.proto_id == other.proto_id
-            and self.route_d == other.route_d
-        )
+        if not isinstance(other, PREFIXv6):
+            return False
+        # Direct _packed comparison - CODE, proto_id, domain, prefix all encoded in wire format
+        return self._packed == other._packed and self.route_d == other.route_d
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -176,7 +173,8 @@ class PREFIXv6(BGPLS):
         return self.json()
 
     def __hash__(self) -> int:
-        return hash((self.CODE, self.domain, self.proto_id, self.route_d))
+        # Direct _packed hash - all wire fields encoded in bytes
+        return hash((self._packed, self.route_d))
 
     def json(self, compact: bool = False) -> str:
         assert self.prefix is not None  # Set during unpack_bgpls_nlri

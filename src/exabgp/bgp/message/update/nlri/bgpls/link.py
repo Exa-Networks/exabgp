@@ -235,14 +235,10 @@ class LINK(BGPLS):
         return cls(data, route_d=rd)
 
     def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, LINK)
-            and self.CODE == other.CODE
-            and self.domain == other.domain
-            and self.proto_id == other.proto_id
-            and self.topology_ids == other.topology_ids
-            and self.route_d == other.route_d
-        )
+        if not isinstance(other, LINK):
+            return False
+        # Direct _packed comparison - CODE, proto_id, domain, topology_ids all encoded in wire format
+        return self._packed == other._packed and self.route_d == other.route_d
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -251,7 +247,8 @@ class LINK(BGPLS):
         return self.json()
 
     def __hash__(self) -> int:
-        return hash((self.CODE, self.domain, self.proto_id, tuple(self.topology_ids), self.route_d))
+        # Direct _packed hash - all wire fields encoded in bytes
+        return hash((self._packed, self.route_d))
 
     # pack_nlri inherited from BGPLS base class - returns self._packed directly
 

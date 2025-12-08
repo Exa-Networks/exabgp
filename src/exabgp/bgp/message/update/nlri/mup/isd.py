@@ -110,7 +110,8 @@ class InterworkSegmentDiscoveryRoute(MUP):
         return '{}:{}:{}{}'.format(self._prefix(), self.rd._str(), self.prefix_ip, '/%d' % self.prefix_ip_len)
 
     def __hash__(self) -> int:
-        return hash((self.rd, self.prefix_ip_len, self.prefix_ip))
+        # Direct _packed hash - include afi since MUP supports both IPv4 and IPv6
+        return hash((self.afi, self._packed))
 
     @classmethod
     def unpack_nlri(

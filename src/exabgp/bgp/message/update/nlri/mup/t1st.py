@@ -227,19 +227,8 @@ class Type1SessionTransformedRoute(MUP):
         return bytes(Family.index(self)) + self.pack_index()
 
     def __hash__(self) -> int:
-        return hash(
-            (
-                self.rd,
-                self.prefix_ip_len,
-                self.prefix_ip,
-                self.teid,
-                self.qfi,
-                self.endpoint_ip_len,
-                self.endpoint_ip,
-                self.source_ip_len,
-                self.source_ip,
-            ),
-        )
+        # Direct _packed hash - include afi since MUP supports both IPv4 and IPv6
+        return hash((self.afi, self._packed))
 
     @classmethod
     def unpack_nlri(

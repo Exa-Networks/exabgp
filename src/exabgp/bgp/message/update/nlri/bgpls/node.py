@@ -170,17 +170,14 @@ class NODE(BGPLS):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, NODE):
             return False
-        return (
-            self.CODE == other.CODE
-            and self.domain == other.domain
-            and self.proto_id == other.proto_id
-            and self.route_d == other.route_d
-        )
+        # Direct _packed comparison - CODE, proto_id, domain, node_ids all encoded in wire format
+        return self._packed == other._packed and self.route_d == other.route_d
 
     def __str__(self) -> str:
         return self.json()
 
     def __hash__(self) -> int:
-        return hash((self.proto_id, self.domain, tuple(self.node_ids), self.route_d))
+        # Direct _packed hash - all wire fields encoded in bytes
+        return hash((self._packed, self.route_d))
 
     # pack_nlri inherited from BGPLS base class - returns self._packed directly

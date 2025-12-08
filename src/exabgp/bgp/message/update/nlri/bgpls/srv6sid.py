@@ -186,6 +186,16 @@ class SRv6SID(BGPLS):
     def __repr__(self) -> str:
         return f'{self.NAME}(protocol_id={self.proto_id}, domain={self.domain})'
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SRv6SID):
+            return False
+        # Direct _packed comparison - CODE, proto_id, domain, TLVs all encoded in wire format
+        return self._packed == other._packed
+
+    def __hash__(self) -> int:
+        # Direct _packed hash - all wire fields encoded in bytes
+        return hash(self._packed)
+
     def json(self, compact: bool = False) -> str:
         nodes = ', '.join(d.json() for d in self.local_node_descriptors)
         content = ', '.join(
