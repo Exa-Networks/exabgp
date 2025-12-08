@@ -22,35 +22,71 @@ if TYPE_CHECKING:
 # XXX: many of the NLRI classes constructor also need correct @classmethods
 
 
-# =========================================================================== IP
-#
-
-
-class IPSelf:
-    SELF: ClassVar[bool] = True
+class IPBase:
+    SELF: ClassVar[bool]
+    RESOLVED: ClassVar[bool] = True
     afi: AFI
+
+    def resolve(self, ip: 'IP') -> None:
+        pass
+
+    @property
+    def resolved(self) -> bool:
+        """True if resolve() has been called with a concrete IP."""
+        return self.RESOLVED
 
     def __init__(self, afi: AFI) -> None:
         self.afi = afi
 
+
+# =========================================================================== IP
+#
+
+
+class IPSelf(IPBase):
+    SELF = True
+    _packed: Buffer
+
+    def __init__(self, afi: AFI) -> None:
+        super().__init__(afi)
+        self._packed = b''  # Empty = unresolved
+
+    @property
+    def resolved(self) -> bool:
+        """True if resolve() has been called with a concrete IP."""
+        return self._packed != b''
+
+    def resolve(self, ip: 'IP') -> None:
+        """Resolve sentinel to concrete IP. Mutates in-place."""
+        if self.resolved:
+            raise ValueError('IPSelf already resolved')
+        self._packed = ip.pack_ip()
+
+    def ton(self, negotiated: 'Negotiated | None' = None, afi: AFI = AFI.undefined) -> Buffer:
+        """Get packed bytes representation."""
+        if not self.resolved:
+            raise ValueError('IPSelf.ton() called before resolve()')
+        return self._packed
+
+    def pack_ip(self) -> Buffer:
+        """Get packed bytes (IP interface compatibility)."""
+        if not self.resolved:
+            raise ValueError('IPSelf.pack_ip() called before resolve()')
+        return self._packed
+
     def __repr__(self) -> str:
-        return 'self'
-
-    def top(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> str:
-        return negotiated.nexthopself(afi).top()
-
-    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> Buffer:
-        return negotiated.nexthopself(afi).ton()
-
-    def pack(self, negotiated: Negotiated) -> Buffer:
-        return negotiated.nexthopself(self.afi).ton()
+        if not self.resolved:
+            return 'self'
+        return IP.ntop(self._packed)
 
     def index(self) -> bytes:
-        return b'self-' + self.afi.name().encode()
+        if not self.resolved:
+            return b'self-' + self.afi.name().encode()
+        return bytes(self._packed)
 
 
-class IP:
-    SELF: ClassVar[bool] = False
+class IP(IPBase):
+    SELF = False
 
     afi: AFI  # here for the API, changed in init (subclasses override as ClassVar)
     # BITS and BYTES are defined as ClassVar in subclasses (IPv4/IPv6)

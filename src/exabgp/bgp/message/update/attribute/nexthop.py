@@ -134,22 +134,35 @@ class NextHop(Attribute):
 
 
 class NextHopSelf(NextHop):
-    """Special NextHop that resolves to the local address at pack time."""
+    """Special NextHop that starts unresolved and is resolved in-place via resolve()."""
 
     SELF: ClassVar[bool] = True
 
     def __init__(self, afi: AFI) -> None:
         # Don't call super().__init__ - we don't have packed bytes yet
         self._afi: AFI = afi
-        self._packed = b''  # Placeholder, resolved at pack time
+        self._packed = b''  # Empty = unresolved
 
     @property
     def afi(self) -> AFI:
         """Get the address family."""
         return self._afi
 
+    @property
+    def resolved(self) -> bool:
+        """True if resolve() has been called with a concrete IP."""
+        return self._packed != b''
+
+    def resolve(self, ip: 'IP') -> None:
+        """Resolve sentinel to concrete IP. Mutates in-place."""
+        if self.resolved:
+            raise ValueError('NextHopSelf already resolved')
+        self._packed = ip.pack_ip()
+
     def __repr__(self) -> str:
-        return 'self'
+        if not self.resolved:
+            return 'self'
+        return IP.ntop(self._packed)
 
     def ipv4(self) -> bool:
         return self._afi == AFI.ipv4
@@ -158,15 +171,14 @@ class NextHopSelf(NextHop):
         return self._afi == AFI.ipv6
 
     def __bool__(self) -> bool:
-        # NextHopSelf is always truthy (resolved at pack time)
-        # Override because _packed is empty, making len() return 0
+        # NextHopSelf is always truthy (even before resolution)
+        # Override because _packed may be empty, making len() return 0
         return True
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        return self._attribute(negotiated.nexthopself(self._afi).ton())
-
-    def ton(self, negotiated: Negotiated, afi: AFI = AFI.undefined) -> Buffer:
-        return negotiated.nexthopself(afi).ton()
+        if not self.resolved:
+            raise ValueError('NextHopSelf.pack_attribute() called before resolve()')
+        return self._attribute(self._packed)
 
     def __eq__(self, other: object) -> bool:
         raise RuntimeError('do not use __eq__ with NextHopSelf')

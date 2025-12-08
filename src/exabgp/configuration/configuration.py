@@ -45,7 +45,6 @@ from exabgp.configuration.template.neighbor import ParseTemplateNeighbor
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 
-
 # Mapping for config keywords that don't match parser section names
 # Format: (parent_section_name, keyword) -> target_section_name
 # Only needed for exceptions where keyword != parser.name
@@ -76,7 +75,7 @@ class _Configuration:
                 neighbor = self.neighbors[neighbor_name]
                 if route.nlri.family().afi_safi() in neighbor.families():
                     # remove_self may well have side effects on route
-                    neighbor.rib.outgoing.add_to_rib(neighbor.remove_self(route))
+                    neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route))
                     result = True
                 else:
                     log.error(

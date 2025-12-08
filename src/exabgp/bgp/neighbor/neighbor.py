@@ -14,11 +14,11 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.operational import Operational
-from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.open.holdtime import HoldTime
-from exabgp.bgp.message.update.attribute import Attribute, NextHop
+from exabgp.bgp.message.operational import Operational
+from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.neighbor.session import Session
 from exabgp.protocol.family import AFI, SAFI
@@ -278,14 +278,30 @@ class Neighbor:
     def ip_self(self, afi: AFI) -> IP:
         return self.session.ip_self(afi)
 
-    def remove_self(self, route: 'Route') -> 'Route':
+    def resolve_self(self, route: 'Route') -> 'Route':
+        nexthop = route.nlri.nexthop
+
+        # Skip if not a SELF type
+        if not nexthop.SELF:
+            return route
+
+        # Skip if already resolved
+        if nexthop.resolved:
+            return route
+
         route_copy = deepcopy(route)
-        if not route_copy.nlri.nexthop.SELF:
-            return route_copy
+        nexthop = route_copy.nlri.nexthop
+
         neighbor_self = self.ip_self(route_copy.nlri.afi)
-        route_copy.nlri.nexthop = neighbor_self
+
+        # Mutate in-place instead of replacing
+        nexthop.resolve(neighbor_self)
+
         if Attribute.CODE.NEXT_HOP in route_copy.attributes:
-            route_copy.attributes[Attribute.CODE.NEXT_HOP] = NextHop(neighbor_self.pack_ip())
+            nh_attr = route_copy.attributes[Attribute.CODE.NEXT_HOP]
+            if nh_attr.SELF and not nh_attr.resolved:
+                nh_attr.resolve(neighbor_self)
+
         return route_copy
 
     def __str__(self) -> str:

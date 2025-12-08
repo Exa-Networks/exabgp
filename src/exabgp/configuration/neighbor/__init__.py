@@ -26,12 +26,12 @@ from exabgp.configuration.neighbor.parser import (
     ttl,
 )
 
+# from exabgp.configuration.parser import asn
+from exabgp.configuration.parser import auto_asn, auto_boolean
+
 # Removed imports migrated to schema validators:
 # description, domainname, hostname, md5, rate_limit, source_interface
 from exabgp.configuration.schema import Container, Leaf, ValueType
-
-# from exabgp.configuration.parser import asn
-from exabgp.configuration.parser import auto_asn, auto_boolean
 
 # Removed imports migrated to schema validators: boolean, ip, peer_ip, port
 from exabgp.environment import getenv
@@ -439,7 +439,7 @@ class ParseNeighbor(Section):
         neighbor.routes = []
         for route in self.scope.pop_routes():
             # remove_self may well have side effects on route
-            neighbor.routes.append(neighbor.remove_self(route))
+            neighbor.routes.append(neighbor.resolve_self(route))
 
         # old format
         for section in ('static', 'l2vpn', 'flow'):
@@ -447,19 +447,19 @@ class ParseNeighbor(Section):
             for route in routes:
                 route.nlri.action = Action.ANNOUNCE
                 # remove_self may well have side effects on route
-                neighbor.routes.append(neighbor.remove_self(route))
+                neighbor.routes.append(neighbor.resolve_self(route))
 
         routes = local.get('routes', [])
         for route in routes:
             route.nlri.action = Action.ANNOUNCE
             # remove_self may well have side effects on route
-            neighbor.routes.append(neighbor.remove_self(route))
+            neighbor.routes.append(neighbor.resolve_self(route))
 
     def _init_neighbor(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         families = neighbor.families()
         for route in neighbor.routes:
             # remove_self may well have side effects on route
-            route = neighbor.remove_self(route)
+            route = neighbor.resolve_self(route)
             if route.nlri.family().afi_safi() in families:
                 # This add the family to neighbor.families()
                 neighbor.rib.outgoing.add_to_rib_watchdog(route)
