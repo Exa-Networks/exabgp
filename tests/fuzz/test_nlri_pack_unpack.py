@@ -20,7 +20,7 @@ def create_negotiated(addpath_send=False, addpath_receive=False):
     """Create a Negotiated object with configurable addpath support."""
     neighbor = Mock()
     neighbor.__getitem__ = Mock(return_value={'aigp': False})
-    negotiated = Negotiated(neighbor, Direction.OUT)
+    negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
 
     # Mock addpath configuration
     negotiated.addpath = Mock()

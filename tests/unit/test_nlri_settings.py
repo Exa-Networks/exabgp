@@ -298,7 +298,7 @@ class TestVPLSFromSettings:
         # Create minimal negotiated using Mock (standard pattern)
         neighbor = Mock()
         neighbor.__getitem__ = Mock(return_value={'aigp': False})
-        negotiated = Negotiated(neighbor, Direction.OUT)
+        negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
 
         packed = vpls.pack_nlri(negotiated)
         assert len(packed) == 19  # VPLS wire format length
@@ -840,7 +840,7 @@ class TestFlowFromSettings:
         # Create negotiated for packing
         neighbor = Mock()
         neighbor.__getitem__ = Mock(return_value={'aigp': False})
-        negotiated = Negotiated(neighbor, Direction.OUT)
+        negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
 
         # Pack and verify
         packed = flow.pack_nlri(negotiated)
@@ -905,7 +905,7 @@ class TestFlowFromSettings:
         # Create negotiated for packing
         neighbor = Mock()
         neighbor.__getitem__ = Mock(return_value={'aigp': False})
-        negotiated = Negotiated(neighbor, Direction.OUT)
+        negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
 
         # Pack and verify
         packed = flow.pack_nlri(negotiated)

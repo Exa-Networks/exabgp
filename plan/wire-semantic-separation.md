@@ -1,6 +1,6 @@
 # Wire vs Semantic Container Separation
 
-**Status:** ✅ Phase 2 Complete
+**Status:** ✅ Phase 3 Complete
 **Created:** 2025-12-07
 **Updated:** 2025-12-08
 
@@ -203,13 +203,48 @@ Phase 2:
 
 ---
 
-## Next Steps
+## Phase 3: Negotiated Factory Method ✅ COMPLETE
 
-Potential future work:
+**Goal:** Create `Negotiated` via factory method `make_negotiated()` instead of `__init__` directly.
 
-1. **Negotiated factory caching** - Create via factory method, not `__init__`
-2. **Next-hop resolution refactoring** - Resolve at NLRI creation, remove `neighbor` dependency from parsing
-3. **Update caching by OpenContext** - Cache wire-format Updates for zero-copy forwarding
+### Why
+
+- Consistency with `OpenContext.make_open_context()` pattern
+- Enable future caching if needed
+- Cleaner API - factory methods are the standard pattern
+
+### Implementation
+
+```python
+class Negotiated:
+    @classmethod
+    def make_negotiated(cls, neighbor: Neighbor, direction: Direction) -> Negotiated:
+        """Factory method to create Negotiated instances."""
+        return cls(neighbor, direction)
+
+    def __init__(self, neighbor: Neighbor, direction: Direction) -> None:
+        # Internal - use make_negotiated() instead
+        ...
+```
+
+### Changes Made
+
+1. Added `make_negotiated()` classmethod to `Negotiated`
+2. Updated 5 src callers to use factory method
+3. Updated 25 test callers to use factory method
+
+### Success Criteria
+
+- [x] `Negotiated.make_negotiated()` factory method exists
+- [x] All callers use factory method
+- [x] All tests pass (11/11)
+
+---
+
+## Future Considerations
+
+1. **Next-hop resolution refactoring** - Resolve at NLRI creation, remove `neighbor` dependency from parsing
+2. **Update caching by OpenContext** - Cache wire-format Updates for zero-copy forwarding
 
 ---
 

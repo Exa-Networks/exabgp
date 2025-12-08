@@ -105,6 +105,14 @@ class Negotiated:
     # Sentinel instance for when Negotiated is required but not used
     UNSET: ClassVar['Negotiated']
 
+    @classmethod
+    def make_negotiated(cls, neighbor: 'Neighbor', direction: 'Direction') -> 'Negotiated':
+        """Factory method to create Negotiated instances.
+
+        Use this instead of calling __init__ directly.
+        """
+        return cls(neighbor, direction)
+
     def __init__(self, neighbor: 'Neighbor', direction: 'Direction') -> None:
         self.neighbor: 'Neighbor' = neighbor
         self.direction: 'Direction' = direction

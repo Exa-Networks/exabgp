@@ -366,7 +366,7 @@ class TestUpdateDecoding(unittest.TestCase):
                 capa,
             )
 
-            negotiated = Negotiated(neighbor, Direction.IN)
+            negotiated = Negotiated.make_negotiated(neighbor, Direction.IN)
             negotiated.sent(o1)
             negotiated.received(o2)
 

@@ -48,7 +48,7 @@ class Protocol:
     def __init__(self, peer: 'Peer') -> None:
         self.peer: 'Peer' = peer
         self.neighbor: 'Neighbor' = peer.neighbor
-        self.negotiated: Negotiated = Negotiated(self.neighbor, Direction.IN)
+        self.negotiated: Negotiated = Negotiated.make_negotiated(self.neighbor, Direction.IN)
         self.connection: 'Incoming' | Outgoing | None = None
 
         if self.neighbor.session.connect:

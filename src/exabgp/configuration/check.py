@@ -88,8 +88,8 @@ def _negotiated(neighbor: Neighbor) -> tuple[Negotiated, Negotiated]:
 
     o1 = Open.make_open(Version(4), ASN(neighbor.session.local_as), HoldTime(180), RouterID(routerid_1), capa)
     o2 = Open.make_open(Version(4), ASN(neighbor.session.peer_as), HoldTime(180), RouterID(routerid_2), capa)
-    negotiated_in = Negotiated(neighbor, Direction.IN)
-    negotiated_out = Negotiated(neighbor, Direction.OUT)
+    negotiated_in = Negotiated.make_negotiated(neighbor, Direction.IN)
+    negotiated_out = Negotiated.make_negotiated(neighbor, Direction.OUT)
     negotiated_in.sent(o1)
     negotiated_in.received(o2)
     negotiated_out.sent(o1)
@@ -508,7 +508,7 @@ def _get_dummy_negotiated() -> Negotiated:
     """Get or create a dummy Negotiated instance for decoding notifications without neighbor context."""
     global _DUMMY_NEGOTIATED
     if _DUMMY_NEGOTIATED is None:
-        _DUMMY_NEGOTIATED = Negotiated(Neighbor.EMPTY, Direction.IN)
+        _DUMMY_NEGOTIATED = Negotiated.make_negotiated(Neighbor.EMPTY, Direction.IN)
     return _DUMMY_NEGOTIATED
 
 

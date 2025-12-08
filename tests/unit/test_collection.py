@@ -23,7 +23,7 @@ def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
     neighbor = Mock()
     neighbor.__getitem__ = Mock(return_value={'aigp': False})
-    return Negotiated(neighbor, Direction.OUT)
+    return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
 def create_context(afi: AFI = AFI.ipv4, safi: SAFI = SAFI.unicast, addpath: bool = False) -> OpenContext:
