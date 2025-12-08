@@ -112,20 +112,17 @@ class Label(INET):
     # AFI varies (ipv4/ipv6) and is set at instance level by INET
     safi: ClassVar[SAFI] = SAFI.nlri_mpls
 
-    def __init__(self, packed: bytes) -> None:
-        """Create a Label NLRI from packed CIDR bytes.
+    def __init__(self, packed: bytes, afi: AFI, *, has_addpath: bool = False) -> None:
+        """Create a Label NLRI from packed wire format bytes.
 
         Args:
-            packed: CIDR wire format bytes [mask_byte][truncated_ip...]
+            packed: Wire format bytes [addpath:4?][mask:1][prefix:var]
+            afi: Address Family Identifier
+            has_addpath: If True, packed includes 4-byte path identifier at start
 
-        AFI is inferred from mask (>32 implies IPv6).
         SAFI is always nlri_mpls (class-level). Use factory methods for creation.
-
-        NOTE: This __init__ is broken (INET requires afi parameter).
-        Use from_cidr() factory method instead.
         """
-        INET.__init__(self, packed)
-        # Note: safi is now a property, setter is a no-op
+        INET.__init__(self, packed, afi, self.safi, has_addpath=has_addpath)
         self._labels_packed: bytes = b''  # Label bytes (empty = NOLABEL)
 
     @property
@@ -134,11 +131,6 @@ class Label(INET):
         if not self._labels_packed:
             return Labels.NOLABEL
         return Labels(self._labels_packed)
-
-    @labels.setter
-    def labels(self, value: Labels) -> None:
-        """Set Labels by storing packed bytes."""
-        self._labels_packed = value.pack_labels()
 
     @classmethod
     def from_cidr(
@@ -163,11 +155,20 @@ class Label(INET):
         Returns:
             New Label instance with SAFI=nlri_mpls
         """
+        # Build wire format: [addpath:4?][mask:1][prefix:var]
+        # Note: Labels are stored separately in _labels_packed for now
+        cidr_packed = cidr.pack_nlri()
+        has_addpath = path_info is not PathInfo.DISABLED
+        if has_addpath:
+            packed = bytes(path_info.pack_path()) + cidr_packed
+        else:
+            packed = cidr_packed
+
         instance = object.__new__(cls)
         # Note: safi parameter is ignored - Label.safi is a class-level constant
         NLRI.__init__(instance, afi, cls.safi, action)
-        instance._packed = cidr.pack_nlri()
-        instance.path_info = path_info
+        instance._packed = packed
+        instance._has_addpath = has_addpath
         instance.nexthop = IP.NoNextHop
         instance._labels_packed = labels.pack_labels() if labels is not None else b''
         instance.rd = None
@@ -205,13 +206,9 @@ class Label(INET):
             safi=settings.safi,
             action=settings.action,
             path_info=settings.path_info,
+            labels=settings.labels,
         )
         instance.nexthop = settings.nexthop
-
-        # Set labels if provided
-        if settings.labels is not None:
-            instance.labels = settings.labels
-
         return instance
 
     def feedback(self, action: Action) -> str:
@@ -251,8 +248,7 @@ class Label(INET):
         # NLRI slots
         self._copy_nlri_slots(new)
         # INET slots
-        new.path_info = self.path_info
-        new.labels = self.labels
+        new._has_addpath = self._has_addpath
         new.rd = self.rd
         # Label slots
         new._labels_packed = self._labels_packed
@@ -268,8 +264,7 @@ class Label(INET):
         # NLRI slots
         self._deepcopy_nlri_slots(new, memo)
         # INET slots
-        new.path_info = self.path_info
-        new.labels = deepcopy(self.labels, memo) if self.labels else None
+        new._has_addpath = self._has_addpath  # bool - immutable
         new.rd = deepcopy(self.rd, memo) if self.rd else None
         # Label slots
         new._labels_packed = self._labels_packed  # bytes - immutable

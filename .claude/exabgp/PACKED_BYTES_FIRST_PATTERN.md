@@ -132,6 +132,39 @@ def endpoint(self) -> int:
 
 ---
 
+## 🚨 NLRI Immutability Rule
+
+**NLRI instances are IMMUTABLE after creation. NO SETTERS ALLOWED.**
+
+```python
+# ❌ WRONG - Never add property setters for NLRI fields
+@path_info.setter
+def path_info(self, value: PathInfo) -> None:
+    self._packed = ...  # FORBIDDEN
+
+# ❌ WRONG - Never assign to NLRI fields after creation
+nlri.labels = Labels.make_labels([100])  # FORBIDDEN
+nlri.rd = RouteDistinguisher(...)  # FORBIDDEN
+nlri.path_info = PathInfo(...)  # FORBIDDEN
+
+# ✅ CORRECT - Use factory methods with all values upfront
+nlri = Label.from_cidr(cidr, afi, labels=Labels.make_labels([100]))
+nlri = IPVPN.from_settings(settings)  # settings has all values
+```
+
+**Why immutability?**
+1. **Wire format integrity:** `_packed` is the source of truth; modifications would desync properties
+2. **Thread safety:** Immutable objects are inherently thread-safe
+3. **Hash stability:** NLRI are used as dict keys; mutable objects break hashing
+4. **Simplicity:** No need to handle partial construction states
+
+**Backward compatibility during migration:**
+- Existing code that assigns to NLRI fields will break - this is intentional
+- Update callers to use factory methods with all values provided upfront
+- If code currently does `nlri.labels = X`, change to `from_cidr(..., labels=X)`
+
+---
+
 ## Implementation Pattern
 
 ### 1. Class Structure

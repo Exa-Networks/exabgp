@@ -47,7 +47,7 @@ class NLRI(Family):
     registered_nlri: ClassVar[dict[str, Type[NLRI]]] = dict()
     registered_families: ClassVar[list[tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
 
-    action: int
+    action: Action
     nexthop: 'IP'
     addpath: 'PathInfo'
     _packed: Buffer  # Wire format bytes (subclass-specific interpretation)
@@ -68,7 +68,9 @@ class NLRI(Family):
         instance._packed = b''
         return instance
 
-    def __init__(self, afi: AFI, safi: SAFI, action: int = Action.UNSET, addpath: PathInfo = PathInfo.DISABLED) -> None:
+    def __init__(
+        self, afi: AFI, safi: SAFI, action: Action = Action.UNSET, addpath: PathInfo = PathInfo.DISABLED
+    ) -> None:
         """Initialize NLRI base class.
 
         Args:
@@ -159,9 +161,6 @@ class NLRI(Family):
 
     def feedback(self, action: Action) -> str:
         raise RuntimeError('feedback is not implemented')
-
-    def assign(self, name: str, value: Any) -> None:
-        setattr(self, name, value)
 
     def add(self, data: Any) -> bool:
         """Add data to NLRI. Only implemented by Flow NLRI."""

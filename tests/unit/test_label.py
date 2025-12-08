@@ -287,15 +287,22 @@ class TestLabelIndex:
         # Index should start with family index
         assert index.startswith(family_index)
 
-    def test_index_no_pathinfo(self) -> None:
-        """Test index uses 'no-pi' when PathInfo is NOPATH"""
+    def test_index_with_nopath(self) -> None:
+        """Test index with NOPATH (AddPath enabled but no specific ID)"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE, labels=Labels.make_labels([100], True))
-        label.path_info = PathInfo.NOPATH
+        # Create with PathInfo.NOPATH - AddPath enabled but no specific ID
+        label = Label.from_cidr(
+            cidr,
+            AFI.ipv4,
+            SAFI.nlri_mpls,
+            Action.ANNOUNCE,
+            path_info=PathInfo.NOPATH,
+            labels=Labels.make_labels([100], True),
+        )
 
         index = label.index()
 
-        # Should contain 'no-pi' marker
+        # NOPATH uses 'no-pi' marker in index for distinguishing from regular path IDs
         assert b'no-pi' in index
 
 

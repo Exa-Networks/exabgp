@@ -73,14 +73,28 @@ class TestINETIndex:
         assert len(index) > 0
 
     def test_index_without_pathinfo(self) -> None:
-        """Test index generation without path info"""
+        """Test index generation without path info (DISABLED)"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
+        # PathInfo.DISABLED = no AddPath bytes in wire format
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE, PathInfo.DISABLED)
+
+        index = nlri.index()
+
+        assert isinstance(index, bytes)
+        # 'disabled' discriminator is added when _has_addpath=False
+        assert b'disabled' in index
+
+    def test_index_with_nopath(self) -> None:
+        """Test index generation with NOPATH (AddPath enabled but no specific ID)"""
+        cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
+        # PathInfo.NOPATH = AddPath enabled, sends 4 zero bytes
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE, PathInfo.NOPATH)
 
         index = nlri.index()
 
         assert isinstance(index, bytes)
-        assert b'no-pi' in index
+        # _packed includes AddPath bytes (4 zeros for NOPATH)
+        assert b'\x00\x00\x00\x00' in index
 
 
 class TestINETJSON:
@@ -176,12 +190,12 @@ class TestINETPathInfo:
         assert remaining == b'\x18\xc0\xa8\x01'
 
     def test_pathinfo_without_addpath(self) -> None:
-        """Test _pathinfo returns NOPATH when addpath is False"""
+        """Test _pathinfo returns DISABLED when addpath is False"""
         data = b'\x18\xc0\xa8\x01'  # route data
 
         pathinfo, remaining = INET._pathinfo(data, addpath=False)
 
-        assert pathinfo == PathInfo.NOPATH
+        assert pathinfo == PathInfo.DISABLED
         assert remaining == data
 
 

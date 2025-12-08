@@ -101,33 +101,65 @@ PATH_INFO_SIZE: int = 4  # Path Identifier is 4 bytes (RFC 7911)
 @NLRI.register(AFI.ipv4, SAFI.multicast)
 @NLRI.register(AFI.ipv6, SAFI.multicast)
 class INET(NLRI):
-    __slots__ = ('path_info', 'labels', 'rd')
+    """INET NLRI using packed-bytes-first pattern.
 
-    def __init__(self, packed: bytes, afi: AFI, safi: SAFI = SAFI.unicast) -> None:
-        """Create an INET NLRI from packed CIDR bytes.
+    Wire format stored in _packed: [addpath:4?][mask:1][prefix:var]
+    - If _has_addpath is True: addpath bytes are at [0:4], mask at [4]
+    - If _has_addpath is False: mask is at [0], no addpath bytes
+
+    Properties extract data from _packed lazily:
+    - path_info: extracts PathInfo from [0:4] if _has_addpath, else DISABLED
+    - cidr: extracts CIDR from [M:] where M = 4 if _has_addpath else 0
+    """
+
+    __slots__ = ('_has_addpath', 'labels', 'rd')
+
+    def __init__(self, packed: bytes, afi: AFI, safi: SAFI = SAFI.unicast, *, has_addpath: bool = False) -> None:
+        """Create an INET NLRI from packed wire format bytes.
 
         Args:
-            packed: CIDR wire format bytes [mask_byte][truncated_ip...]
+            packed: Wire format bytes [addpath:4?][mask:1][prefix:var]
             afi: Address Family Identifier (required - cannot be reliably inferred)
             safi: Subsequent Address Family Identifier (defaults to unicast)
+            has_addpath: If True, packed includes 4-byte path identifier at start
 
-        The AFI parameter is required because wire format is ambiguous for
-        masks 0-32: both IPv4 /32 and IPv6 /32 have the same byte length.
-        Use factory methods (from_cidr, make_route) when creating INET instances.
+        The packed bytes include the complete wire format:
+        - If has_addpath=True: [path_id:4][mask:1][prefix:var]
+        - If has_addpath=False: [mask:1][prefix:var]
+
+        Use factory methods (from_cidr, from_settings) when creating INET instances.
         """
         NLRI.__init__(self, afi, safi, Action.UNSET)
-        self._packed = packed  # CIDR wire format
-        self.path_info = PathInfo.DISABLED
+        self._packed = packed  # Complete wire format
+        self._has_addpath = has_addpath
         self.nexthop = IP.NoNextHop
         self.labels: Labels | None = None
         self.rd: RouteDistinguisher | None = None
 
     @property
+    def _mask_offset(self) -> int:
+        """Offset where mask byte starts (0 or 4 depending on AddPath)."""
+        return PATH_INFO_SIZE if self._has_addpath else 0
+
+    @property
+    def path_info(self) -> PathInfo:
+        """Extract PathInfo from wire bytes if AddPath present."""
+        if not self._has_addpath:
+            return PathInfo.DISABLED
+        path_bytes = self._packed[:PATH_INFO_SIZE]
+        # Return NOPATH singleton for all-zero path ID
+        if path_bytes == b'\x00\x00\x00\x00':
+            return PathInfo.NOPATH
+        return PathInfo(path_bytes)
+
+    @property
     def cidr(self) -> CIDR:
         """Unpack CIDR from stored wire format bytes."""
+        offset = self._mask_offset
+        cidr_bytes = self._packed[offset:]
         if self.afi == AFI.ipv4:
-            return CIDR.from_ipv4(self._packed)
-        return CIDR.from_ipv6(self._packed)
+            return CIDR.from_ipv4(cidr_bytes)
+        return CIDR.from_ipv6(cidr_bytes)
 
     @classmethod
     def from_cidr(
@@ -148,12 +180,22 @@ class INET(NLRI):
             path_info: AddPath path identifier
 
         Returns:
-            New INET instance
+            New INET instance with wire format in _packed
         """
+        # Build wire format: [addpath:4?][mask:1][prefix:var]
+        cidr_packed = cidr.pack_nlri()
+
+        # Determine if AddPath should be included
+        has_addpath = path_info is not PathInfo.DISABLED
+        if has_addpath:
+            packed = bytes(path_info.pack_path()) + cidr_packed
+        else:
+            packed = cidr_packed
+
         instance = object.__new__(cls)
         NLRI.__init__(instance, afi, safi, action)
-        instance._packed = cidr.pack_nlri()
-        instance.path_info = path_info
+        instance._packed = packed
+        instance._has_addpath = has_addpath
         instance.nexthop = IP.NoNextHop
         instance.labels = None
         instance.rd = None
@@ -227,7 +269,8 @@ class INET(NLRI):
         return instance
 
     def __len__(self) -> int:
-        return len(self._packed) + len(self.path_info)
+        # _packed includes AddPath if present
+        return len(self._packed)
 
     def __str__(self) -> str:
         return self.extensive()
@@ -236,13 +279,11 @@ class INET(NLRI):
         return self.extensive()
 
     def __hash__(self) -> int:
-        if self.path_info is PathInfo.NOPATH:
-            addpath = b'no-pi'
-        elif self.path_info is PathInfo.DISABLED:
-            addpath = b'disabled'
-        else:
-            addpath = bytes(self.path_info.pack_path())
-        return hash(addpath + self._packed)
+        # _packed includes AddPath if present; use _has_addpath as discriminator
+        # for DISABLED vs actually having no path bytes
+        if self._has_addpath:
+            return hash(self._packed)
+        return hash(b'disabled' + self._packed)
 
     def __copy__(self) -> 'INET':
         new = self.__class__.__new__(self.__class__)
@@ -252,7 +293,7 @@ class INET(NLRI):
         # NLRI slots
         self._copy_nlri_slots(new)
         # INET slots
-        new.path_info = self.path_info
+        new._has_addpath = self._has_addpath
         new.labels = self.labels
         new.rd = self.rd
         return new
@@ -268,7 +309,7 @@ class INET(NLRI):
         # NLRI slots
         self._deepcopy_nlri_slots(new, memo)
         # INET slots
-        new.path_info = self.path_info  # Typically shared singleton
+        new._has_addpath = self._has_addpath  # bool - immutable
         new.labels = deepcopy(self.labels, memo) if self.labels else None
         new.rd = deepcopy(self.rd, memo) if self.rd else None
         return new
@@ -279,23 +320,37 @@ class INET(NLRI):
         return ''
 
     def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
-        if not negotiated.addpath.send(self.afi, self.safi):
-            return self._packed  # No addpath - return directly, no copy
-        # ADD-PATH negotiated: MUST send 4-byte path ID
-        if self.path_info is PathInfo.DISABLED:
-            addpath = PathInfo.NOPATH.pack_path()
+        """Pack NLRI for wire transmission.
+
+        Handles AddPath based on negotiated capability vs stored format:
+        - If negotiated.send=True AND _has_addpath: return _packed directly
+        - If negotiated.send=True AND NOT _has_addpath: prepend NOPATH
+        - If negotiated.send=False AND _has_addpath: strip AddPath (return from offset 4)
+        - If negotiated.send=False AND NOT _has_addpath: return _packed directly
+        """
+        send_addpath = negotiated.addpath.send(self.afi, self.safi)
+
+        if send_addpath:
+            if self._has_addpath:
+                return self._packed  # Already has AddPath, return directly
+            # Need to prepend NOPATH (4 zero bytes)
+            return bytes(PathInfo.NOPATH.pack_path()) + self._packed
         else:
-            addpath = self.path_info.pack_path()
-        return bytes(addpath) + self._packed
+            if self._has_addpath:
+                # Strip AddPath bytes (first 4 bytes)
+                return self._packed[PATH_INFO_SIZE:]
+            return self._packed  # No AddPath in either, return directly
 
     def index(self) -> bytes:
-        if self.path_info is PathInfo.NOPATH:
-            addpath = b'no-pi'
-        elif self.path_info is PathInfo.DISABLED:
-            addpath = b'disabled'
-        else:
-            addpath = self.path_info.pack_path()
-        return bytes(Family.index(self)) + addpath + self._packed
+        """Generate unique index for RIB lookup.
+
+        Includes family, AddPath status, and wire bytes.
+        """
+        if self._has_addpath:
+            # _packed already includes path bytes
+            return bytes(Family.index(self)) + self._packed
+        # No AddPath - add discriminator to distinguish from has_addpath=True with 0x00000000
+        return bytes(Family.index(self)) + b'disabled' + self._packed
 
     def prefix(self) -> str:
         return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
@@ -400,12 +455,13 @@ class INET(NLRI):
             cidr = CIDR.from_ipv4(bytes([mask]) + bytes(network))
         else:
             cidr = CIDR.from_ipv6(bytes([mask]) + bytes(network))
-        nlri = cls.from_cidr(cidr, afi, safi, action, path_info)
 
-        # Set optional attributes
+        # Build kwargs for from_cidr - subclasses accept labels and rd
+        kwargs: dict[str, Labels | RouteDistinguisher] = {}
         if labels_list is not None:
-            nlri.labels = Labels.make_labels(labels_list)
+            kwargs['labels'] = Labels.make_labels(labels_list)
         if rd is not None:
-            nlri.rd = rd
+            kwargs['rd'] = rd
 
+        nlri = cls.from_cidr(cidr, afi, safi, action, path_info, **kwargs)
         return nlri, data

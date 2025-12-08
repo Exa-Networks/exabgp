@@ -197,29 +197,32 @@ class Section(Error):
                 # Settings mode: set field on settings object
                 self.scope.settings_set(name, self.assign[command], insert)
             elif action == 'nlri-set':
-                # Settings mode: set field on settings object
-                # Legacy mode: mutate NLRI via assign()
+                # Settings mode (preferred): set field on settings object
+                # Direct mode (Flow NLRI only): set directly via setattr
                 if self.scope.in_settings_mode():
                     self.scope.settings_set(name, self.assign[command], insert)
                 else:
-                    self.scope.nlri_assign(name, self.assign[command], insert)
+                    # Flow NLRI have setters; INET/Label/IPVPN don't (will raise AttributeError)
+                    route = self.scope.get_route()
+                    field_name = self.assign.get(command, command)
+                    setattr(route.nlri, field_name, insert)
             elif action == 'nlri-add':
                 for adding in insert:
                     self.scope.nlri_add(name, command, adding)
             elif action == 'nlri-nexthop':
-                # Settings mode: set nexthop on settings object
-                # Legacy mode: set nexthop on NLRI directly
+                # Settings mode (preferred): set nexthop on settings object
+                # Direct mode (Flow NLRI only): set directly
                 if self.scope.in_settings_mode():
                     self.scope.get_settings().nexthop = insert
                 else:
-                    self.scope.nlri_nexthop(name, insert)
+                    self.scope.get_route().nlri.nexthop = insert
             elif action == 'nexthop-and-attribute':
                 ip, attribute = insert
                 if ip:
                     if self.scope.in_settings_mode():
                         self.scope.get_settings().nexthop = ip
                     else:
-                        self.scope.nlri_nexthop(name, ip)
+                        self.scope.get_route().nlri.nexthop = ip
                 if attribute:
                     if self.scope.in_settings_mode():
                         self.scope.settings_attribute_add(name, attribute)

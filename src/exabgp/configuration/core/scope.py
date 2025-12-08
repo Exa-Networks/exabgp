@@ -117,14 +117,8 @@ class Scope(Error):
         if name not in self._added:
             self._added.add(name)
 
-    def nlri_assign(self, name: str, command: str, data: Any) -> None:
-        self.get_route().nlri.assign(command, data)
-
     def nlri_add(self, name: str, command: str, data: Any) -> None:
         self.get_route().nlri.add(data)
-
-    def nlri_nexthop(self, name: str, data: Any) -> None:
-        self.get_route().nlri.nexthop = data
 
     # Settings mode: deferred NLRI construction
 

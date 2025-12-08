@@ -141,20 +141,17 @@ class IPVPN(Label):
     # AFI varies (ipv4/ipv6) and is set at instance level by INET
     safi: ClassVar[SAFI] = SAFI.mpls_vpn
 
-    def __init__(self, packed: bytes) -> None:
-        """Create an IPVPN NLRI from packed CIDR bytes.
+    def __init__(self, packed: bytes, afi: AFI, *, has_addpath: bool = False) -> None:
+        """Create an IPVPN NLRI from packed wire format bytes.
 
         Args:
-            packed: CIDR wire format bytes [mask_byte][truncated_ip...]
+            packed: Wire format bytes [addpath:4?][mask:1][prefix:var]
+            afi: Address Family Identifier
+            has_addpath: If True, packed includes 4-byte path identifier at start
 
-        AFI is inferred from mask (>32 implies IPv6).
         SAFI is always mpls_vpn (class-level). Use factory methods for creation.
-
-        NOTE: This __init__ is broken (Label.__init__ is also broken).
-        Use from_cidr() factory method instead.
         """
-        Label.__init__(self, packed)
-        # Note: safi is now a property, setter is a no-op
+        Label.__init__(self, packed, afi, has_addpath=has_addpath)
         self._rd_packed: bytes = b''  # RD bytes (empty = NORD)
 
     @property
@@ -163,11 +160,6 @@ class IPVPN(Label):
         if not self._rd_packed:
             return RouteDistinguisher.NORD
         return RouteDistinguisher(self._rd_packed)
-
-    @rd.setter
-    def rd(self, value: RouteDistinguisher) -> None:
-        """Set Route Distinguisher by storing its packed bytes."""
-        self._rd_packed = value.pack_rd()
 
     @classmethod
     def from_cidr(
@@ -194,11 +186,20 @@ class IPVPN(Label):
         Returns:
             New IPVPN instance with SAFI=mpls_vpn
         """
+        # Build wire format: [addpath:4?][mask:1][prefix:var]
+        # Note: Labels and RD are stored separately in _labels_packed and _rd_packed for now
+        cidr_packed = cidr.pack_nlri()
+        has_addpath = path_info is not PathInfo.DISABLED
+        if has_addpath:
+            packed = bytes(path_info.pack_path()) + cidr_packed
+        else:
+            packed = cidr_packed
+
         instance = object.__new__(cls)
         # Note: safi parameter is ignored - IPVPN.safi is a class-level property
         NLRI.__init__(instance, afi, cls.safi, action)
-        instance._packed = cidr.pack_nlri()
-        instance.path_info = path_info
+        instance._packed = packed
+        instance._has_addpath = has_addpath
         instance.nexthop = IP.NoNextHop
         instance._labels_packed = labels.pack_labels() if labels is not None else b''
         instance._rd_packed = rd.pack_rd() if rd is not None else b''
@@ -237,17 +238,10 @@ class IPVPN(Label):
             safi=settings.safi,
             action=settings.action,
             path_info=settings.path_info,
+            labels=settings.labels,
+            rd=settings.rd,
         )
         instance.nexthop = settings.nexthop
-
-        # Set labels if provided
-        if settings.labels is not None:
-            instance.labels = settings.labels
-
-        # Set rd if provided
-        if settings.rd is not None:
-            instance.rd = settings.rd
-
         return instance
 
     def feedback(self, action: Action) -> str:
@@ -270,9 +264,7 @@ class IPVPN(Label):
     ) -> 'IPVPN':
         """Factory method to create an IPVPN route."""
         cidr = CIDR.make_cidr(packed, mask)
-        instance = cls.from_cidr(cidr, afi, safi, action, path_info)
-        instance.labels = labels
-        instance.rd = rd
+        instance = cls.from_cidr(cidr, afi, safi, action, path_info, labels=labels, rd=rd)
         instance.nexthop = IP.from_string(nexthop) if nexthop else IP.NoNextHop
         return instance
 
@@ -286,8 +278,8 @@ class IPVPN(Label):
         return self.extensive()
 
     def __len__(self) -> int:
-        # Total length = labels + rd + cidr (including mask byte) + path_info
-        return len(self._labels_packed) + len(self._rd_packed) + len(self._packed) + len(self.path_info)
+        # Total length = _packed (includes addpath if present) + labels + rd
+        return len(self._packed) + len(self._labels_packed) + len(self._rd_packed)
 
     def __eq__(self, other: Any) -> bool:
         return Label.__eq__(self, other) and self._rd_packed == other._rd_packed
@@ -312,9 +304,7 @@ class IPVPN(Label):
         # NLRI slots
         self._copy_nlri_slots(new)
         # INET slots
-        new.path_info = self.path_info
-        new.labels = self.labels
-        new.rd = self.rd
+        new._has_addpath = self._has_addpath
         # Label slots
         new._labels_packed = self._labels_packed
         # IPVPN slots
@@ -322,8 +312,6 @@ class IPVPN(Label):
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'IPVPN':
-        from copy import deepcopy
-
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
         # Family slots (afi - safi is class-level)
@@ -331,9 +319,7 @@ class IPVPN(Label):
         # NLRI slots
         self._deepcopy_nlri_slots(new, memo)
         # INET slots
-        new.path_info = self.path_info
-        new.labels = deepcopy(self.labels, memo) if self.labels else None
-        new.rd = deepcopy(self.rd, memo) if self.rd else None
+        new._has_addpath = self._has_addpath  # bool - immutable
         # Label slots
         new._labels_packed = self._labels_packed  # bytes - immutable
         # IPVPN slots
@@ -438,14 +424,21 @@ class IPVPN(Label):
 
         network, data = data[:size], data[size:]
 
-        # Create NLRI - _packed stores CIDR only
+        # Build wire format: [addpath:4?][mask:1][prefix:var]
         cidr_packed = bytes([mask]) + bytes(network)
+        has_addpath = path_info is not PathInfo.DISABLED
+        if has_addpath:
+            packed = bytes(path_info.pack_path()) + cidr_packed
+        else:
+            packed = cidr_packed
+
+        # Create NLRI
         instance = object.__new__(cls)
         NLRI.__init__(instance, afi, safi, action)
-        instance._packed = cidr_packed
-        instance.path_info = path_info
+        instance._packed = packed
+        instance._has_addpath = has_addpath
         instance.nexthop = IP.NoNextHop
-        instance.labels = Labels.make_labels(labels_list) if labels_list else Labels.NOLABEL
+        instance._labels_packed = Labels.make_labels(labels_list).pack_labels() if labels_list else b''
         instance._rd_packed = rd_packed
 
         return instance, data

@@ -4,6 +4,18 @@ This document maps the NLRI class inheritance structure, showing where class var
 
 ---
 
+## 🚨 NLRI Immutability Rule
+
+**NLRI instances are IMMUTABLE after creation. NO SETTERS ALLOWED.**
+
+- Never add property setters for NLRI fields
+- Never assign to NLRI fields after creation
+- Use factory methods with all values provided upfront
+
+See `PACKED_BYTES_FIRST_PATTERN.md` for full rationale and migration guidance.
+
+---
+
 ## Inheritance Diagram
 
 ```

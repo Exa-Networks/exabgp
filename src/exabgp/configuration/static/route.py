@@ -23,7 +23,8 @@ from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.nlri.settings import INETSettings
+from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
 from exabgp.rib.route import Route
 
@@ -31,7 +32,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.schema import Container, Leaf, LeafList, ValueType
 
 # from exabgp.configuration.static.parser import inet
-from exabgp.configuration.static.parser import mpls
+from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import next_hop
 from exabgp.configuration.static.parser import origin
@@ -290,10 +291,56 @@ class ParseStaticRoute(Section):
         pass
 
     def pre(self) -> bool:
-        self.scope.append_route(mpls(self.parser.tokeniser))
+        """Enter settings mode for nested route syntax.
+
+        Instead of creating NLRI immediately (legacy mode), we:
+        1. Parse the prefix from tokeniser
+        2. Create settings object with CIDR
+        3. Enter settings mode so nlri-set commands populate settings
+        4. Create NLRI in post() when all values are collected
+        """
+        ipmask = prefix(self.parser.tokeniser)
+        settings = INETSettings()
+        settings.cidr = CIDR.make_cidr(ipmask.ton(), ipmask.mask)
+        settings.afi = IP.toafi(ipmask.top())
+        settings.safi = SAFI.mpls_vpn  # Default to IPVPN, can be downgraded in post()
+        settings.action = Action.ANNOUNCE
+        attributes = AttributeCollection()
+
+        self.scope.set_settings(settings, attributes)
         return True
 
     def post(self) -> bool:
+        """Create NLRI from collected settings and finalize route."""
+        # Check if we're in settings mode (nested route syntax: route X { ... })
+        if self.scope.in_settings_mode():
+            settings = self.scope.get_settings()
+            attributes = self.scope.get_settings_attributes()
+
+            # Clear settings mode
+            self.scope.clear_settings()
+
+            # Determine NLRI class based on what was actually parsed
+            has_rd = settings.rd is not None
+            has_labels = settings.labels is not None
+
+            if has_rd:
+                nlri_class = IPVPN
+                settings.safi = SAFI.mpls_vpn
+            elif has_labels:
+                nlri_class = Label
+                settings.safi = SAFI.nlri_mpls
+            else:
+                nlri_class = INET
+                # Use original AFI to determine unicast vs multicast SAFI
+                settings.safi = IP.tosafi(settings.cidr.prefix().split('/')[0])
+
+            # Create immutable NLRI from settings
+            nlri = nlri_class.from_settings(settings)
+            route = Route(nlri, attributes)
+            self.scope.append_route(route)
+
+        # Process routes (from either nested syntax or flat syntax)
         self._split()
         routes = self.scope.pop_routes()
         if routes:
@@ -352,24 +399,23 @@ class ParseStaticRoute(Section):
             if type(nlri) is INET:  # noqa: E721 - exact type check
                 return nlri
 
-        # Create new NLRI with correct type
+        # Build kwargs for from_cidr - pass labels/rd if target supports them
+        kwargs: dict = {}
+        if has_label:
+            kwargs['labels'] = ipvpn_nlri.labels
+        if has_rd:
+            kwargs['rd'] = ipvpn_nlri.rd
+
+        # Create new NLRI with correct type and all values upfront
         new_nlri = target_cls.from_cidr(
             ipvpn_nlri.cidr,
             ipvpn_nlri.afi,
             target_safi,
             ipvpn_nlri.action,
             ipvpn_nlri.path_info,
+            **kwargs,
         )
         new_nlri.nexthop = ipvpn_nlri.nexthop
-
-        # Copy labels if target supports them
-        if has_label and hasattr(new_nlri, 'labels'):
-            new_nlri.labels = ipvpn_nlri.labels
-
-        # Copy RD if target supports it
-        if has_rd and hasattr(new_nlri, 'rd'):
-            new_nlri.rd = ipvpn_nlri.rd
-
         return new_nlri
 
     def _check(self) -> bool:
@@ -437,14 +483,18 @@ class ParseStaticRoute(Section):
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
             new_cidr = CIDR.make_cidr(pack_int(afi, ip), cut)
-            new_nlri: Any = klass.from_cidr(new_cidr, afi, safi, Action.ANNOUNCE)
-            new_nlri.nexthop = nexthop  # nexthop can be NextHopSelf
+
+            # Build kwargs for from_cidr - NLRI are immutable, must pass all values upfront
+            kwargs: dict = {}
             if path_info is not None:
-                new_nlri.path_info = path_info
+                kwargs['path_info'] = path_info
             if labels is not None:
-                new_nlri.labels = labels
+                kwargs['labels'] = labels
             if rd is not None:
-                new_nlri.rd = rd
+                kwargs['rd'] = rd
+
+            new_nlri: Any = klass.from_cidr(new_cidr, afi, safi, Action.ANNOUNCE, **kwargs)
+            new_nlri.nexthop = nexthop  # nexthop can be NextHopSelf
             # next ip
             ip += increment
             yield Route(new_nlri, last.attributes)

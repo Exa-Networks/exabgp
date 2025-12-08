@@ -1083,12 +1083,12 @@ class RouteBuilderValidator(Validator[list[Any]]):
         if self.schema is None:
             raise ValueError('No schema configured')
 
-        # Check for settings mode (deferred construction)
-        if self.schema.settings_class is not None and self.schema.nlri_class is not None:
-            return self._validate_with_settings(tokeniser)
-
-        # Legacy mode (immediate NLRI creation with mutation)
-        return self._validate_legacy(tokeniser)
+        # Settings mode is required - NLRI are immutable
+        if self.schema.settings_class is None or self.schema.nlri_class is None:
+            raise ValueError(
+                f'Schema must define settings_class and nlri_class - NLRI are immutable. Schema: {self.schema}'
+            )
+        return self._validate_with_settings(tokeniser)
 
     def _validate_with_settings(self, tokeniser: 'Tokeniser') -> list[Any]:
         """Build Route using Settings pattern (deferred NLRI construction).
@@ -1173,85 +1173,6 @@ class RouteBuilderValidator(Validator[list[Any]]):
         elif action == 'set-command':
             # Store on settings for later processing
             setattr(settings, command.replace('-', '_'), value)
-        else:
-            raise ValueError(f"Unknown action '{action}' for command '{command}'")
-
-    def _validate_legacy(self, tokeniser: 'Tokeniser') -> list[Any]:
-        """Build Route using legacy pattern (immediate NLRI creation with mutation)."""
-        from exabgp.bgp.message.update.attribute import AttributeCollection
-        from exabgp.bgp.message.update.nlri.cidr import CIDR
-        from exabgp.configuration.schema import Leaf, LeafList
-        from exabgp.rib.route import Route
-
-        # Create NLRI and Change
-        if self.schema.nlri_factory is None:
-            raise ValueError('No NLRI factory configured')
-
-        if self.schema.prefix_parser:
-            # Prefix-based route (IP): parse prefix and create NLRI with CIDR
-            ipmask = self.schema.prefix_parser(tokeniser)
-            cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
-            nlri = self.schema.nlri_factory.from_cidr(cidr, self.afi, self.safi, self.action_type)
-        elif self.schema.factory_with_afi:
-            # Non-prefix route with AFI (FlowSpec): factory needs AFI/SAFI/action but no CIDR
-            nlri = self.schema.nlri_factory(self.afi, self.safi, self.action_type)
-        else:
-            # Non-prefix route (VPLS): factory returns pre-constructed NLRI
-            nlri = self.schema.nlri_factory()
-
-        route = Route(nlri, AttributeCollection())
-
-        # Process sub-commands from schema
-        while True:
-            command = tokeniser()
-            if not command:
-                break
-
-            child = self.schema.children.get(command)
-            if child is None:
-                valid = ', '.join(sorted(self.schema.children.keys()))
-                raise ValueError(f"Unknown command '{command}'\n  Valid options: {valid}")
-
-            # Get validator and parse value
-            if isinstance(child, (Leaf, LeafList)):
-                validator = child.get_validator()
-                if validator is None:
-                    raise ValueError(f"No validator for '{command}'")
-                value = validator.validate(tokeniser)
-                action = child.action
-
-                # Apply action
-                self._apply_action(route, command, action, value)
-
-        return [route]
-
-    def _apply_action(self, route: 'Route', command: str, action: str, value: Any) -> None:
-        """Apply parsed value to Route object based on action (legacy mode)."""
-        if action == 'attribute-add':
-            route.attributes.add(value)
-        elif action == 'nexthop-and-attribute':
-            ip, attribute = value
-            if ip:
-                route.nlri.nexthop = ip
-            if attribute:
-                route.attributes.add(attribute)
-        elif action == 'nlri-set':
-            field_name = self.schema.assign.get(command, command)
-            route.nlri.assign(field_name, value)
-        elif action == 'nlri-add':
-            # For FlowSpec: value is a list of components to add
-            if isinstance(value, (list, tuple)):
-                for item in value:
-                    route.nlri.add(item)
-            else:
-                route.nlri.add(value)
-        elif action == 'nlri-nexthop':
-            route.nlri.nexthop = value
-        elif action == 'nop':
-            pass  # Intentionally do nothing (e.g., FlowSpec 'accept')
-        elif action == 'set-command':
-            # Store as attribute on route for later processing
-            setattr(route, command.replace('-', '_'), value)
         else:
             raise ValueError(f"Unknown action '{action}' for command '{command}'")
 
