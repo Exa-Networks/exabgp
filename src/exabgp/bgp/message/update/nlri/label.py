@@ -277,16 +277,19 @@ class Label(INET):
         return '{}{}'.format(INET.prefix(self), self.labels)
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
-        if negotiated.addpath.send(self.afi, self.safi):
-            # ADD-PATH negotiated: MUST send 4-byte path ID
-            if self.path_info is PathInfo.DISABLED:
-                addpath = PathInfo.NOPATH.pack_path()
-            else:
-                addpath = self.path_info.pack_path()
-        else:
-            addpath = b''
+        # Wire format: [addpath?][mask][labels][prefix]
         mask = bytes([len(self._labels_packed) * 8 + self.cidr.mask])
-        return addpath + mask + self._labels_packed + self.cidr.pack_ip()
+        packed = mask + self._labels_packed + self.cidr.pack_ip()
+
+        if not negotiated.addpath.send(self.afi, self.safi):
+            return packed  # No addpath - return directly
+
+        # ADD-PATH negotiated: MUST prepend 4-byte path ID
+        if self.path_info is PathInfo.DISABLED:
+            addpath = PathInfo.NOPATH.pack_path()
+        else:
+            addpath = self.path_info.pack_path()
+        return addpath + packed
 
     def index(self) -> bytes:
         if self.path_info is PathInfo.NOPATH:

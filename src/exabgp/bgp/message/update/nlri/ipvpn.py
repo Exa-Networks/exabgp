@@ -341,16 +341,19 @@ class IPVPN(Label):
         return True
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
-        if negotiated.addpath.send(self.afi, self.safi):
-            if self.path_info is PathInfo.DISABLED:
-                addpath = PathInfo.NOPATH.pack_path()
-            else:
-                addpath = self.path_info.pack_path()
-        else:
-            addpath = b''
-        # Wire format: [addpath][mask][labels][rd][prefix]
+        # Wire format: [addpath?][mask][labels][rd][prefix]
         mask = len(self._labels_packed) * 8 + len(self._rd_packed) * 8 + self.cidr.mask
-        return bytes(addpath) + bytes([mask]) + self._labels_packed + self._rd_packed + self.cidr.pack_ip()
+        packed = bytes([mask]) + self._labels_packed + self._rd_packed + self.cidr.pack_ip()
+
+        if not negotiated.addpath.send(self.afi, self.safi):
+            return packed  # No addpath - return directly
+
+        # ADD-PATH negotiated: MUST prepend 4-byte path ID
+        if self.path_info is PathInfo.DISABLED:
+            addpath = PathInfo.NOPATH.pack_path()
+        else:
+            addpath = self.path_info.pack_path()
+        return bytes(addpath) + packed
 
     def index(self) -> bytes:
         if self.path_info is PathInfo.NOPATH:

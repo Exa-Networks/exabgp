@@ -53,9 +53,20 @@ class Type1SessionTransformedRoute(MUP):
     NAME: ClassVar[str] = 'Type1SessionTransformedRoute'
     SHORT_NAME: ClassVar[str] = 'T1ST'
 
-    def __init__(self, packed: bytes, afi: AFI) -> None:
+    # Wire format offsets (after 4-byte header: arch(1) + code(2) + length(1))
+    HEADER_SIZE: ClassVar[int] = 4
+    RD_OFFSET: ClassVar[int] = 4  # Bytes 4-11: RD (8 bytes)
+    PREFIX_LEN_OFFSET: ClassVar[int] = 12  # Byte 12: prefix length
+    PREFIX_OFFSET: ClassVar[int] = 13  # Bytes 13+: prefix (variable)
+
+    def __init__(self, packed: Buffer, afi: AFI) -> None:
+        """Create T1ST with complete wire format.
+
+        Args:
+            packed: Complete wire format including 4-byte header
+        """
         MUP.__init__(self, afi)
-        self._packed = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def make_t1st(
@@ -78,7 +89,7 @@ class Type1SessionTransformedRoute(MUP):
             offset += 1
 
         prefix_ip_packed = prefix_ip.pack_ip()
-        packed = (
+        payload = (
             bytes(rd.pack_rd())
             + pack('!B', prefix_ip_len)
             + prefix_ip_packed[0:offset]
@@ -89,17 +100,21 @@ class Type1SessionTransformedRoute(MUP):
 
         if source_ip_len != 0:
             source_ip_packed = source_ip.pack_ip() if isinstance(source_ip, IP) else source_ip
-            packed += pack('!B', source_ip_len) + source_ip_packed
+            payload += pack('!B', source_ip_len) + source_ip_packed
 
+        # Include 4-byte header: arch(1) + code(2) + length(1) + payload
+        packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(payload)) + payload
         return cls(packed, afi)
 
     @property
     def rd(self) -> RouteDistinguisher:
-        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+        # Offset by 4-byte header: RD at bytes 4-11
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[4:12])
 
     @property
     def prefix_ip_len(self) -> int:
-        return self._packed[8]
+        # Offset by 4-byte header: prefix_len at byte 12
+        return self._packed[12]
 
     @property
     def prefix_ip(self) -> IP:
@@ -108,7 +123,8 @@ class Type1SessionTransformedRoute(MUP):
         if ip_remainder != 0:
             ip_offset += 1
 
-        ip = self._packed[9 : 9 + ip_offset]
+        # Offset by 4-byte header: prefix at bytes 13+
+        ip = self._packed[13 : 13 + ip_offset]
         ip_size = 4 if self.afi != AFI.ipv6 else 16
         ip_padding = ip_size - ip_offset
         if ip_padding > 0:
@@ -116,12 +132,13 @@ class Type1SessionTransformedRoute(MUP):
         return IP.unpack_ip(ip)
 
     def _get_teid_qfi_offset(self) -> int:
-        """Calculate offset to TEID field."""
+        """Calculate offset to TEID field (includes 4-byte header)."""
         ip_offset = self.prefix_ip_len // 8
         ip_remainder = self.prefix_ip_len % 8
         if ip_remainder != 0:
             ip_offset += 1
-        return 9 + ip_offset
+        # 4 (header) + 8 (RD) + 1 (prefix_len) + ip_offset
+        return 13 + ip_offset
 
     @property
     def teid(self) -> int:
@@ -200,11 +217,13 @@ class Type1SessionTransformedRoute(MUP):
         return s
 
     def pack_index(self) -> bytes:
-        # removed teid, qfi, endpointip
-        packed = bytes(self.rd.pack_rd()) + pack('!B', self.prefix_ip_len) + self.prefix_ip.pack_ip()
-        return pack('!BHB', self.ARCHTYPE, self.CODE, len(packed)) + packed
+        # T1ST index excludes teid, qfi, endpoint for RIB uniqueness
+        # Build index-specific payload (different from full wire format)
+        index_payload = bytes(self.rd.pack_rd()) + pack('!B', self.prefix_ip_len) + self.prefix_ip.pack_ip()
+        return pack('!BHB', self.ARCHTYPE, self.CODE, len(index_payload)) + index_payload
 
     def index(self) -> bytes:
+        # T1ST uses custom index (excludes teid, qfi, endpoint)
         return bytes(Family.index(self)) + self.pack_index()
 
     def __hash__(self) -> int:
@@ -226,7 +245,8 @@ class Type1SessionTransformedRoute(MUP):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
-        # Validate endpoint_ip_len before creating instance
+        # Parent strips header, provides payload only. Validate before reconstructing.
+        # Payload offsets (no header): RD(0-7), prefix_len(8), prefix(9+)
         prefix_ip_len = data[8]
         ip_offset = prefix_ip_len // 8
         ip_remainder = prefix_ip_len % 8
@@ -251,8 +271,11 @@ class Type1SessionTransformedRoute(MUP):
             if source_ip_len not in [32, 128]:
                 raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
 
-        # Parent handles remaining data; we consume all provided data
-        return cls(data, afi), b''
+        # Reconstruct complete wire format with header
+        packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(data)) + bytes(data)
+        instance = cls(packed, afi)
+        instance.action = action
+        return instance, b''
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)

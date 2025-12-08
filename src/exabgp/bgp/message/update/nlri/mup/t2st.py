@@ -53,9 +53,20 @@ class Type2SessionTransformedRoute(MUP):
     NAME: ClassVar[str] = 'Type2SessionTransformedRoute'
     SHORT_NAME: ClassVar[str] = 'T2ST'
 
-    def __init__(self, packed: bytes, afi: AFI) -> None:
+    # Wire format offsets (after 4-byte header: arch(1) + code(2) + length(1))
+    HEADER_SIZE: ClassVar[int] = 4
+    RD_OFFSET: ClassVar[int] = 4  # Bytes 4-11: RD (8 bytes)
+    ENDPOINT_LEN_OFFSET: ClassVar[int] = 12  # Byte 12: endpoint length
+    ENDPOINT_IP_OFFSET: ClassVar[int] = 13  # Bytes 13+: endpoint IP
+
+    def __init__(self, packed: Buffer, afi: AFI) -> None:
+        """Create T2ST with complete wire format.
+
+        Args:
+            packed: Complete wire format including 4-byte header
+        """
         MUP.__init__(self, afi)
-        self._packed = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def make_t2st(
@@ -67,7 +78,7 @@ class Type2SessionTransformedRoute(MUP):
         afi: AFI,
     ) -> 'Type2SessionTransformedRoute':
         """Factory method to create T2ST from semantic parameters."""
-        packed = bytes(rd.pack_rd()) + pack('!B', endpoint_len) + endpoint_ip.pack_ip()
+        payload = bytes(rd.pack_rd()) + pack('!B', endpoint_len) + endpoint_ip.pack_ip()
 
         endpoint_size = MUP_T2ST_IPV4_SIZE_BITS if endpoint_ip.afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
         teid_size = endpoint_len - endpoint_size
@@ -83,28 +94,34 @@ class Type2SessionTransformedRoute(MUP):
             offset += 1
 
         if teid_size > 0:
-            packed += teid_packed[-offset:]
+            payload += teid_packed[-offset:]
 
+        # Include 4-byte header: arch(1) + code(2) + length(1) + payload
+        packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(payload)) + payload
         return cls(packed, afi)
 
     @property
     def rd(self) -> RouteDistinguisher:
-        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+        # Offset by 4-byte header: RD at bytes 4-11
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[4:12])
 
     @property
     def endpoint_len(self) -> int:
-        return self._packed[8]
+        # Offset by 4-byte header: endpoint_len at byte 12
+        return self._packed[12]
 
     @property
     def endpoint_ip(self) -> IP:
         afi_bytes_size = 4 if self.afi == AFI.ipv4 else 16
-        return IP.unpack_ip(self._packed[9 : 9 + afi_bytes_size])
+        # Offset by 4-byte header: endpoint_ip at bytes 13+
+        return IP.unpack_ip(self._packed[13 : 13 + afi_bytes_size])
 
     @property
     def teid(self) -> int:
         afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if self.afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
         afi_bytes_size = 4 if self.afi == AFI.ipv4 else 16
-        end = 9 + afi_bytes_size
+        # Offset by 4-byte header: teid after endpoint_ip
+        end = 13 + afi_bytes_size
         if self.endpoint_len > afi_bit_size:
             return int.from_bytes(self._packed[end:], 'big')
         return 0
@@ -147,6 +164,8 @@ class Type2SessionTransformedRoute(MUP):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
+        # Parent strips header, provides payload only. Validate before reconstructing.
+        # Payload offsets (no header): RD(0-7), endpoint_len(8)
         afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
         endpoint_len = data[8]
 
@@ -161,8 +180,11 @@ class Type2SessionTransformedRoute(MUP):
                     'endpoint length is too large %d (max %d for Ipv6)' % (endpoint_len, MUP_T2ST_IPV6_MAX_ENDPOINT)
                 )
 
-        # Parent handles remaining data; we consume all provided data
-        return cls(data, afi), b''
+        # Reconstruct complete wire format with header
+        packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(data)) + bytes(data)
+        instance = cls(packed, afi)
+        instance.action = action
+        return instance, b''
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)

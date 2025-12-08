@@ -53,22 +53,25 @@ class MUP(NLRI):
         Note: action defaults to UNSET, set after creation (announce/withdraw).
         """
         NLRI.__init__(self, afi, SAFI.mup)
-        self._packed: bytes = b''
+        self._packed: Buffer = b''
 
     def __hash__(self) -> int:
         return hash('{}:{}:{}:{}:{}'.format(self.afi, self.safi, self.ARCHTYPE, self.CODE, self._packed.hex()))
 
     def __len__(self) -> int:
-        return len(self._packed) + 2
+        # _packed includes 4-byte header: arch_type(1) + route_type(2) + length(1)
+        return len(self._packed)
 
     def __eq__(self, other: Any) -> bool:
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
     def __str__(self) -> str:
         # Use the class's own SHORT_NAME since it's defined on all MUP subclasses
+        # _packed includes 4-byte header, payload starts at offset 4
+        payload = self._packed[4:] if len(self._packed) > 4 else b''
         return 'mup:{}:{}'.format(
             self.SHORT_NAME.lower(),
-            '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
+            '0x' + ''.join('{:02x}'.format(_) for _ in payload),
         )
 
     def __repr__(self) -> str:
@@ -83,12 +86,12 @@ class MUP(NLRI):
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for MUP but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(self.afi, SAFI.mup)
-        # Wire format: [arch_type(1)][route_type(2)][length(1)][payload]
-        return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
+        # Wire format: [arch_type(1)][route_type(2)][length(1)][payload] - _packed includes header
+        return self._packed
 
     def index(self) -> bytes:
-        # Wire format: [family][arch_type(1)][route_type(2)][length(1)][payload]
-        return bytes(Family.index(self)) + pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
+        # Wire format: [family][arch_type(1)][route_type(2)][length(1)][payload] - _packed includes header
+        return bytes(Family.index(self)) + self._packed
 
     def __copy__(self) -> 'MUP':
         new = self.__class__.__new__(self.__class__)
@@ -151,8 +154,8 @@ class MUP(NLRI):
         return mup, data[end:]
 
     def _raw(self) -> str:
-        packed = pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
-        return ''.join('{:02X}'.format(_) for _ in packed)
+        # _packed includes 4-byte header
+        return ''.join('{:02X}'.format(_) for _ in self._packed)
 
 
 class GenericMUP(MUP):
@@ -161,11 +164,20 @@ class GenericMUP(MUP):
     # Instance variables for arch/code since GenericMUP can have any values
     __slots__ = ('_arch', '_code')
 
-    def __init__(self, afi: AFI, arch: int, code: int, packed: bytes) -> None:
+    def __init__(self, afi: AFI, arch: int, code: int, payload: Buffer) -> None:
+        """Create GenericMUP with complete wire format.
+
+        Args:
+            afi: Address family
+            arch: Architecture type
+            code: Route type code
+            payload: Payload bytes (without header)
+        """
         MUP.__init__(self, afi)
         self._arch = arch
         self._code = code
-        self._packed = packed
+        # Store complete wire format including 4-byte header
+        self._packed = pack('!BHB', arch, code, len(payload)) + payload
 
     @property
     def ARCHTYPE(self) -> int:  # type: ignore[override]

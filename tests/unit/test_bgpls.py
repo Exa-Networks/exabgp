@@ -15,6 +15,7 @@ RFC 9514: Border Gateway Protocol - Link State (BGP-LS) Extensions for Segment R
 """
 
 import pytest
+from struct import pack
 from unittest.mock import Mock
 
 from exabgp.bgp.message import Action
@@ -31,6 +32,17 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
 from exabgp.protocol.family import AFI, SAFI
+
+
+def with_bgpls_header(code: int, payload: bytes) -> bytes:
+    """Wrap payload with BGP-LS 4-byte header [type(2)][length(2)].
+
+    BGP-LS NLRI wire format per RFC 7752:
+    - NLRI Type: 2 bytes
+    - Total NLRI Length: 2 bytes
+    - Payload: variable
+    """
+    return pack('!HH', code, len(payload)) + payload
 
 
 def create_negotiated() -> Negotiated:
@@ -97,7 +109,7 @@ class TestNodeNLRI:
         """Test unpacking basic Node NLRI"""
         # Protocol: OSPFv2 (3), Domain: 1, Local Node Descriptor
         # Type=256 (Local Node), Length=16, AS=65533, BGP-LS-ID=0, Router-ID=10.113.63.240
-        data = (
+        payload = (
             b'\x03'  # Protocol-ID: OSPFv2
             b'\x00\x00\x00\x00\x00\x00\x00\x01'  # Domain (64-bit): 1
             b'\x01\x00'  # Type: 256 (Local Node Descriptors)
@@ -107,7 +119,7 @@ class TestNodeNLRI:
             b'\x02\x03\x00\x04\x0a\x71\x3f\xf0'  # Router ID: 10.113.63.240
         )
 
-        node = NODE.unpack_bgpls_nlri(data, rd=None)
+        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
 
         assert node.proto_id == 3  # OSPFv2
         assert node.domain == 1
@@ -119,7 +131,7 @@ class TestNodeNLRI:
 
     def test_node_json(self) -> None:
         """Test Node NLRI JSON serialization"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x18'
@@ -128,7 +140,7 @@ class TestNodeNLRI:
             b'\x02\x03\x00\x04\x0a\x71\x3f\xf0'
         )
 
-        node = NODE.unpack_bgpls_nlri(data, rd=None)
+        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
         node.nexthop = '192.0.2.1'
         json_output = node.json()
 
@@ -141,7 +153,7 @@ class TestNodeNLRI:
     def test_node_equality(self) -> None:
         """Test Node NLRI equality"""
         # Use simpler data with just one AS descriptor
-        data = (
+        payload = (
             b'\x03'  # Protocol: OSPFv2
             b'\x00\x00\x00\x00\x00\x00\x00\x01'  # Domain: 1
             b'\x01\x00'  # Type: 256 (Local Node)
@@ -149,15 +161,16 @@ class TestNodeNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        node1 = NODE.unpack_bgpls_nlri(data, rd=None)
-        node2 = NODE.unpack_bgpls_nlri(data, rd=None)
+        wire_data = with_bgpls_header(NODE.CODE, payload)
+        node1 = NODE.unpack_bgpls_nlri(wire_data, rd=None)
+        node2 = NODE.unpack_bgpls_nlri(wire_data, rd=None)
 
         assert node1 == node2
         assert not (node1 != node2)
 
     def test_node_hash(self) -> None:
         """Test Node NLRI hashing"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00'  # Type: 256
@@ -165,7 +178,7 @@ class TestNodeNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        node = NODE.unpack_bgpls_nlri(data, rd=None)
+        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
 
         # Fixed: node_ids is now properly converted to tuple in __hash__()
         hash1 = hash(node)
@@ -174,7 +187,7 @@ class TestNodeNLRI:
 
     def test_node_string_representation(self) -> None:
         """Test Node NLRI string representation"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00'  # Type: 256
@@ -182,7 +195,7 @@ class TestNodeNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        node = NODE.unpack_bgpls_nlri(data, rd=None)
+        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
         node.nexthop = '192.0.2.1'
         str_repr = str(node)
 
@@ -191,18 +204,18 @@ class TestNodeNLRI:
 
     def test_node_invalid_protocol(self) -> None:
         """Test Node NLRI with invalid protocol ID"""
-        data = (
+        payload = (
             b'\xff'  # Invalid protocol
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x00'
         )
 
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            NODE.unpack_bgpls_nlri(data, rd=None)
+            NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
 
     def test_node_invalid_node_type(self) -> None:
         """Test Node NLRI with invalid node descriptor type"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x01'  # Type: 257 (should be 256 for local node)
@@ -210,11 +223,11 @@ class TestNodeNLRI:
         )
 
         with pytest.raises(Exception, match='Unknown type.*Only Local Node descriptors'):
-            NODE.unpack_bgpls_nlri(data, rd=None)
+            NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
 
     def test_node_pack(self) -> None:
         """Test Node NLRI packing"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00'  # Type: 256
@@ -222,12 +235,13 @@ class TestNodeNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        node = NODE.unpack_bgpls_nlri(data, rd=None)
+        wire_data = with_bgpls_header(NODE.CODE, payload)
+        node = NODE.unpack_bgpls_nlri(wire_data, rd=None)
         negotiated = create_negotiated()
         packed = node.pack_nlri(negotiated)
 
-        # Should return the original packed data
-        assert packed == data
+        # Should return the complete wire format with header
+        assert packed == wire_data
 
 
 class TestLinkNLRI:
@@ -238,7 +252,7 @@ class TestLinkNLRI:
         # Protocol: OSPFv2 (3), Domain: 1
         # Local Node: AS=65533
         # Remote Node: AS=65534
-        data = (
+        payload = (
             b'\x03'  # Protocol-ID: OSPFv2
             b'\x00\x00\x00\x00\x00\x00\x00\x01'  # Domain: 1
             b'\x01\x00'  # Type: 256 (Local Node)
@@ -249,7 +263,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'  # AS: 65534
         )
 
-        link = LINK.unpack_bgpls_nlri(data, rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
 
         assert link.proto_id == 3
         assert link.domain == 1
@@ -261,7 +275,7 @@ class TestLinkNLRI:
 
     def test_link_with_link_identifiers(self) -> None:
         """Test Link NLRI with link identifiers"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -274,14 +288,14 @@ class TestLinkNLRI:
             b'\x00\x00\x00\x02'  # Remote ID: 2
         )
 
-        link = LINK.unpack_bgpls_nlri(data, rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
 
         # Link IDs are returned as a single LinkIdentifier object, not a list
         assert link.link_ids is not None
 
     def test_link_with_interface_addresses(self) -> None:
         """Test Link NLRI with interface addresses (IPv4 and IPv6)"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -293,13 +307,13 @@ class TestLinkNLRI:
             b'\xc0\x00\x02\x01'  # 192.0.2.1
         )
 
-        link = LINK.unpack_bgpls_nlri(data, rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
 
         assert len(link.iface_addrs) == 1
 
     def test_link_with_neighbor_addresses(self) -> None:
         """Test Link NLRI with neighbor addresses"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -311,13 +325,13 @@ class TestLinkNLRI:
             b'\xc0\x00\x02\x02'  # 192.0.2.2
         )
 
-        link = LINK.unpack_bgpls_nlri(data, rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
 
         assert len(link.neigh_addrs) == 1
 
     def test_link_with_multi_topology(self) -> None:
         """Test Link NLRI with multi-topology identifiers"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -329,13 +343,13 @@ class TestLinkNLRI:
             b'\x00\x01'  # MT-ID: 1
         )
 
-        link = LINK.unpack_bgpls_nlri(data, rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
 
         assert len(link.topology_ids) == 1
 
     def test_link_json(self) -> None:
         """Test Link NLRI JSON serialization"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -344,7 +358,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_bgpls_nlri(data, rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
         json_output = link.json()
 
         assert '"ls-nlri-type": "bgpls-link"' in json_output
@@ -355,7 +369,7 @@ class TestLinkNLRI:
 
     def test_link_equality(self) -> None:
         """Test Link NLRI equality"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
@@ -363,15 +377,16 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link1 = LINK.unpack_bgpls_nlri(data, rd=None)
-        link2 = LINK.unpack_bgpls_nlri(data, rd=None)
+        wire_data = with_bgpls_header(LINK.CODE, payload)
+        link1 = LINK.unpack_bgpls_nlri(wire_data, rd=None)
+        link2 = LINK.unpack_bgpls_nlri(wire_data, rd=None)
 
         assert link1 == link2
         assert not (link1 != link2)
 
     def test_link_hash(self) -> None:
         """Test Link NLRI hashing"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
@@ -379,7 +394,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_bgpls_nlri(data, rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
 
         # Fixed: __hash__() now properly returns hash of attributes instead of recursing
         hash1 = hash(link)
@@ -388,7 +403,7 @@ class TestLinkNLRI:
 
     def test_link_string_representation(self) -> None:
         """Test Link NLRI string representation"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
@@ -396,25 +411,25 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_bgpls_nlri(data, rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
         str_repr = str(link)
 
         assert 'bgpls-link' in str_repr
 
     def test_link_invalid_protocol(self) -> None:
         """Test Link NLRI with invalid protocol ID"""
-        data = (
+        payload = (
             b'\xff'  # Invalid protocol
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x00'
         )
 
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            LINK.unpack_bgpls_nlri(data, rd=None)
+            LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
 
     def test_link_pack(self) -> None:
         """Test Link NLRI packing"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
@@ -422,12 +437,13 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_bgpls_nlri(data, rd=None)
+        wire_data = with_bgpls_header(LINK.CODE, payload)
+        link = LINK.unpack_bgpls_nlri(wire_data, rd=None)
 
-        # Fixed: _packed attribute is now properly initialized in __init__()
+        # pack_nlri returns complete wire format with header
         negotiated = create_negotiated()
         packed = link.pack_nlri(negotiated)
-        assert packed == data
+        assert packed == wire_data
 
 
 class TestPrefixV4NLRI:
@@ -435,7 +451,7 @@ class TestPrefixV4NLRI:
 
     def test_prefix_v4_unpack_basic(self) -> None:
         """Test unpacking basic IPv4 Prefix NLRI"""
-        data = (
+        payload = (
             b'\x03'  # Protocol-ID: OSPFv2
             b'\x00\x00\x00\x00\x00\x00\x00\x01'  # Domain: 1
             b'\x01\x00'  # Type: 256 (Local Node)
@@ -446,7 +462,7 @@ class TestPrefixV4NLRI:
             b'\x0a\x0a\x00'  # Prefix: 10.0.0.0/10
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
 
         assert prefix.proto_id == 3
         assert prefix.domain == 1
@@ -458,7 +474,7 @@ class TestPrefixV4NLRI:
 
     def test_prefix_v4_with_ospf_route_type(self) -> None:
         """Test IPv4 Prefix NLRI with OSPF route type"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -471,13 +487,13 @@ class TestPrefixV4NLRI:
             b'\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
 
         assert prefix.ospf_type is not None
 
     def test_prefix_v4_json(self) -> None:
         """Test IPv4 Prefix NLRI JSON serialization"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -485,7 +501,7 @@ class TestPrefixV4NLRI:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
         prefix.nexthop = '192.0.2.1'
         json_output = prefix.json()
 
@@ -497,45 +513,45 @@ class TestPrefixV4NLRI:
 
     def test_prefix_v4_equality(self) -> None:
         """Test IPv4 Prefix NLRI equality"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix1 = PREFIXv4.unpack_bgpls_nlri(data, rd=None)
-        prefix2 = PREFIXv4.unpack_bgpls_nlri(data, rd=None)
+        wire_data = with_bgpls_header(PREFIXv4.CODE, payload)
+        prefix1 = PREFIXv4.unpack_bgpls_nlri(wire_data, rd=None)
+        prefix2 = PREFIXv4.unpack_bgpls_nlri(wire_data, rd=None)
 
         assert prefix1 == prefix2
         assert not (prefix1 != prefix2)
 
     def test_prefix_v4_hash(self) -> None:
         """Test IPv4 Prefix NLRI hashing"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
 
-        # Fixed: __hash__() now properly returns hash of attributes instead of recursing
         hash1 = hash(prefix)
         hash2 = hash(prefix)
         assert hash1 == hash2
 
     def test_prefix_v4_string_representation(self) -> None:
         """Test IPv4 Prefix NLRI string representation"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
         prefix.nexthop = '192.0.2.1'
         str_repr = str(prefix)
 
@@ -543,29 +559,30 @@ class TestPrefixV4NLRI:
 
     def test_prefix_v4_invalid_protocol(self) -> None:
         """Test IPv4 Prefix NLRI with invalid protocol ID"""
-        data = (
+        payload = (
             b'\xff'  # Invalid protocol
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x00'
         )
 
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            PREFIXv4.unpack_bgpls_nlri(data, rd=None)
+            PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
 
     def test_prefix_v4_pack(self) -> None:
         """Test IPv4 Prefix NLRI packing"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(data, rd=None)
+        wire_data = with_bgpls_header(PREFIXv4.CODE, payload)
+        prefix = PREFIXv4.unpack_bgpls_nlri(wire_data, rd=None)
         negotiated = create_negotiated()
         packed = prefix.pack_nlri(negotiated)
 
-        assert packed == data
+        assert packed == wire_data
 
 
 class TestPrefixV6NLRI:
@@ -573,7 +590,7 @@ class TestPrefixV6NLRI:
 
     def test_prefix_v6_unpack_basic(self) -> None:
         """Test unpacking basic IPv6 Prefix NLRI"""
-        data = (
+        payload = (
             b'\x03'  # Protocol-ID: OSPFv2
             b'\x00\x00\x00\x00\x00\x00\x00\x01'  # Domain: 1
             b'\x01\x00'  # Type: 256 (Local Node)
@@ -584,7 +601,7 @@ class TestPrefixV6NLRI:
             b'\x7f\x20\x01\x07'  # Prefix: 2001:700::/127
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
 
         assert prefix.proto_id == 3
         assert prefix.domain == 1
@@ -596,7 +613,7 @@ class TestPrefixV6NLRI:
 
     def test_prefix_v6_with_ospf_route_type(self) -> None:
         """Test IPv6 Prefix NLRI with OSPF route type"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -609,13 +626,13 @@ class TestPrefixV6NLRI:
             b'\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
 
         assert prefix.ospf_type is not None
 
     def test_prefix_v6_json(self) -> None:
         """Test IPv6 Prefix NLRI JSON serialization"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -623,7 +640,7 @@ class TestPrefixV6NLRI:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
         prefix.nexthop = '2001:db8::1'
         json_output = prefix.json()
 
@@ -635,45 +652,45 @@ class TestPrefixV6NLRI:
 
     def test_prefix_v6_equality(self) -> None:
         """Test IPv6 Prefix NLRI equality"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix1 = PREFIXv6.unpack_bgpls_nlri(data, rd=None)
-        prefix2 = PREFIXv6.unpack_bgpls_nlri(data, rd=None)
+        wire_data = with_bgpls_header(PREFIXv6.CODE, payload)
+        prefix1 = PREFIXv6.unpack_bgpls_nlri(wire_data, rd=None)
+        prefix2 = PREFIXv6.unpack_bgpls_nlri(wire_data, rd=None)
 
         assert prefix1 == prefix2
         assert not (prefix1 != prefix2)
 
     def test_prefix_v6_hash(self) -> None:
         """Test IPv6 Prefix NLRI hashing"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
 
-        # Fixed: __hash__() now properly returns hash of attributes instead of recursing
         hash1 = hash(prefix)
         hash2 = hash(prefix)
         assert hash1 == hash2
 
     def test_prefix_v6_string_representation(self) -> None:
         """Test IPv6 Prefix NLRI string representation"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
         prefix.nexthop = '2001:db8::1'
         str_repr = str(prefix)
 
@@ -681,29 +698,30 @@ class TestPrefixV6NLRI:
 
     def test_prefix_v6_invalid_protocol(self) -> None:
         """Test IPv6 Prefix NLRI with invalid protocol ID"""
-        data = (
+        payload = (
             b'\xff'  # Invalid protocol
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x00'
         )
 
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            PREFIXv6.unpack_bgpls_nlri(data, rd=None)
+            PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
 
     def test_prefix_v6_pack(self) -> None:
         """Test IPv6 Prefix NLRI packing"""
-        data = (
+        payload = (
             b'\x03\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(data, rd=None)
+        wire_data = with_bgpls_header(PREFIXv6.CODE, payload)
+        prefix = PREFIXv6.unpack_bgpls_nlri(wire_data, rd=None)
         negotiated = create_negotiated()
         packed = prefix.pack_nlri(negotiated)
 
-        assert packed == data
+        assert packed == wire_data
 
 
 class TestSRv6SIDNLRI:
@@ -711,7 +729,7 @@ class TestSRv6SIDNLRI:
 
     def test_srv6sid_unpack_basic(self) -> None:
         """Test unpacking basic SRv6 SID NLRI"""
-        data = (
+        payload = (
             b'\x03'  # Protocol-ID: OSPFv2
             b'\x00\x00\x00\x00\x00\x00\x00\x01'  # Domain: 1
             b'\x01\x00'  # Type: 256 (Local Node Descriptors)
@@ -723,7 +741,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_bgpls_nlri(data, len(data))
+        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
 
         assert srv6sid.proto_id == 3
         assert srv6sid.domain == 1
@@ -735,7 +753,7 @@ class TestSRv6SIDNLRI:
 
     def test_srv6sid_with_multi_topology(self) -> None:
         """Test SRv6 SID NLRI with multi-topology ID"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -749,13 +767,13 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_bgpls_nlri(data, len(data))
+        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
 
         assert len(srv6sid.srv6_sid_descriptors['multi-topology-ids']) == 1
 
     def test_srv6sid_json(self) -> None:
         """Test SRv6 SID NLRI JSON serialization"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -765,7 +783,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_bgpls_nlri(data, len(data))
+        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
         json_output = srv6sid.json()
 
         assert '"ls-nlri-type": "bgpls-srv6sid"' in json_output
@@ -776,7 +794,7 @@ class TestSRv6SIDNLRI:
 
     def test_srv6sid_repr(self) -> None:
         """Test SRv6 SID NLRI representation"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -786,7 +804,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_bgpls_nlri(data, len(data))
+        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
         repr_str = repr(srv6sid)
 
         assert 'bgpls-srv6sid' in repr_str
@@ -795,18 +813,18 @@ class TestSRv6SIDNLRI:
 
     def test_srv6sid_invalid_protocol(self) -> None:
         """Test SRv6 SID NLRI with invalid protocol ID"""
-        data = (
+        payload = (
             b'\xff'  # Invalid protocol
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x00'
         )
 
         with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            SRv6SID.unpack_bgpls_nlri(data, len(data))
+            SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
 
     def test_srv6sid_invalid_node_type(self) -> None:
         """Test SRv6 SID NLRI with invalid node descriptor type"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x01'  # Type: 257 (should be 256)
@@ -814,11 +832,11 @@ class TestSRv6SIDNLRI:
         )
 
         with pytest.raises(Exception, match='Unknown type.*Only Local Node descriptors'):
-            SRv6SID.unpack_bgpls_nlri(data, len(data))
+            SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
 
     def test_srv6sid_len(self) -> None:
         """Test SRv6 SID NLRI length computation"""
-        data = (
+        payload = (
             b'\x03'
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x08'
@@ -828,11 +846,12 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_bgpls_nlri(data, len(data))
+        wire_data = with_bgpls_header(SRv6SID.CODE, payload)
+        srv6sid = SRv6SID.unpack_bgpls_nlri(wire_data, rd=None)
 
-        # Length should be: 1 (proto_id) + 8 (domain) + local_node_desc + srv6_sid_desc
+        # Length should include 4-byte header + payload
         length = len(srv6sid)
-        assert length > 9  # At least protocol + domain
+        assert length == len(wire_data)
 
 
 class TestBGPLSUnpack:

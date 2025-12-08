@@ -279,14 +279,13 @@ class INET(NLRI):
         return ''
 
     def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
-        if negotiated.addpath.send(self.afi, self.safi):
-            # ADD-PATH negotiated: MUST send 4-byte path ID
-            if self.path_info is PathInfo.DISABLED:
-                addpath = PathInfo.NOPATH.pack_path()
-            else:
-                addpath = self.path_info.pack_path()
+        if not negotiated.addpath.send(self.afi, self.safi):
+            return self._packed  # No addpath - return directly, no copy
+        # ADD-PATH negotiated: MUST send 4-byte path ID
+        if self.path_info is PathInfo.DISABLED:
+            addpath = PathInfo.NOPATH.pack_path()
         else:
-            addpath = b''
+            addpath = self.path_info.pack_path()
         return bytes(addpath) + self._packed
 
     def index(self) -> bytes:

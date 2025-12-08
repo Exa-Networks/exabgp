@@ -9,6 +9,8 @@ from __future__ import annotations
 from struct import pack
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from exabgp.util.types import Buffer
+
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
@@ -18,7 +20,6 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
-from exabgp.util.types import Buffer
 
 # +-----------------------------------+
 # |           RD  (8 octets)          |
@@ -36,9 +37,20 @@ class InterworkSegmentDiscoveryRoute(MUP):
     NAME: ClassVar[str] = 'InterworkSegmentDiscoveryRoute'
     SHORT_NAME: ClassVar[str] = 'ISD'
 
-    def __init__(self, packed: bytes, afi: AFI) -> None:
+    # Wire format offsets (after 4-byte header: arch(1) + code(2) + length(1))
+    HEADER_SIZE: ClassVar[int] = 4
+    RD_OFFSET: ClassVar[int] = 4  # Bytes 4-11: RD (8 bytes)
+    PREFIX_LEN_OFFSET: ClassVar[int] = 12  # Byte 12: prefix length
+    PREFIX_OFFSET: ClassVar[int] = 13  # Bytes 13+: prefix
+
+    def __init__(self, packed: Buffer, afi: AFI) -> None:
+        """Create ISD with complete wire format.
+
+        Args:
+            packed: Complete wire format including 4-byte header
+        """
         MUP.__init__(self, afi)
-        self._packed = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def make_isd(
@@ -55,21 +67,26 @@ class InterworkSegmentDiscoveryRoute(MUP):
             offset += 1
 
         prefix_ip_packed = prefix_ip.pack_ip()
-        packed = bytes(rd.pack_rd()) + pack('!B', prefix_ip_len) + prefix_ip_packed[0:offset]
+        payload = bytes(rd.pack_rd()) + pack('!B', prefix_ip_len) + prefix_ip_packed[0:offset]
+        # Include 4-byte header: arch(1) + code(2) + length(1) + payload
+        packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(payload)) + payload
         return cls(packed, afi)
 
     @property
     def rd(self) -> RouteDistinguisher:
-        return RouteDistinguisher.unpack_routedistinguisher(self._packed[:8])
+        # Offset by 4-byte header: RD at bytes 4-11
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[4:12])
 
     @property
     def prefix_ip_len(self) -> int:
-        return self._packed[8]
+        # Offset by 4-byte header: prefix_len at byte 12
+        return self._packed[12]
 
     @property
     def prefix_ip(self) -> IP:
         size = 4 if self.afi != AFI.ipv6 else 16
-        ip = self._packed[9:]
+        # Offset by 4-byte header: prefix at bytes 13+
+        ip = self._packed[13:]
         padding = size - len(ip)
         if padding > 0:
             ip = bytes(ip) + bytes(padding)
@@ -99,8 +116,11 @@ class InterworkSegmentDiscoveryRoute(MUP):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
-        # Parent handles remaining data; we consume all provided data
-        return cls(data, afi), b''
+        # Parent strips header, provides payload only. Reconstruct complete wire format.
+        packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(data)) + bytes(data)
+        instance = cls(packed, afi)
+        instance.action = action
+        return instance, b''
 
     def json(self, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)
