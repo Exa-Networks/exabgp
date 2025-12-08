@@ -1,4 +1,6 @@
 option:file:conf-new-v6.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0059:02:0000004240010100400200400504000000C8C008087814000078147814800E26000201102A020B8000000002000000000000000100802A020B80000000010000000000000001
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":200,"community":[[30740,0],[30740,30740]]},"announce":{"ipv6 unicast":{"2a02:b80:0:2::1":[{"nlri":"2a02:b80:0:1::1/128"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0059:02:0000004240010100400200400504000000C8C008087814000078147814800E26000201102A020B8000000002000000000000000100802A020B80000000010000000000000002
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":200,"community":[[30740,0],[30740,30740]]},"announce":{"ipv6 unicast":{"2a02:b80:0:2::1":[{"nlri":"2a02:b80:0:1::2/128"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000201

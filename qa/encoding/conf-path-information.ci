@@ -1,6 +1,9 @@
 option:file:conf-path-information.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0035:02:00000015400101004002004003040:A0A0101:40050400000064:00000001:200A00000A
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":55219,"peer":55219},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.10.1.1":[{"nlri":"10.0.0.10/32","path-information":"0.0.0.1"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0035:02:00000015400101004002004003040:A0A0102:40050400000064:00000002:200A00000A
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":55219,"peer":55219},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.10.1.2":[{"nlri":"10.0.0.10/32","path-information":"0.0.0.2"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0035:02:00000015400101004002004003040:A0A0103:40050400000064:00000003:200A01000A
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":55219,"peer":55219},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.10.1.3":[{"nlri":"10.1.0.10/32","path-information":"0.0.0.3"}]}}}}}}
 2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 #2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000101

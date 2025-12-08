@@ -1,3 +1,4 @@
 option:file:conf-ipself4.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003047F00000140050400000064200A000000
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":12345,"peer":12345},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"127.0.0.1":[{"nlri":"10.0.0.0/32"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000

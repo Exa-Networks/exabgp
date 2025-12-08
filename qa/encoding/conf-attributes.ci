@@ -1,4 +1,5 @@
 option:file:conf-attributes.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000201
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"large-community":[[1,2,3],[10,11,12]]},"announce":{"ipv4 unicast":{"255.255.255.255":[{"nlri":"10.0.0.7/32"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004C:02:0000003040010100400200400304FFFFFFFF40050400000064C020180000000100000002000000030000000A0000000B0000000C200A000007

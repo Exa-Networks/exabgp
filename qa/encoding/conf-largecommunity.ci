@@ -1,4 +1,6 @@
 option:file:conf-largecommunity.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004C:02:0000003040010100400200400304C000020140050400000064C0201800000B62000000000000029A00000B6200000CF80000007B200808080A
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65000,"peer":65000},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"large-community":[[2914,0,666],[2914,3320,123]]},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"8.8.8.10/32"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004C:02:0000003040010100400200400304C000020140050400000064C0201800000B62000000000000029A00000B6200000CF80000007B200909090A
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65000,"peer":65000},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"large-community":[[2914,0,666],[2914,3320,123]]},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"9.9.9.10/32"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
