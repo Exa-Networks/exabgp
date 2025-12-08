@@ -6,10 +6,9 @@
 |------|--------|-------------|
 | `todo.md` | 🔄 Active | Master TODO list with project tracking |
 | `coverage.md` | 🔄 Active | Test coverage improvement (59.71% → 60%) |
-| `wire-semantic-separation.md` | 📋 Planning | Wire vs Semantic container separation (Update, Attribute, Collection) |
-| `nlri-immutability-refactoring.md` | 🔄 Active | NLRI immutability and Collection pattern |
-| `packed-nlri-conversion.md` | 🔄 Active | Converting NLRI classes to packed-bytes-first |
-| `byte-interning.md` | 🔄 Partial | LRU caching for NLRI qualifiers |
+| `wire-semantic-separation.md` | 🔄 Phase 1 Complete | Wire vs Semantic container separation |
+| `update-context-attachment.md` | 📋 Planning | Global Update cache with SHA256 IDs |
+| `type-identification-review.md` | 📋 Planning | hasattr() → ClassVar review |
 | `addpath-nlri.md` | 📋 Planning | ADD-PATH for more NLRI types |
 | `architecture.md` | 📋 Planning | Circular dependency fixes |
 | `code-quality.md` | 📋 Planning | Misc improvements (low priority) |

@@ -113,7 +113,8 @@
       "WebSearch",
       "Bash(uv run python:*)",
       "Bash(tee:*)",
-      "Bash(uv run mypy:*)"
+      "Bash(uv run mypy:*)",
+      "Bash(uv run ruff check:*)"
     ],
     "deny": []
   },

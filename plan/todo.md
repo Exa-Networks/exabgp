@@ -1,6 +1,6 @@
 # ExaBGP Quality Improvement TODO
 
-**Updated:** 2025-12-06
+**Updated:** 2025-12-08
 **Naming convention:** See `plan/README.md`
 
 ---
@@ -55,6 +55,31 @@ MyPy errors: 89 (92% reduction from 1,149 baseline)
 
 ---
 
+### 4. Wire vs Semantic Separation (Phase 1 Complete)
+
+**Status:** 🔄 Active (Phase 2 pending)
+**See:** `plan/wire-semantic-separation.md`
+
+Phase 1 complete - Update/UpdateCollection separation:
+- Update stores `_negotiated`, has no `_parsed` caching
+- Callers use `update.data` or `update.parse()`
+
+Next: Phase 2 - Replace `Negotiated` with `OpenContext`:
+- Add `local_as`, `peer_as` to OpenContext
+- Update stores `_context: OpenContext` instead of `_negotiated`
+- Change `pack_attribute(negotiated)` → `pack_attribute(context)`
+
+---
+
+### 5. Update Context Attachment
+
+**Status:** 📋 Planning
+**See:** `plan/update-context-attachment.md`
+
+Global Update cache with SHA256 IDs, sender tracking, API commands.
+
+---
+
 ## Future Projects
 
 ### Security Validation
@@ -98,15 +123,25 @@ Extend ADD-PATH to additional NLRI types (BGP-LS, FlowSpec, VPLS, EVPN, MVPN, MU
 
 ---
 
+### Type Identification Review (Low Priority)
+
+**Status:** 📋 Planning
+**See:** `plan/type-identification-review.md`
+
+Review codebase for hasattr() violations after `_labels_packed` → `_has_labels` bug discovery.
+
+---
+
 ## Plan Index
 
 | Plan | Status | Description |
 |------|--------|-------------|
 | `type-safety/` | 🔄 Active | Type annotations project |
-| `packed-bytes/` | ✅ Complete | Packed-bytes-first refactoring |
 | `coverage.md` | 🔄 Active | Test coverage improvement |
 | `runtime-validation/` | 🔄 Active | Parsing crash prevention |
-| `python312-buffer.md` | ✅ Complete | Python 3.12 buffer protocol |
+| `wire-semantic-separation.md` | 🔄 Active | Wire vs Semantic container separation |
+| `update-context-attachment.md` | 📋 Planning | Global Update cache with IDs |
+| `type-identification-review.md` | 📋 Planning | hasattr() → ClassVar review |
 | `security-validation.md` | 📋 Planning | Config/API validation |
 | `addpath-nlri.md` | 📋 Planning | AddPath for more NLRI types |
 | `architecture.md` | 📋 Planning | Circular dependency fixes |
@@ -211,4 +246,31 @@ Full implementation of zero-copy buffer handling:
 - Tests: 1,882 → 2,540 (+658)
 
 ### BGP-LS Data Validation ✅
-- 12 vulnerabilities fixed across 11 files
+- 12 parsing issues fixed across 11 files (proper exceptions on invalid data)
+
+### INET/Label/IPVPN Packed-Bytes-First ✅ (2025-12-08)
+- Converted INET/Label/IPVPN to `_packed` storage with `_has_addpath`/`_has_labels`/`_has_rd` flags
+- All three classes immutable after creation, zero-copy `pack_nlri()`
+- Fixed `_normalize_nlri_type()` bug, added 12 unit tests
+
+### NLRI Immutability Refactoring ✅ (2025-12-07)
+- Settings classes (VPLSSettings, INETSettings, FlowSettings) with `from_settings()` factories
+- RouteBuilder/Static routes use deferred construction (no mutation)
+- VPLS fully immutable: removed `make_empty()`, `assign()`, builder slots
+
+### Collection Caching by OpenContext ✅ (2025-12-07)
+- UpdateCollection caches wire format per OpenContext (is_ibgp, addpath, asn4, msg_size)
+- `exabgp_cache_updates` env var to enable/disable
+
+### Pack NLRI Optimization ✅ (2025-12-08)
+- All `pack_nlri()` methods do zero-copy returns (inet, rtc, mup, bgpls)
+
+### Sentinel Watchdog Pattern ✅ (2025-12-06)
+- `Watchdog`/`NoWatchdog` sentinel replaces `None` returns
+
+### NLRI Packed-Bytes-First Conversion ✅ (2025-12-08)
+- Core: VPLS, RTC, INET, Label, IPVPN - all converted with zero-copy pack_nlri()
+- EVPN: All 6 types converted
+- MUP: All 4 types converted (ISD, DSD, T1ST, T2ST)
+- BGP-LS: All 6 types converted (NODE, LINK, PREFIXv4, PREFIXv6, SRv6SID)
+- Flow/MVPN not applicable (builder pattern / low priority)
