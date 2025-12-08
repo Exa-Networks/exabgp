@@ -368,10 +368,11 @@ class ParseStaticRoute(Section):
         # Cast to IPVPN to access rd/labels (IPVPN is parent of all created by mpls())
         ipvpn_nlri = cast(IPVPN, nlri)
 
-        # Check actual data presence via _rd_packed/_labels_packed attributes
+        # Check actual data presence via _rd_packed/_has_labels attributes
         # (not has_rd()/has_label() which check SAFI capability, not actual data)
+        # Note: Label class uses _has_labels flag (not _labels_packed) since packed-bytes-first
         has_rd = hasattr(ipvpn_nlri, '_rd_packed') and ipvpn_nlri._rd_packed
-        has_label = hasattr(ipvpn_nlri, '_labels_packed') and ipvpn_nlri._labels_packed
+        has_label = hasattr(ipvpn_nlri, '_has_labels') and ipvpn_nlri._has_labels
 
         # Determine target type and SAFI
         if has_rd:
