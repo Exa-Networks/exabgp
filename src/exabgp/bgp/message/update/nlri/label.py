@@ -148,6 +148,7 @@ class Label(INET):
         safi: SAFI = SAFI.nlri_mpls,  # Default to class SAFI; parameter kept for API compat
         action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
+        labels: Labels | None = None,
     ) -> 'Label':
         """Factory method to create Label from a CIDR object.
 
@@ -157,6 +158,7 @@ class Label(INET):
             safi: Ignored - Label always uses nlri_mpls (kept for API compatibility)
             action: Route action (ANNOUNCE/WITHDRAW)
             path_info: AddPath path identifier
+            labels: MPLS label stack (optional, defaults to NOLABEL)
 
         Returns:
             New Label instance with SAFI=nlri_mpls
@@ -167,7 +169,7 @@ class Label(INET):
         instance._packed = cidr.pack_nlri()
         instance.path_info = path_info
         instance.nexthop = IP.NoNextHop
-        instance._labels_packed = b''  # NOLABEL
+        instance._labels_packed = labels.pack_labels() if labels is not None else b''
         instance.rd = None
         return instance
 

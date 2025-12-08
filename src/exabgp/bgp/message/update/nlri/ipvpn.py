@@ -177,6 +177,8 @@ class IPVPN(Label):
         safi: SAFI = SAFI.mpls_vpn,  # Default to class SAFI; parameter kept for API compat
         action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
+        labels: Labels | None = None,
+        rd: RouteDistinguisher | None = None,
     ) -> 'IPVPN':
         """Factory method to create IPVPN from a CIDR object.
 
@@ -186,6 +188,8 @@ class IPVPN(Label):
             safi: Ignored - IPVPN always uses mpls_vpn (kept for API compatibility)
             action: Route action (ANNOUNCE/WITHDRAW)
             path_info: AddPath path identifier
+            labels: MPLS label stack (optional, defaults to NOLABEL)
+            rd: Route Distinguisher (optional, defaults to NORD)
 
         Returns:
             New IPVPN instance with SAFI=mpls_vpn
@@ -196,8 +200,8 @@ class IPVPN(Label):
         instance._packed = cidr.pack_nlri()
         instance.path_info = path_info
         instance.nexthop = IP.NoNextHop
-        instance._labels_packed = b''  # NOLABEL
-        instance._rd_packed = b''  # NORD
+        instance._labels_packed = labels.pack_labels() if labels is not None else b''
+        instance._rd_packed = rd.pack_rd() if rd is not None else b''
         return instance
 
     @classmethod

@@ -614,58 +614,60 @@ class TestIPVPNFromCidrEdgeCases:
         assert nlri.rd == RouteDistinguisher.NORD
         assert nlri.cidr.prefix() == '192.168.1.0/24'
 
-    def test_from_cidr_then_set_rd_only(self) -> None:
-        """Test from_cidr then setting RD (no labels)"""
+    def test_from_cidr_with_rd_only(self) -> None:
+        """Test from_cidr with RD parameter (no labels)"""
         cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
-        nlri.rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
+        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn, rd=RouteDistinguisher.make_from_elements('10.0.0.1', 100))
 
         assert nlri.labels == Labels.NOLABEL
         assert nlri.rd._str() == '10.0.0.1:100'
         assert nlri.cidr.prefix() == '10.0.0.0/24'
 
-    def test_from_cidr_then_set_labels_only(self) -> None:
-        """Test from_cidr then setting labels (no RD)"""
+    def test_from_cidr_with_labels_only(self) -> None:
+        """Test from_cidr with labels parameter (no RD)"""
         cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
-        nlri.labels = Labels.make_labels([42], True)
+        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn, labels=Labels.make_labels([42], True))
 
         assert nlri.labels.labels == [42]
         assert nlri.rd == RouteDistinguisher.NORD
         assert nlri.cidr.prefix() == '10.0.0.0/24'
 
-    def test_from_cidr_set_rd_before_labels(self) -> None:
-        """Test from_cidr with RD set BEFORE labels (config parser order)
+    def test_from_cidr_with_labels_and_rd(self) -> None:
+        """Test from_cidr with both labels and RD parameters
 
-        The configuration parser often sets RD before labels. Verify this
-        order works correctly.
+        Verifies that both parameters can be set at construction time.
         """
         cidr = CIDR.make_cidr(IP.pton('192.168.0.0'), 16)
-        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
+        nlri = IPVPN.from_cidr(
+            cidr,
+            AFI.ipv4,
+            SAFI.mpls_vpn,
+            labels=Labels.make_labels([100, 200], True),
+            rd=RouteDistinguisher.make_from_elements('172.16.0.1', 50),
+        )
 
-        # Set RD first (like config parser does)
-        nlri.rd = RouteDistinguisher.make_from_elements('172.16.0.1', 50)
+        assert nlri.labels.labels == [100, 200]
         assert nlri.rd._str() == '172.16.0.1:50'
         assert nlri.cidr.prefix() == '192.168.0.0/16'
 
-        # Then set labels
-        nlri.labels = Labels.make_labels([100, 200], True)
-        assert nlri.labels.labels == [100, 200]
-        assert nlri.rd._str() == '172.16.0.1:50'  # RD should be preserved
-        assert nlri.cidr.prefix() == '192.168.0.0/16'  # CIDR should be preserved
+    def test_from_cidr_with_all_parameters(self) -> None:
+        """Test from_cidr with all optional parameters"""
+        from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
-    def test_from_cidr_set_labels_before_rd(self) -> None:
-        """Test from_cidr with labels set BEFORE RD"""
         cidr = CIDR.make_cidr(IP.pton('192.168.0.0'), 16)
-        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
+        nlri = IPVPN.from_cidr(
+            cidr,
+            AFI.ipv4,
+            SAFI.mpls_vpn,
+            action=Action.ANNOUNCE,
+            path_info=PathInfo.NOPATH,
+            labels=Labels.make_labels([100], True),
+            rd=RouteDistinguisher.make_from_elements('172.16.0.1', 50),
+        )
 
-        # Set labels first
-        nlri.labels = Labels.make_labels([100], True)
+        assert nlri.action == Action.ANNOUNCE
+        assert nlri.path_info == PathInfo.NOPATH
         assert nlri.labels.labels == [100]
-
-        # Then set RD
-        nlri.rd = RouteDistinguisher.make_from_elements('172.16.0.1', 50)
-        assert nlri.labels.labels == [100]  # Labels should be preserved
         assert nlri.rd._str() == '172.16.0.1:50'
         assert nlri.cidr.prefix() == '192.168.0.0/16'
 
@@ -872,17 +874,17 @@ class TestIPVPNMultipleLabelEdgeCases:
         """Compare behavior of NOLABEL vs single label"""
         # With NOLABEL
         cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        nlri_no_label = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
-        nlri_no_label.rd = RouteDistinguisher.make_from_elements('10.0.0.1', 1)
+        nlri_no_label = IPVPN.from_cidr(
+            cidr, AFI.ipv4, SAFI.mpls_vpn, rd=RouteDistinguisher.make_from_elements('10.0.0.1', 1)
+        )
 
         # With single label
-        nlri_with_label = IPVPN.make_vpn_route(
+        nlri_with_label = IPVPN.from_cidr(
+            cidr,
             AFI.ipv4,
             SAFI.mpls_vpn,
-            IP.pton('10.0.0.0'),
-            24,
-            Labels.make_labels([42], True),
-            RouteDistinguisher.make_from_elements('10.0.0.1', 1),
+            labels=Labels.make_labels([42], True),
+            rd=RouteDistinguisher.make_from_elements('10.0.0.1', 1),
         )
 
         # Both should have same RD and CIDR
