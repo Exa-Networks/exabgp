@@ -1016,6 +1016,10 @@ class Checker(object):
                 flushed(f'invalid rule: {rule}')
                 sys.exit(0)
 
+            # Skip json lines - they are for test_json regression tests only
+            if encoding == 'json':
+                continue
+
             conn = prefix[0]
             if conn.isalpha():
                 seq = int(prefix[1:])

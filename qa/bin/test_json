@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""ExaBGP JSON decode regression tests.
+
+This test suite verifies BGP message decoding produces consistent JSON output
+by testing all files in qa/decoding/.
+
+Each decoding test file has 3 lines:
+1. Message type and family (e.g., "update l2vpn evpn")
+2. Raw hex packet data
+3. Expected JSON output
+
+Usage:
+    ./qa/bin/test_json              # Run all JSON decode tests
+    ./qa/bin/test_json --verbose    # Show detailed output
+    ./qa/bin/test_json file         # Run specific test file
+
+Exit codes:
+    0 - All tests passed
+    1 - Some tests failed
+    2 - No tests found
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from typing import Any
+
+# ANSI color codes
+GREEN = '\033[32m'
+RED = '\033[31m'
+YELLOW = '\033[33m'
+RESET = '\033[0m'
+
+
+def cleanup_json(obj: dict[str, Any]) -> dict[str, Any]:
+    """Remove dynamic/environment-specific fields from JSON object.
+
+    Matches the cleanup logic in qa/bin/functional DecodingTests.
+    Only removes top-level keys, not recursively.
+    """
+    obj.pop('exabgp', None)
+    obj.pop('host', None)
+    obj.pop('pid', None)
+    obj.pop('ppid', None)
+    obj.pop('time', None)
+    obj.pop('version', None)
+    obj.pop('counter', None)
+    return obj
+
+
+def parse_decoding_file(filepath: Path) -> tuple[str, str, str, dict[str, Any] | None]:
+    """Parse a decoding test file.
+
+    Returns:
+        Tuple of (msg_type, family, packet_hex, expected_json_dict)
+        expected_json_dict is None if parsing fails
+    """
+    with open(filepath, 'r') as f:
+        lines = f.readlines()
+
+    if len(lines) < 3:
+        return '', '', '', None
+
+    # Line 1: type and family (e.g., "update l2vpn evpn" or "open")
+    words = lines[0].split()
+    msg_type = words[0]
+    family = '' if msg_type == 'open' else f'{words[1]} {words[2]}' if len(words) >= 3 else ''
+
+    # Line 2: raw hex packet
+    packet = lines[1].replace(' ', '').strip()
+
+    # Line 3: expected JSON
+    expected_str = lines[2].strip()
+    try:
+        expected = json.loads(expected_str)
+        return msg_type, family, packet, expected
+    except json.JSONDecodeError:
+        return msg_type, family, packet, None
+
+
+def decode_message(packet: str, msg_type: str, family: str, repo_root: Path) -> str | None:
+    """Decode a raw BGP message to JSON using exabgp decode command.
+
+    Returns:
+        JSON string output, or None if decode fails
+    """
+    exabgp_script = repo_root / 'sbin' / 'exabgp'
+
+    cmd = [str(exabgp_script), 'decode']
+    if family:
+        cmd.extend(['-f', family])
+    cmd.extend([f'--{msg_type}', packet])
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(repo_root),
+            env={**os.environ, 'exabgp_log_enable': 'false'},
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+
+def test_file(filepath: Path, repo_root: Path, verbose: bool = False) -> tuple[bool, str]:
+    """Test a single decoding file.
+
+    Returns:
+        Tuple of (passed, error_message)
+    """
+    name = filepath.name
+
+    msg_type, family, packet, expected = parse_decoding_file(filepath)
+
+    if expected is None:
+        return False, f'could not parse expected JSON from {name}'
+
+    actual_str = decode_message(packet, msg_type, family, repo_root)
+    if actual_str is None:
+        return False, f'decode command failed for {name}'
+
+    try:
+        actual = json.loads(actual_str)
+    except json.JSONDecodeError as e:
+        return False, f'invalid JSON from decode: {e}'
+
+    # Compare after removing dynamic fields
+    cleanup_json(actual)
+    cleanup_json(expected)
+
+    if actual == expected:
+        return True, ''
+    else:
+        if verbose:
+            from pprint import pformat
+
+            return False, f'JSON mismatch:\nExpected:\n{pformat(expected)}\n\nActual:\n{pformat(actual)}'
+        return False, 'JSON mismatch'
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('files', nargs='*', help='Specific test files to run (default: all)')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Show detailed output')
+    args = parser.parse_args()
+
+    repo_root = Path(__file__).parent.parent.parent
+    qa_decoding = repo_root / 'qa' / 'decoding'
+
+    # Get list of test files
+    if args.files:
+        test_files = []
+        for f in args.files:
+            p = Path(f)
+            if p.exists():
+                test_files.append(p)
+            else:
+                # Try in qa/decoding/
+                p = qa_decoding / f
+                if p.exists():
+                    test_files.append(p)
+                else:
+                    print(f'{RED}ERROR{RESET} File not found: {f}')
+                    return 2
+    else:
+        test_files = sorted(qa_decoding.glob('*'))
+        # Filter out directories and hidden files
+        test_files = [f for f in test_files if f.is_file() and not f.name.startswith('.')]
+
+    if not test_files:
+        print('No test files found')
+        return 2
+
+    print(f'Testing {len(test_files)} JSON decode files...')
+
+    passed = 0
+    failed = 0
+    failures: list[tuple[str, str]] = []
+    results: list[tuple[Path, bool, str]] = []
+
+    # Run tests in parallel
+    with ThreadPoolExecutor(max_workers=min(len(test_files), 8)) as executor:
+        future_to_file = {
+            executor.submit(test_file, filepath, repo_root, args.verbose): filepath for filepath in test_files
+        }
+        for future in as_completed(future_to_file):
+            filepath = future_to_file[future]
+            try:
+                success, error = future.result()
+                results.append((filepath, success, error))
+            except Exception as e:
+                results.append((filepath, False, str(e)))
+
+    # Sort results by filename for consistent output
+    results.sort(key=lambda x: x[0].name)
+
+    for filepath, success, error in results:
+        if success:
+            passed += 1
+            if args.verbose:
+                print(f'  {GREEN}PASS{RESET} {filepath.name}')
+        else:
+            failed += 1
+            failures.append((filepath.name, error))
+            print(f'  {RED}FAIL{RESET} {filepath.name}')
+            if args.verbose and error:
+                for line in error.split('\n'):
+                    print(f'       {line}')
+
+    if not args.verbose and passed > 0 and failed == 0:
+        print(f'  {GREEN}PASS{RESET} {passed} tests')
+
+    # Summary
+    print()
+    print('=' * 60)
+    print('JSON DECODE TEST SUMMARY')
+    print('=' * 60)
+    print(f'{GREEN}Passed:{RESET}  {passed}')
+    print(f'{RED}Failed:{RESET}  {failed}')
+    if failures:
+        print(f'\nFailed tests:')
+        for name, error in failures:
+            print(f'  - {name}: {error.split(chr(10))[0]}')
+
+    return 0 if failed == 0 else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

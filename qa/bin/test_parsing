@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""ExaBGP configuration validation tests.
+
+This test suite validates all configuration files in etc/exabgp/.
+
+Usage:
+    ./qa/bin/test_parsing              # Run all config validation tests
+    ./qa/bin/test_parsing --verbose    # Show detailed output
+
+Exit codes:
+    0 - All tests passed
+    1 - Some tests failed
+    2 - No tests found
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+# ANSI color codes
+GREEN = '\033[32m'
+RED = '\033[31m'
+RESET = '\033[0m'
+
+
+def validate_single_config(conf_file: Path, repo_root: Path) -> tuple[str, bool, str]:
+    """Validate a single config file.
+
+    Returns:
+        Tuple of (filename, success, error_message)
+    """
+    exabgp_script = repo_root / 'sbin' / 'exabgp'
+    cmd = [str(exabgp_script), 'configuration', 'validate', '-nrv', str(conf_file)]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(repo_root),
+            env={**os.environ, 'exabgp_log_enable': 'false'},
+        )
+        if result.returncode == 0:
+            return conf_file.name, True, ''
+        else:
+            error = ''
+            if result.stdout:
+                error += f'stdout: {result.stdout[:200]}'
+            if result.stderr:
+                error += f'stderr: {result.stderr[:200]}'
+            return conf_file.name, False, error
+    except subprocess.TimeoutExpired:
+        return conf_file.name, False, 'timeout'
+    except Exception as e:
+        return conf_file.name, False, str(e)
+
+
+def validate_configs(repo_root: Path, verbose: bool = False) -> tuple[int, int, list[str]]:
+    """Validate all configuration files in etc/exabgp/.
+
+    Returns:
+        Tuple of (passed, failed, list of failed config names)
+    """
+    etc_exabgp = repo_root / 'etc' / 'exabgp'
+
+    config_files = sorted(etc_exabgp.glob('*.conf'))
+    if not config_files:
+        return 0, 0, []
+
+    print(f'Validating {len(config_files)} configuration files...')
+
+    results: list[tuple[str, bool, str]] = []
+
+    # Run validations in parallel
+    with ThreadPoolExecutor(max_workers=min(len(config_files), 16)) as executor:
+        future_to_file = {
+            executor.submit(validate_single_config, conf_file, repo_root): conf_file for conf_file in config_files
+        }
+        for future in as_completed(future_to_file):
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                conf_file = future_to_file[future]
+                results.append((conf_file.name, False, str(e)))
+
+    # Sort results by filename for consistent output
+    results.sort(key=lambda x: x[0])
+
+    passed = 0
+    failed = 0
+    failed_files: list[str] = []
+
+    for filename, success, error in results:
+        if success:
+            passed += 1
+            if verbose:
+                print(f'  {GREEN}PASS{RESET} {filename}')
+        else:
+            failed += 1
+            failed_files.append(filename)
+            print(f'  {RED}FAIL{RESET} {filename}')
+            if verbose and error:
+                print(f'    {error}')
+
+    if not verbose and passed > 0 and failed == 0:
+        print(f'  {GREEN}PASS{RESET} {passed} configs validated')
+
+    return passed, failed, failed_files
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('-v', '--verbose', action='store_true', help='Show detailed output')
+    args = parser.parse_args()
+
+    repo_root = Path(__file__).parent.parent.parent
+
+    config_passed, config_failed, config_failures = validate_configs(repo_root, verbose=args.verbose)
+
+    # Summary
+    print()
+    print('=' * 60)
+    print('CONFIG VALIDATION SUMMARY')
+    print('=' * 60)
+    print(f'{GREEN}Passed:{RESET}  {config_passed}')
+    print(f'{RED}Failed:{RESET}  {config_failed}')
+    if config_failures:
+        print(f'\nFailed: {", ".join(config_failures)}')
+
+    return 0 if config_failed == 0 else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

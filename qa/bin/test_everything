@@ -70,6 +70,8 @@ DEFAULT_TIMES: dict[str, int] = {
     'config': 2,
     'no-neighbor': 5,
     'encode-decode': 3,
+    'parsing': 6,
+    'json': 3,
     'decoding': 10,
     'encoding': 45,
     'api': 90,
@@ -146,6 +148,8 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     'config': './sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf',
     'no-neighbor': './qa/scripts/test_no_neighbor.py',
     'encode-decode': './qa/scripts/test_encode_decode.py',
+    'parsing': './qa/bin/test_parsing',
+    'json': './qa/bin/test_json',
     'decoding': './qa/bin/functional decoding',
     'encoding': ['killall -9 python 2>/dev/null; sleep 0.5', './qa/bin/functional encoding --quiet'],
     'api': './qa/bin/functional api --quiet',
@@ -160,6 +164,8 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'config': 'Configuration validation',
     'no-neighbor': 'No-neighbor API test',
     'encode-decode': 'Encode/decode CLI test',
+    'parsing': 'Config file validation',
+    'json': 'JSON decode regression tests',
     'decoding': 'Functional decoding tests',
     'encoding': 'Functional encoding tests',
     'api': 'Functional API tests',
@@ -175,6 +181,8 @@ TEST_ORDER = [
     'config',
     'no-neighbor',
     'encode-decode',
+    'parsing',
+    'json',
     'decoding',
     'encoding',
     'cli',
@@ -262,7 +270,7 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
     """Run selected tests with progress output. Returns exit code."""
     start_time = time.time()
     total = len(test_indices)
-    results: list[tuple[str, bool, float]] = []  # (name, success, elapsed)
+    results: list[tuple[str, bool, float, float]] = []  # (name, success, elapsed, expected)
     cumulative_time = 0.0  # Track time spent on previous tests
 
     for run_num, test_idx in enumerate(test_indices, 1):
@@ -292,14 +300,15 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
 
         # Record timing and result
         record_time(cache, name, elapsed)
-        results.append((name, success, elapsed))
+        results.append((name, success, elapsed, expected))
 
-        # Show result with colored time
+        # Show result with colored time (actual vs expected)
         elapsed_str = f'{Colors.BLUE}{format_time(elapsed)}{Colors.RESET}'
+        expected_str = f'{Colors.DIM}(~{format_time(expected)}){Colors.RESET}'
         if success:
-            print(f'{Colors.GREEN}✓{Colors.RESET} {elapsed_str}')
+            print(f'{Colors.GREEN}✓{Colors.RESET} {elapsed_str} {expected_str}')
         else:
-            print(f'{Colors.RED}✗{Colors.RESET} {elapsed_str}')
+            print(f'{Colors.RED}✗{Colors.RESET} {elapsed_str} {expected_str}')
 
         if not success:
             # Show failure details
@@ -317,17 +326,19 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
 
     # Print summary table (verbose only)
     if verbose:
+        total_expected = sum(exp for _, _, _, exp in results)
         print()
-        print(f'{Colors.CYAN}{"─" * 50}{Colors.RESET}')
+        print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
         print(f'{Colors.BOLD}{Colors.WHITE}  Test Summary{Colors.RESET}')
-        print(f'{Colors.CYAN}{"─" * 50}{Colors.RESET}')
-        for name, success, elapsed in results:
+        print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
+        for name, success, elapsed, expected in results:
             status = f'{Colors.GREEN}✓{Colors.RESET}' if success else f'{Colors.RED}✗{Colors.RESET}'
             time_str = f'{Colors.BLUE}{format_time(elapsed):>6}{Colors.RESET}'
-            print(f'  {status} {name:14} {time_str}')
-        print(f'{Colors.CYAN}{"─" * 50}{Colors.RESET}')
-        print(f'  {Colors.GREEN}{Colors.BOLD}Total: {format_time(total_elapsed)}{Colors.RESET}')
-        print(f'{Colors.CYAN}{"─" * 50}{Colors.RESET}')
+            exp_str = f'{Colors.DIM}(~{format_time(expected):>5}){Colors.RESET}'
+            print(f'  {status} {name:14} {time_str} {exp_str}')
+        print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
+        print(f'  {Colors.GREEN}{Colors.BOLD}Total: {format_time(total_elapsed)}{Colors.RESET} {Colors.DIM}(~{format_time(total_expected)}){Colors.RESET}')
+        print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
         print()
 
     print(f'{Colors.GREEN}{Colors.BOLD}✓ All {total} tests passed in {format_time(total_elapsed)}{Colors.RESET}')
