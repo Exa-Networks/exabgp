@@ -6,7 +6,6 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from struct import pack
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
@@ -131,7 +130,7 @@ class MUP(NLRI):
         if len(data) < 4:
             raise Notify(3, 10, f'MUP NLRI too short: need at least 4 bytes, got {len(data)}')
         arch = data[0]
-        code = int.from_bytes(bytes(data[1:3]), 'big')
+        code = int.from_bytes(data[1:3], 'big')
         length = data[3]
 
         # arch and code byte size is 4 byte
@@ -142,13 +141,12 @@ class MUP(NLRI):
         key = '{}:{}'.format(arch, code)
         if key in cls.registered_mup:
             registered_cls = cls.registered_mup[key]
-            # Subclass processes trimmed data; we return (mup, remaining from original buffer)
-            # Call unpack_mup_route if defined, otherwise fall back to unpack_nlri
-            mup_instance, _ = registered_cls.unpack_nlri(afi, safi, bytes(data[4:end]), action, addpath, negotiated)
+            # Pass complete wire format (including 4-byte header) to subclass
+            mup_instance, _ = registered_cls.unpack_nlri(afi, safi, data[0:end], action, addpath, negotiated)
             return mup_instance, data[end:]
 
-        # Generic MUP for unrecognized route types
-        mup = GenericMUP(afi, arch, code, bytes(data[4:end]))
+        # Generic MUP for unrecognized route types - pass complete wire format
+        mup = GenericMUP(afi, data[0:end])
         mup.action = action
         mup.addpath = addpath
         return mup, data[end:]
@@ -161,31 +159,28 @@ class MUP(NLRI):
 class GenericMUP(MUP):
     """Generic MUP for unrecognized route types."""
 
-    # Instance variables for arch/code since GenericMUP can have any values
-    __slots__ = ('_arch', '_code')
+    # No additional slots - arch/code extracted from _packed on demand
+    __slots__ = ()
 
-    def __init__(self, afi: AFI, arch: int, code: int, payload: Buffer) -> None:
+    def __init__(self, afi: AFI, packed: Buffer) -> None:
         """Create GenericMUP with complete wire format.
 
         Args:
             afi: Address family
-            arch: Architecture type
-            code: Route type code
-            payload: Payload bytes (without header)
+            packed: Complete wire format including 4-byte header [arch(1)][code(2)][length(1)][payload]
         """
         MUP.__init__(self, afi)
-        self._arch = arch
-        self._code = code
-        # Store complete wire format including 4-byte header
-        self._packed = pack('!BHB', arch, code, len(payload)) + payload
+        self._packed = packed
 
     @property
     def ARCHTYPE(self) -> int:  # type: ignore[override]
-        return self._arch
+        # Extract from packed header on demand
+        return self._packed[0]
 
     @property
     def CODE(self) -> int:  # type: ignore[override]
-        return self._code
+        # Extract from packed header on demand
+        return int.from_bytes(self._packed[1:3], 'big')
 
     def json(self, compact: bool | None = None) -> str:
         return '{ "arch": %d, "code": %d, "raw": "%s" }' % (self.ARCHTYPE, self.CODE, self._raw())

@@ -7,15 +7,15 @@ Created for comprehensive test coverage improvement
 
 from unittest.mock import Mock
 
+import pytest
+
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
-import pytest
-from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher, Labels
+from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
+from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 
 

@@ -105,24 +105,27 @@ class BGPLS(NLRI):
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, self.safi)
-        # Wire format: [code(1)][length(1)][payload]
-        return pack('!BB', self.CODE, len(self._packed)) + self._packed
+        # Wire format: [type(2)][length(2)][payload] - _packed includes header
+        return self._packed
 
     def index(self) -> bytes:
-        # Wire format: [family][code(1)][length(1)][payload]
-        return bytes(Family.index(self)) + pack('!BB', self.CODE, len(self._packed)) + self._packed
+        # Wire format: [family][type(2)][length(2)][payload] - _packed includes header
+        return bytes(Family.index(self)) + self._packed
 
     def __len__(self) -> int:
-        return len(self._packed) + 2
+        # _packed includes 4-byte header
+        return len(self._packed)
 
     def __hash__(self) -> int:
-        packed = pack('!BB', self.CODE, len(self._packed)) + self._packed
-        return hash((self.afi, self.safi, self.CODE, packed))
+        # _packed includes header
+        return hash((self.afi, self.safi, self.CODE, self._packed))
 
     def __str__(self) -> str:
+        # _packed includes 4-byte header, payload starts at offset 4
+        payload = self._packed[4:] if len(self._packed) > 4 else b''
         return 'bgp-ls:{}:{}'.format(
             self.registered_bgpls.get(self.CODE, self).SHORT_NAME.lower(),
-            '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
+            '0x' + ''.join('{:02x}'.format(_) for _ in payload),
         )
 
     def __copy__(self) -> 'BGPLS':
@@ -172,14 +175,22 @@ class BGPLS(NLRI):
 
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:
-                # Extract Route Distinguisher
+                # Extract Route Distinguisher (between header and payload)
                 rd: RouteDistinguisher | None = RouteDistinguisher.unpack_routedistinguisher(bytes(data[4:12]))
-                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bytes(data[12 : length + 4]), rd)
+                # Reconstruct wire format without RD: [type(2)][length(2)][payload]
+                # Original length includes RD (8 bytes), subtract for payload-only length
+                payload_length = length - 8
+                wire_format = pack('!HH', code, payload_length) + bytes(data[12 : length + 4])
+                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(wire_format, rd)
             else:
                 rd = None
-                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(bytes(data[4 : length + 4]), rd)
+                # Complete wire format including 4-byte header
+                wire_format = bytes(data[0 : length + 4])
+                klass = cls.registered_bgpls[code].unpack_bgpls_nlri(wire_format, rd)
         else:
-            klass = GenericBGPLS(code, bytes(data[4 : length + 4]))
+            # GenericBGPLS receives complete wire format including header
+            wire_format = bytes(data[0 : length + 4])
+            klass = GenericBGPLS(code, wire_format)
 
         klass.action = action
         klass.addpath = addpath
@@ -187,14 +198,20 @@ class BGPLS(NLRI):
         return klass, data[length + 4 :]
 
     def _raw(self) -> str:
-        packed = pack('!BB', self.CODE, len(self._packed)) + self._packed
-        return ''.join('{:02X}'.format(_) for _ in packed)
+        # _packed includes 4-byte header
+        return ''.join('{:02X}'.format(_) for _ in self._packed)
 
 
 class GenericBGPLS(BGPLS):
     CODE: int
 
     def __init__(self, code: int, packed: bytes) -> None:
+        """Create GenericBGPLS with complete wire format.
+
+        Args:
+            code: NLRI type code
+            packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
+        """
         BGPLS.__init__(self)
         self.CODE = code
         self._packed = packed

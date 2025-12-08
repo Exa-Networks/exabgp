@@ -98,13 +98,12 @@ class DirectSegmentDiscoveryRoute(MUP):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
+        # Parent provides complete wire format including 4-byte header
         data_len = len(data)
-        ip_size = data_len - 8  # IP is after 8-byte RD
+        ip_size = data_len - 12  # IP is after 4-byte header + 8-byte RD
         if ip_size not in [4, 16]:
             raise Notify(3, 5, 'Invalid IP size, expect 4 or 16 octets. got %d' % ip_size)
-        # Parent strips header, provides payload only. Reconstruct complete wire format.
-        packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(data)) + bytes(data)
-        instance = cls(packed, afi)
+        instance = cls(data, afi)
         instance.action = action
         return instance, b''
 

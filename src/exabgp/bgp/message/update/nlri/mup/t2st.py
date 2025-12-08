@@ -164,10 +164,10 @@ class Type2SessionTransformedRoute(MUP):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
-        # Parent strips header, provides payload only. Validate before reconstructing.
-        # Payload offsets (no header): RD(0-7), endpoint_len(8)
+        # Parent provides complete wire format including 4-byte header
+        # Offsets: header(0-3), RD(4-11), endpoint_len(12)
         afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
-        endpoint_len = data[8]
+        endpoint_len = data[12]
 
         if endpoint_len > afi_bit_size:
             teid_len = endpoint_len - afi_bit_size
@@ -180,9 +180,7 @@ class Type2SessionTransformedRoute(MUP):
                     'endpoint length is too large %d (max %d for Ipv6)' % (endpoint_len, MUP_T2ST_IPV6_MAX_ENDPOINT)
                 )
 
-        # Reconstruct complete wire format with header
-        packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(data)) + bytes(data)
-        instance = cls(packed, afi)
+        instance = cls(data, afi)
         instance.action = action
         return instance, b''
 

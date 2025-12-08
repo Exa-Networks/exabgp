@@ -76,32 +76,32 @@ class Update(Message):
         self._parsed: 'UpdateCollection | None' = None
 
     @property
-    def payload(self) -> bytes:
+    def payload(self) -> Buffer:
         """Raw UPDATE payload bytes."""
-        return bytes(self._packed)
+        return self._packed
 
     @property
-    def withdrawn_bytes(self) -> bytes:
+    def withdrawn_bytes(self) -> Buffer:
         """Raw bytes of withdrawn routes section."""
         withdrawn_len = unpack('!H', self._packed[:2])[0]
-        return bytes(self._packed[2 : 2 + withdrawn_len])
+        return self._packed[2 : 2 + withdrawn_len]
 
     @property
-    def attribute_bytes(self) -> bytes:
+    def attribute_bytes(self) -> Buffer:
         """Raw bytes of path attributes section."""
         withdrawn_len = unpack('!H', self._packed[:2])[0]
         attr_offset = 2 + withdrawn_len
         attr_len = unpack('!H', self._packed[attr_offset : attr_offset + 2])[0]
-        return bytes(self._packed[attr_offset + 2 : attr_offset + 2 + attr_len])
+        return self._packed[attr_offset + 2 : attr_offset + 2 + attr_len]
 
     @property
-    def nlri_bytes(self) -> bytes:
+    def nlri_bytes(self) -> Buffer:
         """Raw bytes of announced NLRI section."""
         withdrawn_len = unpack('!H', self._packed[:2])[0]
         attr_offset = 2 + withdrawn_len
         attr_len = unpack('!H', self._packed[attr_offset : attr_offset + 2])[0]
         nlri_offset = attr_offset + 2 + attr_len
-        return bytes(self._packed[nlri_offset:])
+        return self._packed[nlri_offset:]
 
     def pack_message(self, negotiated: 'Negotiated | None' = None) -> bytes:
         """Generate complete BGP message with header.
@@ -176,7 +176,7 @@ class Update(Message):
         # Check for End-of-RIB markers (fast path)
         if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
             return EOR(AFI.ipv4, SAFI.unicast)
-        if length == EOR_WITH_PREFIX_LENGTH and bytes(data).startswith(EOR.NLRI.PREFIX):
+        if length == EOR_WITH_PREFIX_LENGTH and bytes(data).startswith(EOR.EOR_NLRI.PREFIX):
             return EOR.unpack_message(data, negotiated)
 
         # Create wire container with negotiated context and parse

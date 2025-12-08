@@ -245,15 +245,15 @@ class Type1SessionTransformedRoute(MUP):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
-        # Parent strips header, provides payload only. Validate before reconstructing.
-        # Payload offsets (no header): RD(0-7), prefix_len(8), prefix(9+)
-        prefix_ip_len = data[8]
+        # Parent provides complete wire format including 4-byte header
+        # Offsets: header(0-3), RD(4-11), prefix_len(12), prefix(13+)
+        prefix_ip_len = data[12]
         ip_offset = prefix_ip_len // 8
         ip_remainder = prefix_ip_len % 8
         if ip_remainder != 0:
             ip_offset += 1
 
-        size = 9 + ip_offset
+        size = 13 + ip_offset  # 4 (header) + 8 (RD) + 1 (prefix_len) + prefix bytes
         size += 5  # teid (4) + qfi (1)
         endpoint_ip_len = data[size]
 
@@ -271,9 +271,7 @@ class Type1SessionTransformedRoute(MUP):
             if source_ip_len not in [32, 128]:
                 raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
 
-        # Reconstruct complete wire format with header
-        packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(data)) + bytes(data)
-        instance = cls(packed, afi)
+        instance = cls(data, afi)
         instance.action = action
         return instance, b''
 

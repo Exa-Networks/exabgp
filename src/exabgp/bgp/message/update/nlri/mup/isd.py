@@ -116,9 +116,8 @@ class InterworkSegmentDiscoveryRoute(MUP):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
-        # Parent strips header, provides payload only. Reconstruct complete wire format.
-        packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(data)) + bytes(data)
-        instance = cls(packed, afi)
+        # Parent provides complete wire format including 4-byte header
+        instance = cls(data, afi)
         instance.action = action
         return instance, b''
 

@@ -11,7 +11,7 @@ from struct import pack, unpack
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
-    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    pass
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
@@ -19,7 +19,6 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.protocol.ip import IP
-from exabgp.util.types import Buffer
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -50,6 +49,12 @@ class NODE(BGPLS):
     NAME: ClassVar[str] = 'bgpls-node'
     SHORT_NAME: ClassVar[str] = 'Node'
 
+    # Wire format offsets (after 4-byte header: type(2) + length(2))
+    HEADER_SIZE: ClassVar[int] = 4
+    PROTO_ID_OFFSET: ClassVar[int] = 4  # Byte 4: Protocol ID
+    DOMAIN_OFFSET: ClassVar[int] = 5  # Bytes 5-12: Domain (8 bytes)
+    NODE_DESC_OFFSET: ClassVar[int] = 13  # Bytes 13+: Node descriptor TLV
+
     def __init__(
         self,
         packed: bytes,
@@ -58,6 +63,11 @@ class NODE(BGPLS):
         route_d: RouteDistinguisher | None = None,
         addpath: PathInfo | None = None,
     ) -> None:
+        """Create NODE with complete wire format.
+
+        Args:
+            packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
+        """
         BGPLS.__init__(self, action, addpath)
         self._packed = packed
         self.nexthop = nexthop
@@ -77,25 +87,31 @@ class NODE(BGPLS):
         """Factory method to create NODE from semantic parameters."""
         node_tlvs = b''.join(node_id.pack_tlv() for node_id in node_ids)
         node_length = len(node_tlvs)
-        packed = pack('!BQ', proto_id, domain) + pack('!HH', NODE_DESCRIPTOR_TYPE, node_length) + node_tlvs
+        # Build payload: proto_id(1) + domain(8) + node_descriptor_tlv(4+n)
+        payload = pack('!BQ', proto_id, domain) + pack('!HH', NODE_DESCRIPTOR_TYPE, node_length) + node_tlvs
+        # Include 4-byte header: type(2) + length(2) + payload
+        packed = pack('!HH', cls.CODE, len(payload)) + payload
         return cls(packed, nexthop, action, route_d, addpath)
 
     @property
     def proto_id(self) -> int:
-        value: int = unpack('!B', self._packed[0:1])[0]
+        # Offset by 4-byte header: proto_id at byte 4
+        value: int = unpack('!B', self._packed[4:5])[0]
         return value
 
     @property
     def domain(self) -> int:
-        value: int = unpack('!Q', self._packed[1:9])[0]
+        # Offset by 4-byte header: domain at bytes 5-12
+        value: int = unpack('!Q', self._packed[5:13])[0]
         return value
 
     @property
     def node_ids(self) -> list[NodeDescriptor]:
-        node_type, node_length = unpack('!HH', self._packed[9:13])
+        # Offset by 4-byte header: node descriptor TLV at bytes 13+
+        node_type, node_length = unpack('!HH', self._packed[13:17])
         if node_type != NODE_DESCRIPTOR_TYPE:
             return []
-        values = self._packed[13 : 13 + node_length]
+        values = self._packed[17 : 17 + node_length]
         node_ids: list[NodeDescriptor] = []
         while values:
             node_id, left = NodeDescriptor.unpack_node(values, self.proto_id)
@@ -122,25 +138,33 @@ class NODE(BGPLS):
 
     @classmethod
     def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> NODE:
-        proto_id = unpack('!B', data[0:1])[0]
+        """Unpack NODE from complete wire format.
+
+        Args:
+            data: Complete wire format including 4-byte header [type(2)][length(2)][payload]
+            rd: Route Distinguisher (for VPN SAFI)
+        """
+        # Data includes 4-byte header, payload starts at offset 4
+        proto_id = unpack('!B', data[4:5])[0]
         if proto_id not in PROTO_CODES.keys():
             raise Exception(f'Protocol-ID {proto_id} is not valid')
 
-        # Validate node descriptor TLV type
-        node_type, node_length = unpack('!HH', data[9:13])
+        # Validate node descriptor TLV type (offset by 4-byte header)
+        node_type, node_length = unpack('!HH', data[13:17])
         if node_type != NODE_DESCRIPTOR_TYPE:
             raise Exception(
                 f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
             )
 
         # Validate node descriptors can be parsed (ensures data integrity)
-        values = data[13 : 13 + node_length]
+        values = data[17 : 17 + node_length]
         while values:
             _node_id, left = NodeDescriptor.unpack_node(values, proto_id)
             if left == values:
                 raise RuntimeError('sub-calls should consume data')
             values = left
 
+        # Store complete wire format including header
         return cls(data, route_d=rd)
 
     def __eq__(self, other: object) -> bool:
@@ -159,5 +183,4 @@ class NODE(BGPLS):
     def __hash__(self) -> int:
         return hash((self.proto_id, self.domain, tuple(self.node_ids), self.route_d))
 
-    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
-        return self._packed
+    # pack_nlri inherited from BGPLS base class - returns self._packed directly
