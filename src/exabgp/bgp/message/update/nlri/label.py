@@ -54,17 +54,20 @@ https://www.rfc-editor.org/rfc/rfc8277.html
     Deprecates the use of SAFI 4 for some cases in favor of
     SAFI 1 with label binding via attributes.
 
-Wire Format (_packed):
-=====================
-    This class stores ONLY the CIDR payload in _packed (not the full labeled NLRI).
+Wire Format (_packed) - Packed-Bytes-First Pattern:
+===================================================
+    This class stores the complete wire format in _packed:
 
-    _packed stores: [mask_byte][truncated_ip_bytes...]  (same as INET)
-    _labels_packed stores: raw label bytes (empty = NOLABEL)
+    _packed stores: [addpath:4?][mask:1][labels:3n][prefix:var]
+    - mask = combined mask (label_bits + prefix_bits)
+    - labels = raw MPLS label bytes (3 bytes per label)
+    - prefix = truncated IP prefix bytes
 
-    On pack_nlri(), these are combined:
-        output = [length][labels][prefix] where length = labels*24 + mask
+    pack_nlri() returns _packed directly (zero-copy).
 
-    Note: path_info (ADD-PATH) is stored in self.path_info, NOT in _packed.
+    Properties extract data lazily:
+    - labels: scans for BOS bit to find label end
+    - cidr: extracts from after labels
 
 Class Hierarchy:
 ===============
@@ -75,6 +78,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
+from struct import unpack
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
@@ -83,12 +87,17 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.inet import INET, PATH_INFO_SIZE
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
+
+# MPLS label size in bytes
+LABEL_SIZE_BYTES = 3
+# Bottom of Stack bit mask (lowest bit of the 24-bit label)
+LABEL_BOS_MASK = 0x01
 
 # ====================================================== MPLS
 # RFC 3107
@@ -97,40 +106,114 @@ from exabgp.util.types import Buffer
 @NLRI.register(AFI.ipv4, SAFI.nlri_mpls)
 @NLRI.register(AFI.ipv6, SAFI.nlri_mpls)
 class Label(INET):
-    """Label NLRI with separate storage for CIDR and labels.
+    """Label NLRI using packed-bytes-first pattern.
 
-    Wire format: [mask][labels][prefix]
-    Storage: _packed (CIDR), _labels_packed (label bytes)
-    pack_nlri() = concatenation with computed mask
+    Wire format stored in _packed: [addpath:4?][mask:1][labels:3n][prefix:var]
+    - mask = combined mask (label_bits + prefix_bits)
+    - labels = raw MPLS label bytes, last has BOS bit set
+    - prefix = truncated IP prefix bytes
+
+    Properties extract data lazily:
+    - labels: scans for BOS bit to find label end (if _has_labels)
+    - cidr: extracts from after labels using _label_end_offset
 
     Uses class-level SAFI (always nlri_mpls) - no instance storage needed.
     """
 
-    __slots__ = ('_labels_packed',)
+    __slots__ = ('_has_labels',)  # Track whether labels are present
 
     # Fixed SAFI for Label NLRI (class attribute shadows slot)
     # AFI varies (ipv4/ipv6) and is set at instance level by INET
     safi: ClassVar[SAFI] = SAFI.nlri_mpls
 
-    def __init__(self, packed: bytes, afi: AFI, *, has_addpath: bool = False) -> None:
+    def __init__(self, packed: bytes, afi: AFI, *, has_addpath: bool = False, has_labels: bool = False) -> None:
         """Create a Label NLRI from packed wire format bytes.
 
         Args:
-            packed: Wire format bytes [addpath:4?][mask:1][prefix:var]
+            packed: Wire format bytes [addpath:4?][mask:1][labels:3n][prefix:var]
             afi: Address Family Identifier
             has_addpath: If True, packed includes 4-byte path identifier at start
+            has_labels: If True, packed includes label bytes after the mask
 
         SAFI is always nlri_mpls (class-level). Use factory methods for creation.
         """
         INET.__init__(self, packed, afi, self.safi, has_addpath=has_addpath)
-        self._labels_packed: bytes = b''  # Label bytes (empty = NOLABEL)
+        self._has_labels = has_labels
+        # Note: inherited rd=None from INET is fine (IPVPN overrides)
+
+    @property
+    def _label_end_offset(self) -> int:
+        """Offset where labels end (i.e., where prefix bytes start).
+
+        Uses _has_labels flag to determine if labels are present.
+        If present, scans from mask+1 for BOS bit to find end of label stack.
+        Returns offset relative to start of _packed.
+        For NOLABEL case (no labels), returns mask offset + 1 (just after mask).
+        """
+        base = self._mask_offset  # 0 or 4 depending on AddPath
+
+        # If no labels flag is set, return immediately after mask
+        if not self._has_labels:
+            return base + 1
+
+        # Scan labels starting after mask byte
+        label_start = base + 1
+        offset = label_start
+        data = self._packed[offset:]
+
+        while len(data) >= LABEL_SIZE_BYTES:
+            # Read 24-bit label value
+            raw = unpack('!L', bytes([0]) + bytes(data[:LABEL_SIZE_BYTES]))[0]
+            offset += LABEL_SIZE_BYTES
+            data = data[LABEL_SIZE_BYTES:]
+
+            # Check BOS bit (lowest bit)
+            if raw & LABEL_BOS_MASK:
+                return offset
+
+        # No BOS found - return current offset (all data was labels)
+        return offset
 
     @property
     def labels(self) -> Labels:
-        """Get Labels from stored bytes."""
-        if not self._labels_packed:
+        """Get Labels from wire bytes by scanning for BOS bit."""
+        # Fast path: no labels
+        if not self._has_labels:
             return Labels.NOLABEL
-        return Labels(self._labels_packed)
+
+        base = self._mask_offset
+        label_start = base + 1
+        label_end = self._label_end_offset
+        label_bytes = self._packed[label_start:label_end]
+
+        if not label_bytes:
+            return Labels.NOLABEL
+        return Labels(label_bytes)
+
+    @property
+    def cidr(self) -> CIDR:
+        """Extract CIDR from after labels in wire format.
+
+        Wire format: [addpath?][mask][labels][prefix]
+        CIDR needs [cidr_mask][prefix] where cidr_mask = mask - label_bits
+        """
+        base = self._mask_offset
+        combined_mask = self._packed[base]
+        label_end = self._label_end_offset
+
+        # Calculate prefix-only mask (subtract label bits)
+        label_bytes_count = label_end - (base + 1)
+        label_bits = label_bytes_count * 8
+        prefix_mask = combined_mask - label_bits
+
+        # Extract prefix bytes from after labels
+        prefix_bytes = self._packed[label_end:]
+
+        # Build CIDR from mask + prefix
+        cidr_packed = bytes([prefix_mask]) + prefix_bytes
+        if self.afi == AFI.ipv4:
+            return CIDR.from_ipv4(cidr_packed)
+        return CIDR.from_ipv6(cidr_packed)
 
     @classmethod
     def from_cidr(
@@ -155,22 +238,28 @@ class Label(INET):
         Returns:
             New Label instance with SAFI=nlri_mpls
         """
-        # Build wire format: [addpath:4?][mask:1][prefix:var]
-        # Note: Labels are stored separately in _labels_packed for now
-        cidr_packed = cidr.pack_nlri()
+        # Build wire format: [addpath:4?][mask:1][labels:3n][prefix:var]
+        labels_packed = labels.pack_labels() if labels is not None else b''
+        has_labels = len(labels_packed) > 0
+        combined_mask = len(labels_packed) * 8 + cidr.mask
+        prefix_bytes = cidr.pack_ip()
+
+        # Build packed data: [mask][labels][prefix]
+        nlri_bytes = bytes([combined_mask]) + labels_packed + prefix_bytes
+
         has_addpath = path_info is not PathInfo.DISABLED
         if has_addpath:
-            packed = bytes(path_info.pack_path()) + cidr_packed
+            packed = bytes(path_info.pack_path()) + nlri_bytes
         else:
-            packed = cidr_packed
+            packed = nlri_bytes
 
         instance = object.__new__(cls)
         # Note: safi parameter is ignored - Label.safi is a class-level constant
         NLRI.__init__(instance, afi, cls.safi, action)
         instance._packed = packed
         instance._has_addpath = has_addpath
+        instance._has_labels = has_labels
         instance.nexthop = IP.NoNextHop
-        instance._labels_packed = labels.pack_labels() if labels is not None else b''
         instance.rd = None
         return instance
 
@@ -226,20 +315,18 @@ class Label(INET):
         return self.extensive()
 
     def __len__(self) -> int:
-        return INET.__len__(self) + len(self._labels_packed)
+        # _packed includes everything: [addpath?][mask][labels][prefix]
+        return len(self._packed)
 
     def __eq__(self, other: Any) -> bool:
-        return self._labels_packed == other._labels_packed and INET.__eq__(self, other)
+        # Compare complete wire format (includes labels)
+        return INET.__eq__(self, other)
 
     def __hash__(self) -> int:
-        if self.path_info is PathInfo.NOPATH:
-            addpath = b'no-pi'
-        elif self.path_info is PathInfo.DISABLED:
-            addpath = b'disabled'
-        else:
-            addpath = self.path_info.pack_path()
-        mask = bytes([len(self._labels_packed) * 8 + self.cidr.mask])
-        return hash(addpath + mask + self._labels_packed + self.cidr.pack_ip())
+        # _packed includes everything; use _has_addpath as discriminator
+        if self._has_addpath:
+            return hash(self._packed)
+        return hash(b'disabled' + self._packed)
 
     def __copy__(self) -> 'Label':
         new = self.__class__.__new__(self.__class__)
@@ -251,7 +338,7 @@ class Label(INET):
         new._has_addpath = self._has_addpath
         new.rd = self.rd
         # Label slots
-        new._labels_packed = self._labels_packed
+        new._has_labels = self._has_labels
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'Label':
@@ -267,28 +354,36 @@ class Label(INET):
         new._has_addpath = self._has_addpath  # bool - immutable
         new.rd = deepcopy(self.rd, memo) if self.rd else None
         # Label slots
-        new._labels_packed = self._labels_packed  # bytes - immutable
+        new._has_labels = self._has_labels  # bool - immutable
         return new
 
     def prefix(self) -> str:
         return '{}{}'.format(INET.prefix(self), self.labels)
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
-        # Wire format: [addpath?][mask][labels][prefix]
-        mask = bytes([len(self._labels_packed) * 8 + self.cidr.mask])
-        packed = mask + self._labels_packed + self.cidr.pack_ip()
+        """Pack NLRI for wire transmission (zero-copy when possible).
 
-        if not negotiated.addpath.send(self.afi, self.safi):
-            return packed  # No addpath - return directly
+        _packed format: [addpath:4?][mask:1][labels:3n][prefix:var]
+        Wire format: [addpath:4?][mask:1][labels:3n][prefix:var]
+        """
+        send_addpath = negotiated.addpath.send(self.afi, self.safi)
 
-        # ADD-PATH negotiated: MUST prepend 4-byte path ID
-        if self.path_info is PathInfo.DISABLED:
-            addpath = PathInfo.NOPATH.pack_path()
+        if send_addpath:
+            if self._has_addpath:
+                return self._packed  # Zero-copy: return directly
+            # Need to prepend NOPATH (4 zero bytes)
+            return bytes(PathInfo.NOPATH.pack_path()) + self._packed
         else:
-            addpath = self.path_info.pack_path()
-        return addpath + packed
+            if self._has_addpath:
+                # Strip AddPath bytes (first 4 bytes)
+                return self._packed[PATH_INFO_SIZE:]
+            return self._packed  # Zero-copy: return directly
 
     def index(self) -> bytes:
+        """Generate unique index for RIB lookup.
+
+        Index uses prefix only (without labels) for uniqueness.
+        """
         if self.path_info is PathInfo.NOPATH:
             addpath = b'no-pi'
         elif self.path_info is PathInfo.DISABLED:
@@ -300,8 +395,9 @@ class Label(INET):
 
     def _internal(self, announced: bool = True) -> list[str]:
         r = INET._internal(self, announced)
-        if announced and self._labels_packed:
-            r.append(self.labels.json())
+        labels = self.labels
+        if announced and labels is not Labels.NOLABEL:
+            r.append(labels.json())
         return r
 
     # @classmethod

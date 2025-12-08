@@ -543,7 +543,7 @@ class TestLabelFromSettings:
         assert label.safi == SAFI.nlri_mpls
         assert label.cidr.mask == 24
         # Verify labels are actually set (not just Labels.NOLABEL)
-        assert label._labels_packed == Labels.make_labels([100000]).pack_labels()
+        assert label.labels == Labels.make_labels([100000])
 
     def test_from_settings_preserves_action(self) -> None:
         """from_settings preserves action from settings"""
@@ -616,7 +616,7 @@ class TestIPVPNFromSettings:
         assert ipvpn.safi == SAFI.mpls_vpn
         assert ipvpn.cidr.mask == 24
         # Verify labels are actually set (not just Labels.NOLABEL)
-        assert ipvpn._labels_packed == Labels.make_labels([100000]).pack_labels()
+        assert ipvpn.labels == Labels.make_labels([100000])
         # Verify rd is actually set
         assert ipvpn.rd is not None
         assert ipvpn.rd._str() == rd._str()
