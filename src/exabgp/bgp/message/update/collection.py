@@ -467,7 +467,7 @@ class UpdateCollection(Message):
         # Check for End-of-RIB markers (fast path)
         if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
             return EOR(AFI.ipv4, SAFI.unicast)
-        if length == EOR_WITH_PREFIX_LENGTH and bytes(data).startswith(EOR.NLRI.PREFIX):
+        if length == EOR_WITH_PREFIX_LENGTH and bytes(data).startswith(EOR.EOR_NLRI.PREFIX):
             return EOR.unpack_message(data, negotiated)
 
         # Parse normally
