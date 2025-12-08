@@ -105,7 +105,7 @@ class TestNormalizeNlriTypeIPVPN:
 
         # Verify initial state
         assert isinstance(nlri, IPVPN)
-        assert nlri._rd_packed != b''
+        assert nlri._has_rd is True
 
         # Apply normalization
         result = ParseStaticRoute._normalize_nlri_type(nlri)
@@ -128,7 +128,7 @@ class TestNormalizeNlriTypeIPVPN:
 
         # Verify initial state
         assert isinstance(nlri, IPVPN)
-        assert nlri._rd_packed == b''
+        assert nlri._has_rd is False
         assert nlri._has_labels is True
 
         # Apply normalization
@@ -223,7 +223,7 @@ class TestIPVPNFromSettings:
         # Verify the IPVPN has labels and RD
         assert isinstance(nlri, IPVPN)
         assert nlri._has_labels is True
-        assert nlri._rd_packed != b''
+        assert nlri._has_rd is True
         assert nlri.labels != Labels.NOLABEL
 
 

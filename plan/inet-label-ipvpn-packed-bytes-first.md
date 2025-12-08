@@ -1,6 +1,6 @@
 # Plan: INET/Label/IPVPN Packed-Bytes-First Pattern
 
-**Status:** ✅ Phase 2 Complete
+**Status:** ✅ All Phases Complete
 **Created:** 2025-12-08
 **Last Updated:** 2025-12-08
 
@@ -81,15 +81,29 @@ has_label = hasattr(ipvpn_nlri, '_has_labels') and ipvpn_nlri._has_labels
 
 ---
 
-### Phase 3: IPVPN Class - NOT STARTED
+### Phase 3: IPVPN Class - COMPLETE ✅
 
-Store RD in `_packed` instead of separate `_rd_packed` slot.
+**Implemented:**
+1. ✅ Removed `_rd_packed` slot, added `_has_rd: bool` slot
+2. ✅ Updated `__init__` to accept `has_labels` and `has_rd` parameters
+3. ✅ Added `_rd_end_offset` property (returns label_end or label_end+8 based on `_has_rd`)
+4. ✅ Updated `rd` property to extract from `_packed[label_end:label_end+8]` if `_has_rd`
+5. ✅ Overrode `cidr` property to extract from after RD using `_rd_end_offset`
+6. ✅ Updated `from_cidr` to build wire format with RD in `_packed`
+7. ✅ Updated `pack_nlri()` for zero-copy (returns `_packed` directly)
+8. ✅ Updated `unpack_nlri()` to store complete wire format including RD
+9. ✅ Updated `__hash__`, `__eq__`, `__len__` for new storage
+10. ✅ Updated `__copy__` and `__deepcopy__` to copy `_has_rd`
+11. ✅ Updated `index()` and `_internal()` to use `_has_rd` flag
+12. ✅ Fixed `_normalize_nlri_type()` to use `_has_rd` (not `_rd_packed`)
+13. ✅ Updated unit tests to use `_has_rd` instead of `_rd_packed`
 
-1. Remove `_rd_packed` slot
-2. Update `__init__` to accept complete wire format including labels and RD
-3. Add `rd` property to extract from `_packed[label_end:label_end+8]`
-4. Override `cidr` property to extract from after RD
-5. Update `unpack_nlri()` to store complete wire format
+**Test Results:**
+- ✅ All 11 test suites pass
+- ✅ All 35 test_label.py tests pass
+- ✅ All 12 test_normalize_nlri_type.py tests pass
+- ✅ All 18 decoding functional tests pass
+- ✅ All 36 encoding functional tests pass
 
 ---
 
@@ -127,22 +141,33 @@ route 10.0.0.0/24 {
 
 ```
 INET:  [addpath:4?][mask:1][prefix:var]
-Label: [addpath:4?][mask:1][labels:3n][prefix:var]  <-- Phase 2 (current)
-IPVPN: [addpath:4?][mask:1][labels:3n][rd:8][prefix:var]
+Label: [addpath:4?][mask:1][labels:3n][prefix:var]
+IPVPN: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
 ```
 
-Current storage:
-- INET: `_packed` = complete wire format ✅
+Final storage (all phases complete):
+- INET: `_packed` = complete wire format ✅ `_has_addpath` flag
 - Label: `_packed` = complete wire format including labels ✅ `_has_labels` flag
-- IPVPN: `_packed` = wire format (from Label), `_rd_packed` = RD (still separate)
+- IPVPN: `_packed` = complete wire format including labels and RD ✅ `_has_rd` flag
+
+---
+
+## Zero-Copy Benefits
+
+All three classes now support zero-copy `pack_nlri()`:
+- INET: Returns `_packed` directly (or strips/prepends AddPath)
+- Label: Returns `_packed` directly (or strips/prepends AddPath)
+- IPVPN: Returns `_packed` directly (or strips/prepends AddPath)
+
+No more mask recalculation or RD insertion at pack time.
 
 ---
 
 ## Resume Point
 
 **Session:** 2025-12-08
-**Last Action:** Fixed test Q failure and added unit tests
-**Next Action:** Start Phase 3 (IPVPN RD integration into `_packed`)
+**Last Action:** Phase 3 complete - IPVPN RD integrated into `_packed`
+**Next Action:** None - all phases complete
 
 **Failures:** None - all tests pass
 

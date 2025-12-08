@@ -68,20 +68,22 @@ Route Distinguisher (RD) Encoding:
         |   Assigned (2 octets)     |  <- Admin-assigned value
         +---------------------------+
 
-Wire Format (_packed) - Packed-Bytes-First Pattern (Partial):
-=============================================================
-    This class inherits Label's packed-bytes-first pattern but keeps RD separate.
+Wire Format (_packed) - Packed-Bytes-First Pattern (Complete):
+==============================================================
+    This class stores complete wire format in _packed (Phase 3 complete).
 
-    _packed stores: [addpath:4?][mask:1][labels:3n][prefix:var] (inherited from Label)
-    - mask = combined mask for labels + prefix (NOT including RD bits)
-    - labels = raw MPLS label bytes
+    _packed stores: [addpath:4?][mask:1][labels:3n][rd:8][prefix:var]
+    - mask = combined mask (labels + RD + prefix bits)
+    - labels = raw MPLS label bytes (if _has_labels)
+    - rd = Route Distinguisher bytes (if _has_rd)
     - prefix = truncated IP prefix bytes
 
-    _rd_packed stores: Route Distinguisher bytes (8 bytes)
+    pack_nlri() returns _packed directly (zero-copy).
 
-    pack_nlri() must recalculate mask to include RD bits and insert RD.
-
-    Note: Phase 3 will move RD into _packed for full zero-copy.
+    Properties extract data lazily:
+    - labels: inherited from Label, scans for BOS bit
+    - rd: extracts from _packed[label_end:label_end+8] if _has_rd
+    - cidr: extracts from after RD using _rd_end_offset
 
 Class Hierarchy:
 ===============
@@ -127,43 +129,97 @@ RD_SIZE_BITS = RD_SIZE * 8
 @NLRI.register(AFI.ipv4, SAFI.mpls_vpn)
 @NLRI.register(AFI.ipv6, SAFI.mpls_vpn)
 class IPVPN(Label):
-    """IPVPN NLRI inheriting Label's packed-bytes-first pattern with separate RD.
+    """IPVPN NLRI using complete packed-bytes-first pattern.
 
-    Wire format for pack: [addpath?][mask][labels][rd][prefix]
-    Storage:
-    - _packed: [addpath:4?][mask:1][labels:3n][prefix:var] (inherited from Label)
-    - _rd_packed: Route Distinguisher bytes (8 bytes)
+    Wire format stored in _packed: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
+    - mask = combined mask (labels + RD + prefix bits)
+    - labels = raw MPLS label bytes (if _has_labels)
+    - rd = Route Distinguisher bytes (if _has_rd)
+    - prefix = truncated IP prefix bytes
 
-    pack_nlri() must recalculate mask to include RD bits and insert RD.
+    pack_nlri() returns _packed directly (zero-copy).
+
+    Properties extract data lazily:
+    - labels: inherited from Label, scans for BOS bit
+    - rd: extracts from _packed[label_end:label_end+8] if _has_rd
+    - cidr: extracts from after RD using _rd_end_offset
 
     Uses class-level SAFI (always mpls_vpn) - no instance storage needed.
     """
 
-    __slots__ = ('_rd_packed',)
+    __slots__ = ('_has_rd',)  # Track whether RD is present in _packed
 
     # Fixed SAFI for IPVPN NLRI (class attribute shadows slot)
     # AFI varies (ipv4/ipv6) and is set at instance level by INET
     safi: ClassVar[SAFI] = SAFI.mpls_vpn
 
-    def __init__(self, packed: bytes, afi: AFI, *, has_addpath: bool = False) -> None:
+    def __init__(
+        self, packed: bytes, afi: AFI, *, has_addpath: bool = False, has_labels: bool = False, has_rd: bool = False
+    ) -> None:
         """Create an IPVPN NLRI from packed wire format bytes.
 
         Args:
-            packed: Wire format bytes [addpath:4?][mask:1][labels:3n][prefix:var]
+            packed: Wire format bytes [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
             afi: Address Family Identifier
             has_addpath: If True, packed includes 4-byte path identifier at start
+            has_labels: If True, packed includes label bytes after the mask
+            has_rd: If True, packed includes 8-byte RD after labels
 
         SAFI is always mpls_vpn (class-level). Use factory methods for creation.
         """
-        Label.__init__(self, packed, afi, has_addpath=has_addpath)
-        self._rd_packed: bytes = b''  # RD bytes (empty = NORD)
+        Label.__init__(self, packed, afi, has_addpath=has_addpath, has_labels=has_labels)
+        self._has_rd = has_rd
+
+    @property
+    def _rd_end_offset(self) -> int:
+        """Offset where RD ends (i.e., where prefix bytes start).
+
+        Uses _has_rd flag to determine if RD is present.
+        Returns offset relative to start of _packed.
+        For NORD case (no RD), returns label_end offset (same as Label.cidr start).
+        """
+        label_end = self._label_end_offset
+        if not self._has_rd:
+            return label_end
+        return label_end + RD_SIZE
 
     @property
     def rd(self) -> RouteDistinguisher:
-        """Get Route Distinguisher from stored bytes."""
-        if not self._rd_packed:
+        """Get Route Distinguisher from wire bytes.
+
+        Extracts RD from _packed[label_end:label_end+8] if _has_rd is True.
+        """
+        if not self._has_rd:
             return RouteDistinguisher.NORD
-        return RouteDistinguisher(self._rd_packed)
+        label_end = self._label_end_offset
+        return RouteDistinguisher(self._packed[label_end : label_end + RD_SIZE])
+
+    @property
+    def cidr(self) -> CIDR:
+        """Extract CIDR from after RD in wire format.
+
+        Wire format: [addpath?][mask][labels][rd][prefix]
+        CIDR needs [cidr_mask][prefix] where cidr_mask = mask - label_bits - rd_bits
+        """
+        base = self._mask_offset
+        combined_mask = self._packed[base]
+        rd_end = self._rd_end_offset
+
+        # Calculate prefix-only mask (subtract label bits and RD bits)
+        label_end = self._label_end_offset
+        label_bytes_count = label_end - (base + 1)
+        label_bits = label_bytes_count * 8
+        rd_bits = RD_SIZE_BITS if self._has_rd else 0
+        prefix_mask = combined_mask - label_bits - rd_bits
+
+        # Extract prefix bytes from after RD
+        prefix_bytes = self._packed[rd_end:]
+
+        # Build CIDR from mask + prefix
+        cidr_packed = bytes([prefix_mask]) + prefix_bytes
+        if self.afi == AFI.ipv4:
+            return CIDR.from_ipv4(cidr_packed)
+        return CIDR.from_ipv6(cidr_packed)
 
     @classmethod
     def from_cidr(
@@ -190,15 +246,18 @@ class IPVPN(Label):
         Returns:
             New IPVPN instance with SAFI=mpls_vpn
         """
-        # Build wire format: [addpath:4?][mask:1][labels:3n][prefix:var]
-        # Note: RD is stored separately in _rd_packed (Phase 3 will move to _packed)
+        # Build wire format: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
         labels_packed = labels.pack_labels() if labels is not None else b''
         has_labels = len(labels_packed) > 0
-        combined_mask = len(labels_packed) * 8 + cidr.mask
+        rd_packed = rd.pack_rd() if rd is not None else b''
+        has_rd = len(rd_packed) > 0
         prefix_bytes = cidr.pack_ip()
 
-        # Build packed data: [mask][labels][prefix]
-        nlri_bytes = bytes([combined_mask]) + labels_packed + prefix_bytes
+        # Combined mask includes labels + RD + prefix
+        combined_mask = len(labels_packed) * 8 + len(rd_packed) * 8 + cidr.mask
+
+        # Build packed data: [mask][labels][rd][prefix]
+        nlri_bytes = bytes([combined_mask]) + labels_packed + rd_packed + prefix_bytes
 
         has_addpath = path_info is not PathInfo.DISABLED
         if has_addpath:
@@ -212,8 +271,8 @@ class IPVPN(Label):
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = has_labels
+        instance._has_rd = has_rd
         instance.nexthop = IP.NoNextHop
-        instance._rd_packed = rd.pack_rd() if rd is not None else b''
         return instance
 
     @classmethod
@@ -289,20 +348,21 @@ class IPVPN(Label):
         return self.extensive()
 
     def __len__(self) -> int:
-        # Total length = _packed (includes addpath, mask, labels, prefix) + rd
-        return len(self._packed) + len(self._rd_packed)
+        # _packed includes everything: [addpath?][mask][labels][rd][prefix]
+        return len(self._packed)
 
     def __eq__(self, other: Any) -> bool:
-        return Label.__eq__(self, other) and self._rd_packed == other._rd_packed
+        # Compare complete wire format (includes RD)
+        return Label.__eq__(self, other)
 
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def __hash__(self) -> int:
-        # Include RD in hash along with _packed (which has labels)
+        # _packed includes everything (labels + RD); use _has_addpath as discriminator
         if self._has_addpath:
-            return hash(self._packed + self._rd_packed)
-        return hash(b'disabled' + self._packed + self._rd_packed)
+            return hash(self._packed)
+        return hash(b'disabled' + self._packed)
 
     def __copy__(self) -> 'IPVPN':
         new = self.__class__.__new__(self.__class__)
@@ -315,7 +375,7 @@ class IPVPN(Label):
         # Label slots
         new._has_labels = self._has_labels
         # IPVPN slots
-        new._rd_packed = self._rd_packed
+        new._has_rd = self._has_rd
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'IPVPN':
@@ -330,7 +390,7 @@ class IPVPN(Label):
         # Label slots
         new._has_labels = self._has_labels  # bool - immutable
         # IPVPN slots
-        new._rd_packed = self._rd_packed  # bytes - immutable
+        new._has_rd = self._has_rd  # bool - immutable
         return new
 
     @classmethod
@@ -338,37 +398,25 @@ class IPVPN(Label):
         return True
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
-        """Pack NLRI for wire transmission.
+        """Pack NLRI for wire transmission (zero-copy when possible).
 
-        Wire format: [addpath?][mask][labels][rd][prefix]
-        _packed format: [addpath?][mask][labels][prefix]
+        _packed format: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
+        Wire format: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
 
-        Must recalculate mask to include RD bits and insert RD after labels.
+        With RD now stored in _packed, we can return it directly.
         """
-        base = self._mask_offset
-        stored_mask = self._packed[base]
-        label_end = self._label_end_offset
-
-        # Get labels and prefix bytes from _packed
-        labels_bytes = self._packed[base + 1 : label_end]
-        prefix_bytes = self._packed[label_end:]
-
-        # Recalculate mask: stored_mask + RD bits
-        rd_bits = len(self._rd_packed) * 8
-        combined_mask = stored_mask + rd_bits
-
-        # Build wire NLRI: [mask][labels][rd][prefix]
-        nlri = bytes([combined_mask]) + labels_bytes + self._rd_packed + prefix_bytes
-
         send_addpath = negotiated.addpath.send(self.afi, self.safi)
+
         if send_addpath:
             if self._has_addpath:
-                # Return with stored addpath bytes
-                return self._packed[:PATH_INFO_SIZE] + nlri
-            # Need to prepend NOPATH
-            return bytes(PathInfo.NOPATH.pack_path()) + nlri
+                return self._packed  # Zero-copy: return directly
+            # Need to prepend NOPATH (4 zero bytes)
+            return bytes(PathInfo.NOPATH.pack_path()) + self._packed
         else:
-            return nlri  # No addpath
+            if self._has_addpath:
+                # Strip AddPath bytes (first 4 bytes)
+                return self._packed[PATH_INFO_SIZE:]
+            return self._packed  # Zero-copy: return directly
 
     def index(self) -> bytes:
         """Generate unique index for RIB lookup.
@@ -382,12 +430,16 @@ class IPVPN(Label):
         else:
             addpath = self.path_info.pack_path()
         # Index uses RD + prefix (without labels) for uniqueness
-        mask = bytes([len(self._rd_packed) * 8 + self.cidr.mask])
-        return Family.index(self) + addpath + mask + self._rd_packed + self.cidr.pack_ip()
+        rd_bits = RD_SIZE_BITS if self._has_rd else 0
+        mask = bytes([rd_bits + self.cidr.mask])
+        # Extract RD bytes from _packed
+        label_end = self._label_end_offset
+        rd_packed = self._packed[label_end : label_end + RD_SIZE] if self._has_rd else b''
+        return Family.index(self) + addpath + mask + rd_packed + self.cidr.pack_ip()
 
     def _internal(self, announced: bool = True) -> list[str]:
         r = Label._internal(self, announced)
-        if announced and self._rd_packed:
+        if announced and self._has_rd:
             r.append(self.rd.json())
         return r
 
@@ -399,7 +451,7 @@ class IPVPN(Label):
 
         Uses SAFI to determine RD presence (exact, not heuristic).
         Wire format: [addpath?][mask][labels][rd][prefix]
-        Storage: _packed = [addpath?][mask][labels][prefix], _rd_packed = rd
+        Storage: _packed = [addpath?][mask][labels][rd][prefix] (complete wire format)
         """
         from struct import unpack
 
@@ -442,9 +494,11 @@ class IPVPN(Label):
 
         # Parse RD if present (exact from SAFI, not heuristic)
         rd_packed = b''
+        has_rd = False
         if rd_size:
             mask -= rd_bits
             rd_packed = bytes(data[:rd_size])
+            has_rd = True
             data = data[rd_size:]
 
         if mask < 0:
@@ -460,10 +514,9 @@ class IPVPN(Label):
 
         network, data = data[:size], data[size:]
 
-        # Build _packed format: [addpath:4?][mask:1][labels:3n][prefix:var]
-        # The mask stored is labels + prefix (without RD bits)
-        stored_mask = len(labels_packed) * 8 + mask
-        nlri_packed = bytes([stored_mask]) + labels_packed + bytes(network)
+        # Build _packed format: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
+        # Store complete wire format including RD (original_mask already includes RD bits)
+        nlri_packed = bytes([original_mask]) + labels_packed + rd_packed + bytes(network)
 
         has_addpath = path_info is not PathInfo.DISABLED
         if has_addpath:
@@ -477,7 +530,7 @@ class IPVPN(Label):
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = len(labels_packed) > 0
+        instance._has_rd = has_rd
         instance.nexthop = IP.NoNextHop
-        instance._rd_packed = rd_packed
 
         return instance, data

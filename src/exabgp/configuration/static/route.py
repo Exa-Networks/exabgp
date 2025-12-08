@@ -377,10 +377,10 @@ class ParseStaticRoute(Section):
         # The class type tells us what the class CAN hold:
         # - INET: no labels, no RD
         # - Label: has _has_labels flag (may be True or False)
-        # - IPVPN: has _has_labels flag AND _rd_packed (may be empty)
+        # - IPVPN: has _has_labels flag AND _has_rd flag
 
-        # Check RD: only IPVPN class has _rd_packed
-        has_rd = isinstance(nlri, IPVPN) and nlri._rd_packed != b''
+        # Check RD: only IPVPN class has _has_rd attribute
+        has_rd = isinstance(nlri, IPVPN) and nlri._has_rd
 
         # Check labels: Label and IPVPN classes have _has_labels flag
         has_label = isinstance(nlri, Label) and nlri._has_labels
