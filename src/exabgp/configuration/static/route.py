@@ -365,14 +365,25 @@ class ParseStaticRoute(Section):
         if not isinstance(nlri, INET):
             return nlri
 
-        # Cast to IPVPN to access rd/labels (IPVPN is parent of all created by mpls())
-        ipvpn_nlri = cast(IPVPN, nlri)
+        # Check actual data presence using class-level capability flags
+        # INET < Label < IPVPN hierarchy, each adds capability
+        # Use class methods has_rd()/type checks instead of hasattr() per coding standards
+        #
+        # Note: We need to check ACTUAL data presence, not SAFI capability:
+        # - SAFI.has_label() returns True for nlri_mpls/mpls_vpn SAFIs
+        # - But an NLRI might have SAFI=nlri_mpls but no actual labels (NOLABEL)
+        # - Similarly for RD: SAFI=mpls_vpn but RD might be empty
+        #
+        # The class type tells us what the class CAN hold:
+        # - INET: no labels, no RD
+        # - Label: has _has_labels flag (may be True or False)
+        # - IPVPN: has _has_labels flag AND _rd_packed (may be empty)
 
-        # Check actual data presence via _rd_packed/_has_labels attributes
-        # (not has_rd()/has_label() which check SAFI capability, not actual data)
-        # Note: Label class uses _has_labels flag (not _labels_packed) since packed-bytes-first
-        has_rd = hasattr(ipvpn_nlri, '_rd_packed') and ipvpn_nlri._rd_packed
-        has_label = hasattr(ipvpn_nlri, '_has_labels') and ipvpn_nlri._has_labels
+        # Check RD: only IPVPN class has _rd_packed
+        has_rd = isinstance(nlri, IPVPN) and nlri._rd_packed != b''
+
+        # Check labels: Label and IPVPN classes have _has_labels flag
+        has_label = isinstance(nlri, Label) and nlri._has_labels
 
         # Determine target type and SAFI
         if has_rd:
@@ -394,7 +405,7 @@ class ParseStaticRoute(Section):
             target_cls = INET
             # Determine SAFI based on IP range (multicast vs unicast)
             # IPVPN/Label have class-level SAFI that's not the intended value
-            cidr = ipvpn_nlri.cidr
+            cidr = nlri.cidr
             target_safi = IP.tosafi(cidr.prefix().split('/')[0])
             # Early return if already correct type
             if type(nlri) is INET:  # noqa: E721 - exact type check
@@ -403,20 +414,22 @@ class ParseStaticRoute(Section):
         # Build kwargs for from_cidr - pass labels/rd if target supports them
         kwargs: dict = {}
         if has_label:
-            kwargs['labels'] = ipvpn_nlri.labels
+            # Safe: has_label is True only if isinstance(nlri, Label)
+            kwargs['labels'] = cast(Label, nlri).labels
         if has_rd:
-            kwargs['rd'] = ipvpn_nlri.rd
+            # Safe: has_rd is True only if isinstance(nlri, IPVPN)
+            kwargs['rd'] = cast(IPVPN, nlri).rd
 
         # Create new NLRI with correct type and all values upfront
         new_nlri = target_cls.from_cidr(
-            ipvpn_nlri.cidr,
-            ipvpn_nlri.afi,
+            nlri.cidr,
+            nlri.afi,
             target_safi,
-            ipvpn_nlri.action,
-            ipvpn_nlri.path_info,
+            nlri.action,
+            nlri.path_info,
             **kwargs,
         )
-        new_nlri.nexthop = ipvpn_nlri.nexthop
+        new_nlri.nexthop = nlri.nexthop
         return new_nlri
 
     def _check(self) -> bool:

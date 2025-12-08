@@ -271,10 +271,56 @@ return cast(int, untrusted_value)
 
 ---
 
+## Type Identification: Use ClassVar, Not hasattr/isinstance
+
+**Rule:** Use ClassVar boolean flags for type/capability identification, NOT `hasattr()` or `isinstance()`.
+
+❌ **NEVER:**
+```python
+# Checking for attribute existence - fragile, breaks with refactoring
+has_label = hasattr(obj, '_labels_packed') and obj._labels_packed
+has_rd = hasattr(obj, '_rd_packed') and obj._rd_packed
+
+# isinstance checks spread throughout codebase - harder to maintain
+if isinstance(nlri, Label):
+    labels = nlri.labels
+```
+
+✅ **ALWAYS:** Use ClassVar flags that declare capability at class level:
+```python
+class INET:
+    has_label: ClassVar[bool] = False  # Declares: this class has no labels
+    has_rd: ClassVar[bool] = False     # Declares: this class has no RD
+
+class Label(INET):
+    has_label: ClassVar[bool] = True   # Override: this class HAS labels
+
+class IPVPN(Label):
+    has_rd: ClassVar[bool] = True      # Override: this class HAS RD
+
+# Usage - check the flag, not the type
+if nlri.has_label:
+    labels = nlri.labels
+if nlri.has_rd:
+    rd = nlri.rd
+```
+
+**Why:**
+1. **Explicit declaration** - Class capabilities are documented in the class itself
+2. **Refactoring-safe** - Renaming internal attributes (`_labels_packed` → `_has_labels`) doesn't break checks
+3. **Inheritance-friendly** - Subclasses inherit or override flags naturally
+4. **Type-safe** - mypy can verify the flag exists (unlike hasattr)
+5. **Faster** - ClassVar lookup is O(1), isinstance checks MRO
+
+**Pattern:** For NLRI classes, use existing `has_label()` and `has_rd()` class methods, or add ClassVar flags.
+
+---
+
 ## Quick Checklist
 
 - [ ] Python 3.12+ syntax (prefer `int | str` over `Union[int, str]`)
 - [ ] Avoid `| None` class attributes when possible
+- [ ] Use ClassVar flags for type identification, not hasattr/isinstance
 - [ ] Fix type errors at root cause, avoid `# type: ignore`
 - [ ] Only use `cast()` when preceded by runtime type check (isinstance/hasattr)
 - [ ] `ruff format src && ruff check src` passes
