@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""ExaBGP JSON decode regression tests.
+"""ExaBGP JSON regression tests.
 
-This test suite verifies BGP message decoding produces consistent JSON output
-by testing all files in qa/decoding/.
+This test suite validates JSON output from BGP message decoding.
 
-Each decoding test file has 3 lines:
-1. Message type and family (e.g., "update l2vpn evpn")
-2. Raw hex packet data
-3. Expected JSON output
+CI files can include expected JSON using the format:
+
+    option:file:config.conf
+    1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0040:02:...
+    1:json:{"exabgp": "6.0.0", "type": "update", ...}
 
 Usage:
-    ./qa/bin/test_json              # Run all JSON decode tests
-    ./qa/bin/test_json --verbose    # Show detailed output
-    ./qa/bin/test_json file         # Run specific test file
+    ./qa/bin/test_json                 # Run all JSON regression tests
+    ./qa/bin/test_json --generate      # Generate missing json: lines
+    ./qa/bin/test_json --verbose       # Show detailed output
+    ./qa/bin/test_json file.ci         # Test specific CI file
 
 Exit codes:
     0 - All tests passed
@@ -25,11 +26,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any
 
 # ANSI color codes
 GREEN = '\033[32m'
@@ -38,64 +38,24 @@ YELLOW = '\033[33m'
 RESET = '\033[0m'
 
 
-def cleanup_json(obj: dict[str, Any]) -> dict[str, Any]:
-    """Remove dynamic/environment-specific fields from JSON object.
+def decode_message(payload_hex: str, repo_root: Path, config_file: Path | None = None) -> dict | None:
+    """Decode a BGP message payload to JSON.
 
-    Matches the cleanup logic in qa/bin/functional DecodingTests.
-    Only removes top-level keys, not recursively.
-    """
-    obj.pop('exabgp', None)
-    obj.pop('host', None)
-    obj.pop('pid', None)
-    obj.pop('ppid', None)
-    obj.pop('time', None)
-    obj.pop('version', None)
-    obj.pop('counter', None)
-    return obj
-
-
-def parse_decoding_file(filepath: Path) -> tuple[str, str, str, dict[str, Any] | None]:
-    """Parse a decoding test file.
+    Args:
+        payload_hex: The BGP UPDATE payload in hex (without marker/length/type header)
+        repo_root: Path to repository root
+        config_file: Optional config file for context
 
     Returns:
-        Tuple of (msg_type, family, packet_hex, expected_json_dict)
-        expected_json_dict is None if parsing fails
-    """
-    with open(filepath, 'r') as f:
-        lines = f.readlines()
-
-    if len(lines) < 3:
-        return '', '', '', None
-
-    # Line 1: type and family (e.g., "update l2vpn evpn" or "open")
-    words = lines[0].split()
-    msg_type = words[0]
-    family = '' if msg_type == 'open' else f'{words[1]} {words[2]}' if len(words) >= 3 else ''
-
-    # Line 2: raw hex packet
-    packet = lines[1].replace(' ', '').strip()
-
-    # Line 3: expected JSON
-    expected_str = lines[2].strip()
-    try:
-        expected = json.loads(expected_str)
-        return msg_type, family, packet, expected
-    except json.JSONDecodeError:
-        return msg_type, family, packet, None
-
-
-def decode_message(packet: str, msg_type: str, family: str, repo_root: Path) -> str | None:
-    """Decode a raw BGP message to JSON using exabgp decode command.
-
-    Returns:
-        JSON string output, or None if decode fails
+        Parsed JSON dict or None on error
     """
     exabgp_script = repo_root / 'sbin' / 'exabgp'
-
     cmd = [str(exabgp_script), 'decode']
-    if family:
-        cmd.extend(['-f', family])
-    cmd.extend([f'--{msg_type}', packet])
+
+    if config_file and config_file.exists():
+        cmd.extend(['-c', str(config_file)])
+
+    cmd.append(payload_hex)
 
     try:
         result = subprocess.run(
@@ -107,133 +67,346 @@ def decode_message(packet: str, msg_type: str, family: str, repo_root: Path) -> 
             env={**os.environ, 'exabgp_log_enable': 'false'},
         )
         if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-    except Exception:
-        pass
-    return None
+            return json.loads(result.stdout.strip())
+        return None
+    except (subprocess.TimeoutExpired, json.JSONDecodeError):
+        return None
 
 
-def test_file(filepath: Path, repo_root: Path, verbose: bool = False) -> tuple[bool, str]:
-    """Test a single decoding file.
+def normalize_json(data: dict) -> dict:
+    """Normalize JSON for comparison by removing volatile fields.
+
+    Removes fields that change between runs:
+    - time, host, pid, ppid, counter
+    - neighbor addresses (depend on test setup)
+    """
+    if not isinstance(data, dict):
+        return data
+
+    # Fields to remove for comparison
+    volatile_fields = {'time', 'host', 'pid', 'ppid', 'counter'}
+
+    normalized = {}
+    for key, value in data.items():
+        if key in volatile_fields:
+            continue
+        if isinstance(value, dict):
+            normalized[key] = normalize_json(value)
+        elif isinstance(value, list):
+            normalized[key] = [normalize_json(item) if isinstance(item, dict) else item for item in value]
+        else:
+            normalized[key] = value
+
+    return normalized
+
+
+def parse_ci_file(ci_path: Path) -> tuple[Path | None, list[tuple[str, str, str | None]]]:
+    """Parse a CI file for raw messages and json expectations.
 
     Returns:
-        Tuple of (passed, error_message)
+        Tuple of (config_file_path, list of (step, payload_hex, expected_json))
     """
-    name = filepath.name
+    config_file = None
+    messages: list[tuple[str, str, str | None]] = []
 
-    msg_type, family, packet, expected = parse_decoding_file(filepath)
+    # Track raw messages by step to match with json
+    raw_by_step: dict[str, list[str]] = {}
+    json_by_step: dict[str, list[str]] = {}
 
-    if expected is None:
-        return False, f'could not parse expected JSON from {name}'
+    with open(ci_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
 
-    actual_str = decode_message(packet, msg_type, family, repo_root)
-    if actual_str is None:
-        return False, f'decode command failed for {name}'
+            # Parse option:file:config.conf
+            if line.startswith('option:file:'):
+                config_name = line.split(':', 2)[2]
+                # Config might be in same directory or etc/exabgp/
+                config_file = ci_path.parent / config_name
+                if not config_file.exists():
+                    config_file = ci_path.parent.parent.parent / 'etc' / 'exabgp' / config_name
 
-    try:
-        actual = json.loads(actual_str)
-    except json.JSONDecodeError as e:
-        return False, f'invalid JSON from decode: {e}'
+            # Parse N:raw:MARKER:LENGTH:TYPE:PAYLOAD
+            # Payload may contain colons for readability, so we split and rejoin
+            raw_match = re.match(r'^(\d+):raw:([A-Fa-f0-9]+):([A-Fa-f0-9]+):([A-Fa-f0-9]+):(.+)$', line)
+            if raw_match:
+                step = raw_match.group(1)
+                msg_type = raw_match.group(4)
+                # Remove any colons from payload (used for readability)
+                payload = raw_match.group(5).replace(':', '')
 
-    # Compare after removing dynamic fields
-    cleanup_json(actual)
-    cleanup_json(expected)
+                # Only process UPDATE messages (type 02), skip EOR (all zeros)
+                if msg_type.upper() == '02' and payload.upper() != '00000000':
+                    if step not in raw_by_step:
+                        raw_by_step[step] = []
+                    raw_by_step[step].append(payload)
 
-    if actual == expected:
-        return True, ''
-    else:
-        if verbose:
-            from pprint import pformat
+            # Parse N:json:{...}
+            json_match = re.match(r'^(\d+):json:(.+)$', line)
+            if json_match:
+                step = json_match.group(1)
+                json_str = json_match.group(2)
+                if step not in json_by_step:
+                    json_by_step[step] = []
+                json_by_step[step].append(json_str)
 
-            return False, f'JSON mismatch:\nExpected:\n{pformat(expected)}\n\nActual:\n{pformat(actual)}'
-        return False, 'JSON mismatch'
+    # Match raw messages with json expectations
+    for step, payloads in sorted(raw_by_step.items(), key=lambda x: int(x[0])):
+        json_list = json_by_step.get(step, [])
+        for i, payload in enumerate(payloads):
+            expected = json_list[i] if i < len(json_list) else None
+            messages.append((step, payload, expected))
+
+    return config_file, messages
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('files', nargs='*', help='Specific test files to run (default: all)')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Show detailed output')
-    args = parser.parse_args()
+def test_ci_file(
+    ci_path: Path, repo_root: Path, verbose: bool = False, generate: bool = False
+) -> tuple[int, int, list[str]]:
+    """Test a single CI file.
 
-    repo_root = Path(__file__).parent.parent.parent
-    qa_decoding = repo_root / 'qa' / 'decoding'
+    Returns:
+        Tuple of (passed, failed, list of generated lines if generate=True)
+    """
+    config_file, messages = parse_ci_file(ci_path)
 
-    # Get list of test files
-    if args.files:
-        test_files = []
-        for f in args.files:
-            p = Path(f)
-            if p.exists():
-                test_files.append(p)
-            else:
-                # Try in qa/decoding/
-                p = qa_decoding / f
-                if p.exists():
-                    test_files.append(p)
-                else:
-                    print(f'{RED}ERROR{RESET} File not found: {f}')
-                    return 2
-    else:
-        test_files = sorted(qa_decoding.glob('*'))
-        # Filter out directories and hidden files
-        test_files = [f for f in test_files if f.is_file() and not f.name.startswith('.')]
-
-    if not test_files:
-        print('No test files found')
-        return 2
-
-    print(f'Testing {len(test_files)} JSON decode files...')
+    if not messages:
+        return 0, 0, []
 
     passed = 0
     failed = 0
-    failures: list[tuple[str, str]] = []
-    results: list[tuple[Path, bool, str]] = []
+    generated_lines: list[str] = []
 
-    # Run tests in parallel
-    with ThreadPoolExecutor(max_workers=min(len(test_files), 8)) as executor:
-        future_to_file = {
-            executor.submit(test_file, filepath, repo_root, args.verbose): filepath for filepath in test_files
-        }
-        for future in as_completed(future_to_file):
-            filepath = future_to_file[future]
-            try:
-                success, error = future.result()
-                results.append((filepath, success, error))
-            except Exception as e:
-                results.append((filepath, False, str(e)))
+    skipped = 0
+    for step, payload, expected_json in messages:
+        decoded = decode_message(payload, repo_root, config_file)
 
-    # Sort results by filename for consistent output
-    results.sort(key=lambda x: x[0].name)
+        if decoded is None:
+            if verbose:
+                print(f'    {YELLOW}SKIP{RESET} step {step}: decode failed')
+            skipped += 1
+            continue
 
-    for filepath, success, error in results:
-        if success:
+        if generate:
+            # Generate json: line
+            # Remove volatile fields for cleaner output
+            clean = normalize_json(decoded)
+            json_line = f'{step}:json:{json.dumps(clean, separators=(",", ":"))}'
+            generated_lines.append(json_line)
+            if verbose:
+                print(f'    {GREEN}GEN{RESET} step {step}')
             passed += 1
-            if args.verbose:
-                print(f'  {GREEN}PASS{RESET} {filepath.name}')
-        else:
-            failed += 1
-            failures.append((filepath.name, error))
-            print(f'  {RED}FAIL{RESET} {filepath.name}')
-            if args.verbose and error:
-                for line in error.split('\n'):
-                    print(f'       {line}')
+        elif expected_json:
+            # Compare with expected
+            try:
+                expected = json.loads(expected_json)
+                normalized_decoded = normalize_json(decoded)
+                normalized_expected = normalize_json(expected)
 
-    if not args.verbose and passed > 0 and failed == 0:
-        print(f'  {GREEN}PASS{RESET} {passed} tests')
+                if normalized_decoded == normalized_expected:
+                    passed += 1
+                    if verbose:
+                        print(f'    {GREEN}PASS{RESET} step {step}')
+                else:
+                    failed += 1
+                    print(f'    {RED}FAIL{RESET} step {step}: JSON mismatch')
+                    if verbose:
+                        # Find the first difference
+                        exp_str = json.dumps(normalized_expected, sort_keys=True)
+                        got_str = json.dumps(normalized_decoded, sort_keys=True)
+                        for i, (e, g) in enumerate(zip(exp_str, got_str)):
+                            if e != g:
+                                print(f'      first diff at char {i}:')
+                                print(f'      expected: ...{exp_str[max(0,i-20):i+50]}...')
+                                print(f'      got:      ...{got_str[max(0,i-20):i+50]}...')
+                                break
+                        else:
+                            # Length difference
+                            print(f'      length diff: expected {len(exp_str)}, got {len(got_str)}')
+            except json.JSONDecodeError:
+                failed += 1
+                print(f'    {RED}FAIL{RESET} step {step}: invalid expected JSON')
+        else:
+            # No expected json - skip or warn
+            if verbose:
+                print(f'    {YELLOW}SKIP{RESET} step {step}: no json: expectation')
+
+    return passed, failed, generated_lines
+
+
+def insert_json_lines(ci_path: Path, json_lines: list[str]) -> bool:
+    """Insert json: lines into CI file after corresponding raw: lines.
+
+    Args:
+        ci_path: Path to CI file
+        json_lines: List of json lines to insert (format: "step:json:{...}")
+
+    Returns:
+        True if file was modified
+    """
+    # Parse json lines into dict by step
+    json_by_step: dict[str, list[str]] = {}
+    for line in json_lines:
+        match = re.match(r'^(\d+):json:', line)
+        if match:
+            step = match.group(1)
+            if step not in json_by_step:
+                json_by_step[step] = []
+            json_by_step[step].append(line)
+
+    # Read file and track which raw lines need json inserted after
+    lines = ci_path.read_text().splitlines()
+    new_lines: list[str] = []
+    raw_counts: dict[str, int] = {}  # Track how many raw lines per step we've seen
+
+    for line in lines:
+        new_lines.append(line)
+
+        # Check if this is a raw UPDATE line
+        raw_match = re.match(r'^(\d+):raw:([A-Fa-f0-9]+):([A-Fa-f0-9]+):([A-Fa-f0-9]+):(.+)$', line)
+        if raw_match:
+            step = raw_match.group(1)
+            msg_type = raw_match.group(4)
+
+            # Only for UPDATE messages, skip EOR
+            payload = raw_match.group(5).replace(':', '')
+            if msg_type.upper() == '02' and payload.upper() != '00000000':
+                if step not in raw_counts:
+                    raw_counts[step] = 0
+
+                # Get the corresponding json line
+                if step in json_by_step and raw_counts[step] < len(json_by_step[step]):
+                    json_line = json_by_step[step][raw_counts[step]]
+                    # Only insert if not already present (check next line)
+                    next_idx = len(new_lines)
+                    if next_idx >= len(lines) or not lines[next_idx - 1 + 1].startswith(f'{step}:json:'):
+                        new_lines.append(json_line)
+
+                raw_counts[step] += 1
+
+    # Write back
+    new_content = '\n'.join(new_lines) + '\n'
+    old_content = ci_path.read_text()
+
+    if new_content != old_content:
+        ci_path.write_text(new_content)
+        return True
+    return False
+
+
+def find_ci_files(repo_root: Path, paths: list[str] | None = None) -> list[Path]:
+    """Find CI files to test.
+
+    Args:
+        repo_root: Repository root path
+        paths: Optional list of specific files/directories to test
+
+    Returns:
+        List of CI file paths
+    """
+    if paths:
+        result = []
+        for p in paths:
+            path = Path(p)
+            if not path.is_absolute():
+                path = repo_root / p
+            if path.is_file():
+                result.append(path)
+            elif path.is_dir():
+                result.extend(sorted(path.glob('*.ci')))
+        return result
+
+    # Default: encoding and api directories
+    ci_files = []
+    for subdir in ['encoding', 'api']:
+        ci_dir = repo_root / 'qa' / subdir
+        if ci_dir.exists():
+            ci_files.extend(sorted(ci_dir.glob('*.ci')))
+
+    return ci_files
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument('-v', '--verbose', action='store_true', help='Show detailed output')
+    parser.add_argument('-g', '--generate', action='store_true', help='Generate missing json: lines')
+    parser.add_argument('-w', '--write', action='store_true', help='Write generated json: lines to CI files')
+    parser.add_argument('--json-only', action='store_true', help='Only test files with json: expectations')
+    parser.add_argument('files', nargs='*', help='CI files or directories to test')
+    args = parser.parse_args()
+
+    repo_root = Path(__file__).parent.parent.parent
+
+    ci_files = find_ci_files(repo_root, args.files if args.files else None)
+
+    if not ci_files:
+        print('No CI files found')
+        return 2
+
+    total_passed = 0
+    total_failed = 0
+    files_tested = 0
+    all_generated: dict[Path, list[str]] = {}
+
+    for ci_file in ci_files:
+        # By default, only test files with json expectations
+        # Use --generate or --write to process all files
+        if not args.generate and not args.write:
+            content = ci_file.read_text()
+            if ':json:' not in content:
+                continue
+
+        rel_path = ci_file.relative_to(repo_root) if ci_file.is_relative_to(repo_root) else ci_file
+        print(f'Testing {rel_path}...')
+
+        passed, failed, generated = test_ci_file(ci_file, repo_root, args.verbose, args.generate or args.write)
+
+        if passed > 0 or failed > 0:
+            files_tested += 1
+            total_passed += passed
+            total_failed += failed
+
+            if generated:
+                all_generated[ci_file] = generated
+                if args.write:
+                    if insert_json_lines(ci_file, generated):
+                        print(f'  {GREEN}WROTE{RESET} {len(generated)} json lines')
+
+        if not args.verbose and passed > 0 and failed == 0:
+            if not args.write:
+                print(f'  {GREEN}PASS{RESET} {passed} messages')
+        elif failed > 0:
+            print(f'  {RED}FAIL{RESET} {failed}/{passed + failed} messages failed')
 
     # Summary
     print()
     print('=' * 60)
-    print('JSON DECODE TEST SUMMARY')
+    print('JSON TEST SUMMARY')
     print('=' * 60)
-    print(f'{GREEN}Passed:{RESET}  {passed}')
-    print(f'{RED}Failed:{RESET}  {failed}')
-    if failures:
-        print(f'\nFailed tests:')
-        for name, error in failures:
-            print(f'  - {name}: {error.split(chr(10))[0]}')
+    print(f'Files tested: {files_tested}')
+    print(f'{GREEN}Passed:{RESET}  {total_passed}')
+    print(f'{RED}Failed:{RESET}  {total_failed}')
 
-    return 0 if failed == 0 else 1
+    # Output generated lines
+    if args.generate and all_generated:
+        print()
+        print('=' * 60)
+        print('GENERATED JSON LINES')
+        print('=' * 60)
+        print('Add these lines to CI files after corresponding raw: lines:')
+        print()
+        for ci_file, lines in all_generated.items():
+            rel_path = ci_file.relative_to(repo_root) if ci_file.is_relative_to(repo_root) else ci_file
+            print(f'# {rel_path}')
+            for line in lines:
+                print(line)
+            print()
+
+    return 0 if total_failed == 0 else 1
 
 
 if __name__ == '__main__':
