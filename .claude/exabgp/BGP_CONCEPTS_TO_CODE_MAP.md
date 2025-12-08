@@ -103,13 +103,14 @@ Network Layer Reachability Information - routes being advertised.
 
 **Directory:** `bgp/message/update/nlri/evpn/`
 
-| Route Type | Code | File | Description |
-|------------|------|------|-------------|
-| Ethernet Auto-Discovery | 1 | `nlri.py` | Auto-discovery |
-| MAC/IP Advertisement | 2 | `mac.py` | MAC/IP route |
-| Inclusive Multicast | 3 | `multicast.py` | Multicast tree |
-| Ethernet Segment | 4 | `nlri.py` | ES route |
-| IP Prefix | 5 | `prefix.py` | IP prefix route |
+| Route Type | Code | File | Class | Description |
+|------------|------|------|-------|-------------|
+| Ethernet Auto-Discovery | 1 | `ethernetad.py` | `EthernetAD` | Auto-discovery |
+| MAC/IP Advertisement | 2 | `mac.py` | `MAC` | MAC/IP route |
+| Inclusive Multicast | 3 | `multicast.py` | `Multicast` | Multicast tree |
+| Ethernet Segment | 4 | `segment.py` | `EthernetSegment` | ES route |
+| IP Prefix | 5 | `prefix.py` | `Prefix` | IP prefix route |
+| Generic (unknown) | * | `nlri.py` | `GenericEVPN` | Fallback for unknown types |
 
 ---
 
@@ -320,4 +321,4 @@ RIB
 
 ---
 
-**Updated:** 2025-12-07
+**Updated:** 2025-12-08

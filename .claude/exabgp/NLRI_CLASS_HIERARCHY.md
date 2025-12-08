@@ -10,9 +10,8 @@ This document maps the NLRI class inheritance structure, showing where class var
 Family (protocol/family.py)
   └── NLRI (nlri.py)
         ├── INET (inet.py)
-        │     ├── Label (label.py)
-        │     │     └── IPVPN (ipvpn.py)
-        │     └── [future: SRTE, etc.]
+        │     └── Label (label.py)
+        │           └── IPVPN (ipvpn.py)
         ├── VPLS (vpls.py)
         ├── Flow (flow.py)
         ├── RTC (rtc.py)
@@ -20,7 +19,7 @@ Family (protocol/family.py)
         │     ├── MAC (evpn/mac.py)
         │     ├── EthernetAD (evpn/ethernetad.py)
         │     ├── Multicast (evpn/multicast.py)
-        │     ├── Segment (evpn/segment.py)
+        │     ├── EthernetSegment (evpn/segment.py)
         │     ├── Prefix (evpn/prefix.py)
         │     └── GenericEVPN (evpn/nlri.py)
         ├── MUP (mup/nlri.py)
@@ -30,19 +29,41 @@ Family (protocol/family.py)
         │     ├── Type2SessionTransformedRoute (mup/t2st.py)
         │     └── GenericMUP (mup/nlri.py)
         ├── MVPN (mvpn/nlri.py)
-        │     ├── IntraAS (mvpn/intraas.py)
-        │     ├── InterAS (mvpn/interas.py)
         │     ├── SourceAD (mvpn/sourcead.py)
         │     ├── SharedJoin (mvpn/sharedjoin.py)
         │     ├── SourceJoin (mvpn/sourcejoin.py)
-        │     ├── LeafAD (mvpn/leafad.py)
         │     └── GenericMVPN (mvpn/nlri.py)
         └── BGPLS (bgpls/nlri.py)
-              ├── Node (bgpls/node.py)
-              ├── Link (bgpls/link.py)
-              ├── PrefixV4 (bgpls/prefixv4.py)
-              ├── PrefixV6 (bgpls/prefixv6.py)
-              └── SRv6SID (bgpls/srv6sid.py)
+              ├── NODE (bgpls/node.py)
+              ├── LINK (bgpls/link.py)
+              ├── PREFIXv4 (bgpls/prefixv4.py)
+              ├── PREFIXv6 (bgpls/prefixv6.py)
+              ├── SRv6SID (bgpls/srv6sid.py)
+              └── GenericBGPLS (bgpls/nlri.py)
+```
+
+---
+
+## Helper Classes (Non-NLRI)
+
+```
+CIDR (cidr.py)                    # IP prefix representation
+
+NLRICollection (collection.py)    # Collection of NLRI for withdrawn routes
+MPNLRICollection (collection.py)  # Collection of NLRI for MP_REACH/MP_UNREACH
+
+Qualifier Classes (qualifier/):
+  ├── RouteDistinguisher (rd.py)  # 8-byte RD
+  ├── Labels (labels.py)          # MPLS label stack
+  ├── PathInfo (path.py)          # ADD-PATH path identifier
+  ├── ESI (esi.py)                # Ethernet Segment Identifier
+  ├── EthernetTag (etag.py)       # EVPN Ethernet Tag
+  └── MAC (mac.py)                # MAC address
+
+Settings Classes (settings.py):
+  ├── VPLSSettings                # VPLS configuration holder
+  ├── INETSettings                # INET/Label/IPVPN configuration holder
+  └── FlowSettings                # FlowSpec configuration holder
 ```
 
 ---
@@ -419,6 +440,64 @@ class BGPLS(NLRI):
     # Registered: AFI.bgpls, SAFI.bgp_ls/bgp_ls_vpn
 ```
 
+### BGPLS Subtypes
+
+| Class | File | CODE | Description |
+|-------|------|------|-------------|
+| `NODE` | bgpls/node.py | 1 | Node NLRI |
+| `LINK` | bgpls/link.py | 2 | Link NLRI |
+| `PREFIXv4` | bgpls/prefixv4.py | 3 | IPv4 Prefix NLRI |
+| `PREFIXv6` | bgpls/prefixv6.py | 4 | IPv6 Prefix NLRI |
+| `SRv6SID` | bgpls/srv6sid.py | 6 | SRv6 SID NLRI |
+| `GenericBGPLS` | bgpls/nlri.py | (dynamic) | Fallback for unknown types |
+
+---
+
+## Flow Component Classes
+
+The Flow NLRI uses many component classes for FlowSpec rules (not part of NLRI hierarchy):
+
+```
+Flow Component Hierarchy (flow.py):
+
+Base Classes:
+  ├── FlowRule (Protocol)         # Typing protocol for flow rules
+  ├── CommonOperator              # Base for numeric/binary operators
+  │     ├── NumericOperator       # Numeric comparison operators
+  │     └── BinaryOperator        # Binary/bitmask operators
+  └── IComponent                  # Interface for flow components
+
+Prefix Components:
+  ├── IPrefix                     # Base prefix interface
+  │     ├── IPrefix4 (+ IPv4)     # IPv4 prefix component
+  │     │     ├── Flow4Destination
+  │     │     └── Flow4Source
+  │     └── IPrefix6 (+ IPv6)     # IPv6 prefix component
+  │           ├── Flow6Destination
+  │           └── Flow6Source
+
+Operation Components:
+  └── IOperation                  # Base operation interface
+        ├── IOperationByte        # 1-byte values
+        ├── IOperationByteShort   # 1-2 byte values
+        └── IOperationByteShortLong  # 1-4 byte values
+
+Concrete Flow Rules:
+  ├── FlowIPProtocol (IPv4)       # IP Protocol field
+  ├── FlowNextHeader (IPv6)       # Next Header field
+  ├── FlowAnyPort                 # Source or Dest port
+  ├── FlowDestinationPort         # Destination port
+  ├── FlowSourcePort              # Source port
+  ├── FlowICMPType                # ICMP type
+  ├── FlowICMPCode                # ICMP code
+  ├── FlowTCPFlag                 # TCP flags
+  ├── FlowPacketLength            # Packet length
+  ├── FlowDSCP (IPv4)             # DSCP field
+  ├── FlowTrafficClass (IPv6)     # Traffic class
+  ├── FlowFragment                # Fragment flags
+  └── FlowFlowLabel (IPv6)        # Flow label
+```
+
 ---
 
 ## Design Patterns
@@ -504,9 +583,17 @@ def rules(self) -> dict:
 | Flow | NLRI | `_rules_cache`, `_packed_stale`, `_rd_override` |
 | RTC | NLRI | `_packed_origin`, `rt` |
 | EVPN | NLRI | (none) |
-| MUP | NLRI | (none, subtypes add `_packed`) |
+| EVPN subtypes | EVPN | (none) |
+| GenericEVPN | EVPN | (none) - CODE via property |
+| MUP | NLRI | (none) |
+| MUP subtypes | MUP | `_packed` (redeclared) |
+| GenericMUP | MUP | (none) - ARCHTYPE/CODE via property |
 | MVPN | NLRI | (none) |
+| MVPN subtypes | MVPN | (none) |
+| GenericMVPN | MVPN | (none) - CODE via property |
 | BGPLS | NLRI | (none) |
+| BGPLS subtypes | BGPLS | (none) |
+| GenericBGPLS | BGPLS | `CODE` (instance attr, not slot) |
 
 ---
 
@@ -520,4 +607,4 @@ def rules(self) -> dict:
 
 ---
 
-**Updated:** 2025-12-07
+**Updated:** 2025-12-08

@@ -57,7 +57,6 @@ known_families.append((AFI.new_afi, SAFI.new_safi))
 ```python
 from __future__ import annotations
 
-from typing import Optional
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.protocol.family import AFI, SAFI
@@ -86,7 +85,7 @@ class NewNLRI(NLRI):
         """
         return self.pack_nlri(None)
 
-    def pack_nlri(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack_nlri(self, negotiated: Negotiated | None = None) -> bytes:
         """
         Encode NLRI to bytes for BGP UPDATE message
 
@@ -109,7 +108,7 @@ class NewNLRI(NLRI):
         safi: SAFI,
         data: bytes,
         action: Action,
-        addpath: Optional[int],
+        addpath: int | None,
         negotiated: Negotiated,
     ) -> NewNLRI:
         """
@@ -285,7 +284,6 @@ option_01:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00XX0200000000...
 ```python
 from __future__ import annotations
 
-from typing import Optional
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message import Negotiated
 
@@ -310,7 +308,7 @@ class NewAttribute(Attribute):
         Attribute.__init__(self)
         self.value = value
 
-    def pack(self, negotiated: Optional[Negotiated] = None) -> bytes:
+    def pack(self, negotiated: Negotiated | None = None) -> bytes:
         """
         Encode attribute value (NOT including flags/code/length)
 
@@ -323,7 +321,7 @@ class NewAttribute(Attribute):
         return self.value.pack()
 
     @classmethod
-    def unpack(cls, data: bytes, negotiated: Optional[Negotiated] = None) -> NewAttribute:
+    def unpack(cls, data: bytes, negotiated: Negotiated | None = None) -> NewAttribute:
         """
         Decode attribute value
 
@@ -623,7 +621,7 @@ Before declaring new type complete:
 - [ ] Functional test added (qa/encoding/)
 - [ ] Functional test passes (./qa/bin/functional encoding <id>)
 - [ ] Linting passes (ruff format + ruff check)
-- [ ] Python 3.8+ compatibility (`Union`, not `|`)
+- [ ] Python 3.12+ syntax (`int | str`, not `Union[int, str]`)
 - [ ] Documentation updated (if public API)
 
 ---
@@ -636,4 +634,4 @@ Before declaring new type complete:
 
 ---
 
-**Updated:** 2025-11-24
+**Updated:** 2025-12-08
