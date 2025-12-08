@@ -1245,11 +1245,12 @@ def test_aigp_no_pack_without_negotiation() -> None:
     metric = 1000
     aigp = AIGP.from_int(metric)
 
-    # Without AIGP negotiation and different AS
+    # Without AIGP negotiation and different AS (EBGP)
     negotiated = Mock()
     negotiated.aigp = False
     negotiated.local_as = 65000
     negotiated.peer_as = 65001
+    negotiated.is_ibgp = False  # EBGP session
 
     # Should return empty bytes
     packed = aigp.pack_attribute(negotiated)
@@ -1263,11 +1264,12 @@ def test_aigp_pack_with_same_as() -> None:
     metric = 1000
     aigp = AIGP.from_int(metric)
 
-    # Same AS but no AIGP negotiation
+    # Same AS but no AIGP negotiation (IBGP)
     negotiated = Mock()
     negotiated.aigp = False
     negotiated.local_as = 65000
     negotiated.peer_as = 65000
+    negotiated.is_ibgp = True  # IBGP session
 
     # Should still pack for IBGP
     packed = aigp.pack_attribute(negotiated)

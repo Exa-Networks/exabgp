@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.open.capability.negotiated import OpenContext
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
@@ -200,12 +201,15 @@ class MPRNLRI(Attribute, Family):
 
 # Create empty MPRNLRI with minimal packed structure
 # AFI(2) + SAFI(1) + NH_LEN(1)=0 + RESERVED(1)=0 = 5 bytes minimum
+# Note: ASN(0) is a sentinel value for empty contexts (not used for attribute packing)
 _EMPTY_CONTEXT = OpenContext.make_open_context(
     afi=AFI.undefined,
     safi=SAFI.undefined,
     addpath=False,
     asn4=False,
     msg_size=4096,
+    local_as=ASN(0),
+    peer_as=ASN(0),
 )
 _EMPTY_PACKED = AFI.undefined.pack_afi() + SAFI.undefined.pack_safi() + bytes([0, 0])
 EMPTY_MPRNLRI = MPRNLRI(_EMPTY_PACKED, _EMPTY_CONTEXT)

@@ -97,6 +97,8 @@ def create_negotiated_mock(families: Any = None, asn4: Any = False, msg_size: An
             addpath=False,
             asn4=asn4,
             msg_size=msg_size,
+            local_as=negotiated.local_as,
+            peer_as=negotiated.peer_as,
         )
 
     negotiated.nlri_context = nlri_context

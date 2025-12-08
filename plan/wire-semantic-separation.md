@@ -1,84 +1,83 @@
 # Wire vs Semantic Container Separation
 
-**Status:** 🔄 Phase 1 Complete, Phase 2 Revised
+**Status:** ✅ Phase 2 Complete
 **Created:** 2025-12-07
 **Updated:** 2025-12-08
 
 ## Goal
 
-Enforce strict separation between Wire Containers (immutable, bytes-first) and Semantic Containers (Collections - mutable, for transformations). Use `OpenContext` (not full `Negotiated`) for encoding context.
+Enforce strict separation between Wire Containers (immutable, bytes-first) and Semantic Containers (Collections - mutable, for transformations). Clear distinction between encoding context (`OpenContext`) and session state (`Negotiated`).
+
+---
+
+## Key Concepts
+
+### OpenContext vs Negotiated
+
+| Aspect | `OpenContext` | `Negotiated` |
+|--------|---------------|--------------|
+| **Purpose** | How data WAS/WILL BE encoded on wire | What the session allows & capabilities |
+| **Scope** | Per AFI/SAFI encoding | Session-wide |
+| **Contains** | Wire format parameters | Session state & capabilities |
+| **Mutability** | Immutable, cacheable | Immutable after OPEN exchange |
+| **References** | None (value object) | `neighbor`, OPEN messages |
+| **Caching** | By parameter tuple | Should use factory (future) |
+
+**`OpenContext`** = Encoding context for a specific AFI/SAFI
+- `afi`, `safi` - Address family for this encoding
+- `addpath` - Whether AddPath is used in this encoding
+- `asn4` - Whether 4-byte ASNs are used
+- `msg_size` - Max message size
+- `local_as`, `peer_as` - For IBGP vs EBGP attribute handling
+- `is_ibgp` - Derived property (`local_as == peer_as`)
+
+**`Negotiated`** = Session-wide immutable state (after OPEN exchange)
+- `families` - Allowed AFI/SAFIs for this session
+- `neighbor` - Peer session info (for next-hop-self)
+- `aigp` - AIGP capability enabled
+- `asn4`, `local_as`, `peer_as` - Session-wide values
+- `required(afi, safi)` - Query AddPath status per family
+- `nlri_context(afi, safi)` - Factory to get cached `OpenContext`
+- `is_ibgp` - Derived property (`local_as == peer_as`)
+
+### When to Use Which
+
+| Operation | Use | Reason |
+|-----------|-----|--------|
+| Decode NLRI bytes | `OpenContext` | Wire format parameters |
+| Encode NLRI to bytes | `OpenContext` | Target encoding format |
+| Pack attributes | `Negotiated` | Need `aigp` capability |
+| Filter NLRIs by allowed families | `Negotiated` | Session policy |
+| Next-hop-self replacement | `Negotiated` | Needs `neighbor` |
+| Check AIGP capability | `Negotiated` | Session capability |
+| Store in MPRNLRI/MPURNLRI | `OpenContext` | Lightweight, per-family |
 
 ---
 
 ## Design Principles
 
-### Wire Container (Update, Attribute, NLRI)
+### Wire Container (Update, MPRNLRI, MPURNLRI, NLRICollection)
 
 - **Immutable** after creation
 - Stores `_packed: bytes` (canonical wire representation)
-- Stores `_context: OpenContext` (encoding parameters)
-- `pack_message()` / `pack()` → just return `_packed` with header
-- `parse()` → returns NEW Semantic Container
+- `MPRNLRI`/`MPURNLRI`/`NLRICollection` store `_context: OpenContext` (encoding params)
+- `Update` stores `_negotiated: Negotiated` (needs full session for parsing)
+- `pack()` → returns `_packed` (already encoded)
+- Parsing yields semantic objects
 
-### Semantic Container (UpdateCollection, AttributeCollection, NLRICollection)
+### Semantic Container (UpdateCollection, AttributeCollection)
 
 - **Mutable** - can add/remove/modify components
 - Stores parsed semantic objects
-- `pack(context)` → creates NEW Wire Container for target capabilities
+- `pack(negotiated)` → creates wire bytes for target session
 
-### OpenContext (encoding context)
-
-Minimal context for encoding/decoding, replacing full `Negotiated`:
+### OpenContext Structure
 
 ```python
 class OpenContext:
     __slots__ = ('afi', 'safi', 'addpath', 'asn4', 'msg_size', 'local_as', 'peer_as')
 
-    # Derived property
-    @property
-    def is_ibgp(self) -> bool:
-        return self.local_as == self.peer_as
-```
-
-**Fields:**
-- `afi`, `safi` - Address family
-- `addpath` - ADD-PATH enabled for this family
-- `asn4` - 4-byte ASN mode
-- `msg_size` - Max message size (4096 or 65535)
-- `local_as`, `peer_as` - For AS_PATH handling (IBGP vs EBGP)
-
----
-
-## Implementation Phases
-
-### Phase 1: Update/UpdateCollection Separation ✅ COMPLETE
-
-- Update stores `_negotiated`, no `_parsed` caching
-- Callers use `update.data` or `update.parse()`
-- All tests pass
-
-### Phase 2: Add ASNs to OpenContext and migrate from Negotiated
-
-**Goal:** Replace `Negotiated` with `OpenContext` where only encoding context is needed.
-
-#### 2.1 Extend OpenContext
-
-Add `local_as` and `peer_as` to OpenContext:
-
-```python
-class OpenContext:
-    __slots__ = ('afi', 'safi', 'addpath', 'asn4', 'msg_size', 'local_as', 'peer_as')
-
-    _cache: ClassVar[dict[tuple[AFI, SAFI, bool, bool, int, ASN, ASN], 'OpenContext']] = {}
-
-    def __init__(self, afi, safi, addpath, asn4, msg_size, local_as, peer_as):
-        self.afi = afi
-        self.safi = safi
-        self.addpath = addpath
-        self.asn4 = asn4
-        self.msg_size = msg_size
-        self.local_as = local_as
-        self.peer_as = peer_as
+    _cache: ClassVar[dict[tuple, OpenContext]] = {}
 
     @property
     def is_ibgp(self) -> bool:
@@ -86,91 +85,104 @@ class OpenContext:
 
     @classmethod
     def make_open_context(cls, afi, safi, addpath, asn4, msg_size, local_as, peer_as):
+        # Factory with caching by parameter tuple
         key = (afi, safi, addpath, asn4, msg_size, local_as, peer_as)
         if key not in cls._cache:
-            cls._cache[key] = cls(afi, safi, addpath, asn4, msg_size, local_as, peer_as)
+            cls._cache[key] = cls(...)
         return cls._cache[key]
 ```
 
-#### 2.2 Update Negotiated.nlri_context()
+### Negotiated Structure
 
 ```python
-def nlri_context(self, afi: AFI, safi: SAFI) -> OpenContext:
-    return OpenContext.make_open_context(
-        afi=afi,
-        safi=safi,
-        addpath=self.required(afi, safi),
-        asn4=self.asn4,
-        msg_size=self.msg_size,
-        local_as=self.local_as,
-        peer_as=self.peer_as,
-    )
+class Negotiated:
+    # Set once during OPEN exchange, immutable after
+    local_as: ASN
+    peer_as: ASN
+    asn4: bool
+    aigp: bool
+    families: list[tuple[AFI, SAFI]]
+    neighbor: Neighbor
+    # ... other session state
+
+    @property
+    def is_ibgp(self) -> bool:
+        return self.local_as == self.peer_as
+
+    def nlri_context(self, afi: AFI, safi: SAFI) -> OpenContext:
+        # Returns cached OpenContext for this AFI/SAFI
+        return OpenContext.make_open_context(
+            afi, safi, self.required(afi, safi),
+            self.asn4, self.msg_size, self.local_as, self.peer_as
+        )
 ```
-
-#### 2.3 Update class changes
-
-Change from storing full Negotiated to OpenContext:
-
-```python
-class Update(Message):
-    def __init__(self, packed: Buffer, context: OpenContext | None = None) -> None:
-        self._packed = packed
-        self._context = context  # Was: _negotiated: Negotiated
-```
-
-#### 2.4 AttributeCollection.pack_attribute() changes
-
-Change signature from `Negotiated` to `OpenContext`:
-
-```python
-def pack_attribute(self, context: OpenContext, with_default: bool = True) -> bytes:
-    local_asn = context.local_as
-    peer_asn = context.peer_as
-    # ... rest unchanged
-```
-
-#### 2.5 Individual Attribute classes
-
-Update `pack_attribute()` signatures:
-
-| Class | Current | New |
-|-------|---------|-----|
-| ASPath | `pack_attribute(negotiated: Negotiated)` | `pack_attribute(context: OpenContext)` |
-| Aggregator | `pack_attribute(negotiated: Negotiated)` | `pack_attribute(context: OpenContext)` |
-| All others | `pack_attribute(negotiated: Negotiated)` | `pack_attribute(context: OpenContext)` |
-
-Most attribute classes only use `negotiated` for the signature - they don't access any fields. These can be changed to accept `OpenContext` with minimal impact.
-
-**Classes that actually use Negotiated fields:**
-- `ASPath.pack_attribute()` - uses `asn4` for AS format
-- `Aggregator.pack_attribute()` - uses `asn4`
-- `AttributeCollection.pack_attribute()` - uses `local_as`, `peer_as`
-
-All these fields will be available in OpenContext.
 
 ---
 
-## Files to Modify
+## Implementation Status
 
-### Phase 2
+### Phase 1: Update/UpdateCollection Separation ✅ COMPLETE
 
-| File | Changes |
-|------|---------|
-| `src/exabgp/bgp/message/open/capability/negotiated.py` | Add `local_as`, `peer_as` to OpenContext |
-| `src/exabgp/bgp/message/update/__init__.py` | Change `_negotiated` to `_context: OpenContext` |
-| `src/exabgp/bgp/message/update/attribute/collection.py` | Change `pack_attribute(negotiated)` to `pack_attribute(context)` |
-| `src/exabgp/bgp/message/update/attribute/*.py` | Update `pack_attribute()` signatures (25+ files) |
-| `src/exabgp/bgp/message/update/collection.py` | Update `messages()` to use OpenContext |
+- Update stores `_negotiated`, no `_parsed` caching
+- Callers use `update.data` or `update.parse()`
+- All tests pass
+
+### Phase 2: Add ASNs to OpenContext ✅ COMPLETE
+
+Changes made:
+1. `OpenContext` has `local_as`, `peer_as` fields
+2. `OpenContext` has `is_ibgp` property
+3. `Negotiated` has `is_ibgp` property
+4. `Negotiated.nlri_context()` passes ASN values to `OpenContext`
+5. All tests pass (11/11)
+
+**Not changed:**
+- `pack_attribute()` methods still use `Negotiated` (need `aigp` capability)
+- `Update` still stores `Negotiated` (needs full session for parsing)
 
 ---
 
-## Benefits
+## Findings & Design Decisions
 
-1. **Lightweight context** - OpenContext is ~7 fields vs Negotiated with neighbor refs
-2. **Cacheable** - Same OpenContext reused for identical parameters
-3. **Hashable** - Can be used as cache key for Update wire format caching
-4. **Decoupled** - No reference to peer/session state
-5. **Zero-copy forwarding** - Compare source/dest OpenContext for compatibility
+### Why `Update` Stores `Negotiated` (not `OpenContext`)
+
+`Update.parse()` → `UpdateCollection._parse_payload()` requires:
+1. **`negotiated.families`** - Filter which NLRIs to process
+2. **`negotiated.neighbor`** - Next-hop-self feature
+3. **`negotiated.required(afi, safi)`** - AddPath status per family
+
+These are session-level concerns, not encoding concerns.
+
+### Why `pack_attribute()` Uses `Negotiated` (not `OpenContext`)
+
+`AIGP.pack_attribute()` needs:
+- `negotiated.aigp` - capability flag (not in `OpenContext`)
+- `negotiated.is_ibgp` - for IBGP-only attribute handling
+
+Other attributes like `ASPath`, `Aggregator` only need `asn4`, but for consistency all use `Negotiated`.
+
+### Why `MPRNLRI`/`MPURNLRI`/`NLRICollection` Use `OpenContext`
+
+These store per-AFI/SAFI encoding context:
+- Lightweight (7 fields vs full Negotiated)
+- Cacheable by parameter tuple
+- No session references
+- Hashable (can be used as cache key)
+
+### Next-Hop Resolution (Future Consideration)
+
+Currently next-hop validation happens during UPDATE parsing, coupling parsing to neighbor session state.
+
+**Better design:** Resolve next-hop at NLRI **creation time**:
+- Remove `NextHopSelf` sentinel class
+- NLRI contains actual IP address
+- Parsing wouldn't need `neighbor` reference
+
+This would enable `Update` to store `OpenContext` instead of `Negotiated`.
+
+### Negotiated Caching (Future Consideration)
+
+`Negotiated` should be created via a factory method (like `OpenContext.make_open_context`) to enable caching. Currently uses `__init__` directly.
 
 ---
 
@@ -183,19 +195,21 @@ Phase 1:
 - [x] All tests pass
 
 Phase 2:
-- [ ] OpenContext has `local_as`, `peer_as` fields
-- [ ] OpenContext has `is_ibgp` property
-- [ ] Update stores `_context: OpenContext` (not Negotiated)
-- [ ] `pack_attribute()` methods accept OpenContext
-- [ ] All tests pass
+- [x] OpenContext has `local_as`, `peer_as` fields
+- [x] OpenContext has `is_ibgp` property
+- [x] Negotiated has `is_ibgp` property
+- [x] `Negotiated.nlri_context()` passes ASN values
+- [x] All tests pass (11/11)
 
 ---
 
-## Resume Point
+## Next Steps
 
-**Phase 1 COMPLETE** ✅
+Potential future work:
 
-**Next action:** Phase 2.1 - Add `local_as`, `peer_as` to OpenContext
+1. **Negotiated factory caching** - Create via factory method, not `__init__`
+2. **Next-hop resolution refactoring** - Resolve at NLRI creation, remove `neighbor` dependency from parsing
+3. **Update caching by OpenContext** - Cache wire-format Updates for zero-copy forwarding
 
 ---
 

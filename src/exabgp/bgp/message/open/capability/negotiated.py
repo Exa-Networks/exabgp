@@ -44,30 +44,43 @@ class OpenContext:
         addpath: Whether AddPath is enabled for this AFI/SAFI combination.
         asn4: Whether 4-byte ASN mode is negotiated.
         msg_size: Maximum BGP message size (4096 standard, 65535 extended).
+        local_as: Local ASN (for AS_PATH handling in IBGP vs EBGP).
+        peer_as: Peer ASN (for AS_PATH handling in IBGP vs EBGP).
     """
 
-    __slots__ = ('afi', 'safi', 'addpath', 'asn4', 'msg_size')
+    __slots__ = ('afi', 'safi', 'addpath', 'asn4', 'msg_size', 'local_as', 'peer_as')
 
-    _cache: ClassVar[dict[tuple[AFI, SAFI, bool, bool, int], 'OpenContext']] = {}
+    _cache: ClassVar[dict[tuple[AFI, SAFI, bool, bool, int, ASN, ASN], 'OpenContext']] = {}
 
-    def __init__(self, afi: AFI, safi: SAFI, addpath: bool, asn4: bool, msg_size: int) -> None:
+    def __init__(
+        self, afi: AFI, safi: SAFI, addpath: bool, asn4: bool, msg_size: int, local_as: ASN, peer_as: ASN
+    ) -> None:
         # Direct construction - use make_open_context() for cached instances
         self.afi = afi
         self.safi = safi
         self.addpath = addpath
         self.asn4 = asn4
         self.msg_size = msg_size
+        self.local_as = local_as
+        self.peer_as = peer_as
 
     @classmethod
-    def make_open_context(cls, afi: AFI, safi: SAFI, addpath: bool, asn4: bool, msg_size: int) -> 'OpenContext':
+    def make_open_context(
+        cls, afi: AFI, safi: SAFI, addpath: bool, asn4: bool, msg_size: int, local_as: ASN, peer_as: ASN
+    ) -> 'OpenContext':
         """Factory method that returns cached OpenContext instances."""
-        key = (afi, safi, addpath, asn4, msg_size)
+        key = (afi, safi, addpath, asn4, msg_size, local_as, peer_as)
         if key not in cls._cache:
-            cls._cache[key] = cls(afi, safi, addpath, asn4, msg_size)
+            cls._cache[key] = cls(afi, safi, addpath, asn4, msg_size, local_as, peer_as)
         return cls._cache[key]
 
+    @property
+    def is_ibgp(self) -> bool:
+        """Return True if this is an IBGP session (local_as == peer_as)."""
+        return self.local_as == self.peer_as
+
     def __repr__(self) -> str:
-        return f'OpenContext(afi={self.afi}, safi={self.safi}, addpath={self.addpath}, asn4={self.asn4}, msg_size={self.msg_size})'
+        return f'OpenContext(afi={self.afi}, safi={self.safi}, addpath={self.addpath}, asn4={self.asn4}, msg_size={self.msg_size}, local_as={self.local_as}, peer_as={self.peer_as})'
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, OpenContext):
@@ -78,10 +91,12 @@ class OpenContext:
             and self.addpath == other.addpath
             and self.asn4 == other.asn4
             and self.msg_size == other.msg_size
+            and self.local_as == other.local_as
+            and self.peer_as == other.peer_as
         )
 
     def __hash__(self) -> int:
-        return hash((self.afi, self.safi, self.addpath, self.asn4, self.msg_size))
+        return hash((self.afi, self.safi, self.addpath, self.asn4, self.msg_size, self.local_as, self.peer_as))
 
 
 class Negotiated:
@@ -291,6 +306,11 @@ class Negotiated:
     def nexthopself(self, afi: AFI) -> 'IP':
         return self.neighbor.ip_self(afi)
 
+    @property
+    def is_ibgp(self) -> bool:
+        """Return True if this is an IBGP session (local_as == peer_as)."""
+        return self.local_as == self.peer_as
+
     def required(self, afi: AFI, safi: SAFI) -> bool:
         """Get addpath status based on internal direction - if IN use receive, else use send"""
         from exabgp.bgp.message.direction import Direction
@@ -308,6 +328,8 @@ class Negotiated:
             addpath=self.required(afi, safi),
             asn4=self.asn4,
             msg_size=self.msg_size,
+            local_as=self.local_as,
+            peer_as=self.peer_as,
         )
 
 

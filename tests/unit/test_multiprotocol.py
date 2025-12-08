@@ -29,6 +29,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import OpenContext
 from exabgp.protocol.family import AFI, SAFI
 
@@ -41,6 +42,8 @@ def make_context(afi: AFI, safi: SAFI) -> OpenContext:
         addpath=False,
         asn4=False,
         msg_size=4096,
+        local_as=ASN(65000),
+        peer_as=ASN(65001),
     )
 
 

@@ -114,9 +114,10 @@ class AIGP(Attribute):
         return not self.__eq__(other)
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
+        # AIGP is sent if explicitly enabled OR if this is an IBGP session
         if negotiated.aigp:
             return self._attribute(self._packed)
-        if negotiated.local_as == negotiated.peer_as:
+        if negotiated.is_ibgp:
             return self._attribute(self._packed)
         return b''
 

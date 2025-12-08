@@ -14,6 +14,7 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated, OpenContext
 from exabgp.protocol.ip import IP
 
@@ -33,6 +34,8 @@ def create_context(afi: AFI = AFI.ipv4, safi: SAFI = SAFI.unicast, addpath: bool
         addpath=addpath,
         asn4=True,
         msg_size=4096,
+        local_as=ASN(65000),
+        peer_as=ASN(65001),
     )
 
 
