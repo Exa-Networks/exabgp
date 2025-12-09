@@ -682,3 +682,96 @@ class TestComprehensiveSequences:
 
         assert announces == 0, 'Announce should be cancelled'
         assert withdraws == 1, 'Final state is withdraw'
+
+
+# ==============================================================================
+# 10. ROUTE.ACTION INTEGRATION TESTS
+# ==============================================================================
+
+
+class TestRouteActionIntegration:
+    """Tests for Route.action (not nlri.action) integration with RIB."""
+
+    def test_cache_uses_route_action_not_nlri_action(self):
+        """Verify cache respects route.action (not nlri.action).
+
+        This tests the migration from nlri.action to Route._action.
+        """
+        rib = create_rib()
+
+        # Create route - the helper uses nlri.action
+        route = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
+
+        # Verify the route has action set (from NLRI)
+        assert route.action == Action.ANNOUNCE
+
+        rib.add_to_rib(route)
+        consume_updates(rib)
+
+        # Route should be cached
+        assert rib.in_cache(route)
+
+    def test_route_with_explicit_action_in_route(self):
+        """Route with action in Route._action (not nlri.action) works."""
+        rib = create_rib()
+
+        # Create route with NLRI action
+        route = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
+
+        # Override with Route._action
+        route._action = Action.ANNOUNCE  # Explicitly set
+
+        rib.add_to_rib(route)
+        updates = consume_updates(rib)
+
+        announces, withdraws = count_announces_withdraws(updates)
+        assert announces == 1
+        assert withdraws == 0
+
+    def test_withdraw_route_with_route_action(self):
+        """Withdraw using Route._action works correctly."""
+        rib = create_rib()
+
+        # First add
+        route = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
+        rib.add_to_rib(route)
+        consume_updates(rib)
+
+        # Create withdraw - uses nlri.action=WITHDRAW
+        withdraw_route = create_change('10.0.0.0/24', action=Action.WITHDRAW)
+
+        # The del_from_rib should work even though action is in nlri
+        rib.del_from_rib(withdraw_route)
+
+        updates = consume_updates(rib)
+        announces, withdraws = count_announces_withdraws(updates)
+
+        assert announces == 0
+        assert withdraws == 1
+
+    def test_route_action_property_returns_correct_value(self):
+        """Verify Route.action property returns correct value."""
+        # Test with ANNOUNCE
+        route_a = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
+        assert route_a.action == Action.ANNOUNCE
+
+        # Test with WITHDRAW
+        route_w = create_change('10.0.0.0/24', action=Action.WITHDRAW)
+        assert route_w.action == Action.WITHDRAW
+
+    def test_cache_in_cache_checks_route_action(self):
+        """in_cache() uses route.action (not nlri.action) for withdraw check."""
+        rib = create_rib()
+
+        # Add an announce route
+        route = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
+        rib.add_to_rib(route)
+        consume_updates(rib)
+
+        assert rib.in_cache(route)
+
+        # Create same route but as withdraw
+        withdraw = create_change('10.0.0.0/24', action=Action.WITHDRAW)
+
+        # Withdraws should always return False from in_cache
+        assert not rib.in_cache(withdraw)
