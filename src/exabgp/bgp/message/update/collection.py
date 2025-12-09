@@ -99,25 +99,14 @@ class UpdateCollection(Message):
 
     def __init__(
         self,
-        announces: 'list[RoutedNLRI] | list[NLRI]',
+        announces: list[RoutedNLRI],
         withdraws: list[NLRI],
         attributes: AttributeCollection,
     ) -> None:
         # UpdateCollection is a composite container - NLRIs and Attributes are already packed-bytes-first
         # No single _packed representation exists because messages() can generate multiple
         # wire-format messages from one UpdateCollection due to size limits
-
-        # Backward compatibility: accept either list[RoutedNLRI] or list[NLRI]
-        # If bare NLRIs are passed, wrap them with their nlri.nexthop
-        # TODO: Remove this once all callers use RoutedNLRI
-        if announces and not isinstance(announces[0], RoutedNLRI):
-            # Legacy mode: wrap bare NLRIs
-            self._announces: list[RoutedNLRI] = [
-                RoutedNLRI(nlri, nlri.nexthop)
-                for nlri in announces  # type: ignore
-            ]
-        else:
-            self._announces = announces  # type: ignore
+        self._announces: list[RoutedNLRI] = announces
         self._withdraws: list[NLRI] = withdraws
         self._attributes: AttributeCollection = attributes
 
