@@ -203,10 +203,11 @@ class OutgoingRIB(Cache):
             return
         if watchdog in self._watchdog:
             for route in list(self._watchdog[watchdog].get('-', {}).values()):
-                route.action = Action.ANNOUNCE
+                old_index = route.index()
+                route = route.with_action(Action.ANNOUNCE)
                 self.add_to_rib(route)
                 self._watchdog[watchdog].setdefault('+', {})[route.index()] = route
-                self._watchdog[watchdog]['-'].pop(route.index())
+                self._watchdog[watchdog]['-'].pop(old_index)
 
     def withdraw_watchdog(self, watchdog: str) -> None:
         if not self.enabled:

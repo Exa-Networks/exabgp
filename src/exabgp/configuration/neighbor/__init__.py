@@ -445,13 +445,13 @@ class ParseNeighbor(Section):
         for section in ('static', 'l2vpn', 'flow'):
             routes = local.get(section, {}).get('routes', [])
             for route in routes:
-                route.action = Action.ANNOUNCE
+                route = route.with_action(Action.ANNOUNCE)
                 # remove_self may well have side effects on route
                 neighbor.routes.append(neighbor.resolve_self(route))
 
         routes = local.get('routes', [])
         for route in routes:
-            route.action = Action.ANNOUNCE
+            route = route.with_action(Action.ANNOUNCE)
             # remove_self may well have side effects on route
             neighbor.routes.append(neighbor.resolve_self(route))
 

@@ -14,9 +14,9 @@ from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
-    from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message import Action
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.logger import lazynlri, log
@@ -82,6 +82,7 @@ class NLRI(Family):
         """
         Family.__init__(self, afi, safi)
         self.action = action
+        self.nexthop = IP.NoNextHop  # Default nexthop - set by subclasses if needed
         self.addpath = addpath
         self._packed = b''  # Subclasses set actual wire data
 

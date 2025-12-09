@@ -92,17 +92,20 @@ class TestRouteActionProperty:
 
         assert route.action == Action.WITHDRAW
 
-    def test_action_setter_updates_internal_action(self):
-        """route.action = X → updates _action."""
+    def test_with_action_returns_new_route(self):
+        """route.with_action(X) → returns new Route with updated action."""
         route = create_route(route_action=Action.UNSET)
 
-        route.action = Action.WITHDRAW
-        assert route._action == Action.WITHDRAW
-        assert route.action == Action.WITHDRAW
+        route2 = route.with_action(Action.WITHDRAW)
+        assert route2._action == Action.WITHDRAW
+        assert route2.action == Action.WITHDRAW
 
-        route.action = Action.ANNOUNCE
-        assert route._action == Action.ANNOUNCE
-        assert route.action == Action.ANNOUNCE
+        route3 = route2.with_action(Action.ANNOUNCE)
+        assert route3._action == Action.ANNOUNCE
+        assert route3.action == Action.ANNOUNCE
+
+        # Original route unchanged
+        assert route._action == Action.UNSET
 
     def test_explicit_action_takes_precedence(self):
         """Route._action != UNSET → nlri.action ignored."""

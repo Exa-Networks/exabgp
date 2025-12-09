@@ -72,7 +72,11 @@ class Route:
 
     @action.setter
     def action(self, value: Action) -> None:
-        """Set the route action."""
+        """Set the route action.
+
+        DEPRECATED: Use with_action() for immutable style.
+        Kept for backward compatibility during transition.
+        """
         self._action = value
 
     @property
@@ -91,12 +95,31 @@ class Route:
     def nexthop(self, value: IP) -> None:
         """Set the route nexthop.
 
+        DEPRECATED: Use with_nexthop() for immutable style.
         During transition: also syncs to nlri.nexthop for code that reads from there.
-        Eventually: will only set self._nexthop.
         """
         self._nexthop = value
         # Sync to nlri.nexthop during transition - UpdateCollection reads from there
         self.nlri.nexthop = value
+
+    def with_action(self, action: Action) -> 'Route':
+        """Return a new Route with a different action.
+
+        Route is immutable, so this creates a new instance.
+        Uses self.nexthop (with fallback) to preserve nexthop during transition.
+        """
+        return Route(self.nlri, self.attributes, action=action, nexthop=self.nexthop)
+
+    def with_nexthop(self, nexthop: IP) -> 'Route':
+        """Return a new Route with a different nexthop.
+
+        Route is immutable, so this creates a new instance.
+        Uses self.action (with fallback) to preserve action during transition.
+        Also syncs to nlri.nexthop during transition for code that reads from there.
+        """
+        # Sync to nlri.nexthop during transition - UpdateCollection reads from there
+        self.nlri.nexthop = nexthop
+        return Route(self.nlri, self.attributes, action=self.action, nexthop=nexthop)
 
     def index(self) -> bytes:
         if not self.__index:

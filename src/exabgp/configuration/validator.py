@@ -1271,16 +1271,18 @@ class TypeSelectorValidator(Validator[list[Any]]):
                     value = validator.validate(tokeniser)
 
                 # Apply action
-                self._apply_action(route, command, action, value, used_afi)
+                route = self._apply_action(route, command, action, value, used_afi)
 
         return [route]
 
-    def _apply_action(self, route: Route, command: str, action: str, value: Any, used_afi: bool = False) -> None:
+    def _apply_action(self, route: Route, command: str, action: str, value: Any, used_afi: bool = False) -> Route:
         """Apply parsed value to Route object based on action.
 
         Note: 'nlri-set' action is not supported for TypeSelector - factories
         should create complete NLRIs. Use Settings pattern with RouteBuilder
         for types that need deferred NLRI construction.
+
+        Returns the (possibly modified) Route.
         """
         from exabgp.protocol.family import AFI
 
@@ -1289,7 +1291,7 @@ class TypeSelectorValidator(Validator[list[Any]]):
         elif action == 'nexthop-and-attribute':
             ip, attribute = value
             if ip:
-                route.nexthop = ip
+                route = route.with_nexthop(ip)
             # Only skip NextHop attribute when:
             # 1. The validator used AFI (accepts_afi=True), AND
             # 2. The AFI is IPv6 (next-hop goes in MP_REACH_NLRI only)
@@ -1303,6 +1305,7 @@ class TypeSelectorValidator(Validator[list[Any]]):
             pass
         else:
             raise ValueError(f"Unknown action '{action}' for command '{command}'")
+        return route
 
     def to_schema(self) -> dict[str, Any]:
         return {'type': 'array', 'items': {'type': 'object'}}

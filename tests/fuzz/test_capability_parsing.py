@@ -15,8 +15,7 @@ Test Categories:
 
 import pytest
 import struct
-from typing import Any
-from hypothesis import given, strategies as st, settings, HealthCheck, assume
+from hypothesis import given, strategies as st, settings, HealthCheck
 
 pytestmark = pytest.mark.fuzz
 
@@ -109,7 +108,7 @@ def test_capabilities_length_mismatch(opt_len: int) -> None:
     data = bytes([opt_len]) + b'\x00' * (opt_len - 1)
 
     try:
-        capabilities = Capabilities.unpack(data)
+        Capabilities.unpack(data)
         # May parse if we got lucky
     except Notify as e:
         # Expected - truncated
@@ -141,7 +140,7 @@ def test_capabilities_extended_truncated(extended_len: int) -> None:
     data = bytes([0xFF, 0xFF]) + struct.pack('!H', extended_len) + b'\x00' * (extended_len - 1)
 
     try:
-        capabilities = Capabilities.unpack(data)
+        Capabilities.unpack(data)
     except Notify as e:
         # Expected - truncated
         assert e.code == 2  # OPEN message error
@@ -199,7 +198,7 @@ def test_addpath_not_multiple_of_4(extra_bytes: int) -> None:
     instance = AddPath()
 
     try:
-        result = AddPath.unpack_capability(instance, data, CapabilityCode(Capability.CODE.ADD_PATH))
+        AddPath.unpack_capability(instance, data, CapabilityCode(Capability.CODE.ADD_PATH))
         # May parse first entry and fail on extra
     except Notify as e:
         # Expected - truncated entry
@@ -279,7 +278,7 @@ def test_multiprotocol_truncated(data_len: int) -> None:
     instance = MultiProtocol((0, 0))
 
     try:
-        result = MultiProtocol.unpack_capability(instance, data, CapabilityCode(Capability.CODE.MULTIPROTOCOL))
+        MultiProtocol.unpack_capability(instance, data, CapabilityCode(Capability.CODE.MULTIPROTOCOL))
     except (Notify, IndexError, struct.error):
         # Expected - truncated
         pass
@@ -327,7 +326,7 @@ def test_graceful_restart_empty() -> None:
     instance = Graceful()
 
     try:
-        result = Graceful.unpack_capability(instance, b'', CapabilityCode(Capability.CODE.GRACEFUL_RESTART))
+        Graceful.unpack_capability(instance, b'', CapabilityCode(Capability.CODE.GRACEFUL_RESTART))
     except (Notify, IndexError, struct.error):
         # Expected - need at least 2 bytes
         pass
@@ -350,7 +349,7 @@ def test_graceful_restart_not_aligned(extra_bytes: int) -> None:
     instance = Graceful()
 
     try:
-        result = Graceful.unpack_capability(instance, data, CapabilityCode(Capability.CODE.GRACEFUL_RESTART))
+        Graceful.unpack_capability(instance, data, CapabilityCode(Capability.CODE.GRACEFUL_RESTART))
     except (Notify, IndexError, struct.error):
         # Expected - incomplete family
         pass
@@ -396,7 +395,7 @@ def test_asn4_truncated(data_len: int) -> None:
     instance = ASN4(0)
 
     try:
-        result = ASN4.unpack_capability(instance, data, CapabilityCode(Capability.CODE.FOUR_BYTES_ASN))
+        ASN4.unpack_capability(instance, data, CapabilityCode(Capability.CODE.FOUR_BYTES_ASN))
     except (Notify, IndexError, struct.error):
         # Expected - need 4 bytes
         pass
@@ -449,7 +448,7 @@ def test_hostname_empty() -> None:
     instance = HostName()
 
     try:
-        result = HostName.unpack_capability(instance, b'', CapabilityCode(Capability.CODE.HOSTNAME))
+        HostName.unpack_capability(instance, b'', CapabilityCode(Capability.CODE.HOSTNAME))
     except (Notify, IndexError):
         # Expected - need at least length byte
         pass
@@ -470,7 +469,7 @@ def test_hostname_truncated_hostname() -> None:
     instance = HostName()
 
     try:
-        result = HostName.unpack_capability(instance, data, CapabilityCode(Capability.CODE.HOSTNAME))
+        HostName.unpack_capability(instance, data, CapabilityCode(Capability.CODE.HOSTNAME))
     except (Notify, IndexError):
         # Expected - truncated
         pass
@@ -522,7 +521,7 @@ def test_nexthop_not_multiple_of_6(extra_bytes: int) -> None:
     instance = NextHop()
 
     try:
-        result = NextHop.unpack_capability(instance, data, CapabilityCode(Capability.CODE.NEXTHOP))
+        NextHop.unpack_capability(instance, data, CapabilityCode(Capability.CODE.NEXTHOP))
     except (Notify, IndexError, struct.error):
         # Expected - incomplete entry
         pass
