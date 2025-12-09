@@ -35,7 +35,7 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 # 3.3.  Originator SRGB TLV
 
 
-@PrefixSid.register()
+@PrefixSid.register_sr()
 class SrGb:
     TLV: ClassVar[int] = 3
     # Length is the total length of the value portion of the TLV: 2 +

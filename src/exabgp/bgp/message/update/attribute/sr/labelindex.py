@@ -25,7 +25,7 @@ from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 # 3.1.  Label-Index TLV
 
 
-@PrefixSid.register()
+@PrefixSid.register_sr()
 class SrLabelIndex:
     TLV: ClassVar[int] = 1
     LENGTH: ClassVar[int] = 7

@@ -43,7 +43,7 @@ class PrefixSid(Attribute):
         self._packed: bytes = self._attribute(packed if packed else b''.join(_.pack_tlv() for _ in sr_attrs))
 
     @classmethod
-    def register(cls, srid: int | None = None, flag: int | None = None) -> Callable[[Type[Any]], Type[Any]]:
+    def register_sr(cls, srid: int | None = None, flag: int | None = None) -> Callable[[Type[Any]], Type[Any]]:
         def register_srid(klass: Type[Any]) -> Type[Any]:
             scode: int = klass.TLV if srid is None else srid
             if scode in cls.registered_srids:
