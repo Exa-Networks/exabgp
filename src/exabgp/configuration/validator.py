@@ -1289,7 +1289,7 @@ class TypeSelectorValidator(Validator[list[Any]]):
         elif action == 'nexthop-and-attribute':
             ip, attribute = value
             if ip:
-                route.nlri.nexthop = ip
+                route.nexthop = ip
             # Only skip NextHop attribute when:
             # 1. The validator used AFI (accepts_afi=True), AND
             # 2. The AFI is IPv6 (next-hop goes in MP_REACH_NLRI only)

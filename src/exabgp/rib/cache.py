@@ -80,11 +80,15 @@ class Cache:
         if cached.attributes.index() != route.attributes.index():
             return False
 
-        cached_nh = getattr(cached.nlri, 'nexthop', None)
-        route_nh = getattr(route.nlri, 'nexthop', None)
-        if cached_nh is not None and route_nh is not None:
+        # Use route.nexthop (with fallback to nlri.nexthop during transition)
+        # Use getattr for safety since some NLRIs may not have nexthop
+        try:
+            cached_nh = cached.nexthop
+            route_nh = route.nexthop
             if cached_nh.index() != route_nh.index():
                 return False
+        except AttributeError:
+            pass  # NLRI type without nexthop
 
         return True
 

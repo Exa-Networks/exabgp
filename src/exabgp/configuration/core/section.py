@@ -215,14 +215,14 @@ class Section(Error):
                 if self.scope.in_settings_mode():
                     self.scope.get_settings().nexthop = insert
                 else:
-                    self.scope.get_route().nlri.nexthop = insert
+                    self.scope.get_route().nexthop = insert
             elif action == 'nexthop-and-attribute':
                 ip, attribute = insert
                 if ip:
                     if self.scope.in_settings_mode():
                         self.scope.get_settings().nexthop = ip
                     else:
-                        self.scope.get_route().nlri.nexthop = ip
+                        self.scope.get_route().nexthop = ip
                 if attribute:
                     if self.scope.in_settings_mode():
                         self.scope.settings_attribute_add(name, attribute)

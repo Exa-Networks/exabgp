@@ -162,8 +162,8 @@ def withdraw_route(
                 # Set the action to withdraw before checking the route
                 route.action = Action.WITHDRAW
                 # NextHop is a mandatory field (but we do not require in)
-                if route.nlri.nexthop is IP.NoNextHop:
-                    route.nlri.nexthop = NextHop.from_string('0.0.0.0')
+                if route.nexthop is IP.NoNextHop:
+                    route.nexthop = NextHop.from_string('0.0.0.0')
 
                 if not ParseStaticRoute.check(route):
                     peer_list = ', '.join(peers) if peers else 'all peers'

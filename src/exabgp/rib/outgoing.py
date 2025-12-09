@@ -307,12 +307,12 @@ class OutgoingRIB(Cache):
         self._update_rib(route)
 
     def _update_rib(self, route: Route) -> None:
-        # Validate: NLRIs entering RIB must have resolved nexthop
+        # Validate: Routes entering RIB must have resolved nexthop
         # NextHopSelf/IPSelf should be resolved via neighbor.resolve_self() before reaching RIB
-        nexthop = route.nlri.nexthop
+        nexthop = route.nexthop  # Uses route.nexthop with fallback to nlri.nexthop
         if getattr(nexthop, 'SELF', False) and not getattr(nexthop, 'resolved', True):
             raise RuntimeError(
-                f'NLRI has unresolved NextHopSelf sentinel - call neighbor.resolve_self() before adding to RIB: {route.nlri}'
+                f'Route has unresolved NextHopSelf sentinel - call neighbor.resolve_self() before adding to RIB: {route.nlri}'
             )
 
         # route.nlri.index does not prepend the family

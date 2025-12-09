@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from exabgp.protocol.family import AFI, SAFI
 
 from exabgp.bgp.message import Action
+from exabgp.protocol.ip import IP
 
 
 class Route:
@@ -28,21 +29,29 @@ class Route:
     Eventually, action will only be stored in Route, not in NLRI.
     """
 
-    __slots__ = ('nlri', 'attributes', '_action', '_Route__index')
+    __slots__ = ('nlri', 'attributes', '_action', '_nexthop', '_Route__index')
 
     nlri: NLRI
     attributes: AttributeCollection
     _action: Action
+    _nexthop: IP
     _Route__index: bytes
 
     @staticmethod
     def family_prefix(family: tuple[AFI, SAFI]) -> bytes:
         return b'%02x%02x' % family
 
-    def __init__(self, nlri: NLRI, attributes: AttributeCollection, action: Action = Action.UNSET) -> None:
+    def __init__(
+        self,
+        nlri: NLRI,
+        attributes: AttributeCollection,
+        action: Action = Action.UNSET,
+        nexthop: IP = IP.NoNextHop,
+    ) -> None:
         self.nlri = nlri
         self.attributes = attributes
         self._action = action
+        self._nexthop = nexthop
         # Index is computed lazily on first .index() call, not at __init__ time.
         # This is intentional: at construction time the NLRI may not be fully populated
         # (e.g., nexthop not yet set), which would cause api-attributes.sequence to fail.
@@ -65,6 +74,29 @@ class Route:
     def action(self, value: Action) -> None:
         """Set the route action."""
         self._action = value
+
+    @property
+    def nexthop(self) -> IP:
+        """Get the route nexthop.
+
+        During transition: returns self._nexthop if set, else falls back to nlri.nexthop.
+        Eventually: will only return self._nexthop.
+        """
+        if self._nexthop is not IP.NoNextHop:
+            return self._nexthop
+        # Fallback to nlri.nexthop during transition period
+        return self.nlri.nexthop
+
+    @nexthop.setter
+    def nexthop(self, value: IP) -> None:
+        """Set the route nexthop.
+
+        During transition: also syncs to nlri.nexthop for code that reads from there.
+        Eventually: will only set self._nexthop.
+        """
+        self._nexthop = value
+        # Sync to nlri.nexthop during transition - UpdateCollection reads from there
+        self.nlri.nexthop = value
 
     def index(self) -> bytes:
         if not self.__index:
