@@ -16,7 +16,6 @@ from typing import Any, Callable, TYPE_CHECKING
 from exabgp.util import hexstring
 
 from exabgp.bgp.message import Message
-from exabgp.bgp.message import Action
 
 from exabgp.environment import getenv
 from exabgp.bgp.message.open.capability.refresh import REFRESH
@@ -360,21 +359,21 @@ class JSON:
         plus: dict[tuple[Any, Any], dict[str, list[Any]]] = {}
         minus: dict[tuple[Any, Any], list[Any]] = {}
 
-        # all the next-hops should be the same but let's not assume it
+        # EOR messages have .nlris directly but no .announces/.withdraws
+        if getattr(update_msg, 'EOR', False):
+            # EOR message - use .nlris directly with original behavior
+            for nlri in update_msg.nlris:  # type: ignore[union-attr]
+                nexthop = str(getattr(nlri, 'nexthop', 'null'))
+                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)
+        else:
+            # UpdateCollection - get nexthop from RoutedNLRI container
+            for routed in update_msg.announces:
+                nlri = routed.nlri
+                nexthop = str(routed.nexthop)
+                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)
 
-        for nlri in update_msg.nlris:
-            try:
-                nexthop = str(nlri.nexthop)
-            except (AttributeError, TypeError, ValueError):
-                nexthop = 'null'
-            if nlri.EOR:
-                # EOR is neither announce nor withdraw - skip action check
-                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)
-            elif nlri.action == Action.UNSET:  # pylint: disable=E1101
-                raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {nlri}')
-            elif nlri.action == Action.ANNOUNCE:  # pylint: disable=E1101
-                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)
-            elif nlri.action == Action.WITHDRAW:  # pylint: disable=E1101
+            # Process withdraws - no nexthop needed
+            for nlri in update_msg.withdraws:
                 minus.setdefault(nlri.family().afi_safi(), []).append(nlri)
 
         add = []

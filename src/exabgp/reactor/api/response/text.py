@@ -12,7 +12,6 @@ import os
 from typing import TYPE_CHECKING
 
 from exabgp.util import hexstring
-from exabgp.bgp.message import Action
 
 if TYPE_CHECKING:
     from typing import Any
@@ -118,19 +117,26 @@ class Text:
         r = f'{prefix} start\n'
 
         attributes = str(update.attributes)
-        for nlri in update.nlris:
-            if nlri.EOR:
+
+        # EOR messages have .nlris directly but no .announces/.withdraws
+        if getattr(update, 'EOR', False):
+            for nlri in update.nlris:  # type: ignore[union-attr]
                 r += f'{prefix} route {nlri.extensive()}\n'
-            elif nlri.action == Action.UNSET:  # pylint: disable=E1101
-                raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {nlri}')
-            elif nlri.action == Action.ANNOUNCE:  # pylint: disable=E1101
-                if nlri.nexthop:
+        else:
+            # Process announces - get nexthop from RoutedNLRI container
+            for routed in update.announces:
+                nlri = routed.nlri
+                nexthop = routed.nexthop
+                if nexthop:
                     r += f'{prefix} announced {nlri.extensive()}{attributes}\n'
                 else:
-                    # This is an EOR or Flow or ... something newer
+                    # Flow or other routes without nexthop
                     r += f'{prefix} {nlri.extensive()} {attributes}\n'
-            else:
+
+            # Process withdraws
+            for nlri in update.withdraws:
                 r += f'{prefix} withdrawn {nlri.extensive()}\n'
+
         if header or body:
             r += f'{self._header_body(header, body)}\n'
 
