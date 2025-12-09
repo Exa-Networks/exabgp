@@ -24,7 +24,7 @@ from exabgp.bgp.message.open.capability import REFRESH, Capability
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.debug.report import format_exception
 from exabgp.environment import getenv
-from exabgp.logger import lazymsg, log
+from exabgp.logger import lazyexc, lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.delay import Delay
@@ -710,7 +710,7 @@ class Peer:
             log.debug(lazymsg('async.network.error error={exc}', exc=exc), self.id())
             raise
         except Exception as exc:
-            log.error(lazymsg('async.mainloop.exception error={exc}', exc=exc), self.id())
+            log.error(lazyexc('async.mainloop.exception error={exc}', exc), self.id())
             raise
 
         # Graceful restart handling

@@ -133,7 +133,7 @@ def announce_route(
             await reactor.processes.answer_error_async(service, error_msg)
         except Exception as e:
             error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
-            self.log_failure(error_msg)
+            self.log_exception(error_msg, e)
             await reactor.processes.answer_error_async(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
@@ -192,7 +192,7 @@ def withdraw_route(
             await reactor.processes.answer_error_async(service, error_msg)
         except Exception as e:
             error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
-            self.log_failure(error_msg)
+            self.log_exception(error_msg, e)
             await reactor.processes.answer_error_async(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
@@ -322,7 +322,7 @@ def announce_attributes(
             await reactor.processes.answer_error_async(service, error_msg)
         except Exception as e:
             error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
-            self.log_failure(error_msg)
+            self.log_exception(error_msg, e)
             await reactor.processes.answer_error_async(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
@@ -372,7 +372,7 @@ def withdraw_attribute(
             await reactor.processes.answer_error_async(service, error_msg)
         except Exception as e:
             error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
-            self.log_failure(error_msg)
+            self.log_exception(error_msg, e)
             await reactor.processes.answer_error_async(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())

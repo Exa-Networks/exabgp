@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import time
+import traceback
 from typing import Any, Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -109,5 +110,34 @@ def lazymsg(template: str, **kwargs: object) -> Callable[[], str]:
 
     def _format() -> str:
         return template.format(**kwargs)
+
+    return _format
+
+
+def _debug_traceback_enabled() -> bool:
+    """Check if debug traceback mode is enabled (via -d flag or env.debug.pdb)."""
+    from exabgp.environment import getenv
+
+    env = getenv()
+    return env.debug.pdb
+
+
+def lazyexc(template: str, exc: BaseException, **kwargs: object) -> Callable[[], str]:
+    """Create a lazy log message that includes full traceback when debug mode (-d) is enabled.
+
+    When running with `exabgp -d`, caught exceptions will include their full traceback
+    in the log message instead of just the exception string.
+
+    Usage:
+        except Exception as exc:
+            log.error(lazyexc('operation.failed error={exc}', exc), 'source')
+    """
+
+    def _format() -> str:
+        msg = template.format(exc=exc, **kwargs)
+        if _debug_traceback_enabled():
+            tb = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+            msg += '\n' + tb
+        return msg
 
     return _format

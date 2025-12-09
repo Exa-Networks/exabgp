@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.fsm import FSM
 from exabgp.configuration.process import API_PREFIX
 from exabgp.environment import getenv
-from exabgp.logger import lazymsg, log
+from exabgp.logger import lazyexc, lazymsg, log
 from exabgp.reactor.api import API
 from exabgp.reactor.api.processes import ProcessError, Processes
 from exabgp.reactor.asynchronous import ASYNC
@@ -177,7 +177,7 @@ class Reactor:
                         # Check if task raised an exception
                         peer._async_task.result()
                     except Exception as exc:
-                        log.error(lazymsg('peer.task.failed peer={key} error={exc}', key=key, exc=exc), 'reactor')
+                        log.error(lazyexc('peer.task.failed peer={key} error={exc}', exc, key=key), 'reactor')
                     completed_peers.append(key)
 
         # Remove completed peers

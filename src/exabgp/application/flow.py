@@ -171,5 +171,5 @@ while True:
 
     except KeyboardInterrupt:
         ACL.end()
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f'flow: error processing message: {exc}', file=sys.stderr)

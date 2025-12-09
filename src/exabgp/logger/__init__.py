@@ -14,6 +14,7 @@ from exabgp.logger.format import lazyformat  # noqa: F401,E261,E501
 from exabgp.logger.format import lazyattribute  # noqa: F401,E261,E501
 from exabgp.logger.format import lazynlri  # noqa: F401,E261,E501
 from exabgp.logger.format import lazymsg  # noqa: F401,E261,E501
+from exabgp.logger.format import lazyexc  # noqa: F401,E261,E501
 
 from exabgp.logger.history import history  # noqa: F401,E261,E501
 from exabgp.logger.history import record  # noqa: F401,E261,E501
@@ -25,6 +26,7 @@ __all__ = [
     'lazyattribute',
     'lazynlri',
     'lazymsg',
+    'lazyexc',
     'history',
     'option',
     'record',

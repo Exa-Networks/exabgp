@@ -12,7 +12,7 @@ import inspect
 from collections import deque
 from typing import Any
 
-from exabgp.logger import log, lazymsg
+from exabgp.logger import log, lazyexc, lazymsg
 
 
 class ASYNC:
@@ -113,11 +113,7 @@ class ASYNC:
                         self._async.appendleft((uid, callback))
                         break
                 except Exception as exc:
-                    log.error(lazymsg('async.callback.error uid={uid}', uid=uid), 'reactor')
-                    for line in str(exc).split('\n'):
-                        log.error(
-                            lazymsg('async.callback.traceback uid={uid} line={line}', uid=uid, line=line), 'reactor'
-                        )
+                    log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
                     # Continue to next callback even if one fails
             return False  # All coroutines processed
         else:
@@ -151,11 +147,7 @@ class ASYNC:
                         return False
                     uid, callback = self._async.popleft()
                 except Exception as exc:
-                    log.error(lazymsg('async.callback.error uid={uid}', uid=uid), 'reactor')
-                    for line in str(exc).split('\n'):
-                        log.error(
-                            lazymsg('async.callback.traceback uid={uid} line={line}', uid=uid, line=line), 'reactor'
-                        )
+                    log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
                     # Error occurred - pop next callback
                     if not self._async:
                         return False

@@ -16,7 +16,7 @@ from exabgp.reactor.loop import Reactor
 from exabgp.configuration.configuration import Configuration
 
 from exabgp.util.dns import warn
-from exabgp.logger import log, lazymsg
+from exabgp.logger import log, lazyexc, lazymsg
 
 # this is imported from configuration.setup to make sure it was initialised
 from exabgp.environment import getenv
@@ -286,7 +286,7 @@ def run(comment: str, configurations: list[str], pid: int = 0) -> None:
             exit_code = Reactor(configuration).run()
         except Exception as e:
             exit_code = Reactor.Exit.unknown
-            log.critical(lazymsg('profile.exception error={error}', error=str(e)))
+            log.critical(lazyexc('profile.exception error={exc}', e))
 
         try:
             profiler.dump_stats(destination)

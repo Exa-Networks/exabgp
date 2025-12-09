@@ -26,7 +26,7 @@ from exabgp.bgp.message import Operational
 from exabgp.rib.route import Route
 
 from exabgp.environment import getenv
-from exabgp.logger import log, lazymsg
+from exabgp.logger import log, lazyexc, lazymsg
 from exabgp.reactor.api.dispatch import dispatch_v4, dispatch_v6, UnknownCommand, NoMatchingPeers
 from exabgp.configuration.configuration import Configuration
 
@@ -50,6 +50,12 @@ class API:
         error = str(self.configuration.error)
         report = '{}\nreason: {}'.format(message, error) if error else message
         log.error(lazymsg('api.failure report={report}', report=report), 'processes', level)
+
+    def log_exception(self, message: str, exc: BaseException, level: str = 'ERR') -> None:
+        """Log a failure with full traceback when debug mode (-d) is enabled."""
+        error = str(self.configuration.error)
+        report = '{}\nreason: {}'.format(message, error) if error else message
+        log.error(lazyexc('api.failure report={report} error={exc}', exc, report=report), 'processes', level)
 
     def process(self, reactor: 'Reactor', service: str, command: str) -> bool:
         """Process an API command (sync version).
