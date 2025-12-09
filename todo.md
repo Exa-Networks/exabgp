@@ -1,151 +1,166 @@
-# TODO
+# ExaBGP TODO
+
+**Updated:** 2025-12-09
+**Plan files:** See `plan/` directory
+
+---
 
 ## Quick Items
 
-- [x] Convert FSM.STATE to use `enum.IntEnum` (src/exabgp/bgp/fsm.py) ✅
-  - Completed: Reduced from 50 lines to 15 lines
-  - Benefits: Better type safety, cleaner code, automatic validation
-  - All 1,955 tests pass including 87 FSM-specific tests
-
+- [x] Convert FSM.STATE to use `enum.IntEnum` ✅
 - [ ] Make async mode the default reactor
   - Current: Requires `exabgp_reactor_asyncio=true` flag
   - Target: Async by default, legacy mode opt-in
   - Status: AsyncIO Phase 2 complete (100% test parity)
-  - See: CLAUDE.md "AsyncIO Support" section
 
 ---
 
-## 🚨 Critical - Fix Immediately (Week 1-2)
+## 🚨 Critical - Fixed
 
-**Overall Grade: B+ (6.7/10)** | Full audit: `~/.claude/plans/eventual-yawning-fox.md`
-
-- [x] **1. Attribute Cache Size Limit** ✅
-  - Analyzed: `Attributes.cache` (line 60) was unused dead code - removed
-  - `Attribute.cache` already uses `util/cache.py` with LRU eviction (max 2000/type, 1hr TTL)
-  - No DoS risk - cache was already bounded
-
-- [x] **2. Fix Blocking Write Deadlock** ✅
-  - Fixed: c7b2f94d - Resolved sync mode write deadlock and partial write bug
-  - Files: `src/exabgp/reactor/api/processes.py`
-
-- [x] **3. Fix Known Race Conditions** ✅
-  - Fixed: Config reload race (086b3ec1), RIB iterator/cache races (48e4405c)
-  - Both commits merged to main
+- [x] **Attribute Cache Size Limit** ✅ - Removed unused dead code, LRU already bounded
+- [x] **Blocking Write Deadlock** ✅ - c7b2f94d
+- [x] **Race Conditions** ✅ - Config reload (086b3ec1), RIB iterator/cache (48e4405c)
+- [x] **Application Layer Tests** ✅ - c97702b9, 112 new tests
+- [x] **Type Safety Issues** ✅ - 159db1cd, removed all `type: ignore`
+- [x] **Logging dictConfig** ✅ - b389975b
 
 ---
 
-## ⚠️ High Priority - Next Sprint (Week 3-4)
+## Active Projects
 
-- [x] **4. Add Application Layer Tests** ✅
-  - Completed: c97702b9 - Added 112 new tests in 7 test files
-  - Files: `tests/unit/application/` (test_healthcheck.py, test_validate.py, test_version.py, test_environ.py, test_decode_app.py, test_encode_app.py, test_main.py)
-  - Coverage: FSM states, CLI argument parsing, encode/decode, subcommand dispatch
+### 1. Memory Optimization
 
-- [ ] **5. Refactor Giant Methods** (1 week)
-  - Impact: Code comprehension and maintainability
-  - Files:
-    - `src/exabgp/reactor/peer.py:631` - `_main()` (386 lines)
-    - `src/exabgp/configuration/configuration.py:125` - `__init__()` (222 lines)
-    - `src/exabgp/reactor/loop.py:450` - `run()` (213 lines)
-  - Solution: Extract method refactoring, state pattern for `_main()`
+**Status:** 🔄 Active
+**See:** `plan/rib-optimisation.md`, `plan/fix-resolve-self-deepcopy.md`
 
-- [ ] **6. Add Class/API Documentation** (2 weeks ongoing)
-  - Impact: Developer onboarding and code understanding
-  - Current: 94.2% of classes lack docstrings (371 of 394)
-  - Files: Start with reactor/, bgp/message/, configuration/
-  - Target: 5.8% → 80% class docstring coverage
-  - Guides: `.claude/DOCUMENTATION_WRITING_GUIDE.md`, `/review-docs <file>`
+| Phase | Optimization                | Savings  | Complexity | Status |
+|-------|-----------------------------|----------|------------|--------|
+| 1     | Fix resolve_self() deepcopy | 60-80%   | Low        | 📋 Planning |
+| 2     | NLRI interning pool         | 20-40%   | Medium     | 📋 Planning |
+| 3     | Attribute interning         | 30-50%   | Medium     | 📋 Planning |
+| 4     | NextHop interning           | 10-20%   | Low        | 📋 Planning |
+| 5     | Reference-based RIB         | Variable | High       | 📋 Planning |
 
-- [ ] **7. Implement Per-IP Connection Limits** (1-2 days)
-  - Impact: DoS protection
-  - Files: `src/exabgp/reactor/listener.py`
-  - Solution: Track connections per IP, max 10 default
-
-- [ ] **8. Fix Respawn Tracking Dict Leak** (1 day)
-  - Impact: Memory leak in long-running processes
-  - Files: `src/exabgp/reactor/api/processes.py:282-302`
-  - Solution: Prune entries older than 1 hour
+**Notes:**
+- CIDR stores truncated bytes (IPv4 /24 = 4 bytes, IPv6 /64 = 9 bytes)
+- No interning for common prefixes (/24, /32, /64, /128)
+- Many routes share same next-hop IP - no current caching
+- VPN deployments reuse same RDs repeatedly
 
 ---
 
-## 📋 Medium Priority - Next Quarter
+### 2. Type Safety (92% Complete)
 
-- [ ] **9. Add Configuration System Tests** (1 week)
-  - Target: 15% → 50% coverage
-  - Files: Expand `tests/unit/configuration/`
+**Status:** 🔄 Active
+**See:** `plan/type-safety/`
 
-- [ ] **10. Enable Coverage Reporting in CI** (4 hours)
-  - Solution: Add Codecov/Coveralls upload to GitHub Actions
+MyPy errors: 89 (92% reduction from 1,149 baseline)
+**Remaining:** mostly `cli/completer.py`
 
-- [ ] **11. Add RIB Size Limits** (2-3 days)
-  - Files: `src/exabgp/rib/`
+---
 
-- [ ] **12. Make Config Reload Async** (2-3 days)
-  - Files: `src/exabgp/configuration/configuration.py:142`
+### 3. Test Coverage
 
-- [ ] **13. Optimize Peer Lookup** (1 day)
-  - Files: `src/exabgp/reactor/loop.py:332-348`
-  - Solution: Dict for exact matches, fallback to iteration
+**Status:** 🔄 Active
+**Current:** 59.71% (up from 46%)
 
-- [ ] **14. Add Pre-commit Hooks** (2 hours)
-  - Files: Create `.pre-commit-config.yaml`
+| Area | Coverage | Target |
+|------|----------|--------|
+| Configuration | 76.2% | ✅ |
+| BGP Message | 84.0% | ✅ |
+| Reactor | 41.3% | 55% |
+| Application | 32.2% | 50% |
+| CLI | 39.3% | 55% |
 
-- [ ] **15. Add Dependabot** (30 minutes)
-  - Files: Create `.github/dependabot.yml`
+---
 
-- [ ] **16. Improve Error Path Cleanup** (3-5 days)
-  - Files: Review all resource acquisition points
+### 4. Runtime Validation
 
-- [x] **17. Resolve Type Safety Issues** ✅
-  - Fixed: 159db1cd - Removed all `type: ignore` comments
-  - All 76 files cleaned up
+**Status:** 🔄 Active
+**See:** `plan/runtime-validation/`
 
-- [ ] **18. Cache Compiled Regexes** (1 day)
-  - Files: `src/exabgp/configuration/neighbor/parser.py:187`
+- [x] Phase 1: BGP-LS data validation ✅
+- [x] Phase 2A-C: Messages, Capabilities, Attributes ✅
+- [ ] Phase 3: NLRI Types
+- [ ] Phase 4: Protocol Layer
 
-- [x] **19. Use logging.dictConfig for Logging** ✅
-  - Fixed: b389975b - Refactored to use `logging.config.dictConfig()`
-  - Added `_get_syslog_address()` with FreeBSD support and socket check
-  - Files: `src/exabgp/logger/handler.py`, `src/exabgp/logger/option.py`
+---
+
+## ⚠️ High Priority
+
+- [ ] **Refactor Giant Methods**
+  - `reactor/peer.py:_main()` - 386 lines
+  - `configuration/configuration.py:__init__()` - 222 lines
+  - `reactor/loop.py:run()` - 213 lines
+
+- [ ] **Add Class/API Documentation**
+  - Current: 94.2% of classes lack docstrings
+  - Target: 80% class docstring coverage
+
+- [ ] **Per-IP Connection Limits** - DoS protection
+  - File: `reactor/listener.py`
+
+- [ ] **Fix Respawn Tracking Dict Leak** - Memory leak
+  - File: `reactor/api/processes.py:282-302`
+
+---
+
+## 📋 Medium Priority
+
+- [ ] Configuration System Tests (15% → 50% coverage)
+- [ ] Coverage Reporting in CI (Codecov/Coveralls)
+- [ ] RIB Size Limits
+- [ ] Make Config Reload Async
+- [ ] Optimize Peer Lookup (dict for exact matches)
+- [ ] Pre-commit Hooks
+- [ ] Dependabot
+- [ ] Cache Compiled Regexes
 
 ---
 
 ## 🔧 Low Priority - Technical Debt
 
-- [ ] **20. Refactor NLRI Duplication** (1 week)
-  - Impact: Reduce 186+ lines of duplication
-  - Files: 44 NLRI pack/unpack implementations
-
-- [ ] **21. Consolidate Test Fixtures** (4 hours)
-  - Files: `tests/unit/conftest.py`
-
-- [ ] **22. Clean Up Legacy Files** (2 days)
-  - Audit: `netlink/old.py`, 20 files with "deprecated"
-
-- [ ] **23. Add Performance Regression Testing** (2 days)
-  - Solution: pytest-benchmark in CI
-
-- [ ] **24. Address TODO/FIXME Comments** (1 day triage)
-  - Count: 48 comments (0.09% of codebase)
-  - Create GitHub issues for each
+- [ ] Refactor NLRI Duplication (186+ lines)
+- [ ] Consolidate Test Fixtures
+- [ ] Clean Up Legacy Files (`netlink/old.py`, deprecated files)
+- [ ] Performance Regression Testing (pytest-benchmark)
+- [ ] Address TODO/FIXME Comments (48 comments)
 
 ---
 
-## 📊 Audit Summary
+## Future Projects
 
-**Key Weaknesses:**
-- 94.2% of classes lack docstrings
-- Giant methods (386-line `_main()`)
-- Memory leaks in respawn tracking dict
-
-**Strengths:**
-- 50%+ unit test coverage (2,067 tests)
-- Zero runtime dependencies (100% stdlib)
-- Excellent CI/CD (8 GitHub Actions workflows)
-- Active maintenance (recent type safety improvements)
-
-**Full Details:** `~/.claude/plans/eventual-yawning-fox.md` (26KB comprehensive audit)
+- **Security Validation** - Config parser input validation, error sanitization
+- **AddPath Support** - Extend to BGP-LS, FlowSpec, VPLS, EVPN, MVPN, MUP
+- **Architecture Cleanup** - `bgp/fsm.py` ↔ `reactor/peer.py` circular dependency
 
 ---
 
-**Last Updated:** 2025-12-01
+## Completed (2025)
+
+### Packed-Bytes-First Pattern ✅
+100% complete (~124 classes) - See `plan/packed-bytes/progress.md`
+
+### Buffer/Wire Architecture ✅
+- Wire vs Semantic containers (Update/UpdateCollection, Attributes/AttributeCollection)
+- `__slots__` on NLRI/Route (68% per-object reduction)
+- `deepcopy` eliminated in `del_from_rib()` (6.5x faster)
+
+### Change → Route Refactoring ✅
+- Renamed across 36 files
+- `Neighbor.rib` made non-Optional
+
+### Python 3.12+ Buffer Protocol ✅
+- Zero-copy with `recv_into()`, `memoryview`, `Buffer` type
+
+### Wire vs Semantic Separation ✅
+- Phases 1-3 complete
+- OpenContext removed
+- NextHopSelf mutate-in-place
+
+### Other ✅
+- API Dispatch Refactoring
+- Run Script Migration (31 scripts)
+- XXX Comment Cleanup
+- BGP-LS Data Validation
+- Sentinel Watchdog Pattern

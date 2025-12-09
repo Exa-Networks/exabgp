@@ -381,6 +381,7 @@ git status && git log --oneline -5
 - 🚫 **Blocker discovered** → Add to "Blockers" section
 - 💡 **Design decision made** → Add to "Decisions" or relevant section
 - ✅ **Task completed** → Mark ✅ in progress table
+- ✅ **Work completed** → Update plan status (🔄 → ✅) and `plan/README.md`
 - 🛑 **Session ending** → Full plan review (see SESSION_END_CHECKLIST.md)
 
 ### What Counts as "Significant Progress"
@@ -391,12 +392,18 @@ Any of these means update the plan:
 - Hit a blocker
 - Made a decision that affects scope
 
+### When a Plan is Completed
+1. Update plan file status to `✅ Completed`
+2. Update `plan/README.md` - move to "Recently Completed" section
+3. Consider deletion after user confirmation (completed plans clutter the directory)
+
 ### Enforcement
 Before ending ANY session where you worked on a plan:
 - [ ] Plan file has "Last Updated" timestamp current
 - [ ] All failures documented
 - [ ] All blockers documented
 - [ ] "Resume Point" section updated
+- [ ] If plan completed: status updated and README.md updated
 
 **See:** SESSION_END_CHECKLIST.md for complete checklist
 
@@ -488,4 +495,4 @@ Before ending ANY session where you worked on a plan:
 
 ---
 
-**Updated:** 2025-12-08
+**Updated:** 2025-12-09

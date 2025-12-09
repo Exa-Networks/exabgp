@@ -1,0 +1,1398 @@
+diff --git a/TODO b/TODO
+index c138409f5..a5c2f652e 100644
+--- a/TODO
++++ b/TODO
+@@ -1,2 +1,17 @@
+-convert FSM to use IntEnum 
+-convert code to use async
++Fix resolve_self() deepcopy by creation of copy
++remove hierarchy of NLRI from IPBase and use interface ?
++remove action from NLRI and have it passed along
++RIB interning
++
++Ask Claude if we duplicate the storage of PathInfo in some NLRI
++
++
++  | Phase | Optimization                | Savings  | Complexity |
++  |-------|-----------------------------|----------|------------|
++  | 1     | Fix resolve_self() deepcopy | 60-80%   | Low        |
++  | 2     | NLRI interning pool         | 20-40%   | Medium     |
++  | 3     | Attribute interning         | 30-50%   | Medium     |
++  | 4     | NextHop interning           | 10-20%   | Low        |
++  | 5     | Reference-based RIB         | Variable | High       |
++  
++
+diff --git a/plan/nexthop-self-refactor.md b/plan/nexthop-self-refactor.md
+deleted file mode 100644
+index 4a3e1d625..000000000
+--- a/plan/nexthop-self-refactor.md
++++ /dev/null
+@@ -1,468 +0,0 @@
+-# NextHopSelf Refactoring Plan
+-
+-**Status:** ✅ Phase 3 Complete (Mutate-in-place)
+-**Created:** 2025-12-08
+-**Updated:** 2025-12-08
+-
+----
+-
+-## Executive Summary
+-
+-`NextHopSelf` is a sentinel pattern that defers next-hop IP resolution until neighbor session context is known. Currently, resolution happens at **two points**:
+-1. **Configuration load time** via `neighbor.remove_self()` - PRIMARY (replaces sentinel permanently)
+-2. **Pack time** via `nlri.nexthop.ton(negotiated)` - SAFETY NET (if sentinel survives to packing)
+-
+-The current design couples UPDATE parsing to neighbor session state (`Negotiated.neighbor`), preventing `Update` from using lightweight `OpenContext`.
+-
+----
+-
+-## Current Architecture
+-
+-### Class Hierarchy
+-
+-```
+-NextHop (Attribute)
+-├── SELF: ClassVar[bool] = False
+-├── _packed: Buffer  # Wire-format IP bytes
+-├── ton() → self._packed
+-└── pack_attribute(negotiated) → self._attribute(self._packed)
+-
+-NextHopSelf(NextHop)
+-├── SELF: ClassVar[bool] = True
+-├── _afi: AFI  # Address family (no packed bytes yet)
+-├── _packed = b''  # Empty placeholder
+-├── ton(negotiated, afi) → negotiated.nexthopself(afi).ton()
+-└── pack_attribute(negotiated) → self._attribute(negotiated.nexthopself(self._afi).ton())
+-
+-IPSelf
+-├── SELF: ClassVar[bool] = True
+-├── afi: AFI
+-├── ton(negotiated, afi) → negotiated.nexthopself(afi).ton()
+-└── pack(negotiated) → negotiated.nexthopself(self.afi).ton()
+-
+-IP
+-├── SELF: ClassVar[bool] = False
+-├── _packed: Buffer
+-└── ton() → self._packed
+-```
+-
+-### Key Files
+-
+-| File | Purpose |
+-|------|---------|
+-| `src/exabgp/bgp/message/update/attribute/nexthop.py:136-173` | `NextHopSelf` class definition |
+-| `src/exabgp/protocol/ip/__init__.py:29-50` | `IPSelf` class definition |
+-| `src/exabgp/bgp/neighbor/neighbor.py:281-289` | `remove_self()` - primary resolution |
+-| `src/exabgp/bgp/neighbor/session.py:105-127` | `ip_self()` - actual IP lookup |
+-| `src/exabgp/bgp/message/open/capability/negotiated.py:314-315` | `nexthopself()` - delegate to neighbor |
+-
+-### Configuration Parsing (Sentinel Creation)
+-
+-All parsers detect literal string `"self"` and create sentinels:
+-
+-| Parser | File:Line | Creates |
+-|--------|-----------|---------|
+-| Static routes | `configuration/static/parser.py:88-95` | `IPSelf(afi), NextHopSelf(afi)` |
+-| Flow routes | `configuration/flow/parser.py:298-304` | `NextHopSelf(AFI.ipv4)` |
+-| L2VPN routes | `configuration/l2vpn/parser.py:51-56` | `NextHopSelf(AFI.ipv4)` |
+-| Validator | `configuration/validator.py:745-760` | `IPSelf(afi), NextHopSelf(afi)` |
+-
+-### NLRI Nexthop Assignment
+-
+-After parsing, nexthop (possibly `NextHopSelf`) is assigned to NLRI:
+-
+-| File:Line | Context |
+-|-----------|---------|
+-| `configuration/static/route.py:511` | `new_nlri.nexthop = nexthop` |
+-| `configuration/announce/__init__.py:87` | `nlri.nexthop = nexthop` |
+-
+-### Resolution Flow (Current)
+-
+-```
+-Configuration File: "next-hop self"
+-         ↓
+-Parser: Creates NextHopSelf(AFI) sentinel
+-         ↓
+-Route.nlri.nexthop = NextHopSelf (SENTINEL STORED)
+-         ↓
+-neighbor.remove_self(route) called at config load time
+-         ↓
+-Checks: route.nlri.nexthop.SELF == True?
+-    ├── Yes → neighbor.ip_self(afi) → session.ip_self(afi)
+-    │         Returns: local_address or router_id
+-    │         Replaces: nlri.nexthop = resolved IP (permanent)
+-    │         Also: attributes[NEXT_HOP] = NextHop(resolved_ip)
+-    └── No  → Return route unchanged
+-         ↓
+-Route added to RIB (with resolved nexthop)
+-         ↓
+-Pack time: nlri.nexthop.ton(negotiated, afi)
+-    ├── IP.ton() → self._packed (already resolved)
+-    └── IPSelf.ton() → negotiated.nexthopself(afi).ton() (safety net)
+-```
+-
+-### Call Sites for `remove_self()`
+-
+-```python
+-# configuration/neighbor/__init__.py
+-neighbor.routes.append(neighbor.remove_self(route))  # Lines 442, 450, 456
+-route = neighbor.remove_self(route)                   # Line 462
+-
+-# configuration/configuration.py
+-neighbor.rib.outgoing.add_to_rib(neighbor.remove_self(route))  # Line 79
+-```
+-
+-### IP Resolution Logic (`session.ip_self()`)
+-
+-```python
+-def ip_self(self, afi: AFI) -> IP:
+-    # Case 1: AFI matches local_address
+-    if not self.auto_discovery and afi == self.local_address.afi:
+-        return self.local_address
+-
+-    # Case 2: IPv4 route with IPv6 session - use router_id
+-    if afi == AFI.ipv4 and self.router_id is not None:
+-        return self.router_id
+-
+-    # Case 3: Cannot resolve - error
+-    raise TypeError('AFI mismatch...')
+-```
+-
+----
+-
+-## Problem Statement
+-
+-### Why This Matters for Wire-Semantic Separation
+-
+-The `Update` class currently stores `Negotiated` because:
+-1. `Update.parse()` needs `negotiated.families` to filter NLRIs
+-2. `Update.parse()` needs `negotiated.neighbor` for next-hop-self resolution
+-
+-If next-hop-self were resolved at NLRI **creation time** (not parsing time), `Update` could store lightweight `OpenContext` instead.
+-
+-### Current Coupling
+-
+-```
+-Update._negotiated: Negotiated
+-     │
+-     ├── families: list[tuple[AFI, SAFI]]  # Needed for NLRI filtering
+-     ├── neighbor: Neighbor                 # Needed for nexthopself()
+-     │       └── session.ip_self(afi)      # Resolves "self" to IP
+-     └── required(afi, safi): bool         # Needed for AddPath
+-```
+-
+-### Desired State
+-
+-```
+-Update._context: OpenContext  # Lightweight, no neighbor reference
+-     │
+-     ├── afi, safi, addpath, asn4, msg_size
+-     └── local_as, peer_as, is_ibgp
+-
+-NLRI.nexthop: IP  # Always concrete, never sentinel
+-```
+-
+----
+-
+-## Design Options
+-
+-### Option A: Resolve at NLRI Creation Time (Early Resolution)
+-
+-**Approach:** Pass resolved IP to NLRI constructor, never store sentinel.
+-
+-**Pros:**
+-- Cleanest separation - NLRIs are always concrete
+-- `Update` can use `OpenContext`
+-- No sentinel classes needed
+-
+-**Cons:**
+-- Requires IP at config parse time (neighbor session may not exist)
+-- Breaks deferred resolution pattern
+-- API change for all NLRI constructors
+-
+-**Feasibility:** LOW - neighbor session doesn't exist at config parse time.
+-
+-### Option B: Resolve at RIB Insertion (Current Pattern, Formalized)
+-
+-**Approach:** Keep current `remove_self()` pattern but:
+-1. Make it explicit that RIB insertion is the resolution boundary
+-2. Assert NLRIs in RIB never have `SELF=True`
+-3. Remove pack-time safety net (fail fast if sentinel escapes)
+-
+-**Pros:**
+-- Minimal code change
+-- Clear boundary (RIB = concrete data)
+-- Validates current invariant
+-
+-**Cons:**
+-- Doesn't help `Update` use `OpenContext`
+-- Still need sentinel classes
+-
+-**Feasibility:** HIGH - formalize existing behavior.
+-
+-### Option C: Store Local IP in OpenContext
+-
+-**Approach:** Add `local_ip: IP` field to `OpenContext`.
+-
+-```python
+-class OpenContext:
+-    __slots__ = ('afi', 'safi', 'addpath', 'asn4', 'msg_size',
+-                 'local_as', 'peer_as', 'local_ip')
+-```
+-
+-**Pros:**
+-- NLRIs can resolve nexthop via context
+-- `Update` can use `OpenContext`
+-- Single source of truth
+-
+-**Cons:**
+-- `OpenContext` grows (but still lightweight)
+-- Caching key changes (adds IP to tuple)
+-- Chicken-and-egg: may not know local_ip at parse time
+-
+-**Feasibility:** MEDIUM - depends on when local_ip is known.
+-
+-### Option D: Two-Phase Parsing (Parse → Resolve)
+-
+-**Approach:**
+-1. Parse UPDATE into structure with unresolved nexthops
+-2. Resolve nexthops in a second pass when session context available
+-
+-```python
+-class Update:
+-    _context: OpenContext
+-    _needs_resolution: bool  # True if any nexthop is sentinel
+-
+-def resolve_nexthops(self, neighbor: Neighbor) -> None:
+-    """Second pass: resolve any NextHopSelf sentinels."""
+-    for nlri in self.nlris:
+-        if nlri.nexthop.SELF:
+-            nlri.nexthop = neighbor.ip_self(nlri.afi)
+-```
+-
+-**Pros:**
+-- Clear separation of parsing and resolution
+-- `Update` can use `OpenContext` for parsing
+-- Explicit about resolution requirement
+-
+-**Cons:**
+-- Two-phase API more complex
+-- Callers must remember to call resolve
+-- Still need sentinel during transition
+-
+-**Feasibility:** MEDIUM - cleaner but more complex.
+-
+-### Option E: Resolve in `pack()` Only (Remove `remove_self()`)
+-
+-**Approach:** Remove config-time resolution, always resolve at pack time.
+-
+-**Pros:**
+-- Single resolution point
+-- Simplifies config loading
+-
+-**Cons:**
+-- Sentinel persists longer (through RIB)
+-- Need `Negotiated` for packing (can't use `OpenContext`)
+-- Breaks current invariant
+-
+-**Feasibility:** LOW - makes wire-semantic separation harder.
+-
+----
+-
+-## Recommended Approach
+-
+-**Option B (Formalize Current Pattern)** as Phase 1, **Option D (Two-Phase)** as Phase 2.
+-
+-### Phase 1: Formalize Current Behavior
+-
+-1. Add assertion that NLRIs in RIB never have `nexthop.SELF == True`
+-2. Document that `remove_self()` is the resolution boundary
+-3. Consider removing pack-time resolution (fail if sentinel escapes)
+-
+-### Phase 2: Two-Phase Parsing (Future)
+-
+-1. `Update.parse()` accepts `OpenContext` (no neighbor)
+-2. New method `Update.resolve_nexthops(neighbor)` resolves sentinels
+-3. Wire containers (`Update`) hold unresolved data
+-4. Semantic containers (`UpdateCollection`) hold resolved data
+-
+----
+-
+-## Detailed Analysis
+-
+-### When is Neighbor Session Available?
+-
+-| Context | Session Available? | Can Resolve? |
+-|---------|-------------------|--------------|
+-| Config file parsing | No | No |
+-| `neighbor { }` block exit | Yes (Neighbor created) | Yes |
+-| Route added to neighbor.routes | Yes | Yes (current) |
+-| Route added to RIB | Yes | Yes (current) |
+-| UPDATE received from wire | Yes (established session) | Yes |
+-| UPDATE packed for sending | Yes | Yes (pack-time fallback) |
+-
+-**Key insight:** Resolution can happen earliest at neighbor block exit.
+-
+-### What Needs `nexthopself()` at Parse Time?
+-
+-Currently: Nothing. Parse creates sentinel, resolution happens later.
+-
+-The coupling is via `Negotiated.nexthopself()` which delegates to `neighbor.ip_self()`.
+-
+-### What Actually Uses `Negotiated.neighbor` During Parsing?
+-
+-```python
+-# collection.py:406-420 - NEXT_HOP validation
+-neighbor = getattr(negotiated, 'neighbor', None)
+-if nexthop is not IP.NoNextHop and neighbor is not None:
+-    local_address = neighbor.session.local_address
+-    if nexthop_packed == local_packed:
+-        log.warning('received NEXT_HOP equals our local address...')
+-```
+-
+-This is a **validation** (RFC 4271 compliance check), not resolution. Could be deferred.
+-
+----
+-
+-## Test Coverage
+-
+-### Existing Tests
+-
+-| Test | File | Coverage |
+-|------|------|----------|
+-| NextHopSelf unit tests | `tests/unit/test_path_attributes.py:882-897` | Basic construction |
+-
+-### Tests Needed
+-
+-- [ ] `remove_self()` replaces sentinel with concrete IP
+-- [ ] Sentinel never reaches RIB
+-- [ ] Pack-time resolution works as fallback
+-- [ ] AFI mismatch raises TypeError
+-- [ ] Router-id fallback for IPv4 routes with IPv6 session
+-
+----
+-
+-## Implementation Plan
+-
+-### Phase 1: Formalize & Document (Low Risk) ✅ COMPLETE
+-
+-**Goal:** Make current behavior explicit with no functional changes.
+-
+-1. **Add RIB entry assertion** ✅
+-   - In `rib.outgoing._update_rib()`, assert `nlri.nexthop.SELF == False`
+-   - Fast-fail if sentinel escapes to RIB
+-   - File: `src/exabgp/rib/outgoing.py:310-315`
+-
+-2. **Add tests** ✅
+-   - Test `remove_self()` behavior
+-   - Test AFI resolution paths
+-   - Test sentinel detection
+-   - Test RIB rejection of unresolved sentinels
+-   - File: `tests/unit/test_nexthop_self.py` (26 tests)
+-
+-3. **Document invariant** ✅
+-   - NLRIs in RIB always have concrete nexthop
+-   - `remove_self()` is the resolution boundary
+-   - Pack-time resolution is safety net (never triggered in practice)
+-
+-### Phase 2: Remove Pack-Time Resolution ✅ COMPLETE
+-
+-**Goal:** Remove redundant pack-time resolution - convert to errors.
+-
+-1. **Verify sentinel never escapes** ✅
+-   - Phase 1 RIB assertion proves sentinels never reach pack time
+-   - All 11 test suites pass with assertion
+-
+-2. **Convert pack-time resolution to errors** ✅
+-   - `NextHopSelf.pack_attribute()` → raises `RuntimeError`
+-   - `NextHopSelf.ton()` → raises `RuntimeError`
+-   - `IPSelf.top()` → raises `RuntimeError`
+-   - `IPSelf.ton()` → raises `RuntimeError`
+-   - `IPSelf.pack()` → raises `RuntimeError`
+-   - Files modified:
+-     - `src/exabgp/bgp/message/update/attribute/nexthop.py:165-179`
+-     - `src/exabgp/protocol/ip/__init__.py:39-61`
+-
+-3. **Add tests for raise behavior** ✅
+-   - `test_pack_attribute_raises` - NextHopSelf
+-   - `test_ton_raises` - NextHopSelf
+-   - `test_top_raises` - IPSelf
+-   - `test_ton_raises` - IPSelf
+-   - `test_pack_raises` - IPSelf
+-   - File: `tests/unit/test_nexthop_self.py` (now 31 tests)
+-
+-### Phase 3: Mutate-in-place Resolution ✅ COMPLETE
+-
+-**Goal:** Change `resolve_self()` to mutate sentinels in-place instead of replacing.
+-
+-**Design:**
+-- `SELF` stays as ClassVar (always True for sentinel classes)
+-- Resolution state detected via `_packed == b''` (unresolved) vs non-empty (resolved)
+-- Added `resolved` property and `resolve()` method
+-
+-**Changes:**
+-
+-1. **IPSelf (`src/exabgp/protocol/ip/__init__.py:37-76`)**
+-   - Added `_packed: Buffer` attribute
+-   - Added `resolved` property
+-   - Added `resolve(ip)` method
+-   - Added `ton()`, `pack_ip()` methods that raise if not resolved
+-   - Updated `__repr__()` and `index()` to handle resolved state
+-
+-2. **NextHopSelf (`src/exabgp/bgp/message/update/attribute/nexthop.py:136-184`)**
+-   - Added `resolved` property
+-   - Added `resolve(ip)` method
+-   - Updated `pack_attribute()` to raise if not resolved
+-   - Updated `__repr__()` to handle resolved state
+-
+-3. **resolve_self() (`src/exabgp/bgp/neighbor/neighbor.py:281-303`)**
+-   - Changed to call `nexthop.resolve(neighbor_self)` instead of replacing
+-   - Checks `nexthop.resolved` to skip already-resolved sentinels
+-
+-4. **RIB assertion (`src/exabgp/rib/outgoing.py:309-316`)**
+-   - Changed to check `SELF and not resolved` (allows resolved sentinels)
+-
+-5. **Tests (`tests/unit/test_nexthop_self.py`)**
+-   - Updated all tests for new behavior
+-   - Tests verify SELF stays True after resolution
+-   - Tests verify resolved transitions to True
+-
+-**Key Invariants:**
+-- Before: `SELF=True`, `_packed=b''`, `resolved=False`
+-- After: `SELF=True`, `_packed=bytes`, `resolved=True`
+-- Pack methods raise `ValueError` if `not resolved`
+-
+-### Phase 4: Two-Phase Parsing (Future)
+-
+-**Goal:** Enable `Update` to use `OpenContext`.
+-
+-1. **Add `Update.resolve_nexthops(neighbor)`**
+-2. **Change callers to call resolution explicitly**
+-3. **Change `Update._negotiated` to `Update._context`**
+-
+----
+-
+-## Dependencies
+-
+-- Wire-Semantic Separation plan (completed phases 1-3)
+-- OpenContext has `local_as`, `peer_as` (completed)
+-
+----
+-
+-## Questions to Resolve
+-
+-1. **Is pack-time resolution ever triggered?**
+-   - If yes, where?
+-   - If no, can we remove it?
+-
+-2. **Should `Update` store sentinel or resolved IP?**
+-   - Wire container: Could store sentinel (raw wire + context)
+-   - Semantic container: Should store resolved IP
+-
+-3. **Can NEXT_HOP validation be deferred?**
+-   - Currently in `_parse_payload()`, needs `neighbor.session.local_address`
+-   - Could move to post-parse validation phase
+-
+----
+-
+-**Updated:** 2025-12-08
+diff --git a/src/exabgp/bgp/message/update/nlri/evpn/ethernetad.py b/src/exabgp/bgp/message/update/nlri/evpn/ethernetad.py
+index e4a0927c7..3c1897328 100644
+--- a/src/exabgp/bgp/message/update/nlri/evpn/ethernetad.py
++++ b/src/exabgp/bgp/message/update/nlri/evpn/ethernetad.py
+@@ -39,13 +39,20 @@ class EthernetAD(EVPN):
+     NAME: ClassVar[str] = 'Ethernet Auto-Discovery'
+     SHORT_NAME: ClassVar[str] = 'EthernetAD'
+ 
+-    def __init__(self, packed: bytes) -> None:
++    def __init__(
++        self,
++        packed: bytes,
++        action: Action = Action.UNSET,
++        addpath: PathInfo = PathInfo.DISABLED,
++    ) -> None:
+         """Create EthernetAD from complete wire-format bytes.
+ 
+         Args:
+             packed: Complete wire format (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+         """
+-        EVPN.__init__(self, packed)
++        EVPN.__init__(self, packed, action, addpath)
+ 
+     @classmethod
+     def make_ethernetad(
+@@ -114,16 +121,18 @@ class EthernetAD(EVPN):
+         return hash((self.rd, self.etag))
+ 
+     @classmethod
+-    def unpack_evpn(cls, packed: bytes) -> EVPN:
++    def unpack_evpn(cls, packed: bytes, action: Action, addpath: PathInfo) -> EVPN:
+         """Unpack EthernetAD from complete wire format bytes.
+ 
+         Args:
+             packed: Complete wire format (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+ 
+         Returns:
+             EthernetAD instance with stored wire bytes
+         """
+-        return cls(packed)
++        return cls(packed, action, addpath)
+ 
+     def json(self, compact: bool | None = None) -> str:
+         content = ' "code": %d, ' % self.CODE
+diff --git a/src/exabgp/bgp/message/update/nlri/evpn/mac.py b/src/exabgp/bgp/message/update/nlri/evpn/mac.py
+index cad005d65..cf622bc5a 100644
+--- a/src/exabgp/bgp/message/update/nlri/evpn/mac.py
++++ b/src/exabgp/bgp/message/update/nlri/evpn/mac.py
+@@ -56,13 +56,20 @@ class MAC(EVPN):
+     NAME: ClassVar[str] = 'MAC/IP advertisement'
+     SHORT_NAME: ClassVar[str] = 'MACAdv'
+ 
+-    def __init__(self, packed: bytes) -> None:
++    def __init__(
++        self,
++        packed: bytes,
++        action: Action = Action.UNSET,
++        addpath: PathInfo = PathInfo.DISABLED,
++    ) -> None:
+         """Create MAC from complete wire-format bytes.
+ 
+         Args:
+             packed: Complete wire format (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+         """
+-        EVPN.__init__(self, packed)
++        EVPN.__init__(self, packed, action, addpath)
+ 
+     @classmethod
+     def make_mac(
+@@ -184,11 +191,13 @@ class MAC(EVPN):
+         return hash((self.rd, self.etag, self.mac, self.ip))
+ 
+     @classmethod
+-    def unpack_evpn(cls, packed: bytes) -> EVPN:
++    def unpack_evpn(cls, packed: bytes, action: 'Action', addpath: 'PathInfo') -> 'EVPN':
+         """Unpack MAC from complete wire format bytes.
+ 
+         Args:
+             packed: Complete wire format (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+ 
+         Returns:
+             MAC instance with stored wire bytes
+@@ -230,7 +239,7 @@ class MAC(EVPN):
+                 'Data field length is given as %d, but does not match one of the expected lengths' % datalen,
+             )
+ 
+-        return cls(packed)
++        return cls(packed, action, addpath)
+ 
+     def json(self, compact: bool | None = None) -> str:
+         content = ' "code": %d, ' % self.CODE
+diff --git a/src/exabgp/bgp/message/update/nlri/evpn/multicast.py b/src/exabgp/bgp/message/update/nlri/evpn/multicast.py
+index e77f3c66d..4f623d830 100644
+--- a/src/exabgp/bgp/message/update/nlri/evpn/multicast.py
++++ b/src/exabgp/bgp/message/update/nlri/evpn/multicast.py
+@@ -41,13 +41,20 @@ class Multicast(EVPN):
+     NAME: ClassVar[str] = 'Inclusive Multicast Ethernet Tag'
+     SHORT_NAME: ClassVar[str] = 'Multicast'
+ 
+-    def __init__(self, packed: bytes) -> None:
++    def __init__(
++        self,
++        packed: bytes,
++        action: Action = Action.UNSET,
++        addpath: PathInfo = PathInfo.DISABLED,
++    ) -> None:
+         """Create Multicast from complete wire-format bytes.
+ 
+         Args:
+             packed: Complete wire format (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+         """
+-        EVPN.__init__(self, packed)
++        EVPN.__init__(self, packed, action, addpath)
+ 
+     @classmethod
+     def make_multicast(
+@@ -105,20 +112,22 @@ class Multicast(EVPN):
+         return hash((self.afi, self.safi, self.CODE, self.rd, self.etag, self.ip))
+ 
+     @classmethod
+-    def unpack_evpn(cls, packed: bytes) -> EVPN:
++    def unpack_evpn(cls, packed: bytes, action: Action, addpath: PathInfo) -> EVPN:
+         """Unpack Multicast from complete wire format bytes.
+ 
+         Args:
+             packed: Complete wire format (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+ 
+         Returns:
+             Multicast instance with stored wire bytes
+         """
+         # IPlen is at offset 14 (after 2-byte header + 8-byte RD + 4-byte ETag)
+         iplen = packed[14]
+         if iplen not in (4 * 8, 16 * 8):
+             raise Exception('IP len is %d, but EVPN route currently support only IPv4 or IPv6' % iplen)
+-        return cls(packed)
++        return cls(packed, action, addpath)
+ 
+     def json(self, compact: bool | None = None) -> str:
+         content = ' "code": %d, ' % self.CODE
+diff --git a/src/exabgp/bgp/message/update/nlri/evpn/nlri.py b/src/exabgp/bgp/message/update/nlri/evpn/nlri.py
+index 989a31696..d6027c4e2 100644
+--- a/src/exabgp/bgp/message/update/nlri/evpn/nlri.py
++++ b/src/exabgp/bgp/message/update/nlri/evpn/nlri.py
+@@ -15,6 +15,7 @@ if TYPE_CHECKING:
+ from exabgp.bgp.message import Action
+ from exabgp.bgp.message.notification import Notify
+ from exabgp.bgp.message.update.nlri import NLRI
++from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+ from exabgp.protocol.family import AFI, SAFI, Family
+ from exabgp.protocol.ip import IP
+ from exabgp.util.types import Buffer
+@@ -53,18 +54,22 @@ class EVPN(NLRI):
+     NAME: ClassVar[str] = 'Unknown'
+     SHORT_NAME: ClassVar[str] = 'unknown'
+ 
+-    def __init__(self, packed: Buffer) -> None:
++    def __init__(
++        self,
++        packed: Buffer,
++        action: Action = Action.UNSET,
++        addpath: PathInfo = PathInfo.DISABLED,
++    ) -> None:
+         """Create an EVPN NLRI from packed wire-format bytes.
+ 
+         Args:
+             packed: [type(1)][length(1)][payload...]
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+ 
+-        Note: action, addpath, and nexthop are NOT part of NLRI wire format.
+-        - action defaults to UNSET, set after creation (announce/withdraw)
+-        - nexthop is in MP_REACH_NLRI attribute (RFC 4760)
+-        - addpath is a prefix when negotiated (RFC 7911)
++        Note: nexthop is NOT part of NLRI wire format - it's in MP_REACH_NLRI attribute (RFC 4760).
+         """
+-        NLRI.__init__(self, AFI.l2vpn, SAFI.evpn)
++        NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action, addpath)
+         self.nexthop = IP.NoNextHop
+         self._packed = bytes(packed)  # Ensure bytes for storage
+ 
+@@ -151,33 +156,38 @@ class EVPN(NLRI):
+         packed = bytes(data[0:total_length])
+ 
+         if code in cls.registered_evpn:
+-            nlri = cls.registered_evpn[code].unpack_evpn(packed)
++            nlri = cls.registered_evpn[code].unpack_evpn(packed, action, addpath)
+         else:
+-            nlri = GenericEVPN(packed)
+-        nlri.action = action
+-        nlri.addpath = addpath
++            nlri = GenericEVPN(packed, action, addpath)
+ 
+         return nlri, data[total_length:]
+ 
+     def _raw(self) -> str:
+         return ''.join('{:02X}'.format(_) for _ in self._packed)
+ 
+ 
+ class GenericEVPN(EVPN):
+     """Generic EVPN for unrecognized route types.
+ 
+     Stores complete wire format including type + length header.
+     """
+ 
+     __slots__ = ()  # No extra storage needed - CODE extracted from _packed
+ 
+-    def __init__(self, packed: Buffer) -> None:
++    def __init__(
++        self,
++        packed: Buffer,
++        action: Action = Action.UNSET,
++        addpath: PathInfo = PathInfo.DISABLED,
++    ) -> None:
+         """Create a GenericEVPN from complete wire format bytes.
+ 
+         Args:
+             packed: Complete wire format bytes (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+         """
+-        EVPN.__init__(self, packed)
++        EVPN.__init__(self, packed, action, addpath)
+ 
+     @property
+     def CODE(self) -> int:  # type: ignore[override]
+diff --git a/src/exabgp/bgp/message/update/nlri/evpn/prefix.py b/src/exabgp/bgp/message/update/nlri/evpn/prefix.py
+index 258e8f7ea..2b8642f7d 100644
+--- a/src/exabgp/bgp/message/update/nlri/evpn/prefix.py
++++ b/src/exabgp/bgp/message/update/nlri/evpn/prefix.py
+@@ -61,13 +61,20 @@ class Prefix(EVPN):
+     NAME: ClassVar[str] = 'IP Prefix Advertisement'
+     SHORT_NAME: ClassVar[str] = 'PrfxAdv'
+ 
+-    def __init__(self, packed: bytes) -> None:
++    def __init__(
++        self,
++        packed: bytes,
++        action: Action = Action.UNSET,
++        addpath: PathInfo = PathInfo.DISABLED,
++    ) -> None:
+         """Create Prefix from complete wire-format bytes.
+ 
+         Args:
+             packed: Complete wire format (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+         """
+-        EVPN.__init__(self, packed)
++        EVPN.__init__(self, packed, action, addpath)
+ 
+     @classmethod
+     def make_prefix(
+@@ -197,28 +204,30 @@ class Prefix(EVPN):
+         return hash('{}:{}:{}:{}'.format(self.rd, self.etag, self.ip, self.iplen))
+ 
+     @classmethod
+-    def unpack_evpn(cls, packed: bytes) -> EVPN:
++    def unpack_evpn(cls, packed: bytes, action: Action, addpath: PathInfo) -> EVPN:
+         """Unpack Prefix from complete wire format bytes.
+ 
+         Args:
+             packed: Complete wire format (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+ 
+         Returns:
+             Prefix instance with stored wire bytes
+         """
+         # Get the data length to understand if addresses are IPv4 or IPv6
+         # Lengths include 2-byte header: 36 for IPv4 (34+2), 60 for IPv6 (58+2)
+         datalen = len(packed)
+ 
+         if datalen not in (36, 60):  # 36 for IPv4, 60 for IPv6
+             raise Notify(
+                 3,
+                 5,
+                 'Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6 (36 or 60)'
+                 % datalen,
+             )
+ 
+-        return cls(packed)
++        return cls(packed, action, addpath)
+ 
+     def json(self, compact: bool = False) -> str:
+         content = ' "code": %d, ' % self.CODE
+diff --git a/src/exabgp/bgp/message/update/nlri/evpn/segment.py b/src/exabgp/bgp/message/update/nlri/evpn/segment.py
+index b0927d7d9..79131ef66 100644
+--- a/src/exabgp/bgp/message/update/nlri/evpn/segment.py
++++ b/src/exabgp/bgp/message/update/nlri/evpn/segment.py
+@@ -42,13 +42,20 @@ class EthernetSegment(EVPN):
+     NAME: ClassVar[str] = 'Ethernet Segment'
+     SHORT_NAME: ClassVar[str] = 'Segment'
+ 
+-    def __init__(self, packed: bytes) -> None:
++    def __init__(
++        self,
++        packed: bytes,
++        action: Action = Action.UNSET,
++        addpath: PathInfo = PathInfo.DISABLED,
++    ) -> None:
+         """Create EthernetSegment from complete wire-format bytes.
+ 
+         Args:
+             packed: Complete wire format (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+         """
+-        EVPN.__init__(self, packed)
++        EVPN.__init__(self, packed, action, addpath)
+ 
+     @classmethod
+     def make_ethernetsegment(
+@@ -111,26 +118,28 @@ class EthernetSegment(EVPN):
+         return hash((self.rd, self.ip))
+ 
+     @classmethod
+-    def unpack_evpn(cls, packed: bytes) -> EVPN:
++    def unpack_evpn(cls, packed: bytes, action: Action, addpath: PathInfo) -> EVPN:
+         """Unpack EthernetSegment from complete wire format bytes.
+ 
+         Args:
+             packed: Complete wire format (type + length + payload)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+ 
+         Returns:
+             EthernetSegment instance with stored wire bytes
+         """
+         # IPlen is at offset 20 (after 2-byte header + 8-byte RD + 10-byte ESI)
+         iplen = packed[20]
+ 
+         if iplen not in (32, 128):
+             raise Notify(
+                 3,
+                 5,
+                 'IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits' % iplen,
+             )
+ 
+-        return cls(packed)
++        return cls(packed, action, addpath)
+ 
+     def json(self, compact: bool | None = None) -> str:
+         content = ' "code": %d, ' % self.CODE
+diff --git a/src/exabgp/bgp/message/update/nlri/mvpn/nlri.py b/src/exabgp/bgp/message/update/nlri/mvpn/nlri.py
+index 6be216a6d..a95380b3d 100644
+--- a/src/exabgp/bgp/message/update/nlri/mvpn/nlri.py
++++ b/src/exabgp/bgp/message/update/nlri/mvpn/nlri.py
+@@ -11,6 +11,7 @@ from exabgp.bgp.message import Action
+ from exabgp.bgp.message.notification import Notify
+ from exabgp.bgp.message.update.nlri import NLRI
+ from exabgp.protocol.family import AFI, SAFI, Family
++from exabgp.protocol.ip import IP
+ 
+ # https://datatracker.ietf.org/doc/html/rfc6514
+ 
+@@ -49,6 +50,7 @@ class MVPN(NLRI):
+ 
+     def __init__(self, afi: AFI) -> None:
+         NLRI.__init__(self, afi=afi, safi=SAFI.mcast_vpn)
++        self.nexthop = IP.NoNextHop
+ 
+     def __hash__(self) -> int:
+         return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed.hex()))
+diff --git a/src/exabgp/bgp/message/update/nlri/nlri.py b/src/exabgp/bgp/message/update/nlri/nlri.py
+index c2ea41429..ef534a2b5 100644
+--- a/src/exabgp/bgp/message/update/nlri/nlri.py
++++ b/src/exabgp/bgp/message/update/nlri/nlri.py
+@@ -22,6 +22,9 @@ from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+ from exabgp.logger import lazynlri, log
+ from exabgp.protocol.family import AFI, SAFI, Family
+ 
++# Slots that can be written multiple times (wire format caches)
++_MUTABLE_SLOTS: frozenset[str] = frozenset({'_packed'})
++
+ T = TypeVar('T', bound='NLRI')
+ 
+ # Sentinel for unparsed NLRI cache (distinguishes "not parsed" from "parsed empty")
+@@ -85,6 +88,30 @@ class NLRI(Family):
+         self.addpath = addpath
+         self._packed = b''  # Subclasses set actual wire data
+ 
++    def __setattr__(self, name: str, value: Any) -> None:
++        """Enforce immutability after initial slot assignment.
++
++        NLRI objects are immutable after construction:
++        - First assignment to a slot is allowed (object creation)
++        - Re-assignment raises AttributeError
++        - _packed is always writable (wire format cache)
++
++        Use with_action() / with_nexthop() to create modified copies.
++        """
++        # Allow mutable slots (wire caches) to be written freely
++        if name in _MUTABLE_SLOTS:
++            object.__setattr__(self, name, value)
++            return
++
++        # Check if slot already has a value
++        try:
++            object.__getattribute__(self, name)
++            # Slot exists - block mutation
++            raise AttributeError(f'NLRI is immutable: cannot change {name!r}')
++        except AttributeError:
++            # Slot not yet initialized - allow first assignment
++            object.__setattr__(self, name, value)
++
+     def _copy_nlri_slots(self, new: 'NLRI') -> None:
+         """Copy NLRI base class slots to new instance."""
+         # Family.__slots__ = ('afi', 'safi')
+@@ -135,6 +162,37 @@ class NLRI(Family):
+         # Subclasses should override and call _deepcopy_nlri_slots
+         raise NotImplementedError(f'{type(self).__name__} must implement __deepcopy__')
+ 
++    @classmethod
++    def _all_slots(cls) -> tuple[str, ...]:
++        """Collect all slots from class hierarchy (for copy operations)."""
++        slots: list[str] = []
++        for klass in cls.__mro__:
++            if hasattr(klass, '__slots__'):
++                slots.extend(klass.__slots__)
++        return tuple(slots)
++
++    def with_action(self: T, action: Action) -> T:
++        """Return a copy with different action.
++
++        Use this instead of direct mutation: nlri = nlri.with_action(Action.WITHDRAW)
++        """
++        from copy import copy
++
++        new = copy(self)
++        object.__setattr__(new, 'action', action)
++        return new
++
++    def with_nexthop(self: T, nexthop: 'IP') -> T:
++        """Return a copy with different nexthop.
++
++        Use this instead of direct mutation: nlri = nlri.with_nexthop(new_hop)
++        """
++        from copy import copy
++
++        new = copy(self)
++        object.__setattr__(new, 'nexthop', nexthop)
++        return new
++
+     def __hash__(self) -> int:
+         return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri(Negotiated.UNSET).hex()))
+ 
+diff --git a/src/exabgp/bgp/message/update/nlri/rtc.py b/src/exabgp/bgp/message/update/nlri/rtc.py
+index ac12a92d3..a648939e3 100644
+--- a/src/exabgp/bgp/message/update/nlri/rtc.py
++++ b/src/exabgp/bgp/message/update/nlri/rtc.py
+@@ -21,6 +21,7 @@ from exabgp.bgp.message.open.asn import ASN
+ from exabgp.bgp.message.update.attribute import Attribute
+ from exabgp.bgp.message.update.attribute.community.extended import RouteTarget
+ from exabgp.bgp.message.update.nlri.nlri import NLRI
++from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+ from exabgp.protocol.family import AFI, SAFI, Family
+ from exabgp.protocol.ip import IP
+ 
+@@ -53,13 +54,20 @@ class RTC(NLRI):
+     afi: ClassVar[AFI] = AFI.ipv4
+     safi: ClassVar[SAFI] = SAFI.rtc
+ 
+-    def __init__(self, packed: Buffer) -> None:
++    def __init__(
++        self,
++        packed: Buffer,
++        action: Action = Action.UNSET,
++        addpath: PathInfo = PathInfo.DISABLED,
++    ) -> None:
+         """Create an RTC NLRI from packed wire-format bytes.
+ 
+         Args:
+             packed: Wire format bytes (13 bytes for full RTC, 1 byte for wildcard)
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+         """
+-        NLRI.__init__(self, AFI.ipv4, SAFI.rtc)
++        NLRI.__init__(self, AFI.ipv4, SAFI.rtc, action, addpath)
+         self._packed: Buffer = packed
+         self.nexthop = IP.NoNextHop
+ 
+@@ -161,21 +169,19 @@ class RTC(NLRI):
+         length = data[0]
+ 
+         if length == 0:
+-            nlri = cls(bytes(data[0:1]))
+-            nlri.action = action
++            nlri = cls(bytes(data[0:1]), action, addpath)
+             return nlri, data[1:]
+ 
+         if length < 8 * 4:
+             raise Exception('incorrect RT length: %d (should be >=32,<=96)' % length)
+ 
+         # Store complete wire format with flags reset on RT
+         # Wire format: [length(1)][origin(4)][rt(8)]
+         packed = (
+             bytes(data[0:5])  # length + origin
+             + bytes([RTC.resetFlags(data[5])])  # RT first byte with flags reset
+             + bytes(data[6:13])  # RT remaining bytes
+         )
+ 
+-        nlri = cls(packed)
+-        nlri.action = action
++        nlri = cls(packed, action, addpath)
+         return nlri, data[13:]
+diff --git a/src/exabgp/bgp/message/update/nlri/vpls.py b/src/exabgp/bgp/message/update/nlri/vpls.py
+index ec07d176a..2f97f3094 100644
+--- a/src/exabgp/bgp/message/update/nlri/vpls.py
++++ b/src/exabgp/bgp/message/update/nlri/vpls.py
+@@ -46,15 +46,20 @@ class VPLS(NLRI):
+     # Wire format length (including 2-byte length prefix)
+     PACKED_LENGTH = 19  # length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
+ 
+-    def __init__(self, packed: Buffer) -> None:
++    def __init__(
++        self,
++        packed: Buffer,
++        action: Action = Action.UNSET,
++        addpath: PathInfo = PathInfo.DISABLED,
++    ) -> None:
+         """Create a VPLS NLRI from packed wire-format bytes.
+ 
+         Args:
+             packed: 19 bytes: [length(2)][RD(8)][endpoint(2)][offset(2)][size(2)][base(3)]
+-
+-        Note: action defaults to UNSET, set after creation (announce/withdraw).
++            action: Route action (ANNOUNCE/WITHDRAW/UNSET)
++            addpath: Path identifier for ADD-PATH (RFC 7911)
+         """
+-        NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
++        NLRI.__init__(self, AFI.l2vpn, SAFI.vpls, action, addpath)
+         self.nexthop = IP.NoNextHop
+ 
+         self._packed: bytes = bytes(packed)  # Ensure bytes for storage
+@@ -234,6 +239,5 @@ class VPLS(NLRI):
+ 
+         # Store wire format directly
+         packed = bytes(data[0 : 2 + length])
+-        nlri = cls(packed)
+-        nlri.action = action
++        nlri = cls(packed, action, addpath)
+         return nlri, data[2 + length :]
+diff --git a/src/exabgp/configuration/core/section.py b/src/exabgp/configuration/core/section.py
+index b504752df..3d7b9e201 100644
+--- a/src/exabgp/configuration/core/section.py
++++ b/src/exabgp/configuration/core/section.py
+@@ -215,14 +215,16 @@ class Section(Error):
+                 if self.scope.in_settings_mode():
+                     self.scope.get_settings().nexthop = insert
+                 else:
+-                    self.scope.get_route().nlri.nexthop = insert
++                    route = self.scope.get_route()
++                    route.nlri = route.nlri.with_nexthop(insert)
+             elif action == 'nexthop-and-attribute':
+                 ip, attribute = insert
+                 if ip:
+                     if self.scope.in_settings_mode():
+                         self.scope.get_settings().nexthop = ip
+                     else:
+-                        self.scope.get_route().nlri.nexthop = ip
++                        route = self.scope.get_route()
++                        route.nlri = route.nlri.with_nexthop(ip)
+                 if attribute:
+                     if self.scope.in_settings_mode():
+                         self.scope.settings_attribute_add(name, attribute)
+diff --git a/src/exabgp/configuration/flow/__init__.py b/src/exabgp/configuration/flow/__init__.py
+index 138641a89..a29ec262b 100644
+--- a/src/exabgp/configuration/flow/__init__.py
++++ b/src/exabgp/configuration/flow/__init__.py
+@@ -88,8 +88,7 @@ class ParseFlow(Section):
+ def route(tokeniser: Any) -> list[Route]:
+     from exabgp.bgp.message import Action
+ 
+-    flow_nlri = Flow.make_flow()
+-    flow_nlri.action = Action.ANNOUNCE  # Flow routes are always announcements
++    flow_nlri = Flow.make_flow(action=Action.ANNOUNCE)  # Flow routes are always announcements
+     flow_route: Route = Route(flow_nlri, AttributeCollection())
+ 
+     while True:
+diff --git a/src/exabgp/configuration/flow/parser.py b/src/exabgp/configuration/flow/parser.py
+index 6dd56c068..6c0690b40 100644
+--- a/src/exabgp/configuration/flow/parser.py
++++ b/src/exabgp/configuration/flow/parser.py
+@@ -100,8 +100,7 @@ DSCP_MAX_VALUE = 0b111111  # DSCP is a 6-bit field (0-63)
+ def flow(tokeniser: 'Tokeniser') -> Route:
+     from exabgp.bgp.message import Action
+ 
+-    nlri = Flow.make_flow()
+-    nlri.action = Action.ANNOUNCE  # Flow routes are always announcements
++    nlri = Flow.make_flow(action=Action.ANNOUNCE)  # Flow routes are always announcements
+     return Route(nlri, AttributeCollection())
+ 
+ 
+diff --git a/src/exabgp/configuration/neighbor/__init__.py b/src/exabgp/configuration/neighbor/__init__.py
+index 170d43f5b..8efd8483e 100644
+--- a/src/exabgp/configuration/neighbor/__init__.py
++++ b/src/exabgp/configuration/neighbor/__init__.py
+@@ -445,13 +445,13 @@ class ParseNeighbor(Section):
+         for section in ('static', 'l2vpn', 'flow'):
+             routes = local.get(section, {}).get('routes', [])
+             for route in routes:
+-                route.nlri.action = Action.ANNOUNCE
++                route = route.with_action(Action.ANNOUNCE)
+                 # remove_self may well have side effects on route
+                 neighbor.routes.append(neighbor.resolve_self(route))
+ 
+         routes = local.get('routes', [])
+         for route in routes:
+-            route.nlri.action = Action.ANNOUNCE
++            route = route.with_action(Action.ANNOUNCE)
+             # remove_self may well have side effects on route
+             neighbor.routes.append(neighbor.resolve_self(route))
+ 
+diff --git a/src/exabgp/configuration/static/mpls.py b/src/exabgp/configuration/static/mpls.py
+index de8440590..02cc45528 100644
+--- a/src/exabgp/configuration/static/mpls.py
++++ b/src/exabgp/configuration/static/mpls.py
+@@ -239,8 +239,7 @@ def mvpn_sharedjoin(tokeniser: Any, afi: AFI, action: Any) -> SharedJoin:
+         raise Exception(f"expect source-as to be a integer in the range 0-{ASN_MAX_VALUE}, but received '{value}'")
+ 
+     nlri = SharedJoin.make_sharedjoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum)
+-    nlri.action = action
+-    return nlri
++    return nlri.with_action(action)
+ 
+ 
+ # source-join source <ip> group <ip> rd <rd> source-as <source-as>
+@@ -272,8 +271,7 @@ def mvpn_sourcejoin(tokeniser: Any, afi: AFI, action: Any) -> SourceJoin:
+         raise Exception(f"expect source-as to be a integer in the range 0-{ASN_MAX_VALUE}, but received '{value}'")
+ 
+     nlri = SourceJoin.make_sourcejoin(rd=rd, afi=afi, source=sourceip, group=groupip, source_as=asnum)
+-    nlri.action = action
+-    return nlri
++    return nlri.with_action(action)
+ 
+ 
+ #'source-ad source <ip address> group <ip address> rd <rd>'
+@@ -297,8 +295,7 @@ def mvpn_sourcead(tokeniser: Any, afi: AFI, action: Any) -> SourceAD:
+     rd = route_distinguisher(tokeniser)
+ 
+     nlri = SourceAD.make_sourcead(rd=rd, afi=afi, source=sourceip, group=groupip)
+-    nlri.action = action
+-    return nlri
++    return nlri.with_action(action)
+ 
+ 
+ # 'mup-isd <ip prefix> rd <rd>',
+diff --git a/src/exabgp/configuration/validator.py b/src/exabgp/configuration/validator.py
+index 25a9a59d2..fab8a41dd 100644
+--- a/src/exabgp/configuration/validator.py
++++ b/src/exabgp/configuration/validator.py
+@@ -1234,9 +1234,8 @@ class TypeSelectorValidator(Validator[list[Any]]):
+             nlri = factory(tokeniser, self.afi, self.action_type)
+         else:
+             nlri = factory(tokeniser, self.afi)
+-
+-        # Set action after factory (action defaults to UNSET, must be set)
+-        nlri.action = self.action_type
++            # Set action after factory (action defaults to UNSET, must be set)
++            nlri = nlri.with_action(self.action_type)
+ 
+         route = Route(nlri, AttributeCollection())
+ 
+@@ -1289,7 +1288,7 @@ class TypeSelectorValidator(Validator[list[Any]]):
+         elif action == 'nexthop-and-attribute':
+             ip, attribute = value
+             if ip:
+-                route.nlri.nexthop = ip
++                route.nlri = route.nlri.with_nexthop(ip)
+             # Only skip NextHop attribute when:
+             # 1. The validator used AFI (accepts_afi=True), AND
+             # 2. The AFI is IPv6 (next-hop goes in MP_REACH_NLRI only)
+diff --git a/src/exabgp/reactor/api/command/announce.py b/src/exabgp/reactor/api/command/announce.py
+index e1bc95457..c08b3d093 100644
+--- a/src/exabgp/reactor/api/command/announce.py
++++ b/src/exabgp/reactor/api/command/announce.py
+@@ -112,7 +112,7 @@ def announce_route(
+                     peer_list = ', '.join(peers) if peers else 'all peers'
+                     self.log_message(f'invalid route for {peer_list} : {route.extensive()}')
+                     continue
+-                route.nlri.action = Action.ANNOUNCE
++                route = route.with_action(Action.ANNOUNCE)
+                 reactor.configuration.inject_route(peers, route)
+                 peer_list = ', '.join(peers) if peers else 'all peers'
+                 self.log_message(f'route added to {peer_list} : {route.extensive()}')
+@@ -160,10 +160,10 @@ def withdraw_route(
+ 
+             for route in routes:
+                 # Set the action to withdraw before checking the route
+-                route.nlri.action = Action.WITHDRAW
++                route = route.with_action(Action.WITHDRAW)
+                 # NextHop is a mandatory field (but we do not require in)
+                 if route.nlri.nexthop is IP.NoNextHop:
+-                    route.nlri.nexthop = NextHop.from_string('0.0.0.0')
++                    route = route.with_nexthop(NextHop.from_string('0.0.0.0'))
+ 
+                 if not ParseStaticRoute.check(route):
+                     peer_list = ', '.join(peers) if peers else 'all peers'
+@@ -217,7 +217,7 @@ def announce_vpls(
+             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+ 
+             for route in routes:
+-                route.nlri.action = Action.ANNOUNCE
++                route = route.with_action(Action.ANNOUNCE)
+                 reactor.configuration.inject_route(peers, route)
+                 peer_list = ', '.join(peers) if peers else 'all peers'
+                 self.log_message(f'vpls added to {peer_list} : {route.extensive()}')
+@@ -258,7 +258,7 @@ def withdraw_vpls(
+             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+ 
+             for route in routes:
+-                route.nlri.action = Action.WITHDRAW
++                route = route.with_action(Action.WITHDRAW)
+                 if reactor.configuration.inject_route(peers, route):
+                     peer_list = ', '.join(peers) if peers else 'all peers'
+                     self.log_message(f'vpls removed from {peer_list} : {route.extensive()}')
+@@ -301,7 +301,7 @@ def announce_attributes(
+             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+ 
+             for route in routes:
+-                route.nlri.action = Action.ANNOUNCE
++                route = route.with_action(Action.ANNOUNCE)
+                 reactor.configuration.inject_route(peers, route)
+                 peer_list = ', '.join(peers) if peers else 'all peers'
+                 self.log_message(f'route added to {peer_list} : {route.extensive()}')
+@@ -347,7 +347,7 @@ def withdraw_attribute(
+             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+ 
+             for route in routes:
+-                route.nlri.action = Action.WITHDRAW
++                route = route.with_action(Action.WITHDRAW)
+                 if reactor.configuration.inject_route(peers, route):
+                     peer_list = ', '.join(peers) if peers else 'all peers'
+                     self.log_message(f'route removed from {peer_list} : {route.extensive()}')
+@@ -397,7 +397,7 @@ def announce_flow(
+             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+ 
+             for route in routes:
+-                route.nlri.action = Action.ANNOUNCE
++                route = route.with_action(Action.ANNOUNCE)
+                 reactor.configuration.inject_route(peers, route)
+                 peer_list = ', '.join(peers) if peers else 'all peers'
+                 self.log_message(f'flow added to {peer_list} : {route.extensive()}')
+@@ -438,7 +438,7 @@ def withdraw_flow(
+             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+ 
+             for route in routes:
+-                route.nlri.action = Action.WITHDRAW
++                route = route.with_action(Action.WITHDRAW)
+                 if reactor.configuration.inject_route(peers, route):
+                     peer_list = ', '.join(peers) if peers else 'all peers'
+                     self.log_message(f'flow removed from {peer_list} : {route.extensive()}')
+@@ -606,7 +606,7 @@ def announce_ipv4(
+             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+ 
+             for route in routes:
+-                route.nlri.action = Action.ANNOUNCE
++                route = route.with_action(Action.ANNOUNCE)
+                 reactor.configuration.inject_route(peers, route)
+                 peer_list = ', '.join(peers) if peers else 'all peers'
+                 self.log_message(f'ipv4 added to {peer_list} : {route.extensive()}')
+@@ -647,7 +647,7 @@ def withdraw_ipv4(
+             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+ 
+             for route in routes:
+-                route.nlri.action = Action.WITHDRAW
++                route = route.with_action(Action.WITHDRAW)
+                 if reactor.configuration.inject_route(peers, route):
+                     peer_list = ', '.join(peers) if peers else 'all peers'
+                     self.log_message(f'ipv4 removed from {peer_list} : {route.extensive()}')
+@@ -690,7 +690,7 @@ def announce_ipv6(
+             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+ 
+             for route in routes:
+-                route.nlri.action = Action.ANNOUNCE
++                route = route.with_action(Action.ANNOUNCE)
+                 reactor.configuration.inject_route(peers, route)
+                 peer_list = ', '.join(peers) if peers else 'all peers'
+                 self.log_message(f'ipv6 added to {peer_list} : {route.extensive()}')
+@@ -731,7 +731,7 @@ def withdraw_ipv6(
+             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+ 
+             for route in routes:
+-                route.nlri.action = Action.WITHDRAW
++                route = route.with_action(Action.WITHDRAW)
+                 if reactor.configuration.inject_route(peers, route):
+                     peer_list = ', '.join(peers) if peers else 'all peers'
+                     self.log_message(f'ipv6 removed from {peer_list} : {route.extensive()}')
+diff --git a/src/exabgp/reactor/protocol.py b/src/exabgp/reactor/protocol.py
+index 381003b50..4a37b6d37 100644
+--- a/src/exabgp/reactor/protocol.py
++++ b/src/exabgp/reactor/protocol.py
+@@ -263,8 +263,9 @@ class Protocol:
+             if isinstance(message, Update):
+                 parsed_update = message.data  # Already parsed by unpack_message
+                 if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in parsed_update.attributes:
+-                    for nlri in parsed_update.nlris:
+-                        nlri.action = Action.WITHDRAW
++                    # Force all NLRIs to withdraw - modify the announces list in place
++                    for i, nlri in enumerate(parsed_update._announces):
++                        parsed_update._announces[i] = nlri.with_action(Action.WITHDRAW)
+ 
+         if for_api:
+             if consolidate:
+diff --git a/src/exabgp/rib/outgoing.py b/src/exabgp/rib/outgoing.py
+index 84b1d18f7..bf673acd5 100644
+--- a/src/exabgp/rib/outgoing.py
++++ b/src/exabgp/rib/outgoing.py
+@@ -202,11 +202,11 @@ class OutgoingRIB(Cache):
+         if not self.enabled:
+             return
+         if watchdog in self._watchdog:
+-            for route in list(self._watchdog[watchdog].get('-', {}).values()):
+-                route.nlri.action = Action.ANNOUNCE  # pylint: disable=E1101
++            for old_route in list(self._watchdog[watchdog].get('-', {}).values()):
++                route = old_route.with_action(Action.ANNOUNCE)
+                 self.add_to_rib(route)
+                 self._watchdog[watchdog].setdefault('+', {})[route.index()] = route
+-                self._watchdog[watchdog]['-'].pop(route.index())
++                self._watchdog[watchdog]['-'].pop(old_route.index())
+ 
+     def withdraw_watchdog(self, watchdog: str) -> None:
+         if not self.enabled:
+diff --git a/src/exabgp/rib/route.py b/src/exabgp/rib/route.py
+index 28cb176bd..46b95b9c2 100644
+--- a/src/exabgp/rib/route.py
++++ b/src/exabgp/rib/route.py
+@@ -10,9 +10,11 @@ from __future__ import annotations
+ from typing import TYPE_CHECKING
+ 
+ if TYPE_CHECKING:
++    from exabgp.bgp.message import Action
+     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+     from exabgp.bgp.message.update.nlri.nlri import NLRI
+     from exabgp.protocol.family import AFI, SAFI
++    from exabgp.protocol.ip import IP
+ 
+ 
+ class Route:
+@@ -40,6 +42,14 @@ class Route:
+             self.__index = b'%02x%02x' % self.nlri.family().afi_safi() + self.nlri.index()
+         return self.__index
+ 
++    def with_action(self, action: Action) -> Route:
++        """Return new Route with different NLRI action."""
++        return Route(self.nlri.with_action(action), self.attributes)
++
++    def with_nexthop(self, nexthop: IP) -> Route:
++        """Return new Route with different NLRI nexthop."""
++        return Route(self.nlri.with_nexthop(nexthop), self.attributes)
++
+     def __eq__(self, other: object) -> bool:
+         if not isinstance(other, Route):
+             return False
+diff --git a/tests/unit/test_evpn.py b/tests/unit/test_evpn.py
+index 03acb9368..54ff52b0c 100644
+--- a/tests/unit/test_evpn.py
++++ b/tests/unit/test_evpn.py
+@@ -23,6 +23,7 @@ from exabgp.bgp.message.update.nlri.evpn.prefix import Prefix
+ from exabgp.bgp.message.update.nlri.evpn.segment import EthernetSegment
+ from exabgp.bgp.message.update.nlri.nlri import Action
+ from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
++from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+ from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
+ from exabgp.protocol.family import AFI, SAFI
+ from exabgp.protocol.ip import IP
+@@ -268,7 +269,11 @@ class TestMAC:
+         packed = rd.pack_rd() + esi.pack_esi() + etag.pack_etag() + bytes([64])  # Invalid: > 48
+ 
+         with pytest.raises(Notify):
+-            MAC.unpack_evpn(packed + mac.pack_mac() + bytes([0]) + Labels.make_labels([100], True).pack_labels())
++            MAC.unpack_evpn(
++                packed + mac.pack_mac() + bytes([0]) + Labels.make_labels([100], True).pack_labels(),
++                Action.ANNOUNCE,
++                PathInfo.DISABLED,
++            )
+ 
+     def test_mac_string_representation(self) -> None:
+         """Test string representation of MAC route"""
+@@ -503,7 +508,7 @@ class TestEthernetSegment:
+         packed = rd.pack_rd() + esi.pack_esi() + bytes([64])  # Invalid: not 32 or 128
+ 
+         with pytest.raises(Notify):
+-            EthernetSegment.unpack_evpn(packed + bytes([0] * 8))
++            EthernetSegment.unpack_evpn(packed + bytes([0] * 8), Action.ANNOUNCE, PathInfo.DISABLED)
+ 
+     def test_segment_string_representation(self) -> None:
+         """Test string representation of EthernetSegment route"""
