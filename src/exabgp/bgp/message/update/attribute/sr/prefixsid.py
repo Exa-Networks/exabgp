@@ -70,7 +70,6 @@ class PrefixSid(Attribute):
                 klass: Any = cls.registered_srids[scode].unpack_attribute(data[3 : length + 3], length)
             else:
                 klass = GenericSRId(scode, data[3 : length + 3])
-            klass.TLV = scode
             sr_attrs.append(klass)
             data = data[length + 3 :]
         return cls(sr_attrs=sr_attrs)
@@ -96,11 +95,13 @@ class PrefixSid(Attribute):
 
 
 class GenericSRId:
-    TLV: ClassVar[int] = 99998
-
     def __init__(self, code: int, rep: bytes) -> None:
         self.rep: bytes = rep
         self.code: int = code
+
+    @property
+    def TLV(self) -> int:
+        return self.code
 
     def __repr__(self) -> str:
         return 'Attribute with code [ {} ] not implemented'.format(self.code)
