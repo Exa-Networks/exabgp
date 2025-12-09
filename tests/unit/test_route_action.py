@@ -167,3 +167,119 @@ class TestRouteActionIntegration:
 
         # Index should be the same regardless of action
         assert route1.index() == route2.index()
+
+
+class TestRouteImmutability:
+    """Test that Route is immutable after creation."""
+
+    def test_action_has_no_setter(self):
+        """Route.action cannot be set directly - raises AttributeError."""
+        route = create_route()
+
+        with __import__('pytest').raises(AttributeError):
+            route.action = Action.WITHDRAW
+
+    def test_nexthop_has_no_setter(self):
+        """Route.nexthop cannot be set directly - raises AttributeError."""
+        route = create_route()
+        nexthop = IP.from_string('1.2.3.4')
+
+        with __import__('pytest').raises(AttributeError):
+            route.nexthop = nexthop
+
+    def test_with_action_returns_new_instance(self):
+        """with_action() returns a new Route, doesn't modify original."""
+        route1 = create_route(route_action=Action.ANNOUNCE)
+        route2 = route1.with_action(Action.WITHDRAW)
+
+        # Different instances
+        assert route1 is not route2
+        # Original unchanged
+        assert route1.action == Action.ANNOUNCE
+        # New route has new action
+        assert route2.action == Action.WITHDRAW
+        # Same NLRI
+        assert route1.nlri is route2.nlri
+
+    def test_with_nexthop_returns_new_instance(self):
+        """with_nexthop() returns a new Route, doesn't modify original."""
+        route1 = create_route()
+        nexthop1 = IP.from_string('1.2.3.4')
+        nexthop2 = IP.from_string('5.6.7.8')
+
+        # Set initial nexthop via constructor
+        route1 = Route(route1.nlri, route1.attributes, nexthop=nexthop1)
+        route2 = route1.with_nexthop(nexthop2)
+
+        # Different instances
+        assert route1 is not route2
+        # Original Route._nexthop unchanged
+        assert route1._nexthop == nexthop1
+        # New route has new nexthop
+        assert route2._nexthop == nexthop2
+        assert route2.nexthop == nexthop2
+
+    def test_with_nexthop_preserves_action(self):
+        """with_nexthop() preserves the route action."""
+        route1 = create_route(route_action=Action.WITHDRAW)
+        nexthop = IP.from_string('1.2.3.4')
+
+        route2 = route1.with_nexthop(nexthop)
+
+        assert route2.action == Action.WITHDRAW
+        assert route2.nexthop == nexthop
+
+    def test_with_action_preserves_nexthop(self):
+        """with_action() preserves the route nexthop."""
+        nexthop = IP.from_string('1.2.3.4')
+        nlri = create_nlri()
+        attrs = AttributeCollection()
+        route1 = Route(nlri, attrs, action=Action.ANNOUNCE, nexthop=nexthop)
+
+        route2 = route1.with_action(Action.WITHDRAW)
+
+        assert route2.action == Action.WITHDRAW
+        assert route2.nexthop == nexthop
+
+
+class TestRouteNexthopProperty:
+    """Test Route.nexthop property with fallback to nlri.nexthop."""
+
+    def test_nexthop_returns_explicit_value(self):
+        """Route._nexthop set → route.nexthop returns it."""
+        nexthop = IP.from_string('1.2.3.4')
+        nlri = create_nlri()
+        attrs = AttributeCollection()
+        route = Route(nlri, attrs, nexthop=nexthop)
+
+        assert route._nexthop == nexthop
+        assert route.nexthop == nexthop
+
+    def test_nexthop_falls_back_to_nlri_when_not_set(self):
+        """Route._nexthop=NoNextHop → route.nexthop returns nlri.nexthop."""
+        nlri = create_nlri()
+        nlri.nexthop = IP.from_string('9.9.9.9')
+        attrs = AttributeCollection()
+        route = Route(nlri, attrs)  # No explicit nexthop
+
+        assert route._nexthop is IP.NoNextHop
+        assert route.nexthop == IP.from_string('9.9.9.9')
+
+    def test_explicit_nexthop_takes_precedence(self):
+        """Route._nexthop set → nlri.nexthop ignored."""
+        nexthop = IP.from_string('1.2.3.4')
+        nlri = create_nlri()
+        nlri.nexthop = IP.from_string('9.9.9.9')
+        attrs = AttributeCollection()
+        route = Route(nlri, attrs, nexthop=nexthop)
+
+        # Route._nexthop takes precedence
+        assert route.nexthop == nexthop
+
+    def test_default_nexthop_is_no_nexthop(self):
+        """Route created without explicit nexthop defaults to NoNextHop."""
+        nlri = create_nlri()
+        attrs = AttributeCollection()
+        route = Route(nlri, attrs)
+
+        assert route._nexthop is IP.NoNextHop
