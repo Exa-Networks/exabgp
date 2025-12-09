@@ -14,18 +14,30 @@
 
 **Core principle:** NEVER discard uncommitted work. ALWAYS ask first.
 
-## ❌ FORBIDDEN without saving diff first AND asking user:
+## ❌ FORBIDDEN without EXPLICIT user permission:
 
-1. **These commands require SAVE + ASK workflow:**
-   - `git checkout -- <file>`
-   - `git checkout HEAD -- <file>`
-   - `git reset --hard`
-   - `git stash drop`
+**MUST ask user before running ANY of these commands:**
+- `git reset` (any form: `--soft`, `--mixed`, `--hard`)
+- `git revert`
+- `git checkout -- <file>`
+- `git checkout HEAD -- <file>`
+- `git restore` (to discard changes)
+- `git stash drop`
+- `rm` / deleting tracked files
 
-2. **NEVER decide on your own to revert/discard work**
+**NO EXCEPTIONS. NO SHORTCUTS. ALWAYS ASK FIRST.**
+
+1. **These commands require EXPLICIT USER PERMISSION:**
+   - STOP before executing
+   - ASK: "May I run `[exact command]`?"
+   - WAIT for explicit "yes" or approval
+   - Only then proceed
+
+2. **NEVER decide on your own to revert/discard/delete work**
    - Even if tests fail
    - Even if you think the approach is wrong
    - Even if you want to try a different approach
+   - Even if it seems like the obvious thing to do
 
 ## ✅ MANDATORY WORKFLOW when you want to revert/change approach:
 
