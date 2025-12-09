@@ -211,18 +211,20 @@ class Section(Error):
                     self.scope.nlri_add(name, command, adding)
             elif action == 'nlri-nexthop':
                 # Settings mode (preferred): set nexthop on settings object
-                # Direct mode (Flow NLRI only): set directly
+                # Direct mode (Flow NLRI only): use immutable with_nexthop()
                 if self.scope.in_settings_mode():
                     self.scope.get_settings().nexthop = insert
                 else:
-                    self.scope.get_route().nexthop = insert
+                    route = self.scope.get_route()
+                    self.scope.replace_route(route.with_nexthop(insert))
             elif action == 'nexthop-and-attribute':
                 ip, attribute = insert
                 if ip:
                     if self.scope.in_settings_mode():
                         self.scope.get_settings().nexthop = ip
                     else:
-                        self.scope.get_route().nexthop = ip
+                        route = self.scope.get_route()
+                        self.scope.replace_route(route.with_nexthop(ip))
                 if attribute:
                     if self.scope.in_settings_mode():
                         self.scope.settings_attribute_add(name, attribute)

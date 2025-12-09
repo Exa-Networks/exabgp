@@ -21,12 +21,15 @@ from exabgp.protocol.ip import IP
 class Route:
     """A Route is an NLRI with attributes and operation context.
 
+    Route is IMMUTABLE after creation. Use with_action() or with_nexthop()
+    to create modified copies.
+
     The action field indicates whether this route is being announced or withdrawn.
     This is operation context, not part of the NLRI identity - the same NLRI can
     be announced and later withdrawn.
 
-    During the transition period, action falls back to nlri.action if not set.
-    Eventually, action will only be stored in Route, not in NLRI.
+    During the transition period, action/nexthop fall back to nlri values if not set.
+    Eventually, action and nexthop will only be stored in Route, not in NLRI.
     """
 
     __slots__ = ('nlri', 'attributes', '_action', '_nexthop', '_Route__index')
@@ -70,15 +73,6 @@ class Route:
         # Fallback to nlri.action during transition period
         return self.nlri.action
 
-    @action.setter
-    def action(self, value: Action) -> None:
-        """Set the route action.
-
-        DEPRECATED: Use with_action() for immutable style.
-        Kept for backward compatibility during transition.
-        """
-        self._action = value
-
     @property
     def nexthop(self) -> IP:
         """Get the route nexthop.
@@ -90,17 +84,6 @@ class Route:
             return self._nexthop
         # Fallback to nlri.nexthop during transition period
         return self.nlri.nexthop
-
-    @nexthop.setter
-    def nexthop(self, value: IP) -> None:
-        """Set the route nexthop.
-
-        DEPRECATED: Use with_nexthop() for immutable style.
-        During transition: also syncs to nlri.nexthop for code that reads from there.
-        """
-        self._nexthop = value
-        # Sync to nlri.nexthop during transition - UpdateCollection reads from there
-        self.nlri.nexthop = value
 
     def with_action(self, action: Action) -> 'Route':
         """Return a new Route with a different action.

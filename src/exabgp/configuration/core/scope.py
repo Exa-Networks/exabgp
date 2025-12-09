@@ -70,6 +70,14 @@ class Scope(Error):
     def get_route(self) -> Route:
         return self._routes[-1]
 
+    def replace_route(self, route: Route) -> None:
+        """Replace the current (last) route with a new one.
+
+        Used for immutable Route updates - e.g., route.with_nexthop() returns
+        a new Route instance which must replace the old one in the list.
+        """
+        self._routes[-1] = route
+
     def pop_route(self) -> Route:
         return self._routes.pop()
 
