@@ -16,6 +16,7 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 - [Use Cases](#use-cases)
 - [Features](#features)
 - [Quick Start](#quick-start)
+- [Version Notice](#version-notice)
 
 </td>
 <td>
@@ -25,7 +26,8 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 - [Zipapp](#zipapp)
 - [pip releases](#pip-releases)
 - [GitHub releases](#github-releases)
-- [git main](#git-main)
+- [git (stable)](#git-stable)
+- [git (development)](#git-development)
 - [OS packages](#os-packages)
 
 </td>
@@ -107,6 +109,20 @@ cd exabgp
 
 See [Installation](#installation) for detailed options and [Documentation](#documentation) for configuration examples.
 
+## Version Notice
+
+**For production use, we recommend the 5.0 branch until version 6.0 is officially released.**
+
+The `main` branch contains development work for the upcoming 6.0 release, which includes significant changes (async reactor default, Python 3.12+ requirement). Until 6.0 is released, use the stable 5.0 branch:
+
+```sh
+git clone https://github.com/Exa-Networks/exabgp
+cd exabgp
+git checkout 5.0
+```
+
+See [Version Information](#version-information) for details on differences between versions.
+
 ## Installation
 
 Should you encounter any issues, we will ask you to install the latest version from git.
@@ -171,8 +187,8 @@ python3 -m exabgp healthcheck --help
 It is also possible to download releases from GitHub:
 
 ```sh
-curl -L https://github.com/Exa-Networks/exabgp/archive/6.0.0.tar.gz | tar zx
-cd exabgp-6.0.0
+curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.1.tar.gz | tar zx
+cd exabgp-5.0.1
 ./sbin/exabgp --version
 ./sbin/exabgp --help
 
@@ -181,9 +197,21 @@ env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 ./bin/healthcheck --help
 ```
 
-### git main
+### git (stable)
 
-In case of issues, we are asking users to run the latest code directly from a local `git clone`:
+For production use, clone and checkout the stable 5.0 branch:
+
+```sh
+git clone https://github.com/Exa-Networks/exabgp exabgp-git
+cd exabgp-git
+git checkout 5.0
+./sbin/exabgp --version
+./sbin/exabgp --help
+```
+
+### git (development)
+
+For testing upcoming features or debugging issues, use the main branch (development towards 6.0):
 
 ```sh
 git clone https://github.com/Exa-Networks/exabgp exabgp-git
@@ -196,10 +224,12 @@ env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 ./bin/healthcheck --help
 ```
 
-It is then possible to change git to use any release (here 6.0.0):
+You can switch between branches or checkout specific releases:
 
 ```sh
-git checkout 6.0.0
+git checkout 5.0      # Stable branch
+git checkout main     # Development branch
+git checkout 5.0.1    # Specific release tag
 ./sbin/exabgp --version
 ```
 
@@ -364,12 +394,12 @@ ExaBGP is nearly as old as Python 3. A lot has changed since 2009; the applicati
 
 ### Version Information
 
-- **Current stable**: 5.0.0 (recommended for production)
+- **Current stable**: 5.0 branch (recommended for production until 6.0 is released)
 - **Development**: main branch (working towards 6.0.0 release)
-  - **Breaking changes**: Command-line arguments changed from 4.x
-  - **Note**: Due to recent async and mypy work, main may not be as stable as it used to be
+  - **Breaking changes**: Command-line arguments changed from 4.x, Python 3.12+ required
+  - **Note**: main is under heavy development with major async reactor and mypy compatibility work, and may undergo non-backward compatible changes
 
-The main branch (previously the master branch) is working towards the ExaBGP 6.0.0 release. The program command line arguments have been changed and are no longer fully backwards compatible with versions 3 and 4. Version 5.0.0 is the recommended stable release for production use. **We recommend using the 5.0.0 release for production deployments.** The upcoming 6.0.0 release will introduce the async reactor as default - users should test thoroughly before production deployment.
+**We recommend using the 5.0 branch for production deployments until version 6.0 is officially released.** The main branch is working towards the ExaBGP 6.0.0 release with significant changes including async reactor as default. Use `git checkout 5.0` after cloning for stable production use.
 
 ### Testing
 
