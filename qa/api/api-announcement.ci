@@ -1,22 +1,36 @@
 option:file:api-announcement.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E:02:000000234001010040020040030465016501800404000000C840050400000064C008040002000117010000
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[2,1]]},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.0.0.0/23"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E:02:000000234001010040020040030465016501800404000000C840050400000064C008040002000117010002
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[2,1]]},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.0.2.0/23"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E:02:000000234001010040020040030465016501800404000000C840050400000064C008040002000117010004
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[2,1]]},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.0.4.0/23"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E:02:000000234001010040020040030465016501800404000000C840050400000064C008040002000117010006
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[2,1]]},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.0.6.0/23"}]}}}}}}
 
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003046501650140050400000064100101
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.1.0.0/16"}]}}}}}}
 
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0030:02:0000001540010100400200400304650165014005040000006418010200
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.2.0.0/24"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0030:02:0000001540010100400200400304650165014005040000006418010201
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.2.1.0/24"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0030:02:0000001540010100400200400304650165014005040000006418010202
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.2.2.0/24"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0030:02:0000001540010100400200400304650165014005040000006418010203
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.2.3.0/24"}]}}}}}}
 
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:000000154001010040020040030465016501400504000000641901030000
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.3.0.0/25"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:000000154001010040020040030465016501400504000000641901030080
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.3.0.128/25"}]}}}}}}
 
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0036:02:0000001C4001010040020040030465016501800404000000C840050400000064100104
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.4.0.0/16"}]}}}}}}
 
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0036:02:0000001C400101004002004003046501650140050400000064C0080400020001100105
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"community":[[2,1]]},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.5.0.0/16"}]}}}}}}
 
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E:02:000000234001010040020040030465016501800404000000C840050400000064C008040002000115010600
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[2,1]]},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.6.0.0/21"}]}}}}}}

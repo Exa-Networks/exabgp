@@ -2,5 +2,8 @@ option:file:api-nexthop.conf
 # 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000201
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E:02:0000003740010100400200400504000001F4800E260002011020010000000000000000000000000001008026050000000000000000000000000002
+2:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65512,"peer":65512},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":500},"announce":{"ipv6 unicast":{"2001::1":[{"nlri":"2605::2/128"}]}}}}}}
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E:02:0000003740010100400200400504000001F4800E260002011020010000000000000000000000000002008026050000000000000000000000000002
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65512,"peer":65512},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":500},"announce":{"ipv6 unicast":{"2001::2":[{"nlri":"2605::2/128"}]}}}}}}
 2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E:02:0000003740010100400200400504000001F4800E260002011020010000000000000000000000000001008026050000000000000000000000000002
+2:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65512,"peer":65512},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":500},"announce":{"ipv6 unicast":{"2001::1":[{"nlri":"2605::2/128"}]}}}}}}

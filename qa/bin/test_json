@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""ExaBGP JSON regression tests.
+"""ExaBGP JSON regression tests (library-based implementation).
 
 This test suite validates JSON output from BGP message decoding.
+Uses library calls directly instead of subprocess forks for faster execution.
 
 CI files can include expected JSON using three tag types:
 
     option:file:config.conf
     1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0040:02:...
     1:json:{"exabgp": "6.0.0", ...}    # Tests with both v4 and v6 encoders
-    1:jsv4:{"exabgp": "6.0.0", ...}    # Tests with v4 encoder only
+    1:jsv4:{"exabgp": "4.0.1", ...}    # Tests with v4 encoder only
     1:jsv6:{"exabgp": "6.0.0", ...}    # Tests with v6 encoder only
 
 Tag usage:
@@ -16,10 +17,10 @@ Tag usage:
     - jsv4: + jsv6:  Use when v4 and v6 differ (e.g., Flow NLRI nexthop)
 
 Usage:
-    ./qa/bin/test_json                 # Run all JSON regression tests
-    ./qa/bin/test_json --generate      # Generate missing json: lines
-    ./qa/bin/test_json --verbose       # Show detailed output
-    ./qa/bin/test_json file.ci         # Test specific CI file
+    ./qa/bin/test_json_lib                 # Run all JSON regression tests
+    ./qa/bin/test_json_lib --generate      # Generate missing json: lines
+    ./qa/bin/test_json_lib --verbose       # Show detailed output
+    ./qa/bin/test_json_lib file.ci         # Test specific CI file
 
 Exit codes:
     0 - All tests passed
@@ -31,11 +32,23 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
-import subprocess
 import sys
 from pathlib import Path
+
+# Add src to path for library imports
+REPO_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT / 'src'))
+
+# Now import exabgp modules
+from exabgp.environment import getenv
+from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.check import _hexa, _make_update
+from exabgp.reactor.api.response import Response
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.version import json as json_v6_version
+from exabgp.version import json_v4 as json_v4_version
 
 # ANSI color codes
 GREEN = '\033[32m'
@@ -43,42 +56,89 @@ RED = '\033[31m'
 YELLOW = '\033[33m'
 RESET = '\033[0m'
 
+# Cache for initialized neighbors
+_neighbor_cache: dict[Path | None, Neighbor] = {}
 
-def decode_message(
-    payload_hex: str, repo_root: Path, config_file: Path | None = None, api_version: int = 4
-) -> dict | None:
-    """Decode a BGP message payload to JSON.
+
+def init_environment() -> None:
+    """Initialize exabgp environment (once per test run)."""
+    env = getenv()
+    env.bgp.passive = True
+    env.log.enable = False
+    env.tcp.bind = []
+
+
+def get_neighbor(config_file: Path | None) -> Neighbor:
+    """Get or create a neighbor for the given config file.
 
     Args:
-        payload_hex: The BGP UPDATE payload in hex (without marker/length/type header)
-        repo_root: Path to repository root
-        config_file: Optional config file for context
-        api_version: API version to use (4 or 6)
+        config_file: Path to config file, or None for default neighbor
+
+    Returns:
+        Neighbor instance configured for decoding
+    """
+    if config_file in _neighbor_cache:
+        return _neighbor_cache[config_file]
+
+    if config_file and config_file.exists():
+        # Load neighbor from config file
+        try:
+            config = Configuration([str(config_file)])
+            config.reload()  # Must call reload() to parse the config
+            neighbors = list(config.neighbors.values())
+            if neighbors:
+                neighbor = neighbors[0]
+                _neighbor_cache[config_file] = neighbor
+                return neighbor
+        except Exception:
+            pass  # Fall through to default
+
+    # Create default neighbor with all families
+    config_text = """
+    neighbor 127.0.0.1 {
+        router-id 10.0.0.2;
+        local-address 127.0.0.1;
+        local-as 65533;
+        peer-as 65533;
+        family { all }
+    }
+    """
+    try:
+        config = Configuration([config_text], text=True)
+        config.reload()  # Must call reload() to parse the config
+        neighbor = list(config.neighbors.values())[0]
+        _neighbor_cache[config_file] = neighbor
+        return neighbor
+    except Exception as e:
+        raise RuntimeError(f'Failed to create default neighbor: {e}')
+
+
+def decode_message(payload_hex: str, neighbor: Neighbor, api_version: int = 6) -> dict | None:
+    """Decode a BGP UPDATE message to JSON using library directly.
+
+    Args:
+        payload_hex: The BGP UPDATE payload in hex
+        neighbor: Neighbor for negotiation context
+        api_version: API version (4 or 6)
 
     Returns:
         Parsed JSON dict or None on error
     """
-    exabgp_script = repo_root / 'sbin' / 'exabgp'
-    cmd = [str(exabgp_script), 'decode']
-
-    if config_file and config_file.exists():
-        cmd.extend(['-c', str(config_file)])
-
-    cmd.append(payload_hex)
-
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=30,
-            cwd=str(repo_root),
-            env={**os.environ, 'exabgp_log_enable': 'false', 'exabgp_api_version': str(api_version)},
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return json.loads(result.stdout.strip())
-        return None
-    except (subprocess.TimeoutExpired, json.JSONDecodeError):
+        raw = _hexa(payload_hex)
+        update = _make_update(neighbor, raw)
+        if not update:
+            return None
+
+        # Select encoder based on API version
+        if api_version == 4:
+            encoder = Response.V4.JSON(json_v4_version)
+        else:
+            encoder = Response.JSON(json_v6_version)
+
+        json_str = encoder.update(neighbor, 'in', update, b'', b'', Negotiated.UNSET)
+        return json.loads(json_str)
+    except Exception:
         return None
 
 
@@ -118,8 +178,27 @@ class JsonExpectation:
         self.jsv6: str | None = None  # v6-specific
 
 
+def is_eor_message(payload: str) -> bool:
+    """Check if a BGP UPDATE payload is an End-of-RIB marker.
+
+    EOR types:
+    1. Empty EOR: 00000000 (withdrawn_len=0, path_attr_len=0)
+    2. MP_UNREACH EOR: 00000007900F0003XXXX (path_attr_len=7, MP_UNREACH_NLRI with just AFI/SAFI)
+    """
+    payload_upper = payload.upper()
+    return payload_upper == '00000000' or payload_upper.startswith('00000007900F0003')
+
+
 def parse_ci_file(ci_path: Path) -> tuple[Path | None, list[tuple[str, str, JsonExpectation]]]:
     """Parse a CI file for raw messages and json expectations.
+
+    Parses the file line by line, matching json/jsv4/jsv6 expectations to the
+    immediately preceding non-EOR raw UPDATE message. EOR messages are ignored.
+
+    Expected CI file format:
+        option:file:config.conf
+        N:raw:MARKER:LENGTH:TYPE:PAYLOAD
+        N:json:{...}                      # or N:jsv4:{...} and/or N:jsv6:{...}
 
     Returns:
         Tuple of (config_file_path, list of (step, payload_hex, expectations))
@@ -127,10 +206,9 @@ def parse_ci_file(ci_path: Path) -> tuple[Path | None, list[tuple[str, str, Json
     config_file = None
     messages: list[tuple[str, str, JsonExpectation]] = []
 
-    # Track raw messages by step to match with json
-    raw_by_step: dict[str, list[str]] = {}
-    # Track expectations by step, with lists for multiple raw messages per step
-    expectations_by_step: dict[str, list[JsonExpectation]] = {}
+    # Current raw message waiting for json expectations (step, payload)
+    current_raw: tuple[str, str] | None = None
+    current_exp = JsonExpectation()
 
     with open(ci_path) as f:
         for line in f:
@@ -145,73 +223,52 @@ def parse_ci_file(ci_path: Path) -> tuple[Path | None, list[tuple[str, str, Json
                 config_file = ci_path.parent / config_name
                 if not config_file.exists():
                     config_file = ci_path.parent.parent.parent / 'etc' / 'exabgp' / config_name
+                continue
 
             # Parse N:raw:MARKER:LENGTH:TYPE:PAYLOAD
-            # Payload may contain colons for readability, so we split and rejoin
             raw_match = re.match(r'^(\d+):raw:([A-Fa-f0-9]+):([A-Fa-f0-9]+):([A-Fa-f0-9]+):(.+)$', line)
             if raw_match:
                 step = raw_match.group(1)
                 msg_type = raw_match.group(4)
-                # Remove any colons from payload (used for readability)
                 payload = raw_match.group(5).replace(':', '')
 
-                # Only process UPDATE messages (type 02), skip EOR (all zeros)
-                if msg_type.upper() == '02' and payload.upper() != '00000000':
-                    if step not in raw_by_step:
-                        raw_by_step[step] = []
-                    raw_by_step[step].append(payload)
+                # Skip non-UPDATE messages
+                if msg_type.upper() != '02':
+                    continue
 
-            # Parse N:json:, N:jsv4:, N:jsv6: using split
+                # Skip EOR messages
+                if is_eor_message(payload):
+                    continue
+
+                # Save previous raw message with its expectations
+                if current_raw is not None:
+                    messages.append((current_raw[0], current_raw[1], current_exp))
+
+                # Start new raw message
+                current_raw = (step, payload)
+                current_exp = JsonExpectation()
+                continue
+
+            # Parse N:json:, N:jsv4:, N:jsv6:
             parts = line.split(':', 2)
             if len(parts) == 3 and parts[0].isdigit() and parts[1] in ('json', 'jsv4', 'jsv6'):
                 step, tag, json_str = parts
-                if step not in expectations_by_step:
-                    expectations_by_step[step] = []
 
-                # Get or create expectation for this message index
-                # Each raw message gets its own expectation
-                exp_list = expectations_by_step[step]
+                # Attach to current raw message
+                if current_raw is None:
+                    # json without preceding raw - skip
+                    continue
 
-                # Determine if we need a new expectation or can add to existing one
-                # - json: needs its own expectation (can't mix with jsv4/jsv6)
-                # - jsv4:/jsv6: should pair together on same expectation
-                need_new = False
-                if len(exp_list) == 0:
-                    need_new = True
-                elif tag == 'json':
-                    # json: starts new if previous has json, jsv4, or jsv6
-                    prev = exp_list[-1]
-                    if prev.json is not None or prev.jsv4 is not None or prev.jsv6 is not None:
-                        need_new = True
-                elif tag == 'jsv4':
-                    # jsv4: starts new if previous already has jsv4 or json
-                    prev = exp_list[-1]
-                    if prev.jsv4 is not None or prev.json is not None:
-                        need_new = True
-                elif tag == 'jsv6':
-                    # jsv6: pairs with jsv4 on same expectation
-                    # Start new if previous has json or jsv6 already
-                    prev = exp_list[-1]
-                    if prev.json is not None or prev.jsv6 is not None:
-                        need_new = True
-
-                if need_new:
-                    exp_list.append(JsonExpectation())
-
-                exp = exp_list[-1]
                 if tag == 'json':
-                    exp.json = json_str
+                    current_exp.json = json_str
                 elif tag == 'jsv4':
-                    exp.jsv4 = json_str
+                    current_exp.jsv4 = json_str
                 elif tag == 'jsv6':
-                    exp.jsv6 = json_str
+                    current_exp.jsv6 = json_str
 
-    # Match raw messages with json expectations
-    for step, payloads in sorted(raw_by_step.items(), key=lambda x: int(x[0])):
-        exp_list = expectations_by_step.get(step, [])
-        for i, payload in enumerate(payloads):
-            exp = exp_list[i] if i < len(exp_list) else JsonExpectation()
-            messages.append((step, payload, exp))
+    # Don't forget the last raw message
+    if current_raw is not None:
+        messages.append((current_raw[0], current_raw[1], current_exp))
 
     return config_file, messages
 
@@ -238,8 +295,8 @@ def compare_json(decoded: dict, expected_json: str, verbose: bool, step: str, la
                 for i, (e, g) in enumerate(zip(exp_str, got_str)):
                     if e != g:
                         print(f'      first diff at char {i}:')
-                        print(f'      expected: ...{exp_str[max(0,i-20):i+50]}...')
-                        print(f'      got:      ...{got_str[max(0,i-20):i+50]}...')
+                        print(f'      expected: ...{exp_str[max(0, i - 20) : i + 50]}...')
+                        print(f'      got:      ...{got_str[max(0, i - 20) : i + 50]}...')
                         break
                 else:
                     # Length difference
@@ -251,21 +308,24 @@ def compare_json(decoded: dict, expected_json: str, verbose: bool, step: str, la
 
 
 def test_ci_file(
-    ci_path: Path, repo_root: Path, verbose: bool = False, generate: bool = False
-) -> tuple[int, int, list[str]]:
+    ci_path: Path, verbose: bool = False, generate: bool = False
+) -> tuple[int, int, list[tuple[str, list[str]]]]:
     """Test a single CI file.
 
     Returns:
-        Tuple of (passed, failed, list of generated lines if generate=True)
+        Tuple of (passed, failed, list of (payload, json_lines) tuples if generate=True)
     """
     config_file, messages = parse_ci_file(ci_path)
 
     if not messages:
         return 0, 0, []
 
+    # Get neighbor for this config
+    neighbor = get_neighbor(config_file)
+
     passed = 0
     failed = 0
-    generated_lines: list[str] = []
+    generated_entries: list[tuple[str, list[str]]] = []
 
     for step, payload, expectations in messages:
         # Determine which tests to run based on expectations
@@ -275,34 +335,69 @@ def test_ci_file(
         has_any = expectations.json or expectations.jsv4 or expectations.jsv6
 
         if generate:
-            # Generate json: line using v4 encoder (default)
-            decoded = decode_message(payload, repo_root, config_file, api_version=4)
-            if decoded is None:
+            # Generate json using both v4 and v6 encoders
+            decoded_v4 = decode_message(payload, neighbor, api_version=4)
+            decoded_v6 = decode_message(payload, neighbor, api_version=6)
+
+            if decoded_v6 is None:
                 if verbose:
                     print(f'    {YELLOW}SKIP{RESET} step {step}: decode failed')
                 continue
-            clean = normalize_json(decoded)
-            json_line = f'{step}:json:{json.dumps(clean, separators=(",", ":"))}'
-            generated_lines.append(json_line)
-            if verbose:
-                print(f'    {GREEN}GEN{RESET} step {step}')
+
+            clean_v6 = normalize_json(decoded_v6)
+            json_lines: list[str] = []
+
+            if decoded_v4 is not None:
+                # Normalize v4 version to v6 for comparison
+                if 'exabgp' in decoded_v4:
+                    decoded_v4['exabgp'] = json_v6_version
+                clean_v4 = normalize_json(decoded_v4)
+
+                if clean_v4 == clean_v6:
+                    # v4 and v6 are identical - use json:
+                    json_line = f'{step}:json:{json.dumps(clean_v6, separators=(",", ":"))}'
+                    json_lines.append(json_line)
+                    if verbose:
+                        print(f'    {GREEN}GEN{RESET} step {step} (json)')
+                else:
+                    # v4 and v6 differ - use jsv4: and jsv6:
+                    # Restore v4 version for jsv4 output
+                    clean_v4_output = normalize_json(decode_message(payload, neighbor, api_version=4) or {})
+                    jsv4_line = f'{step}:jsv4:{json.dumps(clean_v4_output, separators=(",", ":"))}'
+                    jsv6_line = f'{step}:jsv6:{json.dumps(clean_v6, separators=(",", ":"))}'
+                    json_lines.append(jsv4_line)
+                    json_lines.append(jsv6_line)
+                    if verbose:
+                        print(f'    {GREEN}GEN{RESET} step {step} (jsv4 + jsv6)')
+            else:
+                # v4 decode failed, use v6 only
+                jsv6_line = f'{step}:jsv6:{json.dumps(clean_v6, separators=(",", ":"))}'
+                json_lines.append(jsv6_line)
+                if verbose:
+                    print(f'    {GREEN}GEN{RESET} step {step} (jsv6 only)')
+
+            generated_entries.append((payload, json_lines))
             passed += 1
         elif has_any:
             step_passed = True
 
             if expectations.json:
-                # json: tests v6 only (default API version)
-                # Use jsv4:/jsv6: to test both API versions explicitly
-                decoded = decode_message(payload, repo_root, config_file, api_version=6)
-                if decoded is None:
-                    if verbose:
-                        print(f'    {YELLOW}SKIP{RESET} step {step}: decode failed')
-                elif not compare_json(decoded, expectations.json, verbose, step, 'json'):
-                    step_passed = False
+                # json: tests with both v4 and v6 encoders (must match same expectation)
+                for api_ver in [4, 6]:
+                    decoded = decode_message(payload, neighbor, api_version=api_ver)
+                    if decoded is None:
+                        if verbose:
+                            print(f'    {YELLOW}SKIP{RESET} step {step} (v{api_ver}): decode failed')
+                    else:
+                        # For v4 encoder, normalize version field to v6 for comparison
+                        if api_ver == 4 and 'exabgp' in decoded:
+                            decoded['exabgp'] = json_v6_version
+                        if not compare_json(decoded, expectations.json, verbose, step, f'v{api_ver}'):
+                            step_passed = False
 
             if expectations.jsv4:
                 # v4-specific
-                decoded = decode_message(payload, repo_root, config_file, api_version=4)
+                decoded = decode_message(payload, neighbor, api_version=4)
                 if decoded is None:
                     if verbose:
                         print(f'    {YELLOW}SKIP{RESET} step {step} (jsv4): decode failed')
@@ -311,7 +406,7 @@ def test_ci_file(
 
             if expectations.jsv6:
                 # v6-specific
-                decoded = decode_message(payload, repo_root, config_file, api_version=6)
+                decoded = decode_message(payload, neighbor, api_version=6)
                 if decoded is None:
                     if verbose:
                         print(f'    {YELLOW}SKIP{RESET} step {step} (jsv6): decode failed')
@@ -329,58 +424,107 @@ def test_ci_file(
             if verbose:
                 print(f'    {YELLOW}SKIP{RESET} step {step}: no json expectation')
 
-    return passed, failed, generated_lines
+    return passed, failed, generated_entries
 
 
-def insert_json_lines(ci_path: Path, json_lines: list[str]) -> bool:
+def insert_json_lines(ci_path: Path, generated_entries: list[tuple[str, list[str]]]) -> bool:
     """Insert json: lines into CI file after corresponding raw: lines.
 
     Args:
         ci_path: Path to CI file
-        json_lines: List of json lines to insert (format: "step:json:{...}")
+        generated_entries: List of (payload, json_lines) tuples from successful decodes
 
     Returns:
         True if file was modified
     """
-    # Parse json lines into dict by step
-    json_by_step: dict[str, list[str]] = {}
-    for line in json_lines:
-        match = re.match(r'^(\d+):json:', line)
-        if match:
-            step = match.group(1)
-            if step not in json_by_step:
-                json_by_step[step] = []
-            json_by_step[step].append(line)
+    # Build a dict from payload -> json lines for that payload
+    json_by_payload: dict[str, list[str]] = {}
+    for payload, json_lines in generated_entries:
+        # Normalize payload to uppercase for matching
+        json_by_payload[payload.upper()] = json_lines
 
-    # Read file and track which raw lines need json inserted after
+    # Read file and insert json after each non-EOR UPDATE raw line
     lines = ci_path.read_text().splitlines()
     new_lines: list[str] = []
-    raw_counts: dict[str, int] = {}  # Track how many raw lines per step we've seen
 
-    for line in lines:
+    for i, line in enumerate(lines):
         new_lines.append(line)
 
-        # Check if this is a raw UPDATE line
+        # Check if this is a raw UPDATE line (non-EOR)
         raw_match = re.match(r'^(\d+):raw:([A-Fa-f0-9]+):([A-Fa-f0-9]+):([A-Fa-f0-9]+):(.+)$', line)
         if raw_match:
-            step = raw_match.group(1)
             msg_type = raw_match.group(4)
+            payload = raw_match.group(5).replace(':', '').upper()
 
             # Only for UPDATE messages, skip EOR
-            payload = raw_match.group(5).replace(':', '')
-            if msg_type.upper() == '02' and payload.upper() != '00000000':
-                if step not in raw_counts:
-                    raw_counts[step] = 0
+            if msg_type.upper() == '02' and not is_eor_message(payload):
+                # Check if next line already has json expectation
+                next_line = lines[i + 1] if i + 1 < len(lines) else ''
+                has_json = ':json:' in next_line or ':jsv4:' in next_line or ':jsv6:' in next_line
 
-                # Get the corresponding json line
-                if step in json_by_step and raw_counts[step] < len(json_by_step[step]):
-                    json_line = json_by_step[step][raw_counts[step]]
-                    # Only insert if not already present (check next line)
-                    next_idx = len(new_lines)
-                    if next_idx >= len(lines) or not lines[next_idx - 1 + 1].startswith(f'{step}:json:'):
+                # Insert generated json if not already present and we have one
+                if not has_json and payload in json_by_payload:
+                    for json_line in json_by_payload[payload]:
                         new_lines.append(json_line)
 
-                raw_counts[step] += 1
+    # Write back
+    new_content = '\n'.join(new_lines) + '\n'
+    old_content = ci_path.read_text()
+
+    if new_content != old_content:
+        ci_path.write_text(new_content)
+        return True
+    return False
+
+
+def replace_json_lines(ci_path: Path, generated_entries: list[tuple[str, list[str]]]) -> bool:
+    """Replace json:/jsv4:/jsv6: lines in CI file with newly generated ones.
+
+    Preserves all comments and file structure. Removes old json expectations
+    and inserts new ones after corresponding raw: lines.
+
+    Args:
+        ci_path: Path to CI file
+        generated_entries: List of (payload, json_lines) tuples from successful decodes
+
+    Returns:
+        True if file was modified
+    """
+    # Build a dict from payload -> json lines for that payload
+    json_by_payload: dict[str, list[str]] = {}
+    for payload, json_lines in generated_entries:
+        # Normalize payload to uppercase for matching
+        json_by_payload[payload.upper()] = json_lines
+
+    # Read file and process
+    lines = ci_path.read_text().splitlines()
+    new_lines: list[str] = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Check if this is an old json expectation line - skip it (will be replaced)
+        if stripped and not stripped.startswith('#'):
+            parts = stripped.split(':', 2)
+            if len(parts) >= 3 and parts[0].isdigit() and parts[1] in ('json', 'jsv4', 'jsv6'):
+                # Skip old json expectation - it will be replaced
+                continue
+
+        # Keep the line (comment, raw, option, or other)
+        new_lines.append(line)
+
+        # Check if this is a raw UPDATE line (non-EOR)
+        raw_match = re.match(r'^(\d+):raw:([A-Fa-f0-9]+):([A-Fa-f0-9]+):([A-Fa-f0-9]+):(.+)$', stripped)
+        if raw_match:
+            msg_type = raw_match.group(4)
+            payload = raw_match.group(5).replace(':', '').upper()
+
+            # Only for UPDATE messages, skip EOR
+            if msg_type.upper() == '02' and not is_eor_message(payload):
+                # Insert json lines for this specific payload
+                if payload in json_by_payload:
+                    for json_line in json_by_payload[payload]:
+                        new_lines.append(json_line)
 
     # Write back
     new_content = '\n'.join(new_lines) + '\n'
@@ -432,13 +576,21 @@ def main() -> int:
     parser.add_argument('-v', '--verbose', action='store_true', help='Show detailed output')
     parser.add_argument('-g', '--generate', action='store_true', help='Generate missing json: lines')
     parser.add_argument('-w', '--write', action='store_true', help='Write generated json: lines to CI files')
+    parser.add_argument(
+        '-i', '--inline', action='store_true', help='Replace existing json: lines inline (use with --generate)'
+    )
     parser.add_argument('--json-only', action='store_true', help='Only test files with json: expectations')
     parser.add_argument('files', nargs='*', help='CI files or directories to test')
     args = parser.parse_args()
 
-    repo_root = Path(__file__).parent.parent.parent
+    # Validate --inline requires --generate
+    if args.inline and not args.generate:
+        parser.error('--inline requires --generate')
 
-    ci_files = find_ci_files(repo_root, args.files if args.files else None)
+    # Initialize environment once
+    init_environment()
+
+    ci_files = find_ci_files(REPO_ROOT, args.files if args.files else None)
 
     if not ci_files:
         print('No CI files found')
@@ -451,16 +603,16 @@ def main() -> int:
 
     for ci_file in ci_files:
         # By default, only test files with json expectations
-        # Use --generate or --write to process all files
-        if not args.generate and not args.write:
+        # Use --generate, --write, or --inline to process all files
+        if not args.generate and not args.write and not args.inline:
             content = ci_file.read_text()
             if ':json:' not in content and ':jsv4:' not in content and ':jsv6:' not in content:
                 continue
 
-        rel_path = ci_file.relative_to(repo_root) if ci_file.is_relative_to(repo_root) else ci_file
+        rel_path = ci_file.relative_to(REPO_ROOT) if ci_file.is_relative_to(REPO_ROOT) else ci_file
         print(f'Testing {rel_path}...')
 
-        passed, failed, generated = test_ci_file(ci_file, repo_root, args.verbose, args.generate or args.write)
+        passed, failed, generated = test_ci_file(ci_file, args.verbose, args.generate or args.write or args.inline)
 
         if passed > 0 or failed > 0:
             files_tested += 1
@@ -469,12 +621,16 @@ def main() -> int:
 
             if generated:
                 all_generated[ci_file] = generated
-                if args.write:
+                if args.inline:
+                    # Replace existing json lines with new ones
+                    if replace_json_lines(ci_file, generated):
+                        print(f'  {GREEN}REPLACED{RESET} {len(generated)} json lines')
+                elif args.write:
                     if insert_json_lines(ci_file, generated):
                         print(f'  {GREEN}WROTE{RESET} {len(generated)} json lines')
 
         if not args.verbose and passed > 0 and failed == 0:
-            if not args.write:
+            if not args.write and not args.inline:
                 print(f'  {GREEN}PASS{RESET} {passed} messages')
         elif failed > 0:
             print(f'  {RED}FAIL{RESET} {failed}/{passed + failed} messages failed')
@@ -488,19 +644,20 @@ def main() -> int:
     print(f'{GREEN}Passed:{RESET}  {total_passed}')
     print(f'{RED}Failed:{RESET}  {total_failed}')
 
-    # Output generated lines
-    if args.generate and all_generated:
+    # Output generated lines (only if not already written inline)
+    if args.generate and all_generated and not args.inline:
         print()
         print('=' * 60)
         print('GENERATED JSON LINES')
         print('=' * 60)
         print('Add these lines to CI files after corresponding raw: lines:')
         print()
-        for ci_file, lines in all_generated.items():
-            rel_path = ci_file.relative_to(repo_root) if ci_file.is_relative_to(repo_root) else ci_file
+        for ci_file, entries in all_generated.items():
+            rel_path = ci_file.relative_to(REPO_ROOT) if ci_file.is_relative_to(REPO_ROOT) else ci_file
             print(f'# {rel_path}')
-            for line in lines:
-                print(line)
+            for payload, json_lines in entries:
+                for line in json_lines:
+                    print(line)
             print()
 
     return 0 if total_failed == 0 else 1

@@ -5,27 +5,40 @@ option:file:api-rib.conf
 
 # 192.168.0.1/32, wait and remove it
 20:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000014005040000006420C0A80001
+20:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.1":[{"nlri":"192.168.0.1/32"}]}}}}}}
 21:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001C02000520C0A800010000
 
 # 192.168.0.2/32 and 192.168.0.3/32
 30:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000024005040000006420C0A80002
+41:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.2":[{"nlri":"192.168.0.2/32"}]}}}}}}
 30:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000034005040000006420C0A80003
+41:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.3":[{"nlri":"192.168.0.3/32"}]}}}}}}
 # flush
 31:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000024005040000006420C0A80002
+41:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.2":[{"nlri":"192.168.0.2/32"}]}}}}}}
 31:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000034005040000006420C0A80003
+41:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.3":[{"nlri":"192.168.0.3/32"}]}}}}}}
 
 # 192.168.0.4/32, and remove them both
 40:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000044005040000006420C0A80004
+41:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.4":[{"nlri":"192.168.0.4/32"}]}}}}}}
 
 # flush
 41:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000024005040000006420C0A80002
+41:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.2":[{"nlri":"192.168.0.2/32"}]}}}}}}
 41:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000034005040000006420C0A80003
+41:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.3":[{"nlri":"192.168.0.3/32"}]}}}}}}
 41:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000044005040000006420C0A80004
+41:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.4":[{"nlri":"192.168.0.4/32"}]}}}}}}
 
 # clear
 50:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001C:02:000520C0A800020000
+50:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"192.168.0.2/32"}]}}}}}
 50:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001C:02:000520C0A800030000
+50:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"192.168.0.3/32"}]}}}}}
 50:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001C:02:000520C0A800040000
+50:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"192.168.0.4/32"}]}}}}}
 
 # 192.168.0.5/32
 60:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000054005040000006420C0A80005
+60:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.5":[{"nlri":"192.168.0.5/32"}]}}}}}}

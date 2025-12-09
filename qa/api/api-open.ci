@@ -1,3 +1,4 @@
 option:file:api-open.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.1.1.1/32","path-information":"0.0.0.0"}]}}}}}}
