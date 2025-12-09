@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 from exabgp.util.types import Buffer
 
@@ -24,16 +24,6 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
-
-
-def _unique() -> Iterator[int]:
-    value = 0
-    while True:
-        yield value
-        value += 1
-
-
-unique: Iterator[int] = _unique()
 
 
 @NLRI.register(AFI.l2vpn, SAFI.vpls)
@@ -51,7 +41,7 @@ class VPLS(NLRI):
     - unpack_nlri(): Create from wire bytes (network receive path)
     """
 
-    __slots__ = ('unique',)
+    __slots__ = ()
 
     # Wire format length (including 2-byte length prefix)
     PACKED_LENGTH = 19  # length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
@@ -68,7 +58,6 @@ class VPLS(NLRI):
         self.nexthop = IP.NoNextHop
 
         self._packed: bytes = bytes(packed)  # Ensure bytes for storage
-        self.unique = next(unique)
 
     @classmethod
     def make_vpls(
@@ -221,19 +210,15 @@ class VPLS(NLRI):
 
     def __copy__(self) -> 'VPLS':
         new = self.__class__.__new__(self.__class__)
-        # Family/NLRI slots (afi/safi are class-level)
+        # Family/NLRI slots - _packed is in NLRI slots
         self._copy_nlri_slots(new)
-        # VPLS slots (only unique - _packed is in NLRI slots)
-        new.unique = self.unique
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'VPLS':
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
-        # Family/NLRI slots (afi/safi are class-level)
+        # Family/NLRI slots - _packed is in NLRI slots and is immutable bytes
         self._deepcopy_nlri_slots(new, memo)
-        # VPLS slots (only unique - _packed is in NLRI slots and is immutable bytes)
-        new.unique = self.unique
         return new
 
     @classmethod

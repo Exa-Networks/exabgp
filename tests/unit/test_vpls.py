@@ -61,16 +61,6 @@ class TestVPLSCreation:
             assert vpls.offset == offset
             assert vpls.size == size
 
-    def test_vpls_unique_counter(self) -> None:
-        """Test that each VPLS instance gets a unique counter"""
-        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
-        vpls1 = VPLS.make_vpls(rd, 3, 262145, 1, 8)
-        vpls2 = VPLS.make_vpls(rd, 3, 262145, 1, 8)
-
-        # Each instance should have a different unique value
-        assert vpls1.unique != vpls2.unique
-        assert vpls2.unique == vpls1.unique + 1
-
 
 class TestVPLSPackUnpack:
     """Test packing and unpacking VPLS routes"""
