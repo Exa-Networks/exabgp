@@ -337,7 +337,7 @@ class ParseStaticRoute(Section):
 
             # Create immutable NLRI from settings
             nlri = nlri_class.from_settings(settings)
-            route = Route(nlri, attributes)
+            route = Route(nlri, attributes, nexthop=settings.nexthop)
             self.scope.append_route(route)
 
         # Process routes (from either nested syntax or flat syntax)
@@ -511,7 +511,7 @@ class ParseStaticRoute(Section):
             new_nlri.nexthop = nexthop  # nexthop can be NextHopSelf
             # next ip
             ip += increment
-            yield Route(new_nlri, last.attributes)
+            yield Route(new_nlri, last.attributes, nexthop=nexthop)
 
     def _split(self) -> None:
         for route in self.scope.pop_routes():

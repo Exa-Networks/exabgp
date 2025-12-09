@@ -83,15 +83,20 @@ class TestLabelStringRepresentation:
         result = label.extensive()
         assert '192.168.1.0/24' in result
 
-    def test_extensive_with_nexthop(self) -> None:
-        """Test extensive representation with nexthop"""
+    def test_extensive_no_nexthop(self) -> None:
+        """Test extensive representation does NOT include nexthop.
+
+        nexthop is not part of NLRI identity - it comes from Route or RoutedNLRI context.
+        """
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE, labels=Labels.make_labels([100], True))
         label.nexthop = IP.from_string('10.0.0.1')
 
         result = label.extensive()
         assert '192.168.1.0/24' in result
-        assert '10.0.0.1' in result or 'next-hop' in result
+        # nexthop is NOT in NLRI.extensive() - comes from Route/RoutedNLRI context
+        assert 'next-hop' not in result
+        assert '10.0.0.1' not in result
 
 
 class TestLabelPrefix:

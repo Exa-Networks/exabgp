@@ -279,7 +279,7 @@ class Neighbor:
         return self.session.ip_self(afi)
 
     def resolve_self(self, route: 'Route') -> 'Route':
-        nexthop = route.nlri.nexthop
+        nexthop = route.nexthop  # Use route.nexthop, not nlri.nexthop
 
         # Skip if not a SELF type
         if not nexthop.SELF:
@@ -290,12 +290,22 @@ class Neighbor:
             return route
 
         route_copy = deepcopy(route)
-        nexthop = route_copy.nlri.nexthop
+        # Get nexthop from route_copy._nexthop (deepcopied from route._nexthop)
+        # Note: route_copy._nexthop and route_copy.nlri.nexthop may be the same object
+        # if the original route had them pointing to the same IPSelf instance.
+        nexthop_copy = route_copy._nexthop
 
         neighbor_self = self.ip_self(route_copy.nlri.afi)
 
         # Mutate in-place instead of replacing
-        nexthop.resolve(neighbor_self)
+        nexthop_copy.resolve(neighbor_self)
+        # Also resolve nlri.nexthop if it's a different object (backward compat)
+        if (
+            route_copy.nlri.nexthop is not nexthop_copy
+            and route_copy.nlri.nexthop.SELF
+            and not route_copy.nlri.nexthop.resolved
+        ):
+            route_copy.nlri.nexthop.resolve(neighbor_self)
 
         if Attribute.CODE.NEXT_HOP in route_copy.attributes:
             nh_attr = route_copy.attributes[Attribute.CODE.NEXT_HOP]

@@ -28,8 +28,9 @@ class Route:
     This is operation context, not part of the NLRI identity - the same NLRI can
     be announced and later withdrawn.
 
-    During the transition period, action/nexthop fall back to nlri values if not set.
-    Eventually, action and nexthop will only be stored in Route, not in NLRI.
+    Both action and nexthop must be explicitly set when creating a Route.
+    Route.action falls back to nlri.action during transition (will be removed).
+    Route.nexthop does NOT fall back - must be passed to constructor.
     """
 
     __slots__ = ('nlri', 'attributes', '_action', '_nexthop', '_Route__index')
@@ -77,19 +78,15 @@ class Route:
     def nexthop(self) -> IP:
         """Get the route nexthop.
 
-        During transition: returns self._nexthop if set, else falls back to nlri.nexthop.
-        Eventually: will only return self._nexthop.
+        Returns self._nexthop directly. No fallback to nlri.nexthop.
+        Route must be created with explicit nexthop= parameter.
         """
-        if self._nexthop is not IP.NoNextHop:
-            return self._nexthop
-        # Fallback to nlri.nexthop during transition period
-        return self.nlri.nexthop
+        return self._nexthop
 
     def with_action(self, action: Action) -> 'Route':
         """Return a new Route with a different action.
 
         Route is immutable, so this creates a new instance.
-        Uses self.nexthop (with fallback) to preserve nexthop during transition.
         """
         return Route(self.nlri, self.attributes, action=action, nexthop=self.nexthop)
 
@@ -97,10 +94,9 @@ class Route:
         """Return a new Route with a different nexthop.
 
         Route is immutable, so this creates a new instance.
-        Uses self.action (with fallback) to preserve action during transition.
-        Also syncs to nlri.nexthop during transition for code that reads from there.
+        Also syncs to nlri.nexthop for code that reads from there (will be removed).
         """
-        # Sync to nlri.nexthop during transition - UpdateCollection reads from there
+        # Sync to nlri.nexthop - some code still reads from there
         self.nlri.nexthop = nexthop
         return Route(self.nlri, self.attributes, action=self.action, nexthop=nexthop)
 
@@ -133,7 +129,9 @@ class Route:
 
     def extensive(self) -> str:
         # If you change this you must change as well extensive in Update
-        return f'{self.nlri!s}{self.attributes!s}'
+        # nexthop comes from Route, not NLRI (NLRI.extensive() no longer includes nexthop)
+        nexthop_str = '' if self._nexthop is IP.NoNextHop else f' next-hop {self._nexthop}'
+        return f'{self.nlri!s}{nexthop_str}{self.attributes!s}'
 
     def __repr__(self) -> str:
         return self.extensive()

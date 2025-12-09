@@ -255,15 +255,16 @@ class TestRouteNexthopProperty:
         assert route._nexthop == nexthop
         assert route.nexthop == nexthop
 
-    def test_nexthop_falls_back_to_nlri_when_not_set(self):
-        """Route._nexthop=NoNextHop → route.nexthop returns nlri.nexthop."""
+    def test_nexthop_no_fallback_to_nlri(self):
+        """Route.nexthop returns _nexthop directly, no fallback to nlri.nexthop."""
         nlri = create_nlri()
-        nlri.nexthop = IP.from_string('9.9.9.9')
+        nlri.nexthop = IP.from_string('9.9.9.9')  # Set on NLRI but not Route
         attrs = AttributeCollection()
         route = Route(nlri, attrs)  # No explicit nexthop
 
+        # Route._nexthop is NoNextHop, and that's what nexthop returns (no fallback)
         assert route._nexthop is IP.NoNextHop
-        assert route.nexthop == IP.from_string('9.9.9.9')
+        assert route.nexthop is IP.NoNextHop  # No fallback to nlri.nexthop
 
     def test_explicit_nexthop_takes_precedence(self):
         """Route._nexthop set → nlri.nexthop ignored."""

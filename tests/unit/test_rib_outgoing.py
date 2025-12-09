@@ -56,11 +56,13 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else (32 if afi == AFI.ipv4 else 128)
 
+    from exabgp.protocol.ip import IP as IP_
+
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, afi, SAFI.unicast, action)
     attrs = AttributeCollection()
 
-    return Route(nlri, attrs)
+    return Route(nlri, attrs, nexthop=IP_.NoNextHop)
 
 
 def create_change_with_origin(prefix: str, origin: int, action: int = Action.ANNOUNCE) -> Route:
@@ -69,12 +71,14 @@ def create_change_with_origin(prefix: str, origin: int, action: int = Action.ANN
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else 32
 
+    from exabgp.protocol.ip import IP as IP_
+
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, action)
     attrs = AttributeCollection()
     attrs[Origin.ID] = Origin.from_int(origin)
 
-    return Route(nlri, attrs)
+    return Route(nlri, attrs, nexthop=IP_.NoNextHop)
 
 
 def consume_updates(rib: OutgoingRIB, grouped: bool = False) -> List:

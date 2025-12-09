@@ -196,13 +196,12 @@ class VPLS(NLRI):
         return '{{ {} }}'.format(content)
 
     def extensive(self) -> str:
-        return 'vpls{} endpoint {} base {} offset {} size {} {}'.format(
+        return 'vpls{} endpoint {} base {} offset {} size {}'.format(
             self.rd,
             self.endpoint,
             self.base,
             self.offset,
             self.size,
-            '' if self.nexthop is IP.NoNextHop else 'next-hop {}'.format(self.nexthop),
         )
 
     def __str__(self) -> str:

@@ -294,47 +294,26 @@ class MPNLRICollection:
         mpnlri: dict[bytes, list[bytes]] = {}
         family_key = (self._afi, self._safi)
 
-        # Use _routed_nlris if available (new RoutedNLRI mode)
-        # Otherwise fall back to _nlris with nlri.nexthop (legacy mode)
-        if self._routed_nlris:
-            for routed in self._routed_nlris:
-                nlri = routed.nlri
-                nlri_nexthop = routed.nexthop
-                if nlri.family().afi_safi() != family_key:
-                    continue
+        # Use _routed_nlris to get nexthop from RoutedNLRI container
+        for routed in self._routed_nlris:
+            nlri = routed.nlri
+            nlri_nexthop = routed.nexthop
+            if nlri.family().afi_safi() != family_key:
+                continue
 
-                # Encode nexthop
-                if nlri_nexthop is IP.NoNextHop:
-                    nexthop = b''
-                else:
-                    _, rd_size = Family.size.get(family_key, (0, 0))
-                    nh_rd = bytes([0]) * rd_size if rd_size else b''
-                    try:
-                        nexthop = nh_rd + nlri_nexthop.ton(negotiated, nlri.afi)
-                    except TypeError:
-                        # Fallback for invalid nexthop
-                        nexthop = bytes([0]) * 4
+            # Encode nexthop
+            if nlri_nexthop is IP.NoNextHop:
+                nexthop = b''
+            else:
+                _, rd_size = Family.size.get(family_key, (0, 0))
+                nh_rd = bytes([0]) * rd_size if rd_size else b''
+                try:
+                    nexthop = nh_rd + nlri_nexthop.ton(negotiated, nlri.afi)
+                except TypeError:
+                    # Fallback for invalid nexthop
+                    nexthop = bytes([0]) * 4
 
-                mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
-        else:
-            # Legacy mode: read nexthop from nlri.nexthop
-            for nlri in self._nlris:
-                if nlri.family().afi_safi() != family_key:
-                    continue
-
-                # Encode nexthop
-                if nlri.nexthop is IP.NoNextHop:
-                    nexthop = b''
-                else:
-                    _, rd_size = Family.size.get(family_key, (0, 0))
-                    nh_rd = bytes([0]) * rd_size if rd_size else b''
-                    try:
-                        nexthop = nh_rd + nlri.nexthop.ton(negotiated, nlri.afi)
-                    except TypeError:
-                        # Fallback for invalid nexthop
-                        nexthop = bytes([0]) * 4
-
-                mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
+            mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
 
         # Generate attributes for each nexthop group
         afi_bytes = self._afi.pack_afi()

@@ -5,7 +5,7 @@ option:file:conf-flow.conf
 
 # flow source-ipv4 10.0.0.2/32 next-hop 1.2.3.4 extended-community copy-to-nexthop
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C4001010040020040050400000064C010080800000000000001800E100001850401020304000602200A000002
-1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":576460752303423489,"string":"copy-to-nexthop"}]},"announce":{"ipv4 flow":{"1.2.3.4":[{"source-ipv4":["10.0.0.2/32"],"next-hop":"1.2.3.4","string":"flow source-ipv4 10.0.0.2/32 next-hop 1.2.3.4"}]}}}}}}
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":576460752303423489,"string":"copy-to-nexthop"}]},"announce":{"ipv4 flow":{"1.2.3.4":[{"source-ipv4":["10.0.0.2/32"],"next-hop":"1.2.3.4","string":"flow source-ipv4 10.0.0.2/32"}]}}}}}}
 
 # flow destination-ipv4 10.0.0.2/32 source-ipv4 10.0.0.1/32 protocol =TCP destination-port =3128 community [ 30740:0 30740:30740 ] extended-community discard
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0057:02:000000404001010040020040050400000064C008087814000078147814C010088006000000000000800E1900018500001301200A00000202200A00000103810605910C38
@@ -31,11 +31,11 @@ option:file:conf-flow.conf
 
 # flow route-distinguisher 65535:65536 source-ipv4 10.0.0.3/32 next-hop 5.6.7.8 extended-community redirect-to-nexthop
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004B:02:000000344001010040020040050400000064C010080800000000000000800E180001860405060708000E0000FFFF0001000002200A000003
-1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":576460752303423488,"string":"redirect-to-nexthop"}]},"announce":{"ipv4 flow-vpn":{"5.6.7.8":[{"source-ipv4":["10.0.0.3/32"],"rd":"65535:65536","next-hop":"5.6.7.8","string":"flow source-ipv4 10.0.0.3/32 rd 65535:65536 next-hop 5.6.7.8"}]}}}}}}
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":576460752303423488,"string":"redirect-to-nexthop"}]},"announce":{"ipv4 flow-vpn":{"5.6.7.8":[{"source-ipv4":["10.0.0.3/32"],"rd":"65535:65536","next-hop":"5.6.7.8","string":"flow source-ipv4 10.0.0.3/32 rd 65535:65536"}]}}}}}}
 
 # flow destination-ipv4 192.168.0.1/32 next-hop 1.2.3.4 extended-community redirect-to-nexthop
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C4001010040020040050400000064C010080800000000000000800E10000185040102030400060120C0A80001
-1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":576460752303423488,"string":"redirect-to-nexthop"}]},"announce":{"ipv4 flow":{"1.2.3.4":[{"destination-ipv4":["192.168.0.1/32"],"next-hop":"1.2.3.4","string":"flow destination-ipv4 192.168.0.1/32 next-hop 1.2.3.4"}]}}}}}}
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":576460752303423488,"string":"redirect-to-nexthop"}]},"announce":{"ipv4 flow":{"1.2.3.4":[{"destination-ipv4":["192.168.0.1/32"],"next-hop":"1.2.3.4","string":"flow destination-ipv4 192.168.0.1/32"}]}}}}}}
 
 # flow destination-ipv4 192.168.0.1/32 source-ipv4 10.0.0.2/32 protocol [ =udp =tcp ] port [ =80 =8080 ] destination-port [ >8080&<8088 =3128 ] source-port >1024 origin igp local-preference 100 extended-community redirect:258:33756718
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:005E:02:000000474001010040020040050400000064C01008800801020203162E800E2B0001850000250120C0A8000102200A0000020301118106040150911F9005121F90541F98910C3806920400

@@ -74,6 +74,7 @@ def test_mpreach_ipv4_unicast() -> None:
     and can generate MP_REACH_NLRI wire format.
     """
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.collection import RoutedNLRI
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -82,10 +83,11 @@ def test_mpreach_ipv4_unicast() -> None:
     # Create IPv4 unicast prefix
     cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix.nexthop = IPv4.from_string('192.0.2.1')
+    nexthop = IPv4.from_string('192.0.2.1')
 
-    # Create MPNLRICollection
-    collection = MPNLRICollection([prefix], {}, AFI.ipv4, SAFI.unicast)
+    # Create MPNLRICollection using from_routed() with RoutedNLRI
+    routed = RoutedNLRI(prefix, nexthop)
+    collection = MPNLRICollection.from_routed([routed], {}, AFI.ipv4, SAFI.unicast)
 
     # Verify family
     assert collection.afi == AFI.ipv4
@@ -104,6 +106,7 @@ def test_mpreach_ipv6_unicast() -> None:
     messages only support IPv4. This tests basic IPv6 prefix announcement.
     """
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.collection import RoutedNLRI
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -112,10 +115,11 @@ def test_mpreach_ipv6_unicast() -> None:
     # Create IPv6 unicast prefix
     cidr = CIDR.make_cidr(IPv6.from_string('2001:db8::').pack_ip(), 32)
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    prefix.nexthop = IPv6.from_string('2001:db8::1')
+    nexthop = IPv6.from_string('2001:db8::1')
 
-    # Create MPNLRICollection
-    collection = MPNLRICollection([prefix], {}, AFI.ipv6, SAFI.unicast)
+    # Create MPNLRICollection using from_routed() with RoutedNLRI
+    routed = RoutedNLRI(prefix, nexthop)
+    collection = MPNLRICollection.from_routed([routed], {}, AFI.ipv6, SAFI.unicast)
 
     # Verify family
     assert collection.afi == AFI.ipv6
@@ -134,6 +138,7 @@ def test_mpreach_multiple_prefixes() -> None:
     of the same address family with the same next-hop.
     """
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.collection import RoutedNLRI
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -147,15 +152,14 @@ def test_mpreach_multiple_prefixes() -> None:
         ('10.2.0.0', 24),
     ]
 
-    prefixes = []
+    routed_nlris = []
     for ip, mask in prefix_cidrs:
         cidr = CIDR.make_cidr(IPv4.from_string(ip).pack_ip(), mask)
         prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        prefix.nexthop = nexthop
-        prefixes.append(prefix)
+        routed_nlris.append(RoutedNLRI(prefix, nexthop))
 
-    # Create MPNLRICollection with multiple prefixes
-    collection = MPNLRICollection(prefixes, {}, AFI.ipv4, SAFI.unicast)
+    # Create MPNLRICollection using from_routed() with RoutedNLRI
+    collection = MPNLRICollection.from_routed(routed_nlris, {}, AFI.ipv4, SAFI.unicast)
 
     # Verify all prefixes are included
     assert len(collection.nlris) == 3
@@ -170,6 +174,7 @@ def test_mpreach_pack_ipv4() -> None:
     """
     from exabgp.bgp.message import Action
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.collection import RoutedNLRI
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -178,10 +183,11 @@ def test_mpreach_pack_ipv4() -> None:
     # Create IPv4 unicast prefix
     cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix.nexthop = IPv4.from_string('192.0.2.1')
+    nexthop = IPv4.from_string('192.0.2.1')
 
-    # Create MPNLRICollection
-    collection = MPNLRICollection([prefix], {}, AFI.ipv4, SAFI.unicast)
+    # Create MPNLRICollection using from_routed() with RoutedNLRI
+    routed = RoutedNLRI(prefix, nexthop)
+    collection = MPNLRICollection.from_routed([routed], {}, AFI.ipv4, SAFI.unicast)
 
     # Pack the attribute using packed_reach_attributes
     packed_list = list(collection.packed_reach_attributes(Negotiated.UNSET))
@@ -206,6 +212,7 @@ def test_mpreach_nexthop_ipv6_global() -> None:
     This tests the global-only case.
     """
     from exabgp.bgp.message import Action
+    from exabgp.bgp.message.update.collection import RoutedNLRI
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -214,13 +221,14 @@ def test_mpreach_nexthop_ipv6_global() -> None:
     # Create IPv6 unicast prefix with global next-hop
     cidr = CIDR.make_cidr(IPv6.from_string('2001:db8::').pack_ip(), 32)
     prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    prefix.nexthop = IPv6.from_string('2001:db8::1')  # Global next-hop
+    nexthop = IPv6.from_string('2001:db8::1')  # Global next-hop
 
-    # Create MPNLRICollection
-    collection = MPNLRICollection([prefix], {}, AFI.ipv6, SAFI.unicast)
+    # Create MPNLRICollection using from_routed() with RoutedNLRI
+    routed = RoutedNLRI(prefix, nexthop)
+    collection = MPNLRICollection.from_routed([routed], {}, AFI.ipv6, SAFI.unicast)
 
     # Verify next-hop is set
-    assert prefix.nexthop is not None
+    assert nexthop is not None
     assert len(collection.nlris) == 1
 
 

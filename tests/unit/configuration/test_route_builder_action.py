@@ -107,13 +107,14 @@ class TestRouteActionFromConfiguration:
         from exabgp.bgp.message.update.nlri.inet import INET
         from exabgp.bgp.message.update.nlri.cidr import CIDR
         from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+        from exabgp.protocol.ip import IP as IP_
 
         cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
         attrs = AttributeCollection()
 
         # Create Route with explicit WITHDRAW action
-        route = Route(nlri, attrs, Action.WITHDRAW)
+        route = Route(nlri, attrs, Action.WITHDRAW, nexthop=IP_.NoNextHop)
 
         # Route._action should be WITHDRAW
         assert route._action == Action.WITHDRAW
@@ -125,6 +126,7 @@ class TestRouteActionFromConfiguration:
         from exabgp.bgp.message.update.nlri.inet import INET
         from exabgp.bgp.message.update.nlri.cidr import CIDR
         from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+        from exabgp.protocol.ip import IP as IP_
 
         cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
         # NLRI created with ANNOUNCE
@@ -132,7 +134,7 @@ class TestRouteActionFromConfiguration:
         attrs = AttributeCollection()
 
         # Route created with WITHDRAW
-        route = Route(nlri, attrs, Action.WITHDRAW)
+        route = Route(nlri, attrs, Action.WITHDRAW, nexthop=IP_.NoNextHop)
 
         # Even though nlri.action is ANNOUNCE, route.action should be WITHDRAW
         assert nlri.action == Action.ANNOUNCE
@@ -143,13 +145,14 @@ class TestRouteActionFromConfiguration:
         from exabgp.bgp.message.update.nlri.inet import INET
         from exabgp.bgp.message.update.nlri.cidr import CIDR
         from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+        from exabgp.protocol.ip import IP as IP_
 
         cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
         attrs = AttributeCollection()
 
         # Route created without explicit action (defaults to UNSET)
-        route = Route(nlri, attrs)
+        route = Route(nlri, attrs, nexthop=IP_.NoNextHop)
 
         # Should fall back to nlri.action
         assert route._action == Action.UNSET

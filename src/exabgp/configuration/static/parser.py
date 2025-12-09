@@ -100,11 +100,14 @@ def next_hop(tokeniser: 'Tokeniser', afi: AFI | None = None) -> tuple[IP | IPSel
 
 
 def inet(tokeniser: 'Tokeniser') -> Route:
+    from exabgp.protocol.ip import IP
+
     ipmask = prefix(tokeniser)
     cidr = CIDR.make_cidr(ipmask.ton(), ipmask.mask)
     nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.UNSET)
 
-    return Route(nlri, AttributeCollection())
+    # Create with explicit nexthop=NoNextHop; will be updated via with_nexthop() when parsed
+    return Route(nlri, AttributeCollection(), nexthop=IP.NoNextHop)
 
 
 # XXX: using Action.ANNOUNCE should we use the following ?
@@ -112,11 +115,14 @@ def inet(tokeniser: 'Tokeniser') -> Route:
 
 
 def mpls(tokeniser: 'Tokeniser') -> Route:
+    from exabgp.protocol.ip import IP
+
     ipmask = prefix(tokeniser)
     cidr = CIDR.make_cidr(ipmask.ton(), ipmask.mask)
     nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.ANNOUNCE)
 
-    return Route(nlri, AttributeCollection())
+    # Create with explicit nexthop=NoNextHop; will be updated via with_nexthop() when parsed
+    return Route(nlri, AttributeCollection(), nexthop=IP.NoNextHop)
 
 
 def attribute(tokeniser: 'Tokeniser') -> GenericAttribute:

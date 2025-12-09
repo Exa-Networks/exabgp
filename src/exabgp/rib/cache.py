@@ -139,7 +139,7 @@ class Cache:
             # Store as Route for backward compatibility with cached_routes()
             from exabgp.rib.route import Route
 
-            self._seen.setdefault(family, {})[index] = Route(nlri, attrs, Action.ANNOUNCE)
+            self._seen.setdefault(family, {})[index] = Route(nlri, attrs, Action.ANNOUNCE, nexthop=nlri.nexthop)
         elif family in self._seen:
             self._seen[family].pop(index, None)
 

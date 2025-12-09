@@ -127,7 +127,7 @@ def route(tokeniser: Any) -> list[Route]:
 
     # Create immutable NLRI from validated settings
     nlri = nlri_class.from_settings(settings)
-    static_route = Route(nlri, attributes)
+    static_route = Route(nlri, attributes, nexthop=settings.nexthop)
 
     if not check(static_route, nlri.afi):
         raise ValueError('invalid route (missing next-hop, label or rd ?)')
@@ -221,6 +221,6 @@ def attributes(tokeniser: Any) -> list[Route]:
 
         # Create immutable NLRI from settings
         new_nlri = nlri_class.from_settings(settings)
-        routes.append(Route(new_nlri, attr))
+        routes.append(Route(new_nlri, attr, nexthop=settings.nexthop))
 
     return routes

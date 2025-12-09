@@ -87,10 +87,12 @@ class ParseFlow(Section):
 @ParseFlow.register('route', 'append-route')
 def route(tokeniser: Any) -> list[Route]:
     from exabgp.bgp.message import Action
+    from exabgp.protocol.ip import IP
 
     flow_nlri = Flow.make_flow()
     flow_nlri.action = Action.ANNOUNCE  # Flow routes are always announcements
-    flow_route: Route = Route(flow_nlri, AttributeCollection())
+    attributes = AttributeCollection()
+    nexthop: IP = IP.NoNextHop  # Track nexthop separately
 
     while True:
         command: str = tokeniser()
@@ -108,14 +110,15 @@ def route(tokeniser: Any) -> list[Route]:
                 flow_nlri.add(adding)
         elif action == 'attribute-add':
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
-            flow_route.attributes.add(handler(tokeniser))
+            attributes.add(handler(tokeniser))
         elif action == 'nexthop-and-attribute':
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
-            nexthop: Any
+            nh: Any
             attribute: Any
-            nexthop, attribute = handler(tokeniser)
+            nh, attribute = handler(tokeniser)
+            nexthop = nh
             flow_nlri.nexthop = nexthop
-            flow_route.attributes.add(attribute)
+            attributes.add(attribute)
         elif action == 'nop':
             pass  # yes nothing to do !
         else:
@@ -130,6 +133,7 @@ def route(tokeniser: Any) -> list[Route]:
         new_nlri._rules_cache = flow_nlri._rules_cache
         new_nlri._packed_stale = True
         new_nlri.nexthop = flow_nlri.nexthop
-        flow_route.nlri = new_nlri
+        flow_nlri = new_nlri
 
-    return [flow_route]
+    # Create Route at the end with explicit nexthop
+    return [Route(flow_nlri, attributes, nexthop=nexthop)]

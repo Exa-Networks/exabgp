@@ -846,16 +846,21 @@ class TestFlowUnpack:
         feedback = flow.feedback(Action.ANNOUNCE)
         assert feedback == ''
 
-    def test_flow_extensive_string_with_nexthop(self) -> None:
-        """Test extensive string representation with nexthop"""
+    def test_flow_extensive_string_no_nexthop(self) -> None:
+        """Test extensive string representation does NOT include nexthop.
+
+        nexthop is not part of NLRI identity - it comes from Route or RoutedNLRI context.
+        """
         flow = Flow.make_flow()
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
         flow.nexthop = IP.from_string('10.0.0.1')
 
         ext_str = flow.extensive()
-        assert 'next-hop' in ext_str
-        assert '10.0.0.1' in ext_str
+        # nexthop is NOT in NLRI.extensive() - comes from Route/RoutedNLRI context
+        assert 'next-hop' not in ext_str
+        assert 'flow' in ext_str
+        assert 'destination-ipv4' in ext_str
 
     def test_flow_extensive_string_with_rd(self) -> None:
         """Test extensive string representation with route distinguisher"""
@@ -871,15 +876,21 @@ class TestFlowUnpack:
         assert ext_str is not None
 
     def test_flow_json_with_nexthop(self) -> None:
-        """Test JSON with nexthop"""
+        """Test JSON includes nexthop for API v4 backward compatibility.
+
+        Note: nexthop in NLRI.json() is deprecated and will be removed in API v6.
+        See plan/api-v6-nexthop-removal.md for migration strategy.
+        """
         flow = Flow.make_flow()
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
         flow.nexthop = IP.from_string('10.0.0.1')
 
         json_str = flow.json()
+        # nexthop IS in NLRI.json() for backward compatibility (deprecated)
         assert 'next-hop' in json_str
         assert '10.0.0.1' in json_str
+        assert 'destination-ipv4' in json_str
 
 
 # ============================================================================

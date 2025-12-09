@@ -88,7 +88,7 @@ class ParseAnnounce(Section):
             nlri.path_info = path_info
             # next ip
             ip += increment
-            yield Route(nlri, last.attributes)
+            yield Route(nlri, last.attributes, nexthop=nexthop)
 
     def _split(self) -> None:
         for route in self.scope.pop_routes():

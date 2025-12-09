@@ -306,7 +306,7 @@ class Label(INET):
         return ''
 
     def extensive(self) -> str:
-        return '{}{}'.format(self.prefix(), '' if self.nexthop is IP.NoNextHop else ' next-hop {}'.format(self.nexthop))
+        return self.prefix()
 
     def __str__(self) -> str:
         return self.extensive()

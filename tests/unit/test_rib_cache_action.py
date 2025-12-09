@@ -53,9 +53,11 @@ def create_route(
     route_action: int = Action.UNSET,
 ) -> Route:
     """Create a Route for testing with specific action values."""
+    from exabgp.protocol.ip import IP
+
     nlri = create_nlri(prefix, nlri_action)
     attrs = AttributeCollection()
-    return Route(nlri, attrs, route_action)
+    return Route(nlri, attrs, route_action, nexthop=IP.NoNextHop)
 
 
 def create_cache() -> Cache:

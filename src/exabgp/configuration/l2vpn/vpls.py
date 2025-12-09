@@ -303,7 +303,7 @@ class ParseVPLS(Section):
 
         # Create NLRI from settings (no mutation after this point)
         nlri = VPLS_NLRI.from_settings(settings)
-        route = Route(nlri, attributes, Action.ANNOUNCE)
+        route = Route(nlri, attributes, Action.ANNOUNCE, nexthop=settings.nexthop)
 
         # Append route and clear settings
         self.scope.append_route(route)

@@ -1138,7 +1138,7 @@ class RouteBuilderValidator(Validator[list[Any]]):
         # Create immutable NLRI from validated settings
         nlri = self.schema.nlri_class.from_settings(settings)
 
-        return [Route(nlri, attributes, self.action_type)]
+        return [Route(nlri, attributes, self.action_type, nexthop=settings.nexthop)]
 
     def _apply_settings_action(self, settings: Any, attributes: Any, command: str, action: str, value: Any) -> None:
         """Apply parsed value to Settings object based on action."""
@@ -1238,7 +1238,8 @@ class TypeSelectorValidator(Validator[list[Any]]):
         # Set action on Route (nlri.action set for backward compat, will be removed)
         nlri.action = self.action_type
 
-        route = Route(nlri, AttributeCollection(), self.action_type)
+        # Create Route with explicit nexthop from nlri; will be updated via with_nexthop() if parsed
+        route = Route(nlri, AttributeCollection(), self.action_type, nexthop=nlri.nexthop)
 
         # Process remaining tokens as attributes
         from exabgp.configuration.schema import Leaf, LeafList

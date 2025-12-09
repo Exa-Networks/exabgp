@@ -57,6 +57,8 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else (32 if afi == AFI.ipv4 else 128)
 
+    from exabgp.protocol.ip import IP as IP_
+
     # Create NLRI with packed-bytes-first pattern
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, afi, SAFI.unicast, action)
@@ -64,7 +66,7 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
     # Create attributes
     attrs = AttributeCollection()
 
-    return Route(nlri, attrs)
+    return Route(nlri, attrs, nexthop=IP_.NoNextHop)
 
 
 def create_watchdog_route(prefix: str, watchdog: str, action: int = Action.ANNOUNCE) -> Route:

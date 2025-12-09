@@ -356,7 +356,7 @@ class INET(NLRI):
         return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
 
     def extensive(self) -> str:
-        return '{}{}'.format(self.prefix(), '' if self.nexthop is IP.NoNextHop else ' next-hop {}'.format(self.nexthop))
+        return self.prefix()
 
     def _internal(self, announced: bool = True) -> list[str]:
         return [self.path_info.json()]

@@ -142,7 +142,8 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                 update = UpdateCollection.unpack_message(pack1s, negotiated_in)
 
                 # update.announces contains RoutedNLRI, update.nlris extracts bare NLRIs
-                route2 = Route(update.nlris[0], update.attributes)
+                nlri = update.nlris[0]
+                route2 = Route(nlri, update.attributes, nexthop=nlri.nexthop)
                 str2 = route2.extensive()
                 # Use the RoutedNLRI from announces (or create one for recoding)
                 routed = update.announces[0] if update.announces else RoutedNLRI(update.nlris[0], route2.nexthop)
@@ -468,7 +469,8 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
 
     log.debug(lazymsg('update.check.complete'), 'parser')  # separator
     for number in range(len(update.nlris)):
-        route = Route(update.nlris[number], update.attributes)
+        nlri = update.nlris[number]
+        route = Route(nlri, update.attributes, nexthop=nlri.nexthop)
         _route = route  # type: Route
         log.info(
             lazymsg(

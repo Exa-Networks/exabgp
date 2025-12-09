@@ -176,15 +176,22 @@ class TestVPLSStringRepresentation:
         assert '1' in result
         assert '8' in result
 
-    def test_str_vpls_with_nexthop(self) -> None:
-        """Test string representation with nexthop"""
+    def test_str_vpls_no_nexthop(self) -> None:
+        """Test string representation does NOT include nexthop.
+
+        nexthop is not part of NLRI identity - it comes from Route or RoutedNLRI context.
+        """
         rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS.make_vpls(rd, endpoint=3, base=262145, offset=1, size=8)
         vpls.nexthop = IP.from_string('10.0.0.1')
 
         result = str(vpls)
-        assert 'next-hop' in result
-        assert '10.0.0.1' in result
+        # nexthop is NOT in NLRI.extensive() - comes from Route/RoutedNLRI context
+        assert 'next-hop' not in result
+        assert '10.0.0.1' not in result
+        # NLRI identity parts should still be present
+        assert 'vpls' in result
+        assert 'endpoint' in result
 
     def test_str_vpls_without_nexthop(self) -> None:
         """Test string representation without nexthop"""

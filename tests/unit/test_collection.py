@@ -193,14 +193,16 @@ class TestMPNLRICollectionSemantic:
     """Test MPNLRICollection semantic mode (from NLRI list)."""
 
     def test_create_from_nlris(self) -> None:
-        """Test creating MPNLRICollection from NLRI list."""
+        """Test creating MPNLRICollection from NLRI list using from_routed()."""
+        from exabgp.bgp.message.update.collection import RoutedNLRI
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 
         cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-        nlri.nexthop = IP.from_string('2001:db8::1')
+        nexthop = IP.from_string('2001:db8::1')
 
-        collection = MPNLRICollection([nlri], {}, AFI.ipv6, SAFI.unicast)
+        routed = RoutedNLRI(nlri, nexthop)
+        collection = MPNLRICollection.from_routed([routed], {}, AFI.ipv6, SAFI.unicast)
 
         assert collection.afi == AFI.ipv6
         assert collection.safi == SAFI.unicast
@@ -254,14 +256,16 @@ class TestMPNLRICollectionPacking:
 
     def test_packed_reach_attributes_single_nexthop(self) -> None:
         """Test packed_reach_attributes with single nexthop."""
+        from exabgp.bgp.message.update.collection import RoutedNLRI
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
         cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-        nlri.nexthop = IP.from_string('2001:db8::1')
+        nexthop = IP.from_string('2001:db8::1')
 
-        collection = MPNLRICollection([nlri], {}, AFI.ipv6, SAFI.unicast)
+        routed = RoutedNLRI(nlri, nexthop)
+        collection = MPNLRICollection.from_routed([routed], {}, AFI.ipv6, SAFI.unicast)
 
         attrs = list(collection.packed_reach_attributes(Negotiated.UNSET))
         assert len(attrs) == 1
@@ -279,6 +283,7 @@ class TestMPNLRICollectionPacking:
         cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
 
+        # Withdraws don't need nexthop - use bare constructor
         collection = MPNLRICollection([nlri], {}, AFI.ipv6, SAFI.unicast)
 
         attrs = list(collection.packed_unreach_attributes(Negotiated.UNSET))

@@ -127,11 +127,8 @@ class Text:
             for routed in update.announces:
                 nlri = routed.nlri
                 nexthop = routed.nexthop
-                if nexthop:
-                    r += f'{prefix} announced {nlri.extensive()}{attributes}\n'
-                else:
-                    # Flow or other routes without nexthop
-                    r += f'{prefix} {nlri.extensive()} {attributes}\n'
+                nexthop_str = f' next-hop {nexthop}' if nexthop else ''
+                r += f'{prefix} announced {nlri.extensive()}{nexthop_str}{attributes}\n'
 
             # Process withdraws
             for nlri in update.withdraws:

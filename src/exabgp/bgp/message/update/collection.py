@@ -490,8 +490,7 @@ class UpdateCollection(Message):
         while announced_bytes:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced_bytes, Action.ANNOUNCE, addpath, negotiated)
             if nlri is not NLRI.INVALID:
-                # Set nlri.nexthop for backward compatibility (JSON API reads it)
-                # TODO: Remove this once JSON API uses RoutedNLRI
+                # Set nlri.nexthop for backward compat (JSON API reads it)
                 nlri.nexthop = nexthop
                 # Wrap NLRI with nexthop in RoutedNLRI for UpdateCollection
                 routed = RoutedNLRI(nlri, nexthop)
@@ -506,11 +505,8 @@ class UpdateCollection(Message):
             withdraws.extend(unreach)  # Uses __iter__
 
         if reach is not None:
-            # MP_REACH_NLRI contains nexthop - wrap each NLRI with its nexthop
-            for nlri in reach:
-                # The NLRI from MPRNLRI already has nexthop set during unpack
-                # Wrap it in RoutedNLRI to match the new interface
-                announces.append(RoutedNLRI(nlri, nlri.nexthop))
+            # MP_REACH_NLRI contains nexthop - use iter_routed() for RoutedNLRI
+            announces.extend(reach.iter_routed())
 
         return cls(announces, withdraws, attributes)
 

@@ -299,7 +299,7 @@ class OutgoingRIB(Cache):
             # New signature: add_to_rib(nlri, attributes, force=False)
             nlri = route_or_nlri
             attrs = attributes_or_force
-            route = Route(nlri, attrs)
+            route = Route(nlri, attrs, nexthop=nlri.nexthop)
 
         log.debug(lazymsg('rib.insert route={route}', route=route), 'rib')
 

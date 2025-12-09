@@ -956,9 +956,8 @@ class Flow(NLRI):
         return ''.join(string)
 
     def extensive(self) -> str:
-        nexthop = ' next-hop {}'.format(self.nexthop) if self.nexthop is not IP.NoNextHop else ''
         rd = '' if self.rd is RouteDistinguisher.NORD else str(self.rd)
-        return 'flow' + self._rules() + rd + nexthop
+        return 'flow' + self._rules() + rd
 
     def __str__(self) -> str:
         return self.extensive()
@@ -1003,6 +1002,8 @@ class Flow(NLRI):
                     s.append(', ')
                 s.append('"{}"'.format(rule))
             string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
+        # TODO: nexthop in NLRI.json() is deprecated - should be removed in API v6
+        # See plan/api-v6-nexthop-removal.md for migration strategy
         nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not IP.NoNextHop else ''
         rd = '' if self.rd is RouteDistinguisher.NORD else ', {}'.format(self.rd.json())
         compatibility = ', "string": "{}"'.format(self.extensive())

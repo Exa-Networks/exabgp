@@ -281,12 +281,13 @@ def _create_route_with_nexthop_self(prefix: str = '10.0.0.0/24') -> Route:
 
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri.nexthop = IPSelf(AFI.ipv4)
+    nexthop = IPSelf(AFI.ipv4)
+    nlri.nexthop = nexthop
 
     attrs = AttributeCollection()
     attrs[Attribute.CODE.NEXT_HOP] = NextHopSelf(AFI.ipv4)
 
-    return Route(nlri, attrs)
+    return Route(nlri, attrs, nexthop=nexthop)
 
 
 def _create_route_with_concrete_nexthop(prefix: str = '10.0.0.0/24', nexthop: str = '192.168.1.1') -> Route:
@@ -297,12 +298,13 @@ def _create_route_with_concrete_nexthop(prefix: str = '10.0.0.0/24', nexthop: st
 
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    nlri.nexthop = IPv4.from_string(nexthop)
+    nh = IPv4.from_string(nexthop)
+    nlri.nexthop = nh
 
     attrs = AttributeCollection()
     attrs[Attribute.CODE.NEXT_HOP] = NextHop.from_string(nexthop)
 
-    return Route(nlri, attrs)
+    return Route(nlri, attrs, nexthop=nh)
 
 
 class TestNeighborResolveSelf:

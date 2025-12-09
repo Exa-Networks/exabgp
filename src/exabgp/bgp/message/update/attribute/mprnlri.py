@@ -14,6 +14,7 @@ from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.collection import RoutedNLRI
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
@@ -21,6 +22,7 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.ip import IP
 
 # ==================================================== MP Reachable NLRI (14)
 #
@@ -57,10 +59,10 @@ class MPRNLRI(Attribute, Family):
         """Raw wire-format bytes."""
         return bytes(self._packed)
 
-    def __iter__(self) -> Iterator[NLRI]:
-        """Yield NLRIs from wire format.
+    def _parse_nexthop_and_nlris(self) -> tuple[bytes | None, Iterator[NLRI]]:
+        """Parse wire format, returning (nexthop_bytes, nlri_iterator).
 
-        Generator that yields NLRIs one by one, parsing lazily.
+        Internal method that separates nexthop parsing from NLRI parsing.
         """
         data = self._packed
 
@@ -81,6 +83,7 @@ class MPRNLRI(Attribute, Family):
         # Parse nexthops
         nhs = data[offset + rd : offset + rd + size]
         nexthops = [nhs[pos : pos + 16] for pos in range(0, len(nhs), 16)]
+        nexthop_bytes = nexthops[0] if nexthops else None
 
         offset += len_nh
 
@@ -90,21 +93,46 @@ class MPRNLRI(Attribute, Family):
         # Reading the NLRIs
         nlri_data = data[offset:]
 
-        while nlri_data:
-            nlri_result, left_result = NLRI.unpack_nlri(
-                self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._addpath, Negotiated.UNSET
-            )
+        def nlri_generator() -> Iterator[NLRI]:
+            nonlocal nlri_data
+            while nlri_data:
+                nlri_result, left_result = NLRI.unpack_nlri(
+                    self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._addpath, Negotiated.UNSET
+                )
 
-            if nlri_result is not NLRI.INVALID:
-                # Assign nexthop from first parsed nexthop (if any)
-                if nexthops:
-                    nlri_result.nexthop = NextHop.unpack_attribute(nexthops[0], Negotiated.UNSET)
-                yield nlri_result
+                if nlri_result is not NLRI.INVALID:
+                    yield nlri_result
 
-            if left_result == nlri_data:
-                raise RuntimeError('sub-calls should consume data')
+                if left_result == nlri_data:
+                    raise RuntimeError('sub-calls should consume data')
 
-            nlri_data = left_result
+                nlri_data = left_result
+
+        return nexthop_bytes, nlri_generator()
+
+    def __iter__(self) -> Iterator[NLRI]:
+        """Yield NLRIs from wire format.
+
+        Generator that yields NLRIs one by one, parsing lazily.
+        Note: Does NOT set nlri.nexthop - use iter_routed() for RoutedNLRI.
+        """
+        _, nlri_iter = self._parse_nexthop_and_nlris()
+        yield from nlri_iter
+
+    def iter_routed(self) -> Iterator['RoutedNLRI']:
+        """Yield RoutedNLRI from wire format.
+
+        Generator that yields RoutedNLRI (nlri + nexthop) one by one.
+        This is the preferred method for getting announces with nexthop.
+        """
+        from exabgp.bgp.message.update.collection import RoutedNLRI
+
+        nexthop_bytes, nlri_iter = self._parse_nexthop_and_nlris()
+        nexthop = NextHop.unpack_attribute(nexthop_bytes, Negotiated.UNSET) if nexthop_bytes else IP.NoNextHop
+        for nlri in nlri_iter:
+            # Set nlri.nexthop for backward compat (JSON API reads it)
+            nlri.nexthop = nexthop
+            yield RoutedNLRI(nlri, nexthop)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MPRNLRI):
