@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.attribute.attribute import Attribute
     from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
     from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+    from exabgp.bgp.message.update.collection import RoutedNLRI
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.update.nlri.nlri import _UNPARSED, NLRI
@@ -150,7 +151,11 @@ class MPNLRICollection:
     Stores NLRIs and attributes dict. Generates MPRNLRI or MPURNLRI
     wire format based on action (reach vs unreach).
 
-    Constructor signature: __init__(nlris, attributes, afi, safi)
+    Two modes:
+    - Bare NLRI mode: __init__(nlris, attributes, afi, safi)
+      Used for MP_UNREACH (withdraws) where no nexthop is needed.
+    - RoutedNLRI mode: from_routed(routed_nlris, attributes, afi, safi)
+      Used for MP_REACH (announces) where nexthop comes from RoutedNLRI.
     """
 
     # Attribute flags and IDs for wire format generation
@@ -165,18 +170,44 @@ class MPNLRICollection:
         afi: AFI,
         safi: SAFI,
     ) -> None:
-        """Create MPNLRICollection from semantic data.
+        """Create MPNLRICollection from bare NLRIs (for unreach/withdraws).
 
         Args:
-            nlris: List of NLRI objects.
+            nlris: List of NLRI objects (without nexthop).
             attributes: Dict of attributes indexed by Attribute.CODE (int).
             afi: Address Family Identifier
             safi: Subsequent Address Family Identifier
         """
         self._nlris = nlris
+        self._routed_nlris: 'list[RoutedNLRI]' = []  # Empty for bare NLRI mode
         self._attributes = attributes
         self._afi = afi
         self._safi = safi
+
+    @classmethod
+    def from_routed(
+        cls,
+        routed_nlris: 'list[RoutedNLRI]',
+        attributes: 'dict[int, Attribute]',
+        afi: AFI,
+        safi: SAFI,
+    ) -> 'MPNLRICollection':
+        """Create MPNLRICollection from RoutedNLRIs (for reach/announces).
+
+        Args:
+            routed_nlris: List of RoutedNLRI (nlri + nexthop).
+            attributes: Dict of attributes indexed by Attribute.CODE (int).
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+
+        Returns:
+            MPNLRICollection configured for reach mode with nexthops.
+        """
+        instance = cls([], attributes, afi, safi)
+        instance._routed_nlris = routed_nlris
+        # Also populate _nlris for compatibility (e.g., __len__)
+        instance._nlris = [routed.nlri for routed in routed_nlris]
+        return instance
 
     @classmethod
     def from_wire(
@@ -263,23 +294,47 @@ class MPNLRICollection:
         mpnlri: dict[bytes, list[bytes]] = {}
         family_key = (self._afi, self._safi)
 
-        for nlri in self._nlris:
-            if nlri.family().afi_safi() != family_key:
-                continue
+        # Use _routed_nlris if available (new RoutedNLRI mode)
+        # Otherwise fall back to _nlris with nlri.nexthop (legacy mode)
+        if self._routed_nlris:
+            for routed in self._routed_nlris:
+                nlri = routed.nlri
+                nlri_nexthop = routed.nexthop
+                if nlri.family().afi_safi() != family_key:
+                    continue
 
-            # Encode nexthop
-            if nlri.nexthop is IP.NoNextHop:
-                nexthop = b''
-            else:
-                _, rd_size = Family.size.get(family_key, (0, 0))
-                nh_rd = bytes([0]) * rd_size if rd_size else b''
-                try:
-                    nexthop = nh_rd + nlri.nexthop.ton(negotiated, nlri.afi)
-                except TypeError:
-                    # Fallback for invalid nexthop
-                    nexthop = bytes([0]) * 4
+                # Encode nexthop
+                if nlri_nexthop is IP.NoNextHop:
+                    nexthop = b''
+                else:
+                    _, rd_size = Family.size.get(family_key, (0, 0))
+                    nh_rd = bytes([0]) * rd_size if rd_size else b''
+                    try:
+                        nexthop = nh_rd + nlri_nexthop.ton(negotiated, nlri.afi)
+                    except TypeError:
+                        # Fallback for invalid nexthop
+                        nexthop = bytes([0]) * 4
 
-            mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
+                mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
+        else:
+            # Legacy mode: read nexthop from nlri.nexthop
+            for nlri in self._nlris:
+                if nlri.family().afi_safi() != family_key:
+                    continue
+
+                # Encode nexthop
+                if nlri.nexthop is IP.NoNextHop:
+                    nexthop = b''
+                else:
+                    _, rd_size = Family.size.get(family_key, (0, 0))
+                    nh_rd = bytes([0]) * rd_size if rd_size else b''
+                    try:
+                        nexthop = nh_rd + nlri.nexthop.ton(negotiated, nlri.afi)
+                    except TypeError:
+                        # Fallback for invalid nexthop
+                        nexthop = bytes([0]) * 4
+
+                mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
 
         # Generate attributes for each nexthop group
         afi_bytes = self._afi.pack_afi()

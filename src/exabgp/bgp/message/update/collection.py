@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Generator
 
@@ -24,6 +25,24 @@ from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
+
+
+@dataclass(frozen=True, slots=True)
+class RoutedNLRI:
+    """NLRI with associated nexthop for wire format encoding.
+
+    This is a lightweight immutable container used by UpdateCollection
+    to group NLRIs with their nexthops for wire format generation.
+    It does not include action (determined by list placement: announces vs withdraws)
+    or attributes (handled separately by UpdateCollection).
+
+    Using this instead of storing nexthop in NLRI allows NLRI to be immutable
+    and reusable across different nexthop contexts.
+    """
+
+    nlri: NLRI
+    nexthop: IP
+
 
 # Update message header offsets and constants
 UPDATE_WITHDRAWN_LENGTH_OFFSET = 2  # Offset to start of withdrawn routes
@@ -63,6 +82,12 @@ class UpdateCollection(Message):
     Holds announces, withdraws, and attributes as semantic objects.
     Used as a builder to construct UPDATE messages from semantic data.
 
+    Announces are stored as RoutedNLRI (nlri + nexthop) because nexthop
+    is needed for MP_REACH_NLRI wire format encoding.
+
+    Withdraws are stored as bare NLRI because MP_UNREACH_NLRI doesn't
+    include nexthop.
+
     Note: This class inherits from Message for backward compatibility
     (uses _message() method) but is NOT registered as the UPDATE handler.
     The Update class is the registered handler.
@@ -74,24 +99,35 @@ class UpdateCollection(Message):
 
     def __init__(
         self,
-        announces: list[NLRI],
+        announces: 'list[RoutedNLRI] | list[NLRI]',
         withdraws: list[NLRI],
         attributes: AttributeCollection,
     ) -> None:
         # UpdateCollection is a composite container - NLRIs and Attributes are already packed-bytes-first
         # No single _packed representation exists because messages() can generate multiple
         # wire-format messages from one UpdateCollection due to size limits
-        self._announces: list[NLRI] = announces
+
+        # Backward compatibility: accept either list[RoutedNLRI] or list[NLRI]
+        # If bare NLRIs are passed, wrap them with their nlri.nexthop
+        # TODO: Remove this once all callers use RoutedNLRI
+        if announces and not isinstance(announces[0], RoutedNLRI):
+            # Legacy mode: wrap bare NLRIs
+            self._announces: list[RoutedNLRI] = [
+                RoutedNLRI(nlri, nlri.nexthop)
+                for nlri in announces  # type: ignore
+            ]
+        else:
+            self._announces = announces  # type: ignore
         self._withdraws: list[NLRI] = withdraws
         self._attributes: AttributeCollection = attributes
 
     @property
     def nlris(self) -> list[NLRI]:
-        # Backward compat: combine announces and withdraws
-        return self._announces + self._withdraws
+        # Backward compat: combine announces and withdraws (extract NLRI from RoutedNLRI)
+        return [routed.nlri for routed in self._announces] + self._withdraws
 
     @property
-    def announces(self) -> list[NLRI]:
+    def announces(self) -> list[RoutedNLRI]:
         return self._announces
 
     @property
@@ -101,6 +137,27 @@ class UpdateCollection(Message):
     @property
     def attributes(self) -> AttributeCollection:
         return self._attributes
+
+    def get_nexthop(self) -> IP:
+        """Get the nexthop IP from attributes (NEXT_HOP attribute).
+
+        Returns the IP from the NEXT_HOP attribute if present,
+        otherwise returns IP.NoNextHop.
+
+        For MP routes, nexthop is in MP_REACH_NLRI, not NEXT_HOP attribute.
+        """
+        from exabgp.protocol.ip import IPv4, IPv6
+
+        nexthop_attr = self._attributes.get(Attribute.CODE.NEXT_HOP, None)
+        if nexthop_attr is None:
+            return IP.NoNextHop
+        # NextHop attribute has pack_ip() method - convert to IP
+        packed = nexthop_attr.pack_ip()
+        if len(packed) == IPv4.BYTES:
+            return IPv4(packed)
+        elif len(packed) == IPv6.BYTES:
+            return IPv6(packed)
+        return IP.NoNextHop
 
     # message not implemented we should use messages below.
 
@@ -160,34 +217,41 @@ class UpdateCollection(Message):
     # The routes MUST have the same attributes ...
     def messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator[bytes, None, None]:
         # Sort and classify NLRIs into IPv4 and MP categories
-        v4_announces: list = []
-        v4_withdraws: list = []
-        mp_nlris: dict[tuple, dict] = {}
+        # v4_announces/v4_withdraws store bare NLRIs (nexthop is in NEXT_HOP attribute for IPv4)
+        # mp_announces stores RoutedNLRI by family (nexthop needed for MP_REACH_NLRI encoding)
+        # mp_withdraws stores bare NLRI by family (MP_UNREACH_NLRI has no nexthop)
+        v4_announces: list[NLRI] = []
+        v4_withdraws: list[NLRI] = []
+        mp_announces: dict[tuple[AFI, SAFI], list[RoutedNLRI]] = {}
+        mp_withdraws: dict[tuple[AFI, SAFI], list[NLRI]] = {}
 
-        # Process announces
-        for nlri in sorted(self._announces):
+        # Process announces - self._announces contains RoutedNLRI
+        # Sort by nlri for deterministic ordering
+        for routed in sorted(self._announces, key=lambda r: r.nlri):
+            nlri = routed.nlri
+            nexthop = routed.nexthop
             if nlri.family().afi_safi() not in negotiated.families:
                 continue
 
             is_v4 = nlri.afi == AFI.ipv4
             is_v4 = is_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
-            is_v4 = is_v4 and nlri.nexthop.afi == AFI.ipv4
+            is_v4 = is_v4 and nexthop.afi == AFI.ipv4
 
             if is_v4:
                 v4_announces.append(nlri)
                 continue
 
-            if nlri.nexthop.afi != AFI.undefined:
-                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(Action.ANNOUNCE, []).append(nlri)
+            if nexthop.afi != AFI.undefined:
+                mp_announces.setdefault(nlri.family().afi_safi(), []).append(routed)
                 continue
 
             if nlri.safi in (SAFI.flow_ip, SAFI.flow_vpn):
-                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(Action.ANNOUNCE, []).append(nlri)
+                mp_announces.setdefault(nlri.family().afi_safi(), []).append(routed)
                 continue
 
             raise ValueError('unexpected nlri definition ({})'.format(nlri))
 
-        # Process withdraws
+        # Process withdraws - bare NLRIs (no nexthop needed)
         for nlri in sorted(self._withdraws):
             if nlri.family().afi_safi() not in negotiated.families:
                 continue
@@ -200,11 +264,12 @@ class UpdateCollection(Message):
                 continue
 
             # MP withdraws
-            mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(Action.WITHDRAW, []).append(nlri)
+            mp_withdraws.setdefault(nlri.family().afi_safi(), []).append(nlri)
 
         # Check if we have anything to send
         has_v4 = v4_announces or v4_withdraws
-        if not has_v4 and not mp_nlris:
+        has_mp = mp_announces or mp_withdraws
+        if not has_v4 and not has_mp:
             return
 
         # If all we have is MP_UNREACH_NLRI, we do not need the default
@@ -216,15 +281,14 @@ class UpdateCollection(Message):
         include_defaults = True
 
         # Check if we only have withdraws (v4 or mp)
-        only_withdraws = not v4_announces
-        if mp_nlris and only_withdraws:
-            for family, actions in mp_nlris.items():
+        only_withdraws = not v4_announces and not mp_announces
+        if mp_withdraws and only_withdraws:
+            # Check if all MP withdraws are unicast/multicast (simple case)
+            for family in mp_withdraws.keys():
                 afi, safi = family
                 if safi not in (SAFI.unicast, SAFI.multicast):
                     break
-                if set(actions.keys()) != {Action.WITHDRAW}:
-                    break
-            # no break
+            # no break - all families are unicast/multicast
             else:
                 include_defaults = False
 
@@ -238,7 +302,7 @@ class UpdateCollection(Message):
             log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
             return
 
-        if msg_size == 0 and (has_v4 or mp_nlris):
+        if msg_size == 0 and (has_v4 or has_mp):
             # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
             log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
             return
@@ -298,16 +362,20 @@ class UpdateCollection(Message):
             else:
                 yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b'') + announced)
 
-        for family in mp_nlris.keys():
+        # Get all families that have MP announces or withdraws
+        all_mp_families = set(mp_announces.keys()) | set(mp_withdraws.keys())
+
+        for family in all_mp_families:
             afi, safi = family
             mp_reach = b''
             mp_unreach = b''
 
             # Use MPNLRICollection for reach/unreach attribute generation
-            announce_nlris = mp_nlris[family].get(Action.ANNOUNCE, [])
-            withdraw_nlris = mp_nlris[family].get(Action.WITHDRAW, [])
+            # mp_announces contains RoutedNLRI, mp_withdraws contains bare NLRI
+            announce_routed = mp_announces.get(family, [])
+            withdraw_nlris = mp_withdraws.get(family, [])
 
-            mp_announce = MPNLRICollection(announce_nlris, {}, afi, safi)
+            mp_announce = MPNLRICollection.from_routed(announce_routed, {}, afi, safi)
             mp_withdraw = MPNLRICollection(withdraw_nlris, {}, afi, safi)
 
             for mprnlri in mp_announce.packed_reach_attributes(negotiated, msg_size - len(withdraws + announced)):
@@ -420,7 +488,7 @@ class UpdateCollection(Message):
                 # negotiated.neighbor may be a mock or not support subscripting
                 pass
 
-        announces: list[NLRI] = []
+        announces: list[RoutedNLRI] = []
         withdraws: list[NLRI] = []
 
         while withdrawn_bytes:
@@ -433,9 +501,13 @@ class UpdateCollection(Message):
         while announced_bytes:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced_bytes, Action.ANNOUNCE, addpath, negotiated)
             if nlri is not NLRI.INVALID:
+                # Set nlri.nexthop for backward compatibility (JSON API reads it)
+                # TODO: Remove this once JSON API uses RoutedNLRI
                 nlri.nexthop = nexthop
+                # Wrap NLRI with nexthop in RoutedNLRI for UpdateCollection
+                routed = RoutedNLRI(nlri, nexthop)
                 log.debug(lazymsg('announced NLRI {nlri}', nlri=nlri), 'routes')
-                announces.append(nlri)
+                announces.append(routed)
             announced_bytes = left
 
         unreach = attributes.pop(MPURNLRI.ID, None)
@@ -445,7 +517,11 @@ class UpdateCollection(Message):
             withdraws.extend(unreach)  # Uses __iter__
 
         if reach is not None:
-            announces.extend(reach)  # Uses __iter__
+            # MP_REACH_NLRI contains nexthop - wrap each NLRI with its nexthop
+            for nlri in reach:
+                # The NLRI from MPRNLRI already has nexthop set during unpack
+                # Wrap it in RoutedNLRI to match the new interface
+                announces.append(RoutedNLRI(nlri, nlri.nexthop))
 
         return cls(announces, withdraws, attributes)
 

@@ -127,6 +127,8 @@ def test_update_collection_roundtrip() -> None:
     import socket
 
     # Create a simple UPDATE with one IPv4 route
+    from exabgp.bgp.message.update.collection import RoutedNLRI
+
     # Build it from UpdateCollection first
     attrs = AttributeCollection()
     attrs.add(Origin.from_int(Origin.IGP))
@@ -135,9 +137,11 @@ def test_update_collection_roundtrip() -> None:
     packed_ip = socket.inet_aton('10.0.0.0')
     cidr = CIDR.make_cidr(packed_ip, 24)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
-    nlri.nexthop = IP.from_string('192.168.1.1')
+    nexthop = IP.from_string('192.168.1.1')
 
-    collection = UpdateCollection(announces=[nlri], withdraws=[], attributes=attrs)
+    # Use RoutedNLRI to wrap nlri + nexthop
+    routed = RoutedNLRI(nlri, nexthop)
+    collection = UpdateCollection(announces=[routed], withdraws=[], attributes=attrs)
 
     # Create mock negotiated
     negotiated = Mock()

@@ -45,7 +45,9 @@ class UpdateHandler(MessageHandler):
         log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
 
         # Process announces - pass action explicitly
-        for nlri in parsed.announces:
+        # parsed.announces contains RoutedNLRI objects; extract the bare NLRI for RIB
+        for routed in parsed.announces:
+            nlri = routed.nlri
             ctx.neighbor.rib.incoming.update_cache(nlri, parsed.attributes, Action.ANNOUNCE)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
@@ -75,7 +77,9 @@ class UpdateHandler(MessageHandler):
         log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
 
         # Process announces - pass action explicitly
-        for nlri in parsed.announces:
+        # parsed.announces contains RoutedNLRI objects; extract the bare NLRI for RIB
+        for routed in parsed.announces:
+            nlri = routed.nlri
             ctx.neighbor.rib.incoming.update_cache(nlri, parsed.attributes, Action.ANNOUNCE)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),

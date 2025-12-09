@@ -17,6 +17,7 @@ from typing import Callable, TYPE_CHECKING
 from exabgp.environment import getenv
 
 from exabgp.bgp.message import Update, UpdateCollection
+from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
 from exabgp.bgp.message.open import ASN
@@ -117,7 +118,11 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
 
         for route1 in neighbor.rib.outgoing.cached_routes():
             str1 = route1.extensive()
-            packed = list(UpdateCollection([route1.nlri], [], route1.attributes).messages(negotiated_out))
+            packed = list(
+                UpdateCollection([RoutedNLRI(route1.nlri, route1.nexthop)], [], route1.attributes).messages(
+                    negotiated_out
+                )
+            )
             pack1 = packed[0]
 
             _packed = packed  # type: list[bytes]
@@ -136,9 +141,12 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                 pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
                 update = UpdateCollection.unpack_message(pack1s, negotiated_in)
 
+                # update.announces contains RoutedNLRI, update.nlris extracts bare NLRIs
                 route2 = Route(update.nlris[0], update.attributes)
                 str2 = route2.extensive()
-                pack2 = list(UpdateCollection([update.nlris[0]], [], update.attributes).messages(negotiated_out))[0]
+                # Use the RoutedNLRI from announces (or create one for recoding)
+                routed = update.announces[0] if update.announces else RoutedNLRI(update.nlris[0], route2.nexthop)
+                pack2 = list(UpdateCollection([routed], [], update.attributes).messages(negotiated_out))[0]
 
                 _str2 = str2  # type: str
                 _pack2 = pack2  # type: bytes

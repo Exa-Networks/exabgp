@@ -27,7 +27,7 @@ class IPBase:
     RESOLVED: ClassVar[bool] = True
     afi: AFI
 
-    def resolve(self, ip: 'IP') -> None:
+    def resolve(self) -> None:
         pass
 
     @property

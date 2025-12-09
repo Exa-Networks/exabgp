@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Iterator, overload
 
 from exabgp.bgp.message import Action, UpdateCollection
 from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.rib.cache import Cache
@@ -359,7 +360,7 @@ class OutgoingRIB(Cache):
         self._refresh_routes = []
 
         # generating Updates from what is in the RIB
-        # Changes in _new_attr_af_nlri may be announces OR withdraws (based on nlri.action)
+        # Changes in _new_attr_af_nlri may be announces OR withdraws (based on route.action)
         for attr_index, per_family in attr_af_nlri.items():
             for family, routes in per_family.items():
                 if not routes:
@@ -368,10 +369,15 @@ class OutgoingRIB(Cache):
                 attributes = new_attr[attr_index]
 
                 # Validate and separate announces and withdraws based on route.action
+                # Announces become RoutedNLRI (nlri + nexthop), withdraws are bare NLRIs
                 for route in routes.values():
                     if route.action == Action.UNSET:
                         raise RuntimeError(f'Route action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
-                announces = [route.nlri for route in routes.values() if route.action == Action.ANNOUNCE]
+                announces = [
+                    RoutedNLRI(route.nlri, route.nexthop)
+                    for route in routes.values()
+                    if route.action == Action.ANNOUNCE
+                ]
                 withdraws = [route.nlri for route in routes.values() if route.action == Action.WITHDRAW]
 
                 if family == (AFI.ipv4, SAFI.unicast) and grouped:
@@ -401,7 +407,7 @@ class OutgoingRIB(Cache):
                     if route.action == Action.WITHDRAW:
                         yield UpdateCollection([], [route.nlri], attributes)
                     else:
-                        yield UpdateCollection([route.nlri], [], attributes)
+                        yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], attributes)
 
         # Generate Updates for pending withdraws using the new Update signature
         # UpdateCollection(announces=[], withdraws=nlris, attributes) - no nlri.action needed
@@ -420,7 +426,7 @@ class OutgoingRIB(Cache):
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.start)
 
         for route in refresh_routes:
-            yield UpdateCollection([route.nlri], [], route.attributes)
+            yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes)
 
         for afi, safi in refresh_families:
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.end)

@@ -128,6 +128,40 @@ def create_inet_nlri(
     return nlri
 
 
+def create_routed_nlri(
+    prefix: str,
+    prefixlen: int,
+    action: Any,
+    afi: Any = None,
+    safi: Any = None,
+    nexthop: str | None = None,
+) -> Any:
+    """Helper to create RoutedNLRI (NLRI + nexthop) for announces.
+
+    UpdateCollection announces now require RoutedNLRI instead of bare NLRI.
+    This helper creates the wrapped version.
+    """
+    from exabgp.bgp.message.update.collection import RoutedNLRI
+    from exabgp.protocol.ip import IP, IPv6
+    from exabgp.protocol.family import AFI as AFI_CLASS
+
+    if afi is None:
+        afi = AFI_CLASS.ipv4
+
+    nlri = create_inet_nlri(prefix, prefixlen, action, afi, safi, nexthop)
+
+    # Get nexthop IP object
+    if nexthop:
+        if afi == AFI_CLASS.ipv6:
+            nexthop_ip = IPv6.from_string(nexthop)
+        else:
+            nexthop_ip = IP.from_string(nexthop)
+    else:
+        nexthop_ip = IP.NoNextHop
+
+    return RoutedNLRI(nlri, nexthop_ip)
+
+
 # ==============================================================================
 # Phase 1: Message Packing Basics
 # ==============================================================================
