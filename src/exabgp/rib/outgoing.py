@@ -203,7 +203,7 @@ class OutgoingRIB(Cache):
             return
         if watchdog in self._watchdog:
             for route in list(self._watchdog[watchdog].get('-', {}).values()):
-                route.nlri.action = Action.ANNOUNCE  # pylint: disable=E1101
+                route.action = Action.ANNOUNCE
                 self.add_to_rib(route)
                 self._watchdog[watchdog].setdefault('+', {})[route.index()] = route
                 self._watchdog[watchdog]['-'].pop(route.index())
@@ -366,12 +366,12 @@ class OutgoingRIB(Cache):
 
                 attributes = new_attr[attr_index]
 
-                # Validate and separate announces and withdraws based on nlri.action
+                # Validate and separate announces and withdraws based on route.action
                 for route in routes.values():
-                    if route.nlri.action == Action.UNSET:
-                        raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
-                announces = [route.nlri for route in routes.values() if route.nlri.action == Action.ANNOUNCE]
-                withdraws = [route.nlri for route in routes.values() if route.nlri.action == Action.WITHDRAW]
+                    if route.action == Action.UNSET:
+                        raise RuntimeError(f'Route action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
+                announces = [route.nlri for route in routes.values() if route.action == Action.ANNOUNCE]
+                withdraws = [route.nlri for route in routes.values() if route.action == Action.WITHDRAW]
 
                 if family == (AFI.ipv4, SAFI.unicast) and grouped:
                     if announces:
@@ -395,9 +395,9 @@ class OutgoingRIB(Cache):
 
                 # Non-grouped: one Update per NLRI
                 for route in routes.values():
-                    if route.nlri.action == Action.UNSET:
-                        raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
-                    if route.nlri.action == Action.WITHDRAW:
+                    if route.action == Action.UNSET:
+                        raise RuntimeError(f'Route action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
+                    if route.action == Action.WITHDRAW:
                         yield UpdateCollection([], [route.nlri], attributes)
                     else:
                         yield UpdateCollection([route.nlri], [], attributes)

@@ -465,7 +465,7 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
         log.info(
             lazymsg(
                 'update.decoded action={action} extensive={extensive}',
-                action=_route.nlri.action,
+                action=_route.action,
                 extensive=_route.extensive(),
             ),
             'parser',

@@ -11,6 +11,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.schema import RouteBuilder, Leaf, LeafList, ValueType
 from exabgp.configuration.validator import LegacyParserValidator
 
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri import VPLS as VPLS_NLRI
 from exabgp.bgp.message.update.nlri.settings import VPLSSettings
 
@@ -302,7 +303,7 @@ class ParseVPLS(Section):
 
         # Create NLRI from settings (no mutation after this point)
         nlri = VPLS_NLRI.from_settings(settings)
-        route = Route(nlri, attributes)
+        route = Route(nlri, attributes, Action.ANNOUNCE)
 
         # Append route and clear settings
         self.scope.append_route(route)

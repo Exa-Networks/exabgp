@@ -76,7 +76,7 @@ class AnnounceVPN(ParseAnnounce):
             return False
 
         # has_rd() confirms the NLRI type has an rd attribute
-        if route.nlri.action == Action.ANNOUNCE and route.nlri.has_rd():
+        if route.action == Action.ANNOUNCE and route.nlri.has_rd():
             if cast(IPVPN, route.nlri).rd is RouteDistinguisher.NORD:
                 return False
 

@@ -156,7 +156,7 @@ class AnnounceIP(ParseAnnounce):
     @staticmethod
     def check(route: Route, afi: AFI | None) -> bool:
         if (
-            route.nlri.action == Action.ANNOUNCE
+            route.action == Action.ANNOUNCE
             and route.nlri.nexthop is IP.NoNextHop
             and route.nlri.afi == afi
             and route.nlri.safi in (SAFI.unicast, SAFI.multicast)

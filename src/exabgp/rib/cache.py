@@ -67,9 +67,10 @@ class Cache:
             return False
 
         # Withdraws are never duplicates - they always need to be processed
-        if route.nlri.action == Action.UNSET:
+        # Use route.action (not nlri.action) to support transition from nlri.action to route._action
+        if route.action == Action.UNSET:
             raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
-        if route.nlri.action == Action.WITHDRAW:
+        if route.action == Action.WITHDRAW:
             return False
 
         cached = self._seen.get(route.nlri.family().afi_safi(), {}).get(route.index(), None)
@@ -111,14 +112,14 @@ class Cache:
 
         # Handle signatures: (route) or (nlri, attributes) or (nlri, attributes, action)
         if attributes is None:
-            # Legacy signature: update_cache(route) - uses nlri.action
+            # Legacy signature: update_cache(route) - uses route.action (which checks _action then nlri.action)
             route = route_or_nlri
             nlri = route.nlri
             attrs = route.attributes
             family = nlri.family().afi_safi()
             index = route.index()
-            # For legacy callers, still read from nlri.action
-            actual_action = nlri.action
+            # Use route.action to support transition from nlri.action to route._action
+            actual_action = route.action
         else:
             # New signature: update_cache(nlri, attributes[, action])
             nlri = route_or_nlri
@@ -134,7 +135,7 @@ class Cache:
             # Store as Route for backward compatibility with cached_routes()
             from exabgp.rib.route import Route
 
-            self._seen.setdefault(family, {})[index] = Route(nlri, attrs)
+            self._seen.setdefault(family, {})[index] = Route(nlri, attrs, Action.ANNOUNCE)
         elif family in self._seen:
             self._seen[family].pop(index, None)
 
