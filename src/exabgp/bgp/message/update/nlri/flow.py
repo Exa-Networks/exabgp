@@ -991,7 +991,8 @@ class Flow(NLRI):
         new._rd_override = deepcopy(self._rd_override, memo) if self._rd_override else None
         return new
 
-    def json(self, compact: bool = False) -> str:
+    def _json_core(self, compact: bool = False) -> tuple[str, str, str]:
+        """Build JSON core components: rules, rd, compatibility string."""
         string: list[str] = []
         for index in sorted(self.rules):
             rules = self.rules[index]
@@ -1002,12 +1003,21 @@ class Flow(NLRI):
                     s.append(', ')
                 s.append('"{}"'.format(rule))
             string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
-        # TODO: nexthop in NLRI.json() is deprecated - should be removed in API v6
-        # See plan/api-v6-nexthop-removal.md for migration strategy
-        nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not IP.NoNextHop else ''
+        rules_str = ','.join(string)
         rd = '' if self.rd is RouteDistinguisher.NORD else ', {}'.format(self.rd.json())
         compatibility = ', "string": "{}"'.format(self.extensive())
-        return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
+        return rules_str, rd, compatibility
+
+    def json(self, compact: bool = False) -> str:
+        """Serialize Flow NLRI to JSON (v6 format - no nexthop)."""
+        rules_str, rd, compatibility = self._json_core(compact)
+        return '{' + rules_str + rd + compatibility + ' }'
+
+    def v4_json(self, compact: bool = False) -> str:
+        """Serialize Flow NLRI to JSON for API v4 backward compatibility (includes nexthop)."""
+        rules_str, rd, compatibility = self._json_core(compact)
+        nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not IP.NoNextHop else ''
+        return '{' + rules_str + rd + nexthop + compatibility + ' }'
 
     @classmethod
     def unpack_nlri(

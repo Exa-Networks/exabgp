@@ -875,11 +875,11 @@ class TestFlowUnpack:
         # RD should be in string
         assert ext_str is not None
 
-    def test_flow_json_with_nexthop(self) -> None:
-        """Test JSON includes nexthop for API v4 backward compatibility.
+    def test_flow_json_no_nexthop(self) -> None:
+        """Test json() does NOT include nexthop (v6 API format).
 
-        Note: nexthop in NLRI.json() is deprecated and will be removed in API v6.
-        See plan/api-v6-nexthop-removal.md for migration strategy.
+        nexthop is not part of NLRI identity and is available in the grouping key.
+        Use v4_json() for backward compatibility when nexthop is needed.
         """
         flow = Flow.make_flow()
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
@@ -887,7 +887,19 @@ class TestFlowUnpack:
         flow.nexthop = IP.from_string('10.0.0.1')
 
         json_str = flow.json()
-        # nexthop IS in NLRI.json() for backward compatibility (deprecated)
+        # nexthop NOT in v6 json() format
+        assert 'next-hop' not in json_str
+        assert 'destination-ipv4' in json_str
+
+    def test_flow_v4_json_with_nexthop(self) -> None:
+        """Test v4_json() includes nexthop for API v4 backward compatibility."""
+        flow = Flow.make_flow()
+        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
+        flow.add(dest)
+        flow.nexthop = IP.from_string('10.0.0.1')
+
+        json_str = flow.v4_json()
+        # nexthop IS in v4_json() for backward compatibility
         assert 'next-hop' in json_str
         assert '10.0.0.1' in json_str
         assert 'destination-ipv4' in json_str

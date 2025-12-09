@@ -54,6 +54,7 @@ from exabgp.bgp.message import Notification
 # JSON version
 
 from exabgp.version import json as json_version
+from exabgp.version import json_v4 as json_v4_version
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -486,12 +487,21 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
     return True
 
 
+def _get_json_encoder() -> 'Response.JSON | Response.V4.JSON':
+    """Get the appropriate JSON encoder based on API version setting."""
+    api_version = getenv().api.version
+    if api_version == 4:
+        return Response.V4.JSON(json_v4_version)
+    return Response.JSON(json_version)
+
+
 def display_update(neighbor: Neighbor, raw: bytes) -> bool:
     update = _make_update(neighbor, raw)
     if not update:
         return False
 
-    sys.stdout.write(Response.JSON(json_version).update(neighbor, 'in', update, b'', b'', Negotiated.UNSET))
+    encoder = _get_json_encoder()
+    sys.stdout.write(encoder.update(neighbor, 'in', update, b'', b'', Negotiated.UNSET))
     sys.stdout.write('\n')
     return True
 
@@ -501,7 +511,8 @@ def display_notification(neighbor: Neighbor, raw: bytes) -> bool:
     if not notification:
         return False
 
-    sys.stdout.write(Response.JSON(json_version).notification(neighbor, 'in', notification, b'', b'', Negotiated.UNSET))
+    encoder = _get_json_encoder()
+    sys.stdout.write(encoder.notification(neighbor, 'in', notification, b'', b'', Negotiated.UNSET))
     sys.stdout.write('\n')
     return True
 

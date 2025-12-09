@@ -34,6 +34,7 @@ class V4JSON:
 
     def __init__(self, version: str) -> None:
         self._v6 = JSON(json_version)  # Delegate to v6 encoder
+        self._v6.use_v4_json = True  # Enable v4 backward compat (e.g., nexthop in Flow NLRI)
         self.version = version  # v4 version string to use in output
 
     def _patch_version(self, result: str | None) -> str | None:

@@ -177,6 +177,14 @@ class NLRI(Family):
         """Serialize NLRI to JSON format. Must be implemented by subclasses."""
         raise NotImplementedError('json() must be implemented by NLRI subclasses')
 
+    def v4_json(self, compact: bool = False) -> str:
+        """Serialize NLRI to JSON format for API v4 backward compatibility.
+
+        By default, returns the same as json(). Override in subclasses that need
+        to include deprecated fields (like nexthop) for v4 compatibility.
+        """
+        return self.json(compact=compact)
+
     @classmethod
     def register(cls, afi: int, safi: int, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
         def register_nlri(klass: Type[NLRI]) -> Type[NLRI]:

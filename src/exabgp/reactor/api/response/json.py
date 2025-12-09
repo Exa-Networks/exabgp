@@ -44,6 +44,7 @@ class JSON:
         self.version = version
         self.time: Callable[[float], float] = nop
         self.compact = getenv().api.compact
+        self.use_v4_json = False  # Set True for API v4 backward compat
 
     # def _reset (self, neighbor):
     #     self._count[neighbor.uid] = 0
@@ -355,6 +356,12 @@ class JSON:
             message_type='open',
         )
 
+    def _nlri_to_json(self, nlri: Any) -> str:
+        """Convert NLRI to JSON string. Uses v4_json() for backward compat if enabled."""
+        if self.use_v4_json:
+            return nlri.v4_json(compact=self.compact)
+        return nlri.json(compact=self.compact)
+
     def _update(self, update_msg: 'UpdateCollection') -> dict[str, str]:
         plus: dict[tuple[Any, Any], dict[str, list[Any]]] = {}
         minus: dict[tuple[Any, Any], list[Any]] = {}
@@ -383,7 +390,7 @@ class JSON:
             for nexthop in plus[family]:
                 nlris = plus[family][nexthop]
                 m += f'"{nexthop}": [ '
-                m += ', '.join(nlri.json(compact=self.compact) for nlri in nlris)
+                m += ', '.join(self._nlri_to_json(nlri) for nlri in nlris)
                 m += ' ], '
             s += m[:-2]
             s += ' }'
@@ -393,14 +400,14 @@ class JSON:
         for family in minus:
             nlris = minus[family]
             s = f'"{family[0]} {family[1]}": [ '
-            s += ', '.join(nlri.json(compact=self.compact) for nlri in nlris)
+            s += ', '.join(self._nlri_to_json(nlri) for nlri in nlris)
             s += ' ]'
             remove.append(s)
 
         nlri_str = ''
         if not add and not remove:
             if update_msg.nlris:  # an EOR
-                return {'message': f'{{ {update_msg.nlris[0].json()} }}'}
+                return {'message': f'{{ {self._nlri_to_json(update_msg.nlris[0])} }}'}
         if add:
             add_str = ', '.join(add)
             nlri_str += f'"announce": {{ {add_str} }}'
