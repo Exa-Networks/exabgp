@@ -59,6 +59,7 @@ dev = [
 	"pytest-benchmark>=4.0",
 	"pytest-xdist>=3.0",
 	"pytest-timeout>=2.0",
+	"mutmut>=3.0",
 ]
 
 [tool.uv]

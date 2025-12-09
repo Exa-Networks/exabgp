@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# Coverage check script with thresholds
+# Verifies code coverage meets minimum baselines
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+cd "$PROJECT_ROOT"
+
+# Default minimum coverage threshold
+MIN_COVERAGE=${MIN_COVERAGE:-75}
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+usage() {
+    echo "Usage: $0 [--html|--term|--xml|--threshold N]"
+    echo ""
+    echo "Options:"
+    echo "  --html        Generate HTML report (opens in browser)"
+    echo "  --term        Terminal report with missing lines"
+    echo "  --xml         Generate XML report for CI"
+    echo "  --threshold N Set minimum coverage threshold (default: $MIN_COVERAGE)"
+    echo "  --help        Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Quick coverage check"
+    echo "  $0 --html             # Generate and open HTML report"
+    echo "  $0 --threshold 80     # Require 80% coverage"
+}
+
+run_coverage() {
+    local report_type="$1"
+    local extra_args=""
+
+    echo -e "${BLUE}=== Running Coverage Check ===${NC}"
+    echo "Threshold: ${MIN_COVERAGE}%"
+    echo ""
+
+    case "$report_type" in
+        html)
+            extra_args="--cov-report=html"
+            ;;
+        term)
+            extra_args="--cov-report=term-missing:skip-covered"
+            ;;
+        xml)
+            extra_args="--cov-report=xml"
+            ;;
+        *)
+            extra_args="--cov-report=term"
+            ;;
+    esac
+
+    # Run pytest with coverage
+    if uv run pytest tests/unit/ \
+        --cov=exabgp \
+        $extra_args \
+        --cov-fail-under=$MIN_COVERAGE \
+        -q 2>&1; then
+        echo ""
+        echo -e "${GREEN}✓ Coverage check passed (>=${MIN_COVERAGE}%)${NC}"
+
+        if [ "$report_type" = "html" ]; then
+            echo ""
+            echo "Opening HTML report..."
+            if command -v open &> /dev/null; then
+                open htmlcov/index.html
+            elif command -v xdg-open &> /dev/null; then
+                xdg-open htmlcov/index.html
+            else
+                echo "HTML report generated at: htmlcov/index.html"
+            fi
+        fi
+    else
+        echo ""
+        echo -e "${RED}✗ Coverage check failed (<${MIN_COVERAGE}%)${NC}"
+        echo ""
+        echo "To see what's missing, run:"
+        echo "  $0 --term"
+        exit 1
+    fi
+}
+
+# Parse arguments
+REPORT_TYPE="default"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --html)
+            REPORT_TYPE="html"
+            shift
+            ;;
+        --term)
+            REPORT_TYPE="term"
+            shift
+            ;;
+        --xml)
+            REPORT_TYPE="xml"
+            shift
+            ;;
+        --threshold)
+            MIN_COVERAGE="$2"
+            shift 2
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+run_coverage "$REPORT_TYPE"

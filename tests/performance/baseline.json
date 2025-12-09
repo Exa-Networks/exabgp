@@ -1,0 +1,37 @@
+{
+    "description": "Performance baseline thresholds for ExaBGP",
+    "updated": "2025-12-09",
+    "note": "These are soft targets - failures trigger warnings, not hard failures",
+
+    "test_high_load_throughput": {
+        "min_routes_per_sec": 1000,
+        "max_avg_latency_ms": 50,
+        "description": "High load throughput test baseline"
+    },
+
+    "test_backlog_saturation": {
+        "max_time_sec": 10.0,
+        "description": "Maximum time to process backlog saturation"
+    },
+
+    "test_nlri_pack_performance": {
+        "max_ms_per_1000_operations": 100,
+        "description": "Maximum time to pack/unpack 1000 NLRI"
+    },
+
+    "test_attribute_pack_performance": {
+        "max_ms_per_1000_operations": 150,
+        "description": "Maximum time to pack/unpack 1000 attribute sets"
+    },
+
+    "test_message_parsing_performance": {
+        "max_ms_per_1000_messages": 200,
+        "description": "Maximum time to parse 1000 UPDATE messages"
+    },
+
+    "test_concurrent_peers": {
+        "max_setup_time_sec": 5.0,
+        "min_peers": 10,
+        "description": "Concurrent peer handling baseline"
+    }
+}

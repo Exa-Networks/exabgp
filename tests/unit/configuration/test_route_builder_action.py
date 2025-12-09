@@ -40,10 +40,13 @@ class TestAnnounceIPCheck:
         nlri.afi = afi
         nlri.safi = safi
         if has_nexthop:
-            nlri.nexthop = IP.pton('1.2.3.4')
+            nexthop = IP.pton('1.2.3.4')
         else:
-            nlri.nexthop = IP.NoNextHop
+            nexthop = IP.NoNextHop
+        nlri.nexthop = nexthop
         route.nlri = nlri
+        # Route.nexthop property (with fallback to nlri.nexthop during transition)
+        route.nexthop = nexthop
 
         return route
 

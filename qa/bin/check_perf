@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Performance baseline check script
+# Runs performance tests and compares against baseline thresholds
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+cd "$PROJECT_ROOT"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+usage() {
+    echo "Usage: $0 [--quick|--full|--benchmark]"
+    echo ""
+    echo "Options:"
+    echo "  --quick      Run quick performance sanity check"
+    echo "  --full       Run all performance tests"
+    echo "  --benchmark  Run with pytest-benchmark (detailed stats)"
+    echo "  --help       Show this help message"
+}
+
+run_quick() {
+    echo -e "${BLUE}=== Quick Performance Check ===${NC}"
+    echo ""
+
+    uv run pytest tests/performance/ \
+        -k "not slow" \
+        --timeout=60 \
+        -q \
+        2>&1
+
+    echo ""
+    echo -e "${GREEN}✓ Quick performance check passed${NC}"
+}
+
+run_full() {
+    echo -e "${BLUE}=== Full Performance Tests ===${NC}"
+    echo ""
+
+    uv run pytest tests/performance/ \
+        --timeout=300 \
+        -v \
+        2>&1
+
+    echo ""
+    echo -e "${GREEN}✓ Full performance tests completed${NC}"
+}
+
+run_benchmark() {
+    echo -e "${BLUE}=== Performance Benchmark ===${NC}"
+    echo ""
+
+    # Run with pytest-benchmark for detailed statistics
+    uv run pytest tests/performance/ \
+        --benchmark-only \
+        --benchmark-autosave \
+        --benchmark-compare \
+        -v \
+        2>&1 || true  # Don't fail on benchmark comparison
+
+    echo ""
+    echo "Benchmark results saved to .benchmarks/"
+    echo "To compare with previous: pytest --benchmark-compare"
+}
+
+# Parse arguments
+case "${1:-}" in
+    --quick)
+        run_quick
+        ;;
+    --full)
+        run_full
+        ;;
+    --benchmark)
+        run_benchmark
+        ;;
+    --help|-h)
+        usage
+        exit 0
+        ;;
+    "")
+        # Default: quick
+        run_quick
+        ;;
+    *)
+        echo "Unknown option: $1"
+        usage
+        exit 1
+        ;;
+esac

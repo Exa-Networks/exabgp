@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# Mutation testing script for critical BGP message parsing code
+# Uses mutmut to verify test quality
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+cd "$PROJECT_ROOT"
+
+# Default paths to mutate (critical parsing code)
+DEFAULT_PATHS=(
+    "src/exabgp/bgp/message/message.py"
+    "src/exabgp/bgp/message/notification.py"
+    "src/exabgp/bgp/message/open/__init__.py"
+    "src/exabgp/bgp/message/update/__init__.py"
+)
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+usage() {
+    echo "Usage: $0 [--full|--quick|--file <file>|--results]"
+    echo ""
+    echo "Options:"
+    echo "  --quick     Run on single critical file (fast)"
+    echo "  --full      Run on all critical message parsing files"
+    echo "  --file      Run on specific file"
+    echo "  --results   Show results from previous run"
+    echo "  --help      Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0 --quick                    # Quick test on message.py"
+    echo "  $0 --full                     # Full test on all critical files"
+    echo "  $0 --file src/exabgp/bgp/message/notification.py"
+    echo "  $0 --results                  # Show previous results"
+}
+
+show_results() {
+    echo -e "${YELLOW}=== Mutation Testing Results ===${NC}"
+    if command -v mutmut &> /dev/null; then
+        uv run mutmut results || echo "No results available. Run mutation tests first."
+    else
+        echo "mutmut not installed. Run: uv sync"
+    fi
+}
+
+run_mutations() {
+    local paths=("$@")
+
+    echo -e "${YELLOW}=== Running Mutation Tests ===${NC}"
+    echo "Files to mutate:"
+    for path in "${paths[@]}"; do
+        echo "  - $path"
+    done
+    echo ""
+
+    # Build paths string
+    local paths_arg=""
+    for path in "${paths[@]}"; do
+        if [ -n "$paths_arg" ]; then
+            paths_arg="$paths_arg "
+        fi
+        paths_arg="$paths_arg$path"
+    done
+
+    # Run mutmut
+    # --CI flag exits with non-zero if any mutants survive
+    echo "Running mutations..."
+    uv run mutmut run \
+        --paths-to-mutate "$paths_arg" \
+        --tests-dir "tests/unit" \
+        --runner "pytest -x -q tests/unit/" \
+        || true  # Don't fail on surviving mutants
+
+    echo ""
+    echo -e "${YELLOW}=== Results ===${NC}"
+    uv run mutmut results
+
+    # Calculate score
+    local total=$(uv run mutmut results 2>&1 | grep -E "^Killed|^Survived|^Timeout" | wc -l)
+    local killed=$(uv run mutmut results 2>&1 | grep -E "^Killed" | wc -l)
+
+    if [ "$total" -gt 0 ]; then
+        local score=$((killed * 100 / total))
+        echo ""
+        echo -e "Mutation Score: ${GREEN}$score%${NC} ($killed/$total killed)"
+
+        if [ "$score" -lt 80 ]; then
+            echo -e "${YELLOW}Warning: Score below 80% target${NC}"
+        fi
+    fi
+}
+
+# Parse arguments
+case "${1:-}" in
+    --quick)
+        run_mutations "src/exabgp/bgp/message/message.py"
+        ;;
+    --full)
+        run_mutations "${DEFAULT_PATHS[@]}"
+        ;;
+    --file)
+        if [ -z "$2" ]; then
+            echo "Error: --file requires a path argument"
+            usage
+            exit 1
+        fi
+        run_mutations "$2"
+        ;;
+    --results)
+        show_results
+        ;;
+    --help|-h)
+        usage
+        exit 0
+        ;;
+    "")
+        # Default: quick mode
+        run_mutations "src/exabgp/bgp/message/message.py"
+        ;;
+    *)
+        echo "Unknown option: $1"
+        usage
+        exit 1
+        ;;
+esac

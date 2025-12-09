@@ -1,0 +1,48 @@
+# Coverage configuration for exabgp
+# Run with: uv run pytest tests/unit/ --cov=exabgp --cov-config=tests/.coveragerc
+
+[run]
+source = src/exabgp
+branch = true
+omit =
+    */vendoring/*
+    */__pycache__/*
+    */tests/*
+
+[report]
+# Minimum coverage threshold
+fail_under = 75
+
+# Show missing lines in report
+show_missing = true
+
+# Skip files with 100% coverage
+skip_covered = true
+
+# Precision for percentages
+precision = 1
+
+# Exclude lines from coverage
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain about defensive assertions
+    raise AssertionError
+    raise NotImplementedError
+
+    # Don't complain if tests don't hit defensive assertion code
+    if __name__ == .__main__.:
+
+    # Don't complain about abstract methods
+    @abstractmethod
+
+    # Don't complain about TYPE_CHECKING blocks
+    if TYPE_CHECKING:
+
+[html]
+directory = htmlcov
+title = ExaBGP Coverage Report
+
+[xml]
+output = coverage.xml
