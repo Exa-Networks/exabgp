@@ -68,7 +68,6 @@ def create_negotiated_mock(families: Any = None, asn4: Any = False, msg_size: An
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.bgp.message.direction import Direction
-    from exabgp.bgp.message.open.capability.negotiated import OpenContext
 
     negotiated = Mock()
     negotiated.direction = Direction.IN
@@ -88,20 +87,6 @@ def create_negotiated_mock(families: Any = None, asn4: Any = False, msg_size: An
     # Add ASN values
     negotiated.local_as = ASN(65000)
     negotiated.peer_as = ASN(65001)
-
-    # Add nlri_context method that returns a proper OpenContext
-    def nlri_context(afi: AFI, safi: SAFI) -> OpenContext:
-        return OpenContext.make_open_context(
-            afi=afi,
-            safi=safi,
-            addpath=False,
-            asn4=asn4,
-            msg_size=msg_size,
-            local_as=negotiated.local_as,
-            peer_as=negotiated.peer_as,
-        )
-
-    negotiated.nlri_context = nlri_context
 
     return negotiated
 

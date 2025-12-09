@@ -14,8 +14,7 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
-from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.capability.negotiated import Negotiated, OpenContext
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.protocol.ip import IP
 
 
@@ -26,19 +25,6 @@ def create_negotiated() -> Negotiated:
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
-def create_context(afi: AFI = AFI.ipv4, safi: SAFI = SAFI.unicast, addpath: bool = False) -> OpenContext:
-    """Create an OpenContext for testing."""
-    return OpenContext.make_open_context(
-        afi=afi,
-        safi=safi,
-        addpath=addpath,
-        asn4=True,
-        msg_size=4096,
-        local_as=ASN(65000),
-        peer_as=ASN(65001),
-    )
-
-
 class TestNLRICollectionFromBytes:
     """Test NLRICollection wire mode (from packed bytes)."""
 
@@ -46,8 +32,7 @@ class TestNLRICollectionFromBytes:
         """Test creating NLRICollection from empty bytes."""
         from exabgp.bgp.message.update.nlri.collection import NLRICollection
 
-        context = create_context()
-        collection = NLRICollection(b'', context, Action.ANNOUNCE)
+        collection = NLRICollection(b'', AFI.ipv4, SAFI.unicast, addpath=False, action=Action.ANNOUNCE)
 
         assert collection.packed == b''
         assert collection.nlris == []
@@ -58,8 +43,7 @@ class TestNLRICollectionFromBytes:
 
         # 192.168.1.0/24 in wire format: mask=24, 3 bytes
         packed = b'\x18\xc0\xa8\x01'
-        context = create_context()
-        collection = NLRICollection(packed, context, Action.ANNOUNCE)
+        collection = NLRICollection(packed, AFI.ipv4, SAFI.unicast, addpath=False, action=Action.ANNOUNCE)
 
         assert collection.packed == packed
         nlris = collection.nlris
@@ -72,8 +56,7 @@ class TestNLRICollectionFromBytes:
 
         # Two prefixes: 192.168.1.0/24 and 10.0.0.0/8
         packed = b'\x18\xc0\xa8\x01' + b'\x08\x0a'
-        context = create_context()
-        collection = NLRICollection(packed, context, Action.ANNOUNCE)
+        collection = NLRICollection(packed, AFI.ipv4, SAFI.unicast, addpath=False, action=Action.ANNOUNCE)
 
         assert collection.packed == packed
         nlris = collection.nlris
@@ -86,8 +69,7 @@ class TestNLRICollectionFromBytes:
         from exabgp.bgp.message.update.nlri.collection import NLRICollection
 
         packed = b'\x18\xc0\xa8\x01'
-        context = create_context()
-        collection = NLRICollection(packed, context, Action.WITHDRAW)
+        collection = NLRICollection(packed, AFI.ipv4, SAFI.unicast, addpath=False, action=Action.WITHDRAW)
 
         nlris = collection.nlris
         assert len(nlris) == 1
@@ -103,8 +85,7 @@ class TestNLRICollectionLazyParsing:
         from exabgp.bgp.message.update.nlri import _UNPARSED
 
         packed = b'\x18\xc0\xa8\x01'
-        context = create_context()
-        collection = NLRICollection(packed, context, Action.ANNOUNCE)
+        collection = NLRICollection(packed, AFI.ipv4, SAFI.unicast, addpath=False, action=Action.ANNOUNCE)
 
         # Before accessing nlris, cache should be sentinel
         assert collection._nlris_cache is _UNPARSED
@@ -120,8 +101,7 @@ class TestNLRICollectionLazyParsing:
         from exabgp.bgp.message.update.nlri.collection import NLRICollection
 
         packed = b'\x18\xc0\xa8\x01'
-        context = create_context()
-        collection = NLRICollection(packed, context, Action.ANNOUNCE)
+        collection = NLRICollection(packed, AFI.ipv4, SAFI.unicast, addpath=False, action=Action.ANNOUNCE)
 
         # Access nlris twice
         nlris1 = collection.nlris
@@ -140,9 +120,8 @@ class TestNLRICollectionMakeCollection:
 
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        context = create_context()
 
-        collection = NLRICollection.make_collection(context, [nlri], Action.ANNOUNCE)
+        collection = NLRICollection.make_collection(AFI.ipv4, SAFI.unicast, [nlri], Action.ANNOUNCE)
 
         assert len(collection.nlris) == 1
         assert collection.nlris[0] is nlri
@@ -155,9 +134,8 @@ class TestNLRICollectionMakeCollection:
         cidr2 = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
         nlri1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
         nlri2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        context = create_context()
 
-        collection = NLRICollection.make_collection(context, [nlri1, nlri2], Action.ANNOUNCE)
+        collection = NLRICollection.make_collection(AFI.ipv4, SAFI.unicast, [nlri1, nlri2], Action.ANNOUNCE)
 
         assert len(collection.nlris) == 2
 
@@ -167,9 +145,8 @@ class TestNLRICollectionMakeCollection:
 
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        context = create_context()
 
-        collection = NLRICollection.make_collection(context, [nlri], Action.ANNOUNCE)
+        collection = NLRICollection.make_collection(AFI.ipv4, SAFI.unicast, [nlri], Action.ANNOUNCE)
         packed = collection.packed
 
         # Should be able to pack the NLRI
@@ -185,14 +162,13 @@ class TestNLRICollectionRoundtrip:
         from exabgp.bgp.message.update.nlri.collection import NLRICollection
 
         original_packed = b'\x18\xc0\xa8\x01'  # 192.168.1.0/24
-        context = create_context()
 
         # Wire -> semantic
-        collection = NLRICollection(original_packed, context, Action.ANNOUNCE)
+        collection = NLRICollection(original_packed, AFI.ipv4, SAFI.unicast, addpath=False, action=Action.ANNOUNCE)
         nlris = collection.nlris
 
         # Semantic -> wire
-        collection2 = NLRICollection.make_collection(context, nlris, Action.ANNOUNCE)
+        collection2 = NLRICollection.make_collection(AFI.ipv4, SAFI.unicast, nlris, Action.ANNOUNCE)
         repacked = collection2.packed
 
         # Verify roundtrip
@@ -203,12 +179,11 @@ class TestNLRICollectionRoundtrip:
         from exabgp.bgp.message.update.nlri.collection import NLRICollection
 
         original_packed = b'\x18\xc0\xa8\x01' + b'\x08\x0a'  # 192.168.1.0/24 + 10.0.0.0/8
-        context = create_context()
 
-        collection = NLRICollection(original_packed, context, Action.ANNOUNCE)
+        collection = NLRICollection(original_packed, AFI.ipv4, SAFI.unicast, addpath=False, action=Action.ANNOUNCE)
         nlris = collection.nlris
 
-        collection2 = NLRICollection.make_collection(context, nlris, Action.ANNOUNCE)
+        collection2 = NLRICollection.make_collection(AFI.ipv4, SAFI.unicast, nlris, Action.ANNOUNCE)
         repacked = collection2.packed
 
         assert repacked == original_packed
@@ -221,12 +196,11 @@ class TestMPNLRICollectionSemantic:
         """Test creating MPNLRICollection from NLRI list."""
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 
-        context = create_context(AFI.ipv6, SAFI.unicast)
         cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
         nlri.nexthop = IP.from_string('2001:db8::1')
 
-        collection = MPNLRICollection([nlri], {}, context)
+        collection = MPNLRICollection([nlri], {}, AFI.ipv6, SAFI.unicast)
 
         assert collection.afi == AFI.ipv6
         assert collection.safi == SAFI.unicast
@@ -247,10 +221,9 @@ class TestMPNLRICollectionSemantic:
         nlri = b'\x20\x20\x01\x0d\xb8'  # 2001:db8::/32
 
         packed = afi_bytes + safi_byte + nh_len + nexthop + reserved + nlri
-        context = create_context(AFI.ipv6, SAFI.unicast)
 
-        mprnlri = MPRNLRI(packed, context)
-        collection = MPNLRICollection.from_wire(mprnlri, None, {}, context)
+        mprnlri = MPRNLRI(packed, addpath=False)
+        collection = MPNLRICollection.from_wire(mprnlri, None, {}, AFI.ipv6, SAFI.unicast)
 
         assert collection.afi == AFI.ipv6
         assert collection.safi == SAFI.unicast
@@ -267,10 +240,9 @@ class TestMPNLRICollectionSemantic:
         nlri = b'\x20\x20\x01\x0d\xb8'  # 2001:db8::/32
 
         packed = afi_bytes + safi_byte + nlri
-        context = create_context(AFI.ipv6, SAFI.unicast)
 
-        mpurnlri = MPURNLRI(packed, context)
-        collection = MPNLRICollection.from_wire(None, mpurnlri, {}, context)
+        mpurnlri = MPURNLRI(packed, addpath=False)
+        collection = MPNLRICollection.from_wire(None, mpurnlri, {}, AFI.ipv6, SAFI.unicast)
 
         assert collection.afi == AFI.ipv6
         assert collection.safi == SAFI.unicast
@@ -285,12 +257,11 @@ class TestMPNLRICollectionPacking:
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-        context = create_context(AFI.ipv6, SAFI.unicast)
         cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
         nlri.nexthop = IP.from_string('2001:db8::1')
 
-        collection = MPNLRICollection([nlri], {}, context)
+        collection = MPNLRICollection([nlri], {}, AFI.ipv6, SAFI.unicast)
 
         attrs = list(collection.packed_reach_attributes(Negotiated.UNSET))
         assert len(attrs) == 1
@@ -305,11 +276,10 @@ class TestMPNLRICollectionPacking:
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-        context = create_context(AFI.ipv6, SAFI.unicast)
         cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
 
-        collection = MPNLRICollection([nlri], {}, context)
+        collection = MPNLRICollection([nlri], {}, AFI.ipv6, SAFI.unicast)
 
         attrs = list(collection.packed_unreach_attributes(Negotiated.UNSET))
         assert len(attrs) == 1
@@ -321,12 +291,11 @@ class TestMPNLRICollectionPacking:
 class TestMPNLRICollectionAFISAFI:
     """Test AFI/SAFI access from MPNLRICollection."""
 
-    def test_afi_safi_from_context(self) -> None:
-        """Test AFI/SAFI comes from context."""
+    def test_afi_safi_from_params(self) -> None:
+        """Test AFI/SAFI comes from constructor params."""
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 
-        context = create_context(AFI.ipv4, SAFI.multicast)
-        collection = MPNLRICollection([], {}, context)
+        collection = MPNLRICollection([], {}, AFI.ipv4, SAFI.multicast)
 
         assert collection.afi == AFI.ipv4
         assert collection.safi == SAFI.multicast
@@ -335,8 +304,7 @@ class TestMPNLRICollectionAFISAFI:
         """Test IPv6 unicast AFI/SAFI."""
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 
-        context = create_context(AFI.ipv6, SAFI.unicast)
-        collection = MPNLRICollection([], {}, context)
+        collection = MPNLRICollection([], {}, AFI.ipv6, SAFI.unicast)
 
         assert collection.afi == AFI.ipv6
         assert collection.safi == SAFI.unicast
@@ -358,9 +326,8 @@ class TestMPRNLRIIterator:
         nlri_data = b'\x20\x20\x01\x0d\xb8'  # 2001:db8::/32
 
         packed = afi_bytes + safi_byte + nh_len + nexthop + reserved + nlri_data
-        context = create_context(AFI.ipv6, SAFI.unicast)
 
-        mprnlri = MPRNLRI(packed, context)
+        mprnlri = MPRNLRI(packed, addpath=False)
         nlris = list(mprnlri)
 
         assert len(nlris) == 1
@@ -376,9 +343,8 @@ class TestMPRNLRIIterator:
         nlri_data = b'\x20\x20\x01\x0d\xb8'  # 2001:db8::/32
 
         packed = afi_bytes + safi_byte + nlri_data
-        context = create_context(AFI.ipv6, SAFI.unicast)
 
-        mpurnlri = MPURNLRI(packed, context)
+        mpurnlri = MPURNLRI(packed, addpath=False)
         nlris = list(mpurnlri)
 
         assert len(nlris) == 1
@@ -397,9 +363,8 @@ class TestNLRICollectionAddPath:
         prefix = b'\x18\xc0\xa8\x01'  # 192.168.1.0/24
 
         packed = path_id + prefix
-        context = create_context(AFI.ipv4, SAFI.unicast, addpath=True)
 
-        collection = NLRICollection(packed, context, Action.ANNOUNCE)
+        collection = NLRICollection(packed, AFI.ipv4, SAFI.unicast, addpath=True, action=Action.ANNOUNCE)
         nlris = collection.nlris
 
         assert len(nlris) == 1

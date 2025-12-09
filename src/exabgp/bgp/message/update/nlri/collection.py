@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 
 from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.open.capability.negotiated import OpenContext
 from exabgp.bgp.message.update.nlri.nlri import _UNPARSED, NLRI
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.types import Buffer
@@ -29,8 +28,8 @@ class NLRICollection:
     """Wire-format NLRI container for IPv4 announce/withdraw sections.
 
     Dual-mode:
-    - Wire mode: __init__(packed, context, action) - stores bytes, lazy parsing
-    - Semantic mode: make_collection(context, nlris, action) - stores NLRI list
+    - Wire mode: __init__(packed, afi, safi, addpath, action) - stores bytes, lazy parsing
+    - Semantic mode: make_collection(afi, safi, nlris, action) - stores NLRI list
 
     This class follows the packed-bytes-first pattern where wire format
     is the canonical representation and semantic values are derived lazily.
@@ -39,35 +38,40 @@ class NLRICollection:
     _MODE_PACKED = 1  # Created from wire bytes (unpack path)
     _MODE_NLRIS = 2  # Created from NLRI list (semantic path)
 
-    def __init__(self, packed: bytes, context: OpenContext, action: Action = Action.UNSET) -> None:
+    def __init__(self, packed: bytes, afi: AFI, safi: SAFI, addpath: bool, action: Action = Action.UNSET) -> None:
         """Create NLRICollection from wire-format bytes.
 
         Args:
             packed: Raw NLRI section bytes from UPDATE message.
                     Format: sequence of [mask(1) + prefix_bytes...]
-            context: OpenContext with AFI/SAFI and parsing options (addpath, etc.)
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
+            addpath: Whether AddPath is enabled for this AFI/SAFI
             action: Whether these are announcements or withdrawals.
         """
         self._packed = packed
-        self._context = context
+        self._afi = afi
+        self._safi = safi
+        self._addpath = addpath
         self._action = action
         self._mode = self._MODE_PACKED
         self._nlris_cache: list[NLRI] = _UNPARSED
 
     @classmethod
-    def make_collection(cls, context: OpenContext, nlris: list[NLRI], action: Action) -> 'NLRICollection':
+    def make_collection(cls, afi: AFI, safi: SAFI, nlris: list[NLRI], action: Action) -> 'NLRICollection':
         """Create NLRICollection from semantic data (NLRI list).
 
         Args:
-            context: OpenContext with AFI/SAFI and negotiated parameters.
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
             nlris: List of NLRI objects to include.
             action: Whether these are announcements or withdrawals.
 
         Returns:
             NLRICollection instance in semantic mode.
         """
-        # Create instance with empty packed data
-        instance = cls(b'', context, action)
+        # Create instance with empty packed data (addpath=False for semantic mode)
+        instance = cls(b'', afi, safi, addpath=False, action=action)
         # Switch to semantic mode
         instance._mode = cls._MODE_NLRIS
         instance._nlris_cache: list[NLRI] = nlris
@@ -107,7 +111,7 @@ class NLRICollection:
         return []
 
     def _parse_nlris(self) -> list[NLRI]:
-        """Parse NLRIs from wire format using stored context."""
+        """Parse NLRIs from wire format using stored AFI/SAFI/addpath."""
         nlris: list[NLRI] = []
         data = self._packed
 
@@ -120,11 +124,11 @@ class NLRICollection:
 
         while data:
             nlri, data = NLRI.unpack_nlri(
-                self._context.afi,
-                self._context.safi,
+                self._afi,
+                self._safi,
                 data,
                 self._action,
-                self._context.addpath,
+                self._addpath,
                 Negotiated.UNSET,
             )
             if nlri is not NLRI.INVALID:
@@ -137,7 +141,7 @@ class NLRICollection:
         return len(self.nlris)
 
     def __repr__(self) -> str:
-        return f'NLRICollection({self._context.afi}/{self._context.safi}, {len(self)} NLRIs)'
+        return f'NLRICollection({self._afi}/{self._safi}, {len(self)} NLRIs)'
 
 
 class MPNLRICollection:
@@ -146,7 +150,7 @@ class MPNLRICollection:
     Stores NLRIs and attributes dict. Generates MPRNLRI or MPURNLRI
     wire format based on action (reach vs unreach).
 
-    Constructor signature: __init__(nlris, attributes, context)
+    Constructor signature: __init__(nlris, attributes, afi, safi)
     """
 
     # Attribute flags and IDs for wire format generation
@@ -158,18 +162,21 @@ class MPNLRICollection:
         self,
         nlris: list[NLRI],
         attributes: 'dict[int, Attribute]',
-        context: OpenContext,
+        afi: AFI,
+        safi: SAFI,
     ) -> None:
         """Create MPNLRICollection from semantic data.
 
         Args:
             nlris: List of NLRI objects.
             attributes: Dict of attributes indexed by Attribute.CODE (int).
-            context: OpenContext with AFI/SAFI and negotiated parameters.
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
         """
         self._nlris = nlris
         self._attributes = attributes
-        self._context = context
+        self._afi = afi
+        self._safi = safi
 
     @classmethod
     def from_wire(
@@ -177,7 +184,8 @@ class MPNLRICollection:
         mprnlri: 'MPRNLRI | None',
         mpurnlri: 'MPURNLRI | None',
         attributes: 'dict[int, Attribute]',
-        context: OpenContext,
+        afi: AFI,
+        safi: SAFI,
     ) -> 'MPNLRICollection':
         """Create from wire containers (reach and/or unreach).
 
@@ -185,7 +193,8 @@ class MPNLRICollection:
             mprnlri: MPRNLRI wire container (or None).
             mpurnlri: MPURNLRI wire container (or None).
             attributes: Dict of attributes indexed by Attribute.CODE.
-            context: OpenContext with AFI/SAFI.
+            afi: Address Family Identifier
+            safi: Subsequent Address Family Identifier
 
         Returns:
             MPNLRICollection with NLRIs from both containers.
@@ -196,7 +205,7 @@ class MPNLRICollection:
             nlris.extend(list(mprnlri))
         if mpurnlri is not None:
             nlris.extend(list(mpurnlri))
-        return cls(nlris, attributes, context)
+        return cls(nlris, attributes, afi, safi)
 
     @property
     def nlris(self) -> list[NLRI]:
@@ -210,13 +219,13 @@ class MPNLRICollection:
 
     @property
     def afi(self) -> AFI:
-        """Address Family Identifier from context."""
-        return self._context.afi
+        """Address Family Identifier."""
+        return self._afi
 
     @property
     def safi(self) -> SAFI:
-        """Subsequent Address Family Identifier from context."""
-        return self._context.safi
+        """Subsequent Address Family Identifier."""
+        return self._safi
 
     def _attribute_header(self, code: int, length: int) -> bytes:
         """Build attribute header (flag + code + length)."""
@@ -252,7 +261,7 @@ class MPNLRICollection:
 
         # Filter NLRIs for this family and group by nexthop
         mpnlri: dict[bytes, list[bytes]] = {}
-        family_key = (self._context.afi, self._context.safi)
+        family_key = (self._afi, self._safi)
 
         for nlri in self._nlris:
             if nlri.family().afi_safi() != family_key:
@@ -273,8 +282,8 @@ class MPNLRICollection:
             mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
 
         # Generate attributes for each nexthop group
-        afi_bytes = self._context.afi.pack_afi()
-        safi_bytes = self._context.safi.pack_safi()
+        afi_bytes = self._afi.pack_afi()
+        safi_bytes = self._safi.pack_safi()
 
         for nexthop, packed_nlris in mpnlri.items():
             # Build header: AFI(2) + SAFI(1) + NH_len(1) + NH + reserved(1)
@@ -314,7 +323,7 @@ class MPNLRICollection:
             Wire-format attribute bytes (with flags/type/length header).
         """
         # Filter and pack NLRIs for this family
-        family_key = (self._context.afi, self._context.safi)
+        family_key = (self._afi, self._safi)
         packed_nlris: list[bytes] = []
 
         for nlri in self._nlris:
@@ -326,7 +335,7 @@ class MPNLRICollection:
             return
 
         # Build header: AFI(2) + SAFI(1)
-        header = self._context.afi.pack_afi() + self._context.safi.pack_safi()
+        header = self._afi.pack_afi() + self._safi.pack_safi()
         header_length = len(header)
         payload = header
 
@@ -350,4 +359,4 @@ class MPNLRICollection:
         return len(self._nlris)
 
     def __repr__(self) -> str:
-        return f'MPNLRICollection({self._context.afi}/{self._context.safi}, {len(self)} NLRIs)'
+        return f'MPNLRICollection({self._afi}/{self._safi}, {len(self)} NLRIs)'

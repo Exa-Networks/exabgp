@@ -302,14 +302,13 @@ class UpdateCollection(Message):
             afi, safi = family
             mp_reach = b''
             mp_unreach = b''
-            context = negotiated.nlri_context(afi, safi)
 
             # Use MPNLRICollection for reach/unreach attribute generation
             announce_nlris = mp_nlris[family].get(Action.ANNOUNCE, [])
             withdraw_nlris = mp_nlris[family].get(Action.WITHDRAW, [])
 
-            mp_announce = MPNLRICollection(announce_nlris, {}, context)
-            mp_withdraw = MPNLRICollection(withdraw_nlris, {}, context)
+            mp_announce = MPNLRICollection(announce_nlris, {}, afi, safi)
+            mp_withdraw = MPNLRICollection(withdraw_nlris, {}, afi, safi)
 
             for mprnlri in mp_announce.packed_reach_attributes(negotiated, msg_size - len(withdraws + announced)):
                 if mp_reach:
