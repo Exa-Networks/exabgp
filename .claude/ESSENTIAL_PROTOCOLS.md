@@ -92,6 +92,15 @@ Use AskUserQuestion tool:
 - Keep history of failed approaches - they have value
 - If an approach didn't work, document WHY before trying another
 
+## ⚠️ BEFORE starting a NEW plan topic
+
+When user requests a new plan on a different topic:
+1. **ASK FIRST:** "Should I save the current plan to `plan/` before starting a new one?"
+2. **If yes:** Save to `plan/<descriptive-name>.md` in project root
+3. **Only then:** Start the new plan
+
+The temporary plan file (`~/.claude/plans/...`) gets overwritten - always offer to save valuable work to `plan/` first.
+
 **Benefit:** If a session is lost, the plan file contains the full context needed to resume.
 
 ---
