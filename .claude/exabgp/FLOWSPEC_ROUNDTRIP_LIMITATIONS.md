@@ -2,7 +2,7 @@
 
 This document explains why certain BGP messages cannot complete a round-trip test (decode → encode → compare). The test framework marks these with `# No cmd:` comments to skip verification.
 
-**Current coverage:** 341/349 (97.7%) - 8 skipped
+**Current coverage:** 345/353 (97.7%) - 8 skipped
 
 ---
 
@@ -84,19 +84,7 @@ Nothing to announce or withdraw - decoder cannot generate a meaningful command.
 
 ---
 
-## 5. Decode Failed (1 case)
-
-### The Problem
-
-A message that the decoder cannot parse successfully.
-
-### Resolution
-
-**Status:** 🔍 Investigate if needed
-
----
-
-## 6. Multi-NLRI Batching (RESOLVED)
+## 5. Multi-NLRI Batching (RESOLVED)
 
 ### The Problem (was 2 cases)
 
@@ -116,7 +104,7 @@ The encoder batches grouped commands into a single UPDATE.
 
 ---
 
-## 7. Pure Generic Attributes (RESOLVED)
+## 6. Pure Generic Attributes (RESOLVED)
 
 ### The Problem (was many cases)
 
@@ -141,10 +129,9 @@ Supported for all families: IPv4/IPv6, FlowSpec, MCAST-VPN, MUP, VPLS.
 | Case | Count | Status | Resolution |
 |------|-------|--------|------------|
 | Interface-set transitive | 0 | ✅ | Fixed with `transitive` JSON field |
-| Withdraw with attrs | 5 | ✅ | RFC normalization (correct) |
+| Withdraw with attrs | 6 | ✅ | RFC normalization (correct) |
 | Partial-decode attrs | 1 | ❌ | By design |
 | Empty UPDATE | 1 | ✅ | No NLRI to encode |
-| Decode failed | 1 | 🔍 | Investigate |
 | Multi-NLRI batching | 0 | ✅ | Fixed with `group` command |
 | Pure generic attrs | 0 | ✅ | Fixed with `attribute [...]` |
 | **Total skipped** | **8** | | |

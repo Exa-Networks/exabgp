@@ -128,7 +128,7 @@ class AttributeCollection(dict):
             else:
                 yield ' {} {}'.format(name, presentation % str(attribute))
 
-    def _generate_json(self, include_nexthop: bool = False) -> Generator[str, None, None]:
+    def _generate_json(self, include_nexthop: bool = False, generic: bool = False) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
             # Skip internal pseudo-attributes
             if code in AttributeCollection.INTERNAL:
@@ -145,7 +145,12 @@ class AttributeCollection(dict):
                     continue
 
             if code not in self.representation:
-                yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, str(attribute))
+                # For generic mode, output hex; otherwise use str() which may be human-readable
+                if generic and hasattr(attribute, '_packed'):
+                    hex_value = '0x' + attribute._packed.hex()
+                    yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, hex_value)
+                else:
+                    yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, str(attribute))
                 continue
 
             how, _, name, _, presentation = self.representation[code]
@@ -266,10 +271,10 @@ class AttributeCollection(dict):
 
         return message
 
-    def json(self, include_nexthop: bool = False) -> str:
-        # Cache only the default case (without nexthop) since that's most common
-        if include_nexthop:
-            return ', '.join(self._generate_json(include_nexthop=True))
+    def json(self, include_nexthop: bool = False, generic: bool = False) -> str:
+        # Cache only the default case (without nexthop and without generic) since that's most common
+        if include_nexthop or generic:
+            return ', '.join(self._generate_json(include_nexthop=include_nexthop, generic=generic))
         if not self._json:
             self._json = ', '.join(self._generate_json())
         return self._json

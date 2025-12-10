@@ -212,6 +212,9 @@ class TestDecodeCommand(unittest.TestCase):
             configuration=None,
             family=None,
             path_information=False,
+            generic=False,
+            json=True,
+            command=False,
         )
 
         captured = io.StringIO()
@@ -245,6 +248,9 @@ class TestDecodeCommand(unittest.TestCase):
             configuration=None,
             family=None,
             path_information=False,
+            generic=False,
+            json=True,
+            command=False,
         )
 
         # Mock stdin
@@ -279,6 +285,9 @@ class TestDecodeCommand(unittest.TestCase):
             configuration=None,
             family=None,
             path_information=False,
+            generic=False,
+            json=True,
+            command=False,
         )
 
         mock_stdin = io.StringIO(hex1 + '\n' + hex2 + '\n')
@@ -313,6 +322,9 @@ class TestDecodeCommand(unittest.TestCase):
             configuration=None,
             family=None,
             path_information=False,
+            generic=False,
+            json=True,
+            command=False,
         )
 
         captured = io.StringIO()
@@ -338,6 +350,9 @@ class TestDecodeCommand(unittest.TestCase):
             configuration=None,
             family=None,
             path_information=False,
+            generic=False,
+            json=True,
+            command=False,
         )
 
         captured = io.StringIO()
@@ -396,6 +411,9 @@ class TestEncodeDecodeRoundTrip(unittest.TestCase):
             configuration=None,
             family=None,
             path_information=False,
+            generic=False,
+            json=True,
+            command=False,
         )
 
         decoded = io.StringIO()
@@ -442,6 +460,9 @@ class TestEncodeDecodeRoundTrip(unittest.TestCase):
             configuration=None,
             family='ipv6 unicast',
             path_information=False,
+            generic=False,
+            json=True,
+            command=False,
         )
 
         decoded = io.StringIO()
@@ -487,6 +508,9 @@ class TestEncodeDecodeRoundTrip(unittest.TestCase):
             configuration=None,
             family=None,
             path_information=False,
+            generic=False,
+            json=True,
+            command=False,
         )
 
         decoded = io.StringIO()

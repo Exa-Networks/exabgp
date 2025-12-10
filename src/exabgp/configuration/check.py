@@ -256,7 +256,7 @@ def check_message(neighbor: Neighbor, message: str) -> bool:
     return False
 
 
-def display_message(neighbor: Neighbor, message: str) -> bool:
+def display_message(neighbor: Neighbor, message: str, generic: bool = False, command: bool = False) -> bool:
     raw = _hexa(message)
 
     if not raw.startswith(b'\xff' * 16):
@@ -264,7 +264,7 @@ def display_message(neighbor: Neighbor, message: str) -> bool:
         header += struct.pack('!H', len(raw) + 19)
         header += struct.pack('!B', 2)
         # Note: calling display_update directly since we synthesized an UPDATE header
-        return display_update(neighbor, header + raw)
+        return display_update(neighbor, header + raw, generic=generic, command=command)
 
     kind = raw[18]
     # Validate message size from header matches actual data length
@@ -275,7 +275,7 @@ def display_message(neighbor: Neighbor, message: str) -> bool:
     if kind == BGP_MSG_OPEN:
         return display_open(neighbor, raw[19:])
     if kind == BGP_MSG_UPDATE:
-        return display_update(neighbor, raw)
+        return display_update(neighbor, raw, generic=generic, command=command)
     if kind == BGP_MSG_NOTIFICATION:
         return display_notification(neighbor, raw)
     sys.stdout.write(f'unknown type {kind}\n')
@@ -487,20 +487,43 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
     return True
 
 
-def _get_json_encoder() -> 'Response.JSON | Response.V4.JSON':
-    """Get the appropriate JSON encoder based on API version setting."""
+def _get_json_encoder(generic: bool = False) -> 'Response.JSON | Response.V4.JSON':
+    """Get the appropriate JSON encoder based on API version setting.
+
+    Args:
+        generic: If True, output generic attributes as hex instead of human-readable
+    """
     api_version = getenv().api.version
     if api_version == 4:
-        return Response.V4.JSON(json_v4_version)
-    return Response.JSON(json_version)
+        encoder = Response.V4.JSON(json_v4_version)
+    else:
+        encoder = Response.JSON(json_version)
+
+    if generic:
+        encoder.generic_attribute_format = True
+    return encoder
 
 
-def display_update(neighbor: Neighbor, raw: bytes) -> bool:
+def display_update(neighbor: Neighbor, raw: bytes, generic: bool = False, command: bool = False) -> bool:
     update = _make_update(neighbor, raw)
     if not update:
         return False
 
-    encoder = _get_json_encoder()
+    if command:
+        # Output API command instead of JSON
+        from exabgp.configuration.command import decode_to_api_command
+
+        payload = raw[19:].hex()  # Skip BGP header
+        cmds = decode_to_api_command(payload, neighbor, generic=generic)
+        if cmds:
+            for cmd in cmds:
+                sys.stdout.write(cmd)
+                sys.stdout.write('\n')
+            return True
+        # Fall through to JSON output if command generation fails
+        sys.stdout.write('# could not generate API command, falling back to JSON\n')
+
+    encoder = _get_json_encoder(generic=generic)
     sys.stdout.write(encoder.update(neighbor, 'in', update, b'', b'', Negotiated.UNSET))
     sys.stdout.write('\n')
     return True

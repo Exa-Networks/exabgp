@@ -45,6 +45,7 @@ class JSON:
         self.time: Callable[[float], float] = nop
         self.compact = getenv().api.compact
         self.use_v4_json = False  # Set True for API v4 backward compat
+        self.generic_attribute_format = False  # Output generic attributes as hex
 
     # def _reset (self, neighbor):
     #     self._count[neighbor.uid] = 0
@@ -422,7 +423,7 @@ class JSON:
         attributes = (
             ''
             if not update_msg.attributes
-            else f'"attribute": {{ {update_msg.attributes.json(include_nexthop=include_nexthop)} }}'
+            else f'"attribute": {{ {update_msg.attributes.json(include_nexthop=include_nexthop, generic=self.generic_attribute_format)} }}'
         )
         if not attributes or not nlri_str:
             update_str = f'"update": {{ {attributes}{nlri_str} }}'

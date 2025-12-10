@@ -48,6 +48,9 @@ def setargs(sub: argparse.ArgumentParser) -> None:
     sub.add_argument('-c', '--configuration', help='configuration file(s)', type=str)
     sub.add_argument('-f', '--family', help='family expected (format like "ipv4 unicast")', type=str)
     sub.add_argument('-i', '--path-information', help='decode path-information', action='store_true')
+    sub.add_argument('-g', '--generic', help='output generic attributes as hex (for round-trip)', action='store_true')
+    sub.add_argument('-j', '--json', help='output as JSON (default)', action='store_true', default=True)
+    sub.add_argument('-m', '--command', help='output as API command instead of JSON', action='store_true')
     sub.add_argument('payload', help='the BGP payload in hexadecimal (reads from stdin if not provided)', type=str, nargs='?')
     # fmt:on
 
@@ -123,7 +126,7 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
             all_valid = False
             continue
 
-        if not reactor.display(route, cmdarg.nlri):
+        if not reactor.display(route, cmdarg.nlri, generic=cmdarg.generic, command=cmdarg.command):
             sys.stdout.write('invalid payload\n')
             all_valid = False
 

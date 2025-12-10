@@ -416,18 +416,20 @@ class Reactor:
                 return False
         return True
 
-    def display(self, route: str, nlri_only: bool = False) -> bool:
+    def display(self, route: str, nlri_only: bool = False, generic: bool = False, command: bool = False) -> bool:
         from exabgp.configuration.check import display_message, display_nlri
 
         if not self.reload():
             return False
 
-        display = display_nlri if nlri_only else display_message
-
         neighbors = self.configuration.neighbors
         for neighbor in neighbors.values():
-            if not display(neighbor, route):
-                return False
+            if nlri_only:
+                if not display_nlri(neighbor, route):
+                    return False
+            else:
+                if not display_message(neighbor, route, generic=generic, command=command):
+                    return False
         return True
 
     def run(self) -> int:
