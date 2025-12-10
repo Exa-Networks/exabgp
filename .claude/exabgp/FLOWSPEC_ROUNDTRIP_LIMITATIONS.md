@@ -2,7 +2,7 @@
 
 This document explains why certain BGP messages cannot complete a round-trip test (decode → encode → compare). The test framework marks these with `# No cmd:` comments to skip verification.
 
-**Current coverage:** 347/353 (98.3%) - 6 skipped
+**Current coverage:** 349/349 (100%) - 0 skipped
 
 ---
 
@@ -27,22 +27,27 @@ The config parser accepts both old (2-colon) and new (3-colon) formats for backw
 
 ---
 
-## 2. Withdraw With Attributes (5 cases)
+## 2. Withdraw With Attributes (RESOLVED)
 
-### The Problem
+### The Problem (was 6 cases)
 
-Some implementations send withdrawals with path attributes. RFC 4271 says withdrawals should have no attributes. The encoder produces RFC-compliant withdrawals.
+Some implementations send withdrawals with path attributes. RFC 4271 says withdrawals should have no attributes.
 
 ### Wire Format
 
-Original: MP_UNREACH_NLRI + ORIGIN + LOCAL_PREF + EXTENDED_COMMUNITY
-Re-encoded: MP_UNREACH_NLRI only
+Original: MP_UNREACH_NLRI + ORIGIN + LOCAL_PREF + EXTENDED_COMMUNITY + BGP_PREFIX_SID + etc.
 
 ### Resolution
 
-**Status:** ✅ Correct behavior (RFC normalization)
+**Status:** ✅ Fixed with `group attributes ... ; withdraw ...` command
 
-Both messages withdraw the same routes - semantically equivalent.
+The decoder now generates `group` syntax for withdrawals that include extra attributes:
+
+```
+group attributes origin igp local-preference 100 extended-community [rate-limit:1] ; withdraw ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32
+```
+
+This produces a single UPDATE with both attributes and MP_UNREACH_NLRI, matching the original wire format exactly.
 
 ---
 
@@ -139,12 +144,12 @@ Supported for all families: IPv4/IPv6, FlowSpec, MCAST-VPN, MUP, VPLS.
 | Case | Count | Status | Resolution |
 |------|-------|--------|------------|
 | Interface-set transitive | 0 | ✅ | Fixed with `transitive` JSON field |
-| Withdraw with attrs | 6 | ✅ | RFC normalization (correct) |
+| Withdraw with attrs | 0 | ✅ | Fixed with `group attributes ... ; withdraw ...` |
 | Partial-decode attrs | 0 | ✅ | Fixed with `--generic` decode mode |
 | Empty UPDATE | 0 | ✅ | Fixed with `attributes` command |
 | Multi-NLRI batching | 0 | ✅ | Fixed with `group` command |
 | Pure generic attrs | 0 | ✅ | Fixed with `attribute [...]` |
-| **Total skipped** | **6** | | |
+| **Total skipped** | **0** | | |
 
 ---
 
@@ -152,6 +157,7 @@ Supported for all families: IPv4/IPv6, FlowSpec, MCAST-VPN, MUP, VPLS.
 
 | Date | Passed | Skipped | Coverage |
 |------|--------|---------|----------|
+| 2025-12-10 | 349 | 0 | 100% |
 | 2025-12-10 | 347 | 6 | 98.3% |
 | 2025-12-10 | 346 | 7 | 98.0% |
 | 2025-12-10 | 345 | 8 | 97.7% |
@@ -161,4 +167,10 @@ Supported for all families: IPv4/IPv6, FlowSpec, MCAST-VPN, MUP, VPLS.
 
 ## Implications
 
-Most limitations are **by design** - the API command format is intended for human readability and common operations, not for lossless packet reproduction. For cases requiring exact packet reproduction, use the `raw:` hex format directly.
+All limitations have been resolved. The API command format now supports lossless round-trip for all supported BGP message types.
+
+Key solutions:
+- **`group`** command batches multiple NLRIs or attributes + withdrawals
+- **`attributes`** command handles empty UPDATEs
+- **`--generic`** decode mode preserves raw attribute bytes
+- **Hex format** (`0xHHHH...`) for extended-communities the parser doesn't know

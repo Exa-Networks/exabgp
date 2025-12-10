@@ -346,6 +346,14 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
     - **Read when:** Working with UpdateCollection, AttributeCollection, NLRICollection
     - **Contains:** Wire vs Semantic containers, factory patterns, iterator patterns, when to use each
 
+18. **`.claude/exabgp/API_COMMAND_ROUNDTRIP.md`** - API command round-trip testing
+    - **Read when:** Working with API commands, round-trip testing, adding new family support
+    - **Contains:** Test commands, CI file format, `group` command patterns, family support guide
+
+19. **`.claude/exabgp/FLOWSPEC_ROUNDTRIP_LIMITATIONS.md`** - FlowSpec round-trip status
+    - **Read when:** Debugging FlowSpec encoding issues, understanding resolved limitations
+    - **Contains:** Coverage stats, resolved issues, `group` command solutions
+
 **Quick reference:**
 - Adding NLRI type → Read #3, then #1
 - Understanding message flow → Read #2
@@ -361,6 +369,7 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
 - Modifying NLRI __init__ or slots → Read #15
 - Modifying Update/Attribute/Collection classes → Read #16, #17
 - Understanding wire vs semantic separation → Read #16
+- API command round-trip testing → Read #18, #19
 
 ---
 

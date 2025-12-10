@@ -1,6 +1,6 @@
 # Plan: API Command to BGP Message Encoder for Tests
 
-**Status:** ✅ Complete - 330/349 cmd: lines (95%), 0 failures, 19 skipped
+**Status:** ✅ Complete - 349/349 cmd: lines (100%), 0 failures, 0 skipped
 **Created:** 2025-12-10
 **Updated:** 2025-12-10
 
@@ -13,9 +13,9 @@ Add `cmd:` field support to `.ci` test files. API commands like `announce ipv4 u
 ```
 ./qa/bin/test_api_encode --self-check
 
-Passed:  330
+Passed:  349
 Failed:  0
-Skipped: 19
+Skipped: 0
 ```
 
 ---
@@ -75,26 +75,78 @@ Skipped: 19
 
 ---
 
-## Skipped Lines (19 total)
+## Previously Skipped Lines (all now fixed)
 
-| File | Skipped | Reason |
-|------|---------|--------|
-| conf-mvpn.ci | 2 | Multi-NLRI updates (encoder produces separate messages) |
-| api-ipv4.ci | 1 | FlowSpec EOR |
-| api-ipv6.ci | 1 | FlowSpec EOR |
-| api-vpnv4.ci | 1 | Withdraw+attrs |
-| api-flow.ci | 1 | FlowSpec EOR |
-| conf-flow-redirect.ci | 1 | Generic attribute (attribute-0x19-0xC0) not captured in cmd |
-| api-broken-flow.ci | 3 | Withdraw with attributes (unusual BGP) |
-| api-flow-merge.ci | 9 | Interface-set transitive flag lost in string representation |
-| **Total** | **19** | |
+All 19 previously skipped lines now pass. Key fixes:
 
-### Non-roundtrippable Cases
+| Issue | Count | Fix |
+|-------|-------|-----|
+| Multi-NLRI updates | 2 | `group` command batches into single UPDATE |
+| FlowSpec EOR | 3 | EOR decoder/encoder support |
+| Withdraw+attrs | 4 | `group attributes ... ; withdraw ...` syntax |
+| Generic attributes | 1 | `--generic` decode mode + `attribute [...]` syntax |
+| Interface-set transitive | 9 | `transitive` field in JSON + 3-colon format |
 
-These cases cannot round-trip due to information loss in the decoder output:
-1. **Interface-set transitive flag:** Extended community string representation doesn't include transitive/non-transitive flag
-2. **Withdraw with attributes:** Standard BGP withdraws don't carry attributes; encoder produces correct withdraws
-3. **Generic attributes:** Some attributes not captured in API command string
+### Key Pattern: `group` Command for Complex Round-trips
+
+The `group` command is the solution for messages that combine multiple elements:
+
+1. **Multi-NLRI batching:** `group announce X ; announce Y`
+2. **Withdraw with attributes:** `group attributes origin igp local-preference 100 ; withdraw ipv4 flow ...`
+3. **Attributes-only UPDATE:** `attributes origin igp local-preference 100`
+
+The decoder detects these cases and generates appropriate `group` syntax.
+
+---
+
+## Key Learnings for Future Reference
+
+### 1. The `group` Command is Fundamental
+
+Location: `src/exabgp/reactor/api/command/group.py`
+
+The `group` command can combine ANY API commands into a single UPDATE:
+- Uses `;` separator: `group cmd1 ; cmd2 ; cmd3`
+- Supports: `announce`, `withdraw`, `attributes`, all NLRI types
+- Line 273-309 shows `_parse_routes()` handles all family formats
+
+### 2. Withdraw + Attributes Pattern
+
+RFC 4271 says withdraws don't need attributes, but some implementations include them.
+To reproduce byte-identical wire format:
+
+```
+# Instead of:
+withdraw ipv4 flow ... extended-community [...]
+
+# Use:
+group attributes origin igp local-preference 100 extended-community [...] ; withdraw ipv4 flow ...
+```
+
+Detection in decoder: `has_extra_withdraw_attributes()` checks for origin, local-pref, etc.
+
+### 3. decode_to_api_command Location
+
+Moved from `qa/bin/test_api_encode` to `src/exabgp/configuration/command.py`
+- Better code organization
+- Can be reused by decode.py for `--command` flag
+- All format_* helpers are in the same file
+
+### 4. Extended Community Hex Fallback
+
+For extended communities the parser doesn't understand (FlowSpec actions, etc.):
+```python
+# If string format isn't parseable, use hex:
+if 'value' in ec:
+    ecomm_strs.append(f'0x{ec["value"]:016x}')
+```
+
+### 5. skip_attributes Pattern
+
+Format functions accept `skip_attributes=True` to omit attributes when they're provided separately via `group attributes ...`:
+- `format_flow_announce(..., skip_attributes=True)`
+- `format_mup_announce(..., skip_attributes=True)`
+- `format_mvpn_announce(..., skip_attributes=True)`
 
 ---
 
@@ -197,7 +249,9 @@ These cases cannot round-trip due to information loss in the decoder output:
 
 | File | Purpose |
 |------|---------|
-| `qa/bin/test_api_encode` | Main test script with encode/decode functions |
+| `src/exabgp/configuration/command.py` | **decode_to_api_command()** + all format_* helpers |
+| `src/exabgp/reactor/api/command/group.py` | Group command handling (batches into single UPDATE) |
+| `qa/bin/test_api_encode` | Test script with --self-check mode |
 | `src/exabgp/rib/__init__.py` | RIB class with `_cache` (caused collision bug) |
 | `src/exabgp/bgp/message/update/attribute/collection.py` | AttributeCollection.json() with include_nexthop param |
 | `src/exabgp/reactor/api/response/json.py` | JSON encoder, calls json(include_nexthop=True) for withdraws |

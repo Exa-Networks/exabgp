@@ -7,7 +7,7 @@ Run ALL tests before declaring code ready.
 ## Required Test Sequence
 
 ```bash
-./qa/bin/test_everything  # ALL tests, exits on first failure
+./qa/bin/test_everything  # ALL 15 tests, exits on first failure
 ```
 
 **Individual commands (for debugging only):**
@@ -17,13 +17,16 @@ env exabgp_log_enable=false uv run pytest ./tests/unit/
 ./qa/bin/functional encoding
 ./qa/bin/functional decoding
 ./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf
+./qa/bin/test_api_encode              # cmd→raw verification
+./qa/bin/test_api_encode --self-check # raw→cmd→raw round-trip
+./qa/bin/test_json                    # JSON decode regression tests
 ```
 
 ---
 
 ## Pre-Commit Checklist
 
-- [ ] `./qa/bin/test_everything` passes all 6 suites
+- [ ] `./qa/bin/test_everything` passes all 15 tests
 - [ ] `git status` reviewed
 - [ ] User approval
 

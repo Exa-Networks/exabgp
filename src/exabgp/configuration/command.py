@@ -29,8 +29,19 @@ def has_extra_withdraw_attributes(attributes: dict) -> bool:
     If there are other attributes (origin, local-preference, as-path, etc.), we need
     to use 'group attributes ... ; withdraw ...' to reproduce the exact wire format.
     """
-    extra_attrs = {'origin', 'as-path', 'next-hop', 'local-preference', 'med', 'atomic-aggregate',
-                   'aggregator', 'originator-id', 'cluster-list', 'large-community', 'bgp-prefix-sid'}
+    extra_attrs = {
+        'origin',
+        'as-path',
+        'next-hop',
+        'local-preference',
+        'med',
+        'atomic-aggregate',
+        'aggregator',
+        'originator-id',
+        'cluster-list',
+        'large-community',
+        'bgp-prefix-sid',
+    }
     return bool(extra_attrs.intersection(attributes.keys()))
 
 
@@ -560,7 +571,9 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                         nexthop = attributes.get('next-hop', '0.0.0.0')
                         if use_group:
                             # Skip attributes in withdraw - they're in the group attributes command
-                            cmd = format_flow_announce(afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True)
+                            cmd = format_flow_announce(
+                                afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True
+                            )
                             if cmd:
                                 attr_cmd = format_withdraw_attributes(attributes)
                                 commands.append(f'group {attr_cmd} ; {cmd}')
@@ -576,7 +589,9 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                     if isinstance(nlri_info, dict):
                         nexthop = attributes.get('next-hop', '0.0.0.0')
                         if use_group:
-                            cmd = format_mup_announce(afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True)
+                            cmd = format_mup_announce(
+                                afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True
+                            )
                             if cmd:
                                 attr_cmd = format_withdraw_attributes(attributes)
                                 commands.append(f'group {attr_cmd} ; {cmd}')
@@ -592,7 +607,9 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                     if isinstance(nlri_info, dict):
                         nexthop = attributes.get('next-hop', '0.0.0.0')
                         if use_group:
-                            cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True)
+                            cmd = format_mvpn_announce(
+                                afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True
+                            )
                             if cmd:
                                 attr_cmd = format_withdraw_attributes(attributes)
                                 commands.append(f'group {attr_cmd} ; {cmd}')
