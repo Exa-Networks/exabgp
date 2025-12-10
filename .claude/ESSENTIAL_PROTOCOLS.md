@@ -160,7 +160,7 @@ Exit code: 0
 - ✅ "Tests pass (ruff + pytest: 1376)"
 - ❌ "Great news! All tests passed successfully..."
 
-**See:** COMMUNICATION_STYLE.md for full guidelines, EMOJI_GUIDE.md for emoji usage
+**See:** `output-styles/exabgp.md` for full guidelines (activate with `/output-style exabgp`)
 
 ---
 

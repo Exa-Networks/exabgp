@@ -32,8 +32,6 @@ Files in `.claude/` directory use UPPERCASE because they are critical AI assista
 - `CODING_STANDARDS.md`
 - `TESTING_PROTOCOL.md`
 - `CI_TESTING.md`
-- `COMMUNICATION_STYLE.md`
-- `EMOJI_GUIDE.md`
 - `PLANNING_GUIDE.md`
 - `FILE_NAMING_CONVENTIONS.md`
 

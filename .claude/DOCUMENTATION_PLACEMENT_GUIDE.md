@@ -63,18 +63,17 @@ Examples:
 
 **Files:**
 - `VERIFICATION_PROTOCOL.md` - Verify before claiming
-- `COMMUNICATION_STYLE.md` - Terse, direct style
 - `GIT_VERIFICATION_PROTOCOL.md` - Git safety rules
 - `MANDATORY_REFACTORING_PROTOCOL.md` - Refactoring steps
 - `ERROR_RECOVERY_PROTOCOL.md` - Slow down after mistakes
-- `CODING_STANDARDS.md` - Python 3.8+, APIs
+- `CODING_STANDARDS.md` - Python 3.12+, APIs
 - `TESTING_PROTOCOL.md` - Testing requirements
 - `PLANNING_GUIDE.md` - Project planning
 - `CI_TESTING.md` - CI test requirements
 - `FUNCTIONAL_TEST_DEBUGGING_GUIDE.md` - Debug tests
 - `PRE_FLIGHT_CHECKLIST.md` - Session start checklist
-- `EMOJI_GUIDE.md` - Emoji usage
 - `DOCUMENTATION_PLACEMENT_GUIDE.md` - This file
+- `output-styles/exabgp.md` - Communication style
 
 **Update when:** Protocols violated repeatedly, new patterns emerge
 
@@ -200,7 +199,6 @@ plan/                              # Implementation plans (USER PREFERENCE)
 .claude/
 ├── # PROTOCOLS (how we work)
 ├── VERIFICATION_PROTOCOL.md
-├── COMMUNICATION_STYLE.md
 ├── GIT_VERIFICATION_PROTOCOL.md
 ├── MANDATORY_REFACTORING_PROTOCOL.md
 ├── ERROR_RECOVERY_PROTOCOL.md
@@ -210,8 +208,9 @@ plan/                              # Implementation plans (USER PREFERENCE)
 ├── CI_TESTING.md
 ├── FUNCTIONAL_TEST_DEBUGGING_GUIDE.md
 ├── PRE_FLIGHT_CHECKLIST.md
-├── EMOJI_GUIDE.md
 ├── DOCUMENTATION_PLACEMENT_GUIDE.md  # This file
+├── output-styles/
+│   └── exabgp.md                     # Communication style
 ├──
 ├── # REFERENCE (architecture, tests, conventions)
 ├── FUNCTIONAL_TEST_ARCHITECTURE.md

@@ -7,8 +7,7 @@
 ## 1. Protocols Read
 
 - [ ] VERIFICATION_PROTOCOL.md
-- [ ] COMMUNICATION_STYLE.md
-- [ ] EMOJI_GUIDE.md
+- [ ] output-styles/exabgp.md (communication style)
 - [ ] GIT_VERIFICATION_PROTOCOL.md
 - [ ] MANDATORY_REFACTORING_PROTOCOL.md
 - [ ] ERROR_RECOVERY_PROTOCOL.md

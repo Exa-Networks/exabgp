@@ -84,7 +84,7 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 - VERIFICATION_PROTOCOL.md - Complete verification rules
 - TESTING_PROTOCOL.md - Complete testing requirements
 - CODING_STANDARDS.md - All coding standards
-- COMMUNICATION_STYLE.md - Full communication guidelines
+- output-styles/exabgp.md - Communication style (activate with `/output-style exabgp`)
 
 ### Tier 3: Reference Materials (Consult When Needed)
 
@@ -93,10 +93,9 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 - FILE_NAMING_CONVENTIONS.md - Naming patterns
 - CI_TESTING.md - Test commands reference
 - PLANNING_GUIDE.md - Project planning standards
-- EMOJI_GUIDE.md - Emoji reference
 - PRE_FLIGHT_CHECKLIST.md - Session checklist
 
-**Total: 1 essential + 10 contextual + 7 reference = 18 files**
+**Total: 1 essential + 9 contextual + 6 reference = 16 files**
 
 ---
 
@@ -106,7 +105,6 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 .claude/
 ├── # PROTOCOLS (how we work - READ EVERY SESSION)
 ├── VERIFICATION_PROTOCOL.md
-├── COMMUNICATION_STYLE.md
 ├── GIT_VERIFICATION_PROTOCOL.md
 ├── MANDATORY_REFACTORING_PROTOCOL.md
 ├── ERROR_RECOVERY_PROTOCOL.md
@@ -116,8 +114,9 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 ├── CI_TESTING.md
 ├── FUNCTIONAL_TEST_DEBUGGING_GUIDE.md
 ├── PRE_FLIGHT_CHECKLIST.md
-├── EMOJI_GUIDE.md
 ├── DOCUMENTATION_PLACEMENT_GUIDE.md    # ⚠️ READ BEFORE CREATING ANY DOC
+├── output-styles/
+│   └── exabgp.md                       # Communication style (/output-style exabgp)
 │
 ├── # CODEBASE REFERENCE (how to use/modify codebase)
 ├── exabgp/
@@ -232,7 +231,7 @@ Recover from error | ERROR_RECOVERY_PROTOCOL.md | ERROR_RECOVERY_PROTOCOL.md
 4. Only THEN claim success
 
 **Remember:**
-- COMMUNICATION_STYLE.md + EMOJI_GUIDE.md apply to EVERY response
+- output-styles/exabgp.md applies to EVERY response
 - GIT_VERIFICATION_PROTOCOL.md applies to EVERY git operation
 - ERROR_RECOVERY_PROTOCOL.md applies when mistakes happen
 

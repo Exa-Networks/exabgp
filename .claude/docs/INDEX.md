@@ -16,9 +16,8 @@
 - `TESTING_PROTOCOL.md` - Test requirements before claiming success
 
 **Communication & Standards:**
-- `COMMUNICATION_STYLE.md` - Terse, direct communication style
-- `EMOJI_GUIDE.md` - Systematic emoji usage
-- `CODING_STANDARDS.md` - Python 3.10+, mypy, BGP APIs
+- `output-styles/exabgp.md` - Communication style (activate with `/output-style exabgp`)
+- `CODING_STANDARDS.md` - Python 3.12+, mypy, BGP APIs
 
 **Testing & Debugging:**
 - `CI_TESTING.md` - Complete test suite commands
