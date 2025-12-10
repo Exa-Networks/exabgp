@@ -417,7 +417,13 @@ class JSON:
             remove_str = ', '.join(remove)
             nlri_str += f'"withdraw": {{ {remove_str} }}'
 
-        attributes = '' if not update_msg.attributes else f'"attribute": {{ {update_msg.attributes.json()} }}'
+        # Include NEXT_HOP in attributes when withdraws present (it's not shown with NLRI for withdraws)
+        include_nexthop = bool(minus)
+        attributes = (
+            ''
+            if not update_msg.attributes
+            else f'"attribute": {{ {update_msg.attributes.json(include_nexthop=include_nexthop)} }}'
+        )
         if not attributes or not nlri_str:
             update_str = f'"update": {{ {attributes}{nlri_str} }}'
         else:

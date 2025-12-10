@@ -104,7 +104,9 @@ class AttributeCollection(dict):
 
             attribute = self[code]
 
-            # Skip attributes marked as NO_GENERATION
+            # Skip attributes marked as NO_GENERATION:
+            # - Internal pseudo-attributes (TreatAsWithdraw, Discard)
+            # - NextHop: output with NLRI, not as separate attribute
             if attribute.NO_GENERATION:
                 continue
 
@@ -126,7 +128,7 @@ class AttributeCollection(dict):
             else:
                 yield ' {} {}'.format(name, presentation % str(attribute))
 
-    def _generate_json(self) -> Generator[str, None, None]:
+    def _generate_json(self, include_nexthop: bool = False) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
             # Skip internal pseudo-attributes
             if code in AttributeCollection.INTERNAL:
@@ -134,9 +136,13 @@ class AttributeCollection(dict):
 
             attribute = self[code]
 
-            # Skip attributes marked as NO_GENERATION (next-hop is defined with the NLRI)
+            # Skip attributes marked as NO_GENERATION:
+            # - Internal pseudo-attributes (TreatAsWithdraw, Discard) that aren't real BGP attributes
+            # - NextHop: output with NLRI in announce (as "nexthop" key)
+            #   For withdraws, include_nexthop=True includes NEXT_HOP in attributes
             if attribute.NO_GENERATION:
-                continue
+                if not (include_nexthop and code == Attribute.CODE.NEXT_HOP):
+                    continue
 
             if code not in self.representation:
                 yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, str(attribute))
@@ -260,7 +266,10 @@ class AttributeCollection(dict):
 
         return message
 
-    def json(self) -> str:
+    def json(self, include_nexthop: bool = False) -> str:
+        # Cache only the default case (without nexthop) since that's most common
+        if include_nexthop:
+            return ', '.join(self._generate_json(include_nexthop=True))
         if not self._json:
             self._json = ', '.join(self._generate_json())
         return self._json
