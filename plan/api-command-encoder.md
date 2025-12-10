@@ -1,6 +1,6 @@
 # Plan: API Command to BGP Message Encoder for Tests
 
-**Status:** 🔄 In Progress - 287/349 cmd: lines (82%), 62 missing (complex families)
+**Status:** 🔄 In Progress - 295/349 cmd: lines (85%), 54 skipped (FlowSpec + non-roundtrippable)
 **Created:** 2025-12-10
 **Updated:** 2025-12-10
 
@@ -13,9 +13,9 @@ Add `cmd:` field support to `.ci` test files. API commands like `announce ipv4 u
 ```
 ./qa/bin/test_api_encode --self-check
 
-Passed:  287
+Passed:  295
 Failed:  0
-Skipped: 62
+Skipped: 54
 ```
 
 ---
@@ -75,23 +75,23 @@ Skipped: 62
 
 ---
 
-## Missing cmd: Lines (62 total)
+## Skipped Lines (54 total)
 
-The following raw: lines don't have cmd: because they use complex configuration syntax:
+The following raw: lines are skipped for round-trip testing:
 
-| File | Missing | Family |
+| File | Skipped | Reason |
 |------|---------|--------|
-| conf-flow.ci | 13 | FlowSpec |
+| conf-flow.ci | 13 | FlowSpec (complex match/then syntax) |
 | conf-flow-redirect.ci | 5 | FlowSpec |
-| api-mvpn.ci | 12 | MCAST-VPN |
 | api-flow-merge.ci | 11 | FlowSpec |
 | api-broken-flow.ci | 8 | FlowSpec |
 | api-flow.ci | 6 | FlowSpec |
-| api-ipv4.ci | 2 | FlowSpec |
-| api-ipv6.ci | 2 | FlowSpec |
+| api-mvpn.ci | 6 | MCAST-VPN withdraws (NEXT_HOP attr not in JSON) |
+| conf-mvpn.ci | 2 | Multi-NLRI updates |
+| api-ipv4.ci | 1 | FlowSpec |
+| api-ipv6.ci | 1 | FlowSpec |
 | api-vpnv4.ci | 1 | Withdraw+attrs |
-| Other files | 2 | Various |
-| **Total** | **62** | |
+| **Total** | **54** | |
 
 ### Why These Can't Round-Trip
 
@@ -103,13 +103,14 @@ flow route source 10.0.0.0/24 {
 }
 ```
 
-**MCAST-VPN** uses structured route types with nested NLRI.
+**MCAST-VPN withdraws** include NEXT_HOP attribute in wire format, but JSON output doesn't expose it.
+
+**Multi-NLRI** updates have multiple NLRIs bundled; encoder produces separate messages.
 
 ### Future Work
 
-To achieve 100% coverage, would need:
+To achieve higher coverage, would need:
 1. FlowSpec encoder/decoder with match/then syntax
-2. MCAST-VPN route type handling
 
 ---
 
@@ -167,6 +168,19 @@ To achieve 100% coverage, would need:
 - Auto-detection in self-check from wire format
 - Skip marker for messages that can't round-trip (`# No cmd:`)
 
+### MCAST-VPN Support (12 skipped → 8 pass, 6 skipped)
+
+**Fix:** Added MCAST-VPN encode/decode support:
+- Decoder extracts route type from JSON `code` field and maps to config syntax:
+  - Code 5: `source-ad source <ip> group <ip> rd <rd>`
+  - Code 6: `shared-join rp <ip> group <ip> rd <rd> source-as <as>`
+  - Code 7: `source-join source <ip> group <ip> rd <rd> source-as <as>`
+- Encoder uses `announce { afi { mcast-vpn ... } }` config block
+- Handles both IPv4 and IPv6 mcast-vpn address families
+- 6 skipped for non-roundtrippable reasons:
+  - Withdraw messages have NEXT_HOP attr in wire format but not in JSON
+  - Multi-NLRI updates (encoder produces separate messages)
+
 ---
 
 ## Key Files
@@ -215,8 +229,8 @@ To see current failure patterns:
 - [x] Withdraw with attributes (skipped via `# No cmd:` marker)
 - [x] L2VPN/VPLS encode/decode (5 skipped → 0)
 - [x] MUP encode/decode (10 skipped → 0) + fixed 2 JSON bugs in exabgp core
-- [ ] FlowSpec encode/decode (43 missing)
-- [ ] MCAST-VPN encode/decode (12 missing)
+- [x] MCAST-VPN encode/decode (12 missing → 8 pass, 6 skipped for withdraw/multi-NLRI)
+- [ ] FlowSpec encode/decode (43 skipped)
 
 ---
 

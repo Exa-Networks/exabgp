@@ -369,6 +369,70 @@ neighbor {neighbor_ip} {{
                 neighbor.rib.uncache()
             return None
 
+        # Handle MCAST-VPN syntax: announce <afi> mcast-vpn <mvpn-type> ...
+        if len(parts) >= 4 and parts[2] == "mcast-vpn":
+            afi = parts[1]  # ipv4 or ipv6
+            mvpn_details = " ".join(parts[3:])
+            family = f"{afi} mcast-vpn"
+
+            # Use unique neighbor address to avoid RIB cache collision
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+            # Build capability section if needed
+            capability_parts = []
+            if asn4_disabled:
+                capability_parts.append("asn4 disable;")
+            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+
+            # Configuration template for MCAST-VPN
+            conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    {capability_section}
+    family {{ {family}; }}
+    announce {{ {afi} {{ mcast-vpn {mvpn_details}; }} }}
+}}
+"""
+            configuration = Configuration([conf], text=True)
+            if not configuration.reload():
+                return None
+
+            if not configuration.neighbors:
+                return None
+
+            for name in configuration.neighbors.keys():
+                neighbor = configuration.neighbors[name]
+                _, negotiated_out = _negotiated(neighbor)
+
+                if not neighbor.rib.enabled:
+                    continue
+
+                for _ in neighbor.rib.outgoing.updates(False):
+                    pass
+
+                for route in neighbor.rib.outgoing.cached_routes():
+                    if action == "withdraw":
+                        # Withdraw: put NLRI in withdraw list with attributes
+                        # MCAST-VPN withdraws include path attributes
+                        for packed in UpdateCollection(
+                            [], [route.nlri], route.attributes
+                        ).messages(negotiated_out):
+                            neighbor.rib.uncache()
+                            return packed.hex().upper()
+                    else:
+                        # Announce: put NLRI in announce list with attributes
+                        for packed in UpdateCollection(
+                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
+                        ).messages(negotiated_out):
+                            neighbor.rib.uncache()
+                            return packed.hex().upper()
+
+                neighbor.rib.uncache()
+            return None
+
         # Parse family from command: announce <afi> <safi> <nlri> ...
         # Or: announce route <nlri> ... (legacy format)
         if parts[1] == "route":
@@ -493,6 +557,53 @@ def family_to_api_format(family: str) -> str:
         return "route"
     # IPv6 families use explicit family format
     return family
+
+
+def format_mvpn_announce(
+    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = "announce"
+) -> str | None:
+    """Format a MCAST-VPN NLRI as an API announce/withdraw command.
+
+    MVPN route types (RFC 6514):
+    - Code 5: Source Active A-D Route -> source-ad source <ip> group <ip> rd <rd>
+    - Code 6: C-Multicast Shared Tree Join -> shared-join rp <ip> group <ip> rd <rd> source-as <as>
+    - Code 7: C-Multicast Source Tree Join -> source-join source <ip> group <ip> rd <rd> source-as <as>
+    """
+    code = nlri_info.get("code", 0)
+    rd = nlri_info.get("rd", "")
+    source = nlri_info.get("source", "")
+    group = nlri_info.get("group", "")
+    source_as = nlri_info.get("source-as", "")
+
+    # Map code to MVPN type keyword
+    nlri_str = ""
+    if code == 5:
+        # Source Active A-D Route
+        nlri_str = f"source-ad source {source} group {group} rd {rd}"
+    elif code == 6:
+        # C-Multicast Shared Tree Join (source field is actually RP)
+        nlri_str = f"shared-join rp {source} group {group} rd {rd} source-as {source_as}"
+    elif code == 7:
+        # C-Multicast Source Tree Join
+        nlri_str = f"source-join source {source} group {group} rd {rd} source-as {source_as}"
+    else:
+        return None
+
+    # Build command parts
+    cmd_parts = [f"{action} {afi} mcast-vpn {nlri_str} next-hop {nexthop}"]
+
+    # Add extended-community attribute
+    if "extended-community" in attributes:
+        ecomms = attributes["extended-community"]
+        if ecomms:
+            ecomm_strs = []
+            for ec in ecomms:
+                if isinstance(ec, dict) and "string" in ec:
+                    ecomm_strs.append(ec["string"])
+            if ecomm_strs:
+                cmd_parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
+
+    return " ".join(cmd_parts)
 
 
 def format_mup_announce(
@@ -734,7 +845,17 @@ def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
         # Process announces
         for family, nexthops in announce.items():
             # Skip unsupported families that need special syntax
-            if any(x in family for x in ("flow", "mcast-vpn")):
+            if "flow" in family:
+                continue
+
+            # Handle MCAST-VPN family specially
+            if "mcast-vpn" in family:
+                afi = "ipv4" if "ipv4" in family else "ipv6"
+                for nexthop, nlris in nexthops.items():
+                    for nlri_info in nlris:
+                        cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
+                        if cmd:
+                            commands.append(cmd)
                 continue
 
             # Handle MUP family specially
@@ -832,7 +953,18 @@ def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
         # Process withdraws
         for family, nlris in withdraw.items():
             # Skip unsupported families that need special syntax
-            if any(x in family for x in ("flow", "mup", "mcast-vpn")):
+            if any(x in family for x in ("flow", "mup")):
+                continue
+
+            # Handle MCAST-VPN withdraws specially
+            if "mcast-vpn" in family:
+                afi = "ipv4" if "ipv4" in family else "ipv6"
+                for nlri_info in nlris:
+                    if isinstance(nlri_info, dict):
+                        # For withdraws, use a dummy next-hop for config parser validation
+                        cmd = format_mvpn_announce(afi, "0.0.0.0", nlri_info, attributes, action="withdraw")
+                        if cmd:
+                            commands.append(cmd)
                 continue
 
             # Handle L2VPN VPLS specially
