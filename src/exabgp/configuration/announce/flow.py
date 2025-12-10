@@ -54,6 +54,7 @@ from exabgp.configuration.flow.parser import action
 from exabgp.configuration.static.parser import community
 from exabgp.configuration.static.parser import large_community
 from exabgp.configuration.static.parser import extended_community
+from exabgp.configuration.static.mpls import route_distinguisher
 
 from exabgp.configuration.flow.parser import interface_set
 
@@ -67,7 +68,15 @@ class AnnounceFlow(ParseAnnounce):
         settings_class=FlowSettings,
         prefix_parser=None,  # FlowSpec has no prefix
         factory_with_afi=True,  # Factory needs (afi, safi, action)
+        assign={'rd': 'rd'},  # Map rd command to rd field in settings
         children={
+            # Route Distinguisher (for flow-vpn)
+            'rd': Leaf(
+                type=ValueType.RD,
+                description='Route distinguisher (for VPN)',
+                action='nlri-set',
+                validator=LegacyParserValidator(parser_func=route_distinguisher, name='rd'),
+            ),
             # Match components (nlri-add)
             'source': LeafList(
                 type=ValueType.IP_PREFIX,

@@ -840,6 +840,70 @@ def format_mup_announce(
     return " ".join(cmd_parts)
 
 
+def format_flow_announce(
+    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = "announce"
+) -> str | None:
+    """Format a FlowSpec NLRI as an API announce/withdraw command.
+
+    Args:
+        afi: Address family ('ipv4' or 'ipv6')
+        nexthop: Next-hop address (may be 'no-nexthop')
+        nlri_info: NLRI dict from JSON with 'string' field
+        attributes: Attributes dict from JSON
+        action: 'announce' or 'withdraw'
+
+    Returns:
+        API command string or None if formatting fails
+    """
+    # FlowSpec NLRI has a 'string' field with the human-readable representation
+    flow_string = nlri_info.get("string", "")
+    if not flow_string:
+        return None
+
+    # The string starts with "flow " - we need to remove that prefix
+    # since the command format is "announce ipv4 flow <rest>"
+    if flow_string.startswith("flow "):
+        flow_details = flow_string[5:]  # Remove "flow " prefix
+    else:
+        flow_details = flow_string
+
+    # Add RD if present and not already in the flow_string
+    rd = nlri_info.get("rd")
+    if rd and f"rd {rd}" not in flow_details:
+        flow_details = f"{flow_details} rd {rd}"
+
+    # Build command parts
+    cmd_parts = [f"{action} {afi} flow {flow_details}"]
+
+    # Add next-hop if present and not 'no-nexthop'
+    if nexthop and nexthop != "no-nexthop":
+        cmd_parts.append(f"next-hop {nexthop}")
+
+    # Add extended-community attribute (flow actions like discard, rate-limit)
+    if "extended-community" in attributes:
+        ecomms = attributes["extended-community"]
+        if ecomms:
+            ecomm_strs = []
+            for ec in ecomms:
+                if isinstance(ec, dict) and "string" in ec:
+                    ecomm_strs.append(ec["string"])
+            if ecomm_strs:
+                cmd_parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
+
+    # Add community attribute
+    if "community" in attributes:
+        comms = attributes["community"]
+        if comms:
+            comm_strs = []
+            for c in comms:
+                if isinstance(c, list) and len(c) == 2:
+                    comm_strs.append(f"{c[0]}:{c[1]}")
+            if comm_strs:
+                cmd_parts.append(f"community [{' '.join(comm_strs)}]")
+
+    return " ".join(cmd_parts)
+
+
 def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
     """Decode BGP UPDATE hex to API command string(s).
 
@@ -970,8 +1034,14 @@ def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
 
         # Process announces
         for family, nexthops in announce.items():
-            # Skip unsupported families that need special syntax
+            # Handle FlowSpec family specially
             if "flow" in family:
+                afi = "ipv4" if "ipv4" in family else "ipv6"
+                for nexthop, nlris in nexthops.items():
+                    for nlri_info in nlris:
+                        cmd = format_flow_announce(afi, nexthop, nlri_info, attributes)
+                        if cmd:
+                            commands.append(cmd)
                 continue
 
             # Handle MCAST-VPN family specially
@@ -1078,8 +1148,15 @@ def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
 
         # Process withdraws
         for family, nlris in withdraw.items():
-            # Skip unsupported families that need special syntax
+            # Handle FlowSpec withdraws specially
             if "flow" in family:
+                afi = "ipv4" if "ipv4" in family else "ipv6"
+                for nlri_info in nlris:
+                    if isinstance(nlri_info, dict):
+                        nexthop = attributes.get("next-hop", "0.0.0.0")
+                        cmd = format_flow_announce(afi, nexthop, nlri_info, attributes, action="withdraw")
+                        if cmd:
+                            commands.append(cmd)
                 continue
 
             # Handle MUP withdraws specially
