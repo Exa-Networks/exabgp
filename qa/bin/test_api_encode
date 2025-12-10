@@ -58,6 +58,69 @@ RED = "\033[31m"
 YELLOW = "\033[33m"
 RESET = "\033[0m"
 
+
+def extract_nexthop_from_raw(payload: str) -> str | None:
+    """Extract NEXT_HOP attribute from raw UPDATE payload hex string.
+
+    Parses the path attributes section to find NEXT_HOP (type code 3).
+    Returns the IPv4 address as a dotted-decimal string, or None if not found.
+
+    Args:
+        payload: UPDATE payload hex string (after BGP header, starting with withdrawn length)
+
+    Returns:
+        IPv4 address string like "10.10.6.3" or None
+    """
+    try:
+        data = bytes.fromhex(payload)
+        pos = 0
+
+        # Skip withdrawn routes
+        if len(data) < 2:
+            return None
+        withdrawn_len = int.from_bytes(data[0:2], 'big')
+        pos = 2 + withdrawn_len
+
+        # Get path attributes length
+        if len(data) < pos + 2:
+            return None
+        attrs_len = int.from_bytes(data[pos : pos + 2], 'big')
+        pos += 2
+        attrs_end = pos + attrs_len
+
+        # Parse path attributes
+        while pos < attrs_end:
+            if len(data) < pos + 2:
+                break
+            flags = data[pos]
+            type_code = data[pos + 1]
+            pos += 2
+
+            # Extended length?
+            if flags & 0x10:  # Extended length bit
+                if len(data) < pos + 2:
+                    break
+                attr_len = int.from_bytes(data[pos : pos + 2], 'big')
+                pos += 2
+            else:
+                if len(data) < pos + 1:
+                    break
+                attr_len = data[pos]
+                pos += 1
+
+            # Check if this is NEXT_HOP (type 3)
+            if type_code == 3 and attr_len == 4:
+                if len(data) >= pos + 4:
+                    ip_bytes = data[pos : pos + 4]
+                    return '.'.join(str(b) for b in ip_bytes)
+
+            pos += attr_len
+
+        return None
+    except Exception:
+        return None
+
+
 # Cache for initialized neighbors
 _neighbor_cache: dict[Path | None, Neighbor] = {}
 
@@ -714,12 +777,13 @@ def format_mup_announce(
     return " ".join(cmd_parts)
 
 
-def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
+def decode_to_api_command(payload_hex: str, neighbor: Neighbor, raw_nexthop: str | None = None) -> list[str]:
     """Decode BGP UPDATE hex to API command string(s).
 
     Args:
         payload_hex: The BGP UPDATE payload in hex (after 19-byte header)
         neighbor: Neighbor for negotiation context
+        raw_nexthop: Optional NEXT_HOP extracted from raw bytes (for withdraw round-trip)
 
     Returns:
         List of API command strings. For single NLRI: ['announce route X ...']
@@ -961,8 +1025,9 @@ def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
                 afi = "ipv4" if "ipv4" in family else "ipv6"
                 for nlri_info in nlris:
                     if isinstance(nlri_info, dict):
-                        # For withdraws, use a dummy next-hop for config parser validation
-                        cmd = format_mvpn_announce(afi, "0.0.0.0", nlri_info, attributes, action="withdraw")
+                        # Use raw_nexthop if available (for round-trip), else dummy for config parser validation
+                        nexthop = raw_nexthop if raw_nexthop else "0.0.0.0"
+                        cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes, action="withdraw")
                         if cmd:
                             commands.append(cmd)
                 continue
@@ -1230,7 +1295,9 @@ def self_check_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int, 
             continue
 
         # Step 1: Decode raw to cmd(s)
-        cmds = decode_to_api_command(payload, neighbor)
+        # Extract NEXT_HOP from raw for withdraw round-trip (JSON doesn't include it)
+        raw_nexthop = extract_nexthop_from_raw(payload)
+        cmds = decode_to_api_command(payload, neighbor, raw_nexthop=raw_nexthop)
         if not cmds:
             skipped += 1
             if verbose:
