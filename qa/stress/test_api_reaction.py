@@ -206,6 +206,7 @@ class TestTimingInstrumentation:
 
         # Need to reset the environment singleton to pick up new value
         from exabgp.environment.config import Environment
+
         Environment._setup_done = False
         Environment._instance = None
         Environment.setup()

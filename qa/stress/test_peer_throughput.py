@@ -166,8 +166,7 @@ class TestKeepaliveAccuracy:
             # Allow 50% variance from expected interval
             max_allowed = KEEPALIVE_INTERVAL * 1.5
             assert max_interval < max_allowed, (
-                f'Max keepalive interval {max_interval * 1000:.1f}ms '
-                f'exceeds allowed {max_allowed * 1000:.1f}ms'
+                f'Max keepalive interval {max_interval * 1000:.1f}ms exceeds allowed {max_allowed * 1000:.1f}ms'
             )
 
 
@@ -242,9 +241,7 @@ class TestMultiPeerInterleaving:
 
         # All peers should have completed all iterations
         for peer_id, count in peer_iterations.items():
-            assert count == ITERATIONS, (
-                f'Peer {peer_id} only completed {count}/{ITERATIONS} iterations'
-            )
+            assert count == ITERATIONS, f'Peer {peer_id} only completed {count}/{ITERATIONS} iterations'
 
         print(f'\nPeer completion: {peer_iterations}')
 
