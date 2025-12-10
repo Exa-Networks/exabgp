@@ -2,7 +2,7 @@
 
 This document explains why certain BGP messages cannot complete a round-trip test (decode → encode → compare). The test framework marks these with `# No cmd:` comments to skip verification.
 
-**Current coverage:** 345/353 (97.7%) - 8 skipped
+**Current coverage:** 346/353 (98.0%) - 7 skipped
 
 ---
 
@@ -46,23 +46,27 @@ Both messages withdraw the same routes - semantically equivalent.
 
 ---
 
-## 3. Partially-Decoded Generic Attributes (1 case)
+## 3. Partially-Decoded Generic Attributes (RESOLVED)
 
-### The Problem
+### The Problem (was 1 case)
 
-Some attributes are decoded to human-readable strings instead of raw hex:
+Some attributes were decoded to human-readable strings instead of raw hex:
 
 ```json
 "attribute-0x19-0xC0": "redirect-to-nexthop-ietf 2a02:b80:0:1::1"
 ```
 
-The value is a parsed representation, not raw bytes.
-
 ### Resolution
 
-**Status:** ❌ By design (human-readable format)
+**Status:** ✅ Fixed with `--generic` decode mode
 
-Pure generic attributes with hex values (`"0x..."`) DO round-trip correctly.
+The `--generic` flag outputs hex instead of human-readable:
+
+```json
+"attribute-0x19-0xC0": "0x000c2a020b800000000100000000000000010000"
+```
+
+The self-check test now uses `generic=True` to enable round-trip for all generic attributes.
 
 ---
 
@@ -130,11 +134,11 @@ Supported for all families: IPv4/IPv6, FlowSpec, MCAST-VPN, MUP, VPLS.
 |------|-------|--------|------------|
 | Interface-set transitive | 0 | ✅ | Fixed with `transitive` JSON field |
 | Withdraw with attrs | 6 | ✅ | RFC normalization (correct) |
-| Partial-decode attrs | 1 | ❌ | By design |
+| Partial-decode attrs | 0 | ✅ | Fixed with `--generic` decode mode |
 | Empty UPDATE | 1 | ✅ | No NLRI to encode |
 | Multi-NLRI batching | 0 | ✅ | Fixed with `group` command |
 | Pure generic attrs | 0 | ✅ | Fixed with `attribute [...]` |
-| **Total skipped** | **8** | | |
+| **Total skipped** | **7** | | |
 
 ---
 
@@ -142,7 +146,8 @@ Supported for all families: IPv4/IPv6, FlowSpec, MCAST-VPN, MUP, VPLS.
 
 | Date | Passed | Skipped | Coverage |
 |------|--------|---------|----------|
-| 2025-12-10 | 341 | 8 | 97.7% |
+| 2025-12-10 | 346 | 7 | 98.0% |
+| 2025-12-10 | 345 | 8 | 97.7% |
 | 2025-12-10 | 332 | 17 | 95.1% |
 
 ---

@@ -1278,12 +1278,13 @@ def format_flow_announce(
     return " ".join(cmd_parts)
 
 
-def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
+def decode_to_api_command(payload_hex: str, neighbor: Neighbor, generic: bool = False) -> list[str]:
     """Decode BGP UPDATE hex to API command string(s).
 
     Args:
         payload_hex: The BGP UPDATE payload in hex (after 19-byte header)
         neighbor: Neighbor for negotiation context
+        generic: If True, output generic attributes as hex for round-trip
 
     Returns:
         List of API command strings. For single NLRI: ['announce route X ...']
@@ -1297,6 +1298,8 @@ def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
             return []
 
         encoder = Response.JSON(json_version)
+        if generic:
+            encoder.generic_attribute_format = True
         json_str = encoder.update(neighbor, "in", update, b"", b"", Negotiated.UNSET)
         data = json.loads(json_str)
 
@@ -1835,8 +1838,8 @@ def self_check_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int, 
                     print(f"      expected: {raw_hex}")
             continue
 
-        # Step 1: Decode raw to cmd(s)
-        cmds = decode_to_api_command(payload, neighbor)
+        # Step 1: Decode raw to cmd(s) - use generic=True to include hex for generic attributes
+        cmds = decode_to_api_command(payload, neighbor, generic=True)
         if not cmds:
             skipped += 1
             if verbose:
