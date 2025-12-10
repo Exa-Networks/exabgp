@@ -10,4 +10,5 @@ option:file:api-ipv4.conf
 1:cmd:withdraw route 10.0.1.0/24
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001B:02:0004180A00010000
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65000,"peer":65000},"direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"10.0.1.0/24"}]}}}}}
+# No cmd: MUP withdraw with attributes (unusual BGP - standard withdraws have no attributes)
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:006E:02:000000574001010040020040050400000064C010080002000A0000000AC028250500220001001E0020010DB800010001000000000000000000004800010006401810000000800F130001550100010C0000006400000064180A0001

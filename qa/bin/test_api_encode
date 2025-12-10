@@ -670,9 +670,9 @@ def format_mvpn_announce(
 
 
 def format_mup_announce(
-    afi: str, nexthop: str, nlri_info: dict, attributes: dict
+    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = "announce"
 ) -> str | None:
-    """Format a MUP NLRI as an API announce command.
+    """Format a MUP NLRI as an API announce/withdraw command.
 
     MUP route types:
     - InterworkSegmentDiscoveryRoute (ISD) -> mup-isd <prefix_ip>/<prefix_ip_len> rd <rd>
@@ -726,7 +726,7 @@ def format_mup_announce(
         return None
 
     # Build command parts
-    cmd_parts = [f"announce {afi} mup {mup_type} {nlri_str} next-hop {nexthop}"]
+    cmd_parts = [f"{action} {afi} mup {mup_type} {nlri_str} next-hop {nexthop}"]
 
     # Add extended-community attribute
     if "extended-community" in attributes:
@@ -1016,7 +1016,19 @@ def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
         # Process withdraws
         for family, nlris in withdraw.items():
             # Skip unsupported families that need special syntax
-            if any(x in family for x in ("flow", "mup")):
+            if "flow" in family:
+                continue
+
+            # Handle MUP withdraws specially
+            if "mup" in family:
+                afi = "ipv4" if "ipv4" in family else "ipv6"
+                for nlri_info in nlris:
+                    if isinstance(nlri_info, dict):
+                        # Get next-hop from attributes (now included in JSON for withdraws)
+                        nexthop = attributes.get("next-hop", "0.0.0.0")
+                        cmd = format_mup_announce(afi, nexthop, nlri_info, attributes, action="withdraw")
+                        if cmd:
+                            commands.append(cmd)
                 continue
 
             # Handle MCAST-VPN withdraws specially
