@@ -529,6 +529,12 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                 else:
                     commands.append(f'withdraw {api_family} {nlri_info}')
 
+        # Attributes-only UPDATE (no announce, no withdraw, just attributes)
+        if not commands and attributes:
+            attr_parts = format_attributes(attributes)
+            if attr_parts:
+                commands.append('attributes ' + ' '.join(attr_parts))
+
         return commands
 
     except Exception:

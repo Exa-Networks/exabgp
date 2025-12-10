@@ -137,6 +137,8 @@ class NLRI(Family):
         raise NotImplementedError(f'{type(self).__name__} must implement __deepcopy__')
 
     def __hash__(self) -> int:
+        from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
         return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri(Negotiated.UNSET).hex()))
 
     def __eq__(self, other: Any) -> bool:
@@ -168,6 +170,8 @@ class NLRI(Family):
         raise NotImplementedError('add() only implemented by Flow NLRI')
 
     def index(self) -> bytes:
+        from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
         return bytes(Family.index(self)) + self.pack_nlri(Negotiated.UNSET)
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:

@@ -412,15 +412,62 @@ def encode_api_command(
             return packed.hex().upper()
 
         # Handle 'attributes' syntax: announce attributes ... nlri X Y Z
-        if parts[1] == "attributes":
+        # OR attributes-only: attributes origin igp local-preference 100
+        if parts[1] == "attributes" or parts[0] == "attributes":
             # Parse: announce attributes [path-info X] next-hop Y ... nlri A B C
-            attr_parts = parts[2:]
+            # OR: attributes origin igp local-preference 100 (no nlri keyword - attributes-only UPDATE)
+            if parts[0] == "attributes":
+                # attributes-only command: attributes origin igp local-preference 100
+                attr_parts = parts[1:]
+            else:
+                attr_parts = parts[2:]
             nlri_idx = None
             for i, p in enumerate(attr_parts):
                 if p == "nlri":
                     nlri_idx = i
                     break
             if nlri_idx is None:
+                # Attributes-only UPDATE (no NLRI)
+                attr_str = " ".join(attr_parts)
+
+                # Use unique neighbor address to avoid RIB cache collision
+                neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+                conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    family {{ ipv4 unicast; }}
+    static {{ attributes {attr_str}; }}
+}}
+"""
+                configuration = Configuration([conf], text=True)
+                if not configuration.reload():
+                    return None
+
+                if not configuration.neighbors:
+                    return None
+
+                for name in configuration.neighbors.keys():
+                    neighbor = configuration.neighbors[name]
+                    _, negotiated_out = _negotiated(neighbor)
+
+                    if not neighbor.rib.enabled:
+                        continue
+
+                    for _ in neighbor.rib.outgoing.updates(False):
+                        pass
+
+                    for route in neighbor.rib.outgoing.cached_routes():
+                        for packed in UpdateCollection(
+                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
+                        ).messages(negotiated_out):
+                            neighbor.rib.uncache()
+                            return packed.hex().upper()
+
+                    neighbor.rib.uncache()
                 return None
 
             attr_str = " ".join(attr_parts[:nlri_idx])

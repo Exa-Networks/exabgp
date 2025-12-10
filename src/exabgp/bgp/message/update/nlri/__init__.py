@@ -51,6 +51,7 @@ from exabgp.bgp.message.update.nlri.rtc import RTC
 from exabgp.bgp.message.update.nlri.bgpls import BGPLS
 from exabgp.bgp.message.update.nlri.mup import MUP
 from exabgp.bgp.message.update.nlri.mvpn import MVPN
+from exabgp.bgp.message.update.nlri.empty import Empty
 from exabgp.bgp.message.update.nlri.collection import NLRICollection, MPNLRICollection
 
 __all__ = [
@@ -66,6 +67,7 @@ __all__ = [
     'BGPLS',
     'MUP',
     'MVPN',
+    'Empty',
     'NLRICollection',
     'MPNLRICollection',
 ]

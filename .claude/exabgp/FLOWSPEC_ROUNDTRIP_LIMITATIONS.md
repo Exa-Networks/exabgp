@@ -2,7 +2,7 @@
 
 This document explains why certain BGP messages cannot complete a round-trip test (decode → encode → compare). The test framework marks these with `# No cmd:` comments to skip verification.
 
-**Current coverage:** 346/353 (98.0%) - 7 skipped
+**Current coverage:** 347/353 (98.3%) - 6 skipped
 
 ---
 
@@ -70,9 +70,9 @@ The self-check test now uses `generic=True` to enable round-trip for all generic
 
 ---
 
-## 4. Empty UPDATE (1 case)
+## 4. Empty UPDATE (RESOLVED)
 
-### The Problem
+### The Problem (was 1 case)
 
 An UPDATE message with only path attributes and no NLRI (no announce, no withdraw).
 
@@ -82,9 +82,15 @@ An UPDATE message with only path attributes and no NLRI (no announce, no withdra
 
 ### Resolution
 
-**Status:** ✅ Expected (no NLRI to encode)
+**Status:** ✅ Fixed with `attributes` command
 
-Nothing to announce or withdraw - decoder cannot generate a meaningful command.
+The decoder now generates `attributes` command for empty UPDATEs:
+
+```
+attributes origin igp local-preference 100
+```
+
+The encoder uses an Empty NLRI internally to generate the attributes-only UPDATE.
 
 ---
 
@@ -135,10 +141,10 @@ Supported for all families: IPv4/IPv6, FlowSpec, MCAST-VPN, MUP, VPLS.
 | Interface-set transitive | 0 | ✅ | Fixed with `transitive` JSON field |
 | Withdraw with attrs | 6 | ✅ | RFC normalization (correct) |
 | Partial-decode attrs | 0 | ✅ | Fixed with `--generic` decode mode |
-| Empty UPDATE | 1 | ✅ | No NLRI to encode |
+| Empty UPDATE | 0 | ✅ | Fixed with `attributes` command |
 | Multi-NLRI batching | 0 | ✅ | Fixed with `group` command |
 | Pure generic attrs | 0 | ✅ | Fixed with `attribute [...]` |
-| **Total skipped** | **7** | | |
+| **Total skipped** | **6** | | |
 
 ---
 
@@ -146,6 +152,7 @@ Supported for all families: IPv4/IPv6, FlowSpec, MCAST-VPN, MUP, VPLS.
 
 | Date | Passed | Skipped | Coverage |
 |------|--------|---------|----------|
+| 2025-12-10 | 347 | 6 | 98.3% |
 | 2025-12-10 | 346 | 7 | 98.0% |
 | 2025-12-10 | 345 | 8 | 97.7% |
 | 2025-12-10 | 332 | 17 | 95.1% |

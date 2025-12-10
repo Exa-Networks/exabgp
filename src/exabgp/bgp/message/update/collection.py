@@ -205,6 +205,9 @@ class UpdateCollection(Message):
 
     # The routes MUST have the same attributes ...
     def messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator[bytes, None, None]:
+        # Import here to avoid circular import
+        from exabgp.bgp.message.update.nlri.empty import Empty
+
         # Sort and classify NLRIs into IPv4 and MP categories
         # v4_announces/v4_withdraws store bare NLRIs (nexthop is in NEXT_HOP attribute for IPv4)
         # mp_announces stores RoutedNLRI by family (nexthop needed for MP_REACH_NLRI encoding)
@@ -214,11 +217,20 @@ class UpdateCollection(Message):
         mp_announces: dict[tuple[AFI, SAFI], list[RoutedNLRI]] = {}
         mp_withdraws: dict[tuple[AFI, SAFI], list[NLRI]] = {}
 
+        # Track if we have Empty NLRI (attributes-only UPDATE)
+        has_empty_nlri = False
+
         # Process announces - self._announces contains RoutedNLRI
         # Sort by nlri for deterministic ordering
         for routed in sorted(self._announces, key=lambda r: r.nlri):
             nlri = routed.nlri
             nexthop = routed.nexthop
+
+            # Skip Empty NLRI but remember we had one
+            if isinstance(nlri, Empty):
+                has_empty_nlri = True
+                continue
+
             if nlri.family().afi_safi() not in negotiated.families:
                 continue
 
@@ -242,6 +254,11 @@ class UpdateCollection(Message):
 
         # Process withdraws - bare NLRIs (no nexthop needed)
         for nlri in sorted(self._withdraws):
+            # Skip Empty NLRI in withdraws
+            if isinstance(nlri, Empty):
+                has_empty_nlri = True
+                continue
+
             if nlri.family().afi_safi() not in negotiated.families:
                 continue
 
@@ -259,6 +276,11 @@ class UpdateCollection(Message):
         has_v4 = v4_announces or v4_withdraws
         has_mp = mp_announces or mp_withdraws
         if not has_v4 and not has_mp:
+            # Attributes-only UPDATE (Empty NLRI case)
+            if has_empty_nlri and self._attributes:
+                attr = self.attributes.pack_attribute(negotiated, with_default=True)
+                # Generate UPDATE with no withdrawn routes and no NLRI, just attributes
+                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(attr))
             return
 
         # If all we have is MP_UNREACH_NLRI, we do not need the default
