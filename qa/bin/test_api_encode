@@ -59,6 +59,37 @@ YELLOW = "\033[33m"
 RESET = "\033[0m"
 
 
+def format_extended_community(ec: dict) -> str | None:
+    """Format a single extended community dict to API command string.
+
+    Handles interface-set transitive field specially.
+
+    Args:
+        ec: Extended community dict with 'string' and optionally 'transitive' fields
+
+    Returns:
+        Formatted string for API command, or None if invalid
+    """
+    if not isinstance(ec, dict) or "string" not in ec:
+        return None
+
+    ec_string = ec["string"]
+
+    # Handle interface-set with transitive field
+    if ec_string.startswith("interface-set:"):
+        # Check for explicit transitive field
+        if "transitive" in ec:
+            trans = "transitive" if ec["transitive"] else "non-transitive"
+            # String format: interface-set:direction:asn:group
+            # Output format: interface-set:transitive:direction:asn:group
+            parts = ec_string.split(":", 1)  # Split off "interface-set:"
+            if len(parts) == 2:
+                return f"interface-set:{trans}:{parts[1]}"
+        # No transitive field - keep original (defaults to transitive in encoder)
+
+    return ec_string
+
+
 def parse_generic_attribute_name(attr_name: str) -> tuple[int, int] | None:
     """Parse attribute-0xNN-0xNN format to (type_code, flags).
 
@@ -679,10 +710,16 @@ neighbor {neighbor_ip} {{
                                     k += 1
                             elif ec.startswith("interface-set:"):
                                 # interface-set needs special handling:
-                                # API format: interface-set:direction:asn:group-id
-                                # Config format: interface-set transitive:direction:asn:group-id
-                                parts_is = ec.split(":", 1)[1]  # Remove "interface-set:" prefix
-                                config_parts.append(f"interface-set transitive:{parts_is}")
+                                # New format: interface-set:transitive:direction:asn:group-id
+                                # New format: interface-set:non-transitive:direction:asn:group-id
+                                # Old format: interface-set:direction:asn:group-id (defaults to transitive)
+                                rest = ec.split(":", 1)[1]  # Remove "interface-set:" prefix
+                                if rest.startswith("transitive:") or rest.startswith("non-transitive:"):
+                                    # New format - pass through as-is
+                                    config_parts.append(f"interface-set {rest}")
+                                else:
+                                    # Old format - default to transitive
+                                    config_parts.append(f"interface-set transitive:{rest}")
                             elif ec.startswith("origin:") or ec.startswith("target:") or ec.startswith("l2info:"):
                                 # Pass through other extended-communities
                                 other_ec.append(ec)
@@ -1218,8 +1255,9 @@ def format_flow_announce(
         if ecomms:
             ecomm_strs = []
             for ec in ecomms:
-                if isinstance(ec, dict) and "string" in ec:
-                    ecomm_strs.append(ec["string"])
+                formatted = format_extended_community(ec)
+                if formatted:
+                    ecomm_strs.append(formatted)
             if ecomm_strs:
                 cmd_parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
 

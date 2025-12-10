@@ -74,12 +74,9 @@ FlowConditionT = TypeVar(
 SINGLE_SLASH = 1  # Format with single slash (IP/prefix)
 DOUBLE_SLASH = 2  # IPv6 format with offset (IP/prefix/offset)
 
-# Bit width constants for validation
-ASN16_MAX_BITS = 16  # 16-bit ASN field size
-ASN32_MAX_BITS = 32  # 32-bit ASN field size
+# Bit width constants for local administrator field validation
 LOCAL_ADMIN_16_BITS = 16  # 16-bit local administrator field
 LOCAL_ADMIN_32_BITS = 32  # 32-bit local administrator field
-GROUP_ID_BITS = 14  # 14-bit group ID field
 
 # Interface set direction values
 DIRECTION_INPUT = 1
@@ -386,10 +383,10 @@ def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
         asn: int = int(prefix)
         nn_int: int = int(suffix)
 
-        if asn >= pow(2, ASN32_MAX_BITS):
-            raise ValueError('asn is a 32 bits number, value too large {}'.format(asn))
+        if not ASN4.validate(asn):
+            raise ValueError(f'asn is invalid, must be 0 to {ASN.MAX_4BYTE} (32 bits): {asn}')
 
-        if asn >= pow(2, ASN16_MAX_BITS):
+        if asn > ASN.MAX_2BYTE:
             if nn_int >= pow(2, LOCAL_ADMIN_16_BITS):
                 raise ValueError(
                     'asn is a 32 bits number, local administrator field can only be 16 bit {}'.format(nn_int)
@@ -450,25 +447,33 @@ def action(tokeniser: 'Tokeniser') -> ExtendedCommunities:
 
 
 def _interface_set(data: str) -> InterfaceSet:
-    if data.count(':') != INTERFACE_SET_COLON_COUNT:
-        raise ValueError(
-            f"'{data}' is not a valid interface-set\n"
-            f'  Format: <transitive|non-transitive>:<input|output|input-output>:<asn>:<group-id>'
-        )
+    colon_count = data.count(':')
 
     trans: str
     direction: str
     prefix: str
     suffix: str
-    trans, direction, prefix, suffix = data.split(':', INTERFACE_SET_COLON_COUNT)
-
     trans_bool: bool
-    if trans == 'transitive':
+
+    if colon_count == INTERFACE_SET_COLON_COUNT:
+        # New format: transitive:direction:asn:group-id
+        trans, direction, prefix, suffix = data.split(':', INTERFACE_SET_COLON_COUNT)
+        if trans == 'transitive':
+            trans_bool = True
+        elif trans == 'non-transitive':
+            trans_bool = False
+        else:
+            raise ValueError(f"'{trans}' is not a valid transitivity type\n  Valid options: transitive, non-transitive")
+    elif colon_count == 2:
+        # Old format (backward compat): direction:asn:group-id (defaults to transitive)
+        direction, prefix, suffix = data.split(':', 2)
         trans_bool = True
-    elif trans == 'non-transitive':
-        trans_bool = False
     else:
-        raise ValueError(f"'{trans}' is not a valid transitivity type\n  Valid options: transitive, non-transitive")
+        raise ValueError(
+            f"'{data}' is not a valid interface-set\n"
+            f'  Format: <transitive|non-transitive>:<input|output|input-output>:<asn>:<group-id>\n'
+            f'  Or: <input|output|input-output>:<asn>:<group-id> (defaults to transitive)'
+        )
     if prefix.count('.'):
         raise ValueError(f"'{prefix}' is not a valid ASN\n  Must be a 32-bit integer (not dotted notation)")
     int_direction: int
@@ -481,12 +486,12 @@ def _interface_set(data: str) -> InterfaceSet:
     else:
         raise ValueError(f"'{direction}' is not a valid direction\n  Valid options: input, output, input-output")
     asn: int = int(prefix)
-    route_target: int = int(suffix)
-    if asn >= pow(2, ASN32_MAX_BITS):
-        raise ValueError(f'ASN {asn} is too large\n  Maximum is {pow(2, ASN32_MAX_BITS) - 1} (32 bits)')
-    if route_target >= pow(2, GROUP_ID_BITS):
-        raise ValueError(f'group-id {route_target} is too large\n  Maximum is {pow(2, GROUP_ID_BITS) - 1} (14 bits)')
-    return InterfaceSet.make_interface_set(ASN(asn), route_target, int_direction, trans_bool)
+    group_id: int = int(suffix)
+    if not ASN4.validate(asn):
+        raise ValueError(f'ASN {asn} is invalid\n  Must be 0 to {ASN.MAX_4BYTE} (32 bits)')
+    if not InterfaceSet.validate_group_id(group_id):
+        raise ValueError(f'group-id {group_id} is invalid\n  Must be 0 to {InterfaceSet.GROUP_ID_MAX} (14 bits)')
+    return InterfaceSet.make_interface_set(ASN(asn), group_id, int_direction, trans_bool)
 
 
 def interface_set(tokeniser: 'Tokeniser') -> ExtendedCommunities:

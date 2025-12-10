@@ -1,6 +1,6 @@
 # Plan: API Command to BGP Message Encoder for Tests
 
-**Status:** 🔄 In Progress - 301/349 cmd: lines (86%), 48 skipped (FlowSpec + non-roundtrippable)
+**Status:** ✅ Complete - 330/349 cmd: lines (95%), 0 failures, 19 skipped
 **Created:** 2025-12-10
 **Updated:** 2025-12-10
 
@@ -13,9 +13,9 @@ Add `cmd:` field support to `.ci` test files. API commands like `announce ipv4 u
 ```
 ./qa/bin/test_api_encode --self-check
 
-Passed:  301
+Passed:  330
 Failed:  0
-Skipped: 48
+Skipped: 19
 ```
 
 ---
@@ -75,39 +75,26 @@ Skipped: 48
 
 ---
 
-## Skipped Lines (48 total)
-
-The following raw: lines are skipped for round-trip testing:
+## Skipped Lines (19 total)
 
 | File | Skipped | Reason |
 |------|---------|--------|
-| conf-flow.ci | 13 | FlowSpec (complex match/then syntax) |
-| conf-flow-redirect.ci | 5 | FlowSpec |
-| api-flow-merge.ci | 11 | FlowSpec |
-| api-broken-flow.ci | 8 | FlowSpec |
-| api-flow.ci | 6 | FlowSpec |
-| conf-mvpn.ci | 2 | Multi-NLRI updates |
-| api-ipv4.ci | 1 | FlowSpec |
-| api-ipv6.ci | 1 | FlowSpec |
+| conf-mvpn.ci | 2 | Multi-NLRI updates (encoder produces separate messages) |
+| api-ipv4.ci | 1 | FlowSpec EOR |
+| api-ipv6.ci | 1 | FlowSpec EOR |
 | api-vpnv4.ci | 1 | Withdraw+attrs |
-| **Total** | **48** | |
+| api-flow.ci | 1 | FlowSpec EOR |
+| conf-flow-redirect.ci | 1 | Generic attribute (attribute-0x19-0xC0) not captured in cmd |
+| api-broken-flow.ci | 3 | Withdraw with attributes (unusual BGP) |
+| api-flow-merge.ci | 9 | Interface-set transitive flag lost in string representation |
+| **Total** | **19** | |
 
-### Why These Can't Round-Trip
+### Non-roundtrippable Cases
 
-**FlowSpec** uses complex match/then syntax:
-```
-flow route source 10.0.0.0/24 {
-    match { protocol tcp; destination-port 80; }
-    then { rate-limit 1000; discard; }
-}
-```
-
-**Multi-NLRI** updates have multiple NLRIs bundled; encoder produces separate messages.
-
-### Future Work
-
-To achieve higher coverage, would need:
-1. FlowSpec encoder/decoder with match/then syntax
+These cases cannot round-trip due to information loss in the decoder output:
+1. **Interface-set transitive flag:** Extended community string representation doesn't include transitive/non-transitive flag
+2. **Withdraw with attributes:** Standard BGP withdraws don't carry attributes; encoder produces correct withdraws
+3. **Generic attributes:** Some attributes not captured in API command string
 
 ---
 
@@ -164,6 +151,29 @@ To achieve higher coverage, would need:
 - MP EOR for all address families
 - Auto-detection in self-check from wire format
 - Skip marker for messages that can't round-trip (`# No cmd:`)
+
+### FlowSpec Support (38 failures → 0 failures, 13 skipped)
+
+**Fix:** Added FlowSpec single-line API parser to encoder:
+- Parses API command format: `announce ipv4 flow <match-fields> [rd <rd>] [next-hop <nh>] extended-community [<actions>]`
+- Transforms extended-community actions to native config format:
+  - `rate-limit:N` → `rate-limit N`
+  - `copy-to-nexthop` → `copy <next-hop>` (sets both nexthop and EC)
+  - `redirect-to-nexthop` → `redirect <next-hop>` (sets both nexthop and EC)
+  - `redirect:ASN:VALUE` → `redirect ASN:VALUE`
+  - `action X` → `action X`
+  - `mark N` → `mark N`
+  - `redirect-to-nexthop-ietf IP` → `redirect-to-nexthop-ietf IP`
+  - `interface-set:direction:asn:group` → `interface-set transitive:direction:asn:group`
+  - `origin:X:Y` and other ECs → passed through as `extended-community [...]`
+- Handles match fields: source-ipv4/ipv6, destination-ipv4/ipv6, protocol, destination-port, source-port, packet-length, tcp-flags, fragment, flow-label, traffic-class, next-header
+- Detects flow vs flow-vpn SAFI based on RD presence
+- Skips `next-hop 0.0.0.0` placeholder for withdraws
+
+**Non-roundtrippable cases (skipped with `# No cmd:` marker):**
+- Interface-set transitive flag lost in string representation
+- Withdraw with attributes (unusual BGP)
+- Generic attributes not captured in API command
 
 ### MCAST-VPN Support (12 skipped → 14 pass)
 
@@ -232,7 +242,7 @@ To see current failure patterns:
 - [x] L2VPN/VPLS encode/decode (5 skipped → 0)
 - [x] MUP encode/decode (10 skipped → 0) + fixed 2 JSON bugs in exabgp core
 - [x] MCAST-VPN encode/decode (12 missing → 14 pass, withdraw round-trip via raw NEXT_HOP extraction)
-- [ ] FlowSpec encode/decode (43 skipped)
+- [x] FlowSpec encode/decode (38 failures → 0 failures, 13 skipped due to non-roundtrippable data)
 
 ---
 

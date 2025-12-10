@@ -40,3 +40,15 @@ class ASN4(Capability, ASN):
 
     def json(self) -> str:
         return '{ "name": "asn4", "asn4": %d }' % int(self)
+
+    @classmethod
+    def validate(cls, value: int) -> bool:
+        """Validate value is within 32-bit ASN range.
+
+        Args:
+            value: Integer ASN value
+
+        Returns:
+            True if valid, False otherwise
+        """
+        return 0 <= value <= ASN.MAX_4BYTE

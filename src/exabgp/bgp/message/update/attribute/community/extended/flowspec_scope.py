@@ -26,11 +26,27 @@ class InterfaceSet(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x07
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x02
 
+    # Group ID is 14-bit field (direction uses top 2 bits of 16-bit field)
+    GROUP_ID_BITS: ClassVar[int] = 14
+    GROUP_ID_MAX: ClassVar[int] = (1 << 14) - 1  # 16383
+
     names: ClassVar[dict[int, str]] = {
         1: 'input',
         2: 'output',
         3: 'input-output',
     }
+
+    @classmethod
+    def validate_group_id(cls, value: int) -> bool:
+        """Validate group-id is within 14-bit range.
+
+        Args:
+            value: Integer group-id value
+
+        Returns:
+            True if valid, False otherwise
+        """
+        return 0 <= value <= cls.GROUP_ID_MAX
 
     def __init__(self, packed: bytes) -> None:
         ExtendedCommunity.__init__(self, packed)
@@ -60,6 +76,14 @@ class InterfaceSet(ExtendedCommunity):
     def __repr__(self) -> str:
         str_direction = self.names.get(self.direction, str(self.direction))
         return 'interface-set:{}:{}:{}'.format(str_direction, str(self.asn), str(self.target))
+
+    def json(self) -> str:
+        h = 0x00
+        for byte in self._packed:
+            h <<= 8
+            h += byte
+        trans = 'true' if self.transitive() else 'false'
+        return '{{ "value": {}, "string": "{}", "transitive": {} }}'.format(h, repr(self), trans)
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> InterfaceSet:

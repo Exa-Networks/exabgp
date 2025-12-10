@@ -17,14 +17,15 @@ from exabgp.protocol.resource import Resource
 
 
 class ASN(Resource):
-    MAX = pow(2, 16) - 1
+    MAX_2BYTE = pow(2, 16) - 1  # Maximum 16-bit ASN value
+    MAX_4BYTE = pow(2, 32) - 1  # Maximum 32-bit ASN value
 
     # ASN encoding size constants
     SIZE_4BYTE = 4  # 4-byte ASN encoding size
     SIZE_2BYTE = 2  # 2-byte ASN encoding size
 
     def asn4(self) -> bool:
-        return self > self.MAX
+        return self > self.MAX_2BYTE
 
     def pack_asn2(self) -> bytes:
         return pack('!H', self)
@@ -78,9 +79,21 @@ class ASN(Resource):
         # Avoid circular import
         from exabgp.bgp.message.open.capability.asn4 import ASN4
 
-        if value > cls.MAX:
+        if value > cls.MAX_2BYTE:
             return ASN4(value)
         return ASN(value)
+
+    @classmethod
+    def validate(cls: Type[ASN], value: int) -> bool:
+        """Validate value is within 16-bit ASN range.
+
+        Args:
+            value: Integer ASN value
+
+        Returns:
+            True if valid, False otherwise
+        """
+        return 0 <= value <= cls.MAX_2BYTE
 
 
 AS_TRANS = ASN(23456)

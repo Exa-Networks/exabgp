@@ -81,6 +81,27 @@ This is a larger refactor that should be done carefully due to many call sites.
 
 **See:** `plan/family-tuple.md` for detailed plan
 
+### 7. Command Keyword Validation Audit
+
+**Files:** Various configuration parsers
+**Issue:** Audit all command parsers for validation gaps
+**Complexity:** Low
+**Benefit:** Better error messages for invalid input
+
+Note: `interface-set` parser already validates direction correctly for both formats.
+Other parsers should be audited for similar validation patterns.
+
+### 8. Consolidate Numeric Validation (DONE)
+
+**Status:** ✅ Completed 2025-12-10
+
+Added validation methods:
+- `ASN.validate(value) -> bool` - 16-bit range (0 to 65535)
+- `ASN4.validate(value) -> bool` - 32-bit range (0 to 4294967295)
+- `InterfaceSet.validate_group_id(value) -> bool` - 14-bit range (0 to 16383)
+
+Updated `interface-set` parser to use these validators instead of inline `pow(2, N)` checks.
+
 ---
 
 ## Implementation Notes

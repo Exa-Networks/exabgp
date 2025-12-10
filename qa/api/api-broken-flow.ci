@@ -4,23 +4,34 @@ option:file:api-broken-flow.conf
 0:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000185
 
 # Announce then Withdraw
+1:cmd:announce ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32 extended-community [rate-limit:1]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0045:02:0000002E4001010040020040050400000064C01008800600003F800000800E1200018500000C0120AAAAAAAA0220AAAAAAAA
 7:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}}
+# No cmd: withdraw with attributes (unusual BGP - standard withdraws have no attributes)
+2:cmd:withdraw ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32 next-hop 0.0.0.0 extended-community [rate-limit:1]
 2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C4001010040020040050400000064C01008800600003F800000800F100001850C0120AAAAAAAA0220AAAAAAAA
 8:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"withdraw":{"ipv4 flow":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}
 
 # Announce
+3:cmd:announce ipv4 flow destination-ipv4 187.187.187.187/32 source-ipv4 204.204.204.204/32 extended-community [rate-limit:3]
 3:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0045:02:0000002E4001010040020040050400000064C010088006000040400000800E1200018500000C0120BBBBBBBB0220CCCCCCCC
 3:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887792975872,"string":"rate-limit:3"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"destination-ipv4":["187.187.187.187/32"],"source-ipv4":["204.204.204.204/32"],"string":"flow destination-ipv4 187.187.187.187/32 source-ipv4 204.204.204.204/32"}]}}}}}}
+4:cmd:announce ipv4 flow destination-ipv4 187.187.187.187/32 source-ipv4 187.187.187.187/32 extended-community [rate-limit:2]
 4:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0045:02:0000002E4001010040020040050400000064C010088006000040000000800E1200018500000C0120BBBBBBBB0220BBBBBBBB
 4:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887788781568,"string":"rate-limit:2"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"destination-ipv4":["187.187.187.187/32"],"source-ipv4":["187.187.187.187/32"],"string":"flow destination-ipv4 187.187.187.187/32 source-ipv4 187.187.187.187/32"}]}}}}}}
+5:cmd:announce ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32 extended-community [rate-limit:1]
 5:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0045:02:0000002E4001010040020040050400000064C01008800600003F800000800E1200018500000C0120AAAAAAAA0220AAAAAAAA
 7:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}}
 
 # Withdraw, Announce, Withdraw
+# No cmd: withdraw with attributes (unusual BGP - standard withdraws have no attributes)
+6:cmd:withdraw ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32 next-hop 0.0.0.0 extended-community [rate-limit:1]
 6:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C4001010040020040050400000064C01008800600003F800000800F100001850C0120AAAAAAAA0220AAAAAAAA
 8:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"withdraw":{"ipv4 flow":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}
+7:cmd:announce ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32 extended-community [rate-limit:1]
 7:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0045:02:0000002E4001010040020040050400000064C01008800600003F800000800E1200018500000C0120AAAAAAAA0220AAAAAAAA
 7:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}}
+# No cmd: withdraw with attributes (unusual BGP - standard withdraws have no attributes)
+8:cmd:withdraw ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32 next-hop 0.0.0.0 extended-community [rate-limit:1]
 8:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C4001010040020040050400000064C01008800600003F800000800F100001850C0120AAAAAAAA0220AAAAAAAA
 8:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"withdraw":{"ipv4 flow":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}
