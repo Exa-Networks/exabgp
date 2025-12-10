@@ -1104,6 +1104,8 @@ class RouteBuilderValidator(Validator[list[Any]]):
         # Create settings instance
         settings = self.schema.settings_class()
         settings.action = self.action_type
+        settings.afi = self.afi
+        settings.safi = self.safi
         attributes = AttributeCollection()
 
         # Parse prefix if present (for INET-family routes)
@@ -1154,8 +1156,9 @@ class RouteBuilderValidator(Validator[list[Any]]):
             field_name = self.schema.assign.get(command, command)
             settings.set(field_name, value)
         elif action == 'nlri-add':
-            # For FlowSpec: value is a list of components to add
-            if isinstance(value, (list, tuple)):
+            # For FlowSpec: value is a list/tuple/generator of components to add
+            # Use hasattr to check for __iter__ to handle generators
+            if hasattr(value, '__iter__') and not isinstance(value, (str, bytes)):
                 for item in value:
                     if hasattr(settings, 'add_rule'):
                         settings.add_rule(item)

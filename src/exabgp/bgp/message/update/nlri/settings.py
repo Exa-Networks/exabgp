@@ -194,6 +194,15 @@ class FlowSettings:
         """
         setattr(self, name, value)
 
+    def add_rule(self, rule: Any) -> None:
+        """Add a FlowSpec rule.
+
+        Args:
+            rule: FlowRule object with an ID attribute
+        """
+        rule_id = rule.ID
+        self.rules.setdefault(rule_id, []).append(rule)
+
     def validate(self) -> str:
         """Validate all settings are present and consistent.
 

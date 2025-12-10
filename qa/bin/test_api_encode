@@ -432,6 +432,69 @@ neighbor {neighbor_ip} {{
                 neighbor.rib.uncache()
             return None
 
+        # Handle FlowSpec syntax: announce <afi> flow <flow-details> ...
+        if len(parts) >= 4 and parts[2] == "flow":
+            afi = parts[1]  # ipv4 or ipv6
+            flow_details = " ".join(parts[3:])
+            family = f"{afi} flow"
+
+            # Use unique neighbor address to avoid RIB cache collision
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+            # Build capability section if needed
+            capability_parts = []
+            if asn4_disabled:
+                capability_parts.append("asn4 disable;")
+            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+
+            # Configuration template for FlowSpec
+            conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    {capability_section}
+    family {{ {family}; }}
+    announce {{ {afi} {{ flow {flow_details}; }} }}
+}}
+"""
+            configuration = Configuration([conf], text=True)
+            if not configuration.reload():
+                return None
+
+            if not configuration.neighbors:
+                return None
+
+            for name in configuration.neighbors.keys():
+                neighbor = configuration.neighbors[name]
+                _, negotiated_out = _negotiated(neighbor)
+
+                if not neighbor.rib.enabled:
+                    continue
+
+                for _ in neighbor.rib.outgoing.updates(False):
+                    pass
+
+                for route in neighbor.rib.outgoing.cached_routes():
+                    if action == "withdraw":
+                        # Withdraw: put NLRI in withdraw list, empty attributes
+                        for packed in UpdateCollection(
+                            [], [route.nlri], AttributeCollection()
+                        ).messages(negotiated_out):
+                            neighbor.rib.uncache()
+                            return packed.hex().upper()
+                    else:
+                        # Announce: put NLRI in announce list with attributes
+                        for packed in UpdateCollection(
+                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
+                        ).messages(negotiated_out):
+                            neighbor.rib.uncache()
+                            return packed.hex().upper()
+
+                neighbor.rib.uncache()
+            return None
+
         # Handle MCAST-VPN syntax: announce <afi> mcast-vpn <mvpn-type> ...
         if len(parts) >= 4 and parts[2] == "mcast-vpn":
             afi = parts[1]  # ipv4 or ipv6

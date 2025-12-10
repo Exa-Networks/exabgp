@@ -14,6 +14,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.flow import Flow
+from exabgp.bgp.message.update.nlri.settings import FlowSettings
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.route_builder import _build_route
@@ -62,6 +63,8 @@ class AnnounceFlow(ParseAnnounce):
     schema = RouteBuilder(
         description='FlowSpec route announcement',
         nlri_factory=Flow,
+        nlri_class=Flow,
+        settings_class=FlowSettings,
         prefix_parser=None,  # FlowSpec has no prefix
         factory_with_afi=True,  # Factory needs (afi, safi, action)
         children={
