@@ -227,6 +227,109 @@ def get_neighbor(config_file: Path | None) -> Neighbor:
 _encode_counter = 0
 
 
+def encode_group_command(
+    cmd: str, local_as: int = 65533, peer_as: int = 65533, asn4_disabled: bool = False
+) -> str | None:
+    """Encode group command (multiple announces/withdraws) to single BGP UPDATE.
+
+    Args:
+        cmd: Group command like 'group announce ... ; announce ...'
+
+    Returns:
+        Hex string of full BGP UPDATE message, or None on error
+    """
+    global _encode_counter
+
+    # Remove 'group ' prefix and split by semicolon
+    if cmd.startswith("group "):
+        cmd = cmd[6:]  # Remove 'group ' prefix
+
+    sub_cmds = [c.strip() for c in cmd.split(";") if c.strip()]
+    if not sub_cmds:
+        return None
+
+    # Parse all sub-commands and collect routes
+    all_routes = []
+    first_family = None
+    first_nexthop = None
+    first_attributes = None
+
+    for sub_cmd in sub_cmds:
+        parts = sub_cmd.split()
+        if len(parts) < 2:
+            continue
+
+        action = parts[0]
+        if action not in ("announce", "withdraw"):
+            continue
+
+        # Handle MCAST-VPN syntax: announce <afi> mcast-vpn <mvpn-type> ...
+        if len(parts) >= 4 and parts[2] == "mcast-vpn":
+            afi = parts[1]
+            mvpn_details = " ".join(parts[3:])
+            family = f"{afi} mcast-vpn"
+
+            # Use unique neighbor address
+            _encode_counter += 1
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+            capability_parts = []
+            if asn4_disabled:
+                capability_parts.append("asn4 disable;")
+            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+
+            conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    {capability_section}
+    family {{ {family}; }}
+    announce {{ {afi} {{ mcast-vpn {mvpn_details}; }} }}
+}}
+"""
+            configuration = Configuration([conf], text=True)
+            if not configuration.reload():
+                continue
+
+            if not configuration.neighbors:
+                continue
+
+            for name in configuration.neighbors.keys():
+                neighbor = configuration.neighbors[name]
+
+                if not neighbor.rib.enabled:
+                    continue
+
+                for _ in neighbor.rib.outgoing.updates(False):
+                    pass
+
+                for route in neighbor.rib.outgoing.cached_routes():
+                    if first_family is None:
+                        first_family = family
+                        first_nexthop = route.nexthop
+                        first_attributes = route.attributes
+                    all_routes.append(route)
+                    neighbor.rib.uncache()
+                    break  # Only get first route from this sub-command
+
+    if not all_routes:
+        return None
+
+    # Create single UPDATE with all NLRIs
+    neighbor = get_neighbor(None)  # Default neighbor for negotiation
+    _, negotiated_out = _negotiated(neighbor)
+
+    routed_nlris = [RoutedNLRI(r.nlri, r.nexthop) for r in all_routes]
+    for packed in UpdateCollection(
+        routed_nlris, [], first_attributes
+    ).messages(negotiated_out):
+        return packed.hex().upper()
+
+    return None
+
+
 def encode_api_command(
     cmd: str, local_as: int = 65533, peer_as: int = 65533, asn4_disabled: bool = False
 ) -> str | None:
@@ -234,6 +337,7 @@ def encode_api_command(
 
     Args:
         cmd: API command like 'announce route 10.0.0.0/24 next-hop 1.2.3.4'
+        Or group command: 'group announce ... ; announce ...'
 
     Returns:
         Hex string of full BGP UPDATE message, or None on error
@@ -246,7 +350,11 @@ def encode_api_command(
         if len(parts) < 2:
             return None
 
-        action = parts[0]  # announce/withdraw
+        action = parts[0]  # announce/withdraw/group
+
+        # Handle group command: group announce ... ; announce ...
+        if action == "group":
+            return encode_group_command(cmd, local_as, peer_as, asn4_disabled)
 
         # Handle EOR (End-of-RIB) syntax: announce eor [afi safi]
         if len(parts) >= 2 and parts[1] == "eor":
@@ -1270,10 +1378,23 @@ def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
             if "mcast-vpn" in family:
                 afi = "ipv4" if "ipv4" in family else "ipv6"
                 for nexthop, nlris in nexthops.items():
-                    for nlri_info in nlris:
-                        cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
-                        if cmd:
-                            commands.append(cmd)
+                    # Multi-NLRI: use group syntax to batch into single UPDATE
+                    if len(nlris) > 1:
+                        group_cmds = []
+                        for nlri_info in nlris:
+                            cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
+                            if cmd:
+                                group_cmds.append(cmd)
+                        if len(group_cmds) > 1:
+                            # Generate group syntax: group cmd1 ; cmd2 ; ...
+                            commands.append("group " + " ; ".join(group_cmds))
+                        elif group_cmds:
+                            commands.append(group_cmds[0])
+                    else:
+                        for nlri_info in nlris:
+                            cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
+                            if cmd:
+                                commands.append(cmd)
                 continue
 
             # Handle MUP family specially

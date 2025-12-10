@@ -278,6 +278,29 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
             ),
         },
     ),
+    # Group commands for batching multiple announcements
+    'group start': CLICommandSpec(
+        name='group start',
+        description='Begin buffering commands for batch processing',
+    ),
+    'group end': CLICommandSpec(
+        name='group end',
+        description='Process all buffered commands as a single UPDATE',
+    ),
+    'peer group': CLICommandSpec(
+        name='peer group',
+        description='Execute batched commands to peers (semicolon-separated)',
+        arguments={
+            'commands': CLIValueSpec(
+                value_type=ValueType.STRING,
+                description='Semicolon-separated announce/withdraw commands',
+                examples=[
+                    'announce route 10.0.0.0/24 next-hop 1.2.3.4 ; announce route 10.0.0.1/24 next-hop 1.2.3.4',
+                ],
+                required=True,
+            )
+        },
+    ),
 }
 
 

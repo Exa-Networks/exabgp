@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 def _build_v6_tree() -> DispatchTree:
     """Build the v6 dispatch tree lazily to avoid circular imports."""
     from exabgp.reactor.api.command import announce as announce_cmd
+    from exabgp.reactor.api.command import group as group_cmd
     from exabgp.reactor.api.command import neighbor as neighbor_cmd
     from exabgp.reactor.api.command import peer as peer_cmd
     from exabgp.reactor.api.command import reactor as reactor_cmd
@@ -45,6 +46,7 @@ def _build_v6_tree() -> DispatchTree:
         'teardown': neighbor_cmd.teardown,
         'announce': announce_cmd.v6_announce,
         'withdraw': announce_cmd.v6_withdraw,
+        'group': group_cmd.group_inline,
     }
 
     tree: DispatchTree = {
@@ -97,6 +99,11 @@ def _build_v6_tree() -> DispatchTree:
             'delete': peer_cmd.peer_delete,
             # Selector-based commands (*, IP, or [bracket])
             SELECTOR_KEY: peer_selector_tree,
+        },
+        # Group commands for batching multiple announcements
+        'group': {
+            'start': group_cmd.group_start,
+            'end': group_cmd.group_end,
         },
     }
 

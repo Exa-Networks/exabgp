@@ -20,6 +20,7 @@
 | `security-validation.md` | 📋 Planning | Security validation |
 | `from-settings-config.md` | 📋 Planning | from_settings() for Configuration/Neighbor |
 | `raw-attribute-api-v4.md` | ✅ Completed | Generic attribute round-trip for all families |
+| `api-group-command.md` | ✅ Completed | Batch commands into single UPDATE (group start/end) |
 
 ## Recently Completed (to be archived/deleted)
 

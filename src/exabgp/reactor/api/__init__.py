@@ -62,6 +62,8 @@ class API:
 
         Uses parallel v4/v6 dispatchers based on API version setting.
         """
+        from exabgp.reactor.api.command import group as group_cmd
+
         api_version = getenv().api.version
 
         # v6 API is JSON-only, v4 API checks for 'json' as last word
@@ -70,6 +72,19 @@ class API:
         else:
             words = command.split()
             use_json = words[-1] == 'json' if words else False
+
+        # Check if we're in group mode and this is an announce/withdraw command
+        # (not group end which should be processed normally)
+        if group_cmd.is_grouping(service):
+            cmd_lower = command.strip().lower()
+            if cmd_lower.startswith('group end') or cmd_lower.startswith('group start'):
+                pass  # Process normally
+            elif cmd_lower.startswith('announce') or cmd_lower.startswith('withdraw'):
+                # Buffer the command for later processing
+                # For multi-line groups, we use all peers (selector was on group start)
+                peers = list(reactor.peers(service))
+                group_cmd.group_add_command(self, reactor, service, peers, command, use_json)
+                return True
 
         try:
             if api_version == 4:
@@ -92,6 +107,8 @@ class API:
         Uses parallel v4/v6 dispatchers based on API version setting.
         After calling the handler, flush any queued writes immediately.
         """
+        from exabgp.reactor.api.command import group as group_cmd
+
         api_version = getenv().api.version
 
         # v6 API is JSON-only, v4 API checks for 'json' as last word
@@ -100,6 +117,20 @@ class API:
         else:
             words = command.split()
             use_json = words[-1] == 'json' if words else False
+
+        # Check if we're in group mode and this is an announce/withdraw command
+        # (not group end which should be processed normally)
+        if group_cmd.is_grouping(service):
+            cmd_lower = command.strip().lower()
+            if cmd_lower.startswith('group end') or cmd_lower.startswith('group start'):
+                pass  # Process normally
+            elif cmd_lower.startswith('announce') or cmd_lower.startswith('withdraw'):
+                # Buffer the command for later processing
+                # For multi-line groups, we use all peers (selector was on group start)
+                peers = list(reactor.peers(service))
+                group_cmd.group_add_command(self, reactor, service, peers, command, use_json)
+                await reactor.processes.flush_write_queue_async()
+                return True
 
         try:
             if api_version == 4:

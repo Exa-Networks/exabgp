@@ -118,6 +118,10 @@ COMMANDS: list[tuple[str, bool, list[str] | None]] = [
     ('peer withdraw attribute', True, None),
     ('peer withdraw attributes', True, None),
     ('peer withdraw vpls', True, None),
+    # Group commands for batching
+    ('group start', False, None),
+    ('group end', False, None),
+    ('peer group', True, None),
 ]
 
 
