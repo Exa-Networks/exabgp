@@ -46,6 +46,7 @@ from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.check import _hexa, _make_update, _negotiated
+from exabgp.configuration.command import decode_to_api_command
 from exabgp.configuration.configuration import Configuration
 from exabgp.environment import getenv
 from exabgp.logger import log
@@ -265,6 +266,7 @@ def encode_group_command(
 
     Args:
         cmd: Group command like 'group announce ... ; announce ...'
+             Or 'group attributes ... ; withdraw ...'
 
     Returns:
         Hex string of full BGP UPDATE message, or None on error
@@ -280,10 +282,11 @@ def encode_group_command(
         return None
 
     # Parse all sub-commands and collect routes
-    all_routes = []
+    announce_routes = []
+    withdraw_nlris = []
     first_family = None
     first_nexthop = None
-    first_attributes = None
+    group_attributes = None
 
     for sub_cmd in sub_cmds:
         parts = sub_cmd.split()
@@ -291,7 +294,243 @@ def encode_group_command(
             continue
 
         action = parts[0]
+
+        # Handle 'attributes' command: attributes origin igp local-preference 100 ...
+        if action == "attributes":
+            attr_str = " ".join(parts[1:])
+
+            # Use unique neighbor address
+            _encode_counter += 1
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+            conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    family {{ ipv4 unicast; }}
+    static {{ attributes {attr_str}; }}
+}}
+"""
+            configuration = Configuration([conf], text=True)
+            if not configuration.reload():
+                continue
+
+            if not configuration.neighbors:
+                continue
+
+            for name in configuration.neighbors.keys():
+                neighbor = configuration.neighbors[name]
+                if not neighbor.rib.enabled:
+                    continue
+                for _ in neighbor.rib.outgoing.updates(False):
+                    pass
+                for route in neighbor.rib.outgoing.cached_routes():
+                    group_attributes = route.attributes
+                    neighbor.rib.uncache()
+                    break
+            continue
+
         if action not in ("announce", "withdraw"):
+            continue
+
+        is_withdraw = action == "withdraw"
+
+        # Handle FlowSpec syntax: withdraw <afi> flow <flow-details>
+        if len(parts) >= 4 and parts[2] == "flow":
+            afi = parts[1]  # ipv4 or ipv6
+
+            # Transform API format to config format
+            config_parts = []
+            has_rd = False
+            i = 3  # Start after "withdraw <afi> flow"
+            while i < len(parts):
+                token = parts[i]
+                if token == "rd":
+                    has_rd = True
+                    config_parts.append(f"rd {parts[i + 1]}")
+                    i += 2
+                elif token in ("next-hop", "extended-community", "community"):
+                    # Skip these for withdraw - attributes come from group
+                    if token == "next-hop":
+                        i += 2
+                    elif i + 1 < len(parts) and parts[i + 1].startswith("["):
+                        j = i + 1
+                        while not parts[j].endswith("]") and j < len(parts) - 1:
+                            j += 1
+                        i = j + 1
+                    else:
+                        i += 1
+                elif token in (
+                    "source-ipv4", "destination-ipv4", "source-ipv6", "destination-ipv6",
+                    "protocol", "next-header", "destination-port", "source-port", "port",
+                    "icmp-type", "icmp-code", "dscp", "traffic-class", "flow-label",
+                    "fragment", "tcp-flags", "packet-length",
+                ):
+                    if i + 1 < len(parts):
+                        j = i + 1
+                        value = parts[j]
+                        if value.startswith("[") and not value.endswith("]"):
+                            while j < len(parts) - 1:
+                                j += 1
+                                value += " " + parts[j]
+                                if parts[j].endswith("]"):
+                                    break
+                        config_parts.append(f"{token} {value}")
+                        i = j + 1
+                    else:
+                        i += 1
+                else:
+                    i += 1
+
+            safi = "flow-vpn" if has_rd else "flow"
+            family = f"{afi} {safi}"
+            flow_config = " ".join(config_parts) if config_parts else "discard"
+
+            _encode_counter += 1
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+            capability_parts = []
+            if asn4_disabled:
+                capability_parts.append("asn4 disable;")
+            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+
+            conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    {capability_section}
+    family {{ {family}; }}
+    announce {{ {afi} {{ {safi} {flow_config}; }} }}
+}}
+"""
+            configuration = Configuration([conf], text=True)
+            if not configuration.reload():
+                continue
+
+            if not configuration.neighbors:
+                continue
+
+            for name in configuration.neighbors.keys():
+                neighbor = configuration.neighbors[name]
+                if not neighbor.rib.enabled:
+                    continue
+                for _ in neighbor.rib.outgoing.updates(False):
+                    pass
+                for route in neighbor.rib.outgoing.cached_routes():
+                    if first_family is None:
+                        first_family = family
+                        first_nexthop = route.nexthop
+                    if is_withdraw:
+                        withdraw_nlris.append(route.nlri)
+                    else:
+                        announce_routes.append(route)
+                    neighbor.rib.uncache()
+                    break
+            continue
+
+        # Handle MUP syntax: withdraw <afi> mup <mup-type> ...
+        if len(parts) >= 4 and parts[2] == "mup":
+            afi = parts[1]  # ipv4 or ipv6
+            mup_details = " ".join(parts[3:])
+            family = f"{afi} mup"
+
+            _encode_counter += 1
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+            capability_parts = []
+            if asn4_disabled:
+                capability_parts.append("asn4 disable;")
+            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+
+            conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    {capability_section}
+    family {{ {family}; }}
+    announce {{ {afi} {{ mup {mup_details}; }} }}
+}}
+"""
+            configuration = Configuration([conf], text=True)
+            if not configuration.reload():
+                continue
+
+            if not configuration.neighbors:
+                continue
+
+            for name in configuration.neighbors.keys():
+                neighbor = configuration.neighbors[name]
+                if not neighbor.rib.enabled:
+                    continue
+                for _ in neighbor.rib.outgoing.updates(False):
+                    pass
+                for route in neighbor.rib.outgoing.cached_routes():
+                    if first_family is None:
+                        first_family = family
+                        first_nexthop = route.nexthop
+                    if is_withdraw:
+                        withdraw_nlris.append(route.nlri)
+                    else:
+                        announce_routes.append(route)
+                    neighbor.rib.uncache()
+                    break
+            continue
+
+        # Handle VPN route withdraw: withdraw route X rd Y label Z
+        if len(parts) >= 3 and parts[1] == "route" and is_withdraw:
+            route_details = " ".join(parts[2:])
+            # Determine family from route details
+            has_rd = "rd " in route_details
+            family = "ipv4 mpls-vpn" if has_rd else "ipv4 unicast"
+
+            _encode_counter += 1
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+            capability_parts = []
+            if asn4_disabled:
+                capability_parts.append("asn4 disable;")
+            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+
+            conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    {capability_section}
+    family {{ {family}; }}
+    static {{ route {route_details}; }}
+}}
+"""
+            configuration = Configuration([conf], text=True)
+            if not configuration.reload():
+                continue
+
+            if not configuration.neighbors:
+                continue
+
+            for name in configuration.neighbors.keys():
+                neighbor = configuration.neighbors[name]
+                if not neighbor.rib.enabled:
+                    continue
+                for _ in neighbor.rib.outgoing.updates(False):
+                    pass
+                for route in neighbor.rib.outgoing.cached_routes():
+                    if first_family is None:
+                        first_family = family
+                        first_nexthop = route.nexthop
+                    if is_withdraw:
+                        withdraw_nlris.append(route.nlri)
+                    else:
+                        announce_routes.append(route)
+                    neighbor.rib.uncache()
+                    break
             continue
 
         # Handle MCAST-VPN syntax: announce <afi> mcast-vpn <mvpn-type> ...
@@ -300,7 +539,6 @@ def encode_group_command(
             mvpn_details = " ".join(parts[3:])
             family = f"{afi} mcast-vpn"
 
-            # Use unique neighbor address
             _encode_counter += 1
             neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
 
@@ -329,32 +567,37 @@ neighbor {neighbor_ip} {{
 
             for name in configuration.neighbors.keys():
                 neighbor = configuration.neighbors[name]
-
                 if not neighbor.rib.enabled:
                     continue
-
                 for _ in neighbor.rib.outgoing.updates(False):
                     pass
-
                 for route in neighbor.rib.outgoing.cached_routes():
                     if first_family is None:
                         first_family = family
                         first_nexthop = route.nexthop
-                        first_attributes = route.attributes
-                    all_routes.append(route)
+                    if is_withdraw:
+                        withdraw_nlris.append(route.nlri)
+                    else:
+                        announce_routes.append(route)
                     neighbor.rib.uncache()
-                    break  # Only get first route from this sub-command
+                    break
 
-    if not all_routes:
+    if not announce_routes and not withdraw_nlris:
         return None
+
+    # Use group_attributes if available, otherwise use first route's attributes
+    if group_attributes is None and announce_routes:
+        group_attributes = announce_routes[0].attributes
+    if group_attributes is None:
+        group_attributes = AttributeCollection()
 
     # Create single UPDATE with all NLRIs
     neighbor = get_neighbor(None)  # Default neighbor for negotiation
     _, negotiated_out = _negotiated(neighbor)
 
-    routed_nlris = [RoutedNLRI(r.nlri, r.nexthop) for r in all_routes]
+    routed_nlris = [RoutedNLRI(r.nlri, r.nexthop) for r in announce_routes]
     for packed in UpdateCollection(
-        routed_nlris, [], first_attributes
+        routed_nlris, withdraw_nlris, group_attributes
     ).messages(negotiated_out):
         return packed.hex().upper()
 
@@ -1325,343 +1568,8 @@ def format_flow_announce(
     return " ".join(cmd_parts)
 
 
-def decode_to_api_command(payload_hex: str, neighbor: Neighbor, generic: bool = False) -> list[str]:
-    """Decode BGP UPDATE hex to API command string(s).
-
-    Args:
-        payload_hex: The BGP UPDATE payload in hex (after 19-byte header)
-        neighbor: Neighbor for negotiation context
-        generic: If True, output generic attributes as hex for round-trip
-
-    Returns:
-        List of API command strings. For single NLRI: ['announce route X ...']
-        For multiple NLRIs: ['announce attributes ... nlri X Y Z']
-        Empty list on error.
-    """
-    try:
-        raw = _hexa(payload_hex)
-        update = _make_update(neighbor, raw)
-        if not update:
-            return []
-
-        encoder = Response.JSON(json_version)
-        if generic:
-            encoder.generic_attribute_format = True
-        json_str = encoder.update(neighbor, "in", update, b"", b"", Negotiated.UNSET)
-        data = json.loads(json_str)
-
-        message = data.get("neighbor", {}).get("message", {}).get("update", {})
-        if not message:
-            return []
-
-        # Extract announce or withdraw
-        announce = message.get("announce", {})
-        withdraw = message.get("withdraw", {})
-        attributes = message.get("attribute", {})
-
-        commands = []
-
-        # Helper to format attributes for command
-        def format_attributes(attrs: dict) -> list[str]:
-            """Format attributes for API command."""
-            parts = []
-            if "origin" in attrs:
-                parts.append(f"origin {attrs['origin']}")
-            if "as-path" in attrs:
-                as_path = attrs["as-path"]
-                if as_path:
-                    as_nums = []
-                    if isinstance(as_path, list):
-                        as_nums = as_path
-                    elif isinstance(as_path, dict):
-                        for seg in as_path.values():
-                            if isinstance(seg, dict) and "value" in seg:
-                                as_nums.extend(seg["value"])
-                    if as_nums:
-                        parts.append(f"as-path [{' '.join(str(a) for a in as_nums)}]")
-            if "local-preference" in attrs:
-                parts.append(f"local-preference {attrs['local-preference']}")
-            if "med" in attrs:
-                parts.append(f"med {attrs['med']}")
-            if "atomic-aggregate" in attrs:
-                if attrs["atomic-aggregate"]:
-                    parts.append("atomic-aggregate")
-            if "aggregator" in attrs:
-                parts.append(f"aggregator {attrs['aggregator']}")
-            if "community" in attrs:
-                comms = attrs["community"]
-                if comms:
-                    comm_strs = []
-                    for c in comms:
-                        if isinstance(c, list) and len(c) == 2:
-                            comm_strs.append(f"{c[0]}:{c[1]}")
-                        else:
-                            comm_strs.append(str(c))
-                    parts.append(f"community [{' '.join(comm_strs)}]")
-            if "large-community" in attrs:
-                lcomms = attrs["large-community"]
-                if lcomms:
-                    lcomm_strs = []
-                    for lc in lcomms:
-                        if isinstance(lc, list) and len(lc) == 3:
-                            lcomm_strs.append(f"{lc[0]}:{lc[1]}:{lc[2]}")
-                        else:
-                            lcomm_strs.append(str(lc))
-                    parts.append(f"large-community [{' '.join(lcomm_strs)}]")
-            if "extended-community" in attrs:
-                ecomms = attrs["extended-community"]
-                if ecomms:
-                    ecomm_strs = []
-                    for ec in ecomms:
-                        if isinstance(ec, dict) and "string" in ec:
-                            ecomm_strs.append(ec["string"])
-                        else:
-                            ecomm_strs.append(str(ec))
-                    parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
-            if "originator-id" in attrs:
-                parts.append(f"originator-id {attrs['originator-id']}")
-            if "cluster-list" in attrs:
-                cluster_list = attrs["cluster-list"]
-                if cluster_list:
-                    parts.append(f"cluster-list [{' '.join(cluster_list)}]")
-            if "bgp-prefix-sid" in attrs:
-                sid = attrs["bgp-prefix-sid"]
-                if isinstance(sid, dict):
-                    sid_parts = []
-                    if "sr-label-index" in sid:
-                        sid_parts.append(str(sid["sr-label-index"]))
-                    if "sr-srgbs" in sid:
-                        srgb_strs = []
-                        for srgb in sid["sr-srgbs"]:
-                            if isinstance(srgb, list) and len(srgb) == 2:
-                                srgb_strs.append(f"( {srgb[0]},{srgb[1]} )")
-                        if srgb_strs:
-                            sid_parts.append(f"[ {' '.join(srgb_strs)} ]")
-                    if sid_parts:
-                        parts.append(f"bgp-prefix-sid [ {', '.join(sid_parts)} ]")
-            # Generic attributes (attribute-0xNN-0xNN format)
-            for attr_name, attr_value in attrs.items():
-                parsed = parse_generic_attribute_name(attr_name)
-                if parsed is None:
-                    continue
-                type_code, flags = parsed
-                if isinstance(attr_value, str) and attr_value.startswith("0x"):
-                    hex_data = attr_value[2:]
-                    parts.append(f"attribute [0x{type_code:02x} 0x{flags:02x} 0x{hex_data}]")
-            return parts
-
-        # Process announces
-        for family, nexthops in announce.items():
-            # Handle FlowSpec family specially
-            if "flow" in family:
-                afi = "ipv4" if "ipv4" in family else "ipv6"
-                for nexthop, nlris in nexthops.items():
-                    for nlri_info in nlris:
-                        cmd = format_flow_announce(afi, nexthop, nlri_info, attributes)
-                        if cmd:
-                            commands.append(cmd)
-                continue
-
-            # Handle MCAST-VPN family specially
-            if "mcast-vpn" in family:
-                afi = "ipv4" if "ipv4" in family else "ipv6"
-                for nexthop, nlris in nexthops.items():
-                    # Multi-NLRI: use group syntax to batch into single UPDATE
-                    if len(nlris) > 1:
-                        group_cmds = []
-                        for nlri_info in nlris:
-                            cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
-                            if cmd:
-                                group_cmds.append(cmd)
-                        if len(group_cmds) > 1:
-                            # Generate group syntax: group cmd1 ; cmd2 ; ...
-                            commands.append("group " + " ; ".join(group_cmds))
-                        elif group_cmds:
-                            commands.append(group_cmds[0])
-                    else:
-                        for nlri_info in nlris:
-                            cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
-                            if cmd:
-                                commands.append(cmd)
-                continue
-
-            # Handle MUP family specially
-            if "mup" in family:
-                afi = "ipv4" if "ipv4" in family else "ipv6"
-                for nexthop, nlris in nexthops.items():
-                    for nlri_info in nlris:
-                        cmd = format_mup_announce(afi, nexthop, nlri_info, attributes)
-                        if cmd:
-                            commands.append(cmd)
-                continue
-
-            # Handle L2VPN VPLS specially
-            if "vpls" in family:
-                for nexthop, nlris in nexthops.items():
-                    for nlri_info in nlris:
-                        rd = nlri_info.get("rd", "")
-                        endpoint = nlri_info.get("endpoint", 0)
-                        base = nlri_info.get("base", 0)
-                        offset = nlri_info.get("offset", 0)
-                        size = nlri_info.get("size", 0)
-
-                        cmd_parts = [
-                            f"announce vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop {nexthop}"
-                        ]
-                        cmd_parts.extend(format_attributes(attributes))
-                        commands.append(" ".join(cmd_parts))
-                continue
-
-            for nexthop, nlris in nexthops.items():
-                # Check for EOR (End-of-RIB) marker
-                # JSON format: [ "eor": { "afi": "...", "safi": "..." } ]
-                if nlris and isinstance(nlris, list) and len(nlris) == 1:
-                    nlri_item = nlris[0]
-                    if isinstance(nlri_item, str) and nlri_item == "eor":
-                        # Legacy format - just "eor" string, family from outer key
-                        commands.append(f"announce eor {family}")
-                        continue
-                    if isinstance(nlri_item, dict) and "eor" in nlri_item:
-                        # Dict format with eor key
-                        eor_info = nlri_item["eor"]
-                        if isinstance(eor_info, dict):
-                            afi = eor_info.get("afi", "ipv4")
-                            safi = eor_info.get("safi", "unicast")
-                            commands.append(f"announce eor {afi} {safi}")
-                        continue
-                # Check if we have multiple NLRIs - use 'attributes' syntax
-                if len(nlris) > 1:
-                    # Multi-NLRI: announce attributes ... nlri X Y Z
-                    # Check if all NLRIs have same path-information
-                    path_info = nlris[0].get("path-information") if nlris else None
-                    all_same_path = all(
-                        n.get("path-information") == path_info for n in nlris
-                    )
-
-                    cmd_parts = ["announce attributes"]
-                    if path_info and all_same_path:
-                        cmd_parts.append(f"path-information {path_info}")
-                    cmd_parts.append(f"next-hop {nexthop}")
-                    cmd_parts.extend(format_attributes(attributes))
-                    cmd_parts.append("nlri")
-                    for nlri_info in nlris:
-                        nlri = nlri_info.get("nlri", "")
-                        cmd_parts.append(nlri)
-                    commands.append(" ".join(cmd_parts))
-                else:
-                    # Single NLRI: announce route X next-hop Y ...
-                    for nlri_info in nlris:
-                        nlri = nlri_info.get("nlri", "")
-                        api_family = family_to_api_format(family)
-                        cmd_parts = [f"announce {api_family} {nlri} next-hop {nexthop}"]
-
-                        # Add path-information if present (add-path capability)
-                        if "path-information" in nlri_info:
-                            cmd_parts.append(
-                                f"path-information {nlri_info['path-information']}"
-                            )
-
-                        # Add RD for VPN families
-                        if "rd" in nlri_info:
-                            cmd_parts.append(f"rd {nlri_info['rd']}")
-
-                        # Add labels for MPLS families
-                        if "label" in nlri_info:
-                            labels = nlri_info["label"]
-                            if labels:
-                                if isinstance(labels[0], list):
-                                    cmd_parts.append(f"label {labels[0][0]}")
-                                else:
-                                    cmd_parts.append(f"label {labels[0]}")
-
-                        cmd_parts.extend(format_attributes(attributes))
-                        commands.append(" ".join(cmd_parts))
-
-        # Process withdraws
-        for family, nlris in withdraw.items():
-            # Handle FlowSpec withdraws specially
-            if "flow" in family:
-                afi = "ipv4" if "ipv4" in family else "ipv6"
-                for nlri_info in nlris:
-                    if isinstance(nlri_info, dict):
-                        nexthop = attributes.get("next-hop", "0.0.0.0")
-                        cmd = format_flow_announce(afi, nexthop, nlri_info, attributes, action="withdraw")
-                        if cmd:
-                            commands.append(cmd)
-                continue
-
-            # Handle MUP withdraws specially
-            if "mup" in family:
-                afi = "ipv4" if "ipv4" in family else "ipv6"
-                for nlri_info in nlris:
-                    if isinstance(nlri_info, dict):
-                        # Get next-hop from attributes (now included in JSON for withdraws)
-                        nexthop = attributes.get("next-hop", "0.0.0.0")
-                        cmd = format_mup_announce(afi, nexthop, nlri_info, attributes, action="withdraw")
-                        if cmd:
-                            commands.append(cmd)
-                continue
-
-            # Handle MCAST-VPN withdraws specially
-            if "mcast-vpn" in family:
-                afi = "ipv4" if "ipv4" in family else "ipv6"
-                for nlri_info in nlris:
-                    if isinstance(nlri_info, dict):
-                        # Get next-hop from attributes (now included in JSON for withdraws)
-                        nexthop = attributes.get("next-hop", "0.0.0.0")
-                        cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes, action="withdraw")
-                        if cmd:
-                            commands.append(cmd)
-                continue
-
-            # Handle L2VPN VPLS specially
-            if "vpls" in family:
-                for nlri_info in nlris:
-                    if isinstance(nlri_info, dict):
-                        rd = nlri_info.get("rd", "")
-                        endpoint = nlri_info.get("endpoint", 0)
-                        base = nlri_info.get("base", 0)
-                        offset = nlri_info.get("offset", 0)
-                        size = nlri_info.get("size", 0)
-
-                        # Withdraw needs next-hop for config parser validation
-                        cmd_parts = [
-                            f"withdraw vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop 0.0.0.0"
-                        ]
-                        commands.append(" ".join(cmd_parts))
-                continue
-
-            api_family = family_to_api_format(family)
-
-            for nlri_info in nlris:
-                if isinstance(nlri_info, dict):
-                    nlri = nlri_info.get("nlri", "")
-                    cmd_parts = [f"withdraw {api_family} {nlri}"]
-
-                    # Add RD for VPN families
-                    if "rd" in nlri_info:
-                        cmd_parts.append(f"rd {nlri_info['rd']}")
-
-                    # Add labels for MPLS families
-                    if "label" in nlri_info:
-                        labels = nlri_info["label"]
-                        if labels:
-                            if isinstance(labels[0], list):
-                                cmd_parts.append(f"label {labels[0][0]}")
-                            else:
-                                cmd_parts.append(f"label {labels[0]}")
-
-                    # Add attributes for withdraw (needed for VPN withdraws)
-                    cmd_parts.extend(format_attributes(attributes))
-
-                    commands.append(" ".join(cmd_parts))
-                else:
-                    commands.append(f"withdraw {api_family} {nlri_info}")
-
-        return commands
-
-    except Exception:
-        return []
+# decode_to_api_command is now imported from exabgp.configuration.command
+# The old local function has been removed.
 
 
 def parse_ci_file_for_verify(

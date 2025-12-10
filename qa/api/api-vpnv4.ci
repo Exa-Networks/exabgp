@@ -4,7 +4,7 @@ option:file:api-vpnv4.conf
 1:cmd:announce route 1.4.0.0/16 next-hop 101.1.101.1 rd 65000:1 label 1000 origin igp local-preference 100 community [100:1] extended-community [target:65001:1]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0060:02:00000049400101004002004003046501650140050400000064C0080400640001C010080002FDE900000001800E1F0001800C0000000000000000650165010068003E810000FDE8000000010104
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"community":[[100,1]],"extended-community":[{"value":842127122628609,"string":"target:65001:1"}]},"announce":{"ipv4 mpls-vpn":{"101.1.101.1":[{"nlri":"1.4.0.0/16","label":[[1000,16001]],"rd":"65000:1"}]}}}}}}
-# No cmd: for withdraw below - original message has attributes in withdraw (unusual BGP)
+1:cmd:group attributes origin igp next-hop 101.1.101.1 local-preference 100 community [100:1] extended-community [target:65001:1] ; withdraw route 1.4.0.0/16 rd 65000:1 label 1000
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0052:02:0000003B400101004002004003046501650140050400000064C0080400640001C010080002FDE900000001800F1100018068003E810000FDE8000000010104
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","next-hop":"101.1.101.1","local-preference":100,"community":[[100,1]],"extended-community":[{"value":842127122628609,"string":"target:65001:1"}]},"withdraw":{"ipv4 mpls-vpn":[{"nlri":"1.4.0.0/16","label":[[1000,16001]],"rd":"65000:1"}]}}}}}
 

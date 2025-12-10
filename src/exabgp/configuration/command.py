@@ -22,6 +22,26 @@ from exabgp.reactor.api.response import Response
 from exabgp.version import json as json_version
 
 
+def has_extra_withdraw_attributes(attributes: dict) -> bool:
+    """Check if attributes include values beyond what withdraw commands normally handle.
+
+    Withdraw commands for FlowSpec/MUP/MCAST-VPN include extended-community and community.
+    If there are other attributes (origin, local-preference, as-path, etc.), we need
+    to use 'group attributes ... ; withdraw ...' to reproduce the exact wire format.
+    """
+    extra_attrs = {'origin', 'as-path', 'next-hop', 'local-preference', 'med', 'atomic-aggregate',
+                   'aggregator', 'originator-id', 'cluster-list', 'large-community', 'bgp-prefix-sid'}
+    return bool(extra_attrs.intersection(attributes.keys()))
+
+
+def format_withdraw_attributes(attributes: dict) -> str:
+    """Format attributes for use in a group attributes command (for withdraws)."""
+    parts = format_attributes(attributes)
+    if parts:
+        return 'attributes ' + ' '.join(parts)
+    return ''
+
+
 def format_extended_community(ec: dict) -> str | None:
     """Format a single extended community dict to API command string."""
     if not isinstance(ec, dict) or 'string' not in ec:
@@ -92,6 +112,8 @@ def format_attributes(attrs: dict) -> list[str]:
                         as_nums.extend(seg['value'])
             if as_nums:
                 parts.append(f'as-path [{" ".join(str(a) for a in as_nums)}]')
+    if 'next-hop' in attrs:
+        parts.append(f'next-hop {attrs["next-hop"]}')
     if 'local-preference' in attrs:
         parts.append(f'local-preference {attrs["local-preference"]}')
     if 'med' in attrs:
@@ -126,17 +148,55 @@ def format_attributes(attrs: dict) -> list[str]:
         if ecomms:
             ecomm_strs = []
             for ec in ecomms:
-                if isinstance(ec, dict) and 'string' in ec:
-                    ecomm_strs.append(ec['string'])
+                if isinstance(ec, dict):
+                    ec_string = ec.get('string', '')
+                    # Check if it's a format the static parser understands
+                    # Supported: target:X:Y, origin:X:Y, redirect-to-nexthop, 0xHEX
+                    if ec_string.startswith(('target:', 'origin:', 'redirect-to-nexthop', 'l2info:')):
+                        ecomm_strs.append(ec_string)
+                    elif 'value' in ec:
+                        # Convert to hex format for FlowSpec etc.
+                        ecomm_strs.append(f'0x{ec["value"]:016x}')
+                    elif ec_string:
+                        ecomm_strs.append(ec_string)
                 else:
                     ecomm_strs.append(str(ec))
-            parts.append(f'extended-community [{" ".join(ecomm_strs)}]')
+            if ecomm_strs:
+                parts.append(f'extended-community [{" ".join(ecomm_strs)}]')
     if 'originator-id' in attrs:
         parts.append(f'originator-id {attrs["originator-id"]}')
     if 'cluster-list' in attrs:
         cluster_list = attrs['cluster-list']
         if cluster_list:
             parts.append(f'cluster-list [{" ".join(cluster_list)}]')
+    if 'bgp-prefix-sid' in attrs:
+        prefix_sid = attrs['bgp-prefix-sid']
+        if 'l3-service' in prefix_sid:
+            for service in prefix_sid['l3-service']:
+                sid = service.get('sid', '')
+                behavior = service.get('endpoint_behavior', 0)
+                structure = service.get('structure', {})
+                lbl = structure.get('locator-block-length', 0)
+                lnl = structure.get('locator-node-length', 0)
+                fl = structure.get('function-length', 0)
+                al = structure.get('argument-length', 0)
+                tl = structure.get('transposition-length', 0)
+                to = structure.get('transposition-offset', 0)
+                parts.append(
+                    f'bgp-prefix-sid-srv6 ( l3-service {sid} 0x{behavior:x} [{lbl},{lnl},{fl},{al},{tl},{to}] )'
+                )
+        elif 'sr-label-index' in prefix_sid:
+            # Format: bgp-prefix-sid [ label-index ] or bgp-prefix-sid [ label-index, [ srgb-list ] ]
+            label_index = prefix_sid.get('sr-label-index', 0)
+            sr_srgbs = prefix_sid.get('sr-srgbs', [])
+            if sr_srgbs:
+                srgb_strs = []
+                for srgb in sr_srgbs:
+                    if isinstance(srgb, list) and len(srgb) == 2:
+                        srgb_strs.append(f'( {srgb[0]},{srgb[1]} )')
+                parts.append(f'bgp-prefix-sid [ {label_index}, [ {" ".join(srgb_strs)} ] ]')
+            else:
+                parts.append(f'bgp-prefix-sid [ {label_index} ]')
 
     # Generic attributes (attribute-0xNN-0xNN format)
     parts.extend(format_generic_attributes(attrs))
@@ -151,9 +211,14 @@ def family_to_api_format(family: str) -> str:
 
 
 def format_flow_announce(
-    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = 'announce'
+    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = 'announce', skip_attributes: bool = False
 ) -> str | None:
-    """Format a FlowSpec NLRI as an API announce/withdraw command."""
+    """Format a FlowSpec NLRI as an API announce/withdraw command.
+
+    Args:
+        skip_attributes: If True, don't include attributes (used when attributes are
+                        provided separately via 'group attributes ...')
+    """
     flow_string = nlri_info.get('string', '')
     if not flow_string:
         return None
@@ -168,6 +233,10 @@ def format_flow_announce(
         flow_details = f'{flow_details} rd {rd}'
 
     cmd_parts = [f'{action} {afi} flow {flow_details}']
+
+    # Skip attributes when they're provided via 'group attributes ...'
+    if skip_attributes:
+        return ' '.join(cmd_parts)
 
     if nexthop and nexthop != 'no-nexthop':
         cmd_parts.append(f'next-hop {nexthop}')
@@ -198,9 +267,14 @@ def format_flow_announce(
 
 
 def format_mvpn_announce(
-    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = 'announce'
+    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = 'announce', skip_attributes: bool = False
 ) -> str | None:
-    """Format a MCAST-VPN NLRI as an API announce/withdraw command."""
+    """Format a MCAST-VPN NLRI as an API announce/withdraw command.
+
+    Args:
+        skip_attributes: If True, don't include attributes (used when attributes are
+                        provided separately via 'group attributes ...')
+    """
     code = nlri_info.get('code', 0)
     rd = nlri_info.get('rd', '')
     source = nlri_info.get('source', '')
@@ -219,6 +293,10 @@ def format_mvpn_announce(
 
     cmd_parts = [f'{action} {afi} mcast-vpn {nlri_str} next-hop {nexthop}']
 
+    # Skip attributes when they're provided via 'group attributes ...'
+    if skip_attributes:
+        return ' '.join(cmd_parts)
+
     if 'extended-community' in attributes:
         ecomms = attributes['extended-community']
         if ecomms:
@@ -234,9 +312,14 @@ def format_mvpn_announce(
 
 
 def format_mup_announce(
-    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = 'announce'
+    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = 'announce', skip_attributes: bool = False
 ) -> str | None:
-    """Format a MUP NLRI as an API announce/withdraw command."""
+    """Format a MUP NLRI as an API announce/withdraw command.
+
+    Args:
+        skip_attributes: If True, don't include attributes (used when attributes are
+                        provided separately via 'group attributes ...')
+    """
     name = nlri_info.get('name', '')
     rd = nlri_info.get('rd', '')
 
@@ -280,6 +363,10 @@ def format_mup_announce(
         return None
 
     cmd_parts = [f'{action} {afi} mup {mup_type} {nlri_str} next-hop {nexthop}']
+
+    # Skip attributes when they're provided via 'group attributes ...'
+    if skip_attributes:
+        return ' '.join(cmd_parts)
 
     if 'extended-community' in attributes:
         ecomms = attributes['extended-community']
@@ -462,15 +549,25 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                         commands.append(' '.join(cmd_parts))
 
         # Process withdraws
+        # Check if we need to use 'group' for extra attributes
+        use_group = has_extra_withdraw_attributes(attributes)
+
         for family, nlris in withdraw.items():
             if 'flow' in family:
                 afi = 'ipv4' if 'ipv4' in family else 'ipv6'
                 for nlri_info in nlris:
                     if isinstance(nlri_info, dict):
                         nexthop = attributes.get('next-hop', '0.0.0.0')
-                        cmd = format_flow_announce(afi, nexthop, nlri_info, attributes, action='withdraw')
-                        if cmd:
-                            commands.append(cmd)
+                        if use_group:
+                            # Skip attributes in withdraw - they're in the group attributes command
+                            cmd = format_flow_announce(afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True)
+                            if cmd:
+                                attr_cmd = format_withdraw_attributes(attributes)
+                                commands.append(f'group {attr_cmd} ; {cmd}')
+                        else:
+                            cmd = format_flow_announce(afi, nexthop, nlri_info, attributes, action='withdraw')
+                            if cmd:
+                                commands.append(cmd)
                 continue
 
             if 'mup' in family:
@@ -478,9 +575,15 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                 for nlri_info in nlris:
                     if isinstance(nlri_info, dict):
                         nexthop = attributes.get('next-hop', '0.0.0.0')
-                        cmd = format_mup_announce(afi, nexthop, nlri_info, attributes, action='withdraw')
-                        if cmd:
-                            commands.append(cmd)
+                        if use_group:
+                            cmd = format_mup_announce(afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True)
+                            if cmd:
+                                attr_cmd = format_withdraw_attributes(attributes)
+                                commands.append(f'group {attr_cmd} ; {cmd}')
+                        else:
+                            cmd = format_mup_announce(afi, nexthop, nlri_info, attributes, action='withdraw')
+                            if cmd:
+                                commands.append(cmd)
                 continue
 
             if 'mcast-vpn' in family:
@@ -488,9 +591,15 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                 for nlri_info in nlris:
                     if isinstance(nlri_info, dict):
                         nexthop = attributes.get('next-hop', '0.0.0.0')
-                        cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes, action='withdraw')
-                        if cmd:
-                            commands.append(cmd)
+                        if use_group:
+                            cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True)
+                            if cmd:
+                                attr_cmd = format_withdraw_attributes(attributes)
+                                commands.append(f'group {attr_cmd} ; {cmd}')
+                        else:
+                            cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes, action='withdraw')
+                            if cmd:
+                                commands.append(cmd)
                 continue
 
             if 'vpls' in family:
@@ -524,8 +633,13 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                             else:
                                 cmd_parts.append(f'label {labels[0]}')
 
-                    cmd_parts.extend(format_attributes(attributes))
-                    commands.append(' '.join(cmd_parts))
+                    if use_group:
+                        attr_cmd = format_withdraw_attributes(attributes)
+                        withdraw_cmd = ' '.join(cmd_parts)
+                        commands.append(f'group {attr_cmd} ; {withdraw_cmd}')
+                    else:
+                        cmd_parts.extend(format_attributes(attributes))
+                        commands.append(' '.join(cmd_parts))
                 else:
                     commands.append(f'withdraw {api_family} {nlri_info}')
 
