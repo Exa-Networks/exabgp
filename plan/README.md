@@ -18,6 +18,8 @@
 | `code-quality.md` | 📋 Planning | Misc improvements (low priority) |
 | `rib-improvement-proposals.md` | 📋 Discussion | RIB improvement ideas |
 | `security-validation.md` | 📋 Planning | Security validation |
+| `from-settings-config.md` | 📋 Planning | from_settings() for Configuration/Neighbor |
+| `raw-attribute-api-v4.md` | ✅ Completed | Generic attribute round-trip for all families |
 
 ## Recently Completed (to be archived/deleted)
 

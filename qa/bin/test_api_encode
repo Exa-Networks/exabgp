@@ -59,6 +59,59 @@ YELLOW = "\033[33m"
 RESET = "\033[0m"
 
 
+def parse_generic_attribute_name(attr_name: str) -> tuple[int, int] | None:
+    """Parse attribute-0xNN-0xNN format to (type_code, flags).
+
+    Args:
+        attr_name: Attribute name like 'attribute-0x99-0x60'
+
+    Returns:
+        Tuple of (type_code, flags) as integers, or None if invalid format
+    """
+    # Format: attribute-0xNN-0xNN
+    if not attr_name.startswith("attribute-0x"):
+        return None
+
+    # Remove "attribute-" prefix, leaving "0xNN-0xNN"
+    rest = attr_name[10:]  # len("attribute-") = 10
+
+    # Find the separator "-0x" after the first hex value
+    sep_pos = rest.find("-0x", 2)  # Start at 2 to skip "0x" prefix
+    if sep_pos == -1:
+        return None
+
+    type_hex = rest[:sep_pos]  # "0xNN"
+    flags_hex = rest[sep_pos + 1:]  # "0xNN" (skip the "-")
+
+    try:
+        type_code = int(type_hex, 16)
+        flags = int(flags_hex, 16)
+        return (type_code, flags)
+    except ValueError:
+        return None
+
+
+def format_generic_attributes(attributes: dict) -> list[str]:
+    """Extract generic attributes as 'attribute [0xNN 0xNN 0xHEX]' syntax.
+
+    Args:
+        attributes: Attributes dict from JSON
+
+    Returns:
+        List of attribute strings like 'attribute [0x19 0xc0 0x...]'
+    """
+    parts = []
+    for attr_name, attr_value in attributes.items():
+        parsed = parse_generic_attribute_name(attr_name)
+        if parsed is None:
+            continue
+        type_code, flags = parsed
+        if isinstance(attr_value, str) and attr_value.startswith("0x"):
+            hex_data = attr_value[2:]
+            parts.append(f"attribute [0x{type_code:02x} 0x{flags:02x} 0x{hex_data}]")
+    return parts
+
+
 def extract_nexthop_from_raw(payload: str) -> str | None:
     """Extract NEXT_HOP attribute from raw UPDATE payload hex string.
 
@@ -436,7 +489,173 @@ neighbor {neighbor_ip} {{
         if len(parts) >= 4 and parts[2] == "flow":
             afi = parts[1]  # ipv4 or ipv6
             flow_details = " ".join(parts[3:])
-            family = f"{afi} flow"
+
+            # Transform API format to config format
+            # Parse out extended-community actions and convert to native config
+            config_parts = []
+            has_rd = False
+            next_hop = None
+            skip_nexthop = False  # Set when action (copy/redirect) sets nexthop
+            i = 3  # Start after "announce <afi> flow"
+            while i < len(parts):
+                token = parts[i]
+
+                if token == "rd":
+                    # Route distinguisher - indicates flow-vpn
+                    has_rd = True
+                    config_parts.append(f"rd {parts[i + 1]}")
+                    i += 2
+                elif token == "next-hop":
+                    next_hop = parts[i + 1]
+                    # Skip placeholder 0.0.0.0 next-hop (used in withdraws)
+                    if next_hop == "0.0.0.0":
+                        next_hop = None
+                    # Don't add to config_parts yet - may be handled by copy/redirect
+                    i += 2
+                elif token == "extended-community":
+                    # Parse extended-community value(s) and convert to native actions
+                    j = i + 1
+                    if j < len(parts) and parts[j].startswith("["):
+                        # Parse bracketed extended-community list
+                        ec_value = parts[j]
+                        # Handle multi-word values like "action sample-terminal"
+                        while not ec_value.endswith("]") and j < len(parts) - 1:
+                            j += 1
+                            ec_value += " " + parts[j]
+
+                        # Remove brackets and parse
+                        ec_inner = ec_value[1:-1]  # Remove [ and ]
+                        # Split on spaces but keep "action X" together
+                        ec_parts = ec_inner.split()
+
+                        other_ec = []  # Collect extended-communities to pass through
+                        k = 0
+                        while k < len(ec_parts):
+                            ec = ec_parts[k]
+                            if ec.startswith("rate-limit:"):
+                                rate = ec.split(":")[1]
+                                config_parts.append(f"rate-limit {rate}")
+                            elif ec == "copy-to-nexthop":
+                                # copy X sets both nexthop and copy-to-nexthop EC
+                                if next_hop:
+                                    config_parts.append(f"copy {next_hop}")
+                                    skip_nexthop = True
+                            elif ec == "redirect-to-nexthop":
+                                # redirect X sets both nexthop and redirect-to-nexthop EC
+                                if next_hop:
+                                    config_parts.append(f"redirect {next_hop}")
+                                    skip_nexthop = True
+                                else:
+                                    config_parts.append("redirect-to-nexthop")
+                            elif ec == "redirect-to-nexthop-ietf":
+                                # redirect-to-nexthop-ietf takes an IP parameter
+                                if k + 1 < len(ec_parts):
+                                    config_parts.append(f"redirect-to-nexthop-ietf {ec_parts[k + 1]}")
+                                    k += 1
+                            elif ec.startswith("redirect:"):
+                                # redirect:ASN:VALUE or redirect:IP format
+                                redirect_val = ec[9:]  # Remove "redirect:"
+                                config_parts.append(f"redirect {redirect_val}")
+                            elif ec == "action":
+                                # action has a parameter (sample, terminal, sample-terminal)
+                                if k + 1 < len(ec_parts):
+                                    config_parts.append(f"action {ec_parts[k + 1]}")
+                                    k += 1
+                            elif ec.startswith("mark"):
+                                # "mark X" or "mark:X"
+                                if ":" in ec:
+                                    mark_val = ec.split(":")[1]
+                                    config_parts.append(f"mark {mark_val}")
+                                elif k + 1 < len(ec_parts):
+                                    config_parts.append(f"mark {ec_parts[k + 1]}")
+                                    k += 1
+                            elif ec.startswith("interface-set:"):
+                                # interface-set needs special handling:
+                                # API format: interface-set:direction:asn:group-id
+                                # Config format: interface-set transitive:direction:asn:group-id
+                                parts_is = ec.split(":", 1)[1]  # Remove "interface-set:" prefix
+                                config_parts.append(f"interface-set transitive:{parts_is}")
+                            elif ec.startswith("origin:") or ec.startswith("target:") or ec.startswith("l2info:"):
+                                # Pass through other extended-communities
+                                other_ec.append(ec)
+                            k += 1
+                        # Add other extended-communities if any
+                        if other_ec:
+                            config_parts.append(f"extended-community [{' '.join(other_ec)}]")
+                        i = j + 1
+                    else:
+                        i += 1
+                elif token == "community":
+                    # Pass through community values
+                    j = i + 1
+                    if j < len(parts) and parts[j].startswith("["):
+                        comm_value = parts[j]
+                        while not comm_value.endswith("]") and j < len(parts) - 1:
+                            j += 1
+                            comm_value += " " + parts[j]
+                        config_parts.append(f"community {comm_value}")
+                        i = j + 1
+                    else:
+                        i += 1
+                elif token in (
+                    "source-ipv4",
+                    "destination-ipv4",
+                    "source-ipv6",
+                    "destination-ipv6",
+                    "protocol",
+                    "next-header",
+                    "destination-port",
+                    "source-port",
+                    "port",
+                    "icmp-type",
+                    "icmp-code",
+                    "dscp",
+                    "traffic-class",
+                    "flow-label",
+                    "fragment",
+                    "tcp-flags",
+                    "packet-length",
+                ):
+                    # Match field with a value (may be bracketed list)
+                    if i + 1 < len(parts):
+                        j = i + 1
+                        value = parts[j]
+                        # Handle bracketed lists that span multiple tokens
+                        if value.startswith("[") and not value.endswith("]"):
+                            while j < len(parts) - 1:
+                                j += 1
+                                value += " " + parts[j]
+                                if parts[j].endswith("]"):
+                                    break
+                        config_parts.append(f"{token} {value}")
+                        i = j + 1
+                    else:
+                        i += 1
+                elif token == "attribute":
+                    # Generic attribute: attribute [0xNN 0xNN 0xHEX]
+                    j = i + 1
+                    if j < len(parts) and parts[j].startswith("["):
+                        attr_value = parts[j]
+                        # Handle bracketed values that span multiple tokens
+                        while not attr_value.endswith("]") and j < len(parts) - 1:
+                            j += 1
+                            attr_value += " " + parts[j]
+                        config_parts.append(f"attribute {attr_value}")
+                        i = j + 1
+                    else:
+                        i += 1
+                else:
+                    # Unknown token - skip
+                    i += 1
+
+            # Add next-hop to config if not handled by copy/redirect actions
+            if next_hop and not skip_nexthop:
+                config_parts.append(f"next-hop {next_hop}")
+
+            # Determine family: flow-vpn if has RD, else flow
+            safi = "flow-vpn" if has_rd else "flow"
+            family = f"{afi} {safi}"
+            flow_config = " ".join(config_parts)
 
             # Use unique neighbor address to avoid RIB cache collision
             neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
@@ -456,7 +675,7 @@ neighbor {neighbor_ip} {{
     peer-as {peer_as};
     {capability_section}
     family {{ {family}; }}
-    announce {{ {afi} {{ flow {flow_details}; }} }}
+    announce {{ {afi} {{ {safi} {flow_config}; }} }}
 }}
 """
             configuration = Configuration([conf], text=True)
@@ -729,6 +948,9 @@ def format_mvpn_announce(
             if ecomm_strs:
                 cmd_parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
 
+    # Add generic/unknown attributes
+    cmd_parts.extend(format_generic_attributes(attributes))
+
     return " ".join(cmd_parts)
 
 
@@ -837,6 +1059,9 @@ def format_mup_announce(
                     f"bgp-prefix-sid-srv6 ( l2-service {sid} 0x{behavior:x} [{lbl},{lnl},{fl},{al},{tl},{to}] )"
                 )
 
+    # Add generic/unknown attributes
+    cmd_parts.extend(format_generic_attributes(attributes))
+
     return " ".join(cmd_parts)
 
 
@@ -900,6 +1125,9 @@ def format_flow_announce(
                     comm_strs.append(f"{c[0]}:{c[1]}")
             if comm_strs:
                 cmd_parts.append(f"community [{' '.join(comm_strs)}]")
+
+    # Add generic/unknown attributes
+    cmd_parts.extend(format_generic_attributes(attributes))
 
     return " ".join(cmd_parts)
 
@@ -1017,19 +1245,13 @@ def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
                         parts.append(f"bgp-prefix-sid [ {', '.join(sid_parts)} ]")
             # Generic attributes (attribute-0xNN-0xNN format)
             for attr_name, attr_value in attrs.items():
-                if attr_name.startswith("attribute-"):
-                    parts_match = re.match(
-                        r"attribute-0x([0-9a-fA-F]+)-0x([0-9a-fA-F]+)",
-                        attr_name,
-                    )
-                    if parts_match:
-                        type_code = int(parts_match.group(1), 16)
-                        flags = int(parts_match.group(2), 16)
-                        if isinstance(attr_value, str) and attr_value.startswith("0x"):
-                            hex_data = attr_value[2:]
-                            parts.append(
-                                f"attribute [0x{type_code:02x} 0x{flags:02x} 0x{hex_data}]"
-                            )
+                parsed = parse_generic_attribute_name(attr_name)
+                if parsed is None:
+                    continue
+                type_code, flags = parsed
+                if isinstance(attr_value, str) and attr_value.startswith("0x"):
+                    hex_data = attr_value[2:]
+                    parts.append(f"attribute [0x{type_code:02x} 0x{flags:02x} 0x{hex_data}]")
             return parts
 
         # Process announces
@@ -1249,10 +1471,17 @@ def parse_ci_file_for_verify(
     prev_cmd = None
     prev_cmd_step = None
     prev_cmd_line = None
+    skip_next_pair = False
 
     for line_num, line in enumerate(lines):
         stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
+        if not stripped:
+            continue
+
+        # Check for "# No cmd:" comment - skip the following cmd:/raw: pair
+        if stripped.startswith("#"):
+            if "no cmd:" in stripped.lower():
+                skip_next_pair = True
             continue
 
         # Parse option:file:config.conf
@@ -1288,13 +1517,15 @@ def parse_ci_file_for_verify(
             raw_hex = raw_match.group(2).replace(":", "")
 
             # Only UPDATE messages (type 02) with preceding cmd: line
+            # Skip pairs marked with "# No cmd:" comment
             if len(raw_hex) >= 38 and raw_hex[36:38].upper() == "02":
-                if prev_cmd and prev_cmd_step == step:
+                if prev_cmd and prev_cmd_step == step and not skip_next_pair:
                     pairs.append((prev_cmd_line, step, prev_cmd, raw_hex))
 
             prev_cmd = None
             prev_cmd_step = None
             prev_cmd_line = None
+            skip_next_pair = False
             continue
 
     return config_file, peer_as, pairs

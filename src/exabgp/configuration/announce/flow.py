@@ -51,6 +51,7 @@ from exabgp.configuration.flow.parser import copy
 from exabgp.configuration.flow.parser import mark
 from exabgp.configuration.flow.parser import action
 
+from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import community
 from exabgp.configuration.static.parser import large_community
 from exabgp.configuration.static.parser import extended_community
@@ -270,6 +271,12 @@ class AnnounceFlow(ParseAnnounce):
                 description='Interface set',
                 action='attribute-add',
                 validator=LegacyParserValidator(parser_func=interface_set, name='interface-set'),
+            ),
+            'attribute': Leaf(
+                type=ValueType.HEX_STRING,
+                description='Generic BGP attribute in hex format',
+                action='attribute-add',
+                validator=LegacyParserValidator(parser_func=attribute, name='attribute'),
             ),
         },
     )
