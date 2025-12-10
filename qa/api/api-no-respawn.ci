@@ -1,8 +1,12 @@
 option:file:api-no-respawn.conf
+1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
+1:cmd:announce route 1.1.1.1/32 next-hop 11.11.11.11 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040B0B0B0B400504000000642001010101
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"11.11.11.11":[{"nlri":"1.1.1.1/32"}]}}}}}}
+1:cmd:announce route 2.2.2.2/32 next-hop 22.22.22.22 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:000000154001010040020040030416161616400504000000642002020202
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"22.22.22.22":[{"nlri":"2.2.2.2/32"}]}}}}}}
+1:cmd:announce route 3.3.3.3/32 next-hop 33.33.33.33 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:000000154001010040020040030421212121400504000000642003030303
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"33.33.33.33":[{"nlri":"3.3.3.3/32"}]}}}}}}

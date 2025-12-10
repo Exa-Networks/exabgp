@@ -1,10 +1,15 @@
 option:file:api-add-remove.conf
+1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
+1:cmd:announce route 1.1.0.0/24 next-hop 101.1.101.1 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0030:02:0000001540010100400200400304650165014005040000006418010100
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.1.0.0/24"}]}}}}}}
+1:cmd:announce route 1.1.0.0/25 next-hop 101.1.101.1 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:000000154001010040020040030465016501400504000000641901010000
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.1.101.1":[{"nlri":"1.1.0.0/25"}]}}}}}}
+1:cmd:withdraw route 1.1.0.0/24
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001B:02:0004180101000000
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"1.1.0.0/24"}]}}}}}
+1:cmd:withdraw route 1.1.0.0/25
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001C:02:000519010100000000
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"1.1.0.0/25"}]}}}}}

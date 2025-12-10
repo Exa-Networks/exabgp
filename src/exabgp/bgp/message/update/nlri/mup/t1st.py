@@ -274,7 +274,7 @@ class Type1SessionTransformedRoute(MUP):
         content += '"qfi": "{}", '.format(str(self.qfi))
         content += self.rd.json() + ', '
         content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
-        content += '"endpoint_ip": "{}"'.format(str(self.endpoint_ip))
+        content += '"endpoint_ip": "{}", '.format(str(self.endpoint_ip))
         content += '"source_ip_len": %d, ' % self.source_ip_len
         content += '"source_ip": "{}", '.format(str(self.source_ip))
         content += '"raw": "{}"'.format(self._raw())

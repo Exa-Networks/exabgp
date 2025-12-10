@@ -5,6 +5,7 @@ option:file:api-flow-merge.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0047:02:000000304001010040020040050400000064C010104702CAFFEE0140018006000000000000800E0C0001850000060220CAFFEE01
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":5116875327204835329,"string":"interface-set:input:3405770241:1"},{"value":9225060886715039744,"string":"rate-limit:0"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"source-ipv4":["202.255.238.1/32"],"string":"flow source-ipv4 202.255.238.1/32"}]}}}}}}
 
+3:cmd:announce eor ipv4 flow
 3:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000185
 
 4:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003F:02:000000284001010040020040050400000064C010088006000000000000800E0C000185000006022004040404

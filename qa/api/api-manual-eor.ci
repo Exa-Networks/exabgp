@@ -1,2 +1,3 @@
 option:file:api-manual-eor.conf
+1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001702:00000000

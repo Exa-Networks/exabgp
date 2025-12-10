@@ -1,2 +1,3 @@
 option:file:conf-ipv46routes4family.conf
+1:cmd:announce route 193.0.2.1/32 next-hop 10.0.0.1 origin igp local-preference 100 extended-community [target:72:1]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C02:00000020400101004002004003040A00000140050400000064C01008000200480000000120C1000201

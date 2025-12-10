@@ -57,6 +57,9 @@ option:file:conf-flow.conf
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060886715039744,"string":"rate-limit:0"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"destination-ipv4":["10.0.0.2/32"],"source-ipv4":["10.0.0.1/32"],"protocol":["=tcp"],"destination-port":["=3128"],"tcp-flags":["syn","rst&fin&!=push"],"string":"flow destination-ipv4 10.0.0.2/32 source-ipv4 10.0.0.1/32 protocol =tcp destination-port =3128 tcp-flags [ syn rst&fin&!=push ]"}]}}}}}}
 
 # EOR
+1:cmd:announce eor ipv4 flow
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E02:00000007900F0003000185
+1:cmd:announce eor ipv4 flow-vpn
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E02:00000007900F0003000186
+1:cmd:announce eor ipv6 flow
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E02:00000007900F0003000285

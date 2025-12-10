@@ -124,7 +124,7 @@ class Srv6SidInformation:
         return s
 
     def json(self, compact: bool | None = None) -> str:
-        s: str = '{ "sid": "%s", "flags": 0, "endpoint_behavior": %d'
+        s: str = '{{ "sid": "{}", "flags": 0, "endpoint_behavior": {}'.format(str(self.sid), self.behavior)
         content: str = ', '.join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
         if content:
             s += ', {}'.format(content)

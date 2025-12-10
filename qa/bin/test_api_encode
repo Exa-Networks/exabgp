@@ -1,0 +1,1529 @@
+#!/usr/bin/env python3
+"""ExaBGP API Command Encoding Tests.
+
+Verifies that cmd: lines in CI files can be encoded to their corresponding raw: lines.
+This ensures the API command syntax matches the expected BGP wire format.
+
+CI file format:
+    option:file:config.conf
+    1:cmd:announce ipv4 unicast 10.0.0.0/24 next-hop 1.2.3.4 origin igp
+    1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0030:02:...
+
+The cmd: line is the API command to encode.
+The raw: line is the expected BGP UPDATE message.
+
+Usage:
+    ./qa/bin/test_api_encode                 # Verify cmd: encodes to raw: (default)
+    ./qa/bin/test_api_encode --self-check    # Round-trip test: raw→cmd→raw
+    ./qa/bin/test_api_encode --generate      # Generate cmd: from raw: (decode)
+    ./qa/bin/test_api_encode --write         # Write generated cmd: to files
+    ./qa/bin/test_api_encode --annotate      # Alias for --generate --write
+    ./qa/bin/test_api_encode -g -i -w        # Replace existing cmd: lines
+    ./qa/bin/test_api_encode file.ci         # Process specific file
+
+Exit codes:
+    0 - All tests passed / Success
+    1 - Some tests failed
+    2 - No files found
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+# Add src to path for library imports
+REPO_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+# Now import exabgp modules
+from exabgp.bgp.message import UpdateCollection
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.configuration.check import _hexa, _make_update, _negotiated
+from exabgp.configuration.configuration import Configuration
+from exabgp.environment import getenv
+from exabgp.logger import log
+from exabgp.reactor.api.response import Response
+from exabgp.version import json as json_version
+
+# ANSI color codes
+GREEN = "\033[32m"
+RED = "\033[31m"
+YELLOW = "\033[33m"
+RESET = "\033[0m"
+
+# Cache for initialized neighbors
+_neighbor_cache: dict[Path | None, Neighbor] = {}
+
+
+def init_environment() -> None:
+    """Initialize exabgp environment (once per run)."""
+    env = getenv()
+    env.bgp.passive = True
+    env.log.enable = False
+    env.tcp.bind = []
+    log.silence()
+
+
+def get_neighbor(config_file: Path | None) -> Neighbor:
+    """Get or create a neighbor for the given config file."""
+    if config_file in _neighbor_cache:
+        return _neighbor_cache[config_file]
+
+    if config_file and config_file.exists():
+        try:
+            config = Configuration([str(config_file)])
+            config.reload()
+            neighbors = list(config.neighbors.values())
+            if neighbors:
+                neighbor = neighbors[0]
+                _neighbor_cache[config_file] = neighbor
+                return neighbor
+        except Exception:
+            pass
+
+    # Create default neighbor with all families
+    config_text = """
+    neighbor 127.0.0.1 {
+        router-id 10.0.0.2;
+        local-address 127.0.0.1;
+        local-as 65533;
+        peer-as 65533;
+        family { all }
+    }
+    """
+    try:
+        config = Configuration([config_text], text=True)
+        config.reload()
+        neighbor = list(config.neighbors.values())[0]
+        _neighbor_cache[config_file] = neighbor
+        return neighbor
+    except Exception as e:
+        raise RuntimeError(f"Failed to create default neighbor: {e}")
+
+
+_encode_counter = 0
+
+
+def encode_api_command(
+    cmd: str, local_as: int = 65533, peer_as: int = 65533, asn4_disabled: bool = False
+) -> str | None:
+    """Encode API command to hex BGP UPDATE message.
+
+    Args:
+        cmd: API command like 'announce route 10.0.0.0/24 next-hop 1.2.3.4'
+
+    Returns:
+        Hex string of full BGP UPDATE message, or None on error
+    """
+    global _encode_counter
+    _encode_counter += 1
+
+    try:
+        parts = cmd.split()
+        if len(parts) < 2:
+            return None
+
+        action = parts[0]  # announce/withdraw
+
+        # Handle EOR (End-of-RIB) syntax: announce eor [afi safi]
+        if len(parts) >= 2 and parts[1] == "eor":
+            from exabgp.bgp.message.update.eor import EOR
+            from exabgp.protocol.family import AFI, SAFI
+
+            # Default to ipv4 unicast if no family specified
+            if len(parts) == 2:
+                afi, safi = AFI.ipv4, SAFI.unicast
+            elif len(parts) == 4:
+                afi_str, safi_str = parts[2], parts[3]
+                afi = AFI.from_string(afi_str)
+                safi = SAFI.from_string(safi_str)
+            else:
+                return None
+
+            # Create EOR message and pack it
+            eor = EOR(afi, safi)
+            # EOR doesn't need negotiated, but pack_message requires it
+            # Create a minimal negotiated context
+            from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+            packed = eor.pack_message(Negotiated.UNSET)
+            return packed.hex().upper()
+
+        # Handle 'attributes' syntax: announce attributes ... nlri X Y Z
+        if parts[1] == "attributes":
+            # Parse: announce attributes [path-info X] next-hop Y ... nlri A B C
+            attr_parts = parts[2:]
+            nlri_idx = None
+            for i, p in enumerate(attr_parts):
+                if p == "nlri":
+                    nlri_idx = i
+                    break
+            if nlri_idx is None:
+                return None
+
+            attr_str = " ".join(attr_parts[:nlri_idx])
+            nlri_list = attr_parts[nlri_idx + 1 :]
+            if not nlri_list:
+                return None
+
+            # Determine family from first NLRI
+            first_nlri = nlri_list[0]
+            if ":" in first_nlri:
+                family = "ipv6 unicast"
+            else:
+                family = "ipv4 unicast"
+
+            # Build config with multiple route statements (they will be grouped)
+            route_statements = []
+            for nlri in nlri_list:
+                route_statements.append(f"route {nlri} {attr_str}")
+            route_text = "; ".join(route_statements)
+
+            # Use unique neighbor address to avoid RIB cache collision
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+            # Check if add-path is needed
+            needs_addpath = "path-information" in attr_str
+            capability_section = ""
+            addpath_section = ""
+            if needs_addpath:
+                capability_section = "capability { add-path send/receive; }"
+                addpath_section = f"add-path {{ {family}; }}"
+
+            conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    {capability_section}
+    family {{ {family}; }}
+    {addpath_section}
+    static {{ {route_text}; }}
+}}
+"""
+            configuration = Configuration([conf], text=True)
+            if not configuration.reload():
+                return None
+
+            if not configuration.neighbors:
+                return None
+
+            for name in configuration.neighbors.keys():
+                neighbor = configuration.neighbors[name]
+                _, negotiated_out = _negotiated(neighbor)
+
+                if not neighbor.rib.enabled:
+                    continue
+
+                for _ in neighbor.rib.outgoing.updates(False):
+                    pass
+
+                # Collect all routes and pack into one UPDATE
+                routes = list(neighbor.rib.outgoing.cached_routes())
+                if not routes:
+                    neighbor.rib.uncache()
+                    return None
+
+                # Debug: check we have expected routes
+                # print(f"DEBUG: Found {len(routes)} routes: {[str(r.nlri) for r in routes]}")
+
+                routed_nlris = [RoutedNLRI(r.nlri, r.nexthop) for r in routes]
+                for packed in UpdateCollection(
+                    routed_nlris, [], routes[0].attributes
+                ).messages(negotiated_out):
+                    neighbor.rib.uncache()
+                    return packed.hex().upper()
+
+                neighbor.rib.uncache()
+            return None
+
+        # Handle VPLS syntax: announce vpls rd X endpoint Y base Z offset A size B next-hop NH ...
+        if parts[1] == "vpls":
+            vpls_details = " ".join(parts[2:])
+
+            # Use unique neighbor address to avoid RIB cache collision
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+            # Build capability section if needed
+            capability_parts = []
+            if asn4_disabled:
+                capability_parts.append("asn4 disable;")
+            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+
+            # Configuration template for VPLS
+            conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    {capability_section}
+    family {{ l2vpn vpls; }}
+    l2vpn {{ vpls {vpls_details}; }}
+}}
+"""
+            configuration = Configuration([conf], text=True)
+            if not configuration.reload():
+                return None
+
+            if not configuration.neighbors:
+                return None
+
+            for name in configuration.neighbors.keys():
+                neighbor = configuration.neighbors[name]
+                _, negotiated_out = _negotiated(neighbor)
+
+                if not neighbor.rib.enabled:
+                    continue
+
+                for _ in neighbor.rib.outgoing.updates(False):
+                    pass
+
+                for route in neighbor.rib.outgoing.cached_routes():
+                    if action == "withdraw":
+                        # Withdraw: put NLRI in withdraw list, empty attributes
+                        for packed in UpdateCollection(
+                            [], [route.nlri], AttributeCollection()
+                        ).messages(negotiated_out):
+                            neighbor.rib.uncache()
+                            return packed.hex().upper()
+                    else:
+                        # Announce: put NLRI in announce list with attributes
+                        for packed in UpdateCollection(
+                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
+                        ).messages(negotiated_out):
+                            neighbor.rib.uncache()
+                            return packed.hex().upper()
+
+                neighbor.rib.uncache()
+            return None
+
+        # Handle MUP syntax: announce <afi> mup <mup-type> ...
+        if len(parts) >= 4 and parts[2] == "mup":
+            afi = parts[1]  # ipv4 or ipv6
+            mup_details = " ".join(parts[3:])
+            family = f"{afi} mup"
+
+            # Use unique neighbor address to avoid RIB cache collision
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+            # Build capability section if needed
+            capability_parts = []
+            if asn4_disabled:
+                capability_parts.append("asn4 disable;")
+            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+
+            # Configuration template for MUP
+            conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    {capability_section}
+    family {{ {family}; }}
+    announce {{ {afi} {{ mup {mup_details}; }} }}
+}}
+"""
+            configuration = Configuration([conf], text=True)
+            if not configuration.reload():
+                return None
+
+            if not configuration.neighbors:
+                return None
+
+            for name in configuration.neighbors.keys():
+                neighbor = configuration.neighbors[name]
+                _, negotiated_out = _negotiated(neighbor)
+
+                if not neighbor.rib.enabled:
+                    continue
+
+                for _ in neighbor.rib.outgoing.updates(False):
+                    pass
+
+                for route in neighbor.rib.outgoing.cached_routes():
+                    if action == "withdraw":
+                        # Withdraw: put NLRI in withdraw list, empty attributes
+                        for packed in UpdateCollection(
+                            [], [route.nlri], AttributeCollection()
+                        ).messages(negotiated_out):
+                            neighbor.rib.uncache()
+                            return packed.hex().upper()
+                    else:
+                        # Announce: put NLRI in announce list with attributes
+                        for packed in UpdateCollection(
+                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
+                        ).messages(negotiated_out):
+                            neighbor.rib.uncache()
+                            return packed.hex().upper()
+
+                neighbor.rib.uncache()
+            return None
+
+        # Parse family from command: announce <afi> <safi> <nlri> ...
+        # Or: announce route <nlri> ... (legacy format)
+        if parts[1] == "route":
+            # Legacy "route" format: announce route 10.0.0.0/24 next-hop ...
+            route_details = " ".join(parts[2:])
+            nlri = parts[2]
+            is_ipv6 = ":" in nlri
+            has_rd = " rd " in route_details
+            has_label = " label " in route_details
+
+            if is_ipv6:
+                if has_rd:
+                    family = "ipv6 mpls-vpn"
+                elif has_label:
+                    family = "ipv6 nlri-mpls"
+                else:
+                    family = "ipv6 unicast"
+            else:
+                if has_rd:
+                    family = "ipv4 mpls-vpn"
+                elif has_label:
+                    family = "ipv4 nlri-mpls"
+                else:
+                    family = "ipv4 unicast"
+        else:
+            # Standard format: announce ipv4 unicast 10.0.0.0/24 next-hop ...
+            if len(parts) < 4:
+                return None
+            afi = parts[1]
+            safi = parts[2]
+            route_details = " ".join(parts[3:])
+            family = f"{afi} {safi}"
+
+        # Build route text
+        # Note: The static { route ... } config parser requires next-hop for validation
+        # (it always parses as ANNOUNCE). For withdraw, we add a dummy next-hop to pass
+        # validation, then extract only the NLRI (the next-hop is discarded).
+        # RFC says withdraws don't need next-hop - the wire format reflects this.
+        if action == "withdraw" and "next-hop" not in route_details:
+            route_text = f"route {route_details} next-hop 0.0.0.0"
+        else:
+            route_text = f"route {route_details}"
+
+        # Use unique neighbor address to avoid RIB cache collision
+        # RIB uses a class-level cache keyed by neighbor name
+        neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+
+        # Check if add-path is needed (path-information in command)
+        needs_addpath = "path-information" in route_details
+
+        # Build capability and add-path sections if needed
+        capability_parts = []
+        if needs_addpath:
+            capability_parts.append("add-path send/receive;")
+        if asn4_disabled:
+            capability_parts.append("asn4 disable;")
+        capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+        addpath_section = f"add-path {{ {family}; }}" if needs_addpath else ""
+
+        # Configuration template
+        conf = f"""
+neighbor {neighbor_ip} {{
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as {local_as};
+    peer-as {peer_as};
+    {capability_section}
+    family {{ {family}; }}
+    {addpath_section}
+    static {{ {route_text}; }}
+}}
+"""
+        configuration = Configuration([conf], text=True)
+        if not configuration.reload():
+            return None
+
+        if not configuration.neighbors:
+            return None
+
+        for name in configuration.neighbors.keys():
+            neighbor = configuration.neighbors[name]
+            _, negotiated_out = _negotiated(neighbor)
+
+            if not neighbor.rib.enabled:
+                continue
+
+            for _ in neighbor.rib.outgoing.updates(False):
+                pass
+
+            for route in neighbor.rib.outgoing.cached_routes():
+                if action == "withdraw":
+                    # Withdraw: put NLRI in withdraw list, empty attributes
+                    for packed in UpdateCollection(
+                        [], [route.nlri], AttributeCollection()
+                    ).messages(negotiated_out):
+                        neighbor.rib.uncache()
+                        return packed.hex().upper()
+                else:
+                    # Announce: put NLRI in announce list with attributes
+                    for packed in UpdateCollection(
+                        [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
+                    ).messages(negotiated_out):
+                        # Clean up RIB cache to avoid memory leak
+                        neighbor.rib.uncache()
+                        return packed.hex().upper()
+
+        return None
+    except Exception:
+        return None
+
+
+def family_to_api_format(family: str) -> str:
+    """Convert JSON family format to API command format.
+
+    JSON format: "ipv4 unicast", "ipv6 unicast", "ipv4 mpls-vpn", "ipv4 nlri-mpls"
+    API format:
+    - IPv4 families: use "route" format
+    - IPv6 families: use "ipv6 <safi>" format
+    """
+    # IPv4 families use "route" format
+    if family.startswith("ipv4"):
+        return "route"
+    # IPv6 families use explicit family format
+    return family
+
+
+def format_mup_announce(
+    afi: str, nexthop: str, nlri_info: dict, attributes: dict
+) -> str | None:
+    """Format a MUP NLRI as an API announce command.
+
+    MUP route types:
+    - InterworkSegmentDiscoveryRoute (ISD) -> mup-isd <prefix_ip>/<prefix_ip_len> rd <rd>
+    - DirectSegmentDiscoveryRoute (DSD) -> mup-dsd <ip> rd <rd>
+    - Type1SessionTransformedRoute (T1ST) -> mup-t1st <prefix> rd <rd> teid <teid> qfi <qfi> endpoint <ip>
+    - Type2SessionTransformedRoute (T2ST) -> mup-t2st <ip> rd <rd> teid <teid>/<teid_len>
+    """
+    name = nlri_info.get("name", "")
+    rd = nlri_info.get("rd", "")
+
+    # Map JSON names to MUP type keywords
+    mup_type = None
+    nlri_str = ""
+
+    if name == "InterworkSegmentDiscoveryRoute":
+        mup_type = "mup-isd"
+        prefix_ip = nlri_info.get("prefix_ip", "")
+        prefix_ip_len = nlri_info.get("prefix_ip_len", 0)
+        nlri_str = f"{prefix_ip}/{prefix_ip_len} rd {rd}"
+
+    elif name == "DirectSegmentDiscoveryRoute":
+        mup_type = "mup-dsd"
+        ip = nlri_info.get("ip", "")
+        nlri_str = f"{ip} rd {rd}"
+
+    elif name == "Type1SessionTransformedRoute":
+        mup_type = "mup-t1st"
+        prefix_ip = nlri_info.get("prefix_ip", "")
+        prefix_ip_len = nlri_info.get("prefix_ip_len", 0)
+        teid = nlri_info.get("teid", "0")
+        qfi = nlri_info.get("qfi", "0")
+        endpoint_ip = nlri_info.get("endpoint_ip", "")
+        nlri_str = f"{prefix_ip}/{prefix_ip_len} rd {rd} teid {teid} qfi {qfi} endpoint {endpoint_ip}"
+        # Optional source field
+        source_ip = nlri_info.get("source_ip", "")
+        source_ip_len = nlri_info.get("source_ip_len", 0)
+        if source_ip and source_ip_len > 0 and source_ip != "b''":
+            nlri_str += f" source {source_ip}"
+
+    elif name == "Type2SessionTransformedRoute":
+        mup_type = "mup-t2st"
+        endpoint_ip = nlri_info.get("endpoint_ip", "")
+        endpoint_len = nlri_info.get("endpoint_len", 0)
+        teid = nlri_info.get("teid", "0")
+        # Calculate TEID length: endpoint_len - IP bits (32 for IPv4, 128 for IPv6)
+        ip_bits = 128 if ":" in endpoint_ip else 32
+        teid_len = endpoint_len - ip_bits
+        nlri_str = f"{endpoint_ip} rd {rd} teid {teid}/{teid_len}"
+
+    if not mup_type:
+        return None
+
+    # Build command parts
+    cmd_parts = [f"announce {afi} mup {mup_type} {nlri_str} next-hop {nexthop}"]
+
+    # Add extended-community attribute
+    if "extended-community" in attributes:
+        ecomms = attributes["extended-community"]
+        if ecomms:
+            ecomm_strs = []
+            for ec in ecomms:
+                if isinstance(ec, dict) and "string" in ec:
+                    ecomm_strs.append(ec["string"])
+            if ecomm_strs:
+                cmd_parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
+
+    # Add bgp-prefix-sid-srv6 attribute if present
+    if "bgp-prefix-sid" in attributes:
+        prefix_sid = attributes["bgp-prefix-sid"]
+        # Handle l3-service format
+        if "l3-service" in prefix_sid:
+            for service in prefix_sid["l3-service"]:
+                sid = service.get("sid", "")
+                behavior = service.get("endpoint_behavior", 0)
+                structure = service.get("structure", {})
+                lbl = structure.get("locator-block-length", 0)
+                lnl = structure.get("locator-node-length", 0)
+                fl = structure.get("function-length", 0)
+                al = structure.get("argument-length", 0)
+                tl = structure.get("transposition-length", 0)
+                to = structure.get("transposition-offset", 0)
+                # Format: bgp-prefix-sid-srv6 ( l3-service <SID> <behavior> [<LBL>,<LNL>,<FL>,<AL>,<TL>,<TO>] )
+                cmd_parts.append(
+                    f"bgp-prefix-sid-srv6 ( l3-service {sid} 0x{behavior:x} [{lbl},{lnl},{fl},{al},{tl},{to}] )"
+                )
+        # Handle l2-service format
+        elif "l2-service" in prefix_sid:
+            for service in prefix_sid["l2-service"]:
+                sid = service.get("sid", "")
+                behavior = service.get("endpoint_behavior", 0)
+                structure = service.get("structure", {})
+                lbl = structure.get("locator-block-length", 0)
+                lnl = structure.get("locator-node-length", 0)
+                fl = structure.get("function-length", 0)
+                al = structure.get("argument-length", 0)
+                tl = structure.get("transposition-length", 0)
+                to = structure.get("transposition-offset", 0)
+                cmd_parts.append(
+                    f"bgp-prefix-sid-srv6 ( l2-service {sid} 0x{behavior:x} [{lbl},{lnl},{fl},{al},{tl},{to}] )"
+                )
+
+    return " ".join(cmd_parts)
+
+
+def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
+    """Decode BGP UPDATE hex to API command string(s).
+
+    Args:
+        payload_hex: The BGP UPDATE payload in hex (after 19-byte header)
+        neighbor: Neighbor for negotiation context
+
+    Returns:
+        List of API command strings. For single NLRI: ['announce route X ...']
+        For multiple NLRIs: ['announce attributes ... nlri X Y Z']
+        Empty list on error.
+    """
+    try:
+        raw = _hexa(payload_hex)
+        update = _make_update(neighbor, raw)
+        if not update:
+            return []
+
+        encoder = Response.JSON(json_version)
+        json_str = encoder.update(neighbor, "in", update, b"", b"", Negotiated.UNSET)
+        data = json.loads(json_str)
+
+        message = data.get("neighbor", {}).get("message", {}).get("update", {})
+        if not message:
+            return []
+
+        # Extract announce or withdraw
+        announce = message.get("announce", {})
+        withdraw = message.get("withdraw", {})
+        attributes = message.get("attribute", {})
+
+        commands = []
+
+        # Helper to format attributes for command
+        def format_attributes(attrs: dict) -> list[str]:
+            """Format attributes for API command."""
+            parts = []
+            if "origin" in attrs:
+                parts.append(f"origin {attrs['origin']}")
+            if "as-path" in attrs:
+                as_path = attrs["as-path"]
+                if as_path:
+                    as_nums = []
+                    if isinstance(as_path, list):
+                        as_nums = as_path
+                    elif isinstance(as_path, dict):
+                        for seg in as_path.values():
+                            if isinstance(seg, dict) and "value" in seg:
+                                as_nums.extend(seg["value"])
+                    if as_nums:
+                        parts.append(f"as-path [{' '.join(str(a) for a in as_nums)}]")
+            if "local-preference" in attrs:
+                parts.append(f"local-preference {attrs['local-preference']}")
+            if "med" in attrs:
+                parts.append(f"med {attrs['med']}")
+            if "atomic-aggregate" in attrs:
+                if attrs["atomic-aggregate"]:
+                    parts.append("atomic-aggregate")
+            if "aggregator" in attrs:
+                parts.append(f"aggregator {attrs['aggregator']}")
+            if "community" in attrs:
+                comms = attrs["community"]
+                if comms:
+                    comm_strs = []
+                    for c in comms:
+                        if isinstance(c, list) and len(c) == 2:
+                            comm_strs.append(f"{c[0]}:{c[1]}")
+                        else:
+                            comm_strs.append(str(c))
+                    parts.append(f"community [{' '.join(comm_strs)}]")
+            if "large-community" in attrs:
+                lcomms = attrs["large-community"]
+                if lcomms:
+                    lcomm_strs = []
+                    for lc in lcomms:
+                        if isinstance(lc, list) and len(lc) == 3:
+                            lcomm_strs.append(f"{lc[0]}:{lc[1]}:{lc[2]}")
+                        else:
+                            lcomm_strs.append(str(lc))
+                    parts.append(f"large-community [{' '.join(lcomm_strs)}]")
+            if "extended-community" in attrs:
+                ecomms = attrs["extended-community"]
+                if ecomms:
+                    ecomm_strs = []
+                    for ec in ecomms:
+                        if isinstance(ec, dict) and "string" in ec:
+                            ecomm_strs.append(ec["string"])
+                        else:
+                            ecomm_strs.append(str(ec))
+                    parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
+            if "originator-id" in attrs:
+                parts.append(f"originator-id {attrs['originator-id']}")
+            if "cluster-list" in attrs:
+                cluster_list = attrs["cluster-list"]
+                if cluster_list:
+                    parts.append(f"cluster-list [{' '.join(cluster_list)}]")
+            if "bgp-prefix-sid" in attrs:
+                sid = attrs["bgp-prefix-sid"]
+                if isinstance(sid, dict):
+                    sid_parts = []
+                    if "sr-label-index" in sid:
+                        sid_parts.append(str(sid["sr-label-index"]))
+                    if "sr-srgbs" in sid:
+                        srgb_strs = []
+                        for srgb in sid["sr-srgbs"]:
+                            if isinstance(srgb, list) and len(srgb) == 2:
+                                srgb_strs.append(f"( {srgb[0]},{srgb[1]} )")
+                        if srgb_strs:
+                            sid_parts.append(f"[ {' '.join(srgb_strs)} ]")
+                    if sid_parts:
+                        parts.append(f"bgp-prefix-sid [ {', '.join(sid_parts)} ]")
+            # Generic attributes (attribute-0xNN-0xNN format)
+            for attr_name, attr_value in attrs.items():
+                if attr_name.startswith("attribute-"):
+                    parts_match = re.match(
+                        r"attribute-0x([0-9a-fA-F]+)-0x([0-9a-fA-F]+)",
+                        attr_name,
+                    )
+                    if parts_match:
+                        type_code = int(parts_match.group(1), 16)
+                        flags = int(parts_match.group(2), 16)
+                        if isinstance(attr_value, str) and attr_value.startswith("0x"):
+                            hex_data = attr_value[2:]
+                            parts.append(
+                                f"attribute [0x{type_code:02x} 0x{flags:02x} 0x{hex_data}]"
+                            )
+            return parts
+
+        # Process announces
+        for family, nexthops in announce.items():
+            # Skip unsupported families that need special syntax
+            if any(x in family for x in ("flow", "mcast-vpn")):
+                continue
+
+            # Handle MUP family specially
+            if "mup" in family:
+                afi = "ipv4" if "ipv4" in family else "ipv6"
+                for nexthop, nlris in nexthops.items():
+                    for nlri_info in nlris:
+                        cmd = format_mup_announce(afi, nexthop, nlri_info, attributes)
+                        if cmd:
+                            commands.append(cmd)
+                continue
+
+            # Handle L2VPN VPLS specially
+            if "vpls" in family:
+                for nexthop, nlris in nexthops.items():
+                    for nlri_info in nlris:
+                        rd = nlri_info.get("rd", "")
+                        endpoint = nlri_info.get("endpoint", 0)
+                        base = nlri_info.get("base", 0)
+                        offset = nlri_info.get("offset", 0)
+                        size = nlri_info.get("size", 0)
+
+                        cmd_parts = [
+                            f"announce vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop {nexthop}"
+                        ]
+                        cmd_parts.extend(format_attributes(attributes))
+                        commands.append(" ".join(cmd_parts))
+                continue
+
+            for nexthop, nlris in nexthops.items():
+                # Check for EOR (End-of-RIB) marker
+                # JSON format: [ "eor": { "afi": "...", "safi": "..." } ]
+                if nlris and isinstance(nlris, list) and len(nlris) == 1:
+                    nlri_item = nlris[0]
+                    if isinstance(nlri_item, str) and nlri_item == "eor":
+                        # Legacy format - just "eor" string, family from outer key
+                        commands.append(f"announce eor {family}")
+                        continue
+                    if isinstance(nlri_item, dict) and "eor" in nlri_item:
+                        # Dict format with eor key
+                        eor_info = nlri_item["eor"]
+                        if isinstance(eor_info, dict):
+                            afi = eor_info.get("afi", "ipv4")
+                            safi = eor_info.get("safi", "unicast")
+                            commands.append(f"announce eor {afi} {safi}")
+                        continue
+                # Check if we have multiple NLRIs - use 'attributes' syntax
+                if len(nlris) > 1:
+                    # Multi-NLRI: announce attributes ... nlri X Y Z
+                    # Check if all NLRIs have same path-information
+                    path_info = nlris[0].get("path-information") if nlris else None
+                    all_same_path = all(
+                        n.get("path-information") == path_info for n in nlris
+                    )
+
+                    cmd_parts = ["announce attributes"]
+                    if path_info and all_same_path:
+                        cmd_parts.append(f"path-information {path_info}")
+                    cmd_parts.append(f"next-hop {nexthop}")
+                    cmd_parts.extend(format_attributes(attributes))
+                    cmd_parts.append("nlri")
+                    for nlri_info in nlris:
+                        nlri = nlri_info.get("nlri", "")
+                        cmd_parts.append(nlri)
+                    commands.append(" ".join(cmd_parts))
+                else:
+                    # Single NLRI: announce route X next-hop Y ...
+                    for nlri_info in nlris:
+                        nlri = nlri_info.get("nlri", "")
+                        api_family = family_to_api_format(family)
+                        cmd_parts = [f"announce {api_family} {nlri} next-hop {nexthop}"]
+
+                        # Add path-information if present (add-path capability)
+                        if "path-information" in nlri_info:
+                            cmd_parts.append(
+                                f"path-information {nlri_info['path-information']}"
+                            )
+
+                        # Add RD for VPN families
+                        if "rd" in nlri_info:
+                            cmd_parts.append(f"rd {nlri_info['rd']}")
+
+                        # Add labels for MPLS families
+                        if "label" in nlri_info:
+                            labels = nlri_info["label"]
+                            if labels:
+                                if isinstance(labels[0], list):
+                                    cmd_parts.append(f"label {labels[0][0]}")
+                                else:
+                                    cmd_parts.append(f"label {labels[0]}")
+
+                        cmd_parts.extend(format_attributes(attributes))
+                        commands.append(" ".join(cmd_parts))
+
+        # Process withdraws
+        for family, nlris in withdraw.items():
+            # Skip unsupported families that need special syntax
+            if any(x in family for x in ("flow", "mup", "mcast-vpn")):
+                continue
+
+            # Handle L2VPN VPLS specially
+            if "vpls" in family:
+                for nlri_info in nlris:
+                    if isinstance(nlri_info, dict):
+                        rd = nlri_info.get("rd", "")
+                        endpoint = nlri_info.get("endpoint", 0)
+                        base = nlri_info.get("base", 0)
+                        offset = nlri_info.get("offset", 0)
+                        size = nlri_info.get("size", 0)
+
+                        # Withdraw needs next-hop for config parser validation
+                        cmd_parts = [
+                            f"withdraw vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop 0.0.0.0"
+                        ]
+                        commands.append(" ".join(cmd_parts))
+                continue
+
+            api_family = family_to_api_format(family)
+
+            for nlri_info in nlris:
+                if isinstance(nlri_info, dict):
+                    nlri = nlri_info.get("nlri", "")
+                    cmd_parts = [f"withdraw {api_family} {nlri}"]
+
+                    # Add RD for VPN families
+                    if "rd" in nlri_info:
+                        cmd_parts.append(f"rd {nlri_info['rd']}")
+
+                    # Add labels for MPLS families
+                    if "label" in nlri_info:
+                        labels = nlri_info["label"]
+                        if labels:
+                            if isinstance(labels[0], list):
+                                cmd_parts.append(f"label {labels[0][0]}")
+                            else:
+                                cmd_parts.append(f"label {labels[0]}")
+
+                    # Add attributes for withdraw (needed for VPN withdraws)
+                    cmd_parts.extend(format_attributes(attributes))
+
+                    commands.append(" ".join(cmd_parts))
+                else:
+                    commands.append(f"withdraw {api_family} {nlri_info}")
+
+        return commands
+
+    except Exception:
+        return []
+
+
+def parse_ci_file_for_verify(
+    ci_path: Path,
+) -> tuple[Path | None, int | None, list[tuple[int, str, str, str]]]:
+    """Parse a CI file for cmd:/raw: pairs to verify.
+
+    Returns:
+        Tuple of (config_file_path, peer_as, list of (line_num, step, cmd, raw_hex))
+    """
+    config_file = None
+    peer_as = None
+    pairs: list[tuple[int, str, str, str]] = []
+
+    lines = ci_path.read_text().splitlines()
+    prev_cmd = None
+    prev_cmd_step = None
+    prev_cmd_line = None
+
+    for line_num, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        # Parse option:file:config.conf
+        if stripped.startswith("option:file:"):
+            config_name = stripped.split(":", 2)[2]
+            config_file = ci_path.parent / config_name
+            if not config_file.exists():
+                config_file = (
+                    ci_path.parent.parent.parent / "etc" / "exabgp" / config_name
+                )
+            continue
+
+        # Parse option:asn:NNNN
+        if stripped.startswith("option:asn:"):
+            try:
+                peer_as = int(stripped.split(":", 2)[2])
+            except ValueError:
+                pass
+            continue
+
+        # Parse N:cmd:...
+        cmd_match = re.match(r"^(\d+):cmd:(.+)$", stripped)
+        if cmd_match:
+            prev_cmd_step = cmd_match.group(1)
+            prev_cmd = cmd_match.group(2)
+            prev_cmd_line = line_num
+            continue
+
+        # Parse N:raw:...
+        raw_match = re.match(r"^(\d+):raw:(.+)$", stripped)
+        if raw_match:
+            step = raw_match.group(1)
+            raw_hex = raw_match.group(2).replace(":", "")
+
+            # Only UPDATE messages (type 02) with preceding cmd: line
+            if len(raw_hex) >= 38 and raw_hex[36:38].upper() == "02":
+                if prev_cmd and prev_cmd_step == step:
+                    pairs.append((prev_cmd_line, step, prev_cmd, raw_hex))
+
+            prev_cmd = None
+            prev_cmd_step = None
+            prev_cmd_line = None
+            continue
+
+    return config_file, peer_as, pairs
+
+
+def parse_ci_file_for_generate(
+    ci_path: Path,
+) -> tuple[Path | None, int | None, list[tuple[int, str, str, bool, bool]]]:
+    """Parse a CI file for raw: lines to generate cmd: from.
+
+    Returns:
+        Tuple of (config_file_path, peer_as, list of (line_num, step, raw_hex, has_cmd, skip_roundtrip))
+    """
+    config_file = None
+    peer_as = None
+    raw_entries: list[tuple[int, str, str, bool, bool]] = []
+
+    lines = ci_path.read_text().splitlines()
+    prev_was_cmd = False
+    prev_cmd_step = None
+    skip_next_raw = False
+
+    for line_num, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            prev_was_cmd = False
+            continue
+
+        # Check for "# No cmd:" comment - skip the following raw: in round-trip tests
+        if stripped.startswith("#"):
+            if "no cmd:" in stripped.lower():
+                skip_next_raw = True
+            prev_was_cmd = False
+            continue
+
+        if stripped.startswith("option:file:"):
+            config_name = stripped.split(":", 2)[2]
+            config_file = ci_path.parent / config_name
+            if not config_file.exists():
+                config_file = (
+                    ci_path.parent.parent.parent / "etc" / "exabgp" / config_name
+                )
+            prev_was_cmd = False
+            continue
+
+        if stripped.startswith("option:asn:"):
+            try:
+                peer_as = int(stripped.split(":", 2)[2])
+            except ValueError:
+                pass
+            prev_was_cmd = False
+            continue
+
+        cmd_match = re.match(r"^(\d+):cmd:(.+)$", stripped)
+        if cmd_match:
+            prev_was_cmd = True
+            prev_cmd_step = cmd_match.group(1)
+            continue
+
+        raw_match = re.match(r"^(\d+):raw:(.+)$", stripped)
+        if raw_match:
+            step = raw_match.group(1)
+            raw_hex = raw_match.group(2).replace(":", "")
+            if len(raw_hex) >= 38 and raw_hex[36:38].upper() == "02":
+                has_cmd = prev_was_cmd and prev_cmd_step == step
+                raw_entries.append((line_num, step, raw_hex, has_cmd, skip_next_raw))
+            prev_was_cmd = False
+            skip_next_raw = False
+            continue
+
+        prev_was_cmd = False
+        skip_next_raw = False
+
+    return config_file, peer_as, raw_entries
+
+
+def self_check_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int, int]:
+    """Self-check: decode raw→cmd, then encode cmd→raw and compare.
+
+    Returns:
+        Tuple of (passed, failed, skipped)
+    """
+    config_file, peer_as, raw_entries = parse_ci_file_for_generate(ci_path)
+
+    if not raw_entries:
+        return 0, 0, 0
+
+    neighbor = get_neighbor(config_file)
+
+    # Check if ASN4 capability is disabled in the config
+    asn4_disabled = not neighbor.capability.asn4.is_enabled()
+
+    # Default to iBGP if no peer-as specified
+    local_as = 65533
+    if peer_as is None:
+        peer_as = 65533
+
+    passed = 0
+    failed = 0
+    skipped = 0
+
+    for line_num, step, raw_hex, has_cmd, skip_roundtrip in raw_entries:
+        # Skip messages marked with "# No cmd:" comment
+        if skip_roundtrip:
+            skipped += 1
+            if verbose:
+                print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: marked as no-roundtrip")
+            continue
+
+        payload = raw_hex[38:]
+
+        # Handle EOR messages specially - generate cmd directly from wire format
+        is_eor = False
+        eor_cmd = None
+        if payload.upper() == "00000000":
+            # Legacy IPv4 unicast EOR
+            is_eor = True
+            eor_cmd = "announce eor ipv4 unicast"
+        elif payload.upper().startswith("00000007900F0003"):
+            # MP EOR - extract AFI/SAFI from payload
+            # Format: 00000007 (path attrs len) + 900F0003 (MP_UNREACH header) + AFI (2 bytes) + SAFI (1 byte)
+            is_eor = True
+            try:
+                afi_hex = payload[16:20]
+                safi_hex = payload[20:22]
+                afi_int = int(afi_hex, 16)
+                safi_int = int(safi_hex, 16)
+                from exabgp.protocol.family import AFI, SAFI
+                afi_str = str(AFI(afi_int))
+                safi_str = str(SAFI(safi_int))
+                eor_cmd = f"announce eor {afi_str} {safi_str}"
+            except Exception:
+                pass
+
+        if is_eor and eor_cmd:
+            # Round-trip EOR
+            encoded = encode_api_command(eor_cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled)
+            if encoded and encoded.upper() == raw_hex.upper():
+                passed += 1
+                if verbose:
+                    print(f"    {GREEN}PASS{RESET} line {line_num + 1}")
+            else:
+                failed += 1
+                print(f"    {RED}FAIL{RESET} line {line_num + 1}: EOR round-trip mismatch")
+                if verbose:
+                    print(f"      cmd: {eor_cmd}")
+                    print(f"      got:      {encoded}")
+                    print(f"      expected: {raw_hex}")
+            continue
+
+        # Step 1: Decode raw to cmd(s)
+        cmds = decode_to_api_command(payload, neighbor)
+        if not cmds:
+            skipped += 1
+            if verbose:
+                print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: decode failed")
+            continue
+
+        # For round-trip, we use the first command (which may be 'attributes' for multi-NLRI)
+        cmd = cmds[0]
+
+        # Step 2: Encode cmd back to raw
+        encoded = encode_api_command(cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled)
+        if not encoded:
+            failed += 1
+            print(f"    {RED}FAIL{RESET} line {line_num + 1}: encode failed")
+            if verbose:
+                print(f"      cmd: {cmd}")
+            continue
+
+        # Step 3: Compare
+        if encoded.upper() == raw_hex.upper():
+            passed += 1
+            if verbose:
+                print(f"    {GREEN}PASS{RESET} line {line_num + 1}")
+        else:
+            failed += 1
+            print(f"    {RED}FAIL{RESET} line {line_num + 1}: round-trip mismatch")
+            if verbose:
+                print(f"      cmd: {cmd}")
+                # Find first difference
+                for i in range(min(len(encoded), len(raw_hex))):
+                    if encoded[i].upper() != raw_hex[i].upper():
+                        print(f"      first diff at byte {i // 2}")
+                        print(
+                            f"      got:      ...{encoded[max(0, i - 16) : i + 32]}..."
+                        )
+                        print(
+                            f"      expected: ...{raw_hex[max(0, i - 16) : i + 32]}..."
+                        )
+                        break
+                if len(encoded) != len(raw_hex):
+                    print(
+                        f"      length: got {len(encoded) // 2} bytes, expected {len(raw_hex) // 2} bytes"
+                    )
+
+    return passed, failed, skipped
+
+
+def verify_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int]:
+    """Verify cmd: lines encode to matching raw: lines.
+
+    Returns:
+        Tuple of (passed, failed)
+    """
+    config_file, peer_as, pairs = parse_ci_file_for_verify(ci_path)
+
+    if not pairs:
+        return 0, 0
+
+    # Get neighbor context for encoding parameters
+    neighbor = get_neighbor(config_file) if config_file else None
+
+    # Extract encoding parameters from neighbor
+    local_as = 65533
+    asn4_disabled = False
+    if neighbor:
+        local_as = int(neighbor.session.local_as)
+        asn4_disabled = not neighbor.capability.asn4.is_enabled()
+
+    # Default peer_as to local_as (iBGP) if not specified
+    if peer_as is None:
+        peer_as = local_as
+
+    passed = 0
+    failed = 0
+
+    for line_num, step, cmd, expected_raw in pairs:
+        encoded = encode_api_command(cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled)
+
+        if encoded is None:
+            failed += 1
+            print(f"    {RED}FAIL{RESET} line {line_num + 1}: encode failed")
+            if verbose:
+                print(f"      cmd: {cmd}")
+            continue
+
+        if encoded.upper() == expected_raw.upper():
+            passed += 1
+            if verbose:
+                print(f"    {GREEN}PASS{RESET} line {line_num + 1}")
+        else:
+            failed += 1
+            print(f"    {RED}FAIL{RESET} line {line_num + 1}: hex mismatch")
+            if verbose:
+                print(f"      cmd: {cmd}")
+                # Find first difference
+                for i in range(min(len(encoded), len(expected_raw))):
+                    if encoded[i].upper() != expected_raw[i].upper():
+                        print(f"      first diff at byte {i // 2}")
+                        print(
+                            f"      got:      ...{encoded[max(0, i - 16) : i + 32]}..."
+                        )
+                        print(
+                            f"      expected: ...{expected_raw[max(0, i - 16) : i + 32]}..."
+                        )
+                        break
+
+    return passed, failed
+
+
+def generate_ci_file(
+    ci_path: Path, verbose: bool = False, inline: bool = False
+) -> tuple[int, int, list[tuple[int, str]]]:
+    """Generate cmd: lines from raw: lines.
+
+    Returns:
+        Tuple of (processed, skipped, list of (line_num, cmd_line))
+    """
+    config_file, _peer_as, raw_entries = parse_ci_file_for_generate(ci_path)
+
+    if not raw_entries:
+        return 0, 0, []
+
+    neighbor = get_neighbor(config_file)
+
+    processed = 0
+    skipped = 0
+    generated: list[tuple[int, str]] = []
+
+    for line_num, step, raw_hex, has_cmd, skip_roundtrip in raw_entries:
+        # Skip messages marked with "# No cmd:" comment
+        if skip_roundtrip:
+            skipped += 1
+            if verbose:
+                print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: marked as no-roundtrip")
+            continue
+
+        if has_cmd and not inline:
+            skipped += 1
+            if verbose:
+                print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: already has cmd:")
+            continue
+
+        payload = raw_hex[38:]
+
+        # Handle EOR messages - generate cmd directly from wire format
+        eor_cmd = None
+        if payload.upper() == "00000000":
+            # Legacy IPv4 unicast EOR
+            eor_cmd = "announce eor ipv4 unicast"
+        elif payload.upper().startswith("00000007900F0003"):
+            # MP EOR - extract AFI/SAFI from payload
+            try:
+                afi_hex = payload[16:20]
+                safi_hex = payload[20:22]
+                afi_int = int(afi_hex, 16)
+                safi_int = int(safi_hex, 16)
+                from exabgp.protocol.family import AFI, SAFI
+                afi_str = str(AFI(afi_int))
+                safi_str = str(SAFI(safi_int))
+                eor_cmd = f"announce eor {afi_str} {safi_str}"
+            except Exception:
+                pass
+
+        if eor_cmd:
+            cmd_line = f"{step}:cmd:{eor_cmd}"
+            generated.append((line_num, cmd_line))
+            processed += 1
+            if verbose:
+                print(f"    {GREEN}GEN{RESET} line {line_num + 1}: {eor_cmd}")
+            continue
+
+        cmds = decode_to_api_command(payload, neighbor)
+
+        if cmds:
+            # Use first command (which may be 'attributes' for multi-NLRI)
+            cmd = cmds[0]
+            cmd_line = f"{step}:cmd:{cmd}"
+            generated.append((line_num, cmd_line))
+            processed += 1
+            if verbose:
+                short_cmd = cmd[:60] + "..." if len(cmd) > 60 else cmd
+                print(f"    {GREEN}GEN{RESET} line {line_num + 1}: {short_cmd}")
+        else:
+            skipped += 1
+            if verbose:
+                print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: decode failed")
+
+    return processed, skipped, generated
+
+
+def insert_cmd_lines(ci_path: Path, generated: list[tuple[int, str]]) -> bool:
+    """Insert cmd: lines into CI file before corresponding raw: lines."""
+    if not generated:
+        return False
+
+    cmd_by_line: dict[int, str] = {ln: cmd for ln, cmd in generated}
+    lines = ci_path.read_text().splitlines()
+    new_lines: list[str] = []
+
+    for i, line in enumerate(lines):
+        if i in cmd_by_line:
+            new_lines.append(cmd_by_line[i])
+        new_lines.append(line)
+
+    new_content = "\n".join(new_lines) + "\n"
+    old_content = ci_path.read_text()
+
+    if new_content != old_content:
+        ci_path.write_text(new_content)
+        return True
+    return False
+
+
+def replace_cmd_lines(ci_path: Path, generated: list[tuple[int, str]]) -> bool:
+    """Replace existing cmd: lines with newly generated ones."""
+    if not generated:
+        return False
+
+    cmd_by_line: dict[int, str] = {ln: cmd for ln, cmd in generated}
+    lines = ci_path.read_text().splitlines()
+    new_lines: list[str] = []
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+
+        # Skip old cmd: lines
+        if stripped and not stripped.startswith("#"):
+            if re.match(r"^(\d+):cmd:.+$", stripped):
+                continue
+
+        if i in cmd_by_line:
+            new_lines.append(cmd_by_line[i])
+
+        new_lines.append(line)
+
+    new_content = "\n".join(new_lines) + "\n"
+    old_content = ci_path.read_text()
+
+    if new_content != old_content:
+        ci_path.write_text(new_content)
+        return True
+    return False
+
+
+def find_ci_files(repo_root: Path, paths: list[str] | None = None) -> list[Path]:
+    """Find CI files to process."""
+    if paths:
+        result = []
+        for p in paths:
+            path = Path(p)
+            if not path.is_absolute():
+                path = repo_root / p
+            if path.is_file():
+                result.append(path)
+            elif path.is_dir():
+                result.extend(sorted(path.glob("*.ci")))
+        return result
+
+    ci_files = []
+    for subdir in ["encoding", "api"]:
+        ci_dir = repo_root / "qa" / subdir
+        if ci_dir.exists():
+            ci_files.extend(sorted(ci_dir.glob("*.ci")))
+
+    return ci_files
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Show detailed output"
+    )
+    parser.add_argument(
+        "-s", "--self-check", action="store_true", help="Round-trip test: raw→cmd→raw"
+    )
+    parser.add_argument(
+        "-g", "--generate", action="store_true", help="Generate cmd: from raw: (decode)"
+    )
+    parser.add_argument(
+        "-w", "--write", action="store_true", help="Write generated cmd: to files"
+    )
+    parser.add_argument(
+        "-a", "--annotate", action="store_true", help="Alias for --generate --write"
+    )
+    parser.add_argument(
+        "-i", "--inline", action="store_true", help="Replace existing cmd: lines"
+    )
+    parser.add_argument("files", nargs="*", help="CI files or directories to process")
+    args = parser.parse_args()
+
+    if args.annotate:
+        args.generate = True
+        args.write = True
+
+    if args.inline and not args.generate:
+        parser.error("--inline requires --generate")
+
+    init_environment()
+
+    ci_files = find_ci_files(REPO_ROOT, args.files if args.files else None)
+
+    if not ci_files:
+        print("No CI files found")
+        return 2
+
+    total_passed = 0
+    total_failed = 0
+    total_skipped = 0
+    total_generated = 0
+
+    for ci_file in ci_files:
+        content = ci_file.read_text()
+        rel_path = (
+            ci_file.relative_to(REPO_ROOT)
+            if ci_file.is_relative_to(REPO_ROOT)
+            else ci_file
+        )
+
+        if args.self_check:
+            # Self-check mode: raw→cmd→raw round-trip
+            if ":raw:" not in content:
+                continue
+
+            passed, failed, skipped = self_check_ci_file(ci_file, args.verbose)
+
+            if passed > 0 or failed > 0 or (args.verbose and skipped > 0):
+                if failed == 0:
+                    print(
+                        f"{rel_path}: {GREEN}PASS{RESET} ({passed} ok, {skipped} skipped)"
+                    )
+                else:
+                    print(
+                        f"{rel_path}: {RED}FAIL{RESET} ({failed} failed, {passed} ok, {skipped} skipped)"
+                    )
+
+            total_passed += passed
+            total_failed += failed
+            total_skipped += skipped
+
+        elif args.generate:
+            # Generate mode: decode raw: to cmd:
+            if ":raw:" not in content:
+                continue
+
+            processed, skipped, generated = generate_ci_file(
+                ci_file, args.verbose, args.inline
+            )
+
+            if processed > 0 or (args.verbose and skipped > 0):
+                print(f"{rel_path}: {processed} generated, {skipped} skipped")
+
+            total_generated += processed
+            total_skipped += skipped
+
+            if generated and args.write:
+                if args.inline:
+                    if replace_cmd_lines(ci_file, generated):
+                        print(f"  {GREEN}REPLACED{RESET} {len(generated)} cmd lines")
+                else:
+                    if insert_cmd_lines(ci_file, generated):
+                        print(f"  {GREEN}WROTE{RESET} {len(generated)} cmd lines")
+        else:
+            # Verify mode (default): check cmd: encodes to raw:
+            if ":cmd:" not in content:
+                continue
+
+            passed, failed = verify_ci_file(ci_file, args.verbose)
+
+            if passed > 0 or failed > 0:
+                if failed == 0:
+                    print(f"{rel_path}: {GREEN}PASS{RESET} ({passed} tests)")
+                else:
+                    print(
+                        f"{rel_path}: {RED}FAIL{RESET} ({failed}/{passed + failed} failed)"
+                    )
+
+            total_passed += passed
+            total_failed += failed
+
+    # Summary
+    if args.self_check:
+        if total_passed == 0 and total_failed == 0 and total_skipped == 0:
+            print("No raw: lines found to self-check (OK)")
+            return 0
+
+        print()
+        print("=" * 60)
+        print("SELF-CHECK SUMMARY (raw→cmd→raw)")
+        print("=" * 60)
+        print(f"{GREEN}Passed:{RESET}  {total_passed}")
+        print(f"{RED}Failed:{RESET}  {total_failed}")
+        print(f"{YELLOW}Skipped:{RESET} {total_skipped}")
+
+        return 0 if total_failed == 0 else 1
+
+    elif args.generate:
+        if total_generated == 0 and total_skipped == 0:
+            print("No raw: lines found to generate from (OK)")
+            return 0
+
+        print()
+        print("=" * 60)
+        print("GENERATION SUMMARY")
+        print("=" * 60)
+        print(f"Generated: {total_generated}")
+        print(f"Skipped:   {total_skipped}")
+        return 0
+
+    else:
+        if total_passed == 0 and total_failed == 0:
+            print("No cmd: lines found to verify (OK)")
+            return 0
+
+        print()
+        print("=" * 60)
+        print("VERIFICATION SUMMARY")
+        print("=" * 60)
+        print(f"{GREEN}Passed:{RESET}  {total_passed}")
+        print(f"{RED}Failed:{RESET}  {total_failed}")
+
+        return 0 if total_failed == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

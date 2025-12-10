@@ -1,14 +1,19 @@
 option:file:conf-group-limit.conf
 # EOR
+1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
+1:cmd:announce eor ipv6 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000201
 
 # Two IPv4
+1:cmd:announce attributes next-hop 10.0.0.1 origin igp local-preference 100 nlri 193.0.2.1/32 193.0.2.2/32
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0036:02:00000015400101004002004003040A0000014005040000006420C100020120C1000202
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.1":[{"nlri":"193.0.2.1/32"},{"nlri":"193.0.2.2/32"}]}}}}}}
 
 # Two IPv6
+1:cmd:announce ipv6 unicast 2a02:b80:0:1::1/128 next-hop 2a02:b80:1::1 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E:02:000000374001010040020040050400000064800E26000201102A020B8000010000000000000000000100802A020B80000000010000000000000001
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv6 unicast":{"2a02:b80:1::1":[{"nlri":"2a02:b80:0:1::1/128"}]}}}}}}
+1:cmd:announce ipv6 unicast 2a02:b80:0:2::2/128 next-hop 2a02:b80:1::1 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E:02:000000374001010040020040050400000064800E26000201102A020B8000010000000000000000000100802A020B80000000020000000000000002
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv6 unicast":{"2a02:b80:1::1":[{"nlri":"2a02:b80:0:2::2/128"}]}}}}}}

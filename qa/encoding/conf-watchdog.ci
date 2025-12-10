@@ -1,21 +1,30 @@
 option:file:api-watchdog.conf
+1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
+1:cmd:announce attributes next-hop 1.2.3.4 origin igp local-preference 100 nlri 66.66.66.66/32 88.88.88.88/32
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0036:02:0000001540010100400200400304010203044005040000006420424242422058585858
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.2.3.4":[{"nlri":"66.66.66.66/32"},{"nlri":"88.88.88.88/32"}]}}}}}}
+1:cmd:announce route 100.100.100.100/32 next-hop 192.168.1.100 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:0000001540010100400200400304C0A80164400504000000642064646464
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"192.168.1.100":[{"nlri":"100.100.100.100/32"}]}}}}}}
 
+1:cmd:announce route 77.77.77.77/32 next-hop 1.2.3.4 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040102030440050400000064204D4D4D4D
 5:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.2.3.4":[{"nlri":"77.77.77.77/32"}]}}}}}}
+2:cmd:withdraw route 77.77.77.77/32
 2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001C:02:0005204D4D4D4D0000
 6:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"77.77.77.77/32"}]}}}}}
 
+3:cmd:announce route 77.77.77.77/32 next-hop 1.2.3.4 origin igp local-preference 100
 3:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040102030440050400000064204D4D4D4D
 5:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.2.3.4":[{"nlri":"77.77.77.77/32"}]}}}}}}
+4:cmd:withdraw route 77.77.77.77/32
 4:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001C:02:0005204D4D4D4D0000
 6:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"77.77.77.77/32"}]}}}}}
 
+5:cmd:announce route 77.77.77.77/32 next-hop 1.2.3.4 origin igp local-preference 100
 5:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040102030440050400000064204D4D4D4D
 5:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.2.3.4":[{"nlri":"77.77.77.77/32"}]}}}}}}
+6:cmd:withdraw route 77.77.77.77/32
 6:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001C:02:0005204D4D4D4D0000
 6:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"77.77.77.77/32"}]}}}}}

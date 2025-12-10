@@ -1,5 +1,6 @@
 option:file:api-broken-flow.conf
 # EOR IPv4 Flow
+0:cmd:announce eor ipv4 flow
 0:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000185
 
 # Announce then Withdraw

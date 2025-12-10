@@ -1,9 +1,13 @@
 option:file:api-rr.conf
+1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
+2:cmd:announce route 192.168.0.0/32 next-hop 10.0.0.0 origin igp local-preference 100
 2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000004005040000006420C0A80000
 2:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.0":[{"nlri":"192.168.0.0/32"}]}}}}}}
+2:cmd:announce route 192.168.0.1/32 next-hop 10.0.0.1 origin igp local-preference 100
 2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000014005040000006420C0A80001
 2:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.1":[{"nlri":"192.168.0.1/32"}]}}}}}}
 3:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:05:00010001
+4:cmd:announce route 192.168.0.2/32 next-hop 10.0.0.1 origin igp local-preference 100
 4:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000014005040000006420C0A80002
 4:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.1":[{"nlri":"192.168.0.2/32"}]}}}}}}

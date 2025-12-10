@@ -316,6 +316,38 @@ if nlri.has_rd:
 
 ---
 
+## JSON/API Backward Compatibility
+
+**CRITICAL: Do NOT break existing JSON API consumers.**
+
+When modifying JSON output format for NLRI types, attributes, or messages:
+
+1. **API v4 (`v4_json()`)**: ALWAYS maintain existing format for backward compatibility
+   - Users have deployed systems parsing API v4 JSON output
+   - Changing field names, structure, or values breaks their code
+   - Example: MUP API v4 uses CamelCase names like `Type2SessionTransformedRoute`
+
+2. **API v6 (`json()`)**: MAY introduce cleaner RFC-aligned formats
+   - Example: MUP API v6 uses kebab-case names like `type-2-st-route`
+
+3. **Implementation pattern** (see `src/exabgp/bgp/message/update/nlri/flow.py` for example):
+   - `json()` - Returns API v6 format (default, may use new cleaner formats)
+   - `v4_json()` - Returns API v4 format (backward compatible, calls `json()` by default)
+   - Override `v4_json()` in subclasses that need different output for API v4
+
+4. **When adding new JSON fields**: Add to both `json()` and `v4_json()` output
+   - New fields don't break backward compatibility
+   - Removing or renaming fields DOES break compatibility
+
+**Examples of breaking changes (FORBIDDEN for API v4):**
+- Renaming `"name": "Type2SessionTransformedRoute"` to `"name": "type-2-st-route"`
+- Changing `"rd": "100:100"` format to `"rd": {"asn": 100, "number": 100}`
+- Removing any existing field
+
+**See:** `plan/mup-json-name-format.md` for implementation example
+
+---
+
 ## Quick Checklist
 
 - [ ] Python 3.12+ syntax (prefer `int | str` over `Union[int, str]`)

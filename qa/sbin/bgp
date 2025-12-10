@@ -1016,8 +1016,13 @@ class Checker(object):
                 flushed(f'invalid rule: {rule}')
                 sys.exit(0)
 
-            # Skip json lines - they are for test_json regression tests only
-            if encoding == 'json':
+            # Skip json/jsv4/jsv6 lines - they are for test_json regression tests only
+            if encoding in ('json', 'jsv4', 'jsv6'):
+                continue
+
+            # Skip cmd: lines - they are for test_api_encode generation only
+            # Tests must use raw: lines (cmd: would use same encoder as test subject)
+            if encoding == 'cmd':
                 continue
 
             conn = prefix[0]

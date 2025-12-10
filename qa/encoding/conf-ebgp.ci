@@ -1,5 +1,7 @@
 option:file:conf-ebgp.conf
 option:asn:65000
+1:cmd:announce route 10.0.0.0/24 next-hop 10.0.1.254 origin igp as-path [65533]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:000000144001010040020602010000FFFD4003040A0001FE180A0000
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65000},"direction":"in","message":{"update":{"attribute":{"origin":"igp","as-path":{"0":{"element":"as-sequence","value":[65533]}}},"announce":{"ipv4 unicast":{"10.0.1.254":[{"nlri":"10.0.0.0/24"}]}}}}}}
+1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000

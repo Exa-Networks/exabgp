@@ -1,10 +1,15 @@
 option:file:conf-group.conf
+1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
+1:cmd:announce route 1.0.0.0/8 next-hop 1.1.1.1 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002E:02:000000154001010040020040030401010101400504000000640801
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.1.1.1":[{"nlri":"1.0.0.0/8"}]}}}}}}
+1:cmd:announce route 2.0.0.0/8 next-hop 1.1.1.1 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002E:02:000000154001010040020040030401010101400504000000640802
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.1.1.1":[{"nlri":"2.0.0.0/8"}]}}}}}}
+1:cmd:announce route 3.0.0.0/8 next-hop 1.1.1.1 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002E:02:000000154001010040020040030401010101400504000000640803
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.1.1.1":[{"nlri":"3.0.0.0/8"}]}}}}}}
+1:cmd:announce route 4.0.0.0/8 next-hop 1.1.1.1 origin igp local-preference 100
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002E:02:000000154001010040020040030401010101400504000000640804
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.1.1.1":[{"nlri":"4.0.0.0/8"}]}}}}}}

@@ -1,3 +1,4 @@
 option:file:conf-unknowncap.conf
 option:open:send-unknown-capability
+1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000

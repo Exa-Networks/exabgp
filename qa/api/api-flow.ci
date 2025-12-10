@@ -1,4 +1,5 @@
 option:file:api-flow.conf
+1:cmd:announce eor ipv4 flow
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000185
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0025:02:0000000E4001010040020040050400000064
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100}}}}}
