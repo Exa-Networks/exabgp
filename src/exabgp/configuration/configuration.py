@@ -16,6 +16,7 @@ from exabgp.protocol.family import AFI, SAFI
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.operational import OperationalFamily
+    from exabgp.configuration.settings import ConfigurationSettings
     from exabgp.rib.route import Route
 
 from exabgp.configuration.announce import AnnounceIPv4, AnnounceIPv6, AnnounceL2VPN, SectionAnnounce
@@ -218,6 +219,41 @@ class Configuration(_Configuration):
 
         self._neighbors: dict[str, Any] = {}
         self._previous_neighbors: dict[str, Any] = {}
+
+    @classmethod
+    def from_settings(cls, settings: 'ConfigurationSettings') -> 'Configuration':
+        """Create Configuration from validated settings.
+
+        This factory method enables programmatic Configuration creation without
+        parsing config files. Useful for testing and API-driven creation.
+
+        Args:
+            settings: ConfigurationSettings with neighbors and processes.
+
+        Returns:
+            Configured Configuration instance with neighbors ready.
+
+        Raises:
+            ValueError: If settings validation fails.
+        """
+        from exabgp.bgp.neighbor.neighbor import Neighbor
+
+        error = settings.validate()
+        if error:
+            raise ValueError(error)
+
+        # Create Configuration with empty configuration list
+        config = cls(configurations=[])
+
+        # Set processes
+        config.processes = dict(settings.processes)
+
+        # Create neighbors from settings
+        for neighbor_settings in settings.neighbors:
+            neighbor = Neighbor.from_settings(neighbor_settings)
+            config.neighbors[neighbor.name()] = neighbor
+
+        return config
 
     def _build_structure(self) -> dict[str, dict[str, Any]]:
         """Build the configuration structure from parser schemas.

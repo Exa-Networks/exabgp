@@ -26,6 +26,7 @@ from exabgp.protocol.ip import IP
 from exabgp.rib import RIB
 
 if TYPE_CHECKING:
+    from exabgp.bgp.neighbor.settings import NeighborSettings
     from exabgp.rib.route import Route
 
 
@@ -137,6 +138,68 @@ class Neighbor:
         Does NOT support ip_self() - will fail if called.
         """
         return cls()
+
+    @classmethod
+    def from_settings(cls, settings: 'NeighborSettings') -> 'Neighbor':
+        """Create Neighbor from validated settings.
+
+        This factory method enables programmatic Neighbor creation without
+        parsing config files. Useful for testing and API-driven creation.
+
+        Args:
+            settings: NeighborSettings with required fields populated.
+
+        Returns:
+            Configured Neighbor instance with RIB enabled.
+
+        Raises:
+            ValueError: If settings validation fails.
+        """
+        error = settings.validate()
+        if error:
+            raise ValueError(error)
+
+        neighbor = cls()
+
+        # Create Session from settings (this calls session.infer())
+        neighbor.session = Session.from_settings(settings.session)
+
+        # Set BGP policy attributes
+        neighbor.description = settings.description
+        neighbor.hold_time = HoldTime(settings.hold_time)
+        neighbor.rate_limit = settings.rate_limit
+        neighbor.host_name = settings.host_name
+        neighbor.domain_name = settings.domain_name
+        neighbor.group_updates = settings.group_updates
+        neighbor.auto_flush = settings.auto_flush
+        neighbor.adj_rib_in = settings.adj_rib_in
+        neighbor.adj_rib_out = settings.adj_rib_out
+        neighbor.manual_eor = settings.manual_eor
+
+        # Set capability (copy to avoid sharing mutable object)
+        neighbor.capability = settings.capability.copy()
+
+        # Add families
+        for family in settings.families:
+            neighbor.add_family(family)
+        for afi, safi, nhafi in settings.nexthops:
+            neighbor.add_nexthop(afi, safi, nhafi)
+        for family in settings.addpaths:
+            neighbor.add_addpath(family)
+
+        # Set routes
+        neighbor.routes = list(settings.routes)
+
+        # Set API
+        neighbor.api = dict(settings.api)
+
+        # Call infer for graceful_restart time derivation
+        neighbor.infer()
+
+        # Initialize RIB with families
+        neighbor.make_rib()
+
+        return neighbor
 
     def infer(self) -> None:
         # Delegate session-related inference to Session

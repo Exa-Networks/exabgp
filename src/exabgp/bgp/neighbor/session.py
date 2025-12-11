@@ -17,6 +17,7 @@ from exabgp.protocol.ip import IP
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.routerid import RouterID
+    from exabgp.bgp.neighbor.settings import SessionSettings
 
 # MD5 password length constraint (RFC 2385)
 MAX_MD5_PASSWORD_LENGTH = 80
@@ -142,3 +143,45 @@ class Session:
 
         if self.md5_ip is None:
             self.md5_ip = self.local_address
+
+    @classmethod
+    def from_settings(cls, settings: 'SessionSettings') -> 'Session':
+        """Create Session from validated settings.
+
+        This factory method enables programmatic Session creation without
+        parsing config files. Useful for testing and API-driven creation.
+
+        Args:
+            settings: SessionSettings with required fields populated.
+
+        Returns:
+            Configured Session instance with infer() called.
+
+        Raises:
+            ValueError: If settings validation fails.
+        """
+        error = settings.validate()
+        if error:
+            raise ValueError(error)
+
+        assert settings.peer_address is not None
+        assert settings.local_as is not None
+        assert settings.peer_as is not None
+
+        session = cls(
+            peer_address=settings.peer_address,
+            local_address=settings.local_address if settings.local_address else IP.NoNextHop,
+            local_as=settings.local_as,
+            peer_as=settings.peer_as,
+            router_id=settings.router_id,
+            md5_password=settings.md5_password,
+            md5_base64=settings.md5_base64,
+            connect=settings.connect,
+            listen=settings.listen,
+            passive=settings.passive,
+            source_interface=settings.source_interface,
+            outgoing_ttl=settings.outgoing_ttl,
+            incoming_ttl=settings.incoming_ttl,
+        )
+        session.infer()
+        return session
