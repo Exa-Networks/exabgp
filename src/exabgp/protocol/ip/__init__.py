@@ -140,9 +140,6 @@ class IP(IPBase):
     def pack_ip(self) -> Buffer:
         return self._packed
 
-    def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> Buffer:
-        return self._packed
-
     def __str__(self) -> str:
         return 'no-nexthop' if not self._packed else IP.ntop(self._packed)
 
@@ -298,12 +295,6 @@ class IPSelf(IP):
         if self.resolved:
             raise ValueError('IPSelf already resolved')
         self._packed = ip.pack_ip()
-
-    def ton(self, negotiated: 'Negotiated | None' = None, afi: AFI = AFI.undefined) -> Buffer:
-        """Get packed bytes representation."""
-        if not self.resolved:
-            raise ValueError('IPSelf.ton() called before resolve()')
-        return self._packed
 
     def pack_ip(self) -> Buffer:
         """Get packed bytes (IP interface compatibility)."""

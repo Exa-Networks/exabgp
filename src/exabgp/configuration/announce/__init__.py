@@ -65,7 +65,7 @@ class ParseAnnounce(Section):
 
         # convert the IP into a integer/long
         ip = 0
-        for c in inet_nlri.cidr.ton():
+        for c in inet_nlri.cidr.packed_cidr():
             ip <<= 8
             ip += c
 

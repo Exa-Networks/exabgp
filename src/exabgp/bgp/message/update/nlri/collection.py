@@ -308,7 +308,7 @@ class MPNLRICollection:
                 _, rd_size = Family.size.get(family_key, (0, 0))
                 nh_rd = bytes([0]) * rd_size if rd_size else b''
                 try:
-                    nexthop = nh_rd + nlri_nexthop.ton(negotiated, nlri.afi)
+                    nexthop = nh_rd + nlri_nexthop.pack_ip()
                 except TypeError:
                     # Fallback for invalid nexthop
                     nexthop = bytes([0]) * 4

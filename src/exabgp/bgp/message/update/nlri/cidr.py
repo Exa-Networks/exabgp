@@ -200,7 +200,7 @@ class CIDR:
         """Return the IP address as a string."""
         return IP.ntop(self._packed)
 
-    def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> bytes:
+    def packed_cidr(self) -> bytes:
         return self._packed
 
     def __repr__(self) -> str:

@@ -173,19 +173,6 @@ class TestIPSelfSentinel:
         sentinel.resolve(ip)
         assert sentinel.index() == ip.pack_ip()
 
-    def test_ton_raises_before_resolution(self) -> None:
-        """IPSelf.ton() raises ValueError before resolve()."""
-        sentinel = IPSelf(AFI.ipv4)
-        with pytest.raises(ValueError, match='before resolve'):
-            sentinel.ton()
-
-    def test_ton_works_after_resolution(self) -> None:
-        """IPSelf.ton() works after resolve()."""
-        sentinel = IPSelf(AFI.ipv4)
-        ip = IPv4.from_string('192.168.1.1')
-        sentinel.resolve(ip)
-        assert sentinel.ton() == ip.pack_ip()
-
     def test_pack_ip_raises_before_resolution(self) -> None:
         """IPSelf.pack_ip() raises ValueError before resolve()."""
         sentinel = IPSelf(AFI.ipv4)

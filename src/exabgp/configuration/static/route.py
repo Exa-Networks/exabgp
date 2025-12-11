@@ -322,7 +322,7 @@ class ParseStaticRoute(Section):
         """
         ipmask = prefix(self.parser.tokeniser)
         settings = INETSettings()
-        settings.cidr = CIDR.make_cidr(ipmask.ton(), ipmask.mask)
+        settings.cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
         settings.afi = IP.toafi(ipmask.top())
         settings.safi = SAFI.mpls_vpn  # Default to IPVPN, can be downgraded in post()
         settings.action = Action.ANNOUNCE
@@ -496,7 +496,7 @@ class ParseStaticRoute(Section):
 
         # convert the IP into a integer/long
         ip = 0
-        for c in nlri.cidr.ton():
+        for c in nlri.cidr.packed_cidr():
             ip <<= 8
             ip += c
 
