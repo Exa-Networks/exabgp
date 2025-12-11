@@ -19,7 +19,15 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import TypeSelectorBuilder, Leaf, LeafList, ValueType
+from exabgp.configuration.schema import (
+    TypeSelectorBuilder,
+    Leaf,
+    LeafList,
+    ValueType,
+    ActionTarget,
+    ActionOperation,
+    ActionKey,
+)
 from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.static.parser import next_hop
@@ -100,11 +108,11 @@ class AnnounceMup(ParseAnnounce):
         return True
 
 
-@ParseAnnounce.register('mup', 'extend-name', 'ipv4')
+@ParseAnnounce.register_family(AFI.ipv4, SAFI.mup, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def mup_ip_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_type_selector_route(tokeniser, AnnounceMup.schema, AFI.ipv4, SAFI.mup, AnnounceMup.check)
 
 
-@ParseAnnounce.register('mup', 'extend-name', 'ipv6')
+@ParseAnnounce.register_family(AFI.ipv6, SAFI.mup, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def mup_ip_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_type_selector_route(tokeniser, AnnounceMup.schema, AFI.ipv6, SAFI.mup, AnnounceMup.check)

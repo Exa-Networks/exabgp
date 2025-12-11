@@ -24,7 +24,15 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import RouteBuilder, Leaf, LeafList, ValueType
+from exabgp.configuration.schema import (
+    RouteBuilder,
+    Leaf,
+    LeafList,
+    ValueType,
+    ActionTarget,
+    ActionOperation,
+    ActionKey,
+)
 
 from exabgp.configuration.static.parser import prefix
 
@@ -166,11 +174,11 @@ class AnnounceIP(ParseAnnounce):
         return True
 
 
-@ParseAnnounce.register('multicast', 'extend-name', 'ipv4')
+@ParseAnnounce.register_family(AFI.ipv4, SAFI.multicast, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def multicast_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceIP.schema, AFI.ipv4, SAFI.multicast)
 
 
-@ParseAnnounce.register('multicast', 'extend-name', 'ipv6')
+@ParseAnnounce.register_family(AFI.ipv6, SAFI.multicast, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def multicast_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceIP.schema, AFI.ipv6, SAFI.multicast)

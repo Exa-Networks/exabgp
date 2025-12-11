@@ -27,7 +27,7 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import RouteBuilder, Leaf, ValueType
+from exabgp.configuration.schema import RouteBuilder, Leaf, ValueType, ActionTarget, ActionOperation, ActionKey
 from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.static.parser import prefix
@@ -83,11 +83,11 @@ class AnnounceLabel(AnnouncePath):
         return True
 
 
-@ParseAnnounce.register('nlri-mpls', 'extend-name', 'ipv4')
+@ParseAnnounce.register_family(AFI.ipv4, SAFI.nlri_mpls, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def nlri_mpls_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceLabel.schema, AFI.ipv4, SAFI.nlri_mpls, AnnounceLabel.check)
 
 
-@ParseAnnounce.register('nlri-mpls', 'extend-name', 'ipv6')
+@ParseAnnounce.register_family(AFI.ipv6, SAFI.nlri_mpls, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def nlri_mpls_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceLabel.schema, AFI.ipv6, SAFI.nlri_mpls, AnnounceLabel.check)

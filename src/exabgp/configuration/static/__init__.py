@@ -16,7 +16,7 @@ from exabgp.bgp.message.update.nlri.settings import INETSettings
 from exabgp.configuration.announce.label import AnnounceLabel
 from exabgp.configuration.announce.path import AnnouncePath
 from exabgp.configuration.announce.vpn import AnnounceVPN
-from exabgp.configuration.schema import Container
+from exabgp.configuration.schema import Container, ActionTarget, ActionOperation
 from exabgp.configuration.static.mpls import label, route_distinguisher
 from exabgp.configuration.static.parser import path_information, prefix
 from exabgp.configuration.static.route import ParseStaticRoute as ParseStaticRoute  # Re-export
@@ -58,7 +58,7 @@ class ParseStatic(ParseStaticRoute):
         return ParseStaticRoute.post(self)
 
 
-@ParseStatic.register('route', 'append-route')
+@ParseStatic.register_command('route', ActionTarget.ROUTE, ActionOperation.EXTEND)
 def route(tokeniser: Any) -> list[Route]:
     """Parse static route using deferred NLRI construction (Settings pattern).
 
@@ -135,7 +135,7 @@ def route(tokeniser: Any) -> list[Route]:
     return list(ParseStatic.split(static_route))
 
 
-@ParseStatic.register('attributes', 'append-route')
+@ParseStatic.register_command('attributes', ActionTarget.ROUTE, ActionOperation.EXTEND)
 def attributes(tokeniser: Any) -> list[Route]:
     """Parse attributes with optional NLRIs using deferred construction (Settings pattern).
 

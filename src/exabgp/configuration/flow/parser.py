@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
-from exabgp.bgp.message.update.attribute import AttributeCollection, NextHop, NextHopSelf
+from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.attribute.community.extended import (
     ExtendedCommunities,
     ExtendedCommunitiesIPv6,
@@ -50,7 +50,7 @@ from exabgp.logger import log, lazymsg
 from exabgp.protocol.family import (
     AFI,
 )
-from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.protocol.ip import IP, IPSelf, IPv4, IPv6
 from exabgp.rib.route import Route
 
 # TypeVar for flow condition classes
@@ -294,13 +294,17 @@ def flow_label(tokeniser: 'Tokeniser') -> Generator[FlowFlowLabel, None, None]:
     yield from _generic_condition(tokeniser, FlowFlowLabel)
 
 
-def next_hop(tokeniser: 'Tokeniser') -> NextHopSelf | NextHop:
+def next_hop(tokeniser: 'Tokeniser') -> IP:
+    """Parse next-hop for FlowSpec routes.
+
+    Returns IP (not NextHop attribute) since Flow NLRI nexthop field
+    stores IP addresses, not BGP attributes. IPSelf is a subclass of IP.
+    """
     value: str = tokeniser()
 
     if value.lower() == 'self':
-        return NextHopSelf(AFI.ipv4)
-    ip: IP = IP.from_string(value)
-    return NextHop.from_string(ip.top())
+        return IPSelf(AFI.ipv4)
+    return IP.from_string(value)
 
 
 def accept(tokeniser: 'Tokeniser') -> None:

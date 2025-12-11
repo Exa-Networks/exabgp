@@ -8,7 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.configuration.l2vpn.vpls import ParseVPLS
-from exabgp.configuration.schema import Container
+from exabgp.configuration.schema import Container, ActionTarget, ActionOperation
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.configuration.validator import RouteBuilderValidator
 
 
@@ -44,7 +45,7 @@ class ParseL2VPN(ParseVPLS):
         return True
 
 
-@ParseL2VPN.register('vpls', 'append-route')
+@ParseL2VPN.register_family(AFI.undefined, SAFI.vpls, ActionTarget.ROUTE, ActionOperation.EXTEND)
 def vpls(tokeniser):
     """Build VPLS route using RouteBuilderValidator with ParseVPLS schema."""
     validator = RouteBuilderValidator(schema=ParseVPLS.schema)

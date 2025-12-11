@@ -15,7 +15,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, LeafList
+from exabgp.configuration.schema import Container, Leaf, LeafList, ActionTarget, ActionOperation
 
 from exabgp.configuration.flow.route import ParseFlowRoute
 from exabgp.configuration.flow.route import ParseFlowMatch
@@ -84,7 +84,7 @@ class ParseFlow(Section):
         return True
 
 
-@ParseFlow.register('route', 'append-route')
+@ParseFlow.register_command('route', ActionTarget.ROUTE, ActionOperation.EXTEND)
 def route(tokeniser: Any) -> list[Route]:
     from exabgp.bgp.message import Action
     from exabgp.protocol.ip import IP

@@ -22,7 +22,15 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import RouteBuilder, Leaf, LeafList, ValueType
+from exabgp.configuration.schema import (
+    RouteBuilder,
+    Leaf,
+    LeafList,
+    ValueType,
+    ActionTarget,
+    ActionOperation,
+    ActionKey,
+)
 from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.flow.parser import source
@@ -310,21 +318,21 @@ class AnnounceFlow(ParseAnnounce):
         return True
 
 
-@ParseAnnounce.register('flow', 'extend-name', 'ipv4')
+@ParseAnnounce.register_family(AFI.ipv4, SAFI.flow_ip, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def flow_ip_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv4, SAFI.flow_ip, AnnounceFlow.check)
 
 
-@ParseAnnounce.register('flow-vpn', 'extend-name', 'ipv4')
+@ParseAnnounce.register_family(AFI.ipv4, SAFI.flow_vpn, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def flow_vpn_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv4, SAFI.flow_vpn, AnnounceFlow.check)
 
 
-@ParseAnnounce.register('flow', 'extend-name', 'ipv6')
+@ParseAnnounce.register_family(AFI.ipv6, SAFI.flow_ip, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def flow_ip_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv6, SAFI.flow_ip, AnnounceFlow.check)
 
 
-@ParseAnnounce.register('flow-vpn', 'extend-name', 'ipv6')
+@ParseAnnounce.register_family(AFI.ipv6, SAFI.flow_vpn, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def flow_vpn_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv6, SAFI.flow_vpn, AnnounceFlow.check)

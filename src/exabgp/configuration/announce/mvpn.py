@@ -22,7 +22,7 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import TypeSelectorBuilder
+from exabgp.configuration.schema import TypeSelectorBuilder, ActionTarget, ActionOperation, ActionKey
 
 from exabgp.configuration.static.mpls import mvpn_sourcead
 from exabgp.configuration.static.mpls import mvpn_sourcejoin
@@ -83,11 +83,11 @@ class AnnounceMVPN(ParseAnnounce):
         return True
 
 
-@ParseAnnounce.register('mcast-vpn', 'extend-name', 'ipv4')
+@ParseAnnounce.register_family(AFI.ipv4, SAFI.mcast_vpn, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def mcast_vpn_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_type_selector_route(tokeniser, AnnounceMVPN.schema, AFI.ipv4, SAFI.mcast_vpn, AnnounceMVPN.check)
 
 
-@ParseAnnounce.register('mcast-vpn', 'extend-name', 'ipv6')
+@ParseAnnounce.register_family(AFI.ipv6, SAFI.mcast_vpn, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def mcast_vpn_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_type_selector_route(tokeniser, AnnounceMVPN.schema, AFI.ipv6, SAFI.mcast_vpn, AnnounceMVPN.check)

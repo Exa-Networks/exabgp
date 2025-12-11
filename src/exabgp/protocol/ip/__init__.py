@@ -43,48 +43,6 @@ class IPBase:
 #
 
 
-class IPSelf(IPBase):
-    SELF = True
-    _packed: Buffer
-
-    def __init__(self, afi: AFI) -> None:
-        super().__init__(afi)
-        self._packed = b''  # Empty = unresolved
-
-    @property
-    def resolved(self) -> bool:
-        """True if resolve() has been called with a concrete IP."""
-        return self._packed != b''
-
-    def resolve(self, ip: 'IP') -> None:
-        """Resolve sentinel to concrete IP. Mutates in-place."""
-        if self.resolved:
-            raise ValueError('IPSelf already resolved')
-        self._packed = ip.pack_ip()
-
-    def ton(self, negotiated: 'Negotiated | None' = None, afi: AFI = AFI.undefined) -> Buffer:
-        """Get packed bytes representation."""
-        if not self.resolved:
-            raise ValueError('IPSelf.ton() called before resolve()')
-        return self._packed
-
-    def pack_ip(self) -> Buffer:
-        """Get packed bytes (IP interface compatibility)."""
-        if not self.resolved:
-            raise ValueError('IPSelf.pack_ip() called before resolve()')
-        return self._packed
-
-    def __repr__(self) -> str:
-        if not self.resolved:
-            return 'self'
-        return IP.ntop(self._packed)
-
-    def index(self) -> bytes:
-        if not self.resolved:
-            return b'self-' + self.afi.name().encode()
-        return bytes(self._packed)
-
-
 class IP(IPBase):
     SELF = False
 
@@ -308,6 +266,63 @@ class IPRange(IP):
 # ==================================================================== NoNextHop
 # Initialize the class-level singleton
 IP.NoNextHop = IP._create_no_nexthop()
+
+
+# ======================================================================= IPSelf
+#
+
+
+class IPSelf(IP):
+    """Special IP that starts unresolved and is resolved in-place via resolve().
+
+    Inherits from IP so return type can simply be `IP` for functions that
+    may return either a concrete IP or a "self" sentinel.
+    """
+
+    SELF: ClassVar[bool] = True
+    RESOLVED: ClassVar[bool] = False  # Override: unresolved by default
+
+    def __init__(self, afi: AFI) -> None:
+        # Bypass IP.__init__ which raises RuntimeError
+        # Set up IPSelf-specific state
+        self._packed = b''  # Empty = unresolved
+        self.afi = afi
+
+    @property
+    def resolved(self) -> bool:
+        """True if resolve() has been called with a concrete IP."""
+        return self._packed != b''
+
+    def resolve(self, ip: IP) -> None:
+        """Resolve sentinel to concrete IP. Mutates in-place."""
+        if self.resolved:
+            raise ValueError('IPSelf already resolved')
+        self._packed = ip.pack_ip()
+
+    def ton(self, negotiated: 'Negotiated | None' = None, afi: AFI = AFI.undefined) -> Buffer:
+        """Get packed bytes representation."""
+        if not self.resolved:
+            raise ValueError('IPSelf.ton() called before resolve()')
+        return self._packed
+
+    def pack_ip(self) -> Buffer:
+        """Get packed bytes (IP interface compatibility)."""
+        if not self.resolved:
+            raise ValueError('IPSelf.pack_ip() called before resolve()')
+        return self._packed
+
+    def __repr__(self) -> str:
+        if not self.resolved:
+            return 'self'
+        return IP.ntop(self._packed)
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+    def index(self) -> bytes:
+        if not self.resolved:
+            return b'self-' + self.afi.name().encode()
+        return bytes(self._packed)
 
 
 # ========================================================================= IPv4

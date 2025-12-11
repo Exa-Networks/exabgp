@@ -23,7 +23,7 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import RouteBuilder, Leaf, ValueType
+from exabgp.configuration.schema import RouteBuilder, Leaf, ValueType, ActionTarget, ActionOperation, ActionKey
 
 from exabgp.configuration.static.parser import prefix
 
@@ -71,11 +71,11 @@ class AnnouncePath(AnnounceIP):
         return True
 
 
-@ParseAnnounce.register('unicast', 'extend-name', 'ipv4')
+@ParseAnnounce.register_family(AFI.ipv4, SAFI.unicast, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def unicast_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnouncePath.schema, AFI.ipv4, SAFI.unicast, AnnouncePath.check)
 
 
-@ParseAnnounce.register('unicast', 'extend-name', 'ipv6')
+@ParseAnnounce.register_family(AFI.ipv6, SAFI.unicast, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def unicast_v6(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnouncePath.schema, AFI.ipv6, SAFI.unicast, AnnouncePath.check)

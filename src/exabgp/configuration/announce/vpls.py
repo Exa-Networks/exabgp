@@ -21,7 +21,15 @@ from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import RouteBuilder, Leaf, LeafList, ValueType
+from exabgp.configuration.schema import (
+    RouteBuilder,
+    Leaf,
+    LeafList,
+    ValueType,
+    ActionTarget,
+    ActionOperation,
+    ActionKey,
+)
 from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.static.parser import attribute
@@ -222,6 +230,6 @@ class AnnounceVPLS(ParseAnnounce):
         return True
 
 
-@ParseAnnounce.register('vpls', 'extend-name', 'l2vpn')
+@ParseAnnounce.register_family(AFI.l2vpn, SAFI.vpls, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def vpls_v4(tokeniser: Tokeniser) -> list[Route]:
     return _build_route(tokeniser, AnnounceVPLS.schema, AFI.l2vpn, SAFI.vpls, AnnounceVPLS.check)

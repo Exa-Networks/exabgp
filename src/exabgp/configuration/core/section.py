@@ -7,16 +7,18 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, TypeVar, TYPE_CHECKING
-from string import ascii_letters
-from string import digits
+from string import ascii_letters, digits
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
+from exabgp.configuration.core.action import apply_action
 from exabgp.configuration.core.error import Error
-from exabgp.configuration.core.scope import Scope
 from exabgp.configuration.core.parser import Parser
+from exabgp.configuration.core.scope import Scope
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget
+from exabgp.protocol.family import AFI, SAFI
 
 if TYPE_CHECKING:
-    from exabgp.configuration.schema import Container, Completion
+    from exabgp.configuration.schema import Completion, Container
     from exabgp.configuration.validator import Validator
 
 F = TypeVar('F', bound=Callable[..., Any])
@@ -81,7 +83,7 @@ class Section(Error):
     default: dict[
         str | tuple[Any, ...], Any
     ] = {}  # command/section has a a defult value, use it if no data was provided
-    action: dict[str | tuple[Any, ...], str] = {}  # how to handle this command ( append, add, assign, route )
+    action: dict[str | tuple[Any, ...], tuple[ActionTarget, ActionOperation, ActionKey]] = {}  # action enums tuple
     assign: dict[str, str] = {}  # configuration to class variable lookup for setattr
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
@@ -95,13 +97,43 @@ class Section(Error):
         self._names = []
 
     @classmethod
-    def register(cls, name: str, action: str, afi: str = '') -> Callable[[F], F]:
+    def register_family(
+        cls,
+        afi: AFI,
+        safi: SAFI,
+        target: ActionTarget,
+        operation: ActionOperation,
+        key: ActionKey = ActionKey.COMMAND,
+    ) -> Callable[[F], F]:
+        """Register a handler for an AFI/SAFI family combination."""
+
         def inner(function: F) -> F:
-            identifier: str | tuple[str, str] = (afi, name) if afi else name
+            afi_name = '' if afi == AFI.undefined else afi.name()
+            safi_name = safi.name()
+            identifier: str | tuple[str, str] = (afi_name, safi_name) if afi_name else safi_name
             if identifier in cls.known:
                 raise RuntimeError('more than one registration per command attempted')
             cls.known[identifier] = function
-            cls.action[identifier] = action
+            cls.action[identifier] = (target, operation, key)
+            return function
+
+        return inner
+
+    @classmethod
+    def register_command(
+        cls,
+        command: str,
+        target: ActionTarget,
+        operation: ActionOperation,
+        key: ActionKey = ActionKey.COMMAND,
+    ) -> Callable[[F], F]:
+        """Register a handler for a simple command (no AFI/SAFI)."""
+
+        def inner(function: F) -> F:
+            if command in cls.known:
+                raise RuntimeError('more than one registration per command attempted')
+            cls.known[command] = function
+            cls.action[command] = (target, operation, key)
             return function
 
         return inner
@@ -173,69 +205,24 @@ class Section(Error):
 
                     return self.error.set(msg)
 
-            # Get action (from schema or dict)
-            action = self._action_from_schema(command) or self.action.get(identifier, '')
+            # Enum-based action dispatch (unified handler)
+            action_enums = self._action_enums_from_schema(command)
+            if action_enums is not None:
+                target, operation, key, field_name = action_enums
+                # Use assign dict to get field name for NLRI fields
+                resolved_field = self.assign.get(command, field_name)
+                apply_action(target, operation, key, self.scope, name, command, insert, resolved_field)
+                return True
 
-            if action == 'set-command':
-                self.scope.set_value(command, insert)
-            elif action == 'extend-name':
-                self.scope.extend(name, insert)
-            elif action == 'append-name':
-                self.scope.append(name, insert)
-            elif action == 'append-command':
-                self.scope.append(command, insert)
-            elif action == 'extend-command':
-                self.scope.extend(command, insert)
-            elif action == 'attribute-add':
-                # Settings mode: add to standalone attributes collection
-                # Legacy mode: add to route's attributes
-                if self.scope.in_settings_mode():
-                    self.scope.settings_attribute_add(name, insert)
-                else:
-                    self.scope.attribute_add(name, insert)
-            elif action == 'settings-set':
-                # Settings mode: set field on settings object
-                self.scope.settings_set(name, self.assign[command], insert)
-            elif action == 'nlri-set':
-                # Settings mode (preferred): set field on settings object
-                # Direct mode (Flow NLRI only): set directly via setattr
-                if self.scope.in_settings_mode():
-                    self.scope.settings_set(name, self.assign[command], insert)
-                else:
-                    # Flow NLRI have setters; INET/Label/IPVPN don't (will raise AttributeError)
-                    route = self.scope.get_route()
-                    field_name = self.assign.get(command, command)
-                    setattr(route.nlri, field_name, insert)
-            elif action == 'nlri-add':
-                for adding in insert:
-                    self.scope.nlri_add(name, command, adding)
-            elif action == 'nlri-nexthop':
-                # Settings mode (preferred): set nexthop on settings object
-                # Direct mode (Flow NLRI only): use immutable with_nexthop()
-                if self.scope.in_settings_mode():
-                    self.scope.get_settings().nexthop = insert
-                else:
-                    route = self.scope.get_route()
-                    self.scope.replace_route(route.with_nexthop(insert))
-            elif action == 'nexthop-and-attribute':
-                ip, attribute = insert
-                if ip:
-                    if self.scope.in_settings_mode():
-                        self.scope.get_settings().nexthop = ip
-                    else:
-                        route = self.scope.get_route()
-                        self.scope.replace_route(route.with_nexthop(ip))
-                if attribute:
-                    if self.scope.in_settings_mode():
-                        self.scope.settings_attribute_add(name, attribute)
-                    else:
-                        self.scope.attribute_add(name, attribute)
-            elif action == 'append-route':
-                self.scope.extend_routes(insert)
-            elif action == 'nop':
-                pass
-            else:
-                raise RuntimeError(f'name {name} command {command} has no action set')
+            # Decorator-registered actions (@Section.register) - already enum tuples
+            action_tuple = self.action.get(identifier)
+            if action_tuple is not None:
+                target, operation, key = action_tuple
+                resolved_field = self.assign.get(command)
+                apply_action(target, operation, key, self.scope, name, command, insert, resolved_field)
+                return True
+
+            raise RuntimeError(f'name {name} command {command} has no action set')
             return True
         except ValueError as exc:
             return self.error.set(str(exc))
@@ -245,15 +232,17 @@ class Section(Error):
     schema: 'Container | None' = None  # Override in subclasses with schema definitions
 
     @classmethod
-    def _action_from_schema(cls, command: str) -> str | None:
-        """Get action for command from schema.
+    def _action_enums_from_schema(
+        cls, command: str
+    ) -> 'tuple[ActionTarget, ActionOperation, ActionKey, str | None] | None':
+        """Get action enums for command from schema.
 
         Args:
             command: The command name to look up
 
         Returns:
-            Action string from schema, or None if schema not defined
-            or command not found in schema children.
+            Tuple of (target, operation, key, field_name) from schema,
+            or None if schema not defined or command not found.
         """
         if cls.schema is None:
             return None
@@ -262,7 +251,11 @@ class Section(Error):
 
         child = cls.schema.children.get(command)
         if isinstance(child, (Leaf, LeafList)):
-            return child.action
+            enums = child.get_action_enums()
+            if enums is not None:
+                target, operation, key = enums
+                field_name = child.field_name if hasattr(child, 'field_name') else None
+                return (target, operation, key, field_name)
         return None
 
     @classmethod
