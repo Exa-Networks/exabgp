@@ -97,3 +97,96 @@ def create_minimal_configuration(
     config_settings.neighbors = [neighbor_settings]
 
     return Configuration.from_settings(config_settings)
+
+
+def add_route_to_config(
+    configuration: 'Configuration',
+    route_text: str,
+    action: str = 'announce',
+) -> bool:
+    """Parse route text and add to all neighbors in configuration.
+
+    This is a convenience function for adding routes to a programmatically
+    created configuration.
+
+    Args:
+        configuration: Configuration instance (from create_minimal_configuration)
+        route_text: Route specification (e.g., "route 10.0.0.0/24 next-hop 1.2.3.4")
+        action: Action - 'announce' or 'withdraw' (default: 'announce')
+
+    Returns:
+        True if routes were added to at least one neighbor.
+
+    Example:
+        config = create_minimal_configuration(families='ipv4 unicast')
+        add_route_to_config(config, 'route 10.0.0.0/24 next-hop 1.2.3.4')
+    """
+    from exabgp.bgp.message import Action as MsgAction
+
+    routes = configuration.parse_route_text(route_text, action)
+    if not routes:
+        return False
+
+    added = False
+    action_enum = MsgAction.ANNOUNCE if action == 'announce' else MsgAction.WITHDRAW
+
+    for neighbor in configuration.neighbors.values():
+        for route in routes:
+            route = route.with_action(action_enum)
+            if route.nlri.family().afi_safi() in neighbor.families():
+                resolved = neighbor.resolve_self(route)
+                neighbor.rib.outgoing.add_to_rib(resolved)
+                added = True
+
+    return added
+
+
+def create_configuration_with_routes(
+    route_text: str,
+    peer_address: str = '127.0.0.1',
+    local_address: str = '127.0.0.1',
+    local_as: int = 65533,
+    peer_as: int = 65533,
+    families: str = 'ipv4 unicast',
+    add_path: bool = False,
+    action: str = 'announce',
+) -> 'Configuration':
+    """Create configuration with routes already added.
+
+    Convenience function combining create_minimal_configuration and add_route_to_config.
+
+    Args:
+        route_text: Route specification (e.g., "route 10.0.0.0/24 next-hop 1.2.3.4")
+        peer_address: BGP peer IP address (default: 127.0.0.1)
+        local_address: Local IP address (default: 127.0.0.1)
+        local_as: Local AS number (default: 65533)
+        peer_as: Peer AS number (default: 65533)
+        families: Space-separated address families or 'all' (default: 'ipv4 unicast')
+        add_path: Enable ADD-PATH for configured families (default: False)
+        action: Action - 'announce' or 'withdraw' (default: 'announce')
+
+    Returns:
+        Configured Configuration instance with routes added.
+
+    Raises:
+        ValueError: If configuration or route parsing fails.
+
+    Example:
+        config = create_configuration_with_routes(
+            'route 10.0.0.0/24 next-hop 1.2.3.4',
+            families='ipv4 unicast',
+        )
+    """
+    config = create_minimal_configuration(
+        peer_address=peer_address,
+        local_address=local_address,
+        local_as=local_as,
+        peer_as=peer_as,
+        families=families,
+        add_path=add_path,
+    )
+
+    if not add_route_to_config(config, route_text, action):
+        raise ValueError(f'Failed to parse route: {route_text}')
+
+    return config

@@ -5,6 +5,7 @@ import string
 import argparse
 
 from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.setup import create_minimal_configuration
 
 from exabgp.debug.intercept import trace_interceptor
 
@@ -14,24 +15,6 @@ from exabgp.environment import getconf
 
 from exabgp.reactor.loop import Reactor
 from exabgp.logger import log
-
-
-conf_template = """\
-neighbor 127.0.0.1 {
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as 65533;
-    peer-as 65533;
-
-    family {
-        [families];
-    }
-
-    capability {
-        [path-information]
-    }
-}
-"""
 
 
 def is_bgp(message: str) -> bool:
@@ -95,25 +78,26 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
     log.init(env)
     trace_interceptor(env.debug.pdb)
 
-    conf = conf_template.replace('[path-information]', 'add-path send/receive;' if cmdarg.path_information else '')
-
     if cmdarg.configuration:
+        # Use config file
         configuration = Configuration([getconf(cmdarg.configuration)])
-
-    elif cmdarg.family:
-        families = cmdarg.family.split()
-        if len(families) % 2:
-            sys.stdout.write('families provided are invalid')
+        reloaded = configuration.reload()
+        if not reloaded:
+            sys.stdout.write(f'configuration error: {configuration.error}\n')
             sys.stdout.flush()
             sys.exit(1)
-        families_pair = [families[n : n + 2] for n in range(0, len(families), 2)]
-        families_text = ';'.join([f'{a} {s}' for a, s in families_pair])
-        conf = conf.replace('[families]', families_text)
-        configuration = Configuration([conf], text=True)
-
     else:
-        conf = conf.replace('[families]', 'all')
-        configuration = Configuration([conf], text=True)
+        # Use programmatic configuration setup
+        families = cmdarg.family if cmdarg.family else 'all'
+        try:
+            configuration = create_minimal_configuration(
+                families=families,
+                add_path=cmdarg.path_information,
+            )
+        except ValueError as e:
+            sys.stdout.write(f'configuration error: {e}\n')
+            sys.stdout.flush()
+            sys.exit(1)
 
     reactor = Reactor(configuration)
     all_valid = True

@@ -143,3 +143,132 @@ class TestCreateMinimalConfiguration:
         neighbor = list(config.neighbors.values())[0]
         # families() is a method - should have all families
         assert len(neighbor.families()) == len(Family.size)
+
+
+class TestAddRouteToConfig:
+    """Tests for add_route_to_config() helper."""
+
+    def test_add_route_basic(self):
+        """add_route_to_config() should add route to neighbor RIB."""
+        from exabgp.configuration.setup import create_minimal_configuration, add_route_to_config
+
+        config = create_minimal_configuration(peer_address='127.0.1.1', families='ipv4 unicast')
+        result = add_route_to_config(config, 'route 10.0.0.0/24 next-hop 1.2.3.4')
+
+        assert result is True
+        neighbor = list(config.neighbors.values())[0]
+        routes = list(neighbor.rib.outgoing.cached_routes())
+        assert len(routes) == 1
+        assert '10.0.0.0/24' in str(routes[0])
+
+    def test_add_route_preserves_neighbors(self):
+        """add_route_to_config() should preserve neighbors."""
+        from exabgp.configuration.setup import create_minimal_configuration, add_route_to_config
+
+        config = create_minimal_configuration(peer_address='127.0.1.2', families='ipv4 unicast')
+        neighbor_count_before = len(config.neighbors)
+
+        add_route_to_config(config, 'route 10.0.0.0/24 next-hop 1.2.3.4')
+
+        assert len(config.neighbors) == neighbor_count_before
+
+    def test_add_route_invalid_syntax(self):
+        """add_route_to_config() should return False for invalid route syntax."""
+        from exabgp.configuration.setup import create_minimal_configuration, add_route_to_config
+
+        config = create_minimal_configuration(peer_address='127.0.1.3', families='ipv4 unicast')
+        result = add_route_to_config(config, 'invalid route syntax')
+
+        assert result is False
+
+    def test_add_multiple_routes(self):
+        """add_route_to_config() should work for multiple route additions."""
+        from exabgp.configuration.setup import create_minimal_configuration, add_route_to_config
+
+        config = create_minimal_configuration(peer_address='127.0.1.4', families='ipv4 unicast')
+
+        add_route_to_config(config, 'route 10.0.0.0/24 next-hop 1.2.3.4')
+        add_route_to_config(config, 'route 10.0.1.0/24 next-hop 1.2.3.5')
+
+        neighbor = list(config.neighbors.values())[0]
+        routes = list(neighbor.rib.outgoing.cached_routes())
+        assert len(routes) == 2
+
+
+class TestCreateConfigurationWithRoutes:
+    """Tests for create_configuration_with_routes() helper."""
+
+    def test_create_with_route(self):
+        """create_configuration_with_routes() should create config with route."""
+        from exabgp.configuration.setup import create_configuration_with_routes
+
+        config = create_configuration_with_routes(
+            'route 10.0.0.0/24 next-hop 1.2.3.4',
+            peer_address='127.0.2.1',
+            families='ipv4 unicast',
+        )
+
+        assert len(config.neighbors) == 1
+        neighbor = list(config.neighbors.values())[0]
+        routes = list(neighbor.rib.outgoing.cached_routes())
+        assert len(routes) == 1
+
+    def test_create_with_route_custom_as(self):
+        """create_configuration_with_routes() should accept custom AS."""
+        from exabgp.configuration.setup import create_configuration_with_routes
+
+        config = create_configuration_with_routes(
+            'route 10.0.0.0/24 next-hop 1.2.3.4',
+            peer_address='127.0.2.2',
+            local_as=65000,
+            peer_as=65001,
+            families='ipv4 unicast',
+        )
+
+        neighbor = list(config.neighbors.values())[0]
+        assert neighbor.session.local_as == 65000
+        assert neighbor.session.peer_as == 65001
+
+    def test_create_with_invalid_route_raises(self):
+        """create_configuration_with_routes() should raise for invalid route."""
+        from exabgp.configuration.setup import create_configuration_with_routes
+
+        with pytest.raises(ValueError, match='Failed to parse route'):
+            create_configuration_with_routes('invalid route', peer_address='127.0.2.3', families='ipv4 unicast')
+
+
+class TestParseRouteText:
+    """Tests for Configuration.parse_route_text() method."""
+
+    def test_parse_route_text_basic(self):
+        """parse_route_text() should parse route and preserve neighbors."""
+        from exabgp.configuration.setup import create_minimal_configuration
+
+        config = create_minimal_configuration(peer_address='127.0.3.1', families='ipv4 unicast')
+        neighbor_count_before = len(config.neighbors)
+
+        routes = config.parse_route_text('route 10.0.0.0/24 next-hop 1.2.3.4')
+
+        assert len(routes) == 1
+        assert len(config.neighbors) == neighbor_count_before
+
+    def test_parse_route_text_invalid(self):
+        """parse_route_text() should return empty list for invalid syntax."""
+        from exabgp.configuration.setup import create_minimal_configuration
+
+        config = create_minimal_configuration(peer_address='127.0.3.2', families='ipv4 unicast')
+        routes = config.parse_route_text('invalid route')
+
+        assert routes == []
+        # Neighbors should still be preserved
+        assert len(config.neighbors) == 1
+
+    def test_parse_route_text_ipv6(self):
+        """parse_route_text() should handle IPv6 routes."""
+        from exabgp.configuration.setup import create_minimal_configuration
+
+        config = create_minimal_configuration(peer_address='127.0.3.3', families='ipv6 unicast')
+        routes = config.parse_route_text('route 2001:db8::/32 next-hop 2001:db8::1')
+
+        assert len(routes) == 1
+        assert '2001:db8::/32' in str(routes[0])

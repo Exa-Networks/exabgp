@@ -510,6 +510,11 @@ class Configuration(_Configuration):
             )
 
     def _reload(self) -> bool:
+        # If created via from_settings(), no configurations to reload
+        # but neighbors are already set up - return success
+        if not self._configurations and self.neighbors:
+            return True
+
         # taking the first configuration available (FIFO buffer)
         fname = self._configurations.pop(0)
         self._configurations.append(fname)
@@ -622,6 +627,44 @@ class Configuration(_Configuration):
             log.debug(lazymsg('configuration.parse.error message={error_msg}', error_msg=error_msg), 'configuration')
             return False
         return True
+
+    def parse_route_text(self, route_text: str, action: str = 'announce') -> list['Route']:
+        """Parse route text into Route objects without clearing neighbors.
+
+        Unlike partial(), this preserves existing neighbors and just parses
+        the route text. Useful for programmatic configuration building.
+
+        Args:
+            route_text: Route specification (e.g., "route 10.0.0.0/24 next-hop 1.2.3.4")
+            action: Action for routes - 'announce' or 'withdraw'
+
+        Returns:
+            List of parsed Route objects, empty list if parsing failed.
+
+        Example:
+            config = create_minimal_configuration(families='ipv4 unicast')
+            routes = config.parse_route_text('route 10.0.0.0/24 next-hop 1.2.3.4')
+            for route in routes:
+                neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route))
+        """
+        # Save neighbors before partial() clears them
+        saved_neighbors = self.neighbors.copy()
+
+        # Parse the route text
+        self.static.clear()
+        if not self.partial('static', route_text, action):
+            # Restore neighbors on failure
+            self.neighbors = saved_neighbors
+            return []
+
+        # Get parsed routes
+        self.scope.to_context()
+        routes = self.scope.pop_routes()
+
+        # Restore neighbors
+        self.neighbors = saved_neighbors
+
+        return routes
 
     def _enter(self, name: str) -> bool | str:
         location = self.parser.tokeniser()

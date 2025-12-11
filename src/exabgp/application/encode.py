@@ -14,6 +14,7 @@ import sys
 import argparse
 
 from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.setup import create_configuration_with_routes
 
 from exabgp.debug.intercept import trace_interceptor
 
@@ -26,28 +27,6 @@ from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
 
 from exabgp.logger import log
-
-
-conf_template = """\
-neighbor 127.0.0.1 {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-
-    family {{
-        {families};
-    }}
-
-    capability {{
-        {path_information}
-    }}
-
-    static {{
-        {routes};
-    }}
-}}
-"""
 
 
 def setargs(sub: argparse.ArgumentParser) -> None:
@@ -103,34 +82,27 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
 
     # Build configuration
     if cmdarg.configuration:
+        # Use config file
         configuration = Configuration([getconf(cmdarg.configuration)])
-    else:
-        # Parse family argument
-        families = cmdarg.family.split()
-        if len(families) % 2:
-            sys.stdout.write('families provided are invalid\n')
+        reloaded = configuration.reload()
+        if not reloaded:
+            sys.stdout.write(f'configuration error: {configuration.error}\n')
             sys.stdout.flush()
             sys.exit(1)
-        families_pair = [families[n : n + 2] for n in range(0, len(families), 2)]
-        families_text = ';'.join([f'{a} {s}' for a, s in families_pair])
-
-        # Build config from template
-        conf = conf_template.format(
-            local_as=cmdarg.local_as,
-            peer_as=cmdarg.peer_as,
-            families=families_text,
-            path_information='add-path send/receive;' if cmdarg.path_information else '',
-            routes=cmdarg.route,
-        )
-
-        configuration = Configuration([conf], text=True)
-
-    # Parse the configuration
-    reloaded = configuration.reload()
-    if not reloaded:
-        sys.stdout.write(f'configuration error: {configuration.error}\n')
-        sys.stdout.flush()
-        sys.exit(1)
+    else:
+        # Use programmatic configuration setup with routes
+        try:
+            configuration = create_configuration_with_routes(
+                route_text=cmdarg.route,
+                local_as=cmdarg.local_as,
+                peer_as=cmdarg.peer_as,
+                families=cmdarg.family,
+                add_path=cmdarg.path_information,
+            )
+        except ValueError as e:
+            sys.stdout.write(f'configuration error: {e}\n')
+            sys.stdout.flush()
+            sys.exit(1)
 
     if not configuration.neighbors:
         sys.stdout.write('no neighbor defined in configuration\n')
