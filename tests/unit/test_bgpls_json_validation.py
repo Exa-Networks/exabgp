@@ -168,27 +168,25 @@ class TestLinkAttributesJson:
         assert 'remote-te-router-id' in result
         assert result['remote-te-router-id'] == '192.0.2.1'
 
-    @pytest.mark.skip(reason='SrAdjacency not yet converted to packed-bytes-first')
     def test_sr_adjacency_json(self) -> None:
         """SrAdjacency (TLV 1099) produces valid JSON"""
-        flags = {'F': 0, 'B': 0, 'V': 1, 'L': 1, 'S': 0, 'P': 0, 'RSV': 0, 'RSV2': 0}
-        attr = SrAdjacency(flags=flags, sids=[16000], weight=10, undecoded=[])
+        flags = {'F': 0, 'B': 0, 'V': 1, 'L': 1, 'S': 0, 'P': 0}
+        attr = SrAdjacency.make_sradjacency(flags=flags, weight=10, sids=[16000])
         result = validate_json(attr.json(), 'SrAdjacency')
         assert 'sr-adj' in result
         assert 'flags' in result['sr-adj']
         assert 'sids' in result['sr-adj']
         assert 'weight' in result['sr-adj']
 
-    @pytest.mark.skip(reason='SrAdjacencyLan not yet converted to packed-bytes-first')
     def test_sr_adjacency_lan_json(self) -> None:
         """SrAdjacencyLan (TLV 1100) produces valid JSON"""
-        sradjlan = {
-            'neighbor': '0102.0304.0506',
-            'flags': {'F': 0, 'B': 0, 'V': 1, 'L': 1, 'S': 0, 'P': 0},
-            'sids': [16001],
-            'weight': 5,
-        }
-        attr = SrAdjacencyLan(sradjlans=[sradjlan])
+        flags = {'F': 0, 'B': 0, 'V': 1, 'L': 1, 'S': 0, 'P': 0}
+        attr = SrAdjacencyLan.make_sradjacencylan(
+            flags=flags,
+            weight=5,
+            system_id='0102.0304.0506',
+            sid=16001,
+        )
         result = validate_json(attr.json(), 'SrAdjacencyLan')
         assert 'sr-adj-lan-sids' in result
 

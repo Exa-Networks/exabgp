@@ -7,7 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from struct import unpack
+from struct import pack, unpack
 from exabgp.util import hexstring
 
 from exabgp.bgp.message.notification import Notify
@@ -86,6 +86,49 @@ class SrAdjacency(FlagLS):
         if len(data) < SRADJ_MIN_LENGTH:
             raise Notify(3, 5, f'SR Adjacency SID: data too short, need {SRADJ_MIN_LENGTH} bytes, got {len(data)}')
         return cls(data)
+
+    @classmethod
+    def make_sradjacency(
+        cls,
+        flags: dict[str, int],
+        weight: int,
+        sids: list[int],
+    ) -> SrAdjacency:
+        """Create SrAdjacency from semantic values.
+
+        Args:
+            flags: Dict with keys F, B, V, L, S, P (RSV bits ignored)
+            weight: Weight value (0-255)
+            sids: List of SID values
+
+        Returns:
+            SrAdjacency instance with packed wire-format bytes
+        """
+        # Pack flags byte: F(7), B(6), V(5), L(4), S(3), P(2), RSV(1), RSV(0)
+        flags_byte = (
+            (flags.get('F', 0) << 7)
+            | (flags.get('B', 0) << 6)
+            | (flags.get('V', 0) << 5)
+            | (flags.get('L', 0) << 4)
+            | (flags.get('S', 0) << 3)
+            | (flags.get('P', 0) << 2)
+        )
+
+        # Pack header: Flags(1) + Weight(1) + Reserved(2)
+        packed = pack('!BBH', flags_byte, weight, 0)
+
+        # Pack SIDs based on V and L flags
+        v_flag = flags.get('V', 0)
+        l_flag = flags.get('L', 0)
+        for sid in sids:
+            if v_flag and l_flag:
+                # 3-byte label: 20-bit label value in upper bits
+                packed += pack('!L', sid << 4)[1:]  # Take last 3 bytes
+            else:
+                # 4-byte index
+                packed += pack('!I', sid)
+
+        return cls(packed)
 
     def json(self, compact: bool = False) -> str:
         return '"sr-adj": ' + json.dumps(

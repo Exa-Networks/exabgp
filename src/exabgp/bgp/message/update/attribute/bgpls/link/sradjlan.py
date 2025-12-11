@@ -7,7 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from struct import unpack
+from struct import pack, unpack
 from typing import Any, TYPE_CHECKING
 
 from exabgp.util import hexstring
@@ -109,6 +109,64 @@ class SrAdjacencyLan(FlagLS):
 
         parsed = [{'flags': flags, 'weight': weight, 'system-id': system_id, 'sid': sid, 'undecoded': raw}]
         return cls(original_data, parsed)
+
+    @classmethod
+    def make_sradjacencylan(
+        cls,
+        flags: dict[str, int],
+        weight: int,
+        system_id: str,
+        sid: int,
+    ) -> SrAdjacencyLan:
+        """Create SrAdjacencyLan from semantic values.
+
+        Args:
+            flags: Dict with keys F, B, V, L, S, P (RSV bits ignored)
+            weight: Weight value (0-255)
+            system_id: IS-IS System-ID as hex string (e.g., "0102.0304.0506" or "010203040506")
+            sid: SID value
+
+        Returns:
+            SrAdjacencyLan instance with packed wire-format bytes
+        """
+        # Pack flags byte: F(7), B(6), V(5), L(4), S(3), P(2), RSV(1), RSV(0)
+        flags_byte = (
+            (flags.get('F', 0) << 7)
+            | (flags.get('B', 0) << 6)
+            | (flags.get('V', 0) << 5)
+            | (flags.get('L', 0) << 4)
+            | (flags.get('S', 0) << 3)
+            | (flags.get('P', 0) << 2)
+        )
+
+        # Pack header: Flags(1) + Weight(1) + Reserved(2)
+        packed = pack('!BBH', flags_byte, weight, 0)
+
+        # Pack System-ID (6 bytes) - remove dots if present
+        sysid_hex = system_id.replace('.', '')
+        packed += bytes.fromhex(sysid_hex)
+
+        # Pack SID based on V and L flags
+        v_flag = flags.get('V', 0)
+        l_flag = flags.get('L', 0)
+        if v_flag and l_flag:
+            # 3-byte label: 20-bit label value in upper bits
+            packed += pack('!L', sid << 4)[1:]  # Take last 3 bytes
+        else:
+            # 4-byte index
+            packed += pack('!I', sid)
+
+        # Create parsed form for JSON output
+        parsed = [
+            {
+                'flags': flags,
+                'weight': weight,
+                'system-id': sysid_hex,
+                'sid': sid,
+                'undecoded': [],
+            }
+        ]
+        return cls(packed, parsed)
 
     def json(self, compact: bool = False) -> str:
         return f'"sr-adj-lan-sids": {json.dumps(self.sr_adj_lan_sids)}'
