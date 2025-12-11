@@ -32,6 +32,7 @@ from exabgp.configuration.parser import auto_asn, auto_boolean
 # Removed imports migrated to schema validators:
 # description, domainname, hostname, md5, rate_limit, source_interface
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
+from exabgp.configuration.validator import IntValidators
 
 # Removed imports migrated to schema validators: boolean, ip, peer_ip, port
 from exabgp.environment import getenv
@@ -115,8 +116,7 @@ class ParseNeighbor(Section):
                 type=ValueType.INTEGER,
                 description='BGP hold time in seconds (0 disables)',
                 default=180,
-                min_value=0,
-                max_value=65535,
+                validator=IntValidators.hold_time(),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -164,8 +164,7 @@ class ParseNeighbor(Section):
             'outgoing-ttl': Leaf(
                 type=ValueType.INTEGER,
                 description='TTL for outgoing packets (255 for GTSM)',
-                min_value=1,
-                max_value=255,
+                validator=IntValidators.range(1, 255),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -173,8 +172,7 @@ class ParseNeighbor(Section):
             'incoming-ttl': Leaf(
                 type=ValueType.INTEGER,
                 description='Minimum TTL for incoming packets (GTSM)',
-                min_value=1,
-                max_value=255,
+                validator=IntValidators.range(1, 255),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,

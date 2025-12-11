@@ -15,11 +15,10 @@ if TYPE_CHECKING:
     from exabgp.configuration.core.parser import Tokeniser
     from exabgp.configuration.core.scope import Scope
 
-from exabgp.bgp.message.open.capability.graceful import Graceful
-
 from exabgp.configuration.core import Section
 from exabgp.configuration.parser import string
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
+from exabgp.configuration.validator import IntValidators
 
 
 def addpath(tokeniser: 'Tokeniser') -> int:
@@ -43,30 +42,6 @@ def addpath(tokeniser: 'Tokeniser') -> int:
         raise ValueError("'receive/send' is not valid\n  Did you mean: send/receive")
 
     raise ValueError(f"'{ap}' is not a valid add-path option\n  Valid options: send, receive, send/receive, disable")
-
-
-def gracefulrestart(tokeniser: 'Tokeniser', default: int | bool) -> int | bool:
-    if len(tokeniser.tokens) == 1:
-        return default
-
-    state = string(tokeniser)
-
-    if state in ('disable', 'disabled'):
-        return False
-
-    try:
-        grace = int(state)
-    except ValueError:
-        raise ValueError(
-            f"'{state}' is not a valid graceful-restart time\n  Valid options: <seconds> (0-{Graceful.MAX}), disable"
-        ) from None
-
-    if grace < 0:
-        raise ValueError(f"graceful-restart {grace} is invalid\n  Must be 0-{Graceful.MAX} seconds or 'disable'")
-    if grace > Graceful.MAX:
-        raise ValueError(f'graceful-restart {grace} is invalid\n  Maximum is {Graceful.MAX} seconds')
-
-    return grace
 
 
 class ParseCapability(Section):
@@ -104,8 +79,7 @@ class ParseCapability(Section):
                 type=ValueType.INTEGER,
                 description='Graceful restart time in seconds (0 to use hold-time, or "disable")',
                 default=0,
-                min_value=0,
-                max_value=4095,
+                validator=IntValidators.graceful_restart(),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -174,12 +148,10 @@ class ParseCapability(Section):
         '}\n'
     )
 
-    # Schema validators handle BOOLEAN entries (nexthop, asn4, multi-session, operational,
-    # route-refresh, aigp, extended-message, software-version).
+    # Schema validators handle BOOLEAN entries and graceful-restart.
     # Only entries with special parsing logic remain in known:
     known = {
         'add-path': addpath,  # Returns int (0,1,2,3), not string
-        'graceful-restart': gracefulrestart,  # Complex validation with "disable" keyword
     }
 
     # action dict removed - derived from schema (defaults to 'set-command')

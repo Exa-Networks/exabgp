@@ -208,6 +208,101 @@ class IntegerValidator(Validator[int]):
 
 
 @dataclass
+class IntegerOrKeywordValidator(Validator[int | Any]):
+    """Validates integer values with optional keyword alternatives.
+
+    Use this for configuration values that accept either an integer within
+    a range OR specific keywords that map to non-integer values.
+
+    Example:
+        >>> v = IntegerOrKeywordValidator(keywords={'disable': False, 'disabled': False}).in_range(0, 4095)
+        >>> v.validate_string('100')
+        100
+        >>> v.validate_string('disable')
+        False
+    """
+
+    name: str = 'integer-or-keyword'
+    min_value: int | None = None
+    max_value: int | None = None
+    keywords: dict[str, Any] = field(default_factory=dict)
+    default: int | Any | None = None
+
+    def _parse(self, value: str) -> int | Any:
+        # Handle empty input with default
+        if not value and self.default is not None:
+            return self.default
+
+        lower = value.lower()
+        if lower in self.keywords:
+            return self.keywords[lower]
+
+        try:
+            num = int(value)
+        except ValueError:
+            valid_range = f'{self.min_value}-{self.max_value}' if self.min_value is not None else 'integer'
+            valid_keywords = ', '.join(f"'{k}'" for k in self.keywords.keys())
+            if valid_keywords:
+                raise ValueError(
+                    f"'{value}' is not valid\n  Valid options: {valid_range} or {valid_keywords}"
+                ) from None
+            raise ValueError(f"'{value}' is not a valid integer") from None
+
+        if self.min_value is not None and num < self.min_value:
+            raise ValueError(f'{num} is below minimum {self.min_value}')
+        if self.max_value is not None and num > self.max_value:
+            raise ValueError(f'{num} exceeds maximum {self.max_value}')
+        return num
+
+    def in_range(self, min_val: int, max_val: int) -> 'IntegerOrKeywordValidator':
+        """Return new validator with range constraint."""
+        new = deepcopy(self)
+        new.min_value = min_val
+        new.max_value = max_val
+        return new
+
+    def with_keywords(self, keywords: dict[str, Any]) -> 'IntegerOrKeywordValidator':
+        """Return new validator with keyword alternatives."""
+        new = deepcopy(self)
+        new.keywords = keywords
+        return new
+
+    def with_default(self, default: int | Any) -> 'IntegerOrKeywordValidator':
+        """Return new validator with default value for empty input."""
+        new = deepcopy(self)
+        new.default = default
+        return new
+
+    def to_schema(self) -> dict[str, Any]:
+        schema: dict[str, Any] = {
+            'oneOf': [
+                {'type': 'integer'},
+            ]
+        }
+        if self.min_value is not None:
+            schema['oneOf'][0]['minimum'] = self.min_value
+        if self.max_value is not None:
+            schema['oneOf'][0]['maximum'] = self.max_value
+        if self.keywords:
+            schema['oneOf'].append({'type': 'string', 'enum': list(self.keywords.keys())})
+        return schema
+
+    def describe(self) -> str:
+        parts = []
+        if self.min_value is not None and self.max_value is not None:
+            parts.append(f'integer ({self.min_value}-{self.max_value})')
+        elif self.min_value is not None:
+            parts.append(f'integer (>= {self.min_value})')
+        elif self.max_value is not None:
+            parts.append(f'integer (<= {self.max_value})')
+        else:
+            parts.append('integer')
+        if self.keywords:
+            parts.append(' or '.join(f"'{k}'" for k in self.keywords.keys()))
+        return ' or '.join(parts)
+
+
+@dataclass
 class BooleanValidator(Validator[bool]):
     """Validates boolean values with multiple accepted formats."""
 
@@ -1435,3 +1530,87 @@ def get_validator(value_type: 'ValueType') -> Validator[Any] | None:
     if factory is None:
         return None
     return factory()
+
+
+# =============================================================================
+# Integer Validator Factory
+# =============================================================================
+
+
+class IntValidators:
+    """Factory for common integer validators with predefined ranges.
+
+    Use these factory methods to get pre-configured validators for
+    specific BGP/configuration values, avoiding duplication of range
+    constants throughout the codebase.
+
+    Example:
+        >>> v = IntValidators.graceful_restart()
+        >>> v.validate_string('100')
+        100
+        >>> v.validate_string('disable')
+        False
+    """
+
+    @staticmethod
+    def graceful_restart() -> IntegerOrKeywordValidator:
+        """Graceful restart time: 0-4095 seconds or 'disable'.
+
+        RFC 4724: Restart Time is 12 bits, max 4095 seconds.
+        Default is 0 (use hold-time).
+        """
+        return (
+            IntegerOrKeywordValidator(keywords={'disable': False, 'disabled': False}).in_range(0, 4095).with_default(0)
+        )
+
+    @staticmethod
+    def hold_time() -> IntegerValidator:
+        """BGP hold time: 0 or 3-65535 seconds.
+
+        RFC 4271: Hold Time of 0 means hold timer disabled.
+        Minimum non-zero value is 3 seconds.
+        """
+        return IntegerValidator().in_range(0, 65535)
+
+    @staticmethod
+    def ttl() -> IntegerValidator:
+        """IP TTL value: 0-255."""
+        return IntegerValidator().in_range(0, 255)
+
+    @staticmethod
+    def port() -> IntegerValidator:
+        """TCP/UDP port: 1-65535."""
+        return IntegerValidator().in_range(1, 65535)
+
+    @staticmethod
+    def label() -> IntegerValidator:
+        """MPLS label: 0-1048575 (20 bits)."""
+        return IntegerValidator().in_range(0, 1048575)
+
+    @staticmethod
+    def asn() -> IntegerValidator:
+        """AS number: 0-4294967295 (32 bits)."""
+        return IntegerValidator().in_range(0, 4294967295)
+
+    @staticmethod
+    def med() -> IntegerValidator:
+        """Multi-Exit Discriminator: 0-4294967295 (32 bits)."""
+        return IntegerValidator().in_range(0, 4294967295)
+
+    @staticmethod
+    def local_preference() -> IntegerValidator:
+        """Local preference: 0-4294967295 (32 bits)."""
+        return IntegerValidator().in_range(0, 4294967295)
+
+    @staticmethod
+    def range(min_val: int, max_val: int) -> IntegerValidator:
+        """Create validator for arbitrary range.
+
+        Args:
+            min_val: Minimum allowed value (inclusive)
+            max_val: Maximum allowed value (inclusive)
+
+        Returns:
+            IntegerValidator configured with the specified range
+        """
+        return IntegerValidator().in_range(min_val, max_val)
