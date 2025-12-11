@@ -261,6 +261,15 @@ neighbor = Neighbor.from_settings(settings)
 
 ---
 
+## Future Work
+
+- [ ] Add `from_settings()` equivalents for all unit tests that generate routes via configuration parsing
+  - Ensures programmatic API has same coverage as config-file API
+  - Look for tests using `Configuration` or config parsing to create routes
+  - Add parallel tests using `from_settings()` pattern
+
+---
+
 ## Resume Point
 
 Start with Phase 1 - write tests for `SessionSettings` first (TDD approach).

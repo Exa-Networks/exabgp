@@ -19,6 +19,11 @@
 | `rib-improvement-proposals.md` | 📋 Discussion | RIB improvement ideas |
 | `security-validation.md` | 📋 Planning | Security validation |
 | `from-settings-config.md` | 📋 Planning | from_settings() for Configuration/Neighbor |
+| `action-enum-refactor.md` | 🔄 Active | Replace action= strings with type-safe enums |
+| `buffer-protocol-audit.md` | 📋 Planning | Migrate bytes→Buffer + doc updates |
+| `neighbor-naming.md` | 📋 Planning | User-defined neighbor names/aliases |
+| `bgpls-rfc-naming.md` | 🔄 Active | Rename BGP-LS classes to match RFC/IANA |
+| `bgpls-packed-bytes-first.md` | 🔄 Active | BGP-LS packed-bytes-first + MERGE refactor |
 | `raw-attribute-api-v4.md` | ✅ Completed | Generic attribute round-trip for all families |
 | `api-group-command.md` | ✅ Completed | Batch commands into single UPDATE (group start/end) |
 
@@ -26,6 +31,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `from-settings-conversion.md` | 2025-12-11 | Programmatic config API + route indexing |
 | `testing-improvement-plan.md` | 2025-12-09 | Testing improvements (Phases 1-3, 6) |
 | ~~`wire-semantic-separation.md`~~ | 2025-12-08 | Wire vs Semantic separation (deleted) |
 | ~~`nexthop-self-refactor.md`~~ | 2025-12-08 | NextHopSelf refactoring (deleted) |
@@ -76,4 +82,4 @@
 
 ---
 
-**Updated:** 2025-12-09
+**Updated:** 2025-12-11
