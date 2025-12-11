@@ -18,9 +18,9 @@ from exabgp.protocol.ip import IP
 
 @LinkState.register_lsid(lsid=1030)
 @LinkState.register_lsid(lsid=1031)
-class RemoteTeRid(BaseLS):
-    REPR = 'Remote TE Router ID'
-    JSON = 'remote-te-router-id'
+class RemoteRouterId(BaseLS):
+    REPR = 'Remote Router ID'
+    JSON = 'remote-router-id'
 
     @property
     def content(self) -> str:
@@ -28,12 +28,12 @@ class RemoteTeRid(BaseLS):
         return IP.unpack_ip(self._packed).top()
 
     @classmethod
-    def make_remoteterid(cls, ip: str) -> RemoteTeRid:
-        """Factory method to create RemoteTeRid from IP address string."""
+    def make_remoterouterid(cls, ip: str) -> RemoteRouterId:
+        """Factory method to create RemoteRouterId from IP address string."""
         return cls(IP.pton(ip))
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> RemoteTeRid:
+    def unpack_bgpls(cls, data: bytes) -> RemoteRouterId:
         length = len(data)
         if length not in (4, 16):
             raise Notify(3, 5, 'Invalid remote-te size')

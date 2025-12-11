@@ -6,6 +6,9 @@ Reference: RFC 7752 - North-Bound Distribution of Link-State and TE Information 
            https://datatracker.ietf.org/doc/html/rfc7752
            RFC 9552 - Distribution of Link-State and TE Information Using BGP (obsoletes 7752)
            https://datatracker.ietf.org/doc/html/rfc9552
+           RFC 9514 - Segment Routing Extensions for BGP-LS
+           https://datatracker.ietf.org/doc/html/rfc9514
+Registry:  https://www.iana.org/assignments/bgp-ls-parameters
 
 BGP-LS Attribute TLV Format:
 +-----------------------------------+
@@ -16,10 +19,15 @@ BGP-LS Attribute TLV Format:
 |    Value (variable)               |
 +-----------------------------------+
 
-Attribute Categories:
-- Node Attributes: TLVs 1024-1029, 1034-1035 (node/)
-- Link Attributes: TLVs 1028-1031, 1088-1100 (link/)
+Attribute Categories and TLV Ranges:
+- Node Attributes:   TLVs 1024-1029, 1034-1035 (node/)
+- Link Attributes:   TLVs 1030-1031, 1088-1100, 1106-1108, 1162, 1250, 1252 (link/)
 - Prefix Attributes: TLVs 1152-1158, 1170-1171 (prefix/)
+
+See subdirectory __init__.py files for complete TLV-to-class mapping tables:
+- node/__init__.py   - 8 TLVs implemented
+- link/__init__.py   - 22 TLVs implemented
+- prefix/__init__.py - 9 TLVs implemented
 
 Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#bgp-ls-attribute-tlvs-rfc-7752
 
@@ -37,12 +45,12 @@ from exabgp.bgp.message.update.attribute.bgpls.link.igpmetric import IgpMetric
 from exabgp.bgp.message.update.attribute.bgpls.link.srlg import Srlg
 from exabgp.bgp.message.update.attribute.bgpls.link.mplsmask import MplsMask
 from exabgp.bgp.message.update.attribute.bgpls.link.temetric import TeMetric
-from exabgp.bgp.message.update.attribute.bgpls.node.lterid import LocalTeRid
-from exabgp.bgp.message.update.attribute.bgpls.link.rterid import RemoteTeRid
+from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId
+from exabgp.bgp.message.update.attribute.bgpls.link.remoterouterid import RemoteRouterId
 from exabgp.bgp.message.update.attribute.bgpls.link.admingroup import AdminGroup
 from exabgp.bgp.message.update.attribute.bgpls.link.maxbw import MaxBw
-from exabgp.bgp.message.update.attribute.bgpls.link.rsvpbw import RsvpBw
-from exabgp.bgp.message.update.attribute.bgpls.link.unrsvpbw import UnRsvpBw
+from exabgp.bgp.message.update.attribute.bgpls.link.maxreservablebw import MaxReservableBw
+from exabgp.bgp.message.update.attribute.bgpls.link.unreservedbw import UnreservedBw
 from exabgp.bgp.message.update.attribute.bgpls.link.protection import LinkProtectionType
 from exabgp.bgp.message.update.attribute.bgpls.link.opaque import LinkOpaque
 from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
@@ -58,8 +66,8 @@ from exabgp.bgp.message.update.attribute.bgpls.prefix.ospfaddr import OspfForwar
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import PrefixMetric
 from exabgp.bgp.message.update.attribute.bgpls.node.srcap import SrCapabilities
 from exabgp.bgp.message.update.attribute.bgpls.node.sralgo import SrAlgorithm
-from exabgp.bgp.message.update.attribute.bgpls.link.sradj import SrAdjacency
-from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
-from exabgp.bgp.message.update.attribute.bgpls.prefix.srprefix import SrPrefix
-from exabgp.bgp.message.update.attribute.bgpls.prefix.srigpprefixattr import SrIgpPrefixAttr
-from exabgp.bgp.message.update.attribute.bgpls.prefix.srrid import SrSourceRouterID
+from exabgp.bgp.message.update.attribute.bgpls.link.adjacencysid import AdjacencySid
+from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAdjacencySid
+from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixsid import PrefixSid
+from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixattributesflags import PrefixAttributesFlags
+from exabgp.bgp.message.update.attribute.bgpls.prefix.sourcerouterid import SourceRouterId

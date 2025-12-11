@@ -32,7 +32,7 @@ SRADJ_MIN_LENGTH = 4
 
 
 @LinkState.register_lsid()
-class SrAdjacency(FlagLS):
+class AdjacencySid(FlagLS):
     TLV = 1099
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
 
@@ -82,19 +82,19 @@ class SrAdjacency(FlagLS):
         return 'adj_flags: {}, sids: {}, undecoded_sid {}'.format(self.flags, self.sids, self.undecoded)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> SrAdjacency:
+    def unpack_bgpls(cls, data: bytes) -> AdjacencySid:
         if len(data) < SRADJ_MIN_LENGTH:
             raise Notify(3, 5, f'SR Adjacency SID: data too short, need {SRADJ_MIN_LENGTH} bytes, got {len(data)}')
         return cls(data)
 
     @classmethod
-    def make_sradjacency(
+    def make_adjacencysid(
         cls,
         flags: dict[str, int],
         weight: int,
         sids: list[int],
-    ) -> SrAdjacency:
-        """Create SrAdjacency from semantic values.
+    ) -> AdjacencySid:
+        """Create AdjacencySid from semantic values.
 
         Args:
             flags: Dict with keys F, B, V, L, S, P (RSV bits ignored)
@@ -102,7 +102,7 @@ class SrAdjacency(FlagLS):
             sids: List of SID values
 
         Returns:
-            SrAdjacency instance with packed wire-format bytes
+            AdjacencySid instance with packed wire-format bytes
         """
         # Pack flags byte: F(7), B(6), V(5), L(4), S(3), P(2), RSV(1), RSV(0)
         flags_byte = (

@@ -1049,26 +1049,26 @@ class TestBGPLSLinkAttributes:
         assert abs(attr.content - bandwidth) < 1.0
 
     def test_rsvp_bandwidth(self) -> None:
-        """Test RsvpBw attribute (TLV 1090)"""
-        from exabgp.bgp.message.update.attribute.bgpls.link.rsvpbw import RsvpBw
+        """Test MaxReservableBw attribute (TLV 1090)"""
+        from exabgp.bgp.message.update.attribute.bgpls.link.maxreservablebw import MaxReservableBw
         from struct import pack
 
         bandwidth = 100000000.0
         data = pack('!f', bandwidth)
-        attr = RsvpBw.unpack_bgpls(data)
+        attr = MaxReservableBw.unpack_bgpls(data)
 
         assert attr.TLV == 1090
         assert abs(attr.content - bandwidth) < 1.0
 
     def test_unreserved_bandwidth(self) -> None:
-        """Test UnRsvpBw attribute (TLV 1091)"""
-        from exabgp.bgp.message.update.attribute.bgpls.link.unrsvpbw import UnRsvpBw
+        """Test UnreservedBw attribute (TLV 1091)"""
+        from exabgp.bgp.message.update.attribute.bgpls.link.unreservedbw import UnreservedBw
         from struct import pack
 
         # 8 priority levels, each 4 bytes (float)
         bandwidths = [100000000.0] * 8
         data = b''.join(pack('!f', bw) for bw in bandwidths)
-        attr = UnRsvpBw.unpack_bgpls(data)
+        attr = UnreservedBw.unpack_bgpls(data)
 
         assert attr.TLV == 1091
         assert len(attr.content) == 8
@@ -1147,29 +1147,29 @@ class TestBGPLSLinkAttributes:
         assert attr.content == b'link-to-router-2'
 
     def test_sr_adjacency(self) -> None:
-        """Test SrAdjacency attribute (TLV 1099)"""
-        from exabgp.bgp.message.update.attribute.bgpls.link.sradj import SrAdjacency
+        """Test AdjacencySid attribute (TLV 1099)"""
+        from exabgp.bgp.message.update.attribute.bgpls.link.adjacencysid import AdjacencySid
 
         # Flags: F=0, B=0, V=0, L=0 (4-octet SID)
         # Weight: 10
         # Reserved: 0x0000
         # SID: 100
         data = b'\x00\x0a\x00\x00\x00\x00\x00\x64'
-        attr = SrAdjacency.unpack_bgpls(data)
+        attr = AdjacencySid.unpack_bgpls(data)
 
         assert attr.TLV == 1099
         assert attr.weight == 10
         assert 100 in attr.sids
 
     def test_sr_adjacency_lan(self) -> None:
-        """Test SrAdjacencyLan attribute (TLV 1100)"""
-        from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
+        """Test LanAdjacencySid attribute (TLV 1100)"""
+        from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAdjacencySid
 
         # Flags: 0x00, Weight: 10, Reserved: 0x0000
         # Neighbor System-ID (6 bytes): 0x010203040506
         # SID: 200
         data = b'\x00\x0a\x00\x00\x01\x02\x03\x04\x05\x06\x00\x00\x00\xc8'
-        attr = SrAdjacencyLan.unpack_bgpls(data)
+        attr = LanAdjacencySid.unpack_bgpls(data)
 
         assert attr.TLV == 1100
         # Note: The __init__ method has a bug that doesn't properly store content,
@@ -1283,12 +1283,12 @@ class TestBGPLSNodeAttributes:
         assert 'area-id' in json_output
 
     def test_local_te_rid(self) -> None:
-        """Test LocalTeRid attribute (TLV 1028/1029)"""
-        from exabgp.bgp.message.update.attribute.bgpls.node.lterid import LocalTeRid
+        """Test LocalRouterId attribute (TLV 1028/1029)"""
+        from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId
 
         # IPv4 Router ID: 192.0.2.1 (4 bytes -> TLV 1028)
         data = b'\xc0\x00\x02\x01'
-        attr = LocalTeRid.unpack_bgpls(data)
+        attr = LocalRouterId.unpack_bgpls(data)
 
         # TLV 1028 for IPv4, 1029 for IPv6
         assert attr.TLV == 1028
@@ -1413,39 +1413,39 @@ class TestBGPLSPrefixAttributes:
         assert attr.content == data
 
     def test_sr_prefix(self) -> None:
-        """Test SrPrefix attribute (TLV 1158)"""
-        from exabgp.bgp.message.update.attribute.bgpls.prefix.srprefix import SrPrefix
+        """Test PrefixSid attribute (TLV 1158)"""
+        from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixsid import PrefixSid
 
         # Flags: R=1, N=0, P=0, E=1, V=0, L=0
         # Algorithm: 0
         # Reserved: 0x0000
         # SID Index: 100
         data = b'\x90\x00\x00\x00\x00\x00\x00\x64'
-        attr = SrPrefix.unpack_bgpls(data)
+        attr = PrefixSid.unpack_bgpls(data)
 
         assert attr.TLV == 1158
         json_output = attr.json()
         assert 'sr-prefix' in json_output
 
     def test_sr_igp_prefix_attr(self) -> None:
-        """Test SrIgpPrefixAttr attribute (TLV 1170)"""
-        from exabgp.bgp.message.update.attribute.bgpls.prefix.srigpprefixattr import SrIgpPrefixAttr
+        """Test PrefixAttributesFlags attribute (TLV 1170)"""
+        from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixattributesflags import PrefixAttributesFlags
 
         # Flags: X=1, R=0, N=1
         data = b'\xa0'  # 10100000
-        attr = SrIgpPrefixAttr.unpack_bgpls(data)
+        attr = PrefixAttributesFlags.unpack_bgpls(data)
 
         assert attr.TLV == 1170
         json_output = attr.json()
         assert 'sr-prefix-attribute-flags' in json_output
 
     def test_sr_source_router_id(self) -> None:
-        """Test SrSourceRouterID attribute (TLV 1171)"""
-        from exabgp.bgp.message.update.attribute.bgpls.prefix.srrid import SrSourceRouterID
+        """Test SourceRouterId attribute (TLV 1171)"""
+        from exabgp.bgp.message.update.attribute.bgpls.prefix.sourcerouterid import SourceRouterId
 
         # IPv4 Router ID: 192.0.2.1
         data = b'\xc0\x00\x02\x01'
-        attr = SrSourceRouterID.unpack_bgpls(data)
+        attr = SourceRouterId.unpack_bgpls(data)
 
         assert attr.TLV == 1171
         json_output = attr.json()

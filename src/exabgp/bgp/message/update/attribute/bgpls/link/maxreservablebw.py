@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
 @LinkState.register_lsid()
-class RsvpBw(BaseLS):
+class MaxReservableBw(BaseLS):
     TLV = 1090
     REPR = 'Maximum reservable link bandwidth'
     JSON = 'maximum-reservable-link-bandwidth'
@@ -36,11 +36,11 @@ class RsvpBw(BaseLS):
         return value
 
     @classmethod
-    def make_rsvpbw(cls, bandwidth: float) -> RsvpBw:
-        """Factory method to create RsvpBw from bandwidth value."""
+    def make_maxreservablebw(cls, bandwidth: float) -> MaxReservableBw:
+        """Factory method to create MaxReservableBw from bandwidth value."""
         return cls(pack('!f', bandwidth))
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> RsvpBw:
+    def unpack_bgpls(cls, data: bytes) -> MaxReservableBw:
         cls.check(data)
         return cls(data)

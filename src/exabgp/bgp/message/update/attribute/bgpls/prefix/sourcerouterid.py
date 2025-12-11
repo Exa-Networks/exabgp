@@ -24,7 +24,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
 @LinkState.register_lsid()
-class SrSourceRouterID(BaseLS):
+class SourceRouterId(BaseLS):
     TLV = 1171
     REPR = 'Source router identifier'
     JSON = 'sr-source-router-id'
@@ -35,7 +35,7 @@ class SrSourceRouterID(BaseLS):
         return IP.unpack_ip(self._packed)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> SrSourceRouterID:
+    def unpack_bgpls(cls, data: bytes) -> SourceRouterId:
         length = len(data)
         if length not in (4, 16):
             raise Notify(3, 5, 'Error parsing SR Source Router ID. Wrong size')

@@ -36,7 +36,7 @@ SRPREFIX_MIN_LENGTH = 4
 
 
 @LinkState.register_lsid()
-class SrPrefix(FlagLS):
+class PrefixSid(FlagLS):
     TLV = 1158
     FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
 
@@ -91,7 +91,7 @@ class SrPrefix(FlagLS):
         return 'prefix_flags: {}, sids: {}, undecoded_sid: {}'.format(self.flags, self.sids, self.undecoded)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> SrPrefix:
+    def unpack_bgpls(cls, data: bytes) -> PrefixSid:
         if len(data) < SRPREFIX_MIN_LENGTH:
             raise Notify(3, 5, f'SR Prefix SID: data too short, need {SRPREFIX_MIN_LENGTH} bytes, got {len(data)}')
         # Validation for V/L flags and SID length

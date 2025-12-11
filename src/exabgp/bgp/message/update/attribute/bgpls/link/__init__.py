@@ -4,8 +4,39 @@ BGP-LS Link Attribute TLVs.
 
 Reference: RFC 7752 Section 3.3.2 - Link Attribute TLVs
            https://tools.ietf.org/html/rfc7752#section-3.3.2
+           RFC 9514 - Segment Routing Extensions for BGP-LS
+           https://datatracker.ietf.org/doc/html/rfc9514
+Registry:  https://www.iana.org/assignments/bgp-ls-parameters
 
 Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#link-attribute-tlvs
+
+TLV Code to Class Mapping (IANA Registry):
++------+----------------------------------+----------------------+
+| TLV  | IANA/RFC Name                    | ExaBGP Class         |
++------+----------------------------------+----------------------+
+| 1030 | IPv4 Router-ID of Remote Node    | RemoteRouterId       |
+| 1031 | IPv6 Router-ID of Remote Node    | RemoteRouterId       |
+| 1088 | Administrative group (color)     | AdminGroup           |
+| 1089 | Maximum link bandwidth           | MaxBw                |
+| 1090 | Max. reservable link bandwidth   | MaxReservableBw      |
+| 1091 | Unreserved bandwidth             | UnreservedBw         |
+| 1092 | TE Default Metric                | TeMetric             |
+| 1093 | Link Protection Type             | LinkProtectionType   |
+| 1094 | MPLS Protocol Mask               | MplsMask             |
+| 1095 | IGP Metric                       | IgpMetric            |
+| 1096 | Shared Risk Link Group           | Srlg                 |
+| 1097 | Opaque Link Attribute            | LinkOpaque           |
+| 1098 | Link Name                        | LinkName             |
+| 1099 | Adjacency SID                    | AdjacencySid         |
+| 1100 | LAN Adjacency SID                | LanAdjacencySid      |
+| 1038 | SRv6 Capabilities                | Srv6Capabilities     |
+| 1106 | SRv6 End.X SID                   | Srv6EndX             |
+| 1107 | IS-IS SRv6 LAN End.X SID         | Srv6LanEndXISIS      |
+| 1108 | OSPFv3 SRv6 LAN End.X SID        | Srv6LanEndXOSPF      |
+| 1162 | SRv6 Locator                     | Srv6Locator          |
+| 1250 | SRv6 Endpoint Behavior           | Srv6EndpointBehavior |
+| 1252 | SRv6 SID Structure               | Srv6SidStructure     |
++------+----------------------------------+----------------------+
 
 Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
@@ -53,12 +84,12 @@ from exabgp.bgp.message.update.attribute.bgpls.link.igpmetric import IgpMetric
 from exabgp.bgp.message.update.attribute.bgpls.link.srlg import Srlg
 from exabgp.bgp.message.update.attribute.bgpls.link.mplsmask import MplsMask
 from exabgp.bgp.message.update.attribute.bgpls.link.temetric import TeMetric
-from exabgp.bgp.message.update.attribute.bgpls.node.lterid import LocalTeRid
-from exabgp.bgp.message.update.attribute.bgpls.link.rterid import RemoteTeRid
+from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId
+from exabgp.bgp.message.update.attribute.bgpls.link.remoterouterid import RemoteRouterId
 from exabgp.bgp.message.update.attribute.bgpls.link.admingroup import AdminGroup
 from exabgp.bgp.message.update.attribute.bgpls.link.maxbw import MaxBw
-from exabgp.bgp.message.update.attribute.bgpls.link.rsvpbw import RsvpBw
-from exabgp.bgp.message.update.attribute.bgpls.link.unrsvpbw import UnRsvpBw
+from exabgp.bgp.message.update.attribute.bgpls.link.maxreservablebw import MaxReservableBw
+from exabgp.bgp.message.update.attribute.bgpls.link.unreservedbw import UnreservedBw
 from exabgp.bgp.message.update.attribute.bgpls.link.protection import LinkProtectionType
 from exabgp.bgp.message.update.attribute.bgpls.link.opaque import LinkOpaque
 from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
@@ -73,8 +104,8 @@ from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
 #   |           | Identifier (Adj-SID) TLV   |          |               |
 #   +-----------+----------------------------+----------+---------------+
 #   draft-gredler-idr-bgp-ls-segment-routing-ext-03
-from exabgp.bgp.message.update.attribute.bgpls.link.sradj import SrAdjacency
-from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
+from exabgp.bgp.message.update.attribute.bgpls.link.adjacencysid import AdjacencySid
+from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAdjacencySid
 
 #  +================+=============================+===========+
 #  | TLV Code Point | Description                 | Reference |

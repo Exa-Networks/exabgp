@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 
 
 @LinkState.register_lsid()
-class SrAdjacencyLan(FlagLS):
+class LanAdjacencySid(FlagLS):
     TLV = 1100
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
     MERGE = True
@@ -67,7 +67,7 @@ class SrAdjacencyLan(FlagLS):
         return f'sr-adj-lan-sids: {self.sr_adj_lan_sids}'
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> SrAdjacencyLan:
+    def unpack_bgpls(cls, data: bytes) -> LanAdjacencySid:
         if len(data) < SRADJ_LAN_MIN_LENGTH:
             raise Notify(
                 3, 5, f'SR Adjacency LAN SID: data too short, need {SRADJ_LAN_MIN_LENGTH} bytes, got {len(data)}'
@@ -111,14 +111,14 @@ class SrAdjacencyLan(FlagLS):
         return cls(original_data, parsed)
 
     @classmethod
-    def make_sradjacencylan(
+    def make_adjacencysidlan(
         cls,
         flags: dict[str, int],
         weight: int,
         system_id: str,
         sid: int,
-    ) -> SrAdjacencyLan:
-        """Create SrAdjacencyLan from semantic values.
+    ) -> LanAdjacencySid:
+        """Create LanAdjacencySid from semantic values.
 
         Args:
             flags: Dict with keys F, B, V, L, S, P (RSV bits ignored)
@@ -127,7 +127,7 @@ class SrAdjacencyLan(FlagLS):
             sid: SID value
 
         Returns:
-            SrAdjacencyLan instance with packed wire-format bytes
+            LanAdjacencySid instance with packed wire-format bytes
         """
         # Pack flags byte: F(7), B(6), V(5), L(4), S(3), P(2), RSV(1), RSV(0)
         flags_byte = (
@@ -172,5 +172,5 @@ class SrAdjacencyLan(FlagLS):
         return f'"sr-adj-lan-sids": {json.dumps(self.sr_adj_lan_sids)}'
 
     def merge(self, other: BaseLS) -> None:
-        if isinstance(other, SrAdjacencyLan):
+        if isinstance(other, LanAdjacencySid):
             self._sr_adj_lan_sids.extend(other.sr_adj_lan_sids)

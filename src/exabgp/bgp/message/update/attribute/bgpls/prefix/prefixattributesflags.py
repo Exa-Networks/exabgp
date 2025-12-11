@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
 
 @LinkState.register_lsid()
-class SrIgpPrefixAttr(FlagLS):
+class PrefixAttributesFlags(FlagLS):
     REPR = 'Prefix Attr Flags'
     JSON = 'sr-prefix-attribute-flags'
     TLV = 1170

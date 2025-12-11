@@ -30,13 +30,13 @@ from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
 from exabgp.bgp.message.update.attribute.bgpls.link.protection import LinkProtectionType
 from exabgp.bgp.message.update.attribute.bgpls.link.maxbw import MaxBw
 from exabgp.bgp.message.update.attribute.bgpls.link.mplsmask import MplsMask
-from exabgp.bgp.message.update.attribute.bgpls.link.rterid import RemoteTeRid
-from exabgp.bgp.message.update.attribute.bgpls.link.rsvpbw import RsvpBw
-from exabgp.bgp.message.update.attribute.bgpls.link.sradj import SrAdjacency
-from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
+from exabgp.bgp.message.update.attribute.bgpls.link.remoterouterid import RemoteRouterId
+from exabgp.bgp.message.update.attribute.bgpls.link.maxreservablebw import MaxReservableBw
+from exabgp.bgp.message.update.attribute.bgpls.link.adjacencysid import AdjacencySid
+from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAdjacencySid
 from exabgp.bgp.message.update.attribute.bgpls.link.srlg import Srlg
 from exabgp.bgp.message.update.attribute.bgpls.link.temetric import TeMetric
-from exabgp.bgp.message.update.attribute.bgpls.link.unrsvpbw import UnRsvpBw
+from exabgp.bgp.message.update.attribute.bgpls.link.unreservedbw import UnreservedBw
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6capabilities import Srv6Capabilities
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEndXISIS, Srv6LanEndXOSPF
@@ -49,7 +49,7 @@ from exabgp.bgp.message.update.attribute.bgpls.node.nodeflags import NodeFlags
 from exabgp.bgp.message.update.attribute.bgpls.node.nodename import NodeName
 from exabgp.bgp.message.update.attribute.bgpls.node.opaque import NodeOpaque
 from exabgp.bgp.message.update.attribute.bgpls.node.isisarea import IsisArea
-from exabgp.bgp.message.update.attribute.bgpls.node.lterid import LocalTeRid
+from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId
 from exabgp.bgp.message.update.attribute.bgpls.node.srcap import SrCapabilities
 from exabgp.bgp.message.update.attribute.bgpls.node.sralgo import SrAlgorithm
 
@@ -60,9 +60,9 @@ from exabgp.bgp.message.update.attribute.bgpls.prefix.igpextags import IgpExTags
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import PrefixMetric
 from exabgp.bgp.message.update.attribute.bgpls.prefix.ospfaddr import OspfForwardingAddress
 from exabgp.bgp.message.update.attribute.bgpls.prefix.opaque import PrefixOpaque
-from exabgp.bgp.message.update.attribute.bgpls.prefix.srprefix import SrPrefix
-from exabgp.bgp.message.update.attribute.bgpls.prefix.srrid import SrSourceRouterID
-from exabgp.bgp.message.update.attribute.bgpls.prefix.srigpprefixattr import SrIgpPrefixAttr
+from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixsid import PrefixSid
+from exabgp.bgp.message.update.attribute.bgpls.prefix.sourcerouterid import SourceRouterId
+from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixattributesflags import PrefixAttributesFlags
 
 
 def validate_json(json_str: str, class_name: str) -> Dict[str, Any]:
@@ -119,16 +119,16 @@ class TestLinkAttributesJson:
         assert result['maximum-link-bandwidth'] == 125000000.0
 
     def test_rsvp_bw_json(self) -> None:
-        """RsvpBw (TLV 1090) produces valid JSON"""
-        attr = RsvpBw.make_rsvpbw(100000000.0)
-        result = validate_json(attr.json(), 'RsvpBw')
+        """MaxReservableBw (TLV 1090) produces valid JSON"""
+        attr = MaxReservableBw.make_maxreservablebw(100000000.0)
+        result = validate_json(attr.json(), 'MaxReservableBw')
         assert 'maximum-reservable-link-bandwidth' in result
 
     def test_unreserved_bw_json(self) -> None:
-        """UnRsvpBw (TLV 1091) produces valid JSON"""
+        """UnreservedBw (TLV 1091) produces valid JSON"""
         bw_list = [125000000.0] * 8
-        attr = UnRsvpBw.make_unrsvpbw(bw_list)
-        result = validate_json(attr.json(), 'UnRsvpBw')
+        attr = UnreservedBw.make_unreservedbw(bw_list)
+        result = validate_json(attr.json(), 'UnreservedBw')
         assert 'unreserved-bandwidth' in result
         assert len(result['unreserved-bandwidth']) == 8
 
@@ -162,32 +162,32 @@ class TestLinkAttributesJson:
         assert result['link-name'] == 'link-to-router-2'
 
     def test_remote_te_rid_json(self) -> None:
-        """RemoteTeRid (TLV 1097) produces valid JSON"""
-        attr = RemoteTeRid.make_remoteterid('192.0.2.1')
-        result = validate_json(attr.json(), 'RemoteTeRid')
-        assert 'remote-te-router-id' in result
-        assert result['remote-te-router-id'] == '192.0.2.1'
+        """RemoteRouterId (TLV 1097) produces valid JSON"""
+        attr = RemoteRouterId.make_remoterouterid('192.0.2.1')
+        result = validate_json(attr.json(), 'RemoteRouterId')
+        assert 'remote-router-id' in result
+        assert result['remote-router-id'] == '192.0.2.1'
 
     def test_sr_adjacency_json(self) -> None:
-        """SrAdjacency (TLV 1099) produces valid JSON"""
+        """AdjacencySid (TLV 1099) produces valid JSON"""
         flags = {'F': 0, 'B': 0, 'V': 1, 'L': 1, 'S': 0, 'P': 0}
-        attr = SrAdjacency.make_sradjacency(flags=flags, weight=10, sids=[16000])
-        result = validate_json(attr.json(), 'SrAdjacency')
+        attr = AdjacencySid.make_adjacencysid(flags=flags, weight=10, sids=[16000])
+        result = validate_json(attr.json(), 'AdjacencySid')
         assert 'sr-adj' in result
         assert 'flags' in result['sr-adj']
         assert 'sids' in result['sr-adj']
         assert 'weight' in result['sr-adj']
 
     def test_sr_adjacency_lan_json(self) -> None:
-        """SrAdjacencyLan (TLV 1100) produces valid JSON"""
+        """LanAdjacencySid (TLV 1100) produces valid JSON"""
         flags = {'F': 0, 'B': 0, 'V': 1, 'L': 1, 'S': 0, 'P': 0}
-        attr = SrAdjacencyLan.make_sradjacencylan(
+        attr = LanAdjacencySid.make_adjacencysidlan(
             flags=flags,
             weight=5,
             system_id='0102.0304.0506',
             sid=16001,
         )
-        result = validate_json(attr.json(), 'SrAdjacencyLan')
+        result = validate_json(attr.json(), 'LanAdjacencySid')
         assert 'sr-adj-lan-sids' in result
 
     def test_srv6_capabilities_json(self) -> None:
@@ -298,12 +298,12 @@ class TestNodeAttributesJson:
         result = validate_json(attr.json(), 'IsisArea')
         assert 'area-id' in result
 
-    @pytest.mark.skip(reason='LocalTeRid not yet converted to packed-bytes-first')
+    @pytest.mark.skip(reason='LocalRouterId not yet converted to packed-bytes-first')
     def test_local_te_rid_json(self) -> None:
-        """LocalTeRid (TLV 1028/1029) produces valid JSON"""
-        attr = LocalTeRid(terids=['192.0.2.1', '192.0.2.2'])
-        result = validate_json(attr.json(), 'LocalTeRid')
-        assert 'local-te-router-ids' in result
+        """LocalRouterId (TLV 1028/1029) produces valid JSON"""
+        attr = LocalRouterId(terids=['192.0.2.1', '192.0.2.2'])
+        result = validate_json(attr.json(), 'LocalRouterId')
+        assert 'local-router-ids' in result
 
     @pytest.mark.skip(reason='SrCapabilities not yet converted to packed-bytes-first')
     def test_sr_capabilities_json(self) -> None:
@@ -370,28 +370,28 @@ class TestPrefixAttributesJson:
         result = validate_json(attr.json(), 'PrefixOpaque')
         assert 'opaque-prefix' in result
 
-    @pytest.mark.skip(reason='SrPrefix not yet converted to packed-bytes-first')
+    @pytest.mark.skip(reason='PrefixSid not yet converted to packed-bytes-first')
     def test_sr_prefix_json(self) -> None:
-        """SrPrefix (TLV 1158) produces valid JSON"""
+        """PrefixSid (TLV 1158) produces valid JSON"""
         flags = {'R': 0, 'N': 1, 'P': 0, 'E': 0, 'V': 0, 'L': 0, 'RSV': 0, 'RSV2': 0}
-        attr = SrPrefix(flags=flags, sids=[100], sr_algo=0, undecoded=[])
-        result = validate_json(attr.json(), 'SrPrefix')
+        attr = PrefixSid(flags=flags, sids=[100], sr_algo=0, undecoded=[])
+        result = validate_json(attr.json(), 'PrefixSid')
         assert 'sr-prefix-flags' in result
         assert 'sids' in result
 
-    @pytest.mark.skip(reason='SrSourceRouterID not yet converted to packed-bytes-first')
+    @pytest.mark.skip(reason='SourceRouterId not yet converted to packed-bytes-first')
     def test_sr_source_router_id_json(self) -> None:
-        """SrSourceRouterID (TLV 1171) produces valid JSON"""
-        attr = SrSourceRouterID(content='192.0.2.1')
-        result = validate_json(attr.json(), 'SrSourceRouterID')
+        """SourceRouterId (TLV 1171) produces valid JSON"""
+        attr = SourceRouterId(content='192.0.2.1')
+        result = validate_json(attr.json(), 'SourceRouterId')
         assert 'sr-source-router-id' in result
 
-    @pytest.mark.skip(reason='SrIgpPrefixAttr not yet converted to packed-bytes-first')
+    @pytest.mark.skip(reason='PrefixAttributesFlags not yet converted to packed-bytes-first')
     def test_sr_igp_prefix_attr_json(self) -> None:
-        """SrIgpPrefixAttr (TLV 1170) produces valid JSON"""
+        """PrefixAttributesFlags (TLV 1170) produces valid JSON"""
         flags = {'X': 0, 'R': 0, 'N': 1, 'RSV': 0}
-        attr = SrIgpPrefixAttr(flags=flags)
-        result = validate_json(attr.json(), 'SrIgpPrefixAttr')
+        attr = PrefixAttributesFlags(flags=flags)
+        result = validate_json(attr.json(), 'PrefixAttributesFlags')
         assert 'sr-prefix-attribute-flags' in result
 
 
@@ -474,11 +474,11 @@ class TestEdgeCases:
         result = validate_json(attr.json(), 'LinkName(unicode)')
         assert 'link-name' in result
 
-    @pytest.mark.skip(reason='SrSourceRouterID not yet converted to packed-bytes-first')
+    @pytest.mark.skip(reason='SourceRouterId not yet converted to packed-bytes-first')
     def test_ipv6_addresses(self) -> None:
         """IPv6 addresses in JSON are valid"""
-        attr = SrSourceRouterID(content='2001:db8::1')
-        result = validate_json(attr.json(), 'SrSourceRouterID(ipv6)')
+        attr = SourceRouterId(content='2001:db8::1')
+        result = validate_json(attr.json(), 'SourceRouterId(ipv6)')
         assert result['sr-source-router-id'] == '2001:db8::1'
 
     def test_large_metric_values(self) -> None:

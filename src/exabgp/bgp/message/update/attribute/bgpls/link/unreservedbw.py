@@ -24,7 +24,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 
 
 @LinkState.register_lsid()
-class UnRsvpBw(BaseLS):
+class UnreservedBw(BaseLS):
     TLV = 1091
     REPR = 'Maximum link bandwidth'
     JSON = 'unreserved-bandwidth'
@@ -36,13 +36,13 @@ class UnRsvpBw(BaseLS):
         return list(unpack('!ffffffff', self._packed))
 
     @classmethod
-    def make_unrsvpbw(cls, bandwidths: Sequence[float]) -> UnRsvpBw:
-        """Factory method to create UnRsvpBw from 8 bandwidth values."""
+    def make_unreservedbw(cls, bandwidths: Sequence[float]) -> UnreservedBw:
+        """Factory method to create UnreservedBw from 8 bandwidth values."""
         if len(bandwidths) != 8:
-            raise ValueError('UnRsvpBw requires exactly 8 bandwidth values')
+            raise ValueError('UnreservedBw requires exactly 8 bandwidth values')
         return cls(pack('!ffffffff', *bandwidths))
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> UnRsvpBw:
+    def unpack_bgpls(cls, data: bytes) -> UnreservedBw:
         cls.check(data)
         return cls(data)

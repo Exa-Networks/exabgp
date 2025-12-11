@@ -4,8 +4,26 @@ BGP-LS Prefix Attribute TLVs.
 
 Reference: RFC 7752 Section 3.3.3 - Prefix Attribute TLVs
            https://tools.ietf.org/html/rfc7752#section-3.3.3
+           RFC 9514 - Segment Routing Extensions for BGP-LS
+           https://datatracker.ietf.org/doc/html/rfc9514
+Registry:  https://www.iana.org/assignments/bgp-ls-parameters
 
 Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#prefix-attribute-tlvs
+
+TLV Code to Class Mapping (IANA Registry):
++------+----------------------------------+----------------------+
+| TLV  | IANA/RFC Name                    | ExaBGP Class         |
++------+----------------------------------+----------------------+
+| 1152 | IGP Flags                        | IgpFlags             |
+| 1153 | IGP Route Tag                    | IgpTags              |
+| 1154 | IGP Extended Route Tag           | IgpExTags            |
+| 1155 | Prefix Metric                    | PrefixMetric         |
+| 1156 | OSPF Forwarding Address          | OspfForwardingAddress|
+| 1157 | Opaque Prefix Attribute          | PrefixOpaque         |
+| 1158 | Prefix-SID                       | PrefixSid            |
+| 1170 | Prefix Attributes Flags          | PrefixAttributesFlags|
+| 1171 | Source Router Identifier         | SourceRouterId       |
++------+----------------------------------+----------------------+
 
 Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
@@ -52,6 +70,6 @@ from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import Prefix
 # Note: Only IS-IS IGP extensions as defined in draft-ietf-isis-segment-routing-extensions
 # are currently parsed by ExaBGP. Binding segments are not supported (3.5.  Binding Segment)
 
-from exabgp.bgp.message.update.attribute.bgpls.prefix.srprefix import SrPrefix
-from exabgp.bgp.message.update.attribute.bgpls.prefix.srigpprefixattr import SrIgpPrefixAttr
-from exabgp.bgp.message.update.attribute.bgpls.prefix.srrid import SrSourceRouterID
+from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixsid import PrefixSid
+from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixattributesflags import PrefixAttributesFlags
+from exabgp.bgp.message.update.attribute.bgpls.prefix.sourcerouterid import SourceRouterId
