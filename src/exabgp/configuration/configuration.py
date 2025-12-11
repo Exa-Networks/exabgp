@@ -68,14 +68,71 @@ class _Configuration:
     def __init__(self) -> None:
         self.processes: dict[str, Any] = {}
         self.neighbors: dict[str, Any] = {}
+        # Global route store: index -> Route (shared across neighbors)
+        self._routes: dict[bytes, 'Route'] = {}
+
+    def store_route(self, route: 'Route') -> bytes:
+        """Store route in global store, incrementing refcount.
+
+        Args:
+            route: Route to store
+
+        Returns:
+            Route index (bytes)
+        """
+        index = route.index()
+        if index in self._routes:
+            # Route already exists, just increment refcount
+            self._routes[index].ref_inc()
+        else:
+            # New route, add to store with refcount 1
+            route.ref_inc()
+            self._routes[index] = route
+        return index
+
+    def release_route(self, index: bytes) -> bool:
+        """Release route reference, removing if refcount reaches zero.
+
+        Args:
+            index: Route index to release
+
+        Returns:
+            True if route was found and released, False otherwise
+        """
+        route = self._routes.get(index)
+        if route is None:
+            return False
+        if route.ref_dec() <= 0:
+            del self._routes[index]
+        return True
+
+    def get_route(self, index: bytes) -> 'Route | None':
+        """Get route by index (O(1) lookup).
+
+        Args:
+            index: Route index
+
+        Returns:
+            Route if found, None otherwise
+        """
+        return self._routes.get(index)
 
     def inject_route(self, peers: list[str], route: 'Route') -> bool:
+        """Inject route to matching peers.
+
+        Args:
+            peers: List of peer names to inject to
+            route: Route to inject
+
+        Returns:
+            True if route was injected to at least one peer
+        """
         result = False
         for neighbor_name in self.neighbors:
             if neighbor_name in peers:
                 neighbor = self.neighbors[neighbor_name]
                 if route.nlri.family().afi_safi() in neighbor.families():
-                    # remove_self may well have side effects on route
+                    # resolve_self creates a copy with resolved nexthop
                     neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route))
                     result = True
                 else:
@@ -87,6 +144,56 @@ class _Configuration:
                         ),
                         'configuration',
                     )
+        return result
+
+    def inject_route_indexed(self, peers: list[str], route: 'Route') -> tuple[bytes, bool]:
+        """Inject route and store in global index for API access.
+
+        Args:
+            peers: List of peer names to inject to
+            route: Route to inject
+
+        Returns:
+            Tuple of (route_index, success) where success is True if
+            route was injected to at least one peer
+        """
+        # Store in global store for index-based lookup
+        index = self.store_route(route)
+        # Inject to peers
+        success = self.inject_route(peers, route)
+        return index, success
+
+    def withdraw_route_by_index(self, peers: list[str], index: bytes) -> bool:
+        """Withdraw route by its index.
+
+        Args:
+            peers: List of peer names to withdraw from
+            index: Route index (from inject_route_indexed or route.index())
+
+        Returns:
+            True if route was found and withdrawn from at least one peer
+        """
+        from exabgp.bgp.message import Action
+
+        route = self.get_route(index)
+        if route is None:
+            return False
+
+        # Create withdraw version of route
+        withdraw_route = route.with_action(Action.WITHDRAW)
+
+        result = False
+        for neighbor_name in self.neighbors:
+            if neighbor_name in peers:
+                neighbor = self.neighbors[neighbor_name]
+                if withdraw_route.nlri.family().afi_safi() in neighbor.families():
+                    neighbor.rib.outgoing.del_from_rib(neighbor.resolve_self(withdraw_route))
+                    result = True
+
+        # Release from global store
+        if result:
+            self.release_route(index)
+
         return result
 
     def inject_eor(self, peers: list[str], family: object) -> bool:

@@ -38,6 +38,7 @@ def _build_v6_tree() -> DispatchTree:
     from exabgp.reactor.api.command import peer as peer_cmd
     from exabgp.reactor.api.command import reactor as reactor_cmd
     from exabgp.reactor.api.command import rib as rib_cmd
+    from exabgp.reactor.api.command import route as route_cmd
 
     # Peer selector subtree (after selector is consumed)
     # v6_announce/v6_withdraw dispatch to specific handlers based on type token
@@ -47,6 +48,7 @@ def _build_v6_tree() -> DispatchTree:
         'announce': announce_cmd.v6_announce,
         'withdraw': announce_cmd.v6_withdraw,
         'group': group_cmd.group_inline,
+        'routes': route_cmd.v6_routes,
     }
 
     tree: DispatchTree = {

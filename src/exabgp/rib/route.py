@@ -33,13 +33,14 @@ class Route:
     Route.nexthop does NOT fall back - must be passed to constructor.
     """
 
-    __slots__ = ('nlri', 'attributes', '_action', '_nexthop', '_Route__index')
+    __slots__ = ('nlri', 'attributes', '_action', '_nexthop', '_Route__index', '_refcount')
 
     nlri: NLRI
     attributes: AttributeCollection
     _action: Action
     _nexthop: IP
     _Route__index: bytes
+    _refcount: int
 
     @staticmethod
     def family_prefix(family: tuple[AFI, SAFI]) -> bytes:
@@ -61,6 +62,18 @@ class Route:
         # (e.g., nexthop not yet set), which would cause api-attributes.sequence to fail.
         # The lazy evaluation ensures the index is computed only when all NLRI fields are set.
         self.__index = b''
+        # Refcount for global route store (tracks how many neighbors reference this route)
+        self._refcount = 0
+
+    def ref_inc(self) -> int:
+        """Increment reference count. Returns new count."""
+        self._refcount += 1
+        return self._refcount
+
+    def ref_dec(self) -> int:
+        """Decrement reference count. Returns new count."""
+        self._refcount -= 1
+        return self._refcount
 
     @property
     def action(self) -> Action:
