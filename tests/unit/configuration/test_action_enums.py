@@ -10,7 +10,6 @@ from exabgp.configuration.schema import (
     Leaf,
     LeafList,
     ValueType,
-    action_string_to_enums,
 )
 
 
@@ -40,70 +39,6 @@ class TestActionEnums:
         assert ActionKey.FIELD.value == 'field'
 
 
-class TestActionStringToEnums:
-    """Tests for action_string_to_enums() conversion function."""
-
-    def test_set_command(self) -> None:
-        """Test set-command conversion."""
-        result = action_string_to_enums('set-command')
-        assert result == (ActionTarget.SCOPE, ActionOperation.SET, ActionKey.COMMAND)
-
-    def test_append_command(self) -> None:
-        """Test append-command conversion."""
-        result = action_string_to_enums('append-command')
-        assert result == (ActionTarget.SCOPE, ActionOperation.APPEND, ActionKey.COMMAND)
-
-    def test_extend_command(self) -> None:
-        """Test extend-command conversion."""
-        result = action_string_to_enums('extend-command')
-        assert result == (ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.COMMAND)
-
-    def test_append_name(self) -> None:
-        """Test append-name conversion."""
-        result = action_string_to_enums('append-name')
-        assert result == (ActionTarget.SCOPE, ActionOperation.APPEND, ActionKey.NAME)
-
-    def test_extend_name(self) -> None:
-        """Test extend-name conversion."""
-        result = action_string_to_enums('extend-name')
-        assert result == (ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
-
-    def test_attribute_add(self) -> None:
-        """Test attribute-add conversion."""
-        result = action_string_to_enums('attribute-add')
-        assert result == (ActionTarget.ATTRIBUTE, ActionOperation.ADD, ActionKey.NAME)
-
-    def test_nlri_set(self) -> None:
-        """Test nlri-set conversion."""
-        result = action_string_to_enums('nlri-set')
-        assert result == (ActionTarget.NLRI, ActionOperation.SET, ActionKey.FIELD)
-
-    def test_nlri_add(self) -> None:
-        """Test nlri-add conversion."""
-        result = action_string_to_enums('nlri-add')
-        assert result == (ActionTarget.NLRI, ActionOperation.APPEND, ActionKey.FIELD)
-
-    def test_nlri_nexthop(self) -> None:
-        """Test nlri-nexthop conversion."""
-        result = action_string_to_enums('nlri-nexthop')
-        assert result == (ActionTarget.NEXTHOP, ActionOperation.SET, ActionKey.COMMAND)
-
-    def test_append_route(self) -> None:
-        """Test append-route conversion."""
-        result = action_string_to_enums('append-route')
-        assert result == (ActionTarget.ROUTE, ActionOperation.EXTEND, ActionKey.COMMAND)
-
-    def test_nop(self) -> None:
-        """Test nop conversion."""
-        result = action_string_to_enums('nop')
-        assert result == (ActionTarget.SCOPE, ActionOperation.NOP, ActionKey.COMMAND)
-
-    def test_unknown_action_returns_none(self) -> None:
-        """Test unknown action returns None."""
-        result = action_string_to_enums('unknown-action')
-        assert result is None
-
-
 class TestLeafGetActionEnums:
     """Tests for Leaf.get_action_enums() method."""
 
@@ -113,11 +48,10 @@ class TestLeafGetActionEnums:
         result = leaf.get_action_enums()
         assert result == (ActionTarget.SCOPE, ActionOperation.SET, ActionKey.COMMAND)
 
-    def test_explicit_enum_fields_take_precedence(self) -> None:
-        """Test explicit enum fields override string action."""
+    def test_explicit_enum_fields(self) -> None:
+        """Test explicit enum fields are returned correctly."""
         leaf = Leaf(
             type=ValueType.STRING,
-            action='set-command',  # This should be ignored
             target=ActionTarget.ATTRIBUTE,
             operation=ActionOperation.ADD,
             key=ActionKey.NAME,
@@ -135,18 +69,12 @@ class TestLeafGetActionEnums:
         result = leaf.get_action_enums()
         assert result == (ActionTarget.NLRI, ActionOperation.SET, ActionKey.COMMAND)
 
-    def test_string_action_conversion(self) -> None:
-        """Test string action is converted to enums."""
-        leaf = Leaf(type=ValueType.STRING, action='attribute-add')
-        result = leaf.get_action_enums()
-        assert result == (ActionTarget.ATTRIBUTE, ActionOperation.ADD, ActionKey.NAME)
-
-    def test_unknown_action_returns_defaults(self) -> None:
-        """Test unknown action string returns defaults."""
-        leaf = Leaf(type=ValueType.NEXT_HOP, action='unknown-action')  # type: ignore[arg-type]
-        result = leaf.get_action_enums()
-        # Unknown actions fall back to defaults (SCOPE, SET, COMMAND)
-        assert result == (ActionTarget.SCOPE, ActionOperation.SET, ActionKey.COMMAND)
+    def test_all_enum_targets(self) -> None:
+        """Test all ActionTarget values work correctly."""
+        for target in ActionTarget:
+            leaf = Leaf(type=ValueType.STRING, target=target)
+            result = leaf.get_action_enums()
+            assert result[0] == target
 
 
 class TestLeafListGetActionEnums:
@@ -158,11 +86,10 @@ class TestLeafListGetActionEnums:
         result = leaf_list.get_action_enums()
         assert result == (ActionTarget.SCOPE, ActionOperation.APPEND, ActionKey.COMMAND)
 
-    def test_explicit_enum_fields_take_precedence(self) -> None:
-        """Test explicit enum fields override string action."""
+    def test_explicit_enum_fields(self) -> None:
+        """Test explicit enum fields are returned correctly."""
         leaf_list = LeafList(
             type=ValueType.STRING,
-            action='append-command',  # This should be ignored
             target=ActionTarget.NLRI,
             operation=ActionOperation.EXTEND,
             key=ActionKey.FIELD,
@@ -180,11 +107,12 @@ class TestLeafListGetActionEnums:
         result = leaf_list.get_action_enums()
         assert result == (ActionTarget.SCOPE, ActionOperation.APPEND, ActionKey.COMMAND)
 
-    def test_string_action_conversion(self) -> None:
-        """Test string action is converted to enums."""
-        leaf_list = LeafList(type=ValueType.STRING, action='nlri-add')
-        result = leaf_list.get_action_enums()
-        assert result == (ActionTarget.NLRI, ActionOperation.APPEND, ActionKey.FIELD)
+    def test_all_enum_targets(self) -> None:
+        """Test all ActionTarget values work correctly."""
+        for target in ActionTarget:
+            leaf_list = LeafList(type=ValueType.STRING, target=target)
+            result = leaf_list.get_action_enums()
+            assert result[0] == target
 
 
 class TestApplyAction:

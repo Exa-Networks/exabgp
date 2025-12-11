@@ -11,7 +11,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 
 from exabgp.configuration.flow.parser import interface_set
 
@@ -24,7 +24,9 @@ class ParseFlowScope(Section):
             'interface-set': Leaf(
                 type=ValueType.STRING,
                 description='Interface set (transitive:input:local_id:interface_id)',
-                action='attribute-add',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
             ),
         },
     )

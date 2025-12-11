@@ -50,7 +50,9 @@ class AnnounceVPN(ParseAnnounce):
             'rd': Leaf(
                 type=ValueType.RD,
                 description='Route distinguisher',
-                action='nlri-set',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.SET,
+                key=ActionKey.FIELD,
                 validator=LegacyParserValidator(parser_func=route_distinguisher, name='rd'),
             ),
         },

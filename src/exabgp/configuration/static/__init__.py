@@ -112,13 +112,18 @@ def route(tokeniser: Any) -> list[Route]:
             settings.path_info = path_information(tokeniser)
             continue
 
-        cmd_action = ParseStatic.action.get(command, '')
+        # Get action from schema
+        action_enums = ParseStatic._action_enums_from_schema(command)
+        if action_enums is None:
+            raise ValueError('unknown command "{}"'.format(command))
 
-        if cmd_action == 'attribute-add':
+        target, operation, key, field_name = action_enums
+
+        if target == ActionTarget.ATTRIBUTE:
             attributes.add(ParseStatic.known[command](tokeniser))
-        elif cmd_action == 'nlri-set':
+        elif target == ActionTarget.NLRI:
             settings.set(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
-        elif cmd_action == 'nexthop-and-attribute':
+        elif target == ActionTarget.NEXTHOP_ATTRIBUTE:
             nexthop, attribute = ParseStatic.known[command](tokeniser)
             settings.nexthop = nexthop
             attributes.add(attribute)
@@ -223,15 +228,18 @@ def attributes(tokeniser: Any) -> list[Route]:
             template_settings.rd = route_distinguisher(tokeniser)
             continue
 
-        cmd_action = ParseStatic.action.get(command, '')
-        if cmd_action == '':
+        # Get action from schema
+        action_enums = ParseStatic._action_enums_from_schema(command)
+        if action_enums is None:
             raise ValueError(f"The command '{command}' is not known or valid where used")
 
-        if cmd_action == 'attribute-add':
+        target, operation, key, field_name = action_enums
+
+        if target == ActionTarget.ATTRIBUTE:
             attr.add(ParseStatic.known[command](tokeniser))
-        elif cmd_action == 'nlri-set':
+        elif target == ActionTarget.NLRI:
             template_settings.set(ParseStatic.assign[command], ParseStatic.known[command](tokeniser))
-        elif cmd_action == 'nexthop-and-attribute':
+        elif target == ActionTarget.NEXTHOP_ATTRIBUTE:
             nexthop, attribute = ParseStatic.known[command](tokeniser)
             template_settings.nexthop = nexthop
             attr.add(attribute)

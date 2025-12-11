@@ -13,7 +13,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 
 
 from exabgp.configuration.flow.parser import source
@@ -35,103 +35,142 @@ from exabgp.configuration.flow.parser import flow_label
 
 class ParseFlowMatch(Section):
     # Schema definition for FlowSpec match criteria
+    # All match fields use NLRI target, APPEND operation, FIELD key
     schema = Container(
         description='FlowSpec match criteria',
         children={
             'source': Leaf(
                 type=ValueType.IP_PREFIX,
                 description='Source IP prefix to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'source-ipv4': Leaf(
                 type=ValueType.IP_PREFIX,
                 description='Source IPv4 prefix to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'source-ipv6': Leaf(
                 type=ValueType.IP_PREFIX,
                 description='Source IPv6 prefix to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'destination': Leaf(
                 type=ValueType.IP_PREFIX,
                 description='Destination IP prefix to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'destination-ipv4': Leaf(
                 type=ValueType.IP_PREFIX,
                 description='Destination IPv4 prefix to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'destination-ipv6': Leaf(
                 type=ValueType.IP_PREFIX,
                 description='Destination IPv6 prefix to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'protocol': Leaf(
                 type=ValueType.STRING,
                 description='IP protocol to match (IPv4 only)',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'next-header': Leaf(
                 type=ValueType.STRING,
                 description='Next header to match (IPv6 only)',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'port': Leaf(
                 type=ValueType.STRING,
                 description='Port range to match (source or destination)',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'destination-port': Leaf(
                 type=ValueType.STRING,
                 description='Destination port range to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'source-port': Leaf(
                 type=ValueType.STRING,
                 description='Source port range to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'icmp-type': Leaf(
                 type=ValueType.INTEGER,
                 description='ICMP type to match (IPv6 only)',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'icmp-code': Leaf(
                 type=ValueType.INTEGER,
                 description='ICMP code to match (IPv6 only)',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'tcp-flags': Leaf(
                 type=ValueType.STRING,
                 description='TCP flags to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'packet-length': Leaf(
                 type=ValueType.STRING,
                 description='Packet length range to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'dscp': Leaf(
                 type=ValueType.INTEGER,
                 description='DSCP value to match',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'traffic-class': Leaf(
                 type=ValueType.INTEGER,
                 description='Traffic class to match (IPv6 only)',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'fragment': Leaf(
                 type=ValueType.STRING,
                 description='Fragment flags to match (IPv4 only)',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
             'flow-label': Leaf(
                 type=ValueType.STRING,
                 description='Flow label to match (IPv6 only)',
-                action='nlri-add',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.FIELD,
             ),
         },
     )

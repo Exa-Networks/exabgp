@@ -18,7 +18,7 @@ from exabgp.configuration.core import Error
 from exabgp.configuration.parser import boolean
 from exabgp.configuration.neighbor.parser import processes
 from exabgp.configuration.neighbor.parser import processes_match
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 
 
 # ParseSend and ParseReceive use schema validators for boolean fields
@@ -35,55 +35,73 @@ class _ParseDirection(Section):
                 type=ValueType.BOOLEAN,
                 description='Forward parsed messages',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'packets': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward raw packets',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'consolidate': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Consolidate updates',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'open': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward OPEN messages',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'update': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward UPDATE messages',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'notification': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward NOTIFICATION messages',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'keepalive': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward KEEPALIVE messages',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'refresh': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward ROUTE-REFRESH messages',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'operational': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Forward OPERATIONAL messages',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
         },
     )
@@ -140,30 +158,48 @@ class ParseAPI(Section):
             'processes': Leaf(
                 type=ValueType.STRING,
                 description='List of process names to communicate with',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.EXTEND,
+                key=ActionKey.COMMAND,
             ),
             'processes-match': Leaf(
                 type=ValueType.STRING,
                 description='Regex pattern to match process names',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.EXTEND,
+                key=ActionKey.COMMAND,
             ),
             'neighbor-changes': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Notify on neighbor state changes',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'negotiated': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Notify on negotiation completion',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'fsm': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Notify on FSM state changes',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'signal': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Notify on signals',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'send': Container(description='Messages to send to processes'),
             'receive': Container(description='Messages to receive from processes'),
@@ -188,15 +224,7 @@ class ParseAPI(Section):
         'fsm': boolean,
         'signal': boolean,
     }
-
-    action = {
-        'processes': 'set-command',
-        'processes-match': 'set-command',
-        'neighbor-changes': 'set-command',
-        'negotiated': 'set-command',
-        'fsm': 'set-command',
-        'signal': 'set-command',
-    }
+    # action dict removed - schema provides action enums (SET is default for Leaf)
 
     default = {
         'neighbor-changes': True,

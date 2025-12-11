@@ -15,7 +15,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, LeafList, ActionTarget, ActionOperation
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, LeafList
 
 from exabgp.configuration.flow.route import ParseFlowRoute
 from exabgp.configuration.flow.route import ParseFlowMatch
@@ -60,11 +60,15 @@ class ParseFlow(Section):
     }
 
     @classmethod
-    def _get_route_action(cls, command: str) -> str | None:
-        """Get action for a flow route command from schema."""
+    def _get_route_action_enums(
+        cls, command: str
+    ) -> tuple[ActionTarget, ActionOperation, ActionKey, str | None] | None:
+        """Get action enums for a flow route command from schema."""
         child = cls._route_schema_children.get(command)
         if isinstance(child, (Leaf, LeafList)):
-            return child.action
+            target, operation, key = child.get_action_enums()
+            field_name = child.field_name if hasattr(child, 'field_name') else None
+            return (target, operation, key, field_name)
         return None
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
@@ -100,18 +104,20 @@ def route(tokeniser: Any) -> list[Route]:
         if not command:
             break
 
-        action = ParseFlow._get_route_action(command)
-        if action is None:
+        action_enums = ParseFlow._get_route_action_enums(command)
+        if action_enums is None:
             raise ValueError(f'flow route: unknown command "{command}"')
 
-        if action == 'nlri-add':
+        target, operation, key, field_name = action_enums
+
+        if target == ActionTarget.NLRI:
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
             for adding in handler(tokeniser):
                 flow_nlri.add(adding)
-        elif action == 'attribute-add':
+        elif target == ActionTarget.ATTRIBUTE:
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
             attributes.add(handler(tokeniser))
-        elif action == 'nexthop-and-attribute':
+        elif target == ActionTarget.NEXTHOP_ATTRIBUTE:
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
             nh: Any
             attribute: Any
@@ -119,7 +125,7 @@ def route(tokeniser: Any) -> list[Route]:
             nexthop = nh
             flow_nlri.nexthop = nexthop
             attributes.add(attribute)
-        elif action == 'nop':
+        elif operation == ActionOperation.NOP:
             pass  # yes nothing to do !
         else:
             raise ValueError(f'flow: unknown command "{command}"')

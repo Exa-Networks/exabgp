@@ -31,7 +31,7 @@ from exabgp.configuration.parser import auto_asn, auto_boolean
 
 # Removed imports migrated to schema validators:
 # description, domainname, hostname, md5, rate_limit, source_interface
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 
 # Removed imports migrated to schema validators: boolean, ip, peer_ip, port
 from exabgp.environment import getenv
@@ -45,6 +45,7 @@ class ParseNeighbor(Section):
     TTL_SECURITY = 255
 
     # Schema definition for BGP neighbor configuration
+    # Schema uses explicit enum fields (target/operation/key)
     schema = Container(
         description='BGP neighbor (peer) configuration',
         children={
@@ -53,41 +54,61 @@ class ParseNeighbor(Section):
                 type=ValueType.IP_RANGE,
                 description='IP address or range of the BGP peer',
                 mandatory=True,
-                action='set-command',
                 example='127.0.0.1',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'local-address': Leaf(
                 type=ValueType.IP_ADDRESS,
                 description='Local IP address for the BGP session',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'local-as': Leaf(
                 type=ValueType.ASN,
                 description='Local AS number (or "auto" to copy peer-as)',
                 mandatory=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'peer-as': Leaf(
                 type=ValueType.ASN,
                 description='Peer AS number (or "auto" to copy local-as)',
                 mandatory=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'router-id': Leaf(
                 type=ValueType.IP_ADDRESS,
                 description='BGP router ID (defaults to local-address)',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'description': Leaf(
                 type=ValueType.STRING,
                 description='Neighbor description',
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'host-name': Leaf(
                 type=ValueType.STRING,
                 description='Hostname capability value',
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'domain-name': Leaf(
                 type=ValueType.STRING,
                 description='Domain name capability value',
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             # Timers
             'hold-time': Leaf(
@@ -96,35 +117,48 @@ class ParseNeighbor(Section):
                 default=180,
                 min_value=0,
                 max_value=65535,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'rate-limit': Leaf(
                 type=ValueType.INTEGER,
                 description='Rate limit for updates (messages per second)',
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             # Connection options
             'passive': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Wait for incoming connections',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'listen': Leaf(
                 type=ValueType.PORT,
                 description='Local TCP port to listen on',
                 default=179,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'connect': Leaf(
                 type=ValueType.PORT,
                 description='Remote TCP port to connect to',
                 default=179,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'source-interface': Leaf(
                 type=ValueType.STRING,
                 description='Source interface for BGP session',
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             # TTL security
             'outgoing-ttl': Leaf(
@@ -132,63 +166,89 @@ class ParseNeighbor(Section):
                 description='TTL for outgoing packets (255 for GTSM)',
                 min_value=1,
                 max_value=255,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'incoming-ttl': Leaf(
                 type=ValueType.INTEGER,
                 description='Minimum TTL for incoming packets (GTSM)',
                 min_value=1,
                 max_value=255,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             # Authentication
             'md5-password': Leaf(
                 type=ValueType.STRING,
                 description='TCP MD5 authentication password',
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'md5-base64': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Password is base64 encoded',
                 default=False,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'md5-ip': Leaf(
                 type=ValueType.IP_ADDRESS,
                 description='IP address for MD5 authentication',
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             # Behavior options
             'group-updates': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Group updates for efficiency',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'auto-flush': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Auto-flush updates',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'adj-rib-out': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Maintain Adj-RIB-Out',
                 default=False,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'adj-rib-in': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Maintain Adj-RIB-In',
                 default=False,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'manual-eor': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Manual End-of-RIB control',
                 default=False,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'inherit': Leaf(
                 type=ValueType.STRING,
                 description='Inherit from template',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.EXTEND,
+                key=ActionKey.COMMAND,
             ),
             # Subsections
             'family': Container(description='Address families to negotiate'),
@@ -223,22 +283,8 @@ class ParseNeighbor(Section):
         # adj-rib-in, manual-eor, peer-address, md5-ip, rate-limit
     }
 
-    action = {
-        # Cannot migrate (return complex types or optional values):
-        'inherit': 'extend-command',
-        'router-id': 'set-command',
-        'hold-time': 'set-command',
-        'local-address': 'set-command',
-        'local-as': 'set-command',
-        'peer-as': 'set-command',
-        'outgoing-ttl': 'set-command',
-        'incoming-ttl': 'set-command',
-        'md5-base64': 'set-command',
-        'route': 'append-name',
-        # Migrated to schema: description, host-name, domain-name, source-interface,
-        # md5-password, passive, listen, connect, group-updates, auto-flush,
-        # adj-rib-out, adj-rib-in, manual-eor, peer-address, md5-ip, rate-limit
-    }
+    # action dict removed - schema provides action enums via get_action_enums()
+    # Note: 'inherit' uses EXTEND operation, specified via schema target/operation/key fields
 
     default = {
         'md5-base64': False,

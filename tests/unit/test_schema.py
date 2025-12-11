@@ -67,14 +67,18 @@ class TestLeaf:
         assert leaf.default is None
         assert leaf.mandatory is False
         assert leaf.parser is None
-        assert leaf.action == 'set-command'
         assert leaf.choices is None
         assert leaf.min_value is None
         assert leaf.max_value is None
+        # Action defaults
+        assert leaf.target is None
+        assert leaf.operation is None
+        assert leaf.key is None
 
     def test_leaf_full(self):
         """Leaf can be created with all attributes."""
         from exabgp.configuration.validator import IntegerValidator
+        from exabgp.configuration.schema import ActionTarget, ActionOperation, ActionKey
 
         dummy_validator = IntegerValidator(min_value=0, max_value=65535)
 
@@ -84,7 +88,9 @@ class TestLeaf:
             default=100,
             mandatory=True,
             validator=dummy_validator,
-            action='append-command',
+            target=ActionTarget.SCOPE,
+            operation=ActionOperation.APPEND,
+            key=ActionKey.COMMAND,
             min_value=0,
             max_value=65535,
         )
@@ -93,7 +99,9 @@ class TestLeaf:
         assert leaf.default == 100
         assert leaf.mandatory is True
         assert leaf.validator is dummy_validator
-        assert leaf.action == 'append-command'
+        assert leaf.target == ActionTarget.SCOPE
+        assert leaf.operation == ActionOperation.APPEND
+        assert leaf.key == ActionKey.COMMAND
         assert leaf.min_value == 0
         assert leaf.max_value == 65535
 
@@ -131,12 +139,16 @@ class TestLeafList:
         assert leaflist.type == ValueType.COMMUNITY
         assert leaflist.description == ''
         assert leaflist.parser is None
-        assert leaflist.action == 'append-command'
         assert leaflist.choices is None
+        # Action defaults
+        assert leaflist.target is None
+        assert leaflist.operation is None
+        assert leaflist.key is None
 
     def test_leaflist_full(self):
         """LeafList can be created with all attributes."""
         from exabgp.configuration.validator import StringValidator
+        from exabgp.configuration.schema import ActionTarget, ActionOperation, ActionKey
 
         dummy_validator = StringValidator()
 
@@ -144,13 +156,17 @@ class TestLeafList:
             type=ValueType.COMMUNITY,
             description='BGP communities',
             validator=dummy_validator,
-            action='extend-command',
+            target=ActionTarget.SCOPE,
+            operation=ActionOperation.EXTEND,
+            key=ActionKey.COMMAND,
             choices=['no-export', 'no-advertise'],
         )
         assert leaflist.type == ValueType.COMMUNITY
         assert leaflist.description == 'BGP communities'
         assert leaflist.validator is dummy_validator
-        assert leaflist.action == 'extend-command'
+        assert leaflist.target == ActionTarget.SCOPE
+        assert leaflist.operation == ActionOperation.EXTEND
+        assert leaflist.key == ActionKey.COMMAND
         assert leaflist.choices == ['no-export', 'no-advertise']
 
 

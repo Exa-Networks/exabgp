@@ -16,7 +16,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 from exabgp.configuration.validator import NextHopTupleValidator, StatefulValidator, Validator
 
 
@@ -38,12 +38,16 @@ class ParseNextHop(Section):
             'ipv4': Leaf(
                 type=ValueType.STRING,
                 description='IPv4 SAFI with alternate next-hop AFI (e.g., "unicast ipv6")',
-                action='append-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.COMMAND,
             ),
             'ipv6': Leaf(
                 type=ValueType.STRING,
                 description='IPv6 SAFI with alternate next-hop AFI (e.g., "unicast ipv4")',
-                action='append-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.COMMAND,
             ),
         },
     )

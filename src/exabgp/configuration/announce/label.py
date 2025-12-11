@@ -50,7 +50,9 @@ class AnnounceLabel(AnnouncePath):
             'label': Leaf(
                 type=ValueType.LABEL,
                 description='MPLS label stack',
-                action='nlri-set',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.SET,
+                key=ActionKey.FIELD,
                 validator=LegacyParserValidator(parser_func=label, name='label'),
             ),
         },

@@ -43,7 +43,9 @@ class AnnouncePath(AnnounceIP):
             'path-information': Leaf(
                 type=ValueType.IP_ADDRESS,
                 description='Path information (path ID for ADD-PATH)',
-                action='nlri-set',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.SET,
+                key=ActionKey.FIELD,
             ),
         },
     )

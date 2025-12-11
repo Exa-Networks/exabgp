@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from exabgp.protocol.ip import IP, IPRange, IPSelf
     from exabgp.rib.route import Route
 
+from exabgp.configuration.schema import ActionOperation, ActionTarget
+
 T = TypeVar('T')
 
 
@@ -1132,30 +1134,38 @@ class RouteBuilderValidator(Validator[list[Any]]):
                 if validator is None:
                     raise ValueError(f"No validator for '{command}'")
                 value = validator.validate(tokeniser)
-                action = child.action
+                action_enums = child.get_action_enums()
+                if action_enums is None:
+                    raise ValueError(f"No action defined for '{command}'")
 
                 # Apply action - collect into settings or attributes
-                self._apply_settings_action(settings, attributes, command, action, value)
+                self._apply_settings_action(settings, attributes, command, action_enums, value)
 
         # Create immutable NLRI from validated settings
         nlri = self.schema.nlri_class.from_settings(settings)
 
         return [Route(nlri, attributes, self.action_type, nexthop=settings.nexthop)]
 
-    def _apply_settings_action(self, settings: Any, attributes: Any, command: str, action: str, value: Any) -> None:
-        """Apply parsed value to Settings object based on action."""
-        if action == 'attribute-add':
+    def _apply_settings_action(
+        self, settings: Any, attributes: Any, command: str, action_enums: tuple[Any, Any, Any], value: Any
+    ) -> None:
+        """Apply parsed value to Settings object based on action enums."""
+        from exabgp.configuration.schema import ActionTarget, ActionOperation
+
+        target, operation, _ = action_enums
+
+        if target == ActionTarget.ATTRIBUTE and operation == ActionOperation.ADD:
             attributes.add(value)
-        elif action == 'nexthop-and-attribute':
+        elif target == ActionTarget.NEXTHOP_ATTRIBUTE:
             ip, attribute = value
             if ip:
                 settings.nexthop = ip
             if attribute:
                 attributes.add(attribute)
-        elif action == 'nlri-set':
+        elif target == ActionTarget.NLRI and operation == ActionOperation.SET:
             field_name = self.schema.assign.get(command, command)
             settings.set(field_name, value)
-        elif action == 'nlri-add':
+        elif target == ActionTarget.NLRI and operation == ActionOperation.APPEND:
             # For FlowSpec: value is a list/tuple/generator of components to add
             # Use hasattr to check for __iter__ to handle generators
             if hasattr(value, '__iter__') and not isinstance(value, (str, bytes)):
@@ -1169,15 +1179,15 @@ class RouteBuilderValidator(Validator[list[Any]]):
                     settings.add_rule(value)
                 elif hasattr(settings, 'rules'):
                     settings.rules.append(value)
-        elif action == 'nlri-nexthop':
+        elif target == ActionTarget.NEXTHOP:
             settings.nexthop = value
-        elif action == 'nop':
+        elif operation == ActionOperation.NOP:
             pass  # Intentionally do nothing (e.g., FlowSpec 'accept')
-        elif action == 'set-command':
+        elif target == ActionTarget.SCOPE and operation == ActionOperation.SET:
             # Store on settings for later processing
             setattr(settings, command.replace('-', '_'), value)
         else:
-            raise ValueError(f"Unknown action '{action}' for command '{command}'")
+            raise ValueError(f"Unknown action {action_enums} for command '{command}'")
 
     def to_schema(self) -> dict[str, Any]:
         return {'type': 'array', 'items': {'type': 'object'}}
@@ -1263,26 +1273,34 @@ class TypeSelectorValidator(Validator[list[Any]]):
                 if validator is None:
                     raise ValueError(f"No validator for '{command}'")
 
-                action = child.action
+                target, operation, key = child.get_action_enums()
 
                 # For nexthop-and-attribute, use validate_with_afi if validator wants AFI
                 used_afi = False
                 accepts_afi = getattr(validator, 'accepts_afi', False)
-                if action == 'nexthop-and-attribute' and accepts_afi:
+                if target == ActionTarget.NEXTHOP_ATTRIBUTE and accepts_afi:
                     value = validator.validate_with_afi(tokeniser, self.afi)
                     used_afi = True
                 else:
                     value = validator.validate(tokeniser)
 
                 # Apply action
-                route = self._apply_action(route, command, action, value, used_afi)
+                route = self._apply_action(route, command, target, operation, value, used_afi)
 
         return [route]
 
-    def _apply_action(self, route: Route, command: str, action: str, value: Any, used_afi: bool = False) -> Route:
+    def _apply_action(
+        self,
+        route: Route,
+        command: str,
+        target: ActionTarget,
+        operation: ActionOperation,
+        value: Any,
+        used_afi: bool = False,
+    ) -> Route:
         """Apply parsed value to Route object based on action.
 
-        Note: 'nlri-set' action is not supported for TypeSelector - factories
+        Note: NLRI target is not supported for TypeSelector - factories
         should create complete NLRIs. Use Settings pattern with RouteBuilder
         for types that need deferred NLRI construction.
 
@@ -1290,9 +1308,9 @@ class TypeSelectorValidator(Validator[list[Any]]):
         """
         from exabgp.protocol.family import AFI
 
-        if action == 'attribute-add':
+        if target == ActionTarget.ATTRIBUTE:
             route.attributes.add(value)
-        elif action == 'nexthop-and-attribute':
+        elif target == ActionTarget.NEXTHOP_ATTRIBUTE:
             ip, attribute = value
             if ip:
                 route = route.with_nexthop(ip)
@@ -1305,10 +1323,10 @@ class TypeSelectorValidator(Validator[list[Any]]):
                     pass  # Skip NextHop attr for AFI-aware validators with IPv6
                 else:
                     route.attributes.add(attribute)
-        elif action == 'nop':
+        elif operation == ActionOperation.NOP:
             pass
         else:
-            raise ValueError(f"Unknown action '{action}' for command '{command}'")
+            raise ValueError(f"Unknown action target '{target}' for command '{command}'")
         return route
 
     def to_schema(self) -> dict[str, Any]:

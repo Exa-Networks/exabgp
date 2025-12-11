@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.configuration.core import Section
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 from exabgp.configuration.validator import LegacyParserValidator
 
 from exabgp.configuration.operational.parser import asm
@@ -30,49 +30,65 @@ class ParseOperational(Section):
             'asm': Leaf(
                 type=ValueType.STRING,
                 description='Advisory State Message',
-                action='append-name',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.NAME,
                 validator=LegacyParserValidator(parser_func=asm, name='asm'),
             ),
             'adm': Leaf(
                 type=ValueType.STRING,
                 description='Advisory Dump Message',
-                action='append-name',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.NAME,
                 validator=LegacyParserValidator(parser_func=adm, name='adm'),
             ),
             'rpcq': Leaf(
                 type=ValueType.STRING,
                 description='Reachable Prefix Count Query',
-                action='append-name',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.NAME,
                 validator=LegacyParserValidator(parser_func=rpcq, name='rpcq'),
             ),
             'rpcp': Leaf(
                 type=ValueType.STRING,
                 description='Reachable Prefix Count Reply',
-                action='append-name',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.NAME,
                 validator=LegacyParserValidator(parser_func=rpcp, name='rpcp'),
             ),
             'apcq': Leaf(
                 type=ValueType.STRING,
                 description='Adj-RIB-Out Prefix Count Query',
-                action='append-name',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.NAME,
                 validator=LegacyParserValidator(parser_func=apcq, name='apcq'),
             ),
             'apcp': Leaf(
                 type=ValueType.STRING,
                 description='Adj-RIB-Out Prefix Count Reply',
-                action='append-name',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.NAME,
                 validator=LegacyParserValidator(parser_func=apcp, name='apcp'),
             ),
             'lpcq': Leaf(
                 type=ValueType.STRING,
                 description='Local Prefix Count Query',
-                action='append-name',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.NAME,
                 validator=LegacyParserValidator(parser_func=lpcq, name='lpcq'),
             ),
             'lpcp': Leaf(
                 type=ValueType.STRING,
                 description='Local Prefix Count Reply',
-                action='append-name',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.APPEND,
+                key=ActionKey.NAME,
                 validator=LegacyParserValidator(parser_func=lpcp, name='lpcp'),
             ),
         },
@@ -81,7 +97,7 @@ class ParseOperational(Section):
 
     # Empty - all entries handled by schema validators
     known: dict = {}
-    action: dict = {}
+    # action dict removed - derived from schema
 
     name = 'operational'
 

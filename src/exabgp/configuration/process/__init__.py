@@ -12,7 +12,7 @@ import sys
 import uuid
 
 from exabgp.configuration.core import Section
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 
 from exabgp.configuration.process.parser import run
 
@@ -28,20 +28,26 @@ class ParseProcess(Section):
                 type=ValueType.STRING,
                 description='Command to execute (path and arguments)',
                 mandatory=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'encoder': Leaf(
                 type=ValueType.ENUMERATION,
                 description='Message encoding format',
                 choices=['text', 'json'],
                 default='text',
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'respawn': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Restart process if it exits',
                 default=True,
-                action='set-command',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
         },
     )
@@ -51,9 +57,7 @@ class ParseProcess(Section):
     known = {
         'run': run,
     }
-    action = {
-        'run': 'set-command',
-    }
+    # action dict removed - schema provides action enums
 
     default = {
         'respawn': True,

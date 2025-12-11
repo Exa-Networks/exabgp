@@ -24,12 +24,8 @@ if TYPE_CHECKING:
     from exabgp.configuration.validator import Validator
 
 
-# NOTE: ActionType Literal removed - action field now uses str type
-# Valid action strings are defined in _ACTION_STRING_TO_ENUMS mapping below
-
-
 # =============================================================================
-# Type-Safe Action Enums (New)
+# Type-Safe Action Enums
 # =============================================================================
 
 
@@ -85,36 +81,6 @@ class ActionKey(Enum):
     FIELD = 'field'  # Use explicit field_name mapping
 
 
-# Mapping from old string-based action to new enum tuple
-# Format: (ActionTarget, ActionOperation, ActionKey)
-_ACTION_STRING_TO_ENUMS: dict[str, tuple[ActionTarget, ActionOperation, ActionKey]] = {
-    'set-command': (ActionTarget.SCOPE, ActionOperation.SET, ActionKey.COMMAND),
-    'append-command': (ActionTarget.SCOPE, ActionOperation.APPEND, ActionKey.COMMAND),
-    'extend-command': (ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.COMMAND),
-    'append-name': (ActionTarget.SCOPE, ActionOperation.APPEND, ActionKey.NAME),
-    'extend-name': (ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME),
-    'attribute-add': (ActionTarget.ATTRIBUTE, ActionOperation.ADD, ActionKey.NAME),
-    'nlri-set': (ActionTarget.NLRI, ActionOperation.SET, ActionKey.FIELD),
-    'nlri-add': (ActionTarget.NLRI, ActionOperation.APPEND, ActionKey.FIELD),
-    'nlri-nexthop': (ActionTarget.NEXTHOP, ActionOperation.SET, ActionKey.COMMAND),
-    'nexthop-and-attribute': (ActionTarget.NEXTHOP_ATTRIBUTE, ActionOperation.SET, ActionKey.COMMAND),
-    'append-route': (ActionTarget.ROUTE, ActionOperation.EXTEND, ActionKey.COMMAND),
-    'nop': (ActionTarget.SCOPE, ActionOperation.NOP, ActionKey.COMMAND),
-}
-
-
-def action_string_to_enums(action: str) -> tuple[ActionTarget, ActionOperation, ActionKey] | None:
-    """Convert old string-based action to new enum tuple.
-
-    Args:
-        action: Old string-based action type
-
-    Returns:
-        Tuple of (target, operation, key) or None if action not recognized
-    """
-    return _ACTION_STRING_TO_ENUMS.get(action)
-
-
 class ValueType(Enum):
     """YANG-inspired value types for configuration leaves.
 
@@ -167,7 +133,6 @@ class Leaf:
             type=ValueType.INTEGER,
             description='BGP hold time in seconds',
             default=180,
-            parser=hold_time,
             min_value=0,
             max_value=65535,
         )
@@ -177,12 +142,15 @@ class Leaf:
         description: Human-readable description for documentation
         default: Default value if not specified in configuration
         mandatory: Whether this field must be explicitly set
-        parser: Validation/parsing callback function
-        action: How to handle parsed value ('set-command', 'append-command', etc.)
+        parser: Deprecated - use validator instead
         choices: Valid values for ENUMERATION type
         min_value: Minimum value for INTEGER type
         max_value: Maximum value for INTEGER type
         example: Custom syntax hint (overrides auto-generated from type)
+        target: Where to store (ActionTarget enum, default: SCOPE)
+        operation: How to store (ActionOperation enum, default: SET)
+        key: Which key to use (ActionKey enum, default: COMMAND)
+        field_name: Explicit field name for ActionKey.FIELD
     """
 
     type: ValueType
@@ -190,17 +158,16 @@ class Leaf:
     default: Any = None
     mandatory: bool = False
     parser: Callable | None = None  # Deprecated - use validator
-    action: str = 'set-command'  # DEPRECATED - use target/operation/key enums
     choices: list[str] | None = None
     min_value: int | None = None
     max_value: int | None = None
     validator: 'Validator[Any] | None' = None  # Explicit validator override
     example: str | None = None  # Custom syntax hint for definition generation
 
-    # New type-safe action fields (preferred over string action)
-    target: ActionTarget | None = None  # Where to store (defaults based on action)
-    operation: ActionOperation | None = None  # How to store (defaults based on action)
-    key: ActionKey | None = None  # Which key to use (defaults based on action)
+    # Action fields - preferred over string 'action'
+    target: ActionTarget | None = None  # Where to store (default: SCOPE)
+    operation: ActionOperation | None = None  # How to store (default: SET for Leaf)
+    key: ActionKey | None = None  # Which key to use (default: COMMAND)
     field_name: str | None = None  # Explicit field name for ActionKey.FIELD
 
     def __post_init__(self) -> None:
@@ -263,37 +230,25 @@ class Leaf:
         default_target: ActionTarget = ActionTarget.SCOPE,
         default_operation: ActionOperation = ActionOperation.SET,
         default_key: ActionKey = ActionKey.COMMAND,
-    ) -> tuple[ActionTarget, ActionOperation, ActionKey] | None:
-        """Get action as enum tuple, with backward compatibility for string action.
+    ) -> tuple[ActionTarget, ActionOperation, ActionKey]:
+        """Get action as enum tuple with defaults.
 
-        Priority:
-        1. Explicit enum fields (target, operation, key) if any are set
-        2. Convert from string action field
-        3. Return defaults
+        Returns explicit enum fields if set, otherwise defaults.
+        For Leaf: defaults are (SCOPE, SET, COMMAND).
 
         Args:
-            default_target: Default target if not specified
+            default_target: Default target if not specified (SCOPE)
             default_operation: Default operation if not specified (SET for Leaf)
-            default_key: Default key if not specified
+            default_key: Default key if not specified (COMMAND)
 
         Returns:
             Tuple of (target, operation, key)
         """
-        # Priority 1: Explicit enum fields take precedence
-        if self.target is not None or self.operation is not None or self.key is not None:
-            return (
-                self.target if self.target is not None else default_target,
-                self.operation if self.operation is not None else default_operation,
-                self.key if self.key is not None else default_key,
-            )
-
-        # Priority 2: Convert from string action
-        converted = action_string_to_enums(self.action)
-        if converted is not None:
-            return converted
-
-        # Priority 3: Defaults (for unknown actions)
-        return (default_target, default_operation, default_key)
+        return (
+            self.target if self.target is not None else default_target,
+            self.operation if self.operation is not None else default_operation,
+            self.key if self.key is not None else default_key,
+        )
 
 
 @dataclass
@@ -301,38 +256,38 @@ class LeafList:
     """List of values (YANG leaf-list equivalent).
 
     A leaf-list represents a configuration option that can have multiple values
-    of the same type. Values are typically accumulated via 'append-command'.
+    of the same type. Values are typically accumulated (APPEND operation).
 
     Example:
         LeafList(
             type=ValueType.COMMUNITY,
             description='BGP communities to attach',
-            parser=community,
         )
 
     Attributes:
         type: The semantic type of list elements
         description: Human-readable description for documentation
-        parser: Validation/parsing callback function (deprecated - use validator)
-        action: How to handle parsed values (typically 'append-command')
+        parser: Deprecated - use validator instead
         choices: Valid values for ENUMERATION type elements
         validator: Explicit validator override
         example: Custom syntax hint (overrides auto-generated from type)
+        target: Where to store (ActionTarget enum, default: SCOPE)
+        operation: How to store (ActionOperation enum, default: APPEND)
+        key: Which key to use (ActionKey enum, default: COMMAND)
+        field_name: Explicit field name for ActionKey.FIELD
     """
 
     type: ValueType
     description: str = ''
     parser: Callable | None = None  # Deprecated - use validator
-    action: str = 'append-command'  # DEPRECATED - use target/operation/key enums
     choices: list[str] | None = None
     validator: 'Validator[Any] | None' = None  # Explicit validator override
     example: str | None = None  # Custom syntax hint for definition generation
 
-    # New type-safe action fields (preferred over string action)
-    # LeafList defaults to APPEND operation (vs Leaf which defaults to SET)
-    target: ActionTarget | None = None  # Where to store (defaults based on action)
-    operation: ActionOperation | None = None  # How to store (defaults to APPEND for LeafList)
-    key: ActionKey | None = None  # Which key to use (defaults based on action)
+    # Action fields - specify ALL THREE for clarity (LeafList defaults to APPEND)
+    target: ActionTarget | None = None  # Where to store (default: SCOPE)
+    operation: ActionOperation | None = None  # How to store (default: APPEND for LeafList)
+    key: ActionKey | None = None  # Which key to use (default: COMMAND)
     field_name: str | None = None  # Explicit field name for ActionKey.FIELD
 
     def __post_init__(self) -> None:
@@ -380,37 +335,25 @@ class LeafList:
         default_target: ActionTarget = ActionTarget.SCOPE,
         default_operation: ActionOperation = ActionOperation.APPEND,  # APPEND for LeafList
         default_key: ActionKey = ActionKey.COMMAND,
-    ) -> tuple[ActionTarget, ActionOperation, ActionKey] | None:
-        """Get action as enum tuple, with backward compatibility for string action.
+    ) -> tuple[ActionTarget, ActionOperation, ActionKey]:
+        """Get action as enum tuple with defaults.
 
-        Priority:
-        1. Explicit enum fields (target, operation, key) if any are set
-        2. Convert from string action field
-        3. Return defaults (APPEND for LeafList, vs SET for Leaf)
+        Returns explicit enum fields if set, otherwise defaults.
+        For LeafList: defaults are (SCOPE, APPEND, COMMAND).
 
         Args:
-            default_target: Default target if not specified
+            default_target: Default target if not specified (SCOPE)
             default_operation: Default operation if not specified (APPEND for LeafList)
-            default_key: Default key if not specified
+            default_key: Default key if not specified (COMMAND)
 
         Returns:
             Tuple of (target, operation, key)
         """
-        # Priority 1: Explicit enum fields take precedence
-        if self.target is not None or self.operation is not None or self.key is not None:
-            return (
-                self.target if self.target is not None else default_target,
-                self.operation if self.operation is not None else default_operation,
-                self.key if self.key is not None else default_key,
-            )
-
-        # Priority 2: Convert from string action
-        converted = action_string_to_enums(self.action)
-        if converted is not None:
-            return converted
-
-        # Priority 3: Defaults (for unknown actions)
-        return (default_target, default_operation, default_key)
+        return (
+            self.target if self.target is not None else default_target,
+            self.operation if self.operation is not None else default_operation,
+            self.key if self.key is not None else default_key,
+        )
 
 
 # =============================================================================
@@ -569,7 +512,9 @@ class CompositeLeaf(Leaf):
         CompositeLeaf(
             parameters=['afi', 'safi', 'advisory'],
             result_factory=Advisory.ASM,
-            action='append-name',
+            target=ActionTarget.SCOPE,
+            operation=ActionOperation.APPEND,
+            key=ActionKey.NAME,
         )
 
     Attributes:

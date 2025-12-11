@@ -13,7 +13,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, LeafList, ValueType
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, LeafList, ValueType
 
 from exabgp.configuration.flow.parser import accept
 from exabgp.configuration.flow.parser import discard
@@ -38,63 +38,87 @@ class ParseFlowThen(Section):
             'accept': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Accept matching traffic',
-                action='nop',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.NOP,
+                key=ActionKey.COMMAND,
             ),
             'discard': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Discard matching traffic',
-                action='attribute-add',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
             ),
             'rate-limit': Leaf(
                 type=ValueType.INTEGER,
                 description='Rate limit in bytes per second',
-                action='attribute-add',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
             ),
             'redirect': Leaf(
                 type=ValueType.STRING,
                 description='Redirect to VRF (route-target or IP)',
-                action='nexthop-and-attribute',
+                target=ActionTarget.NEXTHOP_ATTRIBUTE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'redirect-to-nexthop': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Redirect to next-hop',
-                action='attribute-add',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
             ),
             'redirect-to-nexthop-ietf': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Redirect to next-hop (IETF format)',
-                action='attribute-add',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
             ),
             'copy': Leaf(
                 type=ValueType.IP_ADDRESS,
                 description='Copy to IP address',
-                action='nexthop-and-attribute',
+                target=ActionTarget.NEXTHOP_ATTRIBUTE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'mark': Leaf(
                 type=ValueType.INTEGER,
                 description='Set DSCP marking',
-                action='attribute-add',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
             ),
             'action': Leaf(
                 type=ValueType.ENUMERATION,
                 description='Traffic action',
                 choices=['sample', 'terminal', 'sample-terminal'],
-                action='attribute-add',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
             ),
             'community': LeafList(
                 type=ValueType.COMMUNITY,
                 description='Standard BGP communities',
-                action='attribute-add',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
             ),
             'large-community': LeafList(
                 type=ValueType.LARGE_COMMUNITY,
                 description='Large BGP communities',
-                action='attribute-add',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
             ),
             'extended-community': LeafList(
                 type=ValueType.EXTENDED_COMMUNITY,
                 description='Extended BGP communities',
-                action='attribute-add',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
             ),
         },
     )

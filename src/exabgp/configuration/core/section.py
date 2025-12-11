@@ -205,24 +205,22 @@ class Section(Error):
 
                     return self.error.set(msg)
 
-            # Enum-based action dispatch (unified handler)
+            # Unified action dispatch - get action enums from schema or decorator registration
             action_enums = self._action_enums_from_schema(command)
             if action_enums is not None:
                 target, operation, key, field_name = action_enums
-                # Use assign dict to get field name for NLRI fields
-                resolved_field = self.assign.get(command, field_name)
-                apply_action(target, operation, key, self.scope, name, command, insert, resolved_field)
-                return True
+            else:
+                # Try decorator-registered actions (@Section.register)
+                action_tuple = self.action.get(identifier)
+                if action_tuple is not None:
+                    target, operation, key = action_tuple
+                    field_name = None
+                else:
+                    raise RuntimeError(f'name {name} command {command} has no action set')
 
-            # Decorator-registered actions (@Section.register) - already enum tuples
-            action_tuple = self.action.get(identifier)
-            if action_tuple is not None:
-                target, operation, key = action_tuple
-                resolved_field = self.assign.get(command)
-                apply_action(target, operation, key, self.scope, name, command, insert, resolved_field)
-                return True
-
-            raise RuntimeError(f'name {name} command {command} has no action set')
+            # Use assign dict to get field name, with schema field_name as fallback
+            resolved_field = self.assign.get(command, field_name)
+            apply_action(target, operation, key, self.scope, name, command, insert, resolved_field)
             return True
         except ValueError as exc:
             return self.error.set(str(exc))
@@ -251,11 +249,9 @@ class Section(Error):
 
         child = cls.schema.children.get(command)
         if isinstance(child, (Leaf, LeafList)):
-            enums = child.get_action_enums()
-            if enums is not None:
-                target, operation, key = enums
-                field_name = child.field_name if hasattr(child, 'field_name') else None
-                return (target, operation, key, field_name)
+            target, operation, key = child.get_action_enums()
+            field_name = child.field_name if hasattr(child, 'field_name') else None
+            return (target, operation, key, field_name)
         return None
 
     @classmethod

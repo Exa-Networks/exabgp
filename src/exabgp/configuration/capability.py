@@ -19,7 +19,7 @@ from exabgp.bgp.message.open.capability.graceful import Graceful
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.parser import string
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 
 
 def addpath(tokeniser: 'Tokeniser') -> int:
@@ -80,16 +80,25 @@ class ParseCapability(Section):
                 type=ValueType.BOOLEAN,
                 description='Extended next-hop capability',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'add-path': Leaf(
                 type=ValueType.ENUMERATION,
                 description='ADD-PATH capability mode',
                 choices=['disable', 'receive', 'send', 'send/receive'],
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'asn4': Leaf(
                 type=ValueType.BOOLEAN,
                 description='4-byte AS number capability',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'graceful-restart': Leaf(
                 type=ValueType.INTEGER,
@@ -97,36 +106,57 @@ class ParseCapability(Section):
                 default=0,
                 min_value=0,
                 max_value=4095,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'multi-session': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Multi-session capability',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'operational': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Operational capability for advisory messages',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'route-refresh': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Route refresh capability',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'aigp': Leaf(
                 type=ValueType.BOOLEAN,
                 description='AIGP (Accumulated IGP Metric) capability',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'extended-message': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Extended message capability (>4096 bytes)',
                 default=True,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'software-version': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Software version capability',
                 default=False,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
         },
     )

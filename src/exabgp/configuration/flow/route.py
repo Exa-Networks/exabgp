@@ -16,7 +16,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
-from exabgp.configuration.schema import Container, Leaf, ValueType
+from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 
 from exabgp.configuration.flow.match import ParseFlowMatch
 from exabgp.configuration.flow.then import ParseFlowThen
@@ -41,17 +41,23 @@ class ParseFlowRoute(Section):
             'rd': Leaf(
                 type=ValueType.RD,
                 description='Route distinguisher',
-                action='nlri-set',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.SET,
+                key=ActionKey.FIELD,
             ),
             'route-distinguisher': Leaf(
                 type=ValueType.RD,
                 description='Route distinguisher (alias for rd)',
-                action='nlri-set',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.SET,
+                key=ActionKey.FIELD,
             ),
             'next-hop': Leaf(
                 type=ValueType.NEXT_HOP,
                 description='Next-hop for redirect-to-nexthop',
-                action='nlri-nexthop',
+                target=ActionTarget.NEXTHOP,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
             ),
             'match': Container(description='FlowSpec match criteria'),
             'scope': Container(description='FlowSpec scope'),
@@ -78,11 +84,7 @@ class ParseFlowRoute(Section):
         'next-hop': next_hop,
     }
 
-    action: dict[str | tuple[Any, ...], str] = {
-        'rd': 'nlri-set',
-        'route-distinguisher': 'nlri-set',
-        'next-hop': 'nlri-nexthop',
-    }
+    # action dict removed - derived from schema
 
     assign: dict[str, str] = {
         'rd': 'rd',
