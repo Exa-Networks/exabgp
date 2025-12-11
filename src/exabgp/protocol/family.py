@@ -416,3 +416,8 @@ class Family:
 
     def __repr__(self) -> str:
         return f'{self.afi!s} {self.safi!s}'
+
+    @classmethod
+    def all_families(cls) -> list[tuple[AFI, SAFI]]:
+        """Return list of all supported (AFI, SAFI) pairs."""
+        return list(cls.size.keys())
