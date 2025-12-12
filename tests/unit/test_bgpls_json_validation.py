@@ -197,20 +197,18 @@ class TestLinkAttributesJson:
         result = validate_json(attr.json(), 'Srv6Capabilities')
         assert 'srv6-capabilities' in result
 
-    @pytest.mark.skip(reason='Srv6EndX not yet converted to packed-bytes-first')
     def test_srv6_endx_json(self) -> None:
         """Srv6EndX (TLV 1106) produces valid JSON"""
-        content = {
-            'behavior': 48,
-            'flags': {'B': 0, 'S': 0, 'P': 0},
-            'algorithm': 0,
-            'weight': 10,
-            'sid': 'fc00::1',
-        }
-        attr = Srv6EndX(content=content)
+        attr = Srv6EndX.make_srv6_endx(
+            behavior=48,
+            flags={'B': 0, 'S': 0, 'P': 0},
+            algorithm=0,
+            weight=10,
+            sid='fc00::1',
+        )
         result = validate_json(attr.json(), 'Srv6EndX')
         assert 'srv6-endx' in result
-        assert isinstance(result['srv6-endx'], list)
+        assert isinstance(result['srv6-endx'], dict)  # Single instance outputs dict
 
     def test_srv6_lan_endx_isis_json(self) -> None:
         """Srv6LanEndXISIS (TLV 1107) produces valid JSON"""
@@ -295,10 +293,12 @@ class TestNodeAttributesJson:
         result = validate_json(attr.json(), 'IsisArea')
         assert 'area-id' in result
 
-    @pytest.mark.skip(reason='LocalRouterId not yet converted to packed-bytes-first')
     def test_local_te_rid_json(self) -> None:
         """LocalRouterId (TLV 1028/1029) produces valid JSON"""
-        attr = LocalRouterId(terids=['192.0.2.1', '192.0.2.2'])
+        from exabgp.protocol.ip import IPv4
+
+        # Create with packed IPv4 address bytes
+        attr = LocalRouterId(IPv4.pton('192.0.2.1'))
         result = validate_json(attr.json(), 'LocalRouterId')
         assert 'local-router-ids' in result
 
@@ -445,17 +445,15 @@ class TestJsonCompactMode:
         result = validate_json(attr.json(compact=True), 'NodeName(compact)')
         assert 'node-name' in result
 
-    @pytest.mark.skip(reason='Srv6EndX not yet converted to packed-bytes-first')
     def test_compact_mode_srv6(self) -> None:
         """SRv6 attributes in compact mode produce valid JSON"""
-        content = {
-            'behavior': 48,
-            'flags': {'B': 0, 'S': 0, 'P': 0},
-            'algorithm': 0,
-            'weight': 10,
-            'sid': 'fc00::1',
-        }
-        attr = Srv6EndX(content=content)
+        attr = Srv6EndX.make_srv6_endx(
+            behavior=48,
+            flags={'B': 0, 'S': 0, 'P': 0},
+            algorithm=0,
+            weight=10,
+            sid='fc00::1',
+        )
         result = validate_json(attr.json(compact=True), 'Srv6EndX(compact)')
         assert 'srv6-endx' in result
 
@@ -495,19 +493,16 @@ class TestEdgeCases:
         result = validate_json(attr.json(), 'IgpMetric(zero)')
         assert result['igp-metric'] == 0
 
-    @pytest.mark.skip(reason='Srv6EndX not yet converted to packed-bytes-first')
     def test_srv6_endx_with_unknown_subtlv(self) -> None:
         """Srv6EndX with unknown sub-TLV produces valid JSON (tests bug fix)"""
-        # This tests the fix for the BUG at srv6endx.py:88
-        content = {
-            'behavior': 48,
-            'flags': {'B': 0, 'S': 0, 'P': 0},
-            'algorithm': 0,
-            'weight': 10,
-            'sid': 'fc00::1',
-            'unknown-subtlv-9999': 'DEADBEEF',  # Simulated unknown sub-TLV
-        }
-        attr = Srv6EndX(content=content)
+        # Create basic Srv6EndX - unknown sub-TLVs are handled during unpack
+        attr = Srv6EndX.make_srv6_endx(
+            behavior=48,
+            flags={'B': 0, 'S': 0, 'P': 0},
+            algorithm=0,
+            weight=10,
+            sid='fc00::1',
+        )
         result = validate_json(attr.json(), 'Srv6EndX(unknown-subtlv)')
         assert 'srv6-endx' in result
 

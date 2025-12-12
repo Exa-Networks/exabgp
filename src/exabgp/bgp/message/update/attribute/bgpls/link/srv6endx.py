@@ -7,7 +7,7 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from struct import unpack
+from struct import pack, unpack
 from typing import Callable
 
 from exabgp.bgp.message.notification import Notify
@@ -115,6 +115,33 @@ class Srv6EndX(FlagLS):
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6EndX:
         return cls(data)
+
+    @classmethod
+    def make_srv6_endx(
+        cls,
+        behavior: int,
+        flags: dict[str, int],
+        algorithm: int,
+        weight: int,
+        sid: str,
+    ) -> Srv6EndX:
+        """Create Srv6EndX from semantic values.
+
+        Args:
+            behavior: Endpoint behavior (16-bit)
+            flags: Dict with B, S, P flag values
+            algorithm: SR algorithm
+            weight: Weight value
+            sid: SRv6 SID as IPv6 string
+
+        Returns:
+            Srv6EndX instance with packed wire-format bytes
+        """
+        # Behavior (2 bytes) + Flags (1) + Algorithm (1) + Weight (1) + Reserved (1) + SID (16)
+        flags_byte = (flags.get('B', 0) << 7) | (flags.get('S', 0) << 6) | (flags.get('P', 0) << 5)
+        packed = pack('!HBBBx', behavior, flags_byte, algorithm, weight)
+        packed += IPv6.pton(sid)
+        return cls(packed)
 
     def json(self, compact: bool = False) -> str:
         return '"srv6-endx": {}'.format(json.dumps(self.content))
