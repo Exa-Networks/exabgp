@@ -348,10 +348,9 @@ class TestPrefixAttributesJson:
         assert 'prefix-metric' in result
         assert result['prefix-metric'] == 20
 
-    @pytest.mark.skip(reason='OspfForwardingAddress not yet converted to packed-bytes-first')
     def test_ospf_forwarding_address_json(self) -> None:
         """OspfForwardingAddress (TLV 1156) produces valid JSON"""
-        attr = OspfForwardingAddress(content='192.0.2.1')
+        attr = OspfForwardingAddress.make_ospf_forwarding_address('192.0.2.1')
         result = validate_json(attr.json(), 'OspfForwardingAddress')
         assert 'ospf-forwarding-address' in result
 
@@ -362,27 +361,24 @@ class TestPrefixAttributesJson:
         result = validate_json(attr.json(), 'PrefixOpaque')
         assert 'opaque-prefix' in result
 
-    @pytest.mark.skip(reason='PrefixSid not yet converted to packed-bytes-first')
     def test_sr_prefix_json(self) -> None:
         """PrefixSid (TLV 1158) produces valid JSON"""
-        flags = {'R': 0, 'N': 1, 'P': 0, 'E': 0, 'V': 0, 'L': 0, 'RSV': 0, 'RSV2': 0}
-        attr = PrefixSid(flags=flags, sids=[100], sr_algo=0, undecoded=[])
+        flags = {'R': 0, 'N': 1, 'P': 0, 'E': 0, 'V': 0, 'L': 0}
+        attr = PrefixSid.make_prefix_sid(flags=flags, sids=[100], sr_algo=0)
         result = validate_json(attr.json(), 'PrefixSid')
         assert 'sr-prefix-flags' in result
         assert 'sids' in result
 
-    @pytest.mark.skip(reason='SourceRouterId not yet converted to packed-bytes-first')
     def test_sr_source_router_id_json(self) -> None:
         """SourceRouterId (TLV 1171) produces valid JSON"""
-        attr = SourceRouterId(content='192.0.2.1')
+        attr = SourceRouterId.make_source_router_id('192.0.2.1')
         result = validate_json(attr.json(), 'SourceRouterId')
         assert 'sr-source-router-id' in result
 
-    @pytest.mark.skip(reason='PrefixAttributesFlags not yet converted to packed-bytes-first')
     def test_sr_igp_prefix_attr_json(self) -> None:
         """PrefixAttributesFlags (TLV 1170) produces valid JSON"""
-        flags = {'X': 0, 'R': 0, 'N': 1, 'RSV': 0}
-        attr = PrefixAttributesFlags(flags=flags)
+        flags = {'X': 0, 'R': 0, 'N': 1}
+        attr = PrefixAttributesFlags.make_prefix_attributes_flags(flags=flags)
         result = validate_json(attr.json(), 'PrefixAttributesFlags')
         assert 'sr-prefix-attribute-flags' in result
 
@@ -474,10 +470,9 @@ class TestEdgeCases:
         result = validate_json(attr.json(), 'LinkName(unicode)')
         assert 'link-name' in result
 
-    @pytest.mark.skip(reason='SourceRouterId not yet converted to packed-bytes-first')
     def test_ipv6_addresses(self) -> None:
         """IPv6 addresses in JSON are valid"""
-        attr = SourceRouterId(content='2001:db8::1')
+        attr = SourceRouterId.make_source_router_id('2001:db8::1')
         result = validate_json(attr.json(), 'SourceRouterId(ipv6)')
         assert result['sr-source-router-id'] == '2001:db8::1'
 

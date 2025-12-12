@@ -7,7 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from struct import unpack
+from struct import pack, unpack
 from exabgp.util import hexstring
 
 from exabgp.bgp.message.notification import Notify
@@ -103,3 +103,36 @@ class PrefixSid(FlagLS):
 
     def json(self, compact: bool = False) -> str:
         return f'"sr-prefix-flags": {json.dumps(self.flags)}, "sids": {json.dumps(self.sids)}, "undecoded-sids": {json.dumps(self.undecoded)}, "sr-algorithm": {json.dumps(self.sr_algo)}'
+
+    @classmethod
+    def make_prefix_sid(cls, flags: dict[str, int], sids: list[int], sr_algo: int) -> PrefixSid:
+        """Create PrefixSid from semantic values.
+
+        Args:
+            flags: Dict with R, N, P, E, V, L flag values (0 or 1)
+            sids: List of SID/Label values
+            sr_algo: SR algorithm value
+
+        Returns:
+            PrefixSid instance with packed wire-format bytes
+        """
+        flags_byte = (
+            (flags.get('R', 0) << 7)
+            | (flags.get('N', 0) << 6)
+            | (flags.get('P', 0) << 5)
+            | (flags.get('E', 0) << 4)
+            | (flags.get('V', 0) << 3)
+            | (flags.get('L', 0) << 2)
+        )
+        # Flags (1) + Algorithm (1) + Reserved (2)
+        packed = pack('!BBH', flags_byte, sr_algo, 0)
+        # Add SIDs based on V/L flags
+        if flags.get('V', 0) and flags.get('L', 0):
+            # 3-byte label
+            for sid in sids:
+                packed += pack('!I', sid)[1:]  # Take last 3 bytes
+        else:
+            # 4-byte index
+            for sid in sids:
+                packed += pack('!I', sid)
+        return cls(packed)

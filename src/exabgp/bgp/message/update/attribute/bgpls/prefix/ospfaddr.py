@@ -37,3 +37,8 @@ class OspfForwardingAddress(BaseLS):
         if length not in (4, 16):
             raise Notify(3, 5, 'Error parsing OSPF Forwarding Address. Wrong size')
         return cls(data)
+
+    @classmethod
+    def make_ospf_forwarding_address(cls, address: str) -> OspfForwardingAddress:
+        """Create OspfForwardingAddress from IP address string."""
+        return cls(IP.pton(address))

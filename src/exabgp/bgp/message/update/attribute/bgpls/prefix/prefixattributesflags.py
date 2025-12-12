@@ -28,3 +28,16 @@ class PrefixAttributesFlags(FlagLS):
     TLV = 1170
     FLAGS = ['X', 'R', 'N', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     LEN = 1
+
+    @classmethod
+    def make_prefix_attributes_flags(cls, flags: dict[str, int]) -> PrefixAttributesFlags:
+        """Create PrefixAttributesFlags from flags dict.
+
+        Args:
+            flags: Dict with X, R, N flag values (0 or 1)
+
+        Returns:
+            PrefixAttributesFlags instance with packed wire-format bytes
+        """
+        flags_byte = (flags.get('X', 0) << 7) | (flags.get('R', 0) << 6) | (flags.get('N', 0) << 5)
+        return cls(bytes([flags_byte]))

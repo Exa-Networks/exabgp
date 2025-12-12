@@ -40,3 +40,8 @@ class SourceRouterId(BaseLS):
         if length not in (4, 16):
             raise Notify(3, 5, 'Error parsing SR Source Router ID. Wrong size')
         return cls(data)
+
+    @classmethod
+    def make_source_router_id(cls, address: str) -> SourceRouterId:
+        """Create SourceRouterId from IP address string."""
+        return cls(IP.pton(address))
