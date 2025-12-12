@@ -47,3 +47,15 @@ class LocalRouterId(BaseLS):
 
     def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": ["{self.content}"]'
+
+    @classmethod
+    def make_local_router_id(cls, address: str) -> LocalRouterId:
+        """Create LocalRouterId from IP address string.
+
+        Args:
+            address: IPv4 or IPv6 address string
+
+        Returns:
+            LocalRouterId instance with packed wire-format bytes
+        """
+        return cls(IP.pton(address))

@@ -356,5 +356,62 @@ class TestNodeFlagsPackedBytesFirst:
         assert instance.flags['E'] == 1
 
 
+class TestLocalRouterIdPackedBytesFirst:
+    """Test LocalRouterId packed-bytes-first pattern"""
+
+    def test_local_router_id_init_takes_packed_bytes(self) -> None:
+        """LocalRouterId.__init__ takes packed bytes"""
+        from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId
+
+        # IPv4 address
+        packed = b'\xc0\x00\x02\x01'  # 192.0.2.1
+        instance = LocalRouterId(packed)
+
+        assert instance._packed == packed
+        assert instance.content == '192.0.2.1'
+
+    def test_local_router_id_make_factory_ipv4(self) -> None:
+        """LocalRouterId.make_local_router_id() factory for IPv4"""
+        from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId
+
+        instance = LocalRouterId.make_local_router_id('192.0.2.1')
+
+        assert instance.content == '192.0.2.1'
+        assert instance._packed == b'\xc0\x00\x02\x01'
+
+    def test_local_router_id_make_factory_ipv6(self) -> None:
+        """LocalRouterId.make_local_router_id() factory for IPv6"""
+        from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId
+
+        instance = LocalRouterId.make_local_router_id('2001:db8::1')
+
+        assert '2001:db8::1' in instance.content
+        assert len(instance._packed) == 16
+
+
+class TestNodeOpaquePackedBytesFirst:
+    """Test NodeOpaque packed-bytes-first pattern"""
+
+    def test_node_opaque_init_takes_packed_bytes(self) -> None:
+        """NodeOpaque.__init__ takes packed bytes"""
+        from exabgp.bgp.message.update.attribute.bgpls.node.opaque import NodeOpaque
+
+        packed = b'\xde\xad\xbe\xef'
+        instance = NodeOpaque(packed)
+
+        assert instance._packed == packed
+        assert instance.content == packed
+
+    def test_node_opaque_make_factory(self) -> None:
+        """NodeOpaque.make_node_opaque() factory method"""
+        from exabgp.bgp.message.update.attribute.bgpls.node.opaque import NodeOpaque
+
+        data = b'opaque-data-123'
+        instance = NodeOpaque.make_node_opaque(data)
+
+        assert instance.content == data
+        assert instance._packed == data
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

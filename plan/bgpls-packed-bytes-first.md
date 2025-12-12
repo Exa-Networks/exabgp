@@ -1,8 +1,8 @@
 # BGP-LS Packed-Bytes-First Conversion
 
-**Status:** ✅ Completed (Phase 2)
+**Status:** ✅ Completed (Phase 3)
 **Created:** 2025-12-11
-**Updated:** 2025-12-11
+**Updated:** 2025-12-12
 
 ## Goal
 
@@ -47,17 +47,21 @@ Added `make_*` factory methods to enable tests:
 - [x] Updated test files for new JSON format (single values as scalars, multiple as arrays)
 - [x] Updated unit tests for new behavior
 
-### Phase 3: Remaining classes (FUTURE)
+### Phase 3: Add remaining factory methods (COMPLETED)
 
-After MERGE refactor, these classes still need attention (skipped in unit tests):
-- [ ] `LocalRouterId` - localrouterid.py (content returns list, causes nested arrays when grouped)
-- [ ] `IgpTags` - igptags.py
-- [ ] `IgpExTags` - igpextags.py
-- [ ] `OspfForwardingAddress` - ospfforwardingaddress.py
-- [ ] `PrefixSid` - prefixsid.py
-- [ ] `SourceRouterId` - sourcerouterid.py
-- [ ] `PrefixAttributesFlags` - prefixattributesflags.py
-- [ ] `NodeOpaque` - opaque.py
+Added factory methods to classes that were missing them:
+- [x] `LocalRouterId.make_local_router_id(address)` - localrouterid.py
+- [x] `NodeOpaque.make_node_opaque(data)` - opaque.py
+
+Already had factory methods (no changes needed):
+- [x] `IgpTags.make_igp_tags(tags)` - igptags.py
+- [x] `IgpExTags.make_igp_ex_tags(tags)` - igpextags.py
+- [x] `OspfForwardingAddress.make_ospf_forwarding_address(address)` - ospfaddr.py
+- [x] `PrefixSid.make_prefix_sid(flags, sids, sr_algo)` - prefixsid.py
+- [x] `SourceRouterId.make_source_router_id(address)` - sourcerouterid.py
+- [x] `PrefixAttributesFlags.make_prefix_attributes_flags(flags)` - prefixattributesflags.py
+
+Added unit tests for new factory methods in `test_bgpls_packed_bytes_first.py`.
 
 ## Files Modified
 
@@ -67,9 +71,11 @@ After MERGE refactor, these classes still need attention (skipped in unit tests)
 | `srv6lanendx.py` | Remove MERGE, add JSON attr, content→dict | ✅ Done |
 | `srv6endx.py` | Remove MERGE/_content_list/merge, add JSON/_unpack_data, content→dict | ✅ Done |
 | `adjacencysid.py` | Add JSON attr, content property for grouping | ✅ Done |
+| `localrouterid.py` | Add `make_local_router_id()` factory | ✅ Done |
+| `opaque.py` (node) | Add `make_node_opaque()` factory | ✅ Done |
 | `test_bgpls.py` | Update Srv6EndX test - content is dict not list | ✅ Done |
 | `test_bgpls_json_validation.py` | Update LinkState test - use wire-format bytes | ✅ Done |
-| `test_bgpls_packed_bytes_first.py` | Update GenericLSID tests - content is string | ✅ Done |
+| `test_bgpls_packed_bytes_first.py` | Update GenericLSID tests, add LocalRouterId/NodeOpaque tests | ✅ Done |
 | `qa/decoding/bgp-ls-*` | Update expected JSON format (scalars for single, arrays for multiple) | ✅ Done |
 
 ## Key Design Changes
@@ -100,7 +106,7 @@ After: Single values as scalars `"generic-lsid-258": "0x..."`
 
 All 15 test categories pass:
 - ruff-format, ruff-check
-- unit (3206 tests)
+- unit (3211 tests - added 5 new tests for LocalRouterId and NodeOpaque)
 - config, no-neighbor, encode-decode, parsing, json
 - api-encode, cmd-roundtrip
 - decoding (18 tests including all BGP-LS)
@@ -109,4 +115,4 @@ All 15 test categories pass:
 
 ---
 
-**Updated:** 2025-12-11
+**Updated:** 2025-12-12

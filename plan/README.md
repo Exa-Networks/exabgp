@@ -23,7 +23,7 @@
 | `buffer-protocol-audit.md` | 📋 Planning | Migrate bytes→Buffer + doc updates |
 | `neighbor-naming.md` | 📋 Planning | User-defined neighbor names/aliases |
 | `bgpls-rfc-naming.md` | 🔄 Active | Rename BGP-LS classes to match RFC/IANA |
-| `bgpls-packed-bytes-first.md` | 🔄 Active | BGP-LS packed-bytes-first + MERGE refactor |
+| `bgpls-packed-bytes-first.md` | ✅ Completed | BGP-LS packed-bytes-first + MERGE refactor |
 | `raw-attribute-api-v4.md` | ✅ Completed | Generic attribute round-trip for all families |
 | `api-group-command.md` | ✅ Completed | Batch commands into single UPDATE (group start/end) |
 
@@ -31,6 +31,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `bgpls-packed-bytes-first.md` | 2025-12-12 | BGP-LS packed-bytes-first + MERGE refactor |
 | `from-settings-conversion.md` | 2025-12-11 | Programmatic config API + route indexing |
 | `testing-improvement-plan.md` | 2025-12-09 | Testing improvements (Phases 1-3, 6) |
 | ~~`wire-semantic-separation.md`~~ | 2025-12-08 | Wire vs Semantic separation (deleted) |
@@ -82,4 +83,4 @@
 
 ---
 
-**Updated:** 2025-12-11
+**Updated:** 2025-12-12

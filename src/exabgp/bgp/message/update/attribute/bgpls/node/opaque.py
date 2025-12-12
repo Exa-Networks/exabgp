@@ -42,3 +42,15 @@ class NodeOpaque(BaseLS):
 
     def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": {json.dumps(self._packed.hex())}'
+
+    @classmethod
+    def make_node_opaque(cls, data: bytes) -> NodeOpaque:
+        """Create NodeOpaque from opaque data bytes.
+
+        Args:
+            data: Opaque data bytes
+
+        Returns:
+            NodeOpaque instance with packed wire-format bytes
+        """
+        return cls(data)
