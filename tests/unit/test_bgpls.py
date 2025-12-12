@@ -1198,10 +1198,10 @@ class TestBGPLSLinkAttributes:
         attr = Srv6EndX.unpack_bgpls(data)
 
         assert attr.TLV == 1106
-        assert len(attr.content) == 1
-        assert attr.content[0]['flags']['B'] == 1
-        assert attr.content[0]['weight'] == 10
-        assert attr.content[0]['behavior'] == 48
+        # content now returns dict directly (LinkState handles grouping)
+        assert attr.content['flags']['B'] == 1
+        assert attr.content['weight'] == 10
+        assert attr.content['behavior'] == 48
 
     def test_srv6_endpoint_behavior(self) -> None:
         """Test Srv6EndpointBehavior attribute (TLV 1250)"""

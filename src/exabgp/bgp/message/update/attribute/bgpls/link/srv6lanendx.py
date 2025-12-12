@@ -7,7 +7,7 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from struct import unpack
+from struct import pack, unpack
 from exabgp.protocol.iso import ISO
 from exabgp.util import hexstring
 
@@ -106,37 +106,29 @@ class Srv6(FlagLS):
 @LinkState.register_lsid()
 class Srv6LanEndXISIS(Srv6):
     TLV = 1107
-    MERGE = True
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    JSON = 'srv6-lan-endx-isis'
+    MERGE = True  # LinkState.json() will group into array
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, packed: bytes, parsed_content: dict[str, object] | None = None) -> None:
-        """Initialize with packed bytes and optionally pre-parsed content."""
+    def __init__(self, packed: bytes) -> None:
+        """Initialize with packed bytes."""
         self._packed = packed
-        self._content_list: list[dict[str, object]] = [parsed_content] if parsed_content else []
 
     @property
-    def content(self) -> list[dict[str, object]]:
-        """Return the parsed content list."""
-        return self._content_list
-
-    def merge(self, other: Srv6LanEndXISIS) -> None:
-        """Merge another Srv6LanEndXISIS's content into this one."""
-        self._content_list.extend(other.content)
+    def content(self) -> dict[str, object]:
+        """Parse and return content from packed bytes on demand."""
+        return self._unpack_data(self._packed, ISIS)
 
     def __repr__(self) -> str:
-        return '\n'.join(
-            [
-                'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
-                    d.get('behavior'),
-                    d.get('neighbor-id'),
-                    d.get('flags'),
-                    d.get('algorithm'),
-                    d.get('weight'),
-                    d.get('sid'),
-                )
-                for d in self.content
-            ],
+        d = self.content
+        return 'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
+            d.get('behavior'),
+            d.get('neighbor-id'),
+            d.get('flags'),
+            d.get('algorithm'),
+            d.get('weight'),
+            d.get('sid'),
         )
 
     @classmethod
@@ -154,46 +146,80 @@ class Srv6LanEndXISIS(Srv6):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXISIS:
-        return cls(data, cls._unpack_data(data, ISIS))
+        return cls(data)
+
+    @classmethod
+    def make_srv6_lan_endx_isis(
+        cls,
+        behavior: int,
+        flags: dict[str, int],
+        algorithm: int,
+        weight: int,
+        neighbor_id: str,
+        sid: str,
+    ) -> Srv6LanEndXISIS:
+        """Create Srv6LanEndXISIS from semantic values.
+
+        Args:
+            behavior: Endpoint behavior code
+            flags: Dict with keys B, S, P
+            algorithm: Algorithm value
+            weight: Weight value
+            neighbor_id: ISIS System ID (e.g., '0102.0304.0506')
+            sid: SRv6 SID as IPv6 string (e.g., 'fc00::2')
+
+        Returns:
+            Srv6LanEndXISIS instance with packed wire-format bytes
+        """
+        # Pack behavior (2 bytes)
+        packed = pack('!H', behavior)
+
+        # Pack flags byte: B(7), S(6), P(5), RSV(4-0)
+        flags_byte = (flags.get('B', 0) << 7) | (flags.get('S', 0) << 6) | (flags.get('P', 0) << 5)
+        packed += bytes([flags_byte])
+
+        # Pack algorithm, weight, reserved
+        packed += bytes([algorithm, weight, 0])
+
+        # Pack ISIS System ID (6 bytes) - format: XXXX.XXXX.XXXX
+        sysid_parts = neighbor_id.replace('.', '')
+        packed += bytes.fromhex(sysid_parts)
+
+        # Pack SID (16 bytes IPv6)
+        packed += IPv6.pton(sid)
+
+        return cls(packed)
 
     def json(self, compact: bool = False) -> str:
-        return '"srv6-lan-endx-isis": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
+        return '"srv6-lan-endx-isis": {}'.format(json.dumps(self.content))
 
 
 @LinkState.register_lsid()
 class Srv6LanEndXOSPF(Srv6):
     TLV = 1108
-    MERGE = True
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    JSON = 'srv6-lan-endx-ospf'
+    MERGE = True  # LinkState.json() groups into array
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, packed: bytes, parsed_content: dict[str, object] | None = None) -> None:
-        """Initialize with packed bytes and optionally pre-parsed content."""
+    def __init__(self, packed: bytes) -> None:
+        """Initialize with packed bytes."""
         self._packed = packed
-        self._content_list: list[dict[str, object]] = [parsed_content] if parsed_content else []
 
     @property
-    def content(self) -> list[dict[str, object]]:
-        """Return the parsed content list."""
-        return self._content_list
-
-    def merge(self, other: Srv6LanEndXOSPF) -> None:
-        """Merge another Srv6LanEndXOSPF's content into this one."""
-        self._content_list.extend(other.content)
+    def content(self) -> dict[str, object]:
+        """Parse and return content from packed bytes on demand."""
+        return self._unpack_data(self._packed, OSPF)
 
     def __repr__(self) -> str:
-        return '\n'.join(
-            [
-                'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
-                    d.get('behavior'),
-                    d.get('neighbor-id'),
-                    d.get('flags'),
-                    d.get('algorithm'),
-                    d.get('weight'),
-                    d.get('sid'),
-                )
-                for d in self.content
-            ],
+        d = self.content
+        return 'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
+            d.get('behavior'),
+            d.get('neighbor-id'),
+            d.get('flags'),
+            d.get('algorithm'),
+            d.get('weight'),
+            d.get('sid'),
         )
 
     @classmethod
@@ -211,7 +237,48 @@ class Srv6LanEndXOSPF(Srv6):
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXOSPF:
-        return cls(data, cls._unpack_data(data, OSPF))
+        return cls(data)
+
+    @classmethod
+    def make_srv6_lan_endx_ospf(
+        cls,
+        behavior: int,
+        flags: dict[str, int],
+        algorithm: int,
+        weight: int,
+        neighbor_id: str,
+        sid: str,
+    ) -> Srv6LanEndXOSPF:
+        """Create Srv6LanEndXOSPF from semantic values.
+
+        Args:
+            behavior: Endpoint behavior code
+            flags: Dict with keys B, S, P
+            algorithm: Algorithm value
+            weight: Weight value
+            neighbor_id: OSPF Router ID as IPv4 string (e.g., '192.0.2.1')
+            sid: SRv6 SID as IPv6 string (e.g., 'fc00::3')
+
+        Returns:
+            Srv6LanEndXOSPF instance with packed wire-format bytes
+        """
+        # Pack behavior (2 bytes)
+        packed = pack('!H', behavior)
+
+        # Pack flags byte: B(7), S(6), P(5), RSV(4-0)
+        flags_byte = (flags.get('B', 0) << 7) | (flags.get('S', 0) << 6) | (flags.get('P', 0) << 5)
+        packed += bytes([flags_byte])
+
+        # Pack algorithm, weight, reserved
+        packed += bytes([algorithm, weight, 0])
+
+        # Pack OSPF Router ID (4 bytes IPv4)
+        packed += IP.pton(neighbor_id)
+
+        # Pack SID (16 bytes IPv6)
+        packed += IPv6.pton(sid)
+
+        return cls(packed)
 
     def json(self, compact: bool = False) -> str:
-        return '"srv6-lan-endx-ospf": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
+        return '"srv6-lan-endx-ospf": {}'.format(json.dumps(self.content))

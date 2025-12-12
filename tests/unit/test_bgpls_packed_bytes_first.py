@@ -186,28 +186,16 @@ class TestGenericLSIDPackedBytesFirst:
         instance = GenericLSID(packed)
         assert instance._packed == packed
 
-    def test_genericlsid_content_returns_list_with_packed(self) -> None:
-        """GenericLSID.content returns list containing packed bytes"""
+    def test_genericlsid_content_returns_hex_string(self) -> None:
+        """GenericLSID.content returns hex string of packed bytes"""
         packed = b'\xde\xad\xbe\xef'
 
         instance = GenericLSID(packed)
-        # GenericLSID.content should be a list for merge support
-        assert isinstance(instance.content, list)
-        assert packed in instance.content
-
-    def test_genericlsid_merge_appends_to_content(self) -> None:
-        """GenericLSID.merge() appends other's content"""
-        packed1 = b'\x01\x02'
-        packed2 = b'\x03\x04'
-
-        instance1 = GenericLSID(packed1)
-        instance2 = GenericLSID(packed2)
-
-        instance1.merge(instance2)
-
-        # After merge, content should have both
-        assert packed1 in instance1.content
-        assert packed2 in instance1.content
+        # GenericLSID.content returns hex string, json() wraps in array for backward compat
+        assert isinstance(instance.content, str)
+        assert instance.content == '0xDEADBEEF'
+        # json() should output array for backward compatibility
+        assert '["0xDEADBEEF"]' in instance.json()
 
     def test_genericlsid_unpack_bgpls_returns_instance(self) -> None:
         """GenericLSID.unpack_bgpls() returns instance with packed bytes"""

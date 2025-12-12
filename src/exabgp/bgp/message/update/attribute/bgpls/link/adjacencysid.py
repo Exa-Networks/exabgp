@@ -35,8 +35,19 @@ SRADJ_MIN_LENGTH = 4
 class AdjacencySid(FlagLS):
     TLV = 1099
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
+    JSON = 'sr-adj'
 
     # flags property is inherited from FlagLS and unpacks from _packed[0:1]
+
+    @property
+    def content(self) -> dict[str, object]:
+        """Return dict representation for JSON grouping."""
+        return {
+            'flags': self.flags,
+            'sids': self.sids,
+            'weight': self.weight,
+            'undecoded-sids': self.undecoded,
+        }
 
     @property
     def weight(self) -> int:

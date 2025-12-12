@@ -24,14 +24,12 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register_lsid(lsid=1028)
 @LinkState.register_lsid(lsid=1029)
 class LocalRouterId(BaseLS):
-    MERGE = True
+    MERGE = True  # LinkState.json() groups into array
     REPR = 'Local Router IDs'
     JSON = 'local-router-ids'
 
     def __init__(self, packed: bytes) -> None:
         self._packed = packed
-        # For merge support, content is a list of packed bytes
-        self._content_list: list[bytes] = [packed]
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> LocalRouterId:
@@ -43,14 +41,9 @@ class LocalRouterId(BaseLS):
         return cls(data)
 
     @property
-    def content(self) -> list[str]:
-        """List of TE Router IDs as strings."""
-        return [str(IP.unpack_ip(data)) for data in self._content_list]
-
-    def merge(self, other: 'LocalRouterId') -> None:
-        """Merge another LocalRouterId's packed bytes into this one."""
-        self._content_list.extend(other._content_list)
+    def content(self) -> str:
+        """TE Router ID as string."""
+        return str(IP.unpack_ip(self._packed))
 
     def json(self, compact: bool = False) -> str:
-        joined = '", "'.join(self.content)
-        return f'"{self.JSON}": ["{joined}"]'
+        return f'"{self.JSON}": ["{self.content}"]'

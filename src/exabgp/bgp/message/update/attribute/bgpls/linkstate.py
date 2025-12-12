@@ -43,8 +43,37 @@ class LinkState(Attribute):
     link_lsids: list[int] = []
     prefix_lsids: list[int] = []
 
-    def __init__(self, ls_attrs: list[BaseLS]) -> None:
-        self.ls_attrs = ls_attrs
+    def __init__(self, packed: bytes) -> None:
+        """Initialize with raw attribute bytes (stores, parses on demand)."""
+        self._packed = packed
+
+    @property
+    def ls_attrs(self) -> list[BaseLS]:
+        """Parse TLVs on demand from stored packed bytes."""
+        return self._parse_tlvs(self._packed)
+
+    @classmethod
+    def _parse_tlvs(cls, data: bytes) -> list[BaseLS]:
+        """Parse TLVs from raw bytes."""
+        ls_attrs: list[BaseLS] = []
+
+        while data:
+            if len(data) < 4:
+                raise Notify(3, 5, f'BGP-LS: TLV header too short, need 4 bytes, got {len(data)}')
+            scode, length = unpack('!HH', data[:4])
+            if len(data) < length + 4:
+                raise Notify(
+                    3, 5, f'BGP-LS: TLV data too short for type {scode}, need {length + 4} bytes, got {len(data)}'
+                )
+            payload = data[4 : length + 4]
+            BaseLS.check_length(payload, length)
+
+            data = data[length + 4 :]
+            klass = cls.get_ls_class(scode)
+            instance = klass.unpack_bgpls(payload)
+            ls_attrs.append(instance)
+
+        return ls_attrs
 
     @classmethod
     def register_lsid(cls, lsid: int | None = None) -> Callable[[type], type]:
@@ -84,38 +113,31 @@ class LinkState(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> LinkState:
-        ls_attrs: list[BaseLS] = []
-        while data:
-            if len(data) < 4:
-                raise Notify(3, 5, f'BGP-LS: TLV header too short, need 4 bytes, got {len(data)}')
-            scode, length = unpack('!HH', data[:4])
-            if len(data) < length + 4:
-                raise Notify(
-                    3, 5, f'BGP-LS: TLV data too short for type {scode}, need {length + 4} bytes, got {len(data)}'
-                )
-            payload = data[4 : length + 4]
-            BaseLS.check_length(payload, length)
-
-            data = data[length + 4 :]
-            klass = cls.get_ls_class(scode)
-            instance = klass.unpack_bgpls(payload)
-
-            if not instance.MERGE:
-                ls_attrs.append(instance)
-                continue
-
-            for k in ls_attrs:
-                if k.TLV == instance.TLV:
-                    k.merge(instance)
-                    break
-            else:
-                ls_attrs.append(instance)
-
-        return cls(ls_attrs=ls_attrs)
+        """Store raw bytes - parsing happens on demand via ls_attrs property."""
+        return cls(data)
 
     def json(self, compact: bool = False) -> str:
-        content = ', '.join(d.json() for d in self.ls_attrs)
-        return f'{{ {content} }}'
+        """Output JSON for all TLVs. MERGE classes are grouped into arrays."""
+        from collections import defaultdict
+
+        # Group by TLV type
+        by_type: dict[int, list[BaseLS]] = defaultdict(list)
+        for attr in self.ls_attrs:
+            by_type[attr.TLV].append(attr)
+
+        parts = []
+        for tlv, attrs in by_type.items():
+            if getattr(attrs[0], 'MERGE', False):
+                # MERGE classes: group into array
+                key = attrs[0].JSON
+                contents = [a.content for a in attrs]
+                parts.append(f'"{key}": {json.dumps(contents)}')
+            else:
+                # Non-MERGE: output individually (may have duplicate keys)
+                for attr in attrs:
+                    parts.append(attr.json(compact))
+
+        return '{ ' + ', '.join(parts) + ' }'
 
     def __str__(self) -> str:
         return ', '.join(str(d) for d in self.ls_attrs)
@@ -174,7 +196,6 @@ class BaseLS:
 
 class GenericLSID(BaseLS):
     TLV: int = 0
-    MERGE: bool = True
 
     def __init__(self, packed: bytes) -> None:
         """Initialize with packed wire-format bytes.
@@ -183,24 +204,23 @@ class GenericLSID(BaseLS):
             packed: Raw TLV payload bytes
         """
         self._packed = packed
-        # For merge support, content is a list of packed bytes
-        self._content_list: list[bytes] = [packed]
 
     @property
-    def content(self) -> list[bytes]:
-        """Return list of packed bytes (for merge support)."""
-        return self._content_list
+    def content(self) -> str:
+        """Return hex string of packed bytes."""
+        return hexstring(self._packed)
+
+    @property
+    def JSON(self) -> str:
+        """Return JSON key name based on TLV code."""
+        return f'generic-lsid-{self.TLV}'
 
     def __repr__(self) -> str:
         return 'Attribute with code [ {} ] not implemented'.format(self.TLV)
 
     def json(self, compact: bool = False) -> str:
-        merged = ', '.join([f'"{hexstring(_)}"' for _ in self.content])
-        return f'"generic-lsid-{self.TLV}": [{merged}]'
-
-    def merge(self, other: GenericLSID) -> None:
-        """Merge another GenericLSID's content into this one."""
-        self._content_list.extend(other.content)
+        # Always output as array for backward compatibility
+        return f'"{self.JSON}": ["{self.content}"]'
 
     @classmethod
     def unpack_bgpls(cls, data: bytes) -> GenericLSID:

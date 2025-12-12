@@ -32,6 +32,27 @@ class IsisArea(BaseLS):
             raise Notify(3, 5, 'ISIS Area: empty data')
         return cls(data)
 
+    @classmethod
+    def make_isis_area(cls, areaid: int) -> IsisArea:
+        """Create IsisArea from area ID integer.
+
+        Args:
+            areaid: ISIS area ID as integer
+
+        Returns:
+            IsisArea instance with packed wire-format bytes
+        """
+        # Convert integer to minimum bytes needed
+        if areaid == 0:
+            packed = b'\x00'
+        else:
+            hex_str = format(areaid, 'x')
+            # Ensure even length for bytes.fromhex
+            if len(hex_str) % 2:
+                hex_str = '0' + hex_str
+            packed = bytes.fromhex(hex_str)
+        return cls(packed)
+
     @property
     def content(self) -> int:
         """ISIS area ID as integer."""

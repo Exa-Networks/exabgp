@@ -38,3 +38,24 @@ class IgpFlags(FlagLS):
     TLV = 1152
     FLAGS = ['D', 'N', 'L', 'P', 'RSV', 'RSV', 'RSV', 'RSV']
     LEN = 1
+
+    @classmethod
+    def unpack_bgpls(cls, data: bytes) -> IgpFlags:
+        cls.check(data)
+        return cls(data)
+
+    @classmethod
+    def make_igp_flags(cls, flags: dict[str, int]) -> IgpFlags:
+        """Create IgpFlags from flags dict.
+
+        Args:
+            flags: Dict with keys D, N, L, P (RSV bits ignored)
+
+        Returns:
+            IgpFlags instance with packed wire-format bytes
+        """
+        # Pack flags byte: D(7), N(6), L(5), P(4), RSV(3-0)
+        flags_byte = (
+            (flags.get('D', 0) << 7) | (flags.get('N', 0) << 6) | (flags.get('L', 0) << 5) | (flags.get('P', 0) << 4)
+        )
+        return cls(bytes([flags_byte]))

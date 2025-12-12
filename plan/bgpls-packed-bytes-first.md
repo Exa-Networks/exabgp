@@ -1,6 +1,6 @@
 # BGP-LS Packed-Bytes-First Conversion
 
-**Status:** 🔄 Active
+**Status:** ✅ Completed (Phase 2)
 **Created:** 2025-12-11
 **Updated:** 2025-12-11
 
@@ -10,14 +10,14 @@ Convert BGP-LS attribute classes to packed-bytes-first pattern and refactor MERG
 
 ## Background
 
-BGP-LS TLV classes currently use `MERGE = True` to combine multiple TLVs of same type into one instance (to avoid duplicate JSON keys). This requires storing lists of parsed content or packed bytes.
+BGP-LS TLV classes previously used `MERGE = True` to combine multiple TLVs of same type into one instance (to avoid duplicate JSON keys). This required storing lists of parsed content or packed bytes.
 
 **Problem:** With packed-bytes-first, we want simple `__init__(packed: bytes)` with `_packed` only - no lists.
 
-**Solution:** Move grouping logic from individual TLV classes to `LinkState` level:
-- Individual TLV classes: simple, single `_packed`, `MERGE = False`
-- `LinkState`: groups same-type TLVs at JSON output time
+**Solution (Option B - chosen):** Move grouping logic from individual TLV classes to `LinkState` level:
 - `LinkState`: stores raw attribute bytes, parses TLVs on demand
+- `LinkState.json()`: groups same-type TLVs at output time
+- Individual TLV classes: simple `_packed`, no MERGE, `content` returns single dict/value
 
 ## Progress
 
@@ -32,73 +32,25 @@ Added `make_*` factory methods to enable tests:
 - [x] `Srv6LanEndXISIS.make_srv6_lan_endx_isis(...)` - srv6lanendx.py
 - [x] `Srv6LanEndXOSPF.make_srv6_lan_endx_ospf(...)` - srv6lanendx.py
 
-### Phase 2: Refactor MERGE handling (TODO)
+### Phase 2: Refactor MERGE handling (COMPLETED)
 
-Current state:
-- `Srv6LanEndXISIS` and `Srv6LanEndXOSPF` have `MERGE = True`
-- Base class `merge()` does `self.content.extend(other.content)`
-- Requires `content` to be a list
+**Completed:**
+- [x] `LinkState` refactored to store `_packed` raw bytes
+- [x] `LinkState.unpack_attribute()` just stores raw bytes
+- [x] `LinkState.ls_attrs` property parses TLVs on demand (no merge)
+- [x] `LinkState.json()` groups same-type TLVs for valid JSON output (with bytes→hex conversion)
+- [x] `Srv6LanEndXISIS` simplified - `JSON` attr, `content` returns dict
+- [x] `Srv6LanEndXOSPF` - removed `MERGE`, added `JSON` attr
+- [x] `Srv6EndX` - removed `MERGE`, `_content_list`, `merge()`, added `JSON`, `_unpack_data()`, `content` returns dict
+- [x] `GenericLSID` - removed `MERGE`, `_content_list`, `merge()`, `JSON` property, `content` returns hex string
+- [x] `AdjacencySid` - added `JSON`, `content` properties for grouping support
+- [x] Updated test files for new JSON format (single values as scalars, multiple as arrays)
+- [x] Updated unit tests for new behavior
 
-#### Option A: Move grouping to LinkState.json()
+### Phase 3: Remaining classes (FUTURE)
 
-```python
-class LinkState:
-    def __init__(self, packed: bytes = b''):
-        self._packed = packed  # Store raw attribute data
-
-    @property
-    def ls_attrs(self) -> list[BaseLS]:
-        """Parse TLVs on demand from _packed"""
-        # Returns list - can have multiple same-type TLVs
-        ...
-
-    def json(self) -> str:
-        """Group by TLV type for valid JSON output"""
-        from collections import defaultdict
-        by_type: dict[int, list[BaseLS]] = defaultdict(list)
-        for attr in self.ls_attrs:
-            by_type[attr.TLV].append(attr)
-
-        parts = []
-        for tlv, attrs in by_type.items():
-            if len(attrs) == 1:
-                parts.append(attrs[0].json())
-            else:
-                # Combine into array
-                key = attrs[0].JSON
-                values = [json.loads('{' + a.json() + '}')[key] for a in attrs]
-                parts.append(f'"{key}": {json.dumps(values)}')
-        return '{ ' + ', '.join(parts) + ' }'
-```
-
-Then for TLV classes:
-- Set `MERGE = False`
-- Remove `merge()` method
-- Simple `content` property returning single dict (not list)
-
-#### Option B: LinkState stores raw bytes, parses on demand
-
-```python
-class LinkState:
-    def __init__(self, packed: bytes):
-        self._packed = packed
-
-    @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated) -> LinkState:
-        return cls(data)  # Just store raw bytes
-
-    @property
-    def ls_attrs(self) -> list[BaseLS]:
-        """Parse all TLVs on demand"""
-        # Parse self._packed into TLV instances
-        ...
-```
-
-### Phase 3: Update remaining skipped tests (TODO)
-
-After MERGE refactor, update tests for:
-- [ ] `Srv6EndX` - srv6endx.py (also has MERGE)
-- [ ] `LocalRouterId` - localrouterid.py
+After MERGE refactor, these classes still need attention (skipped in unit tests):
+- [ ] `LocalRouterId` - localrouterid.py (content returns list, causes nested arrays when grouped)
 - [ ] `IgpTags` - igptags.py
 - [ ] `IgpExTags` - igpextags.py
 - [ ] `OspfForwardingAddress` - ospfforwardingaddress.py
@@ -107,35 +59,53 @@ After MERGE refactor, update tests for:
 - [ ] `PrefixAttributesFlags` - prefixattributesflags.py
 - [ ] `NodeOpaque` - opaque.py
 
-## Files to Modify
+## Files Modified
 
-| File | Change |
-|------|--------|
-| `linkstate.py` | Add JSON grouping logic, store raw bytes |
-| `srv6lanendx.py` | Set MERGE=False, simplify content property |
-| `srv6endx.py` | Set MERGE=False, simplify content property |
-| `test_bgpls_json_validation.py` | Update tests for new JSON format |
+| File | Change | Status |
+|------|--------|--------|
+| `linkstate.py` | Store raw bytes, parse on demand, group in json(), bytes→hex | ✅ Done |
+| `srv6lanendx.py` | Remove MERGE, add JSON attr, content→dict | ✅ Done |
+| `srv6endx.py` | Remove MERGE/_content_list/merge, add JSON/_unpack_data, content→dict | ✅ Done |
+| `adjacencysid.py` | Add JSON attr, content property for grouping | ✅ Done |
+| `test_bgpls.py` | Update Srv6EndX test - content is dict not list | ✅ Done |
+| `test_bgpls_json_validation.py` | Update LinkState test - use wire-format bytes | ✅ Done |
+| `test_bgpls_packed_bytes_first.py` | Update GenericLSID tests - content is string | ✅ Done |
+| `qa/decoding/bgp-ls-*` | Update expected JSON format (scalars for single, arrays for multiple) | ✅ Done |
 
-## Current Test Status
+## Key Design Changes
 
-```
-Skipped tests: 12 remaining
-- Srv6EndX (has MERGE, needs same refactor)
-- LocalRouterId, IgpTags, IgpExTags, OspfForwardingAddress
-- PrefixSid, SourceRouterId, PrefixAttributesFlags, NodeOpaque
-- Plus edge case tests
-```
+### GenericLSID.content
+Before: `list[bytes]` (for MERGE support)
+After: `str` (hex string - merging done at LinkState level)
 
-## Failures
+### Srv6EndX.content
+Before: `list[dict]` (for MERGE support)
+After: `dict` (single value - merging done at LinkState level)
 
-- Decoding test 6 fails: `AttributeError: 'dict' object has no attribute 'extend'`
-- Caused by: `Srv6LanEndXISIS.content` returns dict, but `merge()` expects list
+### LinkState.json()
+Before: Classes with MERGE=True handled their own merging
+After: LinkState groups same-type TLVs and:
+- Single TLV: outputs directly via `attr.json()`
+- Multiple same-type: combines `[a.content for a in attrs]` as JSON array
+- Handles bytes→hex conversion for content that's bytes
 
-## Resume Point
+### Test File JSON Format
+Before: Duplicate keys like `"sr-adj": {...}, "sr-adj": {...}` (invalid JSON)
+After: Arrays like `"sr-adj": [{...}, {...}]` (valid JSON)
 
-Need to decide: Option A (grouping in LinkState.json) or Option B (LinkState stores raw bytes)?
+Before: Single values as arrays `"generic-lsid-258": ["0x..."]`
+After: Single values as scalars `"generic-lsid-258": "0x..."`
 
-Then implement chosen approach and fix decoding test 6.
+## Tests Passing
+
+All 15 test categories pass:
+- ruff-format, ruff-check
+- unit (3206 tests)
+- config, no-neighbor, encode-decode, parsing, json
+- api-encode, cmd-roundtrip
+- decoding (18 tests including all BGP-LS)
+- encoding (72 tests)
+- cli, api, type-ignore
 
 ---
 

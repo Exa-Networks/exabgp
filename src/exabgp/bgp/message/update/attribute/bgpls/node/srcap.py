@@ -6,7 +6,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
@@ -115,6 +115,44 @@ class SrCapabilities(FlagLS):
                 raise Notify(3, 5, 'SR Capabilities: SID/Label data too short')
             offset += total_entry_size
         return cls(data)
+
+    @classmethod
+    def make_sr_capabilities(
+        cls,
+        flags: dict[str, int],
+        sids: list[list[int]],
+    ) -> SrCapabilities:
+        """Create SrCapabilities from semantic values.
+
+        Args:
+            flags: Dict with keys I, V (RSV bits ignored)
+            sids: List of [range_size, sid_value] pairs
+
+        Returns:
+            SrCapabilities instance with packed wire-format bytes
+        """
+        # Pack flags byte: I(7), V(6), RSV(5-0)
+        flags_byte = (flags.get('I', 0) << 7) | (flags.get('V', 0) << 6)
+
+        # Pack header: Flags(1) + Reserved(1)
+        packed = pack('!BB', flags_byte, 0)
+
+        # Pack each SID entry: Range(3) + SubTLV Type(2) + SubTLV Len(2) + SID(3 or 4)
+        for range_size, sid in sids:
+            # Range size is 3 bytes
+            packed += pack('!L', range_size)[1:]  # Take last 3 bytes
+
+            # Determine if 3-byte label or 4-byte SID based on value
+            if sid <= SRCAP_LABEL_MASK_20BIT:
+                # 20-bit label (3 bytes)
+                packed += pack('!HH', SRCAP_LABEL_SUB_TLV_TYPE, SRCAP_LABEL_SIZE_3)
+                packed += pack('!L', sid)[1:]  # Take last 3 bytes
+            else:
+                # 32-bit SID (4 bytes)
+                packed += pack('!HH', SRCAP_LABEL_SUB_TLV_TYPE, SRCAP_LABEL_SIZE_4)
+                packed += pack('!I', sid)
+
+        return cls(packed)
 
     def json(self, compact: bool = False) -> str:
         return f'{FlagLS.json(self)}, "sids": {self.sids}'

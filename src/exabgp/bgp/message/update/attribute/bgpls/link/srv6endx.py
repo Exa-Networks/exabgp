@@ -43,36 +43,23 @@ SRV6_ENDX_MIN_LENGTH = 22
 class Srv6EndX(FlagLS):
     TLV = 1106
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    MERGE = True
+    JSON = 'srv6-endx'
+    MERGE = True  # LinkState.json() groups into array
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, packed: bytes, parsed_content: dict[str, object] | None = None) -> None:
-        """Initialize with packed bytes and optionally pre-parsed content.
-
-        For Srv6EndX, content is complex (includes sub-TLVs parsed to JSON),
-        so we store both packed bytes and parsed content.
-        """
+    def __init__(self, packed: bytes) -> None:
+        """Initialize with packed bytes."""
         self._packed = packed
-        # Store parsed content in a list (for merge support)
-        self._content_list: list[dict[str, object]] = [parsed_content] if parsed_content else []
 
     @property
-    def content(self) -> list[dict[str, object]]:
-        """Return the parsed content list."""
-        return self._content_list
-
-    def merge(self, other: Srv6EndX) -> None:
-        """Merge another Srv6EndX's content into this one."""
-        self._content_list.extend(other.content)
+    def content(self) -> dict[str, object]:
+        """Parse and return content from packed bytes on demand."""
+        return self._unpack_data(self._packed)
 
     def __repr__(self) -> str:
-        return '\n'.join(
-            [
-                'behavior: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
-                    d.get('behavior'), d.get('flags'), d.get('algorithm'), d.get('weight'), d.get('sid')
-                )
-                for d in self.content
-            ],
+        d = self.content
+        return 'behavior: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
+            d.get('behavior'), d.get('flags'), d.get('algorithm'), d.get('weight'), d.get('sid')
         )
 
     @classmethod
@@ -89,10 +76,10 @@ class Srv6EndX(FlagLS):
         return decorator
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> Srv6EndX:
+    def _unpack_data(cls, data: bytes) -> dict[str, object]:
+        """Parse SRv6 End.X SID TLV data into dict."""
         if len(data) < SRV6_ENDX_MIN_LENGTH:
             raise Notify(3, 5, f'SRv6 End.X SID: data too short, need {SRV6_ENDX_MIN_LENGTH} bytes, got {len(data)}')
-        original_data = data
         behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]
@@ -116,7 +103,7 @@ class Srv6EndX(FlagLS):
                 subtlvs.append(f'"unknown-subtlv-{code}": "{hex_data}"')
             data = data[length + cls.BGPLS_SUBTLV_HEADER_SIZE :]
 
-        parsed_content = {
+        return {
             'flags': flags,
             'behavior': behavior,
             'algorithm': algorithm,
@@ -125,7 +112,9 @@ class Srv6EndX(FlagLS):
             **json.loads('{' + ', '.join(subtlvs) + '}'),
         }
 
-        return cls(packed=original_data, parsed_content=parsed_content)
+    @classmethod
+    def unpack_bgpls(cls, data: bytes) -> Srv6EndX:
+        return cls(data)
 
     def json(self, compact: bool = False) -> str:
-        return '"srv6-endx": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
+        return '"srv6-endx": {}'.format(json.dumps(self.content))

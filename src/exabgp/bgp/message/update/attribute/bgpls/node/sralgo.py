@@ -36,6 +36,19 @@ class SrAlgorithm(BaseLS):
         # when using default SPF.
         return cls(data)
 
+    @classmethod
+    def make_sr_algorithm(cls, sr_algos: list[int]) -> SrAlgorithm:
+        """Create SrAlgorithm from list of algorithm values.
+
+        Args:
+            sr_algos: List of SR algorithm values (each 0-255)
+
+        Returns:
+            SrAlgorithm instance with packed wire-format bytes
+        """
+        packed = bytes(sr_algos)
+        return cls(packed)
+
     @property
     def content(self) -> list[int]:
         """List of SR algorithm values."""

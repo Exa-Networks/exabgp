@@ -212,35 +212,33 @@ class TestLinkAttributesJson:
         assert 'srv6-endx' in result
         assert isinstance(result['srv6-endx'], list)
 
-    @pytest.mark.skip(reason='Srv6LanEndXISIS not yet converted to packed-bytes-first')
     def test_srv6_lan_endx_isis_json(self) -> None:
         """Srv6LanEndXISIS (TLV 1107) produces valid JSON"""
-        content = {
-            'behavior': 48,
-            'flags': {'B': 0, 'S': 0, 'P': 0},
-            'algorithm': 0,
-            'weight': 10,
-            'sid': 'fc00::2',
-            'neighbor-id': '0102.0304.0506',
-        }
-        attr = Srv6LanEndXISIS(content=content)
+        attr = Srv6LanEndXISIS.make_srv6_lan_endx_isis(
+            behavior=48,
+            flags={'B': 0, 'S': 0, 'P': 0},
+            algorithm=0,
+            weight=10,
+            neighbor_id='0102.0304.0506',
+            sid='fc00::2',
+        )
         result = validate_json(attr.json(), 'Srv6LanEndXISIS')
         assert 'srv6-lan-endx-isis' in result
+        assert isinstance(result['srv6-lan-endx-isis'], dict)
 
-    @pytest.mark.skip(reason='Srv6LanEndXOSPF not yet converted to packed-bytes-first')
     def test_srv6_lan_endx_ospf_json(self) -> None:
         """Srv6LanEndXOSPF (TLV 1108) produces valid JSON"""
-        content = {
-            'behavior': 48,
-            'flags': {'B': 0, 'S': 0, 'P': 0},
-            'algorithm': 0,
-            'weight': 10,
-            'sid': 'fc00::3',
-            'neighbor-id': '192.0.2.1',
-        }
-        attr = Srv6LanEndXOSPF(content=content)
+        attr = Srv6LanEndXOSPF.make_srv6_lan_endx_ospf(
+            behavior=48,
+            flags={'B': 0, 'S': 0, 'P': 0},
+            algorithm=0,
+            weight=10,
+            neighbor_id='192.0.2.1',
+            sid='fc00::3',
+        )
         result = validate_json(attr.json(), 'Srv6LanEndXOSPF')
         assert 'srv6-lan-endx-ospf' in result
+        assert isinstance(result['srv6-lan-endx-ospf'], dict)
 
     def test_srv6_locator_json(self) -> None:
         """Srv6Locator (TLV 1162) produces valid JSON"""
@@ -290,11 +288,10 @@ class TestNodeAttributesJson:
         result = validate_json(attr.json(), 'NodeOpaque')
         assert 'opaque' in result
 
-    @pytest.mark.skip(reason='IsisArea not yet converted to packed-bytes-first')
     def test_isis_area_json(self) -> None:
         """IsisArea (TLV 1027) produces valid JSON"""
         # IsisArea expects integer area ID (hex converted to int)
-        attr = IsisArea(areaid=0x490001)
+        attr = IsisArea.make_isis_area(areaid=0x490001)
         result = validate_json(attr.json(), 'IsisArea')
         assert 'area-id' in result
 
@@ -305,19 +302,17 @@ class TestNodeAttributesJson:
         result = validate_json(attr.json(), 'LocalRouterId')
         assert 'local-router-ids' in result
 
-    @pytest.mark.skip(reason='SrCapabilities not yet converted to packed-bytes-first')
     def test_sr_capabilities_json(self) -> None:
         """SrCapabilities (TLV 1034) produces valid JSON"""
-        flags = {'I': 0, 'V': 0, 'RSV': 0}
-        sids = [[1000, 16000]]  # base, range pairs
-        attr = SrCapabilities(flags=flags, sids=sids)
+        flags = {'I': 0, 'V': 0}
+        sids = [[1000, 16000]]  # [range_size, sid_value] pairs
+        attr = SrCapabilities.make_sr_capabilities(flags=flags, sids=sids)
         result = validate_json(attr.json(), 'SrCapabilities')
         assert 'sr-capability-flags' in result
 
-    @pytest.mark.skip(reason='SrAlgorithm not yet converted to packed-bytes-first')
     def test_sr_algorithm_json(self) -> None:
         """SrAlgorithm (TLV 1035) produces valid JSON"""
-        attr = SrAlgorithm(sr_algos=[0, 1])
+        attr = SrAlgorithm.make_sr_algorithm(sr_algos=[0, 1])
         result = validate_json(attr.json(), 'SrAlgorithm')
         assert 'sr-algorithms' in result
         assert result['sr-algorithms'] == [0, 1]
@@ -326,11 +321,10 @@ class TestNodeAttributesJson:
 class TestPrefixAttributesJson:
     """Test JSON output from prefix attribute classes"""
 
-    @pytest.mark.skip(reason='IgpFlags not yet converted to packed-bytes-first')
     def test_igp_flags_json(self) -> None:
         """IgpFlags (TLV 1152) produces valid JSON"""
-        flags = {'D': 0, 'N': 1, 'L': 0, 'P': 0, 'RSV': 0}
-        attr = IgpFlags(flags=flags)
+        flags = {'D': 0, 'N': 1, 'L': 0, 'P': 0}
+        attr = IgpFlags.make_igp_flags(flags=flags)
         result = validate_json(attr.json(), 'IgpFlags')
         assert 'igp-flags' in result
 
@@ -407,13 +401,23 @@ class TestBaseClassesJson:
 
     def test_linkstate_container_json(self) -> None:
         """LinkState container combines multiple attributes into valid JSON"""
-        # Create a few simple attributes using unpack_bgpls
-        attr1 = IgpMetric.unpack_bgpls(b'\x00\x00\x64')  # 100
-        attr2 = TeMetric.make_temetric(1000)
-        attr3 = PrefixMetric.make_prefixmetric(20)
+        from struct import pack
 
-        # LinkState holds list of attributes
-        ls = LinkState([attr1, attr2, attr3])
+        # Build wire-format bytes for multiple TLVs:
+        # IgpMetric (TLV 1095) with value 100
+        igp_payload = b'\x00\x00\x64'  # 3 bytes
+        igp_tlv = pack('!HH', 1095, len(igp_payload)) + igp_payload
+
+        # TeMetric (TLV 1092) with value 1000
+        te_payload = pack('!I', 1000)  # 4 bytes
+        te_tlv = pack('!HH', 1092, len(te_payload)) + te_payload
+
+        # PrefixMetric (TLV 1155) with value 20
+        prefix_payload = pack('!I', 20)  # 4 bytes
+        prefix_tlv = pack('!HH', 1155, len(prefix_payload)) + prefix_payload
+
+        # LinkState now stores raw bytes and parses on demand
+        ls = LinkState(igp_tlv + te_tlv + prefix_tlv)
         json_str = ls.json()
 
         # LinkState.json() already returns a complete JSON object with braces
