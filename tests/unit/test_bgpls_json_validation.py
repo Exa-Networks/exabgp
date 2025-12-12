@@ -328,18 +328,16 @@ class TestPrefixAttributesJson:
         result = validate_json(attr.json(), 'IgpFlags')
         assert 'igp-flags' in result
 
-    @pytest.mark.skip(reason='IgpTags not yet converted to packed-bytes-first')
     def test_igp_tags_json(self) -> None:
         """IgpTags (TLV 1153) produces valid JSON"""
-        attr = IgpTags(content=[65534, 65535])
+        attr = IgpTags.make_igp_tags([65534, 65535])
         result = validate_json(attr.json(), 'IgpTags')
         assert 'igp-route-tags' in result
         assert result['igp-route-tags'] == [65534, 65535]
 
-    @pytest.mark.skip(reason='IgpExTags not yet converted to packed-bytes-first')
     def test_igp_ex_tags_json(self) -> None:
         """IgpExTags (TLV 1154) produces valid JSON"""
-        attr = IgpExTags(content=[0xDEADBEEF, 0xCAFEBABE])
+        attr = IgpExTags.make_igp_ex_tags([0xDEADBEEF, 0xCAFEBABE])
         result = validate_json(attr.json(), 'IgpExTags')
         assert 'igp-extended-route-tags' in result
 

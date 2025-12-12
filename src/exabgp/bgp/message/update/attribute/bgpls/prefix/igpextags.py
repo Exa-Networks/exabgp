@@ -6,8 +6,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from struct import unpack
-from typing import Any
+from struct import pack, unpack
 
 from exabgp.util import split
 
@@ -32,7 +31,7 @@ class IgpExTags(BaseLS):
     # Variable length: each extended tag is 8 bytes, length should be multiple of 8.
 
     @property
-    def content(self) -> Any:
+    def content(self) -> list[int]:
         """Unpack and return list of 64-bit extended route tags from packed bytes."""
         return [unpack('!Q', chunk)[0] for chunk in split(self._packed, 8)]
 
@@ -40,3 +39,9 @@ class IgpExTags(BaseLS):
     def unpack_bgpls(cls, data: bytes) -> IgpExTags:
         cls.check(data)
         return cls(data)
+
+    @classmethod
+    def make_igp_ex_tags(cls, tags: list[int]) -> IgpExTags:
+        """Create IgpExTags from list of 64-bit extended route tag values."""
+        packed = b''.join(pack('!Q', tag) for tag in tags)
+        return cls(packed)
