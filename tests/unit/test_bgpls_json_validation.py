@@ -277,12 +277,9 @@ class TestNodeAttributesJson:
         assert 'node-name' in result
         assert result['node-name'] == 'router-1.example.com'
 
-    @pytest.mark.skip(reason="NodeOpaque.json() can't serialize bytes - known limitation")
     def test_node_opaque_json(self) -> None:
         """NodeOpaque (TLV 1025) produces valid JSON"""
-        # NOTE: NodeOpaque stores raw bytes which json.dumps() can't serialize
-        # This is a known limitation in the current implementation
-        attr = NodeOpaque(opaque=b'opaque-data-123')
+        attr = NodeOpaque(b'opaque-data-123')
         result = validate_json(attr.json(), 'NodeOpaque')
         assert 'opaque' in result
 
