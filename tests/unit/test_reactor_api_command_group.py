@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import pytest
 from unittest.mock import Mock
 
@@ -16,6 +17,36 @@ from exabgp.reactor.api.command.group import (
     group_inline,
     is_grouping,
 )
+
+
+def _create_mock_reactor_with_cleanup():
+    """Create a mock reactor that tracks and cleans up scheduled coroutines.
+
+    Returns:
+        tuple: (reactor, cleanup_func) - Call cleanup_func after test to close coroutines.
+    """
+    scheduled_coroutines: list = []
+
+    def track_schedule(service, name, coro):
+        """Track coroutines passed to schedule() for cleanup."""
+        if inspect.iscoroutine(coro):
+            scheduled_coroutines.append(coro)
+
+    reactor = Mock()
+    reactor.processes = Mock()
+    reactor.processes.write = Mock()
+    reactor.processes.answer_done = Mock()
+    reactor.processes.answer_error = Mock()
+    reactor.asynchronous = Mock()
+    reactor.asynchronous.schedule = Mock(side_effect=track_schedule)
+
+    def cleanup():
+        """Close any scheduled coroutines to prevent warnings."""
+        for coro in scheduled_coroutines:
+            coro.close()
+        scheduled_coroutines.clear()
+
+    return reactor, cleanup
 
 
 class TestGroupBufferManagement:
@@ -185,21 +216,19 @@ class TestGroupEndHandler:
     def setup_method(self):
         """Clear group buffers before each test."""
         _GROUP_BUFFERS.clear()
+        self._cleanup = None
 
     def teardown_method(self):
-        """Clear group buffers after each test."""
+        """Clear group buffers and close any scheduled coroutines."""
         _GROUP_BUFFERS.clear()
+        if self._cleanup:
+            self._cleanup()
 
     @pytest.fixture
     def mock_reactor(self):
-        """Create mock reactor for testing."""
-        reactor = Mock()
-        reactor.processes = Mock()
-        reactor.processes.write = Mock()
-        reactor.processes.answer_done = Mock()
-        reactor.processes.answer_error = Mock()
-        reactor.asynchronous = Mock()
-        reactor.asynchronous.schedule = Mock()
+        """Create mock reactor that tracks and cleans up scheduled coroutines."""
+        reactor, cleanup = _create_mock_reactor_with_cleanup()
+        self._cleanup = cleanup
         return reactor
 
     def test_group_end_not_in_group_error(self, mock_reactor):
@@ -252,21 +281,19 @@ class TestGroupInlineHandler:
     def setup_method(self):
         """Clear group buffers before each test."""
         _GROUP_BUFFERS.clear()
+        self._cleanup = None
 
     def teardown_method(self):
-        """Clear group buffers after each test."""
+        """Clear group buffers and close any scheduled coroutines."""
         _GROUP_BUFFERS.clear()
+        if self._cleanup:
+            self._cleanup()
 
     @pytest.fixture
     def mock_reactor(self):
-        """Create mock reactor for testing."""
-        reactor = Mock()
-        reactor.processes = Mock()
-        reactor.processes.write = Mock()
-        reactor.processes.answer_done = Mock()
-        reactor.processes.answer_error = Mock()
-        reactor.asynchronous = Mock()
-        reactor.asynchronous.schedule = Mock()
+        """Create mock reactor that tracks and cleans up scheduled coroutines."""
+        reactor, cleanup = _create_mock_reactor_with_cleanup()
+        self._cleanup = cleanup
         return reactor
 
     def test_group_inline_empty_error(self, mock_reactor):
@@ -347,21 +374,19 @@ class TestGroupBufferIsolation:
     def setup_method(self):
         """Clear group buffers before each test."""
         _GROUP_BUFFERS.clear()
+        self._cleanup = None
 
     def teardown_method(self):
-        """Clear group buffers after each test."""
+        """Clear group buffers and close any scheduled coroutines."""
         _GROUP_BUFFERS.clear()
+        if self._cleanup:
+            self._cleanup()
 
     @pytest.fixture
     def mock_reactor(self):
-        """Create mock reactor for testing."""
-        reactor = Mock()
-        reactor.processes = Mock()
-        reactor.processes.write = Mock()
-        reactor.processes.answer_done = Mock()
-        reactor.processes.answer_error = Mock()
-        reactor.asynchronous = Mock()
-        reactor.asynchronous.schedule = Mock()
+        """Create mock reactor that tracks and cleans up scheduled coroutines."""
+        reactor, cleanup = _create_mock_reactor_with_cleanup()
+        self._cleanup = cleanup
         return reactor
 
     def test_different_services_independent(self, mock_reactor):

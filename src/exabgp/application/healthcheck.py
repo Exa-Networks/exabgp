@@ -90,7 +90,7 @@ def setargs(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('--sudo', action='store_true', default=False, help='use sudo to setup ip addresses')
     parser.add_argument('--name', '-n', metavar='NAME', help='name for this healthchecker')
     parser.add_argument('--config', '-F', metavar='FILE', type=open, help='read configuration from a file')
-    parser.add_argument('--pid', '-p', metavar='FILE', type=argparse.FileType('w'), help='write PID to the provided file')
+    parser.add_argument('--pid', '-p', metavar='FILE', type=str, help='write PID to the provided file')
     parser.add_argument('--user', metavar='USER', help='set user after setting ip addresses')
     parser.add_argument('--group', metavar='GROUP', help='set group after setting ip addresses')
 
@@ -611,8 +611,8 @@ def main() -> None:
     options = parse()
     setup_logging(options.debug, options.silent, options.name, options.syslog_facility, not options.no_syslog)
     if options.pid:
-        options.pid.write(f'{os.getpid()}\n')
-        options.pid.close()
+        with open(options.pid, 'w') as pid_file:
+            pid_file.write(f'{os.getpid()}\n')
     try:
         # Setup IP to use
         options.ips = options.ips or system_ips(None, options.label, False, options.label_exact_match)
