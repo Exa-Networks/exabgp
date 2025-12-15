@@ -15,16 +15,27 @@ from typing import TYPE_CHECKING
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import Family
 from exabgp.bgp.message.update.attribute import NextHop
+from exabgp.bgp.message.update.collection import validate_announce_nlri
 
 from exabgp.logger import log, lazymsg
 
 if TYPE_CHECKING:
+    from exabgp.rib.route import Route
     from exabgp.reactor.api import API
     from exabgp.reactor.loop import Reactor
 
 
 def register_announce() -> None:
     pass
+
+
+def validate_announce(route: 'Route') -> str | None:
+    """Validate route for announcement, return error message or None if valid.
+
+    Provides early validation at API level for immediate feedback.
+    Uses shared validation logic from collection.py.
+    """
+    return validate_announce_nlri(route.nlri, route.nexthop)
 
 
 def parse_sync_mode(command: str, reactor: 'Reactor', service: str) -> tuple[str, bool]:
@@ -106,6 +117,14 @@ def announce_route(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
+                # Validate route before announcing (early feedback)
+                error = validate_announce(route)
+                if error:
+                    peer_list = ', '.join(peers) if peers else 'all peers'
+                    self.log_failure(f'invalid route for {peer_list}: {error}')
+                    await reactor.processes.answer_error_async(service, error)
+                    return
+
                 reactor.configuration.announce_route(peers, route)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {route.extensive()}')

@@ -30,6 +30,7 @@ from exabgp.logger import log, lazymsg
 from exabgp.reactor.api.command.announce import (
     parse_sync_mode,
     register_flush_callbacks,
+    validate_announce,
 )
 
 if TYPE_CHECKING:
@@ -237,6 +238,12 @@ async def _process_group(
                 # Merge shared attributes if available
                 if shared_attributes_route:
                     route = route.with_merged_attributes(shared_attributes_route.attributes)
+
+                # Validate route before announcing (early feedback)
+                error = validate_announce(route)
+                if error:
+                    errors.append(f'invalid route: {error}')
+                    continue
 
                 reactor.configuration.announce_route(cmd_peers, route)
                 all_peers.update(cmd_peers)

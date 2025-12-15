@@ -19,6 +19,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.reactor.api.command.announce import validate_announce
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -197,6 +198,20 @@ def routes_add(
 
             results = []
             for route in routes:
+                # Validate route before announcing (early feedback)
+                error = validate_announce(route)
+                if error:
+                    peer_list = ', '.join(peers) if peers else 'all peers'
+                    self.log_failure(f'invalid route for {peer_list}: {error}')
+                    results.append(
+                        {
+                            'route': route.extensive(),
+                            'success': False,
+                            'error': error,
+                        }
+                    )
+                    continue
+
                 # Use indexed injection to get index
                 index, success = reactor.configuration.announce_route_indexed(peers, route)
 

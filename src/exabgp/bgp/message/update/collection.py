@@ -30,6 +30,35 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 
 
+def validate_announce_nlri(nlri: 'NLRI', nexthop: IP) -> str | None:
+    """Validate NLRI and nexthop for announcement.
+
+    Returns error message if invalid, None if valid.
+
+    This is the single source of truth for announce validation:
+    - Called at wire format generation time (required for all routes)
+    - Called at API level for early feedback (optional but better UX)
+
+    Withdrawals don't need this validation (RFC 4271: MP_UNREACH_NLRI has no nexthop).
+    """
+    # 1. Nexthop validation - required for unicast/multicast announces
+    if nlri.safi in (SAFI.unicast, SAFI.multicast):
+        if nexthop is IP.NoNextHop:
+            return f'announce requires nexthop: {nlri}'
+
+    # 2. Labels validation - required for labeled route announces
+    if nlri.safi.has_label():
+        if isinstance(nlri, Label) and nlri.labels is Labels.NOLABEL:
+            return f'labeled route announce requires labels: {nlri}'
+
+    # 3. RD validation - required for VPN route announces
+    if nlri.safi.has_rd():
+        if isinstance(nlri, IPVPN) and nlri.rd is RouteDistinguisher.NORD:
+            return f'VPN route announce requires RD: {nlri}'
+
+    return None
+
+
 @dataclass(frozen=True, slots=True)
 class RoutedNLRI:
     """NLRI with associated nexthop for wire format encoding.
@@ -238,22 +267,10 @@ class UpdateCollection(Message):
                 continue
 
             # Wire format validation for announces (not needed for withdraws)
-            # Validates that required fields are present before generating MP_REACH_NLRI
-            #
-            # 1. Nexthop validation - required for unicast/multicast announces
-            if nlri.safi in (SAFI.unicast, SAFI.multicast):
-                if nexthop is IP.NoNextHop:
-                    raise ValueError(f'announce requires nexthop: {nlri}')
-
-            # 2. Labels validation - required for labeled route announces
-            if nlri.safi.has_label():
-                if isinstance(nlri, Label) and nlri.labels is Labels.NOLABEL:
-                    raise ValueError(f'labeled route announce requires labels: {nlri}')
-
-            # 3. RD validation - required for VPN route announces
-            if nlri.safi.has_rd():
-                if isinstance(nlri, IPVPN) and nlri.rd is RouteDistinguisher.NORD:
-                    raise ValueError(f'VPN route announce requires RD: {nlri}')
+            # Uses shared validation logic - also called at API level for early feedback
+            error = validate_announce_nlri(nlri, nexthop)
+            if error:
+                raise ValueError(error)
 
             is_v4 = nlri.afi == AFI.ipv4
             is_v4 = is_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]

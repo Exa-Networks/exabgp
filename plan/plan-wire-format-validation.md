@@ -70,21 +70,28 @@ if nlri.safi.has_rd():
 - `test_announce_ipv6_undefined_nexthop_raises_valueerror` - expects new error message
 - `test_announce_ipv4_undefined_nexthop_raises_valueerror` - expects new error message
 
-### Phase 3: Consider API-Level Validation (Optional)
+### Phase 3: API-Level Validation (COMPLETE)
 
-For better error messages at API time, we could validate in the API handlers by checking the action:
+Added early validation at API level for immediate user feedback.
 
-```python
-# In announce_route() handler
-for route in routes:
-    if route.nexthop is IP.NoNextHop and route.nlri.safi in (SAFI.unicast, SAFI.multicast):
-        return error('announce requires nexthop')
+**Shared validation function** `validate_announce_nlri(nlri, nexthop)` in `collection.py`:
+- Single source of truth for validation logic
+- Called at wire format generation (required for config file routes)
+- Called at API level via `validate_announce()` wrapper (immediate feedback)
 
-# In withdraw_route() handler
-# No nexthop validation needed
-```
+API-level wrapper `validate_announce(route)` in `announce.py`:
+- Extracts nlri/nexthop from Route and calls shared function
+- Used by API handlers for early feedback
 
-This gives immediate feedback but duplicates validation logic.
+Added validation calls in:
+- `announce_route()` in `announce.py` - returns error immediately
+- `group` command handler in `group.py` - adds to errors list
+- `routes add` handler in `route.py` - returns error in result object
+
+**Why both validation points exist:**
+- Config file routes bypass API → need wire format validation
+- API routes benefit from immediate feedback → call shared function early
+- Same logic, no duplication
 
 ## Files to Modify
 
