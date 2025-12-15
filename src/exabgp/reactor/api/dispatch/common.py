@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Callable, Iterator, Union
 
 from exabgp.configuration.core.parser import Tokeniser
 
@@ -160,7 +160,7 @@ def is_selector_start(token: str) -> bool:
     return '.' in token or ':' in token
 
 
-def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> list[str]:
+def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> Iterator[str]:
     """Extract peer selector by consuming tokens from the tokeniser.
 
     This function owns its token consumption - it will consume exactly
@@ -177,8 +177,8 @@ def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> 
         reactor: Reactor for peer lookup
         service: Service name for peer filtering
 
-    Returns:
-        List of matching peer names
+    Yields:
+        Matching peer names
     """
     from exabgp.reactor.api.command.limit import match_neighbors
 
@@ -186,11 +186,13 @@ def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> 
 
     # Wildcard - all peers
     if first_token == '*':
-        return list(reactor.peers(service))
+        yield from reactor.peers(service)
+        return
 
     # Bracket syntax: [ip1 key value, ip2]
     if first_token == '[':
-        return _parse_bracket_selector(tokeniser, reactor, service)
+        yield from _parse_bracket_selector(tokeniser, reactor, service)
+        return
 
     # IP address with optional key-value pairs: IP [key value]...
     definition: list[str] = [f'neighbor {first_token}']
@@ -209,10 +211,10 @@ def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> 
         else:
             break
 
-    return match_neighbors(reactor.peers(service), [definition])
+    yield from match_neighbors(reactor.peers(service), [definition])
 
 
-def _parse_bracket_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> list[str]:
+def _parse_bracket_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> Iterator[str]:
     """Parse bracket selector syntax: [ip1 key value, ip2].
 
     Called after '[' has been consumed.
@@ -222,8 +224,8 @@ def _parse_bracket_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: s
         reactor: Reactor for peer lookup
         service: Service name for peer filtering
 
-    Returns:
-        List of matching peer names
+    Yields:
+        Matching peer names
     """
     from exabgp.reactor.api.command.limit import match_neighbors
 
@@ -268,7 +270,7 @@ def _parse_bracket_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: s
             # Unknown token - include it anyway
             current_def.append(tok)
 
-    return match_neighbors(reactor.peers(service), descriptions)
+    yield from match_neighbors(reactor.peers(service), descriptions)
 
 
 def dispatch(
@@ -321,7 +323,8 @@ def dispatch(
         # Check if this is a selector node and the token looks like a selector start
         if SELECTOR_KEY in node and peeked not in node and is_selector_start(peeked):
             # Let extract_selector consume its own tokens
-            peers = extract_selector(tokeniser, reactor, service)
+            # Note: must materialize generator immediately so tokens are consumed now
+            peers = list(extract_selector(tokeniser, reactor, service))
             node = node[SELECTOR_KEY]
             # Don't consume again - extract_selector already did
             if callable(node):

@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from typing import Iterable, Iterator
 
 
 def extract_neighbors(command: str) -> tuple[list[list[str]], str]:
@@ -176,16 +176,18 @@ def match_neighbor(description: list[str], name: str) -> bool:
     return True
 
 
-# TODO: convert to a generator
-def match_neighbors(peers: Iterable[str], descriptions: list[list[str]]) -> list[str]:
-    """Return the sublist of peers matching the description passed, or None if no description is given"""
+def match_neighbors(peers: Iterable[str], descriptions: list[list[str]]) -> Iterator[str]:
+    """Yield peers matching the description passed, or all peers if no description is given."""
     if not descriptions:
-        return list(peers)
+        yield from peers
+        return
 
-    returned: list[str] = []
+    seen: set[str] = set()
     for peer_name in peers:
+        if peer_name in seen:
+            continue
         for description in descriptions:
             if match_neighbor(description, peer_name):
-                if peer_name not in returned:
-                    returned.append(peer_name)
-    return returned
+                seen.add(peer_name)
+                yield peer_name
+                break

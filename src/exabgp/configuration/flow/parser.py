@@ -39,6 +39,8 @@ from exabgp.bgp.message.update.nlri.flow import (
     FlowICMPCode,
     FlowICMPType,
     FlowIPProtocol,
+    FlowIPv4,
+    FlowIPv6,
     FlowNextHeader,
     FlowPacketLength,
     FlowSourcePort,
@@ -203,6 +205,13 @@ def _value(string: str) -> tuple[str, str]:
 # parse [ content1 content2 content3 ]
 # parse =80 or >80 or <25 or &>10<20
 def _generic_condition(tokeniser: 'Tokeniser', klass: Type[FlowConditionT]) -> Generator[FlowConditionT, None, None]:
+    # Validate that the flow rule component is valid for the current address family
+    afi = tokeniser.afi
+    if afi == AFI.ipv4 and not issubclass(klass, FlowIPv4):
+        raise ValueError(f"'{klass.__name__}' is not valid for IPv4 flow routes (IPv6-only component)")
+    if afi == AFI.ipv6 and not issubclass(klass, FlowIPv6):
+        raise ValueError(f"'{klass.__name__}' is not valid for IPv6 flow routes (IPv4-only component)")
+
     _operator = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric
     data: str = tokeniser()
     AND: int = BinaryOperator.NOP
@@ -216,7 +225,6 @@ def _generic_condition(tokeniser: 'Tokeniser', klass: Type[FlowConditionT]) -> G
             operator, _ = _operator(data)
             value: str
             value, data = _value(_)
-            # XXX: should do a check that the rule is valid for the family
             yield klass(AND | operator, klass.converter(value))
             if data:
                 if data[0] != '&':

@@ -142,7 +142,7 @@ class TestMatchNeighbors:
     def test_empty_descriptions_returns_all(self) -> None:
         """Test that empty descriptions return all peers."""
         peers = ['peer1', 'peer2', 'peer3']
-        result = match_neighbors(peers, [])
+        result = list(match_neighbors(peers, []))
         assert result == ['peer1', 'peer2', 'peer3']
 
     def test_match_single_description(self) -> None:
@@ -152,7 +152,7 @@ class TestMatchNeighbors:
             'neighbor 10.0.0.2 peer-as 65001',
         ]
         descriptions = [['neighbor 10.0.0.1']]
-        result = match_neighbors(peers, descriptions)
+        result = list(match_neighbors(peers, descriptions))
         assert result == ['neighbor 10.0.0.1 peer-as 65000']
 
     def test_match_multiple_descriptions(self) -> None:
@@ -163,7 +163,7 @@ class TestMatchNeighbors:
             'neighbor 10.0.0.3 peer-as 65002',
         ]
         descriptions = [['neighbor 10.0.0.1'], ['neighbor 10.0.0.2']]
-        result = match_neighbors(peers, descriptions)
+        result = list(match_neighbors(peers, descriptions))
         assert 'neighbor 10.0.0.1 peer-as 65000' in result
         assert 'neighbor 10.0.0.2 peer-as 65001' in result
         assert len(result) == 2
@@ -173,5 +173,5 @@ class TestMatchNeighbors:
         peers = ['neighbor 10.0.0.1 peer-as 65000 router-id 1.2.3.4']
         # Both descriptions match the same peer
         descriptions = [['neighbor 10.0.0.1'], ['router-id 1.2.3.4']]
-        result = match_neighbors(peers, descriptions)
+        result = list(match_neighbors(peers, descriptions))
         assert len(result) == 1

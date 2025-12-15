@@ -82,7 +82,6 @@ class Operational(Message):
         MP = 0xFFFE  # 65534: Max Permitted
         NS = 0xFFFF  # 65535: Not Satisfied
 
-    # XXX: FIXME: should be upper case
     name: ClassVar[str] = ''
     category: ClassVar[str] = ''
     code: ClassVar[int] = CODE.NOP

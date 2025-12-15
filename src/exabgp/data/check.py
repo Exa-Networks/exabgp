@@ -7,8 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from ipaddress import AddressValueError, IPv4Address, IPv6Address
 from typing import Any, Callable, ClassVar
 
+from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.protocol.ip import IPv4
 from exabgp.protocol.ip import IPv6
 
@@ -79,8 +81,6 @@ def hashtable(data: Any) -> bool:
     return type(data) == type({})  # noqa
 
 
-# XXX: Not very good to redefine the keyword object, but this class uses no OO ...
-
 CHECK_TYPE: dict[int, Callable[[Any], bool]] = {
     TYPE.NULL: null,
     TYPE.BOOLEAN: boolean,
@@ -130,12 +130,24 @@ def ip(data: Any) -> bool:
     return ipv4(data) or ipv6(data)
 
 
-def ipv4(data: Any) -> bool:  # XXX: improve
-    return string(data) and data.count('.') == IPv4.DOT_COUNT
+def ipv4(data: Any) -> bool:
+    if not string(data):
+        return False
+    try:
+        IPv4Address(data)
+        return True
+    except AddressValueError:
+        return False
 
 
-def ipv6(data: Any) -> bool:  # XXX: improve
-    return string(data) and ':' in data
+def ipv6(data: Any) -> bool:
+    if not string(data):
+        return False
+    try:
+        IPv6Address(data)
+        return True
+    except AddressValueError:
+        return False
 
 
 def range4(data: Any) -> bool:
@@ -279,7 +291,7 @@ def extendedcommunity(data: Any) -> bool:  # TODO: improve, incomplete see https
 
 
 def label(data: Any) -> bool:
-    return integer(data) and 0 <= data < pow(2, 20)  # XXX: SHOULD be taken from Label class
+    return integer(data) and 0 <= data <= Labels.MAX
 
 
 def clusterlist(data: Any) -> bool:

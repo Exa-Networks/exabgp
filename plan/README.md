@@ -4,7 +4,7 @@
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Unit Tests | 3,255 | +230 RIB tests (Dec 15) |
+| Unit Tests | 3,404 | +149 since last update |
 | Test Coverage | ~60% | Target: 60%+ |
 | MyPy Errors | 244 | Mostly in `cli/completer.py` |
 | TODO/FIXME Comments | 33 | Down from 48 |
@@ -18,7 +18,6 @@
 
 | Plan | Description |
 |------|-------------|
-| `wip-nlri-immutability.md` | Phase 4 steps 6-7 remaining (remove nexthop from NLRI) |
 | `comment-cleanup/` | XXX/TODO comment cleanup (Phase 6-7) |
 | `runtime-validation/` | Runtime crash prevention (BGP-LS done) |
 | `type-safety/` | MyPy error reduction |
@@ -86,6 +85,7 @@
 | Consolidate Test Fixtures | Reduce fixture duplication |
 | Performance Regression Tests | pytest-benchmark integration |
 | Cache Compiled Regexes | Performance improvement |
+| Community Caching | Re-add community object caching in config parsing |
 
 ---
 
@@ -123,6 +123,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-nlri-immutability.md` | 2025-12-15 | NLRI immutability - remove nexthop from NLRI |
 | `done-rib-testing-comprehensive.md` | 2025-12-15 | 230 new RIB tests (8 files, P0-P3 complete) |
 | `done-buffer-protocol-audit.md` | 2025-12-15 | Migrate bytes→Buffer (117 files, 250 replacements) |
 | `done-action-enum-refactor.md` | 2025-12-15 | Replace action= strings with type-safe enums |
@@ -142,7 +143,7 @@
 
 | Status | Prefix | Example |
 |--------|--------|---------|
-| Active (in progress) | `wip-` | `wip-nlri-immutability.md` |
+| Active (in progress) | `wip-` | `wip-feature-name.md` |
 | Planning (not started) | `plan-` | `plan-addpath-nlri.md` |
 | Completed | `done-` | `done-action-enum-refactor.md` |
 | On Hold | `hold-` | `hold-async-migration.md` |

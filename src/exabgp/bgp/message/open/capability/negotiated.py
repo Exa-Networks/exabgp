@@ -188,12 +188,6 @@ class Negotiated:
         elif sent_capa.announced(Capability.CODE.MULTISESSION):
             self.multisession = (2, 9, 'multisession is mandatory with this peer')
 
-        # XXX: Does not work as the capa is not yet defined
-        # if received_open.capabilities.announced(Capability.CODE.EXTENDED_MESSAGE) \
-        # and sent_open.capabilities.announced(Capability.CODE.EXTENDED_MESSAGE):
-        # 	if self.peer.bgp.received_open_size:
-        # 		self.received_open_size = self.peer.bgp.received_open_size - 19
-
     def validate(self, neighbor: Any) -> tuple[int, int, str] | None:
         # Both opens must be set before validate is called
         assert self.sent_open is not None
@@ -207,7 +201,6 @@ class Negotiated:
             )
 
         # RFC 6286 : https://tools.ietf.org/html/rfc6286
-        # XXX: FIXME: check that router id is not self
         if self.received_open.router_id == RouterID('0.0.0.0'):
             return (2, 3, '0.0.0.0 is an invalid router_id')
 

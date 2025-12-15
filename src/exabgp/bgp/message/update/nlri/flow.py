@@ -152,11 +152,15 @@ def _number(string: bytes) -> NumericValue:
 # Interface ..................
 
 
-class IPv4:
+class FlowIPv4:
+    """Marker class for FlowSpec components valid for IPv4."""
+
     afi: ClassVar[AFI] = AFI.ipv4
 
 
-class IPv6:
+class FlowIPv6:
+    """Marker class for FlowSpec components valid for IPv6."""
+
     afi: ClassVar[AFI] = AFI.ipv6
 
 
@@ -167,7 +171,7 @@ class IPrefix:
 # Prococol
 
 
-class IPrefix4(IPrefix, IComponent, IPv4):
+class IPrefix4(IPrefix, IComponent, FlowIPv4):
     """IPv4 FlowSpec prefix using packed-bytes-first pattern.
 
     Wire format stored in _packed: [mask][truncated_ip...]
@@ -231,7 +235,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
         return cls(packed), bgp[len(cidr) :]
 
 
-class IPrefix6(IPrefix, IComponent, IPv6):
+class IPrefix6(IPrefix, IComponent, FlowIPv6):
     """IPv6 FlowSpec prefix using packed-bytes-first pattern.
 
     Wire format stored in _packed: [mask][truncated_ip...]
@@ -521,56 +525,56 @@ class Flow6Source(IPrefix6, FlowSource):
     NAME: ClassVar[str] = 'source-ipv6'
 
 
-class FlowIPProtocol(IOperationByte, NumericString, IPv4):
+class FlowIPProtocol(IOperationByte, NumericString, FlowIPv4):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'protocol'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(Protocol.from_string, Protocol)
     decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(ord, Protocol)
 
 
-class FlowNextHeader(IOperationByte, NumericString, IPv6):
+class FlowNextHeader(IOperationByte, NumericString, FlowIPv6):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'next-header'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(Protocol.from_string, Protocol)
     decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(ord, Protocol)
 
 
-class FlowAnyPort(IOperationByteShort, NumericString, IPv4, IPv6):
+class FlowAnyPort(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x04
     NAME: ClassVar[str] = 'port'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
-class FlowDestinationPort(IOperationByteShort, NumericString, IPv4, IPv6):
+class FlowDestinationPort(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x05
     NAME: ClassVar[str] = 'destination-port'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
-class FlowSourcePort(IOperationByteShort, NumericString, IPv4, IPv6):
+class FlowSourcePort(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x06
     NAME: ClassVar[str] = 'source-port'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
-class FlowICMPType(IOperationByte, NumericString, IPv4, IPv6):
+class FlowICMPType(IOperationByte, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x07
     NAME: ClassVar[str] = 'icmp-type'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(ICMPType.from_string, ICMPType)
     decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, ICMPType)
 
 
-class FlowICMPCode(IOperationByte, NumericString, IPv4, IPv6):
+class FlowICMPCode(IOperationByte, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x08
     NAME: ClassVar[str] = 'icmp-code'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(ICMPCode.from_string, ICMPCode)
     decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, ICMPCode)
 
 
-class FlowTCPFlag(IOperationByteShort, BinaryString, IPv4, IPv6):
+class FlowTCPFlag(IOperationByteShort, BinaryString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x09
     NAME: ClassVar[str] = 'tcp-flags'
     FLAG: ClassVar[bool] = True
@@ -578,7 +582,7 @@ class FlowTCPFlag(IOperationByteShort, BinaryString, IPv4, IPv6):
     decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, TCPFlag)
 
 
-class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
+class FlowPacketLength(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x0A
     NAME: ClassVar[str] = 'packet-length'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(packet_length, NumericValue)
@@ -586,7 +590,7 @@ class FlowPacketLength(IOperationByteShort, NumericString, IPv4, IPv6):
 
 
 # RFC2474
-class FlowDSCP(IOperationByte, NumericString, IPv4):
+class FlowDSCP(IOperationByte, NumericString, FlowIPv4):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'dscp'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(dscp_value, NumericValue)
@@ -594,7 +598,7 @@ class FlowDSCP(IOperationByte, NumericString, IPv4):
 
 
 # RFC2460
-class FlowTrafficClass(IOperationByte, NumericString, IPv6):
+class FlowTrafficClass(IOperationByte, NumericString, FlowIPv6):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'traffic-class'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(class_value, NumericValue)
@@ -602,7 +606,7 @@ class FlowTrafficClass(IOperationByte, NumericString, IPv6):
 
 
 # BinaryOperator
-class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
+class FlowFragment(IOperationByteShort, BinaryString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x0C
     NAME: ClassVar[str] = 'fragment'
     FLAG: ClassVar[bool] = True
@@ -611,7 +615,7 @@ class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
 
 
 # draft-raszuk-idr-flow-spec-v6-01
-class FlowFlowLabel(IOperationByteShortLong, NumericString, IPv6):
+class FlowFlowLabel(IOperationByteShortLong, NumericString, FlowIPv6):
     ID: ClassVar[int] = 0x0D
     NAME: ClassVar[str] = 'flow-label'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(label_value, NumericValue)
@@ -643,9 +647,9 @@ for content in dir():
         continue
 
     _afis = []
-    if issubclass(kls, IPv4):
+    if issubclass(kls, FlowIPv4):
         _afis.append(AFI.ipv4)
-    if issubclass(kls, IPv6):
+    if issubclass(kls, FlowIPv6):
         _afis.append(AFI.ipv6)
 
     for _afi in _afis:
@@ -818,7 +822,6 @@ class Flow(NLRI):
                 klass = factory[self.afi][what]
 
                 if decoded == 'prefix':
-                    # XXX: That will bomb
                     adding, bgp = klass.make(bgp)
                     rules.setdefault(adding.ID, []).append(adding)
                 else:

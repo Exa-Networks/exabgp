@@ -34,7 +34,7 @@ class ASN4(Capability, ASN):
 
     @classmethod
     def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
-        # XXX: FIXME: if instance is not ASN(0) we have two ASN - raise
+        # RFC 5492: duplicate capabilities use the last one received
         # ASN4 extends both Capability and ASN, so the result is a Capability
         result: ASN4 = ASN.unpack_asn(data, cls)
         return result

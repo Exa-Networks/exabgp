@@ -136,7 +136,6 @@ class Capability:
         def __repr__(self) -> str:
             return str(self)
 
-        # XXX: Could use cls instead of CapabilityCode and other tidy up
         @classmethod
         def name(cls, self: int) -> str | None:
             name: str | None = CapabilityCode.names.get(self, None)

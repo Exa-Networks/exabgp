@@ -28,7 +28,6 @@ class MultiSession(Capability, list[CapabilityCode]):
         self.extend(data)
         return self
 
-    # XXX: FIXME: Looks like we could do with something in this Caoability
     def __str__(self) -> str:
         info = ' (RFC)' if self.ID == Capability.CODE.MULTISESSION else ''
         return 'Multisession{} {}'.format(info, ' '.join([str(capa) for capa in self]))

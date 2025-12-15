@@ -354,9 +354,6 @@ class INET(NLRI):
     def _internal(self, announced: bool = True) -> list[str]:
         return [self.path_info.json()]
 
-    # The announced feature is not used by ExaBGP, is it by BAGPIPE ?
-
-    # XXX: need to review this API
     def json(self, announced: bool = True, compact: bool = False) -> str:
         internal = ', '.join([_ for _ in self._internal(announced) if _])
         if internal:

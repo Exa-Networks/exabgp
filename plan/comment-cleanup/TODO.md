@@ -165,17 +165,17 @@
 
 | ID | File | Line | Comment | Status |
 |----|------|------|---------|--------|
-| 6.1.1 | `reactor/api/command/watchdog.py` | 56 | move into Action | ⏳ Pending |
-| 6.1.2 | `reactor/api/command/watchdog.py` | 75 | move into Action | ⏳ Pending |
+| 6.1.1 | `reactor/api/command/watchdog.py` | 56 | move into Action | ✅ Removed (misleading - watchdogs are gating, not route actions) |
+| 6.1.2 | `reactor/api/command/watchdog.py` | 75 | move into Action | ✅ Removed (same) |
 
 ### 6.2 Data Validation (4 items)
 
 | ID | File | Line | Comment | Status |
 |----|------|------|---------|--------|
-| 6.2.1 | `data/check.py` | 82 | object redefine | ⏳ Pending |
-| 6.2.2 | `data/check.py` | 133 | ipv4 improve | ⏳ Pending |
-| 6.2.3 | `data/check.py` | 137 | ipv6 improve | ⏳ Pending |
-| 6.2.4 | `data/check.py` | 282 | Label class reference | ⏳ Pending |
+| 6.2.1 | `data/check.py` | 82 | object redefine | ✅ Removed (stale - no object function exists) |
+| 6.2.2 | `data/check.py` | 133 | ipv4 improve | ✅ Improved (uses ipaddress.IPv4Address) |
+| 6.2.3 | `data/check.py` | 137 | ipv6 improve | ✅ Improved (uses ipaddress.IPv6Address) |
+| 6.2.4 | `data/check.py` | 282 | Label class reference | ✅ Fixed (uses Labels.MAX) |
 
 ### 6.3 Configuration (6 items)
 

@@ -56,7 +56,6 @@ EXTENDED_COMMUNITY_TARGET_PARTS = 2  # Target extended community has 2 parts (AS
 
 
 def prefix(tokeniser: 'Tokeniser') -> IPRange:
-    # XXX: could raise
     ip = tokeniser()
     try:
         ip, mask_str = ip.split('/')
@@ -94,10 +93,6 @@ def next_hop(tokeniser: 'Tokeniser', afi: AFI | None = None) -> tuple[IP | IPSel
     return ip, NextHop.from_string(ip.top())
 
 
-# XXX: using Action.UNSET should we use the following ?
-# action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
-
-
 def inet(tokeniser: 'Tokeniser') -> Route:
     from exabgp.protocol.ip import IP
 
@@ -107,10 +102,6 @@ def inet(tokeniser: 'Tokeniser') -> Route:
 
     # Create with explicit nexthop=NoNextHop; will be updated via with_nexthop() when parsed
     return Route(nlri, AttributeCollection(), nexthop=IP.NoNextHop)
-
-
-# XXX: using Action.ANNOUNCE should we use the following ?
-# action = Action.ANNOUNCE if tokeniser.announce else Action.WITHDRAW
 
 
 def mpls(tokeniser: 'Tokeniser') -> Route:
@@ -331,9 +322,6 @@ def cluster_list(tokeniser: 'Tokeniser') -> ClusterList:
         raise ValueError(
             f"'{value}' is not a valid cluster-list\n  Format: <cluster-id> or [ <cluster-id1>, <cluster-id2>, ... ]"
         ) from None
-
-
-# XXX: Community does does not cache anymore .. we SHOULD really do it !
 
 
 def _community(value: str) -> Community:

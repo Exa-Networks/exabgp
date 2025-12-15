@@ -53,7 +53,6 @@ def announce_watchdog(
     self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback(name: str) -> None:
-        # XXX: move into Action
         for neighbor_name in reactor.configuration.neighbors.keys():
             neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
             if not neighbor:
@@ -72,7 +71,6 @@ def withdraw_watchdog(
     self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback(name: str) -> None:
-        # XXX: move into Action
         for neighbor_name in reactor.configuration.neighbors.keys():
             neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
             if not neighbor:

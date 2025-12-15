@@ -18,9 +18,6 @@ from exabgp.util.types import Buffer
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-# XXX: The IP,Range and CIDR class API are totally broken, fix it.
-# XXX: many of the NLRI classes constructor also need correct @classmethods
-
 
 class IPBase:
     SELF: ClassVar[bool]
@@ -105,8 +102,13 @@ class IP(IPBase):
     @staticmethod
     def tosafi(ip: str) -> SAFI:
         if ':' in ip:
-            # XXX: FIXME: I assume that ::FFFF:<ip> must be treated unicast
-            # if int(ip.split(':')[-1].split('.')[0]) in IP._multicast_range:
+            # Check for IPv4-mapped IPv6 (::ffff:x.x.x.x)
+            ip_lower = ip.lower()
+            if '::ffff:' in ip_lower and '.' in ip:
+                # Extract IPv4 part after ::ffff:
+                ipv4_part = ip.split(':')[-1]
+                if int(ipv4_part.split('.')[0]) in IP._multicast_range:
+                    return SAFI.multicast
             return SAFI.unicast
         if '.' in ip:
             if int(ip.split('.')[0]) in IP._multicast_range:

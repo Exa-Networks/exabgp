@@ -563,9 +563,9 @@ class ParseNeighbor(Section):
                 )
 
         # create one neighbor object per family for multisession
+        # NOTE: deepcopy per family is memory-intensive but required for multi-session
         if neighbor.capability.multi_session.is_enabled() and len(neighbor.families()) > 1:
             for family in neighbor.families():
-                # XXX: FIXME: Ok, it works but it takes LOTS of memory ..
                 m_neighbor = deepcopy(neighbor)
                 m_neighbor.make_rib()
                 m_neighbor.rib.outgoing.families = {family}

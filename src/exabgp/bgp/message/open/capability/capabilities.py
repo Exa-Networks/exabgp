@@ -174,7 +174,7 @@ class Capabilities(dict[int, Capability]):
     def _session(self, neighbor: Neighbor) -> None:
         if not neighbor.capability.multi_session.is_enabled():
             return
-        # XXX: FIXME: should it not be the RFC version ?
+        # Uses IETF draft code (0x44) - draft-ietf-idr-bgp-multisession expired 2013, never became RFC
         self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
 
     def new(self, neighbor: Neighbor, restarted: bool) -> Capabilities:

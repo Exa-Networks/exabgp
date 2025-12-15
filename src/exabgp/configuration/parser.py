@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from ipaddress import AddressValueError, IPv4Address, IPv6Address
 from typing import TYPE_CHECKING
 
 from exabgp.bgp.message.open.asn import ASN
@@ -102,8 +103,18 @@ def peer_ip(tokeniser: Tokeniser) -> IPRange:
         value, mask_str = value.split('/', 1)
         mask = int(mask_str)
     else:
-        # XXX: This only works as no port are allowed, improve
-        mask = 128 if ':' in value else 32
+        # Determine mask based on address family (32 for IPv4, 128 for IPv6)
+        try:
+            IPv4Address(value)
+            mask = 32
+        except AddressValueError:
+            try:
+                IPv6Address(value)
+                mask = 128
+            except AddressValueError:
+                raise ValueError(
+                    f"'{value}' is not a valid IP address\n  Format: <ip> or <ip>/<prefix> (e.g., 192.0.2.1 or 2001:db8::1/64)"
+                ) from None
 
     try:
         return IPRange(IP.pton(value), mask)

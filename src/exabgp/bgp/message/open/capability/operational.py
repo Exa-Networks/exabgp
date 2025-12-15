@@ -25,7 +25,6 @@ class Operational(Capability, list[bytes]):
     _seen: bool = False
 
     def __str__(self) -> str:
-        # XXX: FIXME: could be more verbose
         return 'Operational'
 
     def json(self) -> str:

@@ -239,7 +239,7 @@ def _dispatch_neighbor_v4(
 
     # Use extract_neighbors to parse selector and get remaining command
     descriptions, remaining = extract_neighbors(command)
-    peers = match_neighbors(reactor.peers(service), descriptions)
+    peers = list(match_neighbors(reactor.peers(service), descriptions))
 
     remaining_parts = remaining.split()
     if not remaining_parts:

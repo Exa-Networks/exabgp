@@ -541,7 +541,7 @@ class AttributeCollection(dict):
         # we sort based on packed values since the items do not
         # necessarily implement __cmp__
         def pack_(attr: Attribute) -> bytes:
-            # XXX: This is pure guesswork
+            # Pack attribute to bytes for comparison
             collection = AttributeCollection()
             collection.add(attr)
             return bytes(collection.pack_attribute(Negotiated.UNSET))

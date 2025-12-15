@@ -558,7 +558,6 @@ class Configuration(_Configuration):
             if not self.parser.set_file(target):
                 return False
 
-        # XXX: Should it be in neighbor ?
         self.process.add_api()
 
         if self.parse_section('root') is not True:

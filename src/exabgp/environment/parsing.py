@@ -102,10 +102,8 @@ def ip_list(_: str) -> list[IP]:
 
 
 def user(_: str) -> str:
-    # XXX: incomplete
     try:
         pwd.getpwnam(_)
-        # uid = answer[2]
     except KeyError:
         raise TypeError(f'user {_} is not found on this system') from None
     return _
