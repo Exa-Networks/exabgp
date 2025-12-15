@@ -114,7 +114,10 @@
       "Bash(uv run python:*)",
       "Bash(tee:*)",
       "Bash(uv run mypy:*)",
-      "Bash(uv run ruff check:*)"
+      "Bash(uv run ruff check:*)",
+      "Bash(uv run ruff:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": []
   },
