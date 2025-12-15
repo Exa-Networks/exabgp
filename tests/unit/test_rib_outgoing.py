@@ -197,12 +197,13 @@ class TestSameNLRISequences:
         rib.del_from_rib(change)
         rib.add_to_rib(change, force=True)  # force=True since it's cached
 
-        # Verify only announce, no withdraw
+        # Both withdraw and announce are sent (cancel logic disabled)
+        # See plan/plan-announce-cancels-withdraw-optimization.md for future optimization
         updates = consume_updates(rib)
         announces, withdraws = count_announces_withdraws(updates)
 
         assert announces == 1, 'Should have 1 announce'
-        assert withdraws == 0, 'Withdraw should be cancelled by subsequent announce'
+        assert withdraws == 1, 'Withdraw is sent (cancel optimization disabled)'
 
     def test_announce_then_announce_same_nlri_different_attrs(self):
         """Announce same NLRI twice with different attributes: both sent
@@ -251,7 +252,11 @@ class TestSameNLRISequences:
         assert withdraws == 1, 'Should have only 1 withdraw (duplicates eliminated)'
 
     def test_announce_withdraw_announce_same_nlri(self):
-        """A→W→A sequence: only final announce sent"""
+        """A→W→A sequence: all operations sent (cancel optimization disabled)
+
+        Without cancel optimization, all operations are sent independently.
+        See plan/plan-announce-cancels-withdraw-optimization.md for future optimization.
+        """
         rib = create_rib()
 
         change = create_change('10.0.0.0/24')
@@ -263,8 +268,10 @@ class TestSameNLRISequences:
         updates = consume_updates(rib)
         announces, withdraws = count_announces_withdraws(updates)
 
-        assert announces == 1, 'Should have 1 announce (final state)'
-        assert withdraws == 0, 'Withdraw should be cancelled'
+        # Announce and withdraw are sent (cancel optimization disabled)
+        # Multiple add_to_rib with same route_index → only 1 announce (last one wins)
+        assert announces == 1, 'Should have 1 announce (coalesced)'
+        assert withdraws == 1, 'Withdraw is sent (cancel optimization disabled)'
 
     def test_withdraw_announce_withdraw_same_nlri(self):
         """W→A→W sequence: only final withdraw sent"""
@@ -663,8 +670,12 @@ class TestComprehensiveSequences:
         updates = consume_updates(rib)
         announces, withdraws = count_announces_withdraws(updates)
 
-        assert announces == 1, 'Final state is announce'
-        assert withdraws == 0, 'No withdraw (cancelled by final announce)'
+        # Announce and withdraw sent (cancel optimization disabled)
+        # Multiple add_to_rib with same route_index → only 1 announce (last one wins)
+        # Multiple del_from_rib with same nlri_index → only 1 withdraw
+        # See plan/plan-announce-cancels-withdraw-optimization.md for future optimization
+        assert announces == 1, 'Announces coalesced to 1 (same route_index)'
+        assert withdraws == 1, 'Withdraws coalesced to 1 (same nlri_index)'
 
     def test_rapid_toggle_ends_in_withdraw(self):
         """Rapid toggling ending in withdraw"""
@@ -763,8 +774,8 @@ class TestRouteActionIntegration:
         route_w = create_change('10.0.0.0/24', action=Action.WITHDRAW)
         assert route_w.action == Action.WITHDRAW
 
-    def test_cache_in_cache_checks_route_action(self):
-        """in_cache() uses route.action (not nlri.action) for withdraw check."""
+    def test_cache_in_cache_checks_route_index(self):
+        """in_cache() checks if route is cached (for deduplication)."""
         rib = create_rib()
 
         # Add an announce route
@@ -772,10 +783,13 @@ class TestRouteActionIntegration:
         rib.add_to_rib(route)
         consume_updates(rib)
 
+        # Route should be in cache after add_to_rib
         assert rib.in_cache(route)
 
-        # Create same route but as withdraw
-        withdraw = create_change('10.0.0.0/24', action=Action.WITHDRAW)
+        # Same prefix route is also found (same index)
+        same_prefix = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
+        assert rib.in_cache(same_prefix)
 
-        # Withdraws should always return False from in_cache
-        assert not rib.in_cache(withdraw)
+        # Different prefix not in cache
+        different = create_change('10.0.1.0/24', action=Action.ANNOUNCE)
+        assert not rib.in_cache(different)

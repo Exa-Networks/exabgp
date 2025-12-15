@@ -31,7 +31,7 @@ def _build_route(
     schema: 'RouteBuilder',
     afi: AFI,
     safi: SAFI,
-    check_func: Callable[[Route, AFI | None], bool] | None = None,
+    check_func: Callable[[Route, AFI | None, Action], bool] | None = None,
 ) -> list[Route]:
     """Build route Change objects using schema-driven validation.
 
@@ -43,7 +43,7 @@ def _build_route(
         schema: RouteBuilder schema defining the route syntax
         afi: Address family identifier
         safi: Subsequent address family identifier
-        check_func: Optional validation function for the Change object
+        check_func: Optional validation function (route, afi, action) -> bool
 
     Returns:
         List containing the built Change object
@@ -64,7 +64,7 @@ def _build_route(
 
     if check_func:
         for route in routes:
-            if not check_func(route, afi):
+            if not check_func(route, afi, action_type):
                 raise ValueError('invalid route announcement (check failed)')
 
     return routes
@@ -75,7 +75,7 @@ def _build_type_selector_route(
     schema: 'TypeSelectorBuilder',
     afi: AFI,
     safi: SAFI,
-    check_func: Callable[[Route, AFI | None], bool] | None = None,
+    check_func: Callable[[Route, AFI | None, Action], bool] | None = None,
 ) -> list[Route]:
     """Build Route objects using type-selector validation.
 
@@ -88,7 +88,7 @@ def _build_type_selector_route(
         schema: TypeSelectorBuilder schema defining valid types and attributes
         afi: Address family identifier
         safi: Subsequent address family identifier
-        check_func: Optional validation function for the Route object
+        check_func: Optional validation function (route, afi, action) -> bool
 
     Returns:
         List containing the built Route object
@@ -109,7 +109,7 @@ def _build_type_selector_route(
 
     if check_func:
         for route in routes:
-            if not check_func(route, afi):
+            if not check_func(route, afi, action_type):
                 raise ValueError('invalid route announcement (check failed)')
 
     return routes

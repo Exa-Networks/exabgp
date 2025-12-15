@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generator, cast
 
-from exabgp.bgp.message import Action, Message, Update
+from exabgp.bgp.message import Message, Update
 from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.reactor.peer.handlers.base import MessageHandler
+from exabgp.rib.route import Route
 
 if TYPE_CHECKING:
     from exabgp.reactor.peer.context import PeerContext
@@ -44,11 +45,12 @@ class UpdateHandler(MessageHandler):
 
         log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
 
-        # Process announces - pass action and nexthop explicitly
+        # Process announces - create Route objects for cache
         # parsed.announces contains RoutedNLRI objects; extract the bare NLRI for RIB
         for routed in parsed.announces:
             nlri = routed.nlri
-            ctx.neighbor.rib.incoming.update_cache(nlri, parsed.attributes, Action.ANNOUNCE, routed.nexthop)
+            route = Route(nlri, parsed.attributes, nexthop=routed.nexthop)
+            ctx.neighbor.rib.incoming.update_cache(route)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
@@ -76,11 +78,12 @@ class UpdateHandler(MessageHandler):
 
         log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
 
-        # Process announces - pass action and nexthop explicitly
+        # Process announces - create Route objects for cache
         # parsed.announces contains RoutedNLRI objects; extract the bare NLRI for RIB
         for routed in parsed.announces:
             nlri = routed.nlri
-            ctx.neighbor.rib.incoming.update_cache(nlri, parsed.attributes, Action.ANNOUNCE, routed.nexthop)
+            route = Route(nlri, parsed.attributes, nexthop=routed.nexthop)
+            ctx.neighbor.rib.incoming.update_cache(route)
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,

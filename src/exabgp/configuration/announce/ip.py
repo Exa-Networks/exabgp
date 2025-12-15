@@ -198,9 +198,20 @@ class AnnounceIP(ParseAnnounce):
         return ParseAnnounce.post(self) and self._check()
 
     @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
+    def check(route: Route, afi: AFI | None, action: Action = Action.ANNOUNCE) -> bool:
+        """Validate route for IP announce/withdraw.
+
+        Args:
+            route: Route to validate
+            afi: Address family to validate against
+            action: Action being performed (ANNOUNCE or WITHDRAW)
+
+        Returns:
+            True if valid, False otherwise
+        """
+        # Announces for unicast/multicast require nexthop
         if (
-            route.action == Action.ANNOUNCE
+            action == Action.ANNOUNCE
             and route.nexthop is IP.NoNextHop
             and route.nlri.afi == afi
             and route.nlri.safi in (SAFI.unicast, SAFI.multicast)

@@ -73,12 +73,12 @@ class AnnounceLabel(AnnouncePath):
         pass
 
     @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
-        if not AnnouncePath.check(route, afi):
+    def check(route: Route, afi: AFI | None, action: Action = Action.ANNOUNCE) -> bool:
+        if not AnnouncePath.check(route, afi, action):
             return False
 
         # has_label() confirms the NLRI type has a labels attribute
-        if route.action == Action.ANNOUNCE and route.nlri.has_label():
+        if action == Action.ANNOUNCE and route.nlri.has_label():
             if cast(Label, route.nlri).labels is Labels.NOLABEL:
                 return False
 

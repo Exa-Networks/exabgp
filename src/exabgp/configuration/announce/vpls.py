@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from exabgp.rib.route import Route
 
+from exabgp.bgp.message import Action
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -267,7 +268,7 @@ class AnnounceVPLS(ParseAnnounce):
         return self._check()
 
     @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
+    def check(route: Route, afi: AFI | None, action: Action = Action.ANNOUNCE) -> bool:
         # No check performed :-(
         return True
 

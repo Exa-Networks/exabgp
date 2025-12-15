@@ -222,7 +222,7 @@ async def _process_group(
                     errors.append(f'invalid route: {route.extensive()}')
                     continue
                 route = route.with_action(Action.ANNOUNCE)
-                reactor.configuration.inject_route(cmd_peers, route)
+                reactor.configuration.announce_route(cmd_peers, route)
                 all_peers.update(cmd_peers)
                 routes_added += 1
                 await asyncio.sleep(0)
@@ -236,7 +236,7 @@ async def _process_group(
 
             for route in routes:
                 route = route.with_action(Action.WITHDRAW)
-                reactor.configuration.inject_route(cmd_peers, route)
+                reactor.configuration.announce_route(cmd_peers, route)
                 all_peers.update(cmd_peers)
                 routes_withdrawn += 1
                 await asyncio.sleep(0)

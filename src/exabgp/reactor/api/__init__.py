@@ -221,7 +221,7 @@ class API:
             action, _, line = command.split(' ', 2)
 
         self.configuration.flow.clear()
-        if not self.configuration.partial('flow', line):
+        if not self.configuration.partial('flow', line, action):
             return []
 
         if self.configuration.scope.location():
@@ -241,7 +241,7 @@ class API:
             action, line = command.split(' ', 1)
 
         self.configuration.l2vpn.clear()
-        if not self.configuration.partial('l2vpn', line):
+        if not self.configuration.partial('l2vpn', line, action):
             return []
 
         self.configuration.scope.to_context()
@@ -258,7 +258,7 @@ class API:
             action, line = command.split(' ', 1)
 
         self.configuration.static.clear()
-        if not self.configuration.partial('static', line):
+        if not self.configuration.partial('static', line, action):
             return []
 
         if self.configuration.scope.location():

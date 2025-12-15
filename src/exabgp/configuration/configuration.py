@@ -117,15 +117,15 @@ class _Configuration:
         """
         return self._routes.get(index)
 
-    def inject_route(self, peers: list[str], route: 'Route') -> bool:
-        """Inject route to matching peers.
+    def announce_route(self, peers: list[str], route: 'Route') -> bool:
+        """Announce route to matching peers.
 
         Args:
-            peers: List of peer names to inject to
-            route: Route to inject
+            peers: List of peer names to announce to
+            route: Route to announce
 
         Returns:
-            True if route was injected to at least one peer
+            True if route was announced to at least one peer
         """
         result = False
         for neighbor_name in self.neighbors:
@@ -146,21 +146,50 @@ class _Configuration:
                     )
         return result
 
-    def inject_route_indexed(self, peers: list[str], route: 'Route') -> tuple[bytes, bool]:
-        """Inject route and store in global index for API access.
+    def withdraw_route(self, peers: list[str], route: 'Route') -> bool:
+        """Withdraw route from matching peers.
 
         Args:
-            peers: List of peer names to inject to
-            route: Route to inject
+            peers: List of peer names to withdraw from
+            route: Route to withdraw
+
+        Returns:
+            True if route was withdrawn from at least one peer
+        """
+        result = False
+        for neighbor_name in self.neighbors:
+            if neighbor_name in peers:
+                neighbor = self.neighbors[neighbor_name]
+                if route.nlri.family().afi_safi() in neighbor.families():
+                    # resolve_self creates a copy with resolved nexthop
+                    neighbor.rib.outgoing.del_from_rib(neighbor.resolve_self(route))
+                    result = True
+                else:
+                    log.error(
+                        lazymsg(
+                            'route.family.unconfigured family={family} neighbor={neighbor}',
+                            family=route.nlri.short(),
+                            neighbor=neighbor_name,
+                        ),
+                        'configuration',
+                    )
+        return result
+
+    def announce_route_indexed(self, peers: list[str], route: 'Route') -> tuple[bytes, bool]:
+        """Announce route and store in global index for API access.
+
+        Args:
+            peers: List of peer names to announce to
+            route: Route to announce
 
         Returns:
             Tuple of (route_index, success) where success is True if
-            route was injected to at least one peer
+            route was announced to at least one peer
         """
         # Store in global store for index-based lookup
         index = self.store_route(route)
-        # Inject to peers
-        success = self.inject_route(peers, route)
+        # Announce to peers
+        success = self.announce_route(peers, route)
         return index, success
 
     def withdraw_route_by_index(self, peers: list[str], index: bytes) -> bool:
@@ -168,26 +197,22 @@ class _Configuration:
 
         Args:
             peers: List of peer names to withdraw from
-            index: Route index (from inject_route_indexed or route.index())
+            index: Route index (from announce_route_indexed or route.index())
 
         Returns:
             True if route was found and withdrawn from at least one peer
         """
-        from exabgp.bgp.message import Action
-
         route = self.get_route(index)
         if route is None:
             return False
 
-        # Create withdraw version of route
-        withdraw_route = route.with_action(Action.WITHDRAW)
-
+        # del_from_rib handles withdraws - no need to set action on route
         result = False
         for neighbor_name in self.neighbors:
             if neighbor_name in peers:
                 neighbor = self.neighbors[neighbor_name]
-                if withdraw_route.nlri.family().afi_safi() in neighbor.families():
-                    neighbor.rib.outgoing.del_from_rib(neighbor.resolve_self(withdraw_route))
+                if route.nlri.family().afi_safi() in neighbor.families():
+                    neighbor.rib.outgoing.del_from_rib(neighbor.resolve_self(route))
                     result = True
 
         # Release from global store

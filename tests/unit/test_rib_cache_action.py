@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """
-Tests for Cache action handling.
+Tests for Cache operations.
 
-The Cache class uses route.action (not nlri.action) to determine:
-- in_cache(): Whether to check the cache (withdraws are never cached)
-- update_cache(): Whether to add or remove from cache
+The Cache class stores announced routes for deduplication:
+- in_cache(): Check if route already announced (for dedup)
+- update_cache(): Add route to cache (announces only)
+- update_cache_withdraw(): Remove route from cache (for withdraws)
 
-This tests the migration from nlri.action to route.action.
+Action is implicit in which method is called:
+- add_to_rib() -> update_cache() -> announces
+- del_from_rib() -> update_cache_withdraw() -> withdraws
 """
 
 import sys
 import os
 from unittest.mock import Mock
-import pytest
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
@@ -66,208 +68,109 @@ def create_cache() -> Cache:
 
 
 class TestCacheInCache:
-    """Test Cache.in_cache() uses route.action correctly."""
+    """Test Cache.in_cache() for announce deduplication."""
 
-    def test_in_cache_uses_route_action_not_nlri_action(self):
-        """in_cache() checks route.action, not route.nlri.action."""
+    def test_in_cache_returns_false_when_not_cached(self):
+        """Route not in cache returns False."""
         cache = create_cache()
+        route = create_route()
 
-        # Create route with nlri.action=WITHDRAW but route._action=ANNOUNCE
-        route = create_route(nlri_action=Action.WITHDRAW, route_action=Action.ANNOUNCE)
+        assert cache.in_cache(route) is False
 
-        # Add to cache (uses route.action=ANNOUNCE)
+    def test_in_cache_returns_true_when_cached(self):
+        """Route in cache returns True."""
+        cache = create_cache()
+        route = create_route()
+
         cache.update_cache(route)
 
-        # Check: route.action is ANNOUNCE, so should check cache
-        # (Not return False just because nlri.action is WITHDRAW)
         assert cache.in_cache(route) is True
 
-    def test_in_cache_withdraw_returns_false(self):
-        """Withdraw routes (route.action=WITHDRAW) return False."""
+    def test_in_cache_returns_false_for_different_prefix(self):
+        """Different prefix not in cache."""
         cache = create_cache()
+        route1 = create_route('10.0.0.0/24')
+        route2 = create_route('10.0.1.0/24')
 
-        # First add an announce route
-        announce_route = create_route(route_action=Action.ANNOUNCE)
-        cache.update_cache(announce_route)
+        cache.update_cache(route1)
 
-        # Create withdraw version of same route
-        withdraw_route = create_route(route_action=Action.WITHDRAW)
-
-        # Withdraws always return False - not cached
-        assert cache.in_cache(withdraw_route) is False
-
-    def test_in_cache_with_route_action_fallback(self):
-        """route._action=UNSET falls back to nlri.action correctly."""
-        cache = create_cache()
-
-        # Create route with _action=UNSET, nlri.action=ANNOUNCE
-        route = create_route(nlri_action=Action.ANNOUNCE, route_action=Action.UNSET)
-
-        # Verify fallback works
-        assert route.action == Action.ANNOUNCE
-
-        # Add to cache
-        cache.update_cache(route)
-
-        # Should be found in cache (falls back to nlri.action=ANNOUNCE)
-        assert cache.in_cache(route) is True
-
-    def test_in_cache_raises_on_unset_action(self):
-        """route.action=UNSET (after fallback) raises RuntimeError."""
-        cache = create_cache()
-
-        # Create route with both _action and nlri.action as UNSET
-        route = create_route(nlri_action=Action.UNSET, route_action=Action.UNSET)
-
-        # Should raise because action is UNSET even after fallback
-        with pytest.raises(RuntimeError, match='NLRI action is UNSET'):
-            cache.in_cache(route)
+        assert cache.in_cache(route2) is False
 
 
 class TestCacheUpdateCache:
-    """Test Cache.update_cache() uses route.action correctly."""
+    """Test Cache.update_cache() stores routes."""
 
-    def test_update_cache_uses_route_action_not_nlri_action(self):
-        """update_cache() checks route.action, not route.nlri.action."""
+    def test_update_cache_stores_route(self):
+        """update_cache() stores route in cache."""
         cache = create_cache()
+        route = create_route()
 
-        # Create route with nlri.action=WITHDRAW but route._action=ANNOUNCE
-        route = create_route(nlri_action=Action.WITHDRAW, route_action=Action.ANNOUNCE)
-
-        # Should store in cache because route.action=ANNOUNCE
         cache.update_cache(route)
 
         family = route.nlri.family().afi_safi()
         assert route.index() in cache._seen.get(family, {})
 
-    def test_update_cache_announce_stores_route(self):
-        """route.action=ANNOUNCE → stored in cache."""
+    def test_update_cache_replaces_existing(self):
+        """update_cache() replaces existing route with same index."""
         cache = create_cache()
+        route1 = create_route()
+        route2 = create_route()  # Same prefix
 
-        route = create_route(route_action=Action.ANNOUNCE)
-        cache.update_cache(route)
+        cache.update_cache(route1)
+        cache.update_cache(route2)
 
-        family = route.nlri.family().afi_safi()
-        assert route.index() in cache._seen.get(family, {})
-
-    def test_update_cache_withdraw_removes_route(self):
-        """route.action=WITHDRAW → removed from cache."""
-        cache = create_cache()
-
-        # First add the route
-        route = create_route(route_action=Action.ANNOUNCE)
-        cache.update_cache(route)
-
-        family = route.nlri.family().afi_safi()
-        assert route.index() in cache._seen.get(family, {})
-
-        # Now update with withdraw action
-        withdraw_route = create_route(route_action=Action.WITHDRAW)
-        cache.update_cache(withdraw_route)
-
-        # Should be removed
-        assert route.index() not in cache._seen.get(family, {})
-
-    def test_update_cache_unset_raises_error(self):
-        """route.action=UNSET → raises RuntimeError."""
-        cache = create_cache()
-
-        # Create route with both actions as UNSET
-        route = create_route(nlri_action=Action.UNSET, route_action=Action.UNSET)
-
-        with pytest.raises(RuntimeError, match='NLRI action is UNSET'):
-            cache.update_cache(route)
-
-    def test_update_cache_with_fallback_to_nlri_action(self):
-        """update_cache() correctly falls back to nlri.action when _action=UNSET."""
-        cache = create_cache()
-
-        # Create route with _action=UNSET, nlri.action=ANNOUNCE
-        route = create_route(nlri_action=Action.ANNOUNCE, route_action=Action.UNSET)
-
-        # Should store because fallback gives ANNOUNCE
-        cache.update_cache(route)
-
-        family = route.nlri.family().afi_safi()
-        assert route.index() in cache._seen.get(family, {})
-
-    def test_update_cache_nlri_attributes_action_signature(self):
-        """update_cache(nlri, attributes, action) uses explicit action."""
-        cache = create_cache()
-
-        nlri = create_nlri(action=Action.WITHDRAW)  # NLRI says WITHDRAW
-        attrs = AttributeCollection()
-
-        # But explicit action says ANNOUNCE
-        cache.update_cache(nlri, attrs, Action.ANNOUNCE)
-
-        family = nlri.family().afi_safi()
-        index = cache._make_index(nlri)
-        assert index in cache._seen.get(family, {})
+        family = route1.nlri.family().afi_safi()
+        # Only one entry for same prefix
+        assert len(cache._seen.get(family, {})) == 1
 
 
 class TestCacheUpdateCacheWithdraw:
-    """Test Cache.update_cache_withdraw() removes from cache."""
+    """Test Cache.update_cache_withdraw() removes routes."""
 
-    def test_update_cache_withdraw_with_route(self):
-        """update_cache_withdraw(route) removes route from cache."""
+    def test_update_cache_withdraw_removes_route(self):
+        """update_cache_withdraw(nlri) removes route from cache."""
         cache = create_cache()
+        route = create_route()
 
-        # First add
-        route = create_route(route_action=Action.ANNOUNCE)
         cache.update_cache(route)
 
         family = route.nlri.family().afi_safi()
         assert route.index() in cache._seen.get(family, {})
 
-        # Now withdraw
-        cache.update_cache_withdraw(route)
+        # Now withdraw using NLRI
+        cache.update_cache_withdraw(route.nlri)
 
         assert route.index() not in cache._seen.get(family, {})
 
-    def test_update_cache_withdraw_with_nlri(self):
-        """update_cache_withdraw(nlri, attributes) removes from cache."""
+    def test_update_cache_withdraw_noop_if_not_present(self):
+        """update_cache_withdraw() is safe when route not in cache."""
         cache = create_cache()
-
         nlri = create_nlri()
-        attrs = AttributeCollection()
 
-        # First add
-        cache.update_cache(nlri, attrs, Action.ANNOUNCE)
-
-        family = nlri.family().afi_safi()
-        index = cache._make_index(nlri)
-        assert index in cache._seen.get(family, {})
-
-        # Now withdraw
-        cache.update_cache_withdraw(nlri, attrs)
-
-        assert index not in cache._seen.get(family, {})
+        # Should not raise
+        cache.update_cache_withdraw(nlri)
 
 
 class TestCachedRoutes:
     """Test Cache.cached_routes() iteration."""
 
-    def test_cached_routes_returns_only_announces(self):
-        """cached_routes() only returns routes with ANNOUNCE action."""
+    def test_cached_routes_returns_stored_routes(self):
+        """cached_routes() returns all stored routes."""
         cache = create_cache()
 
-        # Add an announce route
-        route = create_route('10.0.0.0/24', route_action=Action.ANNOUNCE)
+        route = create_route('10.0.0.0/24')
         cache.update_cache(route)
 
         routes = list(cache.cached_routes())
         assert len(routes) == 1
-        assert routes[0].action == Action.ANNOUNCE
 
     def test_cached_routes_empty_after_withdraw(self):
         """cached_routes() is empty after all routes withdrawn."""
         cache = create_cache()
 
-        # Add then withdraw
-        route = create_route(route_action=Action.ANNOUNCE)
+        route = create_route()
         cache.update_cache(route)
-        cache.update_cache_withdraw(route)
+        cache.update_cache_withdraw(route.nlri)
 
         routes = list(cache.cached_routes())
         assert len(routes) == 0
@@ -280,7 +183,7 @@ class TestCacheDisabled:
         """in_cache() returns False when cache=False."""
         cache = Cache(cache=False, families={(AFI.ipv4, SAFI.unicast)}, enabled=True)
 
-        route = create_route(route_action=Action.ANNOUNCE)
+        route = create_route()
 
         assert cache.in_cache(route) is False
 
@@ -288,7 +191,7 @@ class TestCacheDisabled:
         """update_cache() is a no-op when cache=False."""
         cache = Cache(cache=False, families={(AFI.ipv4, SAFI.unicast)}, enabled=True)
 
-        route = create_route(route_action=Action.ANNOUNCE)
+        route = create_route()
         cache.update_cache(route)
 
         # _seen should remain empty

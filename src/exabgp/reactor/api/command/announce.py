@@ -108,12 +108,11 @@ def announce_route(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                if not ParseStaticRoute.check(route):
+                if not ParseStaticRoute.check(route, Action.ANNOUNCE):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'invalid route for {peer_list} : {route.extensive()}')
                     continue
-                route = route.with_action(Action.ANNOUNCE)
-                reactor.configuration.inject_route(peers, route)
+                reactor.configuration.announce_route(peers, route)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -159,17 +158,15 @@ def withdraw_route(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                # Set the action to withdraw before checking the route
-                route = route.with_action(Action.WITHDRAW)
-                # NextHop is a mandatory field (but we do not require in)
+                # NextHop is a mandatory field (but we do not require it for withdraws)
                 if route.nexthop is IP.NoNextHop:
                     route = route.with_nexthop(NextHop.from_string('0.0.0.0'))
 
-                if not ParseStaticRoute.check(route):
+                if not ParseStaticRoute.check(route, Action.WITHDRAW):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'invalid route for {peer_list} : {route.extensive()}')
                     continue
-                if reactor.configuration.inject_route(peers, route):
+                if reactor.configuration.withdraw_route(peers, route):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'route removed from {peer_list} : {route.extensive()}')
                 else:
@@ -217,8 +214,7 @@ def announce_vpls(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                route = route.with_action(Action.ANNOUNCE)
-                reactor.configuration.inject_route(peers, route)
+                reactor.configuration.announce_route(peers, route)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'vpls added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -258,8 +254,7 @@ def withdraw_vpls(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                route = route.with_action(Action.WITHDRAW)
-                if reactor.configuration.inject_route(peers, route):
+                if reactor.configuration.withdraw_route(peers, route):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'vpls removed from {peer_list} : {route.extensive()}')
                 else:
@@ -301,8 +296,7 @@ def announce_attributes(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                route = route.with_action(Action.ANNOUNCE)
-                reactor.configuration.inject_route(peers, route)
+                reactor.configuration.announce_route(peers, route)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -347,8 +341,7 @@ def withdraw_attribute(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                route = route.with_action(Action.WITHDRAW)
-                if reactor.configuration.inject_route(peers, route):
+                if reactor.configuration.withdraw_route(peers, route):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'route removed from {peer_list} : {route.extensive()}')
                     await asyncio.sleep(0)
@@ -397,8 +390,7 @@ def announce_flow(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                route = route.with_action(Action.ANNOUNCE)
-                reactor.configuration.inject_route(peers, route)
+                reactor.configuration.announce_route(peers, route)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'flow added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -438,8 +430,7 @@ def withdraw_flow(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                route = route.with_action(Action.WITHDRAW)
-                if reactor.configuration.inject_route(peers, route):
+                if reactor.configuration.withdraw_route(peers, route):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'flow removed from {peer_list} : {route.extensive()}')
                 else:
@@ -606,8 +597,7 @@ def announce_ipv4(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                route = route.with_action(Action.ANNOUNCE)
-                reactor.configuration.inject_route(peers, route)
+                reactor.configuration.announce_route(peers, route)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'ipv4 added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -647,8 +637,7 @@ def withdraw_ipv4(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                route = route.with_action(Action.WITHDRAW)
-                if reactor.configuration.inject_route(peers, route):
+                if reactor.configuration.withdraw_route(peers, route):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'ipv4 removed from {peer_list} : {route.extensive()}')
                 else:
@@ -690,8 +679,7 @@ def announce_ipv6(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                route = route.with_action(Action.ANNOUNCE)
-                reactor.configuration.inject_route(peers, route)
+                reactor.configuration.announce_route(peers, route)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'ipv6 added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -731,8 +719,7 @@ def withdraw_ipv6(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                route = route.with_action(Action.WITHDRAW)
-                if reactor.configuration.inject_route(peers, route):
+                if reactor.configuration.withdraw_route(peers, route):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'ipv6 removed from {peer_list} : {route.extensive()}')
                 else:

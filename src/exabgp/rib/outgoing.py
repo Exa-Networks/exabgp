@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Iterator, overload
 
-from exabgp.bgp.message import Action, UpdateCollection
+from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.protocol.ip import IP
@@ -141,7 +141,7 @@ class OutgoingRIB(Cache):
             families = self.families
         requested_families = set(families).intersection(self.families)
 
-        routes = list(self.cached_routes(list(requested_families), (Action.ANNOUNCE, Action.WITHDRAW)))
+        routes = list(self.cached_routes(list(requested_families)))
         for route in routes:
             self.del_from_rib(route)
 
@@ -206,7 +206,7 @@ class OutgoingRIB(Cache):
         if watchdog in self._watchdog:
             for route in list(self._watchdog[watchdog].get('-', {}).values()):
                 old_index = route.index()
-                route = route.with_action(Action.ANNOUNCE)
+                # add_to_rib handles announces - no need to set action on route
                 self.add_to_rib(route)
                 self._watchdog[watchdog].setdefault('+', {})[route.index()] = route
                 self._watchdog[watchdog]['-'].pop(old_index)
@@ -323,17 +323,16 @@ class OutgoingRIB(Cache):
         route_index = route.index()
         route_family = route.nlri.family().afi_safi()
         route_attr_index = route.attributes.index()
-        nlri_index = route.nlri.index()
 
         attr_af_nlri = self._new_attr_af_nlri
         new_nlri = self._new_nlri
         new_attr = self._new_attribute
 
-        # Remove any pending withdraw for this NLRI (announce cancels previous withdraw)
-        if route_family in self._pending_withdraws:
-            self._pending_withdraws[route_family].pop(nlri_index, None)
+        # Note: Cancel logic removed - announce does NOT cancel pending withdraw
+        # This allows withdraw+announce sequences to both be sent
+        # See plan/plan-announce-cancels-withdraw-optimization.md for future optimization
 
-        # add the route to the list to be announced/withdrawn
+        # add the route to the list to be announced
         attr_af_nlri.setdefault(route_attr_index, {}).setdefault(route_family, RIBdict({}))[route_index] = route
         new_nlri[route_index] = route
         new_attr[route_attr_index] = route.attributes
@@ -361,59 +360,9 @@ class OutgoingRIB(Cache):
         self._refresh_families = set()
         self._refresh_routes = []
 
-        # generating Updates from what is in the RIB
-        # Changes in _new_attr_af_nlri may be announces OR withdraws (based on route.action)
-        for attr_index, per_family in attr_af_nlri.items():
-            for family, routes in per_family.items():
-                if not routes:
-                    continue
-
-                attributes = new_attr[attr_index]
-
-                # Validate and separate announces and withdraws based on route.action
-                # Announces become RoutedNLRI (nlri + nexthop), withdraws are bare NLRIs
-                for route in routes.values():
-                    if route.action == Action.UNSET:
-                        raise RuntimeError(f'Route action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
-                announces = [
-                    RoutedNLRI(route.nlri, route.nexthop)
-                    for route in routes.values()
-                    if route.action == Action.ANNOUNCE
-                ]
-                withdraws = [route.nlri for route in routes.values() if route.action == Action.WITHDRAW]
-
-                if family == (AFI.ipv4, SAFI.unicast) and grouped:
-                    if announces:
-                        yield UpdateCollection(announces, [], attributes)
-                    if withdraws:
-                        yield UpdateCollection([], withdraws, attributes)
-                    continue
-
-                if family == (AFI.ipv4, SAFI.mcast_vpn) and grouped:
-                    if announces:
-                        yield UpdateCollection(announces, [], attributes)
-                    if withdraws:
-                        yield UpdateCollection([], withdraws, attributes)
-                    continue
-                if family == (AFI.ipv6, SAFI.mcast_vpn) and grouped:
-                    if announces:
-                        yield UpdateCollection(announces, [], attributes)
-                    if withdraws:
-                        yield UpdateCollection([], withdraws, attributes)
-                    continue
-
-                # Non-grouped: one Update per NLRI
-                for route in routes.values():
-                    if route.action == Action.UNSET:
-                        raise RuntimeError(f'Route action is UNSET (not set to ANNOUNCE or WITHDRAW): {route.nlri}')
-                    if route.action == Action.WITHDRAW:
-                        yield UpdateCollection([], [route.nlri], attributes)
-                    else:
-                        yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], attributes)
-
-        # Generate Updates for pending withdraws using the new Update signature
-        # UpdateCollection(announces=[], withdraws=nlris, attributes) - no nlri.action needed
-        # Yield one Update per NLRI to match original behavior
+        # Generate Updates for pending withdraws FIRST
+        # This ensures withdraw messages are sent before announce messages
+        # when both are pending (preserves semantic ordering)
         for family, nlri_attr_dict in pending_withdraws.items():
             if not nlri_attr_dict:
                 continue
@@ -421,6 +370,33 @@ class OutgoingRIB(Cache):
                 # Use new 3-arg signature: (announces, withdraws, attributes)
                 # Withdraws include attributes for proper BGP encoding (e.g., FlowSpec rate-limit)
                 yield UpdateCollection([], [nlri], attrs)
+
+        # Generate Updates for announces from _new_attr_af_nlri
+        # All routes here are announces (add_to_rib only handles announces)
+        for attr_index, per_family in attr_af_nlri.items():
+            for family, routes in per_family.items():
+                if not routes:
+                    continue
+
+                attributes = new_attr[attr_index]
+
+                # All routes are announces - create RoutedNLRI (nlri + nexthop)
+                announces = [RoutedNLRI(route.nlri, route.nexthop) for route in routes.values()]
+
+                if family == (AFI.ipv4, SAFI.unicast) and grouped:
+                    yield UpdateCollection(announces, [], attributes)
+                    continue
+
+                if family == (AFI.ipv4, SAFI.mcast_vpn) and grouped:
+                    yield UpdateCollection(announces, [], attributes)
+                    continue
+                if family == (AFI.ipv6, SAFI.mcast_vpn) and grouped:
+                    yield UpdateCollection(announces, [], attributes)
+                    continue
+
+                # Non-grouped: one Update per NLRI
+                for route in routes.values():
+                    yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], attributes)
 
         # Route Refresh - use snapshots to avoid modification during iteration
 

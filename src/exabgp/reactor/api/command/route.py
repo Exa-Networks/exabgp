@@ -214,7 +214,7 @@ def routes_add(
                 route = route.with_action(Action.ANNOUNCE)
 
                 # Use indexed injection to get index
-                index, success = reactor.configuration.inject_route_indexed(peers, route)
+                index, success = reactor.configuration.announce_route_indexed(peers, route)
 
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 if success:
@@ -311,7 +311,7 @@ def routes_remove(
             results = []
             for route in routes:
                 route = route.with_action(Action.WITHDRAW)
-                success = reactor.configuration.inject_route(peers, route)
+                success = reactor.configuration.announce_route(peers, route)
 
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 if success:

@@ -279,25 +279,25 @@ class TestRouteIndex:
 
 
 class TestConfigurationIndexedMethods:
-    """Test _Configuration inject_route_indexed and withdraw_route_by_index."""
+    """Test _Configuration announce_route_indexed and withdraw_route_by_index."""
 
-    def test_inject_route_indexed_returns_index_and_success(self):
-        """inject_route_indexed returns (index, False) when no neighbors."""
+    def test_announce_route_indexed_returns_index_and_success(self):
+        """announce_route_indexed returns (index, False) when no neighbors."""
         config = _Configuration()
         route = create_route()
 
-        index, success = config.inject_route_indexed(['peer1'], route)
+        index, success = config.announce_route_indexed(['peer1'], route)
 
         assert index == route.index()
         assert success is False  # No neighbors configured
         assert config._routes[index] is route
 
-    def test_inject_route_indexed_stores_in_global(self):
-        """inject_route_indexed stores route in global store."""
+    def test_announce_route_indexed_stores_in_global(self):
+        """announce_route_indexed stores route in global store."""
         config = _Configuration()
         route = create_route()
 
-        index, _ = config.inject_route_indexed(['peer1'], route)
+        index, _ = config.announce_route_indexed(['peer1'], route)
 
         # Route is in global store
         assert config.get_route(index) is route
@@ -315,7 +315,7 @@ class TestConfigurationIndexedMethods:
         """withdraw_route_by_index returns False when no matching neighbors."""
         config = _Configuration()
         route = create_route()
-        index, _ = config.inject_route_indexed(['peer1'], route)
+        index, _ = config.announce_route_indexed(['peer1'], route)
 
         result = config.withdraw_route_by_index(['peer1'], index)
 

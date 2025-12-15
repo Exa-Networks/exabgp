@@ -79,7 +79,7 @@ def route(tokeniser: Any) -> list[Route]:
     has_label = 'label' in tokeniser.tokens
 
     nlri_class: type[INET]
-    check: Callable[[Route, AFI], bool]
+    check: Callable[[Route, AFI, Action], bool]
     if has_rd:
         nlri_class = IPVPN
         settings.safi = SAFI.mpls_vpn
@@ -134,7 +134,7 @@ def route(tokeniser: Any) -> list[Route]:
     nlri = nlri_class.from_settings(settings)
     static_route = Route(nlri, attributes, nexthop=settings.nexthop)
 
-    if not check(static_route, nlri.afi):
+    if not check(static_route, nlri.afi, nlri_action):
         raise ValueError('invalid route (missing next-hop, label or rd ?)')
 
     return list(ParseStatic.split(static_route))

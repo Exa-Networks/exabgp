@@ -2,14 +2,10 @@
 """
 Tests for RouteBuilderValidator action handling.
 
-The RouteBuilderValidator creates Route objects with:
-1. action_type = Action.ANNOUNCE if tokeniser.announce is True
-2. action_type = Action.WITHDRAW if tokeniser.announce is False
+The RouteBuilderValidator creates Route objects and passes action to
+check functions as an explicit parameter. Action is NOT stored on Route.
 
-The Route is created with Route(nlri, attributes, action_type), storing
-the action in Route._action rather than nlri.action.
-
-This tests the integration between configuration parsing and Route.action.
+This tests the integration between configuration parsing and check functions.
 """
 
 from unittest.mock import Mock
@@ -22,18 +18,16 @@ from exabgp.configuration.announce.ip import AnnounceIP
 
 
 class TestAnnounceIPCheck:
-    """Test AnnounceIP.check() uses route.action correctly."""
+    """Test AnnounceIP.check() with explicit action parameter."""
 
     def _create_mock_route(
         self,
-        action: int,
         has_nexthop: bool = True,
         afi: AFI = AFI.ipv4,
         safi: SAFI = SAFI.unicast,
     ) -> Mock:
         """Create a mock Route for testing check()."""
         route = Mock(spec=Route)
-        route.action = action
 
         # Create mock NLRI
         nlri = Mock()
@@ -45,61 +39,52 @@ class TestAnnounceIPCheck:
             nexthop = IP.NoNextHop
         nlri.nexthop = nexthop
         route.nlri = nlri
-        # Route.nexthop property (with fallback to nlri.nexthop during transition)
+        # Route.nexthop property
         route.nexthop = nexthop
 
         return route
 
     def test_announce_with_nexthop_passes(self):
         """ANNOUNCE + nexthop → check passes."""
-        route = self._create_mock_route(action=Action.ANNOUNCE, has_nexthop=True)
+        route = self._create_mock_route(has_nexthop=True)
 
-        result = AnnounceIP.check(route, AFI.ipv4)
+        result = AnnounceIP.check(route, AFI.ipv4, Action.ANNOUNCE)
         assert result is True
 
     def test_announce_without_nexthop_fails(self):
         """ANNOUNCE + no nexthop → check fails (for unicast/multicast)."""
-        route = self._create_mock_route(action=Action.ANNOUNCE, has_nexthop=False)
+        route = self._create_mock_route(has_nexthop=False)
 
-        result = AnnounceIP.check(route, AFI.ipv4)
+        result = AnnounceIP.check(route, AFI.ipv4, Action.ANNOUNCE)
         assert result is False
 
     def test_withdraw_without_nexthop_passes(self):
         """WITHDRAW + no nexthop → check passes."""
-        route = self._create_mock_route(action=Action.WITHDRAW, has_nexthop=False)
+        route = self._create_mock_route(has_nexthop=False)
 
-        result = AnnounceIP.check(route, AFI.ipv4)
+        result = AnnounceIP.check(route, AFI.ipv4, Action.WITHDRAW)
         assert result is True
 
     def test_withdraw_with_nexthop_passes(self):
         """WITHDRAW + nexthop → check passes (nexthop is optional for withdraws)."""
-        route = self._create_mock_route(action=Action.WITHDRAW, has_nexthop=True)
+        route = self._create_mock_route(has_nexthop=True)
 
-        result = AnnounceIP.check(route, AFI.ipv4)
+        result = AnnounceIP.check(route, AFI.ipv4, Action.WITHDRAW)
         assert result is True
 
-    def test_check_uses_route_action_not_nlri_action(self):
-        """Verify check() uses route.action, not nlri.action."""
-        route = Mock(spec=Route)
-        route.action = Action.WITHDRAW  # Route says WITHDRAW
+    def test_check_default_action_is_announce(self):
+        """check() defaults to ANNOUNCE action."""
+        route = self._create_mock_route(has_nexthop=False)
 
-        # But nlri might say something different (during transition)
-        nlri = Mock()
-        nlri.afi = AFI.ipv4
-        nlri.safi = SAFI.unicast
-        nlri.nexthop = IP.NoNextHop
-        nlri.action = Action.ANNOUNCE  # NLRI says ANNOUNCE (old style)
-        route.nlri = nlri
-
-        # Should pass because route.action is WITHDRAW (not nlri.action)
+        # Without explicit action, should default to ANNOUNCE and fail for no nexthop
         result = AnnounceIP.check(route, AFI.ipv4)
-        assert result is True
+        assert result is False
 
 
 class TestRouteActionFromConfiguration:
     """Test that Route.action is correctly set from configuration.
 
-    These tests verify the full path from tokeniser.announce to Route._action.
+    These tests verify Route._action storage (to be removed in Phase 2).
     """
 
     def test_route_created_with_explicit_action(self):

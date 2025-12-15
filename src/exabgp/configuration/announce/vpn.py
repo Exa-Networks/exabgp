@@ -73,12 +73,12 @@ class AnnounceVPN(ParseAnnounce):
         pass
 
     @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
-        if not AnnounceLabel.check(route, afi):
+    def check(route: Route, afi: AFI | None, action: Action = Action.ANNOUNCE) -> bool:
+        if not AnnounceLabel.check(route, afi, action):
             return False
 
         # has_rd() confirms the NLRI type has an rd attribute
-        if route.action == Action.ANNOUNCE and route.nlri.has_rd():
+        if action == Action.ANNOUNCE and route.nlri.has_rd():
             if cast(IPVPN, route.nlri).rd is RouteDistinguisher.NORD:
                 return False
 

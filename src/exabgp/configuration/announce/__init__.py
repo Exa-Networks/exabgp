@@ -99,7 +99,7 @@ class ParseAnnounce(Section):
         return True
 
     @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
+    def check(route: Route, afi: AFI | None, action: Action = Action.ANNOUNCE) -> bool:
         raise RuntimeError('need to be implemented by subclasses')
 
 
