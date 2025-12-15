@@ -389,11 +389,8 @@ def test_update_with_withdrawn_and_announced() -> None:
     assert isinstance(result, UpdateCollection)
     # Should have both withdrawals and announcements
     assert len(result.nlris) == 4  # 2 withdrawn + 2 announced
-
-    # Check that we have both types of actions
-    actions = {nlri.action for nlri in result.nlris}
-    assert Action.WITHDRAW in actions
-    assert Action.ANNOUNCE in actions
+    # Note: action is no longer stored in NLRI - withdrawals and announces
+    # are determined by context (MPURNLRI vs MPRNLRI, or withdraw section vs announce section)
 
 
 def test_update_attribute_length_validation() -> None:
@@ -468,7 +465,7 @@ def test_update_only_withdrawals_no_attributes() -> None:
     assert isinstance(result, UpdateCollection)
     # Should have withdrawals
     assert len(result.nlris) == 2
-    assert all(nlri.action == Action.WITHDRAW for nlri in result.nlris)
+    # Note: action is no longer stored in NLRI - withdrawals are determined by context
 
 
 # ==============================================================================

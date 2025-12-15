@@ -688,16 +688,15 @@ class Flow(NLRI):
 
     nexthop: Any
 
-    def __init__(self, packed: Buffer, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
+    def __init__(self, packed: Buffer, afi: AFI, safi: SAFI) -> None:
         """Create a Flow NLRI from wire format bytes.
 
         Args:
             packed: Wire format bytes (excluding length prefix) - RD + rules for flow_vpn, just rules for flow_ip
             afi: Address Family Identifier (ipv4 or ipv6)
             safi: Subsequent Address Family Identifier (flow_ip or flow_vpn)
-            action: Route action (ANNOUNCE/WITHDRAW)
         """
-        NLRI.__init__(self, afi, safi, action)
+        NLRI.__init__(self, afi, safi)
         self._packed = packed
         self._rules_cache: dict[int, list[FlowRule]] | None = None
         self._packed_stale = False
@@ -708,7 +707,6 @@ class Flow(NLRI):
         cls,
         afi: AFI = AFI.ipv4,
         safi: SAFI = SAFI.flow_ip,
-        action: Action = Action.UNSET,
     ) -> 'Flow':
         """Factory method to create an empty Flow NLRI for building rules.
 
@@ -718,14 +716,13 @@ class Flow(NLRI):
         Args:
             afi: Address Family Identifier (ipv4 or ipv6)
             safi: Subsequent Address Family Identifier (flow_ip or flow_vpn)
-            action: Route action (ANNOUNCE/WITHDRAW)
 
         Returns:
             New Flow instance ready for adding rules via add()
         """
         # Start with empty packed - will be computed when needed
         packed = RouteDistinguisher.NORD.pack_rd() if safi in (SAFI.flow_vpn,) else b''
-        instance = cls(packed, afi, safi, action)
+        instance = cls(packed, afi, safi)
         instance._rules_cache = {}  # Enable builder mode with empty rules
         return instance
 
@@ -757,7 +754,6 @@ class Flow(NLRI):
         instance = cls.make_flow(
             afi=settings.afi,
             safi=settings.safi,
-            action=settings.action,
         )
         # Note: settings.nexthop is now passed to Route, not stored in NLRI
 
@@ -1040,7 +1036,7 @@ class Flow(NLRI):
         packed = bytes(data[:length])
 
         # Create Flow with packed bytes - rules will be parsed lazily
-        nlri = cls(packed, afi, safi, action)
+        nlri = cls(packed, afi, safi)
 
         # Validate by parsing (this populates _rules_cache)
         try:

@@ -151,7 +151,6 @@ class EVPN(NLRI):
             nlri = cls.registered_evpn[code].unpack_evpn(packed)
         else:
             nlri = GenericEVPN(packed)
-        nlri.action = action
         nlri.addpath = addpath
 
         return nlri, data[total_length:]

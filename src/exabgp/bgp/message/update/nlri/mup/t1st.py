@@ -261,7 +261,6 @@ class Type1SessionTransformedRoute(MUP):
                 raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
 
         instance = cls(data, afi)
-        instance.action = action
         return instance, b''
 
     def json(self, compact: bool | None = None) -> str:

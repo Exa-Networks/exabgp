@@ -81,14 +81,12 @@ class RTC(NLRI):
         cls,
         origin: ASN,
         rt: RouteTarget | None,
-        action: Action = Action.UNSET,
     ) -> 'RTC':
         """Factory method to create an RTC NLRI from components.
 
         Args:
             origin: Origin ASN
             rt: RouteTarget or None for wildcard
-            action: Route action (ANNOUNCE/WITHDRAW)
 
         Returns:
             New RTC instance
@@ -103,7 +101,6 @@ class RTC(NLRI):
             packed = pack('!B', 0)
 
         instance = cls(packed)
-        instance.action = action
         return instance
 
     def feedback(self, action: Action) -> str:
@@ -158,7 +155,6 @@ class RTC(NLRI):
 
         if length == 0:
             nlri = cls(bytes(data[0:1]))
-            nlri.action = action
             return nlri, data[1:]
 
         if length < 8 * 4:
@@ -173,5 +169,4 @@ class RTC(NLRI):
         )
 
         nlri = cls(packed)
-        nlri.action = action
         return nlri, data[13:]

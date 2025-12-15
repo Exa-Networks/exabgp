@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if TYPE_CHECKING:
     pass
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
@@ -64,15 +63,15 @@ class SRv6SID(BGPLS):
     def __init__(
         self,
         packed: Buffer,
-        action: Action = Action.UNSET,
         addpath: PathInfo | None = None,
     ) -> None:
         """Create SRv6SID with complete wire format.
 
         Args:
             packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
+            addpath: AddPath path identifier
         """
-        BGPLS.__init__(self, action, addpath)
+        BGPLS.__init__(self, addpath)
         self._packed = packed
 
     @property

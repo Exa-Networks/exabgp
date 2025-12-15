@@ -39,27 +39,29 @@ from exabgp.protocol.family import AFI, SAFI  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
 
 
-def create_nlri(prefix: str = '10.0.0.0/24', action: int = Action.ANNOUNCE) -> INET:
-    """Create an INET NLRI for testing."""
+def create_nlri(prefix: str = '10.0.0.0/24') -> INET:
+    """Create an INET NLRI for testing.
+
+    Note: Action is no longer stored in NLRI - it's determined by which RIB method is called.
+    """
     parts = prefix.split('/')
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else 32
 
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
-    return INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, action)
+    return INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
 
-def create_route(
-    prefix: str = '10.0.0.0/24',
-    nlri_action: int = Action.ANNOUNCE,
-    route_action: int = Action.UNSET,
-) -> Route:
-    """Create a Route for testing with specific action values."""
+def create_route(prefix: str = '10.0.0.0/24') -> Route:
+    """Create a Route for testing.
+
+    Note: Action is no longer stored in Route - it's determined by which RIB method is called.
+    """
     from exabgp.protocol.ip import IP
 
-    nlri = create_nlri(prefix, nlri_action)
+    nlri = create_nlri(prefix)
     attrs = AttributeCollection()
-    return Route(nlri, attrs, route_action, nexthop=IP.NoNextHop)
+    return Route(nlri, attrs, nexthop=IP.NoNextHop)
 
 
 def create_cache() -> Cache:

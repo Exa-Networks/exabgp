@@ -1241,7 +1241,7 @@ class RouteBuilderValidator(Validator[list[Any]]):
         # Create immutable NLRI from validated settings
         nlri = self.schema.nlri_class.from_settings(settings)
 
-        return [Route(nlri, attributes, self.action_type, nexthop=settings.nexthop)]
+        return [Route(nlri, attributes, nexthop=settings.nexthop)]
 
     def _apply_settings_action(
         self, settings: Any, attributes: Any, command: str, action_enums: tuple[Any, Any, Any], value: Any
@@ -1345,11 +1345,8 @@ class TypeSelectorValidator(Validator[list[Any]]):
         else:
             nlri = factory(tokeniser, self.afi)
 
-        # Set action on Route (nlri.action set for backward compat, will be removed)
-        nlri.action = self.action_type
-
         # Create Route with default nexthop; will be updated via with_nexthop() if parsed later
-        route = Route(nlri, AttributeCollection(), self.action_type, nexthop=IP.NoNextHop)
+        route = Route(nlri, AttributeCollection(), nexthop=IP.NoNextHop)
 
         # Process remaining tokens as attributes
         from exabgp.configuration.schema import Leaf, LeafList

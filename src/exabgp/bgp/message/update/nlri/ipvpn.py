@@ -226,7 +226,6 @@ class IPVPN(Label):
         cidr: CIDR,
         afi: AFI,
         safi: SAFI = SAFI.mpls_vpn,  # Default to class SAFI; parameter kept for API compat
-        action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
         labels: Labels | None = None,
         rd: RouteDistinguisher | None = None,
@@ -237,7 +236,6 @@ class IPVPN(Label):
             cidr: CIDR prefix
             afi: Address Family Identifier
             safi: Ignored - IPVPN always uses mpls_vpn (kept for API compatibility)
-            action: Route action (ANNOUNCE/WITHDRAW)
             path_info: AddPath path identifier
             labels: MPLS label stack (optional, defaults to NOLABEL)
             rd: Route Distinguisher (optional, defaults to NORD)
@@ -266,7 +264,7 @@ class IPVPN(Label):
 
         instance = object.__new__(cls)
         # Note: safi parameter is ignored - IPVPN.safi is a class-level property
-        NLRI.__init__(instance, afi, cls.safi, action)
+        NLRI.__init__(instance, afi, cls.safi)
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = has_labels
@@ -304,7 +302,6 @@ class IPVPN(Label):
             cidr=settings.cidr,
             afi=settings.afi,
             safi=settings.safi,
-            action=settings.action,
             path_info=settings.path_info,
             labels=settings.labels,
             rd=settings.rd,
@@ -325,7 +322,6 @@ class IPVPN(Label):
         mask: int,
         labels: Labels,
         rd: RouteDistinguisher,
-        action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
     ) -> 'IPVPN':
         """Factory method to create an IPVPN route.
@@ -333,7 +329,7 @@ class IPVPN(Label):
         Note: nexthop is stored in Route, not NLRI. Pass nexthop to Route constructor.
         """
         cidr = CIDR.make_cidr(packed, mask)
-        instance = cls.from_cidr(cidr, afi, safi, action, path_info, labels=labels, rd=rd)
+        instance = cls.from_cidr(cidr, afi, safi, path_info, labels=labels, rd=rd)
         return instance
 
     def extensive(self) -> str:

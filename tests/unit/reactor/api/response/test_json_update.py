@@ -224,7 +224,7 @@ class TestEORJSON:
         from exabgp.bgp.message import Action
 
         # Create EOR for IPv4 unicast
-        eor = EOR(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        eor = EOR(AFI.ipv4, SAFI.unicast)
 
         # Generate JSON - should not crash
         result = json_encoder._update(eor)
@@ -241,7 +241,7 @@ class TestEORJSON:
         from exabgp.bgp.message import Action
 
         # Create EOR for IPv6 unicast
-        eor = EOR(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
+        eor = EOR(AFI.ipv6, SAFI.unicast)
 
         # Generate JSON - should not crash
         result = json_encoder._update(eor)
@@ -256,7 +256,7 @@ class TestEORJSON:
         """Test that EOR class has EOR=True attribute."""
         from exabgp.bgp.message import Action
 
-        eor = EOR(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        eor = EOR(AFI.ipv4, SAFI.unicast)
 
         # EOR messages have EOR=True
         assert eor.EOR is True
@@ -278,7 +278,7 @@ class TestEORJSON:
         from exabgp.bgp.message import Action
 
         # EOR message
-        eor = EOR(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        eor = EOR(AFI.ipv4, SAFI.unicast)
         assert getattr(eor, 'EOR', False) is True
 
         # UpdateCollection

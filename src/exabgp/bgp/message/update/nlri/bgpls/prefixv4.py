@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     pass
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
@@ -62,7 +61,6 @@ class PREFIXv4(BGPLS):
         self,
         packed: Buffer,
         route_d: RouteDistinguisher | None = None,
-        action: Action = Action.UNSET,
         addpath: PathInfo | None = None,
     ) -> None:
         """Create PREFIXv4 with complete wire format.
@@ -70,10 +68,9 @@ class PREFIXv4(BGPLS):
         Args:
             packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
             route_d: Route Distinguisher (for VPN SAFI)
-            action: Route action (ANNOUNCE/WITHDRAW)
             addpath: AddPath path identifier
         """
-        BGPLS.__init__(self, action, addpath)
+        BGPLS.__init__(self, addpath)
         self._packed = packed
         self.route_d: RouteDistinguisher | None = route_d
 

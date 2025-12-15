@@ -220,7 +220,6 @@ class Label(INET):
         cidr: CIDR,
         afi: AFI,
         safi: SAFI = SAFI.nlri_mpls,  # Default to class SAFI; parameter kept for API compat
-        action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
         labels: Labels | None = None,
     ) -> 'Label':
@@ -230,7 +229,6 @@ class Label(INET):
             cidr: CIDR prefix
             afi: Address Family Identifier
             safi: Ignored - Label always uses nlri_mpls (kept for API compatibility)
-            action: Route action (ANNOUNCE/WITHDRAW)
             path_info: AddPath path identifier
             labels: MPLS label stack (optional, defaults to NOLABEL)
 
@@ -254,7 +252,7 @@ class Label(INET):
 
         instance = object.__new__(cls)
         # Note: safi parameter is ignored - Label.safi is a class-level constant
-        NLRI.__init__(instance, afi, cls.safi, action)
+        NLRI.__init__(instance, afi, cls.safi)
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = has_labels
@@ -291,7 +289,6 @@ class Label(INET):
             cidr=settings.cidr,
             afi=settings.afi,
             safi=settings.safi,
-            action=settings.action,
             path_info=settings.path_info,
             labels=settings.labels,
         )

@@ -95,11 +95,9 @@ DSCP_MAX_VALUE = 0b111111  # DSCP is a 6-bit field (0-63)
 
 
 def flow(tokeniser: 'Tokeniser') -> Route:
-    from exabgp.bgp.message import Action
     from exabgp.protocol.ip import IP
 
     nlri = Flow.make_flow()
-    nlri.action = Action.ANNOUNCE  # Configuration always defines announcements
     # Create with explicit nexthop=NoNextHop; will be updated via with_nexthop() when parsed
     return Route(nlri, AttributeCollection(), nexthop=IP.NoNextHop)
 

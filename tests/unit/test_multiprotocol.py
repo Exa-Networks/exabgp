@@ -82,7 +82,7 @@ def test_mpreach_ipv4_unicast() -> None:
 
     # Create IPv4 unicast prefix
     cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
-    prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+    prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
     nexthop = IPv4.from_string('192.0.2.1')
 
     # Create MPNLRICollection using from_routed() with RoutedNLRI
@@ -114,7 +114,7 @@ def test_mpreach_ipv6_unicast() -> None:
 
     # Create IPv6 unicast prefix
     cidr = CIDR.make_cidr(IPv6.from_string('2001:db8::').pack_ip(), 32)
-    prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
+    prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast)
     nexthop = IPv6.from_string('2001:db8::1')
 
     # Create MPNLRICollection using from_routed() with RoutedNLRI
@@ -155,7 +155,7 @@ def test_mpreach_multiple_prefixes() -> None:
     routed_nlris = []
     for ip, mask in prefix_cidrs:
         cidr = CIDR.make_cidr(IPv4.from_string(ip).pack_ip(), mask)
-        prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
         routed_nlris.append(RoutedNLRI(prefix, nexthop))
 
     # Create MPNLRICollection using from_routed() with RoutedNLRI
@@ -182,7 +182,7 @@ def test_mpreach_pack_ipv4() -> None:
 
     # Create IPv4 unicast prefix
     cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
-    prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+    prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
     nexthop = IPv4.from_string('192.0.2.1')
 
     # Create MPNLRICollection using from_routed() with RoutedNLRI
@@ -220,7 +220,7 @@ def test_mpreach_nexthop_ipv6_global() -> None:
 
     # Create IPv6 unicast prefix with global next-hop
     cidr = CIDR.make_cidr(IPv6.from_string('2001:db8::').pack_ip(), 32)
-    prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
+    prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast)
     nexthop = IPv6.from_string('2001:db8::1')  # Global next-hop
 
     # Create MPNLRICollection using from_routed() with RoutedNLRI
@@ -251,7 +251,7 @@ def test_mpunreach_ipv4_unicast() -> None:
 
     # Create IPv4 unicast prefix to withdraw
     cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
-    prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
+    prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
     # Create MPNLRICollection
     collection = MPNLRICollection([prefix], {}, AFI.ipv4, SAFI.unicast)
@@ -279,7 +279,7 @@ def test_mpunreach_ipv6_unicast() -> None:
 
     # Create IPv6 unicast prefix to withdraw
     cidr = CIDR.make_cidr(IPv6.from_string('2001:db8::').pack_ip(), 32)
-    prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
+    prefix = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast)
 
     # Create MPNLRICollection
     collection = MPNLRICollection([prefix], {}, AFI.ipv6, SAFI.unicast)
@@ -311,7 +311,7 @@ def test_mpunreach_multiple_prefixes() -> None:
     prefixes = []
     for ip, mask in prefix_cidrs:
         cidr = CIDR.make_cidr(IPv4.from_string(ip).pack_ip(), mask)
-        prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
+        prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
         prefixes.append(prefix)
 
     # Create MPNLRICollection with multiple prefixes
@@ -338,7 +338,7 @@ def test_mpunreach_pack_ipv4() -> None:
 
     # Create IPv4 unicast prefix to withdraw
     cidr = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
-    prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
+    prefix = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
     # Create MPNLRICollection
     collection = MPNLRICollection([prefix], {}, AFI.ipv4, SAFI.unicast)
@@ -489,12 +489,12 @@ def test_mpreach_equality() -> None:
 
     # Create two identical MPNLRICollections
     cidr1 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
-    prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    # Note: nexthop is now stored in Route/RoutedNLRI, not NLRI
+    prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast)
+    # Note: action and nexthop are now stored in Route/RoutedNLRI, not NLRI
 
     cidr2 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
-    prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    # Note: nexthop is now stored in Route/RoutedNLRI, not NLRI
+    prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast)
+    # Note: action and nexthop are now stored in Route/RoutedNLRI, not NLRI
 
     collection1 = MPNLRICollection([prefix1], {}, AFI.ipv4, SAFI.unicast)
     collection2 = MPNLRICollection([prefix2], {}, AFI.ipv4, SAFI.unicast)
@@ -512,12 +512,12 @@ def test_mpunreach_equality() -> None:
     from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.protocol.ip import IPv4
 
-    # Create two identical MPNLRICollections
+    # Create two identical MPNLRICollections (action no longer stored in NLRI)
     cidr1 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
-    prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
+    prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast)
 
     cidr2 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
-    prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
+    prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast)
 
     collection1 = MPNLRICollection([prefix1], {}, AFI.ipv4, SAFI.unicast)
     collection2 = MPNLRICollection([prefix2], {}, AFI.ipv4, SAFI.unicast)

@@ -39,14 +39,13 @@ class NLRI(Family):
 
     # Slots for NLRI base class (subclasses add their own slots)
     # afi/safi inherited from Family.__slots__
-    __slots__ = ('action', 'addpath', '_packed')
+    __slots__ = ('addpath', '_packed')
 
     EOR: ClassVar[bool] = False
 
     registered_nlri: ClassVar[dict[str, Type[NLRI]]] = dict()
     registered_families: ClassVar[list[tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
 
-    action: Action
     addpath: 'PathInfo'
     _packed: Buffer  # Wire format bytes (subclass-specific interpretation)
 
@@ -61,28 +60,26 @@ class NLRI(Family):
         instance = object.__new__(cls)
         instance.afi = AFI.undefined
         instance.safi = SAFI.undefined
-        instance.action = Action.UNSET
         instance.addpath = PathInfo.DISABLED
         instance._packed = b''
         return instance
 
-    def __init__(
-        self, afi: AFI, safi: SAFI, action: Action = Action.UNSET, addpath: PathInfo = PathInfo.DISABLED
-    ) -> None:
+    def __init__(self, afi: AFI, safi: SAFI, addpath: PathInfo = PathInfo.DISABLED) -> None:
         """Initialize NLRI base class.
 
         Args:
             afi: Address Family Identifier
             safi: Subsequent Address Family Identifier
-            action: UNSET by default - MUST be set to ANNOUNCE or WITHDRAW after creation.
-                    Code checking action should raise an error if it encounters UNSET.
             addpath: Path identifier for ADD-PATH (RFC 7911), DISABLED by default
+
+        NOTE: Action (announce vs withdraw) is NOT stored in NLRI. Instead, action
+        is determined by the RIB method called: add_to_rib() for announces,
+        del_from_rib() for withdraws. This saves 8 bytes per NLRI.
 
         NOTE: nexthop is stored in Route, not NLRI.
         Methods like feedback() and v4_json() accept nexthop as a parameter.
         """
         Family.__init__(self, afi, safi)
-        self.action = action
         self.addpath = addpath
         self._packed = b''  # Subclasses set actual wire data
 
@@ -98,8 +95,7 @@ class NLRI(Family):
             new.safi = self.safi
         except AttributeError:
             pass  # Read-only class attribute
-        # NLRI.__slots__ = ('action', 'addpath', '_packed')
-        new.action = self.action
+        # NLRI.__slots__ = ('addpath', '_packed')
         new.addpath = self.addpath
         new._packed = self._packed
 
@@ -115,8 +111,7 @@ class NLRI(Family):
             new.safi = self.safi
         except AttributeError:
             pass  # Read-only class attribute
-        # NLRI.__slots__ = ('action', 'addpath', '_packed')
-        new.action = self.action  # int - immutable
+        # NLRI.__slots__ = ('addpath', '_packed')
         new.addpath = self.addpath  # PathInfo - typically shared singleton
         new._packed = self._packed  # bytes - immutable
 

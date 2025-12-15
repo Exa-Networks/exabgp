@@ -25,7 +25,6 @@ import asyncio
 import json
 from typing import TYPE_CHECKING
 
-from exabgp.bgp.message import Action
 from exabgp.configuration.static import ParseStaticRoute
 from exabgp.logger import log, lazymsg
 
@@ -221,7 +220,6 @@ async def _process_group(
                 if not ParseStaticRoute.check(route):
                     errors.append(f'invalid route: {route.extensive()}')
                     continue
-                route = route.with_action(Action.ANNOUNCE)
                 reactor.configuration.announce_route(cmd_peers, route)
                 all_peers.update(cmd_peers)
                 routes_added += 1
@@ -235,8 +233,7 @@ async def _process_group(
                 continue
 
             for route in routes:
-                route = route.with_action(Action.WITHDRAW)
-                reactor.configuration.announce_route(cmd_peers, route)
+                reactor.configuration.withdraw_route(cmd_peers, route)
                 all_peers.update(cmd_peers)
                 routes_withdrawn += 1
                 await asyncio.sleep(0)

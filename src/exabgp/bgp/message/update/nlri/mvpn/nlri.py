@@ -141,7 +141,6 @@ class MVPN(NLRI):
         else:
             klass = GenericMVPN(packed, afi)
 
-        klass.action = action
         klass.addpath = addpath
 
         return klass, data[total_length:]

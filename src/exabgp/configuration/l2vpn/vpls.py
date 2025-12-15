@@ -19,7 +19,6 @@ from exabgp.configuration.schema import (
 )
 from exabgp.configuration.validator import LegacyParserValidator
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri import VPLS as VPLS_NLRI
 from exabgp.bgp.message.update.nlri.settings import VPLSSettings
 
@@ -330,7 +329,7 @@ class ParseVPLS(Section):
 
         # Create NLRI from settings (no mutation after this point)
         nlri = VPLS_NLRI.from_settings(settings)
-        route = Route(nlri, attributes, Action.ANNOUNCE, nexthop=settings.nexthop)
+        route = Route(nlri, attributes, nexthop=settings.nexthop)
 
         # Append route and clear settings
         self.scope.append_route(route)

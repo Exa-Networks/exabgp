@@ -90,11 +90,9 @@ class ParseFlow(Section):
 
 @ParseFlow.register_command('route', ActionTarget.ROUTE, ActionOperation.EXTEND)
 def route(tokeniser: Any) -> list[Route]:
-    from exabgp.bgp.message import Action
     from exabgp.protocol.ip import IP
 
     flow_nlri = Flow.make_flow()
-    flow_nlri.action = Action.ANNOUNCE  # Flow routes are always announcements
     attributes = AttributeCollection()
     nexthop: IP = IP.NoNextHop  # Track nexthop separately
 
@@ -132,7 +130,7 @@ def route(tokeniser: Any) -> list[Route]:
     # Recreate NLRI with correct SAFI if RD is present
     # (avoids SAFI mutation which is incompatible with class-level SAFI)
     if flow_nlri.rd is not RouteDistinguisher.NORD and flow_nlri.safi != SAFI.flow_vpn:
-        new_nlri = Flow.make_flow(flow_nlri.afi, SAFI.flow_vpn, flow_nlri.action)
+        new_nlri = Flow.make_flow(flow_nlri.afi, SAFI.flow_vpn)
         # Transfer all data to new NLRI
         new_nlri._rd_override = flow_nlri._rd_override
         new_nlri._rules_cache = flow_nlri._rules_cache

@@ -109,7 +109,6 @@ class Prefix(EVPN):
         # Include type + length header for zero-copy pack
         packed = bytes([cls.CODE, len(payload)]) + payload
         instance = cls(packed)
-        instance.action = action
         instance.addpath = addpath
         return instance
 

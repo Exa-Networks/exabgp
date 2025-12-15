@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     pass
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
@@ -59,7 +58,6 @@ class NODE(BGPLS):
     def __init__(
         self,
         packed: Buffer,
-        action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
         addpath: PathInfo | None = None,
     ) -> None:
@@ -67,11 +65,10 @@ class NODE(BGPLS):
 
         Args:
             packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
-            action: Route action (ANNOUNCE/WITHDRAW)
             route_d: Route Distinguisher (for VPN SAFI)
             addpath: AddPath path identifier
         """
-        BGPLS.__init__(self, action, addpath)
+        BGPLS.__init__(self, addpath)
         self._packed = packed
         self.route_d: RouteDistinguisher | None = route_d
 
@@ -81,7 +78,6 @@ class NODE(BGPLS):
         domain: int,
         proto_id: int,
         node_ids: list[NodeDescriptor],
-        action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
         addpath: PathInfo | None = None,
     ) -> 'NODE':
@@ -95,7 +91,7 @@ class NODE(BGPLS):
         payload = pack('!BQ', proto_id, domain) + pack('!HH', NODE_DESCRIPTOR_TYPE, node_length) + node_tlvs
         # Include 4-byte header: type(2) + length(2) + payload
         packed = pack('!HH', cls.CODE, len(payload)) + payload
-        return cls(packed, action, route_d, addpath)
+        return cls(packed, route_d, addpath)
 
     @property
     def proto_id(self) -> int:

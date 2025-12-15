@@ -40,8 +40,7 @@ class TestVPLSCreation:
         assert vpls.base == 262145
         assert vpls.offset == 1
         assert vpls.size == 8
-        assert vpls.action == Action.UNSET
-        # Note: nexthop is now stored in Route, not NLRI
+        # Note: action and nexthop are now stored in Route, not NLRI
 
     def test_create_vpls_various_values(self) -> None:
         """Test creating VPLS with various parameter values"""
@@ -131,7 +130,7 @@ class TestVPLSPackUnpack:
         assert 'length is not consistent' in str(exc_info.value)
 
     def test_unpack_with_action_withdraw(self) -> None:
-        """Test unpacking preserves WITHDRAW action"""
+        """Test unpacking works with withdraw context (action no longer stored in NLRI)"""
         rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS.make_vpls(rd, endpoint=3, base=262145, offset=1, size=8)
 
@@ -140,7 +139,9 @@ class TestVPLSPackUnpack:
             AFI.l2vpn, SAFI.vpls, packed, Action.WITHDRAW, None, negotiated=create_negotiated()
         )
 
-        assert unpacked.action == Action.WITHDRAW
+        # Action is no longer stored in NLRI - verify unpack worked correctly
+        assert isinstance(unpacked, VPLS)
+        assert unpacked.endpoint == 3
 
     def test_unpack_known_juniper_data(self) -> None:
         """Test unpacking known data from Juniper (from test_l2vpn.py)"""

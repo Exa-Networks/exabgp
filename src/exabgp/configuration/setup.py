@@ -121,21 +121,21 @@ def add_route_to_config(
         config = create_minimal_configuration(families='ipv4 unicast')
         add_route_to_config(config, 'route 10.0.0.0/24 next-hop 1.2.3.4')
     """
-    from exabgp.bgp.message import Action as MsgAction
-
     routes = configuration.parse_route_text(route_text, action)
     if not routes:
         return False
 
     added = False
-    action_enum = MsgAction.ANNOUNCE if action == 'announce' else MsgAction.WITHDRAW
+    is_announce = action == 'announce'
 
     for neighbor in configuration.neighbors.values():
         for route in routes:
-            route = route.with_action(action_enum)
             if route.nlri.family().afi_safi() in neighbor.families():
                 resolved = neighbor.resolve_self(route)
-                neighbor.rib.outgoing.add_to_rib(resolved)
+                if is_announce:
+                    neighbor.rib.outgoing.add_to_rib(resolved)
+                else:
+                    neighbor.rib.outgoing.del_from_rib(resolved)
                 added = True
 
     return added

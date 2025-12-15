@@ -166,7 +166,6 @@ class INET(NLRI):
         cidr: CIDR,
         afi: AFI,
         safi: SAFI,
-        action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
     ) -> 'INET':
         """Factory method to create INET from a CIDR object.
@@ -175,7 +174,6 @@ class INET(NLRI):
             cidr: CIDR prefix
             afi: Address Family Identifier
             safi: Subsequent Address Family Identifier
-            action: Route action (ANNOUNCE/WITHDRAW)
             path_info: AddPath path identifier
 
         Returns:
@@ -192,7 +190,7 @@ class INET(NLRI):
             packed = cidr_packed
 
         instance = object.__new__(cls)
-        NLRI.__init__(instance, afi, safi, action)
+        NLRI.__init__(instance, afi, safi)
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance.labels = None
@@ -225,7 +223,7 @@ class INET(NLRI):
             New INET instance
         """
         cidr = CIDR.make_cidr(packed, mask)
-        instance = cls.from_cidr(cidr, afi, safi, action, path_info)
+        instance = cls.from_cidr(cidr, afi, safi, path_info)
         # Note: nexthop parameter is deprecated - nexthop should be stored in Route, not NLRI
         return instance
 
@@ -259,7 +257,6 @@ class INET(NLRI):
             cidr=settings.cidr,
             afi=settings.afi,
             safi=settings.safi,
-            action=settings.action,
             path_info=settings.path_info,
         )
         # Note: settings.nexthop is now passed to Route, not stored in NLRI
@@ -459,5 +456,5 @@ class INET(NLRI):
         if rd is not None:
             kwargs['rd'] = rd
 
-        nlri = cls.from_cidr(cidr, afi, safi, action, path_info, **kwargs)
+        nlri = cls.from_cidr(cidr, afi, safi, path_info, **kwargs)
         return nlri, data

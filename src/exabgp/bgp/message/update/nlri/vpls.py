@@ -64,7 +64,6 @@ class VPLS(NLRI):
         base: int,
         offset: int,
         size: int,
-        action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
     ) -> 'VPLS':
         """Factory method to create a VPLS NLRI from components.
@@ -75,7 +74,6 @@ class VPLS(NLRI):
             base: Label base
             offset: Label block offset
             size: Label block size
-            action: Route action (ANNOUNCE or WITHDRAW)
             addpath: ADD-PATH path identifier
 
         Returns:
@@ -88,7 +86,6 @@ class VPLS(NLRI):
             + pack('!L', (base << 4) | 0x1)[1:]  # 3 bytes with BOS bit
         )
         instance = cls(packed)
-        instance.action = action
         instance.addpath = addpath
         return instance
 
@@ -126,7 +123,6 @@ class VPLS(NLRI):
             base=settings.base,
             offset=settings.offset,
             size=settings.size,
-            action=settings.action,
         )
         # Note: settings.nexthop is now passed to Route, not stored in NLRI
         return instance
@@ -227,5 +223,4 @@ class VPLS(NLRI):
         # Store wire format directly
         packed = bytes(data[0 : 2 + length])
         nlri = cls(packed)
-        nlri.action = action
         return nlri, data[2 + length :]

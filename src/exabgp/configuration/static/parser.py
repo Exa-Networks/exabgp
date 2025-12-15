@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 from struct import pack
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.open import ASN, RouterID
 from exabgp.bgp.message.update.attribute import (
     AIGP,
@@ -104,7 +103,7 @@ def inet(tokeniser: 'Tokeniser') -> Route:
 
     ipmask = prefix(tokeniser)
     cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
-    nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.UNSET)
+    nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()))
 
     # Create with explicit nexthop=NoNextHop; will be updated via with_nexthop() when parsed
     return Route(nlri, AttributeCollection(), nexthop=IP.NoNextHop)
@@ -119,7 +118,7 @@ def mpls(tokeniser: 'Tokeniser') -> Route:
 
     ipmask = prefix(tokeniser)
     cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
-    nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()), Action.ANNOUNCE)
+    nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()))
 
     # Create with explicit nexthop=NoNextHop; will be updated via with_nexthop() when parsed
     return Route(nlri, AttributeCollection(), nexthop=IP.NoNextHop)

@@ -224,23 +224,8 @@ class TestVPLSFromSettings:
         assert vpls.size == 16
         assert vpls.rd is not None
 
-    def test_from_settings_preserves_action(self) -> None:
-        """from_settings preserves action from settings"""
-        from exabgp.bgp.message.update.nlri.settings import VPLSSettings
-        from exabgp.bgp.message.update.nlri.vpls import VPLS
-
-        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
-        settings = VPLSSettings()
-        settings.rd = rd
-        settings.endpoint = 100
-        settings.base = 500000
-        settings.offset = 50
-        settings.size = 16
-        settings.action = Action.WITHDRAW
-
-        vpls = VPLS.from_settings(settings)
-
-        assert vpls.action == Action.WITHDRAW
+    # Note: test_from_settings_preserves_action removed
+    # Action is no longer stored in NLRI - it's determined by which RIB method is called
 
     # Note: test_from_settings_preserves_nexthop removed
     # nexthop is now stored in Route, not NLRI
@@ -447,16 +432,8 @@ class TestINETFromSettings:
         from exabgp.bgp.message.update.nlri.inet import INET
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        settings = INETSettings()
-        settings.cidr = cidr
-        settings.afi = AFI.ipv4
-        settings.safi = SAFI.unicast
-        settings.action = Action.WITHDRAW
-
-        inet = INET.from_settings(settings)
-
-        assert inet.action == Action.WITHDRAW
+        # Note: test_from_settings_preserves_action removed
+        # Action is no longer stored in NLRI - it's determined by which RIB method is called
 
     # Note: test_from_settings_preserves_nexthop removed
     # nexthop is now stored in Route, not NLRI
@@ -520,17 +497,8 @@ class TestLabelFromSettings:
         from exabgp.bgp.message.update.nlri.label import Label
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        settings = INETSettings()
-        settings.cidr = cidr
-        settings.afi = AFI.ipv4
-        settings.safi = SAFI.nlri_mpls
-        settings.labels = Labels.make_labels([100000])
-        settings.action = Action.WITHDRAW
-
-        label = Label.from_settings(settings)
-
-        assert label.action == Action.WITHDRAW
+        # Note: test_from_settings_preserves_action removed
+        # Action is no longer stored in NLRI - it's determined by which RIB method is called
 
     # Note: test_from_settings_preserves_nexthop removed
     # nexthop is now stored in Route, not NLRI
@@ -582,18 +550,8 @@ class TestIPVPNFromSettings:
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
         cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
-        settings = INETSettings()
-        settings.cidr = cidr
-        settings.afi = AFI.ipv4
-        settings.safi = SAFI.mpls_vpn
-        settings.labels = Labels.make_labels([100000])
-        settings.rd = rd
-        settings.action = Action.WITHDRAW
-
-        ipvpn = IPVPN.from_settings(settings)
-
-        assert ipvpn.action == Action.WITHDRAW
+        # Note: test_from_settings_preserves_action removed
+        # Action is no longer stored in NLRI - it's determined by which RIB method is called
 
     # Note: test_from_settings_preserves_nexthop removed
     # nexthop is now stored in Route, not NLRI
@@ -687,19 +645,8 @@ class TestFlowFromSettings:
         assert flow.afi == AFI.ipv4
         assert flow.safi == SAFI.flow_ip
 
-    def test_from_settings_preserves_action(self) -> None:
-        """from_settings preserves action from settings"""
-        from exabgp.bgp.message.update.nlri.flow import Flow
-        from exabgp.bgp.message.update.nlri.settings import FlowSettings
-
-        settings = FlowSettings()
-        settings.afi = AFI.ipv4
-        settings.safi = SAFI.flow_ip
-        settings.action = Action.WITHDRAW
-
-        flow = Flow.from_settings(settings)
-
-        assert flow.action == Action.WITHDRAW
+    # Note: test_from_settings_preserves_action removed
+    # Action is no longer stored in NLRI - it's determined by which RIB method is called
 
     # Note: test_from_settings_preserves_nexthop removed
     # nexthop is now stored in Route, not NLRI

@@ -38,7 +38,7 @@ class TestINETFeedback:
     def test_nlri_feedback_returns_empty(self) -> None:
         """Test NLRI.feedback() returns empty (no NLRI-specific validation)"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
         # NLRI.feedback() no longer validates nexthop - that's Route's job
         feedback = nlri.feedback(Action.ANNOUNCE)
@@ -47,7 +47,7 @@ class TestINETFeedback:
     def test_nlri_feedback_withdraw(self) -> None:
         """Test NLRI.feedback() for WITHDRAW"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
         feedback = nlri.feedback(Action.WITHDRAW)
         assert feedback == ''
@@ -59,7 +59,7 @@ class TestINETIndex:
     def test_index_with_pathinfo(self) -> None:
         """Test index generation with path info"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE, PathInfo(b'\x00\x00\x00\x01'))
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, path_info=PathInfo(b'\x00\x00\x00\x01'))
 
         index = nlri.index()
 
@@ -70,7 +70,7 @@ class TestINETIndex:
         """Test index generation without path info (DISABLED)"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         # PathInfo.DISABLED = no AddPath bytes in wire format
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE, PathInfo.DISABLED)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, path_info=PathInfo.DISABLED)
 
         index = nlri.index()
 
@@ -82,7 +82,7 @@ class TestINETIndex:
         """Test index generation with NOPATH (AddPath enabled but no specific ID)"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         # PathInfo.NOPATH = AddPath enabled, sends 4 zero bytes
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE, PathInfo.NOPATH)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, path_info=PathInfo.NOPATH)
 
         index = nlri.index()
 
@@ -97,7 +97,7 @@ class TestINETJSON:
     def test_json_compact_mode(self) -> None:
         """Test JSON in compact mode"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
         json_str = nlri.json(announced=True, compact=True)
 
@@ -107,7 +107,7 @@ class TestINETJSON:
     def test_json_non_compact_mode(self) -> None:
         """Test JSON in non-compact mode"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
         json_str = nlri.json(announced=True, compact=False)
 
@@ -212,7 +212,7 @@ class TestLabelUnpack:
         )
 
         assert isinstance(nlri, Label)
-        assert nlri.action == Action.WITHDRAW
+        # Action is no longer stored in NLRI - it's determined by which RIB method is called
 
     def test_unpack_with_null_label(self) -> None:
         """Test unpacking route with null label (0x000000)"""
@@ -279,7 +279,7 @@ class TestINETCreationVariants:
     def test_create_ipv4_unicast(self) -> None:
         """Test creating IPv4 unicast INET"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.unicast
@@ -287,7 +287,7 @@ class TestINETCreationVariants:
     def test_create_ipv6_unicast(self) -> None:
         """Test creating IPv6 unicast INET"""
         cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
-        nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
+        nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast)
 
         assert nlri.afi == AFI.ipv6
         assert nlri.safi == SAFI.unicast
@@ -295,7 +295,7 @@ class TestINETCreationVariants:
     def test_create_ipv4_multicast(self) -> None:
         """Test creating IPv4 multicast INET"""
         cidr = CIDR.make_cidr(IP.pton('224.0.0.0'), 4)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.multicast, Action.ANNOUNCE)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.multicast)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.multicast
@@ -303,7 +303,7 @@ class TestINETCreationVariants:
     def test_create_ipv6_multicast(self) -> None:
         """Test creating IPv6 multicast INET"""
         cidr = CIDR.make_cidr(IP.pton('ff00::'), 8)
-        nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.multicast, Action.ANNOUNCE)
+        nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.multicast)
 
         assert nlri.afi == AFI.ipv6
         assert nlri.safi == SAFI.multicast
@@ -325,7 +325,7 @@ class TestNLRIPackedBaseClass:
     def test_inet_inherits_packed_from_nlri(self) -> None:
         """Test that INET uses _packed correctly."""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
         # _packed should be set after creation
         assert hasattr(nlri, '_packed')
@@ -345,7 +345,7 @@ class TestNLRIPackedBaseClass:
     def test_label_has_packed(self) -> None:
         """Test that Label NLRI uses _packed correctly."""
         cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
-        nlri = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE)
+        nlri = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls)
 
         assert hasattr(nlri, '_packed')
         assert isinstance(nlri._packed, bytes)
@@ -353,7 +353,7 @@ class TestNLRIPackedBaseClass:
     def test_packed_decodes_correctly(self) -> None:
         """Test that _packed bytes decode back to original CIDR."""
         cidr = CIDR.make_cidr(IP.pton('192.168.100.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
+        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
         # The cidr property should decode _packed back correctly
         decoded_cidr = nlri.cidr

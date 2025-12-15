@@ -175,7 +175,6 @@ class Type2SessionTransformedRoute(MUP):
                 )
 
         instance = cls(data, afi)
-        instance.action = action
         return instance, b''
 
     def json(self, compact: bool | None = None) -> str:

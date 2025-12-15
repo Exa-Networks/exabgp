@@ -119,7 +119,6 @@ class InterworkSegmentDiscoveryRoute(MUP):
     ) -> tuple[NLRI, Buffer]:
         # Parent provides complete wire format including 4-byte header
         instance = cls(data, afi)
-        instance.action = action
         return instance, b''
 
     def json(self, compact: bool | None = None) -> str:

@@ -41,7 +41,6 @@ class TestNormalizeNlriTypeLabel:
             cidr,
             AFI.ipv4,
             SAFI.nlri_mpls,
-            Action.ANNOUNCE,
             labels=Labels.make_labels([800001]),
         )
 
@@ -71,7 +70,6 @@ class TestNormalizeNlriTypeLabel:
             cidr,
             AFI.ipv4,
             SAFI.nlri_mpls,
-            Action.ANNOUNCE,
             labels=None,  # No labels
         )
 
@@ -98,7 +96,6 @@ class TestNormalizeNlriTypeIPVPN:
             cidr,
             AFI.ipv4,
             SAFI.mpls_vpn,
-            Action.ANNOUNCE,
             labels=Labels.make_labels([800001]),
             rd=rd,
         )
@@ -121,7 +118,6 @@ class TestNormalizeNlriTypeIPVPN:
             cidr,
             AFI.ipv4,
             SAFI.mpls_vpn,
-            Action.ANNOUNCE,
             labels=Labels.make_labels([800001]),
             rd=None,  # No RD
         )
@@ -149,7 +145,6 @@ class TestNormalizeNlriTypeINET:
             cidr,
             AFI.ipv4,
             SAFI.unicast,
-            Action.ANNOUNCE,
         )
 
         # Verify initial state
@@ -237,7 +232,6 @@ class TestLabelHasLabelsAttribute:
             cidr,
             AFI.ipv4,
             SAFI.nlri_mpls,
-            Action.ANNOUNCE,
             labels=Labels.make_labels([800001]),
         )
 
@@ -255,7 +249,6 @@ class TestLabelHasLabelsAttribute:
             cidr,
             AFI.ipv4,
             SAFI.mpls_vpn,
-            Action.ANNOUNCE,
             labels=Labels.make_labels([800001]),
             rd=rd,
         )
@@ -277,7 +270,6 @@ class TestLabelPreservationThroughNormalization:
             cidr,
             AFI.ipv4,
             SAFI.nlri_mpls,
-            Action.ANNOUNCE,
             labels=original_labels,
         )
 
@@ -301,7 +293,6 @@ class TestLabelPreservationThroughNormalization:
             cidr,
             AFI.ipv4,
             SAFI.mpls_vpn,
-            Action.ANNOUNCE,
             labels=original_labels,
             rd=rd,
         )

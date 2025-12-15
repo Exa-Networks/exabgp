@@ -81,64 +81,6 @@ class TestAnnounceIPCheck:
         assert result is False
 
 
-class TestRouteActionFromConfiguration:
-    """Test that Route.action is correctly set from configuration.
-
-    These tests verify Route._action storage (to be removed in Phase 2).
-    """
-
-    def test_route_created_with_explicit_action(self):
-        """Route created with explicit action stores it correctly."""
-        from exabgp.bgp.message.update.nlri.inet import INET
-        from exabgp.bgp.message.update.nlri.cidr import CIDR
-        from exabgp.bgp.message.update.attribute.collection import AttributeCollection
-        from exabgp.protocol.ip import IP as IP_
-
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        attrs = AttributeCollection()
-
-        # Create Route with explicit WITHDRAW action
-        route = Route(nlri, attrs, Action.WITHDRAW, nexthop=IP_.NoNextHop)
-
-        # Route._action should be WITHDRAW
-        assert route._action == Action.WITHDRAW
-        # route.action should return _action, not nlri.action
-        assert route.action == Action.WITHDRAW
-
-    def test_route_action_precedence_over_nlri_action(self):
-        """Route._action takes precedence over nlri.action."""
-        from exabgp.bgp.message.update.nlri.inet import INET
-        from exabgp.bgp.message.update.nlri.cidr import CIDR
-        from exabgp.bgp.message.update.attribute.collection import AttributeCollection
-        from exabgp.protocol.ip import IP as IP_
-
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        # NLRI created with ANNOUNCE
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        attrs = AttributeCollection()
-
-        # Route created with WITHDRAW
-        route = Route(nlri, attrs, Action.WITHDRAW, nexthop=IP_.NoNextHop)
-
-        # Even though nlri.action is ANNOUNCE, route.action should be WITHDRAW
-        assert nlri.action == Action.ANNOUNCE
-        assert route.action == Action.WITHDRAW
-
-    def test_route_action_fallback_to_nlri_when_unset(self):
-        """Route.action falls back to nlri.action when _action is UNSET."""
-        from exabgp.bgp.message.update.nlri.inet import INET
-        from exabgp.bgp.message.update.nlri.cidr import CIDR
-        from exabgp.bgp.message.update.attribute.collection import AttributeCollection
-        from exabgp.protocol.ip import IP as IP_
-
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-        attrs = AttributeCollection()
-
-        # Route created without explicit action (defaults to UNSET)
-        route = Route(nlri, attrs, nexthop=IP_.NoNextHop)
-
-        # Should fall back to nlri.action
-        assert route._action == Action.UNSET
-        assert route.action == Action.WITHDRAW  # From nlri
+# NOTE: TestRouteActionFromConfiguration was removed in Phase 2
+# Route no longer stores _action - action is determined by which RIB method is called
+# (add_to_rib for announces, del_from_rib for withdraws)

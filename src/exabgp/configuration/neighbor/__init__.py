@@ -11,7 +11,6 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.flow import NLRI
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig
@@ -489,13 +488,11 @@ class ParseNeighbor(Section):
         for section in ('static', 'l2vpn', 'flow'):
             routes = local.get(section, {}).get('routes', [])
             for route in routes:
-                route = route.with_action(Action.ANNOUNCE)
                 # remove_self may well have side effects on route
                 neighbor.routes.append(neighbor.resolve_self(route))
 
         routes = local.get('routes', [])
         for route in routes:
-            route = route.with_action(Action.ANNOUNCE)
             # remove_self may well have side effects on route
             neighbor.routes.append(neighbor.resolve_self(route))
 

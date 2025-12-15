@@ -21,23 +21,17 @@ from exabgp.protocol.ip import IP
 class Route:
     """A Route is an NLRI with attributes and operation context.
 
-    Route is IMMUTABLE after creation. Use with_action() or with_nexthop()
-    to create modified copies.
+    Route is IMMUTABLE after creation. Use with_nexthop() to create modified copies.
 
-    The action field indicates whether this route is being announced or withdrawn.
-    This is operation context, not part of the NLRI identity - the same NLRI can
-    be announced and later withdrawn.
-
-    Both action and nexthop must be explicitly set when creating a Route.
-    Route.action falls back to nlri.action during transition (will be removed).
-    Route.nexthop does NOT fall back - must be passed to constructor.
+    Action (announce vs withdraw) is NOT stored in Route. Instead, action is
+    determined by the method called: add_to_rib() for announces, del_from_rib()
+    for withdraws. This saves 8 bytes per route.
     """
 
-    __slots__ = ('nlri', 'attributes', '_action', '_nexthop', '_Route__index', '_refcount')
+    __slots__ = ('nlri', 'attributes', '_nexthop', '_Route__index', '_refcount')
 
     nlri: NLRI
     attributes: AttributeCollection
-    _action: Action
     _nexthop: IP
     _Route__index: bytes
     _refcount: int
@@ -50,12 +44,10 @@ class Route:
         self,
         nlri: NLRI,
         attributes: AttributeCollection,
-        action: Action = Action.UNSET,
         nexthop: IP = IP.NoNextHop,
     ) -> None:
         self.nlri = nlri
         self.attributes = attributes
-        self._action = action
         self._nexthop = nexthop
         # Index is computed lazily on first .index() call, not at __init__ time.
         # This is intentional: at construction time the NLRI may not be fully populated
@@ -76,18 +68,6 @@ class Route:
         return self._refcount
 
     @property
-    def action(self) -> Action:
-        """Get the route action (ANNOUNCE/WITHDRAW).
-
-        During transition: returns self._action if set, else falls back to nlri.action.
-        Eventually: will only return self._action.
-        """
-        if self._action != Action.UNSET:
-            return self._action
-        # Fallback to nlri.action during transition period
-        return self.nlri.action
-
-    @property
     def nexthop(self) -> IP:
         """Get the route nexthop.
 
@@ -96,19 +76,12 @@ class Route:
         """
         return self._nexthop
 
-    def with_action(self, action: Action) -> 'Route':
-        """Return a new Route with a different action.
-
-        Route is immutable, so this creates a new instance.
-        """
-        return Route(self.nlri, self.attributes, action=action, nexthop=self.nexthop)
-
     def with_nexthop(self, nexthop: IP) -> 'Route':
         """Return a new Route with a different nexthop.
 
         Route is immutable, so this creates a new instance.
         """
-        return Route(self.nlri, self.attributes, action=self.action, nexthop=nexthop)
+        return Route(self.nlri, self.attributes, nexthop=nexthop)
 
     def index(self) -> bytes:
         if not self.__index:
@@ -146,11 +119,19 @@ class Route:
     def __repr__(self) -> str:
         return self.extensive()
 
-    def feedback(self) -> str:
+    def feedback(self, action: Action) -> str:
+        """Validate route constraints and return error message if invalid.
+
+        Args:
+            action: ANNOUNCE or WITHDRAW - determines validation rules
+
+        Returns:
+            Empty string if valid, error message if invalid.
+        """
         if self.nlri is None:
             return 'route has no nlri'
         # Route handles nexthop validation (nexthop is stored in Route, not NLRI)
-        if self._nexthop is IP.NoNextHop and self.action == Action.ANNOUNCE:
+        if self._nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return f'{self.nlri.safi.name()} nlri next-hop missing'
         # Delegate NLRI-specific validation
-        return self.nlri.feedback(self.action)
+        return self.nlri.feedback(action)

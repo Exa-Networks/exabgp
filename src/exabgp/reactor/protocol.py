@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 #
 
 from exabgp.bgp.message import _NOP, EOR, KeepAlive, Message, Notification, Notify, Open, Operational, Update
-from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities, Negotiated
@@ -261,10 +260,10 @@ class Protocol:
             # Update: use .data to get parsed collection
             # EOR: has .attributes and .nlris directly
             if isinstance(message, Update):
-                parsed_update = message.data  # Already parsed by unpack_message
-                if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in parsed_update.attributes:
-                    for nlri in parsed_update.nlris:
-                        nlri.action = Action.WITHDRAW
+                # Note: TREAT_AS_WITHDRAW handling is done at the Update level
+                # The UpdateCollection (message.data) already tracks which NLRIs
+                # are withdraws via the announces vs withdraws lists
+                pass
 
         if for_api:
             if consolidate:

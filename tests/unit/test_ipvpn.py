@@ -88,19 +88,19 @@ class TestIPVPNCreation:
             24,
             Labels.make_labels([42], True),
             RouteDistinguisher.make_from_elements('10.0.0.1', 100),
-            action=Action.WITHDRAW,
         )
 
-        assert nlri.action == Action.WITHDRAW
+        # NLRI was created correctly - action is determined by RIB method
+        assert nlri.afi == AFI.ipv4
 
     def test_create_ipvpn_from_cidr(self) -> None:
         """Test creating IPVPN via from_cidr factory method"""
         cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn, Action.ANNOUNCE)
+        nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.mpls_vpn
-        assert nlri.action == Action.ANNOUNCE
+        # Action is no longer stored in NLRI
         assert nlri.rd == RouteDistinguisher.NORD
 
 
@@ -646,13 +646,12 @@ class TestIPVPNFromCidrEdgeCases:
             cidr,
             AFI.ipv4,
             SAFI.mpls_vpn,
-            action=Action.ANNOUNCE,
             path_info=PathInfo.NOPATH,
             labels=Labels.make_labels([100], True),
             rd=RouteDistinguisher.make_from_elements('172.16.0.1', 50),
         )
 
-        assert nlri.action == Action.ANNOUNCE
+        # Action is no longer stored in NLRI - determined by RIB method
         assert nlri.path_info == PathInfo.NOPATH
         assert nlri.labels.labels == [100]
         assert nlri.rd._str() == '172.16.0.1:50'

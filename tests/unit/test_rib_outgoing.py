@@ -50,8 +50,11 @@ from exabgp.bgp.message import Action  # noqa: E402
 # ==============================================================================
 
 
-def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNCE) -> Route:
-    """Create a Route object for testing"""
+def create_change(prefix: str, afi: AFI = AFI.ipv4) -> Route:
+    """Create a Route object for testing.
+
+    Note: Action is no longer stored in Route - it's determined by which RIB method is called.
+    """
     parts = prefix.split('/')
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else (32 if afi == AFI.ipv4 else 128)
@@ -59,14 +62,17 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
     from exabgp.protocol.ip import IP as IP_
 
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
-    nlri = INET.from_cidr(cidr, afi, SAFI.unicast, action)
+    nlri = INET.from_cidr(cidr, afi, SAFI.unicast)
     attrs = AttributeCollection()
 
     return Route(nlri, attrs, nexthop=IP_.NoNextHop)
 
 
-def create_change_with_origin(prefix: str, origin: int, action: int = Action.ANNOUNCE) -> Route:
-    """Create a Route with a specific ORIGIN attribute"""
+def create_change_with_origin(prefix: str, origin: int) -> Route:
+    """Create a Route with a specific ORIGIN attribute.
+
+    Note: Action is no longer stored in Route - it's determined by which RIB method is called.
+    """
     parts = prefix.split('/')
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else 32
@@ -74,7 +80,7 @@ def create_change_with_origin(prefix: str, origin: int, action: int = Action.ANN
     from exabgp.protocol.ip import IP as IP_
 
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
-    nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, action)
+    nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
     attrs = AttributeCollection()
     attrs[Origin.ID] = Origin.from_int(origin)
 
@@ -707,18 +713,17 @@ class TestComprehensiveSequences:
 class TestRouteActionIntegration:
     """Tests for Route.action (not nlri.action) integration with RIB."""
 
-    def test_cache_uses_route_action_not_nlri_action(self):
-        """Verify cache respects route.action (not nlri.action).
+    def test_cache_uses_rib_method_for_action(self):
+        """Verify cache behavior with RIB methods.
 
-        This tests the migration from nlri.action to Route._action.
+        Action is now determined by which RIB method is called:
+        - add_to_rib() = announce
+        - del_from_rib() = withdraw
         """
         rib = create_rib()
 
-        # Create route - the helper uses nlri.action
-        route = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
-
-        # Verify the route has action set (from NLRI)
-        assert route.action == Action.ANNOUNCE
+        # Create route - action is determined by RIB method
+        route = create_change('10.0.0.0/24')
 
         rib.add_to_rib(route)
         consume_updates(rib)
@@ -726,15 +731,12 @@ class TestRouteActionIntegration:
         # Route should be cached
         assert rib.in_cache(route)
 
-    def test_route_with_explicit_action_in_route(self):
-        """Route with action in Route._action (not nlri.action) works."""
+    def test_route_add_and_del_rib(self):
+        """Test add_to_rib and del_from_rib work correctly."""
         rib = create_rib()
 
-        # Create route with NLRI action
-        route = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
-
-        # Override with Route._action
-        route._action = Action.ANNOUNCE  # Explicitly set
+        # Create route
+        route = create_change('10.0.0.0/24')
 
         rib.add_to_rib(route)
         updates = consume_updates(rib)
@@ -743,19 +745,19 @@ class TestRouteActionIntegration:
         assert announces == 1
         assert withdraws == 0
 
-    def test_withdraw_route_with_route_action(self):
-        """Withdraw using Route._action works correctly."""
+    def test_withdraw_route_with_del_from_rib(self):
+        """Withdraw using del_from_rib works correctly."""
         rib = create_rib()
 
         # First add
-        route = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
+        route = create_change('10.0.0.0/24')
         rib.add_to_rib(route)
         consume_updates(rib)
 
-        # Create withdraw - uses nlri.action=WITHDRAW
-        withdraw_route = create_change('10.0.0.0/24', action=Action.WITHDRAW)
+        # Create withdraw - uses del_from_rib
+        withdraw_route = create_change('10.0.0.0/24')
 
-        # The del_from_rib should work even though action is in nlri
+        # del_from_rib determines action as WITHDRAW
         rib.del_from_rib(withdraw_route)
 
         updates = consume_updates(rib)
@@ -764,22 +766,15 @@ class TestRouteActionIntegration:
         assert announces == 0
         assert withdraws == 1
 
-    def test_route_action_property_returns_correct_value(self):
-        """Verify Route.action property returns correct value."""
-        # Test with ANNOUNCE
-        route_a = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
-        assert route_a.action == Action.ANNOUNCE
-
-        # Test with WITHDRAW
-        route_w = create_change('10.0.0.0/24', action=Action.WITHDRAW)
-        assert route_w.action == Action.WITHDRAW
+    # Note: test_route_action_property_returns_correct_value removed
+    # Action is no longer stored in Route - determined by RIB method
 
     def test_cache_in_cache_checks_route_index(self):
         """in_cache() checks if route is cached (for deduplication)."""
         rib = create_rib()
 
         # Add an announce route
-        route = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
+        route = create_change('10.0.0.0/24')
         rib.add_to_rib(route)
         consume_updates(rib)
 
@@ -787,9 +782,9 @@ class TestRouteActionIntegration:
         assert rib.in_cache(route)
 
         # Same prefix route is also found (same index)
-        same_prefix = create_change('10.0.0.0/24', action=Action.ANNOUNCE)
+        same_prefix = create_change('10.0.0.0/24')
         assert rib.in_cache(same_prefix)
 
         # Different prefix not in cache
-        different = create_change('10.0.1.0/24', action=Action.ANNOUNCE)
+        different = create_change('10.0.1.0/24')
         assert not rib.in_cache(different)

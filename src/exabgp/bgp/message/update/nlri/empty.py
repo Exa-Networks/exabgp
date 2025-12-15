@@ -36,15 +36,14 @@ class Empty(NLRI):
     # Class attribute to identify Empty NLRI instances
     EMPTY_NLRI = True
 
-    def __init__(self, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.unicast, action: Action = Action.ANNOUNCE) -> None:
+    def __init__(self, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.unicast) -> None:
         """Create an Empty NLRI.
 
         Args:
             afi: Address Family Identifier (default: ipv4)
             safi: Subsequent Address Family Identifier (default: unicast)
-            action: Action (ANNOUNCE or WITHDRAW, default: ANNOUNCE)
         """
-        super().__init__(afi, safi, action, PathInfo.DISABLED)
+        super().__init__(afi, safi, PathInfo.DISABLED)
         self._packed = b''
 
     def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:

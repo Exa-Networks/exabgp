@@ -50,23 +50,17 @@ class TestRTCCreation:
         assert nlri.rt is None
         # Note: nexthop is now stored in Route, not NLRI
 
-    def test_create_rtc_with_action(self) -> None:
-        """Test creating RTC with specific action"""
-        rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.make_rtc(ASN(65000), rt, action=Action.ANNOUNCE)
-
-        assert nlri.action == Action.ANNOUNCE
-
+    # Note: test_create_rtc_with_action removed - action is no longer stored in NLRI
     # Note: test_create_rtc_with_nexthop removed - nexthop is now stored in Route, not NLRI
 
     def test_create_rtc_direct_init(self) -> None:
         """Test creating RTC via make_rtc factory"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.make_rtc(ASN(65000), rt, Action.ANNOUNCE)
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
         assert nlri.afi == AFI.ipv4
         assert nlri.safi == SAFI.rtc
-        assert nlri.action == Action.ANNOUNCE
+        # Action is no longer stored in NLRI - determined by RIB method
         assert nlri.origin == 65000
         assert nlri.rt == rt
 
@@ -106,7 +100,7 @@ class TestRTCPackUnpack:
         assert unpacked.rt is None
 
     def test_pack_unpack_with_action(self) -> None:
-        """Test pack/unpack preserves action"""
+        """Test pack/unpack works (action is no longer stored in NLRI)"""
         rt = RouteTarget.make_route_target(64512, 100)
         nlri = RTC.make_rtc(ASN(65000), rt)
 
@@ -115,7 +109,9 @@ class TestRTCPackUnpack:
             AFI.ipv4, SAFI.rtc, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
         )
 
-        assert unpacked.action == Action.ANNOUNCE
+        # Action is no longer stored in NLRI - verify unpack worked correctly
+        assert isinstance(unpacked, RTC)
+        assert unpacked.origin == 65000
 
     def test_pack_unpack_various_asns(self) -> None:
         """Test pack/unpack with various ASN values"""

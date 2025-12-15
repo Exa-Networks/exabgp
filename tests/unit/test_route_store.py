@@ -34,26 +34,31 @@ from exabgp.protocol.ip import IP  # noqa: E402
 from exabgp.configuration.configuration import _Configuration  # noqa: E402
 
 
-def create_nlri(prefix: str = '10.0.0.0/24', action: int = Action.ANNOUNCE) -> INET:
-    """Create an INET NLRI for testing."""
+def create_nlri(prefix: str = '10.0.0.0/24') -> INET:
+    """Create an INET NLRI for testing.
+
+    Note: Action is no longer stored in NLRI - it's determined by which RIB method is called.
+    """
     parts = prefix.split('/')
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else 32
 
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
-    return INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, action)
+    return INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
 
 def create_route(
     prefix: str = '10.0.0.0/24',
     nexthop: str = '1.2.3.4',
-    action: int = Action.ANNOUNCE,
 ) -> Route:
-    """Create a Route for testing."""
-    nlri = create_nlri(prefix, action)
+    """Create a Route for testing.
+
+    Note: Action is no longer stored in Route - it's determined by which RIB method is called.
+    """
+    nlri = create_nlri(prefix)
     attrs = AttributeCollection()
     nh = IP.from_string(nexthop) if nexthop else IP.NoNextHop
-    return Route(nlri, attrs, action, nh)
+    return Route(nlri, attrs, nh)
 
 
 class TestRouteRefcount:
@@ -98,14 +103,8 @@ class TestRouteRefcount:
         assert result == -1
         assert route._refcount == -1
 
-    def test_with_action_preserves_zero_refcount(self):
-        """with_action() creates new route with refcount = 0."""
-        route = create_route()
-        route._refcount = 5
-
-        route2 = route.with_action(Action.WITHDRAW)
-        assert route2._refcount == 0  # New route has fresh refcount
-        assert route._refcount == 5  # Original unchanged
+    # Note: test_with_action_preserves_zero_refcount removed
+    # with_action() method no longer exists - action is determined by RIB method
 
     def test_with_nexthop_preserves_zero_refcount(self):
         """with_nexthop() creates new route with refcount = 0."""

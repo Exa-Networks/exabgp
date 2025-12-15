@@ -98,8 +98,8 @@ class BGPLS(NLRI):
     # Type declaration: subclasses may pass packed data or leave as empty
     _packed: Buffer
 
-    def __init__(self, action: Action = Action.UNSET, addpath: PathInfo | None = None) -> None:
-        NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
+    def __init__(self, addpath: PathInfo | None = None) -> None:
+        NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls)
         self._packed = b''
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
@@ -192,7 +192,6 @@ class BGPLS(NLRI):
             wire_format = bytes(data[0 : length + 4])
             klass = GenericBGPLS(code, wire_format)
 
-        klass.action = action
         klass.addpath = addpath
 
         return klass, data[length + 4 :]

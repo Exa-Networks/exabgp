@@ -18,7 +18,6 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from exabgp.bgp.message import Action
 from exabgp.configuration.static import ParseStaticRoute
 from exabgp.protocol.family import AFI, SAFI
 
@@ -211,8 +210,6 @@ def routes_add(
                     )
                     continue
 
-                route = route.with_action(Action.ANNOUNCE)
-
                 # Use indexed injection to get index
                 index, success = reactor.configuration.announce_route_indexed(peers, route)
 
@@ -310,8 +307,7 @@ def routes_remove(
 
             results = []
             for route in routes:
-                route = route.with_action(Action.WITHDRAW)
-                success = reactor.configuration.announce_route(peers, route)
+                success = reactor.configuration.withdraw_route(peers, route)
 
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 if success:

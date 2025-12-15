@@ -148,7 +148,6 @@ class MUP(NLRI):
 
         # Generic MUP for unrecognized route types - pass complete wire format
         mup = GenericMUP(afi, data[0:end])
-        mup.action = action
         mup.addpath = addpath
         return mup, data[end:]
 

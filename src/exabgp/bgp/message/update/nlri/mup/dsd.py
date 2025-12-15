@@ -105,7 +105,6 @@ class DirectSegmentDiscoveryRoute(MUP):
         if ip_size not in [4, 16]:
             raise Notify(3, 5, 'Invalid IP size, expect 4 or 16 octets. got %d' % ip_size)
         instance = cls(data, afi)
-        instance.action = action
         return instance, b''
 
     def json(self, compact: bool | None = None) -> str:

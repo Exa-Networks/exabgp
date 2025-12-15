@@ -109,7 +109,7 @@ class ParseFlowRoute(Section):
         # (avoids SAFI mutation which is incompatible with class-level SAFI)
         if route.nlri.rd is not RouteDistinguisher.NORD and route.nlri.safi != SAFI.flow_vpn:
             old_nlri = route.nlri
-            new_nlri = Flow.make_flow(old_nlri.afi, SAFI.flow_vpn, old_nlri.action)
+            new_nlri = Flow.make_flow(old_nlri.afi, SAFI.flow_vpn)
             # Transfer all data to new NLRI (nexthop is in Route, not NLRI)
             new_nlri._rd_override = old_nlri._rd_override
             new_nlri._rules_cache = old_nlri._rules_cache

@@ -62,12 +62,6 @@ class TestINETFromCidr:
         inet = INET.from_cidr(cidr, AFI.ipv4, SAFI.multicast)
         assert inet.safi == SAFI.multicast
 
-    def test_with_action(self):
-        """INET.from_cidr with explicit action."""
-        cidr = CIDR.from_ipv4(bytes([24, 10, 0, 0]))
-        inet = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, action=Action.ANNOUNCE)
-        assert inet.action == Action.ANNOUNCE
-
     def test_with_path_info(self):
         """INET.from_cidr with path info."""
         cidr = CIDR.from_ipv4(bytes([24, 10, 0, 0]))

@@ -446,7 +446,6 @@ class ParseStaticRoute(Section):
             nlri.cidr,
             nlri.afi,
             target_safi,
-            nlri.action,
             nlri.path_info,
             **kwargs,
         )
@@ -539,7 +538,7 @@ class ParseStaticRoute(Section):
             if rd is not None:
                 kwargs['rd'] = rd
 
-            new_nlri: Any = klass.from_cidr(new_cidr, afi, safi, Action.ANNOUNCE, **kwargs)
+            new_nlri: Any = klass.from_cidr(new_cidr, afi, safi, **kwargs)
             # next ip
             ip += increment
             yield Route(new_nlri, last.attributes, nexthop=nexthop)

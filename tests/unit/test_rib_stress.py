@@ -50,8 +50,11 @@ from exabgp.bgp.message import Action  # noqa: E402
 # ==============================================================================
 
 
-def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNCE) -> Route:
-    """Create a Route object for testing"""
+def create_change(prefix: str, afi: AFI = AFI.ipv4) -> Route:
+    """Create a Route object for testing.
+
+    Note: Action is no longer stored in Route - it's determined by which RIB method is called.
+    """
     # Parse prefix
     parts = prefix.split('/')
     ip_str = parts[0]
@@ -61,7 +64,7 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
 
     # Create NLRI with packed-bytes-first pattern
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
-    nlri = INET.from_cidr(cidr, afi, SAFI.unicast, action)
+    nlri = INET.from_cidr(cidr, afi, SAFI.unicast)
 
     # Create attributes
     attrs = AttributeCollection()
@@ -69,9 +72,12 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4, action: int = Action.ANNOUNC
     return Route(nlri, attrs, nexthop=IP_.NoNextHop)
 
 
-def create_watchdog_route(prefix: str, watchdog: str, action: int = Action.ANNOUNCE) -> Route:
-    """Create a Route with watchdog attribute"""
-    route = create_change(prefix, action=action)
+def create_watchdog_route(prefix: str, watchdog: str) -> Route:
+    """Create a Route with watchdog attribute.
+
+    Note: Action is no longer stored in Route - it's determined by which RIB method is called.
+    """
+    route = create_change(prefix)
     # Watchdog is stored separately, not in the route itself
     return route
 
@@ -678,6 +684,8 @@ def test_watchdog_memory_behavior():
     Location: outgoing.py:144-153
 
     Note: This test documents current behavior. A proper fix would add cleanup.
+    Note: Action is no longer stored in NLRI - the watchdog tracks '+' and '-' states
+          independently of route action.
     """
     rib = OutgoingRIB(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
@@ -697,7 +705,7 @@ def test_watchdog_memory_behavior():
         watchdog_name = f'dog_{i}'
         if watchdog_name in rib._watchdog:
             for change in list(rib._watchdog[watchdog_name].get('-', {}).values()):
-                change.nlri.action = Action.ANNOUNCE
+                # Move from '-' to '+' - action state is tracked by watchdog dict, not NLRI
                 rib._watchdog[watchdog_name].setdefault('+', {})[change.index()] = change
                 rib._watchdog[watchdog_name]['-'].pop(change.index(), None)
 
@@ -709,7 +717,7 @@ def test_watchdog_memory_behavior():
         watchdog_name = f'dog_{i}'
         if watchdog_name in rib._watchdog:
             for change in list(rib._watchdog[watchdog_name].get('+', {}).values()):
-                change.nlri.action = Action.WITHDRAW
+                # Move from '+' to '-' - action state is tracked by watchdog dict, not NLRI
                 rib._watchdog[watchdog_name].setdefault('-', {})[change.index()] = change
                 rib._watchdog[watchdog_name]['+'].pop(change.index(), None)
 

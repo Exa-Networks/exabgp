@@ -14,7 +14,6 @@ from exabgp.util.types import Buffer
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.nlri import NLRI
@@ -37,9 +36,8 @@ class EOR(Message):
 
         nexthop = IP.NoNextHop
 
-        def __init__(self, afi: AFI, safi: SAFI, action: Action) -> None:
-            NLRI.__init__(self, afi, safi, action)
-            self.action = action
+        def __init__(self, afi: AFI, safi: SAFI) -> None:
+            NLRI.__init__(self, afi, safi)
             self.afi = afi
             self.safi = safi
 
@@ -64,10 +62,10 @@ class EOR(Message):
                 return 4
             return self.MP_LENGTH
 
-    def __init__(self, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
+    def __init__(self, afi: AFI, safi: SAFI) -> None:
         Message.__init__(self)
         self.nlris = [
-            EOR.EOR_NLRI(afi, safi, action),
+            EOR.EOR_NLRI(afi, safi),
         ]
         self.attributes = AttributeCollection()
 

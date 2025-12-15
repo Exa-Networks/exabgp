@@ -479,23 +479,21 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
     # Process announces (have nexthop) and withdraws (no nexthop) separately
     for routed in update.announces:
         route = Route(routed.nlri, update.attributes, nexthop=routed.nexthop)
-        _route = route  # type: Route
         log.info(
             lazymsg(
                 'update.decoded action={action} extensive={extensive}',
-                action=_route.action,
-                extensive=_route.extensive(),
+                action=Action.ANNOUNCE,
+                extensive=route.extensive(),
             ),
             'parser',
         )
     for nlri in update.withdraws:
         route = Route(nlri, update.attributes, nexthop=IP.NoNextHop)
-        _route = route  # type: Route
         log.info(
             lazymsg(
                 'update.decoded action={action} extensive={extensive}',
-                action=_route.action,
-                extensive=_route.extensive(),
+                action=Action.WITHDRAW,
+                extensive=route.extensive(),
             ),
             'parser',
         )
