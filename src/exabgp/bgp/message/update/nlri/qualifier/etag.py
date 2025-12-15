@@ -6,9 +6,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-# TODO: take into account E-VPN specs that specify the role of the first bit of ESI
-# (since draft-ietf-l2vpn-evpn-05)
-
 from __future__ import annotations
 
 from struct import pack, unpack

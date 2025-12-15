@@ -7,7 +7,7 @@
 | Unit Tests | 3,404 | +149 since last update |
 | Test Coverage | ~60% | Target: 60%+ |
 | MyPy Errors | 244 | Mostly in `cli/completer.py` |
-| TODO/FIXME Comments | 33 | Down from 48 |
+| TODO/FIXME Comments | 15 | Valid feature gaps/tech debt markers |
 | AsyncIO Mode | Phase 2 | 100% test parity, not default yet |
 
 ---
@@ -18,7 +18,6 @@
 
 | Plan | Description |
 |------|-------------|
-| `comment-cleanup/` | XXX/TODO comment cleanup (Phase 6-7) |
 | `runtime-validation/` | Runtime crash prevention (BGP-LS done) |
 | `type-safety/` | MyPy error reduction |
 
@@ -34,6 +33,10 @@
 | `plan-update-context-attachment.md` | Global Update cache with SHA256 IDs |
 | `plan-type-identification-review.md` | hasattr() → ClassVar review |
 | `plan-addpath-nlri.md` | ADD-PATH for more NLRI types |
+| `plan-asn-conversion-refactor.md` | Consolidate ASN handling in aspath/aggregator |
+| `plan-extended-community-types.md` | Missing extended community types |
+| `plan-flowspec-improvements.md` | FlowSpec AFI/EOL bits refactoring |
+| `plan-validation-improvements.md` | Data validation enhancements |
 | `plan-architecture.md` | Circular dependency fixes |
 | `plan-code-quality.md` | Misc improvements (low priority) |
 | `plan-rib-improvement-proposals.md` | RIB improvement ideas (discussion) |
@@ -123,6 +126,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-comment-cleanup/` | 2025-12-15 | XXX/TODO comment cleanup (Phase 1-7) |
 | `done-nlri-immutability.md` | 2025-12-15 | NLRI immutability - remove nexthop from NLRI |
 | `done-rib-testing-comprehensive.md` | 2025-12-15 | 230 new RIB tests (8 files, P0-P3 complete) |
 | `done-buffer-protocol-audit.md` | 2025-12-15 | Migrate bytes→Buffer (117 files, 250 replacements) |

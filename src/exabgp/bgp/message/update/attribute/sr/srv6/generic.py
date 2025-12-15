@@ -28,8 +28,8 @@ class GenericSrv6ServiceSubTlv:
         return 'SRv6 Service Sub-TLV type %d not implemented' % self.code
 
     def json(self, compact: bool | None = None) -> str:
-        # TODO:
-        return ''
+        # Generic/unknown TLV - show type code and hex data
+        return f'{{"type": {self.code}, "raw": "{bytes(self._packed).hex()}"}}'
 
     def pack_tlv(self) -> bytes:
         return self._packed
@@ -57,8 +57,8 @@ class GenericSrv6ServiceDataSubSubTlv:
         return 'SRv6 Service Data Sub-Sub-TLV type %d not implemented' % self.code
 
     def json(self, compact: bool | None = None) -> str:
-        # TODO:
-        return ''
+        # Generic/unknown TLV - show type code and hex data
+        return f'{{"type": {self.code}, "raw": "{bytes(self._packed).hex()}"}}'
 
     def pack_tlv(self) -> bytes:
         return self._packed

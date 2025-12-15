@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from exabgp.util.types import Buffer
 
-# TODO: take into account E-VPN specs that specify the role of the first bit of ESI
-# (since draft-ietf-l2vpn-evpn-05)
+# NOTE: RFC 7432 defines ESI Types (0-5) in the first byte.
+# Current implementation treats ESI as opaque 10-byte value.
+# Future: parse ESI Type and validate type-specific formats.
 
 
 # Ethernet Segment Identifier

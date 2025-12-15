@@ -1,8 +1,8 @@
 # XXX/TODO Comment Cleanup
 
-**Status:** 🔄 IN PROGRESS - Phase 6-7 pending
+**Status:** ✅ COMPLETE
 **Started:** 2025-11-25
-**Updated:** 2025-12-09
+**Completed:** 2025-12-15
 
 ---
 
@@ -157,7 +157,7 @@
 
 ---
 
-## Phase 6: Remaining XXX Comments - 📋 PENDING
+## Phase 6: Remaining XXX Comments - ✅ COMPLETE
 
 **Total:** 31 XXX comments (28 in src/, 3 in vendoring/)
 
@@ -236,7 +236,7 @@
 
 ---
 
-## Phase 7: TODO Comments - 📋 PENDING
+## Phase 7: TODO Comments - ✅ COMPLETE
 
 **Total:** 21 TODO comments (20 in src/, 1 in vendoring/)
 
@@ -244,62 +244,62 @@
 
 | ID | File | Line | Comment | Status |
 |----|------|------|---------|--------|
-| 7.1.1 | `reactor/api/command/limit.py` | 179 | convert to generator | ⏳ Pending |
-| 7.1.2 | `reactor/api/processes.py` | 274 | ack-format config option | ⏳ Pending |
+| 7.1.1 | `reactor/api/command/limit.py` | 179 | convert to generator | ✅ Done (converted to yield, callers updated) |
+| 7.1.2 | `reactor/api/processes.py` | 274 | ack-format config option | 📋 Keep (valid enhancement) |
 
 ### 7.2 Data Validation (3 items)
 
 | ID | File | Line | Comment | Status |
 |----|------|------|---------|--------|
-| 7.2.1 | `data/check.py` | 214 | improve space check | ⏳ Pending |
-| 7.2.2 | `data/check.py` | 270 | extendedcommunity improve | ⏳ Pending |
-| 7.2.3 | `data/check.py` | 345 | redirect asn check | ⏳ Pending |
+| 7.2.1 | `data/check.py` | 214 | improve space check | 📋 Keep (documents known limitation) |
+| 7.2.2 | `data/check.py` | 270 | extendedcommunity improve | 📋 Keep (RFC 4360 coverage incomplete) |
+| 7.2.3 | `data/check.py` | 345 | redirect asn check | 📋 Keep (documents validation concern) |
 
 ### 7.3 Configuration (2 items)
 
 | ID | File | Line | Comment | Status |
 |----|------|------|---------|--------|
-| 7.3.1 | `configuration/static/parser.py` | 450 | OriginASN4Number (2,2) | ⏳ Pending |
-| 7.3.2 | `configuration/static/parser.py` | 453 | RouteTargetASN4Number (2,3) | ⏳ Pending |
+| 7.3.1 | `configuration/static/parser.py` | 450 | OriginASN4Number (2,2) | 📋 Keep (missing ext community type) |
+| 7.3.2 | `configuration/static/parser.py` | 453 | RouteTargetASN4Number (2,3) | 📋 Keep (missing ext community type) |
 
 ### 7.4 NLRI AddPath Support (5 items)
 
 | ID | File | Line | Comment | Status |
 |----|------|------|---------|--------|
-| 7.4.1 | `bgp/message/update/nlri/vpls.py` | 178 | addpath support | ⏳ Pending |
-| 7.4.2 | `bgp/message/update/nlri/mup/nlri.py` | 87 | addpath support | ⏳ Pending |
-| 7.4.3 | `bgp/message/update/nlri/bgpls/nlri.py` | 107 | addpath support | ⏳ Pending |
-| 7.4.4 | `bgp/message/update/nlri/mvpn/nlri.py` | 84 | addpath support | ⏳ Pending |
-| 7.4.5 | `bgp/message/update/nlri/evpn/nlri.py` | 117 | addpath support | ⏳ Pending |
+| 7.4.1 | `bgp/message/update/nlri/vpls.py` | 167 | addpath support | 📋 Keep (RFC 7911 feature gap) |
+| 7.4.2 | `bgp/message/update/nlri/mup/nlri.py` | 87 | addpath support | 📋 Keep (RFC 7911 feature gap) |
+| 7.4.3 | `bgp/message/update/nlri/bgpls/nlri.py` | 107 | addpath support | 📋 Keep (RFC 7911 feature gap) |
+| 7.4.4 | `bgp/message/update/nlri/mvpn/nlri.py` | 84 | addpath support | 📋 Keep (RFC 7911 feature gap) |
+| 7.4.5 | `bgp/message/update/nlri/evpn/nlri.py` | 117 | addpath support | 📋 Keep (RFC 7911 feature gap) |
 
 ### 7.5 EVPN/Qualifiers (2 items)
 
 | ID | File | Line | Comment | Status |
 |----|------|------|---------|--------|
-| 7.5.1 | `bgp/message/update/nlri/qualifier/etag.py` | 9 | E-VPN ESI specs | ⏳ Pending |
-| 7.5.2 | `bgp/message/update/nlri/qualifier/esi.py` | 13 | E-VPN ESI specs | ⏳ Pending |
+| 7.5.1 | `bgp/message/update/nlri/qualifier/etag.py` | 9 | E-VPN ESI specs | ✅ Removed (misplaced - etag != ESI) |
+| 7.5.2 | `bgp/message/update/nlri/qualifier/esi.py` | 13 | E-VPN ESI specs | ✅ Updated (NOTE with RFC 7432 ref) |
 
 ### 7.6 Attributes (2 items)
 
 | ID | File | Line | Comment | Status |
 |----|------|------|---------|--------|
-| 7.6.1 | `bgp/message/update/attribute/aggregator.py` | 134 | REFACTOR ASN conversion | ⏳ Pending |
-| 7.6.2 | `bgp/message/update/attribute/aspath.py` | 267 | REFACTOR ASN conversion | ⏳ Pending |
+| 7.6.1 | `bgp/message/update/attribute/aggregator.py` | 134 | REFACTOR ASN conversion | 📋 Keep (tech debt marker) |
+| 7.6.2 | `bgp/message/update/attribute/aspath.py` | 267 | REFACTOR ASN conversion | 📋 Keep (tech debt marker) |
 
 ### 7.7 SRv6 (2 items)
 
 | ID | File | Line | Comment | Status |
 |----|------|------|---------|--------|
-| 7.7.1 | `bgp/message/update/attribute/sr/srv6/generic.py` | 29 | incomplete | ⏳ Pending |
-| 7.7.2 | `bgp/message/update/attribute/sr/srv6/generic.py` | 58 | incomplete | ⏳ Pending |
+| 7.7.1 | `bgp/message/update/attribute/sr/srv6/generic.py` | 29 | incomplete | ✅ Done (returns type+hex JSON) |
+| 7.7.2 | `bgp/message/update/attribute/sr/srv6/generic.py` | 58 | incomplete | ✅ Done (returns type+hex JSON) |
 
-### 7.8 FlowSpec (2 items)
+### 7.8 FlowSpec (3 items)
 
 | ID | File | Line | Comment | Status |
 |----|------|------|---------|--------|
-| 7.8.1 | `bgp/message/update/nlri/flow.py` | 874 | AFI reset verify | ⏳ Pending |
-| 7.8.2 | `bgp/message/update/nlri/flow.py` | 897 | REFACTOR EOL bits | ⏳ Pending |
-| 7.8.3 | `bgp/message/update/nlri/flow.py` | 930 | addpath support | ⏳ Pending |
+| 7.8.1 | `bgp/message/update/nlri/flow.py` | 871 | AFI reset verify | 📋 Keep (documents AFI behavior) |
+| 7.8.2 | `bgp/message/update/nlri/flow.py` | 894 | REFACTOR EOL bits | 📋 Keep (tech debt marker) |
+| 7.8.3 | `bgp/message/update/nlri/flow.py` | 927 | addpath support | 📋 Keep (RFC 7911 feature gap) |
 
 ### 7.9 Vendored Code (1 item) - ⚠️ DO NOT MODIFY
 
@@ -311,12 +311,14 @@
 
 ## Summary
 
-| Phase | Category | Total | Resolved | Pending | Skipped |
-|-------|----------|-------|----------|---------|---------|
+| Phase | Category | Total | Resolved | Kept | Skipped |
+|-------|----------|-------|----------|------|---------|
 | 1-5 | Original XXX cleanup | 20 | 20 | 0 | 0 |
-| 6 | Remaining XXX | 31 | 0 | 28 | 3 |
-| 7 | TODO comments | 21 | 0 | 20 | 1 |
-| **Total** | | **72** | **20** | **48** | **4** |
+| 6 | Remaining XXX | 31 | 28 | 0 | 3 |
+| 7 | TODO comments | 21 | 5 | 15 | 1 |
+| **Total** | | **72** | **53** | **15** | **4** |
+
+**Note:** "Kept" TODOs are valid feature gaps, tech debt markers, or documentation of known limitations.
 
 ---
 

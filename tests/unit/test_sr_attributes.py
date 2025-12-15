@@ -909,8 +909,8 @@ class TestGenericSrv6:
         """Test JSON serialization of GenericSrv6ServiceSubTlv."""
         generic = GenericSrv6ServiceSubTlv(b'\x01\x02', code=99)
         json_str = generic.json()
-        # Returns empty string for unimplemented TLVs
-        assert json_str == ''
+        # Returns type code and raw hex data for unknown TLVs
+        assert json_str == '{"type": 99, "raw": "0102"}'
 
     def test_generic_service_data_subsubtlv(self) -> None:
         """Test GenericSrv6ServiceDataSubSubTlv."""
