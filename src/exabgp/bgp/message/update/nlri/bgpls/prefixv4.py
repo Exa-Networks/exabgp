@@ -60,19 +60,19 @@ class PREFIXv4(BGPLS):
     def __init__(
         self,
         packed: Buffer,
-        route_d: RouteDistinguisher | None = None,
+        route_d: RouteDistinguisher = RouteDistinguisher.NORD,
         addpath: PathInfo | None = None,
     ) -> None:
         """Create PREFIXv4 with complete wire format.
 
         Args:
             packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
-            route_d: Route Distinguisher (for VPN SAFI)
+            route_d: Route Distinguisher (for VPN SAFI), NORD if none
             addpath: AddPath path identifier
         """
         BGPLS.__init__(self, addpath)
         self._packed = packed
-        self.route_d: RouteDistinguisher | None = route_d
+        self.route_d: RouteDistinguisher = route_d
 
     @property
     def proto_id(self) -> int:
@@ -128,12 +128,12 @@ class PREFIXv4(BGPLS):
         return self._parse_tlvs()[2]
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher | None) -> PREFIXv4:
+    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher) -> PREFIXv4:
         """Unpack PREFIXv4 from complete wire format.
 
         Args:
             data: Complete wire format including 4-byte header [type(2)][length(2)][payload]
-            rd: Route Distinguisher (for VPN SAFI)
+            rd: Route Distinguisher (for VPN SAFI), NORD if none
         """
         # Data includes 4-byte header, payload starts at offset 4
         proto_id = unpack('!B', data[4:5])[0]

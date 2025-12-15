@@ -6,7 +6,6 @@ explicit AFI parameters, avoiding the /32 IPv6 misclassification bug.
 
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message import Action
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 

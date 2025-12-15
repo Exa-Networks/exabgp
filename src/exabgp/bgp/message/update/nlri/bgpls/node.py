@@ -58,19 +58,19 @@ class NODE(BGPLS):
     def __init__(
         self,
         packed: Buffer,
-        route_d: RouteDistinguisher | None = None,
+        route_d: RouteDistinguisher = RouteDistinguisher.NORD,
         addpath: PathInfo | None = None,
     ) -> None:
         """Create NODE with complete wire format.
 
         Args:
             packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
-            route_d: Route Distinguisher (for VPN SAFI)
+            route_d: Route Distinguisher (for VPN SAFI), NORD if none
             addpath: AddPath path identifier
         """
         BGPLS.__init__(self, addpath)
         self._packed = packed
-        self.route_d: RouteDistinguisher | None = route_d
+        self.route_d: RouteDistinguisher = route_d
 
     @classmethod
     def make_node(
@@ -78,7 +78,7 @@ class NODE(BGPLS):
         domain: int,
         proto_id: int,
         node_ids: list[NodeDescriptor],
-        route_d: RouteDistinguisher | None = None,
+        route_d: RouteDistinguisher = RouteDistinguisher.NORD,
         addpath: PathInfo | None = None,
     ) -> 'NODE':
         """Factory method to create NODE from semantic parameters.
@@ -148,12 +148,12 @@ class NODE(BGPLS):
         return f'{{ {content} }}'
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher | None) -> NODE:
+    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher) -> NODE:
         """Unpack NODE from complete wire format.
 
         Args:
             data: Complete wire format including 4-byte header [type(2)][length(2)][payload]
-            rd: Route Distinguisher (for VPN SAFI)
+            rd: Route Distinguisher (for VPN SAFI), NORD if none
         """
         # Data includes 4-byte header, payload starts at offset 4
         proto_id = unpack('!B', data[4:5])[0]

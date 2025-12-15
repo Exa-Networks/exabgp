@@ -363,7 +363,6 @@ def test_update_with_withdrawn_and_announced() -> None:
     announcing others.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.action import Action
     from tests.fuzz.update_helpers import (
         create_update_message,
         create_ipv4_prefix,
@@ -450,7 +449,6 @@ def test_update_only_withdrawals_no_attributes() -> None:
     When withdrawing routes, no path attributes are required.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.action import Action
     from tests.fuzz.update_helpers import create_update_message, create_ipv4_prefix
 
     negotiated = create_negotiated_mock()

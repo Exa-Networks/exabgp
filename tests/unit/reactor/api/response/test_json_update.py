@@ -221,7 +221,6 @@ class TestEORJSON:
         '"eor": {...}' which creates invalid JSON when embedded in a list).
         This test just verifies EOR doesn't crash and produces output.
         """
-        from exabgp.bgp.message import Action
 
         # Create EOR for IPv4 unicast
         eor = EOR(AFI.ipv4, SAFI.unicast)
@@ -238,7 +237,6 @@ class TestEORJSON:
 
     def test_eor_ipv6_unicast_produces_output(self, json_encoder: JSON) -> None:
         """Test EOR for IPv6 unicast produces some JSON output."""
-        from exabgp.bgp.message import Action
 
         # Create EOR for IPv6 unicast
         eor = EOR(AFI.ipv6, SAFI.unicast)
@@ -254,7 +252,6 @@ class TestEORJSON:
 
     def test_eor_has_eor_attribute(self) -> None:
         """Test that EOR class has EOR=True attribute."""
-        from exabgp.bgp.message import Action
 
         eor = EOR(AFI.ipv4, SAFI.unicast)
 
@@ -275,7 +272,6 @@ class TestEORJSON:
         The JSON encoder checks getattr(update_msg, 'EOR', False) to determine
         whether to use EOR path or UpdateCollection path.
         """
-        from exabgp.bgp.message import Action
 
         # EOR message
         eor = EOR(AFI.ipv4, SAFI.unicast)

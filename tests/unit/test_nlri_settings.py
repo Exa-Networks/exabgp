@@ -429,8 +429,6 @@ class TestINETFromSettings:
 
     def test_from_settings_preserves_action(self) -> None:
         """from_settings preserves action from settings"""
-        from exabgp.bgp.message.update.nlri.inet import INET
-        from exabgp.bgp.message.update.nlri.settings import INETSettings
 
         # Note: test_from_settings_preserves_action removed
         # Action is no longer stored in NLRI - it's determined by which RIB method is called
@@ -494,8 +492,6 @@ class TestLabelFromSettings:
 
     def test_from_settings_preserves_action(self) -> None:
         """from_settings preserves action from settings"""
-        from exabgp.bgp.message.update.nlri.label import Label
-        from exabgp.bgp.message.update.nlri.settings import INETSettings
 
         # Note: test_from_settings_preserves_action removed
         # Action is no longer stored in NLRI - it's determined by which RIB method is called
@@ -546,12 +542,9 @@ class TestIPVPNFromSettings:
 
     def test_from_settings_preserves_action(self) -> None:
         """from_settings preserves action from settings"""
-        from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
-        from exabgp.bgp.message.update.nlri.settings import INETSettings
-
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
         # Note: test_from_settings_preserves_action removed
         # Action is no longer stored in NLRI - it's determined by which RIB method is called
+        pass
 
     # Note: test_from_settings_preserves_nexthop removed
     # nexthop is now stored in Route, not NLRI

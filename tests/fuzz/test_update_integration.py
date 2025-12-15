@@ -64,13 +64,10 @@ def test_unpack_simple_withdrawal() -> None:
 
     result = UpdateCollection.unpack_message(data, negotiated)
 
-    # Should return Update object with nlris
+    # Should return Update object with withdrawals
     assert isinstance(result, UpdateCollection)
-    assert len(result.nlris) >= 1
-    # Should be withdrawal action
-    from exabgp.bgp.message.action import Action
-
-    assert result.nlris[0].action == Action.WITHDRAW
+    # Action is determined by list placement: withdraws list contains withdrawal NLRIs
+    assert len(result.withdraws) >= 1
 
 
 @pytest.mark.fuzz

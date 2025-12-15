@@ -110,9 +110,7 @@ class TestLabelPrefix:
     def test_prefix_with_labels(self) -> None:
         """Test prefix includes label information"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        label = Label.from_cidr(
-            cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100, 200], True)
-        )
+        label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100, 200], True))
 
         prefix = label.prefix()
         assert '192.168.1.0/24' in prefix
@@ -133,9 +131,7 @@ class TestLabelLength:
     def test_len_with_multiple_labels(self) -> None:
         """Test length with multiple labels"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        label = Label.from_cidr(
-            cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100, 200, 300], True)
-        )
+        label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100, 200, 300], True))
 
         # Each label is 3 bytes
         assert len(label) >= 9  # At least 3 labels * 3 bytes
@@ -147,28 +143,20 @@ class TestLabelEquality:
     def test_equal_routes(self) -> None:
         """Test that identical routes are equal"""
         cidr1 = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        label1 = Label.from_cidr(
-            cidr1, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100], True)
-        )
+        label1 = Label.from_cidr(cidr1, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100], True))
 
         cidr2 = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        label2 = Label.from_cidr(
-            cidr2, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100], True)
-        )
+        label2 = Label.from_cidr(cidr2, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100], True))
 
         assert label1 == label2
 
     def test_equal_checks_labels(self) -> None:
         """Test that routes with different labels are checked for equality"""
         cidr1 = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        label1 = Label.from_cidr(
-            cidr1, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100], True)
-        )
+        label1 = Label.from_cidr(cidr1, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100], True))
 
         cidr2 = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        label2 = Label.from_cidr(
-            cidr2, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([200], True)
-        )
+        label2 = Label.from_cidr(cidr2, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([200], True))
 
         # Equality is based on packed data, so different labels may be equal
         # if they pack the same way (unlikely, but test the comparison works)
@@ -231,9 +219,7 @@ class TestLabelPack:
 
         for mask in test_cases:
             cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), mask)
-            label = Label.from_cidr(
-                cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100], True)
-            )
+            label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100], True))
 
             packed = label.pack_nlri(create_negotiated())
             assert len(packed) > 0
@@ -249,9 +235,7 @@ class TestLabelPack:
     def test_pack_multiple_labels(self) -> None:
         """Test packing route with multiple labels"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        label = Label.from_cidr(
-            cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100, 200, 300], True)
-        )
+        label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100, 200, 300], True))
 
         packed = label.pack_nlri(create_negotiated())
         # Should include 3 labels
@@ -364,9 +348,7 @@ class TestLabelEdgeCases:
         """Test Label with maximum label value"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         # MPLS label is 20 bits, max value is 2^20-1 = 1048575
-        label = Label.from_cidr(
-            cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([1048575], True)
-        )
+        label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([1048575], True))
 
         packed = label.pack_nlri(create_negotiated())
         assert len(packed) > 0
@@ -410,9 +392,7 @@ class TestLabelMultipleRoutes:
 
         for afi, ip, mask, label_values in routes:
             cidr = CIDR.make_cidr(IP.pton(ip), mask)
-            label = Label.from_cidr(
-                cidr, afi, SAFI.nlri_mpls, labels=Labels.make_labels(label_values, True)
-            )
+            label = Label.from_cidr(cidr, afi, SAFI.nlri_mpls, labels=Labels.make_labels(label_values, True))
 
             packed = label.pack_nlri(create_negotiated())
             assert len(packed) > 0

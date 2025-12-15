@@ -9,7 +9,6 @@ Tests cover:
 
 import pytest
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.update.attribute import Attribute

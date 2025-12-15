@@ -176,14 +176,14 @@ class BGPLS(NLRI):
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:
                 # Extract Route Distinguisher (between header and payload)
-                rd: RouteDistinguisher | None = RouteDistinguisher.unpack_routedistinguisher(bytes(data[4:12]))
+                rd: RouteDistinguisher = RouteDistinguisher.unpack_routedistinguisher(bytes(data[4:12]))
                 # Reconstruct wire format without RD: [type(2)][length(2)][payload]
                 # Original length includes RD (8 bytes), subtract for payload-only length
                 payload_length = length - 8
                 wire_format = pack('!HH', code, payload_length) + bytes(data[12 : length + 4])
                 klass = cls.registered_bgpls[code].unpack_bgpls_nlri(wire_format, rd)
             else:
-                rd = None
+                rd = RouteDistinguisher.NORD
                 # Complete wire format including 4-byte header
                 wire_format = bytes(data[0 : length + 4])
                 klass = cls.registered_bgpls[code].unpack_bgpls_nlri(wire_format, rd)

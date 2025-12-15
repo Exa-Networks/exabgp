@@ -42,7 +42,6 @@ from exabgp.bgp.message.update.attribute.collection import AttributeCollection  
 from exabgp.bgp.message.update.attribute.origin import Origin  # noqa: E402
 from exabgp.rib.route import Route  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
-from exabgp.bgp.message import Action  # noqa: E402
 
 
 # ==============================================================================

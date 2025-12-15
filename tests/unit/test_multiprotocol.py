@@ -73,7 +73,6 @@ def test_mpreach_ipv4_unicast() -> None:
     MPNLRICollection is the semantic container that stores NLRIs
     and can generate MP_REACH_NLRI wire format.
     """
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.update.collection import RoutedNLRI
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -105,7 +104,6 @@ def test_mpreach_ipv6_unicast() -> None:
     IPv6 routing requires MP_REACH_NLRI as standard BGP UPDATE
     messages only support IPv4. This tests basic IPv6 prefix announcement.
     """
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.update.collection import RoutedNLRI
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -137,7 +135,6 @@ def test_mpreach_multiple_prefixes() -> None:
     A single MPNLRICollection can hold multiple prefixes
     of the same address family with the same next-hop.
     """
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.update.collection import RoutedNLRI
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -172,7 +169,6 @@ def test_mpreach_pack_ipv4() -> None:
     Verifies the wire format of MP_REACH_NLRI attribute.
     Format: AFI(2) + SAFI(1) + NH_LEN(1) + NEXTHOP(var) + RESERVED(1) + NLRI(var)
     """
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.update.collection import RoutedNLRI
     from exabgp.bgp.message.update.nlri import MPNLRICollection
@@ -211,7 +207,6 @@ def test_mpreach_nexthop_ipv6_global() -> None:
     IPv6 next-hops can be 16 bytes (global) or 32 bytes (global + link-local).
     This tests the global-only case.
     """
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.update.collection import RoutedNLRI
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -243,7 +238,6 @@ def test_mpunreach_ipv4_unicast() -> None:
     MP_UNREACH_NLRI is used to withdraw previously announced prefixes.
     Unlike MP_REACH_NLRI, it doesn't include next-hop information.
     """
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -271,7 +265,6 @@ def test_mpunreach_ipv6_unicast() -> None:
 
     IPv6 prefix withdrawals use MP_UNREACH_NLRI.
     """
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -295,7 +288,6 @@ def test_mpunreach_multiple_prefixes() -> None:
 
     A single MPNLRICollection can hold multiple prefixes for withdrawal.
     """
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -329,7 +321,6 @@ def test_mpunreach_pack_ipv4() -> None:
     Format: AFI(2) + SAFI(1) + NLRI(var)
     Note: No next-hop in MP_UNREACH_NLRI.
     """
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -481,7 +472,6 @@ def test_mpreach_equality() -> None:
 
     Two MPNLRICollections are equal if they have the same AFI, SAFI, and NLRI list.
     """
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
@@ -506,7 +496,6 @@ def test_mpreach_equality() -> None:
 
 def test_mpunreach_equality() -> None:
     """Test MPNLRICollection equality comparison for withdrawals."""
-    from exabgp.bgp.message import Action
     from exabgp.bgp.message.update.nlri import MPNLRICollection
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.inet import INET
