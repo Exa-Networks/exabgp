@@ -12,6 +12,7 @@ from exabgp.util import split
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.util.types import Buffer
 
 #   The IGP Route Tag TLV carries original IGP Tags (IS-IS [RFC5130] or
 #   OSPF) of the prefix and is encoded as follows:
@@ -39,7 +40,7 @@ class IgpTags(BaseLS):
         return [unpack('!L', chunk)[0] for chunk in split(self._packed, 4)]
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> IgpTags:
+    def unpack_bgpls(cls, data: Buffer) -> IgpTags:
         cls.check(data)
         return cls(data)
 

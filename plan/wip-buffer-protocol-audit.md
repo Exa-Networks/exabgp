@@ -1,6 +1,6 @@
 # Buffer Protocol Audit and Documentation
 
-**Status:** 🔄 Active
+**Status:** ✅ Complete
 **Created:** 2025-12-11
 **Updated:** 2025-12-15
 
@@ -155,15 +155,16 @@ src/exabgp/bgp/message/update/attribute/community/initial/communities.py (1)
 src/exabgp/bgp/message/update/nlri/qualifier/etag.py (1)
 ```
 
-### Files Needing Migration (82 files, 103 occurrences) ❌
+### Files Needing Migration (90 files total, 77 remaining)
 
-These should be changed from `data: bytes` to `data: Buffer`:
+Script audit found 90 files needing migration (more than original 82 estimate).
+Additional files include: `notification.py`, `logger/format.py`, `connection.py`, etc.
 
-#### Priority 1: Core Capabilities (14 files)
-High-traffic code paths:
+#### Priority 1: Core Capabilities (13 files) ✅ DONE
 
+Migrated 2025-12-15:
 ```
-src/exabgp/bgp/message/open/capability/capability.py (2)
+src/exabgp/bgp/message/open/capability/capability.py (3)
 src/exabgp/bgp/message/open/capability/mp.py (1)
 src/exabgp/bgp/message/open/capability/addpath.py (1)
 src/exabgp/bgp/message/open/capability/graceful.py (1)
@@ -175,7 +176,7 @@ src/exabgp/bgp/message/open/capability/hostname.py (1)
 src/exabgp/bgp/message/open/capability/software.py (1)
 src/exabgp/bgp/message/open/capability/ms.py (1)
 src/exabgp/bgp/message/open/capability/operational.py (1)
-src/exabgp/bgp/message/open/capability/unknown.py (1)
+src/exabgp/bgp/message/open/capability/unknown.py (3)
 ```
 
 #### Priority 2: Communities (12 files)
@@ -244,41 +245,54 @@ src/exabgp/protocol/iso/__init__.py (1)
 - [x] Update `CLAUDE.md` with Buffer requirement
 - [x] Update date stamps on all modified files
 
-### Phase 2: Migration Script
+### Phase 2: Migration Script ✅
 
-Create a Python script to perform the migration safely:
+Created `scripts/migrate_bytes_to_buffer.py`:
+- Lists files needing migration (`--list`)
+- Dry run mode (`--dry-run`)
+- Migrate by priority group (`--priority 1-5`)
+- Migrate all at once (`--all`)
+- Automatically adds Buffer import if missing
+- Replaces `data: bytes` with `data: Buffer` in signatures
 
-```python
-# Script to migrate bytes -> Buffer in unpack methods
-# 1. Find all files with `def unpack.*data: bytes`
-# 2. Add `from exabgp.util.types import Buffer` if not present
-# 3. Replace `data: bytes` with `data: Buffer` in unpack signatures
-# 4. Preserve all other code unchanged
-```
+### Phase 3: Priority 1 Migration (Capabilities) ✅
 
-### Phase 3: Priority 1 Migration (Capabilities)
+- [x] Migrate 13 capability files (18 replacements)
+- [x] Run `./qa/bin/test_everything` - All 15 tests pass
+- [ ] Commit (pending user request)
 
-- [ ] Migrate 14 capability files
-- [ ] Run `./qa/bin/test_everything`
-- [ ] Commit
+### Phase 4: Priority 2 Migration (Communities) ✅
 
-### Phase 4: Priority 2 Migration (Communities)
+- [x] Migrate 13 community files (30 replacements)
+- [x] Run `./qa/bin/test_everything` - All tests pass
 
-- [ ] Migrate 12 community files
-- [ ] Run `./qa/bin/test_everything`
-- [ ] Commit
+### Phase 5: Priority 3 Migration (BGP-LS) ✅
 
-### Phase 5: Priority 3 Migration (BGP-LS)
+- [x] Migrate 22 BGP-LS files (29 replacements)
+- [x] Run `./qa/bin/test_everything` - All tests pass
 
-- [ ] Migrate 35 BGP-LS files
-- [ ] Run `./qa/bin/test_everything`
-- [ ] Commit
+### Phase 6: Priority 4-5 + Remaining Migration ✅
 
-### Phase 6: Priority 4-5 Migration (SR + Other)
+- [x] Migrate 8 SR/SRv6 files (10 replacements)
+- [x] Migrate 2 other files (2 replacements)
+- [x] Migrate 32 additional files not in priority groups (40 replacements)
+- [x] Fix import placement bug in logger/format.py
+- [x] Run `./qa/bin/test_everything` - All 15 tests pass
 
-- [ ] Migrate remaining 11 files
-- [ ] Run `./qa/bin/test_everything`
-- [ ] Commit
+### Phase 7: Constructor and Storage Migration ✅
+
+- [x] Update migration script to handle `packed: bytes` and `_packed: bytes`
+- [x] Migrate 68 additional files (121 replacements)
+- [x] Run `./qa/bin/test_everything` - All 15 tests pass
+
+### All Migrations Complete ✅
+
+**Totals:**
+- 117 files modified
+- 250 type replacements:
+  - `data: bytes` → `data: Buffer` (129)
+  - `packed: bytes` → `packed: Buffer` (121)
+- 0 files remaining needing migration
 
 ---
 
@@ -296,10 +310,10 @@ No functional changes expected - only type hint updates.
 
 ## Success Criteria
 
-- [ ] All `.claude/` documentation updated with Buffer guidance
-- [ ] 0 occurrences of `def unpack.*data: bytes` (except where bytes is truly required)
-- [ ] All tests pass
-- [ ] Claude stops accidentally reverting Buffer to bytes
+- [x] All `.claude/` documentation updated with Buffer guidance
+- [x] 0 occurrences of `def unpack.*data: bytes` (verified via migration script)
+- [x] All tests pass (15/15)
+- [ ] Claude stops accidentally reverting Buffer to bytes (ongoing)
 
 ---
 

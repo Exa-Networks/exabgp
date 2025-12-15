@@ -342,7 +342,7 @@ class AttributeCollection(dict):
         length = data[2]
         return flag, attr, data[3 : length + 3]
 
-    def parse(self, data: bytes, negotiated: Negotiated) -> AttributeCollection:
+    def parse(self, data: Buffer, negotiated: Negotiated) -> AttributeCollection:
         if not data:
             return self
 
@@ -588,7 +588,7 @@ class Attributes:
     values are derived via properties.
     """
 
-    def __init__(self, packed: bytes, context: 'Negotiated | None' = None) -> None:
+    def __init__(self, packed: Buffer, context: 'Negotiated | None' = None) -> None:
         """Create Attributes from packed bytes.
 
         Args:

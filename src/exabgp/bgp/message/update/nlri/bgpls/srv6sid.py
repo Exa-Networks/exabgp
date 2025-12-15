@@ -21,6 +21,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SID
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.util import hexstring
+from exabgp.util.types import Buffer
 
 # BGP-LS SRv6 SID TLV type codes (RFC 9514)
 TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
@@ -62,7 +63,7 @@ class SRv6SID(BGPLS):
 
     def __init__(
         self,
-        packed: bytes,
+        packed: Buffer,
         action: Action = Action.UNSET,
         addpath: PathInfo | None = None,
     ) -> None:
@@ -136,7 +137,7 @@ class SRv6SID(BGPLS):
         return self._parse_tlvs()[1]
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> SRv6SID:
+    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher | None) -> SRv6SID:
         """Unpack SRv6SID from complete wire format.
 
         Args:

@@ -11,6 +11,7 @@ from typing import Callable
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.util.types import Buffer
 
 #    RFC 9514:  3.1.  SRv6 Capabilities TLV
 #     0                   1                   2                   3
@@ -72,7 +73,7 @@ class Srv6Capabilities(BaseLS):
         return cls(packed)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> Srv6Capabilities:
+    def unpack_bgpls(cls, data: Buffer) -> Srv6Capabilities:
         cls.check(data)
         return cls(data)
 

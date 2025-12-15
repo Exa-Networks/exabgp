@@ -10,6 +10,7 @@ from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
+from exabgp.util.types import Buffer
 
 #   The IGP Metric TLV carries the metric for this link.  The length of
 #   this TLV is variable, depending on the metric width of the underlying
@@ -62,7 +63,7 @@ class IgpMetric(BaseLS):
         raise Notify(3, 5, 'Incorrect IGP Metric Size')
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> IgpMetric:
+    def unpack_bgpls(cls, data: Buffer) -> IgpMetric:
         if len(data) not in (IGP_METRIC_SIZE_ISIS_SMALL, IGP_METRIC_SIZE_OSPF, IGP_METRIC_SIZE_ISIS_WIDE):
             raise Notify(3, 5, 'Incorrect IGP Metric Size')
         return cls(data)

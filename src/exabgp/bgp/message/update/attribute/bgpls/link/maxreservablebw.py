@@ -10,6 +10,7 @@ from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.util.types import Buffer
 
 
 # This sub-TLV contains the maximum amount of bandwidth that can be
@@ -41,6 +42,6 @@ class MaxReservableBw(BaseLS):
         return cls(pack('!f', bandwidth))
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> MaxReservableBw:
+    def unpack_bgpls(cls, data: Buffer) -> MaxReservableBw:
         cls.check(data)
         return cls(data)

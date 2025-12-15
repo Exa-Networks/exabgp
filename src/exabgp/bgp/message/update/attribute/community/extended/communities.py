@@ -38,7 +38,7 @@ class ExtendedCommunitiesBase(Attribute, ABC):
     ExtendedCommunitiesIPv6 (code 25).
     """
 
-    _packed: bytes
+    _packed: Buffer
 
     @property
     @abstractmethod
@@ -66,7 +66,7 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
     ID = Attribute.CODE.EXTENDED_COMMUNITY
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    def __init__(self, packed: bytes = b'') -> None:
+    def __init__(self, packed: Buffer = b'') -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -75,7 +75,7 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         Args:
             packed: Raw extended communities bytes (concatenated 8-byte extended communities)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'ExtendedCommunities':
@@ -171,9 +171,9 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
     ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    def __init__(self, packed: bytes = b'') -> None:
+    def __init__(self, packed: Buffer = b'') -> None:
         """Initialize from packed wire-format bytes."""
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'ExtendedCommunitiesIPv6':

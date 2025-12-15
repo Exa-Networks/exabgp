@@ -218,7 +218,7 @@ class Capabilities(dict[int, Capability]):
 
     @staticmethod
     def unpack(data: Buffer) -> Capabilities:
-        def _extended_type_length(name: str, data: bytes) -> tuple[int, bytes, bytes]:
+        def _extended_type_length(name: str, data: Buffer) -> tuple[int, bytes, bytes]:
             if len(data) < MIN_EXTENDED_PARAM_LEN:
                 raise Notify(
                     2,
@@ -241,7 +241,7 @@ class Capabilities(dict[int, Capability]):
             rest: bytes = data[boundary:]
             return key, value, rest
 
-        def _key_values(name: str, data: bytes) -> tuple[int, bytes, bytes]:
+        def _key_values(name: str, data: Buffer) -> tuple[int, bytes, bytes]:
             if len(data) < MIN_PARAM_LEN:
                 raise Notify(2, 0, 'Bad length for OPEN {} (<{}) {}'.format(name, MIN_PARAM_LEN, Capability.hex(data)))
             ld: int = data[1]

@@ -14,6 +14,7 @@ from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.util.types import Buffer
 
 
 #      0                   1                   2                   3
@@ -48,7 +49,7 @@ class Srlg(BaseLS):
         return cls(packed)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> Srlg:
+    def unpack_bgpls(cls, data: Buffer) -> Srlg:
         if len(data) % 4:
             raise Notify(3, 5, 'Unable to decode SRLG')
         return cls(data)

@@ -10,6 +10,7 @@ import json
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
+from exabgp.util.types import Buffer
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -45,7 +46,7 @@ class LinkName(BaseLS):
         return f'"{self.JSON}": {json.dumps(self._packed.decode("utf-8"))}'
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> LinkName:
+    def unpack_bgpls(cls, data: Buffer) -> LinkName:
         if len(data) > cls.BGPLS_TLV_MAX_LENGTH:
             raise Notify(3, 5, 'Link Name TLV length too large')
         return cls(data)

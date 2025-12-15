@@ -45,7 +45,7 @@ class GenericAttribute(Attribute):
             code: Attribute type code
             flag: Attribute flags
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
         self.ID: int = code
         self.FLAG: int = flag
 

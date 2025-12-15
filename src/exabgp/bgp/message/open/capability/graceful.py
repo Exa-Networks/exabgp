@@ -17,6 +17,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log, lazymsg
+from exabgp.util.types import Buffer
 
 # =========================================================== Graceful (Restart)
 # RFC 4727 - https://tools.ietf.org/html/rfc4727
@@ -74,7 +75,7 @@ class Graceful(Capability, dict[tuple[AFI, SAFI], int]):
         return self.keys()
 
     @classmethod
-    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+    def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         assert isinstance(instance, Graceful)
         # Check if this capability was already received (instance would have entries)
         if len(instance) > 0:

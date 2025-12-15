@@ -36,7 +36,7 @@ class MED(Attribute):
         Args:
             packed: Raw attribute value bytes (4-byte unsigned integer, network order)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'MED':

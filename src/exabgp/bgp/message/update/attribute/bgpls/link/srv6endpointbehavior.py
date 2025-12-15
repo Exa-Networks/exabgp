@@ -12,6 +12,7 @@ from struct import unpack
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.util.types import Buffer
 
 # Fixed data length for SRv6 Endpoint Behavior TLV (RFC 9514 Section 7.1)
 # Endpoint Behavior (2) + Flags (1) + Algorithm (1) = 4 bytes
@@ -68,7 +69,7 @@ class Srv6EndpointBehavior(BaseLS):
         return cls(packed)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> Srv6EndpointBehavior:
+    def unpack_bgpls(cls, data: Buffer) -> Srv6EndpointBehavior:
         if len(data) < SRV6_ENDPOINT_BEHAVIOR_LEN:
             raise Notify(
                 3,

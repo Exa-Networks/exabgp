@@ -9,6 +9,7 @@ from __future__ import annotations
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 #   |    1030   | IPv4 Router-ID of   |   134/---    | [RFC5305]/4.3    |
 #   |           | Remote Node         |              |                  |
@@ -33,7 +34,7 @@ class RemoteRouterId(BaseLS):
         return cls(IP.pton(ip))
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> RemoteRouterId:
+    def unpack_bgpls(cls, data: Buffer) -> RemoteRouterId:
         length = len(data)
         if length not in (4, 16):
             raise Notify(3, 5, 'Invalid remote-te size')

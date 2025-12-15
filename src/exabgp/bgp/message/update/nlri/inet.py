@@ -114,7 +114,7 @@ class INET(NLRI):
 
     __slots__ = ('_has_addpath', 'labels', 'rd')
 
-    def __init__(self, packed: bytes, afi: AFI, safi: SAFI = SAFI.unicast, *, has_addpath: bool = False) -> None:
+    def __init__(self, packed: Buffer, afi: AFI, safi: SAFI = SAFI.unicast, *, has_addpath: bool = False) -> None:
         """Create an INET NLRI from packed wire format bytes.
 
         Args:
@@ -206,7 +206,7 @@ class INET(NLRI):
         cls,
         afi: AFI,
         safi: SAFI,
-        packed: bytes,
+        packed: Buffer,
         mask: int,
         action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
@@ -373,7 +373,7 @@ class INET(NLRI):
         return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
 
     @classmethod
-    def _pathinfo(cls, data: bytes, addpath: Any) -> tuple[PathInfo, bytes]:
+    def _pathinfo(cls, data: Buffer, addpath: Any) -> tuple[PathInfo, bytes]:
         if addpath:
             return PathInfo(data[:4]), data[4:]
         return PathInfo.DISABLED, data

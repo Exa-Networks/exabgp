@@ -19,6 +19,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -57,7 +58,7 @@ class NODE(BGPLS):
 
     def __init__(
         self,
-        packed: bytes,
+        packed: Buffer,
         nexthop: IP = IP.NoNextHop,
         action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
@@ -137,7 +138,7 @@ class NODE(BGPLS):
         return f'{{ {content} }}'
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> NODE:
+    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher | None) -> NODE:
         """Unpack NODE from complete wire format.
 
         Args:

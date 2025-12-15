@@ -17,6 +17,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.protocol.ip import IP, IPv6
+from exabgp.util.types import Buffer
 
 # BGP-LS Sub-TLV header constants
 BGPLS_SUBTLV_HEADER_SIZE = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
@@ -58,7 +59,7 @@ OSPF = 2
 
 class Srv6(FlagLS):
     @classmethod
-    def _unpack_data(cls, data: bytes, protocol_type: int) -> dict[str, object]:
+    def _unpack_data(cls, data: Buffer, protocol_type: int) -> dict[str, object]:
         min_length = SRV6_LAN_ENDX_ISIS_MIN_LENGTH if protocol_type == ISIS else SRV6_LAN_ENDX_OSPF_MIN_LENGTH
         if len(data) < min_length:
             proto_name = 'ISIS' if protocol_type == ISIS else 'OSPF'
@@ -111,7 +112,7 @@ class Srv6LanEndXISIS(Srv6):
     MERGE = True  # LinkState.json() will group into array
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize with packed bytes."""
         self._packed = packed
 
@@ -145,7 +146,7 @@ class Srv6LanEndXISIS(Srv6):
         return decorator
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXISIS:
+    def unpack_bgpls(cls, data: Buffer) -> Srv6LanEndXISIS:
         return cls(data)
 
     @classmethod
@@ -202,7 +203,7 @@ class Srv6LanEndXOSPF(Srv6):
     MERGE = True  # LinkState.json() groups into array
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize with packed bytes."""
         self._packed = packed
 
@@ -236,7 +237,7 @@ class Srv6LanEndXOSPF(Srv6):
         return decorator
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> Srv6LanEndXOSPF:
+    def unpack_bgpls(cls, data: Buffer) -> Srv6LanEndXOSPF:
         return cls(data)
 
     @classmethod

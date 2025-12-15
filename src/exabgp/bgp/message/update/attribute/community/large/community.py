@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.util.types import Buffer
 
 
 class LargeCommunity(Attribute):
@@ -27,7 +28,7 @@ class LargeCommunity(Attribute):
     _instance_cache: ClassVar[dict[bytes, LargeCommunity]] = {}
     caching: ClassVar[bool] = True
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -36,10 +37,10 @@ class LargeCommunity(Attribute):
         Args:
             packed: Raw large community bytes (12 bytes)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'LargeCommunity':
+    def from_packet(cls, data: Buffer) -> 'LargeCommunity':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -125,11 +126,11 @@ class LargeCommunity(Attribute):
         return 12
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'LargeCommunity':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'LargeCommunity':
         return cls.from_packet(data)
 
     @classmethod
-    def cached(cls, packed: bytes) -> 'LargeCommunity':
+    def cached(cls, packed: Buffer) -> 'LargeCommunity':
         if not cls.caching:
             return cls(packed)
         if packed in cls._instance_cache:

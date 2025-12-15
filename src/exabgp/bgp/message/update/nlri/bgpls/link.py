@@ -24,6 +24,7 @@ from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # BGP-LS Link TLV type codes (RFC 7752)
 TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
@@ -84,7 +85,7 @@ class LINK(BGPLS):
 
     def __init__(
         self,
-        packed: bytes,
+        packed: Buffer,
         nexthop: IP = IP.NoNextHop,
         action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
@@ -189,7 +190,7 @@ class LINK(BGPLS):
         return self._parse_tlvs()[5]
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> LINK:
+    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher | None) -> LINK:
         """Unpack LINK from complete wire format.
 
         Args:

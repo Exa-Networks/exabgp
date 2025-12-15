@@ -20,6 +20,7 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # ------------ EVPN Prefix Advertisement NLRI ------------
 # As described here:
@@ -61,7 +62,7 @@ class Prefix(EVPN):
     NAME: ClassVar[str] = 'IP Prefix Advertisement'
     SHORT_NAME: ClassVar[str] = 'PrfxAdv'
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Create Prefix from complete wire-format bytes.
 
         Args:
@@ -197,7 +198,7 @@ class Prefix(EVPN):
         return hash('{}:{}:{}:{}'.format(self.rd, self.etag, self.ip, self.iplen))
 
     @classmethod
-    def unpack_evpn(cls, packed: bytes) -> EVPN:
+    def unpack_evpn(cls, packed: Buffer) -> EVPN:
         """Unpack Prefix from complete wire format bytes.
 
         Args:

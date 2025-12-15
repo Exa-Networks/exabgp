@@ -116,7 +116,7 @@ class MVPN(NLRI):
         return klass
 
     @classmethod
-    def unpack_mvpn(cls, data: bytes, afi: AFI) -> 'MVPN':
+    def unpack_mvpn(cls, data: Buffer, afi: AFI) -> 'MVPN':
         """Unpack MVPN route from bytes. Must be implemented by subclasses."""
         raise NotImplementedError('unpack_mvpn must be implemented by subclasses')
 

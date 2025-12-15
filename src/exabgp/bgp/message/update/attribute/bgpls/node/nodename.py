@@ -12,6 +12,7 @@ from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.util.types import Buffer
 
 
 #      0                   1                   2                   3
@@ -52,7 +53,7 @@ class NodeName(BaseLS):
         return cls(name.encode('ascii'))
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> NodeName:
+    def unpack_bgpls(cls, data: Buffer) -> NodeName:
         if len(data) > MAX_NODE_NAME_LENGTH:
             raise Notify(3, 5, 'Node Name TLV length too large')
         return cls(data)

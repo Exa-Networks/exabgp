@@ -34,7 +34,7 @@ class Communities(Attribute):
     ID = Attribute.CODE.COMMUNITY
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    def __init__(self, packed: bytes = b'') -> None:
+    def __init__(self, packed: Buffer = b'') -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -43,7 +43,7 @@ class Communities(Attribute):
         Args:
             packed: Raw communities bytes (concatenated 4-byte communities)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'Communities':

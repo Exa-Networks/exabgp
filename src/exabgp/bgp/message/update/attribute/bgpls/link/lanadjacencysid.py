@@ -16,6 +16,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+from exabgp.util.types import Buffer
 
 # Minimum data length for SR Adjacency LAN SID TLV
 # Flags (1) + Weight (1) + Reserved (2) + System-ID (6) = 10 bytes
@@ -53,7 +54,7 @@ class LanAdjacencySid(FlagLS):
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
     MERGE = True
 
-    def __init__(self, packed: bytes, parsed_sids: list[dict[str, Any]] | None = None) -> None:
+    def __init__(self, packed: Buffer, parsed_sids: list[dict[str, Any]] | None = None) -> None:
         """Initialize with packed bytes and optionally pre-parsed content."""
         self._packed = packed
         self._sr_adj_lan_sids: list[dict[str, Any]] = parsed_sids if parsed_sids else []
@@ -67,7 +68,7 @@ class LanAdjacencySid(FlagLS):
         return f'sr-adj-lan-sids: {self.sr_adj_lan_sids}'
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> LanAdjacencySid:
+    def unpack_bgpls(cls, data: Buffer) -> LanAdjacencySid:
         if len(data) < SRADJ_LAN_MIN_LENGTH:
             raise Notify(
                 3, 5, f'SR Adjacency LAN SID: data too short, need {SRADJ_LAN_MIN_LENGTH} bytes, got {len(data)}'

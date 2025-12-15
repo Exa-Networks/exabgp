@@ -17,6 +17,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.util.types import Buffer
 
 # ================================================================ Encapsulation
 # RFC 5512
@@ -51,7 +52,7 @@ class Encapsulation(ExtendedCommunity):
         Type.MPLS_UDP: 'MPLS-in-UDP',
     }
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
@@ -69,5 +70,5 @@ class Encapsulation(ExtendedCommunity):
         return 'encap:{}'.format(Encapsulation._string.get(self.tunnel_type, 'encap:UNKNOWN-%d' % self.tunnel_type))
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> Encapsulation:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> Encapsulation:
         return cls(data[:8])

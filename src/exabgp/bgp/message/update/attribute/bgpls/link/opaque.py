@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.util.types import Buffer
 
 #
 #     0                   1                   2                   3
@@ -34,5 +35,5 @@ class LinkOpaque(BaseLS):
         return self._packed
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> LinkOpaque:
+    def unpack_bgpls(cls, data: Buffer) -> LinkOpaque:
         return cls(data)

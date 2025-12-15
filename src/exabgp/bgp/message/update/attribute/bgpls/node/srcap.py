@@ -11,6 +11,7 @@ from struct import pack, unpack
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.notification import Notify
+from exabgp.util.types import Buffer
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #   0                   1                   2                   3
@@ -96,7 +97,7 @@ class SrCapabilities(FlagLS):
         return '{}: {}, sids: {}'.format(self.REPR, self.flags, self.sids)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> SrCapabilities:
+    def unpack_bgpls(cls, data: Buffer) -> SrCapabilities:
         if len(data) < SRCAP_MIN_LENGTH:
             raise Notify(3, 5, f'SR Capabilities: data too short, need {SRCAP_MIN_LENGTH} bytes, got {len(data)}')
         # Validate structure before storing

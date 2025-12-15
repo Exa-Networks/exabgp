@@ -13,6 +13,7 @@ from exabgp.util import hexstring
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+from exabgp.util.types import Buffer
 
 # Minimum data length for SR Adjacency SID TLV
 # Flags (1) + Weight (1) + Reserved (2) = 4 bytes
@@ -93,7 +94,7 @@ class AdjacencySid(FlagLS):
         return 'adj_flags: {}, sids: {}, undecoded_sid {}'.format(self.flags, self.sids, self.undecoded)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> AdjacencySid:
+    def unpack_bgpls(cls, data: Buffer) -> AdjacencySid:
         if len(data) < SRADJ_MIN_LENGTH:
             raise Notify(3, 5, f'SR Adjacency SID: data too short, need {SRADJ_MIN_LENGTH} bytes, got {len(data)}')
         return cls(data)

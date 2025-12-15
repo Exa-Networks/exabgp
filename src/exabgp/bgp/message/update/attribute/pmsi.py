@@ -54,7 +54,7 @@ class PMSI(Attribute):
         7: 'mLDP MP2MP LSP',
     }
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize PMSI from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -63,7 +63,7 @@ class PMSI(Attribute):
         Args:
             packed: Raw attribute value bytes (flags:1 + tunnel_type:1 + label:3 + tunnel:variable)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'PMSI':

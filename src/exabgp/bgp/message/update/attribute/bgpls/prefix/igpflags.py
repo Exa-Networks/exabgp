@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+from exabgp.util.types import Buffer
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -40,7 +41,7 @@ class IgpFlags(FlagLS):
     LEN = 1
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> IgpFlags:
+    def unpack_bgpls(cls, data: Buffer) -> IgpFlags:
         cls.check(data)
         return cls(data)
 

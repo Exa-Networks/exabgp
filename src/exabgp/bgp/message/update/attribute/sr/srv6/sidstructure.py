@@ -11,6 +11,7 @@ from struct import pack
 from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
+from exabgp.util.types import Buffer
 
 # 3.2.1.  SRv6 SID Structure Sub-Sub-TLV
 #
@@ -38,10 +39,10 @@ class Srv6SidStructure:
 
     registered_subsubtlvs: ClassVar[dict[int, type]] = dict()
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         if len(packed) != self.LENGTH:
             raise ValueError(f'Srv6SidStructure requires exactly {self.LENGTH} bytes, got {len(packed)}')
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def make_sid_structure(
@@ -82,7 +83,7 @@ class Srv6SidStructure:
         return self._packed[5]
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, length: int) -> Srv6SidStructure:
+    def unpack_attribute(cls, data: Buffer, length: int) -> Srv6SidStructure:
         # Validation happens in __init__
         return cls(data[: cls.LENGTH])
 

@@ -14,6 +14,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.util.types import Buffer
 
 # ================================================================== MacMobility
 # RFC 7432 Section 7.7.
@@ -25,7 +26,7 @@ class MacMobility(ExtendedCommunity):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
     DESCRIPTION: ClassVar[str] = 'mac-mobility'
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
@@ -53,5 +54,5 @@ class MacMobility(ExtendedCommunity):
         return s
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> MacMobility:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> MacMobility:
         return cls(data[:8])

@@ -10,6 +10,7 @@ from __future__ import annotations
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.logger import log, lazymsg
+from exabgp.util.types import Buffer
 
 # ================================================================= RouteRefresh
 #
@@ -60,7 +61,7 @@ class RouteRefresh(Capability):
         return [b'']
 
     @classmethod
-    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+    def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         assert isinstance(instance, RouteRefresh)
         if instance._seen:
             log.debug(lazymsg('capability.route_refresh.duplicate'), 'parser')
@@ -107,7 +108,7 @@ class EnhancedRouteRefresh(Capability):
         return [b'']
 
     @classmethod
-    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+    def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         assert isinstance(instance, EnhancedRouteRefresh)
         if instance._seen:
             log.debug(lazymsg('capability.enhanced_route_refresh.duplicate'), 'parser')

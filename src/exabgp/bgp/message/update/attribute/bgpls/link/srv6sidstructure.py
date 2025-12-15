@@ -13,6 +13,7 @@ from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEndXISIS, Srv6LanEndXOSPF
+from exabgp.util.types import Buffer
 
 # Fixed data length for SRv6 SID Structure TLV (RFC 9514 Section 8)
 # LB Length (1) + LN Length (1) + Function Length (1) + Argument Length (1) = 4 bytes
@@ -77,7 +78,7 @@ class Srv6SidStructure(BaseLS):
         return cls(packed)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> Srv6SidStructure:
+    def unpack_bgpls(cls, data: Buffer) -> Srv6SidStructure:
         if len(data) < SRV6_SID_STRUCTURE_LEN:
             raise Notify(
                 3, 5, f'SRv6 SID Structure: data too short, need {SRV6_SID_STRUCTURE_LEN} bytes, got {len(data)}'

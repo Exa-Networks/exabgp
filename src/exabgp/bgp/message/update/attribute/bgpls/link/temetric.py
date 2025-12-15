@@ -10,6 +10,7 @@ from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.util.types import Buffer
 
 
 #     0                   1                   2                   3
@@ -41,6 +42,6 @@ class TeMetric(BaseLS):
         return cls(pack('!I', metric))
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> TeMetric:
+    def unpack_bgpls(cls, data: Buffer) -> TeMetric:
         cls.check(data)
         return cls(data)

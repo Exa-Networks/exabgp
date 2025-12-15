@@ -325,7 +325,7 @@ class AS4Path(ASPath):
 
     Empty: ClassVar[AS4Path | None] = None
 
-    def __init__(self, packed: bytes, asn4: bool = True) -> None:
+    def __init__(self, packed: Buffer, asn4: bool = True) -> None:
         """Initialize from packed wire-format bytes.
 
         AS4Path always uses 4-byte ASNs, so asn4 parameter is ignored.

@@ -14,6 +14,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
 from exabgp.protocol.ip import IPv6
 from exabgp.util import hexstring
+from exabgp.util.types import Buffer
 
 # Minimum data length for SRv6 End.X SID TLV (RFC 9514 Section 4.1)
 # Endpoint Behavior (2) + Flags (1) + Algorithm (1) + Weight (1) + Reserved (1) + SID (16) = 22 bytes
@@ -47,7 +48,7 @@ class Srv6EndX(FlagLS):
     MERGE = True  # LinkState.json() groups into array
     registered_subsubtlvs: dict[int, type] = dict()
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize with packed bytes."""
         self._packed = packed
 
@@ -76,7 +77,7 @@ class Srv6EndX(FlagLS):
         return decorator
 
     @classmethod
-    def _unpack_data(cls, data: bytes) -> dict[str, object]:
+    def _unpack_data(cls, data: Buffer) -> dict[str, object]:
         """Parse SRv6 End.X SID TLV data into dict."""
         if len(data) < SRV6_ENDX_MIN_LENGTH:
             raise Notify(3, 5, f'SRv6 End.X SID: data too short, need {SRV6_ENDX_MIN_LENGTH} bytes, got {len(data)}')
@@ -113,7 +114,7 @@ class Srv6EndX(FlagLS):
         }
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> Srv6EndX:
+    def unpack_bgpls(cls, data: Buffer) -> Srv6EndX:
         return cls(data)
 
     @classmethod

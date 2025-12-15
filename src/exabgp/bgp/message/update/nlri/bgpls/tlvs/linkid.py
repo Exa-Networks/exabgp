@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from struct import pack, unpack
 
+from exabgp.util.types import Buffer
+
 
 #       0                   1                   2                   3
 #       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -22,13 +24,13 @@ from struct import pack, unpack
 
 
 class LinkIdentifier:
-    def __init__(self, local_id: int, remote_id: int, packed: bytes | None = None) -> None:
+    def __init__(self, local_id: int, remote_id: int, packed: Buffer | None = None) -> None:
         self.local_id = local_id
         self.remote_id = remote_id
         self._packed = packed if packed is not None else pack('!LL', local_id, remote_id)
 
     @classmethod
-    def unpack_linkid(cls, data: bytes) -> 'LinkIdentifier':
+    def unpack_linkid(cls, data: Buffer) -> 'LinkIdentifier':
         local_id = unpack('!L', data[:4])[0]
         remote_id = unpack('!L', data[4:8])[0]
         return cls(local_id=local_id, remote_id=remote_id, packed=data[:8])

@@ -13,6 +13,7 @@ from exabgp.util import hexstring
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+from exabgp.util.types import Buffer
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -91,7 +92,7 @@ class PrefixSid(FlagLS):
         return 'prefix_flags: {}, sids: {}, undecoded_sid: {}'.format(self.flags, self.sids, self.undecoded)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> PrefixSid:
+    def unpack_bgpls(cls, data: Buffer) -> PrefixSid:
         if len(data) < SRPREFIX_MIN_LENGTH:
             raise Notify(3, 5, f'SR Prefix SID: data too short, need {SRPREFIX_MIN_LENGTH} bytes, got {len(data)}')
         # Validation for V/L flags and SID length

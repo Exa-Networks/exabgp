@@ -182,7 +182,7 @@ class IPrefix4(IPrefix, IComponent, IPv4):
     # not used, just present for simplying the nlri generation
     operations: int = 0x0
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Create from wire format bytes [mask][truncated_ip...].
 
         Args:
@@ -247,7 +247,7 @@ class IPrefix6(IPrefix, IComponent, IPv6):
     # not used, just present for simplying the nlri generation
     operations: int = 0x0
 
-    def __init__(self, packed: bytes, offset: int) -> None:
+    def __init__(self, packed: Buffer, offset: int) -> None:
         """Create from wire format bytes [mask][truncated_ip...] and offset.
 
         Args:
@@ -688,7 +688,7 @@ class Flow(NLRI):
 
     nexthop: Any
 
-    def __init__(self, packed: bytes, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
+    def __init__(self, packed: Buffer, afi: AFI, safi: SAFI, action: Action = Action.UNSET) -> None:
         """Create a Flow NLRI from wire format bytes.
 
         Args:

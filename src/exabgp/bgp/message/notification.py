@@ -106,7 +106,7 @@ class Notification(Message, Exception):
         self._packed = packed
 
     @classmethod
-    def make_notification(cls, code: int, subcode: int, data: bytes = b'') -> 'Notification':
+    def make_notification(cls, code: int, subcode: int, data: Buffer = b'') -> 'Notification':
         return cls(bytes([code, subcode]) + data)
 
     @property

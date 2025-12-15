@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.util import hexstring
+from exabgp.util.types import Buffer
 
 # =====================================================================
 # draft-ietf-idr-bgp-prefix-sid
@@ -38,9 +39,9 @@ class PrefixSid(Attribute):
     # Registered subclasses we know how to decode
     registered_srids: ClassVar[dict[int, Type[Any]]] = dict()
 
-    def __init__(self, sr_attrs: list[Any], packed: bytes | None = None) -> None:
+    def __init__(self, sr_attrs: list[Any], packed: Buffer | None = None) -> None:
         self.sr_attrs: list[Any] = sr_attrs
-        self._packed: bytes = self._attribute(packed if packed else b''.join(_.pack_tlv() for _ in sr_attrs))
+        self._packed: Buffer = self._attribute(packed if packed else b''.join(_.pack_tlv() for _ in sr_attrs))
 
     @classmethod
     def register_sr(cls, srid: int | None = None, flag: int | None = None) -> Callable[[Type[Any]], Type[Any]]:
@@ -54,7 +55,7 @@ class PrefixSid(Attribute):
         return register_srid
 
     @classmethod
-    def unpack_attribute(cls: Type[T], data: bytes, negotiated: Negotiated) -> T:
+    def unpack_attribute(cls: Type[T], data: Buffer, negotiated: Negotiated) -> T:
         sr_attrs: list[Any] = []
         while data:
             # TLV header: Type(1) + Length(2) = 3 bytes minimum
@@ -107,7 +108,7 @@ class GenericSRId:
         return 'Attribute with code [ {} ] not implemented'.format(self.code)
 
     @classmethod
-    def unpack_attribute(cls, scode: int, data: bytes) -> GenericSRId:
+    def unpack_attribute(cls, scode: int, data: Buffer) -> GenericSRId:
         return cls(code=scode, rep=data)
 
     def json(self, compact: bool | None = None) -> str:

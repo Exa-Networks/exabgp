@@ -30,7 +30,7 @@ class Origin(Attribute):
     EGP: ClassVar[int] = 0x01
     INCOMPLETE: ClassVar[int] = 0x02
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize Origin from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -39,7 +39,7 @@ class Origin(Attribute):
         Args:
             packed: Raw attribute value bytes (single byte: 0=IGP, 1=EGP, 2=INCOMPLETE)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'Origin':

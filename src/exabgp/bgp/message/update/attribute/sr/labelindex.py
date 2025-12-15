@@ -12,6 +12,7 @@ from struct import pack, unpack
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
+from exabgp.util.types import Buffer
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -30,10 +31,10 @@ class SrLabelIndex:
     TLV: ClassVar[int] = 1
     LENGTH: ClassVar[int] = 7
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         if len(packed) != self.LENGTH:
             raise ValueError(f'SrLabelIndex requires exactly {self.LENGTH} bytes, got {len(packed)}')
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def make_labelindex(cls, labelindex: int) -> 'SrLabelIndex':
@@ -55,7 +56,7 @@ class SrLabelIndex:
         return pack('!B', self.TLV) + pack('!H', self.LENGTH) + self._packed
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, length: int) -> SrLabelIndex:
+    def unpack_attribute(cls, data: Buffer, length: int) -> SrLabelIndex:
         if length != cls.LENGTH:
             raise Notify(3, 5, f'Invalid TLV size. Should be {cls.LENGTH} but {length} received')
         # Data is: Reserved(1) + Flags(2) + LabelIndex(4) = 7 bytes

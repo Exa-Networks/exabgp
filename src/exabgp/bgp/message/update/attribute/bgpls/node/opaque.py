@@ -10,6 +10,7 @@ import json
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.util.types import Buffer
 
 #
 #     0                   1                   2                   3
@@ -32,7 +33,7 @@ class NodeOpaque(BaseLS):
     JSON = 'opaque'
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> NodeOpaque:
+    def unpack_bgpls(cls, data: Buffer) -> NodeOpaque:
         return cls(data)
 
     @property
@@ -44,7 +45,7 @@ class NodeOpaque(BaseLS):
         return f'"{self.JSON}": {json.dumps(self._packed.hex())}'
 
     @classmethod
-    def make_node_opaque(cls, data: bytes) -> NodeOpaque:
+    def make_node_opaque(cls, data: Buffer) -> NodeOpaque:
         """Create NodeOpaque from opaque data bytes.
 
         Args:

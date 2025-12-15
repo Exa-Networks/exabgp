@@ -17,6 +17,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.util.types import Buffer
 
 # ============================================================ Layer2Information
 # RFC 4761
@@ -27,7 +28,7 @@ class L2Info(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0A
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
@@ -61,5 +62,5 @@ class L2Info(ExtendedCommunity):
         return 'l2info:{}:{}:{}:{}'.format(self.encaps, self.control, self.mtu, self.reserved)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> L2Info:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> L2Info:
         return cls(data[:8])

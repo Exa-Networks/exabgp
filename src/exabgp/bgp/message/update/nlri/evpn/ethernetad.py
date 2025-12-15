@@ -13,6 +13,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.util.types import Buffer
 
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
@@ -39,7 +40,7 @@ class EthernetAD(EVPN):
     NAME: ClassVar[str] = 'Ethernet Auto-Discovery'
     SHORT_NAME: ClassVar[str] = 'EthernetAD'
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Create EthernetAD from complete wire-format bytes.
 
         Args:
@@ -114,7 +115,7 @@ class EthernetAD(EVPN):
         return hash((self.rd, self.etag))
 
     @classmethod
-    def unpack_evpn(cls, packed: bytes) -> EVPN:
+    def unpack_evpn(cls, packed: Buffer) -> EVPN:
         """Unpack EthernetAD from complete wire format bytes.
 
         Args:

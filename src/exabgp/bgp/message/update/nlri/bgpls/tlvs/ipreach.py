@@ -11,6 +11,8 @@ from __future__ import annotations
 from struct import unpack
 from ipaddress import ip_address
 
+from exabgp.util.types import Buffer
+
 #   The IP Reachability Information TLV is a mandatory TLV that contains
 #   one IP address prefix (IPv4 or IPv6) originally advertised in the IGP
 #   topology.  Its purpose is to glue a particular BGP service NLRI by
@@ -33,13 +35,13 @@ PROTOCOL_ID_IPV6 = 4  # IPv6 protocol identifier
 
 
 class IpReach:
-    def __init__(self, prefix: str, plength: int, packed: bytes) -> None:
+    def __init__(self, prefix: str, plength: int, packed: Buffer) -> None:
         self.prefix = prefix
         self.plength = plength
         self._packed = packed
 
     @classmethod
-    def unpack_ipreachability(cls, data: bytes, code: int) -> 'IpReach':
+    def unpack_ipreachability(cls, data: Buffer, code: int) -> 'IpReach':
         # FIXME
         # There seems to be a bug in the Cisco Xr implementation
         # that causes the Prefix IP field to be one octet less than

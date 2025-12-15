@@ -48,14 +48,16 @@ from __future__ import annotations
 
 import struct
 
+from exabgp.util.types import Buffer
+
 
 class MTID:
-    def __init__(self, topologies: int, packed: bytes) -> None:
+    def __init__(self, topologies: int, packed: Buffer) -> None:
         self.topologies = topologies
         self._packed = packed
 
     @classmethod
-    def unpack_mtid(cls, data: bytes) -> 'MTID':
+    def unpack_mtid(cls, data: Buffer) -> 'MTID':
         # tids = []
         # for i in range(0, len(data), 2):
         #     payload = struct.unpack('!H', data[i:i+2])[0]

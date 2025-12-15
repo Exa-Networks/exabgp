@@ -6,6 +6,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from exabgp.util.types import Buffer
+
 
 # =========================================================================== ISO
 #
@@ -24,7 +26,7 @@ class ISO:
         self.afi = afi
 
     @classmethod
-    def unpack_sysid(cls, data: bytes) -> str:
+    def unpack_sysid(cls, data: Buffer) -> str:
         return data.hex()
 
     def json(self, compact: bool | None = None) -> str:

@@ -96,7 +96,7 @@ class BGPLS(NLRI):
     SHORT_NAME: ClassVar[str] = 'unknown'
 
     # Type declaration: subclasses may pass packed data or leave as empty
-    _packed: bytes
+    _packed: Buffer
 
     def __init__(self, action: Action = Action.UNSET, addpath: PathInfo | None = None) -> None:
         NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
@@ -205,7 +205,7 @@ class BGPLS(NLRI):
 class GenericBGPLS(BGPLS):
     CODE: int
 
-    def __init__(self, code: int, packed: bytes) -> None:
+    def __init__(self, code: int, packed: Buffer) -> None:
         """Create GenericBGPLS with complete wire format.
 
         Args:

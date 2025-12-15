@@ -14,6 +14,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.util.types import Buffer
 
 # draft-fm-bess-service-chaining
 
@@ -24,7 +25,7 @@ class ConsistentHashSortOrder(ExtendedCommunity):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x14
     DESCRIPTION: ClassVar[str] = 'consistentHashSortOrder'
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
@@ -47,5 +48,5 @@ class ConsistentHashSortOrder(ExtendedCommunity):
         return '%s:%d' % (self.DESCRIPTION, self.order)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> ConsistentHashSortOrder:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> ConsistentHashSortOrder:
         return cls(data[:8])

@@ -9,6 +9,7 @@ from __future__ import annotations
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.util.types import Buffer
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -27,7 +28,7 @@ class IsisArea(BaseLS):
     JSON = 'area-id'
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> IsisArea:
+    def unpack_bgpls(cls, data: Buffer) -> IsisArea:
         if not data:
             raise Notify(3, 5, 'ISIS Area: empty data')
         return cls(data)

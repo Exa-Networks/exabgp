@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.util.types import Buffer
 
 
 # ==================================================================== Community
@@ -36,7 +37,7 @@ class Community:
     cache: ClassVar[dict[bytes, Community]] = {}
     caching: ClassVar[bool] = True
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -45,10 +46,10 @@ class Community:
         Args:
             packed: Raw community bytes (4 bytes)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'Community':
+    def from_packet(cls, data: Buffer) -> 'Community':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -157,11 +158,11 @@ class Community:
         return 4
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> 'Community':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'Community':
         return cls.from_packet(data)
 
     @classmethod
-    def cached(cls, packed: bytes) -> 'Community':
+    def cached(cls, packed: Buffer) -> 'Community':
         if not cls.caching:
             return cls(packed)
         if packed in cls.cache:

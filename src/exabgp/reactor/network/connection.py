@@ -275,7 +275,7 @@ class Connection:
         log.debug(lazyformat('received TCP payload', bytes(view)), self.session())
         return view
 
-    def writer(self, data: bytes) -> Iterator[bool]:
+    def writer(self, data: Buffer) -> Iterator[bool]:
         if not self.io:
             # Connection already closed - nothing to write. Return True to signal
             # completion immediately, allowing the caller to proceed with cleanup.
@@ -335,7 +335,7 @@ class Connection:
                     )
                     yield False
 
-    async def writer_async(self, data: bytes) -> None:
+    async def writer_async(self, data: Buffer) -> None:
         """Write data to socket (async version)
 
         Uses asyncio for I/O operations.

@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.util.types import Buffer
 
 # ==================================================================== Bandwidth
 # draft-ietf-idr-link-bandwidth-06
@@ -26,7 +27,7 @@ class Bandwidth(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x40
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x04
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
@@ -49,5 +50,5 @@ class Bandwidth(ExtendedCommunity):
         return 'bandwith:%d:%0.f' % (self.asn, self.speed)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> Bandwidth:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> Bandwidth:
         return cls(data[:8])

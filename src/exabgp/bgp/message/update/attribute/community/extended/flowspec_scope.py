@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.util.types import Buffer
 
 
 # ============================================================== InterfaceSet
@@ -48,7 +49,7 @@ class InterfaceSet(ExtendedCommunity):
         """
         return 0 <= value <= cls.GROUP_ID_MAX
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
@@ -86,5 +87,5 @@ class InterfaceSet(ExtendedCommunity):
         return '{{ "value": {}, "string": "{}", "transitive": {} }}'.format(h, repr(self), trans)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> InterfaceSet:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> InterfaceSet:
         return cls(data[:8])

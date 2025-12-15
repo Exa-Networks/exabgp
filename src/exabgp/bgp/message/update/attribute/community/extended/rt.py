@@ -19,6 +19,7 @@ from struct import unpack
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.util.types import Buffer
 
 
 # ================================================================== RouteTarget
@@ -53,7 +54,7 @@ class RouteTargetASN2Number(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         RouteTarget.__init__(self, packed)
 
     @classmethod
@@ -79,7 +80,7 @@ class RouteTargetASN2Number(RouteTarget):
         return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> RouteTargetASN2Number:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> RouteTargetASN2Number:
         return cls(data[:8])
 
 
@@ -92,7 +93,7 @@ class RouteTargetIPNumber(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         RouteTarget.__init__(self, packed)
 
     @classmethod
@@ -118,7 +119,7 @@ class RouteTargetIPNumber(RouteTarget):
         return '%s:%s:%d' % (self.DESCRIPTION, self.ip, self.number)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> RouteTargetIPNumber:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> RouteTargetIPNumber:
         return cls(data[:8])
 
 
@@ -131,7 +132,7 @@ class RouteTargetASN4Number(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x02
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         RouteTarget.__init__(self, packed)
 
     @classmethod
@@ -157,5 +158,5 @@ class RouteTargetASN4Number(RouteTarget):
         return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> RouteTargetASN4Number:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> RouteTargetASN4Number:
         return cls(data[:8])

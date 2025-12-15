@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.util.types import Buffer
 
 #  https://tools.ietf.org/html/rfc5305#section-3.3
 #   This sub-TLV contains a single IPv4 address for a neighboring router
@@ -21,12 +22,12 @@ from exabgp.protocol.ip import IP, IPv4, IPv6
 
 
 class NeighAddr:
-    def __init__(self, addr: IP, packed: bytes) -> None:
+    def __init__(self, addr: IP, packed: Buffer) -> None:
         self.addr = addr
         self._packed = packed
 
     @classmethod
-    def unpack_neighaddr(cls, data: bytes) -> 'NeighAddr':
+    def unpack_neighaddr(cls, data: Buffer) -> 'NeighAddr':
         if len(data) == IPv4.BYTES:
             # IPv4 address
             addr = IP.unpack_ip(data[: IPv4.BYTES])

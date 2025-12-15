@@ -15,6 +15,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
 from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceDataSubSubTlv
+from exabgp.util.types import Buffer
 
 
 # TypeVar for SRv6 Service Data Sub-Sub-TLV types
@@ -52,12 +53,12 @@ class Srv6SidInformation:
         sid: IPv6,
         behavior: int,
         subsubtlvs: list[GenericSrv6ServiceDataSubSubTlv],
-        packed: bytes | None = None,
+        packed: Buffer | None = None,
     ) -> None:
         self.sid: IPv6 = sid
         self.behavior: int = behavior
         self.subsubtlvs: list[GenericSrv6ServiceDataSubSubTlv] = subsubtlvs
-        self.packed: bytes = self.pack_tlv()
+        self.packed: Buffer = self.pack_tlv()
 
     @classmethod
     def register(cls) -> Callable[[Type[SubSubTlvType]], Type[SubSubTlvType]]:
@@ -71,7 +72,7 @@ class Srv6SidInformation:
         return register_subsubtlv
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, length: int) -> Srv6SidInformation:
+    def unpack_attribute(cls, data: Buffer, length: int) -> Srv6SidInformation:
         # SRv6 SID Information: reserved(1) + SID(16) + flags(1) + behavior(2) + reserved(1) = 21 bytes minimum
         if len(data) < 21:
             raise Notify(3, 1, f'SRv6 SID Information too short: need 21 bytes, got {len(data)}')

@@ -154,7 +154,7 @@ class IPVPN(Label):
     safi: ClassVar[SAFI] = SAFI.mpls_vpn
 
     def __init__(
-        self, packed: bytes, afi: AFI, *, has_addpath: bool = False, has_labels: bool = False, has_rd: bool = False
+        self, packed: Buffer, afi: AFI, *, has_addpath: bool = False, has_labels: bool = False, has_rd: bool = False
     ) -> None:
         """Create an IPVPN NLRI from packed wire format bytes.
 
@@ -324,7 +324,7 @@ class IPVPN(Label):
         cls,
         afi: AFI,
         safi: SAFI,
-        packed: bytes,
+        packed: Buffer,
         mask: int,
         labels: Labels,
         rd: RouteDistinguisher,

@@ -20,7 +20,7 @@ class MAC:
     def __init__(self, mac: str = '', packed: Buffer = b'') -> None:
         self.mac: str = mac
         if packed:
-            self._packed: bytes = packed
+            self._packed: Buffer = packed
         else:
             assert mac != '', 'Either mac or packed must be provided'
             self._packed = b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))

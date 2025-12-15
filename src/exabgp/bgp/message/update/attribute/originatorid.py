@@ -32,7 +32,7 @@ class OriginatorID(Attribute):
     FLAG: ClassVar[int] = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -41,7 +41,7 @@ class OriginatorID(Attribute):
         Args:
             packed: Raw IPv4 address bytes (4 bytes)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'OriginatorID':

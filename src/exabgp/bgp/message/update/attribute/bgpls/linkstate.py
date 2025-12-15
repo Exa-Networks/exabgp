@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.util import hexstring
+from exabgp.util.types import Buffer
 
 
 class LSClass(Protocol):
@@ -26,7 +27,7 @@ class LSClass(Protocol):
     MERGE: bool
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> BaseLS: ...
+    def unpack_bgpls(cls, data: Buffer) -> BaseLS: ...
 
 
 @Attribute.register()
@@ -43,7 +44,7 @@ class LinkState(Attribute):
     link_lsids: list[int] = []
     prefix_lsids: list[int] = []
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize with raw attribute bytes (stores, parses on demand)."""
         self._packed = packed
 
@@ -53,7 +54,7 @@ class LinkState(Attribute):
         return self._parse_tlvs(self._packed)
 
     @classmethod
-    def _parse_tlvs(cls, data: bytes) -> list[BaseLS]:
+    def _parse_tlvs(cls, data: Buffer) -> list[BaseLS]:
         """Parse TLVs from raw bytes."""
         ls_attrs: list[BaseLS] = []
 
@@ -112,7 +113,7 @@ class LinkState(Attribute):
         return lsid in cls.registered_lsids
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> LinkState:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> LinkState:
         """Store raw bytes - parsing happens on demand via ls_attrs property."""
         return cls(data)
 
@@ -152,7 +153,7 @@ class BaseLS:
 
     BGPLS_SUBTLV_HEADER_SIZE: int = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize with packed wire-format bytes.
 
         Args:
@@ -180,12 +181,12 @@ class BaseLS:
         return '{}: {}'.format(self.REPR, self.content)
 
     @classmethod
-    def check_length(cls, data: bytes, length: int) -> None:
+    def check_length(cls, data: Buffer, length: int) -> None:
         if length and len(data) != length:
             raise Notify(3, 5, f'Unable to decode attribute, wrong size for {cls.REPR}')
 
     @classmethod
-    def check(cls, data: bytes) -> None:
+    def check(cls, data: Buffer) -> None:
         return cls.check_length(data, cls.LEN)
 
     def merge(self, other: BaseLS) -> None:
@@ -197,7 +198,7 @@ class BaseLS:
 class GenericLSID(BaseLS):
     TLV: int = 0
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize with packed wire-format bytes.
 
         Args:
@@ -223,7 +224,7 @@ class GenericLSID(BaseLS):
         return f'"{self.JSON}": ["{self.content}"]'
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> GenericLSID:
+    def unpack_bgpls(cls, data: Buffer) -> GenericLSID:
         return cls(data)
 
 
@@ -231,7 +232,7 @@ class FlagLS(BaseLS):
     # Subclasses define FLAGS as a list of flag names, e.g. ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
     FLAGS: list[str] = []
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize with packed wire-format bytes.
 
         Args:
@@ -251,7 +252,7 @@ class FlagLS(BaseLS):
         return f'"{self.JSON}": {json.dumps(self.flags)}'
 
     @classmethod
-    def unpack_flags(cls, data: bytes) -> dict[str, int]:
+    def unpack_flags(cls, data: Buffer) -> dict[str, int]:
         if not data:
             raise Notify(3, 5, 'BGP-LS: empty data for flag unpacking')
         pad = cls.FLAGS.count('RSV')
@@ -276,7 +277,7 @@ class FlagLS(BaseLS):
         return flags
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> FlagLS:
+    def unpack_bgpls(cls, data: Buffer) -> FlagLS:
         cls.check(data)
         # We only support IS-IS for now.
         return cls(data)

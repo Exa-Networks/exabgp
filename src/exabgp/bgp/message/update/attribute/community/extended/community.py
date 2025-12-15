@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.util.types import Buffer
 
 from struct import pack
 
@@ -46,7 +47,7 @@ class ExtendedCommunityBase(Attribute):
     length_value: ClassVar[dict[bool, int]] = {False: 7, True: 6}
     name: ClassVar[dict[bool, str]] = {False: 'regular', True: 'extended'}
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -56,11 +57,11 @@ class ExtendedCommunityBase(Attribute):
             packed: Raw extended community bytes
         """
         # Two top bits are iana and transitive bits
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
         self.registered_klass: Type[ExtendedCommunityBase] | None = None
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'ExtendedCommunityBase':
+    def from_packet(cls, data: Buffer) -> 'ExtendedCommunityBase':
         """Validate and create from wire-format bytes.
 
         Args:
@@ -156,7 +157,7 @@ class ExtendedCommunityBase(Attribute):
         return hash(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> 'ExtendedCommunityBase':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> 'ExtendedCommunityBase':
         # 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
         community = (data[0] & 0x0F, data[1])
         assert cls.registered_extended is not None
@@ -177,7 +178,7 @@ class ExtendedCommunity(ExtendedCommunityBase):
     registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]]] = {}
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'ExtendedCommunity':
+    def from_packet(cls, data: Buffer) -> 'ExtendedCommunity':
         """Validate and create from wire-format bytes."""
         if len(data) != 8:
             raise ValueError(f'ExtendedCommunity must be 8 bytes, got {len(data)}')
@@ -196,7 +197,7 @@ class ExtendedCommunityIPv6(ExtendedCommunityBase):
     registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]]] = {}
 
     @classmethod
-    def from_packet(cls, data: bytes) -> 'ExtendedCommunityIPv6':
+    def from_packet(cls, data: Buffer) -> 'ExtendedCommunityIPv6':
         """Validate and create from wire-format bytes."""
         if len(data) != 20:
             raise ValueError(f'ExtendedCommunityIPv6 must be 20 bytes, got {len(data)}')

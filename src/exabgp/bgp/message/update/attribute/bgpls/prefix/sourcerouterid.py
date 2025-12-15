@@ -11,6 +11,7 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.util.types import Buffer
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -35,7 +36,7 @@ class SourceRouterId(BaseLS):
         return IP.unpack_ip(self._packed)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> SourceRouterId:
+    def unpack_bgpls(cls, data: Buffer) -> SourceRouterId:
         length = len(data)
         if length not in (4, 16):
             raise Notify(3, 5, 'Error parsing SR Source Router ID. Wrong size')

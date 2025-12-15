@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, R
 from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # EVPN MAC address and IP address length constants (in bits)
 MAC_ADDRESS_LEN_BITS = 48  # Standard MAC address length in bits
@@ -56,7 +57,7 @@ class MAC(EVPN):
     NAME: ClassVar[str] = 'MAC/IP advertisement'
     SHORT_NAME: ClassVar[str] = 'MACAdv'
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Create MAC from complete wire-format bytes.
 
         Args:
@@ -184,7 +185,7 @@ class MAC(EVPN):
         return hash((self.rd, self.etag, self.mac, self.ip))
 
     @classmethod
-    def unpack_evpn(cls, packed: bytes) -> EVPN:
+    def unpack_evpn(cls, packed: Buffer) -> EVPN:
         """Unpack MAC from complete wire format bytes.
 
         Args:

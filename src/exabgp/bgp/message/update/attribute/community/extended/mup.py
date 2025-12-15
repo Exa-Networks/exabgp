@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.util.types import Buffer
 
 # draft-mpmz-bess-mup-safi-02
 # 0                   1                   2                   3
@@ -33,7 +34,7 @@ class MUPExtendedCommunity(ExtendedCommunity):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
@@ -69,5 +70,5 @@ class MUPExtendedCommunity(ExtendedCommunity):
         return '%s:%d:%d' % ('mup', self.sgid2, self.sgid4)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> MUPExtendedCommunity:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> MUPExtendedCommunity:
         return cls(data[:8])

@@ -10,6 +10,7 @@ from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.util.types import Buffer
 
 #  This sub-TLV contains the maximum bandwidth that can be used on this
 #   link in this direction (from the system originating the LSP to its
@@ -39,6 +40,6 @@ class MaxBw(BaseLS):
         return cls(pack('!f', bandwidth))
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> MaxBw:
+    def unpack_bgpls(cls, data: Buffer) -> MaxBw:
         cls.check(data)
         return cls(data)

@@ -22,6 +22,7 @@ from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # BGP-LS Prefix TLV type codes (RFC 7752)
 TLV_LOCAL_NODE_DESC: int = 256  # Local Node Descriptors TLV
@@ -59,7 +60,7 @@ class PREFIXv4(BGPLS):
 
     def __init__(
         self,
-        packed: bytes,
+        packed: Buffer,
         nexthop: IP = IP.NoNextHop,
         route_d: RouteDistinguisher | None = None,
         action: Action = Action.UNSET,
@@ -129,7 +130,7 @@ class PREFIXv4(BGPLS):
         return self._parse_tlvs()[2]
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: bytes, rd: RouteDistinguisher | None) -> PREFIXv4:
+    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher | None) -> PREFIXv4:
         """Unpack PREFIXv4 from complete wire format.
 
         Args:

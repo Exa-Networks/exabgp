@@ -16,6 +16,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log
+from exabgp.util.types import Buffer
 
 # ================================================================ MultiProtocol
 #
@@ -40,7 +41,7 @@ class MultiProtocol(Capability, list[tuple[AFI, SAFI]]):
         return rs
 
     @classmethod
-    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+    def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         assert isinstance(instance, MultiProtocol)
         # MultiProtocol capability is 4 bytes: AFI(2) + reserved(1) + SAFI(1)
         if len(data) < 4:

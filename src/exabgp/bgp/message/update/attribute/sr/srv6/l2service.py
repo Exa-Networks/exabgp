@@ -12,6 +12,7 @@ from typing import Callable, ClassVar, Type, TypeVar
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceSubTlv
+from exabgp.util.types import Buffer
 
 
 # TypeVar for SRv6 Service Sub-TLV types
@@ -37,9 +38,9 @@ class Srv6L2Service:
     # Registry maps TLV codes to Sub-TLV classes
     registered_subtlvs: ClassVar[dict[int, Type[GenericSrv6ServiceSubTlv]]] = dict()
 
-    def __init__(self, subtlvs: list[GenericSrv6ServiceSubTlv], packed: bytes | None = None) -> None:
+    def __init__(self, subtlvs: list[GenericSrv6ServiceSubTlv], packed: Buffer | None = None) -> None:
         self.subtlvs: list[GenericSrv6ServiceSubTlv] = subtlvs
-        self.packed: bytes = self.pack_tlv()
+        self.packed: Buffer = self.pack_tlv()
 
     @classmethod
     def register(cls) -> Callable[[Type[SubTlvType]], Type[SubTlvType]]:
@@ -53,7 +54,7 @@ class Srv6L2Service:
         return register_subtlv
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, length: int) -> Srv6L2Service:
+    def unpack_attribute(cls, data: Buffer, length: int) -> Srv6L2Service:
         subtlvs: list[GenericSrv6ServiceSubTlv] = []
 
         # Need at least 1 byte for reserved field

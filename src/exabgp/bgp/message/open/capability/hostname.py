@@ -13,6 +13,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.dns import host, domain
+from exabgp.util.types import Buffer
 
 
 @Capability.register()
@@ -50,7 +51,7 @@ class HostName(Capability):
         return [ret]
 
     @classmethod
-    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+    def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         assert isinstance(instance, HostName)
         # Hostname capability: hostname_len(1) + hostname + domain_len(1) + domain
         if len(data) < 1:

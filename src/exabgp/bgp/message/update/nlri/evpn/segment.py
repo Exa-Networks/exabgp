@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.qualifier import ESI, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
@@ -42,7 +43,7 @@ class EthernetSegment(EVPN):
     NAME: ClassVar[str] = 'Ethernet Segment'
     SHORT_NAME: ClassVar[str] = 'Segment'
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Create EthernetSegment from complete wire-format bytes.
 
         Args:
@@ -111,7 +112,7 @@ class EthernetSegment(EVPN):
         return hash((self.rd, self.ip))
 
     @classmethod
-    def unpack_evpn(cls, packed: bytes) -> EVPN:
+    def unpack_evpn(cls, packed: Buffer) -> EVPN:
         """Unpack EthernetSegment from complete wire format bytes.
 
         Args:

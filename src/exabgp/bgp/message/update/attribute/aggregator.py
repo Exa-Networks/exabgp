@@ -40,7 +40,7 @@ class Aggregator(Attribute):
     CACHING = True
     DISCARD = True
 
-    def __init__(self, packed: bytes, asn4: bool = True) -> None:
+    def __init__(self, packed: Buffer, asn4: bool = True) -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -50,7 +50,7 @@ class Aggregator(Attribute):
             packed: Raw attribute value bytes (6 or 8 bytes depending on ASN size)
             asn4: True if packed uses 4-byte ASN, False for 2-byte
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
         self._asn4: bool = asn4
 
     @classmethod
@@ -172,7 +172,7 @@ class Aggregator4(Aggregator):
 
     ID = Attribute.CODE.AS4_AGGREGATOR
 
-    def __init__(self, packed: bytes, asn4: bool = True) -> None:
+    def __init__(self, packed: Buffer, asn4: bool = True) -> None:
         """Initialize from packed wire-format bytes.
 
         AS4_AGGREGATOR always uses 4-byte ASNs, so asn4 parameter is ignored.

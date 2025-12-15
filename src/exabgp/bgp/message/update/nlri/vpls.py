@@ -57,7 +57,7 @@ class VPLS(NLRI):
         NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
         self.nexthop = IP.NoNextHop
 
-        self._packed: bytes = bytes(packed)  # Ensure bytes for storage
+        self._packed: Buffer = bytes(packed)  # Ensure bytes for storage
 
     @classmethod
     def make_vpls(

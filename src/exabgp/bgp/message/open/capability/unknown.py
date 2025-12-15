@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.util.types import Buffer
 
 # ============================================================ UnknownCapability
 #
@@ -18,9 +19,9 @@ from exabgp.bgp.message.open.capability.capability import CapabilityCode
 @Capability.unknown
 class UnknownCapability(Capability):
     capability: CapabilityCode
-    data: bytes
+    data: Buffer
 
-    def set(self, capability: CapabilityCode, data: bytes = b'') -> UnknownCapability:
+    def set(self, capability: CapabilityCode, data: Buffer = b'') -> UnknownCapability:
         self.capability = capability
         self.data = data
         return self
@@ -46,6 +47,6 @@ class UnknownCapability(Capability):
         return []
 
     @classmethod
-    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:
+    def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:
         assert isinstance(instance, UnknownCapability)
         return instance.set(capability, data)

@@ -10,6 +10,7 @@ from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.util.types import Buffer
 
 
 @LinkState.register_lsid()
@@ -31,6 +32,6 @@ class AdminGroup(BaseLS):
         return cls(pack('!I', mask))
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> AdminGroup:
+    def unpack_bgpls(cls, data: Buffer) -> AdminGroup:
         cls.check(data)
         return cls(data)

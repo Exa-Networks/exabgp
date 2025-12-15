@@ -12,6 +12,7 @@ from typing import Any, ClassVar
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.logger import log, lazymsg
+from exabgp.util.types import Buffer
 
 # ================================================================= MultiSession
 #
@@ -49,7 +50,7 @@ class MultiSession(Capability, list[CapabilityCode]):
         return rs
 
     @classmethod
-    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+    def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         assert isinstance(instance, MultiSession)
         if instance._seen:
             log.debug(lazymsg('capability.multisession.duplicate'), 'parser')

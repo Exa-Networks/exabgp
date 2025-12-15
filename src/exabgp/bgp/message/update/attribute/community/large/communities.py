@@ -32,7 +32,7 @@ class LargeCommunities(Attribute):
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
     TREAT_AS_WITHDRAW = True
 
-    def __init__(self, packed: bytes = b'') -> None:
+    def __init__(self, packed: Buffer = b'') -> None:
         """Initialize from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -41,7 +41,7 @@ class LargeCommunities(Attribute):
         Args:
             packed: Raw large communities bytes (concatenated 12-byte large communities)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'LargeCommunities':

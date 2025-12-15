@@ -12,6 +12,7 @@ from struct import unpack
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.util.types import Buffer
 
 # Minimum data length for SRv6 Locator TLV (RFC 9514 Section 5.1)
 # Flags (1) + Algorithm (1) + Reserved (2) + Metric (4) = 8 bytes
@@ -81,7 +82,7 @@ class Srv6Locator(FlagLS):
         return cls(packed)
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> Srv6Locator:
+    def unpack_bgpls(cls, data: Buffer) -> Srv6Locator:
         if len(data) < SRV6_LOCATOR_MIN_LENGTH:
             raise Notify(3, 5, f'SRv6 Locator: data too short, need {SRV6_LOCATOR_MIN_LENGTH} bytes, got {len(data)}')
         return cls(data)

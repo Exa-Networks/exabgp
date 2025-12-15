@@ -13,6 +13,7 @@ from typing import Any
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPv6
 from exabgp.protocol.iso import ISO
+from exabgp.util.types import Buffer
 
 #           +--------------------+-------------------+----------+
 #           | Sub-TLV Code Point | Description       |   Length |
@@ -72,7 +73,7 @@ class NodeDescriptor:
         node_type: int,
         psn: int | None,
         dr_id: IP | None,
-        packed: bytes,
+        packed: Buffer,
     ) -> None:
         self.node_id = node_id
         self.node_type = node_type
@@ -81,7 +82,7 @@ class NodeDescriptor:
         self._packed = packed
 
     @classmethod
-    def unpack_node(cls, data: bytes, igp: int) -> tuple['NodeDescriptor', bytes]:
+    def unpack_node(cls, data: Buffer, igp: int) -> tuple['NodeDescriptor', bytes]:
         node_type, length = unpack('!HH', data[0:4])
         packed = data[: 4 + length]
         payload = packed[4:]

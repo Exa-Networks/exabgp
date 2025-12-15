@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.util.types import Buffer
 
 # ========================================================================= ASN4
 #
@@ -27,7 +28,7 @@ class ExtendedMessage(Capability):
         return [b'']
 
     @classmethod
-    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+    def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         return cls()
 
     def json(self) -> str:

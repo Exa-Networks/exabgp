@@ -14,6 +14,7 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.ip import IP
+from exabgp.util.types import Buffer
 
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
@@ -41,7 +42,7 @@ class Multicast(EVPN):
     NAME: ClassVar[str] = 'Inclusive Multicast Ethernet Tag'
     SHORT_NAME: ClassVar[str] = 'Multicast'
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Create Multicast from complete wire-format bytes.
 
         Args:
@@ -105,7 +106,7 @@ class Multicast(EVPN):
         return hash((self.afi, self.safi, self.CODE, self.rd, self.etag, self.ip))
 
     @classmethod
-    def unpack_evpn(cls, packed: bytes) -> EVPN:
+    def unpack_evpn(cls, packed: Buffer) -> EVPN:
         """Unpack Multicast from complete wire format bytes.
 
         Args:

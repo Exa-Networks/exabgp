@@ -8,6 +8,7 @@ from __future__ import annotations
 
 
 from exabgp.protocol.ip import IPv6
+from exabgp.util.types import Buffer
 
 #     RFC 9514 6.1.  SRv6 SID Information TLV
 #     0                   1                   2                   3
@@ -28,12 +29,12 @@ from exabgp.protocol.ip import IPv6
 
 
 class Srv6SIDInformation:
-    def __init__(self, sid: str, packed: bytes) -> None:
+    def __init__(self, sid: str, packed: Buffer) -> None:
         self.sid = sid
         self._packed = packed
 
     @classmethod
-    def unpack_srv6sid(cls, data: bytes) -> 'Srv6SIDInformation':
+    def unpack_srv6sid(cls, data: Buffer) -> 'Srv6SIDInformation':
         sid = IPv6.ntop(data)
         return cls(sid, data)
 

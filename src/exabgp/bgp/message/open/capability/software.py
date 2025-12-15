@@ -12,6 +12,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
 from exabgp.version import version
+from exabgp.util.types import Buffer
 
 
 @Capability.register()
@@ -35,7 +36,7 @@ class Software(Capability):
         return [bytes([len(self.software_version)]) + self.software_version.encode('utf-8')]
 
     @classmethod
-    def unpack_capability(cls, instance: Capability, data: bytes, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
+    def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         assert isinstance(instance, Software)
         # Software capability: length(1) + version_string
         if len(data) < 1:

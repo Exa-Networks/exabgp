@@ -19,6 +19,7 @@ from struct import unpack
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.util.types import Buffer
 
 
 # ======================================================================= Origin
@@ -52,7 +53,7 @@ class OriginASNIP(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         Origin.__init__(self, packed)
 
     @classmethod
@@ -74,7 +75,7 @@ class OriginASNIP(Origin):
         return 'origin:{}:{}'.format(self.asn, self.ip)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> OriginASNIP:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> OriginASNIP:
         return cls(data[:8])
 
 
@@ -87,7 +88,7 @@ class OriginIPASN(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         Origin.__init__(self, packed)
 
     @classmethod
@@ -109,7 +110,7 @@ class OriginIPASN(Origin):
         return 'origin:{}:{}'.format(self.ip, self.asn)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> OriginIPASN:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> OriginIPASN:
         return cls(data[:8])
 
 
@@ -122,7 +123,7 @@ class OriginASN4Number(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x02
     LIMIT: ClassVar[int] = 6
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         Origin.__init__(self, packed)
 
     @classmethod
@@ -145,5 +146,5 @@ class OriginASN4Number(Origin):
         return 'origin:{}:{}'.format(self.asn, self.number)
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, negotiated: Negotiated | None = None) -> OriginASN4Number:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> OriginASN4Number:
         return cls(data[:8])

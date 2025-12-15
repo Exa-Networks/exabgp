@@ -11,6 +11,7 @@ from typing import Sequence
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.util.types import Buffer
 
 
 #   This sub-TLV contains the amount of bandwidth reservable in this
@@ -43,6 +44,6 @@ class UnreservedBw(BaseLS):
         return cls(pack('!ffffffff', *bandwidths))
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> UnreservedBw:
+    def unpack_bgpls(cls, data: Buffer) -> UnreservedBw:
         cls.check(data)
         return cls(data)

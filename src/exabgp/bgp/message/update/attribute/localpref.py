@@ -28,7 +28,7 @@ class LocalPreference(Attribute):
     TREAT_AS_WITHDRAW = True
     MANDATORY = True
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Initialize LocalPreference from packed wire-format bytes.
 
         NO validation - trusted internal use only.
@@ -37,7 +37,7 @@ class LocalPreference(Attribute):
         Args:
             packed: Raw attribute value bytes (4-byte unsigned integer, network order)
         """
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def from_packet(cls, data: Buffer) -> 'LocalPreference':

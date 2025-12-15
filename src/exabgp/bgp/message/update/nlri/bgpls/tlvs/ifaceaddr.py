@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.util.types import Buffer
 
 #   https://tools.ietf.org/html/rfc5305#section-3.2
 #   This sub-TLV contains a 4-octet IPv4 address for the interface
@@ -23,12 +24,12 @@ from exabgp.protocol.ip import IP, IPv4, IPv6
 
 
 class IfaceAddr:
-    def __init__(self, iface_addr: IP, packed: bytes) -> None:
+    def __init__(self, iface_addr: IP, packed: Buffer) -> None:
         self.iface_address = iface_addr
         self._packed = packed
 
     @classmethod
-    def unpack_ifaceaddr(cls, data: bytes) -> 'IfaceAddr':
+    def unpack_ifaceaddr(cls, data: Buffer) -> 'IfaceAddr':
         if len(data) == IPv4.BYTES:
             # IPv4 address
             addr = IP.unpack_ip(data[: IPv4.BYTES])

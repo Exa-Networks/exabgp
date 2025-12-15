@@ -11,6 +11,7 @@ from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.util.types import Buffer
 
 
 #   |     1028    | IPv4 Router-ID of    |        4 | [RFC5305]/4.3     |
@@ -28,11 +29,11 @@ class LocalRouterId(BaseLS):
     REPR = 'Local Router IDs'
     JSON = 'local-router-ids'
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         self._packed = packed
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> LocalRouterId:
+    def unpack_bgpls(cls, data: Buffer) -> LocalRouterId:
         length = len(data)
 
         if length not in (4, 16):

@@ -12,6 +12,7 @@ from struct import unpack
 from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
+from exabgp.util.types import Buffer
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -42,12 +43,12 @@ class SrGb:
     # multiple of 6.
     LENGTH: ClassVar[int] = -1
 
-    def __init__(self, packed: bytes) -> None:
+    def __init__(self, packed: Buffer) -> None:
         # Payload format: Flags(2) + N * (Base(3) + Range(3))
         # Minimum: 2 bytes (flags only), remainder must be divisible by 6
         if len(packed) < 2 or (len(packed) - 2) % 6 != 0:
             raise ValueError(f'Invalid SRGB payload size: {len(packed)} bytes (must be 2 + N*6)')
-        self._packed: bytes = packed
+        self._packed: Buffer = packed
 
     @classmethod
     def make_srgb(cls, srgbs: list[tuple[int, int]]) -> 'SrGb':
@@ -80,7 +81,7 @@ class SrGb:
         return pack('!B', self.TLV) + pack('!H', len(self._packed)) + self._packed
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, length: int) -> SrGb:
+    def unpack_attribute(cls, data: Buffer, length: int) -> SrGb:
         # Validation happens in __init__
         return cls(data)
 

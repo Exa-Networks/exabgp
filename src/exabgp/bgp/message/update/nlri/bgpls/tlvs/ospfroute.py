@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from struct import pack, unpack
 
+from exabgp.util.types import Buffer
+
 
 #     https://tools.ietf.org/html/rfc7752#section-3.2.3
 
@@ -35,12 +37,12 @@ OSPF_ROUTE = {1: 'intra-area', 2: 'inter-area', 3: 'external-1', 4: 'external-2'
 
 
 class OspfRoute:
-    def __init__(self, ospf_type: int, packed: bytes | None = None) -> None:
+    def __init__(self, ospf_type: int, packed: Buffer | None = None) -> None:
         self.ospf_type = ospf_type
         self._packed = packed if packed is not None else pack('!B', ospf_type)
 
     @classmethod
-    def unpack_ospfroute(cls, data: bytes) -> 'OspfRoute':
+    def unpack_ospfroute(cls, data: Buffer) -> 'OspfRoute':
         if len(data) == 1:
             ospf_type = unpack('!B', data[0:1])[0]
         return cls(ospf_type=ospf_type, packed=data)

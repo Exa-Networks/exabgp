@@ -12,6 +12,7 @@ from exabgp.util import split
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.util.types import Buffer
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -36,7 +37,7 @@ class IgpExTags(BaseLS):
         return [unpack('!Q', chunk)[0] for chunk in split(self._packed, 8)]
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> IgpExTags:
+    def unpack_bgpls(cls, data: Buffer) -> IgpExTags:
         cls.check(data)
         return cls(data)
 

@@ -154,7 +154,7 @@ class UpdateCollection(Message):
         return '\n'.join(['{}{}'.format(str(self.nlris[n]), str(self.attributes)) for n in range(len(self.nlris))])
 
     @staticmethod
-    def prefix(data: bytes) -> bytes:
+    def prefix(data: Buffer) -> bytes:
         # This function needs renaming
         return pack('!H', len(data)) + data
 
@@ -446,7 +446,7 @@ class UpdateCollection(Message):
     # These exceptions are caught by the caller in reactor/protocol.py:read_message() which
     # wraps them in a Notify(1, 0) to signal a malformed message to the peer.
     @classmethod
-    def _parse_payload(cls, data: bytes, negotiated: Negotiated) -> UpdateCollection:
+    def _parse_payload(cls, data: Buffer, negotiated: Negotiated) -> UpdateCollection:
         """Parse raw UPDATE payload bytes into semantic UpdateCollection.
 
         This is an internal method called by Update.parse().

@@ -126,7 +126,7 @@ class Label(INET):
     # AFI varies (ipv4/ipv6) and is set at instance level by INET
     safi: ClassVar[SAFI] = SAFI.nlri_mpls
 
-    def __init__(self, packed: bytes, afi: AFI, *, has_addpath: bool = False, has_labels: bool = False) -> None:
+    def __init__(self, packed: Buffer, afi: AFI, *, has_addpath: bool = False, has_labels: bool = False) -> None:
         """Create a Label NLRI from packed wire format bytes.
 
         Args:

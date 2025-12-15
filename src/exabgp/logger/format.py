@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 from exabgp.logger import color
 from exabgp.logger.tty import istty
 from exabgp.util.od import od
+from exabgp.util.types import Buffer
 
 # Type alias for formatter functions - timestamp is time.struct_time
 FormatterFunc = Callable[[str, str, str, time.struct_time], str]
@@ -78,7 +79,7 @@ def lazyformat(prefix: str, message: Any, formater: Callable[[Any], str] = od) -
     return _lazy
 
 
-def lazyattribute(flag: int, aid: int, length: int, data: bytes) -> Callable[[], str]:
+def lazyattribute(flag: int, aid: int, length: int, data: Buffer) -> Callable[[], str]:
     def _lazy() -> str:
         return 'attribute %-18s flag 0x%02x type 0x%02x len 0x%02x%s' % (
             str(aid),
@@ -91,7 +92,7 @@ def lazyattribute(flag: int, aid: int, length: int, data: bytes) -> Callable[[],
     return _lazy
 
 
-def lazynlri(afi: 'AFI', safi: 'SAFI', addpath: bool, data: bytes) -> Callable[[], str]:
+def lazynlri(afi: 'AFI', safi: 'SAFI', addpath: bool, data: Buffer) -> Callable[[], str]:
     def _lazy() -> str:
         family = '{} {}'.format(afi, safi)
         path = 'with path-information' if addpath else 'without path-information'

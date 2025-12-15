@@ -8,13 +8,15 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from exabgp.util.types import Buffer
+
 
 class GenericSrv6ServiceSubTlv:
     # TLV code - defined in subclasses, used by registry
     TLV: ClassVar[int]
 
-    def __init__(self, packed: bytes, code: int) -> None:
-        self._packed: bytes = packed
+    def __init__(self, packed: Buffer, code: int) -> None:
+        self._packed: Buffer = packed
         self.code: int = code
 
     @property
@@ -33,7 +35,7 @@ class GenericSrv6ServiceSubTlv:
         return self._packed
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, length: int) -> 'GenericSrv6ServiceSubTlv':
+    def unpack_attribute(cls, data: Buffer, length: int) -> 'GenericSrv6ServiceSubTlv':
         """Unpack TLV from bytes. Must be implemented by subclasses."""
         raise NotImplementedError('unpack_attribute must be implemented by subclasses')
 
@@ -42,8 +44,8 @@ class GenericSrv6ServiceDataSubSubTlv:
     # TLV code - defined in subclasses, used by registry
     TLV: ClassVar[int]
 
-    def __init__(self, packed: bytes, code: int) -> None:
-        self._packed: bytes = packed
+    def __init__(self, packed: Buffer, code: int) -> None:
+        self._packed: Buffer = packed
         self.code: int = code
 
     @property
@@ -62,6 +64,6 @@ class GenericSrv6ServiceDataSubSubTlv:
         return self._packed
 
     @classmethod
-    def unpack_attribute(cls, data: bytes, length: int) -> 'GenericSrv6ServiceDataSubSubTlv':
+    def unpack_attribute(cls, data: Buffer, length: int) -> 'GenericSrv6ServiceDataSubSubTlv':
         """Unpack TLV from bytes. Must be implemented by subclasses."""
         raise NotImplementedError('unpack_attribute must be implemented by subclasses')

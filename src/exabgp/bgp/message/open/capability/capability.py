@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any, Callable, ClassVar, Type
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.util.types import Buffer
 
 
 class CapabilityCode(int):
@@ -157,12 +158,12 @@ class Capability:
         raise NotImplementedError(f'{type(self).__name__}.extract_capability_bytes() not implemented')
 
     @classmethod
-    def unpack_capability(cls, instance: 'Capability', data: bytes, capability: CapabilityCode) -> 'Capability':
+    def unpack_capability(cls, instance: 'Capability', data: Buffer, capability: CapabilityCode) -> 'Capability':
         """Unpack capability from bytes. Subclasses must implement."""
         raise NotImplementedError(f'{cls.__name__}.unpack_capability() not implemented')
 
     @staticmethod
-    def hex(data: bytes) -> str:
+    def hex(data: Buffer) -> str:
         return '0x' + ''.join('{:02x}'.format(_) for _ in data)
 
     @classmethod
@@ -195,6 +196,6 @@ class Capability:
         raise Notify(2, 4, 'can not handle capability {}'.format(what))
 
     @classmethod
-    def unpack(cls, capability: CapabilityCode, capabilities: Any, data: bytes) -> Capability:
+    def unpack(cls, capability: CapabilityCode, capabilities: Any, data: Buffer) -> Capability:
         instance: Capability = capabilities.get(capability, Capability.klass(capability)())
         return cls.klass(capability).unpack_capability(instance, data, capability)

@@ -10,6 +10,7 @@ import json
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.util.types import Buffer
 
 #     draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -31,7 +32,7 @@ class SrAlgorithm(BaseLS):
     JSON = 'sr-algorithms'
 
     @classmethod
-    def unpack_bgpls(cls, data: bytes) -> SrAlgorithm:
+    def unpack_bgpls(cls, data: Buffer) -> SrAlgorithm:
         # Looks like IOS XR advertises len 0 on this sub TLV
         # when using default SPF.
         return cls(data)
