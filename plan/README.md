@@ -19,7 +19,6 @@
 | Plan | Description |
 |------|-------------|
 | `wip-nlri-immutability.md` | Phase 4 steps 6-7 remaining (remove nexthop from NLRI) |
-| `wip-buffer-protocol-audit.md` | Migrate bytes→Buffer (~42% done, 94/223) |
 | `comment-cleanup/` | XXX/TODO comment cleanup (Phase 6-7) |
 | `runtime-validation/` | Runtime crash prevention (BGP-LS done) |
 | `type-safety/` | MyPy error reduction |
@@ -102,6 +101,7 @@
 | Packed-Bytes Pattern | 2025-12-04 | Architecture done (~124 classes store `_packed`) |
 | Wire vs Semantic Separation | 2025-12-08 | Update/Attributes containers |
 | Change → Route Refactoring | 2025-12 | Renamed across 36 files |
+| Buffer Protocol Audit | 2025-12-15 | bytes→Buffer migration (117 files, 250 replacements) |
 | Python 3.12+ Buffer Protocol | 2025-12 | Zero-copy with `recv_into()`, `memoryview` |
 | FSM.STATE IntEnum | 2025-12 | Converted to IntEnum |
 | Type Safety Issues | 2025-12 | Removed all `type: ignore` |
@@ -121,6 +121,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-buffer-protocol-audit.md` | 2025-12-15 | Migrate bytes→Buffer (117 files, 250 replacements) |
 | `done-action-enum-refactor.md` | 2025-12-15 | Replace action= strings with type-safe enums |
 | `done-bgpls-rfc-naming.md` | 2025-12-11 | Rename BGP-LS classes to match RFC/IANA |
 | `done-bgpls-packed-bytes-first.md` | 2025-12-12 | BGP-LS packed-bytes-first + MERGE refactor |
