@@ -7,16 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import cast
-
 from exabgp.rib.route import Route
-
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri import IPVPN
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.settings import INETSettings
 
 from exabgp.configuration.announce import ParseAnnounce
@@ -71,25 +67,12 @@ class AnnounceVPN(ParseAnnounce):
     def clear(self) -> None:
         pass
 
-    @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
-        if not AnnounceLabel.check(route, afi):
-            return False
-
-        # has_rd() confirms the NLRI type has an rd attribute
-        # RD is required for announces
-        if route.nlri.has_rd():
-            if cast(IPVPN, route.nlri).rd is RouteDistinguisher.NORD:
-                return False
-
-        return True
-
 
 @ParseAnnounce.register_family(AFI.ipv4, SAFI.mpls_vpn, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def mpls_vpn_v4(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnounceVPN.schema, AFI.ipv4, SAFI.mpls_vpn, AnnounceVPN.check)
+    return _build_route(tokeniser, AnnounceVPN.schema, AFI.ipv4, SAFI.mpls_vpn)
 
 
 @ParseAnnounce.register_family(AFI.ipv6, SAFI.mpls_vpn, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def mpls_vpn_v6(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnounceVPN.schema, AFI.ipv6, SAFI.mpls_vpn, AnnounceVPN.check)
+    return _build_route(tokeniser, AnnounceVPN.schema, AFI.ipv6, SAFI.mpls_vpn)

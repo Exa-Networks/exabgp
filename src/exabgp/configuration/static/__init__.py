@@ -7,15 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.attribute import AttributeCollection, NextHop
+from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, Label
 from exabgp.bgp.message.update.nlri.settings import INETSettings
-from exabgp.configuration.announce.label import AnnounceLabel
-from exabgp.configuration.announce.path import AnnouncePath
-from exabgp.configuration.announce.vpn import AnnounceVPN
 from exabgp.configuration.schema import Container, ActionTarget, ActionOperation
 from exabgp.configuration.static.mpls import label, route_distinguisher
 from exabgp.configuration.static.parser import path_information, prefix
@@ -23,10 +20,6 @@ from exabgp.configuration.static.route import ParseStaticRoute as ParseStaticRou
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.rib.route import Route
-
-
-def _check_true(route: Route, afi: AFI) -> bool:
-    return True
 
 
 class ParseStatic(ParseStaticRoute):
@@ -79,19 +72,15 @@ def route(tokeniser: Any) -> list[Route]:
     has_label = 'label' in tokeniser.tokens
 
     nlri_class: type[INET]
-    check: Callable[[Route, AFI, Action], bool]
     if has_rd:
         nlri_class = IPVPN
         settings.safi = SAFI.mpls_vpn
-        check = AnnounceVPN.check
     elif has_label:
         nlri_class = Label
         settings.safi = SAFI.nlri_mpls
-        check = AnnounceLabel.check
     else:
         nlri_class = INET
         settings.safi = IP.tosafi(ipmask.top())
-        check = AnnouncePath.check
 
     # Parse all tokens - collect into settings
     while True:
@@ -130,18 +119,10 @@ def route(tokeniser: Any) -> list[Route]:
         else:
             raise ValueError('unknown command "{}"'.format(command))
 
-    # Create immutable NLRI from validated settings
+    # Create immutable NLRI from settings
+    # Note: Validation (nexthop, labels, RD) happens at wire format generation time
     nlri = nlri_class.from_settings(settings)
-
-    # For withdrawals, set dummy nexthop if not provided (required for check validation)
-    nexthop = settings.nexthop
-    if nlri_action == Action.WITHDRAW and nexthop is IP.NoNextHop:
-        nexthop = NextHop.from_string('0.0.0.0')
-
-    static_route = Route(nlri, attributes, nexthop=nexthop)
-
-    if not check(static_route, nlri.afi):
-        raise ValueError('invalid route (missing next-hop, label or rd ?)')
+    static_route = Route(nlri, attributes, nexthop=settings.nexthop)
 
     return list(ParseStatic.split(static_route))
 

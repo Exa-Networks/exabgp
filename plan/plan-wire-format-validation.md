@@ -1,0 +1,121 @@
+# Plan: Move Route Validation to Wire Format Generation
+
+## Problem
+
+Route validation (nexthop, labels, RD) was being done during parsing via `check()` functions. This is broken because:
+
+1. **Withdrawals don't need these values** - per RFC 4271, MP_UNREACH_NLRI contains only the NLRI, no nexthop/attributes
+2. **Announces need these values** - MP_REACH_NLRI requires nexthop, labeled routes need labels, VPN routes need RD
+3. **Parsing doesn't know the action** - after removing action from Route/NLRI, check functions can't distinguish announce vs withdraw
+
+Current broken check functions:
+- `AnnounceIP.check` - nexthop validation (removed, was broken)
+- `AnnounceLabel.check` - labels validation (broken - can't distinguish action)
+- `AnnounceVPN.check` - RD validation (broken - can't distinguish action)
+
+## Solution
+
+Move validation to wire format generation time in `UpdateCollection.messages()` where we know:
+- Which NLRIs are announces (go into MP_REACH_NLRI)
+- Which NLRIs are withdraws (go into MP_UNREACH_NLRI)
+
+## Implementation
+
+### Phase 1: Remove All Check Functions (COMPLETE)
+
+Remove the broken check infrastructure:
+- [x] Remove `AnnounceIP.check()`
+- [x] Remove `AnnouncePath.check()` (was already removed, no check method)
+- [x] Remove `AnnounceLabel.check()`
+- [x] Remove `AnnounceVPN.check()`
+- [x] Remove `AnnounceVPLS.check()`
+- [x] Remove `AnnounceFlow.check()`
+- [x] Remove `AnnounceMVPN.check()`
+- [x] Remove `AnnounceMUP.check()`
+- [x] Remove `ParseStaticRoute.check()` and `_check()`
+- [x] Remove `check_func` parameter from `_build_route()` and `_build_type_selector_route()`
+- [x] Remove all check calls from API command handlers (announce.py, group.py, route.py)
+- [x] Remove check from `static/__init__.py`
+- [x] Clean up unused imports (Labels, RouteDistinguisher, cast, etc.)
+
+### Phase 2: Add Wire Format Validation
+
+Location: `src/exabgp/bgp/message/update/collection.py` in `messages()` method
+
+**For announces (before generating MP_REACH_NLRI):**
+
+```python
+# In messages() when processing announces
+for routed in self._announces:
+    nlri = routed.nlri
+    nexthop = routed.nexthop
+
+    # Validate nexthop for unicast/multicast
+    if nlri.safi in (SAFI.unicast, SAFI.multicast):
+        if nexthop is IP.NoNextHop:
+            raise ValueError(f'announce requires nexthop: {nlri}')
+
+    # Validate labels for labeled routes
+    if nlri.has_label():
+        if nlri.labels is Labels.NOLABEL:
+            raise ValueError(f'labeled route announce requires labels: {nlri}')
+
+    # Validate RD for VPN routes
+    if nlri.has_rd():
+        if nlri.rd is RouteDistinguisher.NORD:
+            raise ValueError(f'VPN route announce requires RD: {nlri}')
+```
+
+**For withdraws:** No validation needed - withdraws only need NLRI identity.
+
+### Phase 3: Consider API-Level Validation (Optional)
+
+For better error messages at API time, we could validate in the API handlers by checking the action:
+
+```python
+# In announce_route() handler
+for route in routes:
+    if route.nexthop is IP.NoNextHop and route.nlri.safi in (SAFI.unicast, SAFI.multicast):
+        return error('announce requires nexthop')
+
+# In withdraw_route() handler
+# No nexthop validation needed
+```
+
+This gives immediate feedback but duplicates validation logic.
+
+## Files to Modify
+
+### Phase 1 (Remove check functions):
+- `src/exabgp/configuration/announce/ip.py` - remove check method
+- `src/exabgp/configuration/announce/path.py` - remove check method
+- `src/exabgp/configuration/announce/label.py` - remove check method
+- `src/exabgp/configuration/announce/vpn.py` - remove check method
+- `src/exabgp/configuration/announce/vpls.py` - remove check method
+- `src/exabgp/configuration/announce/flow.py` - remove check method
+- `src/exabgp/configuration/announce/mvpn.py` - remove check method
+- `src/exabgp/configuration/announce/mup.py` - remove check method
+- `src/exabgp/configuration/announce/route_builder.py` - remove check_func parameter
+- `src/exabgp/configuration/static/route.py` - remove check method
+- `src/exabgp/configuration/static/__init__.py` - remove check call
+- `src/exabgp/reactor/api/command/announce.py` - remove check calls
+- `src/exabgp/reactor/api/command/group.py` - remove check calls
+- `src/exabgp/reactor/api/command/route.py` - remove check calls
+
+### Phase 2 (Add wire format validation):
+- `src/exabgp/bgp/message/update/collection.py` - add validation in messages()
+
+## Testing
+
+1. All existing tests should pass (validation moves, doesn't disappear)
+2. Test announce without nexthop → should fail at wire generation
+3. Test withdraw without nexthop → should succeed
+4. Test labeled route announce without labels → should fail
+5. Test VPN route announce without RD → should fail
+
+## Benefits
+
+1. **Correct semantics** - validation happens where we know announce vs withdraw
+2. **Simpler parsing** - no check functions cluttering the code
+3. **Single validation point** - wire format generation is the authority
+4. **Better error messages** - can include context about what's being generated

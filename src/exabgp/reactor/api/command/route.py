@@ -18,7 +18,6 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from exabgp.configuration.static import ParseStaticRoute
 from exabgp.protocol.family import AFI, SAFI
 
 if TYPE_CHECKING:
@@ -198,18 +197,6 @@ def routes_add(
 
             results = []
             for route in routes:
-                if not ParseStaticRoute.check(route):
-                    peer_list = ', '.join(peers) if peers else 'all peers'
-                    self.log_message(f'invalid route for {peer_list} : {route.extensive()}')
-                    results.append(
-                        {
-                            'route': route.extensive(),
-                            'success': False,
-                            'error': 'invalid route',
-                        }
-                    )
-                    continue
-
                 # Use indexed injection to get index
                 index, success = reactor.configuration.announce_route_indexed(peers, route)
 

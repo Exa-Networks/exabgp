@@ -381,26 +381,22 @@ class AnnounceFlow(ParseAnnounce):
         self.scope.extend('routes', self.scope.pop('flow', []))
         return True
 
-    @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
-        return True
-
 
 @ParseAnnounce.register_family(AFI.ipv4, SAFI.flow_ip, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def flow_ip_v4(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv4, SAFI.flow_ip, AnnounceFlow.check)
+    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv4, SAFI.flow_ip)
 
 
 @ParseAnnounce.register_family(AFI.ipv4, SAFI.flow_vpn, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def flow_vpn_v4(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv4, SAFI.flow_vpn, AnnounceFlow.check)
+    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv4, SAFI.flow_vpn)
 
 
 @ParseAnnounce.register_family(AFI.ipv6, SAFI.flow_ip, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def flow_ip_v6(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv6, SAFI.flow_ip, AnnounceFlow.check)
+    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv6, SAFI.flow_ip)
 
 
 @ParseAnnounce.register_family(AFI.ipv6, SAFI.flow_vpn, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def flow_vpn_v6(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv6, SAFI.flow_vpn, AnnounceFlow.check)
+    return _build_route(tokeniser, AnnounceFlow.schema, AFI.ipv6, SAFI.flow_vpn)

@@ -266,12 +266,7 @@ class AnnounceVPLS(ParseAnnounce):
     def post(self) -> bool:
         return self._check()
 
-    @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
-        # No check performed :-(
-        return True
-
 
 @ParseAnnounce.register_family(AFI.l2vpn, SAFI.vpls, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def vpls_v4(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnounceVPLS.schema, AFI.l2vpn, SAFI.vpls, AnnounceVPLS.check)
+    return _build_route(tokeniser, AnnounceVPLS.schema, AFI.l2vpn, SAFI.vpls)

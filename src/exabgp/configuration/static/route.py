@@ -452,34 +452,6 @@ class ParseStaticRoute(Section):
         # Note: nexthop is stored in Route, not NLRI - caller handles nexthop
         return new_nlri
 
-    def _check(self) -> bool:
-        change = self.scope.get(self.name)
-        if not self.check(change):
-            self.error.set(self.syntax)
-            return False
-        return True
-
-    @staticmethod
-    def check(route: Route) -> bool:
-        """Validate route before processing.
-
-        Args:
-            route: Route to validate
-
-        Returns:
-            True if valid, False otherwise
-
-        Note:
-            For announces, IPv4 unicast/multicast require nexthop.
-            For withdraws, caller should set a dummy nexthop (e.g., 0.0.0.0) before calling.
-        """
-        nlri: NLRI = route.nlri
-        # Check route.nexthop instead of nlri.nexthop (nexthop is stored in Route)
-        # IPv4 unicast/multicast require nexthop
-        if route.nexthop is IP.NoNextHop and nlri.afi == AFI.ipv4 and nlri.safi in (SAFI.unicast, SAFI.multicast):
-            return False
-        return True
-
     @staticmethod
     def split(last: Route) -> Iterator[Route]:
         if Attribute.CODE.INTERNAL_SPLIT not in last.attributes:

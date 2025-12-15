@@ -16,7 +16,6 @@ from exabgp.protocol.ip import IP
 from exabgp.protocol.family import Family
 from exabgp.bgp.message.update.attribute import NextHop
 
-from exabgp.configuration.static import ParseStaticRoute
 from exabgp.logger import log, lazymsg
 
 if TYPE_CHECKING:
@@ -107,10 +106,6 @@ def announce_route(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                if not ParseStaticRoute.check(route):
-                    peer_list = ', '.join(peers) if peers else 'all peers'
-                    self.log_message(f'invalid route for {peer_list} : {route.extensive()}')
-                    continue
                 reactor.configuration.announce_route(peers, route)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {route.extensive()}')
@@ -161,10 +156,6 @@ def withdraw_route(
                 if route.nexthop is IP.NoNextHop:
                     route = route.with_nexthop(NextHop.from_string('0.0.0.0'))
 
-                if not ParseStaticRoute.check(route):
-                    peer_list = ', '.join(peers) if peers else 'all peers'
-                    self.log_message(f'invalid route for {peer_list} : {route.extensive()}')
-                    continue
                 if reactor.configuration.withdraw_route(peers, route):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'route removed from {peer_list} : {route.extensive()}')

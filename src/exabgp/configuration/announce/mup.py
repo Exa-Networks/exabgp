@@ -109,16 +109,12 @@ class AnnounceMup(ParseAnnounce):
     def post(self) -> bool:
         return ParseAnnounce.post(self) and self._check()
 
-    @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
-        return True
-
 
 @ParseAnnounce.register_family(AFI.ipv4, SAFI.mup, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def mup_ip_v4(tokeniser: Tokeniser) -> list[Route]:
-    return _build_type_selector_route(tokeniser, AnnounceMup.schema, AFI.ipv4, SAFI.mup, AnnounceMup.check)
+    return _build_type_selector_route(tokeniser, AnnounceMup.schema, AFI.ipv4, SAFI.mup)
 
 
 @ParseAnnounce.register_family(AFI.ipv6, SAFI.mup, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def mup_ip_v6(tokeniser: Tokeniser) -> list[Route]:
-    return _build_type_selector_route(tokeniser, AnnounceMup.schema, AFI.ipv6, SAFI.mup, AnnounceMup.check)
+    return _build_type_selector_route(tokeniser, AnnounceMup.schema, AFI.ipv6, SAFI.mup)

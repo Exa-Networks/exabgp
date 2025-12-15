@@ -2,13 +2,9 @@
 """
 Tests for route validation check functions.
 
-The check functions validate that routes have required fields:
-- Unicast/multicast routes require nexthop
-- Labels required for labeled routes
-- RD required for VPN routes
-
-Action is no longer passed to check - it's determined by which RIB method is called.
-For withdraws, callers set a dummy nexthop before calling check.
+The check functions validate route structure, NOT nexthop presence.
+Nexthop validation happens at wire format generation time, not during
+route parsing. Withdrawals don't have nexthop per RFC 4271.
 """
 
 from unittest.mock import Mock
@@ -53,12 +49,16 @@ class TestAnnounceIPCheck:
         result = AnnounceIP.check(route, AFI.ipv4)
         assert result is True
 
-    def test_route_without_nexthop_fails(self):
-        """Route without nexthop fails validation (for unicast/multicast)."""
+    def test_route_without_nexthop_passes(self):
+        """Route without nexthop passes validation.
+
+        Nexthop validation is NOT done in check() - it happens at wire format
+        generation time. Withdrawals legitimately don't have nexthop per RFC 4271.
+        """
         route = self._create_mock_route(has_nexthop=False)
 
         result = AnnounceIP.check(route, AFI.ipv4)
-        assert result is False
+        assert result is True
 
     def test_ipv6_route_with_nexthop_passes(self):
         """IPv6 route with nexthop passes validation."""
@@ -68,13 +68,8 @@ class TestAnnounceIPCheck:
         assert result is True
 
     def test_non_unicast_without_nexthop_passes(self):
-        """Non-unicast/multicast SAFI routes don't require nexthop."""
+        """Non-unicast/multicast SAFI routes pass validation without nexthop."""
         route = self._create_mock_route(has_nexthop=False, safi=SAFI.flow_ip)
 
         result = AnnounceIP.check(route, AFI.ipv4)
         assert result is True
-
-
-# NOTE: Action is no longer passed to check functions.
-# For withdraws, the caller (withdraw_route in announce.py) sets a dummy
-# nexthop (0.0.0.0) before calling check, so the validation passes.

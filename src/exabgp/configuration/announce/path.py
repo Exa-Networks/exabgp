@@ -65,19 +65,12 @@ class AnnouncePath(AnnounceIP):
     def clear(self) -> None:
         pass
 
-    @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
-        if not AnnounceIP.check(route, afi):
-            return False
-
-        return True
-
 
 @ParseAnnounce.register_family(AFI.ipv4, SAFI.unicast, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def unicast_v4(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnouncePath.schema, AFI.ipv4, SAFI.unicast, AnnouncePath.check)
+    return _build_route(tokeniser, AnnouncePath.schema, AFI.ipv4, SAFI.unicast)
 
 
 @ParseAnnounce.register_family(AFI.ipv6, SAFI.unicast, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def unicast_v6(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnouncePath.schema, AFI.ipv6, SAFI.unicast, AnnouncePath.check)
+    return _build_route(tokeniser, AnnouncePath.schema, AFI.ipv6, SAFI.unicast)

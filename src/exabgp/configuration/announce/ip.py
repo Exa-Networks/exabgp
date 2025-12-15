@@ -7,9 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
-from exabgp.protocol.ip import IP
-
 from exabgp.rib.route import Route
 
 
@@ -198,7 +195,7 @@ class AnnounceIP(ParseAnnounce):
 
     @staticmethod
     def check(route: Route, afi: AFI | None) -> bool:
-        """Validate route for IP announce/withdraw.
+        """Validate route structure for IP announce/withdraw.
 
         Args:
             route: Route to validate
@@ -208,17 +205,9 @@ class AnnounceIP(ParseAnnounce):
             True if valid, False otherwise
 
         Note:
-            Unicast/multicast require nexthop. For withdraws, caller should
-            set a dummy nexthop (e.g., 0.0.0.0) before calling.
+            Nexthop validation is NOT done here - it happens at wire format
+            generation time. Withdrawals don't have nexthop per RFC 4271.
         """
-        # Unicast/multicast require nexthop
-        if (
-            route.nexthop is IP.NoNextHop
-            and route.nlri.afi == afi
-            and route.nlri.safi in (SAFI.unicast, SAFI.multicast)
-        ):
-            return False
-
         return True
 
 

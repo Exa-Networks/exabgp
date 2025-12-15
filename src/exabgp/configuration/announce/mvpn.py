@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
 from exabgp.rib.route import Route
 
 from exabgp.protocol.family import AFI
@@ -75,19 +74,12 @@ class AnnounceMVPN(ParseAnnounce):
     def post(self) -> bool:
         return ParseAnnounce.post(self) and self._check()
 
-    @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
-        if not AnnounceIP.check(route, afi):
-            return False
-
-        return True
-
 
 @ParseAnnounce.register_family(AFI.ipv4, SAFI.mcast_vpn, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def mcast_vpn_v4(tokeniser: Tokeniser) -> list[Route]:
-    return _build_type_selector_route(tokeniser, AnnounceMVPN.schema, AFI.ipv4, SAFI.mcast_vpn, AnnounceMVPN.check)
+    return _build_type_selector_route(tokeniser, AnnounceMVPN.schema, AFI.ipv4, SAFI.mcast_vpn)
 
 
 @ParseAnnounce.register_family(AFI.ipv6, SAFI.mcast_vpn, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def mcast_vpn_v6(tokeniser: Tokeniser) -> list[Route]:
-    return _build_type_selector_route(tokeniser, AnnounceMVPN.schema, AFI.ipv6, SAFI.mcast_vpn, AnnounceMVPN.check)
+    return _build_type_selector_route(tokeniser, AnnounceMVPN.schema, AFI.ipv6, SAFI.mcast_vpn)

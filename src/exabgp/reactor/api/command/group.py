@@ -25,7 +25,6 @@ import asyncio
 import json
 from typing import TYPE_CHECKING
 
-from exabgp.configuration.static import ParseStaticRoute
 from exabgp.logger import log, lazymsg
 
 from exabgp.reactor.api.command.announce import (
@@ -239,9 +238,6 @@ async def _process_group(
                 if shared_attributes_route:
                     route = route.with_merged_attributes(shared_attributes_route.attributes)
 
-                if not ParseStaticRoute.check(route):
-                    errors.append(f'invalid route: {route.extensive()}')
-                    continue
                 reactor.configuration.announce_route(cmd_peers, route)
                 all_peers.update(cmd_peers)
                 routes_added += 1

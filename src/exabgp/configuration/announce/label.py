@@ -7,16 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import cast
-
 from exabgp.rib.route import Route
-
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.label import Label
-from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.settings import INETSettings
 
 from exabgp.configuration.announce import ParseAnnounce
@@ -71,25 +67,12 @@ class AnnounceLabel(AnnouncePath):
     def clear(self) -> None:
         pass
 
-    @staticmethod
-    def check(route: Route, afi: AFI | None) -> bool:
-        if not AnnouncePath.check(route, afi):
-            return False
-
-        # has_label() confirms the NLRI type has a labels attribute
-        # Labels are required for announces
-        if route.nlri.has_label():
-            if cast(Label, route.nlri).labels is Labels.NOLABEL:
-                return False
-
-        return True
-
 
 @ParseAnnounce.register_family(AFI.ipv4, SAFI.nlri_mpls, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def nlri_mpls_v4(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnounceLabel.schema, AFI.ipv4, SAFI.nlri_mpls, AnnounceLabel.check)
+    return _build_route(tokeniser, AnnounceLabel.schema, AFI.ipv4, SAFI.nlri_mpls)
 
 
 @ParseAnnounce.register_family(AFI.ipv6, SAFI.nlri_mpls, ActionTarget.SCOPE, ActionOperation.EXTEND, ActionKey.NAME)
 def nlri_mpls_v6(tokeniser: Tokeniser) -> list[Route]:
-    return _build_route(tokeniser, AnnounceLabel.schema, AFI.ipv6, SAFI.nlri_mpls, AnnounceLabel.check)
+    return _build_route(tokeniser, AnnounceLabel.schema, AFI.ipv6, SAFI.nlri_mpls)
