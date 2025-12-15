@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.bgp.message.update.attribute import AttributeCollection, NextHop
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, Label
 from exabgp.bgp.message.update.nlri.settings import INETSettings
 from exabgp.configuration.announce.label import AnnounceLabel
@@ -132,7 +132,13 @@ def route(tokeniser: Any) -> list[Route]:
 
     # Create immutable NLRI from validated settings
     nlri = nlri_class.from_settings(settings)
-    static_route = Route(nlri, attributes, nexthop=settings.nexthop)
+
+    # For withdrawals, set dummy nexthop if not provided (required for check validation)
+    nexthop = settings.nexthop
+    if nlri_action == Action.WITHDRAW and nexthop is IP.NoNextHop:
+        nexthop = NextHop.from_string('0.0.0.0')
+
+    static_route = Route(nlri, attributes, nexthop=nexthop)
 
     if not check(static_route, nlri.afi):
         raise ValueError('invalid route (missing next-hop, label or rd ?)')
@@ -209,7 +215,7 @@ def attributes(tokeniser: Any) -> list[Route]:
             if not has_nlri_keyword:
                 # Attributes-only: return Route with Empty NLRI
                 if attr:
-                    empty_nlri = Empty(AFI.ipv4, SAFI.unicast, nlri_action)
+                    empty_nlri = Empty(AFI.ipv4, SAFI.unicast)
                     return [Route(empty_nlri, attr)]
             return []
 
@@ -266,7 +272,7 @@ def attributes(tokeniser: Any) -> list[Route]:
 
     # If 'nlri' keyword was present but no prefixes followed, return attributes-only
     if not routes and attr:
-        empty_nlri = Empty(AFI.ipv4, SAFI.unicast, nlri_action)
+        empty_nlri = Empty(AFI.ipv4, SAFI.unicast)
         return [Route(empty_nlri, attr)]
 
     return routes

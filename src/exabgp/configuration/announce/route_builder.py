@@ -14,9 +14,11 @@ from typing import TYPE_CHECKING, Callable
 from exabgp.rib.route import Route
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.update.attribute import NextHop
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.ip import IP
 
 from exabgp.configuration.validator import RouteBuilderValidator
 from exabgp.configuration.validator import TypeSelectorValidator
@@ -63,8 +65,13 @@ def _build_route(
     routes = validator.validate(tokeniser)
 
     if check_func:
-        for route in routes:
-            if not check_func(route, afi):
+        for i, route in enumerate(routes):
+            # For withdrawals, set a dummy nexthop if missing (required for check validation)
+            check_route = route
+            if action_type == Action.WITHDRAW and route.nexthop is IP.NoNextHop:
+                check_route = route.with_nexthop(NextHop.from_string('0.0.0.0'))
+                routes[i] = check_route  # Update the list with the nexthop-equipped route
+            if not check_func(check_route, afi):
                 raise ValueError('invalid route announcement (check failed)')
 
     return routes
@@ -108,8 +115,13 @@ def _build_type_selector_route(
     routes = validator.validate(tokeniser)
 
     if check_func:
-        for route in routes:
-            if not check_func(route, afi):
+        for i, route in enumerate(routes):
+            # For withdrawals, set a dummy nexthop if missing (required for check validation)
+            check_route = route
+            if action_type == Action.WITHDRAW and route.nexthop is IP.NoNextHop:
+                check_route = route.with_nexthop(NextHop.from_string('0.0.0.0'))
+                routes[i] = check_route  # Update the list with the nexthop-equipped route
+            if not check_func(check_route, afi):
                 raise ValueError('invalid route announcement (check failed)')
 
     return routes

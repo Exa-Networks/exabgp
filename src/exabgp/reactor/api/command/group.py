@@ -185,12 +185,21 @@ async def _process_group(
 
     Parses all commands, injects routes into RIB, then waits for flush.
     RIB-level batching will automatically combine routes with same attributes.
+
+    Special handling for 'group attributes ... ; withdraw ...' syntax:
+    - First command starting with 'attributes' sets shared attributes
+    - Subsequent withdraw commands get those shared attributes merged in
     """
+    from exabgp.rib.route import Route
+
     # Collect all peers that will receive routes (for flush callbacks)
     all_peers: set[str] = set()
     routes_added = 0
     routes_withdrawn = 0
     errors: list[str] = []
+
+    # Shared attributes from 'attributes ...' command (first in group)
+    shared_attributes_route: Route | None = None
 
     # Determine sync mode from first command (or service default)
     first_cmd = buffered[0][1] if buffered else ''
@@ -209,14 +218,27 @@ async def _process_group(
         # Strip sync/async/json/text from remaining command
         remaining, _ = parse_sync_mode(remaining, reactor, service)
 
-        if action_word == 'announce':
+        if action_word in ('attribute', 'attributes'):
+            # Parse shared attributes - use full command including 'attributes'
+            routes = _parse_routes(api, cmd, action='announce')
+            if routes:
+                shared_attributes_route = routes[0]
+                log.debug(lazymsg('api.group.shared_attributes attrs={a}', a=shared_attributes_route.attributes), 'api')
+            else:
+                errors.append(f'could not parse attributes: {cmd}')
+
+        elif action_word == 'announce':
             # Parse the announcement
-            routes = _parse_routes(api, remaining)
+            routes = _parse_routes(api, remaining, action='announce')
             if not routes:
                 errors.append(f'could not parse: {cmd}')
                 continue
 
             for route in routes:
+                # Merge shared attributes if available
+                if shared_attributes_route:
+                    route = route.with_merged_attributes(shared_attributes_route.attributes)
+
                 if not ParseStaticRoute.check(route):
                     errors.append(f'invalid route: {route.extensive()}')
                     continue
@@ -226,13 +248,17 @@ async def _process_group(
                 await asyncio.sleep(0)
 
         elif action_word == 'withdraw':
-            # Parse the withdrawal
-            routes = _parse_routes(api, remaining)
+            # Parse the withdrawal - pass action='withdraw' for proper handling
+            routes = _parse_routes(api, remaining, action='withdraw')
             if not routes:
                 errors.append(f'could not parse: {cmd}')
                 continue
 
             for route in routes:
+                # Merge shared attributes if available (for withdrawals with attributes)
+                if shared_attributes_route:
+                    route = route.with_merged_attributes(shared_attributes_route.attributes)
+
                 reactor.configuration.withdraw_route(cmd_peers, route)
                 all_peers.update(cmd_peers)
                 routes_withdrawn += 1
@@ -267,7 +293,7 @@ async def _process_group(
     await reactor.processes.answer_done_async(service)
 
 
-def _parse_routes(api: 'API', command: str) -> list:
+def _parse_routes(api: 'API', command: str, action: str = 'announce') -> list:
     """Parse routes from command string.
 
     Handles various route formats:
@@ -276,6 +302,11 @@ def _parse_routes(api: 'API', command: str) -> list:
     - ipv4 mcast-vpn shared-join ...
     - flow match ...
     - vpls ...
+
+    Args:
+        api: API instance for parsing
+        command: Command string to parse
+        action: 'announce' or 'withdraw' - affects how routes are parsed
     """
     if not command:
         return []
@@ -288,20 +319,20 @@ def _parse_routes(api: 'API', command: str) -> list:
 
     try:
         if route_type == 'route':
-            return api.api_route(command, action='announce')
+            return api.api_route(command, action=action)
         elif route_type == 'ipv4':
-            return api.api_announce_v4(command, action='announce')
+            return api.api_announce_v4(command, action=action)
         elif route_type == 'ipv6':
-            return api.api_announce_v6(command, action='announce')
+            return api.api_announce_v6(command, action=action)
         elif route_type == 'flow':
-            return api.api_flow(command, action='announce')
+            return api.api_flow(command, action=action)
         elif route_type == 'vpls':
-            return api.api_vpls(command, action='announce')
+            return api.api_vpls(command, action=action)
         elif route_type in ('attribute', 'attributes'):
-            return api.api_attributes(command, [], action='announce')
+            return api.api_attributes(command, [], action=action)
         else:
             # Unknown type, try as generic route
-            return api.api_route(command, action='announce')
+            return api.api_route(command, action=action)
     except Exception:
         return []
 

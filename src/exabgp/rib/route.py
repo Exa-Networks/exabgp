@@ -83,6 +83,27 @@ class Route:
         """
         return Route(self.nlri, self.attributes, nexthop=nexthop)
 
+    def with_merged_attributes(self, extra_attrs: 'AttributeCollection') -> 'Route':
+        """Return a new Route with additional attributes merged in.
+
+        Route is immutable, so this creates a new instance.
+        Attributes from extra_attrs are added to this route's attributes.
+        Existing attributes in this route take precedence (not overwritten).
+
+        Args:
+            extra_attrs: Additional attributes to merge into this route
+        """
+        from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+
+        merged = AttributeCollection()
+        # First add extra attributes
+        for code, attr in extra_attrs.items():
+            merged.add(attr)
+        # Then add our attributes (these take precedence)
+        for code, attr in self.attributes.items():
+            merged.add(attr)
+        return Route(self.nlri, merged, nexthop=self._nexthop)
+
     def index(self) -> bytes:
         if not self.__index:
             self.__index = b'%02x%02x' % self.nlri.family().afi_safi() + self.nlri.index()
