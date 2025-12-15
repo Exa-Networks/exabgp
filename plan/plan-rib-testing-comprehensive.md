@@ -1,6 +1,6 @@
 # Plan: Comprehensive RIB Testing Suite
 
-**Status:** ✅ Completed (P0+P1)
+**Status:** ✅ Completed (P0+P1+P2)
 **Created:** 2025-12-15
 **Purpose:** Address testing gaps in RIB code after recent refactoring
 
@@ -478,10 +478,10 @@ uv run pytest tests/unit/test_route.py tests/unit/test_rib_*.py -v
 - [x] Phase 2: P1 Tests
   - [x] test_rib_incoming.py (36 tests)
   - [x] test_rib_watchdog.py (21 tests)
-- [ ] Phase 3: P2 Tests (optional - good to have)
-  - [ ] test_rib_index.py
-  - [ ] test_rib_flush_callbacks.py
-  - [ ] test_rib_update_generation.py
+- [x] Phase 3: P2 Tests
+  - [x] test_rib_index.py (30 tests)
+  - [x] test_rib_flush_callbacks.py (19 tests)
+  - [x] test_rib_update_generation.py (19 tests)
 - [ ] Phase 4: P3 Tests (optional - nice to have)
   - [ ] test_rib_invariants.py
 - [x] All tests pass with ./qa/bin/test_everything ✅
@@ -489,14 +489,21 @@ uv run pytest tests/unit/test_route.py tests/unit/test_rib_*.py -v
 ## Completed Work Summary (2025-12-15)
 
 **New test files created:**
-- `tests/unit/test_route.py` - 53 tests for Route class (init, index, with_nexthop, with_merged_attributes, refcount, equality, feedback, extensive)
-- `tests/unit/test_rib_replace.py` - 20 tests for replace_restart/replace_reload operations
-- `tests/unit/test_rib_incoming.py` - 36 tests for IncomingRIB and Cache operations
-- `tests/unit/test_rib_watchdog.py` - 21 tests for Watchdog lifecycle (add, announce, withdraw)
 
-**Total new RIB tests: 130**
+P0+P1 (Critical):
+- `tests/unit/test_route.py` - 53 tests for Route class
+- `tests/unit/test_rib_replace.py` - 20 tests for replace_restart/replace_reload
+- `tests/unit/test_rib_incoming.py` - 36 tests for IncomingRIB and Cache
+- `tests/unit/test_rib_watchdog.py` - 21 tests for Watchdog lifecycle
 
-**Full test suite verification:** All 15 test categories passed (51.5s)
+P2 (Good to have):
+- `tests/unit/test_rib_index.py` - 30 tests for index correctness
+- `tests/unit/test_rib_flush_callbacks.py` - 19 tests for async callbacks
+- `tests/unit/test_rib_update_generation.py` - 19 tests for UpdateCollection
+
+**Total new RIB tests: 198**
+
+**Full test suite verification:** All 15 test categories passed (53.1s)
 
 ---
 
@@ -515,10 +522,7 @@ Routes added to watchdog are never removed from `_watchdog` dict - only moved be
 
 ## Resume Point
 
-**Phase 1+2 Complete.** Optional P2/P3 tests remaining:
-- `test_rib_index.py` - Index correctness across NLRI types
-- `test_rib_flush_callbacks.py` - Async callback mechanism
-- `test_rib_update_generation.py` - UpdateCollection content verification
+**Phase 1+2+3 Complete.** Only P3 (optional) remaining:
 - `test_rib_invariants.py` - Property-based invariant tests
 
-These are lower priority since core functionality is now well-tested.
+P3 is lowest priority - core functionality is comprehensively tested with 198 tests.
