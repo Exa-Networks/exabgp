@@ -1,6 +1,6 @@
 # Plan: Comprehensive RIB Testing Suite
 
-**Status:** ✅ Completed (P0+P1+P2)
+**Status:** ✅ Completed (P0+P1+P2+P3)
 **Created:** 2025-12-15
 **Purpose:** Address testing gaps in RIB code after recent refactoring
 
@@ -482,8 +482,8 @@ uv run pytest tests/unit/test_route.py tests/unit/test_rib_*.py -v
   - [x] test_rib_index.py (30 tests)
   - [x] test_rib_flush_callbacks.py (19 tests)
   - [x] test_rib_update_generation.py (19 tests)
-- [ ] Phase 4: P3 Tests (optional - nice to have)
-  - [ ] test_rib_invariants.py
+- [x] Phase 4: P3 Tests
+  - [x] test_rib_invariants.py (32 tests)
 - [x] All tests pass with ./qa/bin/test_everything ✅
 
 ## Completed Work Summary (2025-12-15)
@@ -501,7 +501,10 @@ P2 (Good to have):
 - `tests/unit/test_rib_flush_callbacks.py` - 19 tests for async callbacks
 - `tests/unit/test_rib_update_generation.py` - 19 tests for UpdateCollection
 
-**Total new RIB tests: 198**
+P3 (Property-based invariants):
+- `tests/unit/test_rib_invariants.py` - 32 tests for RIB/Cache invariants
+
+**Total new RIB tests: 230**
 
 **Full test suite verification:** All 15 test categories passed (53.1s)
 
@@ -522,7 +525,19 @@ Routes added to watchdog are never removed from `_watchdog` dict - only moved be
 
 ## Resume Point
 
-**Phase 1+2+3 Complete.** Only P3 (optional) remaining:
-- `test_rib_invariants.py` - Property-based invariant tests
+**ALL PHASES COMPLETE (P0+P1+P2+P3).** This plan is fully implemented.
 
-P3 is lowest priority - core functionality is comprehensively tested with 198 tests.
+Final summary:
+- 8 new test files created
+- 230 new RIB tests added
+- All 15 test categories pass
+
+The RIB code is now comprehensively tested across:
+- Route class functionality (P0)
+- Replace operations for graceful restart/reload (P0)
+- IncomingRIB and Cache operations (P1)
+- Watchdog lifecycle management (P1)
+- Index correctness across NLRI types (P2)
+- Flush callbacks for sync mode (P2)
+- UpdateCollection generation content (P2)
+- Property-based invariants guaranteeing consistency (P3)

@@ -4,7 +4,7 @@
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Unit Tests | 3,223 | Up from 2,540 (Dec 3) |
+| Unit Tests | 3,255 | +230 RIB tests (Dec 15) |
 | Test Coverage | ~60% | Target: 60%+ |
 | MyPy Errors | 244 | Mostly in `cli/completer.py` |
 | TODO/FIXME Comments | 33 | Down from 48 |
@@ -123,6 +123,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-rib-testing-comprehensive.md` | 2025-12-15 | 230 new RIB tests (8 files, P0-P3 complete) |
 | `done-buffer-protocol-audit.md` | 2025-12-15 | Migrate bytes→Buffer (117 files, 250 replacements) |
 | `done-action-enum-refactor.md` | 2025-12-15 | Replace action= strings with type-safe enums |
 | `done-bgpls-rfc-naming.md` | 2025-12-11 | Rename BGP-LS classes to match RFC/IANA |
