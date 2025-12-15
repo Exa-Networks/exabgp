@@ -16,7 +16,6 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
-from exabgp.protocol.ip import IP
 
 
 def create_negotiated() -> Negotiated:
@@ -42,7 +41,7 @@ class TestVPLSCreation:
         assert vpls.offset == 1
         assert vpls.size == 8
         assert vpls.action == Action.UNSET
-        assert vpls.nexthop is IP.NoNextHop
+        # Note: nexthop is now stored in Route, not NLRI
 
     def test_create_vpls_various_values(self) -> None:
         """Test creating VPLS with various parameter values"""
@@ -183,12 +182,11 @@ class TestVPLSStringRepresentation:
         """
         rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS.make_vpls(rd, endpoint=3, base=262145, offset=1, size=8)
-        vpls.nexthop = IP.from_string('10.0.0.1')
+        # Note: nexthop is now stored in Route, not NLRI
 
         result = str(vpls)
         # nexthop is NOT in NLRI.extensive() - comes from Route/RoutedNLRI context
         assert 'next-hop' not in result
-        assert '10.0.0.1' not in result
         # NLRI identity parts should still be present
         assert 'vpls' in result
         assert 'endpoint' in result
@@ -253,25 +251,20 @@ class TestVPLSJSON:
 
 
 class TestVPLSFeedback:
-    """Test feedback validation for VPLS routes"""
+    """Test feedback validation for VPLS routes.
 
-    def test_feedback_all_fields_present(self) -> None:
-        """Test feedback when all fields are present"""
+    Note: nexthop validation is now handled by Route.feedback(), not NLRI.feedback().
+    NLRI.feedback() only validates NLRI-specific constraints (VPLS has size consistency check).
+    """
+
+    def test_nlri_feedback_returns_empty(self) -> None:
+        """Test NLRI.feedback() returns empty for valid VPLS"""
         rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS.make_vpls(rd, endpoint=3, base=262145, offset=1, size=8)
-        vpls.nexthop = IP.from_string('10.0.0.1')
 
+        # NLRI.feedback() no longer validates nexthop - that's Route's job
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert feedback == ''
-
-    def test_feedback_missing_nexthop(self) -> None:
-        """Test feedback when nexthop is missing (IP.NoNextHop)"""
-        rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
-        vpls = VPLS.make_vpls(rd, endpoint=3, base=262145, offset=1, size=8)
-        # nexthop defaults to IP.NoNextHop
-
-        feedback = vpls.feedback(Action.ANNOUNCE)
-        assert 'vpls nlri next-hop missing' in feedback
 
     # Note: Tests for missing fields (endpoint, base, offset, size, rd) have been
     # removed because they tested the deprecated builder mode (make_empty + assign).
@@ -284,8 +277,8 @@ class TestVPLSFeedback:
         # 20 bits max = 0xFFFFF = 1048575
         # If base > (0xFFFFF - size), it's inconsistent
         vpls = VPLS.make_vpls(rd, endpoint=3, base=1048575, offset=1, size=10)
-        vpls.nexthop = IP.from_string('10.0.0.1')  # Set nexthop so we check size consistency
 
+        # VPLS has NLRI-specific validation for size consistency
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert 'vpls nlri size inconsistency' in feedback
 
@@ -294,7 +287,6 @@ class TestVPLSFeedback:
         rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         # Exactly at limit should pass
         vpls = VPLS.make_vpls(rd, endpoint=3, base=1048567, offset=1, size=8)
-        vpls.nexthop = IP.from_string('10.0.0.1')
 
         feedback = vpls.feedback(Action.ANNOUNCE)
         assert feedback == ''

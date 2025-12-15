@@ -132,7 +132,6 @@ class INET(NLRI):
         NLRI.__init__(self, afi, safi, Action.UNSET)
         self._packed = packed  # Complete wire format
         self._has_addpath = has_addpath
-        self.nexthop = IP.NoNextHop
         self.labels: Labels | None = None
         self.rd: RouteDistinguisher | None = None
 
@@ -196,7 +195,6 @@ class INET(NLRI):
         NLRI.__init__(instance, afi, safi, action)
         instance._packed = packed
         instance._has_addpath = has_addpath
-        instance.nexthop = IP.NoNextHop
         instance.labels = None
         instance.rd = None
         return instance
@@ -228,8 +226,7 @@ class INET(NLRI):
         """
         cidr = CIDR.make_cidr(packed, mask)
         instance = cls.from_cidr(cidr, afi, safi, action, path_info)
-        if nexthop is not None:
-            instance.nexthop = nexthop
+        # Note: nexthop parameter is deprecated - nexthop should be stored in Route, not NLRI
         return instance
 
     @classmethod
@@ -265,7 +262,7 @@ class INET(NLRI):
             action=settings.action,
             path_info=settings.path_info,
         )
-        instance.nexthop = settings.nexthop
+        # Note: settings.nexthop is now passed to Route, not stored in NLRI
         return instance
 
     def __len__(self) -> int:
@@ -315,8 +312,7 @@ class INET(NLRI):
         return new
 
     def feedback(self, action: Action) -> str:
-        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
-            return 'inet nlri next-hop missing'
+        # Nexthop validation handled by Route.feedback()
         return ''
 
     def pack_nlri(self, negotiated: 'Negotiated') -> bytes:

@@ -16,7 +16,6 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
 # https://tools.ietf.org/html/rfc7432
@@ -65,7 +64,6 @@ class EVPN(NLRI):
         - addpath is a prefix when negotiated (RFC 7911)
         """
         NLRI.__init__(self, AFI.l2vpn, SAFI.evpn)
-        self.nexthop = IP.NoNextHop
         self._packed = bytes(packed)  # Ensure bytes for storage
 
     def __hash__(self) -> int:
@@ -104,9 +102,8 @@ class EVPN(NLRI):
         # EVPN has empty __slots__ - nothing else to copy
         return new
 
-    def feedback(self, action: int) -> str:
-        # if self.nexthop is None and action == Action.ANNOUNCE:
-        # 	raise RuntimeError('evpn nlri next-hop is missing')
+    def feedback(self, action: Action) -> str:
+        # Nexthop validation handled by Route.feedback()
         return ''
 
     def _prefix(self) -> str:

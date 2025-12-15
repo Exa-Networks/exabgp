@@ -397,7 +397,7 @@ class TestFlowNLRI:
 
         assert flow.afi == AFI.ipv4
         assert flow.safi == SAFI.flow_ip
-        assert flow.nexthop == IP.NoNextHop
+        # Note: nexthop is stored in Route, not NLRI
         assert len(flow.rules) == 0
 
     def test_flow_add_components(self) -> None:
@@ -824,25 +824,16 @@ class TestFlowUnpack:
         # Should have destination, protocol, and destination port rules
         assert len(flow2.rules) >= 2
 
-    def test_flow_feedback_no_nexthop(self) -> None:
-        """Test feedback when announcing flow without nexthop"""
+    def test_flow_nlri_feedback_returns_empty(self) -> None:
+        """Test NLRI.feedback() returns empty (no NLRI-specific validation).
+
+        Note: nexthop validation is now handled by Route.feedback(), not NLRI.feedback().
+        """
         flow = Flow.make_flow()
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
-        # flow.nexthop defaults to IP.NoNextHop
 
-        # When announcing, should complain about missing nexthop
-        feedback = flow.feedback(Action.ANNOUNCE)
-        assert 'next-hop' in feedback.lower()
-
-    def test_flow_feedback_with_nexthop(self) -> None:
-        """Test feedback when nexthop is set"""
-        flow = Flow.make_flow()
-        dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
-        flow.add(dest)
-        flow.nexthop = IP.from_string('10.0.0.1')
-
-        # Should not complain when nexthop is set
+        # NLRI.feedback() no longer validates nexthop - that's Route's job
         feedback = flow.feedback(Action.ANNOUNCE)
         assert feedback == ''
 
@@ -854,7 +845,7 @@ class TestFlowUnpack:
         flow = Flow.make_flow()
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
-        flow.nexthop = IP.from_string('10.0.0.1')
+        # Note: nexthop is now stored in Route, not NLRI
 
         ext_str = flow.extensive()
         # nexthop is NOT in NLRI.extensive() - comes from Route/RoutedNLRI context
@@ -884,7 +875,7 @@ class TestFlowUnpack:
         flow = Flow.make_flow()
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
-        flow.nexthop = IP.from_string('10.0.0.1')
+        # Note: nexthop is now stored in Route, not NLRI
 
         json_str = flow.json()
         # nexthop NOT in v6 json() format
@@ -896,9 +887,10 @@ class TestFlowUnpack:
         flow = Flow.make_flow()
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         flow.add(dest)
-        flow.nexthop = IP.from_string('10.0.0.1')
+        nexthop = IP.from_string('10.0.0.1')
 
-        json_str = flow.v4_json()
+        # Pass nexthop as parameter (new API - nexthop comes from Route/RoutedNLRI)
+        json_str = flow.v4_json(nexthop=nexthop)
         # nexthop IS in v4_json() for backward compatibility
         assert 'next-hop' in json_str
         assert '10.0.0.1' in json_str

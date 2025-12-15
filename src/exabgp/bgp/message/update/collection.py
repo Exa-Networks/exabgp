@@ -512,8 +512,6 @@ class UpdateCollection(Message):
         while announced_bytes:
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced_bytes, Action.ANNOUNCE, addpath, negotiated)
             if nlri is not NLRI.INVALID:
-                # Set nlri.nexthop for backward compat (JSON API reads it)
-                nlri.nexthop = nexthop
                 # Wrap NLRI with nexthop in RoutedNLRI for UpdateCollection
                 routed = RoutedNLRI(nlri, nexthop)
                 log.debug(lazymsg('announced NLRI {nlri}', nlri=nlri), 'routes')

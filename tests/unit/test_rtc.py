@@ -17,7 +17,6 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number as RouteTarget
 from exabgp.bgp.message.update.nlri.rtc import RTC
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.protocol.ip import IP
 
 
 def create_negotiated() -> Negotiated:
@@ -39,7 +38,7 @@ class TestRTCCreation:
         assert nlri.safi == SAFI.rtc
         assert nlri.origin == 65000
         assert nlri.rt == rt
-        assert nlri.nexthop == IP.NoNextHop
+        # Note: nexthop is now stored in Route, not NLRI
 
     def test_create_rtc_wildcard(self) -> None:
         """Test creating wildcard RTC route"""
@@ -49,7 +48,7 @@ class TestRTCCreation:
         assert nlri.safi == SAFI.rtc
         assert nlri.origin == 0
         assert nlri.rt is None
-        assert nlri.nexthop == IP.NoNextHop
+        # Note: nexthop is now stored in Route, not NLRI
 
     def test_create_rtc_with_action(self) -> None:
         """Test creating RTC with specific action"""
@@ -58,13 +57,7 @@ class TestRTCCreation:
 
         assert nlri.action == Action.ANNOUNCE
 
-    def test_create_rtc_with_nexthop(self) -> None:
-        """Test creating RTC with nexthop"""
-        rt = RouteTarget.make_route_target(64512, 100)
-        nh = IP.from_string('10.0.0.1')
-        nlri = RTC.make_rtc(ASN(65000), rt, nexthop=nh)
-
-        assert nlri.nexthop == nh
+    # Note: test_create_rtc_with_nexthop removed - nexthop is now stored in Route, not NLRI
 
     def test_create_rtc_direct_init(self) -> None:
         """Test creating RTC via make_rtc factory"""
@@ -248,43 +241,36 @@ class TestRTCLength:
 
 
 class TestRTCFeedback:
-    """Test feedback validation for RTC routes"""
+    """Test feedback validation for RTC routes.
 
-    def test_feedback_with_nexthop_announce(self) -> None:
-        """Test feedback when nexthop is set for ANNOUNCE"""
+    Note: nexthop validation is now handled by Route.feedback(), not NLRI.feedback().
+    NLRI.feedback() only validates NLRI-specific constraints (RTC has none).
+    """
+
+    def test_nlri_feedback_returns_empty(self) -> None:
+        """Test NLRI.feedback() returns empty (no NLRI-specific validation)"""
         rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.make_rtc(ASN(65000), rt, nexthop=IP.from_string('10.0.0.1'))
+        nlri = RTC.make_rtc(ASN(65000), rt)
 
+        # NLRI.feedback() no longer validates nexthop - that's Route's job
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert feedback == ''
 
-    def test_feedback_without_nexthop_announce(self) -> None:
-        """Test feedback when nexthop is missing (IP.NoNextHop) for ANNOUNCE"""
+    def test_nlri_feedback_withdraw(self) -> None:
+        """Test NLRI.feedback() for WITHDRAW"""
         rt = RouteTarget.make_route_target(64512, 100)
         nlri = RTC.make_rtc(ASN(65000), rt)
-        # nexthop defaults to IP.NoNextHop
 
-        feedback = nlri.feedback(Action.ANNOUNCE)
-        assert 'rtc nlri next-hop missing' in feedback
-
-    def test_feedback_no_nexthop_withdraw(self) -> None:
-        """Test feedback for WITHDRAW action (doesn't require nexthop)"""
-        rt = RouteTarget.make_route_target(64512, 100)
-        nlri = RTC.make_rtc(ASN(65000), rt)
-        # nexthop defaults to IP.NoNextHop
-
-        # WITHDRAW doesn't require nexthop validation
         feedback = nlri.feedback(Action.WITHDRAW)
-        # Feedback should still report missing nexthop since action check is ==
-        assert feedback == '' or 'next-hop' in feedback
+        assert feedback == ''
 
-    def test_feedback_wildcard(self) -> None:
-        """Test feedback for wildcard RTC"""
+    def test_nlri_feedback_wildcard(self) -> None:
+        """Test NLRI.feedback() for wildcard RTC"""
         nlri = RTC.make_rtc(ASN(0), None)
-        # nexthop defaults to IP.NoNextHop
 
+        # No NLRI-specific validation for RTC
         feedback = nlri.feedback(Action.ANNOUNCE)
-        assert 'rtc nlri next-hop missing' in feedback
+        assert feedback == ''
 
 
 class TestRTCRegistration:

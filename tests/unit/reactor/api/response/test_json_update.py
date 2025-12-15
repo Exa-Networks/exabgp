@@ -146,11 +146,11 @@ class TestUpdateCollectionJSON:
         withdraw = message['update']['withdraw']
         assert 'ipv4 unicast' in withdraw
 
-    def test_update_nexthop_from_routed_nlri_not_bare_nlri(self, json_encoder: JSON) -> None:
-        """Test that nexthop comes from RoutedNLRI, not from bare NLRI.
+    def test_update_nexthop_from_routed_nlri(self, json_encoder: JSON) -> None:
+        """Test that nexthop comes from RoutedNLRI.
 
-        This is critical: RoutedNLRI.nexthop should be the authoritative source,
-        even if nlri.nexthop has a different value.
+        NLRI no longer stores nexthop - nexthop is stored in RoutedNLRI.
+        RoutedNLRI.nexthop is the authoritative source.
         """
         import socket
 
@@ -158,11 +158,9 @@ class TestUpdateCollectionJSON:
         packed_ip = socket.inet_aton('10.0.0.0')
         cidr = CIDR.make_cidr(packed_ip, 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
+        # Note: nlri no longer has nexthop attribute
 
-        # Set a nexthop on the bare NLRI (simulating old behavior)
-        nlri.nexthop = IPv4.from_string('1.1.1.1')
-
-        # But wrap in RoutedNLRI with DIFFERENT nexthop
+        # Wrap in RoutedNLRI with nexthop
         routed_nexthop = IPv4.from_string('2.2.2.2')
         routed = RoutedNLRI(nlri, routed_nexthop)
 
@@ -174,10 +172,9 @@ class TestUpdateCollectionJSON:
         result = json_encoder._update(update)
         message = json.loads(result['message'])
 
-        # The nexthop should be from RoutedNLRI (2.2.2.2), not bare NLRI (1.1.1.1)
+        # The nexthop should be from RoutedNLRI (2.2.2.2)
         announce = message['update']['announce']
         assert '2.2.2.2' in announce['ipv4 unicast']
-        assert '1.1.1.1' not in announce['ipv4 unicast']
 
     def test_update_multiple_announces_different_nexthops(self, json_encoder: JSON) -> None:
         """Test multiple announces with different nexthops are grouped correctly."""

@@ -49,12 +49,11 @@ class TestLabelCreation:
         """Test creating labeled route with all attributes"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE, labels=Labels.make_labels([100], True))
-        label.nexthop = IP.from_string('10.0.0.1')
+        # Note: nexthop is now stored in Route, not NLRI
 
         assert label.cidr.prefix() == '192.168.1.0/24'
         assert len(label.labels.labels) == 1
         assert label.labels.labels[0] == 100
-        assert label.nexthop == IP.from_string('10.0.0.1')
 
 
 class TestLabelStringRepresentation:
@@ -90,13 +89,12 @@ class TestLabelStringRepresentation:
         """
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE, labels=Labels.make_labels([100], True))
-        label.nexthop = IP.from_string('10.0.0.1')
+        # Note: nexthop is now stored in Route, not NLRI
 
         result = label.extensive()
         assert '192.168.1.0/24' in result
         # nexthop is NOT in NLRI.extensive() - comes from Route/RoutedNLRI context
         assert 'next-hop' not in result
-        assert '10.0.0.1' not in result
 
 
 class TestLabelPrefix:
@@ -191,35 +189,28 @@ class TestLabelEquality:
 
 
 class TestLabelFeedback:
-    """Test feedback validation for Label routes"""
+    """Test feedback validation for Label routes.
 
-    def test_feedback_with_nexthop_announce(self) -> None:
-        """Test feedback when nexthop is set for ANNOUNCE"""
+    Note: nexthop validation is now handled by Route.feedback(), not NLRI.feedback().
+    NLRI.feedback() only validates NLRI-specific constraints (Label has none).
+    """
+
+    def test_nlri_feedback_returns_empty(self) -> None:
+        """Test NLRI.feedback() returns empty (no NLRI-specific validation)"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE, labels=Labels.make_labels([100], True))
-        label.nexthop = IP.from_string('10.0.0.1')
 
+        # NLRI.feedback() no longer validates nexthop - that's Route's job
         feedback = label.feedback(Action.ANNOUNCE)
         assert feedback == ''
 
-    def test_feedback_without_nexthop_announce(self) -> None:
-        """Test feedback when nexthop is missing (NoNextHop) for ANNOUNCE"""
-        cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.ANNOUNCE, labels=Labels.make_labels([100], True))
-        # nexthop defaults to NoNextHop
-
-        feedback = label.feedback(Action.ANNOUNCE)
-        assert 'labelled nlri next-hop missing' in feedback
-
-    def test_feedback_withdraw_no_nexthop_required(self) -> None:
-        """Test feedback for WITHDRAW doesn't require nexthop"""
+    def test_nlri_feedback_withdraw(self) -> None:
+        """Test NLRI.feedback() for WITHDRAW"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, Action.WITHDRAW, labels=Labels.make_labels([100], True))
-        # nexthop defaults to NoNextHop
 
         feedback = label.feedback(Action.WITHDRAW)
-        # WITHDRAW should pass even without nexthop
-        assert feedback == '' or 'next-hop' in feedback
+        assert feedback == ''
 
 
 class TestLabelPack:

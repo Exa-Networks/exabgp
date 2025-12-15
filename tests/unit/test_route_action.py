@@ -243,7 +243,7 @@ class TestRouteImmutability:
 
 
 class TestRouteNexthopProperty:
-    """Test Route.nexthop property with fallback to nlri.nexthop."""
+    """Test Route.nexthop property."""
 
     def test_nexthop_returns_explicit_value(self):
         """Route._nexthop set → route.nexthop returns it."""
@@ -255,26 +255,26 @@ class TestRouteNexthopProperty:
         assert route._nexthop == nexthop
         assert route.nexthop == nexthop
 
-    def test_nexthop_no_fallback_to_nlri(self):
-        """Route.nexthop returns _nexthop directly, no fallback to nlri.nexthop."""
+    def test_nexthop_stored_in_route_not_nlri(self):
+        """Route.nexthop returns _nexthop directly. NLRI does not have nexthop."""
         nlri = create_nlri()
-        nlri.nexthop = IP.from_string('9.9.9.9')  # Set on NLRI but not Route
+        # Note: nlri no longer has nexthop attribute
         attrs = AttributeCollection()
         route = Route(nlri, attrs)  # No explicit nexthop
 
-        # Route._nexthop is NoNextHop, and that's what nexthop returns (no fallback)
+        # Route._nexthop is NoNextHop by default
         assert route._nexthop is IP.NoNextHop
-        assert route.nexthop is IP.NoNextHop  # No fallback to nlri.nexthop
+        assert route.nexthop is IP.NoNextHop
 
-    def test_explicit_nexthop_takes_precedence(self):
-        """Route._nexthop set → nlri.nexthop ignored."""
+    def test_explicit_nexthop_stored_in_route(self):
+        """Route._nexthop stores the nexthop explicitly passed to constructor."""
         nexthop = IP.from_string('1.2.3.4')
         nlri = create_nlri()
-        nlri.nexthop = IP.from_string('9.9.9.9')
+        # Note: nlri no longer has nexthop attribute
         attrs = AttributeCollection()
         route = Route(nlri, attrs, nexthop=nexthop)
 
-        # Route._nexthop takes precedence
+        # Route._nexthop stores the explicit nexthop
         assert route.nexthop == nexthop
 
     def test_default_nexthop_is_no_nexthop(self):

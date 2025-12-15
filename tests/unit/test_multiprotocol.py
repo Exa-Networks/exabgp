@@ -490,11 +490,11 @@ def test_mpreach_equality() -> None:
     # Create two identical MPNLRICollections
     cidr1 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix1.nexthop = IPv4.from_string('192.0.2.1')
+    # Note: nexthop is now stored in Route/RoutedNLRI, not NLRI
 
     cidr2 = CIDR.make_cidr(IPv4.from_string('10.0.0.0').pack_ip(), 24)
     prefix2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix2.nexthop = IPv4.from_string('192.0.2.1')
+    # Note: nexthop is now stored in Route/RoutedNLRI, not NLRI
 
     collection1 = MPNLRICollection([prefix1], {}, AFI.ipv4, SAFI.unicast)
     collection2 = MPNLRICollection([prefix2], {}, AFI.ipv4, SAFI.unicast)

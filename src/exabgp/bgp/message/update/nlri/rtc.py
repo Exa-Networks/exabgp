@@ -22,7 +22,6 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended import RouteTarget
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.protocol.ip import IP
 
 T = TypeVar('T', bound='RTC')
 
@@ -61,7 +60,6 @@ class RTC(NLRI):
         """
         NLRI.__init__(self, AFI.ipv4, SAFI.rtc)
         self._packed: Buffer = packed
-        self.nexthop = IP.NoNextHop
 
     @property
     def origin(self) -> ASN:
@@ -84,7 +82,6 @@ class RTC(NLRI):
         origin: ASN,
         rt: RouteTarget | None,
         action: Action = Action.UNSET,
-        nexthop: Any = IP.NoNextHop,
     ) -> 'RTC':
         """Factory method to create an RTC NLRI from components.
 
@@ -92,10 +89,11 @@ class RTC(NLRI):
             origin: Origin ASN
             rt: RouteTarget or None for wildcard
             action: Route action (ANNOUNCE/WITHDRAW)
-            nexthop: Next-hop IP address
 
         Returns:
             New RTC instance
+
+        Note: nexthop is stored in Route, not NLRI. Pass nexthop to Route constructor.
         """
         if rt is not None:
             packed_rt = rt._packed
@@ -106,12 +104,10 @@ class RTC(NLRI):
 
         instance = cls(packed)
         instance.action = action
-        instance.nexthop = nexthop
         return instance
 
     def feedback(self, action: Action) -> str:
-        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
-            return 'rtc nlri next-hop missing'
+        # Nexthop validation handled by Route.feedback()
         return ''
 
     def __len__(self) -> int:

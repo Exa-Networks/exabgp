@@ -118,13 +118,8 @@ def create_inet_nlri(
 
     cidr = CIDR.make_cidr(packed, prefixlen)
     nlri = INET.from_cidr(cidr, afi, safi, action)
-
-    if nexthop:
-        if afi == AFI_CLASS.ipv6:
-            nlri.nexthop = IPv6.from_string(nexthop)
-        else:
-            nlri.nexthop = IP.from_string(nexthop)
-
+    # Note: nexthop is now stored in Route/RoutedNLRI, not in NLRI
+    # The 'nexthop' parameter is ignored here - callers should use RoutedNLRI
     return nlri
 
 
@@ -1215,13 +1210,12 @@ def test_withdraw_ipv6_undefined_nexthop_allowed() -> None:
     from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
-    from exabgp.protocol.ip import IP
 
     negotiated = create_negotiated_mock(families=[(AFI.ipv6, SAFI.unicast)])
 
     # Create IPv6 WITHDRAW with undefined next-hop
     nlri = create_inet_nlri('2001:db8::', 32, Action.WITHDRAW, afi=AFI.ipv6)
-    nlri.nexthop = IP.NoNextHop
+    # Note: nexthop is stored in Route/RoutedNLRI, not in NLRI
 
     attributes = AttributeCollection()
     update = UpdateCollection([], [nlri], attributes)
@@ -1241,13 +1235,12 @@ def test_withdraw_ipv4_undefined_nexthop_allowed() -> None:
     from exabgp.bgp.message.update.attribute import AttributeCollection
     from exabgp.bgp.message.action import Action
     from exabgp.protocol.family import AFI, SAFI
-    from exabgp.protocol.ip import IP
 
     negotiated = create_negotiated_mock(families=[(AFI.ipv4, SAFI.unicast)])
 
     # Create IPv4 WITHDRAW with undefined next-hop
     nlri = create_inet_nlri('10.0.0.0', 8, Action.WITHDRAW)
-    nlri.nexthop = IP.NoNextHop
+    # Note: nexthop is stored in Route/RoutedNLRI, not in NLRI
 
     attributes = AttributeCollection()
     update = UpdateCollection([], [nlri], attributes)

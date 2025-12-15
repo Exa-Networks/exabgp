@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Iterator, overload
 
 from exabgp.bgp.message import Action
+from exabgp.protocol.ip import IP
 
 if TYPE_CHECKING:
     from exabgp.rib.route import Route
@@ -80,7 +81,7 @@ class Cache:
         if cached.attributes.index() != route.attributes.index():
             return False
 
-        # Use route.nexthop (with fallback to nlri.nexthop during transition)
+        # Use route.nexthop (nexthop is stored in Route, not NLRI)
         # Use getattr for safety since some NLRIs may not have nexthop
         try:
             cached_nh = cached.nexthop
@@ -104,34 +105,39 @@ class Cache:
     def update_cache(self, nlri: 'NLRI', attributes: 'AttributeCollection') -> None: ...
     @overload
     def update_cache(self, nlri: 'NLRI', attributes: 'AttributeCollection', action: int) -> None: ...
+    @overload
+    def update_cache(self, nlri: 'NLRI', attributes: 'AttributeCollection', action: int, nexthop: IP) -> None: ...
 
     def update_cache(
         self,
         route_or_nlri: 'Route | NLRI',
         attributes: 'AttributeCollection | None' = None,
         action: int | None = None,
+        nexthop: IP | None = None,
     ) -> None:
         if not self.enabled or not self.cache:
             return
 
-        # Handle signatures: (route) or (nlri, attributes) or (nlri, attributes, action)
+        # Handle signatures: (route) or (nlri, attributes[, action[, nexthop]])
         if attributes is None:
-            # Legacy signature: update_cache(route) - uses route.action (which checks _action then nlri.action)
+            # Legacy signature: update_cache(route) - uses route.action and route.nexthop
             route = route_or_nlri
             nlri = route.nlri
             attrs = route.attributes
             family = nlri.family().afi_safi()
             index = route.index()
-            # Use route.action to support transition from nlri.action to route._action
             actual_action = route.action
+            actual_nexthop = route.nexthop
         else:
-            # New signature: update_cache(nlri, attributes[, action])
+            # New signature: update_cache(nlri, attributes[, action[, nexthop]])
             nlri = route_or_nlri
             attrs = attributes
             family = nlri.family().afi_safi()
             index = self._make_index(nlri)
             # Use explicit action if provided, otherwise fall back to nlri.action
             actual_action = action if action is not None else nlri.action
+            # Use explicit nexthop if provided, otherwise use NoNextHop
+            actual_nexthop = nexthop if nexthop is not None else IP.NoNextHop
 
         if actual_action == Action.UNSET:
             raise RuntimeError(f'NLRI action is UNSET (not set to ANNOUNCE or WITHDRAW): {nlri}')
@@ -139,7 +145,7 @@ class Cache:
             # Store as Route for backward compatibility with cached_routes()
             from exabgp.rib.route import Route
 
-            self._seen.setdefault(family, {})[index] = Route(nlri, attrs, Action.ANNOUNCE, nexthop=nlri.nexthop)
+            self._seen.setdefault(family, {})[index] = Route(nlri, attrs, Action.ANNOUNCE, nexthop=actual_nexthop)
         elif family in self._seen:
             self._seen[family].pop(index, None)
 

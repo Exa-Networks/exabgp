@@ -19,6 +19,8 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
+from exabgp.protocol.ip import IP
+
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.bgp.message.update.attribute import MED, LocalPreference, NextHop, NextHopSelf, Origin
@@ -26,7 +28,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
     from exabgp.configuration.core.parser import Tokeniser
     from exabgp.configuration.schema import ValueType
-    from exabgp.protocol.ip import IP, IPRange, IPSelf
+    from exabgp.protocol.ip import IPRange, IPSelf
     from exabgp.rib.route import Route
 
 from exabgp.configuration.schema import ActionOperation, ActionTarget
@@ -1346,8 +1348,8 @@ class TypeSelectorValidator(Validator[list[Any]]):
         # Set action on Route (nlri.action set for backward compat, will be removed)
         nlri.action = self.action_type
 
-        # Create Route with explicit nexthop from nlri; will be updated via with_nexthop() if parsed
-        route = Route(nlri, AttributeCollection(), self.action_type, nexthop=nlri.nexthop)
+        # Create Route with default nexthop; will be updated via with_nexthop() if parsed later
+        route = Route(nlri, AttributeCollection(), self.action_type, nexthop=IP.NoNextHop)
 
         # Process remaining tokens as attributes
         from exabgp.configuration.schema import Leaf, LeafList

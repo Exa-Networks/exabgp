@@ -91,7 +91,7 @@ class Route:
     def nexthop(self) -> IP:
         """Get the route nexthop.
 
-        Returns self._nexthop directly. No fallback to nlri.nexthop.
+        Returns self._nexthop directly.
         Route must be created with explicit nexthop= parameter.
         """
         return self._nexthop
@@ -107,10 +107,7 @@ class Route:
         """Return a new Route with a different nexthop.
 
         Route is immutable, so this creates a new instance.
-        Also syncs to nlri.nexthop for code that reads from there (will be removed).
         """
-        # Sync to nlri.nexthop - some code still reads from there
-        self.nlri.nexthop = nexthop
         return Route(self.nlri, self.attributes, action=self.action, nexthop=nexthop)
 
     def index(self) -> bytes:
@@ -150,6 +147,10 @@ class Route:
         return self.extensive()
 
     def feedback(self) -> str:
-        if self.nlri is not None:
-            return self.nlri.feedback(self.action)  # Use route.action, not nlri.action
-        return 'no check implemented for the family {} {}'.format(*self.nlri.family().afi_safi())
+        if self.nlri is None:
+            return 'route has no nlri'
+        # Route handles nexthop validation (nexthop is stored in Route, not NLRI)
+        if self._nexthop is IP.NoNextHop and self.action == Action.ANNOUNCE:
+            return f'{self.nlri.safi.name()} nlri next-hop missing'
+        # Delegate NLRI-specific validation
+        return self.nlri.feedback(self.action)

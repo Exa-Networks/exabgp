@@ -450,7 +450,7 @@ class ParseStaticRoute(Section):
             nlri.path_info,
             **kwargs,
         )
-        new_nlri.nexthop = nlri.nexthop
+        # Note: nexthop is stored in Route, not NLRI - caller handles nexthop
         return new_nlri
 
     def _check(self) -> bool:
@@ -463,8 +463,9 @@ class ParseStaticRoute(Section):
     @staticmethod
     def check(route: Route) -> bool:
         nlri: NLRI = route.nlri
+        # Check route.nexthop instead of nlri.nexthop (nexthop is stored in Route)
         if (
-            nlri.nexthop is IP.NoNextHop
+            route.nexthop is IP.NoNextHop
             and nlri.action == Action.ANNOUNCE
             and nlri.afi == AFI.ipv4
             and nlri.safi in (SAFI.unicast, SAFI.multicast)
@@ -503,10 +504,10 @@ class ParseStaticRoute(Section):
         afi = nlri.afi
         safi = nlri.safi
 
-        # Extract data from original NLRI before clearing
+        # Extract data from original NLRI and Route before clearing
         # Check NLRI class type rather than SAFI (SAFI may be unicast even for VPN routes)
         klass = nlri.__class__
-        nexthop = nlri.nexthop
+        nexthop = last.nexthop  # Get nexthop from Route, not NLRI
         path_info = nlri.path_info if safi.has_path() else None
         # Check class type since SAFI may not reflect actual capabilities
         labels = nlri.labels if isinstance(nlri, Label) else None
@@ -529,7 +530,6 @@ class ParseStaticRoute(Section):
                 kwargs['rd'] = rd
 
             new_nlri: Any = klass.from_cidr(new_cidr, afi, safi, Action.ANNOUNCE, **kwargs)
-            new_nlri.nexthop = nexthop  # nexthop can be NextHopSelf
             # next ip
             ip += increment
             yield Route(new_nlri, last.attributes, nexthop=nexthop)

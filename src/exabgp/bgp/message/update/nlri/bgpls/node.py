@@ -59,7 +59,6 @@ class NODE(BGPLS):
     def __init__(
         self,
         packed: Buffer,
-        nexthop: IP = IP.NoNextHop,
         action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
         addpath: PathInfo | None = None,
@@ -68,10 +67,12 @@ class NODE(BGPLS):
 
         Args:
             packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
+            action: Route action (ANNOUNCE/WITHDRAW)
+            route_d: Route Distinguisher (for VPN SAFI)
+            addpath: AddPath path identifier
         """
         BGPLS.__init__(self, action, addpath)
         self._packed = packed
-        self.nexthop = nexthop
         self.route_d: RouteDistinguisher | None = route_d
 
     @classmethod
@@ -80,19 +81,21 @@ class NODE(BGPLS):
         domain: int,
         proto_id: int,
         node_ids: list[NodeDescriptor],
-        nexthop: IP = IP.NoNextHop,
         action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
         addpath: PathInfo | None = None,
     ) -> 'NODE':
-        """Factory method to create NODE from semantic parameters."""
+        """Factory method to create NODE from semantic parameters.
+
+        Note: nexthop is stored in Route, not NLRI. Pass nexthop to Route constructor.
+        """
         node_tlvs = b''.join(node_id.pack_tlv() for node_id in node_ids)
         node_length = len(node_tlvs)
         # Build payload: proto_id(1) + domain(8) + node_descriptor_tlv(4+n)
         payload = pack('!BQ', proto_id, domain) + pack('!HH', NODE_DESCRIPTOR_TYPE, node_length) + node_tlvs
         # Include 4-byte header: type(2) + length(2) + payload
         packed = pack('!HH', cls.CODE, len(payload)) + payload
-        return cls(packed, nexthop, action, route_d, addpath)
+        return cls(packed, action, route_d, addpath)
 
     @property
     def proto_id(self) -> int:
@@ -122,7 +125,8 @@ class NODE(BGPLS):
             values = left
         return node_ids
 
-    def json(self, compact: bool = False) -> str:
+    def _json_content(self) -> str:
+        """Build JSON content string (shared by json and v4_json)."""
         nodes = ', '.join(d.json() for d in self.node_ids)
         content = ', '.join(
             [
@@ -130,11 +134,21 @@ class NODE(BGPLS):
                 f'"l3-routing-topology": {int(self.domain)}',
                 f'"protocol-id": {int(self.proto_id)}',
                 f'"node-descriptors": [ {nodes} ]',
-                f'"nexthop": "{self.nexthop}"',
             ],
         )
         if self.route_d:
             content += f', {self.route_d.json()}'
+        return content
+
+    def json(self, compact: bool = False) -> str:
+        """Serialize NODE NLRI to JSON (API v6 format - no nexthop)."""
+        return f'{{ {self._json_content()} }}'
+
+    def v4_json(self, compact: bool = False, nexthop: IP | None = None) -> str:
+        """Serialize NODE NLRI to JSON for API v4 backward compatibility (includes nexthop)."""
+        content = self._json_content()
+        if nexthop is not None and nexthop is not IP.NoNextHop:
+            content += f', "nexthop": "{nexthop}"'
         return f'{{ {content} }}'
 
     @classmethod

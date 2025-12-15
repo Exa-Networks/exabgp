@@ -60,7 +60,6 @@ class PREFIXv6(BGPLS):
     def __init__(
         self,
         packed: Buffer,
-        nexthop: IP = IP.NoNextHop,
         route_d: RouteDistinguisher | None = None,
         action: Action = Action.UNSET,
         addpath: PathInfo | None = None,
@@ -69,10 +68,12 @@ class PREFIXv6(BGPLS):
 
         Args:
             packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
+            route_d: Route Distinguisher (for VPN SAFI)
+            action: Route action (ANNOUNCE/WITHDRAW)
+            addpath: AddPath path identifier
         """
         BGPLS.__init__(self, action, addpath)
         self._packed = packed
-        self.nexthop = nexthop
         self.route_d: RouteDistinguisher | None = route_d
 
     @property
@@ -177,7 +178,8 @@ class PREFIXv6(BGPLS):
         # Direct _packed hash - all wire fields encoded in bytes
         return hash((self._packed, self.route_d))
 
-    def json(self, compact: bool = False) -> str:
+    def _json_content(self) -> str:
+        """Build JSON content string (shared by json and v4_json)."""
         assert self.prefix is not None  # Set during unpack_bgpls_nlri
         nodes = ', '.join(d.json() for d in self.local_node)
         content = ', '.join(
@@ -187,7 +189,6 @@ class PREFIXv6(BGPLS):
                 f'"protocol-id": {int(self.proto_id)}',
                 f'"node-descriptors": [ {nodes} ]',
                 self.prefix.json(),
-                f'"nexthop": "{self.nexthop}"',
             ],
         )
         if self.ospf_type:
@@ -196,6 +197,17 @@ class PREFIXv6(BGPLS):
         if self.route_d:
             content += f', {self.route_d.json()}'
 
+        return content
+
+    def json(self, compact: bool = False) -> str:
+        """Serialize PREFIXv6 NLRI to JSON (API v6 format - no nexthop)."""
+        return f'{{ {self._json_content()} }}'
+
+    def v4_json(self, compact: bool = False, nexthop: IP | None = None) -> str:
+        """Serialize PREFIXv6 NLRI to JSON for API v4 backward compatibility (includes nexthop)."""
+        content = self._json_content()
+        if nexthop is not None and nexthop is not IP.NoNextHop:
+            content += f', "nexthop": "{nexthop}"'
         return f'{{ {content} }}'
 
     # pack_nlri inherited from BGPLS base class - returns self._packed directly

@@ -269,7 +269,7 @@ def _create_route_with_nexthop_self(prefix: str = '10.0.0.0/24') -> Route:
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     nexthop = IPSelf(AFI.ipv4)
-    nlri.nexthop = nexthop
+    # nexthop is stored in Route, not NLRI
 
     attrs = AttributeCollection()
     attrs[Attribute.CODE.NEXT_HOP] = NextHopSelf(AFI.ipv4)
@@ -286,7 +286,7 @@ def _create_route_with_concrete_nexthop(prefix: str = '10.0.0.0/24', nexthop: st
     cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
     nh = IPv4.from_string(nexthop)
-    nlri.nexthop = nh
+    # nexthop is stored in Route, not NLRI
 
     attrs = AttributeCollection()
     attrs[Attribute.CODE.NEXT_HOP] = NextHop.from_string(nexthop)
@@ -297,22 +297,22 @@ def _create_route_with_concrete_nexthop(prefix: str = '10.0.0.0/24', nexthop: st
 class TestNeighborResolveSelf:
     """Tests for Neighbor.resolve_self() in-place resolution."""
 
-    def test_resolves_nexthop_self_in_nlri(self) -> None:
-        """resolve_self() mutates IPSelf in-place in NLRI."""
+    def test_resolves_nexthop_self_in_route(self) -> None:
+        """resolve_self() mutates IPSelf in-place in Route."""
         neighbor = _create_neighbor(local_ip='192.168.1.1')
         route = _create_route_with_nexthop_self()
 
-        # Verify sentinel before
-        assert route.nlri.nexthop.SELF is True
-        assert route.nlri.nexthop.resolved is False
+        # Verify sentinel before (nexthop is in Route, not NLRI)
+        assert route.nexthop.SELF is True
+        assert route.nexthop.resolved is False
 
         # Resolve
         resolved = neighbor.resolve_self(route)
 
         # SELF stays True, but resolved becomes True
-        assert resolved.nlri.nexthop.SELF is True
-        assert resolved.nlri.nexthop.resolved is True
-        assert repr(resolved.nlri.nexthop) == '192.168.1.1'
+        assert resolved.nexthop.SELF is True
+        assert resolved.nexthop.resolved is True
+        assert repr(resolved.nexthop) == '192.168.1.1'
 
     def test_resolves_nexthop_self_in_attributes(self) -> None:
         """resolve_self() mutates NextHopSelf in-place in attributes."""
@@ -334,8 +334,8 @@ class TestNeighborResolveSelf:
 
         resolved = neighbor.resolve_self(route)
 
-        # Original unchanged
-        assert route.nlri.nexthop.resolved is False
+        # Original unchanged (nexthop is in Route, not NLRI)
+        assert route.nexthop.resolved is False
         # Resolved is different object
         assert resolved is not route
         assert resolved.nlri is not route.nlri
@@ -348,20 +348,21 @@ class TestNeighborResolveSelf:
         resolved = neighbor.resolve_self(route)
 
         # Should still be the same IP (copy, but same value)
-        assert resolved.nlri.nexthop == IPv4.from_string('10.0.0.1')
+        # nexthop is in Route, not NLRI
+        assert resolved.nexthop == IPv4.from_string('10.0.0.1')
 
     def test_passthrough_if_already_resolved(self) -> None:
         """resolve_self() skips if nexthop already resolved."""
         neighbor = _create_neighbor(local_ip='192.168.1.1')
         route = _create_route_with_nexthop_self()
 
-        # Resolve once
+        # Resolve once (nexthop is in Route, not NLRI)
         resolved1 = neighbor.resolve_self(route)
-        assert resolved1.nlri.nexthop.resolved is True
+        assert resolved1.nexthop.resolved is True
 
         # Resolve again - should not raise
         resolved2 = neighbor.resolve_self(resolved1)
-        assert resolved2.nlri.nexthop.resolved is True
+        assert resolved2.nexthop.resolved is True
 
 
 class TestRibRejectsUnresolvedNextHopSelf:
@@ -405,18 +406,19 @@ class TestNextHopSelfWorkflow:
     def test_config_to_rib_workflow(self) -> None:
         """Test complete workflow: sentinel creation → resolution → RIB entry."""
         # 1. Create route with sentinel (simulating config parsing)
+        # nexthop is in Route, not NLRI
         route = _create_route_with_nexthop_self('10.0.0.0/24')
-        assert route.nlri.nexthop.SELF is True
-        assert route.nlri.nexthop.resolved is False
+        assert route.nexthop.SELF is True
+        assert route.nexthop.resolved is False
 
         # 2. Create neighbor (simulating neighbor block exit)
         neighbor = _create_neighbor(local_ip='192.168.1.100')
 
         # 3. Resolve sentinel (simulating config loading)
         resolved = neighbor.resolve_self(route)
-        assert resolved.nlri.nexthop.SELF is True  # SELF stays True
-        assert resolved.nlri.nexthop.resolved is True  # But now resolved
-        assert repr(resolved.nlri.nexthop) == '192.168.1.100'
+        assert resolved.nexthop.SELF is True  # SELF stays True
+        assert resolved.nexthop.resolved is True  # But now resolved
+        assert repr(resolved.nexthop) == '192.168.1.100'
 
         # 4. Add to RIB (should succeed because resolved)
         rib = OutgoingRIB(cache=True, families={(AFI.ipv4, SAFI.unicast)})

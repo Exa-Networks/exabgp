@@ -23,7 +23,6 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.protocol.ip import IP
 
 
 @NLRI.register(AFI.l2vpn, SAFI.vpls)
@@ -55,8 +54,6 @@ class VPLS(NLRI):
         Note: action defaults to UNSET, set after creation (announce/withdraw).
         """
         NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
-        self.nexthop = IP.NoNextHop
-
         self._packed: Buffer = bytes(packed)  # Ensure bytes for storage
 
     @classmethod
@@ -131,7 +128,7 @@ class VPLS(NLRI):
             size=settings.size,
             action=settings.action,
         )
-        instance.nexthop = settings.nexthop
+        # Note: settings.nexthop is now passed to Route, not stored in NLRI
         return instance
 
     @property
@@ -160,14 +157,10 @@ class VPLS(NLRI):
         return unpack('!L', b'\x00' + self._packed[16:19])[0] >> 4
 
     def feedback(self, action: Action) -> str:
-        """Validate VPLS NLRI and return error message if invalid.
+        """Validate VPLS NLRI-specific constraints.
 
-        With packed-bytes-first pattern, all fields are always present.
-        Only nexthop needs runtime validation (set separately from NLRI creation).
-        Size consistency is checked at creation time by VPLSSettings.validate().
+        Note: nexthop validation is handled by Route.feedback(), not here.
         """
-        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
-            return 'vpls nlri next-hop missing'
         # Size consistency check (for routes received from wire or created with invalid values)
         if self.base > (0xFFFFF - self.size):  # 20 bits, 3 bytes
             return 'vpls nlri size inconsistency'

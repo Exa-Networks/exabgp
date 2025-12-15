@@ -72,10 +72,10 @@ class ParseAnnounce(Section):
         afi = inet_nlri.afi
         safi = inet_nlri.safi
 
-        # Extract data from original NLRI before clearing
+        # Extract data from original NLRI and Route before clearing
         klass = inet_nlri.__class__
         path_info = inet_nlri.path_info
-        nexthop = inet_nlri.nexthop
+        nexthop = last.nexthop  # Get nexthop from Route, not NLRI
 
         last.nlri = NLRI.EMPTY  # Clear reference after extracting data
 
@@ -83,9 +83,7 @@ class ParseAnnounce(Section):
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
             cidr = CIDR.make_cidr(pack_int(afi, ip), cut)
-            nlri = klass.from_cidr(cidr, afi, safi, Action.ANNOUNCE)
-            nlri.nexthop = nexthop  # nexthop can be NextHopSelf
-            nlri.path_info = path_info
+            nlri = klass.from_cidr(cidr, afi, safi, Action.ANNOUNCE, path_info)
             # next ip
             ip += increment
             yield Route(nlri, last.attributes, nexthop=nexthop)

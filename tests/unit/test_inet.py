@@ -29,31 +29,25 @@ def create_negotiated() -> Negotiated:
 
 
 class TestINETFeedback:
-    """Test feedback validation for INET routes"""
+    """Test feedback validation for INET routes.
 
-    def test_feedback_announce_without_nexthop(self) -> None:
-        """Test feedback when nexthop is missing for ANNOUNCE"""
+    Note: nexthop validation is now handled by Route.feedback(), not NLRI.feedback().
+    NLRI.feedback() only validates NLRI-specific constraints (INET has none).
+    """
+
+    def test_nlri_feedback_returns_empty(self) -> None:
+        """Test NLRI.feedback() returns empty (no NLRI-specific validation)"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        # nexthop defaults to NoNextHop
 
-        feedback = nlri.feedback(Action.ANNOUNCE)
-        assert 'inet nlri next-hop missing' in feedback
-
-    def test_feedback_announce_with_nexthop(self) -> None:
-        """Test feedback when nexthop is set for ANNOUNCE"""
-        cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-        nlri.nexthop = IP.from_string('10.0.0.1')
-
+        # NLRI.feedback() no longer validates nexthop - that's Route's job
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert feedback == ''
 
-    def test_feedback_withdraw_no_nexthop_required(self) -> None:
-        """Test feedback for WITHDRAW doesn't require nexthop"""
+    def test_nlri_feedback_withdraw(self) -> None:
+        """Test NLRI.feedback() for WITHDRAW"""
         cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-        # nexthop defaults to NoNextHop
 
         feedback = nlri.feedback(Action.WITHDRAW)
         assert feedback == ''

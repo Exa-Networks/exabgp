@@ -702,7 +702,6 @@ class Flow(NLRI):
         self._rules_cache: dict[int, list[FlowRule]] | None = None
         self._packed_stale = False
         self._rd_override: RouteDistinguisher | None = None
-        self.nexthop = IP.NoNextHop
 
     @classmethod
     def make_flow(
@@ -760,7 +759,7 @@ class Flow(NLRI):
             safi=settings.safi,
             action=settings.action,
         )
-        instance.nexthop = settings.nexthop
+        # Note: settings.nexthop is now passed to Route, not stored in NLRI
 
         # Set rules if provided
         if settings.rules:
@@ -842,8 +841,7 @@ class Flow(NLRI):
         return rules
 
     def feedback(self, action: Action) -> str:
-        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
-            return 'flow nlri next-hop missing'
+        # Nexthop validation handled by Route.feedback()
         return ''
 
     def __len__(self) -> int:
@@ -1013,11 +1011,12 @@ class Flow(NLRI):
         rules_str, rd, compatibility = self._json_core(compact)
         return '{' + rules_str + rd + compatibility + ' }'
 
-    def v4_json(self, compact: bool = False) -> str:
+    def v4_json(self, compact: bool = False, nexthop: IP | None = None) -> str:
         """Serialize Flow NLRI to JSON for API v4 backward compatibility (includes nexthop)."""
         rules_str, rd, compatibility = self._json_core(compact)
-        nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not IP.NoNextHop else ''
-        return '{' + rules_str + rd + nexthop + compatibility + ' }'
+        nh = nexthop if nexthop is not None else IP.NoNextHop
+        nexthop_str = ', "next-hop": "{}"'.format(nh) if nh is not IP.NoNextHop else ''
+        return '{' + rules_str + rd + nexthop_str + compatibility + ' }'
 
     @classmethod
     def unpack_nlri(

@@ -77,6 +77,7 @@ class MUP(NLRI):
         return str(self)
 
     def feedback(self, action: Action) -> str:
+        # Nexthop validation handled by Route.feedback()
         return ''
 
     def _prefix(self) -> str:

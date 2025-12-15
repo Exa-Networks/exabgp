@@ -23,7 +23,6 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.logger import lazymsg, log
-from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
 # BGP-LS Link TLV type codes (RFC 7752)
@@ -86,7 +85,6 @@ class LINK(BGPLS):
     def __init__(
         self,
         packed: Buffer,
-        nexthop: IP = IP.NoNextHop,
         action: Action = Action.UNSET,
         route_d: RouteDistinguisher | None = None,
         addpath: PathInfo | None = None,
@@ -95,10 +93,12 @@ class LINK(BGPLS):
 
         Args:
             packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
+            action: Route action (ANNOUNCE/WITHDRAW)
+            route_d: Route Distinguisher (for VPN SAFI)
+            addpath: AddPath path identifier
         """
         BGPLS.__init__(self, action, addpath)
         self._packed = packed
-        self.nexthop = nexthop
         self.route_d: RouteDistinguisher | None = route_d
 
     @property

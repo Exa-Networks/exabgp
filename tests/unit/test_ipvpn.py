@@ -73,10 +73,11 @@ class TestIPVPNCreation:
             24,
             Labels.make_labels([42], True),
             RouteDistinguisher.make_from_elements('10.0.0.1', 100),
-            nexthop='10.0.0.254',
+            # Note: nexthop is now stored in Route, not NLRI
         )
 
-        assert nlri.nexthop == IP.from_string('10.0.0.254')
+        # nexthop is stored in Route, not NLRI - verify NLRI was created correctly
+        assert nlri.cidr is not None
 
     def test_create_ipvpn_with_action(self) -> None:
         """Test creating IPVPN with specific action"""
@@ -249,8 +250,8 @@ class TestIPVPNStringRepresentation:
 
         assert repr(nlri) == str(nlri)
 
-    def test_extensive_with_nexthop(self) -> None:
-        """Test extensive representation with nexthop"""
+    def test_extensive_representation(self) -> None:
+        """Test extensive representation"""
         nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
@@ -258,7 +259,7 @@ class TestIPVPNStringRepresentation:
             24,
             Labels.make_labels([42], True),
             RouteDistinguisher.make_from_elements('10.0.0.1', 100),
-            nexthop='10.0.0.254',
+            # Note: nexthop is now stored in Route, not NLRI
         )
 
         result = nlri.extensive()
@@ -369,10 +370,14 @@ class TestIPVPNEquality:
 
 
 class TestIPVPNFeedback:
-    """Test feedback validation for IPVPN routes"""
+    """Test feedback validation for IPVPN routes.
 
-    def test_feedback_with_nexthop(self) -> None:
-        """Test feedback when nexthop is set"""
+    Note: nexthop validation is now handled by Route.feedback(), not NLRI.feedback().
+    NLRI.feedback() only validates NLRI-specific constraints (IPVPN has none).
+    """
+
+    def test_nlri_feedback_returns_empty(self) -> None:
+        """Test NLRI.feedback() returns empty (no NLRI-specific validation)"""
         nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
@@ -380,14 +385,13 @@ class TestIPVPNFeedback:
             24,
             Labels.make_labels([42], True),
             RouteDistinguisher.make_from_elements('10.0.0.1', 100),
-            nexthop='10.0.0.254',
         )
-
+        # NLRI.feedback() no longer validates nexthop - that's Route's job
         feedback = nlri.feedback(Action.ANNOUNCE)
         assert feedback == ''
 
-    def test_feedback_without_nexthop(self) -> None:
-        """Test feedback when nexthop is missing (NoNextHop)"""
+    def test_nlri_feedback_withdraw(self) -> None:
+        """Test NLRI.feedback() for WITHDRAW"""
         nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
@@ -396,26 +400,9 @@ class TestIPVPNFeedback:
             Labels.make_labels([42], True),
             RouteDistinguisher.make_from_elements('10.0.0.1', 100),
         )
-        # nexthop defaults to NoNextHop when not provided
-
-        feedback = nlri.feedback(Action.ANNOUNCE)
-        assert 'ip-vpn nlri next-hop missing' in feedback
-
-    def test_feedback_withdraw_no_nexthop_required(self) -> None:
-        """Test feedback for WITHDRAW doesn't require nexthop"""
-        nlri = IPVPN.make_vpn_route(
-            AFI.ipv4,
-            SAFI.mpls_vpn,
-            IP.pton('192.168.1.0'),
-            24,
-            Labels.make_labels([42], True),
-            RouteDistinguisher.make_from_elements('10.0.0.1', 100),
-        )
-        # nexthop defaults to NoNextHop when not provided
 
         feedback = nlri.feedback(Action.WITHDRAW)
-        # WITHDRAW validation should pass even without nexthop
-        assert feedback == '' or 'next-hop' in feedback
+        assert feedback == ''
 
 
 class TestIPVPNIndex:

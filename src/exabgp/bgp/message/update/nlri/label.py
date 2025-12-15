@@ -91,7 +91,6 @@ from exabgp.bgp.message.update.nlri.inet import INET, PATH_INFO_SIZE
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
 # MPLS label size in bytes
@@ -259,7 +258,6 @@ class Label(INET):
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = has_labels
-        instance.nexthop = IP.NoNextHop
         instance.rd = None
         return instance
 
@@ -297,12 +295,11 @@ class Label(INET):
             path_info=settings.path_info,
             labels=settings.labels,
         )
-        instance.nexthop = settings.nexthop
+        # Note: settings.nexthop is now passed to Route, not stored in NLRI
         return instance
 
     def feedback(self, action: Action) -> str:
-        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
-            return 'labelled nlri next-hop missing'
+        # Nexthop validation handled by Route.feedback()
         return ''
 
     def extensive(self) -> str:

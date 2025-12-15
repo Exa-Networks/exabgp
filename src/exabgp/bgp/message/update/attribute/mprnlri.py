@@ -130,8 +130,6 @@ class MPRNLRI(Attribute, Family):
         nexthop_bytes, nlri_iter = self._parse_nexthop_and_nlris()
         nexthop = NextHop.unpack_attribute(nexthop_bytes, Negotiated.UNSET) if nexthop_bytes else IP.NoNextHop
         for nlri in nlri_iter:
-            # Set nlri.nexthop for backward compat (JSON API reads it)
-            nlri.nexthop = nexthop
             yield RoutedNLRI(nlri, nexthop)
 
     def __eq__(self, other: object) -> bool:

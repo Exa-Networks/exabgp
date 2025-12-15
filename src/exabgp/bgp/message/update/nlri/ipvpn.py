@@ -116,7 +116,6 @@ from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.protocol.ip import IP
 
 # ====================================================== IPVPN
 # RFC 4364
@@ -272,7 +271,6 @@ class IPVPN(Label):
         instance._has_addpath = has_addpath
         instance._has_labels = has_labels
         instance._has_rd = has_rd
-        instance.nexthop = IP.NoNextHop
         return instance
 
     @classmethod
@@ -311,12 +309,11 @@ class IPVPN(Label):
             labels=settings.labels,
             rd=settings.rd,
         )
-        instance.nexthop = settings.nexthop
+        # Note: settings.nexthop is now passed to Route, not stored in NLRI
         return instance
 
     def feedback(self, action: Action) -> str:
-        if self.nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
-            return 'ip-vpn nlri next-hop missing'
+        # Nexthop validation handled by Route.feedback()
         return ''
 
     @classmethod
@@ -328,14 +325,15 @@ class IPVPN(Label):
         mask: int,
         labels: Labels,
         rd: RouteDistinguisher,
-        nexthop: str | None = None,
         action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
     ) -> 'IPVPN':
-        """Factory method to create an IPVPN route."""
+        """Factory method to create an IPVPN route.
+
+        Note: nexthop is stored in Route, not NLRI. Pass nexthop to Route constructor.
+        """
         cidr = CIDR.make_cidr(packed, mask)
         instance = cls.from_cidr(cidr, afi, safi, action, path_info, labels=labels, rd=rd)
-        instance.nexthop = IP.from_string(nexthop) if nexthop else IP.NoNextHop
         return instance
 
     def extensive(self) -> str:
@@ -531,6 +529,5 @@ class IPVPN(Label):
         instance._has_addpath = has_addpath
         instance._has_labels = len(labels_packed) > 0
         instance._has_rd = has_rd
-        instance.nexthop = IP.NoNextHop
 
         return instance, data

@@ -27,6 +27,7 @@
 
 | Plan | Description |
 |------|-------------|
+| `plan-github-setup-improvements.md` | GitHub templates, SECURITY.md, PR template |
 | `plan-fix-resolve-self-deepcopy.md` | Fix resolve_self() memory duplication |
 | `plan-rib-optimisation.md` | RIB memory optimization |
 | `plan-coverage.md` | Test coverage audit (metrics stale) |

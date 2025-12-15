@@ -22,6 +22,7 @@ from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.reactor.interrupt import Signal
+from exabgp.protocol.ip import IP
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -357,28 +358,36 @@ class JSON:
             message_type='open',
         )
 
-    def _nlri_to_json(self, nlri: Any) -> str:
-        """Convert NLRI to JSON string. Uses v4_json() for backward compat if enabled."""
+    def _nlri_to_json(self, nlri: Any, nexthop: IP | None = None) -> str:
+        """Convert NLRI to JSON string. Uses v4_json() for backward compat if enabled.
+
+        Args:
+            nlri: The NLRI object
+            nexthop: Optional nexthop IP (passed to v4_json for backward compatibility)
+        """
         if self.use_v4_json:
-            return nlri.v4_json(compact=self.compact)
+            return nlri.v4_json(compact=self.compact, nexthop=nexthop)
         return nlri.json(compact=self.compact)
 
     def _update(self, update_msg: 'UpdateCollection') -> dict[str, str]:
-        plus: dict[tuple[Any, Any], dict[str, list[Any]]] = {}
+        # plus stores: family -> nexthop_string -> list of (nlri, nexthop_ip) tuples
+        plus: dict[tuple[Any, Any], dict[str, list[tuple[Any, IP]]]] = {}
         minus: dict[tuple[Any, Any], list[Any]] = {}
 
         # EOR messages have .nlris directly but no .announces/.withdraws
         if getattr(update_msg, 'EOR', False):
             # EOR message - use .nlris directly with original behavior
             for nlri in update_msg.nlris:  # type: ignore[union-attr]
-                nexthop = str(getattr(nlri, 'nexthop', 'null'))
-                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)
+                nexthop_ip = getattr(nlri, 'nexthop', IP.NoNextHop)
+                nexthop_str = str(nexthop_ip) if nexthop_ip is not IP.NoNextHop else 'null'
+                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop_str, []).append((nlri, nexthop_ip))
         else:
             # UpdateCollection - get nexthop from RoutedNLRI container
             for routed in update_msg.announces:
                 nlri = routed.nlri
-                nexthop = str(routed.nexthop)
-                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop, []).append(nlri)
+                nexthop_ip = routed.nexthop
+                nexthop_str = str(nexthop_ip)
+                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop_str, []).append((nlri, nexthop_ip))
 
             # Process withdraws - no nexthop needed
             for nlri in update_msg.withdraws:
@@ -388,10 +397,10 @@ class JSON:
         for family in plus:
             s = f'"{family[0]} {family[1]}": {{ '
             m = ''
-            for nexthop in plus[family]:
-                nlris = plus[family][nexthop]
-                m += f'"{nexthop}": [ '
-                m += ', '.join(self._nlri_to_json(nlri) for nlri in nlris)
+            for nexthop_str in plus[family]:
+                nlri_tuples = plus[family][nexthop_str]
+                m += f'"{nexthop_str}": [ '
+                m += ', '.join(self._nlri_to_json(nlri, nexthop_ip) for nlri, nexthop_ip in nlri_tuples)
                 m += ' ], '
             s += m[:-2]
             s += ' }'

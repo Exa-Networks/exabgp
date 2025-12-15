@@ -123,7 +123,6 @@ def route(tokeniser: Any) -> list[Route]:
             attribute: Any
             nh, attribute = handler(tokeniser)
             nexthop = nh
-            flow_nlri.nexthop = nexthop
             attributes.add(attribute)
         elif operation == ActionOperation.NOP:
             pass  # yes nothing to do !
@@ -138,7 +137,6 @@ def route(tokeniser: Any) -> list[Route]:
         new_nlri._rd_override = flow_nlri._rd_override
         new_nlri._rules_cache = flow_nlri._rules_cache
         new_nlri._packed_stale = True
-        new_nlri.nexthop = flow_nlri.nexthop
         flow_nlri = new_nlri
 
     # Create Route at the end with explicit nexthop

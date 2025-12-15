@@ -18,6 +18,7 @@ from exabgp.environment import getenv
 
 from exabgp.bgp.message import Update, UpdateCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
 from exabgp.bgp.message.open import ASN
@@ -143,11 +144,17 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                 update = UpdateCollection.unpack_message(pack1s, negotiated_in)
 
                 # update.announces contains RoutedNLRI, update.nlris extracts bare NLRIs
-                nlri = update.nlris[0]
-                route2 = Route(nlri, update.attributes, nexthop=nlri.nexthop)
+                # Get nexthop from RoutedNLRI if available (announces), else use NoNextHop (withdraws)
+                if update.announces:
+                    routed = update.announces[0]
+                    nlri = routed.nlri
+                    nexthop = routed.nexthop
+                else:
+                    nlri = update.nlris[0]
+                    nexthop = IP.NoNextHop
+                    routed = RoutedNLRI(nlri, nexthop)
+                route2 = Route(nlri, update.attributes, nexthop=nexthop)
                 str2 = route2.extensive()
-                # Use the RoutedNLRI from announces (or create one for recoding)
-                routed = update.announces[0] if update.announces else RoutedNLRI(update.nlris[0], route2.nexthop)
                 pack2 = list(UpdateCollection([routed], [], update.attributes).messages(negotiated_out))[0]
 
                 _str2 = str2  # type: str
@@ -469,9 +476,20 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
         return False
 
     log.debug(lazymsg('update.check.complete'), 'parser')  # separator
-    for number in range(len(update.nlris)):
-        nlri = update.nlris[number]
-        route = Route(nlri, update.attributes, nexthop=nlri.nexthop)
+    # Process announces (have nexthop) and withdraws (no nexthop) separately
+    for routed in update.announces:
+        route = Route(routed.nlri, update.attributes, nexthop=routed.nexthop)
+        _route = route  # type: Route
+        log.info(
+            lazymsg(
+                'update.decoded action={action} extensive={extensive}',
+                action=_route.action,
+                extensive=_route.extensive(),
+            ),
+            'parser',
+        )
+    for nlri in update.withdraws:
+        route = Route(nlri, update.attributes, nexthop=IP.NoNextHop)
         _route = route  # type: Route
         log.info(
             lazymsg(

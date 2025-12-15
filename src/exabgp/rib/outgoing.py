@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Iterator, overload
 from exabgp.bgp.message import Action, UpdateCollection
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.protocol.ip import IP
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.rib.cache import Cache
@@ -297,9 +298,10 @@ class OutgoingRIB(Cache):
             force = attributes_or_force or force
         else:
             # New signature: add_to_rib(nlri, attributes, force=False)
+            # Note: nexthop should be passed in Route, not extracted from NLRI
             nlri = route_or_nlri
             attrs = attributes_or_force
-            route = Route(nlri, attrs, nexthop=nlri.nexthop)
+            route = Route(nlri, attrs, nexthop=IP.NoNextHop)
 
         log.debug(lazymsg('rib.insert route={route}', route=route), 'rib')
 
@@ -311,7 +313,7 @@ class OutgoingRIB(Cache):
     def _update_rib(self, route: Route) -> None:
         # Validate: Routes entering RIB must have resolved nexthop
         # NextHopSelf/IPSelf should be resolved via neighbor.resolve_self() before reaching RIB
-        nexthop = route.nexthop  # Uses route.nexthop with fallback to nlri.nexthop
+        nexthop = route.nexthop
         if getattr(nexthop, 'SELF', False) and not getattr(nexthop, 'resolved', True):
             raise RuntimeError(
                 f'Route has unresolved NextHopSelf sentinel - call neighbor.resolve_self() before adding to RIB: {route.nlri}'

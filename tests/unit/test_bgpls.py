@@ -141,14 +141,14 @@ class TestNodeNLRI:
         )
 
         node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
-        node.nexthop = '192.0.2.1'
         json_output = node.json()
 
         assert '"ls-nlri-type": "bgpls-node"' in json_output
         assert '"l3-routing-topology": 1' in json_output
         assert '"protocol-id": 3' in json_output
         assert '"node-descriptors"' in json_output
-        assert '"nexthop": "192.0.2.1"' in json_output
+        # nexthop NOT in json() - API v6 has nexthop in grouping key, not NLRI
+        assert '"nexthop"' not in json_output
 
     def test_node_equality(self) -> None:
         """Test Node NLRI equality"""
@@ -502,14 +502,14 @@ class TestPrefixV4NLRI:
         )
 
         prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
-        prefix.nexthop = '192.0.2.1'
         json_output = prefix.json()
 
         assert '"ls-nlri-type": "bgpls-prefix-v4"' in json_output
         assert '"l3-routing-topology": 1' in json_output
         assert '"protocol-id": 3' in json_output
         assert '"node-descriptors"' in json_output
-        assert '"nexthop": "192.0.2.1"' in json_output
+        # nexthop NOT in json() - API v6 has nexthop in grouping key, not NLRI
+        assert '"nexthop"' not in json_output
 
     def test_prefix_v4_equality(self) -> None:
         """Test IPv4 Prefix NLRI equality"""
@@ -641,14 +641,14 @@ class TestPrefixV6NLRI:
         )
 
         prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
-        prefix.nexthop = '2001:db8::1'
         json_output = prefix.json()
 
         assert '"ls-nlri-type": "bgpls-prefix-v6"' in json_output
         assert '"l3-routing-topology": 1' in json_output
         assert '"protocol-id": 3' in json_output
         assert '"node-descriptors"' in json_output
-        assert '"nexthop": "2001:db8::1"' in json_output
+        # nexthop NOT in json() - API v6 has nexthop in grouping key, not NLRI
+        assert '"nexthop"' not in json_output
 
     def test_prefix_v6_equality(self) -> None:
         """Test IPv6 Prefix NLRI equality"""

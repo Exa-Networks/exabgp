@@ -72,8 +72,7 @@ class MVPN(NLRI):
         return str(self)
 
     def feedback(self, action: Action) -> str:
-        # if self.nexthop is None and action == Action.ANNOUNCE:
-        # 	raise RuntimeError('mvpn nlri next-hop is missing')
+        # Nexthop validation handled by Route.feedback()
         return ''
 
     def _prefix(self) -> str:

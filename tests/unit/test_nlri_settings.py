@@ -242,25 +242,9 @@ class TestVPLSFromSettings:
 
         assert vpls.action == Action.WITHDRAW
 
-    def test_from_settings_preserves_nexthop(self) -> None:
-        """from_settings preserves nexthop from settings"""
-        from exabgp.bgp.message.update.nlri.settings import VPLSSettings
-        from exabgp.bgp.message.update.nlri.vpls import VPLS
-
-        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
-        nexthop = IP.from_string('192.168.1.1')
-
-        settings = VPLSSettings()
-        settings.rd = rd
-        settings.endpoint = 100
-        settings.base = 500000
-        settings.offset = 50
-        settings.size = 16
-        settings.nexthop = nexthop
-
-        vpls = VPLS.from_settings(settings)
-
-        assert vpls.nexthop == nexthop
+    # Note: test_from_settings_preserves_nexthop removed
+    # nexthop is now stored in Route, not NLRI
+    # Settings.nexthop is used when creating Route from NLRI
 
     def test_from_settings_raises_on_invalid(self) -> None:
         """from_settings raises ValueError on incomplete settings"""
@@ -474,23 +458,9 @@ class TestINETFromSettings:
 
         assert inet.action == Action.WITHDRAW
 
-    def test_from_settings_preserves_nexthop(self) -> None:
-        """from_settings preserves nexthop from settings"""
-        from exabgp.bgp.message.update.nlri.inet import INET
-        from exabgp.bgp.message.update.nlri.settings import INETSettings
-
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        nexthop = IP.from_string('192.168.1.1')
-
-        settings = INETSettings()
-        settings.cidr = cidr
-        settings.afi = AFI.ipv4
-        settings.safi = SAFI.unicast
-        settings.nexthop = nexthop
-
-        inet = INET.from_settings(settings)
-
-        assert inet.nexthop == nexthop
+    # Note: test_from_settings_preserves_nexthop removed
+    # nexthop is now stored in Route, not NLRI
+    # Settings.nexthop is used when creating Route from NLRI
 
     def test_from_settings_preserves_path_info(self) -> None:
         """from_settings preserves path_info from settings"""
@@ -562,24 +532,9 @@ class TestLabelFromSettings:
 
         assert label.action == Action.WITHDRAW
 
-    def test_from_settings_preserves_nexthop(self) -> None:
-        """from_settings preserves nexthop from settings"""
-        from exabgp.bgp.message.update.nlri.label import Label
-        from exabgp.bgp.message.update.nlri.settings import INETSettings
-
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        nexthop = IP.from_string('192.168.1.1')
-
-        settings = INETSettings()
-        settings.cidr = cidr
-        settings.afi = AFI.ipv4
-        settings.safi = SAFI.nlri_mpls
-        settings.labels = Labels.make_labels([100000])
-        settings.nexthop = nexthop
-
-        label = Label.from_settings(settings)
-
-        assert label.nexthop == nexthop
+    # Note: test_from_settings_preserves_nexthop removed
+    # nexthop is now stored in Route, not NLRI
+    # Settings.nexthop is used when creating Route from NLRI
 
     def test_from_settings_raises_on_invalid(self) -> None:
         """from_settings raises ValueError on incomplete settings"""
@@ -640,26 +595,9 @@ class TestIPVPNFromSettings:
 
         assert ipvpn.action == Action.WITHDRAW
 
-    def test_from_settings_preserves_nexthop(self) -> None:
-        """from_settings preserves nexthop from settings"""
-        from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
-        from exabgp.bgp.message.update.nlri.settings import INETSettings
-
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
-        rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
-        nexthop = IP.from_string('192.168.1.1')
-
-        settings = INETSettings()
-        settings.cidr = cidr
-        settings.afi = AFI.ipv4
-        settings.safi = SAFI.mpls_vpn
-        settings.labels = Labels.make_labels([100000])
-        settings.rd = rd
-        settings.nexthop = nexthop
-
-        ipvpn = IPVPN.from_settings(settings)
-
-        assert ipvpn.nexthop == nexthop
+    # Note: test_from_settings_preserves_nexthop removed
+    # nexthop is now stored in Route, not NLRI
+    # Settings.nexthop is used when creating Route from NLRI
 
     def test_from_settings_raises_on_invalid(self) -> None:
         """from_settings raises ValueError on incomplete settings"""
@@ -763,21 +701,9 @@ class TestFlowFromSettings:
 
         assert flow.action == Action.WITHDRAW
 
-    def test_from_settings_preserves_nexthop(self) -> None:
-        """from_settings preserves nexthop from settings"""
-        from exabgp.bgp.message.update.nlri.flow import Flow
-        from exabgp.bgp.message.update.nlri.settings import FlowSettings
-
-        nexthop = IP.from_string('192.168.1.1')
-
-        settings = FlowSettings()
-        settings.afi = AFI.ipv4
-        settings.safi = SAFI.flow_ip
-        settings.nexthop = nexthop
-
-        flow = Flow.from_settings(settings)
-
-        assert flow.nexthop == nexthop
+    # Note: test_from_settings_preserves_nexthop removed
+    # nexthop is now stored in Route, not NLRI
+    # Settings.nexthop is used when creating Route from NLRI
 
     def test_from_settings_with_rules(self) -> None:
         """from_settings with rules creates flow with those rules"""

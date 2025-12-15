@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, TypeVar
 
 from exabgp.util.types import Buffer
@@ -40,7 +39,7 @@ class NLRI(Family):
 
     # Slots for NLRI base class (subclasses add their own slots)
     # afi/safi inherited from Family.__slots__
-    __slots__ = ('action', 'nexthop', 'addpath', '_packed')
+    __slots__ = ('action', 'addpath', '_packed')
 
     EOR: ClassVar[bool] = False
 
@@ -48,7 +47,6 @@ class NLRI(Family):
     registered_families: ClassVar[list[tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
 
     action: Action
-    nexthop: 'IP'
     addpath: 'PathInfo'
     _packed: Buffer  # Wire format bytes (subclass-specific interpretation)
 
@@ -79,10 +77,12 @@ class NLRI(Family):
             action: UNSET by default - MUST be set to ANNOUNCE or WITHDRAW after creation.
                     Code checking action should raise an error if it encounters UNSET.
             addpath: Path identifier for ADD-PATH (RFC 7911), DISABLED by default
+
+        NOTE: nexthop is stored in Route, not NLRI.
+        Methods like feedback() and v4_json() accept nexthop as a parameter.
         """
         Family.__init__(self, afi, safi)
         self.action = action
-        self.nexthop = IP.NoNextHop  # Default nexthop - set by subclasses if needed
         self.addpath = addpath
         self._packed = b''  # Subclasses set actual wire data
 
@@ -98,9 +98,8 @@ class NLRI(Family):
             new.safi = self.safi
         except AttributeError:
             pass  # Read-only class attribute
-        # NLRI.__slots__ = ('action', 'nexthop', 'addpath', '_packed')
+        # NLRI.__slots__ = ('action', 'addpath', '_packed')
         new.action = self.action
-        new.nexthop = self.nexthop
         new.addpath = self.addpath
         new._packed = self._packed
 
@@ -116,9 +115,8 @@ class NLRI(Family):
             new.safi = self.safi
         except AttributeError:
             pass  # Read-only class attribute
-        # NLRI.__slots__ = ('action', 'nexthop', 'addpath', '_packed')
+        # NLRI.__slots__ = ('action', 'addpath', '_packed')
         new.action = self.action  # int - immutable
-        new.nexthop = deepcopy(self.nexthop, memo)
         new.addpath = self.addpath  # PathInfo - typically shared singleton
         new._packed = self._packed  # bytes - immutable
 
@@ -163,6 +161,17 @@ class NLRI(Family):
         return bool(self == other or self.index() > other.index())
 
     def feedback(self, action: Action) -> str:
+        """Validate NLRI-specific constraints and return error message if invalid.
+
+        Note: nexthop validation is handled by Route.feedback(), not here.
+        This method only validates NLRI-specific constraints (e.g., VPLS size).
+
+        Args:
+            action: ANNOUNCE or WITHDRAW
+
+        Returns:
+            Empty string if valid, error message if invalid.
+        """
         raise RuntimeError('feedback is not implemented')
 
     def add(self, data: Any) -> bool:
@@ -181,8 +190,12 @@ class NLRI(Family):
         """Serialize NLRI to JSON format. Must be implemented by subclasses."""
         raise NotImplementedError('json() must be implemented by NLRI subclasses')
 
-    def v4_json(self, compact: bool = False) -> str:
+    def v4_json(self, compact: bool = False, nexthop: IP | None = None) -> str:
         """Serialize NLRI to JSON format for API v4 backward compatibility.
+
+        Args:
+            compact: Use compact JSON format
+            nexthop: Next hop to include in output (from Route/RoutedNLRI context)
 
         By default, returns the same as json(). Override in subclasses that need
         to include deprecated fields (like nexthop) for v4 compatibility.
