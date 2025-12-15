@@ -22,6 +22,9 @@ from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
+from exabgp.bgp.message.update.nlri.label import Label
+from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
+from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
@@ -233,6 +236,24 @@ class UpdateCollection(Message):
 
             if nlri.family().afi_safi() not in negotiated.families:
                 continue
+
+            # Wire format validation for announces (not needed for withdraws)
+            # Validates that required fields are present before generating MP_REACH_NLRI
+            #
+            # 1. Nexthop validation - required for unicast/multicast announces
+            if nlri.safi in (SAFI.unicast, SAFI.multicast):
+                if nexthop is IP.NoNextHop:
+                    raise ValueError(f'announce requires nexthop: {nlri}')
+
+            # 2. Labels validation - required for labeled route announces
+            if nlri.safi.has_label():
+                if isinstance(nlri, Label) and nlri.labels is Labels.NOLABEL:
+                    raise ValueError(f'labeled route announce requires labels: {nlri}')
+
+            # 3. RD validation - required for VPN route announces
+            if nlri.safi.has_rd():
+                if isinstance(nlri, IPVPN) and nlri.rd is RouteDistinguisher.NORD:
+                    raise ValueError(f'VPN route announce requires RD: {nlri}')
 
             is_v4 = nlri.afi == AFI.ipv4
             is_v4 = is_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]

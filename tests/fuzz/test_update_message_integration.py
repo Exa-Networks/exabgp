@@ -1141,8 +1141,8 @@ def test_announce_ipv6_undefined_nexthop_raises_valueerror() -> None:
     attributes = AttributeCollection()
     update = UpdateCollection([routed], [], attributes)
 
-    # MUST raise ValueError
-    with pytest.raises(ValueError, match='unexpected nlri definition'):
+    # MUST raise ValueError - wire format validation catches missing nexthop
+    with pytest.raises(ValueError, match='announce requires nexthop'):
         list(update.messages(negotiated))
 
 
@@ -1169,8 +1169,8 @@ def test_announce_ipv4_undefined_nexthop_raises_valueerror() -> None:
     attributes = AttributeCollection()
     update = UpdateCollection([routed], [], attributes)
 
-    # MUST raise ValueError
-    with pytest.raises(ValueError, match='unexpected nlri definition'):
+    # MUST raise ValueError - wire format validation catches missing nexthop
+    with pytest.raises(ValueError, match='announce requires nexthop'):
         list(update.messages(negotiated))
 
 

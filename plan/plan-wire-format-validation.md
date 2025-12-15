@@ -38,35 +38,37 @@ Remove the broken check infrastructure:
 - [x] Remove check from `static/__init__.py`
 - [x] Clean up unused imports (Labels, RouteDistinguisher, cast, etc.)
 
-### Phase 2: Add Wire Format Validation
+### Phase 2: Add Wire Format Validation (COMPLETE)
 
 Location: `src/exabgp/bgp/message/update/collection.py` in `messages()` method
 
-**For announces (before generating MP_REACH_NLRI):**
+Added validation in the announce processing loop (before sorting into v4/mp categories):
 
 ```python
-# In messages() when processing announces
-for routed in self._announces:
-    nlri = routed.nlri
-    nexthop = routed.nexthop
+# Wire format validation for announces (not needed for withdraws)
+# Validates that required fields are present before generating MP_REACH_NLRI
 
-    # Validate nexthop for unicast/multicast
-    if nlri.safi in (SAFI.unicast, SAFI.multicast):
-        if nexthop is IP.NoNextHop:
-            raise ValueError(f'announce requires nexthop: {nlri}')
+# 1. Nexthop validation - required for unicast/multicast announces
+if nlri.safi in (SAFI.unicast, SAFI.multicast):
+    if nexthop is IP.NoNextHop:
+        raise ValueError(f'announce requires nexthop: {nlri}')
 
-    # Validate labels for labeled routes
-    if nlri.has_label():
-        if nlri.labels is Labels.NOLABEL:
-            raise ValueError(f'labeled route announce requires labels: {nlri}')
+# 2. Labels validation - required for labeled route announces
+if nlri.safi.has_label():
+    if isinstance(nlri, Label) and nlri.labels is Labels.NOLABEL:
+        raise ValueError(f'labeled route announce requires labels: {nlri}')
 
-    # Validate RD for VPN routes
-    if nlri.has_rd():
-        if nlri.rd is RouteDistinguisher.NORD:
-            raise ValueError(f'VPN route announce requires RD: {nlri}')
+# 3. RD validation - required for VPN route announces
+if nlri.safi.has_rd():
+    if isinstance(nlri, IPVPN) and nlri.rd is RouteDistinguisher.NORD:
+        raise ValueError(f'VPN route announce requires RD: {nlri}')
 ```
 
 **For withdraws:** No validation needed - withdraws only need NLRI identity.
+
+**Tests updated:**
+- `test_announce_ipv6_undefined_nexthop_raises_valueerror` - expects new error message
+- `test_announce_ipv4_undefined_nexthop_raises_valueerror` - expects new error message
 
 ### Phase 3: Consider API-Level Validation (Optional)
 
