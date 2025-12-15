@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import Family
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute import NextHop
 
 from exabgp.configuration.static import ParseStaticRoute
@@ -108,7 +107,7 @@ def announce_route(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                if not ParseStaticRoute.check(route, Action.ANNOUNCE):
+                if not ParseStaticRoute.check(route):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'invalid route for {peer_list} : {route.extensive()}')
                     continue
@@ -162,7 +161,7 @@ def withdraw_route(
                 if route.nexthop is IP.NoNextHop:
                     route = route.with_nexthop(NextHop.from_string('0.0.0.0'))
 
-                if not ParseStaticRoute.check(route, Action.WITHDRAW):
+                if not ParseStaticRoute.check(route):
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_message(f'invalid route for {peer_list} : {route.extensive()}')
                     continue

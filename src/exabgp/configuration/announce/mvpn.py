@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from exabgp.rib.route import Route
 
-from exabgp.bgp.message import Action
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -77,8 +76,8 @@ class AnnounceMVPN(ParseAnnounce):
         return ParseAnnounce.post(self) and self._check()
 
     @staticmethod
-    def check(route: Route, afi: AFI | None, action: Action = Action.ANNOUNCE) -> bool:
-        if not AnnounceIP.check(route, afi, action):
+    def check(route: Route, afi: AFI | None) -> bool:
+        if not AnnounceIP.check(route, afi):
             return False
 
         return True

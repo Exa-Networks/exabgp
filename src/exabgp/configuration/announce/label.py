@@ -11,7 +11,6 @@ from typing import cast
 
 from exabgp.rib.route import Route
 
-from exabgp.bgp.message import Action
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -73,12 +72,13 @@ class AnnounceLabel(AnnouncePath):
         pass
 
     @staticmethod
-    def check(route: Route, afi: AFI | None, action: Action = Action.ANNOUNCE) -> bool:
-        if not AnnouncePath.check(route, afi, action):
+    def check(route: Route, afi: AFI | None) -> bool:
+        if not AnnouncePath.check(route, afi):
             return False
 
         # has_label() confirms the NLRI type has a labels attribute
-        if action == Action.ANNOUNCE and route.nlri.has_label():
+        # Labels are required for announces
+        if route.nlri.has_label():
             if cast(Label, route.nlri).labels is Labels.NOLABEL:
                 return False
 

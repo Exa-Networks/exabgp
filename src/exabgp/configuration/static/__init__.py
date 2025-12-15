@@ -134,7 +134,7 @@ def route(tokeniser: Any) -> list[Route]:
     nlri = nlri_class.from_settings(settings)
     static_route = Route(nlri, attributes, nexthop=settings.nexthop)
 
-    if not check(static_route, nlri.afi, nlri_action):
+    if not check(static_route, nlri.afi):
         raise ValueError('invalid route (missing next-hop, label or rd ?)')
 
     return list(ParseStatic.split(static_route))

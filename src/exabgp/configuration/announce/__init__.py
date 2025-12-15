@@ -10,7 +10,6 @@ from typing import Iterator as TypingIterator, cast
 
 from exabgp.protocol.ip import IP
 
-from exabgp.bgp.message import Action
 from exabgp.rib.route import Route
 
 from exabgp.protocol.family import AFI
@@ -99,7 +98,7 @@ class ParseAnnounce(Section):
         return True
 
     @staticmethod
-    def check(route: Route, afi: AFI | None, action: Action = Action.ANNOUNCE) -> bool:
+    def check(route: Route, afi: AFI | None) -> bool:
         raise RuntimeError('need to be implemented by subclasses')
 
 

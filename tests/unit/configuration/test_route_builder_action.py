@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-Tests for RouteBuilderValidator action handling.
+Tests for route validation check functions.
 
-The RouteBuilderValidator creates Route objects and passes action to
-check functions as an explicit parameter. Action is NOT stored on Route.
+The check functions validate that routes have required fields:
+- Unicast/multicast routes require nexthop
+- Labels required for labeled routes
+- RD required for VPN routes
 
-This tests the integration between configuration parsing and check functions.
+Action is no longer passed to check - it's determined by which RIB method is called.
+For withdraws, callers set a dummy nexthop before calling check.
 """
 
 from unittest.mock import Mock
 
-from exabgp.bgp.message import Action
 from exabgp.rib.route import Route
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
@@ -18,7 +20,7 @@ from exabgp.configuration.announce.ip import AnnounceIP
 
 
 class TestAnnounceIPCheck:
-    """Test AnnounceIP.check() with explicit action parameter."""
+    """Test AnnounceIP.check() route validation."""
 
     def _create_mock_route(
         self,
@@ -44,43 +46,35 @@ class TestAnnounceIPCheck:
 
         return route
 
-    def test_announce_with_nexthop_passes(self):
-        """ANNOUNCE + nexthop → check passes."""
+    def test_route_with_nexthop_passes(self):
+        """Route with nexthop passes validation."""
         route = self._create_mock_route(has_nexthop=True)
 
-        result = AnnounceIP.check(route, AFI.ipv4, Action.ANNOUNCE)
+        result = AnnounceIP.check(route, AFI.ipv4)
         assert result is True
 
-    def test_announce_without_nexthop_fails(self):
-        """ANNOUNCE + no nexthop → check fails (for unicast/multicast)."""
+    def test_route_without_nexthop_fails(self):
+        """Route without nexthop fails validation (for unicast/multicast)."""
         route = self._create_mock_route(has_nexthop=False)
 
-        result = AnnounceIP.check(route, AFI.ipv4, Action.ANNOUNCE)
-        assert result is False
-
-    def test_withdraw_without_nexthop_passes(self):
-        """WITHDRAW + no nexthop → check passes."""
-        route = self._create_mock_route(has_nexthop=False)
-
-        result = AnnounceIP.check(route, AFI.ipv4, Action.WITHDRAW)
-        assert result is True
-
-    def test_withdraw_with_nexthop_passes(self):
-        """WITHDRAW + nexthop → check passes (nexthop is optional for withdraws)."""
-        route = self._create_mock_route(has_nexthop=True)
-
-        result = AnnounceIP.check(route, AFI.ipv4, Action.WITHDRAW)
-        assert result is True
-
-    def test_check_default_action_is_announce(self):
-        """check() defaults to ANNOUNCE action."""
-        route = self._create_mock_route(has_nexthop=False)
-
-        # Without explicit action, should default to ANNOUNCE and fail for no nexthop
         result = AnnounceIP.check(route, AFI.ipv4)
         assert result is False
 
+    def test_ipv6_route_with_nexthop_passes(self):
+        """IPv6 route with nexthop passes validation."""
+        route = self._create_mock_route(has_nexthop=True, afi=AFI.ipv6)
 
-# NOTE: TestRouteActionFromConfiguration was removed in Phase 2
-# Route no longer stores _action - action is determined by which RIB method is called
-# (add_to_rib for announces, del_from_rib for withdraws)
+        result = AnnounceIP.check(route, AFI.ipv6)
+        assert result is True
+
+    def test_non_unicast_without_nexthop_passes(self):
+        """Non-unicast/multicast SAFI routes don't require nexthop."""
+        route = self._create_mock_route(has_nexthop=False, safi=SAFI.flow_ip)
+
+        result = AnnounceIP.check(route, AFI.ipv4)
+        assert result is True
+
+
+# NOTE: Action is no longer passed to check functions.
+# For withdraws, the caller (withdraw_route in announce.py) sets a dummy
+# nexthop (0.0.0.0) before calling check, so the validation passes.

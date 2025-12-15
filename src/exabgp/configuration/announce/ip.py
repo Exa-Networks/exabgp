@@ -12,7 +12,6 @@ from exabgp.protocol.ip import IP
 
 from exabgp.rib.route import Route
 
-from exabgp.bgp.message import Action
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -198,21 +197,23 @@ class AnnounceIP(ParseAnnounce):
         return ParseAnnounce.post(self) and self._check()
 
     @staticmethod
-    def check(route: Route, afi: AFI | None, action: Action = Action.ANNOUNCE) -> bool:
+    def check(route: Route, afi: AFI | None) -> bool:
         """Validate route for IP announce/withdraw.
 
         Args:
             route: Route to validate
             afi: Address family to validate against
-            action: Action being performed (ANNOUNCE or WITHDRAW)
 
         Returns:
             True if valid, False otherwise
+
+        Note:
+            Unicast/multicast require nexthop. For withdraws, caller should
+            set a dummy nexthop (e.g., 0.0.0.0) before calling.
         """
-        # Announces for unicast/multicast require nexthop
+        # Unicast/multicast require nexthop
         if (
-            action == Action.ANNOUNCE
-            and route.nexthop is IP.NoNextHop
+            route.nexthop is IP.NoNextHop
             and route.nlri.afi == afi
             and route.nlri.safi in (SAFI.unicast, SAFI.multicast)
         ):

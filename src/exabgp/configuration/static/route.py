@@ -460,25 +460,23 @@ class ParseStaticRoute(Section):
         return True
 
     @staticmethod
-    def check(route: Route, action: Action = Action.ANNOUNCE) -> bool:
+    def check(route: Route) -> bool:
         """Validate route before processing.
 
         Args:
             route: Route to validate
-            action: Action being performed (ANNOUNCE or WITHDRAW)
 
         Returns:
             True if valid, False otherwise
+
+        Note:
+            For announces, IPv4 unicast/multicast require nexthop.
+            For withdraws, caller should set a dummy nexthop (e.g., 0.0.0.0) before calling.
         """
         nlri: NLRI = route.nlri
         # Check route.nexthop instead of nlri.nexthop (nexthop is stored in Route)
-        # Announces for IPv4 unicast/multicast require nexthop
-        if (
-            route.nexthop is IP.NoNextHop
-            and action == Action.ANNOUNCE
-            and nlri.afi == AFI.ipv4
-            and nlri.safi in (SAFI.unicast, SAFI.multicast)
-        ):
+        # IPv4 unicast/multicast require nexthop
+        if route.nexthop is IP.NoNextHop and nlri.afi == AFI.ipv4 and nlri.safi in (SAFI.unicast, SAFI.multicast):
             return False
         return True
 

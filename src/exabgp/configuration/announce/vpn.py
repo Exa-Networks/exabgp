@@ -11,7 +11,6 @@ from typing import cast
 
 from exabgp.rib.route import Route
 
-from exabgp.bgp.message import Action
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -73,12 +72,13 @@ class AnnounceVPN(ParseAnnounce):
         pass
 
     @staticmethod
-    def check(route: Route, afi: AFI | None, action: Action = Action.ANNOUNCE) -> bool:
-        if not AnnounceLabel.check(route, afi, action):
+    def check(route: Route, afi: AFI | None) -> bool:
+        if not AnnounceLabel.check(route, afi):
             return False
 
         # has_rd() confirms the NLRI type has an rd attribute
-        if action == Action.ANNOUNCE and route.nlri.has_rd():
+        # RD is required for announces
+        if route.nlri.has_rd():
             if cast(IPVPN, route.nlri).rd is RouteDistinguisher.NORD:
                 return False
 
