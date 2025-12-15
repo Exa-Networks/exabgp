@@ -101,6 +101,57 @@ Use `pack_X()` / `unpack_X()` - NO negotiated parameter.
 
 ---
 
+## Buffer Protocol (PEP 688) - Zero-Copy Optimization 🚨
+
+**Rule:** Use `Buffer` not `bytes` for `unpack` method `data` parameters.
+
+This is a common pattern in Go and other languages with slice semantics, but rare in Python.
+Claude tends to write `bytes` by default - **DO NOT** do this in ExaBGP.
+
+✅ **CORRECT:**
+```python
+from exabgp.util.types import Buffer
+
+@classmethod
+def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
+    # data can be bytes, memoryview, or any buffer - zero-copy slicing
+    view = memoryview(data)
+    ...
+```
+
+❌ **FORBIDDEN:**
+```python
+@classmethod
+def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Attribute:
+    # Forces callers to convert memoryview to bytes - copies data!
+    ...
+```
+
+**Why Buffer matters:**
+- `memoryview` slicing is zero-copy (no memory allocation)
+- `bytes` slicing creates new objects (memory allocation + copy)
+- Network code processes many buffers - overhead adds up
+- `struct.unpack()` accepts Buffer directly
+
+**When to use `bytes` vs `Buffer`:**
+
+| Use `bytes` when | Use `Buffer` when |
+|------------------|-------------------|
+| Dict keys (must be hashable) | `_packed` storage |
+| Hashing required | Parsing wire data in unpack methods |
+| External API requires bytes | Passing to struct.unpack |
+| | Creating memoryview slices |
+
+**Note on `_packed: Buffer`:** Store as `Buffer` to keep zero-copy optimization path open.
+At runtime, may be `bytes` (after explicit copy) or `memoryview` (zero-copy from wire).
+Copy to `bytes()` only when releasing large network buffers is needed.
+
+**Import:** `from exabgp.util.types import Buffer`
+
+**See:** `.claude/exabgp/PEP688_BUFFER_PROTOCOL.md` for full details
+
+---
+
 ## Architecture
 
 - **No asyncio** - custom reactor pattern
@@ -351,6 +402,7 @@ When modifying JSON output format for NLRI types, attributes, or messages:
 ## Quick Checklist
 
 - [ ] Python 3.12+ syntax (prefer `int | str` over `Union[int, str]`)
+- [ ] **Buffer protocol:** `data: Buffer` NOT `data: bytes` in unpack methods
 - [ ] Avoid `| None` class attributes when possible
 - [ ] Use ClassVar flags for type identification, not hasattr/isinstance
 - [ ] Fix type errors at root cause, avoid `# type: ignore`
@@ -373,4 +425,4 @@ When modifying JSON output format for NLRI types, attributes, or messages:
 
 ---
 
-**Updated:** 2025-11-30
+**Updated:** 2025-12-15

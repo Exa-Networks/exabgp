@@ -1,8 +1,8 @@
 # Buffer Protocol Audit and Documentation
 
-**Status:** 📋 Planning
+**Status:** 🔄 Active
 **Created:** 2025-12-11
-**Updated:** 2025-12-11
+**Updated:** 2025-12-15
 
 ## Goal
 
@@ -13,8 +13,8 @@
 
 PEP 688 (Python 3.12+) provides `collections.abc.Buffer` for zero-copy buffer protocol operations. ExaBGP has partial adoption:
 
-- **Current state:** 103 `unpack.*data: bytes` vs 50 `unpack.*data: Buffer`
-- **Coverage:** Only ~33% of unpack methods use Buffer
+- **Current state:** 129 `data: bytes` vs 94 `data: Buffer` occurrences
+- **Coverage:** ~42% of data parameters use Buffer (improved from ~33%)
 - **Problem:** Claude tends to write `bytes` because it's more familiar, undoing optimizations
 
 Documentation exists at `.claude/exabgp/PEP688_BUFFER_PROTOCOL.md` but is NOT referenced in:
@@ -237,12 +237,12 @@ src/exabgp/protocol/iso/__init__.py (1)
 
 ## Implementation Plan
 
-### Phase 1: Documentation (Non-breaking)
+### Phase 1: Documentation (Non-breaking) ✅
 
-- [ ] Update `.claude/CODING_STANDARDS.md` with Buffer section
-- [ ] Update `.claude/ESSENTIAL_PROTOCOLS.md` with Buffer reminder
-- [ ] Update `CLAUDE.md` with Buffer requirement
-- [ ] Update date stamps on all modified files
+- [x] Update `.claude/CODING_STANDARDS.md` with Buffer section
+- [x] Update `.claude/ESSENTIAL_PROTOCOLS.md` with Buffer reminder
+- [x] Update `CLAUDE.md` with Buffer requirement
+- [x] Update date stamps on all modified files
 
 ### Phase 2: Migration Script
 

@@ -256,6 +256,10 @@ uv run pytest tests/unit/specific_test.py::test_function -v
   - Example: `if isinstance(x, bool): return cast(T, x)` ✅
   - Example: `return cast(int, value)` without check ❌
   - Prefer assertions/raises over fallback cast: `raise TypeError(...)` not `return cast(T, value)`
+- **Buffer protocol:** Use `Buffer` NOT `bytes` for unpack method `data` parameters
+  - Import: `from exabgp.util.types import Buffer`
+  - Zero-copy slicing with memoryview; `bytes` forces copies
+  - NEVER change existing `data: Buffer` back to `data: bytes`
 
 ✅ **Preferred: Programmatic Code Changes**
 - Prefer writing Python scripts to perform bulk code changes over manual editing
@@ -507,4 +511,4 @@ Before ending ANY session where you worked on a plan:
 
 ---
 
-**Updated:** 2025-12-09
+**Updated:** 2025-12-15

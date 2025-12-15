@@ -410,6 +410,12 @@ Unused `negotiated` parameters are OK and EXPECTED.
 **No asyncio introduction** - uses custom reactor
 **No FIB manipulation** - BGP protocol only
 
+**Buffer Protocol (Zero-Copy) - IMPORTANT:**
+- Use `Buffer` NOT `bytes` for unpack method `data` parameters
+- Import: `from exabgp.util.types import Buffer`
+- NEVER change `data: Buffer` back to `data: bytes` - this undoes optimization
+- See `.claude/exabgp/PEP688_BUFFER_PROTOCOL.md`
+
 **Environment Variables:**
 - See `.claude/exabgp/ENVIRONMENT_VARIABLES.md` for all configuration options (tcp.*, bgp.*, daemon.*, log.*, api.*, reactor.*, etc.)
 

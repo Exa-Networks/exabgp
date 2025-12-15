@@ -1,8 +1,8 @@
 # Action Enum Refactor
 
-**Status:** ✅ Complete (Phase 6 cleanup done)
+**Status:** ✅ Complete
 **Created:** 2025-12-11
-**Updated:** 2025-12-11
+**Updated:** 2025-12-15
 
 ## Goal
 
@@ -269,7 +269,7 @@ def _apply_to_route(scope: Scope, value: Any) -> None:
 |------|--------|
 | `src/exabgp/configuration/validator.py` | Use new handler |
 
-### Phase 4: Convert Schema Definitions ✅ (excluding flow)
+### Phase 4: Convert Schema Definitions ✅
 
 - [x] Convert `announce/path.py` - nlri-set → enums
 - [x] Convert `announce/label.py` - nlri-set → enums
@@ -277,21 +277,17 @@ def _apply_to_route(scope: Scope, value: Any) -> None:
 - [x] Convert `announce/mup.py` - attribute-add → enums
 - [x] Convert `announce/vpls.py` - 17 nlri-set/attribute-add → enums
 - [x] Convert `l2vpn/vpls.py` - 17 nlri-set/attribute-add → enums
-- [ ] Flow files deferred (work correctly with string fallback)
-- [ ] Convert `announce/mvpn.py` schema
-- [ ] ~~Convert `flow/match.py`, `flow/then.py`~~ - BLOCKED (causes API test timeout)
-- [x] Convert `static/route.py` - DONE (23/24, nexthop-and-attribute stays)
-- [ ] Convert `flow/route.py`
-- [ ] Convert `neighbor/family.py`, `neighbor/api.py`
-- [ ] Convert `process/__init__.py`
-- [ ] Convert `operational/__init__.py`
-- [ ] Convert remaining files with `action=`
+- [x] Convert `announce/mvpn.py` - uses register_family with enums
+- [x] Convert `flow/match.py` - all 19 Leaf definitions use enums
+- [x] Convert `flow/then.py` - all 12 Leaf/LeafList definitions use enums
+- [x] Convert `flow/route.py` - all 5 Leaf definitions use enums
+- [x] Convert `static/route.py` - DONE (23/24, nexthop-and-attribute uses NEXTHOP_ATTRIBUTE)
+- [x] Convert `neighbor/family.py` - TupleLeaf definitions use enums
+- [x] Convert `neighbor/api.py` - all Leaf definitions use enums
+- [x] Convert `process/__init__.py` - all Leaf definitions use enums
+- [x] Convert `operational/__init__.py` - all Leaf definitions use enums
 
-**Files:** ~15 files in `src/exabgp/configuration/`
-
-**Known Issue:** Flow file conversions (match.py, then.py) cause API test `o`
-(api-flow-merge) to timeout. Investigation needed - may be related to generators
-returned by flow parsers not being handled correctly in enum-based action path.
+**All schema files converted.** No files use string-based `action=` parameter.
 
 ### Phase 5: Enable Enum Dispatch for All Actions ✅
 
@@ -494,7 +490,7 @@ so separate helper functions were needed rather than using the main `apply_actio
 
 ## Resume Point
 
-**Phase 4 complete (excluding flow).** Ready for Phase 5: Create NextHopIPValidator, eliminate nexthop-and-attribute.
+**All phases complete.** Refactor finished 2025-12-15.
 
 ### 2025-12-11: Session Resume - Fixed Flow Test Failure
 
@@ -562,3 +558,27 @@ at runtime, now done via `action_string_to_enums()` before calling `apply_action
 
 The `action: str` field remains for backward compatibility with existing schema
 definitions. New code should use `target`, `operation`, `key` enum fields directly.
+
+---
+
+### 2025-12-15: Final Verification
+
+**Verified that all schema files are converted:**
+- `flow/match.py` - 19 Leaf definitions with enums
+- `flow/then.py` - 12 Leaf/LeafList definitions with enums
+- `flow/route.py` - 5 Leaf definitions with enums
+- `announce/mvpn.py` - uses `register_family()` with enum parameters
+- `neighbor/family.py` - TupleLeaf definitions with enums
+- `neighbor/api.py` - all Leaf definitions with enums
+- `process/__init__.py` - all Leaf definitions with enums
+- `operational/__init__.py` - all Leaf definitions with enums
+
+**All tests pass:** `./qa/bin/test_everything` (15/15 suites)
+
+**Remaining `action=` in codebase:** Only used in:
+- `command.py` - function parameter for `action='withdraw'` (not schema related)
+- `check.py` - logging context (not schema related)
+- `neighbor/__init__.py` - log message (not schema related)
+- `schema.py` - `factory_needs_action` parameter (different purpose)
+
+**Plan marked complete.**
