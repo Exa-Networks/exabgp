@@ -207,6 +207,33 @@ killall -9 Python  # macOS uses capital P
 
 ---
 
+## Workflow Commands
+
+**Slash commands for development workflow:**
+
+| Command | Purpose | Usage |
+|---------|---------|-------|
+| `/validate` | Run tests | `/validate` (full suite), `/validate quick` (lint only) |
+| `/review` | Semantic code review | `/review` (staged), `/review all`, `/review src/file.py` |
+| `/review-docs` | Documentation review | `/review-docs src/file.py` |
+
+**Validation modes:**
+- **quick:** Lint only (~30s) - for fast feedback during development
+- **full:** Complete test suite (~5min) - default, use before commit
+
+---
+
+## Hooks
+
+**Auto-linter hook** (`.claude/hooks/auto_linter.py`):
+- Triggers on Write/Edit of Python files
+- Runs `ruff format` and `ruff check --fix` automatically
+- Advisory mode: reports remaining issues but doesn't block
+
+**Configuration:** See `.claude/settings.local.json` for hook setup.
+
+---
+
 ## Git Workflow
 
 **🚨 CRITICAL RULES 🚨**
@@ -452,4 +479,4 @@ Before ending session:
 
 ---
 
-**Updated:** 2025-12-07
+**Updated:** 2025-12-16
