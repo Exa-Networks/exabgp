@@ -135,7 +135,7 @@ class CIDR:
         return instance
 
     @classmethod
-    def make_cidr(cls, packed: Buffer, mask: int) -> 'CIDR':
+    def create_cidr(cls, packed: Buffer, mask: int) -> 'CIDR':
         """Factory method to create a CIDR from packed IP bytes and mask.
 
         Args:

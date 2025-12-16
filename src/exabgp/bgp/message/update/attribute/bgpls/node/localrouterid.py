@@ -44,7 +44,7 @@ class LocalRouterId(BaseLS):
     @property
     def content(self) -> str:
         """TE Router ID as string."""
-        return str(IP.unpack_ip(self._packed))
+        return str(IP.create_ip(self._packed))
 
     def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": ["{self.content}"]'

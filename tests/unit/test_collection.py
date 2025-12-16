@@ -123,7 +123,7 @@ class TestNLRICollectionMakeCollection:
         """Test creating NLRICollection from a single NLRI."""
         from exabgp.bgp.message.update.nlri.collection import NLRICollection
 
-        cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('192.168.1.0'), 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
         collection = NLRICollection.make_collection(AFI.ipv4, SAFI.unicast, [nlri], Action.ANNOUNCE)
@@ -135,8 +135,8 @@ class TestNLRICollectionMakeCollection:
         """Test creating NLRICollection from multiple NLRIs."""
         from exabgp.bgp.message.update.nlri.collection import NLRICollection
 
-        cidr1 = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
-        cidr2 = CIDR.make_cidr(IP.pton('10.0.0.0'), 8)
+        cidr1 = CIDR.create_cidr(IP.pton('192.168.1.0'), 24)
+        cidr2 = CIDR.create_cidr(IP.pton('10.0.0.0'), 8)
         nlri1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast)
         nlri2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast)
 
@@ -148,7 +148,7 @@ class TestNLRICollectionMakeCollection:
         """Test that semantic mode collection can generate packed bytes."""
         from exabgp.bgp.message.update.nlri.collection import NLRICollection
 
-        cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('192.168.1.0'), 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
         collection = NLRICollection.make_collection(AFI.ipv4, SAFI.unicast, [nlri], Action.ANNOUNCE)
@@ -202,7 +202,7 @@ class TestMPNLRICollectionSemantic:
         from exabgp.bgp.message.update.collection import RoutedNLRI
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 
-        cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
+        cidr = CIDR.create_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast)
         nexthop = IP.from_string('2001:db8::1')
 
@@ -265,7 +265,7 @@ class TestMPNLRICollectionPacking:
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-        cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
+        cidr = CIDR.create_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast)
         nexthop = IP.from_string('2001:db8::1')
 
@@ -285,7 +285,7 @@ class TestMPNLRICollectionPacking:
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-        cidr = CIDR.make_cidr(IP.pton('2001:db8::'), 32)
+        cidr = CIDR.create_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast)
 
         # Withdraws don't need nexthop - use bare constructor

@@ -26,7 +26,7 @@ class RemoteRouterId(BaseLS):
     @property
     def content(self) -> str:
         """Unpack and return the IP address as a string."""
-        return IP.unpack_ip(self._packed).top()
+        return IP.create_ip(self._packed).top()
 
     @classmethod
     def make_remoterouterid(cls, ip: str) -> RemoteRouterId:

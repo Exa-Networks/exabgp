@@ -258,7 +258,7 @@ class IP(IPBase):
         return new
 
     @classmethod
-    def unpack_ip(cls, data: Buffer) -> IP:
+    def create_ip(cls, data: Buffer) -> IP:
         # Always use concrete IPv4/IPv6 classes based on data length
         # This avoids calling cls(data) when cls might be IP itself
         factory: IPFactory = IPv4 if len(data) == 4 else IPv6

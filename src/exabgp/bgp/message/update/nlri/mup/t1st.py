@@ -129,7 +129,7 @@ class Type1SessionTransformedRoute(MUP):
         ip_padding = ip_size - ip_offset
         if ip_padding > 0:
             ip = bytes(ip) + bytes(ip_padding)
-        return IP.unpack_ip(ip)
+        return IP.create_ip(ip)
 
     def _get_teid_qfi_offset(self) -> int:
         """Calculate offset to TEID field (includes 4-byte header)."""
@@ -159,7 +159,7 @@ class Type1SessionTransformedRoute(MUP):
     def endpoint_ip(self) -> IP:
         offset = self._get_teid_qfi_offset() + 6
         ep_len = self.endpoint_ip_len // 8
-        return IP.unpack_ip(self._packed[offset : offset + ep_len])
+        return IP.create_ip(self._packed[offset : offset + ep_len])
 
     @property
     def source_ip_len(self) -> int:
@@ -177,7 +177,7 @@ class Type1SessionTransformedRoute(MUP):
         source_ip_size = datasize - offset
         if source_ip_size > 0:
             sip_len = self._packed[offset] // 8
-            return IP.unpack_ip(self._packed[offset + 1 : offset + 1 + sip_len])
+            return IP.create_ip(self._packed[offset + 1 : offset + 1 + sip_len])
         return b''
 
     def __eq__(self, other: Any) -> bool:

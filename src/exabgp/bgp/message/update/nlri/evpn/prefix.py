@@ -142,18 +142,18 @@ class Prefix(EVPN):
         # IP address is either 4 or 16 bytes based on total length
         datalen = len(self._packed)
         if datalen == 36:  # IPv4: 2+8+10+4+1+4+4+3
-            return IP.unpack_ip(self._packed[25:29])
+            return IP.create_ip(self._packed[25:29])
         else:  # IPv6: 2+8+10+4+1+16+16+3 = 60
-            return IP.unpack_ip(self._packed[25:41])
+            return IP.create_ip(self._packed[25:41])
 
     @property
     def gwip(self) -> IP:
         """Gateway IP - unpacked from wire bytes."""
         datalen = len(self._packed)
         if datalen == 36:  # IPv4
-            return IP.unpack_ip(self._packed[29:33])
+            return IP.create_ip(self._packed[29:33])
         else:  # IPv6
-            return IP.unpack_ip(self._packed[41:57])
+            return IP.create_ip(self._packed[41:57])
 
     @property
     def label(self) -> Labels:

@@ -222,7 +222,7 @@ class INET(NLRI):
         Returns:
             New INET instance
         """
-        cidr = CIDR.make_cidr(packed, mask)
+        cidr = CIDR.create_cidr(packed, mask)
         instance = cls.from_cidr(cidr, afi, safi, path_info)
         # Note: nexthop parameter is deprecated - nexthop should be stored in Route, not NLRI
         return instance

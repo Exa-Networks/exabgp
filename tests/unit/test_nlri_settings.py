@@ -321,7 +321,7 @@ class TestINETSettings:
         """Validation returns error when afi is missing"""
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         settings = INETSettings()
         settings.cidr = cidr
         settings.safi = SAFI.unicast
@@ -333,7 +333,7 @@ class TestINETSettings:
         """Validation returns error when safi is missing"""
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         settings = INETSettings()
         settings.cidr = cidr
         settings.afi = AFI.ipv4
@@ -345,7 +345,7 @@ class TestINETSettings:
         """Complete valid settings return empty string"""
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         settings = INETSettings()
         settings.cidr = cidr
         settings.afi = AFI.ipv4
@@ -358,7 +358,7 @@ class TestINETSettings:
         """Settings with labels validate correctly"""
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         settings = INETSettings()
         settings.cidr = cidr
         settings.afi = AFI.ipv4
@@ -372,7 +372,7 @@ class TestINETSettings:
         """Settings with RD validate correctly"""
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
         settings = INETSettings()
         settings.cidr = cidr
@@ -388,7 +388,7 @@ class TestINETSettings:
         """set() method assigns values by name"""
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         settings = INETSettings()
 
         settings.set('cidr', cidr)
@@ -415,7 +415,7 @@ class TestINETFromSettings:
         from exabgp.bgp.message.update.nlri.inet import INET
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         settings = INETSettings()
         settings.cidr = cidr
         settings.afi = AFI.ipv4
@@ -442,7 +442,7 @@ class TestINETFromSettings:
         from exabgp.bgp.message.update.nlri.inet import INET
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         path_info = PathInfo.make_from_integer(12345)
 
         settings = INETSettings()
@@ -475,7 +475,7 @@ class TestLabelFromSettings:
         from exabgp.bgp.message.update.nlri.label import Label
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         settings = INETSettings()
         settings.cidr = cidr
         settings.afi = AFI.ipv4
@@ -520,7 +520,7 @@ class TestIPVPNFromSettings:
         from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
         from exabgp.bgp.message.update.nlri.settings import INETSettings
 
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
         settings = INETSettings()
         settings.cidr = cidr

@@ -114,7 +114,7 @@ class Type2SessionTransformedRoute(MUP):
     def endpoint_ip(self) -> IP:
         afi_bytes_size = 4 if self.afi == AFI.ipv4 else 16
         # Offset by 4-byte header: endpoint_ip at bytes 13+
-        return IP.unpack_ip(self._packed[13 : 13 + afi_bytes_size])
+        return IP.create_ip(self._packed[13 : 13 + afi_bytes_size])
 
     @property
     def teid(self) -> int:

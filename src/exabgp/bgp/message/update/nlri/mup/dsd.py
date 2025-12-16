@@ -73,7 +73,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         # Offset by 4-byte header: IP at bytes 12+
         data_len = len(self._packed)
         size = data_len - 12  # Subtract header(4) + RD(8)
-        return IP.unpack_ip(self._packed[12 : 12 + size])
+        return IP.create_ip(self._packed[12 : 12 + size])
 
     def index(self) -> bytes:
         return MUP.index(self)

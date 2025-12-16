@@ -62,7 +62,7 @@ def route(tokeniser: Any) -> list[Route]:
 
     # Create settings and populate initial values
     settings = INETSettings()
-    settings.cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
+    settings.cidr = CIDR.create_cidr(ipmask.pack_ip(), ipmask.mask)
     settings.afi = IP.toafi(ipmask.top())
     settings.action = nlri_action
     attributes = AttributeCollection()
@@ -244,7 +244,7 @@ def attributes(tokeniser: Any) -> list[Route]:
         ipmask = prefix(tokeniser)
         # Copy template settings and update with new CIDR
         settings = copy(template_settings)
-        settings.cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
+        settings.cidr = CIDR.create_cidr(ipmask.pack_ip(), ipmask.mask)
         settings.action = Action.UNSET
 
         # Create immutable NLRI from settings

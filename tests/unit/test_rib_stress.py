@@ -62,7 +62,7 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4) -> Route:
     from exabgp.protocol.ip import IP as IP_
 
     # Create NLRI with packed-bytes-first pattern
-    cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
+    cidr = CIDR.create_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, afi, SAFI.unicast)
 
     # Create attributes

@@ -30,7 +30,7 @@ class OspfForwardingAddress(BaseLS):
     @property
     def content(self) -> str:
         """Unpack and return IP address string from packed bytes."""
-        return IP.unpack_ip(self._packed).top()
+        return IP.create_ip(self._packed).top()
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> OspfForwardingAddress:

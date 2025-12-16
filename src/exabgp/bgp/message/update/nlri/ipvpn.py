@@ -328,7 +328,7 @@ class IPVPN(Label):
 
         Note: nexthop is stored in Route, not NLRI. Pass nexthop to Route constructor.
         """
-        cidr = CIDR.make_cidr(packed, mask)
+        cidr = CIDR.create_cidr(packed, mask)
         instance = cls.from_cidr(cidr, afi, safi, path_info, labels=labels, rd=rd)
         return instance
 

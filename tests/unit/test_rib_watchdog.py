@@ -66,7 +66,7 @@ def create_route(prefix: str, afi: AFI = AFI.ipv4) -> Route:
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else 32
 
-    cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
+    cidr = CIDR.create_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, afi, SAFI.unicast)
     attrs = AttributeCollection()
     attrs[Origin.ID] = Origin.from_int(Origin.IGP)
@@ -86,7 +86,7 @@ def create_watchdog_route(prefix: str, watchdog_name: str, withdraw: bool = Fals
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else 32
 
-    cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
+    cidr = CIDR.create_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, afi=AFI.ipv4, safi=SAFI.unicast)
     attrs = AttributeCollection()
     attrs[Origin.ID] = Origin.from_int(Origin.IGP)

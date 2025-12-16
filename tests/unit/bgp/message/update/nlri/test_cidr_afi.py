@@ -136,26 +136,26 @@ class TestCIDRFromIPv6:
 
 
 class TestCIDRMakeCidr:
-    """Test CIDR.make_cidr() factory with full address bytes."""
+    """Test CIDR.create_cidr() factory with full address bytes."""
 
     def test_ipv4_slash32(self):
         """make_cidr with IPv4 full address."""
         packed = bytes([192, 168, 1, 1])
-        cidr = CIDR.make_cidr(packed, 32)
+        cidr = CIDR.create_cidr(packed, 32)
         assert cidr.mask == 32
         assert cidr.prefix() == '192.168.1.1/32'
 
     def test_ipv4_slash24(self):
         """make_cidr with IPv4 /24."""
         packed = bytes([10, 0, 0, 0])
-        cidr = CIDR.make_cidr(packed, 24)
+        cidr = CIDR.create_cidr(packed, 24)
         assert cidr.mask == 24
         assert cidr.prefix() == '10.0.0.0/24'
 
     def test_ipv6_slash32(self):
         """make_cidr with IPv6 full address and /32 mask."""
         packed = bytes([0x20, 0x01, 0x0D, 0xB8] + [0] * 12)
-        cidr = CIDR.make_cidr(packed, 32)
+        cidr = CIDR.create_cidr(packed, 32)
         assert cidr.mask == 32
         # make_cidr stores full 16 bytes, prefix() will show IPv6 format
         assert '2001:db8::/32' in cidr.prefix()
@@ -163,23 +163,23 @@ class TestCIDRMakeCidr:
     def test_ipv6_slash64(self):
         """make_cidr with IPv6 /64."""
         packed = bytes([0x20, 0x01, 0x0D, 0xB8, 0, 0, 0, 1] + [0] * 8)
-        cidr = CIDR.make_cidr(packed, 64)
+        cidr = CIDR.create_cidr(packed, 64)
         assert cidr.mask == 64
 
     def test_invalid_length_raises(self):
         """make_cidr rejects invalid packed length."""
         with pytest.raises(ValueError, match='must be 4 or 16 bytes'):
-            CIDR.make_cidr(bytes([1, 2, 3]), 24)  # 3 bytes invalid
+            CIDR.create_cidr(bytes([1, 2, 3]), 24)  # 3 bytes invalid
 
     def test_invalid_ipv4_mask_raises(self):
         """make_cidr rejects mask > 32 for IPv4."""
         with pytest.raises(ValueError, match='must be 0-32'):
-            CIDR.make_cidr(bytes([192, 168, 1, 1]), 33)
+            CIDR.create_cidr(bytes([192, 168, 1, 1]), 33)
 
     def test_invalid_ipv6_mask_raises(self):
         """make_cidr rejects mask > 128 for IPv6."""
         with pytest.raises(ValueError, match='must be 0-128'):
-            CIDR.make_cidr(bytes([0x20, 0x01] + [0] * 14), 129)
+            CIDR.create_cidr(bytes([0x20, 0x01] + [0] * 14), 129)
 
 
 class TestCIDRConstructorWithAFI:

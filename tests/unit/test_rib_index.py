@@ -54,7 +54,7 @@ def create_nlri(prefix: str, afi: AFI = AFI.ipv4) -> INET:
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else (32 if afi == AFI.ipv4 else 128)
 
-    cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
+    cidr = CIDR.create_cidr(IP.pton(ip_str), mask)
     return INET.from_cidr(cidr, afi, SAFI.unicast)
 
 

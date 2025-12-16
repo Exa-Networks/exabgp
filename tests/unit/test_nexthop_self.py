@@ -265,7 +265,7 @@ def _create_route_with_nexthop_self(prefix: str = '10.0.0.0/24') -> Route:
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else 32
 
-    cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
+    cidr = CIDR.create_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
     nexthop = IPSelf(AFI.ipv4)
     # nexthop is stored in Route, not NLRI
@@ -282,7 +282,7 @@ def _create_route_with_concrete_nexthop(prefix: str = '10.0.0.0/24', nexthop: st
     ip_str = parts[0]
     mask = int(parts[1]) if len(parts) > 1 else 32
 
-    cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
+    cidr = CIDR.create_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
     nh = IPv4.from_string(nexthop)
     # nexthop is stored in Route, not NLRI

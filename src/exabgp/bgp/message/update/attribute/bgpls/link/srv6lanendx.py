@@ -73,7 +73,7 @@ class Srv6(FlagLS):
         if protocol_type == ISIS:
             neighbor_id = ISO.unpack_sysid(data[6:12])
         else:
-            neighbor_id = str(IP.unpack_ip(data[6:10]))
+            neighbor_id = str(IP.create_ip(data[6:10]))
         start_offset = 12 if protocol_type == ISIS else 6
         sid = IPv6.ntop(data[start_offset : start_offset + 16])
         data = data[start_offset + 16 :]

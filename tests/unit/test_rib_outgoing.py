@@ -60,7 +60,7 @@ def create_change(prefix: str, afi: AFI = AFI.ipv4) -> Route:
 
     from exabgp.protocol.ip import IP as IP_
 
-    cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
+    cidr = CIDR.create_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, afi, SAFI.unicast)
     attrs = AttributeCollection()
 
@@ -78,7 +78,7 @@ def create_change_with_origin(prefix: str, origin: int) -> Route:
 
     from exabgp.protocol.ip import IP as IP_
 
-    cidr = CIDR.make_cidr(IP.pton(ip_str), mask)
+    cidr = CIDR.create_cidr(IP.pton(ip_str), mask)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
     attrs = AttributeCollection()
     attrs[Origin.ID] = Origin.from_int(origin)

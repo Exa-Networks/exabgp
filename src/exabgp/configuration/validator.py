@@ -1214,7 +1214,7 @@ class RouteBuilderValidator(Validator[list[Any]]):
         # Parse prefix if present (for INET-family routes)
         if self.schema.prefix_parser:
             ipmask = self.schema.prefix_parser(tokeniser)
-            settings.cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
+            settings.cidr = CIDR.create_cidr(ipmask.pack_ip(), ipmask.mask)
             settings.afi = self.afi
             settings.safi = self.safi
 

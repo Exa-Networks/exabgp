@@ -119,7 +119,7 @@ def create_inet_nlri(
     else:
         packed = IP.pton(prefix)
 
-    cidr = CIDR.make_cidr(packed, prefixlen)
+    cidr = CIDR.create_cidr(packed, prefixlen)
     nlri = INET.from_cidr(cidr, afi, safi)
     return nlri
 

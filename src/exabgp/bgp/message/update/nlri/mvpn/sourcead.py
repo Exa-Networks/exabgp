@@ -72,14 +72,14 @@ class SourceAD(MVPN):
     @property
     def source(self) -> IP:
         sourceiplen = int(self._packed[10] / 8)
-        return IP.unpack_ip(self._packed[11 : 11 + sourceiplen])
+        return IP.create_ip(self._packed[11 : 11 + sourceiplen])
 
     @property
     def group(self) -> IP:
         sourceiplen = int(self._packed[10] / 8)
         cursor = 11 + sourceiplen
         groupiplen = int(self._packed[cursor] / 8)
-        return IP.unpack_ip(self._packed[cursor + 1 : cursor + 1 + groupiplen])
+        return IP.create_ip(self._packed[cursor + 1 : cursor + 1 + groupiplen])
 
     def __eq__(self, other: object) -> bool:
         return (

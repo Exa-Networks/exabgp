@@ -36,7 +36,7 @@ class TestNormalizeNlriTypeLabel:
         The fix uses _has_labels instead.
         """
         # Create Label with labels
-        cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         nlri = Label.from_cidr(
             cidr,
             AFI.ipv4,
@@ -65,7 +65,7 @@ class TestNormalizeNlriTypeLabel:
         and should be normalized to INET for consistency.
         """
         # Create Label without labels (NOLABEL)
-        cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         nlri = Label.from_cidr(
             cidr,
             AFI.ipv4,
@@ -90,7 +90,7 @@ class TestNormalizeNlriTypeIPVPN:
 
     def test_ipvpn_with_rd_preserved(self) -> None:
         """IPVPN NLRI with RD should not be downgraded."""
-        cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         rd = RouteDistinguisher.make_from_elements('65000', 1)
         nlri = IPVPN.from_cidr(
             cidr,
@@ -113,7 +113,7 @@ class TestNormalizeNlriTypeIPVPN:
 
     def test_ipvpn_without_rd_downgraded(self) -> None:
         """IPVPN NLRI without RD should be downgraded to Label or INET."""
-        cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         nlri = IPVPN.from_cidr(
             cidr,
             AFI.ipv4,
@@ -140,7 +140,7 @@ class TestNormalizeNlriTypeINET:
 
     def test_inet_unchanged(self) -> None:
         """INET NLRI should pass through unchanged."""
-        cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         nlri = INET.from_cidr(
             cidr,
             AFI.ipv4,
@@ -163,7 +163,7 @@ class TestLabelFromSettings:
     def test_from_settings_includes_labels(self) -> None:
         """Label created via from_settings() should include labels in _packed."""
         settings = INETSettings()
-        settings.cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        settings.cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         settings.afi = AFI.ipv4
         settings.safi = SAFI.nlri_mpls
         settings.action = Action.ANNOUNCE
@@ -184,7 +184,7 @@ class TestLabelFromSettings:
     def test_from_settings_without_labels(self) -> None:
         """Label created via from_settings() without labels should have _has_labels=False."""
         settings = INETSettings()
-        settings.cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        settings.cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         settings.afi = AFI.ipv4
         settings.safi = SAFI.nlri_mpls
         settings.action = Action.ANNOUNCE
@@ -205,7 +205,7 @@ class TestIPVPNFromSettings:
     def test_from_settings_includes_labels_and_rd(self) -> None:
         """IPVPN created via from_settings() should include both labels and RD."""
         settings = INETSettings()
-        settings.cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        settings.cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         settings.afi = AFI.ipv4
         settings.safi = SAFI.mpls_vpn
         settings.action = Action.ANNOUNCE
@@ -227,7 +227,7 @@ class TestLabelHasLabelsAttribute:
 
     def test_label_has_has_labels_attribute(self) -> None:
         """Label class should have _has_labels attribute (not _labels_packed)."""
-        cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         nlri = Label.from_cidr(
             cidr,
             AFI.ipv4,
@@ -243,7 +243,7 @@ class TestLabelHasLabelsAttribute:
 
     def test_ipvpn_inherits_has_labels(self) -> None:
         """IPVPN should inherit _has_labels from Label."""
-        cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         rd = RouteDistinguisher.make_from_elements('65000', 1)
         nlri = IPVPN.from_cidr(
             cidr,
@@ -264,7 +264,7 @@ class TestLabelPreservationThroughNormalization:
     def test_label_roundtrip_through_normalization(self) -> None:
         """Labels should be preserved when NLRI goes through normalization."""
         # Create Label with specific label value
-        cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         original_labels = Labels.make_labels([800001])
         nlri = Label.from_cidr(
             cidr,
@@ -285,7 +285,7 @@ class TestLabelPreservationThroughNormalization:
 
     def test_ipvpn_labels_preserved_through_normalization(self) -> None:
         """Labels should be preserved in IPVPN through normalization."""
-        cidr = CIDR.make_cidr(bytes([198, 51, 100, 100]), 32)
+        cidr = CIDR.create_cidr(bytes([198, 51, 100, 100]), 32)
         original_labels = Labels.make_labels([800001])
         rd = RouteDistinguisher.make_from_elements('65000', 1)
 

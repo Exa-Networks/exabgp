@@ -32,10 +32,10 @@ class IfaceAddr:
     def unpack_ifaceaddr(cls, data: Buffer) -> 'IfaceAddr':
         if len(data) == IPv4.BYTES:
             # IPv4 address
-            addr = IP.unpack_ip(data[: IPv4.BYTES])
+            addr = IP.create_ip(data[: IPv4.BYTES])
         elif len(data) == IPv6.BYTES:
             # IPv6
-            addr = IP.unpack_ip(data[: IPv6.BYTES])
+            addr = IP.create_ip(data[: IPv6.BYTES])
         return cls(iface_addr=addr, packed=data)
 
     def json(self, compact: bool = False) -> str:

@@ -136,7 +136,7 @@ class MAC(EVPN):
         if iplen_bits == 0:
             return None
         iplen_bytes = iplen_bits // 8
-        return IP.unpack_ip(self._packed[32 : 32 + iplen_bytes])
+        return IP.create_ip(self._packed[32 : 32 + iplen_bytes])
 
     @property
     def label(self) -> Labels:

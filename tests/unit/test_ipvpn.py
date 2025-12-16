@@ -95,7 +95,7 @@ class TestIPVPNCreation:
 
     def test_create_ipvpn_from_cidr(self) -> None:
         """Test creating IPVPN via from_cidr factory method"""
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
 
         assert nlri.afi == AFI.ipv4
@@ -594,7 +594,7 @@ class TestIPVPNFromCidrEdgeCases:
 
     def test_from_cidr_defaults_no_labels_no_rd(self) -> None:
         """Test from_cidr creates IPVPN with NOLABEL and NORD by default"""
-        cidr = CIDR.make_cidr(IP.pton('192.168.1.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('192.168.1.0'), 24)
         nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn)
 
         assert nlri.labels == Labels.NOLABEL
@@ -603,7 +603,7 @@ class TestIPVPNFromCidrEdgeCases:
 
     def test_from_cidr_with_rd_only(self) -> None:
         """Test from_cidr with RD parameter (no labels)"""
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn, rd=RouteDistinguisher.make_from_elements('10.0.0.1', 100))
 
         assert nlri.labels == Labels.NOLABEL
@@ -612,7 +612,7 @@ class TestIPVPNFromCidrEdgeCases:
 
     def test_from_cidr_with_labels_only(self) -> None:
         """Test from_cidr with labels parameter (no RD)"""
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         nlri = IPVPN.from_cidr(cidr, AFI.ipv4, SAFI.mpls_vpn, labels=Labels.make_labels([42], True))
 
         assert nlri.labels.labels == [42]
@@ -624,7 +624,7 @@ class TestIPVPNFromCidrEdgeCases:
 
         Verifies that both parameters can be set at construction time.
         """
-        cidr = CIDR.make_cidr(IP.pton('192.168.0.0'), 16)
+        cidr = CIDR.create_cidr(IP.pton('192.168.0.0'), 16)
         nlri = IPVPN.from_cidr(
             cidr,
             AFI.ipv4,
@@ -641,7 +641,7 @@ class TestIPVPNFromCidrEdgeCases:
         """Test from_cidr with all optional parameters"""
         from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
-        cidr = CIDR.make_cidr(IP.pton('192.168.0.0'), 16)
+        cidr = CIDR.create_cidr(IP.pton('192.168.0.0'), 16)
         nlri = IPVPN.from_cidr(
             cidr,
             AFI.ipv4,
@@ -859,7 +859,7 @@ class TestIPVPNMultipleLabelEdgeCases:
     def test_single_label_vs_no_labels(self) -> None:
         """Compare behavior of NOLABEL vs single label"""
         # With NOLABEL
-        cidr = CIDR.make_cidr(IP.pton('10.0.0.0'), 24)
+        cidr = CIDR.create_cidr(IP.pton('10.0.0.0'), 24)
         nlri_no_label = IPVPN.from_cidr(
             cidr, AFI.ipv4, SAFI.mpls_vpn, rd=RouteDistinguisher.make_from_elements('10.0.0.1', 1)
         )

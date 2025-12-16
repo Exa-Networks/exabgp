@@ -110,7 +110,7 @@ class NodeDescriptor:
         if node_type == NODE_DESC_TLV_OSPF_AREA:
             if length not in (NODE_DESC_OSPF_AREA_LENGTH, IPv6.BYTES):  # FIXME: it may only need to be 4
                 raise Exception(cls._error_tlvs[node_type])
-            node_id = IP.unpack_ip(payload)
+            node_id = IP.create_ip(payload)
             return cls(node_id, node_type, psn, dr_id, packed), remaining
 
         # IGP Router-ID: The TLV size in combination with the protocol
@@ -130,9 +130,9 @@ class NodeDescriptor:
             if igp in (IGP_OSPFV2, IGP_DIRECT, IGP_OSPFV3, IGP_STATIC):
                 if length not in (OSPF_ROUTER_ID_LENGTH, OSPF_ROUTER_DR_LENGTH):
                     raise Exception(cls._error_tlvs[node_type])
-                node_id = (IP.unpack_ip(payload[:4]),)
+                node_id = (IP.create_ip(payload[:4]),)
                 if length == OSPF_ROUTER_DR_LENGTH:
-                    dr_id = IP.unpack_ip(payload[4:8])
+                    dr_id = IP.create_ip(payload[4:8])
                 return cls(node_id, node_type, psn, dr_id, packed), remaining
 
         raise Exception(f'unknown node descriptor sub-tlv (node-type: {node_type}, igp: {igp})')

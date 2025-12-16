@@ -322,7 +322,7 @@ class ParseStaticRoute(Section):
         """
         ipmask = prefix(self.parser.tokeniser)
         settings = INETSettings()
-        settings.cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
+        settings.cidr = CIDR.create_cidr(ipmask.pack_ip(), ipmask.mask)
         settings.afi = IP.toafi(ipmask.top())
         settings.safi = SAFI.mpls_vpn  # Default to IPVPN, can be downgraded in post()
         settings.action = Action.ANNOUNCE
@@ -497,7 +497,7 @@ class ParseStaticRoute(Section):
         # generate the new routes
         for _ in range(number):
             # update ip to the next route, this recalculate the "ip" field of the Inet class
-            new_cidr = CIDR.make_cidr(pack_int(afi, ip), cut)
+            new_cidr = CIDR.create_cidr(pack_int(afi, ip), cut)
 
             # Build kwargs for from_cidr - NLRI are immutable, must pass all values upfront
             kwargs: dict = {}

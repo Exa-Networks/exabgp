@@ -112,7 +112,7 @@ def inet(tokeniser: 'Tokeniser') -> Route:
     from exabgp.protocol.ip import IP
 
     ipmask = prefix(tokeniser)
-    cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
+    cidr = CIDR.create_cidr(ipmask.pack_ip(), ipmask.mask)
     nlri = INET.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()))
 
     # Create with explicit nexthop=NoNextHop; will be updated via with_nexthop() when parsed
@@ -123,7 +123,7 @@ def mpls(tokeniser: 'Tokeniser') -> Route:
     from exabgp.protocol.ip import IP
 
     ipmask = prefix(tokeniser)
-    cidr = CIDR.make_cidr(ipmask.pack_ip(), ipmask.mask)
+    cidr = CIDR.create_cidr(ipmask.pack_ip(), ipmask.mask)
     nlri = IPVPN.from_cidr(cidr, IP.toafi(ipmask.top()), IP.tosafi(ipmask.top()))
 
     # Create with explicit nexthop=NoNextHop; will be updated via with_nexthop() when parsed

@@ -88,7 +88,7 @@ class Multicast(EVPN):
     def ip(self) -> IP:
         """Originating Router IP - unpacked from wire bytes."""
         iplen = self._packed[14]
-        return IP.unpack_ip(self._packed[15 : 15 + iplen // 8])
+        return IP.create_ip(self._packed[15 : 15 + iplen // 8])
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)

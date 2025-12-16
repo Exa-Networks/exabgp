@@ -64,7 +64,7 @@ class TestUpdateCollectionJSON:
 
         # Create IPv4 route
         packed_ip = socket.inet_aton('10.0.0.0')
-        cidr = CIDR.make_cidr(packed_ip, 24)
+        cidr = CIDR.create_cidr(packed_ip, 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
         nexthop = IPv4.from_string('192.168.1.1')
 
@@ -98,7 +98,7 @@ class TestUpdateCollectionJSON:
 
         # Create IPv6 route
         packed_ip = socket.inet_pton(socket.AF_INET6, '2001:db8::')
-        cidr = CIDR.make_cidr(packed_ip, 32)
+        cidr = CIDR.create_cidr(packed_ip, 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast)
         nexthop = IPv6.from_string('2001:db8::1')
 
@@ -128,7 +128,7 @@ class TestUpdateCollectionJSON:
 
         # Create IPv4 route for withdraw
         packed_ip = socket.inet_aton('10.0.0.0')
-        cidr = CIDR.make_cidr(packed_ip, 24)
+        cidr = CIDR.create_cidr(packed_ip, 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
 
         # Create UpdateCollection with withdraw (no RoutedNLRI needed)
@@ -156,7 +156,7 @@ class TestUpdateCollectionJSON:
 
         # Create IPv4 route
         packed_ip = socket.inet_aton('10.0.0.0')
-        cidr = CIDR.make_cidr(packed_ip, 24)
+        cidr = CIDR.create_cidr(packed_ip, 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
         # Note: nlri no longer has nexthop attribute
 
@@ -182,11 +182,11 @@ class TestUpdateCollectionJSON:
 
         # Create two routes with different nexthops
         packed_ip1 = socket.inet_aton('10.0.0.0')
-        cidr1 = CIDR.make_cidr(packed_ip1, 24)
+        cidr1 = CIDR.create_cidr(packed_ip1, 24)
         nlri1 = INET.from_cidr(cidr1, AFI.ipv4, SAFI.unicast)
 
         packed_ip2 = socket.inet_aton('10.0.1.0')
-        cidr2 = CIDR.make_cidr(packed_ip2, 24)
+        cidr2 = CIDR.create_cidr(packed_ip2, 24)
         nlri2 = INET.from_cidr(cidr2, AFI.ipv4, SAFI.unicast)
 
         nexthop1 = IPv4.from_string('192.168.1.1')
@@ -292,7 +292,7 @@ class TestNLRIAccess:
 
         # Create route
         packed_ip = socket.inet_aton('10.0.0.0')
-        cidr = CIDR.make_cidr(packed_ip, 24)
+        cidr = CIDR.create_cidr(packed_ip, 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
         nexthop = IPv4.from_string('192.168.1.1')
 
@@ -311,7 +311,7 @@ class TestNLRIAccess:
 
         # Create route
         packed_ip = socket.inet_aton('10.0.0.0')
-        cidr = CIDR.make_cidr(packed_ip, 24)
+        cidr = CIDR.create_cidr(packed_ip, 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
         nexthop = IPv4.from_string('192.168.1.1')
 
@@ -331,7 +331,7 @@ class TestNLRIAccess:
         import socket
 
         packed_ip = socket.inet_aton('10.0.0.0')
-        cidr = CIDR.make_cidr(packed_ip, 24)
+        cidr = CIDR.create_cidr(packed_ip, 24)
         nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
         nexthop = IPv4.from_string('192.168.1.1')
 

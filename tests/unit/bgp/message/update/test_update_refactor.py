@@ -135,7 +135,7 @@ def test_update_collection_roundtrip() -> None:
 
     # Create CIDR for 10.0.0.0/24
     packed_ip = socket.inet_aton('10.0.0.0')
-    cidr = CIDR.make_cidr(packed_ip, 24)
+    cidr = CIDR.create_cidr(packed_ip, 24)
     nlri = INET.from_cidr(cidr, AFI.ipv4, SAFI.unicast)
     nexthop = IP.from_string('192.168.1.1')
 

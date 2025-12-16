@@ -82,7 +82,7 @@ class SourceJoin(MVPN):
     def source(self) -> IP:
         cursor = 14  # 2 (header) + 8 (RD) + 4 (source_as)
         sourceiplen = int(self._packed[cursor] / 8)
-        return IP.unpack_ip(self._packed[cursor + 1 : cursor + 1 + sourceiplen])
+        return IP.create_ip(self._packed[cursor + 1 : cursor + 1 + sourceiplen])
 
     @property
     def group(self) -> IP:
@@ -90,7 +90,7 @@ class SourceJoin(MVPN):
         sourceiplen = int(self._packed[cursor] / 8)
         cursor += 1 + sourceiplen
         groupiplen = int(self._packed[cursor] / 8)
-        return IP.unpack_ip(self._packed[cursor + 1 : cursor + 1 + groupiplen])
+        return IP.create_ip(self._packed[cursor + 1 : cursor + 1 + groupiplen])
 
     def __eq__(self, other: object) -> bool:
         return (

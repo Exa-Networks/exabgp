@@ -90,7 +90,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
         padding = size - len(ip)
         if padding > 0:
             ip = bytes(ip) + bytes(padding)
-        return IP.unpack_ip(ip)
+        return IP.create_ip(ip)
 
     def index(self) -> bytes:
         return MUP.index(self)
