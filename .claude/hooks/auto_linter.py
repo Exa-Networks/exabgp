@@ -3,10 +3,20 @@
 
 Advisory mode: fixes issues silently, shows warnings but doesn't block.
 """
+
 import json
 import subprocess
 import sys
 from pathlib import Path
+
+# ANSI color codes
+YELLOW = '\033[33m'
+CYAN = '\033[36m'
+RED = '\033[31m'
+GREEN = '\033[32m'
+BOLD = '\033[1m'
+DIM = '\033[2m'
+RESET = '\033[0m'
 
 
 def main():
@@ -39,8 +49,6 @@ def main():
         # No pyproject.toml found, can't run uv
         return
 
-    issues = []
-
     try:
         # Format (auto-fix)
         subprocess.run(
@@ -68,23 +76,32 @@ def main():
         )
 
         if result.returncode != 0 and result.stdout.strip():
-            # Count issues
+            # Parse issues from ruff output
             lines = [ln for ln in result.stdout.strip().split('\n') if ln and not ln.startswith('Found')]
             if lines:
-                issues.append(f'{len(lines)} lint issue(s) remaining')
+                # Build actionable output
+                rel_path = path.relative_to(project_root) if path.is_relative_to(project_root) else path
+                print(
+                    f'{YELLOW}⚠️  Ruff found {BOLD}{len(lines)}{RESET}{YELLOW} issue(s) in {CYAN}{path.name}{RESET}{YELLOW} that need manual fixing:{RESET}',
+                    file=sys.stderr,
+                )
+                # Show first 3 issues as preview
+                for line in lines[:3]:
+                    print(f'   {DIM}{line}{RESET}', file=sys.stderr)
+                if len(lines) > 3:
+                    print(f'   {DIM}... and {len(lines) - 3} more{RESET}', file=sys.stderr)
+                print(f'   {GREEN}Run: uv run ruff check {rel_path}{RESET}', file=sys.stderr)
+                sys.exit(1)  # Non-blocking warning
 
     except subprocess.TimeoutExpired:
-        issues.append('lint timeout')
+        print(f'{YELLOW}⚠️  Ruff timed out{RESET}', file=sys.stderr)
+        sys.exit(1)
     except FileNotFoundError:
         # uv not found - skip silently
         return
     except Exception as e:
-        issues.append(f'lint error: {e}')
-
-    # Advisory mode: report issues but don't block (exit 0)
-    if issues:
-        print(f'[lint] {path.name}: {", ".join(issues)}', file=sys.stderr)
-        sys.exit(1)  # Non-blocking warning
+        print(f'{RED}⚠️  Ruff error: {e}{RESET}', file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == '__main__':

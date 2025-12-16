@@ -283,21 +283,28 @@ def __eq__(self, other: 'MyClass') -> bool:  # type: ignore[override]
 
 ---
 
-## Refactoring: Fix Root Causes
+## Refactoring: Right Solution, Not Easy Solution
+
+**Core principle:** Always implement the RIGHT solution, not the easiest or lowest-impact one.
 
 **When refactoring reveals mypy or type errors:**
 
-❌ **NEVER hide problems:**
+❌ **NEVER hide problems or take shortcuts:**
 ```python
 x = cast(SomeType, problematic_value)  # Hides real issue - no runtime check
 x = value  # type: ignore  # Silences warning without fixing
+if hasattr(obj, 'attr'):  # Workaround for missing attribute
 ```
 
-✅ **ALWAYS fix the root cause:**
+✅ **ALWAYS fix the root cause, even if it means more work:**
 - Trace back to where the bad type originates
 - Fix the source, not the symptom
-- If a function returns wrong type, fix the function
+- If a function returns wrong type, fix the function's return type
+- If a class is missing an attribute, add it to the class
 - If data structure is wrong, restructure it
+- Touch multiple files if that's where the fix belongs
+
+**The "right" fix may take longer but results in better code quality.**
 
 **Exception: `cast()` with runtime type checks:**
 ```python

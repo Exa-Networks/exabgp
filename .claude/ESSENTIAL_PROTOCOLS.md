@@ -80,6 +80,20 @@ Use AskUserQuestion tool:
 
 **Plan file location:** `plan/` - Implementation plans and active work (project root)
 
+## 🚨 CRITICAL: Plan File Location
+
+**ALL plans MUST be created in `plan/` directory (project root).**
+
+❌ **NEVER create plans in:**
+- `~/.claude/plans/` or `~/.claude/` (user home)
+- `.claude/` (project config directory)
+- Any temporary location
+
+✅ **ALWAYS create plans in:**
+- `plan/plan-<name>.md` for new plans
+- `plan/wip-<name>.md` when work starts
+- `plan/done-<name>.md` when completed
+
 ✅ **Required during complex work:**
 1. If a plan file exists (e.g., `plan/*.md`), update it as you discover:
    - Edge cases found during implementation
@@ -103,15 +117,6 @@ Use AskUserQuestion tool:
 - Mark outdated sections with ~~strikethrough~~ or "SUPERSEDED BY: ..."
 - Keep history of failed approaches - they have value
 - If an approach didn't work, document WHY before trying another
-
-## ⚠️ BEFORE starting a NEW plan topic
-
-When user requests a new plan on a different topic:
-1. **ASK FIRST:** "Should I save the current plan to `plan/` before starting a new one?"
-2. **If yes:** Save to `plan/<descriptive-name>.md` in project root
-3. **Only then:** Start the new plan
-
-The temporary plan file (`~/.claude/plans/...`) gets overwritten - always offer to save valuable work to `plan/` first.
 
 **Benefit:** If a session is lost, the plan file contains the full context needed to resume.
 
@@ -282,6 +287,46 @@ uv run ruff format src && uv run ruff check src  # Must pass
 ```
 
 **See:** CODING_STANDARDS.md for complete standards
+
+---
+
+### 5. Solution Quality (Right Solution, Not Easy Solution)
+
+**Core principle:** Always implement the RIGHT solution, not the easiest or lowest-impact one.
+
+## 🚨 CRITICAL: Quality Over Convenience
+
+When fixing bugs or refactoring code:
+
+✅ **DO:**
+- Fix the root cause, not just the symptom
+- Improve type annotations at the source (e.g., fix method return types)
+- Refactor properly even if it touches multiple files
+- Add missing attributes/methods to the correct class
+- Follow established patterns in the codebase
+
+❌ **DON'T:**
+- Use `cast()` to silence type errors without fixing the underlying issue
+- Use `# type: ignore` to suppress valid warnings
+- Apply workarounds that leave technical debt
+- Choose minimal changes over correct changes
+- Avoid touching other files when the fix belongs there
+
+## Examples
+
+**Bad:** Adding `cast()` in caller because method returns wrong type
+**Good:** Fix the method's return type annotation at the source
+
+**Bad:** Using `hasattr()` check before accessing an attribute
+**Good:** Add the missing attribute/property to the class where it belongs
+
+**Bad:** Duplicating code to avoid modifying shared module
+**Good:** Modify the shared module correctly and update all callers
+
+**Bad:** Returning `TypeA | TypeB` union mixing unrelated types
+**Good:** Unify the types (e.g., EOR as special UpdateCollection with flags)
+
+**Rationale:** Short-term convenience creates long-term maintenance burden. The "right" fix may take longer initially but results in better code quality and fewer future issues.
 
 ---
 
