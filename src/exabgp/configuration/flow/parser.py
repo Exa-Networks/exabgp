@@ -1,3 +1,22 @@
+"""FlowSpec route configuration parsers.
+
+Parsers for FlowSpec (RFC 5575) route configuration elements:
+match conditions, traffic actions, and redirects.
+
+Match conditions:
+    source/destination: IP prefix filters
+    protocol/next_header: IP protocol filters
+    any_port/source_port/destination_port: Port filters
+    tcp_flags/fragment/dscp: Packet header filters
+
+Traffic actions:
+    accept/discard: Allow or drop traffic
+    rate_limit: Limit traffic rate (bytes/sec)
+    redirect: Redirect to VRF or next-hop
+    mark: Set DSCP marking
+    action: Sample and/or terminal flags
+"""
+
 from __future__ import annotations
 
 from typing import Generator, Type, TypeVar, TYPE_CHECKING, cast

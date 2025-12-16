@@ -1,4 +1,18 @@
-"""traffic.py
+"""FlowSpec Traffic Action extended communities (RFC 5575, RFC 7674).
+
+This module implements extended communities that specify actions for
+FlowSpec traffic filtering rules. These communities define what happens
+to traffic matching a FlowSpec rule.
+
+Actions:
+    TrafficRate: Rate-limit matching traffic (rate in bytes/sec)
+    TrafficAction: Sample and/or terminate rule evaluation
+    TrafficRedirect: Redirect to VRF by Route Target
+    TrafficMark: Set DSCP marking on matching packets
+    TrafficNextHop*: Redirect to specific next-hop IP
+
+Wire format (8 bytes for IPv4, 20 bytes for IPv6):
+    [type(1)][subtype(1)][value(6 or 18)]
 
 Created by Thomas Mangin on 2014-06-21.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
@@ -27,11 +41,15 @@ from exabgp.util.types import Buffer
 
 
 # ================================================================== TrafficRate
-# RFC 5575
 
 
 @ExtendedCommunity.register
 class TrafficRate(ExtendedCommunity):
+    """Rate-limit matching traffic (RFC 5575).
+
+    Rate is in bytes per second. Rate of 0 means drop all matching traffic.
+    """
+
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x06
 
@@ -62,11 +80,16 @@ class TrafficRate(ExtendedCommunity):
 
 
 # ================================================================ TrafficAction
-# RFC 5575
 
 
 @ExtendedCommunity.register
 class TrafficAction(ExtendedCommunity):
+    """Traffic action flags (RFC 5575).
+
+    sample: Copy matching traffic to sampling collector
+    terminal: Stop evaluating subsequent FlowSpec rules
+    """
+
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x07
 
@@ -102,11 +125,15 @@ class TrafficAction(ExtendedCommunity):
 
 
 # ============================================================== TrafficRedirect
-# RFC 5575 and 7674
 
 
 @ExtendedCommunity.register
 class TrafficRedirect(ExtendedCommunity):
+    """Redirect matching traffic to VRF (RFC 5575, RFC 7674).
+
+    Uses Route Target format (2-byte ASN : 4-byte value).
+    """
+
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x08
 
@@ -138,6 +165,11 @@ class TrafficRedirect(ExtendedCommunity):
 
 @ExtendedCommunity.register
 class TrafficRedirectASN4(ExtendedCommunity):
+    """Redirect to VRF using 4-byte AS number (RFC 7674).
+
+    Uses Route Target format (4-byte ASN : 2-byte value).
+    """
+
     COMMUNITY_TYPE: ClassVar[int] = 0x82
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x08
 
@@ -168,11 +200,15 @@ class TrafficRedirectASN4(ExtendedCommunity):
 
 
 # ================================================================== TrafficMark
-# RFC 5575
 
 
 @ExtendedCommunity.register
 class TrafficMark(ExtendedCommunity):
+    """Set DSCP value on matching packets (RFC 5575).
+
+    DSCP is 6 bits (0-63), stored in low bits of last byte.
+    """
+
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x09
 
@@ -198,12 +234,16 @@ class TrafficMark(ExtendedCommunity):
 
 
 # =============================================================== TrafficNextHopIPv4IETF
-# draft-ietf-idr-flowspec-redirect-02
-# see RFC 4360 for ipv4 address specific extended community format
 
 
 @ExtendedCommunity.register
 class TrafficNextHopIPv4IETF(ExtendedCommunity):
+    """Redirect to IPv4 next-hop (draft-ietf-idr-flowspec-redirect).
+
+    Contains explicit IPv4 address. Copy flag indicates whether to also
+    forward to original next-hop (copy) or replace entirely (redirect).
+    """
+
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
 
@@ -237,12 +277,16 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
 
 
 # =============================================================== TrafficNextHopIPv6IETF
-# draft-ietf-idr-flowspec-redirect-02
-# see RFC 5701 for ipv6 address specific extended community format
 
 
 @ExtendedCommunityIPv6.register
 class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
+    """Redirect to IPv6 next-hop (draft-ietf-idr-flowspec-redirect, RFC 5701).
+
+    Contains explicit IPv6 address (20 bytes total). Copy flag indicates
+    whether to also forward to original next-hop or replace entirely.
+    """
+
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
 
@@ -276,14 +320,16 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
 
 
 # =============================================================== TrafficNextHopSimpson
-# draft-simpson-idr-flowspec-redirect-02
-#
-# Unlike TrafficNextHopIPv4IETF/IPv6IETF which contain an explicit IP address,
-# this community signals "redirect to the UPDATE's existing NextHop" - no IP stored.
 
 
 @ExtendedCommunity.register
 class TrafficNextHopSimpson(ExtendedCommunity):
+    """Redirect to UPDATE's existing next-hop (draft-simpson-idr-flowspec-redirect).
+
+    Unlike TrafficNextHopIPv4/IPv6 which contain explicit addresses, this signals
+    "use the UPDATE message's NextHop attribute". Copy flag works as above.
+    """
+
     COMMUNITY_TYPE: ClassVar[int] = 0x08
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
 
@@ -309,11 +355,15 @@ class TrafficNextHopSimpson(ExtendedCommunity):
 
 
 # ============================================================ TrafficRedirectIPv6
-# https://tools.ietf.org/html/rfc5701
 
 
 @ExtendedCommunityIPv6.register
 class TrafficRedirectIPv6(ExtendedCommunityIPv6):
+    """Redirect to VRF using IPv6 address (RFC 5701).
+
+    Uses IPv6 Address Specific Extended Community format (20 bytes).
+    """
+
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0B
 

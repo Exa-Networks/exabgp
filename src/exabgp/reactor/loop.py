@@ -1,4 +1,17 @@
-"""reactor/loop.py
+"""Main reactor event loop for ExaBGP.
+
+The Reactor is the central coordinator managing BGP peers, API processes,
+configuration reloading, and signal handling. Supports both generator-based
+(legacy) and asyncio operation modes.
+
+Key classes:
+    Reactor: Main event loop and peer manager
+
+Key responsibilities:
+    - Manage peer lifecycle (create, restart, remove)
+    - Handle configuration reload (SIGUSR1)
+    - Coordinate API command processing
+    - Signal handling (SIGTERM, SIGHUP, etc.)
 
 Created by Thomas Mangin on 2012-06-10.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

@@ -1,4 +1,23 @@
-"""operational.py
+"""BGP Operational messages (draft-ietf-idr-bgp-operational-message).
+
+This module implements BGP Operational messages for exchanging operational
+state between BGP speakers. These messages enable debugging, monitoring,
+and diagnostic capabilities without impacting routing state.
+
+Message categories:
+    Advisory: Text messages (ADM/ASM) for operator notifications
+    Query: Prefix count requests (RPCQ/APCQ/LPCQ)
+    Response: Prefix count replies (RPCP/APCP/LPCP)
+    Control: NS (Not Satisfied) error responses
+
+Key classes:
+    Operational: Base message class
+    OperationalFamily: Messages with AFI/SAFI context
+    SequencedOperationalFamily: Messages with router-id and sequence number
+    Advisory.ADM/ASM: Advisory Demand/Static Messages
+    Query.RPCQ/APCQ/LPCQ: Prefix count queries
+    Response.RPCP/APCP/LPCP: Prefix count responses
+    NS.*: Error response codes
 
 Created by Thomas Mangin on 2013-09-01.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -31,6 +50,8 @@ MAX_ADVISORY = 2048  # 2K
 
 
 class Type(int):
+    """Operational message type code (2-byte unsigned integer)."""
+
     def pack(self) -> bytes:
         return pack('!H', self)
 
@@ -50,6 +71,14 @@ class Type(int):
 
 @Message.register
 class Operational(Message):
+    """Base class for BGP Operational messages.
+
+    Operational messages exchange debugging and monitoring information
+    between BGP speakers. Subclasses implement specific message types.
+
+    Wire format: [type(2)][length(2)][data...]
+    """
+
     ID = Message.CODE.OPERATIONAL
     TYPE = bytes([Message.CODE.OPERATIONAL])
 
@@ -133,10 +162,14 @@ class Operational(Message):
 
 
 # ============================================================ OperationalFamily
-#
 
 
 class OperationalFamily(Operational):
+    """Operational message with AFI/SAFI address family context.
+
+    Wire format: [type(2)][length(2)][afi(2)][safi(1)][data...]
+    """
+
     has_family: ClassVar[bool] = True
 
     def __init__(self, what: int, afi: int | AFI, safi: int | SAFI, data: Buffer = b'') -> None:
@@ -156,10 +189,14 @@ class OperationalFamily(Operational):
 
 
 # =================================================== SequencedOperationalFamily
-#
 
 
 class SequencedOperationalFamily(OperationalFamily):
+    """Operational message with router-id and sequence number for request/response matching.
+
+    Wire format: [type(2)][length(2)][afi(2)][safi(1)][router-id(4)][sequence(4)][data...]
+    """
+
     __sequence_number: ClassVar[dict[RouterID | None, int]] = {}
     has_routerid: ClassVar[bool] = True
 
@@ -195,10 +232,15 @@ class SequencedOperationalFamily(OperationalFamily):
 
 
 # =========================================================================== NS
-#
 
 
 class NS:
+    """Not Satisfied (NS) error response codes.
+
+    Sent when an operational request cannot be fulfilled.
+    Each nested class represents a specific error condition.
+    """
+
     MALFORMED = 0x01  # Request TLV Malformed
     UNSUPPORTED = 0x02  # TLV Unsupported for this neighbor
     MAXIMUM = 0x03  # Max query frequency exceeded
@@ -242,10 +284,15 @@ class NS:
 
 
 # ===================================================================== Advisory
-#
 
 
 class Advisory:
+    """Advisory messages for operator notifications.
+
+    ADM (Advisory Demand Message): One-time notification
+    ASM (Advisory Static Message): Persistent notification
+    """
+
     class _Advisory(OperationalFamily):
         category: ClassVar[str] = 'advisory'
 
@@ -296,10 +343,16 @@ class Advisory:
 
 
 # ======================================================================== Query
-#
 
 
 class Query:
+    """Prefix count query messages.
+
+    RPCQ: Reachable Prefix Count Query (RIB-In)
+    APCQ: Adj-RIB-Out Prefix Count Query
+    LPCQ: Loc-RIB Prefix Count Query
+    """
+
     class _Query(SequencedOperationalFamily):
         category: ClassVar[str] = 'query'
         code: ClassVar[int]
@@ -329,10 +382,16 @@ class Query:
 
 
 # ===================================================================== Response
-#
 
 
 class Response:
+    """Prefix count response messages.
+
+    RPCP: Reachable Prefix Count Reply (RIB-In)
+    APCP: Adj-RIB-Out Prefix Count Reply
+    LPCP: Loc-RIB Prefix Count Reply
+    """
+
     class _Counter(SequencedOperationalFamily):
         category: ClassVar[str] = 'counter'
         code: ClassVar[int]
@@ -370,8 +429,9 @@ class Response:
 
 
 # ========================================================================= Dump
-#
 
 
 class Dump:
+    """Dump messages for debugging (DUP, MUP, MUD - not yet implemented)."""
+
     pass

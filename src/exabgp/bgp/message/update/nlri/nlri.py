@@ -1,4 +1,17 @@
-"""nlri.py
+"""Base NLRI class and registry for Network Layer Reachability Information.
+
+NLRI (Network Layer Reachability Information) represents route prefixes
+in BGP UPDATE messages. This module provides the base NLRI class that
+all specific NLRI types inherit from.
+
+Key concepts:
+    AFI/SAFI: Address Family Identifier / Subsequent AFI define the NLRI type
+    Registry: NLRI subclasses register for AFI/SAFI combinations
+    Packed bytes: NLRI stores wire format in _packed attribute
+
+Registered families (see registered_nlri):
+    IPv4/IPv6 Unicast, Multicast, VPN (INET)
+    FlowSpec, EVPN, VPLS, BGP-LS, MUP, etc.
 
 Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

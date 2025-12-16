@@ -1,4 +1,14 @@
-"""scope.py
+"""Configuration scope management for hierarchical parsing.
+
+This module provides the Scope class for managing configuration state
+during parsing. It maintains a hierarchical context (location) and
+stores parsed values, routes, and templates.
+
+Key concepts:
+    Location: Current position in config hierarchy (e.g., "neighbor/family")
+    Context: Dictionary at current location for storing values
+    Settings mode: Deferred NLRI construction for complex routes
+    Templates: Reusable configuration blocks
 
 Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -20,6 +30,12 @@ if TYPE_CHECKING:
 
 
 class Scope(Error):
+    """Manages configuration parsing state and hierarchical context.
+
+    Tracks current location in config tree, stores parsed values,
+    manages route construction, and handles template inheritance.
+    """
+
     _routes: list[Route]
 
     def __init__(self) -> None:

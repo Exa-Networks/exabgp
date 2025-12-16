@@ -1,4 +1,19 @@
-"""inet/parser.py
+"""Static route configuration parsers.
+
+This module provides parser functions for static route configuration
+elements: prefixes, next-hops, attributes, and communities.
+
+Each function takes a Tokeniser and returns a parsed object (Route,
+Attribute, Community, etc.). Functions raise ValueError with helpful
+error messages on invalid input.
+
+Key parsers:
+    prefix: Parse IP prefix (10.0.0.0/24)
+    inet/mpls: Create Route from prefix
+    next_hop: Parse next-hop (IP or 'self')
+    origin/med/local_preference: Basic attributes
+    as_path: Parse AS path segments
+    community/large_community/extended_community: Community attributes
 
 Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

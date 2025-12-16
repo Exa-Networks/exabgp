@@ -1,4 +1,21 @@
-"""peer.py
+"""BGP peer management and FSM implementation.
+
+This module implements the BGP Finite State Machine (FSM) for managing
+peer connections. Each Peer object represents a BGP neighbor and handles
+connection establishment, message exchange, and session teardown.
+
+Key classes:
+    Peer: Main class managing a single BGP neighbor connection
+    FSMRunner: Encapsulates generator-based FSM state
+    Stats: Tracks peer statistics (messages sent/received, uptime)
+
+FSM States (RFC 4271):
+    IDLE: Initial state, waiting to start connection
+    ACTIVE: Listening for incoming connection
+    CONNECT: Attempting outbound connection
+    OPENSENT: OPEN message sent, waiting for peer's OPEN
+    OPENCONFIRM: OPENs exchanged, waiting for KEEPALIVE
+    ESTABLISHED: Session active, exchanging UPDATE messages
 
 Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -54,6 +71,12 @@ class Stop(Exception):
 
 
 class Stats(dict[str, Any]):
+    """Tracks peer statistics with change notification.
+
+    Stores message counters, timestamps, and FSM state.
+    Yields formatted strings for changed values via changed_statistics().
+    """
+
     __format: dict[str, Any] = {
         'complete': lambda t: 'time {}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(t)))
     }
@@ -122,10 +145,21 @@ class FSMRunner:
 
 
 # ======================================================================== Peer
-# Present a File like interface to socket.socket
 
 
 class Peer:
+    """Manages a single BGP peer connection and FSM.
+
+    Handles the complete lifecycle of a BGP session:
+    - Connection establishment (active/passive)
+    - OPEN message exchange and capability negotiation
+    - UPDATE message sending/receiving
+    - KEEPALIVE timer management
+    - Graceful restart and session teardown
+
+    Supports both sync (generator) and async (asyncio) operation modes.
+    """
+
     def __init__(self, neighbor: 'Neighbor', reactor: 'Reactor') -> None:
         # Maximum connection attempts (0 = unlimited)
         self.max_connection_attempts: int = getenv().tcp.attempts

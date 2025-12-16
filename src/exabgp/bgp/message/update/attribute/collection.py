@@ -1,4 +1,18 @@
-"""attributes.py
+"""BGP path attribute collections (semantic and wire containers).
+
+This module provides two container types for BGP path attributes:
+
+AttributeCollection: Semantic container (dict-like)
+    - Stores parsed Attribute objects by code
+    - Used for building routes and modifying attributes
+    - Provides text/JSON serialization
+
+Attributes: Wire container (bytes-first)
+    - Stores raw packed attribute bytes
+    - Lazy parsing via iterator
+    - Used for efficient message handling
+
+See .claude/exabgp/WIRE_SEMANTIC_SEPARATION.md for design rationale.
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -42,18 +56,16 @@ NOTHING: _NOTHING = _NOTHING()
 
 
 # =================================================================== AttributeCollection
-#
-# Semantic container for BGP path attributes.
-# Stores parsed Attribute objects in a dict-like structure.
-
-# 0                   1
-# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6
-# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-# |  Attr. Flags  |Attr. Type Code|
-# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
 class AttributeCollection(dict):
+    """Semantic container for BGP path attributes (dict-like).
+
+    Stores parsed Attribute objects indexed by attribute code.
+    Used for route construction, modification, and serialization.
+
+    Wire format header: [flags(1)][type_code(1)][length(1-2)][value...]
+    """
     # Internal pseudo-attributes (no dedicated classes exist for these)
     INTERNAL: ClassVar[tuple[int, ...]] = (
         Attribute.CODE.INTERNAL_SPLIT,

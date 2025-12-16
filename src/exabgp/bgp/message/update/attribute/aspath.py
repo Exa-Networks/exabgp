@@ -1,4 +1,14 @@
-"""aspath.py
+"""AS_PATH and AS4_PATH attribute implementation (RFC 4271, RFC 6793).
+
+AS_PATH contains the sequence of ASNs traversed to reach a destination.
+Supports AS_SEQUENCE, AS_SET, and confederation variants.
+
+Key classes:
+    ASPath: Base AS path segment container
+    AS2Path: 2-byte ASN path (AS_PATH attribute)
+    AS4Path: 4-byte ASN path (AS4_PATH attribute)
+    SEQUENCE/SET: Path segment types
+    CONFED_SEQUENCE/CONFED_SET: Confederation segment types
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

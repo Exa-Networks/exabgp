@@ -1,4 +1,18 @@
-"""Copyright (c) 2016 Evelio Vila <eveliovila@gmail.com>
+"""BGP-LS (Link-State) attribute implementation (RFC 7752, RFC 9085).
+
+BGP-LS distributes link-state and traffic engineering topology information
+via BGP UPDATE messages. This module implements the BGP-LS attribute and
+its TLV-encoded sub-attributes.
+
+Key classes:
+    LinkState: Main BGP-LS attribute (parses TLVs on demand)
+    BaseLS: Base class for all BGP-LS TLV types
+    FlagLS: Base class for flag-based TLVs (SR flags, etc.)
+    GenericLSID: Fallback for unknown TLV types
+
+TLV format: [type(2)][length(2)][value(variable)]
+
+Copyright (c) 2016 Evelio Vila <eveliovila@gmail.com>
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
@@ -32,6 +46,12 @@ class LSClass(Protocol):
 
 @Attribute.register()
 class LinkState(Attribute):
+    """BGP-LS attribute containing link-state TLVs (RFC 7752).
+
+    Stores raw bytes and parses TLVs on demand via ls_attrs property.
+    Uses registry pattern for TLV type dispatch.
+    """
+
     ID = Attribute.CODE.BGP_LS
     FLAG = Attribute.Flag.OPTIONAL
     TLV = -1
@@ -145,6 +165,19 @@ class LinkState(Attribute):
 
 
 class BaseLS:
+    """Base class for BGP-LS TLV types.
+
+    Stores packed bytes and unpacks content on demand via properties.
+    Subclasses define TLV code, JSON key, and content unpacking.
+
+    Class attributes:
+        TLV: TLV type code (2 bytes)
+        JSON: Key name for JSON output
+        REPR: Human-readable name
+        LEN: Expected length (0 = variable)
+        MERGE: If True, multiple TLVs of same type are merged into array
+    """
+
     TLV: int = -1
     JSON: str = 'json-name-unset'
     REPR: str = 'repr name unset'
@@ -196,6 +229,11 @@ class BaseLS:
 
 
 class GenericLSID(BaseLS):
+    """Fallback handler for unknown/unimplemented BGP-LS TLV types.
+
+    Returns raw bytes as hex string. Dynamically sets JSON key from TLV code.
+    """
+
     TLV: int = 0
 
     def __init__(self, packed: Buffer) -> None:
@@ -229,6 +267,12 @@ class GenericLSID(BaseLS):
 
 
 class FlagLS(BaseLS):
+    """Base class for flag-based BGP-LS TLVs (SR flags, etc.).
+
+    Subclasses define FLAGS as ordered list of flag names.
+    'RSV' entries are reserved/padding bits.
+    """
+
     # Subclasses define FLAGS as a list of flag names, e.g. ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
     FLAGS: list[str] = []
 

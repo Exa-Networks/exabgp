@@ -1,4 +1,13 @@
-"""communities.py
+"""Extended community collection attributes (RFC 4360, RFC 5701).
+
+Extended communities are 8-byte values used for VPN route targets,
+traffic engineering, and FlowSpec actions. IPv6 extended communities
+are 20 bytes.
+
+Key classes:
+    ExtendedCommunitiesBase: Abstract base for community collections
+    ExtendedCommunities: IPv4 extended community attribute
+    ExtendedCommunitiesIPv6: IPv6 extended community attribute
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.

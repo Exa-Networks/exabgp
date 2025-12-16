@@ -18,7 +18,6 @@
 
 | Plan | Description |
 |------|-------------|
-| `runtime-validation/` | Runtime crash prevention (BGP-LS done) |
 | `type-safety/` | MyPy error reduction |
 
 ### Planning (plan-)
@@ -83,7 +82,7 @@
 
 | Item | Description |
 |------|-------------|
-| Add Class Documentation | 94.2% of classes lack docstrings |
+| Add Class Documentation | ~60% of classes lack docstrings (improved from 94%) |
 | Refactor NLRI Duplication | 186+ lines of duplicated code |
 | Consolidate Test Fixtures | Reduce fixture duplication |
 | Performance Regression Tests | pytest-benchmark integration |
@@ -126,6 +125,9 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-code-docstrings.md` | 2025-12-16 | Module/class docstrings for 15 core files |
+| `done-claude-code-improvements.md` | 2025-12-16 | Auto-linter hook, /validate, /review commands |
+| `done-runtime-validation/` | 2025-12-16 | Runtime crash prevention (BGP-LS complete) |
 | `done-comment-cleanup/` | 2025-12-15 | XXX/TODO comment cleanup (Phase 1-7) |
 | `done-nlri-immutability.md` | 2025-12-15 | NLRI immutability - remove nexthop from NLRI |
 | `done-rib-testing-comprehensive.md` | 2025-12-15 | 230 new RIB tests (8 files, P0-P3 complete) |
@@ -175,4 +177,4 @@
 
 ---
 
-**Updated:** 2025-12-15
+**Updated:** 2025-12-16

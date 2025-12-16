@@ -1,4 +1,12 @@
-"""error.py
+"""Network error types and errno classification.
+
+Provides exception classes for network operations and classifies
+errno values into recoverable (block) vs fatal categories.
+
+Key classes:
+    error: Errno classification (block, fatal, default sets)
+    NetworkError: Base network exception
+    BindingError, AcceptError, LostConnection, etc.: Specific errors
 
 Created by Thomas Mangin on 2013-07-11.
 Copyright (c) 2013-2017 Exa Networks. All rights reserved.

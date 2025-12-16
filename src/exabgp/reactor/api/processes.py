@@ -1,4 +1,18 @@
-"""process.py
+"""API process management for external program communication.
+
+This module manages subprocess communication for ExaBGP's external API.
+External programs can receive BGP events (updates, state changes) and
+send commands back to control routing behavior.
+
+Key classes:
+    Processes: Main class managing API subprocess lifecycle
+    ProcessError: Base exception for process-related errors
+
+Communication model:
+    - ExaBGP spawns subprocesses defined in configuration
+    - Events are encoded (JSON/text) and written to subprocess stdin
+    - Commands are read from subprocess stdout and executed
+    - Supports both sync (generator) and async (asyncio) modes
 
 Created by Thomas Mangin on 2011-05-02.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -92,6 +106,20 @@ def preexec_helper() -> None:
 
 
 class Processes:
+    """Manages external API subprocess lifecycle and communication.
+
+    Handles spawning, monitoring, and communicating with external programs
+    that interact with ExaBGP via stdin/stdout. Supports both sync (generator)
+    and async (asyncio) operation modes.
+
+    Key responsibilities:
+        - Spawn and terminate API subprocesses
+        - Encode BGP events and write to subprocess stdin
+        - Read commands from subprocess stdout
+        - Handle respawning on process failure
+        - Support backpressure for slow consumers
+    """
+
     # how many time can a process can respawn in the time interval
     respawn_timemask: int = 0xFFFFFF - 0b111111
 

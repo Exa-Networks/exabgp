@@ -1,4 +1,32 @@
-"""flow.py
+"""FlowSpec NLRI implementation (RFC 5575, RFC 8955).
+
+This module implements BGP FlowSpec for traffic filtering rules.
+FlowSpec allows BGP to distribute traffic filter rules that can be
+used for DDoS mitigation, traffic engineering, and access control.
+
+Key classes:
+    Flow: The main NLRI class for FlowSpec rules
+    IPrefix4/IPrefix6: Source/destination prefix components
+    IOperation subclasses: Port, protocol, DSCP, TCP flag filters
+
+Wire format:
+    FlowSpec NLRI consists of a length prefix followed by ordered
+    filter components. Each component has a type ID and encoded value.
+
+Component types (RFC 5575 Section 4):
+    ID 1: Destination prefix
+    ID 2: Source prefix
+    ID 3: IP protocol (IPv4) / Next header (IPv6)
+    ID 4: Port (any)
+    ID 5: Destination port
+    ID 6: Source port
+    ID 7: ICMP type
+    ID 8: ICMP code
+    ID 9: TCP flags
+    ID 10: Packet length
+    ID 11: DSCP (IPv4) / Traffic class (IPv6)
+    ID 12: Fragment flags
+    ID 13: Flow label (IPv6 only)
 
 Created by Thomas Mangin on 2010-01-14.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -67,8 +95,12 @@ MAX_FLOW_LABEL: int = 0xFFFFF  # Maximum flow label value (20 bits)
 
 
 class IComponent:
-    # all have ID
-    # should have an interface for serialisation and put it here
+    """Base interface for FlowSpec filter components.
+
+    All FlowSpec components (prefixes, ports, protocols, etc.) inherit from this.
+    Components must define ID (component type) and implement pack()/make().
+    """
+
     FLAG: ClassVar[bool] = False
 
     def pack(self) -> Buffer:
@@ -81,6 +113,15 @@ class IComponent:
 
 
 class CommonOperator:
+    """Base class for FlowSpec operator byte encoding (RFC 5575 Section 4).
+
+    The operator byte format: [EOL][AND][LEN(2 bits)][OP(4 bits)]
+    - EOL: End of list marker
+    - AND: Logical AND with previous (vs OR)
+    - LEN: Value length encoding (1, 2, 4, or 8 bytes)
+    - OP: Operation-specific bits (numeric or binary)
+    """
+
     # power (2,x) is the same as 1 << x which is what the RFC say the len is
     power: ClassVar[dict[int, int]] = {
         0: 1,
@@ -117,6 +158,11 @@ class CommonOperator:
 
 
 class NumericOperator(CommonOperator):
+    """Numeric comparison operators for FlowSpec (RFC 5575 Section 4.2.2).
+
+    Used for port, length, DSCP comparisons. Supports <, >, =, !=, <=, >=.
+    """
+
     # reserved= 0x08  # 0b00001000
     LT: ClassVar[int] = 0x04  # 0b00000100
     GT: ClassVar[int] = 0x02  # 0b00000010
@@ -127,6 +173,11 @@ class NumericOperator(CommonOperator):
 
 
 class BinaryOperator(CommonOperator):
+    """Binary/bitmask operators for FlowSpec (RFC 5575 Section 4.2.2).
+
+    Used for TCP flags and fragment flags. Supports include, match, not.
+    """
+
     # reserved= 0x0C  # 0b00001100
     INCLUDE: ClassVar[int] = 0x00  # 0b00000000
     NOT: ClassVar[int] = 0x02  # 0b00000010
@@ -312,7 +363,16 @@ class IPrefix6(IPrefix, IComponent, FlowIPv6):
 
 
 class IOperation(IComponent):
-    # need to implement encode which encode the value of the operator
+    """Base class for FlowSpec operation components (ports, protocols, etc.).
+
+    Operation components consist of operator byte(s) and value(s).
+    Subclasses define how values are encoded (1, 2, or 4 bytes).
+
+    Attributes:
+        operations: Operator bits (AND, comparison operators, EOL)
+        value: The numeric value being compared
+    """
+
     operations: int
     value: BaseValue
     first: bool | None
@@ -372,6 +432,8 @@ class IOperationByteShortLong(IOperation):
 
 
 class NumericString:
+    """Mixin providing string representation for numeric operations."""
+
     OPERATION: ClassVar[str] = 'numeric'
     # Set by subclasses - always present when short() is called
     operations: int
@@ -408,6 +470,8 @@ class NumericString:
 
 
 class BinaryString:
+    """Mixin providing string representation for binary/bitmask operations."""
+
     OPERATION: ClassVar[str] = 'binary'
     # Set by subclasses - always present when short() is called
     operations: int
@@ -526,6 +590,8 @@ class Flow6Source(IPrefix6, FlowSource):
 
 
 class FlowIPProtocol(IOperationByte, NumericString, FlowIPv4):
+    """IPv4 IP protocol filter (e.g., TCP=6, UDP=17, ICMP=1)."""
+
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'protocol'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(Protocol.from_string, Protocol)
@@ -533,6 +599,8 @@ class FlowIPProtocol(IOperationByte, NumericString, FlowIPv4):
 
 
 class FlowNextHeader(IOperationByte, NumericString, FlowIPv6):
+    """IPv6 next header filter (equivalent to IPv4 protocol)."""
+
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'next-header'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(Protocol.from_string, Protocol)
@@ -540,6 +608,8 @@ class FlowNextHeader(IOperationByte, NumericString, FlowIPv6):
 
 
 class FlowAnyPort(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
+    """Filter on source OR destination port (matches either)."""
+
     ID: ClassVar[int] = 0x04
     NAME: ClassVar[str] = 'port'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value, NumericValue)
@@ -575,6 +645,8 @@ class FlowICMPCode(IOperationByte, NumericString, FlowIPv4, FlowIPv6):
 
 
 class FlowTCPFlag(IOperationByteShort, BinaryString, FlowIPv4, FlowIPv6):
+    """TCP flags bitmask filter (SYN, ACK, FIN, RST, etc.)."""
+
     ID: ClassVar[int] = 0x09
     NAME: ClassVar[str] = 'tcp-flags'
     FLAG: ClassVar[bool] = True
@@ -605,8 +677,9 @@ class FlowTrafficClass(IOperationByte, NumericString, FlowIPv6):
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
-# BinaryOperator
 class FlowFragment(IOperationByteShort, BinaryString, FlowIPv4, FlowIPv6):
+    """IP fragmentation flags filter (DF, MF, IsFragment, First, Last)."""
+
     ID: ClassVar[int] = 0x0C
     NAME: ClassVar[str] = 'fragment'
     FLAG: ClassVar[bool] = True
