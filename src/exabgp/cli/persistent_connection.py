@@ -92,6 +92,7 @@ class PersistentSocketConnection:
 
     def _initial_ping(self) -> None:
         """Send initial synchronous ping to get daemon UUID before starting background threads"""
+        assert self.socket is not None, 'Socket must be connected before ping'
         try:
             # Send ping (v6 API format)
             ping_cmd = f'session ping {self.client_uuid} {self.client_start_time}\n'
@@ -390,6 +391,8 @@ class PersistentSocketConnection:
     def _read_loop(self) -> None:
         """Background thread: continuously read from socket"""
         while self.running:
+            if self.socket is None:
+                break
             try:
                 data = self.socket.recv(4096)
                 if not data:

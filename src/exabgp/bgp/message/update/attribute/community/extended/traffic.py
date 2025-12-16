@@ -257,7 +257,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
         return cls(packed)
 
     @property
-    def ip(self) -> IPv4:
+    def ip(self) -> str:
         return IPv4.ntop(self._packed[2:6])
 
     @property
@@ -300,7 +300,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
         return cls(packed)
 
     @property
-    def ip(self) -> IPv6:
+    def ip(self) -> str:
         return IPv6.ntop(self._packed[2:18])
 
     @property

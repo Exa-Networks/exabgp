@@ -312,7 +312,7 @@ class INET(NLRI):
         # Nexthop validation handled by Route.feedback()
         return ''
 
-    def pack_nlri(self, negotiated: 'Negotiated') -> bytes:
+    def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
         """Pack NLRI for wire transmission.
 
         Handles AddPath based on negotiated capability vs stored format:
@@ -363,7 +363,7 @@ class INET(NLRI):
         return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
 
     @classmethod
-    def _pathinfo(cls, data: Buffer, addpath: Any) -> tuple[PathInfo, bytes]:
+    def _pathinfo(cls, data: Buffer, addpath: Any) -> tuple[PathInfo, Buffer]:
         if addpath:
             return PathInfo(data[:4]), data[4:]
         return PathInfo.DISABLED, data

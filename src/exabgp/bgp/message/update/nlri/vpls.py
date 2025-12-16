@@ -135,22 +135,22 @@ class VPLS(NLRI):
     @property
     def endpoint(self) -> int:
         """VPLS endpoint (VE ID) - unpacked from wire bytes."""
-        return unpack('!H', self._packed[10:12])[0]
+        return int(unpack('!H', bytes(self._packed[10:12]))[0])
 
     @property
     def offset(self) -> int:
         """Label block offset - unpacked from wire bytes."""
-        return unpack('!H', self._packed[12:14])[0]
+        return int(unpack('!H', bytes(self._packed[12:14]))[0])
 
     @property
     def size(self) -> int:
         """Label block size - unpacked from wire bytes."""
-        return unpack('!H', self._packed[14:16])[0]
+        return int(unpack('!H', bytes(self._packed[14:16]))[0])
 
     @property
     def base(self) -> int:
         """Label base - unpacked from wire bytes."""
-        return unpack('!L', b'\x00' + self._packed[16:19])[0] >> 4
+        return int(unpack('!L', b'\x00' + bytes(self._packed[16:19]))[0]) >> 4
 
     def feedback(self, action: Action) -> str:
         """Validate VPLS NLRI-specific constraints.

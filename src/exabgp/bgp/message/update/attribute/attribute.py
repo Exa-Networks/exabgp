@@ -237,6 +237,10 @@ class Attribute:
         length: int = len(value)
         return length + 3 if length <= ATTR_LENGTH_EXTENDED_MAX else length + 4
 
+    def pack_attribute(self, negotiated: 'Negotiated') -> bytes:
+        """Pack attribute for wire transmission. Must be overridden by subclasses."""
+        raise NotImplementedError(f'{self.__class__.__name__} must implement pack_attribute()')
+
     def __eq__(self, other: Any) -> bool:
         return bool(self.ID == other.ID and self.FLAG == other.FLAG)
 

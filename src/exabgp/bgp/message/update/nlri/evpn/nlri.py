@@ -176,7 +176,7 @@ class GenericEVPN(EVPN):
         EVPN.__init__(self, packed)
 
     @property
-    def CODE(self) -> int:  # type: ignore[override]
+    def CODE(self) -> int:
         """Route type code - extracted from wire bytes."""
         return self._packed[0]
 

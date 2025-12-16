@@ -80,10 +80,10 @@ class States(str, Enum):
 
 def setargs(parser: argparse.ArgumentParser) -> None:
     # fmt: off
-    g = parser.add_mutually_exclusive_group()
-    g.add_argument('--silent', '-s', action='store_true', default=False, help="don't log to console")
-    g.add_argument('--syslog-facility', '-sF', metavar='FACILITY', nargs='?', const='daemon', default='daemon', help='log to syslog using FACILITY, default FACILITY is daemon')
-    g.add_argument('--no-syslog', action='store_true', help='disable syslog logging')
+    me_group = parser.add_mutually_exclusive_group()
+    me_group.add_argument('--silent', '-s', action='store_true', default=False, help="don't log to console")
+    me_group.add_argument('--syslog-facility', '-sF', metavar='FACILITY', nargs='?', const='daemon', default='daemon', help='log to syslog using FACILITY, default FACILITY is daemon')
+    me_group.add_argument('--no-syslog', action='store_true', help='disable syslog logging')
 
     parser.add_argument('--debug', '-d', action='store_true', default=False, help='enable debugging')
     parser.add_argument('--no-ack', '-a', action='store_true', default=False, help='set for exabgp 3.4 or 4.x when exabgp.api.ack=false')

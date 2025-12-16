@@ -59,9 +59,9 @@ class HostName(Capability):
         l1 = data[0]
         if len(data) < l1 + 2:
             raise Notify(2, 0, f'Hostname capability truncated: need {l1 + 2} bytes for hostname, got {len(data)}')
-        instance.host_name = data[1 : l1 + 1].decode('utf-8')
+        instance.host_name = bytes(data[1 : l1 + 1]).decode('utf-8')
         l2 = data[l1 + 1]
         if len(data) < l1 + 2 + l2:
             raise Notify(2, 0, f'Hostname capability truncated: need {l1 + 2 + l2} bytes total, got {len(data)}')
-        instance.domain_name = data[l1 + 2 : l1 + 2 + l2].decode('utf-8')
+        instance.domain_name = bytes(data[l1 + 2 : l1 + 2 + l2]).decode('utf-8')
         return instance

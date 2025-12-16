@@ -120,7 +120,7 @@ class Text:
 
         # EOR messages have .nlris directly but no .announces/.withdraws
         if getattr(update, 'EOR', False):
-            for nlri in update.nlris:  # type: ignore[union-attr]
+            for nlri in update.nlris:
                 r += f'{prefix} route {nlri.extensive()}\n'
         else:
             # Process announces - get nexthop from RoutedNLRI container

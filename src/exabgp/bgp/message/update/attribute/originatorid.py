@@ -77,15 +77,15 @@ class OriginatorID(Attribute):
         """Get string representation of the IP address."""
         return IP.ntop(self._packed)
 
-    def ton(self, negotiated: Negotiated | None = None) -> bytes:
+    def ton(self, negotiated: Negotiated | None = None) -> Buffer:
         """Get packed bytes representation."""
         return self._packed
 
-    def pack_ip(self) -> bytes:
+    def pack_ip(self) -> Buffer:
         """Get packed bytes (IP interface compatibility)."""
         return self._packed
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         """Get the packed data for indexing/caching."""
         return self._packed
 

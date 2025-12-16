@@ -226,7 +226,7 @@ class CIDR:
         if len(bgp) < size + 1:
             raise Notify(3, 10, 'could not decode CIDR')
 
-        return bgp[1 : size + 1] + bytes(IP.length(afi) - size), mask
+        return bytes(bgp[1 : size + 1]) + bytes(IP.length(afi) - size), mask
 
         # data = bgp[1:size+1] + '\x0\x0\x0\x0'
         # return data[:4], mask

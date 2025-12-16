@@ -152,7 +152,7 @@ class ASPath(Attribute):
         return self._unpack_segments_static(self._packed, self._asn4)
 
     @property
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         """Get the original packed data, used for indexing/caching."""
         return self._packed
 

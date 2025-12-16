@@ -378,7 +378,7 @@ class Peer:
             local_id = self.neighbor.session.router_id.pack_ip()
             remote_id = self.proto.negotiated.received_open.router_id.pack_ip()
 
-            if remote_id < local_id:
+            if bytes(remote_id) < bytes(local_id):
                 log.debug(
                     lazymsg(
                         'peer.connection.rejected connection={c} reason=higher_router_id_outgoing', c=connection.name()
@@ -540,6 +540,7 @@ class Peer:
 
     async def _send_operational_messages(self) -> None:
         """Send operational messages from the neighbor's message queue."""
+        assert self.proto is not None, 'Protocol must be established'
         if self.neighbor.capability.operational.is_enabled():
             new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
             if new_operational:
@@ -551,6 +552,7 @@ class Peer:
 
     async def _send_refresh_messages(self) -> None:
         """Send route refresh messages from the neighbor's refresh queue."""
+        assert self.proto is not None, 'Protocol must be established'
         if self.neighbor.capability.route_refresh:
             new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
             if new_refresh:
@@ -567,6 +569,7 @@ class Peer:
         Returns:
             Tuple of (updated new_routes generator, updated include_withdraw flag)
         """
+        assert self.proto is not None, 'Protocol must be established'
         if not new_routes and self.neighbor.rib.outgoing.pending():
             log.debug(lazymsg('peer.update.generator.creating'), self.id())
             new_routes = self.proto.new_update_generator(include_withdraw)
@@ -595,6 +598,7 @@ class Peer:
         Returns:
             Updated send_eor flag
         """
+        assert self.proto is not None, 'Protocol must be established'
         if not new_routes and send_eor:
             send_eor = False
             await self.proto.new_eors()

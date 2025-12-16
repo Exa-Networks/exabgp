@@ -52,4 +52,4 @@ class ASN4(Capability, ASN):
         Returns:
             True if valid, False otherwise
         """
-        return 0 <= value <= ASN.MAX_4BYTE
+        return bool(0 <= value <= ASN.MAX_4BYTE)

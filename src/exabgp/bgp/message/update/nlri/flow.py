@@ -508,9 +508,11 @@ def converter(
     return _integer
 
 
-def decoder(function: Callable[[bytes], int], klass: Type = NumericValue) -> Callable[[bytes], BaseValue]:
+def decoder(function: Callable[[bytes], int], klass: Type[BaseValue] = NumericValue) -> Callable[[bytes], BaseValue]:
     def _inner(value: bytes) -> BaseValue:
-        return klass(function(value))
+        # klass is always a BaseValue subclass, return type is guaranteed
+        result: BaseValue = klass(function(value))
+        return result
 
     return _inner
 

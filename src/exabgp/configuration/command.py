@@ -58,7 +58,7 @@ def format_extended_community(ec: dict) -> str | None:
     if not isinstance(ec, dict) or 'string' not in ec:
         return None
 
-    ec_string = ec['string']
+    ec_string: str = str(ec['string'])
 
     # Handle interface-set with transitive field
     if ec_string.startswith('interface-set:'):

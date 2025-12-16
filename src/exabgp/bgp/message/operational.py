@@ -228,7 +228,7 @@ class SequencedOperationalFamily(OperationalFamily):
         else:
             self.sent_sequence = self.sequence
 
-        return self._message(self.sent_routerid.pack_ip() + pack('!L', self.sent_sequence) + self.data)
+        return self._message(bytes(self.sent_routerid.pack_ip()) + pack('!L', self.sent_sequence) + self.data)
 
 
 # =========================================================================== NS

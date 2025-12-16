@@ -130,7 +130,7 @@ class PMSI(Attribute):
         return self.raw_label >> 4
 
     @property
-    def tunnel(self) -> bytes:
+    def tunnel(self) -> Buffer:
         """Get tunnel identifier bytes."""
         return self._packed[5:]
 

@@ -94,7 +94,7 @@ class NextHop(Attribute):
         """Get packed bytes (IP interface compatibility)."""
         return self._packed
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         """Get the packed data for indexing/caching."""
         return self._packed
 
@@ -127,7 +127,7 @@ class NextHop(Attribute):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NextHop':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NextHop | IP':
         if not data:
             return IP.NoNextHop
         return cls.from_packet(data)

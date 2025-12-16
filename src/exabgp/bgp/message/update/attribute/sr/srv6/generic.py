@@ -20,7 +20,7 @@ class GenericSrv6ServiceSubTlv:
         self.code: int = code
 
     @property
-    def packed(self) -> bytes:
+    def packed(self) -> Buffer:
         """Raw TLV payload bytes."""
         return self._packed
 
@@ -31,7 +31,7 @@ class GenericSrv6ServiceSubTlv:
         # Generic/unknown TLV - show type code and hex data
         return f'{{"type": {self.code}, "raw": "{bytes(self._packed).hex()}"}}'
 
-    def pack_tlv(self) -> bytes:
+    def pack_tlv(self) -> Buffer:
         return self._packed
 
     @classmethod
@@ -49,7 +49,7 @@ class GenericSrv6ServiceDataSubSubTlv:
         self.code: int = code
 
     @property
-    def packed(self) -> bytes:
+    def packed(self) -> Buffer:
         """Raw TLV payload bytes."""
         return self._packed
 
@@ -60,7 +60,7 @@ class GenericSrv6ServiceDataSubSubTlv:
         # Generic/unknown TLV - show type code and hex data
         return f'{{"type": {self.code}, "raw": "{bytes(self._packed).hex()}"}}'
 
-    def pack_tlv(self) -> bytes:
+    def pack_tlv(self) -> Buffer:
         return self._packed
 
     @classmethod

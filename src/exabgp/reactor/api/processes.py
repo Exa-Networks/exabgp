@@ -1303,9 +1303,9 @@ class Processes:
         # Check for EOR flag to distinguish (EOR.EOR == True, Update.EOR == False)
         if update.EOR:
             # EOR has .nlris and .attributes directly, compatible with encoder interface
-            update_collection = update  # type: ignore[assignment]
+            update_collection = update
         else:
-            update_collection = update.data  # type: ignore[union-attr]
+            update_collection = update.data
         for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
             self.write(
                 process,

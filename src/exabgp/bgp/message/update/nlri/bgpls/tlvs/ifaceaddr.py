@@ -70,5 +70,5 @@ class IfaceAddr:
     def __hash__(self) -> int:
         return hash(str(self))
 
-    def pack_tlv(self) -> bytes:
+    def pack_tlv(self) -> Buffer:
         return self._packed

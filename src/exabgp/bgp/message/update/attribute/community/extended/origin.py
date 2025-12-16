@@ -16,10 +16,11 @@ if TYPE_CHECKING:
 from struct import pack
 from struct import unpack
 
+from exabgp.util.types import Buffer
+
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-from exabgp.util.types import Buffer
 
 
 # ======================================================================= Origin
@@ -31,11 +32,11 @@ class Origin(ExtendedCommunity):
     LIMIT: ClassVar[int] = 0  # This is to prevent warnings from scrutinizer
 
     @property
-    def la(self) -> bytes:
+    def la(self) -> Buffer:
         return self._packed[2 : self.LIMIT]
 
     @property
-    def ga(self) -> bytes:
+    def ga(self) -> Buffer:
         return self._packed[self.LIMIT : 8]
 
     def __eq__(self, other: object) -> bool:

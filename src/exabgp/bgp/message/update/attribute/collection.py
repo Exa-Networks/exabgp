@@ -626,7 +626,7 @@ class Attributes:
         return cls(packed, negotiated)
 
     @property
-    def packed(self) -> bytes:
+    def packed(self) -> Buffer:
         """Raw packed path attributes bytes."""
         return self._packed
 

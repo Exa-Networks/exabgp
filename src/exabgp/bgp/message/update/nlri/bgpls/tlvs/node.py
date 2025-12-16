@@ -82,7 +82,7 @@ class NodeDescriptor:
         self._packed = packed
 
     @classmethod
-    def unpack_node(cls, data: Buffer, igp: int) -> tuple['NodeDescriptor', bytes]:
+    def unpack_node(cls, data: Buffer, igp: int) -> tuple['NodeDescriptor', Buffer]:
         node_type, length = unpack('!HH', data[0:4])
         packed = data[: 4 + length]
         payload = packed[4:]
@@ -185,5 +185,5 @@ class NodeDescriptor:
     def __hash__(self) -> int:
         return hash(str(self))
 
-    def pack_tlv(self) -> bytes:
+    def pack_tlv(self) -> Buffer:
         return self._packed

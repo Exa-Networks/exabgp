@@ -366,8 +366,8 @@ class JSON:
             nexthop: Optional nexthop IP (passed to v4_json for backward compatibility)
         """
         if self.use_v4_json:
-            return nlri.v4_json(compact=self.compact, nexthop=nexthop)
-        return nlri.json(compact=self.compact)
+            return str(nlri.v4_json(compact=self.compact, nexthop=nexthop))
+        return str(nlri.json(compact=self.compact))
 
     def _update(self, update_msg: 'UpdateCollection') -> dict[str, str]:
         # plus stores: family -> nexthop_string -> list of (nlri, nexthop_ip) tuples
@@ -377,7 +377,7 @@ class JSON:
         # EOR messages have .nlris directly but no .announces/.withdraws
         if getattr(update_msg, 'EOR', False):
             # EOR message - use .nlris directly with original behavior
-            for nlri in update_msg.nlris:  # type: ignore[union-attr]
+            for nlri in update_msg.nlris:
                 nexthop_ip = getattr(nlri, 'nexthop', IP.NoNextHop)
                 nexthop_str = str(nexthop_ip) if nexthop_ip is not IP.NoNextHop else 'null'
                 plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop_str, []).append((nlri, nexthop_ip))

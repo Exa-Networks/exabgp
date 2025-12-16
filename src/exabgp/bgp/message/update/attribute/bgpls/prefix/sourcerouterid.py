@@ -33,7 +33,7 @@ class SourceRouterId(BaseLS):
     @property
     def content(self) -> str:
         """Unpack and return IP address string from packed bytes."""
-        return IP.unpack_ip(self._packed)
+        return str(IP.unpack_ip(self._packed))
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> SourceRouterId:

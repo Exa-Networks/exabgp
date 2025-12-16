@@ -38,7 +38,7 @@ class NodeName(BaseLS):
     @property
     def content(self) -> str:
         """Unpack and return the node name as a string."""
-        return self._packed.decode('ascii')
+        return bytes(self._packed).decode('ascii')
 
     @classmethod
     def make_nodename(cls, name: str) -> NodeName:

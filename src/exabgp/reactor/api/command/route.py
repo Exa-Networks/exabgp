@@ -80,7 +80,7 @@ def v6_routes(
     remaining = ' '.join(words[action_idx + 1 :])
 
     handler = globals()[_V6_ROUTES_HANDLERS[action]]
-    return handler(self, reactor, service, peers, afi_safi_words, remaining, use_json)
+    return bool(handler(self, reactor, service, peers, afi_safi_words, remaining, use_json))
 
 
 def _parse_family_filter(afi_safi_words: list[str]) -> tuple[AFI | None, SAFI | None]:

@@ -812,7 +812,7 @@ def v6_announce(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
         handler = globals()[handler_name]
 
     # Pass action='announce' for clean format parsing
-    return handler(self, reactor, service, peers, command, use_json, action='announce')
+    return bool(handler(self, reactor, service, peers, command, use_json, action='announce'))
 
 
 def v6_withdraw(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
@@ -843,4 +843,4 @@ def v6_withdraw(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
         handler = globals()[handler_name]
 
     # Pass action='withdraw' for clean format parsing
-    return handler(self, reactor, service, peers, command, use_json, action='withdraw')
+    return bool(handler(self, reactor, service, peers, command, use_json, action='withdraw'))

@@ -78,7 +78,7 @@ class GenericAttribute(Attribute):
         return cls(data, code, flag)
 
     @property
-    def data(self) -> bytes:
+    def data(self) -> Buffer:
         """Get the attribute payload data."""
         return self._packed
 

@@ -184,9 +184,7 @@ def _parse_neighbor_params(line: str) -> tuple[dict[str, Any], list[str]]:
     if missing:
         raise ValueError(f'missing required parameters: {", ".join(sorted(missing))}')
 
-    # Return None instead of empty list when no API processes (for test compatibility)
-    if not api_processes:
-        api_processes = None
+    # Empty list is returned when no API processes are specified
 
     # Default router-id to local-address if not provided
     if 'router-id' not in params:

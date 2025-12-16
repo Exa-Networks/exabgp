@@ -20,7 +20,7 @@ import re
 import time
 import threading
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable
 
@@ -45,12 +45,10 @@ class ClientConnection:
     fd: int
     uuid: str | None = None  # From initial ping command
     last_ping: float = 0.0
-    write_queue: deque[bytes] = None
+    write_queue: deque[bytes] = field(default_factory=deque)
     connected_at: float = 0.0
 
     def __post_init__(self) -> None:
-        if self.write_queue is None:
-            self.write_queue = deque()
         if self.connected_at == 0.0:
             self.connected_at = time.time()
 

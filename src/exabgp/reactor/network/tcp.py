@@ -245,7 +245,7 @@ def min_ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
 
 def asynchronous(io: socket.socket, ip: str) -> None:
     try:
-        io.setblocking(0)
+        io.setblocking(False)
     except OSError as exc:
         raise AsyncError('could not set socket non-blocking for {} ({})'.format(ip, errstr(exc))) from None
 

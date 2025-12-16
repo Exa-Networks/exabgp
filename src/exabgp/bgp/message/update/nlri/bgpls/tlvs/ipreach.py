@@ -65,7 +65,7 @@ class IpReach:
             if len(data[1 : octet + 1]) % 2 == 1:
                 # Not an even number.
                 # So we add an empty octet.
-                data += bytearray.fromhex('00')
+                data = bytes(data) + bytearray.fromhex('00')
                 octet += 1
             prefix_tuple = unpack('!%dH' % (octet / 2), data[1 : octet + 1])
             prefix_parts = [str(format(x, 'x')) for x in prefix_tuple]
@@ -121,5 +121,5 @@ class IpReach:
     def __hash__(self) -> int:
         return hash(str(self))
 
-    def pack_tlv(self) -> bytes:
+    def pack_tlv(self) -> Buffer:
         return self._packed

@@ -37,7 +37,7 @@ class NodeOpaque(BaseLS):
         return cls(data)
 
     @property
-    def content(self) -> bytes:
+    def content(self) -> Buffer:
         """Opaque data as bytes."""
         return self._packed
 

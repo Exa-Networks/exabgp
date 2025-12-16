@@ -151,7 +151,7 @@ class IP(IPBase):
     def length(afi: AFI) -> int:
         return 4 if afi == AFI.ipv4 else 16
 
-    def index(self) -> bytes:
+    def index(self) -> Buffer:
         return self._packed
 
     def pack_ip(self) -> Buffer:

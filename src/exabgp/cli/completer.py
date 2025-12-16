@@ -105,7 +105,7 @@ class CommandCompleter:
             def get(self, command: str, default: int = 0) -> int:
                 if self.tracker:
                     # Convert total bonus (0-100) to frequency count (0-10) for scoring
-                    return self.tracker.get_total_bonus(command) // 10
+                    return int(self.tracker.get_total_bonus(command)) // 10
                 return default
 
         freq_provider = FrequencyProvider(self.history_tracker) if self.history_tracker else {}

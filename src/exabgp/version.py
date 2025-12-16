@@ -115,7 +115,7 @@ def latest_github() -> str:
             ),
         ).read(),
     )
-    return latest[0]['tag_name']
+    return str(latest[0]['tag_name'])
 
 
 def time_based() -> str:

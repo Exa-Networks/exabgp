@@ -32,7 +32,7 @@ class LinkName(BaseLS):
     BGPLS_TLV_MAX_LENGTH = 255  # Maximum TLV data length
 
     @property
-    def content(self) -> bytes:
+    def content(self) -> Buffer:
         """Return the raw bytes (link name is stored as bytes)."""
         return self._packed
 
@@ -43,7 +43,7 @@ class LinkName(BaseLS):
 
     def json(self, compact: bool = False) -> str:
         """Return JSON representation, decoding bytes to string."""
-        return f'"{self.JSON}": {json.dumps(self._packed.decode("utf-8"))}'
+        return f'"{self.JSON}": {json.dumps(bytes(self._packed).decode("utf-8"))}'
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> LinkName:

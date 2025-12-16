@@ -91,7 +91,7 @@ class PrefixSid(Attribute):
         # if not, we try to decode path attribute for SRv6
         return '[ ' + ', '.join([str(attr) for attr in self.sr_attrs]) + ' ]'
 
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> Buffer:
         return self._packed
 
 

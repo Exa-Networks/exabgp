@@ -72,7 +72,7 @@ class LargeCommunity(Attribute):
         return cls(packed)
 
     @property
-    def large_community(self) -> bytes:
+    def large_community(self) -> Buffer:
         """Get the packed large community bytes (for compatibility)."""
         return self._packed
 
@@ -93,22 +93,22 @@ class LargeCommunity(Attribute):
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, LargeCommunity):
             raise TypeError(f"'<' not supported between instances of 'LargeCommunity' and '{type(other).__name__}'")
-        return self._packed < other._packed
+        return bytes(self._packed) < bytes(other._packed)
 
     def __le__(self, other: object) -> bool:
         if not isinstance(other, LargeCommunity):
             raise TypeError(f"'<=' not supported between instances of 'LargeCommunity' and '{type(other).__name__}'")
-        return self._packed <= other._packed
+        return bytes(self._packed) <= bytes(other._packed)
 
     def __gt__(self, other: object) -> bool:
         if not isinstance(other, LargeCommunity):
             raise TypeError(f"'>' not supported between instances of 'LargeCommunity' and '{type(other).__name__}'")
-        return self._packed > other._packed
+        return bytes(self._packed) > bytes(other._packed)
 
     def __ge__(self, other: object) -> bool:
         if not isinstance(other, LargeCommunity):
             raise TypeError(f"'>=' not supported between instances of 'LargeCommunity' and '{type(other).__name__}'")
-        return self._packed >= other._packed
+        return bytes(self._packed) >= bytes(other._packed)
 
     def __hash__(self) -> int:
         return hash(self._packed)
@@ -116,7 +116,7 @@ class LargeCommunity(Attribute):
     def json(self) -> str:
         return '[ %d, %d , %d ]' % unpack('!LLL', self._packed)
 
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> Buffer:
         return self._packed
 
     def __repr__(self) -> str:

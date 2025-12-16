@@ -728,9 +728,11 @@ class RouteTargetValidator(Validator['ExtendedCommunity']):
 
             if suffix >= pow(2, 16):
                 raise ValueError(f'Suffix {suffix} too large for IPv4 route-target (max 65535)')
+            from typing import cast
+
             try:
                 community_bytes = pack('!2s4sH', bytes([0x01, 0x02]), IPv4.pton(prefix), suffix)
-                return ExtendedCommunity.unpack_attribute(community_bytes, None)
+                return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(community_bytes, None))
             except (ValueError, OSError):
                 raise ValueError(f"'{value}' is not a valid route-target (invalid IPv4 address)") from None
 
@@ -751,7 +753,9 @@ class RouteTargetValidator(Validator['ExtendedCommunity']):
                 f"'{value}' is not a valid route-target\n  ASN and suffix out of range for route-target formats"
             )
 
-        return ExtendedCommunity.unpack_attribute(community_bytes, None)
+        from typing import cast
+
+        return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(community_bytes, None))
 
     def to_schema(self) -> dict[str, Any]:
         return {

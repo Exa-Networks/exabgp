@@ -101,7 +101,7 @@ class TestParseNeighborParams:
         assert params['peer-as'] == 65001
         assert str(params['router-id']) == '1.2.3.4'
         assert 'families' not in params
-        assert api_processes is None
+        assert api_processes == []
 
     def test_all_params(self):
         line = 'neighbor 10.0.0.2 local-ip 10.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4 family-allowed ipv4-unicast/ipv6-unicast create'
@@ -113,7 +113,7 @@ class TestParseNeighborParams:
         assert params['peer-as'] == 65001
         assert str(params['router-id']) == '1.2.3.4'
         assert len(params['families']) == 2
-        assert api_processes is None
+        assert api_processes == []
 
     def test_with_single_api_process(self):
         line = 'neighbor 127.0.0.1 local-ip 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4 create api peer-lifecycle'

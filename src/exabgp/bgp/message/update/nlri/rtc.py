@@ -71,10 +71,12 @@ class RTC(NLRI):
     @property
     def rt(self) -> RouteTarget | None:
         """RouteTarget - lazily unpacked from wire bytes on access."""
+        from typing import cast
+
         if len(self._packed) < 13:
             return None
         # RT is stored with flags already reset, use unpack_attribute for proper subclass dispatch
-        return RouteTarget.unpack_attribute(self._packed[5:13], None)  # type: ignore[return-value]
+        return cast(RouteTarget, RouteTarget.unpack_attribute(self._packed[5:13], None))
 
     @classmethod
     def make_rtc(

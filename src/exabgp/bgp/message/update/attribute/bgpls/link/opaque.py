@@ -30,7 +30,7 @@ class LinkOpaque(BaseLS):
     JSON = 'opaque-link'
 
     @property
-    def content(self) -> bytes:
+    def content(self) -> Buffer:
         """Return the raw opaque bytes."""
         return self._packed
 

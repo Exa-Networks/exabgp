@@ -59,7 +59,7 @@ class MPRNLRI(Attribute, Family):
         """Raw wire-format bytes."""
         return bytes(self._packed)
 
-    def _parse_nexthop_and_nlris(self) -> tuple[bytes | None, Iterator[NLRI]]:
+    def _parse_nexthop_and_nlris(self) -> tuple[Buffer | None, Iterator[NLRI]]:
         """Parse wire format, returning (nexthop_bytes, nlri_iterator).
 
         Internal method that separates nexthop parsing from NLRI parsing.

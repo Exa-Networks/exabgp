@@ -73,7 +73,7 @@ class ExtendedCommunityBase(Attribute):
         return cls(data)
 
     @property
-    def community(self) -> bytes:
+    def community(self) -> Buffer:
         """Get the packed community bytes (for compatibility)."""
         return self._packed
 
@@ -87,28 +87,28 @@ class ExtendedCommunityBase(Attribute):
             raise TypeError(
                 f"'<' not supported between instances of 'ExtendedCommunityBase' and '{type(other).__name__}'"
             )
-        return self._packed < other._packed
+        return bytes(self._packed) < bytes(other._packed)
 
     def __le__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
             raise TypeError(
                 f"'<=' not supported between instances of 'ExtendedCommunityBase' and '{type(other).__name__}'"
             )
-        return self._packed <= other._packed
+        return bytes(self._packed) <= bytes(other._packed)
 
     def __gt__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
             raise TypeError(
                 f"'>' not supported between instances of 'ExtendedCommunityBase' and '{type(other).__name__}'"
             )
-        return self._packed > other._packed
+        return bytes(self._packed) > bytes(other._packed)
 
     def __ge__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
             raise TypeError(
                 f"'>=' not supported between instances of 'ExtendedCommunityBase' and '{type(other).__name__}'"
             )
-        return self._packed >= other._packed
+        return bytes(self._packed) >= bytes(other._packed)
 
     def iana(self) -> bool:
         return not not (self._packed[0] & 0x80)
@@ -121,10 +121,10 @@ class ExtendedCommunityBase(Attribute):
         #     Value 1: The community is non-transitive across ASes
         return not (self._packed[0] & 0x40)
 
-    def pack_attribute(self, negotiated: Negotiated) -> bytes:
+    def pack_attribute(self, negotiated: Negotiated) -> Buffer:
         return self._packed
 
-    def pack(self) -> bytes:
+    def pack(self) -> Buffer:
         """Return packed bytes for sorting/comparison."""
         return self._packed
 

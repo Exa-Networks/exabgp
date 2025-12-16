@@ -173,12 +173,12 @@ class GenericMUP(MUP):
         self._packed = packed
 
     @property
-    def ARCHTYPE(self) -> int:  # type: ignore[override]
+    def ARCHTYPE(self) -> int:
         # Extract from packed header on demand
         return self._packed[0]
 
     @property
-    def CODE(self) -> int:  # type: ignore[override]
+    def CODE(self) -> int:
         # Extract from packed header on demand
         return int.from_bytes(self._packed[1:3], 'big')
 

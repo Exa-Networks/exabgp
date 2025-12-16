@@ -44,5 +44,5 @@ class Software(Capability):
         l1 = data[0]
         if len(data) < l1 + 1:
             raise Notify(2, 0, f'Software capability truncated: need {l1 + 1} bytes, got {len(data)}')
-        instance.software_version = data[1 : l1 + 1].decode('utf-8')
+        instance.software_version = bytes(data[1 : l1 + 1]).decode('utf-8')
         return instance

@@ -27,14 +27,14 @@ MIN_NONZERO_HOLDTIME = 3  # Minimum hold time in seconds (must be 0 or >= 3)
 
 def inherit(tokeniser) -> list[str]:
     if len(tokeniser.tokens) == INHERIT_SINGLE_TOKEN_COUNT:
-        return [tokeniser()]
+        return [str(tokeniser())]
     if (
         len(tokeniser.tokens) < INHERIT_MIN_LIST_TOKEN_COUNT
         or tokeniser.tokens[1] != '['
         or tokeniser.tokens[-1] != ']'
     ):
         raise ValueError('invalid inherit list\n  Format: inherit <template> or inherit [ template1, template2, ... ]')
-    return tokeniser.tokens[2:-1]
+    return [str(t) for t in tokeniser.tokens[2:-1]]
 
 
 def hostname(tokeniser) -> str:
@@ -83,7 +83,7 @@ def md5(tokeniser) -> str:
         raise ValueError(
             'value requires the value password as an argument (quoted or unquoted).  FreeBSD users should use "kernel" as the argument.',
         )
-    return value
+    return str(value)
 
 
 def ttl(tokeniser) -> int | None:
