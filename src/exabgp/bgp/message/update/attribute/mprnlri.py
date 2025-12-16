@@ -22,7 +22,6 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.protocol.ip import IP
 
 # ==================================================== MP Reachable NLRI (14)
 #
@@ -128,7 +127,7 @@ class MPRNLRI(Attribute, Family):
         from exabgp.bgp.message.update.collection import RoutedNLRI
 
         nexthop_bytes, nlri_iter = self._parse_nexthop_and_nlris()
-        nexthop = NextHop.unpack_attribute(nexthop_bytes, Negotiated.UNSET) if nexthop_bytes else IP.NoNextHop
+        nexthop = NextHop.unpack_attribute(nexthop_bytes, Negotiated.UNSET)
         for nlri in nlri_iter:
             yield RoutedNLRI(nlri, nexthop)
 

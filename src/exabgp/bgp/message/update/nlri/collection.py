@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.collection import RoutedNLRI
 
 from exabgp.bgp.message.action import Action
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.nlri.nlri import _UNPARSED, NLRI
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.types import Buffer
@@ -288,7 +289,6 @@ class MPNLRICollection:
             Wire-format attribute bytes (with flags/type/length header).
         """
         from exabgp.protocol.family import Family
-        from exabgp.protocol.ip import IP
 
         # Filter NLRIs for this family and group by nexthop
         mpnlri: dict[bytes, list[bytes]] = {}
@@ -302,7 +302,7 @@ class MPNLRICollection:
                 continue
 
             # Encode nexthop
-            if nlri_nexthop is IP.NoNextHop:
+            if nlri_nexthop is NextHop.UNSET:
                 nexthop = b''
             else:
                 _, rd_size = Family.size.get(family_key, (0, 0))

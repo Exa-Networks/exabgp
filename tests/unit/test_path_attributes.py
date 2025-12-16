@@ -898,15 +898,14 @@ def test_nexthop_self_basic() -> None:
 
 
 def test_nexthop_empty_unpack() -> None:
-    """Test NEXT_HOP unpack with empty data returns IP.NoNextHop."""
+    """Test NEXT_HOP unpack with empty data returns NextHop.UNSET."""
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
-    from exabgp.protocol.ip import IP
 
     # Unpack empty data
     result = NextHop.unpack_attribute(b'', None)  # type: ignore[arg-type]
 
-    # Should return IP.NoNextHop
-    assert result == IP.NoNextHop
+    # Should return NextHop.UNSET singleton
+    assert result is NextHop.UNSET
 
 
 # ==============================================================================

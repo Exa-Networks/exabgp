@@ -36,6 +36,9 @@ class NextHop(Attribute):
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
     NO_GENERATION: ClassVar[bool] = True
 
+    # Singleton for "no nexthop" (initialized after class definition)
+    UNSET: ClassVar[NextHop]
+
     def __init__(self, packed: Buffer) -> None:
         """Initialize from packed wire-format bytes.
 
@@ -80,10 +83,14 @@ class NextHop(Attribute):
     @property
     def afi(self) -> AFI:
         """Get the address family."""
+        if not self._packed:
+            return AFI.undefined
         return AFI.ipv4 if len(self._packed) == 4 else AFI.ipv6
 
     def top(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> str:
         """Get string representation of the IP address."""
+        if not self._packed:
+            return ''
         return IP.ntop(self._packed)
 
     def ton(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> Buffer:
@@ -106,6 +113,10 @@ class NextHop(Attribute):
         """Check if this is an IPv6 address."""
         return len(self._packed) == 16
 
+    def __bool__(self) -> bool:
+        """UNSET is falsy, concrete nexthops are truthy."""
+        return bool(self._packed)
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, NextHop):
             return False
@@ -118,18 +129,39 @@ class NextHop(Attribute):
         return len(self._packed)
 
     def __repr__(self) -> str:
+        if not self._packed:
+            return 'NextHop.UNSET'
         return self.top()
 
     def __hash__(self) -> int:
         return hash(('NextHop', self._packed))
 
+    def __copy__(self) -> 'NextHop':
+        """Preserve singleton identity for UNSET."""
+        if self is NextHop.UNSET:
+            return self
+        # Use type(self) to preserve subclass (e.g., NextHopSelf)
+        new = object.__new__(type(self))
+        new.__dict__.update(self.__dict__)
+        return new
+
+    def __deepcopy__(self, memo: dict) -> 'NextHop':
+        """Preserve singleton identity for UNSET."""
+        if self is NextHop.UNSET:
+            return self
+        # Use type(self) to preserve subclass (e.g., NextHopSelf)
+        new = object.__new__(type(self))
+        new.__dict__.update(self.__dict__)
+        memo[id(self)] = new
+        return new
+
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NextHop | IP':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NextHop':
         if not data:
-            return IP.NoNextHop
+            return NextHop.UNSET
         return cls.from_packet(data)
 
 
@@ -182,3 +214,8 @@ class NextHopSelf(NextHop):
 
     def __eq__(self, other: object) -> bool:
         raise RuntimeError('do not use __eq__ with NextHopSelf')
+
+
+# ==================================================================== UNSET Singleton
+# Initialize the class-level singleton for "no nexthop"
+NextHop.UNSET = NextHop(b'')
