@@ -117,7 +117,11 @@
       "Bash(uv run ruff check:*)",
       "Bash(uv run ruff:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(./qa/bin/api-encode:*)",
+      "Bash(./qa/bin/test_api_encode:*)",
+      "Bash(uv run python3:*)",
+      "Bash(uv run pytest:*)"
     ],
     "deny": []
   },
