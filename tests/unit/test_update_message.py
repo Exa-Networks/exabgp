@@ -407,7 +407,7 @@ def test_update_attribute_length_validation() -> None:
     result = UpdateCollection.unpack_message(data, negotiated)
 
     # Should handle minimal attributes
-    assert isinstance(result, UpdateCollection) or result.__class__.__name__ == 'EOR'
+    assert isinstance(result, UpdateCollection)
 
 
 def test_update_with_multiple_nlri_prefixes() -> None:
@@ -517,7 +517,6 @@ def test_update_with_mp_unreach_nlri() -> None:
     RFC 4760 states that UPDATE with only MP_UNREACH is valid without other attributes.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.eor import EOR
     from exabgp.protocol.family import AFI, SAFI
     from tests.fuzz.update_helpers import create_update_message, create_path_attribute
 
@@ -539,7 +538,7 @@ def test_update_with_mp_unreach_nlri() -> None:
 
     # Should be EOR for IPv6 unicast (no routes to withdraw means EOR)
     assert result is not None
-    assert isinstance(result, (UpdateCollection, EOR))
+    assert isinstance(result, UpdateCollection)
 
 
 def test_update_eor_marker_validation() -> None:
@@ -550,7 +549,6 @@ def test_update_eor_marker_validation() -> None:
     2. UPDATE with MP_UNREACH_NLRI with no withdrawn routes - for other AFI/SAFI
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.eor import EOR
     from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
@@ -562,10 +560,9 @@ def test_update_eor_marker_validation() -> None:
     result = UpdateCollection.unpack_message(data, negotiated)
 
     # Should be detected as EOR
-    assert isinstance(result, EOR)
-    # EOR stores afi/safi in the NLRI
-    assert result.nlris[0].afi == AFI.ipv4
-    assert result.nlris[0].safi == SAFI.unicast
+    assert result.EOR
+    assert result.eor_afi == AFI.ipv4
+    assert result.eor_safi == SAFI.unicast
 
 
 def test_update_mp_reach_and_mp_unreach_together() -> None:
@@ -575,7 +572,6 @@ def test_update_mp_reach_and_mp_unreach_together() -> None:
     When both have no routes, it may result in an error or EOR.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.eor import EOR
     from exabgp.protocol.family import AFI, SAFI
     from tests.fuzz.update_helpers import create_update_message, create_path_attribute
 
@@ -593,7 +589,7 @@ def test_update_mp_reach_and_mp_unreach_together() -> None:
     # MP_UNREACH with no routes should be EOR or valid UPDATE
     result = UpdateCollection.unpack_message(data, negotiated)
     assert result is not None
-    assert isinstance(result, (UpdateCollection, EOR))
+    assert isinstance(result, UpdateCollection)
 
     # Test shows that UPDATE can handle multiprotocol attributes
     # without causing crashes
@@ -606,7 +602,6 @@ def test_update_mp_unreach_only_is_valid() -> None:
     to carry any other path attributes.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.eor import EOR
     from exabgp.protocol.family import AFI, SAFI
     from tests.fuzz.update_helpers import create_update_message, create_path_attribute
 
@@ -625,7 +620,7 @@ def test_update_mp_unreach_only_is_valid() -> None:
 
     # Should be valid - likely EOR for IPv6 unicast
     assert result is not None
-    assert isinstance(result, (UpdateCollection, EOR))
+    assert isinstance(result, UpdateCollection)
 
 
 # ==============================================================================

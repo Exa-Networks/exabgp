@@ -16,7 +16,7 @@ from typing import Callable, TYPE_CHECKING
 
 from exabgp.environment import getenv
 
-from exabgp.bgp.message import Update, UpdateCollection
+from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message import Open
@@ -350,7 +350,7 @@ def display_nlri(neighbor: Neighbor, routes: str) -> bool:
 #
 
 
-def check_open(neighbor: Neighbor, raw: bytes) -> None:
+def check_open(neighbor: Neighbor, raw: bytes) -> bool:
     import sys
     import traceback
 
@@ -360,6 +360,7 @@ def check_open(neighbor: Neighbor, raw: bytes) -> None:
         negotiated_in, _ = _negotiated(neighbor)
         o = Open.unpack_message(raw, negotiated_in)
         sys.stdout.write(f'{o}\n')
+        return True
     except (Notify, ValueError, IndexError, KeyError, struct.error):
         sys.stdout.write('\n')
         sys.stdout.write('we could not decode this open message\n')
@@ -383,7 +384,7 @@ def display_open(neighbor: Neighbor, raw: bytes) -> bool:
 #
 
 
-def _make_update(neighbor: Neighbor, raw: bytes) -> Update | None:
+def _make_update(neighbor: Neighbor, raw: bytes) -> UpdateCollection | None:
     option.enabled['parser'] = True
     negotiated_in, _ = _negotiated(neighbor)
 

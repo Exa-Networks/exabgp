@@ -66,6 +66,7 @@ class AttributeCollection(dict):
 
     Wire format header: [flags(1)][type_code(1)][length(1-2)][value...]
     """
+
     # Internal pseudo-attributes (no dedicated classes exist for these)
     INTERNAL: ClassVar[tuple[int, ...]] = (
         Attribute.CODE.INTERNAL_SPLIT,

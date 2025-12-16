@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, ClassVar, Generator
 
 from exabgp.util.types import Buffer
 
@@ -123,11 +123,16 @@ class UpdateCollection(Message):
     Note: This class inherits from Message for backward compatibility
     (uses _message() method) but is NOT registered as the UPDATE handler.
     The Update class is the registered handler.
+
+    EOR (End-of-RIB) markers are represented as cached UpdateCollection singletons.
+    Use the EOR property to check, and eor_afi/eor_safi to get the address family.
     """
 
     ID = Message.CODE.UPDATE
     TYPE = bytes([Message.CODE.UPDATE])
-    EOR: bool = False
+
+    # Cache of EOR UpdateCollection singletons keyed by (AFI, SAFI)
+    _EOR_CACHE: ClassVar[dict[tuple[AFI, SAFI], UpdateCollection]] = {}
 
     def __init__(
         self,
@@ -141,6 +146,40 @@ class UpdateCollection(Message):
         self._announces: list[RoutedNLRI] = announces
         self._withdraws: list[NLRI] = withdraws
         self._attributes: AttributeCollection = attributes
+
+    @classmethod
+    def _get_eor(cls, afi: AFI, safi: SAFI) -> 'UpdateCollection':
+        """Get or create a cached EOR singleton for the given address family."""
+        key = (afi, safi)
+        if key not in cls._EOR_CACHE:
+            cls._EOR_CACHE[key] = cls([], [], AttributeCollection())
+        return cls._EOR_CACHE[key]
+
+    def _eor_family(self) -> tuple[AFI, SAFI] | None:
+        """Return (AFI, SAFI) if this is a cached EOR instance, else None."""
+        for key, instance in self._EOR_CACHE.items():
+            if self is instance:
+                return key
+        return None
+
+    @property
+    def EOR(self) -> bool:
+        """True if this is an End-of-RIB marker (cached singleton)."""
+        return self._eor_family() is not None
+
+    @property
+    def eor_afi(self) -> AFI:
+        """AFI of this EOR marker. Only call on EOR instances."""
+        family = self._eor_family()
+        assert family is not None, 'eor_afi called on non-EOR UpdateCollection'
+        return family[0]
+
+    @property
+    def eor_safi(self) -> SAFI:
+        """SAFI of this EOR marker. Only call on EOR instances."""
+        family = self._eor_family()
+        assert family is not None, 'eor_safi called on non-EOR UpdateCollection'
+        return family[1]
 
     @property
     def nlris(self) -> list[NLRI]:
@@ -568,25 +607,27 @@ class UpdateCollection(Message):
 
         return cls(announces, withdraws, attributes)
 
+    # EOR prefix for non-IPv4-unicast families
+    _EOR_PREFIX: ClassVar[bytes] = b'\x00\x00\x00\x07\x90\x0f\x00\x03'
+
     @classmethod
-    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Message:
-        """Parse raw UPDATE payload bytes into UpdateCollection or EOR.
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> 'UpdateCollection':
+        """Parse raw UPDATE payload bytes into UpdateCollection.
 
-        Deprecated: Use Update.unpack_message() for the registered handler.
-
-        This method is kept for backward compatibility.
+        EOR (End-of-RIB) markers are returned as cached UpdateCollection
+        singletons with EOR=True and _eor_afi/_eor_safi set.
         """
-        # Import here to avoid circular import
-        from exabgp.bgp.message.update.eor import EOR
-
-        # Convert to bytes for comparison and downstream parsing
         length = len(data)
 
         # Check for End-of-RIB markers (fast path)
         if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
-            return EOR(AFI.ipv4, SAFI.unicast)
-        if length == EOR_WITH_PREFIX_LENGTH and bytes(data).startswith(EOR.EOR_NLRI.PREFIX):
-            return EOR.unpack_message(data, negotiated)
+            return cls._get_eor(AFI.ipv4, SAFI.unicast)
+        if length == EOR_WITH_PREFIX_LENGTH and bytes(data).startswith(cls._EOR_PREFIX):
+            # Extract AFI/SAFI from after the prefix
+            prefix_len = len(cls._EOR_PREFIX)
+            afi = AFI.unpack_afi(data[prefix_len : prefix_len + 2])
+            safi = SAFI.unpack_safi(data[prefix_len + 2 : prefix_len + 3])
+            return cls._get_eor(afi, safi)
 
         # Parse normally
         return cls._parse_payload(data, negotiated)

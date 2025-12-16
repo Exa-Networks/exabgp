@@ -74,7 +74,7 @@ def test_unpack_simple_withdrawal() -> None:
 def test_unpack_empty_update_is_eor() -> None:
     """Test that empty UPDATE is detected as EOR."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.eor import EOR
+    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock()
 
@@ -83,7 +83,9 @@ def test_unpack_empty_update_is_eor() -> None:
 
     result = UpdateCollection.unpack_message(data, negotiated)
 
-    assert isinstance(result, EOR)
+    assert result.EOR
+    assert result.eor_afi == AFI.ipv4
+    assert result.eor_safi == SAFI.unicast
 
 
 @pytest.mark.fuzz

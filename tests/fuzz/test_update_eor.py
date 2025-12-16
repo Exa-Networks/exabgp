@@ -5,7 +5,7 @@ There are two formats:
 1. IPv4 Unicast: 4-byte all-zeros (0x00000000)
 2. Other AFI/SAFI: 11-byte format (MP_UNREACH_NLRI with no routes)
 
-Target: src/exabgp/bgp/message/update/__init__.py::unpack_message() lines 259-262, 309-317
+Target: src/exabgp/bgp/message/update/collection.py::unpack_message()
 
 Test Coverage:
 - 4-byte IPv4 unicast EOR detection
@@ -35,7 +35,6 @@ def mock_logger() -> Generator[None, None, None]:
 def test_eor_ipv4_unicast_4_byte() -> None:
     """Test detection of IPv4 unicast EOR marker (4 bytes of zeros)."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.family import AFI, SAFI
 
@@ -51,18 +50,16 @@ def test_eor_ipv4_unicast_4_byte() -> None:
 
     result = UpdateCollection.unpack_message(data, negotiated)
 
-    # Should return an EOR object for IPv4 unicast
-    assert isinstance(result, EOR)
-    assert len(result.nlris) == 1
-    assert result.nlris[0].afi == AFI.ipv4
-    assert result.nlris[0].safi == SAFI.unicast
+    # Should return an UpdateCollection with EOR=True for IPv4 unicast
+    assert result.EOR
+    assert result.eor_afi == AFI.ipv4
+    assert result.eor_safi == SAFI.unicast
 
 
 @pytest.mark.fuzz
 def test_eor_not_triggered_by_similar_data() -> None:
     """Test that 4 zeros elsewhere don't trigger false EOR detection."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
 
     negotiated = Mock()
@@ -80,7 +77,7 @@ def test_eor_not_triggered_by_similar_data() -> None:
     try:
         result = UpdateCollection.unpack_message(data, negotiated)
         # If it parses, it should not be an EOR
-        assert not isinstance(result, EOR)
+        assert not result.EOR
     except Exception:
         # May fail to parse, which is fine
         pass
@@ -90,8 +87,8 @@ def test_eor_not_triggered_by_similar_data() -> None:
 def test_non_eor_empty_update() -> None:
     """Test that UPDATE with just length fields is not confused with EOR."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
+    from exabgp.protocol.family import AFI, SAFI
 
     negotiated = Mock()
     negotiated.direction = Direction.IN
@@ -103,14 +100,15 @@ def test_non_eor_empty_update() -> None:
     data = b'\x00\x00\x00\x00'
 
     result = UpdateCollection.unpack_message(data, negotiated)
-    assert isinstance(result, EOR)
+    assert result.EOR
+    assert result.eor_afi == AFI.ipv4
+    assert result.eor_safi == SAFI.unicast
 
 
 @pytest.mark.fuzz
 def test_eor_detection_with_no_attributes_no_nlris() -> None:
     """Test EOR detection when UPDATE has no attributes and no NLRIs after parsing."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.family import AFI, SAFI
 
@@ -126,17 +124,15 @@ def test_eor_detection_with_no_attributes_no_nlris() -> None:
 
     result = UpdateCollection.unpack_message(data, negotiated)
 
-    assert isinstance(result, EOR)
-    assert len(result.nlris) == 1
-    assert result.nlris[0].afi == AFI.ipv4
-    assert result.nlris[0].safi == SAFI.unicast
+    assert result.EOR
+    assert result.eor_afi == AFI.ipv4
+    assert result.eor_safi == SAFI.unicast
 
 
 @pytest.mark.fuzz
 def test_normal_update_not_detected_as_eor() -> None:
     """Test that normal UPDATE messages are not detected as EOR."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.eor import EOR
     from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.family import AFI
 
@@ -154,7 +150,7 @@ def test_normal_update_not_detected_as_eor() -> None:
     try:
         result = UpdateCollection.unpack_message(data, negotiated)
         # Should not be EOR
-        assert not isinstance(result, EOR)
+        assert not result.EOR
     except Exception:
         # May fail due to incomplete mocking, which is okay
         # The important thing is it doesn't return EOR
