@@ -37,6 +37,16 @@ class V4JSON:
         self._v6.use_v4_json = True  # Enable v4 backward compat (e.g., nexthop in Flow NLRI)
         self.version = version  # v4 version string to use in output
 
+    @property
+    def generic_attribute_format(self) -> bool:
+        """Delegate to underlying v6 encoder."""
+        return self._v6.generic_attribute_format
+
+    @generic_attribute_format.setter
+    def generic_attribute_format(self, value: bool) -> None:
+        """Delegate to underlying v6 encoder."""
+        self._v6.generic_attribute_format = value
+
     def _patch_version(self, result: str | None) -> str | None:
         """Replace v6 version with v4 version in JSON output."""
         if result is None:

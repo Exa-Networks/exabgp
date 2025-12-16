@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import builtins
 import socket
-from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Protocol
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
@@ -19,12 +19,27 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
+class IPFactory(Protocol):
+    """Protocol for IP subclass constructors that accept packed data.
+
+    Used for type hints where we need a class callable with packed bytes.
+    IPv4 and IPv6 implement this via their __init__(packed) signature.
+    """
+
+    def __call__(self, packed: Buffer) -> 'IP': ...
+
+
 class IPBase:
     SELF: ClassVar[bool]
     RESOLVED: ClassVar[bool] = True
     afi: AFI
 
-    def resolve(self) -> None:
+    def resolve(self, ip: 'IP | None' = None) -> None:
+        """Resolve address. For regular IPs, this is a no-op.
+
+        IPSelf subclass overrides to accept a concrete IP and resolves in-place.
+        The parameter is optional for base compatibility.
+        """
         pass
 
     @property
@@ -47,7 +62,7 @@ class IP(IPBase):
     # BITS and BYTES are defined as ClassVar in subclasses (IPv4/IPv6)
     # Not annotated here to allow proper ClassVar override
 
-    _known: ClassVar[dict[AFI, Type[IP]]] = dict()
+    _known: ClassVar[dict[AFI, IPFactory]] = dict()
 
     _UNICAST: ClassVar[SAFI] = SAFI.unicast
     _MULTICAST: ClassVar[SAFI] = SAFI.multicast
@@ -129,7 +144,7 @@ class IP(IPBase):
             value += char
         return value
 
-    def __len__(self):
+    def __len__(self) -> int:
         return IP.length(self.afi)
 
     @staticmethod
@@ -176,7 +191,7 @@ class IP(IPBase):
         return hash((self.__class__.__name__, self._packed))
 
     @classmethod
-    def klass(cls, ip: str) -> Type[IP] | None:
+    def klass(cls, ip: str) -> IPFactory | None:
         # the orders matters as ::FFFF:<ipv4> is an IPv6 address
         afi: AFI | None
         if ':' in ip:
@@ -190,15 +205,24 @@ class IP(IPBase):
         return None
 
     @classmethod
-    def from_string(cls, string: str, klass: Type['IP'] | None = None) -> 'IP':
+    def from_string(cls, string: str, klass: IPFactory | None = None) -> 'IP':
         data = IP.pton(string)
         if klass:
             return klass(data)
-        return cls.klass(string)(data)
+        factory = cls.klass(string)
+        if factory is None:
+            raise ValueError(f'Unknown IP address format: {string}')
+        return factory(data)
 
     @classmethod
     def register(cls) -> None:
-        cls._known[cls.afi] = cls
+        # Only concrete IP subclasses (IPv4, IPv6) should register
+        if cls is IP:
+            raise RuntimeError('IP.register() should not be called directly')
+        # cls is IPv4 or IPv6, both implement __init__(packed) -> satisfies IPFactory
+        from typing import cast
+
+        cls._known[cls.afi] = cast(IPFactory, cls)
 
     # Singleton for no next-hop (initialized after class definition)
     NoNextHop: ClassVar[IP]
@@ -235,10 +259,10 @@ class IP(IPBase):
 
     @classmethod
     def unpack_ip(cls, data: Buffer) -> IP:
-        if cls is IP:
-            klass = IPv4 if len(data) == 4 else IPv6
-            return klass(data)
-        return cls(data)
+        # Always use concrete IPv4/IPv6 classes based on data length
+        # This avoids calling cls(data) when cls might be IP itself
+        factory: IPFactory = IPv4 if len(data) == 4 else IPv6
+        return factory(data)
 
 
 # ======================================================================== Range
@@ -253,7 +277,7 @@ class IPRange(IP):
         self.mask = NetMask.make_netmask(mask, self.afi)
 
     @classmethod
-    def from_string(cls, string: str, klass: Type['IP'] = 'IP') -> 'IP':
+    def from_string(cls, string: str, klass: IPFactory | None = None) -> 'IP':
         raise NotImplementedError(f'{cls.__name__}.from_string() not implemented')
 
     def __repr__(self) -> str:
@@ -292,8 +316,14 @@ class IPSelf(IP):
         """True if resolve() has been called with a concrete IP."""
         return self._packed != b''
 
-    def resolve(self, ip: IP) -> None:
-        """Resolve sentinel to concrete IP. Mutates in-place."""
+    def resolve(self, ip: IP | None = None) -> None:
+        """Resolve sentinel to concrete IP. Mutates in-place.
+
+        Args:
+            ip: The concrete IP to resolve to. Required for IPSelf.
+        """
+        if ip is None:
+            raise ValueError('IPSelf.resolve() requires an ip argument')
         if self.resolved:
             raise ValueError('IPSelf already resolved')
         self._packed = ip.pack_ip()
@@ -323,8 +353,8 @@ class IPSelf(IP):
 
 
 class IPv4(IP):
-    # Override afi as ClassVar (base class has it as instance variable)
-    afi: ClassVar[AFI] = AFI.ipv4
+    # Class attribute shadows base class instance variable (same pattern as Family)
+    afi = AFI.ipv4
 
     # lowercase to match the Address API (used in configuration code)
     bits: ClassVar[int] = 32
@@ -376,8 +406,8 @@ IPv4.register()
 
 
 class IPv6(IP):
-    # Override afi as ClassVar (base class has it as instance variable)
-    afi: ClassVar[AFI] = AFI.ipv6
+    # Class attribute shadows base class instance variable (same pattern as Family)
+    afi = AFI.ipv6
 
     # lowercase to match the Address API (used in configuration code)
     bits: ClassVar[int] = 128

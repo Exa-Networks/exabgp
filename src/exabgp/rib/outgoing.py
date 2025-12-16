@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Iterator, overload
+from typing import TYPE_CHECKING, Iterator
 
 from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.refresh import RouteRefresh
@@ -220,26 +220,35 @@ class OutgoingRIB(Cache):
                 self._watchdog[watchdog].setdefault('-', {})[route.index()] = route
                 self._watchdog[watchdog]['+'].pop(route.index())
 
-    @overload
-    def del_from_rib(self, route: 'Route') -> None: ...
-    @overload
-    def del_from_rib(self, nlri: 'NLRI', attributes: 'AttributeCollection | None' = None) -> None: ...
+    def del_from_rib(self, route: 'Route') -> None:
+        """Remove a route from the RIB.
 
-    def del_from_rib(self, route_or_nlri: 'Route | NLRI', attributes: 'AttributeCollection | None' = None) -> None:
+        Args:
+            route: The Route to remove
+        """
         if not self.enabled:
             return
-        # Handle both signatures: (route) or (nlri, attributes)
-        if attributes is None and hasattr(route_or_nlri, 'attributes'):
-            # Legacy signature: del_from_rib(route)
-            route = route_or_nlri
-            nlri = route.nlri
-            attrs = route.attributes
-            route_index = route.index()
-        else:
-            # New signature: del_from_rib(nlri, attributes)
-            nlri = route_or_nlri
-            attrs = attributes
-            route_index = self._make_index(nlri)
+
+        nlri = route.nlri
+        attrs = route.attributes
+        route_index = route.index()
+        self._del_from_rib_impl(nlri, attrs, route_index)
+
+    def del_nlri_from_rib(self, nlri: 'NLRI', attributes: 'AttributeCollection | None' = None) -> None:
+        """Remove an NLRI from the RIB.
+
+        Args:
+            nlri: The NLRI to remove
+            attributes: Optional attributes (unused, kept for API compatibility)
+        """
+        if not self.enabled:
+            return
+
+        route_index = self._make_index(nlri)
+        self._del_from_rib_impl(nlri, attributes, route_index)
+
+    def _del_from_rib_impl(self, nlri: 'NLRI', attrs: 'AttributeCollection | None', route_index: bytes) -> None:
+        """Shared implementation for route removal."""
 
         log.debug(lazymsg('rib.remove nlri={nlri}', nlri=nlri), 'rib')
 
@@ -275,33 +284,15 @@ class OutgoingRIB(Cache):
             return
         self._refresh_routes.append(route)
 
-    @overload
-    def add_to_rib(self, route: 'Route', force: bool = False) -> None: ...
-    @overload
-    def add_to_rib(self, nlri: 'NLRI', attributes: 'AttributeCollection', force: bool = False) -> None: ...
+    def add_to_rib(self, route: 'Route', force: bool = False) -> None:
+        """Add a route to the RIB.
 
-    def add_to_rib(
-        self,
-        route_or_nlri: 'Route | NLRI',
-        attributes_or_force: 'AttributeCollection | bool' = False,
-        force: bool = False,
-    ) -> None:
+        Args:
+            route: The Route to add (must have resolved nexthop)
+            force: If True, add even if already in cache
+        """
         if not self.enabled:
             return
-        from exabgp.rib.route import Route
-
-        # Handle both signatures: (route, force) or (nlri, attributes, force)
-        if isinstance(attributes_or_force, bool):
-            # Legacy signature: add_to_rib(route, force=False)
-            route = route_or_nlri
-            # Support both positional and keyword force: add_to_rib(route, True) or add_to_rib(route, force=True)
-            force = attributes_or_force or force
-        else:
-            # New signature: add_to_rib(nlri, attributes, force=False)
-            # Note: nexthop should be passed in Route, not extracted from NLRI
-            nlri = route_or_nlri
-            attrs = attributes_or_force
-            route = Route(nlri, attrs, nexthop=IP.NoNextHop)
 
         log.debug(lazymsg('rib.insert route={route}', route=route), 'rib')
 
@@ -309,6 +300,21 @@ class OutgoingRIB(Cache):
             return
 
         self._update_rib(route)
+
+    def add_nlri_to_rib(self, nlri: 'NLRI', attributes: 'AttributeCollection', force: bool = False) -> None:
+        """Add an NLRI with attributes to the RIB.
+
+        Convenience method that creates a Route and delegates to add_to_rib.
+
+        Args:
+            nlri: The NLRI to add
+            attributes: The attributes for the route
+            force: If True, add even if already in cache
+        """
+        from exabgp.rib.route import Route
+
+        route = Route(nlri, attributes, nexthop=IP.NoNextHop)
+        self.add_to_rib(route, force)
 
     def _update_rib(self, route: Route) -> None:
         # Validate: Routes entering RIB must have resolved nexthop

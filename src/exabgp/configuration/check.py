@@ -59,6 +59,7 @@ from exabgp.version import json_v4 as json_v4_version
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
+    from exabgp.reactor.api.response import JSONEncoder
 
 # Type alias for log message lambdas
 LogMsg = Callable[[], str]
@@ -504,7 +505,7 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
     return True
 
 
-def _get_json_encoder(generic: bool = False) -> 'Response.JSON | Response.V4.JSON':
+def _get_json_encoder(generic: bool = False) -> 'JSONEncoder':
     """Get the appropriate JSON encoder based on API version setting.
 
     Args:
@@ -512,7 +513,7 @@ def _get_json_encoder(generic: bool = False) -> 'Response.JSON | Response.V4.JSO
     """
     api_version = getenv().api.version
     if api_version == 4:
-        encoder = Response.V4.JSON(json_v4_version)
+        encoder: JSONEncoder = Response.V4.JSON(json_v4_version)
     else:
         encoder = Response.JSON(json_version)
 

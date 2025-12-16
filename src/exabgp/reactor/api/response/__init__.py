@@ -15,6 +15,46 @@ if TYPE_CHECKING:
     from exabgp.reactor.api.response.json import JSON
 
 
+class JSONEncoder(Protocol):
+    """Protocol for JSON encoders (JSON and V4JSON).
+
+    Separate from ResponseEncoder because Text doesn't have generic_attribute_format.
+    """
+
+    version: str
+    generic_attribute_format: bool
+
+    def update(
+        self,
+        neighbor: 'Neighbor',
+        direction: str,
+        update: 'UpdateCollection',
+        header: bytes,
+        body: bytes,
+        negotiated: 'Negotiated',
+    ) -> str: ...
+
+    def notification(
+        self,
+        neighbor: 'Neighbor',
+        direction: str,
+        message: 'Notification',
+        header: bytes,
+        body: bytes,
+        negotiated: 'Negotiated',
+    ) -> str: ...
+
+    def open(
+        self,
+        neighbor: 'Neighbor',
+        direction: str,
+        sent_open: 'Open',
+        header: bytes,
+        body: bytes,
+        negotiated: 'Negotiated',
+    ) -> str: ...
+
+
 class ResponseEncoder(Protocol):
     """Protocol defining the interface for response encoders (Text and JSON)."""
 
