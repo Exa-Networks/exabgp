@@ -94,7 +94,7 @@ class AtomicAggregate(Attribute):
     @classmethod
     def setCache(cls) -> None:
         # There can only be one, build it now :)
-        cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][''] = cls.make_atomic_aggregate()
+        cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][b''] = cls.make_atomic_aggregate()
 
 
 AtomicAggregate.setCache()

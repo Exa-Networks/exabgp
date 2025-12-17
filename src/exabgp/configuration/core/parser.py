@@ -8,7 +8,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections import deque
-from typing import Any, Generator, Iterable, Iterator
+from typing import TYPE_CHECKING, Generator, Iterable, Iterator
+
+if TYPE_CHECKING:
+    from exabgp.configuration.core.error import Error
+    from exabgp.configuration.core.scope import Scope
 
 from exabgp.configuration.core.format import tokens
 from exabgp.protocol.family import AFI
@@ -101,9 +105,9 @@ class Parser:
     def _off() -> Iterator[list[str]]:
         return iter([])
 
-    def __init__(self, scope: Any, error: Any) -> None:
-        self.scope = scope
-        self.error = error
+    def __init__(self, scope: Scope, error: Error) -> None:
+        self.scope: Scope = scope
+        self.error: Error = error
         self.finished = False
         self.number = 0
         self.line: list[str] = []

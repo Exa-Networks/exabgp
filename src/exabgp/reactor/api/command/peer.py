@@ -315,8 +315,8 @@ def neighbor_create(
         return False
 
     try:
-        # Check if peer already exists
-        key = neighbor.index()
+        # Check if peer already exists - use name() as key (string, matches dict types)
+        key = neighbor.name()
         if key in reactor._peers:
             reactor.processes.answer_error(service, f'peer already exists: {neighbor.name()}')
             return False

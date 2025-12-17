@@ -297,7 +297,7 @@ class ParseNeighbor(Section):
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         Section.__init__(self, parser, scope, error)
-        self._neighbors: list[str] = []
+        self._neighbors: list[bytes] = []
         self.neighbors: dict[str, Neighbor] = {}
 
     def clear(self) -> None:

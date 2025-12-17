@@ -24,9 +24,19 @@ class UnknownMessage(Message):
     # Make sure we have a value, which is not defined in any RFC !
 
     def __init__(self, code: int, packed: Buffer = b'', negotiated: Negotiated | None = None) -> None:
-        self.ID = code
-        self.TYPE = bytes([code])
+        self._code = code
+        self._type_bytes = bytes([code])
         self.data = packed
+
+    @property
+    def ID(self) -> int:  # type: ignore[override]
+        """Return message type code (instance-specific for unknown messages)."""
+        return self._code
+
+    @property
+    def TYPE(self) -> bytes:  # type: ignore[override]
+        """Return message type as bytes (instance-specific for unknown messages)."""
+        return self._type_bytes
 
     def pack_message(self, negotiated: Negotiated) -> bytes:
         return self._message(self.data)

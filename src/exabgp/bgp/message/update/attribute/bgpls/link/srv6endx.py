@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from struct import pack, unpack
-from typing import Callable, ClassVar, Protocol
+from typing import Callable, Protocol, Self
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
@@ -20,12 +20,12 @@ from exabgp.util.types import Buffer
 class SubSubTLV(Protocol):
     """Protocol for sub-sub-TLV classes with TLV code and unpack_bgpls method."""
 
-    TLV: ClassVar[int]
+    TLV: int  # Class variable (mypy treats class-level annotations as instance vars)
 
     @classmethod
-    def unpack_bgpls(cls, data: Buffer) -> SubSubTLV: ...
+    def unpack_bgpls(cls, data: Buffer) -> Self: ...
 
-    def json(self) -> dict[str, object]: ...
+    def json(self, compact: bool = False) -> str: ...
 
 
 # Minimum data length for SRv6 End.X SID TLV (RFC 9514 Section 4.1)
@@ -107,9 +107,8 @@ class Srv6EndX(FlagLS):
                 subsubtlv = cls.registered_subsubtlvs[code].unpack_bgpls(
                     data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE]
                 )
-                # Convert dict to JSON string fragment (without outer braces)
-                subtlv_json = json.dumps(subsubtlv.json())[1:-1]  # Strip { and }
-                subtlvs.append(subtlv_json)
+                # json() returns a JSON string fragment like '"key": {...}'
+                subtlvs.append(subsubtlv.json())
             else:
                 # Unknown sub-TLV: format as JSON string with hex data
                 hex_data = hexstring(data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE])

@@ -522,7 +522,7 @@ class IPVPN(Label):
 
         # Create NLRI
         instance = object.__new__(cls)
-        NLRI.__init__(instance, afi, safi, action)
+        NLRI.__init__(instance, afi, safi, path_info)
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = len(labels_packed) > 0

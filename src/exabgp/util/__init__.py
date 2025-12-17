@@ -43,5 +43,5 @@ def split(data: str, step: int) -> Iterator[str]: ...
 def split(data: Buffer, step: int) -> Iterator[Buffer]: ...
 
 
-def split(data: str | Buffer, step: int) -> Iterator[str] | Iterator[Buffer]:
+def split(data: str | Buffer, step: int) -> Iterator[str | Buffer]:
     return (data[i : i + step] for i in range(0, len(data), step))

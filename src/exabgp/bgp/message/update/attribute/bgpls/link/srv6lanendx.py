@@ -11,7 +11,7 @@ from struct import pack, unpack
 from exabgp.protocol.iso import ISO
 from exabgp.util import hexstring
 
-from typing import Callable, ClassVar, Protocol
+from typing import Callable, ClassVar, Protocol, Self
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
@@ -23,12 +23,12 @@ from exabgp.util.types import Buffer
 class SubSubTLV(Protocol):
     """Protocol for sub-sub-TLV classes with TLV code and unpack_bgpls method."""
 
-    TLV: ClassVar[int]
+    TLV: int  # Class variable (mypy treats class-level annotations as instance vars)
 
     @classmethod
-    def unpack_bgpls(cls, data: Buffer) -> SubSubTLV: ...
+    def unpack_bgpls(cls, data: Buffer) -> Self: ...
 
-    def json(self) -> dict[str, object]: ...
+    def json(self, compact: bool = False) -> str: ...
 
 
 # BGP-LS Sub-TLV header constants
@@ -91,7 +91,7 @@ class Srv6(FlagLS):
         start_offset = 12 if protocol_type == ISIS else 6
         sid = IPv6.ntop(data[start_offset : start_offset + 16])
         data = data[start_offset + 16 :]
-        subtlvs = []
+        subtlvs: list[str] = []
 
         while data and len(data) >= BGPLS_SUBTLV_HEADER_SIZE:
             code = unpack('!H', data[0:2])[0]
@@ -101,10 +101,12 @@ class Srv6(FlagLS):
                 subsubtlv = cls.registered_subsubtlvs[code].unpack_bgpls(
                     data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE]
                 )
+                # json() returns a JSON string fragment like '"key": {...}'
                 subtlvs.append(subsubtlv.json())
             else:
-                subsubtlv = hexstring(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
-                subtlvs.append(f'"{code}-undecoded": "{subsubtlv}"')
+                # Unknown sub-TLV: format as JSON string with hex data
+                hex_data = hexstring(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
+                subtlvs.append(f'"unknown-subtlv-{code}": "{hex_data}"')
             data = data[length + BGPLS_SUBTLV_HEADER_SIZE :]
 
         return {
@@ -122,7 +124,7 @@ class Srv6(FlagLS):
 class Srv6LanEndXISIS(Srv6):
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     MERGE = True  # LinkState.json() will group into array
-    registered_subsubtlvs: dict[int, type] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = dict()
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with packed bytes."""
@@ -211,7 +213,7 @@ class Srv6LanEndXISIS(Srv6):
 class Srv6LanEndXOSPF(Srv6):
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     MERGE = True  # LinkState.json() groups into array
-    registered_subsubtlvs: dict[int, type] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = dict()
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with packed bytes."""

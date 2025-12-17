@@ -96,8 +96,8 @@ class PrefixSid(Attribute):
 
 
 class GenericSRId:
-    def __init__(self, code: int, rep: bytes) -> None:
-        self.rep: bytes = rep
+    def __init__(self, code: int, rep: Buffer) -> None:
+        self.rep: Buffer = rep
         self.code: int = code
 
     @property

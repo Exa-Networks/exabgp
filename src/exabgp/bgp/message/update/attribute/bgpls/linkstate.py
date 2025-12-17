@@ -238,6 +238,11 @@ class BaseLS:
     def check(cls, data: Buffer) -> None:
         return cls.check_length(data, cls.LEN)
 
+    @classmethod
+    def unpack_bgpls(cls, data: Buffer) -> BaseLS:
+        """Unpack TLV data into instance. Override in subclasses for custom unpacking."""
+        return cls(data)
+
     def merge(self, other: BaseLS) -> None:
         if not self.MERGE:
             raise Notify(3, 5, f'Invalid merge, issue decoding {self.REPR}')

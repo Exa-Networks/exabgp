@@ -518,7 +518,7 @@ class TestPeerDeleteCommand:
 
         initial_count = len(mock_reactor_with_peers._peers)
         all_peers = list(mock_reactor_with_peers._peers.keys())
-        target_peer = [key for key in all_peers if b'127.0.0.1' in key][0]
+        target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
 
         # peers list is now passed directly (already matched by dispatcher)
         result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
@@ -567,7 +567,7 @@ class TestPeerDeleteCommand:
 
         # Get initial state
         all_peers = list(mock_reactor_with_peers._peers.keys())
-        target_peer = [key for key in all_peers if b'127.0.0.1' in key][0]
+        target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
         initial_peers = len(mock_reactor_with_peers._peers)
         initial_config = len(mock_reactor_with_peers.configuration.neighbors)
         initial_dynamic = len(mock_reactor_with_peers._dynamic_peers)
@@ -596,7 +596,7 @@ class TestPeerDeleteCommand:
 
         # Get all peer keys and configurations before delete
         all_peers = list(mock_reactor_with_peers._peers.keys())
-        target_peer = [key for key in all_peers if b'127.0.0.1' in key][0]
+        target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
         other_peers = [key for key in all_peers if key != target_peer]
 
         # Store other peer data before deletion
@@ -628,7 +628,7 @@ class TestPeerDeleteCommand:
 
         # Get target peer
         all_peers = list(mock_reactor_with_peers._peers.keys())
-        target_peer = [key for key in all_peers if b'127.0.0.1' in key][0]
+        target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
         peer_obj = mock_reactor_with_peers._peers[target_peer]
 
         # Delete the peer (pass matched peer directly)
@@ -645,7 +645,7 @@ class TestPeerDeleteCommand:
 
         # Get target peer key
         all_peers = list(mock_reactor_with_peers._peers.keys())
-        target_peer = [key for key in all_peers if b'127.0.0.2' in key][0]
+        target_peer = [key for key in all_peers if '127.0.0.2' in key][0]
 
         # Verify key exists before deletion
         assert target_peer in mock_reactor_with_peers._peers
@@ -672,7 +672,7 @@ class TestPeerDeleteCommand:
 
         # Get target peer
         all_peers = list(mock_reactor_with_peers._peers.keys())
-        target_peer = [key for key in all_peers if b'127.0.0.1' in key][0]
+        target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
         peer_obj = mock_reactor_with_peers._peers[target_peer]
 
         # Mock remove to record when it's called

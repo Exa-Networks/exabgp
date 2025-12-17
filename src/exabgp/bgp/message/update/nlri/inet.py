@@ -145,7 +145,7 @@ class INET(NLRI):
 
         Use factory methods (from_cidr, from_settings) when creating INET instances.
         """
-        NLRI.__init__(self, afi, safi, Action.UNSET)
+        NLRI.__init__(self, afi, safi)
         self._packed = packed  # Complete wire format
         self._has_addpath = has_addpath
         self._labels: Labels | None = None

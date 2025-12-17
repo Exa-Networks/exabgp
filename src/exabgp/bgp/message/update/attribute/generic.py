@@ -46,8 +46,18 @@ class GenericAttribute(Attribute):
             flag: Attribute flags
         """
         self._packed: Buffer = packed
-        self.ID: int = code
-        self.FLAG: int = flag
+        self._code: int = code
+        self._flag: int = flag
+
+    @property
+    def ID(self) -> int:  # type: ignore[override]
+        """Return attribute type code (instance-specific for generic attributes)."""
+        return self._code
+
+    @property
+    def FLAG(self) -> int:  # type: ignore[override]
+        """Return attribute flags (instance-specific for generic attributes)."""
+        return self._flag
 
     @classmethod
     def from_packet(cls, code: int, flag: int, data: Buffer) -> 'GenericAttribute':

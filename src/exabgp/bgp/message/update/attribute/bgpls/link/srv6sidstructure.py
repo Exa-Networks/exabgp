@@ -36,6 +36,7 @@ SRV6_SID_STRUCTURE_LEN = 4
 @Srv6LanEndXOSPF.register_subsubtlv()
 @LinkState.register_lsid(tlv=1252, json_key='srv6-sid-structure', repr_name='SRv6 SID Structure')
 class Srv6SidStructure(BaseLS):
+    TLV: int = 1252  # Required by SubSubTLV Protocol
     LEN = SRV6_SID_STRUCTURE_LEN
 
     @property
