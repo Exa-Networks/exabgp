@@ -128,12 +128,16 @@ class MPRNLRI(Attribute, Family):
         from exabgp.protocol.ip import IP
 
         nexthop_bytes, nlri_iter = self._parse_nexthop_and_nlris()
-        nexthop_attr = NextHop.unpack_attribute(nexthop_bytes, Negotiated.UNSET)
         # Convert NextHop (Attribute) to IP for RoutedNLRI
-        if nexthop_attr is NextHop.UNSET:
-            nexthop: IP = IP.NoNextHop
+        nexthop: IP
+        if nexthop_bytes is None:
+            nexthop = IP.NoNextHop
         else:
-            nexthop = IP.create_ip(nexthop_attr.pack_ip())
+            nexthop_attr = NextHop.unpack_attribute(nexthop_bytes, Negotiated.UNSET)
+            if nexthop_attr is NextHop.UNSET:
+                nexthop = IP.NoNextHop
+            else:
+                nexthop = IP.create_ip(nexthop_attr.pack_ip())
         for nlri in nlri_iter:
             yield RoutedNLRI(nlri, nexthop)
 

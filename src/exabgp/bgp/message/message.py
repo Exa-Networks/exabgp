@@ -117,11 +117,11 @@ class Message:
     HEADER_LEN: ClassVar[int] = 19
 
     registered_message: ClassVar[dict[int, Type[Message]]] = {}
-    klass_unknown: ClassVar[Callable[[int, bytes, Negotiated], Message]]
+    klass_unknown: ClassVar[Callable[[int, Buffer, Negotiated], Message]]
 
     # TYPE attribute set by subclasses
-    TYPE: bytes
-    ID: int
+    TYPE: ClassVar[bytes]
+    ID: ClassVar[int]
 
     # Reactor scheduling - 0 (MESSAGE) for real BGP messages
     # Scheduling messages (NOP, AWAKE, DONE) set this to Scheduling.LATER/NOW/CLOSE

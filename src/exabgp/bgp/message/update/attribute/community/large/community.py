@@ -133,8 +133,9 @@ class LargeCommunity(Attribute):
     def cached(cls, packed: Buffer) -> 'LargeCommunity':
         if not cls.caching:
             return cls(packed)
-        if packed in cls._instance_cache:
-            return cls._instance_cache[packed]
+        packed_bytes = bytes(packed)
+        if packed_bytes in cls._instance_cache:
+            return cls._instance_cache[packed_bytes]
         instance = cls(packed)
-        cls._instance_cache[packed] = instance
+        cls._instance_cache[packed_bytes] = instance
         return instance

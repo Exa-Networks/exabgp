@@ -94,7 +94,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 from exabgp.util.types import Buffer
 
@@ -148,9 +148,10 @@ class IPVPN(Label):
 
     __slots__ = ('_has_rd',)  # Track whether RD is present in _packed
 
-    # Fixed SAFI for IPVPN NLRI (class attribute shadows slot)
-    # AFI varies (ipv4/ipv6) and is set at instance level by INET
-    safi: ClassVar[SAFI] = SAFI.mpls_vpn
+    # Fixed SAFI for IPVPN NLRI - AFI varies (ipv4/ipv6) and is set at instance level by INET
+    @property
+    def safi(self) -> SAFI:
+        return SAFI.mpls_vpn
 
     def __init__(
         self, packed: Buffer, afi: AFI, *, has_addpath: bool = False, has_labels: bool = False, has_rd: bool = False
@@ -263,8 +264,8 @@ class IPVPN(Label):
             packed = nlri_bytes
 
         instance = object.__new__(cls)
-        # Note: safi parameter is ignored - IPVPN.safi is a class-level property
-        NLRI.__init__(instance, afi, cls.safi)
+        # Note: safi parameter is ignored - IPVPN always uses mpls_vpn
+        NLRI.__init__(instance, afi, SAFI.mpls_vpn)
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = has_labels
@@ -417,6 +418,7 @@ class IPVPN(Label):
 
         Index uses RD + prefix (without labels) for uniqueness.
         """
+        addpath: Buffer
         if self.path_info is PathInfo.NOPATH:
             addpath = b'no-pi'
         elif self.path_info is PathInfo.DISABLED:
@@ -429,7 +431,7 @@ class IPVPN(Label):
         # Extract RD bytes from _packed
         label_end = self._label_end_offset
         rd_packed = self._packed[label_end : label_end + RD_SIZE] if self._has_rd else b''
-        return Family.index(self) + addpath + mask + rd_packed + self.cidr.pack_ip()
+        return Family.index(self) + bytes(addpath) + mask + bytes(rd_packed) + self.cidr.pack_ip()
 
     def _internal(self, announced: bool = True) -> list[str]:
         r = Label._internal(self, announced)

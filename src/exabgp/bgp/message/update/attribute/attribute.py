@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from exabgp.util.types import Buffer
 from struct import pack
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -96,7 +96,7 @@ class Attribute:
     caching: ClassVar[bool] = False
 
     # The attribute cache per attribute ID
-    cache: ClassVar[dict[int, Cache]] = {}
+    cache: ClassVar[dict[int, Cache[bytes, 'Attribute']]] = {}
 
     # ---------------------------------------------------------------------------
 
@@ -237,7 +237,7 @@ class Attribute:
         length: int = len(value)
         return length + 3 if length <= ATTR_LENGTH_EXTENDED_MAX else length + 4
 
-    def pack_attribute(self, negotiated: 'Negotiated') -> bytes:
+    def pack_attribute(self, negotiated: 'Negotiated') -> Buffer:
         """Pack attribute for wire transmission. Must be overridden by subclasses."""
         raise NotImplementedError(f'{self.__class__.__name__} must implement pack_attribute()')
 
@@ -312,16 +312,16 @@ class Attribute:
         cache: bool = cls.caching and cls.CACHING
 
         # Convert to bytes for cache lookup (memoryview isn't hashable)
-        if cache and data in cls.cache.get(cls.ID, {}):
-            # Cache stores Attribute instances
-            return cast(Attribute, cls.cache[cls.ID].retrieve(data))
+        cache_key: bytes = bytes(data)
+        if cache and cache_key in cls.cache.get(cls.ID, {}):
+            return cls.cache[cls.ID].retrieve(cache_key)
 
         key: tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
         if key in Attribute.registered_attributes.keys():
             instance: Attribute = cls.klass(attribute_id, flag).unpack_attribute(data, negotiated)
 
             if cache:
-                cls.cache[cls.ID].cache(data, instance)
+                cls.cache[cls.ID].cache(cache_key, instance)
             return instance
 
         raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))

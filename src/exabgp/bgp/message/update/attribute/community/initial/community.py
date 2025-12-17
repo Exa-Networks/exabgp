@@ -165,10 +165,12 @@ class Community:
     def cached(cls, packed: Buffer) -> 'Community':
         if not cls.caching:
             return cls(packed)
-        if packed in cls.cache:
-            return cls.cache[packed]
-        instance = cls(packed)
-        cls.cache[packed] = instance
+        # Convert to bytes for hashable cache key (memoryview is not hashable)
+        packed_bytes = bytes(packed)
+        if packed_bytes in cls.cache:
+            return cls.cache[packed_bytes]
+        instance = cls(packed_bytes)
+        cls.cache[packed_bytes] = instance
         return instance
 
 

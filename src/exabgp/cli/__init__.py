@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 
-class msg(dict):
+class msg(dict[str, str]):
     command: ClassVar[str] = '[command]'
     help: ClassVar[str] = '[help]'
     validation: ClassVar[str] = '[validation]'

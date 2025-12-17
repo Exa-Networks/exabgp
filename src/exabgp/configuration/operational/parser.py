@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
     from exabgp.configuration.core.parser import Tokeniser
@@ -22,34 +22,41 @@ from exabgp.bgp.message.operational import MAX_ADVISORY
 from exabgp.bgp.message.operational import Advisory
 from exabgp.bgp.message.operational import Query
 from exabgp.bgp.message.operational import Response
+from exabgp.bgp.message.operational import Operational
 
 # Operational message advisory overhead (including quotes)
 ADVISORY_QUOTE_OVERHEAD = 2  # Two quote characters surrounding advisory
 
 
-def _operational(klass, parameters, tokeniser):
-    def utf8(string):
+def _operational(klass: type[Operational], parameters: list[str], tokeniser: Tokeniser) -> Operational:
+    def utf8(string: str) -> bytes:
         return string.encode('utf-8')
 
-    def valid(_):
+    def valid(_: str) -> bool:
         return True
 
     # Maximum values for unsigned integer types
     MAX_U32 = 0xFFFFFFFF  # Maximum 32-bit unsigned integer
     MAX_U64 = 0xFFFFFFFFFFFFFFFF  # Maximum 64-bit unsigned integer
 
-    def u32(_):
+    def u32(_: str) -> bool:
         return int(_) <= MAX_U32
 
-    def u64(_):
+    def u64(_: str) -> bool:
         return int(_) <= MAX_U64
 
-    def advisory(_):
+    def advisory(_: str) -> bool:
         return len(_.encode('utf-8')) <= MAX_ADVISORY + ADVISORY_QUOTE_OVERHEAD  # the two quotes
 
-    convert = {'afi': AFI.value, 'safi': SAFI.value, 'sequence': int, 'counter': int, 'advisory': utf8}
+    convert: dict[str, Callable[[str], Any]] = {
+        'afi': AFI.value,
+        'safi': SAFI.value,
+        'sequence': int,
+        'counter': int,
+        'advisory': utf8,
+    }
 
-    validate = {
+    validate: dict[str, Callable[[str], Any]] = {
         'afi': AFI.value,
         'safi': SAFI.value,
         'sequence': u32,
@@ -57,11 +64,11 @@ def _operational(klass, parameters, tokeniser):
     }
 
     number = len(parameters) * 2
-    tokens = []
+    tokens: list[str] = []
     while len(tokens) != number:
         tokens.append(tokeniser())
 
-    data = {}
+    data: dict[str, Any] = {}
 
     while tokens and parameters:
         command = tokens.pop(0).lower()
@@ -92,11 +99,11 @@ def _operational(klass, parameters, tokeniser):
     return klass(**data)
 
 
-_dispatch = {}
+_dispatch: dict[str, Callable[[Tokeniser], Operational]] = {}
 
 
-def register(name):
-    def inner(function):
+def register(name: str) -> Callable[[Callable[[Tokeniser], Operational]], Callable[[Tokeniser], Operational]]:
+    def inner(function: Callable[[Tokeniser], Operational]) -> Callable[[Tokeniser], Operational]:
         _dispatch[name] = function
         return function
 
@@ -104,44 +111,47 @@ def register(name):
 
 
 @register('asm')
-def asm(tokeniser):
+def asm(tokeniser: Tokeniser) -> Operational:
     return _operational(Advisory.ASM, ['afi', 'safi', 'advisory'], tokeniser)
 
 
 @register('adm')
-def adm(tokeniser):
+def adm(tokeniser: Tokeniser) -> Operational:
     return _operational(Advisory.ADM, ['afi', 'safi', 'advisory'], tokeniser)
 
 
 @register('rpcq')
-def rpcq(tokeniser):
+def rpcq(tokeniser: Tokeniser) -> Operational:
     return _operational(Query.RPCQ, ['afi', 'safi', 'sequence'], tokeniser)
 
 
 @register('rpcp')
-def rpcp(tokeniser):
+def rpcp(tokeniser: Tokeniser) -> Operational:
     return _operational(Response.RPCP, ['afi', 'safi', 'sequence', 'counter'], tokeniser)
 
 
 @register('apcq')
-def apcq(tokeniser):
+def apcq(tokeniser: Tokeniser) -> Operational:
     return _operational(Query.APCQ, ['afi', 'safi', 'sequence'], tokeniser)
 
 
 @register('apcp')
-def apcp(tokeniser):
+def apcp(tokeniser: Tokeniser) -> Operational:
     return _operational(Response.APCP, ['afi', 'safi', 'sequence', 'counter'], tokeniser)
 
 
 @register('lpcq')
-def lpcq(tokeniser):
+def lpcq(tokeniser: Tokeniser) -> Operational:
     return _operational(Query.LPCQ, ['afi', 'safi', 'sequence'], tokeniser)
 
 
 @register('lpcp')
-def lpcp(tokeniser):
+def lpcp(tokeniser: Tokeniser) -> Operational:
     return _operational(Response.LPCP, ['afi', 'safi', 'sequence', 'counter'], tokeniser)
 
 
-def operational(what: str, tokeniser: 'Tokeniser') -> Any:
-    return _dispatch.get(what, lambda _: None)(tokeniser)
+def operational(what: str, tokeniser: Tokeniser) -> Operational | None:
+    dispatch_func = _dispatch.get(what)
+    if dispatch_func is None:
+        return None
+    return dispatch_func(tokeniser)

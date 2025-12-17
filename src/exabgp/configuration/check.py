@@ -15,6 +15,7 @@ import struct
 from typing import Callable, TYPE_CHECKING
 
 from exabgp.environment import getenv
+from exabgp.util.types import Buffer
 
 from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
@@ -297,7 +298,7 @@ def display_message(neighbor: Neighbor, message: str, generic: bool = False, com
 def _make_nlri(neighbor: Neighbor, routes: str) -> list[NLRI]:
     option.enabled['parser'] = True
 
-    announced = _hexa(routes)
+    announced: Buffer = _hexa(routes)
     negotiated_in, negotiated_out = _negotiated(neighbor)
 
     afi, safi = neighbor.families()[0]
@@ -308,7 +309,7 @@ def _make_nlri(neighbor: Neighbor, routes: str) -> list[NLRI]:
     nlris: list[NLRI] = []
     try:
         while announced:
-            _announced = announced  # type: bytes
+            _announced = announced  # type: Buffer
             log.debug(lazymsg('parsing NLRI {announced}', announced=_announced), 'parser')
             nlri_parsed, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath, negotiated_in)
             if nlri_parsed is not NLRI.INVALID:

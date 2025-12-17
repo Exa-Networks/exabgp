@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections import deque
-from typing import Iterator
+from typing import Any, Generator, Iterable, Iterator
 
 from exabgp.configuration.core.format import tokens
 from exabgp.protocol.family import AFI
@@ -66,12 +66,12 @@ class Tokeniser:
     def __call__(self) -> str:
         return self._get()
 
-    def consume(self, name):
+    def consume(self, name: str) -> None:
         next_tok = self._get()
         if next_tok != name:
             raise ValueError(f"expected '{name}' but found '{next_tok}' instead")
 
-    def consume_if_match(self, name):
+    def consume_if_match(self, name: str) -> bool:
         next_tok = self.peek()
         if next_tok == name:
             self._get()
@@ -98,10 +98,10 @@ class Tokeniser:
 
 class Parser:
     @staticmethod
-    def _off():
+    def _off() -> Iterator[list[str]]:
         return iter([])
 
-    def __init__(self, scope, error) -> None:
+    def __init__(self, scope: Any, error: Any) -> None:
         self.scope = scope
         self.error = error
         self.finished = False
@@ -114,11 +114,11 @@ class Parser:
         self.fname = ''
         self.type = 'unset'
 
-        self._tokens = Parser._off
-        self._next = None
-        self._data = None
+        self._tokens: Iterator[list[str]] = Parser._off()
+        self._next: list[str] = []
+        self._data: Generator[list[str], None, None] | None = None
 
-    def clear(self):
+    def clear(self) -> None:
         self.finished = False
         self.number = 0
         self.line = []
@@ -131,7 +131,7 @@ class Parser:
         if self._data:
             self._set(self._data)
 
-    def params(self):
+    def params(self) -> str:
         if len(self.line) <= MIN_LINE_LENGTH_FOR_PARAMS:
             return ''
         if self.end in ('{', '}', ';'):
@@ -140,7 +140,7 @@ class Parser:
         joined = "' '".join(self.line[1:])
         return f"'{joined}'"
 
-    def _tokenise(self, iterator):
+    def _tokenise(self, iterator: Iterable[str]) -> Generator[list[str], None, None]:
         for parsed in tokens(iterator):
             words = [word for y, x, word in parsed]
             self.line = words  # Store the word list, not a joined string
@@ -148,7 +148,7 @@ class Parser:
             # set Location information
             yield words
 
-    def _set(self, function):
+    def _set(self, function: Generator[list[str], None, None]) -> bool | str:
         try:
             self._tokens = function
             self._next = next(self._tokens)
@@ -158,20 +158,20 @@ class Parser:
                 self.error.set(error.split(']')[1].strip())
             else:
                 self.error.set(error)
-            self._tokens = Parser._off
+            self._tokens = Parser._off()
             self._next = []
             return self.error.set('issue setting the configuration parser')
         except StopIteration:
-            self._tokens = Parser._off
+            self._tokens = Parser._off()
             self._next = []
             return self.error.set('issue setting the configuration parser, no data')
         return True
 
-    def set_file(self, data):
-        def _source(fname):
+    def set_file(self, data: str) -> bool | str:
+        def _source(fname: str) -> Generator[list[str], None, None]:
             with open(fname, 'r') as fileobject:
 
-                def formated():
+                def formated() -> Generator[str, None, None]:
                     line = ''
                     for current in fileobject:
                         self.index_line += 1
@@ -195,22 +195,22 @@ class Parser:
         self.tokeniser.fname = data
         return self._set(_source(data))
 
-    def set_text(self, data):
-        def _source(data):
+    def set_text(self, data: str) -> bool | str:
+        def _source(data: str) -> Generator[list[str], None, None]:
             for _ in self._tokenise(data.split('\n')):
                 yield _
 
         self.type = 'text'
         return self._set(_source(data))
 
-    def set_api(self, line):
+    def set_api(self, line: str) -> bool | str:
         return self._set(self._tokenise(iter([line])))
 
-    def set_action(self, command):
+    def set_action(self, command: str) -> None:
         if command != 'announce':
             self.tokeniser.announce = False
 
-    def __call__(self):
+    def __call__(self) -> list[str]:
         self.number += 1
         try:
             self.line, self._next = self._next, next(self._tokens)

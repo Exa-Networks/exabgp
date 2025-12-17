@@ -79,7 +79,7 @@ Class Hierarchy:
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -121,9 +121,10 @@ class Label(INET):
 
     __slots__ = ('_has_labels',)  # Track whether labels are present
 
-    # Fixed SAFI for Label NLRI (class attribute shadows slot)
-    # AFI varies (ipv4/ipv6) and is set at instance level by INET
-    safi: ClassVar[SAFI] = SAFI.nlri_mpls
+    # Fixed SAFI for Label NLRI - AFI varies (ipv4/ipv6) and is set at instance level by INET
+    @property
+    def safi(self) -> SAFI:
+        return SAFI.nlri_mpls
 
     def __init__(self, packed: Buffer, afi: AFI, *, has_addpath: bool = False, has_labels: bool = False) -> None:
         """Create a Label NLRI from packed wire format bytes.
@@ -251,8 +252,8 @@ class Label(INET):
             packed = nlri_bytes
 
         instance = object.__new__(cls)
-        # Note: safi parameter is ignored - Label.safi is a class-level constant
-        NLRI.__init__(instance, afi, cls.safi)
+        # Note: safi parameter is ignored - Label always uses nlri_mpls
+        NLRI.__init__(instance, afi, SAFI.nlri_mpls)
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = has_labels
@@ -378,6 +379,7 @@ class Label(INET):
 
         Index uses prefix only (without labels) for uniqueness.
         """
+        addpath: Buffer
         if self.path_info is PathInfo.NOPATH:
             addpath = b'no-pi'
         elif self.path_info is PathInfo.DISABLED:
@@ -385,7 +387,7 @@ class Label(INET):
         else:
             addpath = self.path_info.pack_path()
         mask = bytes([self.cidr.mask])
-        return Family.index(self) + addpath + mask + self.cidr.pack_ip()
+        return Family.index(self) + bytes(addpath) + mask + self.cidr.pack_ip()
 
     def _internal(self, announced: bool = True) -> list[str]:
         r = INET._internal(self, announced)

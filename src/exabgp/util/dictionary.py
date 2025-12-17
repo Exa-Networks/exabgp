@@ -15,7 +15,7 @@ from typing import Any, Callable
 # an Hardcoded defaultdict with dict as method
 
 
-class Dictionary(defaultdict):
+class Dictionary(defaultdict[Any, dict[Any, Any]]):
     default_factory: Callable[[], dict[Any, Any]] | None
 
     def __init__(self) -> None:

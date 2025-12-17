@@ -313,7 +313,7 @@ class MPNLRICollection:
                     # Fallback for invalid nexthop
                     nexthop = bytes([0]) * 4
 
-            mpnlri.setdefault(nexthop, []).append(nlri.pack_nlri(negotiated))
+            mpnlri.setdefault(nexthop, []).append(bytes(nlri.pack_nlri(negotiated)))
 
         # Generate attributes for each nexthop group
         afi_bytes = self._afi.pack_afi()
@@ -363,7 +363,7 @@ class MPNLRICollection:
         for nlri in self._nlris:
             if nlri.family().afi_safi() != family_key:
                 continue
-            packed_nlris.append(nlri.pack_nlri(negotiated))
+            packed_nlris.append(bytes(nlri.pack_nlri(negotiated)))
 
         if not packed_nlris:
             return

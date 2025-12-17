@@ -218,7 +218,7 @@ class Capabilities(dict[int, Capability]):
 
     @staticmethod
     def unpack(data: Buffer) -> Capabilities:
-        def _extended_type_length(name: str, data: Buffer) -> tuple[int, bytes, bytes]:
+        def _extended_type_length(name: str, data: Buffer) -> tuple[int, Buffer, Buffer]:
             if len(data) < MIN_EXTENDED_PARAM_LEN:
                 raise Notify(
                     2,
@@ -237,11 +237,11 @@ class Capabilities(dict[int, Capability]):
                     'Bad length for OPEN (extended) {} (buffer underrun) {}'.format(name, Capability.hex(data)),
                 )
             key: int = data[0]
-            value: bytes = data[3:boundary]
-            rest: bytes = data[boundary:]
+            value: Buffer = data[3:boundary]
+            rest: Buffer = data[boundary:]
             return key, value, rest
 
-        def _key_values(name: str, data: Buffer) -> tuple[int, bytes, bytes]:
+        def _key_values(name: str, data: Buffer) -> tuple[int, Buffer, Buffer]:
             if len(data) < MIN_PARAM_LEN:
                 raise Notify(2, 0, 'Bad length for OPEN {} (<{}) {}'.format(name, MIN_PARAM_LEN, Capability.hex(data)))
             ld: int = data[1]
@@ -249,8 +249,8 @@ class Capabilities(dict[int, Capability]):
             if len(data) < boundary:
                 raise Notify(2, 0, 'Bad length for OPEN {} (buffer underrun) {}'.format(name, Capability.hex(data)))
             key: int = data[0]
-            value: bytes = data[2:boundary]
-            rest: bytes = data[boundary:]
+            value: Buffer = data[2:boundary]
+            rest: Buffer = data[boundary:]
             return key, value, rest
 
         capabilities = Capabilities()

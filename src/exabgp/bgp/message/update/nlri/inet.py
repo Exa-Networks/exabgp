@@ -112,7 +112,23 @@ class INET(NLRI):
     - cidr: extracts CIDR from [M:] where M = 4 if _has_addpath else 0
     """
 
-    __slots__ = ('_has_addpath', 'labels', 'rd')
+    __slots__ = ('_has_addpath', '_labels', '_rd')
+
+    @property
+    def labels(self) -> Labels | None:
+        return self._labels
+
+    @labels.setter
+    def labels(self, value: Labels | None) -> None:
+        self._labels = value
+
+    @property
+    def rd(self) -> RouteDistinguisher | None:
+        return self._rd
+
+    @rd.setter
+    def rd(self, value: RouteDistinguisher | None) -> None:
+        self._rd = value
 
     def __init__(self, packed: Buffer, afi: AFI, safi: SAFI = SAFI.unicast, *, has_addpath: bool = False) -> None:
         """Create an INET NLRI from packed wire format bytes.
@@ -132,8 +148,8 @@ class INET(NLRI):
         NLRI.__init__(self, afi, safi, Action.UNSET)
         self._packed = packed  # Complete wire format
         self._has_addpath = has_addpath
-        self.labels: Labels | None = None
-        self.rd: RouteDistinguisher | None = None
+        self._labels: Labels | None = None
+        self._rd: RouteDistinguisher | None = None
 
     @property
     def _mask_offset(self) -> int:

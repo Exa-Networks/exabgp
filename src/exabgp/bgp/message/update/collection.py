@@ -417,7 +417,7 @@ class UpdateCollection(Message):
                 return
 
             yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(attr) + announced)
-            announced = packed
+            announced = bytes(packed)
             announced_size = packed_size
             withdraws = b''
             withdraws_size = 0
@@ -440,7 +440,7 @@ class UpdateCollection(Message):
                     yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(attr) + announced)
                 else:
                     yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b'') + announced)
-                withdraws = packed
+                withdraws = bytes(packed)
                 withdraws_size = packed_size
                 announced = b''
                 announced_size = 0
@@ -543,8 +543,8 @@ class UpdateCollection(Message):
 
         # Convert memoryview slices to bytes for downstream parsing
         # (NLRI.unpack_nlri and AttributeCollection.unpack still use bytes)
-        withdrawn_bytes = bytes(withdrawn_view)
-        announced_bytes = bytes(announced_view)
+        withdrawn_bytes: Buffer = bytes(withdrawn_view)
+        announced_bytes: Buffer = bytes(announced_view)
         attributes = AttributeCollection.unpack(bytes(attr_view), negotiated)
 
         if not announced_view:

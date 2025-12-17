@@ -64,9 +64,10 @@ class LargeCommunities(Attribute):
         offset = 0
         while offset < len(data):
             chunk = data[offset : offset + LARGE_COMMUNITY_SIZE]
-            if chunk not in seen:
-                seen.add(chunk)
-                unique_packed += chunk
+            chunk_bytes = bytes(chunk)
+            if chunk_bytes not in seen:
+                seen.add(chunk_bytes)
+                unique_packed += chunk_bytes
             offset += LARGE_COMMUNITY_SIZE
         return cls(unique_packed)
 

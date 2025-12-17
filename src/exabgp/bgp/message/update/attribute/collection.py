@@ -78,7 +78,7 @@ class AttributeCollection(dict):
     # The previously parsed AttributeCollection
     cached: ClassVar[AttributeCollection | None] = None
     # previously parsed attribute, from which cached was made of
-    previous: ClassVar[bytes] = b''
+    previous: ClassVar[Buffer] = b''
 
     representation: ClassVar[dict[int, tuple[str, str, str | tuple[str, ...], str, str]]] = {
         # key:  (how, default, name, text_presentation, json_presentation),

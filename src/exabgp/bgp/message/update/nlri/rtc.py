@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Type, TypeVar
 
 from exabgp.util.types import Buffer
 
@@ -48,9 +48,14 @@ class RTC(NLRI):
     PACKED_LENGTH_FULL = 13  # 1 + 4 + 8
     PACKED_LENGTH_WILDCARD = 1
 
-    # Fixed AFI/SAFI for this single-family NLRI type (class attributes shadow slots)
-    afi: ClassVar[AFI] = AFI.ipv4
-    safi: ClassVar[SAFI] = SAFI.rtc
+    # Fixed AFI/SAFI for this single-family NLRI type
+    @property
+    def afi(self) -> AFI:
+        return AFI.ipv4
+
+    @property
+    def safi(self) -> SAFI:
+        return SAFI.rtc
 
     def __init__(self, packed: Buffer) -> None:
         """Create an RTC NLRI from packed wire-format bytes.

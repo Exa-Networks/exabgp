@@ -317,9 +317,9 @@ SAFI.cache = dict([(inst, inst) for (_, inst) in SAFI.codes.items()])
 
 
 class Family:
-    # afi/safi storage for standalone Family instances and multi-family NLRI types
-    # Single-family NLRI types override these with read-only properties
-    __slots__ = ('afi', 'safi')
+    # Private storage for afi/safi - accessed via properties
+    # Single-family NLRI types override the properties with read-only versions
+    __slots__ = ('_afi', '_safi')
 
     size: ClassVar[dict[tuple[AFI, SAFI], tuple[tuple[int, ...], int]]] = {
         # family                   next-hop   RD
@@ -344,29 +344,39 @@ class Family:
         (AFI.bgpls, SAFI.bgp_ls): ((4, 16), 0),
     }
 
-    # Type hints for afi/safi - may be instance attributes (slots) or class attributes
-    # Single-family types define afi/safi as class attributes, making them read-only
-    # Multi-family types use the inherited __slots__ for instance storage
-    afi: AFI
-    safi: SAFI
+    @property
+    def afi(self) -> AFI:
+        return self._afi
+
+    @afi.setter
+    def afi(self, value: AFI) -> None:
+        self._afi = value
+
+    @property
+    def safi(self) -> SAFI:
+        return self._safi
+
+    @safi.setter
+    def safi(self, value: SAFI) -> None:
+        self._safi = value
 
     def __init__(self, afi: int, safi: int) -> None:
         """Initialize Family with AFI and SAFI.
 
-        Single-family subclasses (VPLS, RTC, EVPN, etc.) define afi/safi as class
-        attributes which shadow the slots, making them read-only constants.
-        Multi-family subclasses (INET, Flow, etc.) use the inherited slots.
+        Single-family subclasses (VPLS, RTC, EVPN, etc.) override afi/safi
+        properties with read-only versions returning fixed constants.
+        Multi-family subclasses (INET, Flow, etc.) use the inherited properties.
         """
         # Try to set instance attributes - will work for multi-family types
-        # but be ignored for single-family types with class-level afi/safi
+        # but raise AttributeError for single-family types with read-only properties
         try:
             self.afi = AFI.from_int(afi)
         except AttributeError:
-            pass  # Single-family type with read-only class attribute
+            pass  # Single-family type with read-only property
         try:
             self.safi = SAFI.from_int(safi)
         except AttributeError:
-            pass  # Single-family type with read-only class attribute
+            pass  # Single-family type with read-only property
 
     def has_label(self) -> bool:
         return self.safi.has_label()

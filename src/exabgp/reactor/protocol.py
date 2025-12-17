@@ -207,7 +207,7 @@ class Protocol:
             if self._api.get(code, False):
                 if consolidate:
                     self.peer.reactor.processes.notification(
-                        self.peer.neighbor, 'receive', notify_msg, header, body, self.negotiated
+                        self.peer.neighbor, 'receive', notify_msg, bytes(header), bytes(body), self.negotiated
                     )
                 elif parsed:
                     self.peer.reactor.processes.notification(
@@ -215,7 +215,7 @@ class Protocol:
                     )
                 elif packets:
                     self.peer.reactor.processes.packets(
-                        self.peer.neighbor, 'receive', msg_id, header, body, self.negotiated
+                        self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self.negotiated
                     )
             raise notify_msg
 
@@ -236,7 +236,9 @@ class Protocol:
         for_api = self._api.get(code, False)
 
         if for_api and packets and not consolidate:
-            self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, header, body, self.negotiated)
+            self.peer.reactor.processes.packets(
+                self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self.negotiated
+            )
 
         if msg_id == Message.CODE.UPDATE:
             if not self.neighbor.adj_rib_in and not (for_api or self.log_routes) and not (parsed or consolidate):
@@ -268,7 +270,7 @@ class Protocol:
         if for_api:
             if consolidate:
                 self.peer.reactor.processes.message(
-                    msg_id, self.peer, 'receive', message, header, body, self.negotiated
+                    msg_id, self.peer, 'receive', message, bytes(header), bytes(body), self.negotiated
                 )
             elif parsed:
                 self.peer.reactor.processes.message(msg_id, self.peer, 'receive', message, b'', b'', self.negotiated)

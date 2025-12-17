@@ -9,9 +9,11 @@ from __future__ import annotations
 
 from typing import Iterator
 
+from exabgp.util.types import Buffer
 
-def od(value: bytes) -> str:
-    def spaced(value: bytes) -> Iterator[str]:
+
+def od(value: Buffer) -> str:
+    def spaced(value: Buffer) -> Iterator[str]:
         even: bool | None = None
         for v in value:
             if even is False:

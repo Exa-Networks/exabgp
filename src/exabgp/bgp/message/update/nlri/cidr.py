@@ -157,7 +157,7 @@ class CIDR:
             if not (0 <= mask <= max_mask):
                 raise ValueError(f'CIDR mask must be 0-{max_mask}, got {mask}')
         instance = object.__new__(cls)
-        instance._packed = packed
+        instance._packed = bytes(packed) if packed else b''
         instance._mask = mask
         return instance
 

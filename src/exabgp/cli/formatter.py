@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
-from typing import Dict, List
+from typing import Any
 
 from exabgp.cli.colors import Colors
 
@@ -51,7 +51,7 @@ class OutputFormatter:
             return f'{Colors.BOLD}{Colors.CYAN}Info:{Colors.RESET} {message}'
         return f'Info: {message}'
 
-    def _format_json_as_text(self, data: Dict | List | str | int | bool | None) -> str:
+    def _format_json_as_text(self, data: Any) -> str:
         """Convert JSON data to human-readable text format with tables
 
         Uses only standard library to format data as tables or key-value pairs.
@@ -91,7 +91,7 @@ class OutputFormatter:
 
         return str(data)
 
-    def _format_table_from_list(self, data: list[Dict]) -> str:
+    def _format_table_from_list(self, data: list[dict[str, Any]]) -> str:
         """Format list of dictionaries as ASCII table or key-value pairs for complex data"""
         if not data:
             return '(empty)'
@@ -116,7 +116,7 @@ class OutputFormatter:
             return self._format_list_as_sections(data)
 
         # Collect all keys across all objects
-        all_keys = []
+        all_keys: list[str] = []
         for item in data:
             for key in item.keys():
                 if key not in all_keys:
@@ -124,7 +124,7 @@ class OutputFormatter:
 
         # Calculate column widths (with max width limit to prevent ultra-wide tables)
         MAX_COL_WIDTH = 40
-        col_widths = {}
+        col_widths: dict[str, int] = {}
         for key in all_keys:
             # Start with header width
             col_widths[key] = len(str(key))
@@ -162,7 +162,7 @@ class OutputFormatter:
 
         return '\n'.join(lines)
 
-    def _format_list_as_sections(self, data: list[Dict]) -> str:
+    def _format_list_as_sections(self, data: list[dict[str, Any]]) -> str:
         """Format list of complex dictionaries as separate sections"""
         lines = []
         for i, item in enumerate(data):
@@ -181,7 +181,7 @@ class OutputFormatter:
 
         return '\n'.join(lines)
 
-    def _extract_identifier(self, item: Dict) -> str | None:
+    def _extract_identifier(self, item: dict[str, Any]) -> str | None:
         """Extract a meaningful identifier from a dictionary
 
         Tries various strategies to find a good identifier:
@@ -230,7 +230,7 @@ class OutputFormatter:
 
         return None
 
-    def _get_nested_value(self, data: Dict, path: list[str]) -> str | None:
+    def _get_nested_value(self, data: dict[str, Any], path: list[str]) -> Any:
         """Get value from nested dictionary using path list
 
         Args:
@@ -240,7 +240,7 @@ class OutputFormatter:
         Returns:
             Value if found, None otherwise
         """
-        current = data
+        current: Any = data
         for key in path:
             if not isinstance(current, dict) or key not in current:
                 return None
@@ -251,14 +251,14 @@ class OutputFormatter:
             return current
         return None
 
-    def _format_dict(self, data: Dict) -> str:
+    def _format_dict(self, data: dict[str, Any]) -> str:
         """Format dictionary as key-value pairs"""
         if not data:
             return '(empty)'
 
         # Separate simple keys from complex keys
-        simple_keys = []
-        complex_keys = []
+        simple_keys: list[str] = []
+        complex_keys: list[str] = []
 
         for key, value in data.items():
             if isinstance(value, (dict, list)):
@@ -308,7 +308,7 @@ class OutputFormatter:
 
         return '\n'.join(lines)
 
-    def _format_value(self, value: str | int | float | bool | None | Dict | List) -> str:
+    def _format_value(self, value: Any) -> str:
         """Format a single value for display"""
         if value is None:
             return 'null'

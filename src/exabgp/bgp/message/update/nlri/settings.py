@@ -179,7 +179,7 @@ class FlowSettings:
     safi: SAFI | None = None
     action: Action = field(default=Action.UNSET)
     nexthop: IP = field(default_factory=lambda: IP.NoNextHop)
-    rules: dict = field(default_factory=dict)  # dict[int, list[FlowRule]]
+    rules: dict[int, list[Any]] = field(default_factory=dict)  # dict[int, list[FlowRule]]
     rd: 'RouteDistinguisher | None' = None
 
     def set(self, name: str, value: Any) -> None:

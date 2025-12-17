@@ -202,7 +202,7 @@ class BGPLS(NLRI):
 
 
 class GenericBGPLS(BGPLS):
-    CODE: int
+    __slots__ = ('_code',)
 
     def __init__(self, code: int, packed: Buffer) -> None:
         """Create GenericBGPLS with complete wire format.
@@ -212,8 +212,12 @@ class GenericBGPLS(BGPLS):
             packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
         """
         BGPLS.__init__(self)
-        self.CODE = code
+        self._code = code
         self._packed = packed
+
+    @property
+    def CODE(self) -> int:  # type: ignore[override]
+        return self._code
 
     def json(self, compact: bool = False) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())
