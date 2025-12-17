@@ -214,15 +214,14 @@ class NLRI(Family):
     def register(cls, afi: int, safi: int, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
         def register_nlri(klass: Type[NLRI]) -> Type[NLRI]:
             new: tuple[AFI, SAFI] = (AFI.from_int(afi), SAFI.from_int(safi))
-            if new in cls.registered_nlri:
+            key = '{}/{}'.format(*new)
+            if key in cls.registered_nlri:
                 if force:
-                    # python has a bug and does not allow %ld/%ld (pypy does)
-                    cls.registered_nlri['{}/{}'.format(*new)] = klass
+                    cls.registered_nlri[key] = klass
                 else:
-                    raise RuntimeError('Tried to register {}/{} twice'.format(*new))
+                    raise RuntimeError('Tried to register {} twice'.format(key))
             else:
-                # python has a bug and does not allow %ld/%ld (pypy does)
-                cls.registered_nlri['{}/{}'.format(*new)] = klass
+                cls.registered_nlri[key] = klass
                 cls.registered_families.append(new)
             return klass
 

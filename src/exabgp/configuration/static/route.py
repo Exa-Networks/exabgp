@@ -433,7 +433,7 @@ class ParseStaticRoute(Section):
                 return nlri
 
         # Build kwargs for from_cidr - pass labels/rd if target supports them
-        kwargs: dict = {}
+        kwargs: dict[str, object] = {}
         if has_label:
             # Safe: has_label is True only if isinstance(nlri, Label)
             kwargs['labels'] = cast(Label, nlri).labels
@@ -500,7 +500,7 @@ class ParseStaticRoute(Section):
             new_cidr = CIDR.create_cidr(pack_int(afi, ip), cut)
 
             # Build kwargs for from_cidr - NLRI are immutable, must pass all values upfront
-            kwargs: dict = {}
+            kwargs: dict[str, object] = {}
             if path_info is not None:
                 kwargs['path_info'] = path_info
             if labels is not None:

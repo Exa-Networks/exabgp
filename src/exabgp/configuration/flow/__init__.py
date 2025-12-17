@@ -22,6 +22,14 @@ from exabgp.configuration.flow.route import ParseFlowMatch
 from exabgp.configuration.flow.route import ParseFlowThen
 from exabgp.configuration.flow.route import ParseFlowScope
 
+__all__ = [
+    'ParseFlow',
+    'ParseFlowRoute',
+    'ParseFlowMatch',
+    'ParseFlowThen',
+    'ParseFlowScope',
+]
+
 from exabgp.rib.route import Route
 from exabgp.bgp.message.update.nlri import Flow
 from exabgp.bgp.message.update.attribute import AttributeCollection

@@ -32,13 +32,10 @@ class REFRESH:
         return 'unknown'
 
     def __str__(self) -> str:
-        if self == REFRESH.ABSENT:
-            return 'absent'
-        if self == REFRESH.NORMAL:
-            return 'normal'
-        if self == REFRESH.ENHANCED:
-            return 'enhanced'
-        return 'unknown'
+        # Note: This method assumes self is an int-like value.
+        # REFRESH is used as a namespace for int constants.
+        # For actual string conversion, use REFRESH.json(value).
+        return 'REFRESH'
 
 
 @Capability.register()

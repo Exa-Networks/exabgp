@@ -157,7 +157,7 @@ class Leaf:
     description: str = ''
     default: Any = None
     mandatory: bool = False
-    parser: Callable | None = None  # Deprecated - use validator
+    parser: Callable[..., Any] | None = None  # Deprecated - use validator
     choices: list[str] | None = None
     min_value: int | None = None
     max_value: int | None = None
@@ -279,7 +279,7 @@ class LeafList:
 
     type: ValueType
     description: str = ''
-    parser: Callable | None = None  # Deprecated - use validator
+    parser: Callable[..., Any] | None = None  # Deprecated - use validator
     choices: list[str] | None = None
     validator: 'Validator[Any] | None' = None  # Explicit validator override
     example: str | None = None  # Custom syntax hint for definition generation

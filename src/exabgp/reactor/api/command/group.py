@@ -36,6 +36,7 @@ from exabgp.reactor.api.command.announce import (
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
     from exabgp.reactor.loop import Reactor
+    from exabgp.rib.route import Route
 
 
 def register_group() -> None:
@@ -190,7 +191,6 @@ async def _process_group(
     - First command starting with 'attributes' sets shared attributes
     - Subsequent withdraw commands get those shared attributes merged in
     """
-    from exabgp.rib.route import Route
 
     # Collect all peers that will receive routes (for flush callbacks)
     all_peers: set[str] = set()
@@ -296,7 +296,7 @@ async def _process_group(
     await reactor.processes.answer_done_async(service)
 
 
-def _parse_routes(api: 'API', command: str, action: str = 'announce') -> list:
+def _parse_routes(api: 'API', command: str, action: str = 'announce') -> list['Route']:
     """Parse routes from command string.
 
     Handles various route formats:

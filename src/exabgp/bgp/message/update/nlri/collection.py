@@ -20,9 +20,9 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.collection import RoutedNLRI
 
 from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.nlri.nlri import _UNPARSED, NLRI
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
 
@@ -302,7 +302,7 @@ class MPNLRICollection:
                 continue
 
             # Encode nexthop
-            if nlri_nexthop is NextHop.UNSET:
+            if nlri_nexthop is IP.NoNextHop:
                 nexthop = b''
             else:
                 _, rd_size = Family.size.get(family_key, (0, 0))

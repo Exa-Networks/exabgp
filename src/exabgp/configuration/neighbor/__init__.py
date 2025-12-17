@@ -11,7 +11,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-from exabgp.bgp.message.update.nlri.flow import NLRI
+from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.configuration.core import Error, Parser, Scope, Section

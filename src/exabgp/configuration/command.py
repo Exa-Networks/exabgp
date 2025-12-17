@@ -11,7 +11,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -22,7 +22,7 @@ from exabgp.reactor.api.response import Response
 from exabgp.version import json as json_version
 
 
-def has_extra_withdraw_attributes(attributes: dict) -> bool:
+def has_extra_withdraw_attributes(attributes: dict[str, Any]) -> bool:
     """Check if attributes include values beyond what withdraw commands normally handle.
 
     Withdraw commands for FlowSpec/MUP/MCAST-VPN include extended-community and community.
@@ -45,7 +45,7 @@ def has_extra_withdraw_attributes(attributes: dict) -> bool:
     return bool(extra_attrs.intersection(attributes.keys()))
 
 
-def format_withdraw_attributes(attributes: dict) -> str:
+def format_withdraw_attributes(attributes: dict[str, Any]) -> str:
     """Format attributes for use in a group attributes command (for withdraws)."""
     parts = format_attributes(attributes)
     if parts:
@@ -53,7 +53,7 @@ def format_withdraw_attributes(attributes: dict) -> str:
     return ''
 
 
-def format_extended_community(ec: dict) -> str | None:
+def format_extended_community(ec: dict[str, Any]) -> str | None:
     """Format a single extended community dict to API command string."""
     if not isinstance(ec, dict) or 'string' not in ec:
         return None
@@ -92,7 +92,7 @@ def parse_generic_attribute_name(attr_name: str) -> tuple[int, int] | None:
         return None
 
 
-def format_generic_attributes(attributes: dict) -> list[str]:
+def format_generic_attributes(attributes: dict[str, Any]) -> list[str]:
     """Extract generic attributes as 'attribute [0xNN 0xNN 0xHEX]' syntax."""
     parts = []
     for attr_name, attr_value in attributes.items():
@@ -106,7 +106,7 @@ def format_generic_attributes(attributes: dict) -> list[str]:
     return parts
 
 
-def format_attributes(attrs: dict) -> list[str]:
+def format_attributes(attrs: dict[str, Any]) -> list[str]:
     """Format attributes for API command."""
     parts = []
     if 'origin' in attrs:
@@ -222,7 +222,12 @@ def family_to_api_format(family: str) -> str:
 
 
 def format_flow_announce(
-    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = 'announce', skip_attributes: bool = False
+    afi: str,
+    nexthop: str,
+    nlri_info: dict[str, Any],
+    attributes: dict[str, Any],
+    action: str = 'announce',
+    skip_attributes: bool = False,
 ) -> str | None:
     """Format a FlowSpec NLRI as an API announce/withdraw command.
 
@@ -278,7 +283,12 @@ def format_flow_announce(
 
 
 def format_mvpn_announce(
-    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = 'announce', skip_attributes: bool = False
+    afi: str,
+    nexthop: str,
+    nlri_info: dict[str, Any],
+    attributes: dict[str, Any],
+    action: str = 'announce',
+    skip_attributes: bool = False,
 ) -> str | None:
     """Format a MCAST-VPN NLRI as an API announce/withdraw command.
 
@@ -323,7 +333,12 @@ def format_mvpn_announce(
 
 
 def format_mup_announce(
-    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = 'announce', skip_attributes: bool = False
+    afi: str,
+    nexthop: str,
+    nlri_info: dict[str, Any],
+    attributes: dict[str, Any],
+    action: str = 'announce',
+    skip_attributes: bool = False,
 ) -> str | None:
     """Format a MUP NLRI as an API announce/withdraw command.
 

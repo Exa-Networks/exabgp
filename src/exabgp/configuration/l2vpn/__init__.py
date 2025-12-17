@@ -12,6 +12,11 @@ from exabgp.configuration.schema import Container, ActionTarget, ActionOperation
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.configuration.validator import RouteBuilderValidator
 
+__all__ = [
+    'ParseL2VPN',
+    'ParseVPLS',
+]
+
 
 class ParseL2VPN(ParseVPLS):
     syntax = 'vpls {};\n'.format(' '.join(ParseVPLS.definition))

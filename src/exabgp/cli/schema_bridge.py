@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from exabgp.cli.completer import CompletionItem
@@ -72,12 +72,12 @@ class ValueTypeCompletionEngine:
     def __init__(self):
         """Initialize completion engine."""
         # Cache validators to avoid repeated creation
-        self._validator_cache: dict[ValueType, Validator | None] = {}
+        self._validator_cache: dict[ValueType, Validator[Any] | None] = {}
         # Cache validation results (LRU with max 100 entries)
         self._validation_cache: dict[tuple[ValueType, str, bool], ValidationResult] = {}
         self._validation_cache_max_size = 100
 
-    def _get_validator(self, value_type: ValueType) -> Validator | None:
+    def _get_validator(self, value_type: ValueType) -> Validator[Any] | None:
         """Get validator for a value type (cached).
 
         Args:

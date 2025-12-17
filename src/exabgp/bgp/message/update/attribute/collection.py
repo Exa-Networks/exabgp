@@ -141,7 +141,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             if how == 'boolean':
                 yield ' {}'.format(name)
             elif how == 'list':
-                yield ' {} {}'.format(name, presentation % str(attribute))
+                value = str(attribute)
+                if value:  # Skip empty lists (e.g., empty AS_PATH)
+                    yield ' {} {}'.format(name, presentation % value)
             elif how == 'multiple':
                 yield ' {} {}'.format(name[0], presentation % str(attribute))
             else:
@@ -178,7 +180,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             elif how == 'string':
                 yield '"{}": "{}"'.format(name, presentation % str(attribute))
             elif how == 'list':
-                yield '"{}": {}'.format(name, presentation % attribute.json())
+                json_value = attribute.json()
+                if json_value != '{}':  # Skip empty lists (e.g., empty AS_PATH)
+                    yield '"{}": {}'.format(name, presentation % json_value)
             elif how == 'multiple':
                 for n in name:
                     value = attribute.json(n)

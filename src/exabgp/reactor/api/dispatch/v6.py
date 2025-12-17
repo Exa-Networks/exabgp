@@ -124,7 +124,7 @@ def _get_v6_tree() -> DispatchTree:
     return _V6_TREE
 
 
-def _v6_needs_peers() -> set:
+def _v6_needs_peers() -> set[Handler]:
     """Return set of handlers that require peers if none specified."""
     from exabgp.reactor.api.command import announce as announce_cmd
     from exabgp.reactor.api.command import neighbor as neighbor_cmd

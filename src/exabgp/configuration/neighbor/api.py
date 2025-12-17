@@ -106,8 +106,8 @@ class _ParseDirection(Section):
         },
     )
     # Empty - all handled by schema validators
-    known: dict = {}
-    action: dict = {}
+    known: dict[str, object] = {}
+    action: dict[str, object] = {}
 
     default = {
         'parsed': True,
@@ -233,7 +233,7 @@ class ParseAPI(Section):
         'signal': True,
     }
 
-    DEFAULT_API: dict[str, list] = {
+    DEFAULT_API: dict[str, list[str]] = {
         'neighbor-changes': [],
         'negotiated': [],
         'fsm': [],

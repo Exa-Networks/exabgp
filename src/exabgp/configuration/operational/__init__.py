@@ -96,7 +96,7 @@ class ParseOperational(Section):
     syntax = 'syntax:\n'
 
     # Empty - all entries handled by schema validators
-    known: dict = {}
+    known: dict[str, object] = {}
     # action dict removed - derived from schema
 
     name = 'operational'

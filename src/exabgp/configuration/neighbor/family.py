@@ -11,7 +11,7 @@ from typing import Any
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message.update.nlri.flow import NLRI
+from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser

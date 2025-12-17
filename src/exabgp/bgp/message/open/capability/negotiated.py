@@ -266,7 +266,7 @@ class RequirePath:
 
     def setup(self, received_open: Any, sent_open: Any) -> None:  # Open messages
         # A Dict always returning False
-        class FalseDict(dict):
+        class FalseDict(dict[str, bool]):
             def __getitem__(self, key: Any) -> bool:
                 return False
 

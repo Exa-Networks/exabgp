@@ -112,7 +112,7 @@ class CommandCompleter:
         self.fuzzy_matcher = FuzzyMatcher(frequency_provider=freq_provider)
         self.schema_engine = ValueTypeCompletionEngine()
 
-    def _get_rl_replace_line(self) -> Callable | None:
+    def _get_rl_replace_line(self) -> Callable[..., None] | None:
         """Try to get rl_replace_line function from readline library via ctypes"""
         try:
             # Try to load the readline library
@@ -133,7 +133,7 @@ class CommandCompleter:
         except (OSError, AttributeError):
             return None
 
-    def _get_rl_forced_update_display(self) -> Callable | None:
+    def _get_rl_forced_update_display(self) -> Callable[..., None] | None:
         """Try to get rl_forced_update_display function from readline library via ctypes"""
         try:
             if sys.platform == 'darwin':

@@ -12,6 +12,17 @@ from exabgp.environment.base import ETC  # noqa: F401,E261
 # Import new typed configuration system
 from exabgp.environment.config import Environment  # noqa: F401,E261
 
+__all__ = [
+    'ROOT',
+    'ENVFILE',
+    'ETC',
+    'APPLICATION',
+    'Environment',
+    'Env',
+    'getenv',
+    'getconf',
+]
+
 # Setup environment on import
 Environment.setup()
 

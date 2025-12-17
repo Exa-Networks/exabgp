@@ -145,7 +145,7 @@ class NextHop(Attribute):
         new.__dict__.update(self.__dict__)
         return new
 
-    def __deepcopy__(self, memo: dict) -> 'NextHop':
+    def __deepcopy__(self, memo: dict[int, object]) -> 'NextHop':
         """Preserve singleton identity for UNSET."""
         if self is NextHop.UNSET:
             return self
