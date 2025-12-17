@@ -23,11 +23,8 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.4
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1155, json_key='prefix-metric', repr_name='prefix_metric')
 class PrefixMetric(BaseLS):
-    TLV = 1155
-    REPR = 'prefix_metric'
-    JSON = 'prefix-metric'
     LEN = 4
 
     @property

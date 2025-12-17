@@ -22,12 +22,8 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.2.7  Link Name TLV
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1098, json_key='link-name', repr_name='Link Name')
 class LinkName(BaseLS):
-    TLV = 1098
-    REPR = 'Link Name'
-    JSON = 'link-name'
-
     # BGP-LS TLV length constants
     BGPLS_TLV_MAX_LENGTH = 255  # Maximum TLV data length
 

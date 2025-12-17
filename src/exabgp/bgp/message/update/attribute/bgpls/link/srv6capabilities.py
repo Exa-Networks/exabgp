@@ -28,9 +28,8 @@ from exabgp.util.types import Buffer
 SRV6_CAPABILITIES_LEN = 4
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1038, json_key='srv6-capabilities', repr_name='SRv6 Capabilities')
 class Srv6Capabilities(BaseLS):
-    TLV = 1038
     LEN = SRV6_CAPABILITIES_LEN
     registered_subsubtlvs: dict[int, type] = dict()
 

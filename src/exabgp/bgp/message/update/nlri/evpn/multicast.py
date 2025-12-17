@@ -30,7 +30,7 @@ from exabgp.util.types import Buffer
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register_evpn_route
+@EVPN.register_evpn_route(code=3)
 class Multicast(EVPN):
     """EVPN Route Type 3: Inclusive Multicast Ethernet Tag.
 
@@ -38,7 +38,6 @@ class Multicast(EVPN):
     Uses packed-bytes-first pattern for zero-copy routing.
     """
 
-    CODE: ClassVar[int] = 3
     NAME: ClassVar[str] = 'Inclusive Multicast Ethernet Tag'
     SHORT_NAME: ClassVar[str] = 'Multicast'
 

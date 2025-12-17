@@ -29,9 +29,8 @@ MVPN_SHAREDJOIN_IPV4_LENGTH: int = 22  # 8 (RD) + 4 (Source AS) + 1 (source len)
 MVPN_SHAREDJOIN_IPV6_LENGTH: int = 46  # 8 (RD) + 4 (Source AS) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
 
 
-@MVPN.register_mvpn
+@MVPN.register_mvpn(code=6)
 class SharedJoin(MVPN):
-    CODE: ClassVar[int] = 6
     NAME: ClassVar[str] = 'C-Multicast Shared Tree Join route'
     SHORT_NAME: ClassVar[str] = 'Shared-Join'
 

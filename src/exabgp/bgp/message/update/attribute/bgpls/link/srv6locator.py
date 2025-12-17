@@ -34,9 +34,8 @@ SRV6_LOCATOR_MIN_LENGTH = 8
 #                      Figure 4: SRv6 Locator TLV Format
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1162, json_key='srv6-locator', repr_name='SRv6 Locator')
 class Srv6Locator(FlagLS):
-    TLV = 1162
     FLAGS = ['D'] + ['RSV' for _ in range(7)]
     registered_subsubtlvs: dict[int, type] = dict()
 

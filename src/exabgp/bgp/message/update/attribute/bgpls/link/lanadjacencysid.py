@@ -48,9 +48,8 @@ if TYPE_CHECKING:
 #  draft-ietf-isis-segment-routing-extensions - Adj-SID IS-IS Flags
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1100, json_key='sr-adj-lan', repr_name='LAN Adjacency SID')
 class LanAdjacencySid(FlagLS):
-    TLV = 1100
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
     MERGE = True
 

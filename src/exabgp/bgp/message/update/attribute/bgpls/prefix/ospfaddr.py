@@ -21,12 +21,8 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.5
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1156, json_key='ospf-forwarding-address', repr_name='Ospf forwarding address')
 class OspfForwardingAddress(BaseLS):
-    TLV = 1156
-    REPR = 'Ospf forwarding address'
-    JSON = 'ospf-forwarding-address'
-
     @property
     def content(self) -> str:
         """Unpack and return IP address string from packed bytes."""

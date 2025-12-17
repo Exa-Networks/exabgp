@@ -30,10 +30,8 @@ from exabgp.protocol.ip import IP
 # +-----------------------------------+
 
 
-@MUP.register_mup_route
+@MUP.register_mup_route(archtype=1, code=1)
 class InterworkSegmentDiscoveryRoute(MUP):
-    ARCHTYPE: ClassVar[int] = 1
-    CODE: ClassVar[int] = 1
     NAME: ClassVar[str] = 'InterworkSegmentDiscoveryRoute'
     SHORT_NAME: ClassVar[str] = 'ISD'
 

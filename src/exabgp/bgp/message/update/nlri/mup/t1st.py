@@ -46,10 +46,8 @@ from exabgp.util.types import Buffer
 #   +-----------------------------------+
 
 
-@MUP.register_mup_route
+@MUP.register_mup_route(archtype=1, code=3)
 class Type1SessionTransformedRoute(MUP):
-    ARCHTYPE: ClassVar[int] = 1
-    CODE: ClassVar[int] = 3
     NAME: ClassVar[str] = 'Type1SessionTransformedRoute'
     SHORT_NAME: ClassVar[str] = 'T1ST'
 

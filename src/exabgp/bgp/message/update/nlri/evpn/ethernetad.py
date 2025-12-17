@@ -28,7 +28,7 @@ from exabgp.util.types import Buffer
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register_evpn_route
+@EVPN.register_evpn_route(code=1)
 class EthernetAD(EVPN):
     """EVPN Route Type 1: Ethernet Auto-Discovery.
 
@@ -36,7 +36,6 @@ class EthernetAD(EVPN):
     Uses packed-bytes-first pattern for zero-copy routing.
     """
 
-    CODE: ClassVar[int] = 1
     NAME: ClassVar[str] = 'Ethernet Auto-Discovery'
     SHORT_NAME: ClassVar[str] = 'EthernetAD'
 

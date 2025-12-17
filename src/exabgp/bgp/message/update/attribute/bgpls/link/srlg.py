@@ -31,12 +31,8 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.2.5 Shared Risk Link Group TLV
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1096, json_key='shared-risk-link-groups', repr_name='link SRLG values')
 class Srlg(BaseLS):
-    TLV = 1096
-    REPR = 'link SRLG values'
-    JSON = 'shared-risk-link-groups'
-
     @property
     def content(self) -> list[int]:
         """Unpack and return the SRLG values from packed bytes."""

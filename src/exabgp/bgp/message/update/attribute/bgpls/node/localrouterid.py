@@ -22,12 +22,9 @@ from exabgp.util.types import Buffer
 #   https://tools.ietf.org/html/rfc7752 sec 3.3.1.4  - Traffic Engineering RouterID
 
 
-@LinkState.register_lsid(lsid=1028)
-@LinkState.register_lsid(lsid=1029)
+@LinkState.register_lsid(tlv=1028, json_key='local-router-ids', repr_name='Local Router IDs', alias_tlv=1029)
 class LocalRouterId(BaseLS):
     MERGE = True  # LinkState.json() groups into array
-    REPR = 'Local Router IDs'
-    JSON = 'local-router-ids'
 
     def __init__(self, packed: Buffer) -> None:
         self._packed = packed

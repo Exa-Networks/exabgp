@@ -30,10 +30,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 # 	RFC 7752 3.3.2.2.  MPLS Protocol Mask TLV
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1094, json_key='mpls-mask', repr_name='MPLS Protocol mask')
 class MplsMask(FlagLS):
-    REPR = 'MPLS Protocol mask'
-    JSON = 'mpls-mask'
-    TLV = 1094
     FLAGS = ['LDP', 'RSVP-TE', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     LEN = 1

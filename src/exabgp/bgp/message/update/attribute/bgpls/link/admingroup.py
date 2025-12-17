@@ -13,11 +13,8 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.util.types import Buffer
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1088, json_key='admin-group-mask', repr_name='Admin Group mask')
 class AdminGroup(BaseLS):
-    TLV = 1088
-    REPR = 'Admin Group mask'
-    JSON = 'admin-group-mask'
     LEN = 4
 
     @property

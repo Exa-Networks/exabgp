@@ -23,11 +23,8 @@ from exabgp.util.types import Buffer
 #    https://tools.ietf.org/html/rfc7752#section-3.3.2.3 TE Metric
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1092, json_key='te-metric', repr_name='TE Default Metric')
 class TeMetric(BaseLS):
-    TLV = 1092
-    REPR = 'TE Default Metric'
-    JSON = 'te-metric'
     LEN = 4
 
     @property

@@ -31,8 +31,12 @@ def pack_int(afi: AFI, integer: int) -> bytes:
 
 
 class ParseAnnounce(Section):
-    syntax: str = ''
     afi: AFI | None = None
+
+    @property
+    def syntax(self) -> str:
+        """Syntax string - override in subclasses."""
+        raise NotImplementedError('syntax must be defined in subclass')
 
     def post(self) -> bool:
         self._split()

@@ -44,7 +44,7 @@ IPV6_ADDRESS_LEN_BITS = 128  # IPv6 address length in bits
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register_evpn_route
+@EVPN.register_evpn_route(code=2)
 class MAC(EVPN):
     """EVPN Route Type 2: MAC/IP Advertisement.
 
@@ -53,7 +53,6 @@ class MAC(EVPN):
     Uses packed-bytes-first pattern for zero-copy routing.
     """
 
-    CODE: ClassVar[int] = 2
     NAME: ClassVar[str] = 'MAC/IP advertisement'
     SHORT_NAME: ClassVar[str] = 'MACAdv'
 

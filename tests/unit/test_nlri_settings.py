@@ -221,7 +221,7 @@ class TestVPLSFromSettings:
         assert vpls.endpoint == 100
         assert vpls.base == 500000
         assert vpls.offset == 50
-        assert vpls.size == 16
+        assert vpls.block_size == 16
         assert vpls.rd is not None
 
     # Note: test_from_settings_preserves_action removed

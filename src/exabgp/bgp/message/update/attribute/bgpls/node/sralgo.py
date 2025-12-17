@@ -25,12 +25,8 @@ from exabgp.util.types import Buffer
 # 						sec 2.1.2.
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1035, json_key='sr-algorithms', repr_name='SrAlgorithms')
 class SrAlgorithm(BaseLS):
-    TLV = 1035
-    REPR = 'SrAlgorithms'
-    JSON = 'sr-algorithms'
-
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> SrAlgorithm:
         # Looks like IOS XR advertises len 0 on this sub TLV

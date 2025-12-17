@@ -32,11 +32,8 @@ from exabgp.util.types import Buffer
 # 	RFC 7752 3.3.3.1. IGP Flags TLV
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1152, json_key='igp-flags', repr_name='IGP flags')
 class IgpFlags(FlagLS):
-    REPR = 'IGP flags'
-    JSON = 'igp-flags'
-    TLV = 1152
     FLAGS = ['D', 'N', 'L', 'P', 'RSV', 'RSV', 'RSV', 'RSV']
     LEN = 1
 

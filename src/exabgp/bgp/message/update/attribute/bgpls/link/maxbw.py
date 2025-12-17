@@ -21,11 +21,8 @@ from exabgp.util.types import Buffer
 #  ----------------------------
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1089, json_key='maximum-link-bandwidth', repr_name='Maximum link bandwidth')
 class MaxBw(BaseLS):
-    TLV = 1089
-    REPR = 'Maximum link bandwidth'
-    JSON = 'maximum-link-bandwidth'
     LEN = 4
 
     @property

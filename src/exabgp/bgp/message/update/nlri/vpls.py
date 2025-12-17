@@ -143,7 +143,7 @@ class VPLS(NLRI):
         return int(unpack('!H', bytes(self._packed[12:14]))[0])
 
     @property
-    def size(self) -> int:
+    def block_size(self) -> int:
         """Label block size - unpacked from wire bytes."""
         return int(unpack('!H', bytes(self._packed[14:16]))[0])
 
@@ -158,7 +158,7 @@ class VPLS(NLRI):
         Note: nexthop validation is handled by Route.feedback(), not here.
         """
         # Size consistency check (for routes received from wire or created with invalid values)
-        if self.base > (0xFFFFF - self.size):  # 20 bits, 3 bytes
+        if self.base > (0xFFFFF - self.block_size):  # 20 bits, 3 bytes
             return 'vpls nlri size inconsistency'
         return ''
 
@@ -179,7 +179,7 @@ class VPLS(NLRI):
                 '"endpoint": {}'.format(self.endpoint),
                 '"base": {}'.format(self.base),
                 '"offset": {}'.format(self.offset),
-                '"size": {}'.format(self.size),
+                '"size": {}'.format(self.block_size),
             ],
         )
         return '{{ {} }}'.format(content)
@@ -190,7 +190,7 @@ class VPLS(NLRI):
             self.endpoint,
             self.base,
             self.offset,
-            self.size,
+            self.block_size,
         )
 
     def __str__(self) -> str:

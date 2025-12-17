@@ -24,11 +24,8 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.3
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1154, json_key='igp-extended-route-tags', repr_name='IGP Extended Route Tags')
 class IgpExTags(BaseLS):
-    TLV = 1154
-    REPR = 'IGP Extended Route Tags'
-    JSON = 'igp-extended-route-tags'
     # Variable length: each extended tag is 8 bytes, length should be multiple of 8.
 
     @property

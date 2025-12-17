@@ -40,11 +40,9 @@ SRV6_ENDX_MIN_LENGTH = 22
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1106, json_key='srv6-endx', repr_name='SRv6 End.X SID')
 class Srv6EndX(FlagLS):
-    TLV = 1106
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    JSON = 'srv6-endx'
     MERGE = True  # LinkState.json() groups into array
     registered_subsubtlvs: dict[int, type] = dict()
 

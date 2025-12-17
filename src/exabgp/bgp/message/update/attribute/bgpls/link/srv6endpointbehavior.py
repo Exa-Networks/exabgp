@@ -30,9 +30,8 @@ SRV6_ENDPOINT_BEHAVIOR_LEN = 4
 #                     Figure 7: SRv6 Endpoint Behavior TLV
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1250, json_key='srv6-endpoint-behavior', repr_name='SRv6 Endpoint Behavior')
 class Srv6EndpointBehavior(BaseLS):
-    TLV = 1250
     LEN = SRV6_ENDPOINT_BEHAVIOR_LEN
 
     @property

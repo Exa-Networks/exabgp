@@ -29,10 +29,8 @@ from exabgp.protocol.ip import IP
 # +-----------------------------------+
 
 
-@MUP.register_mup_route
+@MUP.register_mup_route(archtype=1, code=2)
 class DirectSegmentDiscoveryRoute(MUP):
-    ARCHTYPE: ClassVar[int] = 1
-    CODE: ClassVar[int] = 2
     NAME: ClassVar[str] = 'DirectSegmentDiscoveryRoute'
     SHORT_NAME: ClassVar[str] = 'DSD'
 

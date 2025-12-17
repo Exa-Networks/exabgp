@@ -23,11 +23,10 @@ from exabgp.util.types import Buffer
 #  ----------------------------
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(
+    tlv=1090, json_key='maximum-reservable-link-bandwidth', repr_name='Maximum reservable link bandwidth'
+)
 class MaxReservableBw(BaseLS):
-    TLV = 1090
-    REPR = 'Maximum reservable link bandwidth'
-    JSON = 'maximum-reservable-link-bandwidth'
     LEN = 4
 
     @property

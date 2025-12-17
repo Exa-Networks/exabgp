@@ -33,10 +33,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 # 	RFC 7752 3.3.1.1. Node Flag Bits TLV
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1024, json_key='node-flags', repr_name='Node Flags')
 class NodeFlags(FlagLS):
-    REPR = 'Node Flags'
-    JSON = 'node-flags'
-    TLV = 1024
     FLAGS = ['O', 'T', 'E', 'B', 'R', 'V', 'RSV', 'RSV']
     LEN = 1

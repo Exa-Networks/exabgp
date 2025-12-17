@@ -21,11 +21,8 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 # 	RFC 7794 IPv4/IPv6 Extended Reachability Attribute Flags
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1170, json_key='sr-prefix-attribute-flags', repr_name='Prefix Attr Flags')
 class PrefixAttributesFlags(FlagLS):
-    REPR = 'Prefix Attr Flags'
-    JSON = 'sr-prefix-attribute-flags'
-    TLV = 1170
     FLAGS = ['X', 'R', 'N', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     LEN = 1
 

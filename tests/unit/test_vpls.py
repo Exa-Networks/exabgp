@@ -39,7 +39,7 @@ class TestVPLSCreation:
         assert vpls.endpoint == 3
         assert vpls.base == 262145
         assert vpls.offset == 1
-        assert vpls.size == 8
+        assert vpls.block_size == 8
         # Note: action and nexthop are now stored in Route, not NLRI
 
     def test_create_vpls_various_values(self) -> None:
@@ -57,7 +57,7 @@ class TestVPLSCreation:
             assert vpls.endpoint == endpoint
             assert vpls.base == base
             assert vpls.offset == offset
-            assert vpls.size == size
+            assert vpls.block_size == size
 
 
 class TestVPLSPackUnpack:
@@ -78,7 +78,7 @@ class TestVPLSPackUnpack:
         assert unpacked.endpoint == 3
         assert unpacked.base == 262145
         assert unpacked.offset == 1
-        assert unpacked.size == 8
+        assert unpacked.block_size == 8
         assert unpacked.rd._str() == '172.30.5.4:13'
 
     def test_pack_unpack_various_values(self) -> None:
@@ -101,7 +101,7 @@ class TestVPLSPackUnpack:
             assert unpacked.endpoint == endpoint
             assert unpacked.base == base
             assert unpacked.offset == offset
-            assert unpacked.size == size
+            assert unpacked.block_size == size
 
     def test_pack_format(self) -> None:
         """Test that pack produces correct format"""
@@ -157,7 +157,7 @@ class TestVPLSPackUnpack:
         assert unpacked.rd._str() == '172.30.5.4:13'
         assert unpacked.offset == 1
         assert unpacked.base == 262145
-        assert unpacked.size == 8
+        assert unpacked.block_size == 8
 
 
 class TestVPLSStringRepresentation:
@@ -309,7 +309,7 @@ class TestVPLSEdgeCases:
         assert vpls.endpoint == 0
         assert vpls.base == 0
         assert vpls.offset == 0
-        assert vpls.size == 0
+        assert vpls.block_size == 0
 
     def test_vpls_maximum_base(self) -> None:
         """Test VPLS with maximum 20-bit base value"""
@@ -372,7 +372,7 @@ class TestVPLSMultipleRoutes:
             assert unpacked.endpoint == route.endpoint
             assert unpacked.base == route.base
             assert unpacked.offset == route.offset
-            assert unpacked.size == route.size
+            assert unpacked.block_size == route.block_size
 
     def test_different_vpls_routes(self) -> None:
         """Test creating and packing different VPLS configurations"""

@@ -46,10 +46,8 @@ MUP_T2ST_IPV4_MAX_ENDPOINT: int = 64  # Max endpoint length for IPv4 (32 IP + 32
 MUP_T2ST_IPV6_MAX_ENDPOINT: int = 160  # Max endpoint length for IPv6 (128 IP + 32 TEID)
 
 
-@MUP.register_mup_route
+@MUP.register_mup_route(archtype=1, code=4)
 class Type2SessionTransformedRoute(MUP):
-    ARCHTYPE: ClassVar[int] = 1
-    CODE: ClassVar[int] = 4
     NAME: ClassVar[str] = 'Type2SessionTransformedRoute'
     SHORT_NAME: ClassVar[str] = 'T2ST'
 

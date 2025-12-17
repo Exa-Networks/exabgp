@@ -24,12 +24,8 @@ from exabgp.util.types import Buffer
 #     Source Router Identifier (Source Router-ID) TLV
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1171, json_key='sr-source-router-id', repr_name='Source router identifier')
 class SourceRouterId(BaseLS):
-    TLV = 1171
-    REPR = 'Source router identifier'
-    JSON = 'sr-source-router-id'
-
     @property
     def content(self) -> str:
         """Unpack and return IP address string from packed bytes."""

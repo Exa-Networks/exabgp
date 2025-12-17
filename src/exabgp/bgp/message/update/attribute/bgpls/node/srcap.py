@@ -54,11 +54,8 @@ SRCAP_MIN_LENGTH = 2  # Minimum for flags + reserved
 SRCAP_MIN_ENTRY_LENGTH = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE  # 7 bytes per entry header
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1034, json_key='sr-capability-flags', repr_name='SR Capability Flags')
 class SrCapabilities(FlagLS):
-    REPR = 'SR Capability Flags'
-    JSON = 'sr-capability-flags'
-    TLV = 1034
     FLAGS = ['I', 'V', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
 
     # flags property is inherited from FlagLS and unpacks from _packed[0:1]

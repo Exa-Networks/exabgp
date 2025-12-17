@@ -47,7 +47,7 @@ class EVPN(NLRI):
     # Wire format constant
     HEADER_SIZE = 2  # type(1) + length(1)
 
-    # NEED to be defined in the subclasses
+    # Set by decorator, override in GenericEVPN
     CODE: ClassVar[int] = -1
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
@@ -123,12 +123,19 @@ class EVPN(NLRI):
         raise NotImplementedError(f'{cls.__name__} must implement unpack_evpn')
 
     @classmethod
-    def register_evpn_route(cls, klass: type[EVPN]) -> type[EVPN]:
-        """Register an EVPN route type subclass by its CODE."""
-        if klass.CODE in cls.registered_evpn:
-            raise RuntimeError('only one EVPN registration allowed')
-        cls.registered_evpn[klass.CODE] = klass
-        return klass
+    def register_evpn_route(cls, code: int):
+        """Register an EVPN route type subclass by its code."""
+
+        def decorator(klass: type[EVPN]) -> type[EVPN]:
+            # Set class attribute
+            klass.CODE = code
+            # Register
+            if code in cls.registered_evpn:
+                raise RuntimeError('only one EVPN registration allowed')
+            cls.registered_evpn[code] = klass
+            return klass
+
+        return decorator
 
     @classmethod
     def unpack_nlri(

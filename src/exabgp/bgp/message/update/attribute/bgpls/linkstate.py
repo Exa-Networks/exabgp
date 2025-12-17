@@ -97,24 +97,40 @@ class LinkState(Attribute):
         return ls_attrs
 
     @classmethod
-    def register_lsid(cls, lsid: int | None = None) -> Callable[[type], type]:
-        """Register BGP-LS subclass by TLV code (different from Attribute.register)."""
+    def register_lsid(
+        cls, tlv: int, json_key: str, repr_name: str = '', *, alias_tlv: int | None = None
+    ) -> Callable[[type[BaseLS]], type[BaseLS]]:
+        """Register BGP-LS subclass by TLV code (different from Attribute.register).
 
-        def register_class(klass: type) -> type:
-            if klass.TLV in cls.registered_lsids:
+        Args:
+            tlv: TLV type code
+            json_key: JSON output key name
+            repr_name: Human-readable name (defaults to json_key if not provided)
+            alias_tlv: Optional additional TLV code to register for same class
+                      (e.g., LocalRouterId uses 1028 for IPv4, 1029 for IPv6)
+        """
+
+        def decorator(klass: type[BaseLS]) -> type[BaseLS]:
+            # Set class attributes via decorator
+            klass.TLV = tlv
+            klass.JSON = json_key
+            if repr_name:
+                klass.REPR = repr_name
+            # Register primary TLV
+            if tlv in cls.registered_lsids:
                 raise RuntimeError('only one class can be registered per BGP link state attribute type')
-            cls.registered_lsids[klass.TLV] = klass
+            cls.registered_lsids[tlv] = klass
+            # Register alias TLV if provided (same class, different TLV code)
+            if alias_tlv is not None:
+                if alias_tlv in cls.registered_lsids:
+                    raise RuntimeError('only one class can be registered per BGP link state attribute type')
+                # Create alias class with different TLV but same JSON/REPR
+                alias_klass = type(f'{klass.__name__}_{alias_tlv}', klass.__bases__, dict(klass.__dict__))
+                setattr(alias_klass, 'TLV', alias_tlv)
+                cls.registered_lsids[alias_tlv] = alias_klass
             return klass
 
-        def register_lsid_inner(klass: type) -> type:
-            if not lsid:
-                return register_class(klass)
-
-            kls = type('%s_%d' % (klass.__name__, lsid), klass.__bases__, dict(klass.__dict__))
-            setattr(kls, 'TLV', lsid)
-            return register_class(kls)
-
-        return register_lsid_inner
+        return decorator
 
     @classmethod
     def get_ls_class(cls, code: int) -> type[LSClass]:
@@ -170,7 +186,7 @@ class BaseLS:
     Stores packed bytes and unpacks content on demand via properties.
     Subclasses define TLV code, JSON key, and content unpacking.
 
-    Class attributes:
+    Class attributes (set by decorator):
         TLV: TLV type code (2 bytes)
         JSON: Key name for JSON output
         REPR: Human-readable name
@@ -179,7 +195,7 @@ class BaseLS:
     """
 
     TLV: int = -1
-    JSON: str = 'json-name-unset'
+    JSON: str = 'unset'
     REPR: str = 'repr name unset'
     LEN: int = 0
     MERGE: bool = False

@@ -21,12 +21,8 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.1.2
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1027, json_key='area-id', repr_name='ISIS area id')
 class IsisArea(BaseLS):
-    TLV = 1027
-    REPR = 'ISIS area id'
-    JSON = 'area-id'
-
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> IsisArea:
         if not data:

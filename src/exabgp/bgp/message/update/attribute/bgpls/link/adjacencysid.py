@@ -32,11 +32,9 @@ SRADJ_MIN_LENGTH = 4
 #
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1099, json_key='sr-adj', repr_name='Adjacency SID')
 class AdjacencySid(FlagLS):
-    TLV = 1099
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
-    JSON = 'sr-adj'
 
     # flags property is inherited from FlagLS and unpacks from _packed[0:1]
 

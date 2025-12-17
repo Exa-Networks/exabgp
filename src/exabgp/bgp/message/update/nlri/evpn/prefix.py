@@ -48,7 +48,7 @@ from exabgp.util.types import Buffer
 # https://tools.ietf.org/html/draft-rabadan-l2vpn-evpn-prefix-advertisement-03
 
 
-@EVPN.register_evpn_route
+@EVPN.register_evpn_route(code=5)
 class Prefix(EVPN):
     """EVPN Route Type 5: IP Prefix Advertisement.
 
@@ -58,7 +58,6 @@ class Prefix(EVPN):
     Uses packed-bytes-first pattern for zero-copy routing.
     """
 
-    CODE: ClassVar[int] = 5
     NAME: ClassVar[str] = 'IP Prefix Advertisement'
     SHORT_NAME: ClassVar[str] = 'PrfxAdv'
 

@@ -26,9 +26,8 @@ MVPN_SOURCEAD_IPV4_LENGTH: int = 18  # 8 (RD) + 1 (source len) + 4 (IPv4) + 1 (g
 MVPN_SOURCEAD_IPV6_LENGTH: int = 42  # 8 (RD) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
 
 
-@MVPN.register_mvpn
+@MVPN.register_mvpn(code=5)
 class SourceAD(MVPN):
-    CODE: ClassVar[int] = 5
     NAME: ClassVar[str] = 'Source Active A-D Route'
     SHORT_NAME: ClassVar[str] = 'SourceAD'
 

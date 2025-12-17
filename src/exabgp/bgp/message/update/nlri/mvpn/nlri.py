@@ -42,7 +42,7 @@ class MVPN(NLRI):
     # Wire format constant
     HEADER_SIZE = 2  # type(1) + length(1)
 
-    # NEED to be defined in the subclasses
+    # Set by decorator, override in GenericMVPN
     CODE: ClassVar[int] = -1
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
@@ -108,11 +108,19 @@ class MVPN(NLRI):
         return new
 
     @classmethod
-    def register_mvpn(cls, klass: Type[MVPN]) -> Type[MVPN]:
-        if klass.CODE in cls.registered_mvpn:
-            raise RuntimeError('only one MVPN registration allowed')
-        cls.registered_mvpn[klass.CODE] = klass
-        return klass
+    def register_mvpn(cls, code: int):
+        """Register an MVPN route type subclass by its code."""
+
+        def decorator(klass: Type[MVPN]) -> Type[MVPN]:
+            # Set class attribute
+            klass.CODE = code
+            # Register
+            if code in cls.registered_mvpn:
+                raise RuntimeError('only one MVPN registration allowed')
+            cls.registered_mvpn[code] = klass
+            return klass
+
+        return decorator
 
     @classmethod
     def unpack_mvpn(cls, data: Buffer, afi: AFI) -> 'MVPN':

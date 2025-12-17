@@ -36,9 +36,8 @@ SID_LABEL_LENGTH_NO_FLAGS = 4  # Length of SID/Label when V and L flags are both
 SRPREFIX_MIN_LENGTH = 4
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1158, json_key='sr-prefix-sid', repr_name='Prefix SID')
 class PrefixSid(FlagLS):
-    TLV = 1158
     FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
 
     # flags property is inherited from FlagLS and unpacks from _packed[0:1]

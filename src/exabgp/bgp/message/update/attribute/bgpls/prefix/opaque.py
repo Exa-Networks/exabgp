@@ -21,12 +21,8 @@ from exabgp.util.types import Buffer
 #
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1157, json_key='opaque-prefix', repr_name='Opaque Prefix Attribute')
 class PrefixOpaque(BaseLS):
-    TLV = 1157
-    REPR = 'Opaque Prefix Attribute'
-    JSON = 'opaque-prefix'
-
     # content property inherited from BaseLS returns self._packed (raw bytes)
 
     @classmethod

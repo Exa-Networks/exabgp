@@ -32,12 +32,8 @@ IGP_METRIC_SIZE_ISIS_SMALL: int = 1  # IS-IS small metrics are 1 octet
 IGP_METRIC_SIZE_ISIS_WIDE: int = 3  # IS-IS wide metrics are 3 octets
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1095, json_key='igp-metric', repr_name='IGP Metric')
 class IgpMetric(BaseLS):
-    TLV = 1095
-    REPR = 'IGP Metric'
-    JSON = 'igp-metric'
-
     @property
     def content(self) -> int:
         """Unpack and return the metric value from packed bytes.

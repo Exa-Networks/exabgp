@@ -31,7 +31,7 @@ from exabgp.util.types import Buffer
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register_evpn_route
+@EVPN.register_evpn_route(code=4)
 class EthernetSegment(EVPN):
     """EVPN Route Type 4: Ethernet Segment.
 
@@ -39,7 +39,6 @@ class EthernetSegment(EVPN):
     Uses packed-bytes-first pattern for zero-copy routing.
     """
 
-    CODE: ClassVar[int] = 4
     NAME: ClassVar[str] = 'Ethernet Segment'
     SHORT_NAME: ClassVar[str] = 'Segment'
 

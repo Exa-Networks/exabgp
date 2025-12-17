@@ -28,13 +28,8 @@ from exabgp.util.types import Buffer
 MAX_NODE_NAME_LENGTH = 255  # Maximum length for node name TLV
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1026, json_key='node-name', repr_name='Node Name')
 class NodeName(BaseLS):
-    TLV = 1026
-    MERGE = False
-    REPR = 'Node Name'
-    JSON = 'node-name'
-
     @property
     def content(self) -> str:
         """Unpack and return the node name as a string."""

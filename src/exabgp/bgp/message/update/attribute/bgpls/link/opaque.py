@@ -23,12 +23,8 @@ from exabgp.util.types import Buffer
 # This TLV is added here for completeness but we don't look into the TLV.
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1097, json_key='opaque-link', repr_name='Opaque Link attribute')
 class LinkOpaque(BaseLS):
-    TLV = 1097
-    REPR = 'Opaque Link attribute'
-    JSON = 'opaque-link'
-
     @property
     def content(self) -> Buffer:
         """Return the raw opaque bytes."""

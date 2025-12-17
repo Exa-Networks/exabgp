@@ -104,11 +104,9 @@ class Srv6(FlagLS):
         }
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1107, json_key='srv6-lan-endx-isis', repr_name='SRv6 LAN End.X SID ISIS')
 class Srv6LanEndXISIS(Srv6):
-    TLV = 1107
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    JSON = 'srv6-lan-endx-isis'
     MERGE = True  # LinkState.json() will group into array
     registered_subsubtlvs: dict[int, type] = dict()
 
@@ -195,11 +193,9 @@ class Srv6LanEndXISIS(Srv6):
         return '"srv6-lan-endx-isis": {}'.format(json.dumps(self.content))
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1108, json_key='srv6-lan-endx-ospf', repr_name='SRv6 LAN End.X SID OSPF')
 class Srv6LanEndXOSPF(Srv6):
-    TLV = 1108
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    JSON = 'srv6-lan-endx-ospf'
     MERGE = True  # LinkState.json() groups into array
     registered_subsubtlvs: dict[int, type] = dict()
 

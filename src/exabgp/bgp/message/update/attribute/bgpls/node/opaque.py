@@ -26,12 +26,8 @@ from exabgp.util.types import Buffer
 #   Use of draft-tantsura-bgp-ls-segment-routing-msd-02 in this TLV is not clear
 
 
-@LinkState.register_lsid()
+@LinkState.register_lsid(tlv=1025, json_key='opaque', repr_name='Node Opaque attribute')
 class NodeOpaque(BaseLS):
-    TLV = 1025
-    REPR = 'Node Opaque attribute'
-    JSON = 'opaque'
-
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> NodeOpaque:
         return cls(data)

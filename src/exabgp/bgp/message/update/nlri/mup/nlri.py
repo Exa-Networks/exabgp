@@ -40,7 +40,7 @@ class MUP(NLRI):
     # Values are MUP subclasses that implement unpack_mup_route classmethod
     registered_mup: ClassVar[dict[str, type[MUP]]] = dict()
 
-    # NEED to be defined in the subclasses
+    # Set by decorator, override in GenericMUP
     ARCHTYPE: ClassVar[int] = 0
     CODE: ClassVar[int] = 0
     NAME: ClassVar[str] = 'Unknown'
@@ -115,13 +115,21 @@ class MUP(NLRI):
         return new
 
     @classmethod
-    def register_mup_route(cls, klass: type[MUP]) -> type[MUP]:
-        """Register a MUP route type subclass by its ARCHTYPE:CODE key."""
-        key = '{}:{}'.format(klass.ARCHTYPE, klass.CODE)
-        if key in cls.registered_mup:
-            raise RuntimeError('only one MUP registration allowed')
-        cls.registered_mup[key] = klass
-        return klass
+    def register_mup_route(cls, archtype: int, code: int):
+        """Register a MUP route type subclass by its archtype:code key."""
+
+        def decorator(klass: type[MUP]) -> type[MUP]:
+            # Set class attributes
+            klass.ARCHTYPE = archtype
+            klass.CODE = code
+            # Register
+            key = f'{archtype}:{code}'
+            if key in cls.registered_mup:
+                raise RuntimeError('only one MUP registration allowed')
+            cls.registered_mup[key] = klass
+            return klass
+
+        return decorator
 
     @classmethod
     def unpack_nlri(
