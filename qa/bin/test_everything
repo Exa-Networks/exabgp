@@ -8,6 +8,7 @@ Use this instead of running individual test commands.
 Usage:
   ./qa/bin/test_everything           # Run all tests with progress
   ./qa/bin/test_everything -l        # List available tests
+  ./qa/bin/test_everything --skip-mypy  # Skip mypy type checking
   ./qa/bin/test_everything unit      # Run single test by name
   ./qa/bin/test_everything 3         # Run single test by number
   ./qa/bin/test_everything unit encoding  # Run multiple tests
@@ -365,6 +366,7 @@ def main() -> int:
     )
     parser.add_argument('-l', '--list', action='store_true', help='List available tests')
     parser.add_argument('-v', '--verbose', action='store_true', help='Show commands being run')
+    parser.add_argument('--skip-mypy', action='store_true', help='Skip mypy type checking')
     parser.add_argument('tests', nargs='*', help='Tests to run (name or number)')
 
     args = parser.parse_args()
@@ -387,6 +389,12 @@ def main() -> int:
     else:
         # Run all tests
         test_indices = list(range(len(TEST_ORDER)))
+
+    # Apply --skip-mypy filter
+    if args.skip_mypy:
+        mypy_idx = TEST_ORDER.index('mypy') if 'mypy' in TEST_ORDER else None
+        if mypy_idx is not None:
+            test_indices = [i for i in test_indices if i != mypy_idx]
 
     return run_tests(test_indices, cache, verbose=args.verbose)
 
