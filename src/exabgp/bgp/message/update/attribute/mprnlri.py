@@ -125,9 +125,15 @@ class MPRNLRI(Attribute, Family):
         This is the preferred method for getting announces with nexthop.
         """
         from exabgp.bgp.message.update.collection import RoutedNLRI
+        from exabgp.protocol.ip import IP
 
         nexthop_bytes, nlri_iter = self._parse_nexthop_and_nlris()
-        nexthop = NextHop.unpack_attribute(nexthop_bytes, Negotiated.UNSET)
+        nexthop_attr = NextHop.unpack_attribute(nexthop_bytes, Negotiated.UNSET)
+        # Convert NextHop (Attribute) to IP for RoutedNLRI
+        if nexthop_attr is NextHop.UNSET:
+            nexthop: IP = IP.NoNextHop
+        else:
+            nexthop = IP.create_ip(nexthop_attr.pack_ip())
         for nlri in nlri_iter:
             yield RoutedNLRI(nlri, nexthop)
 

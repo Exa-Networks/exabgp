@@ -129,36 +129,84 @@ class Operational(Message):
         return f'operational {self.name}'
 
     @staticmethod
-    def register(klass: TypingType[_T]) -> TypingType[_T]:
+    def register_operational(klass: TypingType[_T]) -> TypingType[_T]:
+        """Register an Operational subtype (ADM, ASM, RPCQ, etc.) for unpacking.
+
+        Note: This is distinct from Message.register which registers message types.
+        This method registers operational message subtypes in registered_operational.
+        """
         Operational.registered_operational[klass.code] = (klass.category, klass)
         return klass
 
     @classmethod
-    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Operational | None:  # pylint: disable=W0613
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Operational:  # pylint: disable=W0613
+        """Unpack an Operational message from wire format.
+
+        Returns the appropriate Operational subtype based on the message type code,
+        or UnknownOperational if the type is not recognized.
+        """
+        from typing import Any, cast
+
         what = Type(unpack('!H', data[0:2])[0])
         length = unpack('!H', data[2:4])[0]
 
-        decode, klass = cls.registered_operational.get(what, ('unknown', None))
+        entry = cls.registered_operational.get(what)
+        if entry is None:
+            sys.stdout.write('ignoring ATM this kind of message\n')
+            return UnknownOperational(what, data[4 : length + 4])
+
+        decode, klass = entry
+        # Each category has specific constructor signatures validated by decode type.
+        # Cast to Any since Type[Operational] can't express category-specific __init__.
+        # The return cast validates we return an Operational subclass.
+        factory: Any = klass
 
         if decode == 'advisory':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
-            return klass(afi, safi, data[7 : length + 4])
+            return cast(Operational, factory(afi, safi, data[7 : length + 4]))
         if decode == 'query':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack_routerid(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
-            return klass(afi, safi, routerid, sequence)
+            return cast(Operational, factory(afi, safi, routerid, sequence))
         if decode == 'counter':
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack_routerid(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
             counter = unpack('!L', data[15:19])[0]
-            return klass(afi, safi, routerid, sequence, counter)
-        sys.stdout.write('ignoring ATM this kind of message\n')
-        return None
+            return cast(Operational, factory(afi, safi, routerid, sequence, counter))
+
+        # Unknown category in registered_operational
+        sys.stdout.write(f'unknown operational category {decode}\n')
+        return UnknownOperational(what, data[4 : length + 4])
+
+
+# ============================================================ UnknownOperational
+
+
+class UnknownOperational(Operational):
+    """Unknown or unrecognized operational message type.
+
+    Used when receiving an Operational message with a type code that is not
+    registered in registered_operational. This allows graceful handling of
+    unknown message types without breaking the type system.
+    """
+
+    name: ClassVar[str] = 'unknown'
+    category: ClassVar[str] = 'unknown'
+
+    def __init__(self, what: int, data: Buffer) -> None:
+        Operational.__init__(self, what)
+        self.raw_data: Buffer = data
+
+    def extensive(self) -> str:
+        return f'operational unknown type={self.what}'
+
+    def pack_message(self, negotiated: Negotiated) -> bytes:
+        return self._message(self.raw_data)
 
 
 # ============================================================ OperationalFamily
@@ -299,7 +347,7 @@ class Advisory:
         def extensive(self) -> str:
             return f'operational {self.name} afi {self.afi} safi {self.safi} "{self.data.hex()}"'
 
-    @Operational.register
+    @Operational.register_operational
     class ADM(_Advisory):
         name: ClassVar[str] = 'ADM'
         code: ClassVar[int] = Operational.CODE.ADM
@@ -320,7 +368,7 @@ class Advisory:
                 utf8 = utf8[: MAX_ADVISORY - 3] + b'...'
             Advisory._Advisory.__init__(self, Operational.CODE.ADM, afi, safi, utf8)
 
-    @Operational.register
+    @Operational.register_operational
     class ASM(_Advisory):
         name: ClassVar[str] = 'ASM'
         code: ClassVar[int] = Operational.CODE.ASM
@@ -365,17 +413,17 @@ class Query:
                 return f'operational {self.name} afi {self.afi} safi {self.safi} router-id {self._routerid} sequence {self._sequence}'
             return f'operational {self.name} afi {self.afi} safi {self.safi}'
 
-    @Operational.register
+    @Operational.register_operational
     class RPCQ(_Query):
         name: ClassVar[str] = 'RPCQ'
         code: ClassVar[int] = Operational.CODE.RPCQ
 
-    @Operational.register
+    @Operational.register_operational
     class APCQ(_Query):
         name: ClassVar[str] = 'APCQ'
         code: ClassVar[int] = Operational.CODE.APCQ
 
-    @Operational.register
+    @Operational.register_operational
     class LPCQ(_Query):
         name: ClassVar[str] = 'LPCQ'
         code: ClassVar[int] = Operational.CODE.LPCQ
@@ -412,17 +460,17 @@ class Response:
                 return f'operational {self.name} afi {self.afi} safi {self.safi} router-id {self._routerid} sequence {self._sequence} counter {self.counter}'
             return f'operational {self.name} afi {self.afi} safi {self.safi} counter {self.counter}'
 
-    @Operational.register
+    @Operational.register_operational
     class RPCP(_Counter):
         name: ClassVar[str] = 'RPCP'
         code: ClassVar[int] = Operational.CODE.RPCP
 
-    @Operational.register
+    @Operational.register_operational
     class APCP(_Counter):
         name: ClassVar[str] = 'APCP'
         code: ClassVar[int] = Operational.CODE.APCP
 
-    @Operational.register
+    @Operational.register_operational
     class LPCP(_Counter):
         name: ClassVar[str] = 'LPCP'
         code: ClassVar[int] = Operational.CODE.LPCP
