@@ -2414,6 +2414,12 @@ class ParsingTests(Tests):
     def __init__(self) -> None:
         super().__init__(self.Test)
 
+        # Create minimal path_config for summary output compatibility
+        class ParsingPathConfig:
+            name = 'parsing'
+
+        self.path_config = ParsingPathConfig()
+
         for filename in Path.ALL_ETC:
             name = os.path.basename(filename).split('.')[0]
             test = self.new(name)
