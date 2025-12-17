@@ -34,25 +34,13 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
-      - name: Strict modules type check (BLOCKING)
-        run: |
-          echo "Checking locked modules with strict settings..."
-          uv run mypy src/exabgp/util src/exabgp/data src/exabgp/environment src/exabgp/logger
-
       - name: Type ignore regression check (BLOCKING)
         run: |
           echo "Checking type:ignore count against baseline..."
           uv run ./qa/bin/check_type_ignores
 
-      - name: Full codebase type check (informational)
+      - name: Full codebase mypy check (BLOCKING)
         run: |
-          python --version
+          echo "Running mypy on full codebase (must pass with 0 errors)..."
           uv run mypy --version
-          uv run mypy src/exabgp/ --no-error-summary 2>&1 | head -100 || true
-        continue-on-error: true
-
-      - name: Type checking summary
-        run: |
-          echo "Strict modules: BLOCKING (util, data, environment, logger)"
-          echo "Type ignore regression: BLOCKING"
-          echo "Full codebase: informational (during annotation rollout)"
+          uv run mypy src/exabgp/

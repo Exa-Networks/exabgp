@@ -66,6 +66,7 @@ if not sys.stdout.isatty():
 DEFAULT_TIMES: dict[str, int] = {
     'ruff-format': 3,
     'ruff-check': 3,
+    'mypy': 60,
     'unit': 15,
     'config': 2,
     'no-neighbor': 5,
@@ -146,6 +147,7 @@ def run_command(cmd: str, env: dict | None = None, shell: bool = True) -> tuple[
 TEST_COMMANDS: dict[str, str | list[str]] = {
     'ruff-format': 'uv run ruff format src tests',
     'ruff-check': 'uv run ruff check src qa tests',
+    'mypy': 'uv run mypy src/exabgp/',
     'unit': 'env exabgp_log_enable=false uv run pytest ./tests/unit/ ./tests/fuzz/ -q',
     'config': './sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf',
     'no-neighbor': './qa/scripts/test_no_neighbor.py',
@@ -164,6 +166,7 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
 TEST_DESCRIPTIONS: dict[str, str] = {
     'ruff-format': 'Ruff format check',
     'ruff-check': 'Ruff lint check',
+    'mypy': 'Mypy strict type check',
     'unit': 'Unit tests (pytest)',
     'config': 'Configuration validation',
     'no-neighbor': 'No-neighbor API test',
@@ -183,6 +186,7 @@ TEST_DESCRIPTIONS: dict[str, str] = {
 TEST_ORDER = [
     'ruff-format',
     'ruff-check',
+    'mypy',
     'unit',
     'config',
     'no-neighbor',

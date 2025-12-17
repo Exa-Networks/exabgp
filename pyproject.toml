@@ -121,20 +121,30 @@ docstring-code-format = true
 
 [tool.mypy]
 # Type annotation project started: 2025-11-12
-# Target: Full codebase type coverage over 14 weeks (6 sprints)
+# Strict mode enabled: 2025-12-17 (no regressions allowed)
 # Note: Using 3.12 for mypy to match minimum supported version
 python_version = "3.12"
+
+# Strict mode - prevent any type regressions
+strict = true
 warn_unused_configs = true
 warn_return_any = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 
-# Start permissive, tighten gradually as sprints complete
-disallow_untyped_defs = false
-disallow_untyped_calls = false
-disallow_incomplete_defs = false
+# Strict enforcement - no untyped code allowed
+disallow_untyped_defs = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_decorators = true
+check_untyped_defs = true
+no_implicit_reexport = true
+strict_equality = true
+extra_checks = true
 
-# Incremental checking - only check annotated modules
+# Import handling
 follow_imports = "normal"
 ignore_missing_imports = true
 
@@ -146,96 +156,5 @@ exclude = [
     "src/exabgp/vendoring/",
 ]
 
-# Per-module strictness - locked modules (0 mypy errors as of 2025-11-25)
-# These modules are clean and should remain clean
-
-[[tool.mypy.overrides]]
-module = "exabgp.util.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "exabgp.data.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "exabgp.environment.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "exabgp.logger.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "exabgp.rib.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "exabgp.protocol.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "exabgp.debug.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "exabgp.netlink.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-# CLI module (excluding experimental which has external vyos.* dependencies)
-[[tool.mypy.overrides]]
-module = [
-    "exabgp.cli",
-    "exabgp.cli.colors",
-    "exabgp.cli.completer",
-    "exabgp.cli.formatter",
-    "exabgp.cli.persistent_connection",
-]
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "exabgp.conf.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "exabgp.application.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
-
-[[tool.mypy.overrides]]
-module = "exabgp.reactor.*"
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-warn_return_any = true
+# All modules now use global strict settings (2025-12-17)
+# No per-module overrides needed
