@@ -11,13 +11,25 @@ from struct import pack, unpack
 from exabgp.protocol.iso import ISO
 from exabgp.util import hexstring
 
-from typing import Callable
+from typing import Callable, ClassVar, Protocol
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.protocol.ip import IP, IPv6
 from exabgp.util.types import Buffer
+
+
+class SubSubTLV(Protocol):
+    """Protocol for sub-sub-TLV classes with TLV code and unpack_bgpls method."""
+
+    TLV: ClassVar[int]
+
+    @classmethod
+    def unpack_bgpls(cls, data: Buffer) -> SubSubTLV: ...
+
+    def json(self) -> dict[str, object]: ...
+
 
 # BGP-LS Sub-TLV header constants
 BGPLS_SUBTLV_HEADER_SIZE = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
@@ -58,6 +70,8 @@ OSPF = 2
 
 
 class Srv6(FlagLS):
+    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = dict()
+
     @classmethod
     def _unpack_data(cls, data: Buffer, protocol_type: int) -> dict[str, object]:
         min_length = SRV6_LAN_ENDX_ISIS_MIN_LENGTH if protocol_type == ISIS else SRV6_LAN_ENDX_OSPF_MIN_LENGTH
@@ -131,10 +145,10 @@ class Srv6LanEndXISIS(Srv6):
         )
 
     @classmethod
-    def register_subsubtlv(cls) -> Callable[[type], type]:
+    def register_subsubtlv(cls) -> Callable[[type[SubSubTLV]], type[SubSubTLV]]:
         """Register a sub-sub-TLV class for SRv6 LAN End.X ISIS."""
 
-        def decorator(klass: type) -> type:
+        def decorator(klass: type[SubSubTLV]) -> type[SubSubTLV]:
             code = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 LAN End.X Sub-TLV type')
@@ -220,10 +234,10 @@ class Srv6LanEndXOSPF(Srv6):
         )
 
     @classmethod
-    def register_subsubtlv(cls) -> Callable[[type], type]:
+    def register_subsubtlv(cls) -> Callable[[type[SubSubTLV]], type[SubSubTLV]]:
         """Register a sub-sub-TLV class for SRv6 LAN End.X OSPF."""
 
-        def decorator(klass: type) -> type:
+        def decorator(klass: type[SubSubTLV]) -> type[SubSubTLV]:
             code = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 LAN End.X Sub-TLV type')

@@ -7,11 +7,18 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from typing import Callable
+from typing import Callable, ClassVar, Protocol
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.util.types import Buffer
+
+
+class HasTLV(Protocol):
+    """Protocol for classes with a TLV class attribute."""
+
+    TLV: ClassVar[int]
+
 
 #    RFC 9514:  3.1.  SRv6 Capabilities TLV
 #     0                   1                   2                   3
@@ -43,10 +50,10 @@ class Srv6Capabilities(BaseLS):
         return 'flags: {}'.format(self.flags)
 
     @classmethod
-    def register_subsubtlv(cls) -> Callable[[type], type]:
+    def register_subsubtlv(cls) -> Callable[[type[HasTLV]], type[HasTLV]]:
         """Register a sub-sub-TLV class for SRv6 Capabilities."""
 
-        def decorator(klass: type) -> type:
+        def decorator(klass: type[HasTLV]) -> type[HasTLV]:
             code = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Capabilities Sub-TLV type')

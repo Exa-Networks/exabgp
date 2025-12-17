@@ -112,6 +112,11 @@ class BGPLS(NLRI):
         # Wire format: [family][type(2)][length(2)][payload] - _packed includes header
         return bytes(Family.index(self)) + self._packed
 
+    @classmethod
+    def unpack_bgpls_nlri(cls, data: Buffer, rd: 'RouteDistinguisher') -> 'BGPLS':
+        """Unpack NLRI-type-specific data. Override in subclasses."""
+        raise NotImplementedError(f'{cls.__name__} must implement unpack_bgpls_nlri')
+
     def __len__(self) -> int:
         # _packed includes 4-byte header
         return len(self._packed)

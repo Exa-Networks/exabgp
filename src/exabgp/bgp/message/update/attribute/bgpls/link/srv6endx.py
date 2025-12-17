@@ -8,13 +8,25 @@ from __future__ import annotations
 
 import json
 from struct import pack, unpack
-from typing import Callable
+from typing import Callable, ClassVar, Protocol
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
 from exabgp.protocol.ip import IPv6
 from exabgp.util import hexstring
 from exabgp.util.types import Buffer
+
+
+class SubSubTLV(Protocol):
+    """Protocol for sub-sub-TLV classes with TLV code and unpack_bgpls method."""
+
+    TLV: ClassVar[int]
+
+    @classmethod
+    def unpack_bgpls(cls, data: Buffer) -> SubSubTLV: ...
+
+    def json(self) -> dict[str, object]: ...
+
 
 # Minimum data length for SRv6 End.X SID TLV (RFC 9514 Section 4.1)
 # Endpoint Behavior (2) + Flags (1) + Algorithm (1) + Weight (1) + Reserved (1) + SID (16) = 22 bytes
@@ -44,7 +56,7 @@ SRV6_ENDX_MIN_LENGTH = 22
 class Srv6EndX(FlagLS):
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     MERGE = True  # LinkState.json() groups into array
-    registered_subsubtlvs: dict[int, type] = dict()
+    registered_subsubtlvs: dict[int, type[SubSubTLV]] = dict()
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with packed bytes."""
@@ -62,10 +74,10 @@ class Srv6EndX(FlagLS):
         )
 
     @classmethod
-    def register_subsubtlv(cls) -> Callable[[type], type]:
+    def register_subsubtlv(cls) -> Callable[[type[SubSubTLV]], type[SubSubTLV]]:
         """Register a sub-sub-TLV class for SRv6 End.X."""
 
-        def decorator(klass: type) -> type:
+        def decorator(klass: type[SubSubTLV]) -> type[SubSubTLV]:
             code = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 End.X Sub-TLV type')
@@ -85,7 +97,7 @@ class Srv6EndX(FlagLS):
         weight = data[4]
         sid = IPv6.ntop(data[6:22])
         data = data[22:]
-        subtlvs = []
+        subtlvs: list[str] = []
 
         while data and len(data) >= cls.BGPLS_SUBTLV_HEADER_SIZE:
             code = unpack('!H', data[0:2])[0]
@@ -95,7 +107,9 @@ class Srv6EndX(FlagLS):
                 subsubtlv = cls.registered_subsubtlvs[code].unpack_bgpls(
                     data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE]
                 )
-                subtlvs.append(subsubtlv.json())
+                # Convert dict to JSON string fragment (without outer braces)
+                subtlv_json = json.dumps(subsubtlv.json())[1:-1]  # Strip { and }
+                subtlvs.append(subtlv_json)
             else:
                 # Unknown sub-TLV: format as JSON string with hex data
                 hex_data = hexstring(data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE])
