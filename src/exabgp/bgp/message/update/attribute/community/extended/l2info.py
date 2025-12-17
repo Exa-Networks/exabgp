@@ -23,7 +23,7 @@ from exabgp.util.types import Buffer
 # RFC 4761
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class L2Info(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0A

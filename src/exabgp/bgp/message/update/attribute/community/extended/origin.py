@@ -49,7 +49,7 @@ class Origin(ExtendedCommunity):
 # RFC 4360 / RFC 7153
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class OriginASNIP(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
@@ -84,7 +84,7 @@ class OriginASNIP(Origin):
 # RFC 4360 / RFC 7153
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class OriginIPASN(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     LIMIT: ClassVar[int] = 6
@@ -119,7 +119,7 @@ class OriginIPASN(Origin):
 # RFC 4360 / RFC 7153
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class OriginASN4Number(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x02
     LIMIT: ClassVar[int] = 6

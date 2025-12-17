@@ -22,7 +22,7 @@ from exabgp.util.types import Buffer
 # draft-ietf-idr-link-bandwidth-06
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class Bandwidth(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x40
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x04

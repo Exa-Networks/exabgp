@@ -22,7 +22,7 @@ from exabgp.util.types import Buffer
 # draft-ietf-idr-flowspsec-interfaceset
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class InterfaceSet(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x07
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x02

@@ -38,7 +38,11 @@ class ExtendedCommunityBase(Attribute):
     registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]] | None] = None
 
     @classmethod
-    def register(cls, klass: Type[ExtendedCommunityBase]) -> Type[ExtendedCommunityBase]:
+    def register_subtype(cls, klass: Type[ExtendedCommunityBase]) -> Type[ExtendedCommunityBase]:
+        """Register an extended community subclass by type/subtype.
+
+        Note: Named differently from Attribute.register to avoid signature conflict.
+        """
         assert cls.registered_extended is not None
         cls.registered_extended[(klass.COMMUNITY_TYPE & 0x0F, klass.COMMUNITY_SUBTYPE)] = klass
         return klass

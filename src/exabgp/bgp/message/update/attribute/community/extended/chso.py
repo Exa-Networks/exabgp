@@ -19,7 +19,7 @@ from exabgp.util.types import Buffer
 # draft-fm-bess-service-chaining
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class ConsistentHashSortOrder(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x03
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x14

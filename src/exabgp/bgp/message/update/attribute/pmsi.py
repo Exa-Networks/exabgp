@@ -171,7 +171,11 @@ class PMSI(Attribute):
         )
 
     @classmethod
-    def register(cls, klass: Type[PMSI]) -> Type[PMSI]:
+    def register_tunnel_type(cls, klass: Type[PMSI]) -> Type[PMSI]:
+        """Register a PMSI subclass by tunnel type.
+
+        Note: Named differently from Attribute.register to avoid signature conflict.
+        """
         if klass.TUNNEL_TYPE in cls._pmsi_known:
             raise RuntimeError('only one registration for PMSI')
         cls._pmsi_known[klass.TUNNEL_TYPE] = klass
@@ -186,7 +190,7 @@ class PMSI(Attribute):
 # RFC 6514
 
 
-@PMSI.register
+@PMSI.register_tunnel_type
 class PMSINoTunnel(PMSI):
     TUNNEL_TYPE: ClassVar[int] = 0
 
@@ -216,7 +220,7 @@ class PMSINoTunnel(PMSI):
 # RFC 6514
 
 
-@PMSI.register
+@PMSI.register_tunnel_type
 class PMSIIngressReplication(PMSI):
     TUNNEL_TYPE: ClassVar[int] = 6
 

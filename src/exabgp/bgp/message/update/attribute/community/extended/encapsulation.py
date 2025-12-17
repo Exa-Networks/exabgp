@@ -23,7 +23,7 @@ from exabgp.util.types import Buffer
 # RFC 5512
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class Encapsulation(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x03
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C

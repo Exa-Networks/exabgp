@@ -27,16 +27,16 @@ class RTRecord(rt.RouteTarget):
         return cast(T, cls.unpack_attribute(bytes(packed[0:1]) + bytes([cls.COMMUNITY_SUBTYPE]) + bytes(packed[2:])))
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class RTRecordASN2Number(RTRecord, rt.RouteTargetASN2Number):
     pass
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class RTRecordIPNumber(RTRecord, rt.RouteTargetIPNumber):
     pass
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class RTRecordASN4Number(RTRecord, rt.RouteTargetASN4Number):
     pass

@@ -20,7 +20,7 @@ from exabgp.util.types import Buffer
 # RFC 7432 Section 7.7.
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class MacMobility(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x06
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00

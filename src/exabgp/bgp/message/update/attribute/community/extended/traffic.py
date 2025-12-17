@@ -43,7 +43,7 @@ from exabgp.util.types import Buffer
 # ================================================================== TrafficRate
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class TrafficRate(ExtendedCommunity):
     """Rate-limit matching traffic (RFC 5575).
 
@@ -82,7 +82,7 @@ class TrafficRate(ExtendedCommunity):
 # ================================================================ TrafficAction
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class TrafficAction(ExtendedCommunity):
     """Traffic action flags (RFC 5575).
 
@@ -127,7 +127,7 @@ class TrafficAction(ExtendedCommunity):
 # ============================================================== TrafficRedirect
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class TrafficRedirect(ExtendedCommunity):
     """Redirect matching traffic to VRF (RFC 5575, RFC 7674).
 
@@ -163,7 +163,7 @@ class TrafficRedirect(ExtendedCommunity):
         return cls(data[:8])
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class TrafficRedirectASN4(ExtendedCommunity):
     """Redirect to VRF using 4-byte AS number (RFC 7674).
 
@@ -202,7 +202,7 @@ class TrafficRedirectASN4(ExtendedCommunity):
 # ================================================================== TrafficMark
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class TrafficMark(ExtendedCommunity):
     """Set DSCP value on matching packets (RFC 5575).
 
@@ -236,7 +236,7 @@ class TrafficMark(ExtendedCommunity):
 # =============================================================== TrafficNextHopIPv4IETF
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class TrafficNextHopIPv4IETF(ExtendedCommunity):
     """Redirect to IPv4 next-hop (draft-ietf-idr-flowspec-redirect).
 
@@ -279,7 +279,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
 # =============================================================== TrafficNextHopIPv6IETF
 
 
-@ExtendedCommunityIPv6.register
+@ExtendedCommunityIPv6.register_subtype
 class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
     """Redirect to IPv6 next-hop (draft-ietf-idr-flowspec-redirect, RFC 5701).
 
@@ -322,7 +322,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
 # =============================================================== TrafficNextHopSimpson
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class TrafficNextHopSimpson(ExtendedCommunity):
     """Redirect to UPDATE's existing next-hop (draft-simpson-idr-flowspec-redirect).
 
@@ -357,7 +357,7 @@ class TrafficNextHopSimpson(ExtendedCommunity):
 # ============================================================ TrafficRedirectIPv6
 
 
-@ExtendedCommunityIPv6.register
+@ExtendedCommunityIPv6.register_subtype
 class TrafficRedirectIPv6(ExtendedCommunityIPv6):
     """Redirect to VRF using IPv6 address (RFC 5701).
 

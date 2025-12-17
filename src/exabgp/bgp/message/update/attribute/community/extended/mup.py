@@ -27,7 +27,7 @@ from exabgp.util.types import Buffer
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-@ExtendedCommunity.register
+@ExtendedCommunity.register_subtype
 class MUPExtendedCommunity(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x0C
     # Direct-Type Segment Identifier type
