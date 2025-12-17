@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Callable, ClassVar, Type, cast
+from typing import TYPE_CHECKING, Callable, ClassVar, Type
 
 from exabgp.util.types import Buffer
 
@@ -189,6 +189,10 @@ class Message:
         raise NotImplementedError('message not implemented in subclasses')
 
     @classmethod
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Message:
+        raise NotImplementedError('unpack_message not implemented in subclass')
+
+    @classmethod
     def register(cls, klass: Type[Message]) -> Type[Message]:
         if klass.ID in cls.registered_message:
             raise RuntimeError('only one class can be registered per message')
@@ -216,8 +220,7 @@ class Message:
             Parsed Message subclass instance
         """
         if message in cls.registered_message:
-            # Registry lookup returns Type[Message] and unpack_message returns subclass
-            return cast(Message, cls.klass(message).unpack_message(data, negotiated))
+            return cls.klass(message).unpack_message(data, negotiated)
         return cls.klass_unknown(message, data, negotiated)
 
     @classmethod

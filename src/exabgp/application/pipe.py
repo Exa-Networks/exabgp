@@ -172,15 +172,19 @@ class Control:
             # If we can't send the command or read the response, continue anyway
             pass
 
-        def monitor(function):
-            def wrapper(*args):
+        from typing import Any, Callable, TypeVar
+
+        _F = TypeVar('_F', bound=Callable[..., Any])
+
+        def monitor(function: _F) -> _F:
+            def wrapper(*args: Any) -> Any:
                 r = function(*args)
                 return r
 
-            return wrapper
+            return wrapper  # type: ignore[return-value]
 
         @monitor
-        def std_reader(number):
+        def std_reader(number: int) -> bytes:
             try:
                 return os.read(standard_in, number)
             except OSError as exc:
@@ -189,7 +193,7 @@ class Control:
                 sys.exit(1)
 
         @monitor
-        def std_writer(line):
+        def std_writer(line: bytes) -> int:
             try:
                 return os.write(standard_out, line)
             except OSError as exc:
@@ -198,7 +202,7 @@ class Control:
                 sys.exit(1)
 
         @monitor
-        def fifo_reader(number):
+        def fifo_reader(number: int) -> bytes:
             if self.r_pipe is None:
                 return b''
             try:
@@ -209,7 +213,7 @@ class Control:
                 sys.exit(1)
 
         @monitor
-        def fifo_writer(line):
+        def fifo_writer(line: bytes) -> int:
             pipe, nb = None, 0
             try:
                 pipe = os.open(self.send, os.O_WRONLY | os.O_NONBLOCK | os.O_EXCL)

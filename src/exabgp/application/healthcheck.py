@@ -361,18 +361,18 @@ def drop_privileges(user: str | None, group: str | None) -> None:
 
         gid = grp.getgrnam(group).gr_gid
         logger.debug(f'Dropping privileges to group {group}/{gid}')
-        try:
+        if hasattr(os, 'setresgid'):
             os.setresgid(gid, gid, gid)
-        except AttributeError:
+        else:
             os.setregid(gid, gid)
     if user is not None:
         import pwd
 
         uid = pwd.getpwnam(user).pw_uid
         logger.debug(f'Dropping privileges to user {user}/{uid}')
-        try:
+        if hasattr(os, 'setresuid'):
             os.setresuid(uid, uid, uid)
-        except AttributeError:
+        else:
             os.setreuid(uid, uid)
 
 

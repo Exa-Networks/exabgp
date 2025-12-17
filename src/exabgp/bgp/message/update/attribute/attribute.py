@@ -241,6 +241,11 @@ class Attribute:
         """Pack attribute for wire transmission. Must be overridden by subclasses."""
         raise NotImplementedError(f'{self.__class__.__name__} must implement pack_attribute()')
 
+    @classmethod
+    def unpack_attribute(cls, data: Buffer, negotiated: 'Negotiated') -> 'Attribute':
+        """Unpack attribute from wire format. Must be overridden by subclasses."""
+        raise NotImplementedError(f'{cls.__name__} must implement unpack_attribute()')
+
     def __eq__(self, other: Any) -> bool:
         return bool(self.ID == other.ID and self.FLAG == other.FLAG)
 

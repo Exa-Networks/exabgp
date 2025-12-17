@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection, NextHop
+from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
@@ -43,7 +43,8 @@ def validate_announce_nlri(nlri: 'NLRI', nexthop: IP) -> str | None:
     """
     # 1. Nexthop validation - required for unicast/multicast announces
     if nlri.safi in (SAFI.unicast, SAFI.multicast):
-        if nexthop is NextHop.UNSET:
+        # Check for undefined nexthop (IP.NoNextHop has afi=AFI.undefined)
+        if nexthop.afi == AFI.undefined:
             return f'announce requires nexthop: {nlri}'
 
     # 2. Labels validation - required for labeled route announces

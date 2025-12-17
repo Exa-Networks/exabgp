@@ -9,9 +9,11 @@ from __future__ import annotations
 
 from exabgp.util.types import Buffer
 from struct import pack, unpack
-from typing import Type
+from typing import Type, TypeVar
 
 from exabgp.protocol.resource import Resource
+
+_ASN = TypeVar('_ASN', bound='ASN')
 
 # =================================================================== ASN
 
@@ -37,15 +39,14 @@ class ASN(Resource):
         return pack('!L' if asn4 else '!H', self)
 
     @classmethod
-    def unpack_asn(cls: Type[ASN], data: Buffer, klass: Type[ASN]) -> ASN:
-        kls = klass
+    def unpack_asn(cls: Type[ASN], data: Buffer, klass: Type[_ASN]) -> _ASN:
         if len(data) == cls.SIZE_4BYTE:
             value = unpack('!L', data)[0]
         elif len(data) == cls.SIZE_2BYTE:
             value = unpack('!H', data)[0]
         else:
             raise ValueError(f'ASN data invalid size: need {cls.SIZE_2BYTE} or {cls.SIZE_4BYTE} bytes, got {len(data)}')
-        return kls(value)
+        return klass(value)
 
     def __len__(self) -> int:
         return self.SIZE_4BYTE if self.asn4() else self.SIZE_2BYTE
