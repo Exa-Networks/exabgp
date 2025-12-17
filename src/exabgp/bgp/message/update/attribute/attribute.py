@@ -20,41 +20,6 @@ from exabgp.util.cache import Cache
 # Attribute length encoding constants
 ATTR_LENGTH_EXTENDED_MAX: int = 0xFF  # Maximum length for non-extended encoding (255)
 
-# ============================================================== TreatAsWithdraw
-#
-
-
-class TreatAsWithdraw:
-    ID: ClassVar[int] = 0xFFFF
-    GENERIC: ClassVar[bool] = False
-    NO_GENERATION: ClassVar[bool] = True
-
-    aid: int | None
-
-    def __init__(self, aid: int | None = None) -> None:
-        self.aid = aid
-
-    def __str__(self) -> str:
-        if self.aid is None:
-            return 'treat-as-withdraw'
-        return 'treat-as-withdraw due to {}'.format(Attribute.CODE.name(self.aid))
-
-
-class Discard:
-    ID: ClassVar[int] = 0xFFFE
-    GENERIC: ClassVar[bool] = False
-    NO_GENERATION: ClassVar[bool] = True
-
-    aid: int | None
-
-    def __init__(self, aid: int | None = None) -> None:
-        self.aid = aid
-
-    def __str__(self) -> str:
-        if self.aid is None:
-            return 'discard'
-        return 'discard due to {}'.format(Attribute.CODE.name(self.aid))
-
 
 # ==================================================================== Attribute
 #
@@ -246,6 +211,10 @@ class Attribute:
         """Unpack attribute from wire format. Must be overridden by subclasses."""
         raise NotImplementedError(f'{cls.__name__} must implement unpack_attribute()')
 
+    def json(self, *args: Any, **kwargs: Any) -> str:
+        """Return JSON representation. Must be overridden by subclasses."""
+        raise NotImplementedError(f'{self.__class__.__name__} must implement json()')
+
     def __eq__(self, other: Any) -> bool:
         return bool(self.ID == other.ID and self.FLAG == other.FLAG)
 
@@ -332,6 +301,52 @@ class Attribute:
             for attribute in Attribute.CODE.names:
                 if attribute not in cls.cache:
                     cls.cache[attribute] = Cache()
+
+
+# ============================================================== TreatAsWithdraw
+#
+
+
+class TreatAsWithdraw(Attribute):
+    """Pseudo-attribute indicating update should be treated as withdraw."""
+
+    ID: ClassVar[int] = 0xFFFF
+    FLAG: ClassVar[int] = 0x00
+    GENERIC: ClassVar[bool] = False
+    NO_GENERATION: ClassVar[bool] = True
+
+    aid: int | None
+
+    def __init__(self, aid: int | None = None) -> None:
+        self.aid = aid
+
+    def __str__(self) -> str:
+        if self.aid is None:
+            return 'treat-as-withdraw'
+        return 'treat-as-withdraw due to {}'.format(Attribute.CODE.name(self.aid))
+
+
+# ==================================================================== Discard
+#
+
+
+class Discard(Attribute):
+    """Pseudo-attribute indicating update should be discarded."""
+
+    ID: ClassVar[int] = 0xFFFE
+    FLAG: ClassVar[int] = 0x00
+    GENERIC: ClassVar[bool] = False
+    NO_GENERATION: ClassVar[bool] = True
+
+    aid: int | None
+
+    def __init__(self, aid: int | None = None) -> None:
+        self.aid = aid
+
+    def __str__(self) -> str:
+        if self.aid is None:
+            return 'discard'
+        return 'discard due to {}'.format(Attribute.CODE.name(self.aid))
 
 
 Attribute.setCache()

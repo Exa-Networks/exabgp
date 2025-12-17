@@ -22,7 +22,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Generator, Iterator
+from collections.abc import Callable, Iterator, MutableMapping
+from typing import TYPE_CHECKING, Any, ClassVar, Generator, cast
 
 from exabgp.util.types import Buffer
 
@@ -32,13 +33,18 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, SET, AS2Path
-from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard, TreatAsWithdraw
+from exabgp.bgp.message.update.attribute.attribute import (
+    Attribute,
+    Discard,
+    TreatAsWithdraw,
+)
 
 # For bagpipe
 from exabgp.bgp.message.update.attribute.community import Communities
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesBase
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.watchdog import NoWatchdog, Watchdog
 from exabgp.logger import lazyattribute, lazymsg, log
@@ -58,7 +64,7 @@ NOTHING: _NOTHING = _NOTHING()
 # =================================================================== AttributeCollection
 
 
-class AttributeCollection(dict):
+class AttributeCollection(MutableMapping[int, Attribute]):
     """Semantic container for BGP path attributes (dict-like).
 
     Stores parsed Attribute objects indexed by attribute code.
@@ -185,7 +191,7 @@ class AttributeCollection(dict):
                 yield '"{}": {}'.format(name, presentation % str(attribute))
 
     def __init__(self) -> None:
-        dict.__init__(self)
+        self._data: dict[int, Attribute] = {}
         # cached representation of the object
         self._str = ''
         self._idx = b''
@@ -194,10 +200,27 @@ class AttributeCollection(dict):
         self.cacheable = True
         # Note: Attribute.caching is set in application/server.py at startup
 
-    def has(self, k: int) -> bool:
-        return k in self
+    # MutableMapping abstract methods
 
-    def add(self, attribute: Attribute | TreatAsWithdraw | Discard | None, _: Any = None) -> None:
+    def __getitem__(self, key: int) -> Attribute:
+        return self._data[key]
+
+    def __setitem__(self, key: int, value: Attribute) -> None:
+        self._data[key] = value
+
+    def __delitem__(self, key: int) -> None:
+        del self._data[key]
+
+    def __iter__(self) -> Iterator[int]:
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def has(self, k: int) -> bool:
+        return k in self._data
+
+    def add(self, attribute: Attribute | None, _: Any = None) -> None:
         # we return None as attribute if the unpack code must not generate them
         if attribute is None:
             return
@@ -212,8 +235,10 @@ class AttributeCollection(dict):
 
             # attribute.ID is EXTENDED_COMMUNITY, so attribute is ExtendedCommunitiesBase
             assert isinstance(attribute, ExtendedCommunitiesBase)
+            existing = self[attribute.ID]
+            assert isinstance(existing, ExtendedCommunitiesBase)
             for community in attribute.communities:
-                self[attribute.ID].add(community)
+                existing.add(community)
             return
 
         self._str = ''
@@ -238,7 +263,7 @@ class AttributeCollection(dict):
 
         message = b''
 
-        default = {
+        default: dict[int, Callable[[int, int], Attribute | _NOTHING]] = {
             Attribute.CODE.ORIGIN: lambda left, right: Origin.from_int(Origin.IGP),
             Attribute.CODE.AS_PATH: lambda left, right: (
                 AS2Path.make_aspath([])
@@ -256,8 +281,8 @@ class AttributeCollection(dict):
             Attribute.CODE.LOCAL_PREF: lambda left, right: LocalPreference.from_int(100) if left == right else NOTHING,
         }
 
-        skip = {
-            Attribute.CODE.NEXT_HOP: lambda left, right, nh: nh.ipv4() is not True,
+        skip: dict[int, Callable[[int, int, Attribute], bool]] = {
+            Attribute.CODE.NEXT_HOP: lambda left, right, nh: cast(NextHop, nh).ipv4() is not True,
             Attribute.CODE.LOCAL_PREF: lambda left, right, nh: left != right,
         }
 
@@ -488,23 +513,27 @@ class AttributeCollection(dict):
         return self.parse(left, negotiated)
 
     def merge_attributes(self) -> None:
-        as2path = self[Attribute.CODE.AS_PATH]
-        as4path = self[Attribute.CODE.AS4_PATH]
+        as2path_attr = self[Attribute.CODE.AS_PATH]
+        as4path_attr = self[Attribute.CODE.AS4_PATH]
         self.remove(Attribute.CODE.AS_PATH)
         self.remove(Attribute.CODE.AS4_PATH)
 
+        # Type narrowing - these are guaranteed to be AS2Path after parsing
+        assert isinstance(as2path_attr, AS2Path), f'AS_PATH must be AS2Path, got {type(as2path_attr)}'
+        assert isinstance(as4path_attr, AS2Path), f'AS4_PATH must be AS2Path, got {type(as4path_attr)}'
+        as2path: AS2Path = as2path_attr
+        as4path: AS2Path = as4path_attr
+
         # this key is unique as index length is a two header, plus a number of ASN of size 2 or 4
         # so adding the: make the length odd and unique
-        key = '{}:{}'.format(as2path.index, as4path.index)
+        key = bytes(as2path.index) + b':' + bytes(as4path.index)
 
         # found a cache copy
-        cached = Attribute.cache.get(Attribute.CODE.AS_PATH, {}).get(key, None)
+        cache_dict = Attribute.cache.get(Attribute.CODE.AS_PATH)
+        cached = cache_dict.get(key, None) if cache_dict else None
         if cached:
             self.add(cached, key)
             return
-
-        # as_seq = []
-        # as_set = []
 
         len2 = len(as2path.as_seq)
         len4 = len(as4path.as_seq)
@@ -551,14 +580,6 @@ class AttributeCollection(dict):
         if not isinstance(other, AttributeCollection):
             return False
 
-        # we sort based on packed values since the items do not
-        # necessarily implement __cmp__
-        def pack_(attr: Attribute) -> bytes:
-            # Pack attribute to bytes for comparison
-            collection = AttributeCollection()
-            collection.add(attr)
-            return bytes(collection.pack_attribute(Negotiated.UNSET))
-
         try:
             for key in set(self.keys()).union(set(other.keys())):
                 if key == Attribute.CODE.MP_REACH_NLRI or key == Attribute.CODE.MP_UNREACH_NLRI:
@@ -572,11 +593,12 @@ class AttributeCollection(dict):
                 if isinstance(sval, Communities):
                     if not isinstance(oval, Communities):
                         return False
-
-                    sval = sorted(sval, key=pack_)
-                    oval = sorted(oval, key=pack_)
-
-                if sval != oval:
+                    # Compare sorted community lists by their packed bytes
+                    if sorted(bytes(c._packed) for c in sval.communities) != sorted(
+                        bytes(c._packed) for c in oval.communities
+                    ):
+                        return False
+                elif sval != oval:
                     return False
             return True
         except KeyError:

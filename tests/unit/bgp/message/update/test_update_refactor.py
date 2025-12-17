@@ -50,12 +50,14 @@ def test_update_data_can_be_constructed() -> None:
     assert update.attributes is attrs
 
 
-def test_attribute_set_is_dict() -> None:
-    """Test that AttributeCollection inherits from dict."""
+def test_attribute_set_is_mapping() -> None:
+    """Test that AttributeCollection is a MutableMapping."""
+    from collections.abc import MutableMapping
+
     from exabgp.bgp.message.update.attribute import AttributeCollection
 
     attrs = AttributeCollection()
-    assert isinstance(attrs, dict)
+    assert isinstance(attrs, MutableMapping)
 
 
 def test_attribute_set_has_method() -> None:

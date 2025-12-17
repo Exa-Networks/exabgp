@@ -234,6 +234,66 @@ warn_return_any = true
 
 ---
 
+## `# type: ignore` Usage (REQUIRES EXPLICIT APPROVAL)
+
+**Rule:** NEVER add `# type: ignore` comments without explicit user approval.
+
+❌ **NEVER do this on your own initiative:**
+```python
+def __hash__(self) -> int:  # type: ignore[override]
+    return hash(repr(self))
+```
+
+✅ **ALWAYS ask user first, then if approved:**
+```python
+def __hash__(self) -> int:  # type: ignore[override]
+    # EXCEPTION: dict sets __hash__ = None but AttributeCollection is intentionally
+    # hashable for use as dict keys. Approved 2025-XX-XX.
+    return hash(repr(self))
+```
+
+**Process:**
+1. Identify the mypy error
+2. Ask user: "This requires `# type: ignore[X]` - should I add it?"
+3. If approved, add BOTH the ignore AND an explanatory comment documenting WHY it's an exception
+4. Comment must include: what the exception is, why it's needed, approval date
+
+**Why:** Type ignores hide problems. Each one must be a deliberate, documented exception.
+
+---
+
+## Minimize `isinstance` Checks
+
+**Rule:** Prefer structural solutions over runtime `isinstance` checks.
+
+**Preferred approaches (in order):**
+1. **Restructure types** - Make types inherit from common base so union isn't needed
+2. **Use `cast()`** - When code structure guarantees the type (e.g., accessing by known key)
+3. **ClassVar flags** - Use `has_label`, `has_rd` style flags instead of isinstance
+4. **`isinstance`** - Last resort, when runtime type truly varies
+
+✅ **PREFERRED - use cast() when code structure guarantees type:**
+```python
+# We know AS_PATH code always maps to AS2Path
+as2path = cast(AS2Path, self[Attribute.CODE.AS_PATH])
+```
+
+❌ **AVOID - isinstance when type is already known from context:**
+```python
+attr = self[Attribute.CODE.AS_PATH]
+if isinstance(attr, AS2Path):  # Unnecessary - code guarantees this
+    as2path = attr
+```
+
+**When cast() is acceptable without isinstance:**
+- Accessing dict by specific key that always maps to specific type
+- After calling factory that returns specific subtype for known input
+- When code structure makes type obvious (comments should explain why)
+
+**Note:** `cast()` has zero runtime cost - it's purely for type checker. Use it when you KNOW the type is correct from code structure.
+
+---
+
 ## Class Attribute Type Annotations
 
 **Avoid `| None` in class attributes when possible:**
