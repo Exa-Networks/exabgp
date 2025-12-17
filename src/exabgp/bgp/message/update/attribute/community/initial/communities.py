@@ -10,8 +10,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING, Iterator, Sequence
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -123,5 +124,5 @@ class Communities(Attribute):
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'Communities':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         return cls.from_packet(data)

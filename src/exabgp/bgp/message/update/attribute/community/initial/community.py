@@ -7,14 +7,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.util.types import Buffer
 
+from exabgp.util.types import Buffer
 
 # ==================================================================== Community
 #
@@ -158,7 +157,7 @@ class Community:
         return 4
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'Community':
+    def unpack_community(cls, data: Buffer, negotiated: Negotiated) -> 'Community':
         return cls.from_packet(data)
 
     @classmethod

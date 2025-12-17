@@ -159,7 +159,7 @@ class NextHop(Attribute):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'NextHop':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         if not data:
             return NextHop.UNSET
         return cls.from_packet(data)

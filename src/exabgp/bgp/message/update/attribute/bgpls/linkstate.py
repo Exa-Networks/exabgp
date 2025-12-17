@@ -23,7 +23,7 @@ import binascii
 import itertools
 import json
 from struct import unpack
-from typing import Any, Callable, Protocol, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -133,7 +133,7 @@ class LinkState(Attribute):
         return lsid in cls.registered_lsids
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> LinkState:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         """Store raw bytes - parsing happens on demand via ls_attrs property."""
         return cls(data)
 

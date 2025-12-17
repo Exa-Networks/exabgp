@@ -126,7 +126,7 @@ class LargeCommunity(Attribute):
         return 12
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'LargeCommunity':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         return cls.from_packet(data)
 
     @classmethod

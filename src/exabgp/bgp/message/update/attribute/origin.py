@@ -7,8 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING, ClassVar
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -107,7 +108,7 @@ class Origin(Attribute):
         return 'invalid'
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Origin:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         # Wire data - use from_packet for validation
         return cls.from_packet(data)
 

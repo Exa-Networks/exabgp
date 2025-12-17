@@ -110,5 +110,5 @@ class OriginatorID(Attribute):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'OriginatorID':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         return cls.from_packet(data)

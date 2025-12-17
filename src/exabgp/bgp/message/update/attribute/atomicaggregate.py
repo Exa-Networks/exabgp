@@ -7,8 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from typing import TYPE_CHECKING
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -86,7 +87,7 @@ class AtomicAggregate(Attribute):
         return 0
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> AtomicAggregate:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         # Wire data - use from_packet for validation
         return cls.from_packet(data)
 

@@ -50,7 +50,8 @@ def test_aspath_empty() -> None:
 
     result = AS2Path.unpack_attribute(data, negotiated)
 
-    assert result is None
+    # Empty data returns the Empty singleton
+    assert result is AS2Path.Empty
 
 
 def test_aspath_simple_sequence_asn2() -> None:

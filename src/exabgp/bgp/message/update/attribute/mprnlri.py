@@ -157,7 +157,7 @@ class MPRNLRI(Attribute, Family):
         return 'MP_REACH_NLRI for %s %s' % (self.afi, self.safi)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> MPRNLRI:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         """Unpack MPRNLRI from wire format.
 
         Validates the data and creates an MPRNLRI instance storing the wire bytes.
