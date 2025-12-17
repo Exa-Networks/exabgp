@@ -11,10 +11,17 @@ import os
 import sys
 import uuid
 
+from typing import TYPE_CHECKING
+
 from exabgp.configuration.core import Section
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 
 from exabgp.configuration.process.parser import run
+
+if TYPE_CHECKING:
+    from exabgp.configuration.core.error import Error
+    from exabgp.configuration.core.parser import Parser
+    from exabgp.configuration.core.scope import Scope
 
 API_PREFIX = 'api-internal-cli'
 
@@ -65,24 +72,24 @@ class ParseProcess(Section):
 
     name = 'process'
 
-    def __init__(self, parser, scope, error):
+    def __init__(self, parser: 'Parser', scope: 'Scope', error: 'Error') -> None:
         Section.__init__(self, parser, scope, error)
-        self.processes = {}
-        self._processes = []
+        self.processes: dict[str, dict[str, object]] = {}
+        self._processes: list[str] = []
         self.named = ''
 
-    def clear(self):
+    def clear(self) -> None:
         self.processes = {}
         self._processes = []
 
-    def pre(self):
+    def pre(self) -> bool:
         self.named = self.parser.line[1]
         if self.named in self._processes:
             return self.error.set('a process section called "{}" already exists'.format(self.named))
         self._processes.append(self.named)
         return True
 
-    def post(self):
+    def post(self) -> bool:
         configured = self.scope.get().keys()
         # Apply defaults from self.default dict
         for default in self.default:
@@ -109,7 +116,7 @@ class ParseProcess(Section):
         self.processes.update({self.named: self.scope.pop()})
         return True
 
-    def add_api(self):
+    def add_api(self) -> None:
         prog = os.path.join(os.environ.get('PWD', ''), sys.argv[0])
 
         # Add pipe-based process if enabled

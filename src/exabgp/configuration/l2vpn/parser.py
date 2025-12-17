@@ -11,12 +11,13 @@ from exabgp.protocol.family import AFI
 
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.attribute import NextHopSelf
+from exabgp.configuration.core.parser import Tokeniser
 
 # VPLS parameter maximum value (16-bit field)
 VPLS_PARAM_MAX = 0xFFFF  # Maximum value for VPLS endpoint, size, offset, and label base
 
 
-def vpls_endpoint(tokeniser):
+def vpls_endpoint(tokeniser: Tokeniser) -> int:
     number = int(tokeniser())
     if number < 0 or number > VPLS_PARAM_MAX:
         raise ValueError('invalid l2vpn vpls endpoint')
@@ -24,7 +25,7 @@ def vpls_endpoint(tokeniser):
     # vpls.endpoint = number
 
 
-def vpls_size(tokeniser):
+def vpls_size(tokeniser: Tokeniser) -> int:
     number = int(tokeniser())
     if number < 0 or number > VPLS_PARAM_MAX:
         raise ValueError('invalid l2vpn vpls block-size')
@@ -32,7 +33,7 @@ def vpls_size(tokeniser):
     # vpls.size = number
 
 
-def vpls_offset(tokeniser):
+def vpls_offset(tokeniser: Tokeniser) -> int:
     number = int(tokeniser())
     if number < 0 or number > VPLS_PARAM_MAX:
         raise ValueError('invalid l2vpn vpls block-offset')
@@ -40,7 +41,7 @@ def vpls_offset(tokeniser):
     # vpls.offset = number
 
 
-def vpls_base(tokeniser):
+def vpls_base(tokeniser: Tokeniser) -> int:
     number = int(tokeniser())
     if number < 0 or number > VPLS_PARAM_MAX:
         raise ValueError('invalid l2vpn vpls label')
@@ -48,7 +49,7 @@ def vpls_base(tokeniser):
     # vpls.base = number
 
 
-def next_hop(tokeniser):
+def next_hop(tokeniser: Tokeniser) -> NextHopSelf | IP:
     value = tokeniser()
 
     if value.lower() == 'self':

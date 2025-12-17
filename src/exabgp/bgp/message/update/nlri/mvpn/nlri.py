@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Type
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type
 
 from exabgp.util.types import Buffer
 
@@ -108,7 +108,7 @@ class MVPN(NLRI):
         return new
 
     @classmethod
-    def register_mvpn(cls, code: int):
+    def register_mvpn(cls, code: int) -> Callable[[Type[MVPN]], Type[MVPN]]:
         """Register an MVPN route type subclass by its code."""
 
         def decorator(klass: Type[MVPN]) -> Type[MVPN]:

@@ -23,6 +23,7 @@ from exabgp.cli.colors import Colors
 from exabgp.cli.command_schema import get_command_spec
 from exabgp.cli.formatter import OutputFormatter
 from exabgp.cli.fuzzy import FuzzyMatcher
+from exabgp.cli.history import HistoryTracker
 from exabgp.cli.schema_bridge import ValueTypeCompletionEngine, ValidationState
 from exabgp.reactor.api.command.registry import CommandRegistry
 
@@ -99,7 +100,7 @@ class CommandCompleter:
         class FrequencyProvider:
             """Dict-like wrapper for history tracker"""
 
-            def __init__(self, tracker):
+            def __init__(self, tracker: HistoryTracker | None) -> None:
                 self.tracker = tracker
 
             def get(self, command: str, default: int = 0) -> int:
@@ -108,7 +109,9 @@ class CommandCompleter:
                     return int(self.tracker.get_total_bonus(command)) // 10
                 return default
 
-        freq_provider = FrequencyProvider(self.history_tracker) if self.history_tracker else {}
+        freq_provider: FrequencyProvider | dict[str, int] = (
+            FrequencyProvider(self.history_tracker) if self.history_tracker else {}
+        )
         self.fuzzy_matcher = FuzzyMatcher(frequency_provider=freq_provider)
         self.schema_engine = ValueTypeCompletionEngine()
 

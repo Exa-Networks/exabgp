@@ -14,6 +14,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
+
+
+class FrequencyLookup(Protocol):
+    """Protocol for frequency data lookup (dict-like interface)."""
+
+    def get(self, key: str, default: int = 0) -> int:
+        """Get frequency count for a command."""
+        ...
 
 
 @dataclass
@@ -52,14 +61,16 @@ class FuzzyMatcher:
         - Typical: <20ms for 200 candidates
     """
 
-    def __init__(self, frequency_provider: dict[str, int] | None = None):
+    def __init__(self, frequency_provider: FrequencyLookup | dict[str, int] | None = None):
         """Initialize fuzzy matcher.
 
         Args:
-            frequency_provider: Optional dict mapping candidate → usage count
+            frequency_provider: Optional object with .get() method mapping candidate → usage count
                                 Used for ranking bonus (0-50 points)
         """
-        self.frequency_provider = frequency_provider or {}
+        self._frequency_provider: FrequencyLookup | dict[str, int] = (
+            frequency_provider if frequency_provider is not None else {}
+        )
 
     def subsequence_match(self, query: str, candidate: str) -> tuple[bool, int]:
         """Check if query is subsequence of candidate (case-insensitive).
@@ -151,7 +162,7 @@ class FuzzyMatcher:
         score -= gaps
 
         # Factor 4: Frequency bonus (from usage history)
-        freq_count = self.frequency_provider.get(candidate, 0)
+        freq_count = self._frequency_provider.get(candidate, 0)
         freq_bonus = min(50, freq_count * 5)  # Cap at 50 points
         score += freq_bonus
 
@@ -220,13 +231,13 @@ class FuzzyMatcher:
 
         return scored[:limit]
 
-    def set_frequency_provider(self, provider: dict[str, int]) -> None:
+    def set_frequency_provider(self, provider: FrequencyLookup | dict[str, int]) -> None:
         """Update frequency provider for ranking bonus.
 
         Args:
-            provider: Dict mapping candidate → usage count
+            provider: Object with .get() method mapping candidate → usage count
         """
-        self.frequency_provider = provider
+        self._frequency_provider = provider
 
 
 # Convenience function for simple cases

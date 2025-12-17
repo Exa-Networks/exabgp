@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from exabgp.configuration.core import Section
 from exabgp.configuration.schema import (
     ActionKey,
@@ -18,6 +20,11 @@ from exabgp.configuration.schema import (
     ValueType,
 )
 from exabgp.configuration.validator import LegacyParserValidator
+
+if TYPE_CHECKING:
+    from exabgp.configuration.core.error import Error
+    from exabgp.configuration.core.parser import Parser
+    from exabgp.configuration.core.scope import Scope
 
 from exabgp.bgp.message.update.nlri import VPLS as VPLS_NLRI
 from exabgp.bgp.message.update.nlri.settings import VPLSSettings
@@ -303,20 +310,20 @@ class ParseVPLS(Section):
 
     name = 'l2vpn/vpls'
 
-    def __init__(self, parser, scope, error):
+    def __init__(self, parser: 'Parser', scope: 'Scope', error: 'Error') -> None:
         Section.__init__(self, parser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         # Settings mode: create VPLSSettings and AttributeCollection for deferred NLRI construction
         settings = VPLSSettings()
         attributes = AttributeCollection()
         self.scope.set_settings(settings, attributes)
         return True
 
-    def post(self):
+    def post(self) -> bool:
         # Create immutable VPLS from validated settings
         settings = self.scope.get_settings()
         attributes = self.scope.get_settings_attributes()

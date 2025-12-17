@@ -19,6 +19,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from types import ModuleType
 from typing import TYPE_CHECKING
 
 from exabgp.reactor.api.dispatch.common import Handler, UnknownCommand, NoMatchingPeers
@@ -26,6 +27,10 @@ from exabgp.reactor.api.command.limit import extract_neighbors, match_neighbors
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
+
+# Sentinel type alias for module objects passed to dispatch functions
+AnnounceModule = ModuleType
+WatchdogModule = ModuleType
 
 
 # Translation table for simple v4 commands → v6 prefix
@@ -270,8 +275,8 @@ def _dispatch_announce_v4(
     command: str,
     parts: list[str],
     peers: list[str],
-    announce_cmd,
-    watchdog_cmd,
+    announce_cmd: AnnounceModule,
+    watchdog_cmd: WatchdogModule,
 ) -> tuple[Handler, list[str], str]:
     """Dispatch announce subcommand (v4).
 
@@ -315,8 +320,8 @@ def _dispatch_withdraw_v4(
     command: str,
     parts: list[str],
     peers: list[str],
-    announce_cmd,
-    watchdog_cmd,
+    announce_cmd: AnnounceModule,
+    watchdog_cmd: WatchdogModule,
 ) -> tuple[Handler, list[str], str]:
     """Dispatch withdraw subcommand (v4).
 

@@ -6,7 +6,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -115,7 +115,7 @@ class MUP(NLRI):
         return new
 
     @classmethod
-    def register_mup_route(cls, archtype: int, code: int):
+    def register_mup_route(cls, archtype: int, code: int) -> Callable[[type[MUP]], type[MUP]]:
         """Register a MUP route type subclass by its archtype:code key."""
 
         def decorator(klass: type[MUP]) -> type[MUP]:

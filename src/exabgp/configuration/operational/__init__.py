@@ -7,9 +7,16 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from exabgp.configuration.core import Section
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 from exabgp.configuration.validator import LegacyParserValidator
+
+if TYPE_CHECKING:
+    from exabgp.configuration.core.error import Error
+    from exabgp.configuration.core.parser import Parser
+    from exabgp.configuration.core.scope import Scope
 
 from exabgp.configuration.operational.parser import asm
 from exabgp.configuration.operational.parser import adm
@@ -101,17 +108,17 @@ class ParseOperational(Section):
 
     name = 'operational'
 
-    def __init__(self, parser, scope, error):
+    def __init__(self, parser: 'Parser', scope: 'Scope', error: 'Error') -> None:
         Section.__init__(self, parser, scope, error)
 
-    def clear(self):
+    def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         self.scope.to_context()
         return True
 
-    def post(self):
+    def post(self) -> bool:
         routes = self.scope.pop(self.name)
         if routes:
             self.scope.set_value('routes', routes)

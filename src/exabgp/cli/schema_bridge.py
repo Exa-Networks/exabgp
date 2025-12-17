@@ -69,7 +69,7 @@ class ValueTypeCompletionEngine:
         'IGP|EGP|INCOMPLETE'
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize completion engine."""
         # Cache validators to avoid repeated creation
         self._validator_cache: dict[ValueType, Validator[Any] | None] = {}

@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -123,7 +123,7 @@ class EVPN(NLRI):
         raise NotImplementedError(f'{cls.__name__} must implement unpack_evpn')
 
     @classmethod
-    def register_evpn_route(cls, code: int):
+    def register_evpn_route(cls, code: int) -> Callable[[type[EVPN]], type[EVPN]]:
         """Register an EVPN route type subclass by its code."""
 
         def decorator(klass: type[EVPN]) -> type[EVPN]:

@@ -17,6 +17,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.core import Parser
 from exabgp.configuration.core import Scope
 from exabgp.configuration.core import Error
+from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType, TupleLeaf
 from exabgp.configuration.validator import TupleValidator, StatefulValidator, Validator
 
@@ -183,7 +184,7 @@ class ParseFamily(Section):
         # Wrap with StatefulValidator for deduplication using instance's _seen
         return StatefulValidator(inner=inner, seen=self._seen)
 
-    def all(self, tokeniser) -> None:
+    def all(self, tokeniser: Tokeniser) -> None:
         """Handle 'all' command - enable all known address families."""
         if self._all or self._seen:
             self.error.set('all cannot be used with any other options')

@@ -7,10 +7,18 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from exabgp.configuration.l2vpn.vpls import ParseVPLS
 from exabgp.configuration.schema import Container, ActionTarget, ActionOperation
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.configuration.validator import RouteBuilderValidator
+from exabgp.rib.route import Route
+
+if TYPE_CHECKING:
+    from exabgp.configuration.core.error import Error
+    from exabgp.configuration.core.parser import Parser, Tokeniser
+    from exabgp.configuration.core.scope import Scope
 
 __all__ = [
     'ParseL2VPN',
@@ -34,16 +42,16 @@ class ParseL2VPN(ParseVPLS):
 
     name = 'L2VPN'
 
-    def __init__(self, parser, scope, error):
+    def __init__(self, parser: 'Parser', scope: 'Scope', error: 'Error') -> None:
         ParseVPLS.__init__(self, parser, scope, error)
 
     def clear(self) -> None:
         pass
 
-    def pre(self):
+    def pre(self) -> bool:
         return True
 
-    def post(self):
+    def post(self) -> bool:
         routes = self.scope.pop_routes()
         if routes:
             self.scope.extend('routes', routes)
@@ -51,7 +59,7 @@ class ParseL2VPN(ParseVPLS):
 
 
 @ParseL2VPN.register_family(AFI.undefined, SAFI.vpls, ActionTarget.ROUTE, ActionOperation.EXTEND)
-def vpls(tokeniser):
+def vpls(tokeniser: 'Tokeniser') -> list[Route]:
     """Build VPLS route using RouteBuilderValidator with ParseVPLS schema."""
     validator = RouteBuilderValidator(schema=ParseVPLS.schema)
     return validator.validate(tokeniser)
