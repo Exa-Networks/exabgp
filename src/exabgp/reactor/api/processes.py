@@ -1149,6 +1149,18 @@ class Processes:
         else:
             await self._answer_async(service, Answer.text_error)
 
+    async def answer_async(self, service: str, data: object) -> None:
+        """Async version of answer() - send JSON-serializable data to API process.
+
+        Args:
+            service: The service/process name to send to
+            data: JSON-serializable data (dict, list, etc.) to send as response
+        """
+        import json
+
+        response = json.dumps(data)
+        await self._answer_async(service, response)
+
     def set_ack(self, service: str, enabled: bool) -> None:
         """Set ACK state for a specific service/process"""
         self._ack[service] = enabled

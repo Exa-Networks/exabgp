@@ -67,6 +67,7 @@ class Outgoing(Connection):
             if setup_issue:
                 return setup_issue
         try:
+            assert self.io is not None  # Set by _setup() above
             connect(self.io, self.peer, self.port, self.afi, self.md5)
             return None
         except Exception as exc:
@@ -99,6 +100,7 @@ class Outgoing(Connection):
                 continue
 
             connected = False
+            assert self.io is not None  # Set by successful _connect() above
             for r, message in ready(self.io):
                 if not r:
                     yield False
@@ -167,6 +169,7 @@ class Outgoing(Connection):
 
             # Use asyncio to connect (non-blocking, event-driven)
             try:
+                assert self.io is not None  # Set by _setup_async() above
                 if self.afi == AFI.ipv4:
                     await loop.sock_connect(self.io, (self.peer, self.port))
                 elif self.afi == AFI.ipv6:

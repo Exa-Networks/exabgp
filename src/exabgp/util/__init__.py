@@ -8,14 +8,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import string
-from typing import Iterator, TypeVar
+from typing import Iterator, overload
 
 from exabgp.util.types import Buffer
 
 # Hexadecimal string prefix length
 HEX_PREFIX_LENGTH: int = 2  # Length of '0x' prefix
-
-T = TypeVar('T', str, bytes)
 
 
 def hexstring(value: Buffer) -> str:
@@ -39,5 +37,11 @@ def string_is_hex(s: str) -> bool:
     return all(c in string.hexdigits for c in s[HEX_PREFIX_LENGTH:])
 
 
-def split(data: T, step: int) -> Iterator[T]:
+@overload
+def split(data: str, step: int) -> Iterator[str]: ...
+@overload
+def split(data: Buffer, step: int) -> Iterator[Buffer]: ...
+
+
+def split(data: str | Buffer, step: int) -> Iterator[str] | Iterator[Buffer]:
     return (data[i : i + step] for i in range(0, len(data), step))
