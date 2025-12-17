@@ -161,7 +161,7 @@ def most_common_types(limit=10, objects=None, shortnames=True):
     return stats
 
 
-def show_most_common_types(limit=10, objects=None, shortnames=True):
+def show_most_common_types(limit: int = 10, objects: object = None, shortnames: bool = True) -> None:
     """Print the table of types of most common instances.
 
     The caveats documented in :func:`typestats` apply.
@@ -256,7 +256,7 @@ def get_leaking_objects(objects=None):
         del objects, i  # clear cyclic references to frame
 
 
-def by_type(typename, objects=None):
+def by_type(typename: str, objects: object = None) -> list[object]:
     """Return objects tracked by the garbage collector with a given class name.
 
     Example:
@@ -353,18 +353,18 @@ def find_backref_chain(obj, predicate, max_depth=20, extra_ignore=()):
 
 
 def show_backrefs(
-    objs,
-    max_depth=3,
-    extra_ignore=(),
-    filter=None,
-    too_many=10,
-    highlight=None,
-    filename=None,
-    extra_info=None,
-    refcounts=False,
-    shortnames=True,
-    output=None,
-):
+    objs: object,
+    max_depth: int = 3,
+    extra_ignore: tuple[object, ...] = (),
+    filter: object = None,
+    too_many: int = 10,
+    highlight: object = None,
+    filename: str | None = None,
+    extra_info: object = None,
+    refcounts: bool = False,
+    shortnames: bool = True,
+    output: object = None,
+) -> None:
     """Generate an object reference graph ending at ``objs``.
 
     The graph will show you what objects refer to ``objs``, directly and

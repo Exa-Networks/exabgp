@@ -101,7 +101,9 @@ class IComponent:
     Components must define ID (component type) and implement pack()/make().
     """
 
+    ID: ClassVar[int]  # Component type identifier, set by subclasses
     FLAG: ClassVar[bool] = False
+    decoder: ClassVar[Callable[[bytes], object]]  # Value decoder, set by subclasses
 
     def pack(self) -> Buffer:
         """Pack the component to wire format. Must be overridden by subclasses."""

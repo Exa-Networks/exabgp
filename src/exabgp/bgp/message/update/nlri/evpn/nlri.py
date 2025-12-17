@@ -118,7 +118,7 @@ class EVPN(NLRI):
         return bytes(Family.index(self)) + self._packed
 
     @classmethod
-    def unpack_evpn_route(cls, data: Buffer) -> EVPN:
+    def unpack_evpn(cls, data: Buffer) -> EVPN:
         """Unpack route-type-specific data. Override in subclasses."""
         raise NotImplementedError(f'{cls.__name__} must implement unpack_evpn')
 
@@ -155,7 +155,8 @@ class EVPN(NLRI):
         packed = bytes(data[0:total_length])
 
         if code in cls.registered_evpn:
-            nlri = cls.registered_evpn[code].unpack_evpn(packed)
+            klass = cls.registered_evpn[code]
+            nlri = klass.unpack_evpn(packed)
         else:
             nlri = GenericEVPN(packed)
         nlri.addpath = addpath
