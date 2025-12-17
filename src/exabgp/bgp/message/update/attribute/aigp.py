@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard
 
 # ========================================================================== TLV
 #
@@ -125,8 +125,8 @@ class AIGP(Attribute):
         return f'0x{self.aigp:016x}'
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> AIGP | None:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         if not negotiated.aigp:
             # AIGP must only be accepted on configured sessions
-            return None
+            return Discard(cls.ID)
         return cls.from_packet(data)

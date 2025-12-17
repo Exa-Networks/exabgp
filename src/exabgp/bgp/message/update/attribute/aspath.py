@@ -310,9 +310,10 @@ class ASPath(Attribute):
         return message
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'ASPath | None':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         if not bytes(data):
-            return None
+            assert cls.Empty is not None  # Set after class definition
+            return cls.Empty
         return cls.from_packet(data, negotiated.asn4)
 
 
@@ -365,9 +366,10 @@ class AS4Path(ASPath):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'AS4Path | None':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         if not bytes(data):
-            return None
+            assert cls.Empty is not None  # Set after class definition
+            return cls.Empty
         return cls.from_packet(data)
 
 
