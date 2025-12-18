@@ -180,7 +180,7 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'encoding': 'Functional encoding tests',
     'api': 'Functional API tests',
     'cli': 'Functional CLI tests',
-    'type-ignore': 'Type ignore regression check',
+    'type-ignore': 'Prohibited # type: comments check',
 }
 
 # Ordered list of test names

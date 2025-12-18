@@ -256,7 +256,7 @@ uv run pytest tests/unit/specific_test.py::test_function -v
 - Python 3.12+ syntax: `int | str` NOT `Union[int, str]`
 - NO code requiring mypy config changes
 - BGP APIs: keep `negotiated` parameter (stable API, unused OK)
-- Fix type errors at root cause, avoid `# type: ignore`
+- Fix type errors at root cause, NEVER use `# type:` comments
 - `cast()` is acceptable ONLY when preceded by runtime type check (isinstance/hasattr)
   - Example: `if isinstance(x, bool): return cast(T, x)` ✅
   - Example: `return cast(int, value)` without check ❌
@@ -278,6 +278,9 @@ uv run pytest tests/unit/specific_test.py::test_function -v
 ❌ **Prohibited:**
 - `Union[int, str]` instead of `int | str`
 - Adding mypy suppressions or relaxed settings
+- **ANY mypy `# type` comments** - includes `# type: ignore`, `# type: ignore[code]`, `# type: X`
+  - These are workarounds that hide problems instead of fixing them
+  - Fix the actual type issue at its source instead
 - Removing `negotiated` parameter from pack/unpack methods
 - Introducing asyncio (custom reactor pattern used)
 
@@ -307,7 +310,7 @@ When fixing bugs or refactoring code:
 
 ❌ **DON'T:**
 - Use `cast()` to silence type errors without fixing the underlying issue
-- Use `# type: ignore` to suppress valid warnings
+- Use ANY `# type:` comments (ignore, ignore[code], type annotations)
 - Apply workarounds that leave technical debt
 - Choose minimal changes over correct changes
 - Avoid touching other files when the fix belongs there
@@ -556,4 +559,4 @@ Before ending ANY session where you worked on a plan:
 
 ---
 
-**Updated:** 2025-12-15
+**Updated:** 2025-12-18

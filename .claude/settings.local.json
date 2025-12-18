@@ -139,5 +139,6 @@
         ]
       }
     ]
-  }
+  },
+  "outputStyle": "ExaBGP Terse"
 }

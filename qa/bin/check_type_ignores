@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-Check for type:ignore regression in the codebase.
+Check for prohibited # type: comments in the codebase.
 
-This script counts type:ignore comments and fails if the count increases
-beyond the baseline. Run with --update to set a new baseline.
+This script scans for ANY # type: comments and fails if found.
+All type annotations must use Python 3.12+ inline syntax.
+
+Prohibited patterns:
+  # type: ignore
+  # type: ignore[error-code]
+  # type: SomeType  (Python 2 style annotation)
 
 Usage:
-    ./qa/bin/check_type_ignores          # Check against baseline
-    ./qa/bin/check_type_ignores --update # Update baseline
-    ./qa/bin/check_type_ignores --show   # Show all type:ignore locations
+    ./qa/bin/check_type_ignores          # Check and fail if any found
+    ./qa/bin/check_type_ignores --show   # Show all locations
 """
 
 from __future__ import annotations
@@ -17,19 +21,16 @@ import argparse
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
-# Baseline file location
-BASELINE_FILE = Path(__file__).parent.parent / 'type_ignore_baseline.txt'
 SRC_DIR = Path(__file__).parent.parent.parent / 'src' / 'exabgp'
 
-# Pattern to match type: ignore comments
-TYPE_IGNORE_PATTERN = re.compile(r'#\s*type:\s*ignore')
+# Pattern to match ANY # type: comment (ignore, type annotations, etc.)
+TYPE_COMMENT_PATTERN = re.compile(r'#\s*type\s*:')
 
 
-def find_type_ignores() -> Dict[str, List[Tuple[int, str]]]:
-    """Find all type:ignore comments in the codebase."""
-    results: Dict[str, List[Tuple[int, str]]] = {}
+def find_type_comments() -> dict[str, list[tuple[int, str]]]:
+    """Find all # type: comments in the codebase."""
+    results: dict[str, list[tuple[int, str]]] = {}
 
     for py_file in SRC_DIR.rglob('*.py'):
         # Skip vendored files
@@ -37,12 +38,12 @@ def find_type_ignores() -> Dict[str, List[Tuple[int, str]]]:
             continue
 
         rel_path = str(py_file.relative_to(SRC_DIR.parent.parent))
-        matches: List[Tuple[int, str]] = []
+        matches: list[tuple[int, str]] = []
 
         try:
             with open(py_file, 'r', encoding='utf-8') as f:
                 for line_num, line in enumerate(f, 1):
-                    if TYPE_IGNORE_PATTERN.search(line):
+                    if TYPE_COMMENT_PATTERN.search(line):
                         matches.append((line_num, line.rstrip()))
         except Exception as e:
             print(f'Error reading {py_file}: {e}', file=sys.stderr)
@@ -54,31 +55,13 @@ def find_type_ignores() -> Dict[str, List[Tuple[int, str]]]:
     return results
 
 
-def count_ignores(results: Dict[str, List[Tuple[int, str]]]) -> int:
-    """Count total number of type:ignore comments."""
+def count_comments(results: dict[str, list[tuple[int, str]]]) -> int:
+    """Count total number of # type: comments."""
     return sum(len(matches) for matches in results.values())
 
 
-def read_baseline() -> int:
-    """Read the baseline count from file."""
-    if not BASELINE_FILE.exists():
-        return -1
-    try:
-        with open(BASELINE_FILE, 'r') as f:
-            return int(f.read().strip())
-    except (ValueError, IOError):
-        return -1
-
-
-def write_baseline(count: int) -> None:
-    """Write the baseline count to file."""
-    with open(BASELINE_FILE, 'w') as f:
-        f.write(f'{count}\n')
-    print(f'Baseline updated: {count} type:ignore comments')
-
-
-def show_ignores(results: Dict[str, List[Tuple[int, str]]]) -> None:
-    """Display all type:ignore locations."""
+def show_comments(results: dict[str, list[tuple[int, str]]]) -> None:
+    """Display all # type: comment locations."""
     for filepath in sorted(results.keys()):
         matches = results[filepath]
         print(f'\n{filepath}:')
@@ -87,44 +70,34 @@ def show_ignores(results: Dict[str, List[Tuple[int, str]]]) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description='Check type:ignore regression')
-    parser.add_argument('--update', action='store_true', help='Update baseline')
+    parser = argparse.ArgumentParser(description='Check for prohibited # type: comments')
     parser.add_argument('--show', action='store_true', help='Show all locations')
     args = parser.parse_args()
 
-    results = find_type_ignores()
-    current_count = count_ignores(results)
+    results = find_type_comments()
+    current_count = count_comments(results)
 
     if args.show:
-        show_ignores(results)
-        print(f'\nTotal: {current_count} type:ignore comments in {len(results)} files')
+        if results:
+            show_comments(results)
+            print(f'\nTotal: {current_count} # type: comments in {len(results)} files')
+        else:
+            print('No # type: comments found')
         return 0
 
-    if args.update:
-        write_baseline(current_count)
-        return 0
-
-    # Check mode
-    baseline = read_baseline()
-
-    if baseline < 0:
-        print(f'No baseline found. Current count: {current_count}')
-        print('Run with --update to create baseline')
-        return 1
-
-    print(f'type:ignore count: {current_count} (baseline: {baseline})')
-
-    if current_count > baseline:
-        print(f'FAIL: {current_count - baseline} new type:ignore comments added')
+    # Check mode - fail if ANY # type: comments found
+    if current_count > 0:
+        print(f'FAIL: Found {current_count} prohibited # type: comments in {len(results)} files')
+        print()
+        print('All # type: comments are prohibited. Use Python 3.12+ inline annotations instead:')
+        print('  Bad:  x = value  # type: int')
+        print('  Good: x: int = value')
+        print()
         print('Run with --show to see all locations')
         return 1
-    elif current_count < baseline:
-        print(f'IMPROVEMENT: {baseline - current_count} type:ignore comments removed')
-        print('Consider running --update to lower the baseline')
-        return 0
-    else:
-        print('OK: No regression')
-        return 0
+
+    print('OK: No # type: comments found')
+    return 0
 
 
 if __name__ == '__main__':

@@ -129,12 +129,12 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
             )
             pack1 = packed[0]
 
-            _packed = packed  # type: list[bytes]
-            _pack1 = pack1  # type: bytes
+            _packed: list[bytes] = packed
+            _pack1: bytes = pack1
             log.debug(lazymsg('parsed route requires {count} updates', count=len(_packed)), 'parser')
             log.debug(lazymsg('update size is {size}', size=len(_pack1)), 'parser')
 
-            _str1 = str1  # type: str
+            _str1: str = str1
             log.debug(lazymsg('parsed route {route}', route=_str1), 'parser')
             log.debug(lazymsg('parsed hex   {hex}', hex=od(_pack1)), 'parser')
 
@@ -159,8 +159,8 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                 str2 = route2.extensive()
                 pack2 = list(UpdateCollection([routed], [], update.attributes).messages(negotiated_out))[0]
 
-                _str2 = str2  # type: str
-                _pack2 = pack2  # type: bytes
+                _str2: str = str2
+                _pack2: bytes = pack2
                 log.debug(lazymsg('recoded route {route}', route=_str2), 'parser')
                 log.debug(lazymsg('recoded hex   {hex}', hex=od(_pack2)), 'parser')
 
@@ -199,8 +199,8 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                         skip = True
                     else:
                         log.debug(lazymsg('check.strings.different'), 'parser')
-                        _str1r = str1r  # type: str
-                        _str2r = str2r  # type: str
+                        _str1r: str = str1r
+                        _str2r: str = str2r
                         log.debug(lazymsg('[{s}]', s=_str1r), 'parser')
                         log.debug(lazymsg('[{s}]', s=_str2r), 'parser')
                         return False
@@ -211,8 +211,8 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                     log.debug(lazymsg('check.encoding.skip reason=non_transitive_attributes'), 'parser')
                 elif pack1 != pack2:
                     log.debug(lazymsg('check.encoding.different'), 'parser')
-                    _pack1_cmp = pack1  # type: bytes
-                    _pack2_cmp = pack2  # type: bytes
+                    _pack1_cmp: bytes = pack1
+                    _pack2_cmp: bytes = pack2
                     log.debug(lazymsg('[{hex}]', hex=od(_pack1_cmp)), 'parser')
                     log.debug(lazymsg('[{hex}]', hex=od(_pack2_cmp)), 'parser')
                     return False
@@ -309,7 +309,7 @@ def _make_nlri(neighbor: Neighbor, routes: str) -> list[NLRI]:
     nlris: list[NLRI] = []
     try:
         while announced:
-            _announced = announced  # type: Buffer
+            _announced: Buffer = announced
             log.debug(lazymsg('parsing NLRI {announced}', announced=_announced), 'parser')
             nlri_parsed, announced = NLRI.unpack_nlri(afi, safi, announced, Action.ANNOUNCE, addpath, negotiated_in)
             if nlri_parsed is not NLRI.INVALID:
@@ -318,7 +318,7 @@ def _make_nlri(neighbor: Neighbor, routes: str) -> list[NLRI]:
         log.error(lazymsg('nlri.parse.failed afi={a} safi={s}', a=afi, s=safi), 'parser')
         from exabgp.debug import string_exception
 
-        _exc_nlri = exc  # type: BaseException
+        _exc_nlri: BaseException = exc
         log.error(lazymsg('nlri.parse.error error={msg}', msg=string_exception(_exc_nlri)), 'parser')
         if getenv().debug.pdb:
             raise
@@ -400,7 +400,7 @@ def _make_update(neighbor: Neighbor, raw: bytes) -> UpdateCollection | None:
             if kind == BGP_MSG_UPDATE:
                 log.debug(lazymsg('message.type type=update'), 'parser')
             else:
-                _kind = kind  # type: int
+                _kind: int = kind
                 log.debug(lazymsg('message.type.abort type={kind} expected=update', kind=_kind), 'parser')
                 return None
         else:
@@ -577,6 +577,6 @@ def _get_dummy_negotiated() -> Negotiated:
 
 def check_notification(raw: bytes) -> bool:
     notification = Notification.unpack_message(raw[18:], _get_dummy_negotiated())
-    _notification = notification  # type: Notification
+    _notification: Notification = notification
     log.info(lazymsg('notification.decoded notification={notification}', notification=_notification), 'parser')
     return True
