@@ -1,0 +1,37 @@
+when:
+  - event: push
+    branch: [main, 5.0, 4.2, 3.4]
+  - event: pull_request
+    branch: main
+
+matrix:
+  PYTHON_VERSION:
+    - "3.12"
+    - "3.13"
+    - "3.14"
+
+steps:
+  - name: parsing
+    image: python:${PYTHON_VERSION}-bookworm
+    commands:
+      - curl -LsSf https://astral.sh/uv/install.sh | sh
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv sync --frozen
+      - python --version
+      - uv run ./qa/bin/functional parsing
+
+  - name: encoding
+    image: python:${PYTHON_VERSION}-bookworm
+    commands:
+      - curl -LsSf https://astral.sh/uv/install.sh | sh
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv sync --frozen
+      - uv run ./qa/bin/functional encoding
+
+  - name: decoding
+    image: python:${PYTHON_VERSION}-bookworm
+    commands:
+      - curl -LsSf https://astral.sh/uv/install.sh | sh
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv sync --frozen
+      - uv run ./qa/bin/functional decoding

@@ -1,0 +1,25 @@
+when:
+  - event: push
+    branch: [main, 5.0, 4.2, 3.4]
+  - event: pull_request
+    branch: main
+
+steps:
+  - name: type-ignore-check
+    image: python:3.12-bookworm
+    commands:
+      - curl -LsSf https://astral.sh/uv/install.sh | sh
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv sync --frozen
+      - echo "Checking type:ignore count against baseline..."
+      - uv run ./qa/bin/check_type_ignores
+
+  - name: mypy
+    image: python:3.12-bookworm
+    commands:
+      - curl -LsSf https://astral.sh/uv/install.sh | sh
+      - export PATH="$HOME/.local/bin:$PATH"
+      - uv sync --frozen
+      - echo "Running mypy on full codebase (must pass with 0 errors)..."
+      - uv run mypy --version
+      - uv run mypy src/exabgp/
