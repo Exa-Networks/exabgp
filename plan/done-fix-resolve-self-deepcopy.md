@@ -279,9 +279,23 @@ uv run pytest tests/unit/ -k route -v
 
 ## Status
 
-- [ ] Change `IPSelf.resolve()` to return new IP
-- [ ] Update `resolve_self()` to use shallow copy
-- [ ] Handle NextHop attribute similarly
-- [ ] Update any other callers of `IPSelf.resolve()`
-- [ ] Run full test suite
-- [ ] Memory profiling before/after
+✅ **COMPLETED** 2025-12-18
+
+- [x] Change `IPSelf.resolve()` to return new IP
+- [x] Change `NextHopSelf.resolve()` to return new NextHop
+- [x] Update `resolve_self()` to use `Route.with_nexthop()` instead of deepcopy
+- [x] Update tests for new immutable semantics
+- [x] Run full test suite (16/16 passed)
+- [ ] Memory profiling before/after (not done - left for user)
+
+### Implementation Summary
+
+1. **`IPSelf.resolve(ip)`** - Now returns the passed `ip` directly (no mutation)
+2. **`NextHopSelf.resolve(ip)`** - Now returns a new `NextHop(ip.pack_ip())`
+3. **`resolve_self()`** - Uses `Route.with_nexthop()` to create new route with resolved IP
+4. **Tests** - Updated 13 tests to expect immutable semantics (sentinel stays unresolved)
+
+### Key Semantic Change
+
+- OLD: Sentinel mutated in-place, `.resolved` becomes True, `.SELF` stays True
+- NEW: Sentinel unchanged, returns concrete IP/NextHop with `.SELF = False`

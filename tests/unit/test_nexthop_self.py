@@ -47,15 +47,19 @@ class TestNextHopSelfSentinel:
         assert sentinel.resolved is False
 
     def test_resolved_property(self) -> None:
-        """NextHopSelf.resolved is False before and True after resolve()."""
+        """NextHopSelf.resolved stays False - resolve() returns new NextHop."""
         sentinel = NextHopSelf(AFI.ipv4)
         assert sentinel.resolved is False
 
         ip = IPv4.from_string('192.168.1.1')
-        sentinel.resolve(ip)
+        resolved = sentinel.resolve(ip)
 
-        assert sentinel.resolved is True
-        assert sentinel._packed == ip.pack_ip()
+        # Sentinel stays unresolved (immutable)
+        assert sentinel.resolved is False
+        assert sentinel._packed == b''
+        # Returned NextHop is the resolved value
+        assert isinstance(resolved, NextHop)
+        assert resolved._packed == ip.pack_ip()
 
     def test_repr_before_resolution(self) -> None:
         """NextHopSelf.__repr__() returns 'self' before resolution."""
@@ -63,10 +67,13 @@ class TestNextHopSelfSentinel:
         assert repr(sentinel) == 'self'
 
     def test_repr_after_resolution(self) -> None:
-        """NextHopSelf.__repr__() returns IP string after resolution."""
+        """resolve() returns NextHop with correct repr."""
         sentinel = NextHopSelf(AFI.ipv4)
-        sentinel.resolve(IPv4.from_string('192.168.1.1'))
-        assert repr(sentinel) == '192.168.1.1'
+        resolved = sentinel.resolve(IPv4.from_string('192.168.1.1'))
+        # Sentinel stays 'self' (immutable)
+        assert repr(sentinel) == 'self'
+        # Returned NextHop has the resolved IP
+        assert repr(resolved) == '192.168.1.1'
 
     def test_bool_is_true(self) -> None:
         """NextHopSelf is truthy even before resolution."""
@@ -100,26 +107,31 @@ class TestNextHopSelfSentinel:
         with pytest.raises(ValueError, match='before resolve'):
             sentinel.pack_attribute(mock_negotiated)
 
-    def test_pack_attribute_works_after_resolution(self) -> None:
-        """NextHopSelf.pack_attribute() works after resolve()."""
+    def test_pack_attribute_works_on_resolved(self) -> None:
+        """Returned NextHop from resolve() can be packed."""
         from unittest.mock import Mock
 
         sentinel = NextHopSelf(AFI.ipv4)
-        sentinel.resolve(IPv4.from_string('192.168.1.1'))
+        resolved = sentinel.resolve(IPv4.from_string('192.168.1.1'))
         mock_negotiated = Mock()
 
-        # Should not raise
-        result = sentinel.pack_attribute(mock_negotiated)
+        # Resolved NextHop should pack successfully
+        result = resolved.pack_attribute(mock_negotiated)
         assert isinstance(result, bytes)
 
-    def test_resolve_twice_raises(self) -> None:
-        """NextHopSelf.resolve() raises ValueError if already resolved."""
+    def test_resolve_multiple_times_ok(self) -> None:
+        """NextHopSelf.resolve() can be called multiple times (sentinel stays immutable)."""
         sentinel = NextHopSelf(AFI.ipv4)
-        ip = IPv4.from_string('192.168.1.1')
-        sentinel.resolve(ip)
+        ip1 = IPv4.from_string('192.168.1.1')
+        ip2 = IPv4.from_string('192.168.1.2')
 
-        with pytest.raises(ValueError, match='already resolved'):
-            sentinel.resolve(ip)
+        # Each call returns a new NextHop, sentinel unchanged
+        resolved1 = sentinel.resolve(ip1)
+        resolved2 = sentinel.resolve(ip2)
+
+        assert repr(resolved1) == '192.168.1.1'
+        assert repr(resolved2) == '192.168.1.2'
+        assert repr(sentinel) == 'self'  # Sentinel unchanged
 
 
 class TestIPSelfSentinel:
@@ -136,15 +148,18 @@ class TestIPSelfSentinel:
         assert sentinel.afi == AFI.ipv4
 
     def test_resolved_property(self) -> None:
-        """IPSelf.resolved is False before and True after resolve()."""
+        """IPSelf.resolved stays False - resolve() returns concrete IP."""
         sentinel = IPSelf(AFI.ipv4)
         assert sentinel.resolved is False
 
         ip = IPv4.from_string('192.168.1.1')
-        sentinel.resolve(ip)
+        resolved = sentinel.resolve(ip)
 
-        assert sentinel.resolved is True
-        assert sentinel._packed == ip.pack_ip()
+        # Sentinel stays unresolved (immutable)
+        assert sentinel.resolved is False
+        assert sentinel._packed == b''
+        # Returned IP is the resolved value
+        assert resolved is ip
 
     def test_repr_before_resolution(self) -> None:
         """IPSelf.__repr__() returns 'self' before resolution."""
@@ -152,10 +167,13 @@ class TestIPSelfSentinel:
         assert repr(sentinel) == 'self'
 
     def test_repr_after_resolution(self) -> None:
-        """IPSelf.__repr__() returns IP string after resolution."""
+        """resolve() returns concrete IP - sentinel stays 'self'."""
         sentinel = IPSelf(AFI.ipv4)
-        sentinel.resolve(IPv4.from_string('192.168.1.1'))
-        assert repr(sentinel) == '192.168.1.1'
+        resolved = sentinel.resolve(IPv4.from_string('192.168.1.1'))
+        # Sentinel stays 'self' (immutable)
+        assert repr(sentinel) == 'self'
+        # Returned IP has the resolved value
+        assert repr(resolved) == '192.168.1.1'
 
     def test_index_before_resolution(self) -> None:
         """IPSelf.index() includes AFI name before resolution."""
@@ -166,11 +184,14 @@ class TestIPSelfSentinel:
         assert sentinel6.index() == b'self-ipv6'
 
     def test_index_after_resolution(self) -> None:
-        """IPSelf.index() returns packed bytes after resolution."""
+        """resolve() returns concrete IP with proper index - sentinel unchanged."""
         sentinel = IPSelf(AFI.ipv4)
         ip = IPv4.from_string('192.168.1.1')
-        sentinel.resolve(ip)
-        assert sentinel.index() == ip.pack_ip()
+        resolved = sentinel.resolve(ip)
+        # Sentinel stays 'self-*' (immutable)
+        assert sentinel.index() == b'self-ipv4'
+        # Returned IP has packed bytes index
+        assert resolved.index() == ip.pack_ip()
 
     def test_pack_ip_raises_before_resolution(self) -> None:
         """IPSelf.pack_ip() raises ValueError before resolve()."""
@@ -178,21 +199,27 @@ class TestIPSelfSentinel:
         with pytest.raises(ValueError, match='before resolve'):
             sentinel.pack_ip()
 
-    def test_pack_ip_works_after_resolution(self) -> None:
-        """IPSelf.pack_ip() works after resolve()."""
+    def test_pack_ip_works_on_resolved(self) -> None:
+        """Returned IP from resolve() can be packed."""
         sentinel = IPSelf(AFI.ipv4)
         ip = IPv4.from_string('192.168.1.1')
-        sentinel.resolve(ip)
-        assert sentinel.pack_ip() == ip.pack_ip()
+        resolved = sentinel.resolve(ip)
+        # Resolved IP can be packed
+        assert resolved.pack_ip() == ip.pack_ip()
 
-    def test_resolve_twice_raises(self) -> None:
-        """IPSelf.resolve() raises ValueError if already resolved."""
+    def test_resolve_multiple_times_ok(self) -> None:
+        """IPSelf.resolve() can be called multiple times (sentinel stays immutable)."""
         sentinel = IPSelf(AFI.ipv4)
-        ip = IPv4.from_string('192.168.1.1')
-        sentinel.resolve(ip)
+        ip1 = IPv4.from_string('192.168.1.1')
+        ip2 = IPv4.from_string('192.168.1.2')
 
-        with pytest.raises(ValueError, match='already resolved'):
-            sentinel.resolve(ip)
+        # Each call returns the passed IP, sentinel unchanged
+        resolved1 = sentinel.resolve(ip1)
+        resolved2 = sentinel.resolve(ip2)
+
+        assert resolved1 is ip1
+        assert resolved2 is ip2
+        assert repr(sentinel) == 'self'  # Sentinel unchanged
 
 
 class TestSessionIpSelf:
@@ -297,7 +324,7 @@ class TestNeighborResolveSelf:
     """Tests for Neighbor.resolve_self() in-place resolution."""
 
     def test_resolves_nexthop_self_in_route(self) -> None:
-        """resolve_self() mutates IPSelf in-place in Route."""
+        """resolve_self() returns route with concrete IP nexthop (not IPSelf)."""
         neighbor = _create_neighbor(local_ip='192.168.1.1')
         route = _create_route_with_nexthop_self()
 
@@ -308,13 +335,13 @@ class TestNeighborResolveSelf:
         # Resolve
         resolved = neighbor.resolve_self(route)
 
-        # SELF stays True, but resolved becomes True
-        assert resolved.nexthop.SELF is True
+        # Resolved route has concrete IP (not IPSelf) - SELF is False
+        assert resolved.nexthop.SELF is False
         assert resolved.nexthop.resolved is True
         assert repr(resolved.nexthop) == '192.168.1.1'
 
     def test_resolves_nexthop_self_in_attributes(self) -> None:
-        """resolve_self() mutates NextHopSelf in-place in attributes."""
+        """resolve_self() returns route with concrete NextHop attribute (not NextHopSelf)."""
         neighbor = _create_neighbor(local_ip='192.168.1.1')
         route = _create_route_with_nexthop_self()
 
@@ -322,22 +349,24 @@ class TestNeighborResolveSelf:
 
         nh_attr = resolved.attributes.get(Attribute.CODE.NEXT_HOP)
         assert nh_attr is not None
-        assert nh_attr.SELF is True
-        assert nh_attr.resolved is True
+        # Resolved route has concrete NextHop (not NextHopSelf) - SELF is False
+        assert nh_attr.SELF is False
         assert repr(nh_attr) == '192.168.1.1'
 
-    def test_returns_copy_not_original(self) -> None:
-        """resolve_self() returns a deep copy, not the original."""
+    def test_returns_new_route_original_unchanged(self) -> None:
+        """resolve_self() returns new Route, original sentinel unchanged."""
         neighbor = _create_neighbor()
         route = _create_route_with_nexthop_self()
 
         resolved = neighbor.resolve_self(route)
 
-        # Original unchanged (nexthop is in Route, not NLRI)
+        # Original unchanged (nexthop sentinel stays unresolved)
         assert route.nexthop.resolved is False
-        # Resolved is different object
+        assert route.nexthop.SELF is True
+        # Resolved is different Route object
         assert resolved is not route
-        assert resolved.nlri is not route.nlri
+        # NLRI can be shared (it's immutable)
+        assert resolved.nlri is route.nlri
 
     def test_passthrough_if_not_self(self) -> None:
         """resolve_self() returns copy unchanged if nexthop is not SELF."""
@@ -351,17 +380,18 @@ class TestNeighborResolveSelf:
         assert resolved.nexthop == IPv4.from_string('10.0.0.1')
 
     def test_passthrough_if_already_resolved(self) -> None:
-        """resolve_self() skips if nexthop already resolved."""
+        """resolve_self() skips if nexthop not SELF (already concrete)."""
         neighbor = _create_neighbor(local_ip='192.168.1.1')
         route = _create_route_with_nexthop_self()
 
-        # Resolve once (nexthop is in Route, not NLRI)
+        # Resolve once - gets concrete IP back
         resolved1 = neighbor.resolve_self(route)
+        assert resolved1.nexthop.SELF is False  # Now concrete IP
         assert resolved1.nexthop.resolved is True
 
-        # Resolve again - should not raise
+        # Resolve again - passthrough because nexthop is not SELF
         resolved2 = neighbor.resolve_self(resolved1)
-        assert resolved2.nexthop.resolved is True
+        assert resolved2 is resolved1  # Same route object returned
 
 
 class TestRibRejectsUnresolvedNextHopSelf:
@@ -415,8 +445,9 @@ class TestNextHopSelfWorkflow:
 
         # 3. Resolve sentinel (simulating config loading)
         resolved = neighbor.resolve_self(route)
-        assert resolved.nexthop.SELF is True  # SELF stays True
-        assert resolved.nexthop.resolved is True  # But now resolved
+        # Resolved route has concrete IP (not IPSelf) - SELF is False
+        assert resolved.nexthop.SELF is False
+        assert resolved.nexthop.resolved is True
         assert repr(resolved.nexthop) == '192.168.1.100'
 
         # 4. Add to RIB (should succeed because resolved)

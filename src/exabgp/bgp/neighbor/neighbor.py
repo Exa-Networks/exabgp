@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 from collections import Counter, deque
-from copy import deepcopy
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -352,24 +351,37 @@ class Neighbor:
         if nexthop.resolved:
             return route
 
-        route_copy = deepcopy(route)
-        # Get nexthop from route_copy._nexthop (deepcopied from route._nexthop)
-        nexthop_copy = route_copy._nexthop
+        # Resolve nexthop to concrete IP (immutable - returns new IP, doesn't mutate)
+        neighbor_self = self.ip_self(route.nlri.afi)
+        resolved_ip = nexthop.resolve(neighbor_self)
+        # nexthop.SELF is True and not resolved, so resolve() returns concrete IP
+        assert resolved_ip is not None
 
-        neighbor_self = self.ip_self(route_copy.nlri.afi)
+        # Create new route with resolved nexthop (no deepcopy needed!)
+        new_route = route.with_nexthop(resolved_ip)
 
-        # Mutate in-place instead of replacing
-        nexthop_copy.resolve(neighbor_self)
-
-        if Attribute.CODE.NEXT_HOP in route_copy.attributes:
-            nh_attr = route_copy.attributes[Attribute.CODE.NEXT_HOP]
-            # NextHopSelf has SELF, resolved, and resolve() attributes
+        # Handle NEXT_HOP attribute if present (IPv4 unicast/multicast legacy attribute)
+        if Attribute.CODE.NEXT_HOP in route.attributes:
+            from exabgp.bgp.message.update.attribute.collection import AttributeCollection
             from exabgp.bgp.message.update.attribute.nexthop import NextHopSelf
 
+            nh_attr = route.attributes[Attribute.CODE.NEXT_HOP]
             if isinstance(nh_attr, NextHopSelf) and nh_attr.SELF and not nh_attr.resolved:
-                nh_attr.resolve(neighbor_self)
+                # Resolve attribute (immutable - returns new NextHop)
+                resolved_nh_attr = nh_attr.resolve(neighbor_self)
+                # Create new attribute collection with resolved nexthop
+                new_attrs = AttributeCollection()
+                for code, attr in route.attributes.items():
+                    if code == Attribute.CODE.NEXT_HOP:
+                        new_attrs.add(resolved_nh_attr)
+                    else:
+                        new_attrs.add(attr)
+                # Return route with both resolved nexthop and resolved attribute
+                from exabgp.rib.route import Route
 
-        return route_copy
+                return Route(new_route.nlri, new_attrs, nexthop=resolved_ip)
+
+        return new_route
 
     def __str__(self) -> str:
         return NeighborTemplate.configuration(self, False)

@@ -101,6 +101,13 @@ class NextHop(Attribute):
         """Get packed bytes (IP interface compatibility)."""
         return self._packed
 
+    def resolve(self, ip: 'IP') -> 'NextHop':
+        """Resolve address. For concrete NextHop, returns self (already resolved).
+
+        NextHopSelf subclass overrides to return a new NextHop with the resolved IP.
+        """
+        return self
+
     def index(self) -> Buffer:
         """Get the packed data for indexing/caching."""
         return self._packed
@@ -185,11 +192,11 @@ class NextHopSelf(NextHop):
         """True if resolve() has been called with a concrete IP."""
         return self._packed != b''
 
-    def resolve(self, ip: 'IP') -> None:
-        """Resolve sentinel to concrete IP. Mutates in-place."""
+    def resolve(self, ip: 'IP') -> 'NextHop':
+        """Resolve sentinel to concrete IP. Returns new NextHop (does NOT mutate self)."""
         if self.resolved:
             raise ValueError('NextHopSelf already resolved')
-        self._packed = ip.pack_ip()
+        return NextHop(ip.pack_ip())
 
     def __repr__(self) -> str:
         if not self.resolved:

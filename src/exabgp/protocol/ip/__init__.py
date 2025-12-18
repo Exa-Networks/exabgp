@@ -34,14 +34,6 @@ class IPBase:
     RESOLVED: ClassVar[bool] = True
     afi: AFI
 
-    def resolve(self, ip: 'IP | None' = None) -> None:
-        """Resolve address. For regular IPs, this is a no-op.
-
-        IPSelf subclass overrides to accept a concrete IP and resolves in-place.
-        The parameter is optional for base compatibility.
-        """
-        pass
-
     @property
     def resolved(self) -> bool:
         """True if resolve() has been called with a concrete IP."""
@@ -156,6 +148,13 @@ class IP(IPBase):
 
     def pack_ip(self) -> Buffer:
         return self._packed
+
+    def resolve(self, ip: 'IP') -> 'IP':
+        """Resolve address. For concrete IPs, returns self (already resolved).
+
+        IPSelf subclass overrides to return the resolved concrete IP.
+        """
+        return self
 
     def __str__(self) -> str:
         return 'no-nexthop' if not self._packed else IP.ntop(self._packed)
@@ -316,17 +315,21 @@ class IPSelf(IP):
         """True if resolve() has been called with a concrete IP."""
         return self._packed != b''
 
-    def resolve(self, ip: IP | None = None) -> None:
-        """Resolve sentinel to concrete IP. Mutates in-place.
+    def resolve(self, ip: IP) -> IP:
+        """Resolve sentinel to concrete IP. Returns the resolved IP (does NOT mutate self).
 
         Args:
-            ip: The concrete IP to resolve to. Required for IPSelf.
+            ip: The concrete IP to resolve to.
+
+        Returns:
+            The resolved concrete IP.
+
+        Raises:
+            ValueError: If this IPSelf was already mutated by legacy code.
         """
-        if ip is None:
-            raise ValueError('IPSelf.resolve() requires an ip argument')
         if self.resolved:
             raise ValueError('IPSelf already resolved')
-        self._packed = ip.pack_ip()
+        return ip
 
     def pack_ip(self) -> Buffer:
         """Get packed bytes (IP interface compatibility)."""
