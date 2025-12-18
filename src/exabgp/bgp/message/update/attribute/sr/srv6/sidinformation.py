@@ -7,7 +7,7 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Callable, ClassVar, Type, TypeVar
+from typing import Callable, ClassVar, Protocol, Type, TypeVar
 
 from exabgp.protocol.ip import IPv6
 
@@ -18,8 +18,14 @@ from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6Servi
 from exabgp.util.types import Buffer
 
 
-# TypeVar for SRv6 Service Data Sub-Sub-TLV types
-SubSubTlvType = TypeVar('SubSubTlvType', bound=GenericSrv6ServiceDataSubSubTlv)
+class HasTLV(Protocol):
+    """Protocol for classes with TLV class attribute."""
+
+    TLV: ClassVar[int]
+
+
+# TypeVar for classes with TLV attribute
+SubSubTlvType = TypeVar('SubSubTlvType', bound=HasTLV)
 
 # 3.1.  SRv6 SID Information Sub-TLV
 #

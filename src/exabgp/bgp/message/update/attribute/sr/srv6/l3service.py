@@ -7,7 +7,7 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Callable, ClassVar, Type, TypeVar
+from typing import Callable, ClassVar, Protocol, Type, TypeVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
@@ -15,8 +15,14 @@ from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6Servi
 from exabgp.util.types import Buffer
 
 
-# TypeVar for SRv6 Service Sub-TLV types
-SubTlvType = TypeVar('SubTlvType', bound=GenericSrv6ServiceSubTlv)
+class HasTLV(Protocol):
+    """Protocol for classes with TLV class attribute."""
+
+    TLV: ClassVar[int]
+
+
+# TypeVar for classes with TLV attribute
+SubTlvType = TypeVar('SubTlvType', bound=HasTLV)
 
 # 2.  SRv6 Services TLVs
 #
@@ -44,6 +50,11 @@ class Srv6L3Service:
 
     @classmethod
     def register(cls) -> Callable[[Type[SubTlvType]], Type[SubTlvType]]:
+        """Register a Sub-TLV class by its TLV code.
+
+        Accepts any class with a TLV class attribute (structural typing via HasTLV Protocol).
+        """
+
         def register_subtlv(klass: Type[SubTlvType]) -> Type[SubTlvType]:
             scode: int = klass.TLV
             if scode in cls.registered_subtlvs:

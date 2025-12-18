@@ -256,7 +256,7 @@ class ASPath(Attribute):
         return result
 
     @classmethod
-    def _segment(cls, seg_type: int, values: SegmentType, asn4: bool) -> bytes:
+    def _segment(cls, seg_type: int, values: SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET, asn4: bool) -> bytes:
         length = len(values)
         if length == 0:
             return b''

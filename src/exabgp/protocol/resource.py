@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from typing import Any, Type, Iterator, ClassVar
 from exabgp.util import string_is_hex
 
@@ -15,7 +14,7 @@ from exabgp.util import string_is_hex
 RESOURCE_VALUE_MAX: int = 0xFFFF  # Maximum 16-bit unsigned integer value
 
 
-class BaseValue(int, ABC):
+class BaseValue(int):
     """Base class for int types that provide short() for display.
 
     Flow values need two things:
@@ -23,10 +22,13 @@ class BaseValue(int, ABC):
     2. short() -> str - for string formatting
     """
 
-    @abstractmethod
     def short(self) -> str:
-        """Return short string representation for display."""
-        ...
+        """Return short string representation for display.
+
+        Default implementation returns the integer as string.
+        Subclasses may override for named representations.
+        """
+        return str(int(self))
 
 
 class Resource(BaseValue):
