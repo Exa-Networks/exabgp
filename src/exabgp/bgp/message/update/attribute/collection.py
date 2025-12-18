@@ -130,11 +130,15 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 continue
 
             if code not in self.representation:
-                yield ' attribute [ 0x{:02X} 0x{:02X} {} ]'.format(code, attribute.FLAG, str(attribute))
+                # GenericAttribute uses attr_flag, regular attributes use FLAG ClassVar
+                attr_flag = getattr(attribute, 'attr_flag', None) or attribute.FLAG
+                yield ' attribute [ 0x{:02X} 0x{:02X} {} ]'.format(code, attr_flag, str(attribute))
                 continue
 
             if attribute.GENERIC:
-                yield ' attribute [ 0x{:02X} 0x{:02X} {} ]'.format(code, attribute.FLAG, str(attribute))
+                # GenericAttribute uses attr_flag, regular attributes use FLAG ClassVar
+                attr_flag = getattr(attribute, 'attr_flag', None) or attribute.FLAG
+                yield ' attribute [ 0x{:02X} 0x{:02X} {} ]'.format(code, attr_flag, str(attribute))
                 continue
 
             how, _, name, presentation, _ = self.representation[code]
@@ -167,11 +171,13 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
             if code not in self.representation:
                 # For generic mode, output hex; otherwise use str() which may be human-readable
+                # GenericAttribute uses attr_flag, regular attributes use FLAG ClassVar
+                attr_flag = getattr(attribute, 'attr_flag', None) or attribute.FLAG
                 if generic and hasattr(attribute, '_packed'):
                     hex_value = '0x' + attribute._packed.hex()
-                    yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, hex_value)
+                    yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attr_flag, hex_value)
                 else:
-                    yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, str(attribute))
+                    yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attr_flag, str(attribute))
                 continue
 
             how, _, name, _, presentation = self.representation[code]
@@ -229,17 +235,20 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         if attribute is None:
             return
 
-        if attribute.ID in self:
-            if attribute.ID != Attribute.CODE.EXTENDED_COMMUNITY:
+        # GenericAttribute uses attr_id, regular attributes use ID ClassVar
+        attr_code = getattr(attribute, 'attr_id', None) or attribute.ID
+
+        if attr_code in self:
+            if attr_code != Attribute.CODE.EXTENDED_COMMUNITY:
                 # attempting to add duplicate attribute when not allowed
                 return
 
             self._str = ''
             self._json = ''
 
-            # attribute.ID is EXTENDED_COMMUNITY, so attribute is ExtendedCommunitiesBase
+            # attr_code is EXTENDED_COMMUNITY, so attribute is ExtendedCommunitiesBase
             assert isinstance(attribute, ExtendedCommunitiesBase)
-            existing = self[attribute.ID]
+            existing = self[attr_code]
             assert isinstance(existing, ExtendedCommunitiesBase)
             for community in attribute.communities:
                 existing.add(community)
@@ -247,7 +256,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
         self._str = ''
         self._json = ''
-        self[attribute.ID] = attribute
+        self[attr_code] = attribute
 
     def remove(self, attrid: int) -> None:
         self.pop(attrid)
@@ -674,16 +683,26 @@ class Attributes:
     def __getitem__(self, code: int) -> Attribute:
         """Get attribute by code."""
         for attr in self:
-            if attr.ID == code:
+            # GenericAttribute uses attr_id, regular attributes use ID ClassVar
+            attr_code = getattr(attr, 'attr_id', None) or attr.ID
+            if attr_code == code:
                 return attr
         raise KeyError(code)
 
     def has(self, code: int) -> bool:
         """Check if attribute exists."""
         for attr in self:
-            if attr.ID == code:
+            # GenericAttribute uses attr_id, regular attributes use ID ClassVar
+            attr_code = getattr(attr, 'attr_id', None) or attr.ID
+            if attr_code == code:
                 return True
         return False
+
+    def __contains__(self, code: object) -> bool:
+        """Check if attribute with given code exists (enables 'in' operator)."""
+        if not isinstance(code, int):
+            return False
+        return self.has(code)
 
     def __iter__(self) -> Iterator[Attribute]:
         """Iterate over Attribute objects with buffer slices.

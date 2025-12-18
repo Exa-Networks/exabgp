@@ -50,13 +50,19 @@ class GenericAttribute(Attribute):
         self._flag: int = flag
 
     @property
-    def ID(self) -> int:  # type: ignore[override]
-        """Return attribute type code (instance-specific for generic attributes)."""
+    def attr_id(self) -> int:
+        """Return attribute type code (instance-specific for generic attributes).
+
+        Note: Named attr_id to avoid overriding base Attribute.ID ClassVar.
+        """
         return self._code
 
     @property
-    def FLAG(self) -> int:  # type: ignore[override]
-        """Return attribute flags (instance-specific for generic attributes)."""
+    def attr_flag(self) -> int:
+        """Return attribute flags (instance-specific for generic attributes).
+
+        Note: Named attr_flag to avoid overriding base Attribute.FLAG ClassVar.
+        """
         return self._flag
 
     @classmethod
@@ -100,7 +106,7 @@ class GenericAttribute(Attribute):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, GenericAttribute):
             return False
-        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other._packed
+        return self.attr_id == other.attr_id and self.attr_flag == other.attr_flag and self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -112,7 +118,7 @@ class GenericAttribute(Attribute):
         return '0x' + ''.join('{:02x}'.format(_) for _ in self._packed)
 
     def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
-        flag: int = self.FLAG
+        flag: int = self.attr_flag
         length: int = len(self._packed)
         if length > MAX_SINGLE_OCTET_LENGTH:
             flag |= Attribute.Flag.EXTENDED_LENGTH
@@ -121,7 +127,7 @@ class GenericAttribute(Attribute):
             len_value = pack('!H', length)
         else:
             len_value = bytes([length])
-        return bytes([flag, self.ID]) + len_value + self._packed
+        return bytes([flag, self.attr_id]) + len_value + self._packed
 
     def json(self) -> str:
-        return '{ "id": %d, "flag": %d, "payload": "%s"}' % (self.ID, self.FLAG, hexstring(self._packed))
+        return '{ "id": %d, "flag": %d, "payload": "%s"}' % (self.attr_id, self.attr_flag, hexstring(self._packed))

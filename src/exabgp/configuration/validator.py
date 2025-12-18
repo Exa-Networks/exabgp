@@ -1376,8 +1376,9 @@ class TypeSelectorValidator(Validator[list[Any]]):
                 # For nexthop-and-attribute, use validate_with_afi if validator wants AFI
                 used_afi = False
                 accepts_afi = getattr(validator, 'accepts_afi', False)
-                if target == ActionTarget.NEXTHOP_ATTRIBUTE and accepts_afi:
-                    value = validator.validate_with_afi(tokeniser, self.afi)  # type: ignore[attr-defined]
+                validate_with_afi = getattr(validator, 'validate_with_afi', None)
+                if target == ActionTarget.NEXTHOP_ATTRIBUTE and accepts_afi and validate_with_afi is not None:
+                    value = validate_with_afi(tokeniser, self.afi)
                     used_afi = True
                 else:
                     value = validator.validate(tokeniser)

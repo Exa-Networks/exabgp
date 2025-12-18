@@ -29,13 +29,19 @@ class UnknownMessage(Message):
         self.data = packed
 
     @property
-    def ID(self) -> int:  # type: ignore[override]
-        """Return message type code (instance-specific for unknown messages)."""
+    def message_id(self) -> int:
+        """Return message type code (instance-specific for unknown messages).
+
+        Note: Named message_id to avoid overriding base Message.ID ClassVar.
+        """
         return self._code
 
     @property
-    def TYPE(self) -> bytes:  # type: ignore[override]
-        """Return message type as bytes (instance-specific for unknown messages)."""
+    def message_type(self) -> bytes:
+        """Return message type as bytes (instance-specific for unknown messages).
+
+        Note: Named message_type to avoid overriding base Message.TYPE ClassVar.
+        """
         return self._type_bytes
 
     def pack_message(self, negotiated: Negotiated) -> bytes:

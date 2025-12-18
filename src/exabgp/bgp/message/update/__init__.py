@@ -194,10 +194,10 @@ class Update(Message):
                 temp_attrs = AttributeCollection.unpack(bytes(attr_view), negotiated)
                 unreach = temp_attrs.get(MPURNLRI.ID)
                 reach = temp_attrs.get(MPRNLRI.ID)
-                if unreach is not None:
-                    return EOR(unreach.afi, unreach.safi)  # type: ignore[attr-defined]
-                if reach is not None:
-                    return EOR(reach.afi, reach.safi)  # type: ignore[attr-defined]
+                if unreach is not None and isinstance(unreach, MPURNLRI):
+                    return EOR(unreach.afi, unreach.safi)
+                if reach is not None and isinstance(reach, MPRNLRI):
+                    return EOR(reach.afi, reach.safi)
             # No MP attributes - this is IPv4 unicast EOR
             return EOR(AFI.ipv4, SAFI.unicast)
 

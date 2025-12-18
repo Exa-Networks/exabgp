@@ -172,7 +172,7 @@ class Control:
             # If we can't send the command or read the response, continue anyway
             pass
 
-        from typing import Any, Callable, TypeVar
+        from typing import Any, Callable, TypeVar, cast
 
         _F = TypeVar('_F', bound=Callable[..., Any])
 
@@ -181,7 +181,7 @@ class Control:
                 r = function(*args)
                 return r
 
-            return wrapper  # type: ignore[return-value]
+            return cast(_F, wrapper)
 
         @monitor
         def std_reader(number: int) -> bytes:

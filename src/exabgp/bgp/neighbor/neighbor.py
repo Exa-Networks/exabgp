@@ -363,8 +363,11 @@ class Neighbor:
 
         if Attribute.CODE.NEXT_HOP in route_copy.attributes:
             nh_attr = route_copy.attributes[Attribute.CODE.NEXT_HOP]
-            if nh_attr.SELF and not nh_attr.resolved:  # type: ignore[attr-defined]
-                nh_attr.resolve(neighbor_self)  # type: ignore[attr-defined]
+            # NextHopSelf has SELF, resolved, and resolve() attributes
+            from exabgp.bgp.message.update.attribute.nexthop import NextHopSelf
+
+            if isinstance(nh_attr, NextHopSelf) and nh_attr.SELF and not nh_attr.resolved:
+                nh_attr.resolve(neighbor_self)
 
         return route_copy
 
