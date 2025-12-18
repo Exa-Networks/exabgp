@@ -115,7 +115,7 @@ MAX_RATE_LIMIT_BPS = 1000000000000  # Maximum rate limit (1 terabyte/s)
 DSCP_MAX_VALUE = 0b111111  # DSCP is a 6-bit field (0-63)
 
 
-def flow(tokeniser: 'Tokeniser') -> Route:
+def flow() -> Route:
     from exabgp.protocol.ip import IP
 
     nlri = Flow.make_flow()

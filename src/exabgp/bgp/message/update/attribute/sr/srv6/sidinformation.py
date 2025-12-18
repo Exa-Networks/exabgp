@@ -51,8 +51,8 @@ SubSubTlvType = TypeVar('SubSubTlvType', bound=HasTLV)
 class Srv6SidInformation:
     TLV: ClassVar[int] = 1
 
-    # Registry maps TLV codes to Sub-Sub-TLV classes
-    registered_subsubtlvs: ClassVar[dict[int, Type[GenericSrv6ServiceDataSubSubTlv]]] = dict()
+    # Registry maps TLV codes to Sub-Sub-TLV classes (uses HasTLV protocol)
+    registered_subsubtlvs: ClassVar[dict[int, Type[HasTLV]]] = dict()
 
     def __init__(
         self,

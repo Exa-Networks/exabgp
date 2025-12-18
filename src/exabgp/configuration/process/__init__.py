@@ -93,7 +93,7 @@ class ParseProcess(Section):
         configured = self.scope.get().keys()
         # Apply defaults from self.default dict
         for default in self.default:
-            if default not in configured:
+            if default not in configured and isinstance(default, str):
                 self.scope.set_value(default, self.default[default])
         # Apply defaults from schema
         if self.schema:

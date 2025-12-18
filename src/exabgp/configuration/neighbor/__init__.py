@@ -311,7 +311,8 @@ class ParseNeighbor(Section):
         for inherited in self.scope.pop('inherit', []):
             data = self.scope.template('neighbor', inherited)
             self.scope.inherit(data)
-        return self.scope.get()
+        result: dict[str, Any] = self.scope.get()
+        return result
 
     # Map config keys to Neighbor attributes (BGP policy)
     _CONFIG_TO_NEIGHBOR: dict[str, str] = {

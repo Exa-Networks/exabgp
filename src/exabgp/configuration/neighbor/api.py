@@ -109,7 +109,7 @@ class _ParseDirection(Section):
     known: dict[str | tuple[Any, ...], Any] = {}
     action: dict[str | tuple[Any, ...], tuple[ActionTarget, ActionOperation, ActionKey]] = {}
 
-    default: dict[str, bool] = {
+    default = {
         'parsed': True,
         'packets': True,
         'consolidate': True,
@@ -121,7 +121,7 @@ class _ParseDirection(Section):
         'operational': True,
     }
 
-    syntax = '{{\n  {};\n}}'.format(';\n  '.join(default.keys()))
+    syntax = '{{\n  {};\n}}'.format(';\n  '.join(k for k in default if isinstance(k, str)))
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         Section.__init__(self, parser, scope, error)

@@ -44,6 +44,7 @@ from typing import (
     Protocol as TypingProtocol,
     Self,
     Type,
+    cast,
 )
 
 from exabgp.util.types import Buffer
@@ -779,7 +780,7 @@ class Flow(NLRI):
         """
         NLRI.__init__(self, afi, safi)
         self._packed = packed
-        self._rules_cache: dict[int, list[FlowRule]] | None = None
+        self._rules_cache: dict[int, list[IComponent]] | None = None
         self._packed_stale = False
         self._rd_override: RouteDistinguisher | None = None
 
@@ -851,7 +852,7 @@ class Flow(NLRI):
         return instance
 
     @property
-    def rules(self) -> dict[int, list[FlowRule]]:
+    def rules(self) -> dict[int, list[IComponent]]:
         """Rules dict - parsed lazily from _packed on first access."""
         if self._rules_cache is not None:
             return self._rules_cache
@@ -879,9 +880,9 @@ class Flow(NLRI):
         # Store the new RD value - it will be used when repacking
         self._rd_override = value
 
-    def _parse_rules(self) -> dict[int, list[FlowRule]]:
+    def _parse_rules(self) -> dict[int, list[IComponent]]:
         """Parse rules from _packed bytes."""
-        rules: dict[int, list[FlowRule]] = {}
+        rules: dict[int, list[IComponent]] = {}
         bgp = self._packed
 
         # Skip RD for flow_vpn
@@ -908,9 +909,11 @@ class Flow(NLRI):
                         end = CommonOperator.eol(byte)
                         operator = CommonOperator.operator(byte)
                         length = CommonOperator.length(byte)
-                        value, bgp = bgp[:length], bgp[length:]
-                        adding_val = klass.decoder(value)
-                        rules.setdefault(what, []).append(klass(operator, adding_val))
+                        value_bytes, bgp = bytes(bgp[:length]), bgp[length:]
+                        adding_val = klass.decoder(value_bytes)
+                        # klass is IOperation subclass with (operator, value) constructor
+                        component = cast(IComponent, klass(operator, adding_val))
+                        rules.setdefault(what, []).append(component)
         except (IndexError, KeyError):
             pass  # Incomplete data, return what we have
 

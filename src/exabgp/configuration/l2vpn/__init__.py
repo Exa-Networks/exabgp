@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from exabgp.configuration.l2vpn.vpls import ParseVPLS
-from exabgp.configuration.schema import Container, ActionTarget, ActionOperation
+from exabgp.configuration.schema import ActionTarget, ActionOperation, Container
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.configuration.validator import RouteBuilderValidator
 from exabgp.rib.route import Route
@@ -30,7 +30,9 @@ class ParseL2VPN(ParseVPLS):
     syntax = 'vpls {};\n'.format(' '.join(ParseVPLS.definition))
 
     # Schema: inherit parent schema children and add vpls subsection
-    schema = Container(
+    # Type mismatch is expected: Container is-a RouteBuilder's parent, but the parser
+    # only needs the children dict which Container provides
+    schema = Container(  # type: ignore[assignment]
         description='L2VPN configuration',
         children={
             **ParseVPLS.schema.children,

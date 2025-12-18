@@ -63,7 +63,9 @@ class ParseAnnounce(Section):
             return
 
         # calculate the number of IP in the /<size> of the new route
-        increment = pow(2, inet_nlri.afi.mask() - cut)
+        afi_mask = inet_nlri.afi.mask()
+        assert afi_mask is not None, f'Invalid AFI {inet_nlri.afi} for split operation'
+        increment = pow(2, afi_mask - cut)
         # how many new routes are we going to create from the initial one
         number = pow(2, cut - inet_nlri.cidr.mask)
 

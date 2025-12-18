@@ -34,7 +34,7 @@ class ParseStatic(ParseStaticRoute):
         },
     )
 
-    action: dict[str | tuple[Any, ...], str] = dict(ParseStaticRoute.action)
+    action = dict(ParseStaticRoute.action)
 
     name: str = 'static'
 
@@ -150,7 +150,17 @@ def attributes(tokeniser: Any) -> list[Route]:
     ipmask = None
     if has_nlri_keyword:
         try:
-            ipmask = prefix(lambda: tokeniser.tokens[-1])
+            # Parse the last token as a prefix (peek without consuming)
+            last_token = tokeniser.tokens[-1]
+            if '/' in last_token:
+                ip_str, mask_str = last_token.split('/')
+                mask = int(mask_str)
+            else:
+                ip_str = last_token
+                mask = 128 if ':' in ip_str else 32
+            from exabgp.protocol.ip import IPRange
+
+            ipmask = IPRange(IP.pton(ip_str), mask)
             has_prefix = True
         except (ValueError, KeyError):
             pass
