@@ -80,7 +80,7 @@ def help_command(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
             reactor.processes.write(service, line_text)
         reactor.processes.write(service, '')
 
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -90,7 +90,7 @@ def shutdown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], co
         reactor.processes.write(service, json.dumps({'status': 'shutdown in progress'}))
     else:
         reactor.processes.write(service, 'shutdown in progress')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -100,7 +100,7 @@ def reload(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comm
         reactor.processes.write(service, json.dumps({'status': 'reload in progress'}))
     else:
         reactor.processes.write(service, 'reload in progress')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -110,7 +110,7 @@ def restart(self: 'API', reactor: 'Reactor', service: str, peers: list[str], com
         reactor.processes.write(service, json.dumps({'status': 'restart in progress'}))
     else:
         reactor.processes.write(service, 'restart in progress')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -119,13 +119,13 @@ def version(self: 'API', reactor: 'Reactor', service: str, peers: list[str], com
         reactor.processes.write(service, json.dumps({'version': _version, 'application': 'exabgp'}))
     else:
         reactor.processes.write(service, f'exabgp {_version}')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
 def comment(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     log.debug(lazymsg('api.comment text={text}', text=command.lstrip().lstrip('#').strip()), 'processes')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -137,7 +137,7 @@ def reset(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comma
     else:
         reactor.processes.write(service, 'asynchronous queue cleared')
 
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -163,7 +163,7 @@ def queue_status(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
                 lines.append(f'{process_name}: {items} items ({bytes_count} bytes)')
             reactor.processes.write(service, '\n'.join(lines))
 
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -173,7 +173,7 @@ def crash(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comma
         await asyncio.sleep(0)  # This line is unreachable but matches original structure
 
     # Send acknowledgment before scheduling the crash
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     reactor.asynchronous.schedule(service, command, callback())
     return True
 
@@ -181,14 +181,14 @@ def crash(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comma
 def disable_ack(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Disable ACK responses for this connection (sends 'done' for this command, then disables)"""
     reactor.processes.set_ack(service, False)
-    reactor.processes.answer_done(service, force=True)
+    reactor.processes.answer_done_sync(service, force=True)
     return True
 
 
 def enable_ack(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Re-enable ACK responses for this connection"""
     reactor.processes.set_ack(service, True)
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -207,7 +207,7 @@ def enable_sync(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
     actually been transmitted.
     """
     reactor.processes.set_sync(service, True)
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -219,7 +219,7 @@ def disable_sync(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
     for it to be sent on the wire.
     """
     reactor.processes.set_sync(service, False)
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -271,7 +271,7 @@ def ping(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comman
         reactor.processes.write(service, json.dumps(response))
     else:
         reactor.processes.write(service, f'pong {reactor.daemon_uuid} active={str(is_active).lower()}')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -289,7 +289,7 @@ def bye(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command
     if client_uuid and client_uuid in reactor.active_clients:
         del reactor.active_clients[client_uuid]
 
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -319,7 +319,7 @@ def api_version_cmd(
                     reactor.processes.write(service, json.dumps({'error': 'API version must be 4 or 6'}))
                 else:
                     reactor.processes.write(service, 'error: API version must be 4 or 6')
-                reactor.processes.answer_error(service)
+                reactor.processes.answer_error_sync(service)
                 return False
 
             # Set the new version in the environment
@@ -346,7 +346,7 @@ def api_version_cmd(
                 reactor.processes.write(service, json.dumps({'error': f'Invalid version: {version_str}'}))
             else:
                 reactor.processes.write(service, f'error: invalid version: {version_str}')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error_sync(service)
             return False
     else:
         # Just show current version
@@ -365,7 +365,7 @@ def api_version_cmd(
             desc = 'legacy (text/json)' if current_version == 4 else 'json-only'
             reactor.processes.write(service, f'API version: {current_version} ({desc})')
 
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -412,5 +412,5 @@ def status(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comm
         for line_text in lines:
             reactor.processes.write(service, line_text)
 
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True

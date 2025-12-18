@@ -244,7 +244,7 @@ class Processes:
                 except ProcessError:
                     pass
         # Flush all queued shutdown messages
-        await self.flush_write_queue_async()
+        await self.flush_write_queue()
         self.silence = True
         # waiting a little to make sure IO is flushed to the pipes
         await asyncio.sleep(0.1)
@@ -786,7 +786,7 @@ class Processes:
         This prevents deadlock in async mode where blocking write would prevent
         reading from API process stdout.
 
-        Note: Currently unused - async writes go through write() + flush_write_queue_async().
+        Note: Currently unused - async writes go through write() + flush_write_queue().
         Kept for potential future direct async write needs.
         """
         if string is None:
@@ -824,7 +824,7 @@ class Processes:
         stdin_fd = self._get_stdin(process).fileno()
 
         try:
-            # Use os.write for non-blocking write (same as flush_write_queue_async)
+            # Use os.write for non-blocking write (same as flush_write_queue)
             written = os.write(stdin_fd, data)
             if written < len(data):
                 # Partial write - queue remainder for later flush
@@ -919,7 +919,7 @@ class Processes:
             iterations = 0
             while self.get_queue_size(process) > self.WRITE_QUEUE_LOW_WATER:
                 await asyncio.sleep(0.1)
-                await self.flush_write_queue_async()
+                await self.flush_write_queue()
                 iterations += 1
                 if iterations >= max_wait_iterations:
                     log.error(
@@ -936,7 +936,7 @@ class Processes:
         # Queue the write (regular write() handles queueing in async mode)
         return self.write(process, string)
 
-    async def flush_write_queue_async(self) -> None:
+    async def flush_write_queue(self) -> None:
         """Flush all queued writes to API processes (async mode only)
 
         Called by main loop to drain the write queue without blocking.
@@ -1047,7 +1047,7 @@ class Processes:
         # Always yield control after processing
         await asyncio.sleep(0)
 
-    def _answer(self, service: str, string: str, force: bool = False) -> None:
+    def _answer_sync(self, service: str, string: str, force: bool = False) -> None:
         # Check per-process ACK state
         process_ack = self._ack[service]
         if force or process_ack:
@@ -1059,7 +1059,7 @@ class Processes:
             )
             self.write(service, string)
 
-    async def _answer_async(self, service: str, string: str, force: bool = False) -> None:
+    async def _answer(self, service: str, string: str, force: bool = False) -> None:
         """Async version of _answer() - non-blocking response to API process
 
         Queues the write and flushes immediately to ensure response delivered
@@ -1072,30 +1072,30 @@ class Processes:
                 'processes',
             )
             self.write(service, string)  # Queue write
-            await self.flush_write_queue_async()  # Flush immediately
+            await self.flush_write_queue()  # Flush immediately
 
-    def answer_done(self, service: str, force: bool = False) -> None:
+    def answer_done_sync(self, service: str, force: bool = False) -> None:
         """Send ACK/done response to API process
 
         In async mode, this returns a coroutine that must be awaited.
         In sync mode, this blocks until write completes.
         """
-        # In async mode, caller must use answer_done_async() instead
+        # In async mode, caller must use answer_done() instead
         # This sync version will block and cause deadlock in async mode
         if self._async_mode:
-            # This should not be called in async mode - caller should use answer_done_async()
+            # This should not be called in async mode - caller should use answer_done()
             # But for compatibility during migration, we can detect this
             log.warning(
-                lazymsg('api.answer.mode.mismatch service={s} mode=async expected=answer_done_async', s=service),
+                lazymsg('api.answer.mode.mismatch service={s} mode=async expected=answer_done', s=service),
                 'processes',
             )
 
         if self._ackjson[service]:
-            self._answer(service, Answer.json_done, force=force)
+            self._answer_sync(service, Answer.json_done, force=force)
         else:
-            self._answer(service, Answer.text_done, force=force)
+            self._answer_sync(service, Answer.text_done, force=force)
 
-    async def answer_done_async(self, service: str, force: bool = False) -> None:
+    async def answer_done(self, service: str, force: bool = False) -> None:
         """Async version of answer_done() - non-blocking ACK to API process
 
         Queues the write and flushes immediately to ensure ACK delivered
@@ -1103,15 +1103,15 @@ class Processes:
         """
         log.debug(lazymsg('api.answer.done.async service={s}', s=service), 'processes')
         if self._ackjson[service]:
-            self._answer(service, Answer.json_done, force=force)
+            self._answer_sync(service, Answer.json_done, force=force)
         else:
-            self._answer(service, Answer.text_done, force=force)
+            self._answer_sync(service, Answer.text_done, force=force)
         # Flush immediately to ensure ACK delivered before callback returns
         log.debug(lazymsg('api.flush.async.start service={s}', s=service), 'processes')
-        await self.flush_write_queue_async()
+        await self.flush_write_queue()
         log.debug(lazymsg('api.flush.async.complete service={s}', s=service), 'processes')
 
-    def answer_error(self, service: str, message: str = '') -> None:
+    def answer_error_sync(self, service: str, message: str = '') -> None:
         """Send error response, optionally with descriptive message"""
         if message:
             # Send error details before the error marker
@@ -1119,19 +1119,19 @@ class Processes:
                 import json
 
                 error_data = {'error': message}
-                self._answer(service, json.dumps(error_data))
+                self._answer_sync(service, json.dumps(error_data))
             else:
-                self._answer(service, f'error: {message}')
+                self._answer_sync(service, f'error: {message}')
 
         # Send standard error markers
         if self._ackjson[service]:
-            self._answer(service, Answer.json_error)
+            self._answer_sync(service, Answer.json_error)
             # Send error marker after JSON error for consistency with text API
-            self._answer(service, Answer.text_error, force=True)
+            self._answer_sync(service, Answer.text_error, force=True)
         else:
-            self._answer(service, Answer.text_error)
+            self._answer_sync(service, Answer.text_error)
 
-    async def answer_error_async(self, service: str, message: str = '') -> None:
+    async def answer_error(self, service: str, message: str = '') -> None:
         """Async version of answer_error() - non-blocking error response to API process"""
         if message:
             # Send error details before the error marker
@@ -1139,19 +1139,19 @@ class Processes:
                 import json
 
                 error_data = {'error': message}
-                await self._answer_async(service, json.dumps(error_data))
+                await self._answer(service, json.dumps(error_data))
             else:
-                await self._answer_async(service, f'error: {message}')
+                await self._answer(service, f'error: {message}')
 
         # Send standard error markers
         if self._ackjson[service]:
-            await self._answer_async(service, Answer.json_error)
+            await self._answer(service, Answer.json_error)
             # Send error marker after JSON error for consistency with text API
-            await self._answer_async(service, Answer.text_error, force=True)
+            await self._answer(service, Answer.text_error, force=True)
         else:
-            await self._answer_async(service, Answer.text_error)
+            await self._answer(service, Answer.text_error)
 
-    async def answer_async(self, service: str, data: object) -> None:
+    async def answer(self, service: str, data: object) -> None:
         """Async version of answer() - send JSON-serializable data to API process.
 
         Args:
@@ -1161,7 +1161,7 @@ class Processes:
         import json
 
         response = json.dumps(data)
-        await self._answer_async(service, response)
+        await self._answer(service, response)
 
     def set_ack(self, service: str, enabled: bool) -> None:
         """Set ACK state for a specific service/process"""

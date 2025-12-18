@@ -60,7 +60,7 @@ def announce_watchdog(
             neighbor.rib.outgoing.announce_watchdog(name)
             await asyncio.sleep(0)  # Yield control after each neighbor (matches original yield False)
 
-        await reactor.processes.answer_done_async(service)
+        await reactor.processes.answer_done(service)
 
     name = _extract_watchdog_name(command, service, action)
     reactor.asynchronous.schedule(service, command, callback(name))
@@ -78,7 +78,7 @@ def withdraw_watchdog(
             neighbor.rib.outgoing.withdraw_watchdog(name)
             await asyncio.sleep(0)  # Yield control after each neighbor (matches original yield False)
 
-        await reactor.processes.answer_done_async(service)
+        await reactor.processes.answer_done(service)
 
     name = _extract_watchdog_name(command, service, action)
     reactor.asynchronous.schedule(service, command, callback(name))

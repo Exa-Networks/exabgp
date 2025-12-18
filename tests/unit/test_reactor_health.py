@@ -34,7 +34,7 @@ class MockProcesses:
     def write(self, service, data, force=False):
         self.written_data.append(data)
 
-    def answer_done(self, service, force=False):
+    def answer_done_sync(self, service, force=False):
         self.written_data.append('done')
 
 

@@ -1,8 +1,8 @@
 # Plan: Remove `_async` Suffix from API Methods
 
-**Status:** 📋 Planning
+**Status:** ✅ Completed
 **Created:** 2025-12-17
-**Last Updated:** 2025-12-17
+**Last Updated:** 2025-12-18
 
 ## Goal
 

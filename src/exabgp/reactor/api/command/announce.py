@@ -109,7 +109,7 @@ def announce_route(
             if not routes:
                 error_msg = f'Could not parse route: {cmd}'
                 self.log_failure(error_msg)
-                await reactor.processes.answer_error_async(service, error_msg)
+                await reactor.processes.answer_error(service, error_msg)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -121,7 +121,7 @@ def announce_route(
                 if error:
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'invalid route for {peer_list}: {error}')
-                    await reactor.processes.answer_error_async(service, error)
+                    await reactor.processes.answer_error(service, error)
                     return
 
                 reactor.configuration.announce_route(peers, route)
@@ -133,19 +133,19 @@ def announce_route(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError as e:
             error_msg = f'Failed to parse route: {str(e)}'
             self.log_failure(error_msg)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
         except IndexError as e:
             error_msg = f'Invalid route syntax: {str(e)}'
             self.log_failure(error_msg)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
             error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
             self.log_exception(error_msg, e)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -163,7 +163,7 @@ def withdraw_route(
             if not routes:
                 error_msg = f'Could not parse route: {cmd}'
                 self.log_failure(error_msg)
-                await reactor.processes.answer_error_async(service, error_msg)
+                await reactor.processes.answer_error(service, error_msg)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -186,19 +186,19 @@ def withdraw_route(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError as e:
             error_msg = f'Failed to parse route: {str(e)}'
             self.log_failure(error_msg)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
         except IndexError as e:
             error_msg = f'Invalid route syntax: {str(e)}'
             self.log_failure(error_msg)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
             error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
             self.log_exception(error_msg, e)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -215,7 +215,7 @@ def announce_vpls(
             routes = self.api_vpls(cmd, action)
             if not routes:
                 self.log_failure(f'command could not parse vpls in : {cmd}')
-                await reactor.processes.answer_error_async(service)
+                await reactor.processes.answer_error(service)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -231,13 +231,13 @@ def announce_vpls(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the vpls')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
         except IndexError:
             self.log_failure('issue parsing the vpls')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -255,7 +255,7 @@ def withdraw_vpls(
 
             if not routes:
                 self.log_failure(f'command could not parse vpls in : {cmd}')
-                await reactor.processes.answer_error_async(service)
+                await reactor.processes.answer_error(service)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -274,13 +274,13 @@ def withdraw_vpls(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the vpls')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
         except IndexError:
             self.log_failure('issue parsing the vpls')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -297,7 +297,7 @@ def announce_attributes(
             routes = self.api_attributes(cmd, peers, action)
             if not routes:
                 self.log_failure(f'command could not parse route in : {cmd}')
-                await reactor.processes.answer_error_async(service)
+                await reactor.processes.answer_error(service)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -313,19 +313,19 @@ def announce_attributes(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError as e:
             error_msg = f'Failed to parse route: {str(e)}'
             self.log_failure(error_msg)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
         except IndexError as e:
             error_msg = f'Invalid route syntax: {str(e)}'
             self.log_failure(error_msg)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
             error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
             self.log_exception(error_msg, e)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -342,7 +342,7 @@ def withdraw_attribute(
             routes = self.api_attributes(cmd, peers, action)
             if not routes:
                 self.log_failure(f'command could not parse route in : {cmd}')
-                await reactor.processes.answer_error_async(service)
+                await reactor.processes.answer_error(service)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -362,19 +362,19 @@ def withdraw_attribute(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError as e:
             error_msg = f'Failed to parse route: {str(e)}'
             self.log_failure(error_msg)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
         except IndexError as e:
             error_msg = f'Invalid route syntax: {str(e)}'
             self.log_failure(error_msg)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
             error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
             self.log_exception(error_msg, e)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -391,7 +391,7 @@ def announce_flow(
             routes = self.api_flow(cmd, action)
             if not routes:
                 self.log_failure(f'command could not parse flow in : {cmd}')
-                await reactor.processes.answer_error_async(service)
+                await reactor.processes.answer_error(service)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -407,13 +407,13 @@ def announce_flow(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the flow')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
         except IndexError:
             self.log_failure('issue parsing the flow')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -431,7 +431,7 @@ def withdraw_flow(
 
             if not routes:
                 self.log_failure(f'command could not parse flow in : {cmd}')
-                await reactor.processes.answer_error_async(service)
+                await reactor.processes.answer_error(service)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -450,13 +450,13 @@ def withdraw_flow(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the flow')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
         except IndexError:
             self.log_failure('issue parsing the flow')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -471,13 +471,13 @@ def announce_eor(
         active_peers = [p for p in peers if p in established]
         if not active_peers:
             self.log_failure('No established peers to send EOR to')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
             return
 
         result = self.api_eor(command, action)
         if not isinstance(result, Family):
             self.log_failure(f'Command could not parse eor : {command}')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
             return
 
         family: Family = result
@@ -486,18 +486,18 @@ def announce_eor(
         self.log_message(f'Sent to {peer_list} : {family.extensive()}')
         await asyncio.sleep(0)
 
-        await reactor.processes.answer_done_async(service)
+        await reactor.processes.answer_done(service)
 
     try:
         reactor.asynchronous.schedule(service, command, callback())
         return True
     except ValueError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
     except IndexError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
 
@@ -510,13 +510,13 @@ def announce_refresh(
         active_peers = [p for p in peers if p in established]
         if not active_peers:
             self.log_failure('No established peers to send route-refresh to')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
             return
 
         refreshes = self.api_refresh(command, action)
         if not refreshes:
             self.log_failure(f'Command could not parse route-refresh command : {command}')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
             return
 
         reactor.configuration.inject_refresh(active_peers, refreshes)
@@ -525,18 +525,18 @@ def announce_refresh(
             self.log_message(f'Sent to {peer_list} : {refresh.extensive()}')
 
         await asyncio.sleep(0)
-        await reactor.processes.answer_done_async(service)
+        await reactor.processes.answer_done(service)
 
     try:
         reactor.asynchronous.schedule(service, command, callback())
         return True
     except ValueError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
     except IndexError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
 
@@ -549,7 +549,7 @@ def announce_operational(
         result = self.api_operational(command, action)
         if not result or result is True:
             self.log_failure(f'Command could not parse operational command : {command}')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
             return
 
         operational: Operational = result
@@ -557,7 +557,7 @@ def announce_operational(
         peer_list = ', '.join(peers) if peers else 'all peers'
         self.log_message(f'operational message sent to {peer_list} : {operational.extensive()}')
         await asyncio.sleep(0)
-        await reactor.processes.answer_done_async(service)
+        await reactor.processes.answer_done(service)
 
     # Check for valid operational subcommand
     words = command.split() + ['be', 'safe']
@@ -571,7 +571,7 @@ def announce_operational(
         'lpcq',
         'lpcp',
     ):
-        reactor.processes.answer_done(service)
+        reactor.processes.answer_done_sync(service)
         return False
 
     try:
@@ -579,11 +579,11 @@ def announce_operational(
         return True
     except ValueError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
     except IndexError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
 
@@ -598,7 +598,7 @@ def announce_ipv4(
             routes = self.api_announce_v4(cmd, action)
             if not routes:
                 self.log_failure(f'command could not parse ipv4 in : {cmd}')
-                await reactor.processes.answer_error_async(service)
+                await reactor.processes.answer_error(service)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -614,13 +614,13 @@ def announce_ipv4(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the ipv4')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
         except IndexError:
             self.log_failure('issue parsing the ipv4')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -638,7 +638,7 @@ def withdraw_ipv4(
 
             if not routes:
                 self.log_failure(f'command could not parse ipv4 in : {cmd}')
-                await reactor.processes.answer_error_async(service)
+                await reactor.processes.answer_error(service)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -657,13 +657,13 @@ def withdraw_ipv4(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the ipv4')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
         except IndexError:
             self.log_failure('issue parsing the ipv4')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -680,7 +680,7 @@ def announce_ipv6(
             routes = self.api_announce_v6(cmd, action)
             if not routes:
                 self.log_failure(f'command could not parse ipv6 in : {cmd}')
-                await reactor.processes.answer_error_async(service)
+                await reactor.processes.answer_error(service)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -696,13 +696,13 @@ def announce_ipv6(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the ipv6')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
         except IndexError:
             self.log_failure('issue parsing the ipv6')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -720,7 +720,7 @@ def withdraw_ipv6(
 
             if not routes:
                 self.log_failure(f'command could not parse ipv6 in : {cmd}')
-                await reactor.processes.answer_error_async(service)
+                await reactor.processes.answer_error(service)
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -739,13 +739,13 @@ def withdraw_ipv6(
             if flush_events:
                 await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
         except ValueError:
             self.log_failure('issue parsing the ipv6')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
         except IndexError:
             self.log_failure('issue parsing the ipv6')
-            await reactor.processes.answer_error_async(service)
+            await reactor.processes.answer_error(service)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -795,13 +795,13 @@ def v6_announce(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
 
     words = command.split(None, 1)
     if not words:
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
     route_type = words[0]
     handler_name = _V6_ANNOUNCE_HANDLERS.get(route_type)
     if not handler_name:
-        reactor.processes.answer_error(service, f'unknown announce type: {route_type}')
+        reactor.processes.answer_error_sync(service, f'unknown announce type: {route_type}')
         return False
 
     # Get handler from this module or watchdog module
@@ -826,13 +826,13 @@ def v6_withdraw(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
 
     words = command.split(None, 1)
     if not words:
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
     route_type = words[0]
     handler_name = _V6_WITHDRAW_HANDLERS.get(route_type)
     if not handler_name:
-        reactor.processes.answer_error(service, f'unknown withdraw type: {route_type}')
+        reactor.processes.answer_error_sync(service, f'unknown withdraw type: {route_type}')
         return False
 
     # Get handler from this module or watchdog module

@@ -79,7 +79,7 @@ def group_start(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
             reactor.processes.write(service, json.dumps({'error': error_msg}))
         else:
             reactor.processes.write(service, f'error: {error_msg}')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
     _start_group(service)
@@ -89,7 +89,7 @@ def group_start(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
         reactor.processes.write(service, json.dumps({'status': 'group started'}))
     else:
         reactor.processes.write(service, 'group started')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 
@@ -107,7 +107,7 @@ def group_end(self: 'API', reactor: 'Reactor', service: str, peers: list[str], c
             reactor.processes.write(service, json.dumps({'error': error_msg}))
         else:
             reactor.processes.write(service, f'error: {error_msg}')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
     buffered = _end_group(service)
@@ -119,7 +119,7 @@ def group_end(self: 'API', reactor: 'Reactor', service: str, peers: list[str], c
             reactor.processes.write(service, json.dumps({'status': 'group ended', 'commands': 0}))
         else:
             reactor.processes.write(service, 'group ended (0 commands)')
-        reactor.processes.answer_done(service)
+        reactor.processes.answer_done_sync(service)
         return True
 
     # Schedule async processing of all buffered commands
@@ -129,7 +129,7 @@ def group_end(self: 'API', reactor: 'Reactor', service: str, peers: list[str], c
         except Exception as e:
             error_msg = f'group processing failed: {type(e).__name__}: {str(e)}'
             log.error(lazymsg('api.group.error error={e}', e=error_msg), 'api')
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, 'group end', callback())
     return True
@@ -153,7 +153,7 @@ def group_inline(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
             reactor.processes.write(service, json.dumps({'error': error_msg}))
         else:
             reactor.processes.write(service, f'error: {error_msg}')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
     log.debug(lazymsg('api.group.inline service={s} commands={n}', s=service, n=len(parts)), 'api')
@@ -169,7 +169,7 @@ def group_inline(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
         except Exception as e:
             error_msg = f'group processing failed: {type(e).__name__}: {str(e)}'
             log.error(lazymsg('api.group.error error={e}', e=error_msg), 'api')
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, 'group inline', callback())
     return True
@@ -293,7 +293,7 @@ async def _process_group(
             msg += f', {len(errors)} errors'
         reactor.processes.write(service, msg)
 
-    await reactor.processes.answer_done_async(service)
+    await reactor.processes.answer_done(service)
 
 
 def _parse_routes(api: 'API', command: str, action: str = 'announce') -> list['Route']:
@@ -350,7 +350,7 @@ def group_add_command(
     """
     _add_to_group(service, peers, command)
     log.debug(lazymsg('api.group.add service={s} command={c}', s=service, c=command[:50]), 'api')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True
 
 

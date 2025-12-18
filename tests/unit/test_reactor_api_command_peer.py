@@ -342,7 +342,7 @@ class TestNeighborCreateCommand:
         result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
 
         assert result is True
-        mock_reactor.processes._answer.assert_called_once_with('test-service', 'done')
+        mock_reactor.processes._answer_sync.assert_called_once_with('test-service', 'done')
         assert len(mock_reactor._peers) == 1
         assert len(mock_reactor._dynamic_peers) == 1
 
@@ -359,8 +359,8 @@ class TestNeighborCreateCommand:
         # Try to create duplicate
         result2 = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
         assert result2 is False
-        mock_reactor.processes.answer_error.assert_called()
-        error_msg = mock_reactor.processes.answer_error.call_args[0][1]
+        mock_reactor.processes.answer_error_sync.assert_called()
+        error_msg = mock_reactor.processes.answer_error_sync.call_args[0][1]
         assert 'peer already exists' in error_msg
 
     def test_create_with_invalid_ip(self, mock_reactor):
@@ -371,7 +371,7 @@ class TestNeighborCreateCommand:
         result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
 
         assert result is False
-        mock_reactor.processes.answer_error.assert_called()
+        mock_reactor.processes.answer_error_sync.assert_called()
 
     def test_create_with_missing_params(self, mock_reactor):
         """Test creating peer with missing required parameters."""
@@ -381,7 +381,7 @@ class TestNeighborCreateCommand:
         result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
 
         assert result is False
-        mock_reactor.processes.answer_error.assert_called()
+        mock_reactor.processes.answer_error_sync.assert_called()
 
     def test_create_multiple_peers(self, mock_reactor):
         """Test creating multiple different peers."""
@@ -524,7 +524,7 @@ class TestPeerDeleteCommand:
         result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
 
         assert result is True
-        mock_reactor_with_peers.processes.answer_done.assert_called_once()
+        mock_reactor_with_peers.processes.answer_done_sync.assert_called_once()
         assert len(mock_reactor_with_peers._peers) == initial_count - 1
 
     def test_delete_nonexistent_peer(self, mock_reactor_with_peers):
@@ -535,8 +535,8 @@ class TestPeerDeleteCommand:
         result = peer_delete(None, mock_reactor_with_peers, 'test-service', [], '', False)
 
         assert result is False
-        mock_reactor_with_peers.processes.answer_error.assert_called()
-        error_msg = mock_reactor_with_peers.processes.answer_error.call_args[0][1]
+        mock_reactor_with_peers.processes.answer_error_sync.assert_called()
+        error_msg = mock_reactor_with_peers.processes.answer_error_sync.call_args[0][1]
         assert 'no neighbors match' in error_msg
 
     def test_delete_all_peers(self, mock_reactor_with_peers):
@@ -559,7 +559,7 @@ class TestPeerDeleteCommand:
         result = peer_delete(None, mock_reactor_with_peers, 'test-service', [], '', False)
 
         assert result is False
-        mock_reactor_with_peers.processes.answer_error.assert_called()
+        mock_reactor_with_peers.processes.answer_error_sync.assert_called()
 
     def test_delete_verifies_peer_removed(self, mock_reactor_with_peers):
         """Test that delete properly removes peer from all data structures."""

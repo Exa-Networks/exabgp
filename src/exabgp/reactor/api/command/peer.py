@@ -311,14 +311,14 @@ def neighbor_create(
         sys.stderr.write(f'Exception in neighbor_create: {e}\n')
         traceback.print_exc(file=sys.stderr)
         sys.stderr.flush()
-        reactor.processes.answer_error(service, f'Unexpected error: {type(e).__name__}: {e}')
+        reactor.processes.answer_error_sync(service, f'Unexpected error: {type(e).__name__}: {e}')
         return False
 
     try:
         # Check if peer already exists - use name() as key (string, matches dict types)
         key = neighbor.name()
         if key in reactor._peers:
-            reactor.processes.answer_error(service, f'peer already exists: {neighbor.name()}')
+            reactor.processes.answer_error_sync(service, f'peer already exists: {neighbor.name()}')
             return False
 
         # Add to configuration (for reload persistence - though we'll mark as dynamic)
@@ -333,15 +333,15 @@ def neighbor_create(
         # Mark as dynamic peer (ephemeral - removed on reload)
         reactor._dynamic_peers.add(key)
 
-        # Success response - use _answer() which works in both sync and async modes
-        reactor.processes._answer(service, 'done')
+        # Success response - use _answer_sync() for sync context
+        reactor.processes._answer_sync(service, 'done')
         return True
 
     except ValueError as e:
-        reactor.processes.answer_error(service, f'neighbor create failed: {e}')
+        reactor.processes.answer_error_sync(service, f'neighbor create failed: {e}')
         return False
     except Exception as e:
-        reactor.processes.answer_error(service, f'neighbor create error: {e}')
+        reactor.processes.answer_error_sync(service, f'neighbor create error: {e}')
         return False
 
 
@@ -364,7 +364,7 @@ def peer_delete(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
         # peers list already parsed by dispatcher
         if not peers:
             # No matches - return error
-            reactor.processes.answer_error(service, 'no neighbors match the selector')
+            reactor.processes.answer_error_sync(service, 'no neighbors match the selector')
             return False
 
         # Delete each matched peer
@@ -391,12 +391,12 @@ def peer_delete(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
                 deleted_count += 1
 
         # Success response
-        reactor.processes.answer_done(service)
+        reactor.processes.answer_done_sync(service)
         return True
 
     except ValueError as e:
-        reactor.processes.answer_error(service, f'neighbor delete failed: {e}')
+        reactor.processes.answer_error_sync(service, f'neighbor delete failed: {e}')
         return False
     except Exception as e:
-        reactor.processes.answer_error(service, f'neighbor delete error: {e}')
+        reactor.processes.answer_error_sync(service, f'neighbor delete error: {e}')
         return False

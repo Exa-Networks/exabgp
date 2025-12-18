@@ -60,9 +60,9 @@ def list_neighbor(
                 reactor.processes.write(service, line)
                 await asyncio.sleep(0)
         except Exception as e:
-            await reactor.processes.answer_error_async(service, str(e))
+            await reactor.processes.answer_error(service, str(e))
         else:
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -73,19 +73,19 @@ def teardown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], co
         # command contains the teardown code (e.g., "6" for code 6)
         code = command.strip()
         if not code.isdigit():
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error_sync(service)
             return False
         for peer_key in peers:
             if peer_key in reactor.established_peers():
                 reactor.teardown_peer(peer_key, int(code))
                 self.log_message(f'teardown scheduled for {peer_key}')
-        reactor.processes.answer_done(service)
+        reactor.processes.answer_done_sync(service)
         return True
     except ValueError:
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
     except IndexError:
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
 
@@ -137,9 +137,9 @@ def show_neighbor(
                     reactor.processes.write(service, line)
                     await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         except Exception as e:
-            await reactor.processes.answer_error_async(service, str(e))
+            await reactor.processes.answer_error(service, str(e))
         else:
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
 
     async def callback_json() -> None:
         p = []
@@ -177,7 +177,7 @@ def show_neighbor(
         for line in json.dumps(p).split('\n'):
             reactor.processes.write(service, line)
             await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
-        await reactor.processes.answer_done_async(service)
+        await reactor.processes.answer_done(service)
 
     async def callback_extensive() -> None:
         # Show ALL configured neighbors (both connected and disconnected)
@@ -216,9 +216,9 @@ def show_neighbor(
                     reactor.processes.write(service, '')
                     await asyncio.sleep(0)
         except Exception as e:
-            await reactor.processes.answer_error_async(service, str(e))
+            await reactor.processes.answer_error(service, str(e))
         else:
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
 
     async def callback_summary() -> None:
         try:
@@ -234,9 +234,9 @@ def show_neighbor(
                         reactor.processes.write(service, line)
                     await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         except Exception as e:
-            await reactor.processes.answer_error_async(service, str(e))
+            await reactor.processes.answer_error(service, str(e))
         else:
-            await reactor.processes.answer_done_async(service)
+            await reactor.processes.answer_done(service)
 
     # JSON output takes priority in v6 API (use_json=True)
     # This ensures consistent JSON responses for all commands
@@ -261,5 +261,5 @@ def show_neighbor(
 
     # Fallback
     reactor.processes.write(service, 'usage: peer <ip> show [summary|extensive|configuration]')
-    reactor.processes.answer_done(service)
+    reactor.processes.answer_done_sync(service)
     return True

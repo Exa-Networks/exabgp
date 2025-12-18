@@ -70,7 +70,7 @@ def v6_routes(
             break
 
     if not action:
-        reactor.processes.answer_error(service, 'routes requires action: list, add, or remove')
+        reactor.processes.answer_error_sync(service, 'routes requires action: list, add, or remove')
         return False
 
     # Extract optional AFI/SAFI filter (words before action)
@@ -155,11 +155,11 @@ def routes_list(
                         }
                     )
 
-            await reactor.processes.answer_async(service, routes_data)
+            await reactor.processes.answer(service, routes_data)
         except Exception as e:
             error_msg = f'Failed to list routes: {type(e).__name__}: {str(e)}'
             self.log_exception(error_msg, e)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, f'routes list {" ".join(afi_safi_words)}', callback())
     return True
@@ -185,7 +185,7 @@ def routes_add(
     async def callback() -> None:
         try:
             if not command.strip():
-                await reactor.processes.answer_error_async(service, 'routes add requires route specification')
+                await reactor.processes.answer_error(service, 'routes add requires route specification')
                 return
 
             # Parse route specification
@@ -193,7 +193,7 @@ def routes_add(
             if not routes:
                 error_msg = f'Could not parse route: {command}'
                 self.log_failure(error_msg)
-                await reactor.processes.answer_error_async(service, error_msg)
+                await reactor.processes.answer_error(service, error_msg)
                 return
 
             results = []
@@ -232,18 +232,18 @@ def routes_add(
 
             # Return single result or list
             if len(results) == 1:
-                await reactor.processes.answer_async(service, results[0])
+                await reactor.processes.answer(service, results[0])
             else:
-                await reactor.processes.answer_async(service, results)
+                await reactor.processes.answer(service, results)
 
         except ValueError as e:
             error_msg = f'Failed to parse route: {str(e)}'
             self.log_failure(error_msg)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
             error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
             self.log_exception(error_msg, e)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, f'routes add {command}', callback())
     return True
@@ -271,7 +271,7 @@ def routes_remove(
     async def callback() -> None:
         try:
             if not command.strip():
-                await reactor.processes.answer_error_async(service, 'routes remove requires route spec or index')
+                await reactor.processes.answer_error(service, 'routes remove requires route spec or index')
                 return
 
             # Check if removing by index
@@ -280,7 +280,7 @@ def routes_remove(
                 try:
                     index = bytes.fromhex(index_hex)
                 except ValueError:
-                    await reactor.processes.answer_error_async(service, f'Invalid hex index: {index_hex}')
+                    await reactor.processes.answer_error(service, f'Invalid hex index: {index_hex}')
                     return
 
                 success = reactor.configuration.withdraw_route_by_index(peers, index)
@@ -290,7 +290,7 @@ def routes_remove(
                 else:
                     self.log_failure(f'route not found for index: {index_hex}')
 
-                await reactor.processes.answer_async(
+                await reactor.processes.answer(
                     service,
                     {
                         'removed': success,
@@ -304,7 +304,7 @@ def routes_remove(
             if not routes:
                 error_msg = f'Could not parse route: {command}'
                 self.log_failure(error_msg)
-                await reactor.processes.answer_error_async(service, error_msg)
+                await reactor.processes.answer_error(service, error_msg)
                 return
 
             results = []
@@ -328,18 +328,18 @@ def routes_remove(
 
             # Return single result or list
             if len(results) == 1:
-                await reactor.processes.answer_async(service, results[0])
+                await reactor.processes.answer(service, results[0])
             else:
-                await reactor.processes.answer_async(service, results)
+                await reactor.processes.answer(service, results)
 
         except ValueError as e:
             error_msg = f'Failed to parse route: {str(e)}'
             self.log_failure(error_msg)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
             error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
             self.log_exception(error_msg, e)
-            await reactor.processes.answer_error_async(service, error_msg)
+            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, f'routes remove {command}', callback())
     return True

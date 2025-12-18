@@ -172,7 +172,7 @@ class TestGroupStartHandler:
         assert result is True
         assert _is_grouping('test-service') is True
         mock_reactor.processes.write.assert_called_once()
-        mock_reactor.processes.answer_done.assert_called_once_with('test-service')
+        mock_reactor.processes.answer_done_sync.assert_called_once_with('test-service')
 
     def test_group_start_text_response(self, mock_reactor):
         """Test group start text response."""
@@ -198,7 +198,7 @@ class TestGroupStartHandler:
         result = group_start(None, mock_reactor, 'test-service', [], '', False)
 
         assert result is False
-        mock_reactor.processes.answer_error.assert_called_once_with('test-service')
+        mock_reactor.processes.answer_error_sync.assert_called_once_with('test-service')
 
     def test_group_start_nested_error_message(self, mock_reactor):
         """Test nested group error message contains explanation."""
@@ -236,7 +236,7 @@ class TestGroupEndHandler:
         result = group_end(None, mock_reactor, 'test-service', [], '', False)
 
         assert result is False
-        mock_reactor.processes.answer_error.assert_called_once_with('test-service')
+        mock_reactor.processes.answer_error_sync.assert_called_once_with('test-service')
 
     def test_group_end_not_in_group_error_message(self, mock_reactor):
         """Test not in group error message."""
@@ -252,7 +252,7 @@ class TestGroupEndHandler:
         result = group_end(None, mock_reactor, 'test-service', [], '', False)
 
         assert result is True
-        mock_reactor.processes.answer_done.assert_called_once_with('test-service')
+        mock_reactor.processes.answer_done_sync.assert_called_once_with('test-service')
 
     def test_group_end_empty_group_clears_buffer(self, mock_reactor):
         """Test group end clears buffer."""
@@ -301,7 +301,7 @@ class TestGroupInlineHandler:
         result = group_inline(None, mock_reactor, 'test-service', [], '', False)
 
         assert result is False
-        mock_reactor.processes.answer_error.assert_called_once_with('test-service')
+        mock_reactor.processes.answer_error_sync.assert_called_once_with('test-service')
 
     def test_group_inline_empty_error_message(self, mock_reactor):
         """Test empty group error message."""

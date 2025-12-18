@@ -92,7 +92,7 @@ def _show_adjrib_callback(
                 else:
                     to_text(key, extracted)
                 await asyncio.sleep(0)  # Yield control after each chunk (matches original yield True)
-        await reactor.processes.answer_done_async(service)
+        await reactor.processes.answer_done(service)
 
     return callback
 
@@ -105,7 +105,7 @@ def show_adj_rib(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
     # Get direction from first word
     rib = words[0] if words else ''
     if rib not in ('in', 'out'):
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
     klass: tuple[type[NLRI], ...] = (NLRI,)
@@ -140,23 +140,23 @@ def flush_adj_rib_out(
             reactor.neighbor_rib_resend(peer_name)
             await asyncio.sleep(0)  # Yield control after each peer (matches original yield False)
 
-        await reactor.processes.answer_done_async(service)
+        await reactor.processes.answer_done(service)
 
     try:
         # peers list already parsed by dispatcher
         if not peers:
             self.log_failure(f'no neighbor matching the command : {command}', 'warning')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error_sync(service)
             return False
         reactor.asynchronous.schedule(service, command, callback(self, peers))
         return True
     except ValueError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
     except IndexError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
 
 
@@ -173,13 +173,13 @@ def clear_adj_rib(
                 reactor.neighbor_rib_in_clear(peer_name)
             await asyncio.sleep(0)  # Yield control after each peer (matches original yield False)
 
-        await reactor.processes.answer_done_async(service)
+        await reactor.processes.answer_done(service)
 
     try:
         # peers list already parsed by dispatcher
         if not peers:
             self.log_failure(f'no neighbor matching the command : {command}', 'warning')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error_sync(service)
             return False
         words = command.split()
         direction = 'in' if 'in' in words else 'out'
@@ -187,9 +187,9 @@ def clear_adj_rib(
         return True
     except ValueError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False
     except IndexError:
         self.log_failure('issue parsing the command')
-        reactor.processes.answer_error(service)
+        reactor.processes.answer_error_sync(service)
         return False

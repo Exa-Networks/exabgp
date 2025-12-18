@@ -275,7 +275,7 @@ class Reactor:
                     await self.asynchronous._run_async()
 
                 # Flush API process write queue (send ACKs and responses)
-                await self.processes.flush_write_queue_async()
+                await self.processes.flush_write_queue()
 
                 # Yield control to peer tasks (minimal sleep)
                 # asyncio event loop handles I/O waiting automatically

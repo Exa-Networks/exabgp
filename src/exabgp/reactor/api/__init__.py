@@ -94,11 +94,11 @@ class API:
             return handler(self, reactor, service, peers, remaining, use_json)
         except UnknownCommand:
             log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error_sync(service)
             return False
         except NoMatchingPeers:
             log.warning(lazymsg('api.command.no_peers command={command}', command=command), 'api')
-            reactor.processes.answer_error(service)
+            reactor.processes.answer_error_sync(service)
             return False
 
     async def process_async(self, reactor: 'Reactor', service: str, command: str) -> bool:
@@ -129,7 +129,7 @@ class API:
                 # For multi-line groups, we use all peers (selector was on group start)
                 peers = list(reactor.peers(service))
                 group_cmd.group_add_command(self, reactor, service, peers, command, use_json)
-                await reactor.processes.flush_write_queue_async()
+                await reactor.processes.flush_write_queue()
                 return True
 
         try:
@@ -139,17 +139,17 @@ class API:
                 handler, peers, remaining = dispatch_v6(command, reactor, service)
             result = handler(self, reactor, service, peers, remaining, use_json)
             # Flush any queued writes immediately
-            await reactor.processes.flush_write_queue_async()
+            await reactor.processes.flush_write_queue()
             return bool(result)
         except UnknownCommand:
             log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
-            reactor.processes.answer_error(service)
-            await reactor.processes.flush_write_queue_async()
+            reactor.processes.answer_error_sync(service)
+            await reactor.processes.flush_write_queue()
             return False
         except NoMatchingPeers:
             log.warning(lazymsg('api.command.no_peers command={command}', command=command), 'api')
-            reactor.processes.answer_error(service)
-            await reactor.processes.flush_write_queue_async()
+            reactor.processes.answer_error_sync(service)
+            await reactor.processes.flush_write_queue()
             return False
 
     def api_route(self, command: str, action: str = '') -> list[Route]:
