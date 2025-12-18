@@ -94,6 +94,18 @@ Use AskUserQuestion tool:
 - `plan/wip-<name>.md` when work starts
 - `plan/done-<name>.md` when completed
 
+## ✅ When starting work on a plan:
+```bash
+git mv plan/plan-<name>.md plan/wip-<name>.md
+```
+**Do this BEFORE starting any implementation work.** This signals active work and prevents confusion.
+
+## ✅ When completing a plan:
+```bash
+git mv plan/wip-<name>.md plan/done-<name>.md
+```
+**Do this when all tasks are complete and tests pass.** Update `plan/README.md` to reflect completion.
+
 ✅ **Required during complex work:**
 1. If a plan file exists (e.g., `plan/*.md`), update it as you discover:
    - Edge cases found during implementation
