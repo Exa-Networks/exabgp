@@ -108,9 +108,10 @@ class IComponent:
         """Pack the component to wire format. Must be overridden by subclasses."""
         raise NotImplementedError(f'{self.__class__.__name__} must implement pack()')
 
-    def make(cls, bgp: Buffer) -> tuple[IComponent, Buffer]:
-        """Pack the component to wire format. Must be overridden by subclasses."""
-        raise NotImplementedError(f'{cls.__class__.__name__} must implement make()')
+    @classmethod
+    def make(cls, bgp: Buffer) -> tuple['IComponent', Buffer]:
+        """Unpack component from wire format. Must be overridden by subclasses."""
+        raise NotImplementedError(f'{cls.__name__} must implement make()')
 
 
 class CommonOperator:

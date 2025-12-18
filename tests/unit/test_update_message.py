@@ -560,7 +560,7 @@ def test_update_eor_marker_validation() -> None:
     result = UpdateCollection.unpack_message(data, negotiated)
 
     # Should be detected as EOR
-    assert result.EOR
+    assert result.IS_EOR
     assert result.eor_afi == AFI.ipv4
     assert result.eor_safi == SAFI.unicast
 

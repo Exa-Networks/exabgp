@@ -76,7 +76,7 @@ class NLRICollection:
         instance = cls(b'', afi, safi, addpath=False, action=action)
         # Switch to semantic mode
         instance._mode = cls._MODE_NLRIS
-        instance._nlris_cache: list[NLRI] = nlris
+        instance._nlris_cache = nlris
         return instance
 
     @property

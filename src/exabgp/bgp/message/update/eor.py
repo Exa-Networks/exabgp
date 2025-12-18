@@ -27,12 +27,12 @@ from exabgp.protocol.ip import IP
 class EOR(Message):
     ID = Message.CODE.UPDATE
     TYPE = bytes([Message.CODE.UPDATE])
-    EOR: ClassVar[bool] = True  # End-of-RIB marker (Update has EOR = False)
+    IS_EOR: ClassVar[bool] = True  # End-of-RIB marker (Update has IS_EOR = False)
 
     class EOR_NLRI(NLRI):
         PREFIX: ClassVar[bytes] = b'\x00\x00\x00\x07\x90\x0f\x00\x03'
         MP_LENGTH: ClassVar[int] = len(PREFIX) + 1 + 2  # len(AFI) and len(SAFI)
-        EOR: ClassVar[bool] = True  # Override class variable
+        IS_EOR: ClassVar[bool] = True  # Override class variable
 
         nexthop = IP.NoNextHop
 

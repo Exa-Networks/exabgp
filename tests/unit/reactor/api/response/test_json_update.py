@@ -255,32 +255,32 @@ class TestEORJSON:
 
         eor = EOR(AFI.ipv4, SAFI.unicast)
 
-        # EOR messages have EOR=True
-        assert eor.EOR is True
+        # EOR messages have IS_EOR=True
+        assert eor.IS_EOR is True
 
     def test_update_collection_has_eor_false(self) -> None:
         """Test that UpdateCollection has EOR=False attribute."""
         attrs = AttributeCollection()
         update = UpdateCollection(announces=[], withdraws=[], attributes=attrs)
 
-        # UpdateCollection has EOR=False
-        assert update.EOR is False
+        # UpdateCollection has IS_EOR=False
+        assert update.IS_EOR is False
 
     def test_eor_vs_update_distinguished_by_eor_attribute(self, json_encoder: JSON) -> None:
         """Test that EOR and UpdateCollection are correctly distinguished.
 
-        The JSON encoder checks getattr(update_msg, 'EOR', False) to determine
+        The JSON encoder checks getattr(update_msg, 'IS_EOR', False) to determine
         whether to use EOR path or UpdateCollection path.
         """
 
         # EOR message
         eor = EOR(AFI.ipv4, SAFI.unicast)
-        assert getattr(eor, 'EOR', False) is True
+        assert getattr(eor, 'IS_EOR', False) is True
 
         # UpdateCollection
         attrs = AttributeCollection()
         update = UpdateCollection(announces=[], withdraws=[], attributes=attrs)
-        assert getattr(update, 'EOR', False) is False
+        assert getattr(update, 'IS_EOR', False) is False
 
 
 class TestNLRIAccess:

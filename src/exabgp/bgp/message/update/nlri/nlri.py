@@ -54,7 +54,7 @@ class NLRI(Family):
     # afi/safi inherited from Family.__slots__
     __slots__ = ('addpath', '_packed')
 
-    EOR: ClassVar[bool] = False
+    IS_EOR: ClassVar[bool] = False
 
     registered_nlri: ClassVar[dict[str, Type[NLRI]]] = dict()
     registered_families: ClassVar[list[tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]

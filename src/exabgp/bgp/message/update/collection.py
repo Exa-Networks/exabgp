@@ -164,7 +164,7 @@ class UpdateCollection(Message):
         return None
 
     @property
-    def EOR(self) -> bool:
+    def IS_EOR(self) -> bool:
         """True if this is an End-of-RIB marker (cached singleton)."""
         return self._eor_family() is not None
 

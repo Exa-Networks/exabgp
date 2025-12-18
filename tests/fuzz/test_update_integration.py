@@ -83,7 +83,7 @@ def test_unpack_empty_update_is_eor() -> None:
 
     result = UpdateCollection.unpack_message(data, negotiated)
 
-    assert result.EOR
+    assert result.IS_EOR
     assert result.eor_afi == AFI.ipv4
     assert result.eor_safi == SAFI.unicast
 

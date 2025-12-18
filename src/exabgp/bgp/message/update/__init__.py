@@ -60,7 +60,7 @@ class Update(Message):
 
     ID = Message.CODE.UPDATE
     TYPE = bytes([Message.CODE.UPDATE])
-    EOR: bool = False  # Not an End-of-RIB marker
+    IS_EOR: bool = False  # Not an End-of-RIB marker
 
     def __init__(self, packed: Buffer, negotiated: 'Negotiated | None' = None) -> None:
         """Create Update from raw payload bytes.

@@ -209,9 +209,9 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
         return self
 
     @property
-    def communities(self) -> list[ExtendedCommunityIPv6]:
+    def communities(self) -> list[ExtendedCommunityBase]:
         """Get list of ExtendedCommunityIPv6 objects by unpacking from bytes."""
-        result: list[ExtendedCommunityIPv6] = []
+        result: list[ExtendedCommunityBase] = []
         data = self._packed
         while data:
             community = ExtendedCommunityIPv6.unpack_attribute(data[:EXTENDED_COMMUNITY_IPV6_SIZE], None)
@@ -227,7 +227,7 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
             return self._attribute(self._packed)
         return b''
 
-    def __iter__(self) -> Iterator[ExtendedCommunityIPv6]:
+    def __iter__(self) -> Iterator[ExtendedCommunityBase]:
         return iter(self.communities)
 
     def __repr__(self) -> str:

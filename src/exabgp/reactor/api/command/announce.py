@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import Family
-from exabgp.bgp.message.update.attribute import NextHop
 from exabgp.bgp.message.update.collection import validate_announce_nlri
 
 from exabgp.logger import log, lazymsg
@@ -173,7 +172,7 @@ def withdraw_route(
             for route in routes:
                 # NextHop is a mandatory field (but we do not require it for withdraws)
                 if route.nexthop is IP.NoNextHop:
-                    route = route.with_nexthop(NextHop.from_string('0.0.0.0'))
+                    route = route.with_nexthop(IP.from_string('0.0.0.0'))
 
                 if reactor.configuration.withdraw_route(peers, route):
                     peer_list = ', '.join(peers) if peers else 'all peers'

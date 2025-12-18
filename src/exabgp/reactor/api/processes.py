@@ -1313,10 +1313,10 @@ class Processes:
     ) -> None:
         # Encoders expect UpdateCollection (semantic container), not Update (wire container)
         # Both Update and EOR have TYPE == Update.TYPE, but EOR has .nlris/.attributes directly
-        # Check for EOR flag to distinguish (EOR.EOR == True, Update.EOR == False)
+        # Check for IS_EOR flag to distinguish (EOR.IS_EOR == True, Update.IS_EOR == False)
         # Both branches produce something compatible with UpdateCollection interface
         update_collection: UpdateCollection
-        if update.EOR:
+        if update.IS_EOR:
             # EOR has .nlris and .attributes directly, compatible with encoder interface
             update_collection = cast(UpdateCollection, update)
         else:

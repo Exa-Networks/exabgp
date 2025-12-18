@@ -375,7 +375,7 @@ class JSON:
         minus: dict[tuple[Any, Any], list[Any]] = {}
 
         # EOR messages have .nlris directly but no .announces/.withdraws
-        if getattr(update_msg, 'EOR', False):
+        if getattr(update_msg, 'IS_EOR', False):
             # EOR message - use .nlris directly with original behavior
             for nlri in update_msg.nlris:
                 nexthop_ip = getattr(nlri, 'nexthop', IP.NoNextHop)

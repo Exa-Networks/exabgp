@@ -77,7 +77,7 @@ CIDR_MAX_MASK = 128
 
 
 class CIDR:
-    EOR: bool = False
+    IS_EOR: bool = False
 
     _mask_to_bytes: dict[int, int] = {}
 
