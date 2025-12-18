@@ -106,8 +106,8 @@ class _ParseDirection(Section):
         },
     )
     # Empty - all handled by schema validators
-    known: dict[str, object] = {}
-    action: dict[str, object] = {}
+    known: dict[str | tuple[Any, ...], Any] = {}
+    action: dict[str | tuple[Any, ...], tuple[ActionTarget, ActionOperation, ActionKey]] = {}
 
     default = {
         'parsed': True,

@@ -53,7 +53,8 @@ class Route:
         # This is intentional: at construction time the NLRI may not be fully populated
         # (e.g., nexthop not yet set), which would cause api-attributes.sequence to fail.
         # The lazy evaluation ensures the index is computed only when all NLRI fields are set.
-        self.__index = b''
+        # Note: Use mangled name directly for mypy compatibility with __slots__
+        self._Route__index = b''
         # Refcount for global route store (tracks how many neighbors reference this route)
         self._refcount = 0
 
@@ -105,9 +106,9 @@ class Route:
         return Route(self.nlri, merged, nexthop=self._nexthop)
 
     def index(self) -> bytes:
-        if not self.__index:
-            self.__index = b'%02x%02x' % self.nlri.family().afi_safi() + self.nlri.index()
-        return self.__index
+        if not self._Route__index:
+            self._Route__index = b'%02x%02x' % self.nlri.family().afi_safi() + self.nlri.index()
+        return self._Route__index
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Route):

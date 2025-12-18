@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
@@ -103,7 +103,7 @@ class ParseOperational(Section):
     syntax = 'syntax:\n'
 
     # Empty - all entries handled by schema validators
-    known: dict[str, object] = {}
+    known: dict[str | tuple[Any, ...], Any] = {}
     # action dict removed - derived from schema
 
     name = 'operational'

@@ -69,7 +69,7 @@ class ParseNextHop(Section):
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         Section.__init__(self, parser, scope, error)
         # Empty - all entries handled by schema validators via _get_stateful_validator
-        self.known: dict[str, object] = {}
+        self.known: dict[str | tuple[Any, ...], Any] = {}
         self._seen: set[tuple[AFI, SAFI, AFI]] = set()
 
     def clear(self) -> None:
