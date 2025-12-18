@@ -95,6 +95,19 @@ def pack(self, negotiated: Negotiated) -> bytes:
 
 ❌ DO NOT: Remove unused `negotiated`, make it Optional, suggest removing.
 
+✅ DO: When `Negotiated` is unavailable at call site, pass the `Negotiated.UNSET` singleton:
+```python
+# WRONG - makes negotiated optional
+packed = c.pack_attribute(None)  # mypy error!
+
+# RIGHT - use the singleton
+packed = c.pack_attribute(Negotiated.UNSET)  # type-safe
+```
+
+**Note:** The `Negotiated.UNSET` singleton exists for contexts where no session negotiation
+has occurred (e.g., building communities before session establishment). It provides
+sensible defaults that work for packing operations.
+
 ### Utility Classes (ESI, Labels, TLVs)
 
 Use `pack_X()` / `unpack_X()` - NO negotiated parameter.

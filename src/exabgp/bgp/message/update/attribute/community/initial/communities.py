@@ -15,9 +15,10 @@ from typing import TYPE_CHECKING, Iterator, Sequence
 from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
-    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    pass
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.initial.community import Community
 
@@ -75,7 +76,7 @@ class Communities(Attribute):
         """
         # Sort communities and pack
         sorted_communities = sorted(communities)
-        packed = b''.join(c.pack_attribute(None) for c in sorted_communities)
+        packed = b''.join(c.pack_attribute(Negotiated.UNSET) for c in sorted_communities)
         return cls(packed)
 
     def add(self, data: Community) -> 'Communities':
@@ -87,7 +88,7 @@ class Communities(Attribute):
         communities = list(self.communities)
         communities.append(data)
         communities.sort()
-        self._packed = b''.join(c.pack_attribute(None) for c in communities)
+        self._packed = b''.join(c.pack_attribute(Negotiated.UNSET) for c in communities)
         return self
 
     @property

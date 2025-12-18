@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import ClassVar, Type, TypeVar, cast
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import rt
 
@@ -23,7 +24,7 @@ class RTRecord(rt.RouteTarget):
 
     @classmethod
     def from_rt(cls: Type[T], route_target: rt.RouteTarget) -> T:
-        packed = route_target.pack_attribute(None)
+        packed = route_target.pack_attribute(Negotiated.UNSET)
         return cast(T, cls.unpack_attribute(bytes(packed[0:1]) + bytes([cls.COMMUNITY_SUBTYPE]) + bytes(packed[2:])))
 
 
