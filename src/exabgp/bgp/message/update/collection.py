@@ -212,8 +212,11 @@ class UpdateCollection(Message):
         nexthop_attr = self._attributes.get(Attribute.CODE.NEXT_HOP, None)
         if nexthop_attr is None:
             return IP.NoNextHop
-        # NextHop attribute has pack_ip() method - convert to IP
-        packed = nexthop_attr.pack_ip()  # type: ignore[attr-defined]
+        # NextHop attribute - extract IP from packed bytes
+        if isinstance(nexthop_attr, NextHop):
+            packed = nexthop_attr._packed
+        else:
+            return IP.NoNextHop
         if len(packed) == IPv4.BYTES:
             return IPv4(packed)
         elif len(packed) == IPv6.BYTES:
@@ -615,9 +618,9 @@ class UpdateCollection(Message):
             # MPURNLRI implements __iter__ yielding NLRI
             withdraws.extend(unreach)
 
-        if reach is not None:
+        if reach is not None and isinstance(reach, MPRNLRI):
             # MP_REACH_NLRI contains nexthop - use iter_routed() for RoutedNLRI
-            announces.extend(reach.iter_routed())  # type: ignore[attr-defined]
+            announces.extend(reach.iter_routed())
 
         return cls(announces, withdraws, attributes)
 

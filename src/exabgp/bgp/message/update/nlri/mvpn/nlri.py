@@ -170,13 +170,13 @@ class GenericMVPN(MVPN):
         self._packed = bytes(packed)  # Ensure bytes for storage
 
     @property
-    def CODE(self) -> int:  # type: ignore[override]
+    def route_code(self) -> int:
         """Route type code - extracted from wire bytes.
 
-        Override: Base MVPN.CODE is ClassVar set by decorator; GenericMVPN
-        extracts dynamically from packed bytes for unknown route types.
+        Note: Named route_code to avoid overriding base MVPN.CODE ClassVar.
+        Base classes use CODE set by decorator; GenericMVPN extracts dynamically.
         """
         return self._packed[0]
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())
+        return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.route_code, self._raw())

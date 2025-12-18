@@ -215,8 +215,12 @@ class GenericBGPLS(BGPLS):
         self._packed = packed
 
     @property
-    def CODE(self) -> int:  # type: ignore[override]
+    def route_code(self) -> int:
+        """Route type code - stored from wire bytes.
+
+        Note: Named route_code to avoid overriding base BGPLS.CODE ClassVar.
+        """
         return self._code
 
     def json(self, announced: bool = True, compact: bool = False) -> str:
-        return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())
+        return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.route_code, self._raw())

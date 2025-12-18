@@ -810,8 +810,8 @@ class TestMUPGeneric:
             AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
 
-        assert unpacked.CODE == 99
-        assert unpacked.ARCHTYPE == 1
+        assert unpacked.route_code == 99
+        assert unpacked.arch_type == 1
 
     def test_mup_safi(self) -> None:
         """Test that MUP routes use correct SAFI"""

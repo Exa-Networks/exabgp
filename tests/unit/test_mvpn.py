@@ -564,7 +564,7 @@ class TestMVPNGeneric:
             AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
 
-        assert unpacked.CODE == 99
+        assert unpacked.route_code == 99
 
     def test_mvpn_safi(self) -> None:
         """Test that MVPN routes use correct SAFI"""

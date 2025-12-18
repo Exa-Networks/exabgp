@@ -914,9 +914,10 @@ class Flow(NLRI):
                         value_bytes, bgp = bytes(bgp[:length]), bgp[length:]
                         adding_val = klass.decoder(value_bytes)
                         # klass is IOperation subclass with (operator, value) constructor
-                        # factory is typed as Type[IComponent] but actual classes are IOperation subclasses
-                        component = klass(operator, adding_val)  # type: ignore[call-arg]
-                        rules.setdefault(what, []).append(component)
+                        # decoder returns object but IOperation expects BaseValue
+                        if issubclass(klass, IOperation) and isinstance(adding_val, BaseValue):
+                            component = klass(operator, adding_val)
+                            rules.setdefault(what, []).append(component)
         except (IndexError, KeyError):
             pass  # Incomplete data, return what we have
 
@@ -950,7 +951,9 @@ class Flow(NLRI):
                 pair = self.rules.get(FlowDestination.ID, [])
             if pair:
                 # rule and pair[0] are IPrefix subclasses (FlowIPv4/FlowIPv6) which have afi
-                if rule.afi != pair[0].afi:  # type: ignore[attr-defined]
+                rule_afi = getattr(rule, 'afi', None)
+                pair_afi = getattr(pair[0], 'afi', None)
+                if rule_afi is not None and pair_afi is not None and rule_afi != pair_afi:
                     return False
             # TODO: verify if this is correct - why reset the afi of the NLRI object after initialisation?
             if rule.NAME.endswith('ipv6'):
@@ -1141,7 +1144,9 @@ class Flow(NLRI):
             dst_rules = rules.get(FlowDestination.ID, [])
             if src_rules and dst_rules:
                 # src_rules[0] and dst_rules[0] are IPrefix subclasses with afi
-                if src_rules[0].afi != dst_rules[0].afi:  # type: ignore[attr-defined]
+                src_afi = getattr(src_rules[0], 'afi', None)
+                dst_afi = getattr(dst_rules[0], 'afi', None)
+                if src_afi is not None and dst_afi is not None and src_afi != dst_afi:
                     raise Notify(
                         3,
                         10,

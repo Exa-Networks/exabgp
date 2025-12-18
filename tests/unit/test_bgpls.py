@@ -78,7 +78,7 @@ class TestBGPLSBase:
         packed_data = b'\x01\x02\x03\x04'
         generic = GenericBGPLS(code, packed_data)
 
-        assert code == generic.CODE
+        assert code == generic.route_code
         assert generic._packed == packed_data
 
         # Test JSON output
@@ -942,7 +942,7 @@ class TestBGPLSUnpack:
         nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
 
         assert isinstance(nlri, GenericBGPLS)
-        assert nlri.CODE == 153
+        assert nlri.route_code == 153
         assert len(leftover) == 0
 
     def test_unpack_with_leftover(self) -> None:
