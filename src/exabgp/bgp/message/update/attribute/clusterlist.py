@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.protocol.ip import IPv4
+from exabgp.protocol.ip import IPFactory, IPv4
 
 # ===================================================================
 #
@@ -23,8 +23,9 @@ from exabgp.protocol.ip import IPv4
 
 class ClusterID(IPv4):
     @classmethod
-    def from_string(cls, string: str) -> 'ClusterID':
+    def from_string(cls, string: str, klass: IPFactory | None = None) -> 'ClusterID':
         """Create ClusterID from string representation."""
+        # klass parameter unused - ClusterID always returns ClusterID
         return cls(IPv4.pton(string))
 
 

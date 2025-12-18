@@ -270,17 +270,14 @@ class GenericLSID(BaseLS):
         """Return hex string of packed bytes."""
         return hexstring(self._packed)
 
-    @property
-    def JSON(self) -> str:
-        """Return JSON key name based on TLV code."""
-        return f'generic-lsid-{self.TLV}'
-
     def __repr__(self) -> str:
         return 'Attribute with code [ {} ] not implemented'.format(self.TLV)
 
     def json(self, compact: bool = False) -> str:
         # Always output as array for backward compatibility
-        return f'"{self.JSON}": ["{self.content}"]'
+        # Compute JSON key inline to avoid overriding class attribute with property
+        json_key = f'generic-lsid-{self.TLV}'
+        return f'"{json_key}": ["{self.content}"]'
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> GenericLSID:

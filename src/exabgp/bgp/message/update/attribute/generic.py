@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.util.types import Buffer
-from typing import TYPE_CHECKING, ClassVar, Type
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -122,10 +122,6 @@ class GenericAttribute(Attribute):
         else:
             len_value = bytes([length])
         return bytes([flag, self.ID]) + len_value + self._packed
-
-    @classmethod
-    def unpack_attribute(cls: Type['GenericAttribute'], code: int, flag: int, data: Buffer) -> 'GenericAttribute':
-        return cls.from_packet(code, flag, data)
 
     def json(self) -> str:
         return '{ "id": %d, "flag": %d, "payload": "%s"}' % (self.ID, self.FLAG, hexstring(self._packed))

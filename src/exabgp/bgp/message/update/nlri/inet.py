@@ -380,7 +380,7 @@ class INET(NLRI):
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[INET, Buffer]:
+    ) -> tuple[NLRI, Buffer]:
         data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # Parse path_info if AddPath is enabled
         if addpath:
