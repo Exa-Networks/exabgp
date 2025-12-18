@@ -500,6 +500,49 @@ When API version is v4, responses may need format conversion:
 
 ---
 
+## JSON Output Format Differences
+
+Beyond command syntax, v4 and v6 differ in **JSON output format** for certain NLRI types.
+
+### nexthop in NLRI
+
+**v4:** Includes `next-hop` field in NLRI objects for backward compatibility
+**v6:** Excludes `next-hop` from NLRI (available in grouping key instead)
+
+**Example - Flow NLRI:**
+
+```json
+// v4 format (v4_json)
+{
+  "string": "flow destination 10.0.0.0/24",
+  "next-hop": "1.2.3.4",
+  "destination-ipv4": ["10.0.0.0/24"]
+}
+
+// v6 format (json)
+{
+  "string": "flow destination 10.0.0.0/24",
+  "destination-ipv4": ["10.0.0.0/24"]
+}
+// nexthop is in the grouping key: "ipv4 flow": {"1.2.3.4": [...]}
+```
+
+**Rationale:** nexthop is not part of NLRI identity (two routes with same prefix but different nexthops are different routes). v6 places nexthop in the JSON grouping structure.
+
+**Affected NLRI types:**
+- Flow (FlowSpec)
+- BGP-LS (node, prefixv4, prefixv6)
+
+### Implementation Pattern
+
+NLRI classes implement two methods:
+- `json()` - v6 format (no nexthop)
+- `v4_json(nexthop)` - v4 format (includes nexthop if provided)
+
+The encoder uses `use_v4_json` flag to select which method to call.
+
+---
+
 ## Migration Guide
 
 ### From v4 to v6
@@ -580,4 +623,4 @@ $ echo "neighbor * announce route 10.0.0.0/24 next-hop 1.2.3.4" | exabgp-cli
 
 ---
 
-**Updated:** 2025-12-05
+**Updated:** 2025-12-18
