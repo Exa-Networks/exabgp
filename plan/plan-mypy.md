@@ -4,324 +4,159 @@
 **Created:** 2025-12-17
 **Last Updated:** 2025-12-18
 **Starting Errors:** 1,149 (baseline)
-**Current Errors:** 74 (94% reduction achieved)
-**Target:** <50 errors
+**Current Errors:** 44 (96% reduction achieved)
+**Target:** <25 errors
 
 ---
 
 ## Executive Summary
 
-Current position: **97 errors remaining** across 43 files after 92% reduction from baseline.
+After deep analysis (see `plan/mypy-decorator-classvar-pattern.md` for full details), the remaining 50 errors fall into 12 distinct categories with clear fix patterns.
 
-| Category | Count | Difficulty | Strategy |
-|----------|-------|------------|----------|
-| Property overrides (`[misc]`/`[override]`) | 10 | Easy | Remove setters from INET base class |
-| Negotiated = None (`[arg-type]`) | 9 | Medium | Sentinel pattern or Optional |
-| Attribute access (`[attr-defined]`) | 12 | Medium | Protocol types or cast |
-| Static route types (`[arg-type]`/`[assignment]`) | 10 | Medium | Fix type narrowing |
-| Flow NLRI registry (`[call-arg]`/`[arg-type]`) | 8 | Hard | Fix IComponent class methods |
-| Flow parser yields (`[misc]`) | 6 | Easy | Fix return type annotations |
-| Section dict types (`[assignment]`) | 7 | Easy | Unify dict key types |
-| Update vs UpdateCollection | 5 | Medium | Type alias or union |
-| Method signature overrides (`[override]`) | 4 | Hard | Signature alignment |
-| Other misc issues | 26 | Varies | Case-by-case |
+**Key insight from user:** "Many type issues can be fixed by using the base class as return type" - covariant return types and unified base class method signatures are the primary fix patterns.
 
 ---
 
-## Phase 1: Quick Wins (~33 errors)
+## Current Error Distribution (50 errors)
 
-### 1.1 Property Override Fixes (10 errors) ✅ READY
-
-**Root cause:** INET defines `labels` and `rd` as read-write properties (with setters), but Label/IPVPN override them as read-only properties.
-
-**Files:**
-| File | Lines | Properties |
-|------|-------|------------|
-| `nlri/rtc.py` | 52, 56 | safi, labels |
-| `nlri/label.py` | 125, 177 | safi, labels |
-| `nlri/ipvpn.py` | 152, 186 | safi, rd |
-| `nlri/mvpn/nlri.py` | 179 | safi |
-| `nlri/mup/nlri.py` | 184, 189 | safi, rd |
-| `nlri/evpn/nlri.py` | 187 | safi |
-| `attribute/bgpls/linkstate.py` | 274 | tlvs |
-
-**Fix:** Remove setters from `inet.py` lines 121-123 and 129-131. The packed-bytes-first pattern makes properties read-only by design.
-
-```python
-# REMOVE these setter methods from inet.py:
-@labels.setter
-def labels(self, value: Labels | None) -> None:
-    self._labels = value
-
-@rd.setter
-def rd(self, value: RouteDistinguisher | None) -> None:
-    self._rd = value
-```
-
-### 1.2 Flow Parser Yield Types (6 errors) ✅ READY
-
-**Root cause:** Functions return `Generator[Flow4Source | Flow6Source]` but yield `IPrefix4`/`IPrefix6`.
-
-**File:** `configuration/flow/parser.py` lines 135, 139, 144, 156, 160, 165
-
-**Fix:** The `make_prefix4`/`make_prefix6` methods return the correct Flow types. Update the type hints to match actual return types, or verify the methods return Flow4Source/Flow6Source (they should).
-
-### 1.3 Section Dict Types (7 errors) ✅ READY
-
-**Root cause:** Subclasses define `content: dict[str, object]` but base Section uses `dict[str | tuple[Any, ...], Any]`.
-
-**Files:**
-- `configuration/operational/__init__.py:106`
-- `configuration/neighbor/nexthop.py:72`
-- `configuration/neighbor/api.py:109,110,124`
-- `configuration/static/__init__.py` (2 errors)
-- `configuration/configuration.py` (dict_keys)
-
-**Fix:** Change subclass type annotations to match base class:
-```python
-content: dict[str | tuple[Any, ...], Any] = {}
-```
-
-### 1.4 Route __index Slot (2 errors) ✅ READY
-
-**Root cause:** `__index` not in `__slots__` but `_Route__index` is (Python name mangling).
-
-**File:** `rib/route.py:56,109`
-
-**Fix:** The slot is correctly declared as `_Route__index` (line 36). The assignment `self.__index = b''` uses Python's name mangling and should work. Need to verify mypy understands this - may need explicit cast or rename.
-
-### 1.5 INET Attribute Redefinition (2 errors) ✅ READY
-
-**Root cause:** `_labels` and `_rd` defined in `__slots__` AND as instance attributes.
-
-**File:** `inet.py:151,152`
-
-**Fix:** Remove the redundant instance attribute assignments since they're already in `__slots__`:
-```python
-# Lines 151-152 can be removed if __slots__ handles it
-# Or keep only the type annotation without assignment
-```
-
-### 1.6 EOR Valid Type (1 error) ✅ READY
-
-**Root cause:** `EOR.EOR` used as a type but it's a ClassVar bool.
-
-**File:** `eor.py:79`
-
-**Fix:** The `EOR.EOR` is used as a marker. Check context - likely needs different approach.
-
-### 1.7 NLRI Collection Type Declaration (1 error) ✅ READY
-
-**Root cause:** Type declared in assignment to non-self attribute.
-
-**File:** `nlri/collection.py:79`
-
-**Fix:** Move type annotation to class level or use different pattern.
-
-### 1.8 Extended Community List Type (1 error) ✅ READY
-
-**File:** `community/extended/communities.py:217`
-
-**Fix:** Cast or fix the list type annotation.
-
-### 1.9 L2VPN Container Type (1 error) ✅ READY
-
-**File:** `configuration/l2vpn/__init__.py`
-
-**Fix:** Align Container/RouteBuilder types.
-
-### 1.10 Flow Route Tokeniser (1 error) ✅ READY
-
-**File:** `configuration/flow/route.py`
-
-**Fix:** Handle None case for Tokeniser argument.
+| Category | Count | Difficulty | Fix Pattern |
+|----------|-------|------------|-------------|
+| Method signature overrides | 6 | Medium | Add params with defaults / use base return type |
+| Read-only property overrides | 4 | Easy | Remove Family setters |
+| Flow NLRI (IComponent/BaseValue) | 6 | Medium | Add @classmethod, implement abstract |
+| TypeVar bound constraints | 3 | Medium | Expand TypeVar bounds |
+| Static route type narrowing | 6 | Medium | Use `type[INET]` union annotation |
+| Config misc (arithmetic, dicts) | 11 | Easy | Type guards, casts |
+| Srv6 TLV type hierarchy | 3 | Medium | Fix class hierarchy |
+| EOR type marker | 1 | Easy | Use TypeAlias |
+| Collection attribute access | 2 | Easy | Cast after code check |
+| NLRICollection type decl | 1 | Easy | Move to class level |
+| Extended communities list | 1 | Easy | Use base class type |
+| Announce NextHop | 1 | Easy | Use .ip accessor |
+| **Total** | **50** | | |
 
 ---
 
-## Phase 2: Medium Complexity (~35 errors)
+## Implementation Priority (Ordered by Impact)
 
-### 2.1 Negotiated = None Pattern (9 errors)
+### Phase 1: Quick Wins (~15 min, -12 errors)
 
-**Root cause:** Community pack methods call `pack_attribute(None)` where `Negotiated` expected.
+| Fix | File(s) | Errors |
+|-----|---------|--------|
+| Add `@classmethod` to `IComponent.make()` | flow.py:111 | -4 |
+| Remove Family afi/safi setters | family.py | -4 |
+| Fix EOR.EOR type usage | eor.py:77 | -1 |
+| Fix NLRICollection type decl | collection.py:79 | -1 |
+| Fix communities list type | communities.py:218 | -1 |
+| Fix NextHop vs IP | announce.py:176 | -1 |
 
-**Files:**
-- `community/large/communities.py:87,100`
-- `community/initial/communities.py:78,90`
-- `community/extended/rt_record.py:26`
-- `community/extended/communities.py:118,129,199,207`
+### Phase 2: Signature Alignment (~30 min, -6 errors)
 
-**Options:**
-1. **Sentinel pattern** - Create `NullNegotiated` singleton
-2. **Optional parameter** - Make `negotiated: Negotiated | None`
-3. **Skip pack_attribute** - Use direct packing for these cases
+| Fix | File(s) | Errors |
+|-----|---------|--------|
+| Align `unpack_nlri` return to `tuple[NLRI, Buffer]` | ipvpn.py, inet.py | -1 |
+| Add `announced` param to base NLRI.json() | nlri.py | -1 |
+| Add `negotiated` to UnknownMessage.unpack_message | unknown.py | -1 |
+| Rename GenericAttribute.unpack_attribute | generic.py | -1 |
+| Fix ClusterID.from_string signature | clusterlist.py | -1 |
+| Fix linkstate.py tlvs property | linkstate.py | -1 |
 
-**Recommended:** Option 2 - Make parameter optional with None default, add runtime guard.
+### Phase 3: Type Guards (~45 min, -11 errors)
 
-### 2.2 Attribute Access on Base Types (12 errors)
+| Fix | File(s) | Errors |
+|-----|---------|--------|
+| Add type guards for attribute arithmetic | announce/__init__.py | -4 |
+| Explicit `type[INET]` annotation for nlri_class | static/route.py | -6 |
+| Fix dict_keys iteration | api.py, configuration.py | -1 |
 
-**Root cause:** Code accesses subclass-specific attributes on base `Attribute` type.
+### Phase 4: Hierarchy Fixes (~45 min, -9 errors)
 
-| File | Attribute | Solution |
-|------|-----------|----------|
-| `collection.py:216` | `pack_ip` | Cast to NextHop |
-| `collection.py:594` | (Attribute\|IP) → IP | Type guard |
-| `collection.py:603` | `extend` with Attribute | Cast to MPRNLRI |
-| `collection.py:607` | `iter_routed` | Cast to MPRNLRI |
-| `mprnlri.py:140` | `pack_ip` | Cast to NextHop |
-| `update/__init__.py:198,200` | `afi`, `safi` | Cast to MPRNLRI |
-| `update/__init__.py:210` | UpdateCollection\|None | Type guard |
-| `neighbor.py:366,367` | `SELF`, `resolved`, `resolve` | Cast to NextHop |
-| `validator.py:1380` | `validate_with_afi` | Add method or Protocol |
+| Fix | File(s) | Errors |
+|-----|---------|--------|
+| BaseValue: add default short() implementation | flow.py | -2 |
+| Expand TypeVar bounds | aspath.py, srv6/*.py | -3 |
+| Srv6 TLV hierarchy (inheritance or union) | mpls.py | -3 |
+| Config misc (neighbor, l2vpn, etc.) | various | -1 |
 
-**Fix:** Use `cast()` with appropriate types based on the attribute code being accessed.
+### Phase 5: Remaining Config (~30 min, -6 errors)
 
-### 2.3 Update vs UpdateCollection (5 errors)
-
-**Root cause:** Functions return `UpdateCollection` but are typed to return `Update`.
-
-**Files:**
-- `reactor/protocol.py:445,464` - return type mismatch
-- `reactor/api/processes.py:1320,1324` - assignment/arg mismatch
-- `bgp/message/update/__init__.py:210` - None handling
-
-**Fix:** Either:
-1. Change return types to `UpdateCollection`
-2. Create type alias `UpdateResult = Update | UpdateCollection`
-3. Verify the semantic intent and fix appropriately
-
-### 2.4 Static Route Type Mismatches (10 errors)
-
-**Files:**
-- `configuration/static/route.py:352,355,419,426` - type[INET/Label] → type[IPVPN]
-- `configuration/static/route.py:450` - kwargs spread
-- `configuration/static/route.py:500` - Attribute → int
-- `configuration/static/parser.py:330,332` - IP → ClusterID
-- `configuration/static/mpls.py:138` - missing return
-- `configuration/static/mpls.py:181,189,191` - Srv6 TLV types
-
-**Fix:** These require careful analysis of the type narrowing logic. The route creation code assigns different NLRI class types based on conditions.
-
-### 2.5 Announce Config Issues (4 errors)
-
-**File:** `configuration/announce/__init__.py:65,67,88`
-
-**Pattern:** Arithmetic on `int | None` and `Attribute` types.
-
-**Fix:** Add type guards before arithmetic operations.
-
-### 2.6 Announce NextHop (1 error)
-
-**File:** `reactor/api/command/announce.py`
-
-**Pattern:** `NextHop` passed where `IP` expected.
-
-**Fix:** NextHop should be compatible with IP or needs accessor.
-
-### 2.7 Neighbor Return Type (1 error)
-
-**File:** `configuration/neighbor/__init__.py`
-
-**Pattern:** Returning Any from typed function.
-
-**Fix:** Add proper return type annotation.
+Remaining configuration file fixes.
 
 ---
 
-## Phase 3: Complex Fixes (~25 errors)
+## Detailed Fix Strategies
 
-### 3.1 Flow NLRI Registry Issues (8 errors)
+### IComponent.make() - Missing @classmethod
 
-**Root cause:** `IComponent` base class doesn't properly type the registry pattern.
-
-**File:** `nlri/flow.py` lines 902, 903, 912, 913, 508, 516
-
-**Issues:**
-1. `klass.make(bgp)` - `make` is not a classmethod but used as one
-2. `klass(operator, adding_val)` - IComponent constructor doesn't match
-3. `BaseValue` instantiation - abstract class
+**Current (line 111-113 in flow.py):**
+```python
+def make(cls, bgp: Buffer) -> tuple[IComponent, Buffer]:
+    raise NotImplementedError(...)
+```
 
 **Fix:**
-1. Make `make` a proper `@classmethod` with correct signature
-2. Add ClassVar declarations for factory methods
-3. Fix BaseValue to not be abstract or use concrete subclass
+```python
+@classmethod
+def make(cls, bgp: Buffer) -> tuple[IComponent, Buffer]:
+    raise NotImplementedError(...)
+```
 
-### 3.2 Method Signature Overrides (4 errors)
+### Static Route Type Narrowing
 
-| File | Method | Issue |
-|------|--------|-------|
-| `attribute/generic.py:127` | `unpack_attribute` | Extra params (code, flag) |
-| `nlri/ipvpn.py:443` | `unpack_nlri` | Returns NLRI vs INET |
-| `nlri/inet.py:373` | `json` | Extra param (announced) |
-| `message/unknown.py:48` | `unpack_message` | Missing negotiated param |
+**Current (route.py ~348-355):**
+```python
+if has_rd:
+    nlri_class = IPVPN  # mypy infers type[IPVPN]
+elif has_labels:
+    nlri_class = Label  # Error: incompatible with type[IPVPN]
+else:
+    nlri_class = INET   # Error: incompatible with type[IPVPN]
+```
 
-**Fix options:**
-1. Use `@overload` decorators
-2. Align signatures with base class
-3. Use `# type: ignore[override]` with documentation (last resort)
+**Fix:**
+```python
+nlri_class: type[INET]  # Explicit annotation - INET is base
+if has_rd:
+    nlri_class = IPVPN
+elif has_labels:
+    nlri_class = Label
+else:
+    nlri_class = INET
+```
 
-### 3.3 TypeVar Constraints (3 errors)
+### unpack_nlri Return Type Alignment
 
-**Files:**
-- `attribute/aspath.py:255` - SegmentType
-- `attribute/sr/srv6/sidinformation.py:45` - SubTlvType
-- `attribute/sr/srv6/sidstructure.py:36` - SubSubTlvType
+**Issue:** INET returns `tuple[INET, Buffer]`, IPVPN returns `tuple[NLRI, Buffer]`
+**Fix:** All implementations should return `tuple[NLRI, Buffer]` (base class type)
 
-**Fix:** Expand TypeVar bounds to include the actual types being used.
+This follows the user's insight: use base class return types for covariance.
 
----
+### Announce Attribute Arithmetic
 
-## Implementation Order
+**Current:**
+```python
+cut = last.attributes[Attribute.CODE.INTERNAL_SPLIT]
+if mask >= cut:  # Error: cut is Attribute | None, not int
+```
 
-| Priority | Phase | Errors | Effort | Notes |
-|----------|-------|--------|--------|-------|
-| 1 | 1.1 Property overrides | 10 | 15 min | Just remove setters |
-| 2 | 1.2 Flow parser yields | 6 | 15 min | Type annotation fix |
-| 3 | 1.3-1.10 Quick misc | 9 | 30 min | Various small fixes |
-| 4 | 2.1 Negotiated None | 9 | 30 min | Parameter change |
-| 5 | 2.2 Attribute access | 12 | 45 min | Add casts |
-| 6 | 2.3 Update types | 5 | 30 min | Return type fixes |
-| 7 | 2.4-2.7 Static route | 16 | 1 hr | Type narrowing |
-| 8 | 3.1 Flow registry | 8 | 1 hr | Class restructure |
-| 9 | 3.2 Method sigs | 4 | 45 min | Signature alignment |
-| 10 | 3.3 TypeVars | 3 | 15 min | Bound expansion |
-
-**Estimated total:** ~6 hours to reach <50 errors
-
----
-
-## Quick Start: First 25 Errors
-
-Run these in order for maximum impact:
-
-```bash
-# 1. Remove INET property setters (10 errors)
-# Edit src/exabgp/bgp/message/update/nlri/inet.py
-# Remove lines 121-123 (@labels.setter) and 129-131 (@rd.setter)
-
-# 2. Fix flow parser return types (6 errors)
-# Edit src/exabgp/configuration/flow/parser.py
-# Verify make_prefix4/make_prefix6 return correct types
-
-# 3. Fix Section dict types (7 errors)
-# Update subclass type annotations to match base
-
-# 4. Fix Route __index and INET redefinitions (4 errors)
-# Minor slot/attribute fixes
-
-# Verify:
-uv run mypy src/exabgp 2>&1 | tail -3
+**Fix:**
+```python
+cut_attr = last.attributes.get(Attribute.CODE.INTERNAL_SPLIT)
+if cut_attr is None or not isinstance(cut_attr, InternalSplit):
+    yield last
+    return
+cut = cut_attr.value  # Now properly typed as int
 ```
 
 ---
 
 ## Decisions Needed
 
-| Decision | Options | Impact |
-|----------|---------|--------|
-| Negotiated None | Sentinel vs Optional param | 9 errors |
-| Update vs UpdateCollection | Union type vs separate | 5 errors |
-| Method signature overrides | Align vs type:ignore | 4 errors |
-| Flow IComponent | Restructure vs Protocol | 8 errors |
+| Decision | Options | Impact | Recommendation |
+|----------|---------|--------|----------------|
+| Family afi/safi | Keep settable vs make read-only | 4 errors | Make read-only (packed-bytes-first pattern) |
+| GenericAttribute.unpack_attribute | Rename vs type:ignore | 1 error | Rename to unpack_generic |
+| Srv6 TLV hierarchy | Inheritance vs union type | 3 errors | Fix inheritance |
 
 ---
 
@@ -329,7 +164,7 @@ uv run mypy src/exabgp 2>&1 | tail -3
 
 After each phase:
 ```bash
-uv run mypy src/exabgp  # Verify error reduction
+uv run mypy src/exabgp 2>&1 | tail -3  # Verify error reduction
 uv run ruff format src && uv run ruff check src
 env exabgp_log_enable=false uv run pytest ./tests/unit/ -x -q
 ```
@@ -343,12 +178,14 @@ Before declaring complete:
 
 ## Success Criteria
 
-- [x] Error count < 100 ✅ (97 achieved)
+- [x] Error count < 100 ✅ (97→74→50 achieved)
 - [x] Error count < 80 ✅ (74 achieved)
-- [ ] Error count < 50
-- [ ] All tests pass
-- [ ] No new `# type: ignore` added
-- [ ] No mypy config changes
+- [x] Error count < 60 ✅ (50 achieved)
+- [x] Error count < 50 ✅ (44 achieved)
+- [ ] Error count < 25 (new target)
+- [x] All tests pass ✅ (3404 unit + 169 fuzz)
+- [x] No new `# type: ignore` added ✅
+- [x] No mypy config changes ✅
 
 ---
 
@@ -358,46 +195,54 @@ Before declaring complete:
 - Baseline: 1,149 errors
 - After Phase 1-2d: 120 errors (90% reduction)
 
-### 2025-12-17 - Ultrathink Deep Analysis
-- Current: **97 errors** (92% reduction from baseline)
-- Categorized all 97 errors into 10 major categories
-- Identified 33 quick-win errors (Phase 1)
-- Property override fix alone removes 10 errors
-- Created prioritized implementation plan
-- Estimated ~6 hours to reach <50 errors
-
-**Error Distribution by Category:**
-- Property overrides: 10
-- Negotiated None: 9
-- Attribute access: 12
-- Static route types: 10
-- Flow NLRI: 8
-- Flow parser: 6
-- Section dict: 7
-- Update types: 5
-- Method overrides: 4
-- TypeVars: 3
-- Other: 23
+### 2025-12-17 - First Deep Analysis
+- Current: 97 errors (92% reduction from baseline)
+- Categorized into 10 major categories
 
 ### 2025-12-18 - Phase 1 Implementation
+- Commits: Family properties, Negotiated.UNSET, Route/Section fixes
+- Current: 74 errors (94% reduction)
 
-**Commits:**
-1. `d0846055e` - Make Family afi/safi properties read-only (97→89, -8 errors)
-2. `6ac0e1978` - Use Negotiated.UNSET singleton (89→80, -9 errors)
-3. (pending) - Fix Route __index and Section dict types (80→74, -6 errors)
+### 2025-12-18 - Current Session
+- Starting error count: **50 errors** (96% reduction)
+- Created deep analysis document: `mypy-decorator-classvar-pattern.md`
+- Identified 12 distinct error categories with clear fix patterns
+- **Key insight:** Base class return types for covariant methods
 
-**Current: 74 errors** (94% reduction from baseline)
+**Phase 1 Implementation:**
+- Added `@classmethod` to `IComponent.make()` in flow.py
+- Renamed `EOR` ClassVar to `IS_EOR` to avoid name shadowing with class
+- Fixed NLRICollection type declaration (removed redundant annotation)
+- Fixed communities list type (use base class `ExtendedCommunityBase`)
+- Fixed NextHop vs IP in announce.py (use `IP.from_string`)
+- Updated all tests to use `IS_EOR`
 
-**Remaining error categories:**
-- ClassVar property overrides: 5
-- Flow NLRI registry: 6
-- Attribute access (cast needed): 6
+**Result:** 50 → 44 errors (-6)
+
+**Remaining error categories (44 total):**
+- Method signature overrides: 6
+- Read-only property overrides: 5 (CODE/ARCHTYPE in Generic* classes)
+- Flow NLRI (BaseValue abstract): 4
+- TypeVar constraints: 3
 - Static route types: 6
-- Flow parser yields: 4
-- Update vs UpdateCollection: 2
-- Method signature overrides: 3
-- TypeVars: 3
-- Other misc: ~40
+- Config misc (arithmetic, dicts): 10
+- Srv6 TLV types: 3
+- Collection attribute access: 2
+- Other: 5
+
+**Estimated time to <25 errors:** ~2 hours across remaining phases
+
+---
+
+## Files Reference
+
+**Primary targets (highest error density):**
+- `src/exabgp/bgp/message/update/nlri/flow.py` - 6 errors (IComponent, BaseValue)
+- `src/exabgp/configuration/static/route.py` - 6 errors (type narrowing)
+- `src/exabgp/configuration/announce/__init__.py` - 4 errors (attribute arithmetic)
+
+**Supporting documents:**
+- `plan/mypy-decorator-classvar-pattern.md` - Full strategic analysis
 
 ---
 
