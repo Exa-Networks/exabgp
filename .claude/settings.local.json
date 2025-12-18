@@ -121,7 +121,10 @@
       "Bash(./qa/bin/api-encode:*)",
       "Bash(./qa/bin/test_api_encode:*)",
       "Bash(uv run python3:*)",
-      "Bash(uv run pytest:*)"
+      "Bash(uv run pytest:*)",
+      "WebFetch(domain:woodpecker-ci.org)",
+      "WebFetch(domain:codeberg.org)",
+      "WebFetch(domain:forgejo.org)"
     ],
     "deny": []
   },
