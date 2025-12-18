@@ -88,10 +88,7 @@ class MVPN(NLRI):
 
     def __copy__(self) -> 'MVPN':
         new = self.__class__.__new__(self.__class__)
-        # Family slots (afi/safi)
-        new.afi = self.afi
-        new.safi = self.safi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # MVPN has empty __slots__ - nothing else to copy
         return new
@@ -99,10 +96,7 @@ class MVPN(NLRI):
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'MVPN':
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
-        # Family slots (afi/safi) - immutable enums
-        new.afi = self.afi
-        new.safi = self.safi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
         # MVPN has empty __slots__ - nothing else to copy
         return new

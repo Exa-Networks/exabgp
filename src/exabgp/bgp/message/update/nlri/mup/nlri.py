@@ -95,10 +95,7 @@ class MUP(NLRI):
 
     def __copy__(self) -> 'MUP':
         new = self.__class__.__new__(self.__class__)
-        # Family slots (afi/safi)
-        new.afi = self.afi
-        new.safi = self.safi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # MUP has empty __slots__ - nothing else to copy
         return new
@@ -106,10 +103,7 @@ class MUP(NLRI):
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'MUP':
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
-        # Family slots (afi/safi) - immutable enums
-        new.afi = self.afi
-        new.safi = self.safi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
         # MUP has empty __slots__ - nothing else to copy
         return new

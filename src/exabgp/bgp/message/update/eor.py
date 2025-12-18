@@ -38,8 +38,6 @@ class EOR(Message):
 
         def __init__(self, afi: AFI, safi: SAFI) -> None:
             NLRI.__init__(self, afi, safi)
-            self.afi = afi
-            self.safi = safi
 
         def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
             # EOR (End-of-RIB) marker - addpath not applicable

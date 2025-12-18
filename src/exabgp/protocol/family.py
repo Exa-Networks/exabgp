@@ -348,17 +348,9 @@ class Family:
     def afi(self) -> AFI:
         return self._afi
 
-    @afi.setter
-    def afi(self, value: AFI) -> None:
-        self._afi = value
-
     @property
     def safi(self) -> SAFI:
         return self._safi
-
-    @safi.setter
-    def safi(self, value: SAFI) -> None:
-        self._safi = value
 
     def __init__(self, afi: int, safi: int) -> None:
         """Initialize Family with AFI and SAFI.
@@ -366,17 +358,12 @@ class Family:
         Single-family subclasses (VPLS, RTC, EVPN, etc.) override afi/safi
         properties with read-only versions returning fixed constants.
         Multi-family subclasses (INET, Flow, etc.) use the inherited properties.
+
+        For subclasses with read-only properties, _afi/_safi are still set but
+        the property getter will return the constant value (ignoring the stored value).
         """
-        # Try to set instance attributes - will work for multi-family types
-        # but raise AttributeError for single-family types with read-only properties
-        try:
-            self.afi = AFI.from_int(afi)
-        except AttributeError:
-            pass  # Single-family type with read-only property
-        try:
-            self.safi = SAFI.from_int(safi)
-        except AttributeError:
-            pass  # Single-family type with read-only property
+        self._afi = AFI.from_int(afi)
+        self._safi = SAFI.from_int(safi)
 
     def has_label(self) -> bool:
         return self.safi.has_label()

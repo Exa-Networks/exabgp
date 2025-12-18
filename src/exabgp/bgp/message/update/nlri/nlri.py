@@ -71,8 +71,8 @@ class NLRI(Family):
     def _create_singleton(cls, name: str) -> 'NLRI':
         """Create a singleton NLRI (INVALID or EMPTY). Called once at module load."""
         instance = object.__new__(cls)
-        instance.afi = AFI.undefined
-        instance.safi = SAFI.undefined
+        instance._afi = AFI.undefined
+        instance._safi = SAFI.undefined
         instance.addpath = PathInfo.DISABLED
         instance._packed = b''
         return instance
@@ -98,32 +98,18 @@ class NLRI(Family):
 
     def _copy_nlri_slots(self, new: 'NLRI') -> None:
         """Copy NLRI base class slots to new instance."""
-        # Family.__slots__ = ('afi', 'safi')
-        # Single-family types have read-only class-level afi/safi - skip those
-        try:
-            new.afi = self.afi
-        except AttributeError:
-            pass  # Read-only class attribute
-        try:
-            new.safi = self.safi
-        except AttributeError:
-            pass  # Read-only class attribute
+        # Family.__slots__ = ('_afi', '_safi') - use private attrs directly
+        new._afi = self._afi
+        new._safi = self._safi
         # NLRI.__slots__ = ('addpath', '_packed')
         new.addpath = self.addpath
         new._packed = self._packed
 
     def _deepcopy_nlri_slots(self, new: 'NLRI', memo: dict[Any, Any]) -> None:
         """Deep copy NLRI base class slots to new instance."""
-        # Family.__slots__ = ('afi', 'safi') - singletons, no deepcopy needed
-        # Single-family types have read-only class-level afi/safi - skip those
-        try:
-            new.afi = self.afi
-        except AttributeError:
-            pass  # Read-only class attribute
-        try:
-            new.safi = self.safi
-        except AttributeError:
-            pass  # Read-only class attribute
+        # Family.__slots__ = ('_afi', '_safi') - singletons, no deepcopy needed
+        new._afi = self._afi
+        new._safi = self._safi
         # NLRI.__slots__ = ('addpath', '_packed')
         new.addpath = self.addpath  # PathInfo - typically shared singleton
         new._packed = self._packed  # bytes - immutable

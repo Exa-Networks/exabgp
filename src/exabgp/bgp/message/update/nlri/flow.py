@@ -947,7 +947,7 @@ class Flow(NLRI):
                     return False
             # TODO: verify if this is correct - why reset the afi of the NLRI object after initialisation?
             if rule.NAME.endswith('ipv6'):
-                self.afi = AFI.ipv6
+                self._afi = AFI.ipv6
         self.rules.setdefault(ID, []).append(rule)
         self._packed_stale = True  # Mark packed as stale after modification
         return True
@@ -1038,10 +1038,7 @@ class Flow(NLRI):
 
     def __copy__(self) -> 'Flow':
         new = self.__class__.__new__(self.__class__)
-        # Family slots (afi/safi)
-        new.afi = self.afi
-        new.safi = self.safi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # Flow slots
         new._rules_cache = self._rules_cache
@@ -1054,10 +1051,7 @@ class Flow(NLRI):
 
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
-        # Family slots (afi/safi) - immutable enums
-        new.afi = self.afi
-        new.safi = self.safi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
         # Flow slots
         new._rules_cache = deepcopy(self._rules_cache, memo)

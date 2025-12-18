@@ -257,7 +257,7 @@ class Label(INET):
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = has_labels
-        instance.rd = None
+        instance._rd = None
         return instance
 
     @classmethod
@@ -325,13 +325,11 @@ class Label(INET):
 
     def __copy__(self) -> 'Label':
         new = self.__class__.__new__(self.__class__)
-        # Family slots (afi - safi is class-level)
-        new.afi = self.afi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # INET slots
         new._has_addpath = self._has_addpath
-        new.rd = self.rd
+        new._rd = self._rd
         # Label slots
         new._has_labels = self._has_labels
         return new
@@ -341,13 +339,11 @@ class Label(INET):
 
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
-        # Family slots (afi - safi is class-level)
-        new.afi = self.afi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
         # INET slots
         new._has_addpath = self._has_addpath  # bool - immutable
-        new.rd = deepcopy(self.rd, memo) if self.rd else None
+        new._rd = deepcopy(self._rd, memo) if self._rd else None
         # Label slots
         new._has_labels = self._has_labels  # bool - immutable
         return new

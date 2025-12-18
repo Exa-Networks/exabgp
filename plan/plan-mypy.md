@@ -1,151 +1,148 @@
 # MyPy Error Reduction Plan
 
-**Status:** 📋 Planning (ultrathink analysis)
+**Status:** 🔄 Active
 **Created:** 2025-12-17
 **Last Updated:** 2025-12-17
 **Starting Errors:** 1,149 (baseline)
-**Current Errors:** 186 (84% reduction achieved)
+**Current Errors:** 97 (92% reduction achieved)
 **Target:** <50 errors
 
 ---
 
 ## Executive Summary
 
-Current position: **186 errors remaining** after 84% reduction from baseline.
+Current position: **97 errors remaining** across 43 files after 92% reduction from baseline.
 
 | Category | Count | Difficulty | Strategy |
 |----------|-------|------------|----------|
-| `[arg-type]` | 44 | Medium | Mixed: pattern fixes + architectural |
-| `[no-untyped-def]` | 30 | Easy | Batch annotate config parsers |
-| `[attr-defined]` | 29 | Medium | Registry protocols + missing methods |
-| `[misc]` | 19 | Hard | ClassVar patterns, property overrides |
-| `[no-untyped-call]` | 17 | Easy | Annotate called functions |
-| `[assignment]` | 11 | Medium | Type hierarchy fixes |
-| `[override]` | 9 | Hard | Signature unification |
-| `[type-var]` | 6 | Medium | Buffer/TypeVar fixes |
-| Others | 21 | Varies | Case-by-case |
+| Property overrides (`[misc]`/`[override]`) | 10 | Easy | Remove setters from INET base class |
+| Negotiated = None (`[arg-type]`) | 9 | Medium | Sentinel pattern or Optional |
+| Attribute access (`[attr-defined]`) | 12 | Medium | Protocol types or cast |
+| Static route types (`[arg-type]`/`[assignment]`) | 10 | Medium | Fix type narrowing |
+| Flow NLRI registry (`[call-arg]`/`[arg-type]`) | 8 | Hard | Fix IComponent class methods |
+| Flow parser yields (`[misc]`) | 6 | Easy | Fix return type annotations |
+| Section dict types (`[assignment]`) | 7 | Easy | Unify dict key types |
+| Update vs UpdateCollection | 5 | Medium | Type alias or union |
+| Method signature overrides (`[override]`) | 4 | Hard | Signature alignment |
+| Other misc issues | 26 | Varies | Case-by-case |
 
 ---
 
-## Phase 1: Easy Wins (~60 errors, ~3 hours)
+## Phase 1: Quick Wins (~33 errors)
 
-### 1.1 Function Annotations (30 errors) ⏸️ Pending
+### 1.1 Property Override Fixes (10 errors) ✅ READY
 
-Add type annotations to configuration parsers. These are mechanical fixes.
-
-**Files (by error count):**
-| File | Errors | Functions |
-|------|--------|-----------|
-| `configuration/l2vpn/parser.py` | 5 | Parser functions |
-| `configuration/process/__init__.py` | 5 | ParseProcess methods |
-| `configuration/operational/__init__.py` | 4 | ParseOperational methods |
-| `configuration/l2vpn/vpls.py` | 4 | ParseVPLS methods |
-| `configuration/l2vpn/__init__.py` | 4 | ParseL2VPN methods |
-| `configuration/neighbor/family.py` | 1 | Method annotation |
-| `reactor/api/dispatch/v4.py` | 2 | Handler functions |
-| `cli/schema_bridge.py` | 1 | `__init__` return type |
-| `cli/completer.py` | 1 | Function annotation |
-| `bgp/message/update/nlri/mvpn/nlri.py` | 1 | unpack method |
-| `bgp/message/update/nlri/mup/nlri.py` | 1 | unpack method |
-| `bgp/message/update/nlri/evpn/nlri.py` | 1 | unpack method |
-
-**Pattern:** Add return types `-> bool:`, `-> None:`, parameter types `(self, scope: Scope) -> bool:`
-
-### 1.2 Fix no-untyped-call (17 errors) ⏸️ Pending
-
-These are caused by calling untyped functions. Fix by annotating the called functions.
-
-**Cascade effect:** Fixing 1.1 will automatically fix ~9 of these:
-- `ParseProcess`, `ParseL2VPN`, `ParseVPLS`, `ParseOperational` calls in `configuration/configuration.py`
-- `clear`, `add_api` calls
-
-**Remaining (3 errors) - objgraph library:**
-- `application/server.py` calls `show_most_common_types`, `by_type`, `show_backrefs`
-- **Fix:** Add stub or type: ignore for vendored library
-
-**Remaining (5 errors) - cli completers:**
-- `cli/schema_bridge.py` calls `ValueTypeCompletionEngine`
-- `cli/completer.py` calls `FrequencyProvider`, `ValueTypeCompletionEngine`
-- **Fix:** Add annotations to prompt_toolkit integration classes
-
----
-
-## Phase 2: Pattern-Based Fixes (~50 errors, ~4 hours)
-
-### 2.1 Registry Protocol Pattern (15 errors) ⏸️ Pending
-
-Apply the decorator-sets-ClassVar pattern already used for NLRI registries.
-
-**Files with "type[X]" has no attribute errors:**
-| File | Attribute | Pattern |
-|------|-----------|---------|
-| `nlri/evpn/nlri.py:158` | `unpack_evpn` | Registry method |
-| `nlri/bgpls/nlri.py:184,189` | `unpack_bgpls_nlri` | Registry method |
-| `nlri/flow.py:901,910` | `ID`, `decoder` | IComponent registry |
-| `attribute/bgpls/link/srv6*.py` | `TLV`, `unpack_bgpls`, `registered_subsubtlvs` | TLV registries |
-
-**Solution:** Add ClassVar declarations to base classes, use Protocol pattern:
-```python
-class EVPN(NLRI):
-    unpack_evpn: ClassVar[Callable[[Buffer, Negotiated], EVPN]]
-```
-
-### 2.2 Missing Method - answer_async (6 errors) ⏸️ Pending
-
-**Issue:** `reactor/api/command/route.py` calls `processes.answer_async()` but only these exist:
-- `_answer_async()` (private)
-- `answer_done_async()`
-- `answer_error_async()`
-
-**Fix:** Either:
-1. Add public `answer_async()` method wrapper
-2. Change calls to use `_answer_async()` (if appropriate)
-3. Use `answer_done_async()` or `answer_error_async()` as appropriate
-
-**Lines:** 158, 235, 237, 293, 331, 333
-
-### 2.3 Attribute Access on Base Types (8 errors) ⏸️ Pending
-
-**Pattern:** Base `Attribute` class accessed where subclass expected
-| File | Issue |
-|------|-------|
-| `collection.py:216` | `Attribute` has no `pack_ip` |
-| `collection.py:607` | `Attribute` has no `iter_routed` |
-| `mprnlri.py:140` | `Attribute` has no `pack_ip` |
-| `__init__.py:198,200` | `Attribute` has no `afi`, `safi` |
-| `neighbor.py:366,367` | `Attribute` has no `SELF`, `resolved`, `resolve` |
-
-**Fix:** Cast to specific type or use Protocol:
-```python
-from typing import Protocol, cast
-
-class HasPackIP(Protocol):
-    def pack_ip(self, negotiated: Negotiated) -> bytes: ...
-
-nexthop = cast(HasPackIP, self[Attribute.CODE.NEXT_HOP])
-```
-
-### 2.4 Buffer/TypeVar in split() (3 errors) ⏸️ Pending
-
-**Issue:** `split()` TypeVar is `T = TypeVar('T', str, bytes)` but called with `bytes | memoryview`
+**Root cause:** INET defines `labels` and `rd` as read-write properties (with setters), but Label/IPVPN override them as read-only properties.
 
 **Files:**
-- `bgpls/prefix/igptags.py:37`
-- `bgpls/prefix/igpextags.py:34`
-- `bgpls/link/srlg.py:39`
+| File | Lines | Properties |
+|------|-------|------------|
+| `nlri/rtc.py` | 52, 56 | safi, labels |
+| `nlri/label.py` | 125, 177 | safi, labels |
+| `nlri/ipvpn.py` | 152, 186 | safi, rd |
+| `nlri/mvpn/nlri.py` | 179 | safi |
+| `nlri/mup/nlri.py` | 184, 189 | safi, rd |
+| `nlri/evpn/nlri.py` | 187 | safi |
+| `attribute/bgpls/linkstate.py` | 274 | tlvs |
 
-**Fix:** Change split() to accept Buffer:
+**Fix:** Remove setters from `inet.py` lines 121-123 and 129-131. The packed-bytes-first pattern makes properties read-only by design.
+
 ```python
-T = TypeVar('T', str, Buffer)  # or use overloads
+# REMOVE these setter methods from inet.py:
+@labels.setter
+def labels(self, value: Labels | None) -> None:
+    self._labels = value
+
+@rd.setter
+def rd(self, value: RouteDistinguisher | None) -> None:
+    self._rd = value
 ```
+
+### 1.2 Flow Parser Yield Types (6 errors) ✅ READY
+
+**Root cause:** Functions return `Generator[Flow4Source | Flow6Source]` but yield `IPrefix4`/`IPrefix6`.
+
+**File:** `configuration/flow/parser.py` lines 135, 139, 144, 156, 160, 165
+
+**Fix:** The `make_prefix4`/`make_prefix6` methods return the correct Flow types. Update the type hints to match actual return types, or verify the methods return Flow4Source/Flow6Source (they should).
+
+### 1.3 Section Dict Types (7 errors) ✅ READY
+
+**Root cause:** Subclasses define `content: dict[str, object]` but base Section uses `dict[str | tuple[Any, ...], Any]`.
+
+**Files:**
+- `configuration/operational/__init__.py:106`
+- `configuration/neighbor/nexthop.py:72`
+- `configuration/neighbor/api.py:109,110,124`
+- `configuration/static/__init__.py` (2 errors)
+- `configuration/configuration.py` (dict_keys)
+
+**Fix:** Change subclass type annotations to match base class:
+```python
+content: dict[str | tuple[Any, ...], Any] = {}
+```
+
+### 1.4 Route __index Slot (2 errors) ✅ READY
+
+**Root cause:** `__index` not in `__slots__` but `_Route__index` is (Python name mangling).
+
+**File:** `rib/route.py:56,109`
+
+**Fix:** The slot is correctly declared as `_Route__index` (line 36). The assignment `self.__index = b''` uses Python's name mangling and should work. Need to verify mypy understands this - may need explicit cast or rename.
+
+### 1.5 INET Attribute Redefinition (2 errors) ✅ READY
+
+**Root cause:** `_labels` and `_rd` defined in `__slots__` AND as instance attributes.
+
+**File:** `inet.py:151,152`
+
+**Fix:** Remove the redundant instance attribute assignments since they're already in `__slots__`:
+```python
+# Lines 151-152 can be removed if __slots__ handles it
+# Or keep only the type annotation without assignment
+```
+
+### 1.6 EOR Valid Type (1 error) ✅ READY
+
+**Root cause:** `EOR.EOR` used as a type but it's a ClassVar bool.
+
+**File:** `eor.py:79`
+
+**Fix:** The `EOR.EOR` is used as a marker. Check context - likely needs different approach.
+
+### 1.7 NLRI Collection Type Declaration (1 error) ✅ READY
+
+**Root cause:** Type declared in assignment to non-self attribute.
+
+**File:** `nlri/collection.py:79`
+
+**Fix:** Move type annotation to class level or use different pattern.
+
+### 1.8 Extended Community List Type (1 error) ✅ READY
+
+**File:** `community/extended/communities.py:217`
+
+**Fix:** Cast or fix the list type annotation.
+
+### 1.9 L2VPN Container Type (1 error) ✅ READY
+
+**File:** `configuration/l2vpn/__init__.py`
+
+**Fix:** Align Container/RouteBuilder types.
+
+### 1.10 Flow Route Tokeniser (1 error) ✅ READY
+
+**File:** `configuration/flow/route.py`
+
+**Fix:** Handle None case for Tokeniser argument.
 
 ---
 
-## Phase 3: Type Hierarchy Fixes (~35 errors, ~4 hours)
+## Phase 2: Medium Complexity (~35 errors)
 
-### 3.1 arg-type: None instead of Negotiated (8 errors) ⏸️ Pending
+### 2.1 Negotiated = None Pattern (9 errors)
 
-**Pattern:** `pack_attribute(..., None)` where `Negotiated` required
+**Root cause:** Community pack methods call `pack_attribute(None)` where `Negotiated` expected.
 
 **Files:**
 - `community/large/communities.py:87,100`
@@ -153,199 +150,178 @@ T = TypeVar('T', str, Buffer)  # or use overloads
 - `community/extended/rt_record.py:26`
 - `community/extended/communities.py:118,129,199,207`
 
-**Fix options:**
-1. Create `NullNegotiated` sentinel object
-2. Make `negotiated: Negotiated | None` with runtime guard
-3. Pass actual Negotiated in these contexts
+**Options:**
+1. **Sentinel pattern** - Create `NullNegotiated` singleton
+2. **Optional parameter** - Make `negotiated: Negotiated | None`
+3. **Skip pack_attribute** - Use direct packing for these cases
 
-### 3.2 arg-type: Socket | None (4 errors) ⏸️ Pending
+**Recommended:** Option 2 - Make parameter optional with None default, add runtime guard.
 
-**File:** `reactor/network/outgoing.py:70,102,171,173`
+### 2.2 Attribute Access on Base Types (12 errors)
 
-**Pattern:** `connect(socket | None)` where `socket` required
+**Root cause:** Code accesses subclass-specific attributes on base `Attribute` type.
 
-**Fix:** Add assert/guard before calls:
-```python
-if self.io is None:
-    raise ...
-# or
-assert self.io is not None
-```
+| File | Attribute | Solution |
+|------|-----------|----------|
+| `collection.py:216` | `pack_ip` | Cast to NextHop |
+| `collection.py:594` | (Attribute\|IP) → IP | Type guard |
+| `collection.py:603` | `extend` with Attribute | Cast to MPRNLRI |
+| `collection.py:607` | `iter_routed` | Cast to MPRNLRI |
+| `mprnlri.py:140` | `pack_ip` | Cast to NextHop |
+| `update/__init__.py:198,200` | `afi`, `safi` | Cast to MPRNLRI |
+| `update/__init__.py:210` | UpdateCollection\|None | Type guard |
+| `neighbor.py:366,367` | `SELF`, `resolved`, `resolve` | Cast to NextHop |
+| `validator.py:1380` | `validate_with_afi` | Add method or Protocol |
 
-### 3.3 arg-type: Type hierarchy mismatches (10 errors) ⏸️ Pending
+**Fix:** Use `cast()` with appropriate types based on the attribute code being accessed.
 
-| File | Issue |
-|------|-------|
-| `collection.py:594` | `Attribute | IP` expected `IP` |
-| `collection.py:603` | `Attribute` expected `Iterable[NLRI]` |
-| `nlri/ipvpn.py:525` | `Action` expected `PathInfo` |
-| `nlri/inet.py:148` | `Action` expected `PathInfo` |
-| `configuration/static/parser.py:330,332` | `IP` expected `ClusterID` |
-| `configuration/static/route.py:450` | kwargs mismatch |
-| `configuration/static/route.py:500` | `Attribute` expected `int` |
-| `configuration/static/mpls.py:181,189,191` | Srv6 TLV type hierarchy |
+### 2.3 Update vs UpdateCollection (5 errors)
 
-**Fix:** These require careful analysis of actual data types being passed.
-
-### 3.4 assignment: Section dict type (5 errors) ⏸️ Pending
-
-**Pattern:** `dict[str, object]` assigned where `dict[str | tuple[...], Any]` expected
+**Root cause:** Functions return `UpdateCollection` but are typed to return `Update`.
 
 **Files:**
-- `configuration/operational/__init__.py:99`
-- `configuration/neighbor/nexthop.py:72`
-- `configuration/neighbor/api.py:109,110`
-- `configuration/static/__init__.py:37`
+- `reactor/protocol.py:445,464` - return type mismatch
+- `reactor/api/processes.py:1320,1324` - assignment/arg mismatch
+- `bgp/message/update/__init__.py:210` - None handling
 
-**Fix:** Use common dict type `dict[str | tuple[Any, ...], Any]` or restructure Section base class
+**Fix:** Either:
+1. Change return types to `UpdateCollection`
+2. Create type alias `UpdateResult = Update | UpdateCollection`
+3. Verify the semantic intent and fix appropriately
+
+### 2.4 Static Route Type Mismatches (10 errors)
+
+**Files:**
+- `configuration/static/route.py:352,355,419,426` - type[INET/Label] → type[IPVPN]
+- `configuration/static/route.py:450` - kwargs spread
+- `configuration/static/route.py:500` - Attribute → int
+- `configuration/static/parser.py:330,332` - IP → ClusterID
+- `configuration/static/mpls.py:138` - missing return
+- `configuration/static/mpls.py:181,189,191` - Srv6 TLV types
+
+**Fix:** These require careful analysis of the type narrowing logic. The route creation code assigns different NLRI class types based on conditions.
+
+### 2.5 Announce Config Issues (4 errors)
+
+**File:** `configuration/announce/__init__.py:65,67,88`
+
+**Pattern:** Arithmetic on `int | None` and `Attribute` types.
+
+**Fix:** Add type guards before arithmetic operations.
+
+### 2.6 Announce NextHop (1 error)
+
+**File:** `reactor/api/command/announce.py`
+
+**Pattern:** `NextHop` passed where `IP` expected.
+
+**Fix:** NextHop should be compatible with IP or needs accessor.
+
+### 2.7 Neighbor Return Type (1 error)
+
+**File:** `configuration/neighbor/__init__.py`
+
+**Pattern:** Returning Any from typed function.
+
+**Fix:** Add proper return type annotation.
 
 ---
 
-## Phase 4: Override Issues (~20 errors, ~5 hours)
+## Phase 3: Complex Fixes (~25 errors)
 
-### 4.1 Property Override Conflicts (8 errors) ⏸️ Pending
+### 3.1 Flow NLRI Registry Issues (8 errors)
 
-**Pattern:** Read-only property overrides read-write property
+**Root cause:** `IComponent` base class doesn't properly type the registry pattern.
 
-| File | Property |
-|------|----------|
-| `nlri/rtc.py:52,56` | Properties |
-| `nlri/label.py:125,177` | Properties |
-| `nlri/ipvpn.py:152,186` | Properties |
-| `nlri/mvpn/nlri.py:179` | Property |
-| `nlri/mup/nlri.py:184,189` | Properties |
-| `nlri/evpn/nlri.py:186` | Property |
-| `attribute/bgpls/linkstate.py:269` | Property |
+**File:** `nlri/flow.py` lines 902, 903, 912, 913, 508, 516
 
-**Fix:** Remove setters from base class (INET) - user approved approach from previous session
+**Issues:**
+1. `klass.make(bgp)` - `make` is not a classmethod but used as one
+2. `klass(operator, adding_val)` - IComponent constructor doesn't match
+3. `BaseValue` instantiation - abstract class
 
-### 4.2 Method Signature Incompatibilities (5 errors) ⏸️ Pending
+**Fix:**
+1. Make `make` a proper `@classmethod` with correct signature
+2. Add ClassVar declarations for factory methods
+3. Fix BaseValue to not be abstract or use concrete subclass
+
+### 3.2 Method Signature Overrides (4 errors)
 
 | File | Method | Issue |
 |------|--------|-------|
-| `attribute/generic.py:117` | `unpack_attribute` | Signature incompatible |
-| `nlri/ipvpn.py:443` | `unpack_nlri` | Return type incompatible |
-| `nlri/inet.py:373` | `json` | Signature incompatible |
-| `message/unknown.py:38` | `unpack_message` | Signature incompatible |
+| `attribute/generic.py:127` | `unpack_attribute` | Extra params (code, flag) |
+| `nlri/ipvpn.py:443` | `unpack_nlri` | Returns NLRI vs INET |
+| `nlri/inet.py:373` | `json` | Extra param (announced) |
+| `message/unknown.py:48` | `unpack_message` | Missing negotiated param |
 
-**Fix:** Align signatures or use `@overload`
+**Fix options:**
+1. Use `@overload` decorators
+2. Align signatures with base class
+3. Use `# type: ignore[override]` with documentation (last resort)
 
-### 4.3 ClassVar Assignment via Instance (4 errors) ⏸️ Pending
-
-**Pattern:** `Cannot assign to class variable "ID" via instance`
-
-| File | ClassVar |
-|------|----------|
-| `attribute/generic.py:49,50` | `ID`, `FLAG` |
-| `message/unknown.py:27,28` | `ID`, `TYPE` |
-
-**Fix:** Use decorator pattern to set ClassVars at class definition time, not instance init
-
----
-
-## Phase 5: Misc and Edge Cases (~21 errors, ~3 hours)
-
-### 5.1 Flow Parser yield types (6 errors) ⏸️ Pending
-
-**File:** `configuration/flow/parser.py:135,139,144,156,160,165`
-
-**Pattern:** Yield `IPrefix4`/`IPrefix6` where `Flow4Source | Flow6Source` expected
-
-**Fix:** Update generator return type or restructure flow type hierarchy
-
-### 5.2 Route __index slot issue (2 errors) ⏸️ Pending
-
-**File:** `rib/route.py:56,109`
-
-**Pattern:** `Trying to assign name "__index" that is not in "__slots__"`
-
-**Fix:** Add `"__index"` to `__slots__` or rename attribute
-
-### 5.3 Collection type annotation (1 error) ⏸️ Pending
-
-**File:** `nlri/collection.py:79`
-
-**Pattern:** `Type cannot be declared in assignment to non-self attribute`
-
-**Fix:** Move type declaration to class level or use different pattern
-
-### 5.4 Validator attribute (1 error) ⏸️ Pending
-
-**File:** `configuration/validator.py:1380`
-
-**Pattern:** `Validator[Any]` has no attribute `validate_with_afi`
-
-**Fix:** Add method to Validator or use Protocol
-
-### 5.5 TypeVar constraints (3 errors) ⏸️ Pending
+### 3.3 TypeVar Constraints (3 errors)
 
 **Files:**
-- `attribute/aspath.py:255` - SegmentType constraint
-- `attribute/sr/srv6/sidinformation.py:45` - SubTlvType constraint
-- `attribute/sr/srv6/sidstructure.py:36` - SubSubTlvType constraint
+- `attribute/aspath.py:255` - SegmentType
+- `attribute/sr/srv6/sidinformation.py:45` - SubTlvType
+- `attribute/sr/srv6/sidstructure.py:36` - SubSubTlvType
 
-**Fix:** Expand TypeVar bounds or use Union
-
-### 5.6 Abstract class issues (2 errors) ⏸️ Pending
-
-Check specific errors and implement required abstract methods
-
-### 5.7 Comparison overlap (2 errors) ⏸️ Pending
-
-**Files:**
-- `reactor/api/command/peer.py:320`
-- `configuration/neighbor/__init__.py:547`
-
-**Pattern:** bytes vs str key comparison
-
-**Fix:** Normalize to single type
+**Fix:** Expand TypeVar bounds to include the actual types being used.
 
 ---
 
-## Implementation Order (Recommended)
+## Implementation Order
 
-| Priority | Phase | Errors | Hours | Dependencies |
-|----------|-------|--------|-------|--------------|
-| 1 | 1.1 Function annotations | 30 | 1.5 | None |
-| 2 | 1.2 no-untyped-call | 17→8 | 0.5 | After 1.1 |
-| 3 | 2.4 Buffer TypeVar | 3 | 0.5 | None |
-| 4 | 2.2 answer_async | 6 | 0.5 | None |
-| 5 | 3.2 Socket guards | 4 | 0.5 | None |
-| 6 | 4.3 ClassVar assignment | 4 | 1 | None |
-| 7 | 2.1 Registry protocols | 15 | 2 | Research |
-| 8 | 2.3 Attribute protocols | 8 | 1.5 | After 2.1 |
-| 9 | 4.1 Property overrides | 8 | 2 | User decision |
-| 10 | 3.1 Negotiated None | 8 | 1 | Design decision |
-| 11 | 3.3 Type hierarchy | 10 | 2 | Analysis |
-| 12 | 4.2 Method signatures | 5 | 2 | After 4.1 |
-| 13 | 3.4 Section dict | 5 | 1 | Analysis |
-| 14 | 5.x Misc | ~12 | 2 | Varies |
+| Priority | Phase | Errors | Effort | Notes |
+|----------|-------|--------|--------|-------|
+| 1 | 1.1 Property overrides | 10 | 15 min | Just remove setters |
+| 2 | 1.2 Flow parser yields | 6 | 15 min | Type annotation fix |
+| 3 | 1.3-1.10 Quick misc | 9 | 30 min | Various small fixes |
+| 4 | 2.1 Negotiated None | 9 | 30 min | Parameter change |
+| 5 | 2.2 Attribute access | 12 | 45 min | Add casts |
+| 6 | 2.3 Update types | 5 | 30 min | Return type fixes |
+| 7 | 2.4-2.7 Static route | 16 | 1 hr | Type narrowing |
+| 8 | 3.1 Flow registry | 8 | 1 hr | Class restructure |
+| 9 | 3.2 Method sigs | 4 | 45 min | Signature alignment |
+| 10 | 3.3 TypeVars | 3 | 15 min | Bound expansion |
 
-**Estimated total:** ~18 hours to reach <50 errors
+**Estimated total:** ~6 hours to reach <50 errors
 
 ---
 
-## Quick Wins Today
+## Quick Start: First 25 Errors
 
-If starting now, tackle in this order:
+Run these in order for maximum impact:
 
-1. **Phase 1.1** - Annotate 30 functions (purely mechanical)
-2. **Phase 2.4** - Fix `split()` TypeVar (3 errors, 10 min)
-3. **Phase 2.2** - Add `answer_async()` method (6 errors, 15 min)
-4. **Phase 3.2** - Add socket guards (4 errors, 15 min)
+```bash
+# 1. Remove INET property setters (10 errors)
+# Edit src/exabgp/bgp/message/update/nlri/inet.py
+# Remove lines 121-123 (@labels.setter) and 129-131 (@rd.setter)
 
-This batch alone: **~43 errors fixed** in ~2 hours.
+# 2. Fix flow parser return types (6 errors)
+# Edit src/exabgp/configuration/flow/parser.py
+# Verify make_prefix4/make_prefix6 return correct types
+
+# 3. Fix Section dict types (7 errors)
+# Update subclass type annotations to match base
+
+# 4. Fix Route __index and INET redefinitions (4 errors)
+# Minor slot/attribute fixes
+
+# Verify:
+uv run mypy src/exabgp 2>&1 | tail -3
+```
 
 ---
 
-## Blockers and Decisions Needed
+## Decisions Needed
 
 | Decision | Options | Impact |
 |----------|---------|--------|
-| answer_async implementation | Add wrapper vs change callers | 6 errors |
-| Negotiated None pattern | Sentinel vs Optional | 8 errors |
-| Property override approach | Remove setters vs @property.setter | 8 errors |
-| Section dict type | Change base vs change subclasses | 5 errors |
+| Negotiated None | Sentinel vs Optional param | 9 errors |
+| Update vs UpdateCollection | Union type vs separate | 5 errors |
+| Method signature overrides | Align vs type:ignore | 4 errors |
+| Flow IComponent | Restructure vs Protocol | 8 errors |
 
 ---
 
@@ -356,7 +332,6 @@ After each phase:
 uv run mypy src/exabgp  # Verify error reduction
 uv run ruff format src && uv run ruff check src
 env exabgp_log_enable=false uv run pytest ./tests/unit/ -x -q
-./qa/bin/functional encoding
 ```
 
 Before declaring complete:
@@ -368,8 +343,8 @@ Before declaring complete:
 
 ## Success Criteria
 
-- [ ] Error count < 100 (Phase 1-2)
-- [ ] Error count < 50 (Phase 3-4)
+- [x] Error count < 100 ✅ (97 achieved)
+- [ ] Error count < 50
 - [ ] All tests pass
 - [ ] No new `# type: ignore` added
 - [ ] No mypy config changes
@@ -378,84 +353,31 @@ Before declaring complete:
 
 ## Progress Log
 
-### 2025-12-17 - Ultrathink Analysis
+### 2025-12-17 - Initial Analysis
+- Baseline: 1,149 errors
+- After Phase 1-2d: 120 errors (90% reduction)
 
-- Analyzed 186 errors across 63 files
-- Categorized by error type and difficulty
-- Identified quick wins (~43 errors in 2 hours)
+### 2025-12-17 - Ultrathink Deep Analysis
+- Current: **97 errors** (92% reduction from baseline)
+- Categorized all 97 errors into 10 major categories
+- Identified 33 quick-win errors (Phase 1)
+- Property override fix alone removes 10 errors
 - Created prioritized implementation plan
-- Estimated ~18 hours to reach <50 errors
+- Estimated ~6 hours to reach <50 errors
 
-### 2025-12-17 - Phase 1.1 Complete
-
-- **Start:** 186 errors
-- **End:** 141 errors
-- **Fixed:** 45 errors (24% reduction)
-
-**Files annotated:**
-- `configuration/l2vpn/parser.py` - 5 functions
-- `configuration/process/__init__.py` - 5 functions
-- `configuration/operational/__init__.py` - 4 functions
-- `configuration/l2vpn/vpls.py` - 4 functions
-- `configuration/l2vpn/__init__.py` - 4 functions
-- `bgp/message/update/nlri/mvpn/nlri.py` - register_mvpn return type
-- `bgp/message/update/nlri/mup/nlri.py` - register_mup_route return type
-- `bgp/message/update/nlri/evpn/nlri.py` - register_evpn_route return type
-- `configuration/neighbor/family.py` - all() method
-- `reactor/api/dispatch/v4.py` - dispatch functions with ModuleType
-- `cli/schema_bridge.py` - __init__ return type
-- `cli/completer.py` - FrequencyProvider class, imports
-- `cli/fuzzy.py` - FrequencyLookup Protocol, broader types
-
-**No type: ignore comments added.**
-
-### 2025-12-17 - Phase 2 Complete
-
-- **Start:** 141 errors
-- **End:** 128 errors
-- **Fixed:** 13 errors
-
-**Changes:**
-- `util/__init__.py` - split() with overloads for str and Buffer types
-- `reactor/api/processes.py` - Added public `answer_async()` method
-- `reactor/network/outgoing.py` - Added socket asserts for type narrowing
-
-### 2025-12-17 - Phase 2b (Registry fixes)
-
-- **Start:** 128 errors
-- **End:** 123 errors
-- **Fixed:** 5 errors
-
-**Changes:**
-- `vendoring/objgraph.py` - Added type annotations for show_most_common_types, by_type, show_backrefs
-- `application/server.py` - Fixed show_most_common_types usage (returns None, prints to stdout)
-- `nlri/flow.py` - Added ClassVar declarations for ID and decoder to IComponent base class
-- `nlri/evpn/nlri.py` - Renamed unpack_evpn_route → unpack_evpn to match subclass implementations
-
-### 2025-12-17 - Phase 2c (More Registry fixes)
-
-- **Start:** 123 errors
-- **End:** 120 errors
-- **Fixed:** 3 errors
-
-**Changes:**
-- `nlri/bgpls/nlri.py` - Added unpack_bgpls_nlri classmethod stub to BGPLS base class
-- `attribute/bgpls/link/srv6capabilities.py` - Added HasTLV Protocol for TLV class attribute typing
-
-### 2025-12-17 - Phase 2d (SRv6 Protocol fixes)
-
-- **Start:** 120 errors
-- **End:** 120 errors (swapped TLV errors for ClassVar override errors)
-
-**Changes:**
-- `attribute/bgpls/link/srv6endx.py` - Added SubSubTLV Protocol combining TLV + unpack_bgpls
-- `attribute/bgpls/link/srv6lanendx.py` - Added SubSubTLV Protocol and ClassVar to Srv6 base
-
-**Note:** Fixed TLV attr-defined errors but introduced ClassVar override errors in subclasses.
-These require restructuring the class hierarchy or using different patterns.
-
-**Total reduction:** 186 → 120 errors (35% reduction)
+**Error Distribution by Category:**
+- Property overrides: 10
+- Negotiated None: 9
+- Attribute access: 12
+- Static route types: 10
+- Flow NLRI: 8
+- Flow parser: 6
+- Section dict: 7
+- Update types: 5
+- Method overrides: 4
+- TypeVars: 3
+- Other: 23
 
 ---
 
-**Last Updated:** 2025-12-17
+**Last Updated:** 2025-12-17 (Ultrathink analysis complete)

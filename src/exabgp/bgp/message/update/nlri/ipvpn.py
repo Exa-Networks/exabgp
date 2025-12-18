@@ -361,9 +361,7 @@ class IPVPN(Label):
 
     def __copy__(self) -> 'IPVPN':
         new = self.__class__.__new__(self.__class__)
-        # Family slots (afi - safi is class-level)
-        new.afi = self.afi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # INET slots
         new._has_addpath = self._has_addpath
@@ -376,9 +374,7 @@ class IPVPN(Label):
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'IPVPN':
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
-        # Family slots (afi - safi is class-level)
-        new.afi = self.afi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
         # INET slots
         new._has_addpath = self._has_addpath  # bool - immutable

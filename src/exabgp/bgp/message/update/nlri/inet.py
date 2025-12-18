@@ -118,17 +118,9 @@ class INET(NLRI):
     def labels(self) -> Labels | None:
         return self._labels
 
-    @labels.setter
-    def labels(self, value: Labels | None) -> None:
-        self._labels = value
-
     @property
     def rd(self) -> RouteDistinguisher | None:
         return self._rd
-
-    @rd.setter
-    def rd(self, value: RouteDistinguisher | None) -> None:
-        self._rd = value
 
     def __init__(self, packed: Buffer, afi: AFI, safi: SAFI = SAFI.unicast, *, has_addpath: bool = False) -> None:
         """Create an INET NLRI from packed wire format bytes.
@@ -209,8 +201,8 @@ class INET(NLRI):
         NLRI.__init__(instance, afi, safi)
         instance._packed = packed
         instance._has_addpath = has_addpath
-        instance.labels = None
-        instance.rd = None
+        instance._labels = None
+        instance._rd = None
         return instance
 
     @classmethod
@@ -297,15 +289,12 @@ class INET(NLRI):
 
     def __copy__(self) -> 'INET':
         new = self.__class__.__new__(self.__class__)
-        # Family slots (afi, safi)
-        new.afi = self.afi
-        new.safi = self.safi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # INET slots
         new._has_addpath = self._has_addpath
-        new.labels = self.labels
-        new.rd = self.rd
+        new._labels = self._labels
+        new._rd = self._rd
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'INET':
@@ -313,15 +302,12 @@ class INET(NLRI):
 
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
-        # Family slots (afi, safi) - immutable enums
-        new.afi = self.afi
-        new.safi = self.safi
-        # NLRI slots
+        # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
         # INET slots
         new._has_addpath = self._has_addpath  # bool - immutable
-        new.labels = deepcopy(self.labels, memo) if self.labels else None
-        new.rd = deepcopy(self.rd, memo) if self.rd else None
+        new._labels = deepcopy(self._labels, memo) if self._labels else None
+        new._rd = deepcopy(self._rd, memo) if self._rd else None
         return new
 
     def feedback(self, action: Action) -> str:
