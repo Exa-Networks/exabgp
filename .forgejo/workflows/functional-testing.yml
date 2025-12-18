@@ -1,0 +1,38 @@
+name: Functional Testing
+
+on:
+  push:
+    branches: [main, 5.0, 4.2, 3.4]
+  pull_request:
+    branches: [main]
+
+jobs:
+  functional-tests:
+    runs-on: docker
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+    container:
+      image: python:${{ matrix.python-version }}-bookworm
+    steps:
+      - uses: https://github.com/actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Configuration parsing
+        run: |
+          python --version
+          uv run ./qa/bin/functional parsing
+
+      - name: Encoding tests
+        run: uv run ./qa/bin/functional encoding
+
+      - name: Decoding tests
+        run: uv run ./qa/bin/functional decoding

@@ -1,0 +1,29 @@
+name: Linting
+
+on:
+  push:
+    branches: [main, 5.0, 4.2, 3.4]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: docker
+    container:
+      image: python:3.12-bookworm
+    steps:
+      - uses: https://github.com/actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: ruff
+        run: |
+          python --version
+          uv run ruff --version
+          uv run ruff check src qa tests --output-format=full --statistics

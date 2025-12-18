@@ -1,0 +1,34 @@
+name: Type Checking
+
+on:
+  push:
+    branches: [main, 5.0, 4.2, 3.4]
+  pull_request:
+    branches: [main]
+
+jobs:
+  mypy-type-check:
+    runs-on: docker
+    container:
+      image: python:3.12-bookworm
+    steps:
+      - uses: https://github.com/actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Type ignore regression check
+        run: |
+          echo "Checking type:ignore count against baseline..."
+          uv run ./qa/bin/check_type_ignores
+
+      - name: Full codebase mypy check
+        run: |
+          echo "Running mypy on full codebase (must pass with 0 errors)..."
+          uv run mypy --version
+          uv run mypy src/exabgp/
