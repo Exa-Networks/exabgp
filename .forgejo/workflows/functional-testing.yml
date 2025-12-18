@@ -2,7 +2,7 @@ name: Functional Testing
 
 on:
   push:
-    branches: [main, 5.0, 4.2, 3.4]
+    branches: [main]
   pull_request:
     branches: [main]
 
