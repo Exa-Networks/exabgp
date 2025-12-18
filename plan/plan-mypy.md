@@ -259,12 +259,168 @@ Before declaring complete:
 ## Files Reference
 
 **Primary targets (highest error density):**
-- `src/exabgp/bgp/message/update/nlri/flow.py` - 6 errors (IComponent, BaseValue)
-- `src/exabgp/configuration/static/route.py` - 6 errors (type narrowing)
-- `src/exabgp/configuration/announce/__init__.py` - 4 errors (attribute arithmetic)
+- `src/exabgp/bgp/message/update/nlri/flow.py` - 10 errors (IComponent attribute access)
+- `src/exabgp/bgp/message/update/attribute/sr/srv6/*.py` - 6 errors (HasTLV + hierarchy)
+- `src/exabgp/bgp/message/update/nlri/*/nlri.py` - 4 errors (property overrides)
 
 **Supporting documents:**
 - `plan/mypy-decorator-classvar-pattern.md` - Full strategic analysis
+
+---
+
+## Deep Analysis: 24 Remaining Errors (Phase 6)
+
+### Category 1: IComponent Attribute Access (10 errors) - HIGHEST PRIORITY
+
+**Files:** `flow.py:915, 949, 987, 989, 1026, 1028, 1032, 1073, 1076, 1136`
+
+**Root Cause:** The `rules` dict is typed as `dict[int, list[IComponent]]` but actual values
+are subclasses with additional attributes: `afi`, `operations`, `short()`, `NAME`.
+
+**Error breakdown:**
+- Line 915: "Redundant cast" + "Too many arguments for IComponent"
+- Lines 949, 1136: `IComponent` has no attribute `afi`
+- Lines 987, 989, 1026, 1073: `IComponent` has no attribute `operations`
+- Line 1028: `IComponent` has no attribute `short`
+- Lines 1032, 1076: `IComponent` has no attribute `NAME`
+
+**Subclass analysis:**
+- `IPrefix4/6`: Has `afi` (ClassVar), `operations` (int=0), `NAME`, `short()`
+- `IOperation` subclasses: Has `operations`, `short()`, `NAME` but NOT `afi` as ClassVar
+
+**Fix Strategy:**
+1. Add abstract/default attributes to `IComponent`:
+   ```python
+   class IComponent:
+       ID: ClassVar[int]
+       NAME: ClassVar[str] = ''  # Add default
+       operations: int = 0  # Add default for prefix types
+
+       def short(self) -> str:  # Add abstract/default
+           raise NotImplementedError()
+   ```
+2. For `afi` access (lines 949, 1136): Add isinstance check for IPrefix types OR define
+   `afi` as Optional ClassVar in IComponent
+
+---
+
+### Category 2: Property Overrides (4 errors)
+
+**Files:** `mvpn/nlri.py:173`, `mup/nlri.py:178, 183`, `evpn/nlri.py:187`
+
+**Root Cause:** Generic* classes have `@property CODE` that extracts from `_packed`,
+but base classes define `CODE: ClassVar[int] = -1`.
+
+**Example:**
+```python
+class MVPN(NLRI):
+    CODE: ClassVar[int] = -1  # Writeable class variable
+
+class GenericMVPN(MVPN):
+    @property
+    def CODE(self) -> int:  # Read-only property - conflicts!
+        return self._packed[0]
+```
+
+**Fix Options:**
+A. Rename property to avoid conflict: `raw_code` or `code_from_wire`
+B. Use `# type: ignore[override]` with documentation (deliberate pattern)
+C. Make base CODE a property too (but then decorators can't set it)
+
+**Recommendation:** Option A (rename) is cleanest - these are different concepts:
+- Base `CODE`: Static class identifier set by decorator
+- GenericX `code_from_wire`: Dynamic extraction from packed bytes
+
+---
+
+### Category 3: Srv6 HasTLV.unpack_attribute (3 errors)
+
+**Files:** `l3service.py:86`, `l2service.py:81`, `sidinformation.py:99`
+
+**Error:** `"type[HasTLV]" has no attribute "unpack_attribute"`
+
+**Root Cause:** `HasTLV` Protocol only defines `TLV: ClassVar[int]`, but code calls
+`.unpack_attribute()` on registered classes.
+
+**Fix:** Extend Protocol:
+```python
+class HasTLV(Protocol):
+    TLV: ClassVar[int]
+
+    @classmethod
+    def unpack_attribute(cls, data: Buffer, length: int) -> Self: ...
+```
+
+---
+
+### Category 4: Srv6 TLV Hierarchy (3 errors)
+
+**File:** `mpls.py:181, 189, 191`
+
+**Errors:**
+- Line 181: `list[Srv6SidStructure]` vs `list[GenericSrv6ServiceDataSubSubTlv]`
+- Lines 189, 191: `list[Srv6SidInformation]` vs `list[GenericSrv6ServiceSubTlv]`
+
+**Root Cause:** Srv6SidInformation/Srv6SidStructure don't inherit from Generic* bases.
+
+**Fix Options:**
+A. Fix inheritance: `class Srv6SidStructure(GenericSrv6ServiceDataSubSubTlv)`
+B. Use Union types in parameter annotations
+C. Use Protocol for structural typing
+
+**Recommendation:** Option A if semantically correct, otherwise B.
+
+---
+
+### Category 5: Collection Attribute Access (2 errors)
+
+**File:** `collection.py:594, 603`
+
+**Errors:**
+- Line 594: `nexthop` is `Attribute | IP` but needs `IP`
+- Line 603: `unreach` is `Attribute` but needs `Iterable[NLRI]`
+
+**Fix:** Add type narrowing after attribute lookup:
+```python
+# Line 594
+nh_attr = attributes[Attribute.CODE.NEXT_HOP]
+if isinstance(nh_attr, IP):
+    routed = RoutedNLRI(nlri, nh_attr)
+
+# Line 603 - already has None check, add isinstance
+if unreach is not None and isinstance(unreach, MPURNLRI):
+    withdraws.extend(unreach)
+```
+
+---
+
+### Category 6: INET.json Signature (1 error)
+
+**File:** `inet.py:359`
+
+**Error:** `json(self, announced=True, compact=False)` incompatible with `json(self, compact=False)`
+
+**Fix:** Add `announced` param to base NLRI.json():
+```python
+class NLRI:
+    def json(self, compact: bool = False, announced: bool = True) -> str:
+        ...
+```
+
+---
+
+## Implementation Plan
+
+| Phase | Category | Errors | Complexity | Time Est |
+|-------|----------|--------|------------|----------|
+| 6a | IComponent attrs | 10 | Medium | 30 min |
+| 6b | Property overrides | 4 | Low | 15 min |
+| 6c | HasTLV Protocol | 3 | Low | 10 min |
+| 6d | Srv6 hierarchy | 3 | Medium | 20 min |
+| 6e | Collection access | 2 | Low | 10 min |
+| 6f | INET.json | 1 | Low | 5 min |
+| 6g | Flow cast cleanup | 1 | Low | 5 min |
+| **Total** | | **24** | | ~1.5h |
 
 ---
 

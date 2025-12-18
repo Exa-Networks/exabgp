@@ -119,7 +119,7 @@ class Multicast(EVPN):
             raise Exception('IP len is %d, but EVPN route currently support only IPv4 or IPv6' % iplen)
         return cls(packed)
 
-    def json(self, compact: bool | None = None) -> str:
+    def json(self, announced: bool = True, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

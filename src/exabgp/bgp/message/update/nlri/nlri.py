@@ -180,8 +180,13 @@ class NLRI(Family):
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         raise Exception('unimplemented in NLRI children class')
 
-    def json(self, compact: bool = False) -> str:
-        """Serialize NLRI to JSON format. Must be implemented by subclasses."""
+    def json(self, announced: bool = True, compact: bool = False) -> str:
+        """Serialize NLRI to JSON format. Must be implemented by subclasses.
+
+        Args:
+            announced: Whether this is an announced route (vs withdrawn) - affects key names
+            compact: Use compact JSON format
+        """
         raise NotImplementedError('json() must be implemented by NLRI subclasses')
 
     def v4_json(self, compact: bool = False, nexthop: IP | None = None) -> str:

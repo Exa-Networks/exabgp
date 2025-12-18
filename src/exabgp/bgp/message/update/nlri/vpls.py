@@ -170,7 +170,7 @@ class VPLS(NLRI):
     def index(self) -> bytes:
         return Family.index(self) + self._packed
 
-    def json(self, compact: bool | None = None) -> str:
+    def json(self, announced: bool = True, compact: bool | None = None) -> str:
         # Note: The unique key for VPLS is the combination of all fields (rd, endpoint, base, offset, size).
         # This matches what index() returns for UPDATE withdraw matching.
         content = ', '.join(

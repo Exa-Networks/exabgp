@@ -175,14 +175,20 @@ class GenericMUP(MUP):
         self._packed = packed
 
     @property
-    def ARCHTYPE(self) -> int:
-        # Extract from packed header on demand
+    def ARCHTYPE(self) -> int:  # type: ignore[override]
+        """Architecture type - extracted from packed header.
+
+        Override: Base MUP.ARCHTYPE is ClassVar; GenericMUP extracts dynamically.
+        """
         return self._packed[0]
 
     @property
-    def CODE(self) -> int:
-        # Extract from packed header on demand
+    def CODE(self) -> int:  # type: ignore[override]
+        """Route type code - extracted from packed header.
+
+        Override: Base MUP.CODE is ClassVar; GenericMUP extracts dynamically.
+        """
         return int.from_bytes(self._packed[1:3], 'big')
 
-    def json(self, compact: bool | None = None) -> str:
+    def json(self, announced: bool = True, compact: bool | None = None) -> str:
         return '{ "arch": %d, "code": %d, "raw": "%s" }' % (self.ARCHTYPE, self.CODE, self._raw())

@@ -196,7 +196,7 @@ class SRv6SID(BGPLS):
         # Direct _packed hash - all wire fields encoded in bytes
         return hash(self._packed)
 
-    def json(self, compact: bool = False) -> str:
+    def json(self, announced: bool = True, compact: bool = False) -> str:
         nodes = ', '.join(d.json() for d in self.local_node_descriptors)
         content = ', '.join(
             [

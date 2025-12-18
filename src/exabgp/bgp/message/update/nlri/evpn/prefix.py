@@ -219,7 +219,7 @@ class Prefix(EVPN):
 
         return cls(packed)
 
-    def json(self, compact: bool = False) -> str:
+    def json(self, announced: bool = True, compact: bool = False) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
         content += '"raw": "{}", '.format(self._raw())

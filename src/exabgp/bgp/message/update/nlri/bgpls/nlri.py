@@ -218,5 +218,5 @@ class GenericBGPLS(BGPLS):
     def CODE(self) -> int:  # type: ignore[override]
         return self._code
 
-    def json(self, compact: bool = False) -> str:
+    def json(self, announced: bool = True, compact: bool = False) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE, self._raw())

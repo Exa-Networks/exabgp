@@ -261,7 +261,7 @@ class Type1SessionTransformedRoute(MUP):
         instance = cls(data, afi)
         return instance, b''
 
-    def json(self, compact: bool | None = None) -> str:
+    def json(self, announced: bool = True, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE

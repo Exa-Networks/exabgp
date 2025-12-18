@@ -197,7 +197,7 @@ class PREFIXv4(BGPLS):
 
         return content
 
-    def json(self, compact: bool = False) -> str:
+    def json(self, announced: bool = True, compact: bool = False) -> str:
         """Serialize PREFIXv4 NLRI to JSON (API v6 format - no nexthop)."""
         return f'{{ {self._json_content()} }}'
 

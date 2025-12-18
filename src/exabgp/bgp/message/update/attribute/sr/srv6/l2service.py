@@ -7,7 +7,7 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Callable, ClassVar, Protocol, Type, TypeVar
+from typing import Any, Callable, ClassVar, Protocol, Type, TypeVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
@@ -16,9 +16,12 @@ from exabgp.util.types import Buffer
 
 
 class HasTLV(Protocol):
-    """Protocol for classes with TLV class attribute."""
+    """Protocol for classes with TLV class attribute and unpack_attribute method."""
 
     TLV: ClassVar[int]
+
+    @classmethod
+    def unpack_attribute(cls, data: Buffer, length: int) -> Any: ...
 
 
 # TypeVar for classes with TLV attribute
@@ -44,8 +47,14 @@ class Srv6L2Service:
     # Registry maps TLV codes to Sub-TLV classes (uses HasTLV protocol)
     registered_subtlvs: ClassVar[dict[int, Type[HasTLV]]] = dict()
 
-    def __init__(self, subtlvs: list[GenericSrv6ServiceSubTlv], packed: Buffer | None = None) -> None:
-        self.subtlvs: list[GenericSrv6ServiceSubTlv] = subtlvs
+    def __init__(self, subtlvs: list[Any], packed: Buffer | None = None) -> None:
+        """Initialize L2 Service TLV.
+
+        Args:
+            subtlvs: List of sub-TLVs (Srv6SidInformation or GenericSrv6ServiceSubTlv)
+            packed: Optional pre-packed wire format
+        """
+        self.subtlvs: list[Any] = subtlvs
         self.packed: Buffer = self.pack_tlv()
 
     @classmethod

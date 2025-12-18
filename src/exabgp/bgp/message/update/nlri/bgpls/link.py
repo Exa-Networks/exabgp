@@ -250,7 +250,7 @@ class LINK(BGPLS):
 
     # pack_nlri inherited from BGPLS base class - returns self._packed directly
 
-    def json(self, compact: bool = False) -> str:
+    def json(self, announced: bool = True, compact: bool = False) -> str:
         content = f'"ls-nlri-type": "{self.NAME}", '
         content += f'"l3-routing-topology": {int(self.domain)}, '
         content += f'"protocol-id": {int(self.proto_id)}, '

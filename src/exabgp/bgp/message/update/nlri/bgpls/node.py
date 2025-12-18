@@ -136,7 +136,7 @@ class NODE(BGPLS):
             content += f', {self.route_d.json()}'
         return content
 
-    def json(self, compact: bool = False) -> str:
+    def json(self, announced: bool = True, compact: bool = False) -> str:
         """Serialize NODE NLRI to JSON (API v6 format - no nexthop)."""
         return f'{{ {self._json_content()} }}'
 

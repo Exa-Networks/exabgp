@@ -44,7 +44,6 @@ from typing import (
     Protocol as TypingProtocol,
     Self,
     Type,
-    cast,
 )
 
 from exabgp.util.types import Buffer
@@ -99,11 +98,22 @@ class IComponent:
 
     All FlowSpec components (prefixes, ports, protocols, etc.) inherit from this.
     Components must define ID (component type) and implement pack()/make().
+
+    Attributes:
+        ID: Component type identifier (set by subclasses)
+        NAME: Human-readable component name (set by subclasses)
+        FLAG: Component flag (default False)
+        operations: Operator byte for non-prefix components (default 0 for prefixes)
+        decoder: Value decoder function (set by subclasses)
     """
 
     ID: ClassVar[int]  # Component type identifier, set by subclasses
+    NAME: ClassVar[str] = ''  # Human-readable name, set by subclasses
     FLAG: ClassVar[bool] = False
     decoder: ClassVar[Callable[[bytes], object]]  # Value decoder, set by subclasses
+
+    # Operator byte - 0 for prefix types, set by IOperation subclasses
+    operations: int = 0
 
     def pack(self) -> Buffer:
         """Pack the component to wire format. Must be overridden by subclasses."""
@@ -232,13 +242,9 @@ class IPrefix4(IPrefix, IComponent, FlowIPv4):
     CIDR unpacked on demand via property.
     """
 
-    # Must be defined in subclasses
+    # Must be defined in subclasses (NAME and operations inherited from IComponent)
     CODE: ClassVar[int] = -1
-    NAME: ClassVar[str] = ''
     ID: ClassVar[int]
-
-    # not used, just present for simplying the nlri generation
-    operations: int = 0x0
 
     def __init__(self, packed: Buffer) -> None:
         """Create from wire format bytes [mask][truncated_ip...].
@@ -297,13 +303,9 @@ class IPrefix6(IPrefix, IComponent, FlowIPv6):
     CIDR unpacked on demand via property.
     """
 
-    # Must be defined in subclasses
+    # Must be defined in subclasses (NAME and operations inherited from IComponent)
     CODE: ClassVar[int] = -1
-    NAME: ClassVar[str] = ''
     ID: ClassVar[int]
-
-    # not used, just present for simplying the nlri generation
-    operations: int = 0x0
 
     def __init__(self, packed: Buffer, offset: int) -> None:
         """Create from wire format bytes [mask][truncated_ip...] and offset.
@@ -912,7 +914,8 @@ class Flow(NLRI):
                         value_bytes, bgp = bytes(bgp[:length]), bgp[length:]
                         adding_val = klass.decoder(value_bytes)
                         # klass is IOperation subclass with (operator, value) constructor
-                        component = cast(IComponent, klass(operator, adding_val))
+                        # factory is typed as Type[IComponent] but actual classes are IOperation subclasses
+                        component = klass(operator, adding_val)  # type: ignore[call-arg]
                         rules.setdefault(what, []).append(component)
         except (IndexError, KeyError):
             pass  # Incomplete data, return what we have
@@ -946,7 +949,8 @@ class Flow(NLRI):
             else:
                 pair = self.rules.get(FlowDestination.ID, [])
             if pair:
-                if rule.afi != pair[0].afi:
+                # rule and pair[0] are IPrefix subclasses (FlowIPv4/FlowIPv6) which have afi
+                if rule.afi != pair[0].afi:  # type: ignore[attr-defined]
                     return False
             # TODO: verify if this is correct - why reset the afi of the NLRI object after initialisation?
             if rule.NAME.endswith('ipv6'):
@@ -1025,7 +1029,10 @@ class Flow(NLRI):
                 # only add ' ' after the first element
                 if idx and not rule.operations & NumericOperator.AND:
                     r_str.append(' ')
-                r_str.append(rule.short())
+                # All concrete IComponent subclasses (IPrefix, IOperation) have short()
+                # via direct definition or mixins (NumericString, BinaryString)
+                short_fn = getattr(rule, 'short', None)
+                r_str.append(short_fn() if short_fn else str(rule))
             line = ''.join(r_str)
             if len(r_str) > 1:
                 line = '[ {} ]'.format(line)
@@ -1079,7 +1086,7 @@ class Flow(NLRI):
         compatibility = ', "string": "{}"'.format(self.extensive())
         return rules_str, rd, compatibility
 
-    def json(self, compact: bool = False) -> str:
+    def json(self, announced: bool = True, compact: bool = False) -> str:
         """Serialize Flow NLRI to JSON (v6 format - no nexthop)."""
         rules_str, rd, compatibility = self._json_core(compact)
         return '{' + rules_str + rd + compatibility + ' }'
@@ -1133,7 +1140,8 @@ class Flow(NLRI):
             src_rules = rules.get(FlowSource.ID, [])
             dst_rules = rules.get(FlowDestination.ID, [])
             if src_rules and dst_rules:
-                if src_rules[0].afi != dst_rules[0].afi:
+                # src_rules[0] and dst_rules[0] are IPrefix subclasses with afi
+                if src_rules[0].afi != dst_rules[0].afi:  # type: ignore[attr-defined]
                     raise Notify(
                         3,
                         10,

@@ -32,10 +32,11 @@ import time
 from threading import Thread
 from typing import IO, TYPE_CHECKING, Any, Callable, Generator, TypeVar, cast
 
+from exabgp.bgp.message.update import UpdateCollection  # Needed at runtime for cast()
+
 if TYPE_CHECKING:
     from exabgp.bgp.fsm import FSM
     from exabgp.bgp.message import Open, Update
-    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.operational import OperationalFamily
     from exabgp.bgp.message.refresh import RouteRefresh

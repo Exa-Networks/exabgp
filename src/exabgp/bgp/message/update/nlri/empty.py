@@ -50,7 +50,7 @@ class Empty(NLRI):
         """Pack to empty bytes (no NLRI)."""
         return b''
 
-    def json(self, compact: bool = False) -> str:
+    def json(self, announced: bool = True, compact: bool = False) -> str:
         """JSON representation (empty object)."""
         return '{}'
 

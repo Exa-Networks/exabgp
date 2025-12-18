@@ -51,7 +51,7 @@ class EOR(Message):
         def extensive(self) -> str:
             return 'eor %ld/%ld (%s %s)' % (int(self.afi), int(self.safi), self.afi, self.safi)
 
-        def json(self, compact: bool = False) -> str:
+        def json(self, announced: bool = True, compact: bool = False) -> str:
             return '"eor": {{ "afi" : "{}", "safi" : "{}" }}'.format(self.afi, self.safi)
 
         def __len__(self) -> int:

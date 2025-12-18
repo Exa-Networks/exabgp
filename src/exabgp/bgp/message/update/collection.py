@@ -27,7 +27,8 @@ from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
 
 def validate_announce_nlri(nlri: 'NLRI', nexthop: IP) -> str | None:
@@ -207,7 +208,6 @@ class UpdateCollection(Message):
 
         For MP routes, nexthop is in MP_REACH_NLRI, not NEXT_HOP attribute.
         """
-        from exabgp.protocol.ip import IPv4, IPv6
 
         nexthop_attr = self._attributes.get(Attribute.CODE.NEXT_HOP, None)
         if nexthop_attr is None:
@@ -591,7 +591,19 @@ class UpdateCollection(Message):
             nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced_bytes, Action.ANNOUNCE, addpath, negotiated)
             if nlri is not NLRI.INVALID:
                 # Wrap NLRI with nexthop in RoutedNLRI for UpdateCollection
-                routed = RoutedNLRI(nlri, nexthop)
+                # nexthop is NextHop attribute or IP.NoNextHop
+                if isinstance(nexthop, IP):
+                    routed = RoutedNLRI(nlri, nexthop)
+                elif isinstance(nexthop, NextHop):
+                    # NextHop attribute - convert packed bytes to IP
+                    packed = nexthop._packed
+                    if len(packed) == IPv4.BYTES:
+                        routed = RoutedNLRI(nlri, IPv4(packed))
+                    else:
+                        routed = RoutedNLRI(nlri, IPv6(packed))
+                else:
+                    # Should not happen, but use NoNextHop as fallback
+                    routed = RoutedNLRI(nlri, IP.NoNextHop)
                 log.debug(lazymsg('announced NLRI {nlri}', nlri=nlri), 'routes')
                 announces.append(routed)
             announced_bytes = left
@@ -599,8 +611,9 @@ class UpdateCollection(Message):
         unreach = attributes.pop(MPURNLRI.ID, None)
         reach = attributes.pop(MPRNLRI.ID, None)
 
-        if unreach is not None:
-            withdraws.extend(unreach)  # Uses __iter__
+        if unreach is not None and isinstance(unreach, MPURNLRI):
+            # MPURNLRI implements __iter__ yielding NLRI
+            withdraws.extend(unreach)
 
         if reach is not None:
             # MP_REACH_NLRI contains nexthop - use iter_routed() for RoutedNLRI

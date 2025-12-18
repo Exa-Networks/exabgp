@@ -7,7 +7,7 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Callable, ClassVar, Protocol, Type, TypeVar
+from typing import Any, Callable, ClassVar, Protocol, Type, TypeVar
 
 from exabgp.protocol.ip import IPv6
 
@@ -19,9 +19,12 @@ from exabgp.util.types import Buffer
 
 
 class HasTLV(Protocol):
-    """Protocol for classes with TLV class attribute."""
+    """Protocol for classes with TLV class attribute and unpack_attribute method."""
 
     TLV: ClassVar[int]
+
+    @classmethod
+    def unpack_attribute(cls, data: Buffer, length: int) -> Any: ...
 
 
 # TypeVar for classes with TLV attribute
@@ -58,12 +61,20 @@ class Srv6SidInformation:
         self,
         sid: IPv6,
         behavior: int,
-        subsubtlvs: list[GenericSrv6ServiceDataSubSubTlv],
+        subsubtlvs: list[Any],
         packed: Buffer | None = None,
     ) -> None:
+        """Initialize SID Information sub-TLV.
+
+        Args:
+            sid: SRv6 SID value (IPv6 address)
+            behavior: SRv6 Endpoint Behavior code
+            subsubtlvs: List of sub-sub-TLVs (Srv6SidStructure or GenericSrv6ServiceDataSubSubTlv)
+            packed: Optional pre-packed wire format
+        """
         self.sid: IPv6 = sid
         self.behavior: int = behavior
-        self.subsubtlvs: list[GenericSrv6ServiceDataSubSubTlv] = subsubtlvs
+        self.subsubtlvs: list[Any] = subsubtlvs
         self.packed: Buffer = self.pack_tlv()
 
     @classmethod
