@@ -29,8 +29,8 @@ class NextHop(Attribute):
     Delegates IP functionality via composition rather than inheritance.
     """
 
-    ID: ClassVar[int] = Attribute.CODE.NEXT_HOP
-    FLAG: ClassVar[int] = Attribute.Flag.TRANSITIVE
+    ID: int = Attribute.CODE.NEXT_HOP
+    FLAG: int = Attribute.Flag.TRANSITIVE
     CACHING: ClassVar[bool] = True
     SELF: ClassVar[bool] = False
     TREAT_AS_WITHDRAW: ClassVar[bool] = True

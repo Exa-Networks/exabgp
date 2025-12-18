@@ -36,8 +36,8 @@ class ClusterList(Attribute):
     Stores packed wire-format bytes. Each cluster ID is a 4-byte IPv4 address.
     """
 
-    ID: ClassVar[int] = Attribute.CODE.CLUSTER_LIST
-    FLAG: ClassVar[int] = Attribute.Flag.OPTIONAL
+    ID: int = Attribute.CODE.CLUSTER_LIST
+    FLAG: int = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer) -> None:

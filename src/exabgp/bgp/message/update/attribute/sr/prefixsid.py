@@ -31,8 +31,8 @@ T = TypeVar('T', bound='PrefixSid')
 
 @Attribute.register()
 class PrefixSid(Attribute):
-    ID: ClassVar[int] = Attribute.CODE.BGP_PREFIX_SID
-    FLAG: ClassVar[int] = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    ID: int = Attribute.CODE.BGP_PREFIX_SID
+    FLAG: int = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
     TLV: ClassVar[int] = -1
 

@@ -27,8 +27,9 @@ ATTR_LENGTH_EXTENDED_MAX: int = 0xFF  # Maximum length for non-extended encoding
 
 class Attribute:
     # we need to define ID and FLAG inside of the subclasses
-    ID: ClassVar[int] = 0x00
-    FLAG: ClassVar[int] = 0x00
+    # Note: Not ClassVar so GenericAttribute can override with properties
+    ID: int = 0x00
+    FLAG: int = 0x00
 
     # Should this Attribute be cached
     CACHING: ClassVar[bool] = False
@@ -310,8 +311,8 @@ class Attribute:
 class TreatAsWithdraw(Attribute):
     """Pseudo-attribute indicating update should be treated as withdraw."""
 
-    ID: ClassVar[int] = 0xFFFF
-    FLAG: ClassVar[int] = 0x00
+    ID: int = 0xFFFF
+    FLAG: int = 0x00
     GENERIC: ClassVar[bool] = False
     NO_GENERATION: ClassVar[bool] = True
 
@@ -333,8 +334,8 @@ class TreatAsWithdraw(Attribute):
 class Discard(Attribute):
     """Pseudo-attribute indicating update should be discarded."""
 
-    ID: ClassVar[int] = 0xFFFE
-    FLAG: ClassVar[int] = 0x00
+    ID: int = 0xFFFE
+    FLAG: int = 0x00
     GENERIC: ClassVar[bool] = False
     NO_GENERATION: ClassVar[bool] = True
 

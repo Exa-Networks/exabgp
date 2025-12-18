@@ -50,20 +50,28 @@ class GenericAttribute(Attribute):
         self._flag: int = flag
 
     @property
-    def attr_id(self) -> int:
+    def ID(self) -> int:
         """Return attribute type code (instance-specific for generic attributes).
 
-        Note: Named attr_id to avoid overriding base Attribute.ID ClassVar.
+        GenericAttribute's ID comes from wire data, not class definition.
         """
         return self._code
 
+    @ID.setter
+    def ID(self, value: int) -> None:
+        self._code = value
+
     @property
-    def attr_flag(self) -> int:
+    def FLAG(self) -> int:
         """Return attribute flags (instance-specific for generic attributes).
 
-        Note: Named attr_flag to avoid overriding base Attribute.FLAG ClassVar.
+        GenericAttribute's FLAG comes from wire data, not class definition.
         """
         return self._flag
+
+    @FLAG.setter
+    def FLAG(self, value: int) -> None:
+        self._flag = value
 
     @classmethod
     def from_packet(cls, code: int, flag: int, data: Buffer) -> 'GenericAttribute':
@@ -106,7 +114,7 @@ class GenericAttribute(Attribute):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, GenericAttribute):
             return False
-        return self.attr_id == other.attr_id and self.attr_flag == other.attr_flag and self._packed == other._packed
+        return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -118,7 +126,7 @@ class GenericAttribute(Attribute):
         return '0x' + ''.join('{:02x}'.format(_) for _ in self._packed)
 
     def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
-        flag: int = self.attr_flag
+        flag: int = self.FLAG
         length: int = len(self._packed)
         if length > MAX_SINGLE_OCTET_LENGTH:
             flag |= Attribute.Flag.EXTENDED_LENGTH
@@ -127,7 +135,7 @@ class GenericAttribute(Attribute):
             len_value = pack('!H', length)
         else:
             len_value = bytes([length])
-        return bytes([flag, self.attr_id]) + len_value + self._packed
+        return bytes([flag, self.ID]) + len_value + self._packed
 
     def json(self) -> str:
-        return '{ "id": %d, "flag": %d, "payload": "%s"}' % (self.attr_id, self.attr_flag, hexstring(self._packed))
+        return '{ "id": %d, "flag": %d, "payload": "%s"}' % (self.ID, self.FLAG, hexstring(self._packed))

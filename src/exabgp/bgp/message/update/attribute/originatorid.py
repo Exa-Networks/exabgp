@@ -28,8 +28,8 @@ class OriginatorID(Attribute):
     Delegates IP functionality via composition rather than inheritance.
     """
 
-    ID: ClassVar[int] = Attribute.CODE.ORIGINATOR_ID
-    FLAG: ClassVar[int] = Attribute.Flag.OPTIONAL
+    ID: int = Attribute.CODE.ORIGINATOR_ID
+    FLAG: int = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer) -> None:
