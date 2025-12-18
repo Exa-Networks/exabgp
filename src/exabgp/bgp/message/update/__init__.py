@@ -195,9 +195,9 @@ class Update(Message):
                 unreach = temp_attrs.get(MPURNLRI.ID)
                 reach = temp_attrs.get(MPRNLRI.ID)
                 if unreach is not None:
-                    return EOR(unreach.afi, unreach.safi)
+                    return EOR(unreach.afi, unreach.safi)  # type: ignore[attr-defined]
                 if reach is not None:
-                    return EOR(reach.afi, reach.safi)
+                    return EOR(reach.afi, reach.safi)  # type: ignore[attr-defined]
             # No MP attributes - this is IPv4 unicast EOR
             return EOR(AFI.ipv4, SAFI.unicast)
 
@@ -206,6 +206,7 @@ class Update(Message):
             from exabgp.reactor.api.response import Response
             from exabgp.version import json as json_version
 
+            assert update._parsed is not None  # Always set after parsing
             return 'json {}'.format(
                 Response.JSON(json_version).update(negotiated.neighbor, 'receive', update._parsed, b'', b'', negotiated)
             )

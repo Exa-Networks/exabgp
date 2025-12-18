@@ -35,6 +35,7 @@ from typing import IO, TYPE_CHECKING, Any, Callable, Generator, TypeVar, cast
 if TYPE_CHECKING:
     from exabgp.bgp.fsm import FSM
     from exabgp.bgp.message import Open, Update
+    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.operational import OperationalFamily
     from exabgp.bgp.message.refresh import RouteRefresh
@@ -1313,9 +1314,11 @@ class Processes:
         # Encoders expect UpdateCollection (semantic container), not Update (wire container)
         # Both Update and EOR have TYPE == Update.TYPE, but EOR has .nlris/.attributes directly
         # Check for EOR flag to distinguish (EOR.EOR == True, Update.EOR == False)
+        # Both branches produce something compatible with UpdateCollection interface
+        update_collection: UpdateCollection
         if update.EOR:
             # EOR has .nlris and .attributes directly, compatible with encoder interface
-            update_collection = update
+            update_collection = cast(UpdateCollection, update)
         else:
             update_collection = update.data
         for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.UPDATE.SHORT}'):

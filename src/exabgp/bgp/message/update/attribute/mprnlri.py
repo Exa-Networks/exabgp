@@ -137,7 +137,7 @@ class MPRNLRI(Attribute, Family):
             if nexthop_attr is NextHop.UNSET:
                 nexthop = IP.NoNextHop
             else:
-                nexthop = IP.create_ip(nexthop_attr.pack_ip())
+                nexthop = IP.create_ip(nexthop_attr.pack_ip())  # type: ignore[attr-defined]
         for nlri in nlri_iter:
             yield RoutedNLRI(nlri, nexthop)
 

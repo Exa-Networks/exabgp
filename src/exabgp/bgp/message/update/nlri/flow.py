@@ -41,10 +41,9 @@ from typing import (
     Any,
     Callable,
     ClassVar,
-    Type,
-)
-from typing import (
     Protocol as TypingProtocol,
+    Self,
+    Type,
 )
 
 from exabgp.util.types import Buffer
@@ -253,7 +252,7 @@ class IPrefix4(IPrefix, IComponent, FlowIPv4):
         return CIDR.from_ipv4(self._packed)
 
     @classmethod
-    def make_prefix4(cls, raw: bytes, netmask: int) -> 'IPrefix4':
+    def make_prefix4(cls, raw: bytes, netmask: int) -> Self:
         """Factory to create from full IP bytes and mask (for config parsing).
 
         Args:
@@ -261,7 +260,7 @@ class IPrefix4(IPrefix, IComponent, FlowIPv4):
             netmask: Prefix length
 
         Returns:
-            New IPrefix4 instance with packed wire format
+            New instance of cls with packed wire format
         """
         packed = bytes([netmask]) + raw[: CIDR.size(netmask)]
         return cls(packed)
@@ -325,7 +324,7 @@ class IPrefix6(IPrefix, IComponent, FlowIPv6):
         return self._offset
 
     @classmethod
-    def make_prefix6(cls, raw: bytes, netmask: int, offset: int) -> 'IPrefix6':
+    def make_prefix6(cls, raw: bytes, netmask: int, offset: int) -> Self:
         """Factory to create from full IP bytes, mask and offset (for config parsing).
 
         Args:
@@ -334,7 +333,7 @@ class IPrefix6(IPrefix, IComponent, FlowIPv6):
             offset: IPv6 FlowSpec offset value
 
         Returns:
-            New IPrefix6 instance with packed wire format
+            New instance of cls with packed wire format
         """
         packed = bytes([netmask]) + raw[: CIDR.size(netmask)]
         return cls(packed, offset)

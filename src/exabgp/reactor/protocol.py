@@ -419,7 +419,7 @@ class Protocol:
             log.debug(lazymsg('update.sent count={n}', n=final_number), self._session())
         log.debug(lazymsg('update.generator.completed count={count}', count=number), self._session())
 
-    async def new_update(self, include_withdraw: bool) -> Update:
+    async def new_update(self, include_withdraw: bool) -> UpdateCollection:
         """Send BGP UPDATE messages (runs to completion)."""
         assert self.connection is not None
         log.debug(lazymsg('update.started'), self._session())
@@ -452,7 +452,7 @@ class Protocol:
         log.debug(lazymsg('eor.sent afi={a} safi={s}', a=afi, s=safi), self._session())
         return eor
 
-    async def new_eors(self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined) -> Update:
+    async def new_eors(self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined) -> UpdateCollection:
         """Send End-of-RIB markers for all families."""
         if self.negotiated.families:
             families = self.negotiated.families if (afi, safi) == (AFI.undefined, SAFI.undefined) else [(afi, safi)]

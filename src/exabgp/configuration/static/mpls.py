@@ -187,7 +187,7 @@ def prefix_sid_srv6(tokeniser: Any) -> PrefixSid:
 
     if service_type == 'l3-service':
         return PrefixSid([Srv6L3Service(subtlvs=subtlvs)])
-    if service_type == 'l2-service':
+    else:  # l2-service (validated at line 144)
         return PrefixSid([Srv6L2Service(subtlvs=subtlvs)])
 
 

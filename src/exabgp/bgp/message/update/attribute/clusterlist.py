@@ -22,7 +22,10 @@ from exabgp.protocol.ip import IPv4
 
 
 class ClusterID(IPv4):
-    pass
+    @classmethod
+    def from_string(cls, string: str) -> 'ClusterID':
+        """Create ClusterID from string representation."""
+        return cls(IPv4.pton(string))
 
 
 @Attribute.register()
