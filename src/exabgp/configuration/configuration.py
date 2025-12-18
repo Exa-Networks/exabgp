@@ -419,7 +419,8 @@ class Configuration(_Configuration):
                 commands = _SPECIAL_COMMANDS[parser.name]
             else:
                 # Combine commands from known dict and schema Leaf children
-                commands = list(parser.known.keys())
+                # Filter to only string keys (known may have tuple keys for special cases)
+                commands = [k for k in parser.known.keys() if isinstance(k, str)]
                 if parser.schema:
                     from exabgp.configuration.schema import Leaf, LeafList
 

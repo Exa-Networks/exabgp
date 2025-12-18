@@ -56,7 +56,8 @@ class ParseAnnounce(Section):
 
         # ignore if the request is for an aggregate, or the same size
         mask = inet_nlri.cidr.mask
-        cut = last.attributes[Attribute.CODE.INTERNAL_SPLIT]
+        # INTERNAL_SPLIT stores a Split(int) subclass - cast to int for type safety
+        cut = cast(int, last.attributes[Attribute.CODE.INTERNAL_SPLIT])
         if mask >= cut:
             yield last
             return

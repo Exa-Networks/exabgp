@@ -109,7 +109,7 @@ class _ParseDirection(Section):
     known: dict[str | tuple[Any, ...], Any] = {}
     action: dict[str | tuple[Any, ...], tuple[ActionTarget, ActionOperation, ActionKey]] = {}
 
-    default = {
+    default: dict[str, bool] = {
         'parsed': True,
         'packets': True,
         'consolidate': True,

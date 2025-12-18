@@ -345,6 +345,8 @@ class ParseStaticRoute(Section):
             has_rd = settings.rd is not None
             has_labels = settings.labels is not None
 
+            # Explicit type annotation: INET is base class of Label and IPVPN
+            nlri_class: type[INET]
             if has_rd:
                 nlri_class = IPVPN
                 settings.safi = SAFI.mpls_vpn
@@ -407,6 +409,8 @@ class ParseStaticRoute(Section):
         has_label = isinstance(nlri, Label) and nlri._has_labels
 
         # Determine target type and SAFI
+        # Explicit type annotation: INET is base class of Label and IPVPN
+        target_cls: type[INET]
         if has_rd:
             # IPVPN: has RD (and likely labels)
             target_cls = IPVPN
@@ -433,7 +437,8 @@ class ParseStaticRoute(Section):
                 return nlri
 
         # Build kwargs for from_cidr - pass labels/rd if target supports them
-        kwargs: dict[str, object] = {}
+        # Use Any for values since actual types depend on target_cls (Label/IPVPN)
+        kwargs: dict[str, Any] = {}
         if has_label:
             # Safe: has_label is True only if isinstance(nlri, Label)
             kwargs['labels'] = cast(Label, nlri).labels
@@ -464,7 +469,8 @@ class ParseStaticRoute(Section):
 
         # ignore if the request is for an aggregate, or the same size
         mask = nlri.cidr.mask
-        cut = last.attributes[Attribute.CODE.INTERNAL_SPLIT]
+        # INTERNAL_SPLIT stores a Split(int) subclass - cast to int for type safety
+        cut = cast(int, last.attributes[Attribute.CODE.INTERNAL_SPLIT])
         if mask >= cut:
             yield last
             return
