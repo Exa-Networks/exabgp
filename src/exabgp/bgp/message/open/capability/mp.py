@@ -10,8 +10,7 @@ from __future__ import annotations
 from struct import pack
 from typing import ClassVar
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
@@ -23,7 +22,7 @@ from exabgp.util.types import Buffer
 
 
 @Capability.register()
-class MultiProtocol(Capability, list[tuple[AFI, SAFI]]):
+class MultiProtocol(Capability, list[FamilyTuple]):
     ID: ClassVar[int] = Capability.CODE.MULTIPROTOCOL
 
     def __str__(self) -> str:

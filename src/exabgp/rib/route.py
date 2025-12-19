@@ -9,10 +9,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from exabgp.protocol.family import FamilyTuple
+
 if TYPE_CHECKING:
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.update.nlri.nlri import NLRI
-    from exabgp.protocol.family import AFI, SAFI
 
 from exabgp.bgp.message import Action
 from exabgp.protocol.ip import IP
@@ -37,7 +38,7 @@ class Route:
     _refcount: int
 
     @staticmethod
-    def family_prefix(family: tuple[AFI, SAFI]) -> bytes:
+    def family_prefix(family: FamilyTuple) -> bytes:
         return b'%02x%02x' % family
 
     def __init__(

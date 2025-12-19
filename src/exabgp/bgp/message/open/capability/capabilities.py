@@ -10,8 +10,7 @@ from __future__ import annotations
 from exabgp.util.types import Buffer
 from typing import ClassVar, TYPE_CHECKING
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -73,7 +72,7 @@ class Capabilities(dict[int, Capability]):
     # RFC 9072 - Extended Optional Parameters Length
     EXTENDED_LENGTH: ClassVar[int] = 0xFF  # IANA Extended Length type code - indicates extended format in use
 
-    _ADD_PATH: ClassVar[list[tuple[AFI, SAFI]]] = [
+    _ADD_PATH: ClassVar[list[FamilyTuple]] = [
         (AFI.ipv4, SAFI.unicast),
         (AFI.ipv6, SAFI.unicast),
         (AFI.ipv4, SAFI.nlri_mpls),
@@ -129,7 +128,7 @@ class Capabilities(dict[int, Capability]):
             return
 
         families = neighbor.addpaths()
-        ap_families: list[tuple[AFI, SAFI]] = []
+        ap_families: list[FamilyTuple] = []
         for allowed in self._ADD_PATH:
             if allowed in families:
                 ap_families.append(allowed)

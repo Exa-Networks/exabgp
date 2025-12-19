@@ -11,7 +11,7 @@ from typing import ClassVar
 
 from exabgp.rib.incoming import IncomingRIB
 from exabgp.rib.outgoing import OutgoingRIB
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import FamilyTuple
 
 
 class RIB:
@@ -30,7 +30,7 @@ class RIB:
         name: str,
         adj_rib_in: bool,
         adj_rib_out: bool,
-        families: set[tuple[AFI, SAFI]],
+        families: set[FamilyTuple],
         enabled: bool = True,
     ) -> None:
         self.name = name
@@ -53,7 +53,7 @@ class RIB:
         if not adj_rib_in:
             self.incoming.clear()
 
-    def enable(self, new_name: str, adj_rib_in: bool, adj_rib_out: bool, families: set[tuple[AFI, SAFI]]) -> None:
+    def enable(self, new_name: str, adj_rib_in: bool, adj_rib_out: bool, families: set[FamilyTuple]) -> None:
         """Enable a disabled RIB with proper name and settings."""
         # Remove old placeholder from cache
         old_name = self.name

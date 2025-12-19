@@ -36,7 +36,7 @@ from exabgp.configuration.validator import IntValidators
 # Removed imports migrated to schema validators: boolean, ip, peer_ip, port
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP, IPRange
 from exabgp.util.enumeration import TriState
 
@@ -346,7 +346,7 @@ class ParseNeighbor(Section):
         'incoming-ttl': 'incoming_ttl',
     }
 
-    def _post_neighbor(self, local: dict[str, Any], families: list[tuple[AFI, SAFI]]) -> Neighbor:
+    def _post_neighbor(self, local: dict[str, Any], families: list[FamilyTuple]) -> Neighbor:
         neighbor = Neighbor()
 
         # Set neighbor (BGP policy) attributes
@@ -379,8 +379,8 @@ class ParseNeighbor(Section):
 
         return neighbor
 
-    def _post_families(self, local: dict[str, Any]) -> list[tuple[AFI, SAFI]]:
-        families: list[tuple[AFI, SAFI]] = []
+    def _post_families(self, local: dict[str, Any]) -> list[FamilyTuple]:
+        families: list[FamilyTuple] = []
         for family in ParseFamily.convert:
             for pair in local.get('family', {}).get(family, []):
                 families.append(pair)
@@ -418,7 +418,7 @@ class ParseNeighbor(Section):
                 # gr == 0 means enabled but use hold-time (inferred later)
                 cap.graceful_restart = GracefulRestartConfig.with_time(gr)
 
-    def _post_capa_addpath(self, neighbor: Neighbor, local: dict[str, Any], families: list[tuple[AFI, SAFI]]) -> None:
+    def _post_capa_addpath(self, neighbor: Neighbor, local: dict[str, Any], families: list[FamilyTuple]) -> None:
         if not neighbor.capability.add_path:
             return
 
@@ -433,7 +433,7 @@ class ParseNeighbor(Section):
                 if pair not in families:
                     pair_log = pair
 
-                    def _log_skip(pair_arg: tuple[AFI, SAFI] = pair_log) -> str:
+                    def _log_skip(pair_arg: FamilyTuple = pair_log) -> str:
                         return 'skipping add-path family ' + str(pair_arg) + ' as it is not negotiated'
 
                     log.debug(_log_skip, 'configuration')

@@ -39,6 +39,12 @@ RD_SEPARATOR_COUNT: int = 1  # Number of colons in route distinguisher
 # IPv4 range separator count
 IPV4_RANGE_SEPARATOR_COUNT: int = 1  # Number of slashes in IPv4 range
 
+# Bit width limits (used for uint validation)
+BITS_8: int = 2**8  # 256
+BITS_16: int = 2**16  # 65536
+BITS_32: int = 2**32  # 4294967296
+BITS_96: int = 2**96  # Large community global admin
+
 
 class TYPE:
     NULL: ClassVar[int] = 0x01
@@ -107,19 +113,19 @@ def nop(data: Any) -> bool:
 
 
 def uint8(data: Any) -> bool:
-    return bool(0 <= data < pow(2, 8))
+    return bool(0 <= data < BITS_8)
 
 
 def uint16(data: Any) -> bool:
-    return bool(0 <= data < pow(2, 16))
+    return bool(0 <= data < BITS_16)
 
 
 def uint32(data: Any) -> bool:
-    return bool(0 <= data < pow(2, 32))
+    return bool(0 <= data < BITS_32)
 
 
 def uint96(data: Any) -> bool:
-    return bool(0 <= data < pow(2, 96))
+    return bool(0 <= data < BITS_96)
 
 
 def float(data: Any) -> bool:
@@ -161,26 +167,26 @@ def range6(data: Any) -> bool:
 def ipv4_range(data: Any) -> bool:
     if not data.count('/') == IPV4_RANGE_SEPARATOR_COUNT:
         return False
-    ip, r = data.split('/')
-    if not ipv4(ip):
+    addr, prefix = data.split('/')
+    if not ipv4(addr):
         return False
-    if not r.isdigit():
+    if not prefix.isdigit():
         return False
-    if not range4(int(r)):
+    if not range4(int(prefix)):
         return False
     return True
 
 
 def port(data: Any) -> bool:
-    return bool(0 <= data < pow(2, 16))
+    return bool(0 <= data < BITS_16)
 
 
 def asn16(data: Any) -> bool:
-    return bool(1 <= data < pow(2, 16))
+    return bool(1 <= data < BITS_16)
 
 
 def asn32(data: Any) -> bool:
-    return bool(1 <= data < pow(2, 32))
+    return bool(1 <= data < BITS_32)
 
 
 asn = asn32
@@ -235,11 +241,11 @@ def split(data: Any) -> bool:
 
 
 def aspath(data: Any) -> bool:
-    return integer(data) and data < pow(2, 32)
+    return integer(data) and data < BITS_32
 
 
 def assequence(data: Any) -> bool:
-    return integer(data) and data < pow(2, 32)
+    return integer(data) and data < BITS_32
 
 
 def community(data: Any) -> bool:

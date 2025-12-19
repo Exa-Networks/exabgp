@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.bgp.message.open.asn import ASN
@@ -52,7 +52,7 @@ def _parse_asn(value: str) -> ASN:
         raise ValueError(f'invalid ASN {value}: {e}')
 
 
-def _parse_families(value: str) -> list[tuple[AFI, SAFI]]:
+def _parse_families(value: str) -> list[FamilyTuple]:
     """Parse family-allowed value into list of (AFI, SAFI) tuples.
 
     Accepts formats like:

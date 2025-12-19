@@ -15,13 +15,12 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.protocol.ip import IP
 from exabgp.logger import lazymsg, log
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.rib.cache import Cache
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.update.nlri.nlri import NLRI
-    from exabgp.protocol.family import AFI, SAFI
     from exabgp.rib.route import Route
 
 # This is needs to be an ordered dict
@@ -31,16 +30,16 @@ RIBdict = dict
 class OutgoingRIB(Cache):
     _watchdog: dict[str, dict[str, dict[bytes, Route]]]
     _new_nlri: dict[bytes, Route]
-    _new_attr_af_nlri: dict[bytes, dict[tuple[AFI, SAFI], dict[bytes, Route]]]
+    _new_attr_af_nlri: dict[bytes, dict[FamilyTuple, dict[bytes, Route]]]
     _new_attribute: dict[bytes, AttributeCollection]
-    _refresh_families: set[tuple[AFI, SAFI]]
+    _refresh_families: set[FamilyTuple]
     _refresh_routes: list[Route]
 
     # New structure for withdraws - avoids deepcopy by not modifying nlri.action
     # Indexed by family -> nlri_index -> (NLRI, AttributeCollection)
-    _pending_withdraws: dict[tuple[AFI, SAFI], dict[bytes, tuple['NLRI', 'AttributeCollection']]]
+    _pending_withdraws: dict[FamilyTuple, dict[bytes, tuple['NLRI', 'AttributeCollection']]]
 
-    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]], enabled: bool = True) -> None:
+    def __init__(self, cache: bool, families: set[FamilyTuple], enabled: bool = True) -> None:
         Cache.__init__(self, cache, families, enabled)
 
         self._watchdog = {}
@@ -119,7 +118,7 @@ class OutgoingRIB(Cache):
                 event.set()
             self._flush_callbacks.clear()
 
-    def resend(self, enhanced_refresh: bool, family: tuple[AFI, SAFI] | None = None) -> None:
+    def resend(self, enhanced_refresh: bool, family: FamilyTuple | None = None) -> None:
         if not self.enabled:
             return
         requested_families = set(self.families)
@@ -134,7 +133,7 @@ class OutgoingRIB(Cache):
         for route in self.cached_routes(list(requested_families)):
             self._refresh_routes.append(route)
 
-    def withdraw(self, families: set[tuple[AFI, SAFI]] | None = None) -> None:
+    def withdraw(self, families: set[FamilyTuple] | None = None) -> None:
         if not self.enabled:
             return
         if not families:

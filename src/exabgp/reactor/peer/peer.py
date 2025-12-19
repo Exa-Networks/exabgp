@@ -42,7 +42,7 @@ from exabgp.bgp.timer import ReceiveTimer
 from exabgp.debug.report import format_exception
 from exabgp.environment import getenv
 from exabgp.logger import lazyexc, lazymsg, log
-from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.family import Family, FamilyTuple
 from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.delay import Delay
 from exabgp.reactor.keepalive import KA
@@ -322,7 +322,7 @@ class Peer:
         self._stop('shutting down')
         self.stop()
 
-    def resend(self, enhanced: bool, family: tuple[AFI, SAFI] | None = None) -> None:
+    def resend(self, enhanced: bool, family: FamilyTuple | None = None) -> None:
         if self.neighbor.rib:
             self.neighbor.rib.outgoing.resend(enhanced, family)
         self._delay.reset()
@@ -944,7 +944,7 @@ class Peer:
             ),
         }
 
-        families: dict[tuple[AFI, SAFI], tuple[bool, TriState, TriState, TriState]] = {}
+        families: dict[FamilyTuple, tuple[bool, TriState, TriState, TriState]] = {}
         for family in self.neighbor.families():
             common: TriState
             send_addpath: TriState

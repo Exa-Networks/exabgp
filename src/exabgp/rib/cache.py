@@ -9,19 +9,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterator
 
+from exabgp.protocol.family import FamilyTuple
+
 if TYPE_CHECKING:
     from exabgp.rib.route import Route
     from exabgp.bgp.message.update.nlri.nlri import NLRI
-    from exabgp.protocol.family import AFI, SAFI
 
 
 class Cache:
     cache: bool
     enabled: bool
-    families: set[tuple[AFI, SAFI]]
-    _seen: dict[tuple[AFI, SAFI], dict[bytes, Route]]
+    families: set[FamilyTuple]
+    _seen: dict[FamilyTuple, dict[bytes, Route]]
 
-    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]], enabled: bool = True) -> None:
+    def __init__(self, cache: bool, families: set[FamilyTuple], enabled: bool = True) -> None:
         self.cache = cache
         self.enabled = enabled
         self._seen = {}
@@ -34,14 +35,14 @@ class Cache:
     def clear_cache(self) -> None:
         self._seen = {}
 
-    def delete_cached_family(self, families: set[tuple[AFI, SAFI]]) -> None:
+    def delete_cached_family(self, families: set[FamilyTuple]) -> None:
         for family in list(self._seen.keys()):
             if family not in families:
                 del self._seen[family]
 
     def cached_routes(
         self,
-        families: list[tuple[AFI, SAFI]] | None = None,
+        families: list[FamilyTuple] | None = None,
     ) -> Iterator['Route']:
         """Yield all cached routes (announces only).
 

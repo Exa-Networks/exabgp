@@ -88,23 +88,26 @@ class IP(IPBase):
     def top(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> str:
         return IP.ntop(self._packed)
 
+    # Mapping from socket address family to AFI
+    _AF_TO_AFI: ClassVar[dict[int, AFI]] = {
+        socket.AF_INET: AFI.ipv4,
+        socket.AF_INET6: AFI.ipv6,
+    }
+
     @staticmethod
     def toaf(ip: str) -> int:
-        # the orders matters as ::FFFF:<ipv4> is an IPv6 address
+        """Get socket address family (AF_INET/AF_INET6) from IP string."""
+        # the order matters as ::FFFF:<ipv4> is an IPv6 address
         if ':' in ip:
             return socket.AF_INET6
         if '.' in ip:
             return socket.AF_INET
         raise ValueError(f'unrecognised ip address {ip}')
 
-    @staticmethod
-    def toafi(ip: str) -> AFI:
-        # the orders matters as ::FFFF:<ipv4> is an IPv6 address
-        if ':' in ip:
-            return AFI.ipv6
-        if '.' in ip:
-            return AFI.ipv4
-        raise ValueError(f'unrecognised ip address {ip}')
+    @classmethod
+    def toafi(cls, ip: str) -> AFI:
+        """Get AFI from IP string."""
+        return cls._AF_TO_AFI[cls.toaf(ip)]
 
     @staticmethod
     def tosafi(ip: str) -> SAFI:
@@ -191,17 +194,9 @@ class IP(IPBase):
 
     @classmethod
     def klass(cls, ip: str) -> IPFactory | None:
-        # the orders matters as ::FFFF:<ipv4> is an IPv6 address
-        afi: AFI | None
-        if ':' in ip:
-            afi = IPv6.afi
-        elif '.' in ip:
-            afi = IPv4.afi
-        else:
-            raise ValueError(f'can not decode this ip address : {ip}')
-        if afi in cls._known:
-            return cls._known[afi]
-        return None
+        """Get the IP factory class for the given IP string."""
+        afi = cls.toafi(ip)
+        return cls._known.get(afi)
 
     @classmethod
     def from_string(cls, string: str, klass: IPFactory | None = None) -> 'IP':

@@ -568,9 +568,8 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         self.add(aspath, key)
 
     def __hash__(self) -> int:
-        # FIXME: two routes with distinct nh but other attributes equal
-        # will hash to the same value until repr represents the nh (??)
-        return hash(repr(self))
+        # Use index() which includes nexthop, unlike repr() which excludes it
+        return hash(self.index())
 
     def __eq__(self, other: object) -> bool:
         return self.sameValuesAs(other)

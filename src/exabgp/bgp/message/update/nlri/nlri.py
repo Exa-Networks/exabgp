@@ -32,7 +32,7 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.logger import lazynlri, log
-from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.family import AFI, SAFI, Family, FamilyTuple
 
 T = TypeVar('T', bound='NLRI')
 
@@ -57,7 +57,7 @@ class NLRI(Family):
     IS_EOR: ClassVar[bool] = False
 
     registered_nlri: ClassVar[dict[str, Type[NLRI]]] = dict()
-    registered_families: ClassVar[list[tuple[AFI, SAFI]]] = [(AFI.ipv4, SAFI.multicast)]
+    registered_families: ClassVar[list[FamilyTuple]] = [(AFI.ipv4, SAFI.multicast)]
 
     addpath: 'PathInfo'
     _packed: Buffer  # Wire format bytes (subclass-specific interpretation)
@@ -204,7 +204,7 @@ class NLRI(Family):
     @classmethod
     def register(cls, afi: int, safi: int, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
         def register_nlri(klass: Type[NLRI]) -> Type[NLRI]:
-            new: tuple[AFI, SAFI] = (AFI.from_int(afi), SAFI.from_int(safi))
+            new: FamilyTuple = (AFI.from_int(afi), SAFI.from_int(safi))
             key = '{}/{}'.format(*new)
             if key in cls.registered_nlri:
                 if force:
@@ -219,7 +219,7 @@ class NLRI(Family):
         return register_nlri
 
     @staticmethod
-    def known_families() -> list[tuple[AFI, SAFI]]:
+    def known_families() -> list[FamilyTuple]:
         # we do not want to take the risk of the caller modifying the list by accident
         # it can not be a generator
         return list(NLRI.registered_families)

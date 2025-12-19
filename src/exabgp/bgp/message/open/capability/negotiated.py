@@ -24,8 +24,7 @@ from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 
 
 class Negotiated:
@@ -52,7 +51,7 @@ class Negotiated:
         self.holdtime: HoldTime = HoldTime(0)
         self.local_as: ASN = ASN(0)
         self.peer_as: ASN = ASN(0)
-        self.families: list[tuple[AFI, SAFI]] = []
+        self.families: list[FamilyTuple] = []
         self.nexthop: list[tuple[AFI, SAFI, AFI]] = []  # RFC5549 - (nlri_afi, nlri_safi, nexthop_afi)
         self.asn4: bool = False
         self.addpath: RequirePath = RequirePath()
@@ -61,7 +60,7 @@ class Negotiated:
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
         self.aigp: bool = neighbor.capability.aigp.is_enabled()
-        self.mismatch: list[tuple[str, tuple[AFI, SAFI]]] = []
+        self.mismatch: list[tuple[str, FamilyTuple]] = []
 
     @classmethod
     def _create_unset(cls) -> 'Negotiated':
@@ -224,8 +223,8 @@ class Negotiated:
 
         sent_mp = self.sent_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, None)
         recv_mp = self.received_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, None)
-        s: set[tuple[AFI, SAFI]] = set(sent_mp) if isinstance(sent_mp, MultiProtocol) else set()
-        r: set[tuple[AFI, SAFI]] = set(recv_mp) if isinstance(recv_mp, MultiProtocol) else set()
+        s: set[FamilyTuple] = set(sent_mp) if isinstance(sent_mp, MultiProtocol) else set()
+        r: set[FamilyTuple] = set(recv_mp) if isinstance(recv_mp, MultiProtocol) else set()
         mismatch = s ^ r
 
         for family in mismatch:
@@ -261,8 +260,8 @@ class RequirePath:
     BOTH: ClassVar[int] = SEND | RECEIVE
 
     def __init__(self) -> None:
-        self._send: dict[tuple[AFI, SAFI], bool] = {}
-        self._receive: dict[tuple[AFI, SAFI], bool] = {}
+        self._send: dict[FamilyTuple, bool] = {}
+        self._receive: dict[FamilyTuple, bool] = {}
 
     def setup(self, received_open: Any, sent_open: Any) -> None:  # Open messages
         # A Dict always returning False
@@ -274,7 +273,7 @@ class RequirePath:
         send = sent_open.capabilities.get(Capability.CODE.ADD_PATH, FalseDict())
 
         # python 2.4 compatibility mean no simple union but using sets.Set
-        union: list[tuple[AFI, SAFI]] = []
+        union: list[FamilyTuple] = []
         union.extend(send.keys())
         union.extend([k for k in receive.keys() if k not in send.keys()])
 

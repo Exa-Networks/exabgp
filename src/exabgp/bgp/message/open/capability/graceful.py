@@ -11,8 +11,7 @@ from struct import pack
 from struct import unpack
 from typing import ClassVar, Iterable
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
@@ -24,7 +23,7 @@ from exabgp.util.types import Buffer
 
 
 @Capability.register()
-class Graceful(Capability, dict[tuple[AFI, SAFI], int]):
+class Graceful(Capability, dict[FamilyTuple, int]):
     MAX: ClassVar[int] = 0xFFFF
     ID: ClassVar[int] = Capability.CODE.GRACEFUL_RESTART
 
@@ -71,7 +70,7 @@ class Graceful(Capability, dict[tuple[AFI, SAFI], int]):
         items = ', '.join(f'"{k}": {v}' for k, v in d.items())
         return f'{{ {items} }}'
 
-    def families(self) -> Iterable[tuple[AFI, SAFI]]:
+    def families(self) -> Iterable[FamilyTuple]:
         return self.keys()
 
     @classmethod

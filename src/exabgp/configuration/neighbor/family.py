@@ -9,8 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.configuration.core import Section
@@ -143,7 +142,7 @@ class ParseFamily(Section):
             'all': self.all,
         }
         self._all: bool = False
-        self._seen: set[tuple[AFI, SAFI]] = set()
+        self._seen: set[FamilyTuple] = set()
 
     def clear(self) -> None:
         self._all = False

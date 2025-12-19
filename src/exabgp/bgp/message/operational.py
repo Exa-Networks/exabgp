@@ -32,8 +32,7 @@ from struct import pack
 from struct import unpack
 from typing import ClassVar, Type as TypingType, TypeVar, TYPE_CHECKING
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.message import Message
 
@@ -226,7 +225,7 @@ class OperationalFamily(Operational):
         self.safi: SAFI = SAFI.from_int(safi)
         self.data: Buffer = data
 
-    def family(self) -> tuple[AFI, SAFI]:
+    def family(self) -> FamilyTuple:
         return (self.afi, self.safi)
 
     def _message(self, data: Buffer) -> bytes:

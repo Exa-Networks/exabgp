@@ -12,7 +12,7 @@ import re
 from typing import TYPE_CHECKING, Any, cast
 
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import FamilyTuple
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.operational import OperationalFamily
@@ -242,7 +242,7 @@ class _Configuration:
                     neighbor_err: str = neighbor
                     family_err = family
 
-                    def _log_err(neighbor: str = neighbor_err, family: tuple[AFI, SAFI] = family_err) -> str:
+                    def _log_err(neighbor: str = neighbor_err, family: FamilyTuple = family_err) -> str:
                         return f'the route family {family} is not configured on neighbor {neighbor}'
 
                     log.error(_log_err, 'configuration')
@@ -263,9 +263,7 @@ class _Configuration:
                         family_err = family
                         neighbor_err: str = neighbor
 
-                        def _log_refresh_err(
-                            family: tuple[AFI, SAFI] = family_err, neighbor: str = neighbor_err
-                        ) -> str:
+                        def _log_refresh_err(family: FamilyTuple = family_err, neighbor: str = neighbor_err) -> str:
                             return f'the route family {family} is not configured on neighbor {neighbor}'
 
                         log.error(_log_refresh_err, 'configuration')

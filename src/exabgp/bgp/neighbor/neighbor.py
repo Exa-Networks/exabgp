@@ -20,7 +20,7 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.neighbor.session import Session
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
 from exabgp.rib import RIB
 
@@ -56,14 +56,14 @@ class Neighbor:
     capability: NeighborCapability
     range_size: int
     generated: bool
-    _families: list[tuple[AFI, SAFI]]
+    _families: list[FamilyTuple]
     _nexthop: list[tuple[AFI, SAFI, AFI]]
-    _addpath: list[tuple[AFI, SAFI]]
+    _addpath: list[FamilyTuple]
     rib: RIB
     routes: list['Route']
     previous: 'Neighbor' | None
-    eor: deque[tuple[AFI, SAFI]]
-    asm: dict[tuple[AFI, SAFI], Operational]
+    eor: deque[FamilyTuple]
+    asm: dict[FamilyTuple, Operational]
     messages: deque[Operational]
     refresh: deque[RouteRefresh]
     counter: Counter[str]
@@ -242,7 +242,7 @@ class Neighbor:
         peer_as = self.session.peer_as if self.session.peer_as else 'auto'
         return f'neighbor {self.session.peer_address} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self.session.router_id} family-allowed {session}'
 
-    def families(self) -> list[tuple[AFI, SAFI]]:
+    def families(self) -> list[FamilyTuple]:
         # this list() is important .. as we use the function to modify self._families
         return list(self._families)
 
@@ -250,11 +250,11 @@ class Neighbor:
         # this list() is important .. as we use the function to modify self._nexthop
         return list(self._nexthop)
 
-    def addpaths(self) -> list[tuple[AFI, SAFI]]:
+    def addpaths(self) -> list[FamilyTuple]:
         # this list() is important .. as we use the function to modify self._add_path
         return list(self._addpath)
 
-    def add_family(self, family: tuple[AFI, SAFI]) -> None:
+    def add_family(self, family: FamilyTuple) -> None:
         # the families MUST be sorted for neighbor indexing name to be predictable for API users
         # this list() is important .. as we use the function to modify self._families
         if family not in self.families():
@@ -271,7 +271,7 @@ class Neighbor:
         if (afi, safi, nhafi) not in self._nexthop:
             self._nexthop.append((afi, safi, nhafi))
 
-    def add_addpath(self, family: tuple[AFI, SAFI]) -> None:
+    def add_addpath(self, family: FamilyTuple) -> None:
         # the families MUST be sorted for neighbor indexing name to be predictable for API users
         # this list() is important .. as we use the function to modify self._add_path
         if family not in self.addpaths():
@@ -284,7 +284,7 @@ class Neighbor:
                 d.setdefault(afi, []).append(safi)
             self._addpath = [(afi, safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
-    def remove_family(self, family: tuple[AFI, SAFI]) -> None:
+    def remove_family(self, family: FamilyTuple) -> None:
         if family in self.families():
             self._families.remove(family)
 
@@ -292,7 +292,7 @@ class Neighbor:
         if (afi, safi, nhafi) in self.nexthops():
             self._nexthop.remove((afi, safi, nhafi))
 
-    def remove_addpath(self, family: tuple[AFI, SAFI]) -> None:
+    def remove_addpath(self, family: FamilyTuple) -> None:
         if family in self.addpaths():
             self._addpath.remove(family)
 

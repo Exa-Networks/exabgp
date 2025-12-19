@@ -14,14 +14,14 @@ from typing import TYPE_CHECKING
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.neighbor.settings import NeighborSettings, SessionSettings
 from exabgp.configuration.settings import ConfigurationSettings
-from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.family import AFI, SAFI, Family, FamilyTuple
 from exabgp.protocol.ip import IP
 
 if TYPE_CHECKING:
     from exabgp.configuration.configuration import Configuration
 
 
-def parse_family(family_text: str) -> list[tuple[AFI, SAFI]]:
+def parse_family(family_text: str) -> list[FamilyTuple]:
     """Parse family text into AFI/SAFI tuples.
 
     Args:
@@ -41,7 +41,7 @@ def parse_family(family_text: str) -> list[tuple[AFI, SAFI]]:
     if len(words) % 2:
         raise ValueError(f'Invalid family format: {family_text}')
 
-    families: list[tuple[AFI, SAFI]] = []
+    families: list[FamilyTuple] = []
     for i in range(0, len(words), 2):
         afi = AFI.from_string(words[i])
         safi = SAFI.from_string(words[i + 1])

@@ -26,7 +26,7 @@ from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
 from exabgp.logger import lazymsg, log
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP, IPv4, IPv6
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
@@ -134,7 +134,7 @@ class UpdateCollection(Message):
     TYPE = bytes([Message.CODE.UPDATE])
 
     # Cache of EOR UpdateCollection singletons keyed by (AFI, SAFI)
-    _EOR_CACHE: ClassVar[dict[tuple[AFI, SAFI], UpdateCollection]] = {}
+    _EOR_CACHE: ClassVar[dict[FamilyTuple, UpdateCollection]] = {}
 
     def __init__(
         self,
@@ -157,7 +157,7 @@ class UpdateCollection(Message):
             cls._EOR_CACHE[key] = cls([], [], AttributeCollection())
         return cls._EOR_CACHE[key]
 
-    def _eor_family(self) -> tuple[AFI, SAFI] | None:
+    def _eor_family(self) -> FamilyTuple | None:
         """Return (AFI, SAFI) if this is a cached EOR instance, else None."""
         for key, instance in self._EOR_CACHE.items():
             if self is instance:
@@ -289,8 +289,8 @@ class UpdateCollection(Message):
         # mp_withdraws stores bare NLRI by family (MP_UNREACH_NLRI has no nexthop)
         v4_announces: list[NLRI] = []
         v4_withdraws: list[NLRI] = []
-        mp_announces: dict[tuple[AFI, SAFI], list[RoutedNLRI]] = {}
-        mp_withdraws: dict[tuple[AFI, SAFI], list[NLRI]] = {}
+        mp_announces: dict[FamilyTuple, list[RoutedNLRI]] = {}
+        mp_withdraws: dict[FamilyTuple, list[NLRI]] = {}
 
         # Track if we have Empty NLRI (attributes-only UPDATE)
         has_empty_nlri = False

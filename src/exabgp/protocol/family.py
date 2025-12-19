@@ -313,6 +313,10 @@ SAFI.codes = dict(
 SAFI.cache = dict([(inst, inst) for (_, inst) in SAFI.codes.items()])
 
 
+# Type alias for (AFI, SAFI) tuple used throughout the codebase
+FamilyTuple = tuple[AFI, SAFI]
+
+
 # ===================================================================== FAMILY
 
 

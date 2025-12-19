@@ -7,16 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from exabgp.protocol.family import FamilyTuple
 from exabgp.rib.cache import Cache
-
-if TYPE_CHECKING:
-    from exabgp.protocol.family import AFI, SAFI
 
 
 class IncomingRIB(Cache):
-    def __init__(self, cache: bool, families: set[tuple[AFI, SAFI]], enabled: bool = True) -> None:
+    def __init__(self, cache: bool, families: set[FamilyTuple], enabled: bool = True) -> None:
         Cache.__init__(self, cache, families, enabled)
 
     # back to square one, all the routes are removed

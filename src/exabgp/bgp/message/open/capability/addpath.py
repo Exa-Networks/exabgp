@@ -10,8 +10,7 @@ from __future__ import annotations
 from struct import pack
 from typing import ClassVar, Iterable
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
@@ -23,7 +22,7 @@ from exabgp.util.types import Buffer
 
 
 @Capability.register()
-class AddPath(Capability, dict[tuple[AFI, SAFI], int]):
+class AddPath(Capability, dict[FamilyTuple, int]):
     ID: ClassVar[int] = Capability.CODE.ADD_PATH
 
     string: ClassVar[dict[int, str]] = {
@@ -33,7 +32,7 @@ class AddPath(Capability, dict[tuple[AFI, SAFI], int]):
         3: 'send/receive',
     }
 
-    def __init__(self, families: Iterable[tuple[AFI, SAFI]] = (), send_receive: int = 0) -> None:
+    def __init__(self, families: Iterable[FamilyTuple] = (), send_receive: int = 0) -> None:
         for afi, safi in families:
             self.add_path(afi, safi, send_receive)
 

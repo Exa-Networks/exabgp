@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Callable, Generator, cast
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import FamilyTuple
 from exabgp.reactor.peer.handlers.base import MessageHandler
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ class RouteRefreshHandler(MessageHandler):
     Supports both standard and enhanced route refresh.
     """
 
-    def __init__(self, resend_callback: Callable[[bool, tuple[AFI, SAFI]], None]) -> None:
+    def __init__(self, resend_callback: Callable[[bool, FamilyTuple], None]) -> None:
         """Initialize the handler.
 
         Args:
