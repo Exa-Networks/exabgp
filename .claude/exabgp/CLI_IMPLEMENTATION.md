@@ -13,7 +13,19 @@ Internal architecture and design of the ExaBGP interactive CLI.
 
 ## File Structure
 
-**Main file:** `src/exabgp/application/cli.py` (2,595 lines)
+**Main entry point:** `src/exabgp/application/cli.py` (583 lines) - InteractiveCLI class
+
+**CLI module:** `src/exabgp/cli/` (4,176 total lines)
+| File | Lines | Purpose |
+|------|-------|---------|
+| `persistent_connection.py` | 678 | Socket lifecycle, health monitoring |
+| `completer.py` | 1,426 | Tab completion with auto-expansion |
+| `formatter.py` | 458 | Output formatting (JSON/text) |
+| `history.py` | 420 | Command history management |
+| `command_schema.py` | 350 | Command schema definitions |
+| `schema_bridge.py` | 407 | Registry ↔ schema bridge |
+| `fuzzy.py` | 359 | Fuzzy command matching |
+| `colors.py` | 59 | ANSI color helpers |
 
 **Supporting files:**
 - `src/exabgp/application/shortcuts.py` - Command shortcut expansion
@@ -61,7 +73,7 @@ User input (REPL)
 
 ## Class: PersistentSocketConnection
 
-**File:** `src/exabgp/application/cli.py:76-684`
+**File:** `src/exabgp/cli/persistent_connection.py` (678 lines)
 
 **Purpose:** Manage Unix socket connection with automatic reconnection and health monitoring.
 
@@ -229,7 +241,7 @@ Main thread (REPL)
 
 ## Class: CommandCompleter
 
-**File:** `src/exabgp/application/cli.py:695-1584`
+**File:** `src/exabgp/cli/completer.py` (1,426 lines)
 
 **Purpose:** Context-aware tab completion with auto-expansion.
 
@@ -471,7 +483,7 @@ neighbor     Target specific neighbor by IP
 
 ## Class: OutputFormatter
 
-**File:** `src/exabgp/application/cli.py:1586-2027`
+**File:** `src/exabgp/cli/formatter.py` (458 lines)
 
 **Purpose:** Format API responses for display.
 
@@ -577,7 +589,7 @@ Generate CLI prompt string.
 
 ## Class: InteractiveCLI
 
-**File:** `src/exabgp/application/cli.py:2029-2479`
+**File:** `src/exabgp/application/cli.py` (583 lines)
 
 **Purpose:** Main REPL loop and command execution.
 
@@ -1126,4 +1138,4 @@ Get completion values for specific contexts.
 
 ---
 
-**Updated:** 2025-11-24
+**Updated:** 2025-12-19

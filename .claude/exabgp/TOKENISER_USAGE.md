@@ -78,6 +78,17 @@ Used to reset the tokeniser with a new list of tokens:
 tokeniser.replenish(['announce', 'route', '10.0.0.0/24'])
 ```
 
+### `tokeniser.remaining_string()` - Get Unconsumed Tokens
+
+Returns remaining unconsumed tokens joined as a string:
+
+```python
+tokeniser.replenish(['peer', '*', 'announce', 'route', '10.0.0.0/24'])
+_ = tokeniser()  # 'peer'
+_ = tokeniser()  # '*'
+remaining = tokeniser.remaining_string()  # 'announce route 10.0.0.0/24'
+```
+
 ## Correct Patterns
 
 ### Pattern 1: Simple Value Parsing
@@ -404,7 +415,7 @@ while parser():
 
 1. **Line vs Tokeniser**: `parser.line` includes the terminator, `parser.tokeniser` does not
 2. **Terminator Check**: Always check `parser.end` to know if entering a block
-3. **Replenish Behavior**: `replenish()` decrements `consumed` by 1 (for internal tracking)
+3. **Replenish Behavior**: `replenish()` resets `consumed` to 0
 4. **Empty Tokens**: `tokeniser()` returns `''` when exhausted, not `None`
 
 ## Summary
@@ -417,6 +428,7 @@ while parser():
 | `tokeniser.consume_if_match(x)` | Conditionally | Optional structure |
 | `tokeniser.tokens` | No | Check if tokens exist |
 | `tokeniser.replenish(list)` | Resets | Initialize with new tokens |
+| `tokeniser.remaining_string()` | No | Get unconsumed tokens as string |
 
 **Key Rules:**
 1. Always consume tokens via `tokeniser()` or `consume()` methods
@@ -424,3 +436,7 @@ while parser():
 3. Don't pass already-consumed tokens as parameters to other functions
 4. Don't access `tokeniser.tokens` for positional data - use consume pattern
 5. Let each function own its token consumption
+
+---
+
+**Updated:** 2025-12-19

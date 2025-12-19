@@ -218,8 +218,6 @@ Each level follows the same principle:
 | `MPRNLRI` | `MPNLRICollection` | Dual-mode, needs review |
 | `MPURNLRI` | `MPNLRICollection` | Dual-mode, needs review |
 
-See `plan/wire-semantic-separation.md` for refactoring plan.
-
 ---
 
 ## Common Mistakes
@@ -276,8 +274,7 @@ new_update = collection.pack(negotiated)
 - `COLLECTION_PATTERN.md` - Iterator and factory patterns
 - `PACKED_BYTES_FIRST_PATTERN.md` - NLRI packed-bytes implementation
 - `BUFFER_SHARING_AND_CACHING.md` - Memory optimization patterns
-- `plan/wire-semantic-separation.md` - Refactoring plan
 
 ---
 
-**Updated:** 2025-12-07
+**Updated:** 2025-12-19

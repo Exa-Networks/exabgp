@@ -2,16 +2,16 @@
 
 Complete documentation of `qa/bin/functional` - the ExaBGP functional test runner.
 
-**File:** `qa/bin/functional` (~2670 lines)
+**File:** `qa/bin/functional` (~2902 lines)
 
 ---
 
 ## Overview
 
 The functional test runner orchestrates three types of tests:
-1. **Encoding tests** - Validate BGP message encoding (72 tests)
-2. **Decoding tests** - Validate BGP message decoding (20 tests)
-3. **Parsing tests** - Validate configuration file parsing (90 tests)
+1. **Encoding tests** - Validate BGP message encoding (17 tests)
+2. **Decoding tests** - Validate BGP message decoding (11 tests)
+3. **Parsing tests** - Validate configuration file parsing (35 tests)
 
 ---
 
@@ -409,4 +409,4 @@ Detect if another test runner instance is running.
 
 ---
 
-**Updated:** 2025-12-05
+**Updated:** 2025-12-19

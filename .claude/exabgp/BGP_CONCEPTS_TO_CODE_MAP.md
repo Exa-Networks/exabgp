@@ -51,7 +51,7 @@ BGP has 7 message types (RFC 4271 + extensions):
 | bgp_ls | 71 | BGP Link State |
 | rtc | 132 | Route Target Constraint |
 | vpls | 65 | Virtual Private LAN Service |
-| mup | 69 | Mobility User Plane |
+| mup | 85 | Mobility User Plane |
 | mpls_vpn | 5 | Multicast VPN |
 
 ### Supported Families (42 combinations)
@@ -321,4 +321,4 @@ RIB
 
 ---
 
-**Updated:** 2025-12-08
+**Updated:** 2025-12-19

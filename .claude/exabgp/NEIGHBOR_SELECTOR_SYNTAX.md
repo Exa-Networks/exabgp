@@ -270,5 +270,5 @@ Test coverage needed:
 
 ---
 
-**Last Updated:** 2025-11-24
+**Last Updated:** 2025-12-19
 **Implementation:** ExaBGP 5.0+

@@ -468,4 +468,4 @@ For these cases, document why packed-first doesn't apply.
 
 ---
 
-**Updated:** 2025-12-07
+**Updated:** 2025-12-19

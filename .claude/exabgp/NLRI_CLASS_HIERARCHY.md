@@ -97,29 +97,26 @@ class Family:
 
 ```python
 class NLRI(Family):
-    __slots__ = ('action', 'nexthop', 'addpath', '_packed')
+    __slots__ = ('addpath', '_packed')
 
     # Class Variables
-    EOR: ClassVar[bool] = False
+    IS_EOR: ClassVar[bool] = False
     registered_nlri: ClassVar[dict[str, Type[NLRI]]] = {}
-    registered_families: ClassVar[list[tuple[AFI, SAFI]]] = []
+    registered_families: ClassVar[list[FamilyTuple]] = []
     INVALID: ClassVar[NLRI]  # Singleton
     EMPTY: ClassVar[NLRI]    # Singleton
 
-    def __init__(self, afi: AFI, safi: SAFI, action: Action = Action.UNSET,
-                 addpath: PathInfo = PathInfo.DISABLED):
+    def __init__(self, afi: AFI, safi: SAFI, addpath: PathInfo = PathInfo.DISABLED):
         Family.__init__(self, afi, safi)
-        self.action = action
-        self.nexthop = IP.NoNextHop
         self.addpath = addpath
         self._packed = b''  # Wire format bytes
 ```
 
 **Key Points:**
 - `_packed` stores wire format bytes (subclasses use this differently)
-- `action` tracks ANNOUNCE/WITHDRAW state
-- `nexthop` is the BGP next-hop (IP or NoNextHop)
 - `addpath` is PathInfo for RFC 7911 ADD-PATH
+- **action** is NOT stored in NLRI - determined by RIB method (add_to_rib/del_from_rib)
+- **nexthop** is NOT stored in NLRI - stored in Route, passed to methods as parameter
 
 ---
 
@@ -129,79 +126,110 @@ class NLRI(Family):
 
 ```python
 class INET(NLRI):
-    __slots__ = ('path_info', 'labels', 'rd')
+    __slots__ = ('_has_addpath', '_labels', '_rd')
 
     # Registered: AFI.ipv4/ipv6, SAFI.unicast/multicast
 
-    def __init__(self, packed: bytes, afi: AFI, safi: SAFI = SAFI.unicast):
+    def __init__(self, packed: Buffer, afi: AFI, safi: SAFI = SAFI.unicast, *, has_addpath: bool = False):
         NLRI.__init__(self, afi, safi)
-        self._packed = packed  # CIDR bytes: [mask_byte][truncated_ip...]
-        self.path_info = PathInfo.DISABLED
-        self.labels = None
-        self.rd = None
+        self._packed = packed  # Wire format: [addpath:4?][mask:1][prefix:var]
+        self._has_addpath = has_addpath
+        self._labels: Labels | None = None
+        self._rd: RouteDistinguisher | None = None
+
+    @property
+    def path_info(self) -> PathInfo:
+        """Extract PathInfo from wire bytes if AddPath present."""
+        if not self._has_addpath:
+            return PathInfo.DISABLED
+        return PathInfo(self._packed[:4])
+
+    @property
+    def cidr(self) -> CIDR:
+        """Unpack CIDR from stored wire format bytes."""
+        offset = 4 if self._has_addpath else 0
+        return CIDR.from_ipv4(self._packed[offset:])  # or from_ipv6
 ```
 
 **Slot Storage:**
 | Slot | Source | Description |
 |------|--------|-------------|
-| `afi` | Family | Address Family Identifier |
-| `safi` | Family | Subsequent AFI |
-| `action` | NLRI | ANNOUNCE/WITHDRAW |
-| `nexthop` | NLRI | Next-hop IP |
-| `addpath` | NLRI | ADD-PATH PathInfo |
-| `_packed` | NLRI | CIDR wire bytes |
-| `path_info` | INET | PathInfo for display |
-| `labels` | INET | Labels object or None |
-| `rd` | INET | RouteDistinguisher or None |
+| `afi` | Family | Address Family Identifier (private: `_afi`) |
+| `safi` | Family | Subsequent AFI (private: `_safi`) |
+| `addpath` | NLRI | ADD-PATH PathInfo (legacy, see `path_info` property) |
+| `_packed` | NLRI | Wire bytes: [addpath?][mask][prefix] |
+| `_has_addpath` | INET | Flag: _packed includes AddPath bytes |
+| `_labels` | INET | Labels object or None (for subclasses) |
+| `_rd` | INET | RouteDistinguisher or None (for subclasses) |
 
 ### Label (`src/exabgp/bgp/message/update/nlri/label.py`)
 
 ```python
 class Label(INET):
-    __slots__ = ('_labels_packed',)
+    __slots__ = ('_has_labels',)
 
-    # Class Variables (shadows inherited slot)
-    safi: ClassVar[SAFI] = SAFI.nlri_mpls
+    # SAFI is fixed via property (always nlri_mpls)
+    @property
+    def safi(self) -> SAFI:
+        return SAFI.nlri_mpls
 
     # Registered: AFI.ipv4/ipv6, SAFI.nlri_mpls
 
-    def __init__(self, packed: bytes):
-        # Note: Does NOT call INET.__init__
-        # Manually sets inherited slots
-        self._packed = packed  # CIDR bytes only
-        self._labels_packed = b''  # Empty = NOLABEL
+    def __init__(self, packed: Buffer, afi: AFI, *, has_addpath: bool = False, has_labels: bool = False):
+        INET.__init__(self, packed, afi, self.safi, has_addpath=has_addpath)
+        self._has_labels = has_labels
+
+    @property
+    def labels(self) -> Labels:
+        """Get Labels from wire bytes by scanning for BOS bit."""
+        if not self._has_labels:
+            return Labels.NOLABEL
+        # Scan _packed for label bytes, return Labels object
+        ...
 ```
 
 **Additional Slot:**
 | Slot | Source | Description |
 |------|--------|-------------|
-| `_labels_packed` | Label | Raw label bytes |
+| `_has_labels` | Label | Flag: _packed includes label bytes |
 
-**Note:** The `safi` ClassVar shadows the inherited `safi` slot from Family, making it effectively read-only.
+**Wire format:** `[addpath:4?][mask:1][labels:3n][prefix:var]`
+Labels extracted lazily via `labels` property scanning for BOS bit.
 
 ### IPVPN (`src/exabgp/bgp/message/update/nlri/ipvpn.py`)
 
 ```python
 class IPVPN(Label):
-    __slots__ = ('_rd_packed',)
+    __slots__ = ('_has_rd',)
 
-    # Class Variables (shadows inherited slot)
-    safi: ClassVar[SAFI] = SAFI.mpls_vpn
+    # SAFI is fixed via property (always mpls_vpn)
+    @property
+    def safi(self) -> SAFI:
+        return SAFI.mpls_vpn
 
     # Registered: AFI.ipv4/ipv6, SAFI.mpls_vpn
 
-    def __init__(self, packed: bytes):
-        # Note: Does NOT call Label.__init__
-        # Manually sets inherited slots
-        self._packed = packed
-        self._labels_packed = b''
-        self._rd_packed = b''
+    def __init__(self, packed: Buffer, afi: AFI, *, has_addpath: bool = False,
+                 has_labels: bool = False, has_rd: bool = False):
+        Label.__init__(self, packed, afi, has_addpath=has_addpath, has_labels=has_labels)
+        self._has_rd = has_rd
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        """Get Route Distinguisher from wire bytes."""
+        if not self._has_rd:
+            return RouteDistinguisher.NORD
+        # Extract from _packed[label_end:label_end+8]
+        ...
 ```
 
 **Additional Slot:**
 | Slot | Source | Description |
 |------|--------|-------------|
-| `_rd_packed` | IPVPN | Route Distinguisher bytes |
+| `_has_rd` | IPVPN | Flag: _packed includes RD bytes |
+
+**Wire format:** `[addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]`
+RD extracted lazily via `rd` property.
 
 ---
 
@@ -211,39 +239,31 @@ class IPVPN(Label):
 
 ```python
 class VPLS(NLRI):
-    __slots__ = ('unique',)
+    __slots__ = ()  # No additional slots - all data in _packed
 
     # Class Variables
     PACKED_LENGTH: int = 19  # Wire format length
 
     # Registered: AFI.l2vpn, SAFI.vpls (single family)
 
-    def __init__(self, packed: bytes):
-        # Note: Does NOT call NLRI.__init__
-        # Manually sets required slots
-        self._packed = packed  # 19 bytes: [len(2)][RD(8)][endpoint(2)][offset(2)][size(2)][base(3)]
-        self.unique = next(_unique_vpls_id)
-        self.action = Action.UNSET
-        self.nexthop = IP.NoNextHop
-        self.addpath = PathInfo.DISABLED
+    def __init__(self, packed: Buffer):
+        NLRI.__init__(self, AFI.l2vpn, SAFI.vpls)
+        self._packed = bytes(packed)  # 19 bytes: [len(2)][RD(8)][endpoint(2)][offset(2)][size(2)][base(3)]
 ```
 
 **Slot Storage:**
 | Slot | Source | Description |
 |------|--------|-------------|
-| `afi` | Family | Always AFI.l2vpn (set via property) |
-| `safi` | Family | Always SAFI.vpls (set via property) |
-| `action` | NLRI | ANNOUNCE/WITHDRAW |
-| `nexthop` | NLRI | Next-hop IP |
+| `afi` | Family | Always AFI.l2vpn (private: `_afi`) |
+| `safi` | Family | Always SAFI.vpls (private: `_safi`) |
 | `addpath` | NLRI | ADD-PATH PathInfo |
 | `_packed` | NLRI | Complete wire format (19 bytes) |
-| `unique` | VPLS | Unique instance counter |
 
 **Properties (unpacked from `_packed`):**
 - `rd` → bytes 2-10
 - `endpoint` → bytes 10-12
 - `offset` → bytes 12-14
-- `size` → bytes 14-16
+- `block_size` → bytes 14-16
 - `base` → bytes 16-19 (20-bit label)
 
 ### Flow (`src/exabgp/bgp/message/update/nlri/flow.py`)
@@ -254,8 +274,8 @@ class Flow(NLRI):
 
     # Registered: AFI.ipv4/ipv6, SAFI.flow_ip/flow_vpn
 
-    def __init__(self, packed: bytes, afi: AFI, safi: SAFI, action: Action = Action.UNSET):
-        NLRI.__init__(self, afi, safi, action)
+    def __init__(self, packed: Buffer, afi: AFI, safi: SAFI):
+        NLRI.__init__(self, afi, safi)
         self._packed = packed  # RD + rules (flow_vpn) or just rules (flow_ip)
         self._rules_cache = None  # Lazily parsed
         self._packed_stale = False  # True if rules modified
@@ -268,6 +288,10 @@ class Flow(NLRI):
 | `_rules_cache` | Flow | Lazily parsed rules dict |
 | `_packed_stale` | Flow | Flag: rules modified, need repack |
 | `_rd_override` | Flow | Override RD for builder mode |
+
+**Two modes:**
+- **Packed mode:** created from wire bytes, rules parsed lazily via `rules` property
+- **Builder mode:** created empty, rules added via `add()`, _packed computed on pack
 
 ### RTC (`src/exabgp/bgp/message/update/nlri/rtc.py`)
 
@@ -586,26 +610,32 @@ def rules(self) -> dict:
 
 | Class | Inherits Slots From | Adds Slots |
 |-------|---------------------|------------|
-| Family | - | `afi`, `safi` |
-| NLRI | Family | `action`, `nexthop`, `addpath`, `_packed` |
-| INET | NLRI | `path_info`, `labels`, `rd` |
-| Label | INET | `_labels_packed` |
-| IPVPN | Label | `_rd_packed` |
-| VPLS | NLRI | `unique` |
+| Family | - | `_afi`, `_safi` |
+| NLRI | Family | `addpath`, `_packed` |
+| INET | NLRI | `_has_addpath`, `_labels`, `_rd` |
+| Label | INET | `_has_labels` |
+| IPVPN | Label | `_has_rd` |
+| VPLS | NLRI | (none) |
 | Flow | NLRI | `_rules_cache`, `_packed_stale`, `_rd_override` |
 | RTC | NLRI | `_packed_origin`, `rt` |
 | EVPN | NLRI | (none) |
 | EVPN subtypes | EVPN | (none) |
 | GenericEVPN | EVPN | (none) - CODE via property |
 | MUP | NLRI | (none) |
-| MUP subtypes | MUP | `_packed` (redeclared) |
-| GenericMUP | MUP | (none) - ARCHTYPE/CODE via property |
+| MUP subtypes | MUP | (none) |
+| GenericMUP | MUP | `_arch`, `_code` |
 | MVPN | NLRI | (none) |
 | MVPN subtypes | MVPN | (none) |
 | GenericMVPN | MVPN | (none) - CODE via property |
 | BGPLS | NLRI | (none) |
 | BGPLS subtypes | BGPLS | (none) |
 | GenericBGPLS | BGPLS | `CODE` (instance attr, not slot) |
+
+**Key changes from pre-refactor:**
+- `action`/`nexthop` removed from NLRI - action determined by RIB method, nexthop in Route
+- INET uses `_has_addpath` flag pattern, `path_info` is now a property
+- Label/IPVPN use `_has_labels`/`_has_rd` flags instead of `_labels_packed`/`_rd_packed`
+- VPLS no longer has `unique` slot
 
 ---
 
@@ -619,4 +649,4 @@ def rules(self) -> dict:
 
 ---
 
-**Updated:** 2025-12-08
+**Updated:** 2025-12-19

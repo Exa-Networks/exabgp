@@ -16,7 +16,8 @@ Complete structural map of ExaBGP codebase - what exists where and why.
 src/exabgp/
 ├── bgp/                          # BGP Protocol Implementation (Core)
 │   ├── fsm.py                   # State Machine: IDLE → ESTABLISHED
-│   ├── neighbor.py              # Neighbor config & state (653 lines)
+│   ├── neighbor/                # Neighbor package
+│   │   └── neighbor.py          # Neighbor config & state (716 lines)
 │   ├── timer.py                 # BGP timers (Connect, Hold, Keepalive)
 │   └── message/                 # BGP Message Types
 │       ├── message.py           # Base Message + registry pattern
@@ -28,7 +29,7 @@ src/exabgp/
 │       │   ├── attribute/       # Path Attributes (23+ types)
 │       │   │   ├── __init__.py # Attribute registry
 │       │   │   ├── attribute.py # Attribute base class
-│       │   │   ├── attributes.py# Attributes collection (532 lines)
+│       │   │   ├── collection.py# Attributes collection (755 lines)
 │       │   │   ├── nexthop.py  # Next-Hop attribute
 │       │   │   ├── aspath.py   # AS Path attribute
 │       │   │   ├── community/  # Communities (Standard, Extended, Large)
@@ -39,7 +40,7 @@ src/exabgp/
 │       │       ├── inet.py     # IPv4/IPv6 Unicast/Multicast
 │       │       ├── ipvpn.py    # IP-VPN (VPNv4/VPNv6)
 │       │       ├── label.py    # MPLS Labels
-│       │       ├── flow.py     # FlowSpec (764 lines - most complex)
+│       │       ├── flow.py     # FlowSpec (1162 lines - most complex)
 │       │       ├── vpls.py     # VPLS
 │       │       ├── evpn/       # EVPN (5 route types)
 │       │       ├── bgpls/      # BGP Link State
@@ -51,10 +52,10 @@ src/exabgp/
 │       └── refresh.py           # ROUTE-REFRESH
 │
 ├── reactor/                      # Event Loop & Peer Management (Core)
-│   ├── loop.py                  # Main reactor loop (821 lines)
+│   ├── loop.py                  # Main reactor loop (617 lines)
 │   ├── peer/                    # Peer protocol handler (package)
 │   │   ├── __init__.py         # Re-exports Peer, Stats, etc.
-│   │   ├── peer.py             # Main Peer class (950 lines, async-only)
+│   │   ├── peer.py             # Main Peer class (989 lines, async-only)
 │   │   ├── context.py          # PeerContext dataclass
 │   │   └── handlers/           # Message handlers
 │   │       ├── base.py         # MessageHandler ABC
@@ -105,8 +106,15 @@ src/exabgp/
 │   ├── ip/                    # IP address utilities
 │   └── iso/                   # ISO address utilities
 │
+├── cli/                       # CLI Module (refactored from application/cli.py)
+│   ├── persistent_connection.py  # Socket lifecycle, health monitoring (678 lines)
+│   ├── completer.py           # Tab completion (1426 lines)
+│   ├── formatter.py           # Output formatting (458 lines)
+│   ├── history.py             # Command history (420 lines)
+│   └── colors.py              # Terminal colors (59 lines)
+│
 ├── application/               # CLI & Tools (Peripheral)
-│   ├── cli.py                 # CLI interface (2595 lines - largest file)
+│   ├── cli.py                 # CLI entry point (uses cli/ module)
 │   ├── shell.py               # Interactive shell
 │   ├── run.py                 # Main entry point (592 lines)
 │   ├── healthcheck.py         # Health monitoring (623 lines)
@@ -146,16 +154,16 @@ src/exabgp/
 
 | File | Lines | Purpose | Modification Frequency |
 |------|-------|---------|----------------------|
-| `application/cli.py` | 2595 | CLI interface | Medium (CLI features only) |
-| `reactor/peer/peer.py` | 950 | Peer protocol handling (async) | Medium (protocol changes) |
+| `cli/completer.py` | 1426 | Tab completion | Medium (CLI features) |
+| `bgp/message/update/nlri/flow.py` | 1162 | FlowSpec NLRI | Low (complex, avoid) |
+| `reactor/peer/peer.py` | 989 | Peer protocol handling (async) | Medium (protocol changes) |
 | `reactor/api/processes.py` | 992 | External process API | Low (stable) |
-| `reactor/loop.py` | 821 | Main event loop | Low (stable) |
-| `bgp/message/update/nlri/flow.py` | 764 | FlowSpec NLRI | Low (complex, avoid) |
-| `reactor/api/command/announce.py` | 656 | Route announcements | High (API changes) |
-| `bgp/neighbor.py` | 653 | Neighbor config/state | Medium |
+| `bgp/message/update/attribute/collection.py` | 755 | Attribute handling | High (new attributes) |
+| `bgp/neighbor/neighbor.py` | 716 | Neighbor config/state | Medium |
+| `cli/persistent_connection.py` | 678 | Socket lifecycle | Medium |
+| `reactor/loop.py` | 617 | Main event loop | Low (stable) |
 | `configuration/configuration.py` | 614 | Config parser | High (new syntax) |
 | `application/run.py` | 592 | Main entry point | Low (stable) |
-| `bgp/message/update/attribute/attributes.py` | 532 | Attribute handling | High (new attributes) |
 
 **Rule:** Files >500 lines = high complexity, modify carefully
 
@@ -219,8 +227,8 @@ Network
 ## Key Statistics
 
 - **Total source files:** ~150+ Python files
-- **Largest file:** `application/cli.py` (2595 lines)
-- **Most complex NLRI:** `flow.py` (764 lines)
+- **Largest file:** `cli/completer.py` (1426 lines)
+- **Most complex NLRI:** `flow.py` (1162 lines)
 - **NLRI types:** 9 distinct address families
 - **Attribute types:** 23+ path attributes
 - **Message types:** 7 (OPEN, UPDATE, NOTIFICATION, KEEPALIVE, ROUTE_REFRESH, OPERATIONAL, NOP)
@@ -254,4 +262,4 @@ Network
 
 ---
 
-**Updated:** 2025-12-08
+**Updated:** 2025-12-19

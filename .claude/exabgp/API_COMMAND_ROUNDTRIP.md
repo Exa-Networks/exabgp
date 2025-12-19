@@ -128,3 +128,7 @@ if extra_attrs.intersection(attributes.keys()):
 
 - `.claude/exabgp/FLOWSPEC_ROUNDTRIP_LIMITATIONS.md` - Resolved limitations
 - `plan/api-command-encoder.md` - Implementation plan and history
+
+---
+
+**Updated:** 2025-12-19

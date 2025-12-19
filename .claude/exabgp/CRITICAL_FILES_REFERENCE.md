@@ -10,14 +10,14 @@ The 20% of files you'll modify 80% of the time - quick navigation guide.
 |------|------|-------|---------|----------------|
 | 1 | `reactor/api/command/announce.py` | 656 | Route announcements via API | Adding route types, API syntax |
 | 2 | `bgp/message/update/__init__.py` | ~400 | UPDATE encoding/decoding | Message format changes |
-| 3 | `bgp/message/update/attribute/attributes.py` | 532 | Attribute collection handling | New attributes, parsing logic |
+| 3 | `bgp/message/update/attribute/collection.py` | 755 | Attribute collection handling | New attributes, parsing logic |
 | 4 | `configuration/configuration.py` | 614 | Main config parser | New config syntax |
-| 5 | `reactor/peer/peer.py` | 950 | BGP peer protocol handler (async) | Protocol changes, FSM |
+| 5 | `reactor/peer/peer.py` | 989 | BGP peer protocol handler (async) | Protocol changes, FSM |
 | 6 | `bgp/message/update/nlri/nlri.py` | ~300 | NLRI base + registry | New NLRI families |
 | 7 | `protocol/family.py` | 442 | AFI/SAFI definitions | New address families |
-| 8 | `reactor/loop.py` | 821 | Main reactor event loop | Event handling changes |
+| 8 | `reactor/loop.py` | 617 | Main reactor event loop | Event handling changes |
 | 9 | `rib/outgoing.py` | ~400 | Adj-RIB-Out management | RIB operations |
-| 10 | `bgp/neighbor.py` | 653 | Neighbor config/state | Neighbor features |
+| 10 | `bgp/neighbor/neighbor.py` | 716 | Neighbor config/state | Neighbor features |
 
 ---
 
@@ -42,7 +42,7 @@ The 20% of files you'll modify 80% of the time - quick navigation guide.
 **Must modify:**
 1. `bgp/message/update/attribute/{name}.py` - Create new file
 2. `bgp/message/update/attribute/__init__.py` - Add import
-3. `bgp/message/update/attribute/attributes.py` - Special handling (optional)
+3. `bgp/message/update/attribute/collection.py` - Special handling (optional)
 4. `tests/unit/bgp/message/update/attribute/test_{name}.py` - Add tests
 
 **Example files to reference:**
@@ -153,7 +153,7 @@ Breaking changes require major version bump and migration guide.
 **Read this first** when adding new NLRI.
 
 ### 2. Complex NLRI Type
-**File:** `bgp/message/update/nlri/flow.py` (764 lines)
+**File:** `bgp/message/update/nlri/flow.py` (1162 lines)
 
 **Why:** Demonstrates:
 - Complex TLV encoding
@@ -199,7 +199,7 @@ Breaking changes require major version bump and migration guide.
 **Read this first** when adding API commands.
 
 ### 6. Event Loop Integration
-**File:** `reactor/loop.py` (821 lines)
+**File:** `reactor/loop.py` (617 lines)
 
 **Why:** Demonstrates:
 - Reactor pattern
@@ -210,7 +210,7 @@ Breaking changes require major version bump and migration guide.
 **Read this** to understand event flow.
 
 ### 7. BGP Protocol Handler
-**File:** `reactor/peer/peer.py` (950 lines, async-only)
+**File:** `reactor/peer/peer.py` (989 lines, async-only)
 
 **Why:** Demonstrates:
 - FSM implementation
@@ -249,7 +249,7 @@ bgp/message/message.py (Dispatcher)
 bgp/message/update/__init__.py (UPDATE parser)
   ↓
 bgp/message/update/nlri/nlri.py (NLRI registry)
-bgp/message/update/attribute/attributes.py (Attr parser)
+bgp/message/update/attribute/collection.py (Attr parser)
 ```
 
 **Change any file → test entire chain**
@@ -364,4 +364,4 @@ reactor/protocol.py (TCP send)
 
 ---
 
-**Updated:** 2025-12-08
+**Updated:** 2025-12-19

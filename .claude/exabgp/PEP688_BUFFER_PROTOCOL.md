@@ -134,10 +134,10 @@ def unpack_attribute(cls, data: bytes, negotiated: Negotiated) -> Attribute:
 ### After (Buffer-aware)
 
 ```python
-from collections.abc import Buffer
+from exabgp.util.types import Buffer  # ExaBGP compatibility wrapper
 
 def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
-    if len(data) < 4:  # type: ignore[arg-type]  # len() works on Buffer
+    if len(data) < 4:
         raise ValueError("Too short")
     # struct.unpack accepts Buffer directly
     value = struct.unpack('!I', data[:4])[0]
@@ -145,13 +145,15 @@ def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
     return cls(bytes(data))
 ```
 
-### Type Ignore Notes
+### ExaBGP Import Pattern
 
-Some operations on `Buffer` may require `# type: ignore[arg-type]` because:
-- `len()` is typed to accept `Sized`, not `Buffer`
-- Some stdlib functions aren't yet annotated for `Buffer`
+ExaBGP uses a compatibility wrapper for Buffer:
 
-This is a known limitation that will improve over time.
+```python
+from exabgp.util.types import Buffer  # Preferred import for ExaBGP code
+```
+
+This wrapper handles type checking mode differences and provides consistent behavior.
 
 ---
 
@@ -177,4 +179,4 @@ Keep as Buffer when:
 
 ---
 
-**Updated:** 2025-12-06
+**Updated:** 2025-12-19

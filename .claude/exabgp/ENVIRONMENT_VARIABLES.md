@@ -460,4 +460,4 @@ Some environment variables have aliases for backward compatibility:
 
 ---
 
-**Updated:** 2025-11-24
+**Updated:** 2025-12-19

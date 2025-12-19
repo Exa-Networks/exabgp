@@ -174,3 +174,7 @@ Key solutions:
 - **`attributes`** command handles empty UPDATEs
 - **`--generic`** decode mode preserves raw attribute bytes
 - **Hex format** (`0xHHHH...`) for extended-communities the parser doesn't know
+
+---
+
+**Updated:** 2025-12-19

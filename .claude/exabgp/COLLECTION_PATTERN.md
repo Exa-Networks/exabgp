@@ -161,8 +161,6 @@ Collection  ──────────────────────�
 | `MPRNLRI` | `MPNLRICollection` | Dual-mode |
 | `MPURNLRI` | `MPNLRICollection` | Dual-mode |
 
-See `plan/wire-semantic-separation.md` for refactoring details.
-
 ---
 
 ## Pattern Application Examples
@@ -326,8 +324,7 @@ class MED(Attribute):
 - `WIRE_SEMANTIC_SEPARATION.md` - Comprehensive design principles
 - `PACKED_BYTES_FIRST_PATTERN.md` - NLRI implementation details
 - `BUFFER_SHARING_AND_CACHING.md` - Memory optimization
-- `plan/wire-semantic-separation.md` - Refactoring plan
 
 ---
 
-**Updated:** 2025-12-07
+**Updated:** 2025-12-19

@@ -626,5 +626,7 @@ Server: error: Could not parse route: bad-syntax\nerror\n
 
 ---
 
-**Implementation:** `src/exabgp/application/{cli,unixsocket}.py`, `src/exabgp/reactor/api/`
-**Updated:** 2025-11-24
+**Note:** The default API is now **v6** (target-first syntax). See `API_FORMAT_VERSIONS.md` for command format differences.
+
+**Implementation:** `src/exabgp/application/{cli,unixsocket}.py`, `src/exabgp/reactor/api/`, `src/exabgp/cli/`
+**Updated:** 2025-12-19

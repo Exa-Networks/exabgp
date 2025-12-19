@@ -634,4 +634,4 @@ Before declaring new type complete:
 
 ---
 
-**Updated:** 2025-12-08
+**Updated:** 2025-12-19

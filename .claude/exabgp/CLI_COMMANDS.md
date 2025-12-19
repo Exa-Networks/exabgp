@@ -1312,4 +1312,8 @@ exabgp> neighbor 192.168.1.1 announce route-refresh ipv4 unicast
 
 ---
 
-**Updated:** 2025-11-27
+**Note:** This document describes the **v4 API** (legacy action-first syntax). The default API is now **v6** (target-first syntax). See `API_FORMAT_VERSIONS.md` for v6 command format.
+
+---
+
+**Updated:** 2025-12-19

@@ -82,11 +82,11 @@ ExaBGP operates on three main data flows:
 ```
 
 ### Key Files (Inbound)
-- `reactor/protocol.py:252` - `read_message()`
-- `bgp/message/message.py:53` - `Message.unpack()`
-- `bgp/message/update/__init__.py:214` - `Update.unpack_message()`
-- `bgp/message/update/attribute/attributes.py:156` - `Attributes.unpack()`
-- `bgp/message/update/nlri/nlri.py:89` - `NLRI.unpack_nlri()`
+- `reactor/protocol.py` - `read_message()`
+- `bgp/message/message.py` - `Message.unpack()`
+- `bgp/message/update/__init__.py` - `Update.unpack_message()`
+- `bgp/message/update/attribute/collection.py` - `Attributes.unpack()`
+- `bgp/message/update/nlri/nlri.py` - `NLRI.unpack_nlri()`
 
 ---
 
@@ -154,12 +154,12 @@ ExaBGP operates on three main data flows:
 ```
 
 ### Key Files (Outbound)
-- `configuration/configuration.py:178` - `parse()`
-- `reactor/api/command/announce.py:45` - API route parsing
-- `rib/outgoing.py:89` - `insert_announced()`
-- `bgp/message/update/__init__.py:95` - `Update.pack_message()`
-- `bgp/message/update/attribute/attribute.py:45` - `Attribute.pack()`
-- `bgp/message/update/nlri/nlri.py:67` - `NLRI.pack_nlri()`
+- `configuration/configuration.py` - `parse()`
+- `reactor/api/command/announce.py` - API route parsing
+- `rib/outgoing.py` - `insert_announced()`
+- `bgp/message/update/__init__.py` - `Update.pack_message()`
+- `bgp/message/update/attribute/attribute.py` - `Attribute.pack()`
+- `bgp/message/update/nlri/nlri.py` - `NLRI.pack_nlri()`
 
 ---
 
@@ -401,4 +401,4 @@ Don't send UPDATE (protect session)
 
 ---
 
-**Updated:** 2025-11-24
+**Updated:** 2025-12-19

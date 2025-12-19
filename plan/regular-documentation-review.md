@@ -1,6 +1,6 @@
 # Plan: Review and Update .claude/exabgp/ Documentation
 
-## Status: ⏸️ On Hold
+## Status: ✅ Phase 2 Complete (All 21 files reviewed)
 
 ## Objective
 Review and update the existing `.claude/exabgp/` documentation files to ensure they are:
@@ -98,11 +98,41 @@ Will update: `.claude/exabgp/*.md` (21 files)
 
 ## Progress
 
-- [ ] Phase 1: Quick audit
-- [ ] Phase 2: Deep review
-- [ ] Phase 3: Verification
+- [x] Phase 1: Quick audit ✅ (2025-12-19)
+- [x] Phase 2: Deep review (HIGH priority files) ✅ (2025-12-19)
+- [x] Phase 2: Deep review (LOW priority files) ✅ (2025-12-19)
+- [ ] Phase 3: Verification (optional - cross-refs already consistent)
+
+### Phase 2 Updates Completed
+
+**HIGH priority files updated (6):**
+| File | Changes |
+|------|---------|
+| `NLRI_CLASS_HIERARCHY.md` | Updated slot definitions: action/nexthop removed from NLRI, INET uses _has_addpath flag, Label/IPVPN use _has_labels/_has_rd flags |
+| `CLI_IMPLEMENTATION.md` | Updated file locations to cli/ module (completer.py, formatter.py, persistent_connection.py, etc.) |
+| `CODEBASE_ARCHITECTURE.md` | Updated line counts, file paths (neighbor package, collection.py rename, flow.py size) |
+| `CRITICAL_FILES_REFERENCE.md` | Updated line counts and paths to match codebase |
+| `FUNCTIONAL_TEST_RUNNER.md` | Updated test counts (17/11/35), file size (2902 lines) |
+| `DATA_FLOW_GUIDE.md` | Removed hardcoded line numbers, updated collection.py path |
+
+**LOW priority files verified (15) - all current, no updates needed:**
+- ✅ REGISTRY_AND_EXTENSION_PATTERNS.md
+- ✅ PACKED_BYTES_FIRST_PATTERN.md
+- ✅ WIRE_SEMANTIC_SEPARATION.md
+- ✅ COLLECTION_PATTERN.md
+- ✅ PEP688_BUFFER_PROTOCOL.md
+- ✅ BUFFER_SHARING_AND_CACHING.md
+- ✅ BGP_CONCEPTS_TO_CODE_MAP.md
+- ✅ CLI_COMMANDS.md
+- ✅ CLI_SHORTCUTS.md
+- ✅ UNIX_SOCKET_API.md
+- ✅ API_FORMAT_VERSIONS.md
+- ✅ NEIGHBOR_SELECTOR_SYNTAX.md
+- ✅ ENVIRONMENT_VARIABLES.md
+- ✅ LOGGING_STYLE_GUIDE.md
+- ✅ TOKENISER_USAGE.md
 
 ---
 
 **Created:** 2025-12-10
-**Last Updated:** 2025-12-10
+**Last Updated:** 2025-12-19
