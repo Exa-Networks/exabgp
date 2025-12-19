@@ -44,9 +44,15 @@ def label(tokeniser: Any) -> Labels:
             value = tokeniser()
             if value == ']':
                 break
-            labels.append(int(value))
+            lbl = int(value)
+            if lbl < 0 or lbl > Labels.MAX:
+                raise ValueError(f'MPLS label {lbl} out of range\n  Must be 0 to {Labels.MAX} (20-bit)')
+            labels.append(lbl)
     else:
-        labels.append(int(value))
+        lbl = int(value)
+        if lbl < 0 or lbl > Labels.MAX:
+            raise ValueError(f'MPLS label {lbl} out of range\n  Must be 0 to {Labels.MAX} (20-bit)')
+        labels.append(lbl)
 
     return Labels.make_labels(labels)
 
@@ -337,6 +343,12 @@ def srv6_mup_dsd(tokeniser: Any, afi: AFI) -> DirectSegmentDiscoveryRoute:
     )
 
 
+# TEID (Tunnel Endpoint Identifier) is 32-bit (3GPP TS 29.281)
+TEID_MAX = 0xFFFFFFFF  # 2^32 - 1
+# QFI (QoS Flow Identifier) is 6-bit (3GPP TS 24.501)
+QFI_MAX = 63  # 2^6 - 1
+
+
 # 'mup-t1st <ip prefix> rd <rd> teid <teid> qfi <qfi> endpoint <endpoint> [source <source>]',
 def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
     prefix_ip, prefix_ip_len = parse_ip_prefix(tokeniser())
@@ -347,14 +359,18 @@ def srv6_mup_t1st(tokeniser: Any, afi: AFI) -> Type1SessionTransformedRoute:
     tokeniser.consume('teid')
     value = tokeniser()
     if not value.isdigit():
-        raise Exception(f"expect teid to be a number, but received '{value}'")
+        raise ValueError(f"teid must be a number, received '{value}'")
     teid = int(value)
+    if teid < 0 or teid > TEID_MAX:
+        raise ValueError(f'TEID {teid} out of range\n  Must be 0 to {TEID_MAX} (32-bit)')
 
     tokeniser.consume('qfi')
     value = tokeniser()
     if not value.isdigit():
-        raise Exception(f"expect qfi to be a number, but received '{value}'")
+        raise ValueError(f"qfi must be a number, received '{value}'")
     qfi = int(value)
+    if qfi < 0 or qfi > QFI_MAX:
+        raise ValueError(f'QFI {qfi} out of range\n  Must be 0 to {QFI_MAX} (6-bit)')
 
     tokeniser.consume('endpoint')
     endpoint_ip: IPv4 | IPv6
@@ -400,30 +416,33 @@ def srv6_mup_t2st(tokeniser: Any, afi: AFI) -> Type2SessionTransformedRoute:
     elif afi == AFI.ipv6:
         endpoint_ip = IPv6.unpack_ipv6(IPv6.pton(tokeniser()))
     else:
-        raise Exception(f'unexpect afi: {afi}')
+        raise ValueError(f'unexpected afi: {afi}')
 
     value = tokeniser()
     if value != 'rd':
-        raise Exception(f"expect rd, but received '{value}'")
+        raise ValueError(f"expected 'rd', received '{value}'")
 
     rd = route_distinguisher(tokeniser)
 
     value = tokeniser()
     if value != 'teid':
-        raise Exception(f"expect teid, but received '{value}'")
+        raise ValueError(f"expected 'teid', received '{value}'")
 
     teids = tokeniser().split('/')
     if len(teids) != SRGB_TUPLE_SIZE:
-        raise Exception(f'unexpect teid format, this expect format <teid>/<length, expect 0 ~ {TEID_MAX_BITS}')
+        raise ValueError(f'invalid teid format\n  Expected: <teid>/<length> (length 0-{TEID_MAX_BITS})')
 
     teid = int(teids[0])
     teid_len = int(teids[1])
 
+    if teid < 0 or teid > TEID_MAX:
+        raise ValueError(f'TEID {teid} out of range\n  Must be 0 to {TEID_MAX} (32-bit)')
+
     if not (0 <= teid_len <= TEID_MAX_BITS):
-        raise Exception(f'unexpect teid format, this expect format <teid>/<length, expect 0 ~ {TEID_MAX_BITS}>')
+        raise ValueError(f'teid length {teid_len} out of range\n  Must be 0 to {TEID_MAX_BITS}')
 
     if teid >= pow(2, teid_len):
-        raise Exception(f'unexpect teid format, we can not store {teid} using {teid_len} bits')
+        raise ValueError(f'TEID {teid} cannot be stored in {teid_len} bits')
 
     return Type2SessionTransformedRoute.make_t2st(
         rd=rd,

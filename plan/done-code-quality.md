@@ -1,6 +1,6 @@
 # Code Quality Improvements
 
-**Status:** 🔄 Active (low priority)
+**Status:** ✅ Complete
 **Priority:** Low
 **See also:** `type-safety/`, `comment-cleanup/`
 
@@ -62,15 +62,24 @@ Files updated:
 - configuration/neighbor/__init__.py, configuration/neighbor/family.py
 - configuration/configuration.py, configuration/setup.py
 
-### 7. Command Keyword Validation Audit
+### ~~7. Command Keyword Validation Audit~~ (DONE)
 
-**Files:** Various configuration parsers
-**Issue:** Audit all command parsers for validation gaps
-**Complexity:** Low
-**Benefit:** Better error messages for invalid input
+**Status:** ✅ Completed (2025-12-19)
 
-Note: `interface-set` parser already validates direction correctly for both formats.
-Other parsers should be audited for similar validation patterns.
+Audited configuration parsers and fixed validation gaps:
+
+**Bugs fixed:**
+- `_large_community()`: Fixed hex parsing bug (`int(value)` → `int(value, 16)`)
+
+**Range validation added:**
+- `aigp()`: Added 64-bit range check (0 to 2^64-1)
+- `label()`: Added 20-bit range check (0 to 1048575)
+- `srv6_mup_t1st()`: Added TEID (32-bit) and QFI (6-bit) range checks
+- `srv6_mup_t2st()`: Added TEID range check, improved error messages
+
+**Files modified:**
+- `configuration/static/parser.py` - large community hex fix, AIGP validation
+- `configuration/static/mpls.py` - label, TEID, QFI validation
 
 ### ~~8. Consolidate Numeric Validation~~ (DONE)
 
@@ -85,25 +94,11 @@ Updated `interface-set` parser to use these validators instead of inline `pow(2,
 
 ---
 
-## Active Items Summary
+## Summary
 
-| # | Item | Complexity | Status |
-|---|------|------------|--------|
-| 7 | Command Keyword Validation Audit | Low | 📋 Open |
-
----
-
-## Implementation Notes
-
-These items are intentionally low priority because:
-- Code works correctly as-is
-- Changes are cosmetic/cleanup
-- Risk of regression outweighs benefit
-
-Work on these when:
-- Touching the file for other reasons
-- Need a small task to fill time
-- Building familiarity with a module
+All 8 items complete:
+- 2 obsolete (code already refactored)
+- 6 implemented
 
 ---
 
@@ -114,8 +109,8 @@ Each change requires:
 ./qa/bin/test_everything
 ```
 
-Most changes are safe refactors that shouldn't break functionality.
+All tests pass.
 
 ---
 
-**Last Updated:** 2025-12-18
+**Last Updated:** 2025-12-19

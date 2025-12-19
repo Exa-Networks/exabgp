@@ -175,6 +175,9 @@ def attribute(tokeniser: 'Tokeniser') -> GenericAttribute:
 
 
 def aigp(tokeniser: 'Tokeniser') -> AIGP:
+    # AIGP metric is 64-bit unsigned (RFC 7311)
+    AIGP_MAX = 0xFFFFFFFFFFFFFFFF  # 2^64 - 1
+
     if not tokeniser.tokens:
         raise ValueError('aigp requires a value\n  Format: <number> or 0x<hex> (e.g., 100 or 0x64)')
     value = tokeniser()
@@ -185,6 +188,9 @@ def aigp(tokeniser: 'Tokeniser') -> AIGP:
         raise ValueError(
             f"'{value}' is not a valid AIGP value\n  Format: <number> or 0x<hex> (e.g., 100 or 0x64)"
         ) from None
+
+    if number < 0 or number > AIGP_MAX:
+        raise ValueError(f'AIGP value {number} out of range\n  Must be 0 to {AIGP_MAX} (64-bit unsigned)')
 
     return AIGP.from_int(number)
 
@@ -417,7 +423,7 @@ def _large_community(value: str) -> LargeCommunity:
         return LargeCommunity(pack('!LLL', prefix_int, affix_int, suffix_int))
 
     if value[:2].lower() == '0x':
-        number = int(value)
+        number = int(value, 16)
         if number > LargeCommunity.MAX:
             raise ValueError('invalid large community {} (too large)'.format(value))
         return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
