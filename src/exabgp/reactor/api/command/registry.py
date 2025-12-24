@@ -71,8 +71,18 @@ class CommandRegistry:
 
     # AFI-specific SAFI values (from AFI.implemented_safi)
     AFI_SAFI_MAP: ClassVar[dict[str, list[str]]] = {
-        'ipv4': ['unicast', 'multicast', 'nlri-mpls', 'mcast-vpn', 'mpls-vpn', 'flow', 'flow-vpn', 'mup'],
-        'ipv6': ['unicast', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
+        'ipv4': [
+            'unicast',
+            'multicast',
+            'nlri-mpls',
+            'labeled-unicast',
+            'mcast-vpn',
+            'mpls-vpn',
+            'flow',
+            'flow-vpn',
+            'mup',
+        ],
+        'ipv6': ['unicast', 'nlri-mpls', 'labeled-unicast', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
         'l2vpn': ['vpls', 'evpn'],
         'bgp-ls': ['bgp-ls', 'bgp-ls-vpn'],
     }

@@ -23,11 +23,11 @@ from exabgp.configuration.validator import NextHopTupleValidator, StatefulValida
 class ParseNextHop(Section):
     # Valid SAFI and next-hop AFI options for each AFI
     ipv4_config = {
-        'safis': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'],
+        'safis': ['unicast', 'multicast', 'nlri-mpls', 'labeled-unicast', 'mpls-vpn'],
         'nhafis': ['ipv6'],
     }
     ipv6_config = {
-        'safis': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'],
+        'safis': ['unicast', 'multicast', 'nlri-mpls', 'labeled-unicast', 'mpls-vpn'],
         'nhafis': ['ipv4'],
     }
 
@@ -60,7 +60,7 @@ class ParseNextHop(Section):
         '   ipv6 unicast ipv4;\n'
         '   ipv6 multicast ipv4;\n'
         '   ipv6 mpls-vpn ipv4;\n'
-        '   ipv6 nlri-mpls ipv4;\n'
+        '   ipv6 labeled-unicast ipv4;  # preferred (nlri-mpls also accepted)\n'
         '}'
     )
 

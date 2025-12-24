@@ -96,9 +96,19 @@ class AFI(int):
     @staticmethod
     def implemented_safi(afi: str) -> list[str]:
         if afi == 'ipv4':
-            return ['unicast', 'multicast', 'nlri-mpls', 'mcast-vpn', 'mpls-vpn', 'flow', 'flow-vpn', 'mup']
+            return [
+                'unicast',
+                'multicast',
+                'nlri-mpls',
+                'labeled-unicast',
+                'mcast-vpn',
+                'mpls-vpn',
+                'flow',
+                'flow-vpn',
+                'mup',
+            ]
         if afi == 'ipv6':
-            return ['unicast', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup']
+            return ['unicast', 'nlri-mpls', 'labeled-unicast', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup']
         if afi == 'l2vpn':
             return ['vpls', 'evpn']
         if afi == 'bgp-ls':
@@ -297,6 +307,7 @@ SAFI.codes = dict(
         'unicast': SAFI.unicast,
         'multicast': SAFI.multicast,
         'nlri-mpls': SAFI.nlri_mpls,
+        'labeled-unicast': SAFI.nlri_mpls,  # preferred alias for SAFI 4
         'vpls': SAFI.vpls,
         'evpn': SAFI.evpn,
         'bgp-ls': SAFI.bgp_ls,
@@ -411,6 +422,17 @@ class Family:
 
     def extensive(self) -> str:
         return f'afi {self.afi} safi {self.safi}'
+
+    def safi_display_name(self) -> str:
+        """Return display name for SAFI, using preferred terminology per AFI.
+
+        IPv6 SAFI 4: 'labeled-unicast' (preferred, clearer)
+        IPv4 SAFI 4: 'nlri-mpls' (backward compatibility)
+        Other: standard SAFI name
+        """
+        if self.safi == SAFI.nlri_mpls and self.afi == AFI.ipv6:
+            return 'labeled-unicast'
+        return self.safi.name()
 
     def index(self) -> bytes:
         return f'{self.afi:02x}{self.safi:02x}'.encode()

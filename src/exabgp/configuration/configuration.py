@@ -395,8 +395,28 @@ class Configuration(_Configuration):
         """
         # Special command lists for parsers that don't use known.keys()
         _SPECIAL_COMMANDS: dict[str, list[str]] = {
-            'ipv4': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
-            'ipv6': ['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
+            'ipv4': [
+                'unicast',
+                'multicast',
+                'nlri-mpls',
+                'labeled-unicast',
+                'mpls-vpn',
+                'mcast-vpn',
+                'flow',
+                'flow-vpn',
+                'mup',
+            ],
+            'ipv6': [
+                'unicast',
+                'multicast',
+                'nlri-mpls',
+                'labeled-unicast',
+                'mpls-vpn',
+                'mcast-vpn',
+                'flow',
+                'flow-vpn',
+                'mup',
+            ],
             'l2vpn': ['vpls'],
             'static': ['route', 'attributes'],
         }

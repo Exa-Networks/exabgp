@@ -57,6 +57,10 @@ class JSON:
         self._count[neighbor.uid] = increased
         return increased
 
+    def _safi_display_name(self, afi: Any, safi: Any) -> str:
+        """Get SAFI display name - always uses canonical name for backward compat."""
+        return str(safi)  # safi.name() via __str__ - always nlri-mpls for SAFI 4
+
     def _string(self, obj: Any) -> str:
         if issubclass(obj.__class__, bool):
             return 'true' if obj else 'false'
@@ -181,9 +185,13 @@ class JSON:
         )
 
     def _negotiated(self, negotiated: 'Negotiated') -> dict[str, str]:
-        families_str = ' ,'.join([f'{family[0]} {family[1]}' for family in negotiated.families])
+        families_str = ' ,'.join(
+            [f'{family[0]} {self._safi_display_name(family[0], family[1])}' for family in negotiated.families]
+        )
         # nexthop is list[tuple[AFI, SAFI, AFI]] per RFC5549 - third element is nexthop AFI
-        nexthop_str = ' ,'.join([f'{nh[0]} {nh[1]} {nh[2]}' for nh in negotiated.nexthop])
+        nexthop_str = ' ,'.join(
+            [f'{nh[0]} {self._safi_display_name(nh[0], nh[1])} {nh[2]}' for nh in negotiated.nexthop]
+        )
         kv_content = self._kv(
             {
                 'message_size': negotiated.msg_size,
@@ -194,13 +202,11 @@ class JSON:
                 'refresh': REFRESH.json(negotiated.refresh),
                 'families': f'[ {families_str} ]',
                 'nexthop': f'[ {nexthop_str} ]',
-                # NOTE: Do not convert to f-string! The nested % formatting with complex
-                # comprehensions and conditional logic is more readable with % formatting.
                 'add_path': '{{ "send": {}, "receive": {} }}'.format(
                     '[ {} ]'.format(
                         ', '.join(
                             [
-                                '"{} {}"'.format(*family)
+                                f'"{family[0]} {self._safi_display_name(family[0], family[1])}"'
                                 for family in negotiated.families
                                 if negotiated.addpath.send(*family)
                             ]
@@ -209,7 +215,7 @@ class JSON:
                     '[ {} ]'.format(
                         ', '.join(
                             [
-                                '"{} {}"'.format(*family)
+                                f'"{family[0]} {self._safi_display_name(family[0], family[1])}"'
                                 for family in negotiated.families
                                 if negotiated.addpath.receive(*family)
                             ],
@@ -395,7 +401,8 @@ class JSON:
 
         add = []
         for family in plus:
-            s = f'"{family[0]} {family[1]}": {{ '
+            safi_name = self._safi_display_name(family[0], family[1])
+            s = f'"{family[0]} {safi_name}": {{ '
             m = ''
             for nexthop_str in plus[family]:
                 nlri_tuples = plus[family][nexthop_str]
@@ -409,7 +416,8 @@ class JSON:
         remove = []
         for family in minus:
             nlris = minus[family]
-            s = f'"{family[0]} {family[1]}": [ '
+            safi_name = self._safi_display_name(family[0], family[1])
+            s = f'"{family[0]} {safi_name}": [ '
             s += ', '.join(self._nlri_to_json(nlri) for nlri in nlris)
             s += ' ]'
             remove.append(s)

@@ -28,6 +28,7 @@ class ParseFamily(Section):
             'unicast': (AFI.ipv4, SAFI.unicast),
             'multicast': (AFI.ipv4, SAFI.multicast),
             'nlri-mpls': (AFI.ipv4, SAFI.nlri_mpls),
+            'labeled-unicast': (AFI.ipv4, SAFI.nlri_mpls),  # alias
             'mpls-vpn': (AFI.ipv4, SAFI.mpls_vpn),
             'mcast-vpn': (AFI.ipv4, SAFI.mcast_vpn),
             'flow': (AFI.ipv4, SAFI.flow_ip),
@@ -37,6 +38,7 @@ class ParseFamily(Section):
         'ipv6': {
             'unicast': (AFI.ipv6, SAFI.unicast),
             'nlri-mpls': (AFI.ipv6, SAFI.nlri_mpls),
+            'labeled-unicast': (AFI.ipv6, SAFI.nlri_mpls),  # preferred alias
             'mpls-vpn': (AFI.ipv6, SAFI.mpls_vpn),
             'mcast-vpn': (AFI.ipv6, SAFI.mcast_vpn),
             'mup': (AFI.ipv6, SAFI.mup),
@@ -61,7 +63,17 @@ class ParseFamily(Section):
             'ipv4': TupleLeaf(
                 type=ValueType.ENUMERATION,
                 description='IPv4 address family',
-                choices=['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
+                choices=[
+                    'unicast',
+                    'multicast',
+                    'nlri-mpls',
+                    'labeled-unicast',
+                    'mpls-vpn',
+                    'mcast-vpn',
+                    'flow',
+                    'flow-vpn',
+                    'mup',
+                ],
                 conversion_map=convert,
                 afi_context='ipv4',
                 track_duplicates=True,
@@ -72,7 +84,7 @@ class ParseFamily(Section):
             'ipv6': TupleLeaf(
                 type=ValueType.ENUMERATION,
                 description='IPv6 address family',
-                choices=['unicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'mup', 'flow', 'flow-vpn'],
+                choices=['unicast', 'nlri-mpls', 'labeled-unicast', 'mpls-vpn', 'mcast-vpn', 'mup', 'flow', 'flow-vpn'],
                 conversion_map=convert,
                 afi_context='ipv6',
                 track_duplicates=True,
@@ -124,6 +136,8 @@ class ParseFamily(Section):
         '   ipv4 flow;\n'
         '   ipv4 flow-vpn;\n'
         '   ipv6 unicast;\n'
+        '   ipv6 labeled-unicast;  # preferred (nlri-mpls also accepted)\n'
+        '   ipv6 mpls-vpn;\n'
         '   ipv6 mcast-vpn;\n'
         '   ipv6 mup;\n'
         '   ipv6 flow;\n'
@@ -202,7 +216,17 @@ class ParseAddPath(ParseFamily):
             'ipv4': TupleLeaf(
                 type=ValueType.ENUMERATION,
                 description='IPv4 ADD-PATH family',
-                choices=['unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'flow', 'flow-vpn', 'mup'],
+                choices=[
+                    'unicast',
+                    'multicast',
+                    'nlri-mpls',
+                    'labeled-unicast',
+                    'mpls-vpn',
+                    'mcast-vpn',
+                    'flow',
+                    'flow-vpn',
+                    'mup',
+                ],
                 conversion_map=ParseFamily.convert,
                 afi_context='ipv4',
                 track_duplicates=True,
@@ -213,7 +237,7 @@ class ParseAddPath(ParseFamily):
             'ipv6': TupleLeaf(
                 type=ValueType.ENUMERATION,
                 description='IPv6 ADD-PATH family',
-                choices=['unicast', 'nlri-mpls', 'mpls-vpn', 'mcast-vpn', 'mup', 'flow', 'flow-vpn'],
+                choices=['unicast', 'nlri-mpls', 'labeled-unicast', 'mpls-vpn', 'mcast-vpn', 'mup', 'flow', 'flow-vpn'],
                 conversion_map=ParseFamily.convert,
                 afi_context='ipv6',
                 track_duplicates=True,
