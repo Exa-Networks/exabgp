@@ -823,16 +823,16 @@ class Message:
 
     @staticmethod
     def notify(notification):
+        # RFC 9003: Shutdown Communication with length prefix
+        text = notification.encode('utf-8')[:255]  # Max 255 octets
         return bytearray(
-            [
-                0xFF,
-            ]
-            * 16
-            + [0x00, 19 + 2 + len(notification)]
-            + [0x03]
-            + [0x06]
-            + [0x00]
-        ) + notification.encode('utf-8')
+            [0xFF] * 16
+            + [0x00, 19 + 3 + len(text)]  # Header + code + subcode + len + text
+            + [0x03]  # Type: NOTIFICATION
+            + [0x06]  # Error code: Cease
+            + [0x02]  # Subcode: Administrative Shutdown (RFC 9003)
+            + [len(text)]  # Length of shutdown communication
+        ) + text
 
     _name = {
         b'\x01': 'OPEN',
