@@ -162,21 +162,21 @@ class TestLinkAttributesJson:
         assert result['link-name'] == 'link-to-router-2'
 
     def test_remote_te_rid_json(self) -> None:
-        """RemoteRouterId (TLV 1097) produces valid JSON"""
+        """RemoteRouterId (TLV 1030) produces valid JSON"""
         attr = RemoteRouterId.make_remoterouterid('192.0.2.1')
         result = validate_json(attr.json(), 'RemoteRouterId')
-        assert 'remote-router-id' in result
-        assert result['remote-router-id'] == '192.0.2.1'
+        assert 'remote-router-ids' in result
+        assert result['remote-router-ids'] == '192.0.2.1'
 
     def test_sr_adjacency_json(self) -> None:
         """AdjacencySid (TLV 1099) produces valid JSON"""
         flags = {'F': 0, 'B': 0, 'V': 1, 'L': 1, 'S': 0, 'P': 0}
         attr = AdjacencySid.make_adjacencysid(flags=flags, weight=10, sids=[16000])
         result = validate_json(attr.json(), 'AdjacencySid')
-        assert 'sr-adj' in result
-        assert 'flags' in result['sr-adj']
-        assert 'sids' in result['sr-adj']
-        assert 'weight' in result['sr-adj']
+        assert 'sr-adjs' in result
+        assert 'flags' in result['sr-adjs']
+        assert 'sids' in result['sr-adjs']
+        assert 'weight' in result['sr-adjs']
 
     def test_sr_adjacency_lan_json(self) -> None:
         """LanAdjacencySid (TLV 1100) produces valid JSON"""

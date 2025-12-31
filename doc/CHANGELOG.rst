@@ -6,6 +6,11 @@ Version explained:
 Version 6.0.0:
  * Compatibility: BGP-LS ip-reachability-tlv JSON key changed from "ip" to "prefix"
    - Now includes prefix length in CIDR notation (e.g., "10.134.2.88/30")
+ * Compatibility: BGP-LS Adjacency SID JSON key changed from "sr-adj" to "sr-adjs"
+   - Now outputs as array of objects instead of duplicate keys
+ * Compatibility: BGP-LS Remote Router ID JSON key changed to "remote-router-ids"
+   - Now outputs as array of strings instead of duplicate keys
+   - IPv4 and IPv6 router IDs properly merged into single array
  * Compatibility: Drop support for Python 3.7
  * Feature: Add type annotations to the codebase for better type safety
  * Change: **BREAKING** - Async mode is now the default reactor implementation

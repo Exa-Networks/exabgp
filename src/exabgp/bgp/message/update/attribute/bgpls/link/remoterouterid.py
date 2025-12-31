@@ -17,8 +17,10 @@ from exabgp.util.types import Buffer
 #   |           | Remote Node         |              |                  |
 
 
-@LinkState.register_lsid(tlv=1030, json_key='remote-router-id', repr_name='Remote Router ID', alias_tlv=1031)
+@LinkState.register_lsid(tlv=1030, json_key='remote-router-ids', repr_name='Remote Router ID', alias_tlv=1031)
 class RemoteRouterId(BaseLS):
+    MERGE = True  # LinkState.json() groups into array
+
     @property
     def content(self) -> str:
         """Unpack and return the IP address as a string."""

@@ -154,25 +154,29 @@ class LinkState(Attribute):
         return cls(data)
 
     def json(self, compact: bool = False) -> str:
-        """Output JSON for all TLVs. MERGE classes are grouped into arrays."""
+        """Output JSON for all TLVs. MERGE classes are grouped into arrays by JSON key."""
         from collections import defaultdict
 
-        # Group by TLV type
-        by_type: dict[int, list[BaseLS]] = defaultdict(list)
+        # Separate MERGE and non-MERGE attributes
+        # MERGE: group by JSON key (so alias TLVs like 1028/1029 merge together)
+        # Non-MERGE: preserve order, output individually
+        merge_groups: dict[str, list[BaseLS]] = defaultdict(list)
+        non_merge: list[BaseLS] = []
+
         for attr in self.ls_attrs:
-            by_type[attr.TLV].append(attr)
+            if getattr(attr, 'MERGE', False):
+                merge_groups[attr.JSON].append(attr)
+            else:
+                non_merge.append(attr)
 
         parts = []
-        for tlv, attrs in by_type.items():
-            if getattr(attrs[0], 'MERGE', False):
-                # MERGE classes: group into array
-                key = attrs[0].JSON
-                contents = [a.content for a in attrs]
-                parts.append(f'"{key}": {json.dumps(contents)}')
-            else:
-                # Non-MERGE: output individually (may have duplicate keys)
-                for attr in attrs:
-                    parts.append(attr.json(compact))
+        # Output MERGE groups as arrays
+        for key, attrs in merge_groups.items():
+            contents = [a.content for a in attrs]
+            parts.append(f'"{key}": {json.dumps(contents)}')
+        # Output non-MERGE individually
+        for attr in non_merge:
+            parts.append(attr.json(compact))
 
         return '{ ' + ', '.join(parts) + ' }'
 

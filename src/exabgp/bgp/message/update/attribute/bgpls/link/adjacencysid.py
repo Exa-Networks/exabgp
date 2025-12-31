@@ -6,7 +6,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-import json
 from struct import pack, unpack
 from exabgp.util import hexstring
 
@@ -32,9 +31,10 @@ SRADJ_MIN_LENGTH = 4
 #
 
 
-@LinkState.register_lsid(tlv=1099, json_key='sr-adj', repr_name='Adjacency SID')
+@LinkState.register_lsid(tlv=1099, json_key='sr-adjs', repr_name='Adjacency SID')
 class AdjacencySid(FlagLS):
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
+    MERGE = True  # LinkState.json() groups into array
 
     # flags property is inherited from FlagLS and unpacks from _packed[0:1]
 
@@ -91,6 +91,11 @@ class AdjacencySid(FlagLS):
     def __repr__(self) -> str:
         return 'adj_flags: {}, sids: {}, undecoded_sid {}'.format(self.flags, self.sids, self.undecoded)
 
+    def json(self, compact: bool = False) -> str:
+        import json
+
+        return f'"{self.JSON}": {json.dumps(self.content)}'
+
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> AdjacencySid:
         if len(data) < SRADJ_MIN_LENGTH:
@@ -139,13 +144,3 @@ class AdjacencySid(FlagLS):
                 packed += pack('!I', sid)
 
         return cls(packed)
-
-    def json(self, compact: bool = False) -> str:
-        return '"sr-adj": ' + json.dumps(
-            {
-                'flags': self.flags,
-                'sids': self.sids,
-                'weight': self.weight,
-                'undecoded-sids': self.undecoded,
-            },
-        )
