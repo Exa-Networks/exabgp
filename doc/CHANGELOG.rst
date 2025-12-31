@@ -4,6 +4,8 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Compatibility: BGP-LS ip-reachability-tlv JSON key changed from "ip" to "prefix"
+   - Now includes prefix length in CIDR notation (e.g., "10.134.2.88/30")
  * Compatibility: Drop support for Python 3.7
  * Feature: Add type annotations to the codebase for better type safety
  * Change: **BREAKING** - Async mode is now the default reactor implementation
