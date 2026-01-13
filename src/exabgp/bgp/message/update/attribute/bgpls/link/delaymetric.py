@@ -53,11 +53,7 @@ class MinMaxUnidirectionalLinkDelay(BaseLS):
         anomalous = bool(data[0] & 0x80)
         min_delay_us = _u24(data[1:4])
         max_delay_us = _u24(data[5:8])
-        return cls({
-            'min-delay-us': min_delay_us,
-            'max-delay-us': max_delay_us,
-            'anomalous': anomalous
-        })
+        return cls({'min-delay-us': min_delay_us, 'max-delay-us': max_delay_us, 'anomalous': anomalous})
 
 
 # 1116 - Unidirectional Delay Variation
