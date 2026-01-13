@@ -86,3 +86,10 @@ from exabgp.bgp.message.update.attribute.bgpls.link.srv6capabilities import Srv6
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6locator import Srv6Locator
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6endpointbehavior import Srv6EndpointBehavior
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEndXISIS, Srv6LanEndXOSPF
+from exabgp.bgp.message.update.attribute.bgpls.link.localremoteid import LinkLocalRemoteIdentifiers
+from exabgp.bgp.message.update.attribute.bgpls.link.delaymetric import (
+    DelayMetric,
+    UnidirectionalResidualBandwidth,
+    UnidirectionalAvailableBandwidth,
+    UnidirectionalUtilizedBandwidth
+)
