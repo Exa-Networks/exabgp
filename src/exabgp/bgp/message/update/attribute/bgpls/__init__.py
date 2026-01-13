@@ -71,3 +71,5 @@ from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAd
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixattributesflags import PrefixAttributesFlags
 from exabgp.bgp.message.update.attribute.bgpls.prefix.sourcerouterid import SourceRouterId
+from exabgp.bgp.message.update.attribute.bgpls.link.delaymetric import DelayMetric
+from exabgp.bgp.message.update.attribute.bgpls.link.localremoteid import LinkLocalRemoteIdentifiers
