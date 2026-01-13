@@ -41,3 +41,5 @@ from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyL
 from exabgp.bgp.message.update.attribute.bgpls.prefix.srprefix import SrPrefix
 from exabgp.bgp.message.update.attribute.bgpls.prefix.srigpprefixattr import SrIgpPrefixAttr
 from exabgp.bgp.message.update.attribute.bgpls.prefix.srrid import SrSourceRouterID
+from exabgp.bgp.message.update.attribute.bgpls.link.delaymetric import DelayMetric
+from exabgp.bgp.message.update.attribute.bgpls.link.localremoteid import LinkLocalRemoteIdentifiers
