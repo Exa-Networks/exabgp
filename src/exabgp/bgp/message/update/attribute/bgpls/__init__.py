@@ -8,6 +8,8 @@ Reference: RFC 7752 - North-Bound Distribution of Link-State and TE Information 
            https://datatracker.ietf.org/doc/html/rfc9552
            RFC 9514 - Segment Routing Extensions for BGP-LS
            https://datatracker.ietf.org/doc/html/rfc9514
+           RFC 8571 - BGP-LS Performance Metric Extensions
+           https://datatracker.ietf.org/doc/html/rfc8571
 Registry:  https://www.iana.org/assignments/bgp-ls-parameters
 
 BGP-LS Attribute TLV Format:
@@ -21,12 +23,12 @@ BGP-LS Attribute TLV Format:
 
 Attribute Categories and TLV Ranges:
 - Node Attributes:   TLVs 1024-1029, 1034-1035 (node/)
-- Link Attributes:   TLVs 1030-1031, 1088-1100, 1106-1108, 1162, 1250, 1252 (link/)
+- Link Attributes:   TLVs 258, 1030-1031, 1088-1100, 1106-1108, 1114-1120, 1162, 1250, 1252 (link/)
 - Prefix Attributes: TLVs 1152-1158, 1170-1171 (prefix/)
 
 See subdirectory __init__.py files for complete TLV-to-class mapping tables:
 - node/__init__.py   - 8 TLVs implemented
-- link/__init__.py   - 22 TLVs implemented
+- link/__init__.py   - 30 TLVs implemented
 - prefix/__init__.py - 9 TLVs implemented
 
 Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#bgp-ls-attribute-tlvs-rfc-7752
@@ -71,3 +73,13 @@ from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAd
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixattributesflags import PrefixAttributesFlags
 from exabgp.bgp.message.update.attribute.bgpls.prefix.sourcerouterid import SourceRouterId
+from exabgp.bgp.message.update.attribute.bgpls.link.delaymetric import (
+    UnidirectionalLinkDelay,
+    MinMaxUnidirLinkDelay,
+    UnidirectionalDelayVar,
+    UnidirectionalLinkLoss,
+    UnidirectionalResidualBw,
+    UnidirectionalAvailableBw,
+    UnidirectionalUtilizedBw,
+)
+from exabgp.bgp.message.update.attribute.bgpls.link.localremoteid import LinkLocalRemoteId

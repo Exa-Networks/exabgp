@@ -6,37 +6,47 @@ Reference: RFC 7752 Section 3.3.2 - Link Attribute TLVs
            https://tools.ietf.org/html/rfc7752#section-3.3.2
            RFC 9514 - Segment Routing Extensions for BGP-LS
            https://datatracker.ietf.org/doc/html/rfc9514
+           RFC 8571 - BGP-LS Performance Metric Extensions
+           https://datatracker.ietf.org/doc/html/rfc8571
 Registry:  https://www.iana.org/assignments/bgp-ls-parameters
 
 Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#link-attribute-tlvs
 
 TLV Code to Class Mapping (IANA Registry):
-+------+----------------------------------+----------------------+
-| TLV  | IANA/RFC Name                    | ExaBGP Class         |
-+------+----------------------------------+----------------------+
-| 1030 | IPv4 Router-ID of Remote Node    | RemoteRouterId       |
-| 1031 | IPv6 Router-ID of Remote Node    | RemoteRouterId       |
-| 1088 | Administrative group (color)     | AdminGroup           |
-| 1089 | Maximum link bandwidth           | MaxBw                |
-| 1090 | Max. reservable link bandwidth   | MaxReservableBw      |
-| 1091 | Unreserved bandwidth             | UnreservedBw         |
-| 1092 | TE Default Metric                | TeMetric             |
-| 1093 | Link Protection Type             | LinkProtectionType   |
-| 1094 | MPLS Protocol Mask               | MplsMask             |
-| 1095 | IGP Metric                       | IgpMetric            |
-| 1096 | Shared Risk Link Group           | Srlg                 |
-| 1097 | Opaque Link Attribute            | LinkOpaque           |
-| 1098 | Link Name                        | LinkName             |
-| 1099 | Adjacency SID                    | AdjacencySid         |
-| 1100 | LAN Adjacency SID                | LanAdjacencySid      |
-| 1038 | SRv6 Capabilities                | Srv6Capabilities     |
-| 1106 | SRv6 End.X SID                   | Srv6EndX             |
-| 1107 | IS-IS SRv6 LAN End.X SID         | Srv6LanEndXISIS      |
-| 1108 | OSPFv3 SRv6 LAN End.X SID        | Srv6LanEndXOSPF      |
-| 1162 | SRv6 Locator                     | Srv6Locator          |
-| 1250 | SRv6 Endpoint Behavior           | Srv6EndpointBehavior |
-| 1252 | SRv6 SID Structure               | Srv6SidStructure     |
-+------+----------------------------------+----------------------+
++------+----------------------------------+--------------------------+
+| TLV  | IANA/RFC Name                    | ExaBGP Class             |
++------+----------------------------------+--------------------------+
+|  258 | Link Local/Remote Identifiers    | LinkLocalRemoteId        |
+| 1030 | IPv4 Router-ID of Remote Node    | RemoteRouterId           |
+| 1031 | IPv6 Router-ID of Remote Node    | RemoteRouterId           |
+| 1088 | Administrative group (color)     | AdminGroup               |
+| 1089 | Maximum link bandwidth           | MaxBw                    |
+| 1090 | Max. reservable link bandwidth   | MaxReservableBw          |
+| 1091 | Unreserved bandwidth             | UnreservedBw             |
+| 1092 | TE Default Metric                | TeMetric                 |
+| 1093 | Link Protection Type             | LinkProtectionType       |
+| 1094 | MPLS Protocol Mask               | MplsMask                 |
+| 1095 | IGP Metric                       | IgpMetric                |
+| 1096 | Shared Risk Link Group           | Srlg                     |
+| 1097 | Opaque Link Attribute            | LinkOpaque               |
+| 1098 | Link Name                        | LinkName                 |
+| 1099 | Adjacency SID                    | AdjacencySid             |
+| 1100 | LAN Adjacency SID                | LanAdjacencySid          |
+| 1038 | SRv6 Capabilities                | Srv6Capabilities         |
+| 1106 | SRv6 End.X SID                   | Srv6EndX                 |
+| 1107 | IS-IS SRv6 LAN End.X SID         | Srv6LanEndXISIS          |
+| 1108 | OSPFv3 SRv6 LAN End.X SID        | Srv6LanEndXOSPF          |
+| 1114 | Unidirectional Link Delay        | UnidirectionalLinkDelay  |
+| 1115 | Min/Max Unidirectional Link Delay| MinMaxUnidirLinkDelay    |
+| 1116 | Unidirectional Delay Variation   | UnidirectionalDelayVar   |
+| 1117 | Unidirectional Link Loss         | UnidirectionalLinkLoss   |
+| 1118 | Unidirectional Residual Bandwidth| UnidirectionalResidualBw |
+| 1119 | Unidirectional Available Bandwidth| UnidirectionalAvailableBw|
+| 1120 | Unidirectional Utilized Bandwidth| UnidirectionalUtilizedBw |
+| 1162 | SRv6 Locator                     | Srv6Locator              |
+| 1250 | SRv6 Endpoint Behavior           | Srv6EndpointBehavior     |
+| 1252 | SRv6 SID Structure               | Srv6SidStructure         |
++------+----------------------------------+--------------------------+
 
 Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
@@ -124,3 +134,31 @@ from exabgp.bgp.message.update.attribute.bgpls.link.srv6capabilities import Srv6
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6locator import Srv6Locator
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6endpointbehavior import Srv6EndpointBehavior
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEndXISIS, Srv6LanEndXOSPF
+
+#  +================+===========================================+===========+
+#  | TLV Code Point | Description                               | Reference |
+#  +================+===========================================+===========+
+#  | 1114           | Unidirectional Link Delay                 | RFC 8571  |
+#  | 1115           | Min/Max Unidirectional Link Delay         | RFC 8571  |
+#  | 1116           | Unidirectional Delay Variation            | RFC 8571  |
+#  | 1117           | Unidirectional Link Loss                  | RFC 8571  |
+#  | 1118           | Unidirectional Residual Bandwidth         | RFC 8571  |
+#  | 1119           | Unidirectional Available Bandwidth        | RFC 8571  |
+#  | 1120           | Unidirectional Utilized Bandwidth         | RFC 8571  |
+#  +----------------+-------------------------------------------+-----------+
+from exabgp.bgp.message.update.attribute.bgpls.link.delaymetric import (
+    UnidirectionalLinkDelay,
+    MinMaxUnidirLinkDelay,
+    UnidirectionalDelayVar,
+    UnidirectionalLinkLoss,
+    UnidirectionalResidualBw,
+    UnidirectionalAvailableBw,
+    UnidirectionalUtilizedBw,
+)
+
+#  +----------------+-------------------------------+-----------+
+#  | TLV Code Point | Description                   | Reference |
+#  +----------------+-------------------------------+-----------+
+#  |  258           | Link Local/Remote Identifiers | RFC 7752  |
+#  +----------------+-------------------------------+-----------+
+from exabgp.bgp.message.update.attribute.bgpls.link.localremoteid import LinkLocalRemoteId
