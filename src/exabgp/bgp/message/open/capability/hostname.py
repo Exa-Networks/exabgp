@@ -32,21 +32,22 @@ class HostName(Capability):
         return '{{ "host-name": "{}", "domain-name": "{}" }}'.format(self.host_name, self.domain_name)
 
     def extract_capability_bytes(self) -> list[bytes]:
-        ret = b''
+        # Return empty list (not [b'']) when no hostname - capability should not be sent
+        if not self.host_name:
+            return []
 
-        if self.host_name:
-            hostname = self.host_name.encode('utf-8')
-            if len(hostname) > self.HOSTNAME_MAX_LEN:
-                hostname = hostname[: self.HOSTNAME_MAX_LEN]
-            ret += bytes([len(hostname)]) + hostname
+        hostname = self.host_name.encode('utf-8')
+        if len(hostname) > self.HOSTNAME_MAX_LEN:
+            hostname = hostname[: self.HOSTNAME_MAX_LEN]
+        ret = bytes([len(hostname)]) + hostname
 
-            if self.domain_name:
-                domainname = self.domain_name.encode('utf-8')
-                if len(domainname) > self.HOSTNAME_MAX_LEN:
-                    domainname = domainname[: self.HOSTNAME_MAX_LEN]
-                ret += bytes([len(domainname)]) + domainname
-            else:
-                ret += bytes([0]) + b''
+        if self.domain_name:
+            domainname = self.domain_name.encode('utf-8')
+            if len(domainname) > self.HOSTNAME_MAX_LEN:
+                domainname = domainname[: self.HOSTNAME_MAX_LEN]
+            ret += bytes([len(domainname)]) + domainname
+        else:
+            ret += bytes([0]) + b''
 
         return [ret]
 

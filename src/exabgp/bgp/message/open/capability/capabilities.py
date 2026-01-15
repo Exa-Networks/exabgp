@@ -202,8 +202,8 @@ class Capabilities(dict[int, Capability]):
         parameters = b''
         for k, capabilities in self.items():
             for capability in capabilities.extract_capability_bytes():
-                if len(capability) == 0:
-                    continue
+                # Encode capability TLV: code (1 byte) + length (1 byte) + data
+                # Zero-length capabilities (e.g., RouteRefresh, LinkLocalNextHop) are valid
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += bytes([2, len(encoded)]) + encoded
 
@@ -216,8 +216,8 @@ class Capabilities(dict[int, Capability]):
         parameters = b''
         for k, capabilities in self.items():
             for capability in capabilities.extract_capability_bytes():
-                if len(capability) == 0:
-                    continue
+                # Encode capability TLV: code (1 byte) + length (1 byte) + data
+                # Zero-length capabilities (e.g., RouteRefresh, LinkLocalNextHop) are valid
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += pack('!BH', 2, len(encoded)) + encoded
 

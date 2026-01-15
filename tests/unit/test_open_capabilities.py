@@ -608,6 +608,147 @@ def test_add_path_capability_code() -> None:
 
 
 # ==============================================================================
+# Phase 12: Link-Local Next Hop Capability (draft-ietf-idr-linklocal-capability)
+# ==============================================================================
+
+
+def test_link_local_nexthop_capability_code() -> None:
+    """Test Link-Local Next Hop capability code.
+
+    draft-ietf-idr-linklocal-capability: Code 77 (0x4D).
+    """
+    assert Capability.CODE.LINK_LOCAL_NEXTHOP == 77
+
+
+def test_link_local_nexthop_creation() -> None:
+    """Test LinkLocalNextHop capability creation."""
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+
+    cap = LinkLocalNextHop()
+    assert cap.ID == Capability.CODE.LINK_LOCAL_NEXTHOP
+    assert str(cap) == 'Link-Local NextHop'
+
+
+def test_link_local_nexthop_json() -> None:
+    """Test LinkLocalNextHop JSON representation."""
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+
+    cap = LinkLocalNextHop()
+    assert cap.json() == '{ "name": "link-local-nexthop" }'
+
+
+def test_link_local_nexthop_extract_bytes() -> None:
+    """Test LinkLocalNextHop extract_capability_bytes.
+
+    Capability has no payload (length 0).
+    """
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+
+    cap = LinkLocalNextHop()
+    bytes_list = cap.extract_capability_bytes()
+    assert bytes_list == [b'']
+
+
+def test_link_local_nexthop_equality() -> None:
+    """Test LinkLocalNextHop equality comparison."""
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+
+    cap1 = LinkLocalNextHop()
+    cap2 = LinkLocalNextHop()
+
+    assert cap1 == cap2
+    assert not (cap1 != cap2)
+
+
+def test_link_local_nexthop_inequality_with_other() -> None:
+    """Test LinkLocalNextHop inequality with other types."""
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+
+    cap = LinkLocalNextHop()
+
+    assert cap != 'not a capability'
+    assert cap != 77
+    assert cap != None  # noqa: E711
+
+
+def test_link_local_nexthop_ordering_raises() -> None:
+    """Test that ordering operations raise RuntimeError."""
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+    import pytest
+
+    cap1 = LinkLocalNextHop()
+    cap2 = LinkLocalNextHop()
+
+    with pytest.raises(RuntimeError):
+        cap1 < cap2
+
+    with pytest.raises(RuntimeError):
+        cap1 <= cap2
+
+    with pytest.raises(RuntimeError):
+        cap1 > cap2
+
+    with pytest.raises(RuntimeError):
+        cap1 >= cap2
+
+
+def test_open_with_link_local_nexthop_capability() -> None:
+    """Test OPEN message with Link-Local NextHop capability."""
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+
+    capabilities = Capabilities()
+    capabilities[Capability.CODE.LINK_LOCAL_NEXTHOP] = LinkLocalNextHop()
+
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+
+    assert Capability.CODE.LINK_LOCAL_NEXTHOP in open_msg.capabilities
+
+
+def test_open_with_link_local_nexthop_and_ipv6() -> None:
+    """Test OPEN with Link-Local NextHop and IPv6 Unicast.
+
+    Common scenario: IPv6 peer using link-local addresses.
+    """
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+
+    capabilities = Capabilities()
+    capabilities[Capability.CODE.MULTIPROTOCOL] = [(AFI.ipv6, SAFI.unicast)]
+    capabilities[Capability.CODE.LINK_LOCAL_NEXTHOP] = LinkLocalNextHop()
+
+    open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+
+    assert Capability.CODE.MULTIPROTOCOL in open_msg.capabilities
+    assert Capability.CODE.LINK_LOCAL_NEXTHOP in open_msg.capabilities
+
+
+def test_link_local_nexthop_unpack() -> None:
+    """Test LinkLocalNextHop unpack_capability."""
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+
+    cap = LinkLocalNextHop()
+    # Empty data - capability has no payload
+    result = LinkLocalNextHop.unpack_capability(cap, b'', Capability.CODE.LINK_LOCAL_NEXTHOP)
+
+    assert result is cap
+    assert cap._seen is True
+
+
+def test_link_local_nexthop_unpack_duplicate() -> None:
+    """Test LinkLocalNextHop unpack handles duplicates."""
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+
+    cap = LinkLocalNextHop()
+
+    # First unpack
+    LinkLocalNextHop.unpack_capability(cap, b'', Capability.CODE.LINK_LOCAL_NEXTHOP)
+    assert cap._seen is True
+
+    # Second unpack (duplicate) - should still work, just logs
+    LinkLocalNextHop.unpack_capability(cap, b'', Capability.CODE.LINK_LOCAL_NEXTHOP)
+    assert cap._seen is True
+
+
+# ==============================================================================
 # Summary
 # ==============================================================================
 # Total tests: 48
