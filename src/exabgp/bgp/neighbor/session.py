@@ -36,6 +36,7 @@ class Session:
 
     # With defaults (non-None where possible)
     local_address: IP = field(default_factory=lambda: IP.NoNextHop)  # NoNextHop = auto-discovery
+    local_link_local: IP | None = None  # Link-local address for IPv6 (fe80::/10)
     local_as: ASN = field(default_factory=lambda: ASN(0))  # 0 = auto (mirror peer)
     peer_as: ASN = field(default_factory=lambda: ASN(0))  # 0 = auto
     router_id: 'RouterID | None' = None  # Derived from local_address if None and IPv4
@@ -126,6 +127,14 @@ class Session:
         raise TypeError(
             f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({local_afi})',
         )
+
+    def ip_link_local(self) -> IP | None:
+        """Get the local link-local IPv6 address if available.
+
+        Returns:
+            Link-local IP or None if not set.
+        """
+        return self.local_link_local
 
     def connection_established(self, local: str) -> None:
         """Called after TCP connection to set auto-discovered values.

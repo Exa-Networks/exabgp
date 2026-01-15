@@ -140,6 +140,14 @@ class ParseCapability(Section):
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
             ),
+            'link-local-prefer': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Prefer link-local over global IPv6 next-hop when both present',
+                default=False,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+            ),
         },
     )
 
@@ -154,6 +162,7 @@ class ParseCapability(Section):
         '   extended-message enable|disable;\n'
         '   software-version enable|disable;\n'
         '   link-local-nexthop enable|disable;\n'
+        '   link-local-prefer enable|disable;\n'
         '}\n'
     )
 
@@ -176,6 +185,7 @@ class ParseCapability(Section):
         'extended-message': True,
         'software-version': False,
         'link-local-nexthop': None,
+        'link-local-prefer': False,
     }
 
     name = 'capability'

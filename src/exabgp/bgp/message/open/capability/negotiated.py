@@ -241,6 +241,23 @@ class Negotiated:
     def nexthopself(self, afi: AFI) -> 'IP':
         return self.neighbor.ip_self(afi)
 
+    def link_local_address(self) -> 'IP | None':
+        """Get the local link-local IPv6 address if available."""
+        return self.neighbor.session.ip_link_local()
+
+    def link_local_prefer(self) -> bool:
+        """Check if link-local nexthop is preferred over global."""
+        return self.neighbor.capability.link_local_prefer
+
+    def is_multihop(self) -> bool:
+        """Check if session is multihop (TTL > 1).
+
+        Used to determine if link-local addresses should be excluded from
+        next-hop (link-local only valid for directly connected peers).
+        """
+        ttl = self.neighbor.session.outgoing_ttl
+        return ttl is not None and ttl > 1
+
     @property
     def is_ibgp(self) -> bool:
         """Return True if this is an IBGP session (local_as == peer_as)."""

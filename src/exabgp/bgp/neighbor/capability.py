@@ -81,6 +81,7 @@ class NeighborCapability:
     nexthop: TriState = TriState.UNSET
     aigp: TriState = TriState.UNSET
     link_local_nexthop: TriState = TriState.UNSET
+    link_local_prefer: bool = False  # Prefer link-local over global when both present
     software_version: str | None = None
 
     def copy(self) -> 'NeighborCapability':
@@ -99,6 +100,7 @@ class NeighborCapability:
             nexthop=self.nexthop,
             aigp=self.aigp,
             link_local_nexthop=self.link_local_nexthop,
+            link_local_prefer=self.link_local_prefer,
             software_version=self.software_version,
         )
 
@@ -117,5 +119,6 @@ class NeighborCapability:
             and self.nexthop == other.nexthop
             and self.aigp == other.aigp
             and self.link_local_nexthop == other.link_local_nexthop
+            and self.link_local_prefer == other.link_local_prefer
             and self.software_version == other.software_version
         )

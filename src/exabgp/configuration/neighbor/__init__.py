@@ -66,6 +66,13 @@ class ParseNeighbor(Section):
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
             ),
+            'local-link-local': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Local IPv6 link-local address for LLNH capability (fe80::/10)',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+            ),
             'local-as': Leaf(
                 type=ValueType.ASN,
                 description='Local AS number (or "auto" to copy peer-as)',
@@ -332,6 +339,7 @@ class ParseNeighbor(Section):
     _CONFIG_TO_SESSION: dict[str, str] = {
         'router-id': 'router_id',
         'local-address': 'local_address',
+        'local-link-local': 'local_link_local',
         'source-interface': 'source_interface',
         'peer-address': 'peer_address',
         'local-as': 'local_as',
@@ -413,6 +421,8 @@ class ParseNeighbor(Section):
         if 'link-local-nexthop' in capability:
             if capability['link-local-nexthop'] is not None:
                 cap.link_local_nexthop = TriState.from_bool(capability['link-local-nexthop'])
+        if 'link-local-prefer' in capability:
+            cap.link_local_prefer = capability['link-local-prefer']
         if 'graceful-restart' in capability:
             gr = capability['graceful-restart']
             if gr is False:
@@ -539,6 +549,11 @@ class ParseNeighbor(Section):
                 return self.error.set('local-address and peer-address must be of the same family')
         if neighbor.session.peer_address is IP.NoNextHop:
             return self.error.set('peer-address must be set')
+
+        # Validate local-link-local is actually a link-local address if set
+        if neighbor.session.local_link_local is not None:
+            if not neighbor.session.local_link_local.is_link_local():
+                return self.error.set('local-link-local must be an IPv6 link-local address (fe80::/10)')
 
         # peer_address is always IPRange when parsed from configuration (see parser.peer_ip)
         assert isinstance(neighbor.session.peer_address, IPRange)

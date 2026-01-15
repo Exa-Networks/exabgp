@@ -272,6 +272,72 @@ class MPNLRICollection:
         """Calculate total attribute length including header."""
         return payload_len + (4 if payload_len > 255 else 3)
 
+    def _encode_nexthop(
+        self,
+        nlri_nexthop: IP,
+        family_key: tuple[AFI, SAFI],
+        negotiated: 'Negotiated',
+    ) -> bytes:
+        """Encode nexthop bytes for MP_REACH_NLRI.
+
+        Handles link-local nexthop capability (RFC draft-ietf-idr-linklocal-capability):
+        - 16-byte: link-local only (when LLNH negotiated) or global only
+        - 32-byte: global + link-local (for IPv6 unicast/labeled)
+
+        Args:
+            nlri_nexthop: The route's next-hop IP address.
+            family_key: (AFI, SAFI) tuple for the family.
+            negotiated: BGP session parameters.
+
+        Returns:
+            Packed nexthop bytes (including RD if applicable).
+        """
+        from exabgp.protocol.family import Family
+
+        if nlri_nexthop is IP.NoNextHop:
+            return b''
+
+        _, rd_size = Family.size.get(family_key, (0, 0))
+        nh_rd = bytes([0]) * rd_size if rd_size else b''
+
+        try:
+            nh_packed = nlri_nexthop.pack_ip()
+        except TypeError:
+            # Fallback for invalid nexthop
+            return bytes([0]) * 4
+
+        # Only apply LLNH logic for IPv6 families
+        if family_key[0] != AFI.ipv6:
+            return nh_rd + nh_packed
+
+        # Check if LLNH capability is negotiated
+        if not negotiated.linklocal_nexthop:
+            # Without LLNH, just send the nexthop as-is
+            return nh_rd + nh_packed
+
+        # Check if session is multihop - link-local not usable beyond 1 hop
+        # RFC draft-ietf-idr-linklocal-capability: exclude LLA for non-directly-connected peers
+        if negotiated.is_multihop():
+            return nh_rd + nh_packed
+
+        # Get link-local address if available
+        link_local = negotiated.link_local_address()
+        is_nh_link_local = nlri_nexthop.is_link_local()
+
+        # Case 1: Nexthop is already link-local - send as 16-byte (with LLNH negotiated)
+        if is_nh_link_local:
+            return nh_rd + nh_packed
+
+        # Case 2: Nexthop is global, and we have a link-local to include
+        # Wire format is ALWAYS: Global (16 bytes) + Link-local (16 bytes)
+        # The link-local-prefer config affects receiver's forwarding decision, not wire order
+        if link_local is not None:
+            lla_packed = link_local.pack_ip()
+            return nh_rd + nh_packed + lla_packed
+
+        # Case 3: Global nexthop, no link-local available - send as 16-byte
+        return nh_rd + nh_packed
+
     def packed_reach_attributes(
         self,
         negotiated: 'Negotiated',
@@ -288,8 +354,6 @@ class MPNLRICollection:
         Yields:
             Wire-format attribute bytes (with flags/type/length header).
         """
-        from exabgp.protocol.family import Family
-
         # Filter NLRIs for this family and group by nexthop
         mpnlri: dict[bytes, list[bytes]] = {}
         family_key = (self._afi, self._safi)
@@ -301,19 +365,8 @@ class MPNLRICollection:
             if nlri.family().afi_safi() != family_key:
                 continue
 
-            # Encode nexthop
-            # Note: link-local capability doesn't change encoding - existing code
-            # already produces correct lengths (16 for IPv6, 24 for VPNv6)
-            if nlri_nexthop is IP.NoNextHop:
-                nexthop = b''
-            else:
-                _, rd_size = Family.size.get(family_key, (0, 0))
-                nh_rd = bytes([0]) * rd_size if rd_size else b''
-                try:
-                    nexthop = nh_rd + nlri_nexthop.pack_ip()
-                except TypeError:
-                    # Fallback for invalid nexthop
-                    nexthop = bytes([0]) * 4
+            # Encode nexthop with LLNH support
+            nexthop = self._encode_nexthop(nlri_nexthop, family_key, negotiated)
 
             mpnlri.setdefault(nexthop, []).append(bytes(nlri.pack_nlri(negotiated)))
 

@@ -88,6 +88,12 @@ def create_negotiated_mock(families: Any = None, asn4: Any = False, msg_size: An
     negotiated.local_as = ASN(65000)
     negotiated.peer_as = ASN(65001)
 
+    # Link-local nexthop capability (default: disabled)
+    negotiated.linklocal_nexthop = False
+    negotiated.link_local_address = Mock(return_value=None)
+    negotiated.link_local_prefer = Mock(return_value=False)
+    negotiated.is_multihop = Mock(return_value=False)
+
     return negotiated
 
 
