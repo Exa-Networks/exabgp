@@ -302,6 +302,8 @@ class MPNLRICollection:
                 continue
 
             # Encode nexthop
+            # Note: link-local capability doesn't change encoding - existing code
+            # already produces correct lengths (16 for IPv6, 24 for VPNv6)
             if nlri_nexthop is IP.NoNextHop:
                 nexthop = b''
             else:

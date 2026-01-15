@@ -132,6 +132,14 @@ class ParseCapability(Section):
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
             ),
+            'link-local-nexthop': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Link-local next-hop capability (RFC draft-ietf-idr-linklocal-capability)',
+                default=None,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+            ),
         },
     )
 
@@ -145,6 +153,7 @@ class ParseCapability(Section):
         '   refresh enable|disable;\n'
         '   extended-message enable|disable;\n'
         '   software-version enable|disable;\n'
+        '   link-local-nexthop enable|disable;\n'
         '}\n'
     )
 
@@ -166,6 +175,7 @@ class ParseCapability(Section):
         'aigp': True,
         'extended-message': True,
         'software-version': False,
+        'link-local-nexthop': None,
     }
 
     name = 'capability'

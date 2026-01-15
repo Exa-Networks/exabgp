@@ -60,6 +60,7 @@ class Negotiated:
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
         self.aigp: bool = neighbor.capability.aigp.is_enabled()
+        self.linklocal_nexthop: bool = False
         self.mismatch: list[tuple[str, FamilyTuple]] = []
 
     @classmethod
@@ -78,6 +79,7 @@ class Negotiated:
         instance.operational = False
         instance.refresh = REFRESH.ABSENT
         instance.aigp = False
+        instance.linklocal_nexthop = False
         instance.mismatch = []
         instance.sent_open = None
         instance.received_open = None
@@ -148,6 +150,10 @@ class Negotiated:
             Capability.CODE.EXTENDED_MESSAGE,
         ):
             self.msg_size = ExtendedMessage.EXTENDED_SIZE
+
+        self.linklocal_nexthop = sent_capa.announced(Capability.CODE.LINK_LOCAL_NEXTHOP) and recv_capa.announced(
+            Capability.CODE.LINK_LOCAL_NEXTHOP,
+        )
 
         self.multisession = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(
             Capability.CODE.MULTISESSION,

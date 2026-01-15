@@ -410,6 +410,9 @@ class ParseNeighbor(Section):
             cap.route_refresh = 2 if capability['route-refresh'] else 0  # REFRESH.NORMAL or 0
         if 'software-version' in capability:
             cap.software_version = 'exabgp' if capability['software-version'] else None
+        if 'link-local-nexthop' in capability:
+            if capability['link-local-nexthop'] is not None:
+                cap.link_local_nexthop = TriState.from_bool(capability['link-local-nexthop'])
         if 'graceful-restart' in capability:
             gr = capability['graceful-restart']
             if gr is False:

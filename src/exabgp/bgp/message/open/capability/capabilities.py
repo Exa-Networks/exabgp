@@ -170,6 +170,13 @@ class Capabilities(dict[int, Capability]):
             return
         self[Capability.CODE.OPERATIONAL] = Operational()
 
+    def _linklocal(self, neighbor: Neighbor) -> None:
+        if not neighbor.capability.link_local_nexthop.is_enabled():
+            return
+        from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+
+        self[Capability.CODE.LINK_LOCAL_NEXTHOP] = LinkLocalNextHop()
+
     def _session(self, neighbor: Neighbor) -> None:
         if not neighbor.capability.multi_session.is_enabled():
             return
@@ -187,6 +194,7 @@ class Capabilities(dict[int, Capability]):
         self._extended_message(neighbor)
         self._hostname(neighbor)  # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
         self._software_version(neighbor)  # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
+        self._linklocal(neighbor)  # https://datatracker.ietf.org/doc/html/draft-ietf-idr-linklocal-capability
         self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
         return self
 

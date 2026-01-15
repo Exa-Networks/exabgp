@@ -80,6 +80,7 @@ class NeighborCapability:
     route_refresh: int = 0  # REFRESH enum: ABSENT=1, NORMAL=2, ENHANCED=4
     nexthop: TriState = TriState.UNSET
     aigp: TriState = TriState.UNSET
+    link_local_nexthop: TriState = TriState.UNSET
     software_version: str | None = None
 
     def copy(self) -> 'NeighborCapability':
@@ -97,6 +98,7 @@ class NeighborCapability:
             route_refresh=self.route_refresh,
             nexthop=self.nexthop,
             aigp=self.aigp,
+            link_local_nexthop=self.link_local_nexthop,
             software_version=self.software_version,
         )
 
@@ -114,5 +116,6 @@ class NeighborCapability:
             and self.route_refresh == other.route_refresh
             and self.nexthop == other.nexthop
             and self.aigp == other.aigp
+            and self.link_local_nexthop == other.link_local_nexthop
             and self.software_version == other.software_version
         )

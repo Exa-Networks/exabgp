@@ -191,6 +191,8 @@ class MPRNLRI(Attribute, Family):
 
         length, rd = Family.size[(afi, safi)]
 
+        # Note: link-local nexthop capability (code 77) doesn't change validation -
+        # 16-byte nexthops are already valid for IPv6 families in Family.size
         if negotiated.nexthop:
             if len_nh in (16, 32, 24):
                 nh_afi = AFI.ipv6

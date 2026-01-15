@@ -132,6 +132,10 @@ class IP(IPBase):
     def ipv6(self) -> bool:
         return len(self._packed) != IPv4.BYTES
 
+    def is_link_local(self) -> bool:
+        """Check if address is link-local. Override in subclasses."""
+        return False
+
     def address(self) -> int:
         value = 0
         for char in self._packed:
@@ -382,6 +386,10 @@ class IPv4(IP):
     def ipv6(self) -> bool:
         return False
 
+    def is_link_local(self) -> bool:
+        """IPv4 link-local not supported by link-local nexthop capability."""
+        return False
+
     @staticmethod
     def pton(ip: str) -> builtins.bytes:
         return socket.inet_pton(socket.AF_INET, ip)
@@ -434,6 +442,13 @@ class IPv6(IP):
 
     def multicast(self) -> bool:
         return False
+
+    def is_link_local(self) -> bool:
+        """Check if IPv6 address is link-local (fe80::/10)."""
+        if len(self._packed) != 16:
+            return False
+        # fe80::/10 = first byte 0xfe, second byte 0x80-0xbf (high 2 bits = 10)
+        return self._packed[0] == 0xFE and (self._packed[1] & 0xC0) == 0x80
 
     @staticmethod
     def pton(ip: str) -> builtins.bytes:
