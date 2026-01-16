@@ -1,4 +1,3 @@
-
 """neighbor/__init__.py
 
 Created by Thomas Mangin on 2015-06-04.
@@ -196,7 +195,10 @@ class ParseNeighbor(Section):
         for family in ParseAddPath.convert:
             for pair in add_path.get(family, []):
                 if pair not in families:
-                    log.debug(lambda pair=pair: 'skipping add-path family ' + str(pair) + ' as it is not negotiated', 'configuration')
+                    log.debug(
+                        lambda pair=pair: 'skipping add-path family ' + str(pair) + ' as it is not negotiated',
+                        'configuration',
+                    )
                     continue
                 neighbor.add_addpath(pair)
 
@@ -234,8 +236,12 @@ class ParseNeighbor(Section):
 
     def _post_capa_rr(self, neighbor):
         if neighbor['capability']['route-refresh']:
-            if neighbor['adj-rib-out']:
-                log.debug(lambda: 'route-refresh requested, enabling adj-rib-out', 'configuration')
+            if not neighbor['adj-rib-out']:
+                log.warning(
+                    lambda: f"route-refresh enabled but adj-rib-out disabled for {neighbor['peer-address']}, auto-enabling adj-rib-out",
+                    'configuration',
+                )
+                neighbor['adj-rib-out'] = True
 
     def _post_routes(self, neighbor, local):
         # NOTE: this may modify change but does not matter as want to modified
@@ -284,6 +290,7 @@ class ParseNeighbor(Section):
         self._post_capa_default(neighbor, local)
         self._post_capa_addpath(neighbor, local, families)
         self._post_capa_nexthop(neighbor, local)
+        self._post_capa_rr(neighbor)
         self._post_routes(neighbor, local)
 
         neighbor.api = ParseAPI.flatten(local.pop('api', {}))
@@ -318,7 +325,9 @@ class ParseNeighbor(Section):
             family = change.nlri.family().afi_safi()
             if family not in families and family != (AFI.ipv4, SAFI.unicast):
                 return self.error.set(
-                    'Trying to announce a route of type {},{} when we are not announcing the family to our peer'.format(*change.nlri.family().afi_safi()),
+                    'Trying to announce a route of type {},{} when we are not announcing the family to our peer'.format(
+                        *change.nlri.family().afi_safi()
+                    ),
                 )
 
         # create one neighbor object per family for multisession
