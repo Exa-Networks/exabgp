@@ -459,6 +459,9 @@ class Reactor:
         # Create processes after closing file descriptors
         self.processes = Processes()
 
+        # Mark signal handler as ready - any signals received before this point are queued
+        self.signal.mark_ready()
+
         # Setup listeners
         for ip in self._ips:
             if not self.listener.listen_on(ip, None, self._port, None, False, None):

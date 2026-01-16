@@ -42,11 +42,28 @@ class Signal:
     def __init__(self) -> None:
         self.received: int = self.NONE
         self.number: int = 0
+        self._ready: bool = False
+        self._pending: list[tuple[int, int]] = []
         self.rearm()
+
+    def mark_ready(self) -> None:
+        """Mark the signal handler as ready to process signals.
+
+        If signals were received before ready, the first one will be processed now.
+        Remaining signals will be processed after each rearm() call.
+        """
+        self._ready = True
+        if self._pending:
+            log.critical(lazymsg('signal.processing_deferred count={c}', c=len(self._pending)), 'reactor')
+            self.received, self.number = self._pending.pop(0)
 
     def rearm(self) -> None:
         self.received = Signal.NONE
         self.number = 0
+
+        # Process next queued signal if any
+        if self._pending:
+            self.received, self.number = self._pending.pop(0)
 
         signal.signal(signal.SIGTERM, self.sigterm)
         signal.signal(signal.SIGHUP, self.sighup)
@@ -54,47 +71,41 @@ class Signal:
         signal.signal(signal.SIGUSR1, self.sigusr1)
         signal.signal(signal.SIGUSR2, self.sigusr2)
 
-    def sigterm(self, signum: int, frame: FrameType | None) -> None:
-        log.critical(lazymsg('signal.received signal=SIGTERM'), 'reactor')
+    def _defer_or_schedule(self, action: int, signum: int, action_name: str) -> None:
+        """Common logic for signal handlers - defer if not ready, schedule if ready."""
+        if not self._ready:
+            # Deduplicate by action type
+            if any(a == action for a, _ in self._pending):
+                log.critical(
+                    lazymsg('signal.deferred reason=not_ready action={a} status=duplicate', a=action_name), 'reactor'
+                )
+                return
+            log.critical(lazymsg('signal.deferred reason=not_ready action={a} status=queued', a=action_name), 'reactor')
+            self._pending.append((action, signum))
+            return
         if self.received:
             log.critical(lazymsg('signal.ignored reason=handling_previous'), 'reactor')
             return
-        log.critical(lazymsg('signal.scheduling action=shutdown'), 'reactor')
-        self.received = self.SHUTDOWN
+        log.critical(lazymsg('signal.scheduling action={a}', a=action_name), 'reactor')
+        self.received = action
         self.number = signum
+
+    def sigterm(self, signum: int, frame: FrameType | None) -> None:
+        log.critical(lazymsg('signal.received signal=SIGTERM'), 'reactor')
+        self._defer_or_schedule(self.SHUTDOWN, signum, 'shutdown')
 
     def sighup(self, signum: int, frame: FrameType | None) -> None:
         log.critical(lazymsg('signal.received signal=SIGHUP'), 'reactor')
-        if self.received:
-            log.critical(lazymsg('signal.ignored reason=handling_previous'), 'reactor')
-            return
-        log.critical(lazymsg('signal.scheduling action=shutdown'), 'reactor')
-        self.received = self.SHUTDOWN
-        self.number = signum
+        self._defer_or_schedule(self.SHUTDOWN, signum, 'shutdown')
 
     def sigalrm(self, signum: int, frame: FrameType | None) -> None:
         log.critical(lazymsg('signal.received signal=SIGALRM'), 'reactor')
-        if self.received:
-            log.critical(lazymsg('signal.ignored reason=handling_previous'), 'reactor')
-            return
-        log.critical(lazymsg('signal.scheduling action=restart'), 'reactor')
-        self.received = self.RESTART
-        self.number = signum
+        self._defer_or_schedule(self.RESTART, signum, 'restart')
 
     def sigusr1(self, signum: int, frame: FrameType | None) -> None:
         log.critical(lazymsg('signal.received signal=SIGUSR1'), 'reactor')
-        if self.received:
-            log.critical(lazymsg('signal.ignored reason=handling_previous'), 'reactor')
-            return
-        log.critical(lazymsg('signal.scheduling action=reload_config'), 'reactor')
-        self.received = self.RELOAD
-        self.number = signum
+        self._defer_or_schedule(self.RELOAD, signum, 'reload_config')
 
     def sigusr2(self, signum: int, frame: FrameType | None) -> None:
         log.critical(lazymsg('signal.received signal=SIGUSR2'), 'reactor')
-        if self.received:
-            log.critical(lazymsg('signal.ignored reason=handling_previous'), 'reactor')
-            return
-        log.critical(lazymsg('signal.scheduling action=full_reload'), 'reactor')
-        self.received = self.FULL_RELOAD
-        self.number = signum
+        self._defer_or_schedule(self.FULL_RELOAD, signum, 'full_reload')
