@@ -603,11 +603,113 @@ class TestPeerReconfigure:
 
         new_neighbor = Mock()
         new_neighbor.uid = '2'
+        new_neighbor.rib = Mock()
+        new_neighbor.rib.outgoing = Mock()
+        new_neighbor.routes = []
+        new_neighbor.previous = None
 
         peer = Peer(neighbor, reactor)
         peer.reconfigure(new_neighbor)
 
+        # Neighbor reference updated immediately
+        assert peer.neighbor is new_neighbor
+        # _neighbor cleared when offline (issue #1126 fix)
+        assert peer._neighbor is None
+
+    def test_reconfigure_offline_updates_rib_directly(self) -> None:
+        """Test reconfigure() updates RIB when peer is offline (issue #1126).
+
+        When a neighbor is offline (not ESTABLISHED) during config reload,
+        the RIB should be updated immediately since the main loop isn't
+        running to process the _neighbor variable later.
+        """
+        neighbor = Mock()
+        neighbor.uid = '1'
+        neighbor.api = {'neighbor-changes': False, 'fsm': False}
+        reactor = Mock()
+
+        peer = Peer(neighbor, reactor)
+        # Peer starts in IDLE (offline)
+        assert peer.fsm == FSM.IDLE
+
+        # Create new neighbor config with routes and RIB
+        # After reconfigure(), peer.neighbor becomes new_neighbor
+        # so the RIB is accessed from new_neighbor
+        new_neighbor = Mock()
+        new_neighbor.uid = '1'
+        new_neighbor.rib = Mock()
+        new_neighbor.rib.outgoing = Mock()
+        new_neighbor.rib.outgoing.replace_reload = Mock()
+        current_routes = [Mock(name='route1')]
+        previous_routes = [Mock(name='old_route')]
+        new_neighbor.routes = current_routes
+        new_neighbor.previous = Mock()
+        new_neighbor.previous.routes = previous_routes
+
+        peer.reconfigure(new_neighbor)
+
+        # RIB should be updated directly since peer is offline
+        new_neighbor.rib.outgoing.replace_reload.assert_called_once_with(
+            previous_routes,
+            current_routes,
+        )
+        # previous should be cleared
+        assert new_neighbor.previous is None
+        # _neighbor should be cleared to prevent double-processing on reconnect
+        assert peer._neighbor is None
+
+    def test_reconfigure_online_defers_rib_update(self) -> None:
+        """Test reconfigure() defers RIB update when peer is ESTABLISHED.
+
+        When a neighbor is online (ESTABLISHED), the RIB update should be
+        deferred to the main loop which will process _neighbor.
+        """
+        neighbor = Mock()
+        neighbor.uid = '1'
+        neighbor.api = {'neighbor-changes': False, 'fsm': False}
+        reactor = Mock()
+
+        peer = Peer(neighbor, reactor)
+        peer.fsm.change(FSM.ESTABLISHED)
+
+        # Create new neighbor config with routes and RIB
+        new_neighbor = Mock()
+        new_neighbor.uid = '1'
+        new_neighbor.rib = Mock()
+        new_neighbor.rib.outgoing = Mock()
+        new_neighbor.rib.outgoing.replace_reload = Mock()
+        new_neighbor.routes = [Mock(name='route1')]
+        new_neighbor.previous = Mock()
+        new_neighbor.previous.routes = [Mock(name='old_route')]
+
+        peer.reconfigure(new_neighbor)
+
+        # RIB should NOT be updated directly - main loop will handle it
+        new_neighbor.rib.outgoing.replace_reload.assert_not_called()
+        # _neighbor should be set for main loop to process
         assert peer._neighbor is new_neighbor
+        # previous should NOT be cleared (main loop will do it)
+        assert new_neighbor.previous is not None
+
+    def test_reconfigure_offline_no_rib(self) -> None:
+        """Test reconfigure() handles missing RIB gracefully."""
+        neighbor = Mock()
+        neighbor.uid = '1'
+        neighbor.api = {'neighbor-changes': False, 'fsm': False}
+        neighbor.rib = None  # No RIB
+        reactor = Mock()
+
+        peer = Peer(neighbor, reactor)
+        assert peer.fsm == FSM.IDLE
+
+        new_neighbor = Mock()
+        new_neighbor.uid = '1'
+        new_neighbor.routes = []
+        new_neighbor.previous = None
+
+        # Should not raise
+        peer.reconfigure(new_neighbor)
+        assert peer.neighbor is new_neighbor
 
     def test_teardown_sets_code_and_restart(self) -> None:
         """Test teardown() sets correct code and restart flag"""
