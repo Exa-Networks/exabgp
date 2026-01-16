@@ -14,16 +14,11 @@ Bug fixes that need backporting to stable branches.
 
 | Date | Commit | Description | Target Branch | Status |
 |------|--------|-------------|---------------|--------|
-| 2025-11 | 086b3ec1 | Config reload race condition - API processes see stale neighbor config (fixes #1340) | 5.0 | 🔴 Pending |
-| 2025-11 | 48e4405c | Critical RIB race conditions - iterator crash, cache corruption, missing routes | 5.0 | 🔴 Pending |
 | 2025-11 | be0d1a55 | SAFI typo - 'mcast-vpnmpls-vpn' split into separate values | 5.0 | 🔴 Pending |
 | 2025-11 | 04410ed5 | BGP-LS srv6endx.py JSON bug - hexstring().json() would fail | 5.0 | 🔴 Pending |
 | 2025-11 | 7677b415 | Process change detection - config reload failure handling | 5.0 | 🟡 Review |
 | 2025-11 | 30caf8e7 | Duplicate capability detection in BGP OPEN parsing | 5.0 | 🟡 Review |
-| 2025-11 | 05c35fce | handle_connection bug - return value not propagated, md5 param confusion | 5.0 | 🔴 Pending |
-| 2025-11 | 6553be10 | .afi_safi() bug - invalid call on tuple in inject_operational | 5.0 | 🔴 Pending |
 | 2025-11 | 2f4d05d0 | write_async bug - was using sock_sendall(int), now uses os.write() | 5.0 | 🔴 Pending |
-| 2025-11 | (pending) | attributes.py:340 - `attribute.ID` should be `aid` (bytes has no .ID, crashes on duplicate attr) | 5.0 | 🔴 Pending |
 | 2025-11 | (pending) | multitopology.py:90 - `__str__` calls non-existent `self.pack()`, should be `self.pack_tlv()` | 5.0 | 🟡 Review |
 | 2025-11 | (pending) | neighbor.py:144-145 - `str(None)` produces "None" instead of "not set" for peer/local-address | 5.0 | 🟡 Review |
 | 2025-11 | (pending) | aggregator.py:65 - JSON format used `%d` for IPv4 speaker address, should be `%s` | 5.0 | 🔴 Pending |
@@ -72,3 +67,8 @@ Bug fixes that need backporting to stable branches.
 | 2025-01 | 511cf9b6f | fix: Update RIB when neighbor offline during config reload (issue #1126) | 5.0 | manual |
 | 2025-01 | c112b97cf | fix: Auto-enable adj-rib-out when route-refresh capability is enabled | 5.0 | manual |
 | 2025-01 | c9f302b9b | fix: Defer signal handling until reactor is ready | 5.0 | manual |
+| 2025-11 | 086b3ec1 | Config reload race condition - API processes see stale neighbor config (#1340) | 5.0 | manual |
+| 2025-11 | 48e4405c | Critical RIB race conditions - iterator crash, cache corruption, missing routes | 5.0 | manual |
+| 2025-11 | 05c35fce | handle_connection bug - return value not propagated, md5 param confusion | 5.0 | manual |
+| 2025-11 | 6553be10 | .afi_safi() bug - invalid call on tuple in inject_operational | 5.0 | manual |
+| 2025-11 | (main) | attributes.py - `attribute.ID` should be `aid` (duplicate attr crash) | 5.0 | manual |
