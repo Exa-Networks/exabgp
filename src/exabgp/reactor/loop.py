@@ -271,6 +271,9 @@ class Reactor:
         # so we can not do it with dropped privileges
         self.processes = Processes()
 
+        # Mark signal handler as ready - any signals received before this point are queued
+        self.signal.mark_ready()
+
         # we have to read the configuration possibly with root privileges
         # as we need the MD5 information when we bind, and root is needed
         # to bind to a port < 1024
