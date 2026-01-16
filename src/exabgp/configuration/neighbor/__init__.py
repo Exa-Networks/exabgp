@@ -500,8 +500,15 @@ class ParseNeighbor(Section):
 
     def _post_capa_rr(self, neighbor: Neighbor) -> None:
         if neighbor.capability.route_refresh:
-            if neighbor.adj_rib_out:
-                log.debug(lazymsg('neighbor.capability.route_refresh action=enable_adj_rib_out'), 'configuration')
+            if not neighbor.adj_rib_out:
+                log.warning(
+                    lazymsg(
+                        'neighbor.route_refresh.adj_rib_out peer={peer} action=auto_enabled reason=route_refresh_requires_cache',
+                        peer=neighbor.session.peer_address,
+                    ),
+                    'configuration',
+                )
+                neighbor.adj_rib_out = True
 
     def _post_routes(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         # NOTE: this may modify change but does not matter as want to modified
@@ -548,6 +555,7 @@ class ParseNeighbor(Section):
         self._post_capa_default(neighbor, local)
         self._post_capa_addpath(neighbor, local, families)
         self._post_capa_nexthop(neighbor, local)
+        self._post_capa_rr(neighbor)
         self._post_routes(neighbor, local)
 
         neighbor.api = ParseAPI.flatten(local.pop('api', {}))
