@@ -24,6 +24,11 @@ class TestSessionDefaults:
         assert session.md5_password == ''
         assert session.md5_base64 is False
         assert session.md5_ip is None
+        # TCP-AO defaults
+        assert session.tcp_ao_keyid is None
+        assert session.tcp_ao_algorithm == ''
+        assert session.tcp_ao_password == ''
+        assert session.tcp_ao_base64 is False
         assert session.connect == 0
         assert session.listen == 0
         assert session.passive is False
@@ -177,6 +182,130 @@ class TestSessionValidateMd5:
         session = Session(md5_password='x' * 81)
         error = session.validate_md5()
         assert '80' in error
+
+
+class TestSessionValidateTcpAo:
+    """Test Session.validate_tcp_ao() for TCP-AO validation."""
+
+    def test_validate_tcp_ao_empty_password(self) -> None:
+        """Test validate_tcp_ao returns empty for no password."""
+        session = Session()
+        assert session.validate_tcp_ao() == ''
+
+    def test_validate_tcp_ao_valid_config(self) -> None:
+        """Test validate_tcp_ao returns empty for valid config."""
+        session = Session(
+            tcp_ao_password='my-secret-key',
+            tcp_ao_keyid=1,
+            tcp_ao_algorithm='hmac-sha-256',
+        )
+        assert session.validate_tcp_ao() == ''
+
+    def test_validate_tcp_ao_all_algorithms(self) -> None:
+        """Test validate_tcp_ao accepts all valid algorithms."""
+        for algorithm in ['hmac-sha-1-96', 'aes-128-cmac-96', 'hmac-sha-256']:
+            session = Session(
+                tcp_ao_password='secret',
+                tcp_ao_keyid=1,
+                tcp_ao_algorithm=algorithm,
+            )
+            assert session.validate_tcp_ao() == '', f'Algorithm {algorithm} should be valid'
+
+    def test_validate_tcp_ao_invalid_algorithm(self) -> None:
+        """Test validate_tcp_ao returns error for invalid algorithm."""
+        session = Session(
+            tcp_ao_password='secret',
+            tcp_ao_keyid=1,
+            tcp_ao_algorithm='invalid-algo',
+        )
+        error = session.validate_tcp_ao()
+        assert 'Invalid TCP-AO algorithm' in error
+
+    def test_validate_tcp_ao_missing_keyid(self) -> None:
+        """Test validate_tcp_ao returns error when keyid missing."""
+        session = Session(
+            tcp_ao_password='secret',
+            tcp_ao_algorithm='hmac-sha-256',
+        )
+        error = session.validate_tcp_ao()
+        assert 'keyid is required' in error
+
+    def test_validate_tcp_ao_missing_algorithm(self) -> None:
+        """Test validate_tcp_ao returns error when algorithm missing."""
+        session = Session(
+            tcp_ao_password='secret',
+            tcp_ao_keyid=1,
+        )
+        error = session.validate_tcp_ao()
+        assert 'algorithm is required' in error
+
+    def test_validate_tcp_ao_keyid_range(self) -> None:
+        """Test validate_tcp_ao validates keyid 0-255."""
+        # Valid keyids
+        for keyid in [0, 1, 127, 255]:
+            session = Session(
+                tcp_ao_password='secret',
+                tcp_ao_keyid=keyid,
+                tcp_ao_algorithm='hmac-sha-256',
+            )
+            assert session.validate_tcp_ao() == '', f'keyid {keyid} should be valid'
+
+        # Invalid keyid
+        session = Session(
+            tcp_ao_password='secret',
+            tcp_ao_keyid=256,
+            tcp_ao_algorithm='hmac-sha-256',
+        )
+        error = session.validate_tcp_ao()
+        assert '0-255' in error
+
+    def test_validate_tcp_ao_key_too_long(self) -> None:
+        """Test validate_tcp_ao returns error for key > 80 bytes."""
+        session = Session(
+            tcp_ao_password='x' * 81,
+            tcp_ao_keyid=1,
+            tcp_ao_algorithm='hmac-sha-256',
+        )
+        error = session.validate_tcp_ao()
+        assert '80' in error
+
+    def test_validate_tcp_ao_valid_base64(self) -> None:
+        """Test validate_tcp_ao returns empty for valid base64 key."""
+        import base64
+
+        key = base64.b64encode(b'my-secret-key').decode()
+        session = Session(
+            tcp_ao_password=key,
+            tcp_ao_keyid=1,
+            tcp_ao_algorithm='hmac-sha-256',
+            tcp_ao_base64=True,
+        )
+        assert session.validate_tcp_ao() == ''
+
+    def test_validate_tcp_ao_invalid_base64(self) -> None:
+        """Test validate_tcp_ao returns error for invalid base64."""
+        session = Session(
+            tcp_ao_password='not-valid-base64!!!',
+            tcp_ao_keyid=1,
+            tcp_ao_algorithm='hmac-sha-256',
+            tcp_ao_base64=True,
+        )
+        error = session.validate_tcp_ao()
+        assert 'Invalid base64' in error
+
+    def test_validate_tcp_ao_mutual_exclusion_with_md5(self) -> None:
+        """Test TCP-AO and MD5 are mutually exclusive."""
+        session = Session(
+            md5_password='md5secret',
+            tcp_ao_password='aosecret',
+            tcp_ao_keyid=1,
+            tcp_ao_algorithm='hmac-sha-256',
+        )
+        # Both validations should return mutual exclusion error
+        tcp_ao_error = session.validate_tcp_ao()
+        md5_error = session.validate_md5()
+        assert 'mutually exclusive' in tcp_ao_error
+        assert 'mutually exclusive' in md5_error
 
 
 class TestSessionConnectionEstablished:

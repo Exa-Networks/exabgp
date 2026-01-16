@@ -80,7 +80,13 @@ class Listener:
         use_md5: str | None,
         md5_base64: bool,
         ttl_in: int | None,
+        tcp_ao_keyid: int | None = None,
+        tcp_ao_algorithm: str = '',
+        tcp_ao_password: str = '',
+        tcp_ao_base64: bool = False,
     ) -> None:
+        from exabgp.reactor.network.tcp import tcp_ao
+
         self.serving = True
 
         for sock, (local, port, peer, md) in self._sockets.items():
@@ -90,6 +96,9 @@ class Listener:
                 continue
             if use_md5:
                 md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
+            # TCP-AO (mutually exclusive with MD5)
+            if tcp_ao_password and tcp_ao_keyid is not None:
+                tcp_ao(sock, peer_ip.top(), 0, tcp_ao_password, tcp_ao_keyid, tcp_ao_algorithm, tcp_ao_base64)
             if ttl_in:
                 min_ttl(sock, peer_ip.top(), ttl_in)
             return
@@ -99,6 +108,9 @@ class Listener:
             # MD5 must match the peer side of the TCP, not the local one
             if use_md5:
                 md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
+            # TCP-AO (mutually exclusive with MD5)
+            if tcp_ao_password and tcp_ao_keyid is not None:
+                tcp_ao(sock, peer_ip.top(), 0, tcp_ao_password, tcp_ao_keyid, tcp_ao_algorithm, tcp_ao_base64)
             if ttl_in:
                 min_ttl(sock, peer_ip.top(), ttl_in)
             try:
@@ -132,15 +144,30 @@ class Listener:
         md5_password: str | None,
         md5_base64: bool,
         ttl_in: int | None,
+        tcp_ao_keyid: int | None = None,
+        tcp_ao_algorithm: str = '',
+        tcp_ao_password: str = '',
+        tcp_ao_base64: bool = False,
     ) -> bool:
         try:
             if not remote_addr:
                 remote_addr = IP.from_string('0.0.0.0') if local_addr.ipv4() else IP.from_string('::')
-            self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
-            md5_enabled: str = 'true' if md5_password else 'false'
+            self._listen(
+                local_addr,
+                remote_addr,
+                port,
+                md5_password,
+                md5_base64,
+                ttl_in,
+                tcp_ao_keyid,
+                tcp_ao_algorithm,
+                tcp_ao_password,
+                tcp_ao_base64,
+            )
+            auth_type = 'tcp-ao' if tcp_ao_password else ('md5' if md5_password else 'none')
             log.debug(
                 lazymsg(
-                    'listener.started ip={addr} port={port} md5={md5}', addr=local_addr, port=port, md5=md5_enabled
+                    'listener.started ip={addr} port={port} auth={auth}', addr=local_addr, port=port, auth=auth_type
                 ),
                 'network',
             )

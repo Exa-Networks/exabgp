@@ -115,7 +115,25 @@ class Protocol:
         md5_base64 = self.neighbor.session.md5_base64
         ttl_out = self.neighbor.session.outgoing_ttl
         itf = self.neighbor.session.source_interface
-        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
+        # TCP-AO (RFC 5925)
+        tcp_ao_keyid = self.neighbor.session.tcp_ao_keyid
+        tcp_ao_algorithm = self.neighbor.session.tcp_ao_algorithm
+        tcp_ao_password = self.neighbor.session.tcp_ao_password
+        tcp_ao_base64 = self.neighbor.session.tcp_ao_base64
+        self.connection = Outgoing(
+            afi,
+            peer,
+            local,
+            self.port,
+            md5,
+            md5_base64,
+            ttl_out,
+            itf,
+            tcp_ao_keyid,
+            tcp_ao_algorithm,
+            tcp_ao_password,
+            tcp_ao_base64,
+        )
 
         # Use async establish instead of generator
         connected = await self.connection.establish_async()

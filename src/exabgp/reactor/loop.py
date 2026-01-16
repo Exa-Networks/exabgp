@@ -480,6 +480,10 @@ class Reactor:
                     neighbor.session.md5_password,
                     neighbor.session.md5_base64,
                     neighbor.session.incoming_ttl,
+                    neighbor.session.tcp_ao_keyid,
+                    neighbor.session.tcp_ao_algorithm,
+                    neighbor.session.tcp_ao_password,
+                    neighbor.session.tcp_ao_base64,
                 ):
                     log.critical(
                         lazymsg(
@@ -587,6 +591,10 @@ class Reactor:
                         neighbor.session.md5_password,
                         neighbor.session.md5_base64,
                         None,
+                        neighbor.session.tcp_ao_keyid,
+                        neighbor.session.tcp_ao_algorithm,
+                        neighbor.session.tcp_ao_password,
+                        neighbor.session.tcp_ao_base64,
                     )
         log.info(lazymsg('config.loaded'), 'reactor')
 

@@ -22,6 +22,17 @@ if TYPE_CHECKING:
 # MD5 password length constraint (RFC 2385)
 MAX_MD5_PASSWORD_LENGTH = 80
 
+# TCP-AO key length constraint (RFC 5925)
+MAX_TCP_AO_KEY_LENGTH = 80
+
+
+# Valid TCP-AO algorithms - import from canonical source to avoid duplication
+# Use lazy import to avoid circular dependency
+def _get_tcp_ao_algorithms() -> set[str]:
+    from exabgp.reactor.network.tcp import TCP_AO_ALGORITHMS
+
+    return set(TCP_AO_ALGORITHMS.keys())
+
 
 @dataclass
 class Session:
@@ -43,6 +54,11 @@ class Session:
     md5_password: str = ''
     md5_base64: bool = False
     md5_ip: IP | None = None  # Derived from local_address if None
+    # TCP-AO (RFC 5925) - mutually exclusive with MD5
+    tcp_ao_keyid: int | None = None
+    tcp_ao_algorithm: str = ''
+    tcp_ao_password: str = ''
+    tcp_ao_base64: bool = False
     connect: int = 0  # 0 = use default (179)
     listen: int = 0  # 0 = disabled
     passive: bool = False
@@ -94,6 +110,10 @@ class Session:
         if not self.md5_password:
             return ''
 
+        # Check mutual exclusion with TCP-AO
+        if self.tcp_ao_password:
+            return 'MD5 and TCP-AO are mutually exclusive - cannot use both'
+
         try:
             password = base64.b64decode(self.md5_password) if self.md5_base64 else self.md5_password
         except (TypeError, ValueError) as e:
@@ -101,6 +121,47 @@ class Session:
 
         if len(password) > MAX_MD5_PASSWORD_LENGTH:
             return f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} characters'
+
+        return ''
+
+    def validate_tcp_ao(self) -> str:
+        """Validate TCP-AO configuration.
+
+        Returns:
+            Error message if invalid, empty string if valid.
+        """
+        if not self.tcp_ao_password:
+            return ''
+
+        # Check mutual exclusion with MD5
+        if self.md5_password:
+            return 'TCP-AO and MD5 are mutually exclusive - cannot use both'
+
+        # Validate keyid
+        if self.tcp_ao_keyid is None:
+            return 'TCP-AO keyid is required when password is set'
+        if not (0 <= self.tcp_ao_keyid <= 255):
+            return f'TCP-AO keyid must be 0-255 (got: {self.tcp_ao_keyid})'
+
+        # Validate algorithm
+        if not self.tcp_ao_algorithm:
+            return 'TCP-AO algorithm is required when password is set'
+        tcp_ao_algorithms = _get_tcp_ao_algorithms()
+        if self.tcp_ao_algorithm not in tcp_ao_algorithms:
+            valid = ', '.join(sorted(tcp_ao_algorithms))
+            return f'Invalid TCP-AO algorithm "{self.tcp_ao_algorithm}". Valid: {valid}'
+
+        # Validate key length (must check byte length, not character length)
+        try:
+            if self.tcp_ao_base64:
+                key_bytes = base64.b64decode(self.tcp_ao_password)
+            else:
+                key_bytes = self.tcp_ao_password.encode('utf-8')
+        except (TypeError, ValueError) as e:
+            return f'Invalid base64 encoding of TCP-AO key ({e})'
+
+        if len(key_bytes) > MAX_TCP_AO_KEY_LENGTH:
+            return f'TCP-AO key must be no larger than {MAX_TCP_AO_KEY_LENGTH} bytes'
 
         return ''
 
@@ -185,6 +246,10 @@ class Session:
             router_id=settings.router_id,
             md5_password=settings.md5_password,
             md5_base64=settings.md5_base64,
+            tcp_ao_keyid=settings.tcp_ao_keyid,
+            tcp_ao_algorithm=settings.tcp_ao_algorithm,
+            tcp_ao_password=settings.tcp_ao_password,
+            tcp_ao_base64=settings.tcp_ao_base64,
             connect=settings.connect,
             listen=settings.listen,
             passive=settings.passive,

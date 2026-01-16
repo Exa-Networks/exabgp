@@ -257,6 +257,7 @@ class ParseNeighbor(Section):
             # Subsections
             'family': Container(description='Address families to negotiate'),
             'capability': Container(description='BGP capabilities'),
+            'tcp-ao': Container(description='TCP-AO (RFC 5925) authentication'),
             'add-path': Container(description='ADD-PATH configuration'),
             'nexthop': Container(description='Next-hop encoding options'),
             'api': Container(description='External process API'),
@@ -368,6 +369,18 @@ class ParseNeighbor(Section):
             conf = local.get(config_key, None)
             if conf is not None:
                 setattr(neighbor.session, attr_name, conf)
+
+        # Handle TCP-AO section configuration
+        tcp_ao = local.get('tcp-ao', {})
+        if tcp_ao:
+            if 'keyid' in tcp_ao:
+                neighbor.session.tcp_ao_keyid = tcp_ao['keyid']
+            if 'algorithm' in tcp_ao:
+                neighbor.session.tcp_ao_algorithm = tcp_ao['algorithm']
+            if 'password' in tcp_ao:
+                neighbor.session.tcp_ao_password = tcp_ao['password']
+            if 'base64' in tcp_ao:
+                neighbor.session.tcp_ao_base64 = tcp_ao['base64']
 
         # auto_discovery is now derived from local_address being IP.NoNextHop
         # (which is the default if local-address is not set in config)
@@ -570,6 +583,10 @@ class ParseNeighbor(Section):
         md5_error = neighbor.session.validate_md5()
         if md5_error:
             return self.error.set(md5_error)
+
+        tcp_ao_error = neighbor.session.validate_tcp_ao()
+        if tcp_ao_error:
+            return self.error.set(tcp_ao_error)
 
         # check we are not trying to announce routes without the right MP announcement
         for route in neighbor.routes:

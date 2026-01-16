@@ -29,6 +29,11 @@ class TestSessionSettings:
         assert settings.router_id is None
         assert settings.md5_password == ''
         assert settings.md5_base64 is False
+        # TCP-AO defaults
+        assert settings.tcp_ao_keyid is None
+        assert settings.tcp_ao_algorithm == ''
+        assert settings.tcp_ao_password == ''
+        assert settings.tcp_ao_base64 is False
         assert settings.connect == 0
         assert settings.listen == 0
         assert settings.passive is False
@@ -374,3 +379,25 @@ class TestSessionFromSettings:
         assert session.peer_address == IP.from_string('2001:db8::1')
         assert session.local_address == IP.from_string('2001:db8::2')
         assert session.router_id is not None
+
+    def test_from_settings_preserves_tcp_ao(self) -> None:
+        """from_settings preserves TCP-AO settings"""
+        from exabgp.bgp.neighbor.session import Session
+        from exabgp.bgp.neighbor.settings import SessionSettings
+
+        settings = SessionSettings()
+        settings.peer_address = IP.from_string('192.168.1.1')
+        settings.local_address = IP.from_string('192.168.1.2')
+        settings.local_as = ASN(65000)
+        settings.peer_as = ASN(65001)
+        settings.tcp_ao_keyid = 1
+        settings.tcp_ao_algorithm = 'hmac-sha-256'
+        settings.tcp_ao_password = 'my-secret-key'
+        settings.tcp_ao_base64 = False
+
+        session = Session.from_settings(settings)
+
+        assert session.tcp_ao_keyid == 1
+        assert session.tcp_ao_algorithm == 'hmac-sha-256'
+        assert session.tcp_ao_password == 'my-secret-key'
+        assert session.tcp_ao_base64 is False

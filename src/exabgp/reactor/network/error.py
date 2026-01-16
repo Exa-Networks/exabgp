@@ -27,6 +27,7 @@ __all__ = [
     'NotConnected',
     'LostConnection',
     'MD5Error',
+    'TCPAOError',
     'NagleError',
     'TTLError',
     'AsyncError',
@@ -95,6 +96,10 @@ class LostConnection(NetworkError):
 
 
 class MD5Error(NetworkError):
+    pass
+
+
+class TCPAOError(NetworkError):
     pass
 
 

@@ -60,6 +60,11 @@ class SessionSettings:
     router_id: 'RouterID | None' = None
     md5_password: str = ''
     md5_base64: bool = False
+    # TCP-AO (RFC 5925) - mutually exclusive with MD5
+    tcp_ao_keyid: int | None = None
+    tcp_ao_algorithm: str = ''
+    tcp_ao_password: str = ''
+    tcp_ao_base64: bool = False
     connect: int = 0
     listen: int = 0
     passive: bool = False

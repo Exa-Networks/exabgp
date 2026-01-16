@@ -192,6 +192,151 @@ def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: bool | None
         raise MD5Error('ExaBGP has no MD5 support for {}'.format(platform_os))
 
 
+# TCP-AO (RFC 5925) - TCP Authentication Option
+# Linux kernel 6.7+ required
+#
+# From linux/tcp.h:
+# struct tcp_ao_add {
+#     struct __kernel_sockaddr_storage addr;  /* 128 bytes */
+#     char alg_name[64];                       /* algorithm name */
+#     __s32 ifindex;                           /* VRF interface */
+#     __u32 set_current:1, set_rnext:1, reserved:30;
+#     __u16 reserved2;
+#     __u8 prefix, sndid, rcvid, maclen, keyflags, keylen;
+#     __u8 key[TCP_AO_MAXKEYLEN];              /* 80 bytes */
+# };
+
+# Algorithm name mapping: user-friendly config -> kernel crypto name
+TCP_AO_ALGORITHMS = {
+    'hmac-sha-1-96': 'hmac(sha1)',
+    'aes-128-cmac-96': 'cmac(aes)',
+    'hmac-sha-256': 'hmac(sha256)',
+}
+
+
+def tcp_ao(
+    io: socket.socket,
+    ip: str,
+    port: int,
+    password: str,
+    keyid: int,
+    algorithm: str,
+    base64_encoded: bool = False,
+) -> None:
+    """Set TCP-AO (RFC 5925) authentication on socket.
+
+    Args:
+        io: Socket to configure
+        ip: Remote IP address
+        port: Remote port (0 for listening sockets)
+        password: Authentication key
+        keyid: Key ID (0-255, used for both sndid and rcvid)
+        algorithm: Algorithm name (hmac-sha-1-96, aes-128-cmac-96, hmac-sha-256)
+        base64_encoded: Whether password is base64 encoded
+
+    Raises:
+        TCPAOError: If TCP-AO cannot be configured
+    """
+    from exabgp.reactor.network.error import TCPAOError
+
+    if not password:
+        return
+
+    platform_os = platform.system()
+    if platform_os != 'Linux':
+        raise TCPAOError(f'TCP-AO is only supported on Linux (current: {platform_os})')
+
+    # Validate keyid
+    if not (0 <= keyid <= 255):
+        raise TCPAOError(f'TCP-AO keyid must be 0-255 (got: {keyid})')
+
+    # Map algorithm name
+    kernel_alg = TCP_AO_ALGORITHMS.get(algorithm)
+    if kernel_alg is None:
+        valid = ', '.join(TCP_AO_ALGORITHMS.keys())
+        raise TCPAOError(f'Invalid TCP-AO algorithm "{algorithm}". Valid: {valid}')
+
+    # Decode password if base64 encoded
+    if base64_encoded:
+        try:
+            key_bytes = base64.b64decode(password)
+        except (TypeError, ValueError) as e:
+            raise TCPAOError(f'Failed to decode base64 TCP-AO key: {e}') from None
+    else:
+        key_bytes = password.encode('utf-8')
+
+    # Validate key length
+    TCP_AO_MAXKEYLEN = 80
+    if len(key_bytes) > TCP_AO_MAXKEYLEN:
+        raise TCPAOError(f'TCP-AO key too long ({len(key_bytes)} > {TCP_AO_MAXKEYLEN} bytes)')
+
+    try:
+        # Socket option constants (from linux/tcp.h)
+        TCP_AO_ADD_KEY = 38
+        ALG_NAME_LEN = 64
+
+        # Build sockaddr_storage (same as MD5)
+        n_af = IP.toaf(ip)
+        n_addr = IP.pton(ip)
+        n_port = socket.htons(port)
+
+        if IP.toafi(ip) == AFI.ipv4:
+            SS_MAXSIZE_PADDING = 128 - calcsize('HH4s')  # 120
+            sockaddr = pack('HH4s%dx' % SS_MAXSIZE_PADDING, socket.AF_INET, n_port, n_addr)
+        else:
+            SS_MAXSIZE_PADDING = 128 - calcsize('HHI16sI')  # 100
+            SIN6_FLOWINFO = 0
+            SIN6_SCOPE_ID = 0
+            sockaddr = pack('HHI16sI%dx' % SS_MAXSIZE_PADDING, n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
+
+        # Pack algorithm name (64 bytes, null-padded)
+        alg_name = kernel_alg.encode('ascii').ljust(ALG_NAME_LEN, b'\x00')
+
+        # Pack remaining fields:
+        # ifindex (4 bytes) + flags (4 bytes) + reserved2 (2 bytes)
+        # + prefix, sndid, rcvid, maclen, keyflags, keylen (6 bytes)
+        # + key (80 bytes)
+        ifindex = 0  # No VRF
+        flags = 0x3  # set_current=1, set_rnext=1
+        reserved2 = 0
+        prefix = 0  # Exact match (no prefix filtering)
+        sndid = keyid
+        rcvid = keyid
+        maclen = 0  # Use default for algorithm
+        keyflags = 0
+        keylen = len(key_bytes)
+
+        # Pad key to TCP_AO_MAXKEYLEN
+        key_padded = key_bytes.ljust(TCP_AO_MAXKEYLEN, b'\x00')
+
+        # Pack: ifindex(i) + flags(I) + reserved2(H) + prefix,sndid,rcvid,maclen,keyflags,keylen(6B) + key(80s)
+        ao_data = pack(
+            'iIH6B%ds' % TCP_AO_MAXKEYLEN,
+            ifindex,
+            flags,
+            reserved2,
+            prefix,
+            sndid,
+            rcvid,
+            maclen,
+            keyflags,
+            keylen,
+            key_padded,
+        )
+
+        # Combine sockaddr + alg_name + ao_data
+        tcp_ao_add = sockaddr + alg_name + ao_data
+
+        io.setsockopt(socket.IPPROTO_TCP, TCP_AO_ADD_KEY, tcp_ao_add)
+
+    except OSError as exc:
+        if exc.errno == errno.ENOPROTOOPT:
+            raise TCPAOError(
+                f'This Linux kernel does not support TCP-AO (requires kernel 6.7+). Error: {errstr(exc)}'
+            ) from None
+        raise TCPAOError(f'Failed to set TCP-AO option: {errstr(exc)}') from None
+
+
 def nagle(io: socket.socket, ip: str) -> None:
     try:
         # diable Nagle's algorithm (no grouping of packets)

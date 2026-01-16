@@ -32,6 +32,7 @@ from exabgp.configuration.announce.vpls import AnnounceVPLS  # noqa: F401,E261,E
 from exabgp.configuration.announce.vpn import AnnounceVPN  # noqa: F401,E261,E501
 from exabgp.configuration.capability import ParseCapability
 from exabgp.configuration.core import Error, Parser, Scope, Section, Tokeniser
+from exabgp.configuration.tcpao import ParseTCPAO
 from exabgp.configuration.flow import ParseFlow, ParseFlowMatch, ParseFlowRoute, ParseFlowScope, ParseFlowThen
 from exabgp.configuration.l2vpn import ParseL2VPN, ParseVPLS
 from exabgp.configuration.neighbor import ParseNeighbor
@@ -294,6 +295,7 @@ class Configuration(_Configuration):
         self.addpath = ParseAddPath(*params)
         self.nexthop = ParseNextHop(*params)
         self.capability = ParseCapability(*params)
+        self.tcpao = ParseTCPAO(*params)
         self.api = ParseAPI(*params)
         self.api_send = ParseSend(*params)
         self.api_receive = ParseReceive(*params)
@@ -324,6 +326,7 @@ class Configuration(_Configuration):
                 self.addpath,
                 self.nexthop,
                 self.capability,
+                self.tcpao,
                 self.api,
                 self.api_send,
                 self.api_receive,
@@ -496,6 +499,7 @@ class Configuration(_Configuration):
         self.neighbor.clear()
         self.family.clear()
         self.capability.clear()
+        self.tcpao.clear()
         self.api.clear()
         self.api_send.clear()
         self.api_receive.clear()

@@ -33,6 +33,10 @@ class Outgoing(Connection):
         md5_base64: bool = False,
         ttl: int | None = None,
         itf: str | None = None,
+        tcp_ao_keyid: int | None = None,
+        tcp_ao_algorithm: str = '',
+        tcp_ao_password: str = '',
+        tcp_ao_base64: bool = False,
     ) -> None:
         Connection.__init__(self, afi, peer, local)
 
@@ -42,11 +46,29 @@ class Outgoing(Connection):
         self.md5_base64: bool = md5_base64
         self.port: int = port
         self.interface: str | None = itf
+        # TCP-AO (RFC 5925)
+        self.tcp_ao_keyid: int | None = tcp_ao_keyid
+        self.tcp_ao_algorithm: str = tcp_ao_algorithm
+        self.tcp_ao_password: str = tcp_ao_password
+        self.tcp_ao_base64: bool = tcp_ao_base64
 
     def _setup(self) -> Exception | None:
+        from .tcp import tcp_ao
+
         try:
             self.io = create(self.afi, self.interface)
             md5(self.io, self.peer, self.port, self.md5, self.md5_base64)
+            # TCP-AO (mutually exclusive with MD5 - validated at config time)
+            if self.tcp_ao_password and self.tcp_ao_keyid is not None:
+                tcp_ao(
+                    self.io,
+                    self.peer,
+                    self.port,
+                    self.tcp_ao_password,
+                    self.tcp_ao_keyid,
+                    self.tcp_ao_algorithm,
+                    self.tcp_ao_base64,
+                )
             if self.afi == AFI.ipv4:
                 ttl(self.io, self.peer, self.ttl)
             elif self.afi == AFI.ipv6:
