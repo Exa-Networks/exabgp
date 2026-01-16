@@ -605,17 +605,31 @@ neighbor {neighbor_ip} {{
 
 
 def encode_api_command(
-    cmd: str, local_as: int = 65533, peer_as: int = 65533, asn4_disabled: bool = False
+    cmd: str,
+    local_as: int = 65533,
+    peer_as: int = 65533,
+    asn4_disabled: bool = False,
+    source_neighbor: Neighbor | None = None,
 ) -> str | None:
     """Encode API command to hex BGP UPDATE message.
 
     Args:
         cmd: API command like 'announce route 10.0.0.0/24 next-hop 1.2.3.4'
         Or group command: 'group announce ... ; announce ...'
+        source_neighbor: Optional neighbor to extract capability settings from (e.g., LLNH)
 
     Returns:
         Hex string of full BGP UPDATE message, or None on error
     """
+    # Extract LLNH settings from source neighbor if available
+    llnh_enabled = False
+    local_link_local = None
+    if source_neighbor:
+        from exabgp.util.enumeration import TriState
+
+        llnh_enabled = source_neighbor.capability.link_local_nexthop == TriState.TRUE
+        if source_neighbor.session.local_link_local:
+            local_link_local = str(source_neighbor.session.local_link_local)
     global _encode_counter
     _encode_counter += 1
 
@@ -1258,7 +1272,13 @@ neighbor {neighbor_ip} {{
 
         # Use unique neighbor address to avoid RIB cache collision
         # RIB uses a class-level cache keyed by neighbor name
-        neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+        is_ipv6_family = family.startswith("ipv6")
+        if is_ipv6_family:
+            neighbor_ip = f"::ffff:127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+            local_addr = "::1"
+        else:
+            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
+            local_addr = "127.0.0.1"
 
         # Check if add-path is needed (path-information in command)
         needs_addpath = "path-information" in route_details
@@ -1269,14 +1289,22 @@ neighbor {neighbor_ip} {{
             capability_parts.append("add-path send/receive;")
         if asn4_disabled:
             capability_parts.append("asn4 disable;")
+        if llnh_enabled and is_ipv6_family:
+            capability_parts.append("link-local-nexthop enable;")
         capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
         addpath_section = f"add-path {{ {family}; }}" if needs_addpath else ""
+
+        # Build local-link-local section if LLNH enabled
+        llnh_section = ""
+        if local_link_local and llnh_enabled and is_ipv6_family:
+            llnh_section = f"local-link-local {local_link_local};"
 
         # Configuration template
         conf = f"""
 neighbor {neighbor_ip} {{
     router-id 10.0.0.2;
-    local-address 127.0.0.1;
+    local-address {local_addr};
+    {llnh_section}
     local-as {local_as};
     peer-as {peer_as};
     {capability_section}
@@ -1779,7 +1807,7 @@ def self_check_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int, 
 
         if is_eor and eor_cmd:
             # Round-trip EOR
-            encoded = encode_api_command(eor_cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled)
+            encoded = encode_api_command(eor_cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled, source_neighbor=neighbor)
             if encoded and encoded.upper() == raw_hex.upper():
                 passed += 1
                 if verbose:
@@ -1805,7 +1833,7 @@ def self_check_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int, 
         cmd = cmds[0]
 
         # Step 2: Encode cmd back to raw
-        encoded = encode_api_command(cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled)
+        encoded = encode_api_command(cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled, source_neighbor=neighbor)
         if not encoded:
             failed += 1
             print(f"    {RED}FAIL{RESET} line {line_num + 1}: encode failed")
@@ -1871,7 +1899,7 @@ def verify_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int]:
     failed = 0
 
     for line_num, step, cmd, expected_raw in pairs:
-        encoded = encode_api_command(cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled)
+        encoded = encode_api_command(cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled, source_neighbor=neighbor)
 
         if encoded is None:
             failed += 1
