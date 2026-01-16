@@ -264,6 +264,16 @@ class Peer:
         if restart_neighbor:
             self.neighbor = restart_neighbor
 
+            # If peer is not ESTABLISHED, update RIB directly since the main loop
+            # isn't running to process the _neighbor variable later.
+            # GitHub issue #1126: stale adj-rib when neighbor offline during reload
+            if self.fsm != FSM.ESTABLISHED and self.neighbor.rib:
+                previous = restart_neighbor.previous.routes if restart_neighbor.previous else []
+                current = restart_neighbor.routes
+                self.neighbor.rib.outgoing.replace_reload(previous, current)
+                restart_neighbor.previous = None
+                self._neighbor = None  # Prevent double-processing when peer connects
+
     def teardown(self, code, restart=True):
         self._restart = restart
         self._teardown = code
