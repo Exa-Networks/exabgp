@@ -4,6 +4,10 @@ Bug fixes that need backporting to stable branches.
 
 **Last reviewed commit:** 0da20411
 
+**Branch locations:**
+- `main` (6.x development): current directory
+- `5.0` (stable): `../5.0`
+
 ---
 
 ## Pending Backports
@@ -65,4 +69,4 @@ Bug fixes that need backporting to stable branches.
 
 | Date | Commit | Description | Backported To | PR |
 |------|--------|-------------|---------------|-----|
-| | | | | |
+| 2025-01 | 511cf9b6f | fix: Update RIB when neighbor offline during config reload (issue #1126) | 5.0 | manual |
