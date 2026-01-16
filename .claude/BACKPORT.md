@@ -70,3 +70,5 @@ Bug fixes that need backporting to stable branches.
 | Date | Commit | Description | Backported To | PR |
 |------|--------|-------------|---------------|-----|
 | 2025-01 | 511cf9b6f | fix: Update RIB when neighbor offline during config reload (issue #1126) | 5.0 | manual |
+| 2025-01 | c112b97cf | fix: Auto-enable adj-rib-out when route-refresh capability is enabled | 5.0 | manual |
+| 2025-01 | c9f302b9b | fix: Defer signal handling until reactor is ready | 5.0 | manual |
