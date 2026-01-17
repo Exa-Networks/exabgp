@@ -43,7 +43,7 @@ def mock_logger() -> Any:
     mock_option_logger.fatal = Mock()
 
     # Create a mock formater that accepts all arguments
-    mock_formater = Mock(return_value="formatted message")
+    mock_formater = Mock(return_value='formatted message')
 
     option.logger = mock_option_logger
     option.formater = mock_formater
@@ -231,7 +231,9 @@ class TestPeerCollisionDetection:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.__getitem__ = Mock(side_effect=lambda key: Mock(pack=Mock(return_value=b'\x02\x02\x02\x02')) if key == 'router-id' else None)
+        neighbor.__getitem__ = Mock(
+            side_effect=lambda key: Mock(pack=Mock(return_value=b'\x02\x02\x02\x02')) if key == 'router-id' else None
+        )
         reactor = Mock()
 
         peer = Peer(neighbor, reactor)
@@ -258,7 +260,9 @@ class TestPeerCollisionDetection:
         neighbor = Mock()
         neighbor.uid = '1'
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.__getitem__ = Mock(side_effect=lambda key: Mock(pack=Mock(return_value=b'\x01\x01\x01\x01')) if key == 'router-id' else None)
+        neighbor.__getitem__ = Mock(
+            side_effect=lambda key: Mock(pack=Mock(return_value=b'\x01\x01\x01\x01')) if key == 'router-id' else None
+        )
         reactor = Mock()
 
         peer = Peer(neighbor, reactor)
@@ -272,6 +276,7 @@ class TestPeerCollisionDetection:
         peer.proto.close = Mock()
 
         from exabgp.reactor.protocol import Protocol
+
         connection = Mock()
         connection.name = Mock(return_value='test-connection')
 
@@ -297,6 +302,7 @@ class TestPeerCollisionDetection:
         peer.proto = old_proto
 
         from exabgp.reactor.protocol import Protocol
+
         connection = Mock()
         connection.name = Mock(return_value='test-connection')
 
@@ -595,11 +601,18 @@ class TestPeerReconfigure:
 
         new_neighbor = Mock()
         new_neighbor.uid = '2'
+        new_neighbor.rib = Mock()
+        new_neighbor.rib.outgoing = Mock()
+        new_neighbor.routes = []
+        new_neighbor.previous = None
 
         peer = Peer(neighbor, reactor)
         peer.reconfigure(new_neighbor)
 
-        assert peer._neighbor is new_neighbor
+        # Neighbor reference updated immediately
+        assert peer.neighbor is new_neighbor
+        # _neighbor cleared when offline (issue #1126 fix)
+        assert peer._neighbor is None
 
     def test_teardown_sets_code_and_restart(self) -> None:
         """Test teardown() sets correct code and restart flag"""
