@@ -59,12 +59,17 @@ class ParseFlow(Section):
     known: dict[str | tuple[Any, ...], object] = dict(ParseFlowMatch.known)
     known.update(ParseFlowThen.known)
     known.update(ParseFlowScope.known)
+    known.update(ParseFlowRoute.known)
 
     # Route schema children for action lookup in route() function
+    # Note: Only include rd/route-distinguisher from ParseFlowRoute, not next-hop
+    # (next-hop has target=NEXTHOP which isn't handled by route())
     _route_schema_children = {
         **ParseFlowMatch.schema.children,
         **ParseFlowThen.schema.children,
         **ParseFlowScope.schema.children,
+        'rd': ParseFlowRoute.schema.children['rd'],
+        'route-distinguisher': ParseFlowRoute.schema.children['route-distinguisher'],
     }
 
     @classmethod
@@ -118,8 +123,13 @@ def route(tokeniser: Any) -> list[Route]:
 
         if target == ActionTarget.NLRI:
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
-            for adding in handler(tokeniser):
-                flow_nlri.add(adding)
+            if operation == ActionOperation.SET:
+                # Direct field assignment (e.g., rd/route-distinguisher)
+                setattr(flow_nlri, field_name or command, handler(tokeniser))
+            else:
+                # Flow rules that need iteration and add()
+                for adding in handler(tokeniser):
+                    flow_nlri.add(adding)
         elif target == ActionTarget.ATTRIBUTE:
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
             attributes.add(handler(tokeniser))
