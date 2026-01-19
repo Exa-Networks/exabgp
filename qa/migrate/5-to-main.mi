@@ -1,0 +1,33 @@
+# Migration test: 5 -> main
+# Tests nlri-mpls -> labeled-unicast rename
+
+from:5
+to:main
+
+input:<<<
+# Example 5.x config with nlri-mpls
+process announce {
+    encoder text;
+    run ./run/test.py;
+}
+
+neighbor 10.0.0.1 {
+    router-id 1.2.3.4;
+    local-as 65000;
+    peer-as 65001;
+
+    family {
+        ipv4 nlri-mpls;
+        ipv6 nlri-mpls;
+        ipv4 unicast;
+    }
+
+    api {
+        processes [ announce ];
+    }
+}
+>>>
+
+expect:labeled-unicast
+expect:ipv4 unicast
+reject:nlri-mpls

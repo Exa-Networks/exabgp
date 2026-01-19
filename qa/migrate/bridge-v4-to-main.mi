@@ -1,0 +1,81 @@
+# Migration test: Bridge --exec mode v4 -> main
+# Tests bidirectional API transformation through the migrate bridge
+#
+# Flow:
+#   1. Script outputs v4 commands (announce route ...)
+#   2. Bridge transforms to v6 (peer * announce route ...)
+#   3. Input is v6 JSON (simulating ExaBGP output)
+#   4. Bridge transforms to v4 JSON for script
+#   5. Script confirms it received v4 JSON by echoing key marker
+
+type:bridge
+from:4
+to:main
+
+# Script that outputs old v4-style commands and confirms reverse transform
+script:<<<
+#!/usr/bin/env python3
+import sys
+import json
+
+# Output v4-style commands (no peer selector)
+# These should be transformed to v6 format by the bridge
+print('announce route 10.99.0.0/24 next-hop 1.2.3.4', flush=True)
+print('withdraw route 10.99.1.0/24', flush=True)
+print('shutdown', flush=True)
+
+# Read input and verify reverse transformation (v6 JSON -> v4 JSON)
+# Tests both version steps:
+#   4->5: sr-capability-flags -> sr_capability_flags
+#   5->main: prefix -> ip (in ip-reachability-tlv context)
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        data = json.loads(line)
+        bgpls = data.get('bgp-ls', {})
+        tlv = bgpls.get('ip-reachability-tlv', {})
+
+        # Check 4->5 reverse: sr-capability-flags -> sr_capability_flags
+        if 'sr_capability_flags' in bgpls:
+            print('REVERSE_4to5_OK', flush=True)
+        elif 'sr-capability-flags' in bgpls:
+            print('REVERSE_4to5_FAIL', flush=True)
+
+        # Check 5->main reverse: prefix -> ip
+        if 'ip' in tlv:
+            print('REVERSE_5toMain_OK', flush=True)
+        elif 'prefix' in tlv:
+            print('REVERSE_5toMain_FAIL', flush=True)
+
+    except json.JSONDecodeError:
+        print('REVERSE_OK:not_json', flush=True)
+    break
+>>>
+
+# Simulated v6 JSON input (what ExaBGP would send)
+# Contains keys that should be reverse-transformed:
+#   sr-capability-flags -> sr_capability_flags (4->5 reverse)
+#   prefix -> ip (5->main reverse, in ip-reachability-tlv context)
+input:<<<
+{"exabgp":"6.0.0","type":"state","bgp-ls":{"sr-capability-flags":"test","ip-reachability-tlv":{"prefix":"10.0.0.0/24"}}}
+>>>
+
+# Expected output: v4 commands transformed to v6
+expect:peer * announce route 10.99.0.0/24 next-hop 1.2.3.4
+expect:peer * withdraw route 10.99.1.0/24
+expect:daemon shutdown
+
+# Verify reverse transformations worked (script received v4 format)
+expect:REVERSE_4to5_OK
+expect:REVERSE_5toMain_OK
+
+# Verify v4 format is NOT in output (forward transform worked)
+reject:^announce route 10.99
+reject:^withdraw route 10.99
+reject:^shutdown$
+
+# Verify reverse transforms didn't fail
+reject:REVERSE_4to5_FAIL
+reject:REVERSE_5toMain_FAIL

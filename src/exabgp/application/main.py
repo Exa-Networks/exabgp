@@ -25,6 +25,7 @@ from exabgp.application import shell
 from exabgp.application import schema
 from exabgp.application import export
 from exabgp.application import example
+from exabgp.application import migrate
 
 
 def main() -> int | None:
@@ -60,6 +61,7 @@ def main() -> int | None:
             'env',
             'shell',
             'schema',
+            'migrate',
         ):
             sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
 
@@ -149,6 +151,13 @@ def main() -> int | None:
     )
     config_example.set_defaults(func=example.cmdline)
     example.setargs(config_example)
+
+    # Migration tools subcommand group
+    migrate_parser = subparsers.add_parser(
+        'migrate', help='migrate configuration/API between versions', description=migrate.__doc__
+    )
+    migrate_parser.set_defaults(func=migrate.cmdline)
+    migrate.setargs(migrate_parser)
 
     try:
         cmdarg = parser.parse_args()

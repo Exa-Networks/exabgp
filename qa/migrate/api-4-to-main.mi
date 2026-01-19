@@ -1,0 +1,34 @@
+# Migration test: API commands 4 -> main
+# Tests API command format migration (v4 -> v6)
+
+type:api
+from:4
+to:main
+
+input:<<<
+shutdown
+reload
+announce route 10.0.0.0/24 next-hop 1.2.3.4
+withdraw route 10.0.0.0/24
+neighbor 10.0.0.1 announce route 192.168.0.0/16 next-hop 10.0.0.2
+show adj-rib out
+show neighbor summary
+teardown
+>>>
+
+expect:daemon shutdown
+expect:daemon reload
+expect:peer * announce route 10.0.0.0/24 next-hop 1.2.3.4
+expect:peer * withdraw route 10.0.0.0/24
+expect:peer 10.0.0.1 announce route 192.168.0.0/16 next-hop 10.0.0.2
+expect:rib show out
+expect:peer show summary
+expect:peer * teardown
+reject:^shutdown$
+reject:^reload$
+reject:^announce route
+reject:^withdraw route
+reject:^neighbor
+reject:^show adj-rib
+reject:^show neighbor
+reject:^teardown$

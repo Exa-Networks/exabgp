@@ -1,0 +1,329 @@
+#!/usr/bin/env python3
+"""Test runner for migration tests.
+
+Runs .mi files from qa/migrate/ directory to validate the migrate command.
+
+Test file format (.mi):
+    from:<version>       - Source version (3.4, 4, 5)
+    to:<version>         - Target version (4, 5, main)
+    type:api             - Optional: test API migration instead of config
+    type:bridge          - Optional: test --exec mode with bidirectional transforms
+    wrap-api:true        - Optional: test with --wrap-api flag
+    script:<<<           - For bridge tests: script content (outputs v4 commands)
+    >>>                  - End of script
+    input:<<<            - Start of input config/commands (or v6 JSON for bridge)
+    >>>                  - End of input
+    expect:<pattern>     - Output must contain this pattern
+    reject:<pattern>     - Output must NOT contain this pattern
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class MigrateTest:
+    """Parsed migration test."""
+
+    name: str
+    from_version: str
+    to_version: str
+    test_type: str  # 'conf', 'api', or 'bridge'
+    wrap_api: bool
+    input_content: str
+    script_content: str  # For bridge tests: script that outputs v4 commands
+    expect_patterns: list[str]
+    reject_patterns: list[str]
+
+
+def parse_test_file(path: Path) -> MigrateTest:
+    """Parse a .mi test file."""
+    content = path.read_text()
+    lines = content.splitlines()
+
+    from_version = ''
+    to_version = ''
+    test_type = 'conf'
+    wrap_api = False
+    input_content = ''
+    script_content = ''
+    expect_patterns: list[str] = []
+    reject_patterns: list[str] = []
+
+    in_input = False
+    in_script = False
+    input_lines: list[str] = []
+    script_lines: list[str] = []
+
+    for line in lines:
+        line_stripped = line.strip()
+
+        # Skip comments and empty lines outside input/script blocks
+        if not in_input and not in_script and (line_stripped.startswith('#') or not line_stripped):
+            continue
+
+        if line_stripped.startswith('from:'):
+            from_version = line_stripped[5:].strip()
+        elif line_stripped.startswith('to:'):
+            to_version = line_stripped[3:].strip()
+        elif line_stripped.startswith('type:'):
+            test_type = line_stripped[5:].strip()
+        elif line_stripped.startswith('wrap-api:'):
+            wrap_api = line_stripped[9:].strip().lower() == 'true'
+        elif line_stripped == 'script:<<<':
+            in_script = True
+        elif line_stripped == 'input:<<<':
+            in_input = True
+        elif line_stripped == '>>>':
+            if in_input:
+                in_input = False
+                input_content = '\n'.join(input_lines)
+            elif in_script:
+                in_script = False
+                script_content = '\n'.join(script_lines)
+        elif in_input:
+            input_lines.append(line)
+        elif in_script:
+            script_lines.append(line)
+        elif line_stripped.startswith('expect:'):
+            expect_patterns.append(line_stripped[7:])
+        elif line_stripped.startswith('reject:'):
+            reject_patterns.append(line_stripped[7:])
+
+    return MigrateTest(
+        name=path.stem,
+        from_version=from_version,
+        to_version=to_version,
+        test_type=test_type,
+        wrap_api=wrap_api,
+        input_content=input_content,
+        script_content=script_content,
+        expect_patterns=expect_patterns,
+        reject_patterns=reject_patterns,
+    )
+
+
+def run_migrate(test: MigrateTest, exabgp_bin: str) -> tuple[bool, str, list[str]]:
+    """Run migration and check results.
+
+    Returns (success, output, errors).
+    """
+    import subprocess
+    import threading
+
+    errors: list[str] = []
+
+    # Write input to temp file for conf tests
+    if test.test_type == 'conf':
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.conf', delete=False) as f:
+            f.write(test.input_content)
+            input_file = f.name
+
+        try:
+            cmd = [
+                exabgp_bin,
+                'migrate',
+                'conf',
+                '-f',
+                test.from_version,
+                '-t',
+                test.to_version,
+                input_file,
+            ]
+            if test.wrap_api:
+                cmd.insert(-1, '--wrap-api')
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            output = result.stdout
+            if result.returncode != 0:
+                errors.append(f'migrate returned {result.returncode}: {result.stderr}')
+        finally:
+            os.unlink(input_file)
+
+    elif test.test_type == 'bridge':
+        # Bridge test - run --exec with a test script
+        # Create temp script that outputs v4 commands
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(test.script_content)
+            script_file = f.name
+        os.chmod(script_file, 0o755)
+
+        try:
+            cmd = [
+                exabgp_bin,
+                'migrate',
+                'api',
+                '-f',
+                test.from_version,
+                '-t',
+                test.to_version,
+                '--exec',
+                sys.executable,
+                script_file,
+            ]
+
+            # Run with stdin/stdout for bidirectional communication
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+            output_lines: list[str] = []
+
+            def read_output() -> None:
+                """Read stdout from the bridge process."""
+                assert proc.stdout is not None
+                for line in proc.stdout:
+                    output_lines.append(line.rstrip('\n'))
+
+            # Start reader thread
+            reader = threading.Thread(target=read_output)
+            reader.daemon = True
+            reader.start()
+
+            # Send input (simulated v6 JSON from ExaBGP) to bridge stdin
+            assert proc.stdin is not None
+            if test.input_content:
+                proc.stdin.write(test.input_content)
+                if not test.input_content.endswith('\n'):
+                    proc.stdin.write('\n')
+            proc.stdin.close()
+
+            # Wait for process with timeout
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                errors.append('bridge process timed out')
+
+            reader.join(timeout=1)
+            output = '\n'.join(output_lines)
+
+            stderr = proc.stderr.read() if proc.stderr else ''
+            if proc.returncode != 0 and proc.returncode is not None:
+                errors.append(f'bridge returned {proc.returncode}: {stderr}')
+        finally:
+            os.unlink(script_file)
+
+    else:
+        # API test - use stdin
+        cmd = [
+            exabgp_bin,
+            'migrate',
+            'api',
+            '-f',
+            test.from_version,
+            '-t',
+            test.to_version,
+        ]
+        result = subprocess.run(cmd, input=test.input_content, capture_output=True, text=True, timeout=10)
+        output = result.stdout
+        if result.returncode != 0:
+            errors.append(f'migrate returned {result.returncode}: {result.stderr}')
+
+    # Check expect patterns
+    for pattern in test.expect_patterns:
+        if pattern.startswith('^') or pattern.endswith('$'):
+            # Regex pattern
+            if not re.search(pattern, output, re.MULTILINE):
+                errors.append(f"expect pattern not found: '{pattern}'")
+        else:
+            # Simple substring
+            if pattern not in output:
+                errors.append(f"expect pattern not found: '{pattern}'")
+
+    # Check reject patterns
+    for pattern in test.reject_patterns:
+        if pattern.startswith('^') or pattern.endswith('$'):
+            # Regex pattern
+            if re.search(pattern, output, re.MULTILINE):
+                errors.append(f"reject pattern found: '{pattern}'")
+        else:
+            # Simple substring
+            if pattern in output:
+                errors.append(f"reject pattern found: '{pattern}'")
+
+    return len(errors) == 0, output, errors
+
+
+def main() -> int:
+    """Run migration tests."""
+    # Find project root
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent.parent
+    migrate_dir = project_root / 'qa' / 'migrate'
+    exabgp_bin = str(project_root / 'sbin' / 'exabgp')
+
+    # Parse arguments
+    verbose = '-v' in sys.argv or '--verbose' in sys.argv
+    list_tests = '-l' in sys.argv or '--list' in sys.argv
+    specific_test = None
+    for arg in sys.argv[1:]:
+        if not arg.startswith('-'):
+            specific_test = arg
+            break
+
+    # Find test files
+    test_files = sorted(migrate_dir.glob('*.mi'))
+    if specific_test:
+        test_files = [f for f in test_files if specific_test in f.stem]
+
+    if not test_files:
+        print(f'No test files found in {migrate_dir}')
+        return 1
+
+    # List mode
+    if list_tests:
+        print(f'Migration tests in {migrate_dir}:')
+        for test_file in test_files:
+            test = parse_test_file(test_file)
+            flags = []
+            if test.wrap_api:
+                flags.append('wrap-api')
+            if test.test_type == 'bridge':
+                flags.append('exec')
+            flag_str = f' [{", ".join(flags)}]' if flags else ''
+            print(f'  {test.name}: {test.test_type} {test.from_version} → {test.to_version}{flag_str}')
+        return 0
+
+    # Run tests
+    passed = 0
+    failed = 0
+
+    for test_file in test_files:
+        test = parse_test_file(test_file)
+        success, output, errors = run_migrate(test, exabgp_bin)
+
+        if success:
+            passed += 1
+            if verbose:
+                print(f'✓ {test.name}')
+        else:
+            failed += 1
+            print(f'✗ {test.name}')
+            for error in errors:
+                print(f'  - {error}')
+            if verbose:
+                print(f'  Output:\n{output[:500]}...' if len(output) > 500 else f'  Output:\n{output}')
+
+    # Summary
+    total = passed + failed
+    if failed == 0:
+        print(f'✓ All {total} migration tests passed')
+        return 0
+    else:
+        print(f'✗ {failed}/{total} migration tests failed')
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

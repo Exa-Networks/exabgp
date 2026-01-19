@@ -1,0 +1,42 @@
+# Migration test: 3.4 -> main (full chain)
+# Tests complete migration path through all versions
+
+from:3.4
+to:main
+
+input:<<<
+# Full 3.4 config testing all migration rules
+process healthcheck {
+    run python -m exabgp healthcheck --name test;
+}
+
+neighbor 10.0.0.1 {
+    router-id 1.2.3.4;
+    local-as 65000;
+    peer-as 65001;
+
+    process healthcheck;
+
+    capability {
+        route-refresh;
+    }
+
+    family {
+        ipv4 nlri-mpls;
+        ipv4 unicast;
+    }
+}
+>>>
+
+# 3.4 -> 4 changes
+expect:encoder text;
+expect:api {
+expect:processes [ healthcheck ]
+expect:route-refresh enable;
+
+# 5 -> main changes
+expect:labeled-unicast
+
+# Should not have old syntax
+reject:process healthcheck;
+reject:nlri-mpls

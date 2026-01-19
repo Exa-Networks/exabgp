@@ -72,7 +72,7 @@ def setargs(sub: argparse.ArgumentParser) -> None:
     sub.add_argument('-P', '--passive', help='only accept incoming connections', action='store_true')
     sub.add_argument('-m', '--memory', help='display memory usage information on exit', action='store_true')
     sub.add_argument('--profile', help='enable profiling and set where the information should be saved', type=str, default='')
-    sub.add_argument('configuration', help='configuration file(s)', nargs='+', type=str)
+    sub.add_argument('configuration', help='configuration file(s), use - for stdin', nargs='+', type=str)
     # fmt:on
 
 
@@ -111,22 +111,40 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
     if cmdarg.passive:
         env.bgp.passive = True
 
-    configurations = []
-    for configuration in cmdarg.configuration:
-        location = getconf(configuration)
-        if not location:
-            log.critical(
-                lazymsg('config.invalid file={f}', f=configuration),
-                'configuration',
-            )
+    # Check for stdin input
+    stdin_config = None
+    if '-' in cmdarg.configuration:
+        if len(cmdarg.configuration) > 1:
+            log.critical(lazymsg('config.stdin.exclusive'), 'configuration')
             sys.exit(1)
-        configurations.append(location)
+        if sys.stdin.isatty():
+            log.critical(lazymsg('config.stdin.empty'), 'configuration')
+            sys.exit(1)
+        stdin_config = sys.stdin.read()
+        if not stdin_config.strip():
+            log.critical(lazymsg('config.stdin.empty'), 'configuration')
+            sys.exit(1)
+
+    configurations = []
+    if stdin_config:
+        # Use text mode for stdin config
+        configurations.append(stdin_config)
+    else:
+        for configuration in cmdarg.configuration:
+            location = getconf(configuration)
+            if not location:
+                log.critical(
+                    lazymsg('config.invalid file={f}', f=configuration),
+                    'configuration',
+                )
+                sys.exit(1)
+            configurations.append(location)
 
     delay = cmdarg.signal
     _delayed_signal(delay, signal.SIGUSR1)
 
     if env.debug.rotate or len(configurations) == 1:
-        run(comment, configurations)
+        run(comment, configurations, text=stdin_config is not None)
 
     if not (env.log.destination in ('syslog', 'stdout', 'stderr') or env.log.destination.startswith('host:')):
         log.error(lazymsg('config.error reason=multiple_configs_file_log'), 'configuration')
@@ -155,7 +173,7 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
         sys.exit(1)
 
 
-def run(comment: str, configurations: list[str], pid: int = 0) -> None:
+def run(comment: str, configurations: list[str], pid: int = 0, text: bool = False) -> None:
     env = getenv()
 
     log.info(lazymsg('startup.banner message=thank_you_for_using_exabgp'), 'startup')
@@ -244,7 +262,7 @@ def run(comment: str, configurations: list[str], pid: int = 0) -> None:
         os.environ['exabgp_api_socketname'] = socketname
         log.info(lazymsg('cli.socket.path path={p}', p=f'{socket_path}{socketname}.sock'), 'cli')
 
-    configuration = Configuration(configurations)
+    configuration = Configuration(configurations, text=text)
 
     if not env.profile.enable:
         exit_code = Reactor(configuration).run()

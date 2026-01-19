@@ -1,0 +1,42 @@
+# Migration test: 3.4 -> main with --wrap-api
+# Tests that run commands are wrapped with API migration bridge
+
+from:3.4
+to:main
+wrap-api:true
+
+input:<<<
+# 3.4 config with process that needs API wrapping
+process announce {
+    run /usr/bin/announce-routes.py --config /etc/routes.json;
+}
+
+process monitor {
+    run /opt/scripts/bgp-monitor.sh;
+}
+
+neighbor 10.0.0.1 {
+    router-id 1.2.3.4;
+    local-as 65000;
+    peer-as 65001;
+
+    process announce;
+    process monitor;
+}
+>>>
+
+# Should have encoder added
+expect:encoder text;
+
+# Should have API wrapper
+expect:api {
+expect:processes [ announce ]
+expect:processes [ monitor ]
+
+# Run commands should be wrapped with migrate api
+expect:run exabgp migrate api -f 4 -t main --exec /usr/bin/announce-routes.py
+expect:run exabgp migrate api -f 4 -t main --exec /opt/scripts/bgp-monitor.sh
+
+# Should not have unwrapped run commands
+reject:run /usr/bin/announce-routes.py --config
+reject:run /opt/scripts/bgp-monitor.sh;

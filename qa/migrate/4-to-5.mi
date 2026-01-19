@@ -1,0 +1,44 @@
+# Migration test: 4 -> 5
+# Tests route refresh hyphenation, tcp.once, fragment syntax, facility rename
+
+from:4
+to:5
+
+input:<<<
+# Example 4.x config with old syntax
+process announce {
+    encoder text;
+    run ./run/test.py;
+}
+
+neighbor 10.0.0.1 {
+    router-id 1.2.3.4;
+    local-as 65000;
+    peer-as 65001;
+
+    capability {
+        route refresh;
+    }
+
+    family {
+        ipv4 flow;
+    }
+
+    flow {
+        route fragment {
+            match {
+                fragment not-a-fragment;
+            }
+        }
+    }
+
+    api {
+        processes [ announce ];
+    }
+}
+>>>
+
+expect:route-refresh
+expect:!is-fragment
+reject:route refresh
+reject:not-a-fragment

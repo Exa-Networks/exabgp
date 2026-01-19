@@ -1,0 +1,39 @@
+# Migration test: 3.4 -> 4
+# Tests process block encoder addition and process reference wrapping
+
+from:3.4
+to:4
+
+input:<<<
+# Example 3.4 config with process blocks
+process service-nginx {
+    run python -m exabgp healthcheck -s --name nginx;
+}
+
+process tcp-control {
+    run etc/exabgp/processes/tcp-server;
+}
+
+neighbor 10.0.0.3 {
+    description "will announce routes";
+    router-id 198.111.227.39;
+    local-address 10.0.0.2;
+    local-as 65533;
+    peer-as 65533;
+
+    process service-nginx;
+    process tcp-control;
+
+    capability {
+        route-refresh;
+    }
+}
+>>>
+
+expect:encoder text;
+expect:api {
+expect:processes [ service-nginx ]
+expect:processes [ tcp-control ]
+expect:route-refresh enable;
+reject:process service-nginx;
+reject:process tcp-control;
