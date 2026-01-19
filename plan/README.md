@@ -46,6 +46,7 @@
 | `plan-mup-json-name-format.md` | API v6 MUP naming |
 | `plan-api-v6-nexthop-removal.md` | Remove nexthop from NLRI JSON |
 | `plan-documentation-review.md` | Documentation review |
+| `plan-llgr.md` | Long-Lived Graceful Restart (RFC 9494, issue #292) |
 
 ### Completed (done-) and Directories
 
