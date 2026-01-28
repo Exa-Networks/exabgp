@@ -8,7 +8,7 @@ option:file:api-broken-flow.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0045:02:0000002E4001010040020040050400000064C01008800600003F800000800E1200018500000C0120AAAAAAAA0220AAAAAAAA
 7:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}}
 2:cmd:group attributes origin igp local-preference 100 extended-community [0x800600003f800000] ; withdraw ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32
-2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C4001010040020040050400000064C01008800600003F800000800F100001850C0120AAAAAAAA0220AAAAAAAA
+2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C800F100001850C0120AAAAAAAA0220AAAAAAAA4001010040020040050400000064C01008800600003F800000
 8:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"withdraw":{"ipv4 flow":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}
 
 # Announce
@@ -24,11 +24,11 @@ option:file:api-broken-flow.conf
 
 # Withdraw, Announce, Withdraw
 6:cmd:group attributes origin igp local-preference 100 extended-community [0x800600003f800000] ; withdraw ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32
-6:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C4001010040020040050400000064C01008800600003F800000800F100001850C0120AAAAAAAA0220AAAAAAAA
+6:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C800F100001850C0120AAAAAAAA0220AAAAAAAA4001010040020040050400000064C01008800600003F800000
 8:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"withdraw":{"ipv4 flow":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}
 7:cmd:announce ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32 extended-community [rate-limit:1]
 7:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0045:02:0000002E4001010040020040050400000064C01008800600003F800000800E1200018500000C0120AAAAAAAA0220AAAAAAAA
 7:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}}
 8:cmd:group attributes origin igp local-preference 100 extended-community [0x800600003f800000] ; withdraw ipv4 flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32
-8:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C4001010040020040050400000064C01008800600003F800000800F100001850C0120AAAAAAAA0220AAAAAAAA
+8:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:02:0000002C800F100001850C0120AAAAAAAA0220AAAAAAAA4001010040020040050400000064C01008800600003F800000
 8:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887780392960,"string":"rate-limit:1"}]},"withdraw":{"ipv4 flow":[{"destination-ipv4":["170.170.170.170/32"],"source-ipv4":["170.170.170.170/32"],"string":"flow destination-ipv4 170.170.170.170/32 source-ipv4 170.170.170.170/32"}]}}}}}
