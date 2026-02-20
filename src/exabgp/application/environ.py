@@ -1,5 +1,3 @@
-
-
 """exabgp environement values"""
 
 from __future__ import annotations

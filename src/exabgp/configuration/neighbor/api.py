@@ -1,4 +1,3 @@
-
 """parse_process.py
 
 Created by Thomas Mangin on 2015-06-05.
@@ -182,7 +181,9 @@ class ParseAPI(Section):
                     'refresh',
                     'operational',
                 ):
-                    built.setdefault('{}-{}'.format(direction, action), []).extend(procs if data.get(action, False) else [])
+                    built.setdefault('{}-{}'.format(direction, action), []).extend(
+                        procs if data.get(action, False) else []
+                    )
 
         return built
 

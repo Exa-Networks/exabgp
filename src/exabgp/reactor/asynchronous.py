@@ -1,4 +1,3 @@
-
 """reactor/async.py
 
 Created by Thomas Mangin on 2017-07-01.
@@ -64,9 +63,7 @@ class ASYNC:
             return False
 
         # Check if we have any coroutines in the queue
-        has_coroutines = any(
-            self._is_coroutine(callback) for _, callback in self._async
-        )
+        has_coroutines = any(self._is_coroutine(callback) for _, callback in self._async)
 
         if has_coroutines:
             # If we have coroutines, we need to run in async context

@@ -1,4 +1,3 @@
-
 """rt_record.py
 
 Created by Thomas Mangin on <unset>

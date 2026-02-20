@@ -1,4 +1,3 @@
-
 """rt.py
 
 Created by Thomas Mangin on 2014-06-20.
@@ -82,7 +81,8 @@ class RouteTargetIPNumber(RouteTarget):
         self.number = number
         # assert(number < pow(2,16))
         RouteTarget.__init__(
-            self, community if community else pack('!2s4sH', self._subtype(transitive), IPv4.pton(ip), number),
+            self,
+            community if community else pack('!2s4sH', self._subtype(transitive), IPv4.pton(ip), number),
         )
 
     # why could we not simply use ExtendedCommunity.hash ?

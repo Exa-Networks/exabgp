@@ -1,4 +1,3 @@
-
 """enumeration.py
 
 Created by Thomas Mangin on 2013-03-18.

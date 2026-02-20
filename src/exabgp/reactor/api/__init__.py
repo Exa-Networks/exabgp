@@ -1,4 +1,3 @@
-
 """decoder/__init__.py
 
 Created by Thomas Mangin on 2009-08-25.

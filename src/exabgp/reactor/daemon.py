@@ -1,4 +1,3 @@
-
 """daemon.py
 
 Created by Thomas Mangin on 2011-05-02.
@@ -73,7 +72,9 @@ class Daemon:
                 # If pid is not running, reopen file without O_EXCL
                 fd = os.open(self.pid, flags ^ os.O_EXCL, mode)
             except (OSError, ValueError):
-                log.debug(lambda: f'issue accessing PID file {self.pid} (most likely permission or ownership)', 'daemon')
+                log.debug(
+                    lambda: f'issue accessing PID file {self.pid} (most likely permission or ownership)', 'daemon'
+                )
                 return False
 
         try:

@@ -1,4 +1,3 @@
-
 """line/rib.py
 
 Created by Thomas Mangin on 2017-07-01.

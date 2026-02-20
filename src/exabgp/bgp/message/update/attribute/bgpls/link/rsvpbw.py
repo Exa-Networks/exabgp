@@ -1,4 +1,3 @@
-
 """rsvpbw.py
 
 Created by Evelio Vila on 2016-12-01.

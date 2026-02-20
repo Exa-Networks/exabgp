@@ -228,7 +228,10 @@ class _Message:
         return self.format(*extracted)
 
     def extract(
-        self, atype, flags=NetLinkRoute.Flags.NLM_F_REQUEST | NetLinkRoute.Flags.NLM_F_DUMP, family=socket.AF_UNSPEC,
+        self,
+        atype,
+        flags=NetLinkRoute.Flags.NLM_F_REQUEST | NetLinkRoute.Flags.NLM_F_DUMP,
+        family=socket.AF_UNSPEC,
     ):
         for data in self.route.send(atype, flags, family):
             yield self.decode(data)

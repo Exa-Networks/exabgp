@@ -1,4 +1,3 @@
-
 """mprnlri.py
 
 Created by Thomas Mangin on 2009-11-05.
@@ -145,7 +144,9 @@ class MPRNLRI(Attribute, Family):
             elif len_nh in (4, 12):
                 nh_afi = AFI.ipv4
             else:
-                raise Notify(3, 0, 'unsupported family {} {} with extended next-hop capability enabled'.format(afi, safi))
+                raise Notify(
+                    3, 0, 'unsupported family {} {} with extended next-hop capability enabled'.format(afi, safi)
+                )
             length, _ = Family.size[(nh_afi, safi)]
 
         if len_nh not in length:

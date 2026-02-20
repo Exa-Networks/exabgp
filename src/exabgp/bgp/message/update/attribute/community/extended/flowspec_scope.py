@@ -1,4 +1,3 @@
-
 """flowspec_scope.py
 
 Created by Stephane Litkowski on 2017-02-24.
@@ -35,7 +34,8 @@ class InterfaceSet(ExtendedCommunity):
         self.transitive = trans
         new_target = (direction << 14) + target
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack('!2sLH', self._subtype(self.transitive), asn, new_target),
+            self,
+            community if community is not None else pack('!2sLH', self._subtype(self.transitive), asn, new_target),
         )
 
     def __repr__(self):

@@ -1,4 +1,3 @@
-
 """l2vpn/parser.py
 
 Created by Thomas Mangin on 2014-06-17.

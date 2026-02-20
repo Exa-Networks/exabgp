@@ -1,4 +1,3 @@
-
 """refresh.py
 
 Created by Thomas Mangin on 2012-07-17.

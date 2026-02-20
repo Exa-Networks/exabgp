@@ -1,4 +1,3 @@
-
 """software_version.py
 
 Copyright (c) 2024 Donatas Abraitis. All rights reserved.

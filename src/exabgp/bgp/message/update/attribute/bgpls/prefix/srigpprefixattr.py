@@ -1,4 +1,3 @@
-
 """srigpprefixattr.py
 
 Created by Evelio Vila

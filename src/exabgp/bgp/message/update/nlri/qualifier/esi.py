@@ -1,4 +1,3 @@
-
 """esi.py
 
 Created by Thomas Mangin on 2012-07-08.
@@ -60,7 +59,7 @@ class ESI:
 
     @classmethod
     def unpack(cls, data):
-        return cls(data[:cls.LENGTH])
+        return cls(data[: cls.LENGTH])
 
     def json(self, compact=None):
         return '"esi": "{}"'.format(str(self))

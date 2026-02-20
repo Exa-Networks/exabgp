@@ -1,4 +1,3 @@
-
 """parse_process.py
 
 Created by Thomas Mangin on 2015-06-18.

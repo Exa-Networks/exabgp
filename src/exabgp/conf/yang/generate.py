@@ -50,6 +50,8 @@ class Generate:
             pprint.pprint(data)
         for section in self.codes:
             sys.stdout.write(f'{section}\n')
+
+
 def main():
     folder = os.path.abspath(os.path.dirname(__file__))
     data = os.path.join(folder, '..', '..', '..', '..', 'data')

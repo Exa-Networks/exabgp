@@ -1,4 +1,3 @@
-
 """notification.py
 
 Created by Thomas Mangin on 2009-11-05.
@@ -129,7 +128,9 @@ class Notification(Message, Exception):
             return
 
         if shutdown_length > self.SHUTDOWN_COMM_MAX_LEGACY:
-            self.data = f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'.encode()
+            self.data = (
+                f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'.encode()
+            )
             return
 
         try:

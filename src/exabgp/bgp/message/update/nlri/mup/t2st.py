@@ -137,9 +137,13 @@ class Type2SessionTransformedRoute(MUP):
         if endpoint_len > afi_bit_size:
             teid_len = endpoint_len - afi_bit_size
             if afi == AFI.ipv4 and teid_len > MUP_T2ST_TEID_MAX_SIZE:
-                raise Exception('endpoint length is too large %d (max %d for Ipv4)' % (endpoint_len, MUP_T2ST_IPV4_MAX_ENDPOINT))
+                raise Exception(
+                    'endpoint length is too large %d (max %d for Ipv4)' % (endpoint_len, MUP_T2ST_IPV4_MAX_ENDPOINT)
+                )
             if afi == AFI.ipv6 and teid_len > MUP_T2ST_TEID_MAX_SIZE:
-                raise Exception('endpoint length is too large %d (max %d for Ipv6)' % (endpoint_len, MUP_T2ST_IPV6_MAX_ENDPOINT))
+                raise Exception(
+                    'endpoint length is too large %d (max %d for Ipv6)' % (endpoint_len, MUP_T2ST_IPV6_MAX_ENDPOINT)
+                )
 
             teid = int.from_bytes(data[end:], 'big')
 

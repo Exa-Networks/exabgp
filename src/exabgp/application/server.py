@@ -1,5 +1,3 @@
-
-
 """exabgp server"""
 
 from __future__ import annotations
@@ -117,7 +115,9 @@ def cmdline(cmdarg):
     for configuration in cmdarg.configuration:
         location = getconf(configuration)
         if not location:
-            log.critical(lambda configuration=configuration: f'{configuration} is not an exabgp config file', 'configuration')
+            log.critical(
+                lambda configuration=configuration: f'{configuration} is not an exabgp config file', 'configuration'
+            )
             sys.exit(1)
         configurations.append(location)
 
@@ -176,7 +176,8 @@ def run(comment, configurations, pid=0):
         if len(pipes) != 1:
             env.api.cli = False
             log.error(
-                f'could not find the named pipes ({pipename}.in and {pipename}.out) required for the cli', 'cli',
+                f'could not find the named pipes ({pipename}.in and {pipename}.out) required for the cli',
+                'cli',
             )
             log.error(lambda: 'we scanned the following folders (the number is your PID):', 'cli')
             for location in pipes:

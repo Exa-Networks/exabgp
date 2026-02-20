@@ -1,4 +1,3 @@
-
 """sr/srgb.py
 
 Created by Evelio Vila 2017-02-16

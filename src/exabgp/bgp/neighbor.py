@@ -1,4 +1,3 @@
-
 """neighbor.py
 
 Created by Thomas Mangin on 2009-11-05.
@@ -470,8 +469,12 @@ Neighbor {peer-address}
 
             apis += _api
 
-        md5_base64_str = 'true' if neighbor['md5-base64'] is True else 'false' if neighbor['md5-base64'] is False else 'auto'
-        add_path_str = AddPath.string[neighbor['capability']['add-path']] if neighbor['capability']['add-path'] else 'disable'
+        md5_base64_str = (
+            'true' if neighbor['md5-base64'] is True else 'false' if neighbor['md5-base64'] is False else 'auto'
+        )
+        add_path_str = (
+            AddPath.string[neighbor['capability']['add-path']] if neighbor['capability']['add-path'] else 'disable'
+        )
 
         returned = (
             f'neighbor {neighbor["peer-address"]} {{\n'
@@ -486,19 +489,19 @@ Neighbor {peer-address}
             f'\thold-time {neighbor["hold-time"]};\n'
             f'\trate-limit {"disable" if neighbor["rate-limit"] == 0 else neighbor["rate-limit"]};\n'
             f'\tmanual-eor {"true" if neighbor["manual-eor"] else "false"};\n'
-            f'\n\tpassive {"true" if neighbor["passive"] else "false"};\n' +
-            (f'\n\tlisten {neighbor["listen"]};\n' if neighbor['listen'] else '') +
-            (f'\n\tconnect {neighbor["connect"]};\n' if neighbor['connect'] else '') +
-            f"\tgroup-updates {'true' if neighbor['group-updates'] else 'false'};\n"
+            f'\n\tpassive {"true" if neighbor["passive"] else "false"};\n'
+            + (f'\n\tlisten {neighbor["listen"]};\n' if neighbor['listen'] else '')
+            + (f'\n\tconnect {neighbor["connect"]};\n' if neighbor['connect'] else '')
+            + f"\tgroup-updates {'true' if neighbor['group-updates'] else 'false'};\n"
             f"\tauto-flush {'true' if neighbor['auto-flush'] else 'false'};\n"
             f"\tadj-rib-in {'true' if neighbor['adj-rib-in'] else 'false'};\n"
-            f"\tadj-rib-out {'true' if neighbor['adj-rib-out'] else 'false'};\n" +
-            (f'\tmd5-password "{neighbor["md5-password"]}";\n' if neighbor['md5-password'] else '') +
-            f'\tmd5-base64 {md5_base64_str};\n' +
-            (f'\tmd5-ip "{neighbor["md5-ip"]}";\n' if not neighbor.auto_discovery else '') +
-            (f'\toutgoing-ttl {neighbor["outgoing-ttl"]};\n' if neighbor['outgoing-ttl'] else '') +
-            (f'\tincoming-ttl {neighbor["incoming-ttl"]};\n' if neighbor['incoming-ttl'] else '') +
-            f'\tcapability {{\n'
+            f"\tadj-rib-out {'true' if neighbor['adj-rib-out'] else 'false'};\n"
+            + (f'\tmd5-password "{neighbor["md5-password"]}";\n' if neighbor['md5-password'] else '')
+            + f'\tmd5-base64 {md5_base64_str};\n'
+            + (f'\tmd5-ip "{neighbor["md5-ip"]}";\n' if not neighbor.auto_discovery else '')
+            + (f'\toutgoing-ttl {neighbor["outgoing-ttl"]};\n' if neighbor['outgoing-ttl'] else '')
+            + (f'\tincoming-ttl {neighbor["incoming-ttl"]};\n' if neighbor['incoming-ttl'] else '')
+            + f'\tcapability {{\n'
             f"\t\tasn4 {'enable' if neighbor['capability']['asn4'] else 'disable'};\n"
             f"\t\troute-refresh {'enable' if neighbor['capability']['route-refresh'] else 'disable'};\n"
             f"\t\tgraceful-restart {neighbor['capability']['graceful-restart'] if neighbor['capability']['graceful-restart'] else 'disable'};\n"
@@ -597,7 +600,8 @@ Neighbor {peer-address}
             'id': f"   {'ID':<20} {answer['local-id']:>15} {_pr(answer['peer-id']):>15} {'':<15}",
             'hold': f"   {'hold-time':<20} {answer['local-hold']:>15} {_pr(answer['peer-hold']):>15} {'':<15}",
             'capabilities': '\n'.join(
-                f"   {f'{k}:':<20} {_en(lc):>15} {_en(pc):>15} {'':<15}" for k, (lc, pc) in answer['capabilities'].items()
+                f"   {f'{k}:':<20} {_en(lc):>15} {_en(pc):>15} {'':<15}"
+                for k, (lc, pc) in answer['capabilities'].items()
             ),
             'families': '\n'.join(
                 f"   {f'{a} {s}:':<20} {_en(lf):>15} {_en(rf):>15} {_addpath(aps, apr):<15}"

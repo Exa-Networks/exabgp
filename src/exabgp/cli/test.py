@@ -25,6 +25,8 @@ def test_complete():
     sys.stdout.write('\n')
     sys.stdout.write(f'"{cmd}"\n')
     sys.stdout.write(f'{completer.set_help()}\n')
+
+
 def test_validate():
     commands = [
         'set interfaces dummy dum0 address 1.2.',
@@ -44,6 +46,8 @@ def test_validate():
             validator._validate_set(cmd)
         except ValidationError:
             sys.stdout.write(f'{message}\n')
+
+
 if __name__ == '__main__':
     try:
         # test_complete()

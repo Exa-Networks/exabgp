@@ -1,4 +1,3 @@
-
 """srv6/generic.py
 
 Created by Ryoga Saito 2022-02-24

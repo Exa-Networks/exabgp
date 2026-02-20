@@ -1,4 +1,3 @@
-
 """flow.py
 
 Created by Thomas Mangin on 2010-01-14.
@@ -692,7 +691,9 @@ class Flow(NLRI):
                         raise Notify(
                             3,
                             10,
-                            'components are incompatible (two sources, two destinations, mix ipv4/ipv6) {}'.format(seen),
+                            'components are incompatible (two sources, two destinations, mix ipv4/ipv6) {}'.format(
+                                seen
+                            ),
                         )
                 else:
                     end = False

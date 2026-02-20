@@ -1,4 +1,3 @@
-
 """aggregator.py
 
 Created by Thomas Mangin on 2012-07-14.
@@ -41,7 +40,8 @@ class Aggregator(Attribute):
             return self._attribute(self.asn.pack(True) + self.speaker.pack())
         if self.asn.asn4():
             return self._attribute(self.asn.trans().pack() + self.speaker.pack()) + Aggregator4(
-                self.asn, self.speaker,
+                self.asn,
+                self.speaker,
             ).pack(negotiated)
         return self._attribute(self.asn.pack() + self.speaker.pack())
 

@@ -131,21 +131,33 @@ class Transcoder:
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             if len(data) < shutdown_length:
-                message.data = f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(data)}]'
+                message.data = (
+                    f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(data)}]'
+                )
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             if shutdown_length > MAX_SHUTDOWN_COMM_LENGTH:
-                message.data = f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'
+                message.data = (
+                    f'invalid Shutdown Communication (too large) length : {shutdown_length} [{hexstring(data)}]'
+                )
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             try:
                 # NOTE: Do not convert to f-string! The chained method calls with multiline
                 # formatting is more readable with % formatting.
-                message.data = 'Shutdown Communication: "{}"'.format(data[:shutdown_length].decode('utf-8').replace(
-                    '\r', ' ',
-                ).replace('\n', ' '))
+                message.data = 'Shutdown Communication: "{}"'.format(
+                    data[:shutdown_length]
+                    .decode('utf-8')
+                    .replace(
+                        '\r',
+                        ' ',
+                    )
+                    .replace('\n', ' ')
+                )
             except UnicodeDecodeError:
-                message.data = f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(data)}]'
+                message.data = (
+                    f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(data)}]'
+                )
                 return self.encoder.notification(neighbor, direction, message, None, header, body)
 
             trailer = data[shutdown_length:]

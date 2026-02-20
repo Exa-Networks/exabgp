@@ -1,4 +1,3 @@
-
 """update/__init__.py
 
 Created by Thomas Mangin on 2009-11-05.
@@ -102,7 +101,14 @@ class Update(Message):
         if len(attributes) != len_attributes:
             raise Notify(3, 1, 'invalid total path attribute length, not enough data available')
 
-        if UPDATE_WITHDRAWN_LENGTH_OFFSET + len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET + len_attributes + len(announced) != length:
+        if (
+            UPDATE_WITHDRAWN_LENGTH_OFFSET
+            + len_withdrawn
+            + UPDATE_WITHDRAWN_LENGTH_OFFSET
+            + len_attributes
+            + len(announced)
+            != length
+        ):
             raise Notify(3, 1, 'error in BGP message length, not enough data for the size announced')
 
         return withdrawn, attributes, announced
@@ -237,7 +243,8 @@ class Update(Message):
 
             if include_withdraw:
                 for mpurnlri in mp_withdraw.packed_attributes(
-                    negotiated, msg_size - len(withdraws + announced + mp_reach),
+                    negotiated,
+                    msg_size - len(withdraws + announced + mp_reach),
                 ):
                     if mp_unreach:
                         yield self._message(
@@ -330,7 +337,9 @@ class Update(Message):
             from exabgp.reactor.api.response import Response
             from exabgp.version import json as json_version
 
-            return 'json {}'.format(Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, None, '', ''))
+            return 'json {}'.format(
+                Response.JSON(json_version).update(negotiated.neighbor, 'receive', update, None, '', '')
+            )
 
         log.debug(lazyformat('decoded UPDATE', '', parsed), 'parser')
 

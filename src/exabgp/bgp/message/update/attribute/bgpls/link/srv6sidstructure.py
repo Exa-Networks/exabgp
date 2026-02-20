@@ -1,4 +1,3 @@
-
 """srv6sidstructure.py
 
 Created by Quentin De Muynck

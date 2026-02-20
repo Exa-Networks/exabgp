@@ -1,4 +1,3 @@
-
 """environment.py
 
 Created by Thomas Mangin on 2011-11-29.

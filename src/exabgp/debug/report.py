@@ -1,4 +1,3 @@
-
 """report.py
 
 Created by Thomas Mangin on 2014-12-30.

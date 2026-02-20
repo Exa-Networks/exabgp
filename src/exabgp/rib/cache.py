@@ -1,4 +1,3 @@
-
 """store.py
 
 Created by Thomas Mangin on 2009-11-05.

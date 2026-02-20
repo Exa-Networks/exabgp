@@ -1,4 +1,3 @@
-
 """traffic.py
 
 Created by Thomas Mangin on 2014-06-21.
@@ -34,7 +33,8 @@ class TrafficRate(ExtendedCommunity):
         self.asn = asn
         self.rate = rate
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack('!2sHf', self._subtype(), asn, rate),
+            self,
+            community if community is not None else pack('!2sHf', self._subtype(), asn, rate),
         )
 
     def __repr__(self):
@@ -70,7 +70,8 @@ class TrafficAction(ExtendedCommunity):
         self.terminal = terminal
         bitmask = self._sample[sample] | self._terminal[terminal]
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack('!2sLBB', self._subtype(), 0, 0, bitmask),
+            self,
+            community if community is not None else pack('!2sLBB', self._subtype(), 0, 0, bitmask),
         )
 
     def __repr__(self):
@@ -102,7 +103,8 @@ class TrafficRedirect(ExtendedCommunity):
         self.asn = asn
         self.target = target
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack('!2sHL', self._subtype(), asn, target),
+            self,
+            community if community is not None else pack('!2sHL', self._subtype(), asn, target),
         )
 
     def __repr__(self):
@@ -123,7 +125,8 @@ class TrafficRedirectASN4(ExtendedCommunity):
         self.asn = asn
         self.target = target
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack('!2sLH', self._subtype(), asn, target),
+            self,
+            community if community is not None else pack('!2sLH', self._subtype(), asn, target),
         )
 
     def __str__(self):
@@ -147,7 +150,8 @@ class TrafficMark(ExtendedCommunity):
     def __init__(self, dscp, community=None):
         self.dscp = dscp
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack('!2sLBB', self._subtype(), 0, 0, dscp),
+            self,
+            community if community is not None else pack('!2sLBB', self._subtype(), 0, 0, dscp),
         )
 
     def __repr__(self):
@@ -173,11 +177,16 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
         self.ip = ip
         self.copy = copy
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack('!2s4sH', self._subtype(), ip.pack(), 1 if copy else 0),
+            self,
+            community if community is not None else pack('!2s4sH', self._subtype(), ip.pack(), 1 if copy else 0),
         )
 
     def __repr__(self):
-        return 'copy-to-nexthop-ietf {} (with copy)'.format(self.ip) if self.copy else 'redirect-to-nexthop-ietf {}'.format(self.ip)
+        return (
+            'copy-to-nexthop-ietf {} (with copy)'.format(self.ip)
+            if self.copy
+            else 'redirect-to-nexthop-ietf {}'.format(self.ip)
+        )
 
     @staticmethod
     def unpack(data):
@@ -199,11 +208,16 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
         self.ip = ip
         self.copy = copy
         ExtendedCommunityIPv6.__init__(
-            self, community if community is not None else pack('!2s16sH', self._subtype(), ip.pack(), 1 if copy else 0),
+            self,
+            community if community is not None else pack('!2s16sH', self._subtype(), ip.pack(), 1 if copy else 0),
         )
 
     def __repr__(self):
-        return 'copy-to-nexthop-ietf {} (with copy)'.format(self.ip) if self.copy else 'redirect-to-nexthop-ietf {}'.format(self.ip)
+        return (
+            'copy-to-nexthop-ietf {} (with copy)'.format(self.ip)
+            if self.copy
+            else 'redirect-to-nexthop-ietf {}'.format(self.ip)
+        )
 
     @staticmethod
     def unpack(data):
@@ -225,7 +239,8 @@ class TrafficNextHopSimpson(ExtendedCommunity):
     def __init__(self, copy, community=None):
         self.copy = copy
         ExtendedCommunity.__init__(
-            self, community if community is not None else pack('!2sLH', self._subtype(), 0, 1 if copy else 0),
+            self,
+            community if community is not None else pack('!2sLH', self._subtype(), 0, 1 if copy else 0),
         )
 
     def __repr__(self):

@@ -1,4 +1,3 @@
-
 """line/reactor.py
 
 Created by Thomas Mangin on 2017-07-01.
@@ -35,7 +34,9 @@ def manual(self, reactor, service, line, use_json):
     reactor.processes.write(service, '=======================================', True)
     reactor.processes.write(service, '', True)
     reactor.processes.write(
-        service, 'filter can be: [local-ip <ip>][local-as <asn>][peer-as <asn>][router-id <router-id>]', True,
+        service,
+        'filter can be: [local-ip <ip>][local-as <asn>][peer-as <asn>][router-id <router-id>]',
+        True,
     )
     reactor.processes.write(service, '', True)
     reactor.processes.write(service, 'command are:', True)
