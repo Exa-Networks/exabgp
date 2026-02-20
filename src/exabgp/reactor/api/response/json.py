@@ -96,11 +96,13 @@ class JSON:
         peer_addr = neighbor.session.peer_address
         local_as = neighbor.session.local_as
         peer_as = neighbor.session.peer_as
+        router_id = neighbor.session.router_id
+        rid_field = f', "router-id": "{router_id}"' if router_id else ''
         sep1 = ', ' if direction else ''
         dir_field = f'"direction": "{direction}"' if direction else ''
         sep2 = ', ' if content else ' '
 
-        return f'"neighbor": {{ "address": {{ "local": "{local_addr}", "peer": "{peer_addr}" }}, "asn": {{ "local": {local_as}, "peer": {peer_as} }} {sep1}{dir_field}{sep2}{content} }}'
+        return f'"neighbor": {{ "address": {{ "local": "{local_addr}", "peer": "{peer_addr}" }}, "asn": {{ "local": {local_as}, "peer": {peer_as} }}{rid_field} {sep1}{dir_field}{sep2}{content} }}'
 
     def _kv(self, extra: dict[str, Any]) -> str:
         return ', '.join(f'"{k}": {self._string(v)}' for (k, v) in extra.items())

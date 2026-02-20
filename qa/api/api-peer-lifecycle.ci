@@ -14,4 +14,4 @@ option:tcp_connections:0
 # Decoded: origin=igp, local-pref=100, next-hop=101.101.101.101, nlri=1.1.0.0/24
 2:cmd:announce route 1.1.0.0/24 next-hop 101.101.101.101 origin igp local-preference 100
 2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0030:02:0000001540010100400200400304656565654005040000006418010100
-2:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.101.101.101":[{"nlri":"1.1.0.0/24"}]}}}}}}
+2:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"10.0.0.2","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"101.101.101.101":[{"nlri":"1.1.0.0/24"}]}}}}}}
