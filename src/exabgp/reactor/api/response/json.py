@@ -72,11 +72,13 @@ class JSON:
         peer_addr = neighbor['peer-address']
         local_as = neighbor['local-as']
         peer_as = neighbor['peer-as']
+        router_id = neighbor['router-id']
+        rid_field = f', "router-id": "{router_id}"' if router_id else ''
         sep1 = ', ' if direction else ''
         dir_field = f'"direction": "{direction}"' if direction else ''
         sep2 = ', ' if content else ' '
 
-        return f'"neighbor": {{ "address": {{ "local": "{local_addr}", "peer": "{peer_addr}" }}, "asn": {{ "local": {local_as}, "peer": {peer_as} }} {sep1}{dir_field}{sep2}{content} }}'
+        return f'"neighbor": {{ "address": {{ "local": "{local_addr}", "peer": "{peer_addr}" }}, "asn": {{ "local": {local_as}, "peer": {peer_as} }}{rid_field} {sep1}{dir_field}{sep2}{content} }}'
 
     def _kv(self, extra):
         return ', '.join(f'"{k}": {self._string(v)}' for (k, v) in extra.items())
@@ -176,10 +178,24 @@ class JSON:
                 # NOTE: Do not convert to f-string! The nested % formatting with complex
                 # comprehensions and conditional logic is more readable with % formatting.
                 'add_path': '{{ "send": {}, "receive": {} }}'.format(
-                    '[ {} ]'.format(', '.join(['"{} {}"'.format(*family) for family in negotiated.families if negotiated.addpath.send(*family)])),
-                    '[ {} ]'.format(', '.join(
-                        ['"{} {}"'.format(*family) for family in negotiated.families if negotiated.addpath.receive(*family)],
-                    )),
+                    '[ {} ]'.format(
+                        ', '.join(
+                            [
+                                '"{} {}"'.format(*family)
+                                for family in negotiated.families
+                                if negotiated.addpath.send(*family)
+                            ]
+                        )
+                    ),
+                    '[ {} ]'.format(
+                        ', '.join(
+                            [
+                                '"{} {}"'.format(*family)
+                                for family in negotiated.families
+                                if negotiated.addpath.receive(*family)
+                            ],
+                        )
+                    ),
                 ),
             },
         )
@@ -196,7 +212,11 @@ class JSON:
 
     def fsm(self, neighbor, fsm):
         return self._header(
-            self._neighbor(neighbor, None, self._kv({'state': fsm.name()})), '', '', neighbor, message_type='fsm',
+            self._neighbor(neighbor, None, self._kv({'state': fsm.name()})),
+            '',
+            '',
+            neighbor,
+            message_type='fsm',
         )
 
     def signal(self, neighbor, signal):
@@ -356,7 +376,11 @@ class JSON:
         if negotiated:
             message.update(self._negotiated(negotiated))
         return self._header(
-            self._neighbor(neighbor, direction, self._kv(message)), header, body, neighbor, message_type='update',
+            self._neighbor(neighbor, direction, self._kv(message)),
+            header,
+            body,
+            neighbor,
+            message_type='update',
         )
 
     def refresh(self, neighbor, direction, refresh, negotiated, header, body):
