@@ -124,7 +124,8 @@
       "Bash(uv run pytest:*)",
       "WebFetch(domain:woodpecker-ci.org)",
       "WebFetch(domain:codeberg.org)",
-      "WebFetch(domain:forgejo.org)"
+      "WebFetch(domain:forgejo.org)",
+      "Bash(gh issue view:*)"
     ],
     "deny": []
   },
