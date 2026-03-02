@@ -17,7 +17,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py` - Unit tests with coverage
 - `./qa/bin/parsing` - Configuration parsing tests
 
-**Build:**
+**Build & Release:**
+- See `.claude/docs/RELEASE_PROCESS.md` for full release workflow
 - `python3 setup.py sdist bdist_wheel` - Build distribution packages
 - `./release binary <target>` - Create self-contained zipapp binary
 

@@ -3,6 +3,13 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.2:
+ * Fix: healthcheck (and other subcommands) not working when api.cli is enabled
+   When exabgp.api.cli is true, the exabgp_cli_pipe environment variable was
+   inherited by all child processes, causing 'python -m exabgp healthcheck'
+   to run the CLI pipe code instead of the healthcheck subcommand.
+   Only the internal CLI process now receives this variable.
+
 Version 5.0.1:
  * Fix: ImportError when running exabgp commands (--help, version, etc.)
    Missing get_root() and get_zipapp() functions in version.py that were

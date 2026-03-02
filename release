@@ -25,6 +25,8 @@ class Path:
     changelog = os.path.join(root, CHANGELOG)
     lib_exa = os.path.join(root, 'src/exabgp')
     version = os.path.join(root, 'src/exabgp/version.py')
+    pyproject = os.path.join(root, 'pyproject.toml')
+    sbin = os.path.join(root, 'sbin/exabgp')
     debian = os.path.join(root, 'debian/changelog')
     egg = os.path.join(root, 'src/exabgp.egg-info')
     build_exabgp = os.path.join(root, 'build/src/exabgp')
@@ -50,17 +52,28 @@ class Version:
 import os
 import sys
 
+
+def get_zipapp():
+    return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-2]))
+
+
+def get_root():
+    if os.path.isfile(get_zipapp()):
+        return get_zipapp()
+    return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-1]))
+
+
 commit = "%s"
 release = "%s"
 json = "%s"
 text = "%s"
-version = os.environ.get('exabgp_version',release)
+version = os.environ.get('exabgp_version', release)
 
 # Do not change the first line as it is parsed by scripts
 
 if sys.version_info.major < 3:
     sys.exit('exabgp requires python3.6 or later')
-if (sys.version_info.major == 3 and sys.version_info.minor < 6):
+if sys.version_info.major == 3 and sys.version_info.minor < 6:
     sys.exit('exabgp requires python3.6 or later')
 
 if __name__ == '__main__':
@@ -89,9 +102,12 @@ if __name__ == '__main__':
 
     @staticmethod
     def set(tag, commit):
+        if Command.dryrun:
+            print('  [dry-run] would write src/exabgp/version.py')
+            return True
         with open(Path.version, 'w') as f:
             f.write(Version.template % (commit, tag, Version.JSON, Version.TEXT))
-        return Version.current() == tag
+        return True
 
     @staticmethod
     def latest(tags):
@@ -125,6 +141,9 @@ exabgp (%s-0) unstable; urgency=low
 
     @staticmethod
     def set(version):
+        if Command.dryrun:
+            print('  [dry-run] would write debian/changelog')
+            return
         from email.utils import formatdate
 
         with open(Path.debian, 'w') as w:
@@ -138,7 +157,7 @@ class Command:
     @staticmethod
     def run(cmd):
         print('>', cmd)
-        return Git.dryrun or os.system(cmd)
+        return Git.dryrun or os.system(cmd)  # noqa: S605 - release tool, not user input
 
 
 class Git(Command):
@@ -147,12 +166,12 @@ class Git(Command):
         return Git.run('git commit -a -m "%s"' % comment)
 
     @staticmethod
-    def push(tag=False, repo=''):
+    def push(tag='', repo=''):
         command = 'git push'
-        if tag:
-            command += ' --tags'
         if repo:
             command += ' %s' % repo
+        if tag:
+            command += ' %s' % tag
         return Git.run(command)
 
     @staticmethod
@@ -161,7 +180,7 @@ class Git(Command):
 
     @staticmethod
     def tags():
-        return os.popen('git tag').read().split('-')[0].strip().split('\n')
+        return os.popen('git tag').read().strip().split('\n')
 
     @staticmethod
     def tag(release):
@@ -169,23 +188,48 @@ class Git(Command):
 
     @staticmethod
     def pending():
-        # XXX: terrible please rewrite
+        allowed = (
+            'src/exabgp/version.py',
+            'debian/changelog',
+            'README.md',
+            'doc/README.rst',
+            'pyproject.toml',
+            'sbin/exabgp',
+        )
         commit = None
-        for line in os.popen('git status').read().split('\n'):
-            if 'modified:' in line:
-                if 'src/exabgp/version.py' in line or 'debian/changelog' in line or 'README' in line:
+        for line in os.popen('git status --porcelain').read().split('\n'):
+            if not line.strip():
+                continue
+            status = line[:2]
+            filepath = line[3:].strip()
+            if status.strip() in ('M', 'MM', 'AM'):
+                if any(filepath.endswith(a) for a in allowed):
                     if commit is not False:
                         commit = True
                 else:
                     return False
-            elif 'renamed:' in line:
+            elif status.strip() in ('R', 'RM'):
                 return False
         return commit
+
+    @staticmethod
+    def has_remote(name):
+        return name in os.popen('git remote').read().strip().split('\n')
 
 
 #
 # Check that that there is no version inconsistancy before any pypi action
 #
+
+
+def update_file_version(filepath, current, release):
+    """Replace current version with release version in a file"""
+    if Command.dryrun:
+        print('  [dry-run] would update %s' % filepath)
+        return
+    with fileinput.FileInput(filepath, inplace=True) as replacer:
+        for line in replacer:
+            print(line.replace(current, release), end='')
 
 
 def release_github(args):
@@ -210,7 +254,8 @@ def release_github(args):
     candidates = Version.candidates(Version.latest(tags))
     if release not in candidates:
         print('valid versions are:', ', '.join(candidates))
-        print('this release is not one of the candidates')
+        print('this release is not one of the candidates, aborting')
+        return 1
 
     print('updating src/exabgp/version.py')
     Version.set(release, Git.head_commit())
@@ -218,11 +263,9 @@ def release_github(args):
     Debian.set(release)
 
     print('updating ', end='')
-    for readme in ('README.md', 'doc/README.rst'):
-        print(readme + ' ', end='')
-        with fileinput.FileInput(readme, inplace=True) as replacer:
-            for line in replacer:
-                print(line.replace(current, release), end='')
+    for path in ('README.md', 'doc/README.rst', 'pyproject.toml', 'sbin/exabgp'):
+        print(path + ' ', end='')
+        update_file_version(path, current, release)
     print()
 
     print('checking if we need to commit a version.py change')
@@ -244,21 +287,25 @@ def release_github(args):
         return 1
 
     print('pushing the new tag')
-    if Git.push(tag=True, repo='origin'):
+    if Git.push(tag=release, repo='origin'):
         print('could not push release tag to origin')
         return 1
 
-    if Git.push(tag=False, repo='origin'):
+    if Git.push(repo='origin'):
         print('could not push release version to origin')
         return 1
 
-    if Git.push(tag=True, repo='upstream'):
-        print('could not push release tag to upstream')
-        return 1
+    if Git.has_remote('upstream'):
+        if Git.push(tag=release, repo='upstream'):
+            print('could not push release tag to upstream')
+            return 1
 
-    if Git.push(tag=False, repo='upstream'):
-        print('could not push release version to upstream')
-        return 1
+        if Git.push(repo='upstream'):
+            print('could not push release version to upstream')
+            return 1
+    else:
+        print('no upstream remote, skipping')
+
     return 0
 
 
@@ -283,7 +330,7 @@ def release_pypi(args):
     if test:
         server = '--repository-url https://test.pypi.org/legacy/'
 
-    if Command.run('twine upload %s dist/exabgp-%s.tar.gz' % (server, release)):
+    if Command.run('twine upload %s dist/exabgp-%s.tar.gz dist/exabgp-%s-py3-none-any.whl' % (server, release, release)):
         print('could not upload with twine')
         return 1
 
