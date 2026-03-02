@@ -45,6 +45,7 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import Negotiated
+from exabgp.configuration.process import API_PREFIX
 from exabgp.configuration.core.format import formated
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
@@ -309,6 +310,8 @@ class Processes:
 
                 # Prepare environment variables for child process
                 child_env = os.environ.copy()
+                if not process.startswith(API_PREFIX):
+                    child_env.pop('exabgp_cli_pipe', None)
                 if 'env' in configuration:
                     child_env.update(configuration['env'])
 
