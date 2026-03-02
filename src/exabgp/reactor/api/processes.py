@@ -17,6 +17,7 @@ import fcntl
 from exabgp.util.errstr import errstr
 from exabgp.reactor.network.error import error
 
+from exabgp.configuration.process import API_PREFIX
 from exabgp.configuration.core.format import formated
 from exabgp.reactor.api.response import Response
 from exabgp.reactor.api.response.answer import Answer
@@ -156,10 +157,15 @@ class Processes:
                 # Initialize per-process ACK state (process config overrides global default)
                 self._ack[process] = configuration.get('ack', self._default_ack)
 
+                child_env = os.environ.copy()
+                if not process.startswith(API_PREFIX):
+                    child_env.pop('exabgp_cli_pipe', None)
+
                 self._process[process] = subprocess.Popen(
                     run,
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
+                    env=child_env,
                     preexec_fn=preexec_helper,
                     # This flags exists for python 2.7.3 in the documentation but on on my MAC
                     # creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
