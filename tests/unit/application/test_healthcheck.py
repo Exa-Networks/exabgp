@@ -15,6 +15,7 @@ import pytest
 from exabgp.application.healthcheck import (
     States,
     check,
+    loop,
     setup_logging,
     setargs,
     ip_ifname,
@@ -317,3 +318,111 @@ class TestParseIpIfnames:
         assert not re.match(pattern, '')  # Too short
         assert not re.match(pattern, 'a' * 16)  # Too long
         assert not re.match(pattern, 'eth 0')  # Space not allowed
+
+
+class TestHealthcheckV6Commands:
+    """Verify healthcheck generates v6 API format commands.
+
+    The healthcheck sends commands to ExaBGP via stdout. Since ExaBGP v6,
+    commands must use 'peer *' prefix instead of the v4 'neighbor *' prefix.
+    These tests catch regressions where v4 command format is accidentally used.
+    """
+
+    @staticmethod
+    def _make_options(**overrides: object) -> argparse.Namespace:
+        """Build minimal options namespace for healthcheck loop."""
+        from ipaddress import ip_network as ipn
+
+        defaults: dict[str, object] = {
+            'ips': [ipn('10.0.0.1/32')],
+            'next_hop': 'self',
+            'withdraw_on_down': True,
+            'rise': 1,
+            'fall': 1,
+            'command': 'true',
+            'timeout': 5,
+            'interval': 0,  # exit after first announcement
+            'fast': 1,
+            'increase': 0,
+            'up_metric': 100,
+            'down_metric': 1000,
+            'disabled_metric': 500,
+            'local_preference': -1,
+            'community': None,
+            'disabled_community': None,
+            'extended_community': None,
+            'large_community': None,
+            'as_path': None,
+            'up_as_path': None,
+            'down_as_path': None,
+            'path_id': None,
+            'neighbors': None,
+            'disable': None,
+            'ip_dynamic': False,
+            'ip_setup': False,
+            'ip_ifnames': {},
+            'debounce': False,
+            'no_ack': True,
+            'label': None,
+            'label_exact_match': False,
+            'sudo': False,
+            'execute': None,
+            'up_execute': None,
+            'down_execute': None,
+            'disabled_execute': None,
+        }
+        defaults.update(overrides)
+        return argparse.Namespace(**defaults)
+
+    @staticmethod
+    def _capture_loop(options: argparse.Namespace) -> list[str]:
+        """Run healthcheck loop and capture stdout commands."""
+        import sys
+        from io import StringIO
+
+        captured = StringIO()
+        with patch.object(sys, 'stdout', captured), patch('signal.signal'):
+            loop(options)
+        return [line for line in captured.getvalue().strip().split('\n') if line]
+
+    def test_announce_up_uses_peer_prefix(self) -> None:
+        """UP announce must use v6 'peer *' prefix, not v4 'neighbor *'."""
+        options = self._make_options()
+        commands = self._capture_loop(options)
+
+        assert len(commands) >= 1
+        for cmd in commands:
+            assert cmd.startswith('peer '), f"Expected v6 'peer *' prefix, got: {cmd}"
+            assert 'neighbor' not in cmd, f"v4 'neighbor' found in command: {cmd}"
+
+    def test_withdraw_uses_peer_prefix(self) -> None:
+        """Withdraw must use v6 'peer *' prefix."""
+        options = self._make_options(command='false', withdraw_on_down=True)
+        commands = self._capture_loop(options)
+
+        assert len(commands) >= 1
+        for cmd in commands:
+            assert cmd.startswith('peer '), f"Expected v6 'peer *' prefix, got: {cmd}"
+            assert 'peer * withdraw' in cmd or 'peer * announce' in cmd
+
+    def test_neighbor_filter_uses_peer_prefix(self) -> None:
+        """Neighbor-filtered commands must use v6 'peer <ip>' prefix."""
+        from ipaddress import ip_address
+
+        options = self._make_options(neighbors=[ip_address('10.0.0.2')])
+        commands = self._capture_loop(options)
+
+        assert len(commands) >= 1
+        for cmd in commands:
+            assert 'peer 10.0.0.2' in cmd, f"Expected 'peer 10.0.0.2' in: {cmd}"
+            assert 'neighbor' not in cmd, f"v4 'neighbor' found in command: {cmd}"
+
+    def test_announce_contains_route(self) -> None:
+        """Announce command must contain route specification."""
+        options = self._make_options()
+        commands = self._capture_loop(options)
+
+        assert len(commands) >= 1
+        for cmd in commands:
+            assert 'route 10.0.0.1/32' in cmd
+            assert 'next-hop self' in cmd

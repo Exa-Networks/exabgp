@@ -155,7 +155,7 @@ class Control:
 
         # Enable ACK for this CLI control process to ensure command responses are always received
         try:
-            os.write(standard_out, b'enable-ack\n')
+            os.write(standard_out, b'session ack enable\n')
             # Read and discard the 'done' response to prevent it from interfering with user commands
             # Wait up to 1 second for the response
             poller = select.poll()
