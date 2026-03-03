@@ -19,6 +19,23 @@ class ASYNC:
 
     def __init__(self):
         self._async = deque()
+        self._error_handler = None
+
+    def set_error_handler(self, handler):
+        """Set a callback to notify services when their async callback fails.
+
+        The handler receives the service uid and should send an error response
+        so the client doesn't hang waiting for done/error.
+        """
+        self._error_handler = handler
+
+    def _notify_error(self, uid):
+        """Notify the service that its callback failed."""
+        if self._error_handler:
+            try:
+                self._error_handler(uid)
+            except Exception:
+                pass
 
     def ready(self):
         return not self._async
@@ -115,6 +132,7 @@ class ASYNC:
                 log.error(lambda uid=uid: f'async | {uid} | problem with function', 'reactor')
                 for line in str(exc).split('\n'):
                     log.error(lambda line=line, uid=uid: f'async | {uid} | {line}', 'reactor')
+                self._notify_error(uid)
                 if not self._async:
                     return False
                 uid, callback = self._async.popleft()

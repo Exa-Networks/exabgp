@@ -271,6 +271,9 @@ class Reactor:
         # so we can not do it with dropped privileges
         self.processes = Processes()
 
+        # Wire up ASYNC error handler so failed callbacks send error to CLI
+        self.asynchronous.set_error_handler(self.processes.answer_error)
+
         # Mark signal handler as ready - any signals received before this point are queued
         self.signal.mark_ready()
 
