@@ -459,6 +459,9 @@ class Reactor:
         # Create processes after closing file descriptors
         self.processes = Processes()
 
+        # Wire up ASYNC error handler so failed callbacks send error to CLI
+        self.asynchronous.set_error_handler(self.processes.answer_error_sync)
+
         # Mark signal handler as ready - any signals received before this point are queued
         self.signal.mark_ready()
 

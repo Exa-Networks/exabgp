@@ -989,7 +989,7 @@ class Peer:
             'local-as': int(self.neighbor.session.local_as),
             'peer-as': int(self.neighbor.session.peer_as),
             'local-id': str(self.neighbor.session.router_id),
-            'peer-id': None if peer['peer-id'] is None else str(peer['router-id']),
+            'peer-id': None if peer['peer-id'] is None else str(peer['peer-id']),
             'local-hold': int(self.neighbor.hold_time),
             'peer-hold': None if peer['hold-time'] is None else int(peer['hold-time']),
             'state': self.fsm.name(),

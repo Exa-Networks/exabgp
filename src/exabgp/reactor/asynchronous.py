@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections import deque
-from typing import Any
+from typing import Any, Callable
 
 from exabgp.logger import log, lazyexc, lazymsg
 
@@ -20,6 +20,23 @@ class ASYNC:
 
     def __init__(self) -> None:
         self._async: deque[tuple[str, Any]] = deque()
+        self._error_handler: Callable[[str], None] | None = None
+
+    def set_error_handler(self, handler: Callable[[str], None]) -> None:
+        """Set a callback to notify services when their async callback fails.
+
+        The handler receives the service uid and should send an error response
+        so the client doesn't hang waiting for done/error.
+        """
+        self._error_handler = handler
+
+    def _notify_error(self, uid: str) -> None:
+        """Notify the service that its callback failed."""
+        if self._error_handler:
+            try:
+                self._error_handler(uid)
+            except Exception:
+                pass
 
     def ready(self) -> bool:
         return not self._async
@@ -114,6 +131,7 @@ class ASYNC:
                         break
                 except Exception as exc:
                     log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
+                    self._notify_error(uid)
                     # Continue to next callback even if one fails
             return False  # All coroutines processed
         else:
@@ -148,6 +166,7 @@ class ASYNC:
                     uid, callback = self._async.popleft()
                 except Exception as exc:
                     log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
+                    self._notify_error(uid)
                     # Error occurred - pop next callback
                     if not self._async:
                         return False
