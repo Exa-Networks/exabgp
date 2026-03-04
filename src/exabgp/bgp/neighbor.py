@@ -586,10 +586,10 @@ Neighbor {peer-address}
     def formated_dict(cls, answer):
         if answer['duration']:
             duration_value = timedelta(seconds=answer['duration'])
-            duration = f"   {'up for':<20} {duration_value:>15} {'':<15} {'':<15}"
+            duration = f"   {'up for':<20} {str(duration_value):>15} {'':<15} {'':<15}"
         else:
             down_value = timedelta(seconds=answer['down'])
-            duration = f"   {'down for':<20} {down_value:>15} {'':<15} {'':<15}"
+            duration = f"   {'down for':<20} {str(down_value):>15} {'':<15} {'':<15}"
 
         formated = {
             'peer-address': answer['peer-address'],
