@@ -259,11 +259,15 @@ class TestConnectionLifecycleBasics:
                 # Non-blocking connect may raise EINPROGRESS, which is OK
                 pass
 
-            # Wait for connection to establish
-            time.sleep(0.2)
+            # Wait for server thread to accept the connection (race condition fix)
+            server_accepted = False
+            for _ in range(20):  # Wait up to 2 seconds
+                if server.connection_established:
+                    server_accepted = True
+                    break
+                time.sleep(0.1)
 
-            # Check if server received the connection
-            assert server.connection_established
+            assert server_accepted, 'Server should receive connection'
 
             client_sock.close()
         finally:
