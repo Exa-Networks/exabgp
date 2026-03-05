@@ -3,6 +3,16 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.3:
+ * Fix: CLI hang on failing async commands
+   ASYNC error handler now sends error response when callback fails,
+   preventing the CLI from hanging indefinitely.
+ * Fix: peer-id field in show neighbor extensive
+   cli_data() now correctly uses peer['peer-id'] instead of peer['router-id'].
+ * Fix: timedelta formatting error on Python 3.12+
+   Python 3.12+ timedelta.__format__ rejects alignment specs like :>15.
+   Wrapping in str() before formatting fixes the TypeError.
+
 Version 5.0.2:
  * Fix: healthcheck (and other subcommands) not working when api.cli is enabled
    When exabgp.api.cli is true, the exabgp_cli_pipe environment variable was
