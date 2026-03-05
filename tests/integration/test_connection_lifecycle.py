@@ -39,7 +39,7 @@ def mock_logger() -> Generator[None, None, None]:
     mock_option_logger.error = Mock()
     mock_option_logger.critical = Mock()
 
-    mock_formater = Mock(return_value="formatted message")
+    mock_formater = Mock(return_value='formatted message')
 
     option.logger = mock_option_logger
     option.formater = mock_formater
@@ -63,7 +63,7 @@ class MockBGPServer:
     Creates a real TCP server socket that can accept connections and exchange BGP messages.
     """
 
-    def __init__(self, host: Any ='127.0.0.1', port: Any =0, afi: Any =AFI.ipv4):
+    def __init__(self, host: Any = '127.0.0.1', port: Any = 0, afi: Any = AFI.ipv4):
         self.host = host
         self.port = port
         self.afi = afi
@@ -169,7 +169,7 @@ class MockBGPServer:
                 pass
 
 
-def create_bgp_message(msg_type: Any, body: Any =b'') -> Any:
+def create_bgp_message(msg_type: Any, body: Any = b'') -> Any:
     """Create a valid BGP message.
 
     Args:
@@ -185,7 +185,7 @@ def create_bgp_message(msg_type: Any, body: Any =b'') -> Any:
     return header + body
 
 
-def create_open_message(asn: Any =64512, router_id: Any ='192.0.2.1', hold_time: Any =180) -> Any:
+def create_open_message(asn: Any = 64512, router_id: Any = '192.0.2.1', hold_time: Any = 180) -> Any:
     """Create a BGP OPEN message.
 
     Args:
@@ -210,7 +210,7 @@ def create_keepalive_message() -> Any:
     return create_bgp_message(4, b'')
 
 
-def create_notification_message(error_code: Any =1, error_subcode: Any =1, data: Any =b'') -> Any:
+def create_notification_message(error_code: Any = 1, error_subcode: Any = 1, data: Any = b'') -> Any:
     """Create a BGP NOTIFICATION message"""
     body = struct.pack('!BB', error_code, error_subcode) + data
     return create_bgp_message(3, body)
@@ -226,7 +226,7 @@ class TestConnectionLifecycleBasics:
             client, server = socket.socketpair()
         else:
             # Fallback for systems without socketpair
-            pytest.skip("socketpair not available")
+            pytest.skip('socketpair not available')
 
         try:
             # Send data from client to server
@@ -259,11 +259,15 @@ class TestConnectionLifecycleBasics:
                 # Non-blocking connect may raise EINPROGRESS, which is OK
                 pass
 
-            # Wait for connection to establish
-            time.sleep(0.2)
+            # Wait for server thread to accept the connection (race condition fix)
+            server_accepted = False
+            for _ in range(20):  # Wait up to 2 seconds
+                if server.connection_established:
+                    server_accepted = True
+                    break
+                time.sleep(0.1)
 
-            # Check if server received the connection
-            assert server.connection_established
+            assert server_accepted, 'Server should receive connection'
 
             client_sock.close()
         finally:
@@ -295,9 +299,18 @@ class TestOutgoingConnectionLifecycle:
                     break
                 time.sleep(0.1)
 
-            assert established, "Connection should establish"
-            assert outgoing.io is not None, "Socket should be assigned"
-            assert server.connection_established, "Server should receive connection"
+            assert established, 'Connection should establish'
+            assert outgoing.io is not None, 'Socket should be assigned'
+
+            # Wait for server thread to accept the connection (race condition fix)
+            server_accepted = False
+            for _ in range(20):  # Wait up to 2 seconds
+                if server.connection_established:
+                    server_accepted = True
+                    break
+                time.sleep(0.1)
+
+            assert server_accepted, 'Server should receive connection'
 
             outgoing.close()
         finally:
@@ -331,8 +344,8 @@ class TestOutgoingConnectionLifecycle:
             # Wait for server to receive it
             time.sleep(0.2)
 
-            assert len(server.messages_received) > 0, "Server should receive message"
-            assert server.messages_received[0] == keepalive, "Should receive KEEPALIVE"
+            assert len(server.messages_received) > 0, 'Server should receive message'
+            assert server.messages_received[0] == keepalive, 'Should receive KEEPALIVE'
 
             outgoing.close()
         finally:
@@ -372,9 +385,9 @@ class TestOutgoingConnectionLifecycle:
             while length == 0 and error is None:
                 length, msg_type, header, body, error = next(reader)
 
-            assert error is None, "Should not have error"
-            assert length == 19, "KEEPALIVE is 19 bytes"
-            assert msg_type == 4, "Should be KEEPALIVE (type 4)"
+            assert error is None, 'Should not have error'
+            assert length == 19, 'KEEPALIVE is 19 bytes'
+            assert msg_type == 4, 'Should be KEEPALIVE (type 4)'
 
             outgoing.close()
         finally:
@@ -420,7 +433,7 @@ class TestOutgoingConnectionLifecycle:
                 length, msg_type, header, body, error = next(reader)
 
             assert error is None
-            assert msg_type == 1, "Should receive OPEN (type 1)"
+            assert msg_type == 1, 'Should receive OPEN (type 1)'
 
             # 4. Exchange KEEPALIVES
             keepalive = create_keepalive_message()
@@ -438,10 +451,10 @@ class TestOutgoingConnectionLifecycle:
                 length, msg_type, header, body, error = next(reader)
 
             assert error is None
-            assert msg_type == 4, "Should receive KEEPALIVE (type 4)"
+            assert msg_type == 4, 'Should receive KEEPALIVE (type 4)'
 
             # Verify server received our messages
-            assert len(server.messages_received) >= 2, "Server should receive OPEN and KEEPALIVE"
+            assert len(server.messages_received) >= 2, 'Server should receive OPEN and KEEPALIVE'
 
             outgoing.close()
         finally:
@@ -455,7 +468,7 @@ class TestIncomingConnectionLifecycle:
         """Test Incoming can be created from a real connected socket"""
         # Create a socket pair to simulate an accepted connection
         if not hasattr(socket, 'socketpair'):
-            pytest.skip("socketpair not available")
+            pytest.skip('socketpair not available')
 
         server_sock, client_sock = socket.socketpair()
 
@@ -480,7 +493,7 @@ class TestIncomingConnectionLifecycle:
     def test_incoming_receive_message(self) -> None:
         """Test Incoming can receive messages from connected socket"""
         if not hasattr(socket, 'socketpair'):
-            pytest.skip("socketpair not available")
+            pytest.skip('socketpair not available')
 
         server_sock, client_sock = socket.socketpair()
 
@@ -519,7 +532,7 @@ class TestIncomingConnectionLifecycle:
     def test_incoming_send_message(self) -> None:
         """Test Incoming can send messages to connected socket"""
         if not hasattr(socket, 'socketpair'):
-            pytest.skip("socketpair not available")
+            pytest.skip('socketpair not available')
 
         server_sock, client_sock = socket.socketpair()
 
@@ -575,7 +588,7 @@ class TestConnectionErrorScenarios:
     def test_connection_close_during_read(self) -> None:
         """Test handling of connection close during read operation"""
         if not hasattr(socket, 'socketpair'):
-            pytest.skip("socketpair not available")
+            pytest.skip('socketpair not available')
 
         server_sock, client_sock = socket.socketpair()
         incoming = None
@@ -605,7 +618,7 @@ class TestConnectionErrorScenarios:
     def test_invalid_bgp_marker(self) -> None:
         """Test detection of invalid BGP marker"""
         if not hasattr(socket, 'socketpair'):
-            pytest.skip("socketpair not available")
+            pytest.skip('socketpair not available')
 
         server_sock, client_sock = socket.socketpair()
         incoming = None
@@ -631,6 +644,7 @@ class TestConnectionErrorScenarios:
 
                 # Should have a NotifyError
                 from exabgp.reactor.network.error import NotifyError
+
                 assert isinstance(error, NotifyError)
                 assert error.code == 1  # Message Header Error
                 assert error.subcode == 1  # Connection Not Synchronized
@@ -694,8 +708,8 @@ class TestConnectionConcurrency:
                 time.sleep(0.1)
 
             # Should have sent and received messages
-            assert messages_sent > 0, "Should send messages"
-            assert messages_received > 0, "Should receive messages"
+            assert messages_sent > 0, 'Should send messages'
+            assert messages_received > 0, 'Should receive messages'
 
             outgoing.close()
         finally:
