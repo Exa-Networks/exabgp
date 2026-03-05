@@ -2,6 +2,8 @@
 
 Guidance for Claude Code (claude.ai/code) working with this repository.
 
+**NEVER write memory files outside this project.** Use `.claude/memory/` within the repo for all persistent notes. Do not use `~/.claude/projects/*/memory/`.
+
 ---
 
 ## 🚨 SESSION START PROTOCOL - READ FIRST 🚨
