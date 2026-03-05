@@ -190,7 +190,7 @@ class Git(Command):
     def pending():
         allowed = (
             'src/exabgp/version.py',
-            'debian/changelog',
+            # 'debian/changelog',
             'README.md',
             'doc/README.rst',
             'pyproject.toml',
@@ -259,8 +259,8 @@ def release_github(args):
 
     print('updating src/exabgp/version.py')
     Version.set(release, Git.head_commit())
-    print('updating debian/changelog')
-    Debian.set(release)
+    # print('updating debian/changelog')
+    # Debian.set(release)
 
     print('updating ', end='')
     for path in ('README.md', 'doc/README.rst', 'pyproject.toml', 'sbin/exabgp'):

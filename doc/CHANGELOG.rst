@@ -3,6 +3,13 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.4:
+ * Fix: Flaky test on slow CI runners (Alpine Linux) (#1359)
+   Race condition in test_connection_lifecycle where client-side TCP
+   handshake completes before server thread calls accept(). Added
+   retry loop instead of bare assertion.
+ * Fix: Release script no longer generates debian/changelog
+
 Version 5.0.3:
  * Fix: CLI hang on failing async commands
    ASYNC error handler now sends error response when callback fails,
