@@ -24,6 +24,7 @@ from exabgp.protocol.family import AFI
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.network.tcp import md5
 from exabgp.reactor.network.tcp import min_ttl
+from exabgp.reactor.network.tcp import min_ttlv6
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno
 from exabgp.reactor.network.error import NetworkError
@@ -100,7 +101,10 @@ class Listener:
             if tcp_ao_password and tcp_ao_keyid is not None:
                 tcp_ao(sock, peer_ip.top(), 0, tcp_ao_password, tcp_ao_keyid, tcp_ao_algorithm, tcp_ao_base64)
             if ttl_in:
-                min_ttl(sock, peer_ip.top(), ttl_in)
+                if local_ip.ipv6():
+                    min_ttlv6(sock, peer_ip.top(), ttl_in)
+                else:
+                    min_ttl(sock, peer_ip.top(), ttl_in)
             return
 
         try:
@@ -112,7 +116,10 @@ class Listener:
             if tcp_ao_password and tcp_ao_keyid is not None:
                 tcp_ao(sock, peer_ip.top(), 0, tcp_ao_password, tcp_ao_keyid, tcp_ao_algorithm, tcp_ao_base64)
             if ttl_in:
-                min_ttl(sock, peer_ip.top(), ttl_in)
+                if local_ip.ipv6():
+                    min_ttlv6(sock, peer_ip.top(), ttl_in)
+                else:
+                    min_ttl(sock, peer_ip.top(), ttl_in)
             try:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 if local_ip.ipv6():

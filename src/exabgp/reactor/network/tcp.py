@@ -388,6 +388,26 @@ def min_ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
             ) from None
 
 
+def min_ttlv6(io: socket.socket, ip: str, ttl: int | None) -> None:
+    # None (ttl-security unset) or zero (maximum TTL) is the same thing
+    if ttl:
+        try:
+            # IPV6_MINHOPCOUNT is Linux-specific (value 73), not always in the socket module
+            IPV6_MINHOPCOUNT = getattr(socket, 'IPV6_MINHOPCOUNT', 73)
+            io.setsockopt(socket.IPPROTO_IPV6, IPV6_MINHOPCOUNT, ttl)
+        except OSError as exc:
+            raise TTLError(
+                'This OS does not support IPV6_MINHOPCOUNT (ttl-security) for {} ({})'.format(ip, errstr(exc))
+            ) from None
+
+        try:
+            io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
+        except OSError as exc:
+            raise TTLError(
+                'This OS does not support IPV6_UNICAST_HOPS (ttl-security) for {} ({})'.format(ip, errstr(exc)),
+            ) from None
+
+
 def asynchronous(io: socket.socket, ip: str) -> None:
     try:
         io.setblocking(False)
