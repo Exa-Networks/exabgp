@@ -6,6 +6,7 @@ Tests that parsed configuration matches expected JSON output.
 from __future__ import annotations
 
 import json
+import re
 import pytest
 from pathlib import Path
 
@@ -17,6 +18,14 @@ from exabgp.configuration.encoder import ConfigEncoder, config_to_json, _seriali
 FIXTURES_DIR = Path(__file__).parent / 'fixtures'
 # Directory containing ExaBGP example configs
 CONFIG_DIR = Path(__file__).parent.parent.parent.parent / 'etc' / 'exabgp'
+
+# Pattern matching absolute paths to the exabgp repo root
+_REPO_PATH_RE = re.compile(r'(?<=")/[^"]*?(?=/etc/exabgp/)')
+
+
+def _normalize_repo_paths(text: str) -> str:
+    """Replace absolute repo paths with a placeholder for portable comparison."""
+    return _REPO_PATH_RE.sub('<REPO>', text)
 
 
 def get_config_fixtures() -> list[tuple[Path, Path]]:
@@ -48,8 +57,8 @@ def test_configuration_export_matches_expected(conf_file: Path, expected_file: P
         expected = json.load(f)
     expected_json = json.dumps(expected, sort_keys=True, indent=2)
 
-    # Compare
-    assert actual_json == expected_json, (
+    # Compare (normalize absolute repo paths for portability)
+    assert _normalize_repo_paths(actual_json) == _normalize_repo_paths(expected_json), (
         f'Configuration mismatch for {conf_file.name}\n'
         f'Run: ./sbin/exabgp configuration export {conf_file} > {expected_file}\n'
         f'to update expected output'
