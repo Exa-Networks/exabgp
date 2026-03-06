@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.bgp.message.open.capability import Negotiated
+    from exabgp.reactor.peer.stats import Stats
     from exabgp.reactor.protocol import Protocol
 
 
@@ -29,3 +30,4 @@ class PeerContext:
     refresh_enhanced: bool
     routes_per_iteration: int
     peer_id: str
+    stats: Stats

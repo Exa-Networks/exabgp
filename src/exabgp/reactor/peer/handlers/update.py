@@ -51,6 +51,7 @@ class UpdateHandler(MessageHandler):
             nlri = routed.nlri
             route = Route(nlri, parsed.attributes, nexthop=routed.nexthop)
             ctx.neighbor.rib.incoming.update_cache(route)
+            ctx.stats['receive-prefixes'] += 1
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
@@ -59,6 +60,7 @@ class UpdateHandler(MessageHandler):
         # Process withdraws - use dedicated method
         for nlri in parsed.withdraws:
             ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
+            ctx.stats['receive-withdraws'] += 1
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
@@ -84,6 +86,7 @@ class UpdateHandler(MessageHandler):
             nlri = routed.nlri
             route = Route(nlri, parsed.attributes, nexthop=routed.nexthop)
             ctx.neighbor.rib.incoming.update_cache(route)
+            ctx.stats['receive-prefixes'] += 1
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
@@ -92,6 +95,7 @@ class UpdateHandler(MessageHandler):
         # Process withdraws - use dedicated method
         for nlri in parsed.withdraws:
             ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
+            ctx.stats['receive-withdraws'] += 1
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,

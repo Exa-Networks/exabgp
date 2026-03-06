@@ -194,6 +194,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-prefixes': 0,
+                'receive-withdraws': 0,
             },
         )
 
@@ -241,6 +243,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-prefixes': 0,
+                'receive-withdraws': 0,
             },
         )
 
@@ -665,6 +669,7 @@ class Peer:
             refresh_enhanced=refresh_enhanced,
             routes_per_iteration=routes_per_iteration,
             peer_id=self.id(),
+            stats=self.stats,
         )
         update_handler = UpdateHandler()
         route_refresh_handler = RouteRefreshHandler(self.resend)
@@ -981,6 +986,11 @@ class Peer:
             messages[message] = (sent, rcvd)
         messages['total'] = (total_sent, total_rcvd)
 
+        prefixes = {
+            'received': self.stats['receive-prefixes'],
+            'withdrawn': self.stats['receive-withdraws'],
+        }
+
         return {
             'down': int(self.stats['reset'] - self.stats['creation']),
             'duration': (int(time.time() - self.stats['complete']) if self.stats['complete'] else 0),
@@ -996,4 +1006,5 @@ class Peer:
             'capabilities': capabilities,
             'families': families,
             'messages': messages,
+            'prefixes': prefixes,
         }

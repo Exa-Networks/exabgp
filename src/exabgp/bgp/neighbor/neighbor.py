@@ -432,9 +432,12 @@ Neighbor {peer-address}
 
     Message Statistic               Sent        Received
 {messages}
+
+    Prefix Statistic
+{prefixes}
 """.replace('\t', '  ')
 
-    summary_header: ClassVar[str] = 'Peer            AS        up/down state       |     #sent     #recvd'
+    summary_header: ClassVar[str] = 'Peer            AS        up/down state       |     #sent     #recvd    #pfx_in'
     summary_template: ClassVar[str] = '%-15s %-7s %9s %-12s %10d %10d'
 
     @classmethod
@@ -655,6 +658,9 @@ Neighbor {peer-address}
         formated['peer']['id'] = answer['peer-id']
         formated['peer']['hold'] = answer['peer-hold']
 
+        if 'prefixes' in answer:
+            formated['prefixes'] = answer['prefixes']
+
         return formated
 
     @classmethod
@@ -685,6 +691,9 @@ Neighbor {peer-address}
             'messages': '\n'.join(
                 f'    {f"{k}:":<20} {ms!s:>15} {mr!s:>15} {"":<15}' for k, (ms, mr) in answer['messages'].items()
             ),
+            'prefixes': '\n'.join(
+                f'    {f"{k}:":<20} {v!s:>15} {"":<15} {"":<15}' for k, v in answer.get('prefixes', {}).items()
+            ),
         }
 
         return formated
@@ -709,7 +718,8 @@ Neighbor {peer-address}
         state_str = answer['state'].lower()
         update_in = answer['messages']['update'][0]
         update_out = answer['messages']['update'][1]
-        return f'{peer_addr:<15} {peer_as_str:<7} {duration_str:>9} {state_str:<12} {update_in:>10} {update_out:>10}'
+        prefixes_rcvd = answer.get('prefixes', {}).get('received', 0)
+        return f'{peer_addr:<15} {peer_as_str:<7} {duration_str:>9} {state_str:<12} {update_in:>10} {update_out:>10} {prefixes_rcvd:>10}'
 
 
 # Initialize the empty neighbor singleton

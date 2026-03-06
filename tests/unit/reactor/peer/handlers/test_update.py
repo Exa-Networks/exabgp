@@ -20,6 +20,7 @@ class TestUpdateHandler:
         ctx.neighbor.rib = Mock()
         ctx.neighbor.rib.incoming = Mock()
         ctx.peer_id = 'test-peer'
+        ctx.stats = {'receive-prefixes': 0, 'receive-withdraws': 0}
         return ctx
 
     def test_can_handle_update(self, handler: UpdateHandler) -> None:
@@ -48,6 +49,8 @@ class TestUpdateHandler:
         list(handler.handle(mock_context, update))
 
         assert mock_context.neighbor.rib.incoming.update_cache.call_count == 2
+        assert mock_context.stats['receive-prefixes'] == 2
+        assert mock_context.stats['receive-withdraws'] == 0
 
     def test_handle_empty_nlris(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """UpdateHandler handles updates with no NLRIs."""
@@ -84,6 +87,21 @@ class TestUpdateHandler:
         handler.reset()
         assert handler._number == 0
 
+    def test_handle_counts_withdraws(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
+        """UpdateHandler increments withdraw counter per NLRI."""
+        parsed = Mock()
+        parsed.announces = []
+        parsed.withdraws = [Mock(), Mock(), Mock()]
+        parsed.attributes = Mock()
+        update = Mock()
+        update.TYPE = UpdateCollection.TYPE
+        update.data = parsed
+
+        list(handler.handle(mock_context, update))
+
+        assert mock_context.stats['receive-prefixes'] == 0
+        assert mock_context.stats['receive-withdraws'] == 3
+
     def test_handle_is_generator(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """handle() returns a generator."""
         parsed = Mock()
@@ -112,6 +130,7 @@ class TestUpdateHandlerAsync:
         ctx.neighbor.rib = Mock()
         ctx.neighbor.rib.incoming = Mock()
         ctx.peer_id = 'test-peer'
+        ctx.stats = {'receive-prefixes': 0, 'receive-withdraws': 0}
         return ctx
 
     @pytest.mark.asyncio
