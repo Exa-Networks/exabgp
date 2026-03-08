@@ -343,23 +343,23 @@ class NeighborTemplate:
     extensive_template = """\
 Neighbor {peer-address}
 
-    Session                         Local
+    Session                       Local
 {local-address}
 {state}
 {duration}
 
-    Setup                           Local          Remote
+    Setup                         Local          Remote
 {as}
 {id}
 {hold}
 
-    Capability                      Local          Remote
+    Capability                    Local          Remote
 {capabilities}
 
-    Families                        Local          Remote        Add-Path
+    Families                      Local          Remote        Add-Path
 {families}
 
-    Message Statistic                Sent        Received
+    Message Statistic              Sent        Received
 {messages}
 """.replace('\t', '  ')
 
