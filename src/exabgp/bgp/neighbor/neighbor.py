@@ -427,7 +427,7 @@ Neighbor {peer-address}
     Capability                     Local          Remote
 {capabilities}
 
-    Families                        Local         Remote        Add-Path
+    Families                       Local          Remote        Add-Path
 {families}
 
     Message Statistic               Sent        Received
