@@ -88,5 +88,5 @@ class Srv6Capabilities(BaseLS):
             {
                 'flags': self.flags,
             },
-            indent=compact,
+            indent=None,
         )

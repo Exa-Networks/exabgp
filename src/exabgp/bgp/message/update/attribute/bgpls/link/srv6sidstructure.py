@@ -101,5 +101,5 @@ class Srv6SidStructure(BaseLS):
                 'func_len': self.func_len,
                 'arg_len': self.arg_len,
             },
-            indent=compact,
+            indent=None,
         )

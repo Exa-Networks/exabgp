@@ -93,5 +93,5 @@ class Srv6Locator(FlagLS):
                 'algorithm': self.algorithm,
                 'metric': self.metric,
             },
-            indent=compact,
+            indent=None,
         )

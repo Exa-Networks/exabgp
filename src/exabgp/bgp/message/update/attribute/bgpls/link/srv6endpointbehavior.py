@@ -91,5 +91,5 @@ class Srv6EndpointBehavior(BaseLS):
                 'flags': self.flags,
                 'algorithm': self.algorithm,
             },
-            indent=compact,
+            indent=None,
         )
