@@ -173,7 +173,7 @@ def parse():
         args = [x.strip() for x in args]
         args.extend(sys.argv[1:])
         options = parser.parse_args(args)
-        options.ip_ifnames = parse_ip_ifnames(options.ip_ifnames, options.ips)
+    options.ip_ifnames = parse_ip_ifnames(options.ip_ifnames, options.ips)
     return options
 
 
