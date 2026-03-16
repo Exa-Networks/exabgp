@@ -3,6 +3,11 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.5:
+ * Fix: healthcheck --neighbor produced doubled neighbor prefix (#1366)
+ * Fix: healthcheck crash when --ip-ifname not used (#1365)
+ * Fix: Align column headers in show neighbor extensive
+
 Version 5.0.4:
  * Fix: Flaky test on slow CI runners (Alpine Linux) (#1359)
    Race condition in test_connection_lifecycle where client-side TCP
