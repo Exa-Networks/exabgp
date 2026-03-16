@@ -418,14 +418,19 @@ def loop(options):
         as_path = vars(options).get(f'{str(target).lower()}_as_path', None)
         if as_path is None:
             as_path = options.as_path
+        if options.neighbors:
+            prefix = ', '.join(f'neighbor {neighbor}' for neighbor in options.neighbors)
+        else:
+            prefix = 'neighbor *'
         for ip in options.ips:
             if options.withdraw_on_down or target is states.EXIT:
-                command = 'neighbor * announce' if target is states.UP else 'neighbor * withdraw'
+                action = 'announce' if target is states.UP else 'withdraw'
             else:
-                command = 'neighbor * announce'
+                action = 'announce'
+            command = f'{prefix} {action}'
             announce = f"route {ip} next-hop {options.next_hop or 'self'}"
 
-            if command == 'neighbor * announce':
+            if action == 'announce':
                 announce = f'{announce} med {metric}'
                 if options.local_preference >= 0:
                     announce = f'{announce} local-preference {options.local_preference}'
@@ -446,14 +451,6 @@ def loop(options):
             # append path ID if required
             if options.path_id:
                 announce = f'{announce} path-information {options.path_id}'
-
-            # allow filtering neighbors that the route should be advertised to
-            if options.neighbors:
-                # routes are filtered to specific neighbors; format them and put into a list
-                neighbors = [f'neighbor {neighbor}' for neighbor in options.neighbors]
-                # comma seperate the neighbor list and prepend to announcement command
-                neighbors_str = ', '.join(neighbors)
-                command = f'{neighbors_str} {command}'
 
             metric += options.increase
 
