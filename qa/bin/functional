@@ -73,6 +73,10 @@ class Path:
     ALL_ENCODING = glob.glob(os.path.join(ENCODING, '*.ci'))
     ALL_ENCODING.sort()
 
+    @classmethod
+    def setup_env(cls):
+        os.environ['PYTHONPATH'] = cls.SRC
+
     @staticmethod
     def etc(fname):
         return os.path.abspath(os.path.join(Path.ETC, fname))
@@ -838,6 +842,7 @@ def add_test(subparser, name, tests, extra):
 
 if __name__ == '__main__':
     Path.validate()
+    Path.setup_env()
 
     decoding = DecodingTests()
     encoding = EncodingTests()

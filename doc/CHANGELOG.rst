@@ -7,6 +7,12 @@ Version 5.0.5:
  * Fix: healthcheck --neighbor produced doubled neighbor prefix (#1366)
  * Fix: healthcheck crash when --ip-ifname not used (#1365)
  * Fix: Align column headers in show neighbor extensive
+ * Fix: Route Refresh messages sent after new updates instead of before
+   When flush adj-rib out and a new announce arrived in the same reactor
+   cycle, the new route UPDATE was sent before the ROUTE_REFRESH start
+   marker, violating the Enhanced Route Refresh sequence.
+ * Fix: pytest collecting tests from wrong exabgp installation
+   Added pythonpath to pyproject.toml so tests use local src/.
 
 Version 5.0.4:
  * Fix: Flaky test on slow CI runners (Alpine Linux) (#1359)

@@ -219,6 +219,19 @@ class OutgoingRIB(Cache):
         self._refresh_families = set()
         self._refresh_changes = []
 
+        # Route Refresh first - must be sent before new updates because
+        # the flush command semantically precedes any new announces that
+        # arrived in the same reactor cycle
+
+        for afi, safi in refresh_families:
+            yield RouteRefresh(afi, safi, RouteRefresh.start)
+
+        for change in refresh_changes:
+            yield Update([change.nlri], change.attributes)
+
+        for afi, safi in refresh_families:
+            yield RouteRefresh(afi, safi, RouteRefresh.end)
+
         # generating Updates from what is in the RIB
         for attr_index, per_family in attr_af_nlri.items():
             for family, changes in per_family.items():
@@ -243,14 +256,3 @@ class OutgoingRIB(Cache):
 
                 for change in changes.values():
                     yield Update([change.nlri], attributes)
-
-        # Route Refresh - use snapshots to avoid modification during iteration
-
-        for afi, safi in refresh_families:
-            yield RouteRefresh(afi, safi, RouteRefresh.start)
-
-        for change in refresh_changes:
-            yield Update([change.nlri], change.attributes)
-
-        for afi, safi in refresh_families:
-            yield RouteRefresh(afi, safi, RouteRefresh.end)

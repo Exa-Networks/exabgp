@@ -66,6 +66,7 @@ requires = ["setuptools", "wheel"]
 
 
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 markers = [
 	"fuzz: Fuzzing tests using Hypothesis (deselect with '-m \"not fuzz\"')",
 	"asyncio: Async tests using pytest-asyncio",
