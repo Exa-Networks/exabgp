@@ -21,6 +21,7 @@ Test Coverage:
 8. AS4_PATH attribute handling
 9. Mixed ASN2/ASN4 scenarios with AS_TRANS
 """
+
 import struct
 from typing import Any
 from unittest.mock import Mock
@@ -28,7 +29,7 @@ from unittest.mock import Mock
 import pytest
 
 
-def create_negotiated_mock(asn4: Any =False) -> Any:
+def create_negotiated_mock(asn4: Any = False) -> Any:
     """Create minimal mock negotiated object for testing."""
     negotiated = Mock()
     negotiated.asn4 = asn4
@@ -38,6 +39,7 @@ def create_negotiated_mock(asn4: Any =False) -> Any:
 # =============================================================================
 # Test AS_SEQUENCE (most common segment type)
 # =============================================================================
+
 
 def test_aspath_empty() -> None:
     """Test empty AS_PATH unpacking."""
@@ -119,6 +121,7 @@ def test_aspath_single_asn() -> None:
 # Test AS_SET
 # =============================================================================
 
+
 def test_aspath_as_set() -> None:
     """Test AS_SET segment type (unordered set of ASNs)."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SET
@@ -141,6 +144,7 @@ def test_aspath_as_set() -> None:
 # =============================================================================
 # Test CONFED_SEQUENCE and CONFED_SET
 # =============================================================================
+
 
 def test_aspath_confed_sequence() -> None:
     """Test CONFED_SEQUENCE segment type (BGP confederation)."""
@@ -185,6 +189,7 @@ def test_aspath_confed_set() -> None:
 # =============================================================================
 # Test multiple segments
 # =============================================================================
+
 
 def test_aspath_multiple_segments() -> None:
     """Test AS_PATH with multiple segments."""
@@ -236,6 +241,7 @@ def test_aspath_mixed_confederation() -> None:
 # Test AS4_PATH attribute
 # =============================================================================
 
+
 def test_as4path_unpacking() -> None:
     """Test AS4_PATH attribute (always uses 4-byte ASNs)."""
     from exabgp.bgp.message.update.attribute.aspath import AS4Path, SEQUENCE
@@ -259,6 +265,7 @@ def test_as4path_unpacking() -> None:
 # =============================================================================
 # Test error cases
 # =============================================================================
+
 
 def test_aspath_invalid_segment_type() -> None:
     """Test AS_PATH with invalid segment type."""
@@ -339,6 +346,7 @@ def test_aspath_truncated_asn4_data() -> None:
 # Test packing
 # =============================================================================
 
+
 def test_aspath_pack_asn2() -> None:
     """Test packing AS_PATH with 2-byte ASNs."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
@@ -402,6 +410,7 @@ def test_aspath_pack_with_as_trans() -> None:
 # Test string representation
 # =============================================================================
 
+
 def test_aspath_string_representation() -> None:
     """Test AS_PATH string formatting."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
@@ -439,6 +448,7 @@ def test_aspath_json_representation() -> None:
 # Test equality
 # =============================================================================
 
+
 def test_aspath_equality() -> None:
     """Test AS_PATH equality comparison."""
     from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
@@ -467,5 +477,5 @@ def test_aspath_inequality() -> None:
     assert aspath1 != aspath2
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+if __name__ == '__main__':
+    pytest.main([__file__, '-v'])

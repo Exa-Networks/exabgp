@@ -59,15 +59,15 @@ class TestSocketCreation:
         """Test creating socket with interface binding (may require root)"""
         # This test may fail without root privileges or on some platforms
         # We'll just verify it doesn't crash with invalid interface
-        with pytest.raises(NotConnected, match="Could not bind to device"):
-            tcp.create(AFI.ipv4, interface="nonexistent_interface_12345")
+        with pytest.raises(NotConnected, match='Could not bind to device'):
+            tcp.create(AFI.ipv4, interface='nonexistent_interface_12345')
 
     @patch('socket.socket')
     def test_create_socket_failure(self, mock_socket: Any) -> None:
         """Test socket creation failure"""
-        mock_socket.side_effect = OSError("Socket creation failed")
+        mock_socket.side_effect = OSError('Socket creation failed')
 
-        with pytest.raises(NotConnected, match="Could not create socket"):
+        with pytest.raises(NotConnected, match='Could not create socket'):
             tcp.create(AFI.ipv4)
 
 
@@ -99,13 +99,13 @@ class TestSocketBinding:
         except OSError:
             # IPv6 might not be available on all systems
             io.close()
-            pytest.skip("IPv6 not available on this system")
+            pytest.skip('IPv6 not available on this system')
 
     def test_bind_invalid_address(self) -> None:
         """Test binding to invalid IP address"""
         io = tcp.create(AFI.ipv4)
 
-        with pytest.raises(BindingError, match="Could not bind to local ip"):
+        with pytest.raises(BindingError, match='Could not bind to local ip'):
             tcp.bind(io, '999.999.999.999', AFI.ipv4)
 
         io.close()
@@ -177,7 +177,7 @@ class TestSocketConnection:
 
             io.close()
         except OSError:
-            pytest.skip("IPv6 not available on this system")
+            pytest.skip('IPv6 not available on this system')
 
     def test_connect_with_md5_error_message(self) -> None:
         """Test that MD5 password hint appears in error with MD5 enabled"""
@@ -190,7 +190,7 @@ class TestSocketConnection:
             tcp.connect(io, '127.0.0.1', 1, AFI.ipv4, md5='test123')
 
         # Verify MD5 hint is in error message
-        assert "check your MD5 password" in str(exc_info.value)
+        assert 'check your MD5 password' in str(exc_info.value)
 
         io.close()
 
@@ -203,7 +203,7 @@ class TestMD5Authentication:
         with patch('platform.system', return_value='Windows'):
             io = tcp.create(AFI.ipv4)
 
-            with pytest.raises(MD5Error, match="ExaBGP has no MD5 support for Windows"):
+            with pytest.raises(MD5Error, match='ExaBGP has no MD5 support for Windows'):
                 tcp.md5(io, '127.0.0.1', 179, 'password123', False)
 
             io.close()
@@ -214,7 +214,7 @@ class TestMD5Authentication:
         io = tcp.create(AFI.ipv4)
 
         # FreeBSD requires 'kernel' as the md5 value
-        with pytest.raises(MD5Error, match="FreeBSD requires that you set your MD5 key via ipsec.conf"):
+        with pytest.raises(MD5Error, match='FreeBSD requires that you set your MD5 key via ipsec.conf'):
             tcp.md5(io, '127.0.0.1', 179, 'password123', False)
 
         io.close()
@@ -223,10 +223,10 @@ class TestMD5Authentication:
     @patch('socket.socket.setsockopt')
     def test_md5_freebsd_with_kernel(self, mock_setsockopt: Any, mock_platform: Any) -> None:
         """Test FreeBSD MD5 with 'kernel' value"""
-        mock_setsockopt.side_effect = OSError("Not enabled")
+        mock_setsockopt.side_effect = OSError('Not enabled')
         io = tcp.create(AFI.ipv4)
 
-        with pytest.raises(MD5Error, match="rebuild your kernel"):
+        with pytest.raises(MD5Error, match='rebuild your kernel'):
             tcp.md5(io, '127.0.0.1', 179, 'kernel', False)
 
         io.close()
@@ -317,10 +317,10 @@ class TestNagleAlgorithm:
     @patch('socket.socket.setsockopt')
     def test_nagle_disable_failure(self, mock_setsockopt: Any) -> None:
         """Test Nagle disable failure handling"""
-        mock_setsockopt.side_effect = OSError("Not supported")
+        mock_setsockopt.side_effect = OSError('Not supported')
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        with pytest.raises(NagleError, match="Could not disable nagle"):
+        with pytest.raises(NagleError, match='Could not disable nagle'):
             tcp.nagle(io, '127.0.0.1')
 
         io.close()
@@ -341,7 +341,7 @@ class TestTTLConfiguration:
             assert ttl_value == 255
         except TTLError:
             # Some systems may not support this
-            pytest.skip("IP_TTL not supported on this system")
+            pytest.skip('IP_TTL not supported on this system')
 
         io.close()
 
@@ -374,19 +374,19 @@ class TestTTLConfiguration:
                 hops = io.getsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS)
                 assert hops == 64
             except TTLError:
-                pytest.skip("IPV6_UNICAST_HOPS not supported on this system")
+                pytest.skip('IPV6_UNICAST_HOPS not supported on this system')
 
             io.close()
         except OSError:
-            pytest.skip("IPv6 not available on this system")
+            pytest.skip('IPv6 not available on this system')
 
     @patch('socket.socket.setsockopt')
     def test_ttl_not_supported(self, mock_setsockopt: Any) -> None:
         """Test TTL error when not supported"""
-        mock_setsockopt.side_effect = OSError("Not supported")
+        mock_setsockopt.side_effect = OSError('Not supported')
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        with pytest.raises(TTLError, match="does not support IP_TTL"):
+        with pytest.raises(TTLError, match='does not support IP_TTL'):
             tcp.ttl(io, '127.0.0.1', 64)
 
         io.close()
@@ -430,10 +430,10 @@ class TestAsynchronousMode:
     @patch('socket.socket.setblocking')
     def test_asynchronous_failure(self, mock_setblocking: Any) -> None:
         """Test async mode failure handling"""
-        mock_setblocking.side_effect = OSError("Not supported")
+        mock_setblocking.side_effect = OSError('Not supported')
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        with pytest.raises(AsyncError, match="could not set socket non-blocking"):
+        with pytest.raises(AsyncError, match='could not set socket non-blocking'):
             tcp.asynchronous(io, '127.0.0.1')
 
         io.close()
@@ -470,7 +470,7 @@ class TestSocketReadiness:
         """Test ready() handling poll errors"""
 
         mock_poller = MagicMock()
-        mock_poller.poll.side_effect = OSError("Poll failed")
+        mock_poller.poll.side_effect = OSError('Poll failed')
         mock_poll_class.return_value = mock_poller
 
         io = tcp.create(AFI.ipv4)
@@ -570,7 +570,7 @@ class TestIntegration:
 
             io.close()
         except OSError:
-            pytest.skip("IPv6 not available on this system")
+            pytest.skip('IPv6 not available on this system')
 
     def test_socket_cleanup(self) -> None:
         """Test that sockets are properly cleaned up"""

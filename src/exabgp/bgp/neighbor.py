@@ -138,7 +138,7 @@ class Neighbor(dict):
         # - have multiple exabgp toward one peer on the same host ( use of pid )
         # - have more than once connection toward a peer
         # - each connection has it own neihgbor (hence why identificator is not in Protocol)
-        self.uid = f"{self._GLOBAL['uid']}"
+        self.uid = f'{self._GLOBAL["uid"]}'
         self._GLOBAL['uid'] += 1
 
     def infer(self):
@@ -159,7 +159,7 @@ class Neighbor(dict):
     # This set must be unique between peer, not full draft-ietf-idr-bgp-multisession-07
     def index(self):
         if self['listen'] != 0:
-            return f"peer-ip {self['peer-address']} listen {self['listen']}"
+            return f'peer-ip {self["peer-address"]} listen {self["listen"]}'
         return self.name()
 
     def make_rib(self):
@@ -185,7 +185,7 @@ class Neighbor(dict):
         local_addr = self['local-address'] if self['peer-address'] is not None else 'auto'
         local_as = self['local-as'] if self['local-as'] is not None else 'auto'
         peer_as = self['peer-as'] if self['peer-as'] is not None else 'auto'
-        return f"neighbor {self['peer-address']} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self['router-id']} family-allowed {session}"
+        return f'neighbor {self["peer-address"]} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self["router-id"]} family-allowed {session}'
 
     def families(self):
         # this list() is important .. as we use the function to modify self._families
@@ -492,25 +492,25 @@ Neighbor {peer-address}
             f'\n\tpassive {"true" if neighbor["passive"] else "false"};\n'
             + (f'\n\tlisten {neighbor["listen"]};\n' if neighbor['listen'] else '')
             + (f'\n\tconnect {neighbor["connect"]};\n' if neighbor['connect'] else '')
-            + f"\tgroup-updates {'true' if neighbor['group-updates'] else 'false'};\n"
-            f"\tauto-flush {'true' if neighbor['auto-flush'] else 'false'};\n"
-            f"\tadj-rib-in {'true' if neighbor['adj-rib-in'] else 'false'};\n"
-            f"\tadj-rib-out {'true' if neighbor['adj-rib-out'] else 'false'};\n"
+            + f'\tgroup-updates {"true" if neighbor["group-updates"] else "false"};\n'
+            f'\tauto-flush {"true" if neighbor["auto-flush"] else "false"};\n'
+            f'\tadj-rib-in {"true" if neighbor["adj-rib-in"] else "false"};\n'
+            f'\tadj-rib-out {"true" if neighbor["adj-rib-out"] else "false"};\n'
             + (f'\tmd5-password "{neighbor["md5-password"]}";\n' if neighbor['md5-password'] else '')
             + f'\tmd5-base64 {md5_base64_str};\n'
             + (f'\tmd5-ip "{neighbor["md5-ip"]}";\n' if not neighbor.auto_discovery else '')
             + (f'\toutgoing-ttl {neighbor["outgoing-ttl"]};\n' if neighbor['outgoing-ttl'] else '')
             + (f'\tincoming-ttl {neighbor["incoming-ttl"]};\n' if neighbor['incoming-ttl'] else '')
             + f'\tcapability {{\n'
-            f"\t\tasn4 {'enable' if neighbor['capability']['asn4'] else 'disable'};\n"
-            f"\t\troute-refresh {'enable' if neighbor['capability']['route-refresh'] else 'disable'};\n"
-            f"\t\tgraceful-restart {neighbor['capability']['graceful-restart'] if neighbor['capability']['graceful-restart'] else 'disable'};\n"
-            f"\t\tsoftware-version {'enable' if neighbor['capability']['software-version'] else 'disable'};\n"
-            f"\t\tnexthop {'enable' if neighbor['capability']['nexthop'] else 'disable'};\n"
-            f"\t\tadd-path {add_path_str};\n"
-            f"\t\tmulti-session {'enable' if neighbor['capability']['multi-session'] else 'disable'};\n"
-            f"\t\toperational {'enable' if neighbor['capability']['operational'] else 'disable'};\n"
-            f"\t\taigp {'enable' if neighbor['capability']['aigp'] else 'disable'};\n"
+            f'\t\tasn4 {"enable" if neighbor["capability"]["asn4"] else "disable"};\n'
+            f'\t\troute-refresh {"enable" if neighbor["capability"]["route-refresh"] else "disable"};\n'
+            f'\t\tgraceful-restart {neighbor["capability"]["graceful-restart"] if neighbor["capability"]["graceful-restart"] else "disable"};\n'
+            f'\t\tsoftware-version {"enable" if neighbor["capability"]["software-version"] else "disable"};\n'
+            f'\t\tnexthop {"enable" if neighbor["capability"]["nexthop"] else "disable"};\n'
+            f'\t\tadd-path {add_path_str};\n'
+            f'\t\tmulti-session {"enable" if neighbor["capability"]["multi-session"] else "disable"};\n'
+            f'\t\toperational {"enable" if neighbor["capability"]["operational"] else "disable"};\n'
+            f'\t\taigp {"enable" if neighbor["capability"]["aigp"] else "disable"};\n'
             f'\t}}\n'
             f'\tfamily {{{families}\n'
             f'\t}}\n'
@@ -586,29 +586,29 @@ Neighbor {peer-address}
     def formated_dict(cls, answer):
         if answer['duration']:
             duration_value = timedelta(seconds=answer['duration'])
-            duration = f"   {'up for':<20} {str(duration_value):>15} {'':<15} {'':<15}"
+            duration = f'   {"up for":<20} {str(duration_value):>15} {"":<15} {"":<15}'
         else:
             down_value = timedelta(seconds=answer['down'])
-            duration = f"   {'down for':<20} {str(down_value):>15} {'':<15} {'':<15}"
+            duration = f'   {"down for":<20} {str(down_value):>15} {"":<15} {"":<15}'
 
         formated = {
             'peer-address': answer['peer-address'],
-            'local-address': f"   {'local':<20} {answer['local-address']:>15} {'':<15} {'':<15}",
-            'state': f"   {'state':<20} {answer['state']:>15} {'':<15} {'':<15}",
+            'local-address': f'   {"local":<20} {answer["local-address"]:>15} {"":<15} {"":<15}',
+            'state': f'   {"state":<20} {answer["state"]:>15} {"":<15} {"":<15}',
             'duration': duration,
-            'as': f"   {'AS':<20} {answer['local-as']:>15} {_pr(answer['peer-as']):>15} {'':<15}",
-            'id': f"   {'ID':<20} {answer['local-id']:>15} {_pr(answer['peer-id']):>15} {'':<15}",
-            'hold': f"   {'hold-time':<20} {answer['local-hold']:>15} {_pr(answer['peer-hold']):>15} {'':<15}",
+            'as': f'   {"AS":<20} {answer["local-as"]:>15} {_pr(answer["peer-as"]):>15} {"":<15}',
+            'id': f'   {"ID":<20} {answer["local-id"]:>15} {_pr(answer["peer-id"]):>15} {"":<15}',
+            'hold': f'   {"hold-time":<20} {answer["local-hold"]:>15} {_pr(answer["peer-hold"]):>15} {"":<15}',
             'capabilities': '\n'.join(
-                f"   {f'{k}:':<20} {_en(lc):>15} {_en(pc):>15} {'':<15}"
+                f'   {f"{k}:":<20} {_en(lc):>15} {_en(pc):>15} {"":<15}'
                 for k, (lc, pc) in answer['capabilities'].items()
             ),
             'families': '\n'.join(
-                f"   {f'{a} {s}:':<20} {_en(lf):>15} {_en(rf):>15} {_addpath(aps, apr):<15}"
+                f'   {f"{a} {s}:":<20} {_en(lf):>15} {_en(rf):>15} {_addpath(aps, apr):<15}'
                 for (a, s), (lf, rf, apr, aps) in answer['families'].items()
             ),
             'messages': '\n'.join(
-                f"   {f'{k}:':<20} {ms!s:>15} {mr!s:>15} {'':<15}" for k, (ms, mr) in answer['messages'].items()
+                f'   {f"{k}:":<20} {ms!s:>15} {mr!s:>15} {"":<15}' for k, (ms, mr) in answer['messages'].items()
             ),
         }
 

@@ -3,12 +3,13 @@
 This module provides utilities to create well-formed and malformed UPDATE
 messages for fuzzing and testing the UPDATE message parser.
 """
+
 import struct
 import sys
 from typing import Any
 
 
-def create_update_message(withdrawn_routes: Any =b'', path_attributes: Any =b'', nlri: Any =b'') -> bytes:
+def create_update_message(withdrawn_routes: Any = b'', path_attributes: Any = b'', nlri: Any = b'') -> bytes:
     """Create a BGP UPDATE message with given components.
 
     Args:
@@ -36,11 +37,11 @@ def create_ipv4_prefix(ip: Any, prefix_len: Any) -> bytes:
         bytes: Wire format (length byte + address bytes)
 
     Example:
-        >>> create_ipv4_prefix("192.0.2.0", 24)
+        >>> create_ipv4_prefix('192.0.2.0', 24)
         b'\\x18\\xc0\\x00\\x02'  # length=24, 3 bytes of IP
     """
     if not (0 <= prefix_len <= 32):
-        raise ValueError(f"Invalid prefix length: {prefix_len} (must be 0-32)")
+        raise ValueError(f'Invalid prefix length: {prefix_len} (must be 0-32)')
 
     # Calculate how many bytes needed for the prefix
     bytes_needed = (prefix_len + 7) // 8
@@ -48,7 +49,7 @@ def create_ipv4_prefix(ip: Any, prefix_len: Any) -> bytes:
     # Convert IP to bytes
     parts = ip.split('.')
     if len(parts) != 4:
-        raise ValueError(f"Invalid IPv4 address: {ip}")
+        raise ValueError(f'Invalid IPv4 address: {ip}')
 
     ip_bytes = bytes([int(p) for p in parts])
 
@@ -56,7 +57,14 @@ def create_ipv4_prefix(ip: Any, prefix_len: Any) -> bytes:
     return bytes([prefix_len]) + ip_bytes[:bytes_needed]
 
 
-def create_path_attribute(type_code: Any, value: Any, optional: Any =False, transitive: Any =True, partial: Any =False, extended: Any =False) -> bytes:
+def create_path_attribute(
+    type_code: Any,
+    value: Any,
+    optional: Any = False,
+    transitive: Any = True,
+    partial: Any = False,
+    extended: Any = False,
+) -> bytes:
     """Create a BGP path attribute.
 
     Args:
@@ -108,7 +116,7 @@ def create_origin_attribute(origin_type: Any) -> bytes:
         bytes: ORIGIN attribute
     """
     if origin_type not in (0, 1, 2):
-        raise ValueError(f"Invalid origin type: {origin_type}")
+        raise ValueError(f'Invalid origin type: {origin_type}')
 
     return create_path_attribute(
         type_code=1,
@@ -141,7 +149,7 @@ def create_as_path_attribute(as_sequence: Any) -> bytes:
     value = bytes([segment_type, segment_length])
     for asn in as_sequence:
         if asn > 65535:
-            raise ValueError(f"AS number {asn} requires 4-byte AS support")
+            raise ValueError(f'AS number {asn} requires 4-byte AS support')
         value += struct.pack('!H', asn)
 
     return create_path_attribute(
@@ -163,7 +171,7 @@ def create_next_hop_attribute(ip_address: Any) -> bytes:
     """
     parts = ip_address.split('.')
     if len(parts) != 4:
-        raise ValueError(f"Invalid IPv4 address: {ip_address}")
+        raise ValueError(f'Invalid IPv4 address: {ip_address}')
 
     ip_bytes = bytes([int(p) for p in parts])
 
@@ -185,7 +193,7 @@ def create_med_attribute(med_value: Any) -> bytes:
         bytes: MED attribute
     """
     if not (0 <= med_value <= 0xFFFFFFFF):
-        raise ValueError(f"Invalid MED value: {med_value}")
+        raise ValueError(f'Invalid MED value: {med_value}')
 
     return create_path_attribute(
         type_code=4,
@@ -205,7 +213,7 @@ def create_local_pref_attribute(local_pref: Any) -> bytes:
         bytes: LOCAL_PREF attribute
     """
     if not (0 <= local_pref <= 0xFFFFFFFF):
-        raise ValueError(f"Invalid LOCAL_PREF value: {local_pref}")
+        raise ValueError(f'Invalid LOCAL_PREF value: {local_pref}')
 
     return create_path_attribute(
         type_code=5,
@@ -224,7 +232,7 @@ def create_eor_message() -> bytes:
     return b'\x00\x00\x00\x00'
 
 
-def create_minimal_update(nlri_prefix: Any =None) -> bytes:
+def create_minimal_update(nlri_prefix: Any = None) -> bytes:
     """Create minimal valid UPDATE message.
 
     Args:
@@ -239,9 +247,9 @@ def create_minimal_update(nlri_prefix: Any =None) -> bytes:
 
         # Need mandatory attributes for announcement
         attributes = (
-            create_origin_attribute(0) +  # IGP
-            create_as_path_attribute([]) +  # Empty AS_PATH
-            create_next_hop_attribute("192.0.2.1")  # Some next-hop
+            create_origin_attribute(0)  # IGP
+            + create_as_path_attribute([])  # Empty AS_PATH
+            + create_next_hop_attribute('192.0.2.1')  # Some next-hop
         )
 
         return create_update_message(
@@ -272,6 +280,7 @@ def create_withdrawal_update(prefixes: Any) -> bytes:
 
 
 # Malformed message helpers for testing
+
 
 def create_update_with_invalid_withdrawn_length(actual_data_length: Any, claimed_length: Any) -> bytes:
     """Create UPDATE with mismatched withdrawn routes length.
@@ -321,27 +330,27 @@ def create_truncated_update(valid_update: Any, truncate_at: Any) -> bytes:
     return valid_update[:truncate_at]
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Quick self-test
-    sys.stdout.write("Testing UPDATE helper functions...\n")
+    sys.stdout.write('Testing UPDATE helper functions...\n')
     # Test EOR
     eor = create_eor_message()
-    assert eor == b'\x00\x00\x00\x00', "EOR should be 4 zeros"
+    assert eor == b'\x00\x00\x00\x00', 'EOR should be 4 zeros'
     sys.stdout.write(f'✓ EOR: {eor.hex()}\n')
     # Test minimal update
     minimal = create_minimal_update()
-    assert len(minimal) == 4, "Minimal UPDATE (no NLRI) should be EOR"
+    assert len(minimal) == 4, 'Minimal UPDATE (no NLRI) should be EOR'
     sys.stdout.write(f'✓ Minimal UPDATE: {minimal.hex()}\n')
     # Test prefix creation
-    prefix = create_ipv4_prefix("192.0.2.0", 24)
-    assert prefix == b'\x18\xc0\x00\x02', "Prefix should be correct"
+    prefix = create_ipv4_prefix('192.0.2.0', 24)
+    assert prefix == b'\x18\xc0\x00\x02', 'Prefix should be correct'
     sys.stdout.write(f'✓ Prefix 192.0.2.0/24: {prefix.hex()}\n')
     # Test UPDATE with announcement
-    update_with_nlri = create_minimal_update(("10.0.0.0", 8))
-    assert len(update_with_nlri) > 4, "UPDATE with NLRI should be larger than EOR"
+    update_with_nlri = create_minimal_update(('10.0.0.0', 8))
+    assert len(update_with_nlri) > 4, 'UPDATE with NLRI should be larger than EOR'
     sys.stdout.write(f'✓ UPDATE with NLRI: {len(update_with_nlri)} bytes\n')
     # Test withdrawal
-    withdrawal = create_withdrawal_update([("192.0.2.0", 24), ("10.0.0.0", 8)])
-    assert len(withdrawal) > 4, "Withdrawal should have data"
+    withdrawal = create_withdrawal_update([('192.0.2.0', 24), ('10.0.0.0', 8)])
+    assert len(withdrawal) > 4, 'Withdrawal should have data'
     sys.stdout.write(f'✓ Withdrawal UPDATE: {len(withdrawal)} bytes\n')
-    sys.stdout.write("\nAll helper tests passed! ✓\n")
+    sys.stdout.write('\nAll helper tests passed! ✓\n')

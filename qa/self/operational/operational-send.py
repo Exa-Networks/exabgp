@@ -30,10 +30,14 @@ while True:
     try:
         time.sleep(1)
         if counter % 2:
-            sys.stdout.write('announce operational adm afi ipv4 safi unicast advisory "this is dynamic message #%d"\n' % counter)
+            sys.stdout.write(
+                'announce operational adm afi ipv4 safi unicast advisory "this is dynamic message #%d"\n' % counter
+            )
             sys.stdout.flush()
         else:
-            sys.stdout.write('announce operational asm afi ipv4 safi unicast advisory "we SHOULD not send asm from the API"\n')
+            sys.stdout.write(
+                'announce operational asm afi ipv4 safi unicast advisory "we SHOULD not send asm from the API"\n'
+            )
             sys.stdout.flush()
 
         counter += 1

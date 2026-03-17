@@ -7,6 +7,7 @@ This module provides property-based fuzz tests for critical parsing components:
 - ASN and port number validation
 - Binary protocol data handling
 """
+
 import pytest
 from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
@@ -17,6 +18,7 @@ pytestmark = pytest.mark.fuzz
 # =============================================================================
 # Configuration Parser Fuzz Tests
 # =============================================================================
+
 
 @pytest.mark.fuzz
 @given(text=st.text(alphabet=st.characters(blacklist_categories=('Cs',)), max_size=500))
@@ -57,7 +59,7 @@ def test_ipv4_creation(prefix_len: int, octet1: int, octet2: int, octet3: int, o
     """Test IPv4 address creation with valid boundary values."""
     from exabgp.protocol.ip import IPv4
 
-    ip_str = f"{octet1}.{octet2}.{octet3}.{octet4}/{prefix_len}"
+    ip_str = f'{octet1}.{octet2}.{octet3}.{octet4}/{prefix_len}'
 
     try:
         ip = IPv4.create(ip_str)
@@ -94,7 +96,7 @@ def test_asn_number_range(asn: int) -> None:
         asn_obj = ASN(asn)
         assert int(asn_obj) == asn
     except (ValueError, OverflowError) as e:
-        pytest.fail(f"Valid ASN {asn} was rejected: {e}")
+        pytest.fail(f'Valid ASN {asn} was rejected: {e}')
 
 
 @pytest.mark.fuzz
@@ -109,12 +111,12 @@ def test_nested_config_blocks(nesting_level: int) -> None:
     from exabgp.configuration.core.scope import Scope
 
     # Create nested configuration with valid syntax
-    config_text = ""
+    config_text = ''
     for i in range(nesting_level):
-        config_text += f"group test{i} {{\n"
+        config_text += f'group test{i} {{\n'
 
     for i in range(nesting_level):
-        config_text += "}\n"
+        config_text += '}\n'
 
     scope = Scope()
     error = Error()
@@ -146,6 +148,7 @@ def test_nested_config_blocks(nesting_level: int) -> None:
 # =============================================================================
 # BGP Message Wire Format Fuzz Tests
 # =============================================================================
+
 
 @pytest.mark.fuzz
 @given(data=st.binary(min_size=0, max_size=100))
@@ -182,6 +185,7 @@ def test_connection_reader_robustness(data: bytes) -> None:
         # Should either parse successfully or return an error
         if error:
             from exabgp.reactor.network.error import NotifyError
+
             assert isinstance(error, NotifyError)
         elif length > 0:
             assert 19 <= length <= 4096
@@ -204,7 +208,7 @@ def test_bgp_header_validation(valid_marker: bool, length: int, msg_type: int) -
     from unittest.mock import MagicMock
 
     # Build BGP header
-    marker = b'\xFF' * 16 if valid_marker else b'\x00' * 16
+    marker = b'\xff' * 16 if valid_marker else b'\x00' * 16
     header_data = marker + struct.pack('!H', length) + bytes([msg_type])
 
     # Add body if length > 19
@@ -263,7 +267,7 @@ def test_mpls_label_values(label_value: int, exp: int, ttl: int) -> None:
         assert len(packed) == 3  # One label = 3 bytes
     except (ValueError, Exception) as e:
         # Should succeed for all valid label values
-        pytest.fail(f"Valid label {label_value} failed: {e}")
+        pytest.fail(f'Valid label {label_value} failed: {e}')
 
 
 @pytest.mark.fuzz
@@ -281,15 +285,12 @@ def test_open_message_basic_structure(version: int, my_as: int, hold_time: int) 
     opt_params_len = 0
 
     open_data = (
-        bytes([version]) +
-        struct.pack('!H', my_as) +
-        struct.pack('!H', hold_time) +
-        bgp_id +
-        bytes([opt_params_len])
+        bytes([version]) + struct.pack('!H', my_as) + struct.pack('!H', hold_time) + bgp_id + bytes([opt_params_len])
     )
 
     try:
         from exabgp.environment import Env
+
         env = Env()
 
         open_msg = Open.unpack(env, open_data, None, None)
@@ -310,6 +311,7 @@ def test_update_message_robustness(data: bytes) -> None:
 
     try:
         from exabgp.environment import Env
+
         env = Env()
 
         # Try to parse as UPDATE message
@@ -327,6 +329,7 @@ def test_update_message_robustness(data: bytes) -> None:
 # Edge Case and Boundary Tests
 # =============================================================================
 
+
 @pytest.mark.fuzz
 def test_empty_configuration() -> None:
     """Test parser handles empty configuration."""
@@ -339,7 +342,7 @@ def test_empty_configuration() -> None:
     tokeniser = Tokeniser(scope, error)
 
     try:
-        tokeniser.set_text("")
+        tokeniser.set_text('')
 
         # Should not crash
         tokeniser()
@@ -386,7 +389,7 @@ def test_truncated_bgp_header(truncate_at: int) -> None:
     from unittest.mock import MagicMock
 
     # Valid BGP KEEPALIVE header
-    valid_header = b'\xFF' * 16 + struct.pack('!H', 19) + b'\x04'
+    valid_header = b'\xff' * 16 + struct.pack('!H', 19) + b'\x04'
 
     # Truncate it
     truncated = valid_header[:truncate_at]
@@ -437,5 +440,5 @@ def test_community_values(as_num: int, value: int) -> None:
     assert len(community_bytes) == 4
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-m", "fuzz"])
+if __name__ == '__main__':
+    pytest.main([__file__, '-v', '-m', 'fuzz'])

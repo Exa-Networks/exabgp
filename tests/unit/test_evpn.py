@@ -30,6 +30,7 @@ from exabgp.bgp.message.update.nlri.nlri import Action
 # EVPN Route Type 1: Ethernet Auto-Discovery (EthernetAD)
 # ============================================================================
 
+
 class TestEthernetAD:
     """Tests for EVPN Route Type 1: Ethernet Auto-Discovery"""
 
@@ -121,6 +122,7 @@ class TestEthernetAD:
 # ============================================================================
 # EVPN Route Type 2: MAC/IP Advertisement (MAC)
 # ============================================================================
+
 
 class TestMAC:
     """Tests for EVPN Route Type 2: MAC/IP Advertisement"""
@@ -297,6 +299,7 @@ class TestMAC:
 # EVPN Route Type 3: Inclusive Multicast Ethernet Tag (Multicast)
 # ============================================================================
 
+
 class TestMulticast:
     """Tests for EVPN Route Type 3: Inclusive Multicast Ethernet Tag"""
 
@@ -399,6 +402,7 @@ class TestMulticast:
 # ============================================================================
 # EVPN Route Type 4: Ethernet Segment (EthernetSegment)
 # ============================================================================
+
 
 class TestEthernetSegment:
     """Tests for EVPN Route Type 4: Ethernet Segment"""
@@ -521,6 +525,7 @@ class TestEthernetSegment:
 # ============================================================================
 # EVPN Route Type 5: IP Prefix Advertisement (Prefix)
 # ============================================================================
+
 
 class TestPrefix:
     """Tests for EVPN Route Type 5: IP Prefix Advertisement"""
@@ -676,6 +681,7 @@ class TestPrefix:
 # ============================================================================
 # EVPN NLRI Integration Tests
 # ============================================================================
+
 
 class TestEVPNIntegration:
     """Integration tests for EVPN NLRI parsing and handling"""

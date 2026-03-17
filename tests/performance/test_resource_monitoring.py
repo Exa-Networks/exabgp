@@ -175,10 +175,7 @@ class TestResourceUtilization:
         num_peers = 50
         messages_per_peer = 100
 
-        peer_data = {
-            peer_id: create_batch_messages('update', count=messages_per_peer)
-            for peer_id in range(num_peers)
-        }
+        peer_data = {peer_id: create_batch_messages('update', count=messages_per_peer) for peer_id in range(num_peers)}
 
         process = psutil.Process(os.getpid())
 
@@ -280,6 +277,7 @@ class TestScalabilityLimits:
                 stream = BytesIO(batch)
 
                 import time
+
                 start_time = time.time()
 
                 processed = 0
@@ -404,13 +402,15 @@ class TestStressWithMonitoring:
                 elapsed = time.time() - start_time
                 mem_after = process.memory_info().rss / 1024 / 1024
 
-                metrics.append({
-                    'round': round_num,
-                    'messages': count,
-                    'time': elapsed,
-                    'rate': count / elapsed if elapsed > 0 else 0,
-                    'memory_delta': mem_after - mem_before,
-                })
+                metrics.append(
+                    {
+                        'round': round_num,
+                        'messages': count,
+                        'time': elapsed,
+                        'rate': count / elapsed if elapsed > 0 else 0,
+                        'memory_delta': mem_after - mem_before,
+                    }
+                )
 
             return metrics
 

@@ -248,7 +248,7 @@ def system_ips(ip_ifnames, label, label_only, label_exact_match):
         else:
             mask = bin(int(mo.group('netmask'), 16)).count('1')
         try:
-            ip = ip_network(f"{mo.group('ip')}/{mask}")
+            ip = ip_network(f'{mo.group("ip")}/{mask}')
         except ValueError:
             continue
         if not ip.is_loopback:
@@ -428,7 +428,7 @@ def loop(options):
             else:
                 action = 'announce'
             command = f'{prefix} {action}'
-            announce = f"route {ip} next-hop {options.next_hop or 'self'}"
+            announce = f'route {ip} next-hop {options.next_hop or "self"}'
 
             if action == 'announce':
                 announce = f'{announce} med {metric}'

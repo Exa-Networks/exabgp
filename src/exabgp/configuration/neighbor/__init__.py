@@ -238,7 +238,7 @@ class ParseNeighbor(Section):
         if neighbor['capability']['route-refresh']:
             if not neighbor['adj-rib-out']:
                 log.warning(
-                    lambda: f"route-refresh enabled but adj-rib-out disabled for {neighbor['peer-address']}, auto-enabling adj-rib-out",
+                    lambda: f'route-refresh enabled but adj-rib-out disabled for {neighbor["peer-address"]}, auto-enabling adj-rib-out',
                     'configuration',
                 )
                 neighbor['adj-rib-out'] = True

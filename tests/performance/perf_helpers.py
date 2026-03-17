@@ -26,7 +26,7 @@ def create_mock_logger() -> Any:
     return logger
 
 
-def create_mock_negotiated(add_path: Any =False, extended_message: Any =False) -> Any:
+def create_mock_negotiated(add_path: Any = False, extended_message: Any = False) -> Any:
     """Create a mock negotiated capabilities object."""
     negotiated = Mock()
     negotiated.families = {(1, 1)}  # IPv4 Unicast
@@ -37,7 +37,7 @@ def create_mock_negotiated(add_path: Any =False, extended_message: Any =False) -
     return negotiated
 
 
-def create_mock_neighbor(asn: Any =65000, router_id: Any ='1.2.3.4') -> Any:
+def create_mock_neighbor(asn: Any = 65000, router_id: Any = '1.2.3.4') -> Any:
     """Create a mock neighbor configuration."""
     neighbor = Mock(spec=Neighbor)
     neighbor.peer_address = IPv4.create('192.0.2.1')
@@ -49,7 +49,7 @@ def create_mock_neighbor(asn: Any =65000, router_id: Any ='1.2.3.4') -> Any:
     return neighbor
 
 
-def create_simple_update_bytes(num_routes: Any =1, base_prefix: Any ='10.0.0.0/24') -> Any:
+def create_simple_update_bytes(num_routes: Any = 1, base_prefix: Any = '10.0.0.0/24') -> Any:
     """Create raw bytes for a simple UPDATE message with specified number of routes.
 
     Args:
@@ -119,7 +119,7 @@ def create_keepalive_bytes() -> Any:
     return marker + struct.pack('!HB', length, msg_type)
 
 
-def create_notification_bytes(error_code: Any =6, error_subcode: Any =0) -> Any:
+def create_notification_bytes(error_code: Any = 6, error_subcode: Any = 0) -> Any:
     """Create raw bytes for a NOTIFICATION message."""
     marker = b'\xff' * 16
     body = struct.pack('!BB', error_code, error_subcode)
@@ -128,7 +128,7 @@ def create_notification_bytes(error_code: Any =6, error_subcode: Any =0) -> Any:
     return marker + struct.pack('!HB', length, msg_type) + body
 
 
-def create_large_update_bytes(num_attributes: Any =10, num_routes: Any =100) -> Any:
+def create_large_update_bytes(num_attributes: Any = 10, num_routes: Any = 100) -> Any:
     """Create a large UPDATE message with many attributes and routes.
 
     Args:
@@ -210,7 +210,7 @@ def create_mock_connection_with_data(data_bytes: Any) -> Any:
     return connection
 
 
-def create_batch_messages(message_type: Any ='update', count: Any =1000) -> Any:
+def create_batch_messages(message_type: Any = 'update', count: Any = 1000) -> Any:
     """Create a batch of BGP messages for load testing.
 
     Args:
@@ -227,12 +227,14 @@ def create_batch_messages(message_type: Any ='update', count: Any =1000) -> Any:
     elif message_type == 'notification':
         single_msg = create_notification_bytes()
     else:
-        raise ValueError(f"Unknown message type: {message_type}")
+        raise ValueError(f'Unknown message type: {message_type}')
 
     return single_msg * count
 
 
-def create_mixed_message_batch(update_count: Any =500, keepalive_count: Any =300, notification_count: Any =200) -> Any:
+def create_mixed_message_batch(
+    update_count: Any = 500, keepalive_count: Any = 300, notification_count: Any = 200
+) -> Any:
     """Create a batch of mixed message types.
 
     Args:

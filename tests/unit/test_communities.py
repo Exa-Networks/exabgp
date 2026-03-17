@@ -40,6 +40,7 @@ Phase 5: Mixed Community Types (tests 27-30)
   - Community filtering
   - Set operations
 """
+
 import struct
 from typing import Any
 from unittest.mock import Mock
@@ -65,7 +66,7 @@ def mock_logger() -> Any:
     mock_option_logger.critical = Mock()
 
     # Create a mock formater that accepts all arguments
-    mock_formater = Mock(return_value="formatted message")
+    mock_formater = Mock(return_value='formatted message')
 
     option.logger = mock_option_logger
     option.formater = mock_formater
@@ -81,6 +82,7 @@ def mock_logger() -> Any:
 # Phase 1: Standard Communities (RFC 1997)
 # ==============================================================================
 
+
 def test_standard_community_parsing() -> None:
     """Test basic standard community parsing.
 
@@ -95,7 +97,7 @@ def test_standard_community_parsing() -> None:
 
     # Verify parsing
     assert len(community) == 4
-    assert str(community) == "65000:100"
+    assert str(community) == '65000:100'
 
     # Verify pack round-trip
     assert community.pack() == community_bytes
@@ -115,24 +117,24 @@ def test_standard_community_well_known() -> None:
 
     # Test NO_EXPORT
     no_export = Community(Community.NO_EXPORT)
-    assert str(no_export) == "no-export"
+    assert str(no_export) == 'no-export'
     assert len(no_export) == 4
 
     # Test NO_ADVERTISE
     no_advertise = Community(Community.NO_ADVERTISE)
-    assert str(no_advertise) == "no-advertise"
+    assert str(no_advertise) == 'no-advertise'
 
     # Test NO_EXPORT_SUBCONFED
     no_export_subconfed = Community(Community.NO_EXPORT_SUBCONFED)
-    assert str(no_export_subconfed) == "no-export-subconfed"
+    assert str(no_export_subconfed) == 'no-export-subconfed'
 
     # Test NO_PEER
     no_peer = Community(Community.NO_PEER)
-    assert str(no_peer) == "no-peer"
+    assert str(no_peer) == 'no-peer'
 
     # Test BLACKHOLE
     blackhole = Community(Community.BLACKHOLE)
-    assert str(blackhole) == "blackhole"
+    assert str(blackhole) == 'blackhole'
 
     # Verify caching works for well-known communities
     cached = Community.cached(Community.NO_EXPORT)
@@ -191,6 +193,7 @@ def test_standard_community_malformed() -> None:
 # Phase 2: Extended Communities - Route Target (RFC 4360, RFC 7153)
 # ==============================================================================
 
+
 def test_route_target_asn2_number() -> None:
     """Test Route Target with 2-byte ASN.
 
@@ -207,7 +210,7 @@ def test_route_target_asn2_number() -> None:
     rt = RouteTargetASN2Number(asn, number, transitive=True)
 
     # Verify representation
-    assert str(rt) == "target:65000:100"
+    assert str(rt) == 'target:65000:100'
     assert len(rt) == 8
 
     # Verify pack/unpack round-trip
@@ -234,12 +237,12 @@ def test_route_target_ip_number() -> None:
     from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetIPNumber
 
     # Create RT with IPv4 address
-    ip = "192.0.2.1"
+    ip = '192.0.2.1'
     number = 100
     rt = RouteTargetIPNumber(ip, number, transitive=True)
 
     # Verify representation
-    assert str(rt) == "target:192.0.2.1:100"
+    assert str(rt) == 'target:192.0.2.1:100'
     assert len(rt) == 8
 
     # Verify pack/unpack round-trip
@@ -272,7 +275,7 @@ def test_route_target_asn4_number() -> None:
     rt = RouteTargetASN4Number(asn, number, transitive=True)
 
     # Verify representation
-    assert str(rt) == "target:4200000000:100"
+    assert str(rt) == 'target:4200000000:100'
     assert len(rt) == 8
 
     # Verify pack/unpack round-trip
@@ -338,6 +341,7 @@ def test_extended_community_base_parsing() -> None:
 # Phase 3: Extended Communities - Other Types
 # ==============================================================================
 
+
 def test_route_origin_community() -> None:
     """Test Route Origin extended community.
 
@@ -353,7 +357,7 @@ def test_route_origin_community() -> None:
     ro = OriginASN4Number(asn, number, transitive=True)
 
     # Verify representation
-    assert str(ro) == "origin:65000:200"
+    assert str(ro) == 'origin:65000:200'
     assert len(ro) == 8
 
     # Verify subtype (0x03 for origin vs 0x02 for target)
@@ -376,7 +380,7 @@ def test_bandwidth_community() -> None:
     bw = Bandwidth(asn, speed)
 
     # Verify representation
-    assert "bandwith" in str(bw).lower()  # Note: typo in original code
+    assert 'bandwith' in str(bw).lower()  # Note: typo in original code
     assert len(bw) == 8
 
     # Verify pack/unpack
@@ -405,7 +409,7 @@ def test_encapsulation_community_vxlan() -> None:
     encap = Encapsulation(Encapsulation.Type.VXLAN)
 
     # Verify representation
-    assert str(encap) == "encap:VXLAN"
+    assert str(encap) == 'encap:VXLAN'
     assert len(encap) == 8
 
     # Verify pack/unpack
@@ -430,11 +434,11 @@ def test_encapsulation_community_types() -> None:
     from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 
     test_cases = [
-        (Encapsulation.Type.GRE, "encap:GRE"),
-        (Encapsulation.Type.IPIP, "encap:IP-in-IP"),
-        (Encapsulation.Type.VXLAN, "encap:VXLAN"),
-        (Encapsulation.Type.MPLS, "encap:MPLS"),
-        (Encapsulation.Type.VXLAN_GPE, "encap:VXLAN-GPE"),
+        (Encapsulation.Type.GRE, 'encap:GRE'),
+        (Encapsulation.Type.IPIP, 'encap:IP-in-IP'),
+        (Encapsulation.Type.VXLAN, 'encap:VXLAN'),
+        (Encapsulation.Type.MPLS, 'encap:MPLS'),
+        (Encapsulation.Type.VXLAN_GPE, 'encap:VXLAN-GPE'),
     ]
 
     for tunnel_type, expected_str in test_cases:
@@ -536,7 +540,7 @@ def test_flowspec_redirect_community() -> None:
 
     # Verify it's a valid RT that can be used for redirect
     assert len(redirect) == 8
-    assert str(redirect) == "target:65000:999"
+    assert str(redirect) == 'target:65000:999'
 
 
 def test_rt_record_community() -> None:
@@ -570,12 +574,13 @@ def test_mup_community() -> None:
 
     # Verify basic properties
     assert len(mup) == 8
-    assert str(mup) == "mup:100:200"
+    assert str(mup) == 'mup:100:200'
 
 
 # ==============================================================================
 # Phase 4: Large Communities (RFC 8092)
 # ==============================================================================
+
 
 def test_large_community_parsing() -> None:
     """Test Large Community basic parsing.
@@ -598,7 +603,7 @@ def test_large_community_parsing() -> None:
 
     # Verify parsing
     assert len(lc) == 12
-    assert str(lc) == "65000:100:200"
+    assert str(lc) == '65000:100:200'
 
     # Verify pack round-trip
     assert lc.pack() == large_bytes
@@ -644,7 +649,7 @@ def test_large_community_max_values() -> None:
 
     # Verify parsing
     assert len(lc) == 12
-    assert str(lc) == f"{max_val}:{max_val}:{max_val}"
+    assert str(lc) == f'{max_val}:{max_val}:{max_val}'
 
 
 def test_large_community_malformed() -> None:
@@ -668,6 +673,7 @@ def test_large_community_malformed() -> None:
 # ==============================================================================
 # Phase 5: Mixed Community Types and Operations
 # ==============================================================================
+
 
 def test_mixed_community_types() -> None:
     """Test handling multiple community attribute types together.
@@ -770,12 +776,12 @@ def test_community_json_representation() -> None:
     # Standard community JSON
     comm = Community(struct.pack('!HH', 65000, 100))
     json_str = comm.json()
-    assert "65000" in json_str
-    assert "100" in json_str
+    assert '65000' in json_str
+    assert '100' in json_str
 
     # Large community JSON
     lc = LargeCommunity(struct.pack('!LLL', 65000, 100, 200))
     json_str = lc.json()
-    assert "65000" in json_str
-    assert "100" in json_str
-    assert "200" in json_str
+    assert '65000' in json_str
+    assert '100' in json_str
+    assert '200' in json_str

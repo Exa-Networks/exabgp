@@ -23,6 +23,7 @@ Phase 4: Advanced Features
   - Extended next-hop capability
   - EOR (End-of-RIB) markers
 """
+
 from typing import Any
 from unittest.mock import Mock
 
@@ -47,7 +48,7 @@ def mock_logger() -> Any:
     mock_option_logger.critical = Mock()
 
     # Create a mock formater
-    mock_formater = Mock(return_value="formatted message")
+    mock_formater = Mock(return_value='formatted message')
 
     option.logger = mock_option_logger
     option.formater = mock_formater
@@ -62,6 +63,7 @@ def mock_logger() -> Any:
 # ==============================================================================
 # Phase 1: MP_REACH_NLRI (Type 14) - Basic IPv4/IPv6
 # ==============================================================================
+
 
 def test_mpreach_ipv4_unicast() -> None:
     """Test MP_REACH_NLRI for IPv4 unicast.
@@ -79,8 +81,8 @@ def test_mpreach_ipv4_unicast() -> None:
 
     # Create IPv4 unicast prefix
     prefix = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix.cidr = CIDR(IPv4.create("10.0.0.0").pack(), 24)
-    prefix.nexthop = IPv4.create("192.0.2.1")
+    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix.nexthop = IPv4.create('192.0.2.1')
 
     # Create MP_REACH_NLRI
     mpreach = MPRNLRI(AFI.ipv4, SAFI.unicast, [prefix])
@@ -91,9 +93,9 @@ def test_mpreach_ipv4_unicast() -> None:
     assert len(mpreach.nlris) == 1
 
     # Verify representation
-    assert "MP_REACH_NLRI" in str(mpreach)
-    assert "ipv4" in str(mpreach).lower()
-    assert "unicast" in str(mpreach).lower()
+    assert 'MP_REACH_NLRI' in str(mpreach)
+    assert 'ipv4' in str(mpreach).lower()
+    assert 'unicast' in str(mpreach).lower()
 
 
 def test_mpreach_ipv6_unicast() -> None:
@@ -111,8 +113,8 @@ def test_mpreach_ipv6_unicast() -> None:
 
     # Create IPv6 unicast prefix
     prefix = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    prefix.cidr = CIDR(IPv6.create("2001:db8::").pack(), 32)
-    prefix.nexthop = IPv6.create("2001:db8::1")
+    prefix.cidr = CIDR(IPv6.create('2001:db8::').pack(), 32)
+    prefix.nexthop = IPv6.create('2001:db8::1')
 
     # Create MP_REACH_NLRI
     mpreach = MPRNLRI(AFI.ipv6, SAFI.unicast, [prefix])
@@ -123,8 +125,8 @@ def test_mpreach_ipv6_unicast() -> None:
     assert len(mpreach.nlris) == 1
 
     # Verify representation
-    assert "MP_REACH_NLRI" in str(mpreach)
-    assert "ipv6" in str(mpreach).lower()
+    assert 'MP_REACH_NLRI' in str(mpreach)
+    assert 'ipv6' in str(mpreach).lower()
 
 
 def test_mpreach_multiple_prefixes() -> None:
@@ -141,11 +143,11 @@ def test_mpreach_multiple_prefixes() -> None:
     from exabgp.bgp.message import Action
 
     # Create multiple IPv4 unicast prefixes with same next-hop
-    nexthop = IPv4.create("192.0.2.1")
+    nexthop = IPv4.create('192.0.2.1')
     prefix_cidrs = [
-        ("10.0.0.0", 24),
-        ("10.1.0.0", 24),
-        ("10.2.0.0", 24),
+        ('10.0.0.0', 24),
+        ('10.1.0.0', 24),
+        ('10.2.0.0', 24),
     ]
 
     prefixes = []
@@ -160,7 +162,7 @@ def test_mpreach_multiple_prefixes() -> None:
 
     # Verify all prefixes are included
     assert len(mpreach.nlris) == 3
-    assert "3 NLRI" in str(mpreach)
+    assert '3 NLRI' in str(mpreach)
 
 
 def test_mpreach_pack_ipv4() -> None:
@@ -178,8 +180,8 @@ def test_mpreach_pack_ipv4() -> None:
 
     # Create IPv4 unicast prefix
     prefix = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix.cidr = CIDR(IPv4.create("10.0.0.0").pack(), 24)
-    prefix.nexthop = IPv4.create("192.0.2.1")
+    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix.nexthop = IPv4.create('192.0.2.1')
 
     # Create MP_REACH_NLRI
     mpreach = MPRNLRI(AFI.ipv4, SAFI.unicast, [prefix])
@@ -219,8 +221,8 @@ def test_mpreach_nexthop_ipv6_global() -> None:
 
     # Create IPv6 unicast prefix with global next-hop
     prefix = INET(AFI.ipv6, SAFI.unicast, Action.ANNOUNCE)
-    prefix.cidr = CIDR(IPv6.create("2001:db8::").pack(), 32)
-    prefix.nexthop = IPv6.create("2001:db8::1")  # Global next-hop
+    prefix.cidr = CIDR(IPv6.create('2001:db8::').pack(), 32)
+    prefix.nexthop = IPv6.create('2001:db8::1')  # Global next-hop
 
     # Create MP_REACH_NLRI
     mpreach = MPRNLRI(AFI.ipv6, SAFI.unicast, [prefix])
@@ -233,6 +235,7 @@ def test_mpreach_nexthop_ipv6_global() -> None:
 # ==============================================================================
 # Phase 2: MP_UNREACH_NLRI (Type 15) - Withdrawals
 # ==============================================================================
+
 
 def test_mpunreach_ipv4_unicast() -> None:
     """Test MP_UNREACH_NLRI for IPv4 unicast.
@@ -249,7 +252,7 @@ def test_mpunreach_ipv4_unicast() -> None:
 
     # Create IPv4 unicast prefix to withdraw
     prefix = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    prefix.cidr = CIDR(IPv4.create("10.0.0.0").pack(), 24)
+    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
 
     # Create MP_UNREACH_NLRI
     mpunreach = MPURNLRI(AFI.ipv4, SAFI.unicast, [prefix])
@@ -260,8 +263,8 @@ def test_mpunreach_ipv4_unicast() -> None:
     assert len(mpunreach.nlris) == 1
 
     # Verify representation
-    assert "MP_UNREACH_NLRI" in str(mpunreach)
-    assert "ipv4" in str(mpunreach).lower()
+    assert 'MP_UNREACH_NLRI' in str(mpunreach)
+    assert 'ipv4' in str(mpunreach).lower()
 
 
 def test_mpunreach_ipv6_unicast() -> None:
@@ -278,7 +281,7 @@ def test_mpunreach_ipv6_unicast() -> None:
 
     # Create IPv6 unicast prefix to withdraw
     prefix = INET(AFI.ipv6, SAFI.unicast, Action.WITHDRAW)
-    prefix.cidr = CIDR(IPv6.create("2001:db8::").pack(), 32)
+    prefix.cidr = CIDR(IPv6.create('2001:db8::').pack(), 32)
 
     # Create MP_UNREACH_NLRI
     mpunreach = MPURNLRI(AFI.ipv6, SAFI.unicast, [prefix])
@@ -304,9 +307,9 @@ def test_mpunreach_multiple_prefixes() -> None:
 
     # Create multiple IPv4 unicast prefixes to withdraw
     prefix_cidrs = [
-        ("10.0.0.0", 24),
-        ("10.1.0.0", 24),
-        ("10.2.0.0", 24),
+        ('10.0.0.0', 24),
+        ('10.1.0.0', 24),
+        ('10.2.0.0', 24),
     ]
 
     prefixes = []
@@ -320,7 +323,7 @@ def test_mpunreach_multiple_prefixes() -> None:
 
     # Verify all prefixes are included
     assert len(mpunreach.nlris) == 3
-    assert "3 NLRI" in str(mpunreach)
+    assert '3 NLRI' in str(mpunreach)
 
 
 def test_mpunreach_pack_ipv4() -> None:
@@ -339,7 +342,7 @@ def test_mpunreach_pack_ipv4() -> None:
 
     # Create IPv4 unicast prefix to withdraw
     prefix = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    prefix.cidr = CIDR(IPv4.create("10.0.0.0").pack(), 24)
+    prefix.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
 
     # Create MP_UNREACH_NLRI
     mpunreach = MPURNLRI(AFI.ipv4, SAFI.unicast, [prefix])
@@ -367,6 +370,7 @@ def test_mpunreach_pack_ipv4() -> None:
 # Phase 3: Address Family Support
 # ==============================================================================
 
+
 def test_mpreach_afi_safi_combinations() -> None:
     """Test MP_REACH_NLRI supports various AFI/SAFI combinations.
 
@@ -381,10 +385,10 @@ def test_mpreach_afi_safi_combinations() -> None:
 
     # Test various AFI/SAFI combinations
     test_cases = [
-        (AFI.ipv4, SAFI.unicast, "IPv4 unicast"),
-        (AFI.ipv4, SAFI.multicast, "IPv4 multicast"),
-        (AFI.ipv6, SAFI.unicast, "IPv6 unicast"),
-        (AFI.ipv6, SAFI.multicast, "IPv6 multicast"),
+        (AFI.ipv4, SAFI.unicast, 'IPv4 unicast'),
+        (AFI.ipv4, SAFI.multicast, 'IPv4 multicast'),
+        (AFI.ipv6, SAFI.unicast, 'IPv6 unicast'),
+        (AFI.ipv6, SAFI.multicast, 'IPv6 multicast'),
     ]
 
     for afi, safi, description in test_cases:
@@ -392,8 +396,8 @@ def test_mpreach_afi_safi_combinations() -> None:
         mpreach = MPRNLRI(afi, safi, [])
 
         # Verify family is correctly set
-        assert mpreach.afi == afi, f"AFI mismatch for {description}"
-        assert mpreach.safi == safi, f"SAFI mismatch for {description}"
+        assert mpreach.afi == afi, f'AFI mismatch for {description}'
+        assert mpreach.safi == safi, f'SAFI mismatch for {description}'
 
 
 def test_mpunreach_afi_safi_combinations() -> None:
@@ -403,10 +407,10 @@ def test_mpunreach_afi_safi_combinations() -> None:
 
     # Test various AFI/SAFI combinations
     test_cases = [
-        (AFI.ipv4, SAFI.unicast, "IPv4 unicast"),
-        (AFI.ipv4, SAFI.multicast, "IPv4 multicast"),
-        (AFI.ipv6, SAFI.unicast, "IPv6 unicast"),
-        (AFI.ipv6, SAFI.multicast, "IPv6 multicast"),
+        (AFI.ipv4, SAFI.unicast, 'IPv4 unicast'),
+        (AFI.ipv4, SAFI.multicast, 'IPv4 multicast'),
+        (AFI.ipv6, SAFI.unicast, 'IPv6 unicast'),
+        (AFI.ipv6, SAFI.multicast, 'IPv6 multicast'),
     ]
 
     for afi, safi, description in test_cases:
@@ -414,13 +418,14 @@ def test_mpunreach_afi_safi_combinations() -> None:
         mpunreach = MPURNLRI(afi, safi, [])
 
         # Verify family is correctly set
-        assert mpunreach.afi == afi, f"AFI mismatch for {description}"
-        assert mpunreach.safi == safi, f"SAFI mismatch for {description}"
+        assert mpunreach.afi == afi, f'AFI mismatch for {description}'
+        assert mpunreach.safi == safi, f'SAFI mismatch for {description}'
 
 
 # ==============================================================================
 # Phase 4: Advanced Features
 # ==============================================================================
+
 
 def test_mpreach_empty_nlri_eor() -> None:
     """Test MP_REACH_NLRI with empty NLRI list (End-of-RIB marker).
@@ -436,7 +441,7 @@ def test_mpreach_empty_nlri_eor() -> None:
 
     # Verify it's empty
     assert len(mpreach.nlris) == 0
-    assert "0 NLRI" in str(mpreach)
+    assert '0 NLRI' in str(mpreach)
 
 
 def test_mpunreach_empty_nlri() -> None:
@@ -452,7 +457,7 @@ def test_mpunreach_empty_nlri() -> None:
 
     # Verify it's empty
     assert len(mpunreach.nlris) == 0
-    assert "0 NLRI" in str(mpunreach)
+    assert '0 NLRI' in str(mpunreach)
 
 
 def test_mpreach_attribute_flags() -> None:
@@ -498,12 +503,12 @@ def test_mpreach_equality() -> None:
 
     # Create two identical MP_REACH_NLRI attributes
     prefix1 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix1.cidr = CIDR(IPv4.create("10.0.0.0").pack(), 24)
-    prefix1.nexthop = IPv4.create("192.0.2.1")
+    prefix1.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix1.nexthop = IPv4.create('192.0.2.1')
 
     prefix2 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
-    prefix2.cidr = CIDR(IPv4.create("10.0.0.0").pack(), 24)
-    prefix2.nexthop = IPv4.create("192.0.2.1")
+    prefix2.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
+    prefix2.nexthop = IPv4.create('192.0.2.1')
 
     mpreach1 = MPRNLRI(AFI.ipv4, SAFI.unicast, [prefix1])
     mpreach2 = MPRNLRI(AFI.ipv4, SAFI.unicast, [prefix2])
@@ -524,10 +529,10 @@ def test_mpunreach_equality() -> None:
 
     # Create two identical MP_UNREACH_NLRI attributes
     prefix1 = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    prefix1.cidr = CIDR(IPv4.create("10.0.0.0").pack(), 24)
+    prefix1.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
 
     prefix2 = INET(AFI.ipv4, SAFI.unicast, Action.WITHDRAW)
-    prefix2.cidr = CIDR(IPv4.create("10.0.0.0").pack(), 24)
+    prefix2.cidr = CIDR(IPv4.create('10.0.0.0').pack(), 24)
 
     mpunreach1 = MPURNLRI(AFI.ipv4, SAFI.unicast, [prefix1])
     mpunreach2 = MPURNLRI(AFI.ipv4, SAFI.unicast, [prefix2])

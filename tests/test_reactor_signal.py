@@ -51,8 +51,7 @@ class TestSignalInit:
 
     def test_init_registers_handlers(self):
         """Test Signal registers signal handlers on init."""
-        with patch('exabgp.reactor.interrupt.signal') as mock_signal_module, \
-             patch('exabgp.reactor.interrupt.log'):
+        with patch('exabgp.reactor.interrupt.signal') as mock_signal_module, patch('exabgp.reactor.interrupt.log'):
             Signal()
             # Should register 5 signals (via signal.signal calls)
             assert mock_signal_module.signal.call_count == 5

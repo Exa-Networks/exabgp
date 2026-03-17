@@ -234,7 +234,7 @@ class TestOD:
     def test_od_spacing(self) -> None:
         """Test od() spacing pattern"""
         # Groups bytes in pairs with spaces between pairs
-        result = od(b'\xAA\xBB\xCC\xDD\xEE\xFF')
+        result = od(b'\xaa\xbb\xcc\xdd\xee\xff')
         assert result == 'AABB CCDD EEFF'
 
     def test_od_with_zeros(self) -> None:

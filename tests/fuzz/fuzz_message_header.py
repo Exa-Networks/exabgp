@@ -46,6 +46,7 @@ Run Instructions:
     # Skip fuzzing tests
     PYTHONPATH=src python -m pytest tests/ -v -m "not fuzz"
 """
+
 import pytest
 from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
@@ -75,7 +76,7 @@ def parse_header_from_bytes(data: bytes) -> tuple[bytes, int, int]:
 
     # Check minimum length (BGP header is 19 bytes)
     if len(data) < Message.HEADER_LEN:
-        raise ValueError(f"Message too short: {len(data)} bytes (minimum {Message.HEADER_LEN})")
+        raise ValueError(f'Message too short: {len(data)} bytes (minimum {Message.HEADER_LEN})')
 
     # Extract header components
     marker = data[0:16]
@@ -84,7 +85,7 @@ def parse_header_from_bytes(data: bytes) -> tuple[bytes, int, int]:
 
     # Validate marker (must be 16 bytes of 0xFF)
     if marker != Message.MARKER:
-        raise ValueError("Invalid marker: must be 16 bytes of 0xFF")
+        raise ValueError('Invalid marker: must be 16 bytes of 0xFF')
 
     # Unpack and validate length
     length = struct.unpack('!H', length_bytes)[0]
@@ -92,16 +93,16 @@ def parse_header_from_bytes(data: bytes) -> tuple[bytes, int, int]:
     # Length must be at least 19 (header size) and at most 4096 (standard BGP max)
     # Note: Can be up to 65535 if Extended Message capability is negotiated
     if length < Message.HEADER_LEN:
-        raise ValueError(f"Invalid length: {length} (minimum {Message.HEADER_LEN})")
+        raise ValueError(f'Invalid length: {length} (minimum {Message.HEADER_LEN})')
 
     if length > 4096:  # Using standard max for now
-        raise ValueError(f"Invalid length: {length} (maximum 4096 for standard BGP)")
+        raise ValueError(f'Invalid length: {length} (maximum 4096 for standard BGP)')
 
     # Validate message type (valid BGP types are 1-5, though code supports 0-6)
     # Type 0 (NOP) is internal, Type 6 (OPERATIONAL) is not IANA assigned
     # For strict validation, we'll accept 1-5
     if msg_type < 1 or msg_type > 5:
-        raise ValueError(f"Invalid message type: {msg_type} (valid: 1-5)")
+        raise ValueError(f'Invalid message type: {msg_type} (valid: 1-5)')
 
     return marker, length, msg_type
 
@@ -118,14 +119,14 @@ def test_header_parsing_with_random_data(data: bytes) -> None:
         result = parse_header_from_bytes(data)
         # If parsing succeeds, verify the result is valid
         marker, length, msg_type = result
-        assert marker == b'\xFF' * 16
+        assert marker == b'\xff' * 16
         assert 19 <= length <= 4096
         assert 1 <= msg_type <= 5
     except (ValueError, IndexError, struct.error):
         # Expected exceptions for malformed data
         pass
     except Exception as e:
-        pytest.fail(f"Unexpected exception: {type(e).__name__}: {e}")
+        pytest.fail(f'Unexpected exception: {type(e).__name__}: {e}')
 
 
 @pytest.mark.fuzz
@@ -140,7 +141,7 @@ def test_marker_validation(marker: bytes) -> None:
     msg_type = b'\x01'  # OPEN message
     data = marker + length + msg_type
 
-    if marker == b'\xFF' * 16:
+    if marker == b'\xff' * 16:
         # Should parse successfully
         result = parse_header_from_bytes(data)
         assert result is not None
@@ -149,7 +150,7 @@ def test_marker_validation(marker: bytes) -> None:
         assert result[2] == 1
     else:
         # Should raise ValueError
-        with pytest.raises(ValueError, match="Invalid marker"):
+        with pytest.raises(ValueError, match='Invalid marker'):
             parse_header_from_bytes(data)
 
 
@@ -161,7 +162,7 @@ def test_length_validation(length: int) -> None:
 
     Only 19-4096 should be valid BGP message lengths.
     """
-    marker = b'\xFF' * 16
+    marker = b'\xff' * 16
     length_bytes = struct.pack('!H', length)
     msg_type = b'\x01'
     data = marker + length_bytes + msg_type
@@ -173,7 +174,7 @@ def test_length_validation(length: int) -> None:
         assert result[1] == length
     else:
         # Should raise ValueError
-        with pytest.raises(ValueError, match="Invalid length"):
+        with pytest.raises(ValueError, match='Invalid length'):
             parse_header_from_bytes(data)
 
 
@@ -185,7 +186,7 @@ def test_message_type_validation(msg_type: int) -> None:
 
     Only 1-5 are valid BGP message types.
     """
-    marker = b'\xFF' * 16
+    marker = b'\xff' * 16
     length = struct.pack('!H', 19)
     data = marker + length + bytes([msg_type])
 
@@ -196,7 +197,7 @@ def test_message_type_validation(msg_type: int) -> None:
         assert result[2] == msg_type
     else:
         # Should raise ValueError
-        with pytest.raises(ValueError, match="Invalid message type"):
+        with pytest.raises(ValueError, match='Invalid message type'):
             parse_header_from_bytes(data)
 
 
@@ -218,7 +219,7 @@ def test_truncated_headers(data: bytes) -> None:
 @settings(deadline=None)
 def test_marker_single_bit_flips(marker_byte: int, position: int) -> None:
     """Test marker with single byte corrupted at each position."""
-    marker = bytearray(b'\xFF' * 16)
+    marker = bytearray(b'\xff' * 16)
     marker[position] = marker_byte
 
     length = struct.pack('!H', 19)
@@ -231,14 +232,14 @@ def test_marker_single_bit_flips(marker_byte: int, position: int) -> None:
         assert result is not None
     else:
         # Corrupted marker should be rejected
-        with pytest.raises(ValueError, match="Invalid marker"):
+        with pytest.raises(ValueError, match='Invalid marker'):
             parse_header_from_bytes(data)
 
 
 @pytest.mark.fuzz
 def test_minimum_valid_header() -> None:
     """Test minimum valid BGP header (19 bytes, OPEN message)."""
-    marker = b'\xFF' * 16
+    marker = b'\xff' * 16
     length = struct.pack('!H', 19)
     msg_type = b'\x01'
     data = marker + length + msg_type
@@ -252,7 +253,7 @@ def test_minimum_valid_header() -> None:
 @pytest.mark.fuzz
 def test_maximum_valid_header() -> None:
     """Test maximum valid BGP header (4096 bytes)."""
-    marker = b'\xFF' * 16
+    marker = b'\xff' * 16
     length = struct.pack('!H', 4096)
     msg_type = b'\x02'  # UPDATE
     data = marker + length + msg_type
@@ -266,31 +267,31 @@ def test_maximum_valid_header() -> None:
 @pytest.mark.fuzz
 def test_length_one_below_minimum() -> None:
     """Test length = 18 (one below minimum)."""
-    marker = b'\xFF' * 16
+    marker = b'\xff' * 16
     length = struct.pack('!H', 18)
     msg_type = b'\x01'
     data = marker + length + msg_type
 
-    with pytest.raises(ValueError, match="Invalid length"):
+    with pytest.raises(ValueError, match='Invalid length'):
         parse_header_from_bytes(data)
 
 
 @pytest.mark.fuzz
 def test_length_one_above_maximum() -> None:
     """Test length = 4097 (one above maximum)."""
-    marker = b'\xFF' * 16
+    marker = b'\xff' * 16
     length = struct.pack('!H', 4097)
     msg_type = b'\x01'
     data = marker + length + msg_type
 
-    with pytest.raises(ValueError, match="Invalid length"):
+    with pytest.raises(ValueError, match='Invalid length'):
         parse_header_from_bytes(data)
 
 
 @pytest.mark.fuzz
 def test_empty_input() -> None:
     """Test completely empty input."""
-    with pytest.raises(ValueError, match="Message too short"):
+    with pytest.raises(ValueError, match='Message too short'):
         parse_header_from_bytes(b'')
 
 
@@ -298,7 +299,7 @@ def test_empty_input() -> None:
 def test_all_zeros() -> None:
     """Test header with all zeros."""
     data = b'\x00' * 19
-    with pytest.raises(ValueError, match="Invalid marker"):
+    with pytest.raises(ValueError, match='Invalid marker'):
         parse_header_from_bytes(data)
 
 
@@ -310,17 +311,17 @@ def test_all_ones() -> None:
     Length would be 0xFFFF = 65535 - invalid (> 4096)
     Type 0xFF - invalid
     """
-    data = b'\xFF' * 19
+    data = b'\xff' * 19
 
     # Should fail on length validation (65535 > 4096)
-    with pytest.raises(ValueError, match="Invalid length"):
+    with pytest.raises(ValueError, match='Invalid length'):
         parse_header_from_bytes(data)
 
 
 @pytest.mark.fuzz
 def test_all_valid_message_types() -> None:
     """Test all valid message types (1-5)."""
-    marker = b'\xFF' * 16
+    marker = b'\xff' * 16
     length = struct.pack('!H', 19)
 
     for msg_type in [1, 2, 3, 4, 5]:  # OPEN, UPDATE, NOTIFICATION, KEEPALIVE, ROUTE_REFRESH
@@ -380,6 +381,6 @@ class TestRealWorldHeaders:
         assert result[2] == 5
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Run with: python -m pytest tests/fuzz/fuzz_message_header.py -v
-    pytest.main([__file__, "-v", "-m", "fuzz"])
+    pytest.main([__file__, '-v', '-m', 'fuzz'])

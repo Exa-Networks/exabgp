@@ -165,7 +165,7 @@ class TestNodeNLRI:
             hash2 = hash(node)
             assert hash1 == hash2
         except TypeError:
-            pytest.skip("Known bug in NODE.__hash__() - node_ids list is unhashable")
+            pytest.skip('Known bug in NODE.__hash__() - node_ids list is unhashable')
 
     def test_node_string_representation(self) -> None:
         """Test Node NLRI string representation"""
@@ -383,7 +383,7 @@ class TestLinkNLRI:
             hash2 = hash(link)
             assert hash1 == hash2
         except RecursionError:
-            pytest.skip("Known bug in LINK.__hash__() causing RecursionError")
+            pytest.skip('Known bug in LINK.__hash__() causing RecursionError')
 
     def test_link_string_representation(self) -> None:
         """Test Link NLRI string representation"""
@@ -429,7 +429,7 @@ class TestLinkNLRI:
             packed = link.pack()
             assert packed == data
         except AttributeError:
-            pytest.skip("Known bug in LINK.pack() - checks wrong attribute name")
+            pytest.skip('Known bug in LINK.pack() - checks wrong attribute name')
 
 
 class TestPrefixV4NLRI:
@@ -530,7 +530,7 @@ class TestPrefixV4NLRI:
             hash2 = hash(prefix)
             assert hash1 == hash2
         except RecursionError:
-            pytest.skip("Known bug in PREFIXv4.__hash__() causing RecursionError")
+            pytest.skip('Known bug in PREFIXv4.__hash__() causing RecursionError')
 
     def test_prefix_v4_string_representation(self) -> None:
         """Test IPv4 Prefix NLRI string representation"""
@@ -671,7 +671,7 @@ class TestPrefixV6NLRI:
             hash2 = hash(prefix)
             assert hash1 == hash2
         except RecursionError:
-            pytest.skip("Known bug in PREFIXv6.__hash__() causing RecursionError")
+            pytest.skip('Known bug in PREFIXv6.__hash__() causing RecursionError')
 
     def test_prefix_v6_string_representation(self) -> None:
         """Test IPv6 Prefix NLRI string representation"""

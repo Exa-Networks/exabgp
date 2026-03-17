@@ -16,6 +16,7 @@ Phase 3: Multiprotocol packing (tests 11-13)
 Phase 4: Message size and splitting (tests 14-16)
 Phase 5: Complex integration scenarios (tests 17-20)
 """
+
 from typing import Any
 from unittest.mock import Mock, patch
 
@@ -40,15 +41,15 @@ def mock_logger() -> Any:
     mock_option_logger.critical = Mock()
 
     # Create a mock formater that accepts all arguments
-    mock_formater = Mock(return_value="formatted message")
+    mock_formater = Mock(return_value='formatted message')
 
     option.logger = mock_option_logger
     option.formater = mock_formater
 
     # Also mock log to avoid other issues
-    with patch('exabgp.bgp.message.update.log') as mock_log, \
-         patch('exabgp.bgp.message.update.nlri.nlri.log') as mock_nlri_log, \
-         patch('exabgp.bgp.message.update.attribute.attributes.log') as mock_attr_log:
+    with patch('exabgp.bgp.message.update.log') as mock_log, patch(
+        'exabgp.bgp.message.update.nlri.nlri.log'
+    ) as mock_nlri_log, patch('exabgp.bgp.message.update.attribute.attributes.log') as mock_attr_log:
         mock_log.debug = Mock()
         mock_nlri_log.debug = Mock()
         mock_attr_log.debug = Mock()
@@ -60,7 +61,7 @@ def mock_logger() -> Any:
     option.formater = original_formater
 
 
-def create_negotiated_mock(families: Any =None, asn4: Any =False, msg_size: Any =4096) -> Any:
+def create_negotiated_mock(families: Any = None, asn4: Any = False, msg_size: Any = 4096) -> Any:
     """Create a mock negotiated object with configurable parameters."""
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.bgp.message.open.asn import ASN
@@ -88,6 +89,7 @@ def create_negotiated_mock(families: Any =None, asn4: Any =False, msg_size: Any 
 # ==============================================================================
 # Phase 1: Message Packing Basics
 # ==============================================================================
+
 
 @pytest.mark.fuzz
 def test_messages_packs_simple_ipv4_announcement() -> None:
@@ -256,6 +258,7 @@ def test_messages_filters_by_negotiated_families() -> None:
 # ==============================================================================
 # Phase 2: Round-trip Integrity Tests
 # ==============================================================================
+
 
 @pytest.mark.fuzz
 def test_roundtrip_simple_ipv4_announcement() -> None:
@@ -501,6 +504,7 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
 # Phase 3: Multiprotocol Packing Tests
 # ==============================================================================
 
+
 @pytest.mark.fuzz
 def test_messages_packs_ipv6_as_mp_reach() -> None:
     """Test that messages() packs IPv6 routes as MP_REACH_NLRI.
@@ -598,10 +602,12 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
     from exabgp.protocol.family import AFI, SAFI
 
     # Negotiate both families
-    negotiated = create_negotiated_mock(families=[
-        (AFI.ipv4, SAFI.unicast),
-        (AFI.ipv6, SAFI.unicast),
-    ])
+    negotiated = create_negotiated_mock(
+        families=[
+            (AFI.ipv4, SAFI.unicast),
+            (AFI.ipv6, SAFI.unicast),
+        ]
+    )
 
     # Create IPv4 route
     nlri_v4 = INET(AFI.ipv4, SAFI.unicast, Action.ANNOUNCE)
@@ -634,6 +640,7 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
 # ==============================================================================
 # Phase 4: Message Size and Splitting Tests
 # ==============================================================================
+
 
 @pytest.mark.fuzz
 def test_messages_splits_large_nlri_set() -> None:
@@ -762,6 +769,7 @@ def test_messages_handles_large_attributes() -> None:
 # ==============================================================================
 # Phase 5: Complex Integration Scenarios
 # ==============================================================================
+
 
 @pytest.mark.fuzz
 def test_integration_full_update_cycle() -> None:
@@ -918,5 +926,5 @@ def test_integration_sorting_and_grouping() -> None:
     assert len(messages) >= 1
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-m", "fuzz"])
+if __name__ == '__main__':
+    pytest.main([__file__, '-v', '-m', 'fuzz'])

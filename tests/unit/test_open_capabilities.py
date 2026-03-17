@@ -32,6 +32,7 @@ from exabgp.protocol.family import AFI, SAFI
 # Phase 1: Basic OPEN Message Creation and Validation
 # ==============================================================================
 
+
 def test_open_creation_basic() -> None:
     """Test basic OPEN message creation.
 
@@ -69,14 +70,14 @@ def test_open_message_id() -> None:
 
 
 def test_open_message_type_bytes() -> None:
-    """Test OPEN TYPE byte representation.
-    """
+    """Test OPEN TYPE byte representation."""
     assert Open.TYPE == b'\x01'
 
 
 # ==============================================================================
 # Phase 2: Multiprotocol Capability (RFC 4760)
 # ==============================================================================
+
 
 def test_open_with_multiprotocol_ipv4_unicast() -> None:
     """Test OPEN message with Multiprotocol capability for IPv4 Unicast.
@@ -93,8 +94,7 @@ def test_open_with_multiprotocol_ipv4_unicast() -> None:
 
 
 def test_open_with_multiprotocol_ipv6_unicast() -> None:
-    """Test OPEN with IPv6 Unicast capability.
-    """
+    """Test OPEN with IPv6 Unicast capability."""
     capabilities = Capabilities()
     capabilities[Capability.CODE.MULTIPROTOCOL] = [(AFI.ipv6, SAFI.unicast)]
 
@@ -135,8 +135,7 @@ def test_open_with_vpnv4_capability() -> None:
 
 
 def test_open_with_multicast_capability() -> None:
-    """Test OPEN with multicast capabilities.
-    """
+    """Test OPEN with multicast capabilities."""
     capabilities = Capabilities()
     capabilities[Capability.CODE.MULTIPROTOCOL] = [
         (AFI.ipv4, SAFI.multicast),
@@ -153,6 +152,7 @@ def test_open_with_multicast_capability() -> None:
 # ==============================================================================
 # Phase 3: Route Refresh Capability (RFC 2918)
 # ==============================================================================
+
 
 def test_open_with_route_refresh_capability() -> None:
     """Test OPEN with Route Refresh capability.
@@ -184,6 +184,7 @@ def test_open_with_enhanced_route_refresh() -> None:
 # Phase 4: 4-Byte ASN Capability (RFC 6793)
 # ==============================================================================
 
+
 def test_open_with_4byte_asn_capability() -> None:
     """Test OPEN with 4-byte ASN capability.
 
@@ -202,11 +203,10 @@ def test_open_with_4byte_asn_capability() -> None:
 
 
 def test_open_with_various_4byte_asns() -> None:
-    """Test OPEN with various 4-byte ASN values.
-    """
+    """Test OPEN with various 4-byte ASN values."""
     test_asns = [
-        65536,       # First 4-byte ASN
-        100000,      # Mid-range
+        65536,  # First 4-byte ASN
+        100000,  # Mid-range
         4200000000,  # High value
         4294967294,  # Max valid ASN (2^32 - 2)
     ]
@@ -223,6 +223,7 @@ def test_open_with_various_4byte_asns() -> None:
 # ==============================================================================
 # Phase 5: Graceful Restart Capability (RFC 4724)
 # ==============================================================================
+
 
 def test_open_with_graceful_restart_basic() -> None:
     """Test OPEN with basic Graceful Restart capability.
@@ -249,8 +250,7 @@ def test_open_with_graceful_restart_basic() -> None:
 
 
 def test_open_with_graceful_restart_multiple_families() -> None:
-    """Test Graceful Restart with multiple address families.
-    """
+    """Test Graceful Restart with multiple address families."""
     capabilities = Capabilities()
 
     graceful = Graceful()
@@ -275,8 +275,7 @@ def test_open_with_graceful_restart_multiple_families() -> None:
 
 
 def test_open_with_graceful_restart_flags() -> None:
-    """Test Graceful Restart with restart flags.
-    """
+    """Test Graceful Restart with restart flags."""
     capabilities = Capabilities()
 
     graceful = Graceful()
@@ -300,6 +299,7 @@ def test_open_with_graceful_restart_flags() -> None:
 # Phase 6: ADD-PATH Capability (RFC 7911)
 # ==============================================================================
 
+
 def test_open_with_addpath_receive() -> None:
     """Test OPEN with ADD-PATH capability (receive mode).
 
@@ -318,8 +318,7 @@ def test_open_with_addpath_receive() -> None:
 
 
 def test_open_with_addpath_send() -> None:
-    """Test OPEN with ADD-PATH capability (send mode).
-    """
+    """Test OPEN with ADD-PATH capability (send mode)."""
     capabilities = Capabilities()
 
     addpath = AddPath()
@@ -334,8 +333,7 @@ def test_open_with_addpath_send() -> None:
 
 
 def test_open_with_addpath_send_receive() -> None:
-    """Test OPEN with ADD-PATH capability (send/receive mode).
-    """
+    """Test OPEN with ADD-PATH capability (send/receive mode)."""
     capabilities = Capabilities()
 
     addpath = AddPath()
@@ -355,6 +353,7 @@ def test_open_with_addpath_send_receive() -> None:
 # Phase 7: Extended Message Capability (RFC 8654)
 # ==============================================================================
 
+
 def test_open_with_extended_message_capability() -> None:
     """Test OPEN with Extended Message capability.
 
@@ -372,6 +371,7 @@ def test_open_with_extended_message_capability() -> None:
 # ==============================================================================
 # Phase 8: Multiple Capabilities Combined
 # ==============================================================================
+
 
 def test_open_with_multiple_capabilities() -> None:
     """Test OPEN with multiple capabilities combined.
@@ -400,8 +400,7 @@ def test_open_with_multiple_capabilities() -> None:
 
 
 def test_open_with_full_capability_set() -> None:
-    """Test OPEN with comprehensive set of capabilities.
-    """
+    """Test OPEN with comprehensive set of capabilities."""
     capabilities = Capabilities()
 
     # Multiprotocol
@@ -440,6 +439,7 @@ def test_open_with_full_capability_set() -> None:
 # Phase 9: OPEN Message Encoding
 # ==============================================================================
 
+
 def test_open_message_encoding_basic() -> None:
     """Test basic OPEN message encoding.
 
@@ -470,8 +470,7 @@ def test_open_message_encoding_basic() -> None:
 
 
 def test_open_message_encoding_with_capabilities() -> None:
-    """Test OPEN message encoding with capabilities.
-    """
+    """Test OPEN message encoding with capabilities."""
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
 
     capabilities = Capabilities()
@@ -495,6 +494,7 @@ def test_open_message_encoding_with_capabilities() -> None:
 # Phase 10: OPEN Message Validation
 # ==============================================================================
 
+
 def test_open_with_various_hold_times() -> None:
     """Test OPEN with various Hold Time values.
 
@@ -510,8 +510,7 @@ def test_open_with_various_hold_times() -> None:
 
 
 def test_open_with_various_router_ids() -> None:
-    """Test OPEN with various Router ID values.
-    """
+    """Test OPEN with various Router ID values."""
     router_ids = [
         '0.0.0.0',
         '10.0.0.1',
@@ -542,9 +541,9 @@ def test_open_version_field() -> None:
 # Phase 11: Capability Code Constants
 # ==============================================================================
 
+
 def test_capability_code_constants() -> None:
-    """Test that capability code constants are defined correctly.
-    """
+    """Test that capability code constants are defined correctly."""
     assert hasattr(Capability.CODE, 'MULTIPROTOCOL')
     assert hasattr(Capability.CODE, 'ROUTE_REFRESH')
     assert hasattr(Capability.CODE, 'FOUR_BYTES_ASN')

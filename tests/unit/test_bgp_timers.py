@@ -43,7 +43,7 @@ def mock_logger() -> Any:
     mock_option_logger.fatal = Mock()
 
     # Create a mock formater that accepts all arguments
-    mock_formater = Mock(return_value="formatted message")
+    mock_formater = Mock(return_value='formatted message')
 
     option.logger = mock_option_logger
     option.formater = mock_formater
