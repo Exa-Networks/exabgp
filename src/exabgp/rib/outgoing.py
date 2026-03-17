@@ -365,9 +365,21 @@ class OutgoingRIB(Cache):
         self._refresh_families = set()
         self._refresh_routes = []
 
-        # Generate Updates for pending withdraws FIRST
-        # This ensures withdraw messages are sent before announce messages
-        # when both are pending (preserves semantic ordering)
+        # Route Refresh first - must be sent before new updates because
+        # the flush command semantically precedes any new announces that
+        # arrived in the same reactor cycle
+
+        for afi, safi in refresh_families:
+            yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.start)
+
+        for route in refresh_routes:
+            yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes)
+
+        for afi, safi in refresh_families:
+            yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.end)
+
+        # Generate Updates for pending withdraws before announces
+        # (preserves semantic ordering)
         for family, nlri_attr_dict in pending_withdraws.items():
             if not nlri_attr_dict:
                 continue
@@ -402,14 +414,3 @@ class OutgoingRIB(Cache):
                 # Non-grouped: one Update per NLRI
                 for route in routes.values():
                     yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], attributes)
-
-        # Route Refresh - use snapshots to avoid modification during iteration
-
-        for afi, safi in refresh_families:
-            yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.start)
-
-        for route in refresh_routes:
-            yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes)
-
-        for afi, safi in refresh_families:
-            yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.end)

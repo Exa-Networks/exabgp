@@ -4,6 +4,10 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: Route Refresh messages sent after new updates instead of before
+   When flush adj-rib out and a new announce arrived in the same reactor
+   cycle, the new route UPDATE was sent before the ROUTE_REFRESH start
+   marker, violating the Enhanced Route Refresh sequence.
  * Compatibility: BGP-LS ip-reachability-tlv JSON key changed from "ip" to "prefix"
    - Now includes prefix length in CIDR notation (e.g., "10.134.2.88/30")
  * Compatibility: BGP-LS Adjacency SID JSON key changed from "sr-adj" to "sr-adjs"

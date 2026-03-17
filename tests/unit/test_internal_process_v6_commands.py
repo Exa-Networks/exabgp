@@ -57,12 +57,12 @@ class TestHealthcheckV6Commands:
         from exabgp.application.healthcheck import loop
 
         source = inspect.getsource(loop)
-        # Must use v6 peer prefix
-        assert "'peer * announce'" in source, "healthcheck must use v6 'peer * announce'"
-        assert "'peer * withdraw'" in source, "healthcheck must use v6 'peer * withdraw'"
+        # Must use v6 peer prefix (constructed dynamically via prefix variable)
+        assert "prefix = 'peer *'" in source, "healthcheck must default to 'peer *' prefix"
+        assert "f'peer {" in source, "healthcheck must format neighbor filter as 'peer {ip}'"
         # Must not use v4 neighbor prefix
-        assert "'neighbor * announce'" not in source, "healthcheck must not use v4 'neighbor * announce'"
-        assert "'neighbor * withdraw'" not in source, "healthcheck must not use v4 'neighbor * withdraw'"
+        assert "'neighbor *'" not in source, "healthcheck must not use v4 'neighbor *'"
+        assert "f'neighbor {" not in source, "healthcheck must not format as 'neighbor {ip}'"
 
     def test_healthcheck_neighbor_filter_uses_peer(self) -> None:
         """healthcheck --neighbor filter must use 'peer {ip}', not 'neighbor {ip}'."""

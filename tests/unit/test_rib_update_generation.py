@@ -407,6 +407,80 @@ class TestRouteRefreshGeneration:
         assert route_idx is not None
         assert start_idx < route_idx < end_idx
 
+    def test_refresh_before_new_announces(self):
+        """Route Refresh sequence precedes new announces in same cycle.
+
+        When resend() and add_to_rib() both happen before updates(),
+        all RouteRefresh messages (BoRR, routes, EoRR) must be yielded
+        before any new announce UpdateCollections (RFC 7313).
+        """
+        rib = create_rib()
+
+        # Seed a route into cache
+        cached_route = create_route('10.0.0.0/24')
+        rib.add_to_rib(cached_route)
+        collect_updates(rib)
+
+        # Same reactor cycle: resend (Route Refresh) + new announce
+        rib.resend(enhanced_refresh=True)
+        new_route = create_route('10.0.1.0/24')
+        rib.add_to_rib(new_route)
+
+        updates = list(rib.updates(grouped=False))
+
+        # Find last RouteRefresh index and first new-announce index
+        last_refresh_idx = None
+        first_announce_idx = None
+
+        for i, u in enumerate(updates):
+            if isinstance(u, RouteRefresh):
+                last_refresh_idx = i
+            elif isinstance(u, UpdateCollection) and u.announces:
+                # Distinguish refresh routes from new announces by checking NLRI
+                nlri_str = str(u.announces[0].nlri)
+                if '10.0.1' in nlri_str:
+                    if first_announce_idx is None:
+                        first_announce_idx = i
+
+        assert last_refresh_idx is not None, 'Expected RouteRefresh messages'
+        assert first_announce_idx is not None, 'Expected new announce update'
+        assert last_refresh_idx < first_announce_idx, (
+            f'RouteRefresh (idx {last_refresh_idx}) must precede new announce (idx {first_announce_idx})'
+        )
+
+    def test_refresh_before_new_withdraws(self):
+        """Route Refresh sequence precedes new withdraws in same cycle."""
+        rib = create_rib()
+
+        # Seed routes into cache
+        route1 = create_route('10.0.0.0/24')
+        route2 = create_route('10.0.1.0/24')
+        rib.add_to_rib(route1)
+        rib.add_to_rib(route2)
+        collect_updates(rib)
+
+        # Same reactor cycle: resend (Route Refresh) + withdraw
+        rib.resend(enhanced_refresh=True)
+        rib.del_from_rib(route2)
+
+        updates = list(rib.updates(grouped=False))
+
+        last_refresh_idx = None
+        first_withdraw_idx = None
+
+        for i, u in enumerate(updates):
+            if isinstance(u, RouteRefresh):
+                last_refresh_idx = i
+            elif isinstance(u, UpdateCollection) and u.withdraws:
+                if first_withdraw_idx is None:
+                    first_withdraw_idx = i
+
+        assert last_refresh_idx is not None, 'Expected RouteRefresh messages'
+        assert first_withdraw_idx is not None, 'Expected withdraw update'
+        assert last_refresh_idx < first_withdraw_idx, (
+            f'RouteRefresh (idx {last_refresh_idx}) must precede withdraw (idx {first_withdraw_idx})'
+        )
+
 
 # ==============================================================================
 # Test Edge Cases
