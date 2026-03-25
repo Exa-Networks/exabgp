@@ -431,6 +431,38 @@ def test_aspath_json_representation() -> None:
     assert len(parsed['0']['value']) == 2
 
 
+def test_aspath_json_all_segment_types() -> None:
+    """Test that each segment type has a distinct JSON element name."""
+    from exabgp.bgp.message.update.attribute.aspath import (
+        AS2Path,
+        SET,
+        SEQUENCE,
+        CONFED_SEQUENCE,
+        CONFED_SET,
+    )
+    from exabgp.bgp.message.open.asn import ASN
+    import json
+
+    segments = [
+        SEQUENCE([ASN(65001)]),
+        SET([ASN(65002)]),
+        CONFED_SEQUENCE([ASN(64512)]),
+        CONFED_SET([ASN(64513)]),
+    ]
+    aspath = AS2Path.make_aspath(segments)
+
+    parsed = json.loads(aspath.json())
+
+    assert parsed['0']['element'] == 'as-sequence'
+    assert parsed['1']['element'] == 'as-set'
+    assert parsed['2']['element'] == 'as-confed-sequence'
+    assert parsed['3']['element'] == 'as-confed-set'
+
+    # All four names must be distinct
+    names = {parsed[str(i)]['element'] for i in range(4)}
+    assert len(names) == 4, f'Segment type names must be distinct, got: {names}'
+
+
 # =============================================================================
 # Test equality
 # =============================================================================

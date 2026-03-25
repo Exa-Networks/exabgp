@@ -50,14 +50,14 @@ class SEQUENCE(list[ASN]):
 
 class CONFED_SEQUENCE(list[ASN]):
     ID: ClassVar[int] = 0x03
-    NAME: ClassVar[str] = 'as-sequence'
+    NAME: ClassVar[str] = 'as-confed-sequence'
     HEAD: ClassVar[str] = '{('
     TAIL: ClassVar[str] = ')}'
 
 
 class CONFED_SET(list[ASN]):
     ID: ClassVar[int] = 0x04
-    NAME: ClassVar[str] = 'as-sequence'
+    NAME: ClassVar[str] = 'as-confed-set'
     HEAD: ClassVar[str] = '{['
     TAIL: ClassVar[str] = ']}'
 
