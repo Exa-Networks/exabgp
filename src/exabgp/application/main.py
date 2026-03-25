@@ -21,6 +21,19 @@ from exabgp.application import healthcheck
 
 
 def main():
+    # Handle --env-file early, before Environment setup is triggered
+    from exabgp.environment import base as envbase
+
+    for i, arg in enumerate(sys.argv[1:], 1):
+        if arg == '--env-file' and i < len(sys.argv) - 1:
+            envbase.ENVFILE = sys.argv[i + 1]
+            sys.argv = sys.argv[:i] + sys.argv[i + 2 :]
+            break
+        if arg.startswith('--env-file='):
+            envbase.ENVFILE = arg.split('=', 1)[1]
+            sys.argv = sys.argv[:i] + sys.argv[i + 1 :]
+            break
+
     cli_named_pipe = os.environ.get('exabgp_cli_pipe', '')
     if cli_named_pipe:
         from exabgp.application.pipe import main
@@ -34,7 +47,15 @@ def main():
             sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
 
     formatter = argparse.RawDescriptionHelpFormatter
-    parser = argparse.ArgumentParser(description='The BGP swiss army knife of networking')
+    parser = argparse.ArgumentParser(
+        description='The BGP swiss army knife of networking\n\n'
+        'A configuration file can be passed directly:\n'
+        '  exabgp config.conf     (equivalent to: exabgp server config.conf)\n\n'
+        'Environment file override:\n'
+        '  exabgp --env-file /path/to/exabgp.env server config.conf\n'
+        '  EXABGP_ENVFILE=/path/to/exabgp.env exabgp server config.conf',
+        formatter_class=formatter,
+    )
 
     subparsers = parser.add_subparsers()
 

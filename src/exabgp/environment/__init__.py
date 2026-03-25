@@ -3,9 +3,8 @@ from __future__ import annotations
 import os
 
 # this is where the environment should be taken from
-# it makes sure the environment is setup before it is imported
+# setup is deferred to getenv() so --env-file can override ENVFILE first
 
-import exabgp.environment.setup  # noqa: F401,E261
 from exabgp.environment.environment import Env  # noqa: F401,E261
 
 from exabgp.environment.base import APPLICATION  # noqa: F401,E261
@@ -21,6 +20,8 @@ from exabgp.environment.hashtable import GlobalHashTable as __
 
 
 def getenv():
+    import exabgp.environment.setup  # noqa: F401,E261
+
     return __()
 
 

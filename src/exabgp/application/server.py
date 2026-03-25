@@ -21,7 +21,6 @@ from exabgp.logger import log
 # this is imported from configuration.setup to make sure it was initialised
 from exabgp.environment import getenv
 from exabgp.environment import getconf
-from exabgp.environment import ENVFILE
 from exabgp.environment import ROOT
 
 from exabgp.application.pipe import named_pipe
@@ -77,8 +76,10 @@ def setargs(sub):
 
 
 def cmdline(cmdarg):
-    if not os.path.isfile(ENVFILE):
-        comment = f'environment file missing\ngenerate it using "exabgp env > {ENVFILE}"'
+    from exabgp.environment import base as envbase
+
+    if not os.path.isfile(envbase.ENVFILE):
+        comment = f'environment file missing\ngenerate it using "exabgp env > {envbase.ENVFILE}"'
     else:
         comment = ''
 

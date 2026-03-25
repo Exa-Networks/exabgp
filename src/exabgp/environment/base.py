@@ -28,4 +28,4 @@ def _find_root():
 APPLICATION = 'exabgp'
 ROOT = _find_root()
 ETC = os.path.join(ROOT, 'etc', APPLICATION)
-ENVFILE = os.path.join(ETC, f'{APPLICATION}.env')
+ENVFILE = os.environ.get('EXABGP_ENVFILE', os.path.join(ETC, f'{APPLICATION}.env'))

@@ -13,7 +13,6 @@ import configparser as ConfigParser
 
 from exabgp.environment import base
 from exabgp.environment import parsing
-from exabgp.environment.base import ENVFILE
 from exabgp.environment.hashtable import HashTable
 from exabgp.environment.hashtable import GlobalHashTable
 
@@ -36,7 +35,13 @@ class Env:
     _env = GlobalHashTable()
 
     @classmethod
+    def _ensure_setup(cls):
+        if not cls._setup:
+            import exabgp.environment.setup  # noqa: F401
+
+    @classmethod
     def default(cls):
+        cls._ensure_setup()
         for section in sorted(cls.definition):
             if section in ('internal', 'debug'):
                 continue
@@ -51,6 +56,7 @@ class Env:
 
     @classmethod
     def iter_ini(cls, diff=False):
+        cls._ensure_setup()
         for section in sorted(cls._env):
             if section in ('internal', 'debug'):
                 continue
@@ -68,6 +74,7 @@ class Env:
 
     @classmethod
     def iter_env(cls, diff=False):
+        cls._ensure_setup()
         for section, values in cls._env.items():
             if section in ('internal', 'debug'):
                 continue
@@ -91,7 +98,7 @@ class Env:
         ini = ConfigParser.ConfigParser()
 
         _conf_paths = [
-            ENVFILE,
+            base.ENVFILE,
         ]
 
         ini_files = [path for path in _conf_paths if os.path.exists(path)]
@@ -144,4 +151,5 @@ class Env:
 
     @classmethod
     def settings(cls):
+        cls._ensure_setup()
         return cls._env
