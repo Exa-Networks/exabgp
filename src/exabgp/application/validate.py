@@ -48,17 +48,18 @@ def cmdline(cmdarg):
         log.info(lambda configuration=configuration: f'loading {configuration}', 'configuration')
         location = getconf(configuration)
         if not location:
-            log.critical(
-                lambda configuration=configuration: f'{configuration} is not an exabgp config file', 'configuration'
-            )
+            msg = f'{configuration} is not an exabgp config file (file not found)'
+            log.critical(lambda msg=msg: msg, 'configuration')
+            sys.stderr.write(f'error: {msg}\n')
             sys.exit(1)
 
         config = Configuration([location])
 
         if not config.reload():
-            log.critical(
-                lambda configuration=configuration: f'{configuration} is not a valid config file', 'configuration'
-            )
+            error = str(config.error)
+            msg = f'{configuration} is not a valid config file: {error}'
+            log.critical(lambda msg=msg: msg, 'configuration')
+            sys.stderr.write(f'error: {msg}\n')
             sys.exit(1)
         log.info(lambda: '\u2713 loading', 'configuration')
 
