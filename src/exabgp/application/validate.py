@@ -48,17 +48,18 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
         log.info(lazymsg('loading {configuration}', configuration=configuration), 'configuration')
         location = getconf(configuration)
         if not location:
-            log.critical(
-                lazymsg('{configuration} is not an exabgp config file', configuration=configuration), 'configuration'
-            )
+            msg = f'{configuration} is not an exabgp config file (file not found)'
+            log.critical(lazymsg('{msg}', msg=msg), 'configuration')
+            sys.stderr.write(f'error: {msg}\n')
             sys.exit(1)
 
         config = Configuration([location])
 
         if not config.reload():
-            log.critical(
-                lazymsg('{configuration} is not a valid config file', configuration=configuration), 'configuration'
-            )
+            error = str(config.error)
+            msg = f'{configuration} is not a valid config file: {error}'
+            log.critical(lazymsg('{msg}', msg=msg), 'configuration')
+            sys.stderr.write(f'error: {msg}\n')
             sys.exit(1)
         log.info(lazymsg('validate.loading status=success'), 'configuration')
 
