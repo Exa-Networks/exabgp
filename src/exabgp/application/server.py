@@ -134,10 +134,9 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
         for configuration in cmdarg.configuration:
             location = getconf(configuration)
             if not location:
-                log.critical(
-                    lazymsg('config.invalid file={f}', f=configuration),
-                    'configuration',
-                )
+                msg = f'{configuration} is not an exabgp config file (file not found)'
+                log.critical(lazymsg('{msg}', msg=msg), 'configuration')
+                sys.stderr.write(f'error: {msg}\n')
                 sys.exit(1)
             configurations.append(location)
 
