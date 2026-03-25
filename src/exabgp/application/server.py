@@ -116,9 +116,9 @@ def cmdline(cmdarg):
     for configuration in cmdarg.configuration:
         location = getconf(configuration)
         if not location:
-            log.critical(
-                lambda configuration=configuration: f'{configuration} is not an exabgp config file', 'configuration'
-            )
+            msg = f'{configuration} is not an exabgp config file (file not found)'
+            log.critical(lambda msg=msg: msg, 'configuration')
+            sys.stderr.write(f'error: {msg}\n')
             sys.exit(1)
         configurations.append(location)
 
