@@ -64,6 +64,13 @@ IP_IFNAME_PARTS = 2  # Expected format: ip%ifname
 logger = logging.getLogger('healthcheck')
 
 
+def neighbor_address(value):
+    """Parse a neighbor value: an IP address or '*' for all peers."""
+    if value.strip() == '*':
+        return '*'
+    return ip_address(value)
+
+
 def enum(*sequential):
     """Create a simple enumeration."""
     return type(str('Enum'), (), dict(zip(sequential, sequential)))
@@ -119,7 +126,7 @@ def setargs(parser):
     g.add_argument('--disabled-as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path when the service is disabled')
     g.add_argument('--withdraw-on-down', action='store_true', help='Instead of increasing the metric on health failure, withdraw the route')
     g.add_argument('--path-id', metavar='PATHID', type=int, default=None, help='path ID to advertise for the route')
-    g.add_argument('--neighbor', metavar='NEIGHBOR', type=ip_address, dest='neighbors', action='append', help='advertise the route to the selected neigbors')
+    g.add_argument('--neighbor', metavar='NEIGHBOR', type=neighbor_address, dest='neighbors', action='append', help='advertise the route to the selected neighbors (* for all)')
     g.add_argument('--debounce', action='store_true', dest='debounce', help='announce only on state changes, instead of every iteration')
 
     g = parser.add_argument_group('reporting')
@@ -418,7 +425,7 @@ def loop(options):
         as_path = vars(options).get(f'{str(target).lower()}_as_path', None)
         if as_path is None:
             as_path = options.as_path
-        if options.neighbors:
+        if options.neighbors and not any(n == '*' for n in options.neighbors):
             prefix = ', '.join(f'neighbor {neighbor}' for neighbor in options.neighbors)
         else:
             prefix = 'neighbor *'
