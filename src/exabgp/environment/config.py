@@ -16,7 +16,6 @@ import configparser as ConfigParser
 
 from exabgp.environment import base
 from exabgp.environment import parsing
-from exabgp.environment.base import ENVFILE
 from exabgp.protocol.ip import IP
 
 T = TypeVar('T')
@@ -389,8 +388,8 @@ class Environment:
 
         # Read INI file if exists
         ini: ConfigParser.ConfigParser = ConfigParser.ConfigParser()
-        if os.path.exists(ENVFILE):
-            ini.read(ENVFILE)
+        if os.path.exists(base.ENVFILE):
+            ini.read(base.ENVFILE)
 
         # Load each section
         for section_name, section in sections.items():
@@ -477,6 +476,7 @@ class Environment:
     @classmethod
     def default(cls) -> Iterator[str]:
         """Yield default configuration lines."""
+        cls.setup()
         env = cls()
         for section_name, section in env._sections().items():
             if section_name in ('internal', 'debug'):
@@ -492,6 +492,7 @@ class Environment:
     @classmethod
     def iter_ini(cls, diff: bool = False) -> Iterator[str]:
         """Yield INI-format configuration lines."""
+        cls.setup()
         env = cls()
         for section_name, section in env._sections().items():
             if section_name in ('internal', 'debug'):
@@ -509,6 +510,7 @@ class Environment:
     @classmethod
     def iter_env(cls, diff: bool = False) -> Iterator[str]:
         """Yield environment variable format lines."""
+        cls.setup()
         env = cls()
         for section_name, section in env._sections().items():
             if section_name in ('internal', 'debug'):
@@ -525,4 +527,5 @@ class Environment:
     @classmethod
     def settings(cls) -> Environment:
         """Return the environment singleton (for backward compatibility)."""
+        cls.setup()
         return cls()

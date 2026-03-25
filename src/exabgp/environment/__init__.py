@@ -23,15 +23,13 @@ __all__ = [
     'getconf',
 ]
 
-# Setup environment on import
-Environment.setup()
-
 if TYPE_CHECKING:
     pass
 
 
 def getenv() -> Environment:
     """Return the global environment configuration."""
+    Environment.setup()
     return Environment()
 
 
