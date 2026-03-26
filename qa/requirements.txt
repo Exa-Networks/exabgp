@@ -76,7 +76,7 @@ pyyaml==6.0.3 ; (python_full_version != '3.13.*' and sys_platform == 'darwin') o
     # via libcst
 pyyaml-ft==8.0.0 ; (python_full_version == '3.13.*' and sys_platform == 'darwin') or (python_full_version == '3.13.*' and sys_platform == 'linux')
     # via libcst
-requests==2.32.5 ; sys_platform == 'darwin' or sys_platform == 'linux'
+requests==2.33.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via coveralls
 rich==14.2.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via textual
