@@ -54,7 +54,7 @@ pluggy==1.6.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 psutil==7.1.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
 py-cpuinfo==9.0.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via pytest-benchmark
-pygments==2.19.2 ; sys_platform == 'darwin' or sys_platform == 'linux'
+pygments==2.20.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   pytest
     #   rich
