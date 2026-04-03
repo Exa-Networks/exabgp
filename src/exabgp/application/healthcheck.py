@@ -471,7 +471,7 @@ def loop(options: argparse.Namespace) -> None:
                 if options.large_community:
                     announce = f'{announce} large-community [ {options.large_community} ]'
                 if as_path:
-                    announce = f'{announce} as-path [ {options.as_path} ]'
+                    announce = f'{announce} as-path [ {as_path} ]'
 
             # append path ID if required
             if options.path_id:
