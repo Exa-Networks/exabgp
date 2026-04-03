@@ -3,6 +3,25 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.6:
+ * Feature: add --env-file flag and EXABGP_ENVFILE env var for custom env file (#1367)
+   The exabgp 5.x CLI had no way to specify a custom exabgp.env file path,
+   unlike the 4.x --env flag. Two override mechanisms are now available:
+   exabgp --env-file /path/to/exabgp.env server config.conf
+   EXABGP_ENVFILE=/path/to/exabgp.env exabgp server config.conf
+ * Fix: show error details when configuration validation fails (#1367)
+   Validation errors were silently swallowed with exit code 1 and no output.
+   Now writes errors to stderr with the actual parse error.
+ * Fix: accept wildcard * in healthcheck --neighbor option (#1367)
+   The --neighbor argument rejected * which is common in 4.x config files.
+   Adds neighbor_address() validator that accepts * as a wildcard.
+ * Fix: show error on stderr when server can't find config file (#1367)
+   The server silently exited with code 1 when given a nonexistent config
+   file. Now writes the error to stderr.
+ * Fix: healthcheck uses per-state as-path instead of ignoring it
+   The locally-resolved as_path variable (from --up-as-path, --down-as-path,
+   --disabled-as-path) was computed but never used.
+
 Version 5.0.5:
  * Fix: healthcheck --neighbor produced doubled neighbor prefix (#1366)
  * Fix: healthcheck crash when --ip-ifname not used (#1365)

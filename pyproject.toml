@@ -74,7 +74,7 @@ markers = [
 
 [tool.ruff]
 line-length = 120
-exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages", "src/exabgp/vendoring"]
+exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages", "src/exabgp/vendoring", ".claude/worktrees"]
 
 [tool.ruff.lint]
 # Select same critical error codes as flake8 configuration:
