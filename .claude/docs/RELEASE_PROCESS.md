@@ -90,7 +90,19 @@ This command:
 - Pushes the specific tag and commits to `origin`
 - Pushes to `upstream` if that remote exists, skips otherwise
 
-### 6. Publish to PyPI
+### 6. Create GitHub Release
+
+Ask the user for the release name before proceeding.
+
+```bash
+gh release create X.Y.Z --repo Exa-Networks/exabgp \
+  --title "ExaBGP '<name>' Release" \
+  --notes "<release notes matching CHANGELOG entries>"
+```
+
+Previous release names: 'Easter Rabbit', 'Saint Patrick', 'Alpine', 'Flying Bell'.
+
+### 7. Publish to PyPI
 
 ```bash
 ./release pypi       # production
