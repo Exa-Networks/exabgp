@@ -29,28 +29,32 @@ class HostName(Capability):
         return '{{ "host-name": "{}", "domain-name": "{}" }}'.format(self.host_name, self.domain_name)
 
     def extract(self):
+        if not self.host_name:
+            return []
+
         ret = b''
+        hostname = self.host_name.encode('utf-8')
+        if len(hostname) > self.HOSTNAME_MAX_LEN:
+            hostname = hostname[: self.HOSTNAME_MAX_LEN]
+        ret += bytes([len(hostname)]) + hostname
 
-        if self.host_name:
-            hostname = self.host_name.encode('utf-8')
-            if len(hostname) > self.HOSTNAME_MAX_LEN:
-                hostname = hostname[: self.HOSTNAME_MAX_LEN]
-            ret += bytes([len(hostname)]) + hostname
-
-            if self.domain_name:
-                domainname = self.domain_name.encode('utf-8')
-                if len(domainname) > self.HOSTNAME_MAX_LEN:
-                    domainname = domainname[: self.HOSTNAME_MAX_LEN]
-                ret += bytes([len(domainname)]) + domainname
-            else:
-                ret += bytes([0]) + b''
+        if self.domain_name:
+            domainname = self.domain_name.encode('utf-8')
+            if len(domainname) > self.HOSTNAME_MAX_LEN:
+                domainname = domainname[: self.HOSTNAME_MAX_LEN]
+            ret += bytes([len(domainname)]) + domainname
+        else:
+            ret += bytes([0]) + b''
 
         return [ret]
 
     @staticmethod
     def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
+        if not data:
+            return instance
         l1 = data[0]
         instance.host_name = data[1 : l1 + 1].decode('utf-8')
-        l2 = data[l1 + 1]
-        instance.domain_name = data[l1 + 2 : l1 + 2 + l2].decode('utf-8')
+        if l1 + 1 < len(data):
+            l2 = data[l1 + 1]
+            instance.domain_name = data[l1 + 2 : l1 + 2 + l2].decode('utf-8')
         return instance
