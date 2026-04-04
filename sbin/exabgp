@@ -27,13 +27,7 @@ fi
 export EXABGP_ROOT=$path
 export PYTHONPATH="$path"/src
 
-# Prefer `python` binary when in a venv
-INTS="$INTERPRETER python3 python pypy3"
-if [ -d "${VIRTUAL_ENV}" ]; then
-    INTS="$INTERPRETER python3 python pypy3"
-fi
-
-for INTERPRETER in $(echo $INTS); do
+for INTERPRETER in $INTERPRETER python3 python pypy3; do
     INTERPRETER="$(command -v "$INTERPRETER")" && break
 done
 
