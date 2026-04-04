@@ -17,6 +17,10 @@ internal/
 .coveralls.yml*
 .coverage
 .idea
+.crush/
+.vscode/
+.spyproject/
+.codegpt/
 
 *.pyproj
 *.suo
