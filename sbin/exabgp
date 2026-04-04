@@ -6,12 +6,8 @@ path="$(cd "$(dirname "$0")"/.. ; pwd)"
 # Get base version from pyproject.toml (single source of truth)
 BASE_VERSION=$(grep "^version = " "$path/pyproject.toml" | sed "s/version = '\\(.*\\)'/\\1/")
 
-git status 2> /dev/null > /dev/null
-
-# returns 128 if not in a git repo
-# returns 127 if git is not installed
-
 if [ -z "$exabgp_version" ]; then
+    git status 2> /dev/null > /dev/null
     if [ $? -eq 0 ]; then
         GIT_TAG=$(git status | egrep 'detached at 3|4' | wc -l)
         if [ $GIT_TAG -eq 0 ]; then
