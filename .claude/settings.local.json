@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(ty check:*)",
+      "Bash(python3:*)",
+      "Bash(ulimit:*)",
+      "Bash(./qa/bin/functional:*)",
+      "Bash(timeout:*)"
+    ],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": false
+}

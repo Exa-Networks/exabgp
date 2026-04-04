@@ -1,0 +1,26 @@
+"""nlri/__init__.py
+
+Created by Thomas Mangin on 2013-08-07.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
+# Every NLRI should be imported from this file
+
+# flake8: noqa: F401,E261
+
+from __future__ import annotations
+
+from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.cidr import CIDR
+
+from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.label import Label
+from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
+from exabgp.bgp.message.update.nlri.vpls import VPLS
+from exabgp.bgp.message.update.nlri.flow import Flow
+from exabgp.bgp.message.update.nlri.evpn import EVPN
+from exabgp.bgp.message.update.nlri.rtc import RTC
+from exabgp.bgp.message.update.nlri.bgpls import BGPLS
+from exabgp.bgp.message.update.nlri.mup import MUP
+from exabgp.bgp.message.update.nlri.mvpn import MVPN

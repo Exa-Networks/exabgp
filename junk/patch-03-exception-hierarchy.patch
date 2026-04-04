@@ -1,0 +1,329 @@
+diff --git a/src/exabgp/exceptions.py b/src/exabgp/exceptions.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/src/exabgp/exceptions.py
+@@ -0,0 +1,105 @@
++"""Comprehensive exception hierarchy for ExaBGP."""
++from __future__ import annotations
++
++from typing import Optional, Dict, Any
++
++
++class ExaBGPError(Exception):
++    """Base exception for all ExaBGP errors.
++    
++    This is the root exception that all other ExaBGP exceptions inherit from.
++    It provides structured error information including error codes and context.
++    """
++    
++    def __init__(self, message: str, error_code: Optional[int] = None, 
++                 context: Optional[Dict[str, Any]] = None) -> None:
++        super().__init__(message)
++        self.message = message
++        self.error_code = error_code
++        self.context = context or {}
++    
++    def __str__(self) -> str:
++        base_msg = self.message
++        if self.error_code:
++            base_msg = f"[{self.error_code}] {base_msg}"
++        return base_msg
++
++
++class ConfigurationError(ExaBGPError):
++    """Errors in configuration parsing or validation.
++    
++    Raised when there are issues with:
++    - Invalid configuration syntax
++    - Missing required configuration parameters  
++    - Invalid configuration values
++    - Configuration file access issues
++    """
++    pass
++
++
++class ProtocolError(ExaBGPError):
++    """BGP protocol-related errors.
++    
++    Base class for all BGP protocol violations and communication errors.
++    """
++    pass
++
++
++class ConnectionError(ProtocolError):
++    """Network connection errors.
++    
++    Raised when there are issues with:
++    - TCP connection establishment
++    - Socket errors
++    - Network timeouts
++    - Connection drops
++    """
++    
++    def __init__(self, message: str, peer_address: Optional[str] = None,
++                 error_code: Optional[int] = None) -> None:
++        context = {'peer_address': peer_address} if peer_address else {}
++        super().__init__(message, error_code, context)
++        self.peer_address = peer_address
++
++
++class MessageError(ProtocolError):
++    """BGP message parsing/encoding errors.
++    
++    Raised when there are issues with:
++    - Invalid BGP message format
++    - Message parsing failures
++    - Message encoding failures
++    - Protocol violations
++    """
++    
++    def __init__(self, message: str, message_type: Optional[int] = None, 
++                 raw_data: Optional[bytes] = None,
++                 peer_address: Optional[str] = None) -> None:
++        context = {
++            'message_type': message_type,
++            'raw_data_length': len(raw_data) if raw_data else None,
++            'peer_address': peer_address,
++        }
++        super().__init__(message, context=context)
++        self.message_type = message_type
++        self.raw_data = raw_data
++        self.peer_address = peer_address
++
++
++class ValidationError(ExaBGPError):
++    """Input validation errors.
++    
++    Raised when input data fails validation checks:
++    - Invalid IP addresses
++    - Invalid AS numbers
++    - Invalid configuration values
++    - Security validation failures
++    """
++    pass
++
++
++class APIError(ExaBGPError):
++    """API-related errors.
++    
++    Raised when there are issues with the ExaBGP API:
++    - Invalid API commands
++    - API authentication failures
++    - API rate limiting
++    """
++    pass
++
++
++class ResourceError(ExaBGPError):
++    """Resource-related errors.
++    
++    Raised when there are issues with system resources:
++    - Memory allocation failures
++    - File system errors
++    - Resource limits exceeded
++    """
++    pass
+diff --git a/src/exabgp/bgp/message/message.py b/src/exabgp/bgp/message/message.py
+index abcdefg..1234567 100644
+--- a/src/exabgp/bgp/message/message.py
++++ b/src/exabgp/bgp/message/message.py
+@@ -10,6 +10,7 @@
+ from struct import pack, unpack
+ from typing import Optional, Union, Dict, Any, ClassVar
+ from exabgp.types import BGPMessage
++from exabgp.exceptions import MessageError, ProtocolError, ValidationError
+ 
+ from __future__ import annotations
+ 
+@@ -42,11 +43,24 @@ class Message:
+     @classmethod
+     def unpack(cls, data: bytes) -> Optional[Message]:
+         """Unpack BGP wire format into Message object."""
+-        if len(data) < cls.HEADER_LEN:
+-            return None
++        try:
++            if len(data) < cls.HEADER_LEN:
++                raise MessageError("BGP message too short", raw_data=data)
++            
++            # Validate BGP marker
++            if not data.startswith(cls.MARKER):
++                raise MessageError("Invalid BGP message marker", raw_data=data[:16])
++            
++            # Extract length and type
++            length = unpack('!H', data[16:18])[0]
++            msg_type = unpack('!B', data[18:19])[0]
++            
++            if length < cls.HEADER_LEN or length > 4096:
++                raise MessageError(f"Invalid BGP message length: {length}", raw_data=data)
++            
++            return cls(msg_type)
+         
+-        # Extract header information
+-        return cls(data[18])
++        except (struct.error, IndexError) as e:
++            raise MessageError(f"Failed to unpack BGP message: {e}", raw_data=data) from e
+ 
+     def __str__(self):
+         return f"BGP Message Type {self.ID}"
+diff --git a/src/exabgp/bgp/neighbor.py b/src/exabgp/bgp/neighbor.py
+index abcdefg..1234567 100644
+--- a/src/exabgp/bgp/neighbor.py
++++ b/src/exabgp/bgp/neighbor.py
+@@ -11,6 +11,7 @@ import time
+ from typing import Optional, Dict, Any, List
+ from ipaddress import IPv4Address, IPv6Address
+ from exabgp.types import IPAddress
++from exabgp.exceptions import ValidationError, ConnectionError
+ 
+ class Neighbor:
+     """BGP neighbor configuration and state management."""
+@@ -18,6 +19,15 @@ class Neighbor:
+     def __init__(self, peer_address: str, local_as: int, peer_as: int) -> None:
+         self.peer_address: str = peer_address
+         self.local_as: int = local_as
+         self.peer_as: int = peer_as
++        
++        # Validate inputs
++        self._validate_initialization()
++        
+         self.state: str = 'idle'
+         self.capabilities: Dict[str, Any] = {}
+         self.timers: Dict[str, float] = {}
++    
++    def _validate_initialization(self) -> None:
++        """Validate neighbor initialization parameters.""" 
++        if not 1 <= self.local_as <= 4294967295:
++            raise ValidationError(f"Invalid local AS: {self.local_as}")
++        if not 1 <= self.peer_as <= 4294967295:
++            raise ValidationError(f"Invalid peer AS: {self.peer_as}")
++            
++        try:
++            from exabgp.util.ip import isipv4, isipv6
++            if not (isipv4(self.peer_address) or isipv6(self.peer_address)):
++                raise ValidationError(f"Invalid peer address: {self.peer_address}")
++        except Exception as e:
++            raise ValidationError(f"Failed to validate peer address: {e}") from e
+
+     def __str__(self) -> str:
+         return f"Neighbor {self.peer_address} (AS{self.peer_as})"
+diff --git a/src/exabgp/configuration/configuration.py b/src/exabgp/configuration/configuration.py
+index abcdefg..1234567 100644
+--- a/src/exabgp/configuration/configuration.py
++++ b/src/exabgp/configuration/configuration.py
+@@ -11,6 +11,7 @@ import os
+ from typing import List, Dict, Any, Optional
+ from pathlib import Path
+ from exabgp.types import ConfigDict
++from exabgp.exceptions import ConfigurationError
+ 
+ from exabgp.configuration.core.error import Error
+ from exabgp.configuration.core.format import formated
+@@ -22,5 +23,17 @@ class Configuration:
+         self.configurations: List[str] = configurations
+         self.config_data: ConfigDict = {}
+ 
++        # Validate configuration files exist
++        self._validate_config_files()
++    
++    def _validate_config_files(self) -> None:
++        """Validate that all configuration files exist and are readable."""
++        for config_file in self.configurations:
++            config_path = Path(config_file)
++            if not config_path.exists():
++                raise ConfigurationError(f"Configuration file not found: {config_file}")
++            if not config_path.is_file():
++                raise ConfigurationError(f"Configuration path is not a file: {config_file}")
++            if not os.access(config_path, os.R_OK):
++                raise ConfigurationError(f"Configuration file not readable: {config_file}")
++
+     def reload(self):
+-        pass
++        try:
++            # Existing reload logic
++            pass
++        except Exception as e:
++            raise ConfigurationError(f"Failed to reload configuration: {e}") from e
+diff --git a/tests/unit/test_exceptions.py b/tests/unit/test_exceptions.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/tests/unit/test_exceptions.py
+@@ -0,0 +1,69 @@
++"""Unit tests for ExaBGP exception hierarchy."""
++from __future__ import annotations
++
++import pytest
++from exabgp.exceptions import (
++    ExaBGPError, ConfigurationError, ProtocolError, 
++    ConnectionError, MessageError, ValidationError, APIError
++)
++
++
++class TestExceptionHierarchy:
++    """Test the exception hierarchy structure."""
++    
++    def test_base_exception(self):
++        """Test ExaBGPError base exception."""
++        error = ExaBGPError("Test error", error_code=100)
++        
++        assert str(error) == "[100] Test error"
++        assert error.message == "Test error"
++        assert error.error_code == 100
++        assert isinstance(error.context, dict)
++        
++    def test_configuration_error(self):
++        """Test ConfigurationError inherits properly."""
++        error = ConfigurationError("Invalid config")
++        
++        assert isinstance(error, ExaBGPError)
++        assert error.message == "Invalid config"
++        
++    def test_protocol_error(self):
++        """Test ProtocolError inherits properly."""
++        error = ProtocolError("BGP protocol violation")
++        
++        assert isinstance(error, ExaBGPError)
++        assert error.message == "BGP protocol violation"
++        
++    def test_connection_error(self):
++        """Test ConnectionError with peer address."""
++        error = ConnectionError("Connection failed", peer_address="192.168.1.1")
++        
++        assert isinstance(error, ProtocolError)
++        assert isinstance(error, ExaBGPError)
++        assert error.peer_address == "192.168.1.1"
++        assert error.context['peer_address'] == "192.168.1.1"
++        
++    def test_message_error(self):
++        """Test MessageError with BGP message details."""
++        raw_data = b'\xff' * 16 + b'\x00\x13\x04'
++        error = MessageError(
++            "Invalid message", 
++            message_type=4,
++            raw_data=raw_data,
++            peer_address="192.168.1.2"
++        )
++        
++        assert isinstance(error, ProtocolError)
++        assert error.message_type == 4
++        assert error.raw_data == raw_data
++        assert error.peer_address == "192.168.1.2"
++        assert error.context['raw_data_length'] == len(raw_data)
++        
++    def test_validation_error(self):
++        """Test ValidationError for input validation."""
++        error = ValidationError("Invalid AS number")
++        
++        assert isinstance(error, ExaBGPError)
++        assert error.message == "Invalid AS number"
++        
++    def test_exception_chaining(self):
++        """Test exception chaining works properly."""
++        try:
++            raise ValueError("Original error")
++        except ValueError as e:
++            chained_error = MessageError("Wrapped error") from e
++            
++        assert chained_error.__cause__ is not None
++        assert isinstance(chained_error.__cause__, ValueError)

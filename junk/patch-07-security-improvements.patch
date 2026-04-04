@@ -1,0 +1,856 @@
+diff --git a/src/exabgp/security/__init__.py b/src/exabgp/security/__init__.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/src/exabgp/security/__init__.py
+@@ -0,0 +1,12 @@
++"""Security utilities for ExaBGP.
++
++This package provides security-related functionality including:
++- Input validation and sanitization
++- Rate limiting for network operations
++- Security logging and monitoring
++- Cryptographic utilities for authentication
++"""
++
++from .validation import InputValidator
++from .rate_limiter import RateLimiter
++from .auth import AuthenticationManager
+diff --git a/src/exabgp/security/validation.py b/src/exabgp/security/validation.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/src/exabgp/security/validation.py
+@@ -0,0 +1,179 @@
++"""Input validation and sanitization for security."""
++from __future__ import annotations
++
++import ipaddress
++import re
++import struct
++from typing import Union, Optional, List, Dict, Any
++from exabgp.exceptions import ValidationError
++from exabgp.logging import get_logger
++
++logger = get_logger(__name__)
++
++
++class InputValidator:
++    """Centralized input validation for security.
++    
++    This class provides comprehensive validation methods for all user inputs
++    to prevent injection attacks, protocol violations, and system abuse.
++    """
++    
++    # Regex patterns for validation
++    ASN_PATTERN = re.compile(r'^[1-9]\d{0,9}$')  # 1-4294967295
++    HOSTNAME_PATTERN = re.compile(r'^[a-zA-Z0-9.-]{1,253}$')
++    COMMUNITY_PATTERN = re.compile(r'^\d+:\d+$')
++    ROUTE_TARGET_PATTERN = re.compile(r'^\d+:\d+$')
++    
++    # Constants for validation limits
++    MAX_BGP_MESSAGE_SIZE = 4096
++    MIN_BGP_MESSAGE_SIZE = 19
++    MAX_AS_NUMBER = 4294967295
++    MIN_AS_NUMBER = 1
++    MAX_PREFIX_LENGTH_V4 = 32
++    MAX_PREFIX_LENGTH_V6 = 128
++    MAX_STRING_LENGTH = 255
++    
++    @staticmethod
++    def validate_ip_address(address: str) -> Union[ipaddress.IPv4Address, ipaddress.IPv6Address]:
++        """Validate and normalize IP address input.
++        
++        Args:
++            address: IP address string to validate
++            
++        Returns:
++            Normalized IP address object
++            
++        Raises:
++            ValidationError: If address is invalid
++        """
++        if not isinstance(address, str):
++            raise ValidationError("IP address must be a string")
++            
++        # Remove whitespace and convert to lowercase
++        address = address.strip().lower()
++        
++        if not address:
++            raise ValidationError("IP address cannot be empty")
++            
++        try:
++            return ipaddress.ip_address(address)
++        except ValueError as e:
++            logger.warning(f"Invalid IP address validation attempt: {address}")
++            raise ValidationError(f"Invalid IP address '{address}': {e}") from e
++    
++    @staticmethod
++    def validate_network_prefix(prefix: str) -> ipaddress.IPv4Network | ipaddress.IPv6Network:
++        """Validate network prefix/CIDR notation.
++        
++        Args:
++            prefix: Network prefix in CIDR notation
++            
++        Returns:
++            Normalized network object
++            
++        Raises:
++            ValidationError: If prefix is invalid
++        """
++        if not isinstance(prefix, str):
++            raise ValidationError("Network prefix must be a string")
++            
++        prefix = prefix.strip()
++        
++        try:
++            network = ipaddress.ip_network(prefix, strict=False)
++            
++            # Additional validation for BGP-specific constraints
++            if isinstance(network, ipaddress.IPv4Network):
++                if network.prefixlen > InputValidator.MAX_PREFIX_LENGTH_V4:
++                    raise ValidationError(f"IPv4 prefix length too long: {network.prefixlen}")
++            elif isinstance(network, ipaddress.IPv6Network):
++                if network.prefixlen > InputValidator.MAX_PREFIX_LENGTH_V6:
++                    raise ValidationError(f"IPv6 prefix length too long: {network.prefixlen}")
++                    
++            return network
++            
++        except ValueError as e:
++            logger.warning(f"Invalid network prefix validation attempt: {prefix}")
++            raise ValidationError(f"Invalid network prefix '{prefix}': {e}") from e
++    
++    @staticmethod
++    def validate_asn(asn: Union[str, int]) -> int:
++        """Validate AS number.
++        
++        Args:
++            asn: AS number to validate
++            
++        Returns:
++            Validated AS number
++            
++        Raises:
++            ValidationError: If ASN is invalid
++        """
++        try:
++            if isinstance(asn, str):
++                asn = asn.strip()
++                if not InputValidator.ASN_PATTERN.match(asn):
++                    raise ValidationError(f"Invalid ASN format: {asn}")
++                asn_int = int(asn)
++            else:
++                asn_int = int(asn)
++                
++            if not InputValidator.MIN_AS_NUMBER <= asn_int <= InputValidator.MAX_AS_NUMBER:
++                raise ValidationError(
++                    f"ASN {asn_int} out of valid range "
++                    f"({InputValidator.MIN_AS_NUMBER}-{InputValidator.MAX_AS_NUMBER})"
++                )
++                
++            return asn_int
++            
++        except (ValueError, TypeError) as e:
++            logger.warning(f"Invalid ASN validation attempt: {asn}")
++            raise ValidationError(f"Invalid ASN '{asn}': {e}") from e
++    
++    @staticmethod 
++    def validate_bgp_message_size(data: bytes) -> bytes:
++        """Validate BGP message size constraints.
++        
++        Args:
++            data: BGP message data
++            
++        Returns:
++            Validated message data
++            
++        Raises:
++            ValidationError: If message size is invalid
++        """
++        if not isinstance(data, bytes):
++            raise ValidationError("BGP message data must be bytes")
++            
++        message_length = len(data)
++        
++        if message_length < InputValidator.MIN_BGP_MESSAGE_SIZE:
++            raise ValidationError(
++                f"BGP message too short: {message_length} bytes "
++                f"(minimum {InputValidator.MIN_BGP_MESSAGE_SIZE})"
++            )
++            
++        if message_length > InputValidator.MAX_BGP_MESSAGE_SIZE:
++            raise ValidationError(
++                f"BGP message too long: {message_length} bytes "
++                f"(maximum {InputValidator.MAX_BGP_MESSAGE_SIZE})"
++            )
++            
++        return data
++    
++    @staticmethod
++    def validate_bgp_marker(data: bytes) -> None:
++        """Validate BGP message marker.
++        
++        Args:
++            data: BGP message data (at least 16 bytes)
++            
++        Raises:
++            ValidationError: If marker is invalid
++        """
++        if len(data) < 16:
++            raise ValidationError("Insufficient data for BGP marker validation")
++            
++        expected_marker = b'\xff' * 16
++        actual_marker = data[:16]
++        
++        if actual_marker != expected_marker:
++            logger.warning(f"Invalid BGP marker detected: {actual_marker.hex()}")
++            raise ValidationError("Invalid BGP message marker")
++    
++    @staticmethod
++    def sanitize_string_input(value: str, max_length: int = None) -> str:
++        """Sanitize string input to prevent injection attacks.
++        
++        Args:
++            value: String to sanitize
++            max_length: Maximum allowed length
++            
++        Returns:
++            Sanitized string
++            
++        Raises:
++            ValidationError: If string fails validation
++        """
++        if not isinstance(value, str):
++            raise ValidationError("Expected string input")
++        
++        # Remove null bytes and control characters except tab, newline, carriage return
++        sanitized = ''.join(
++            c for c in value 
++            if ord(c) >= 32 or c in '\t\n\r'
++        )
++        
++        # Apply length limit
++        if max_length is None:
++            max_length = InputValidator.MAX_STRING_LENGTH
++            
++        if len(sanitized) > max_length:
++            raise ValidationError(f"String too long: {len(sanitized)} > {max_length} characters")
++            
++        return sanitized
++    
++    @staticmethod
++    def validate_bgp_community(community: str) -> str:
++        """Validate BGP community format.
++        
++        Args:
++            community: Community string in format "ASN:VALUE"
++            
++        Returns:
++            Validated community string
++            
++        Raises:
++            ValidationError: If community format is invalid
++        """
++        if not isinstance(community, str):
++            raise ValidationError("Community must be a string")
++            
++        community = community.strip()
++        
++        if not InputValidator.COMMUNITY_PATTERN.match(community):
++            raise ValidationError(f"Invalid community format: {community}")
++            
++        try:
++            asn_str, value_str = community.split(':', 1)
++            asn = int(asn_str)
++            value = int(value_str)
++            
++            # Validate ASN and value ranges
++            if not 0 <= asn <= 65535:
++                raise ValidationError(f"Community ASN out of range: {asn}")
++            if not 0 <= value <= 65535:
++                raise ValidationError(f"Community value out of range: {value}")
++                
++            return community
++            
++        except ValueError as e:
++            raise ValidationError(f"Invalid community values: {e}") from e
++    
++    @staticmethod
++    def validate_hostname(hostname: str) -> str:
++        """Validate hostname format.
++        
++        Args:
++            hostname: Hostname to validate
++            
++        Returns:
++            Validated hostname
++            
++        Raises:
++            ValidationError: If hostname is invalid
++        """
++        if not isinstance(hostname, str):
++            raise ValidationError("Hostname must be a string")
++            
++        hostname = hostname.strip().lower()
++        
++        if not hostname:
++            raise ValidationError("Hostname cannot be empty")
++            
++        if not InputValidator.HOSTNAME_PATTERN.match(hostname):
++            raise ValidationError(f"Invalid hostname format: {hostname}")
++            
++        # Additional checks
++        if hostname.startswith('.') or hostname.endswith('.'):
++            raise ValidationError("Hostname cannot start or end with dot")
++            
++        if '..' in hostname:
++            raise ValidationError("Hostname cannot contain consecutive dots")
++            
++        return hostname
+diff --git a/src/exabgp/security/rate_limiter.py b/src/exabgp/security/rate_limiter.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/src/exabgp/security/rate_limiter.py
+@@ -0,0 +1,101 @@
++"""Rate limiting for network operations."""
++from __future__ import annotations
++
++import time
++from collections import defaultdict, deque
++from typing import Dict, Deque, Optional
++import threading
++from exabgp.logging import get_logger
++
++logger = get_logger(__name__)
++
++
++class RateLimiter:
++    """Thread-safe rate limiter for network operations.
++    
++    Implements a sliding window rate limiter to prevent abuse and DoS attacks.
++    Each identifier (e.g., IP address) is tracked separately.
++    """
++    
++    def __init__(self, max_requests: int, window_seconds: int, 
++                 cleanup_interval: int = 300) -> None:
++        """Initialize rate limiter.
++        
++        Args:
++            max_requests: Maximum requests allowed per window
++            window_seconds: Time window in seconds
++            cleanup_interval: How often to clean old entries (seconds)
++        """
++        self.max_requests = max_requests
++        self.window_seconds = window_seconds
++        self.cleanup_interval = cleanup_interval
++        
++        self._requests: Dict[str, Deque[float]] = defaultdict(deque)
++        self._lock = threading.RLock()
++        self._last_cleanup = time.time()
++        
++        logger.info(
++            f"Rate limiter initialized: {max_requests} requests per {window_seconds}s"
++        )
++    
++    def is_allowed(self, identifier: str) -> bool:
++        """Check if request is allowed under rate limit.
++        
++        Args:
++            identifier: Unique identifier (e.g., IP address)
++            
++        Returns:
++            True if request is allowed, False if rate limited
++        """
++        current_time = time.time()
++        cutoff_time = current_time - self.window_seconds
++        
++        with self._lock:
++            # Periodic cleanup of old entries
++            if current_time - self._last_cleanup > self.cleanup_interval:
++                self._cleanup_old_entries(current_time)
++                self._last_cleanup = current_time
++            
++            # Clean old requests for this identifier
++            request_times = self._requests[identifier]
++            while request_times and request_times[0] < cutoff_time:
++                request_times.popleft()
++            
++            # Check if under limit
++            if len(request_times) < self.max_requests:
++                request_times.append(current_time)
++                return True
++            else:
++                # Log rate limiting event
++                logger.warning(
++                    f"Rate limit exceeded for {identifier}: "
++                    f"{len(request_times)} requests in {self.window_seconds}s"
++                )
++                return False
++    
++    def _cleanup_old_entries(self, current_time: float) -> None:
++        """Clean up old entries to prevent memory leaks.
++        
++        Args:
++            current_time: Current timestamp
++        """
++        cutoff_time = current_time - (self.window_seconds * 2)  # Keep extra buffer
++        identifiers_to_remove = []
++        
++        for identifier, request_times in self._requests.items():
++            # Remove old requests
++            while request_times and request_times[0] < cutoff_time:
++                request_times.popleft()
++            
++            # Mark empty deques for removal
++            if not request_times:
++                identifiers_to_remove.append(identifier)
++        
++        # Remove empty entries
++        for identifier in identifiers_to_remove:
++            del self._requests[identifier]
++        
++        if identifiers_to_remove:
++            logger.debug(f"Cleaned up {len(identifiers_to_remove)} old rate limit entries")
++    
++    def get_remaining_requests(self, identifier: str) -> int:
++        """Get remaining requests for identifier.
++        
++        Args:
++            identifier: Unique identifier
++            
++        Returns:
++            Number of remaining requests in current window
++        """
++        current_time = time.time()
++        cutoff_time = current_time - self.window_seconds
++        
++        with self._lock:
++            request_times = self._requests[identifier]
++            
++            # Clean old requests
++            while request_times and request_times[0] < cutoff_time:
++                request_times.popleft()
++            
++            return max(0, self.max_requests - len(request_times))
++    
++    def reset_identifier(self, identifier: str) -> None:
++        """Reset rate limit for specific identifier.
++        
++        Args:
++            identifier: Identifier to reset
++        """
++        with self._lock:
++            if identifier in self._requests:
++                del self._requests[identifier]
++                logger.info(f"Rate limit reset for {identifier}")
+diff --git a/src/exabgp/security/auth.py b/src/exabgp/security/auth.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/src/exabgp/security/auth.py
+@@ -0,0 +1,88 @@
++"""Authentication and authorization utilities."""
++from __future__ import annotations
++
++import hashlib
++import hmac
++import secrets
++import time
++from typing import Optional, Dict, Any
++from exabgp.exceptions import ValidationError
++from exabgp.logging import get_logger
++
++logger = get_logger(__name__)
++
++
++class AuthenticationManager:
++    """Manages authentication for BGP sessions and API access."""
++    
++    def __init__(self) -> None:
++        """Initialize authentication manager."""
++        self._md5_keys: Dict[str, str] = {}
++        self._api_keys: Dict[str, Dict[str, Any]] = {}
++    
++    def add_md5_key(self, peer_address: str, password: str) -> None:
++        """Add MD5 authentication key for BGP peer.
++        
++        Args:
++            peer_address: BGP peer IP address
++            password: MD5 password
++            
++        Raises:
++            ValidationError: If parameters are invalid
++        """
++        if not peer_address or not password:
++            raise ValidationError("Peer address and password are required")
++            
++        if len(password) > 80:  # RFC 2385 limit
++            raise ValidationError("MD5 password too long (max 80 characters)")
++            
++        self._md5_keys[peer_address] = password
++        logger.info(f"MD5 authentication configured for peer {peer_address}")
++    
++    def get_md5_key(self, peer_address: str) -> Optional[str]:
++        """Get MD5 key for BGP peer.
++        
++        Args:
++            peer_address: BGP peer IP address
++            
++        Returns:
++            MD5 password if configured, None otherwise
++        """
++        return self._md5_keys.get(peer_address)
++    
++    def remove_md5_key(self, peer_address: str) -> bool:
++        """Remove MD5 key for BGP peer.
++        
++        Args:
++            peer_address: BGP peer IP address
++            
++        Returns:
++            True if key was removed, False if not found
++        """
++        if peer_address in self._md5_keys:
++            del self._md5_keys[peer_address]
++            logger.info(f"MD5 authentication removed for peer {peer_address}")
++            return True
++        return False
++    
++    def generate_api_key(self, name: str, permissions: Dict[str, bool] = None) -> str:
++        """Generate new API key.
++        
++        Args:
++            name: Descriptive name for the key
++            permissions: Permissions dictionary
++            
++        Returns:
++            Generated API key
++        """
++        if permissions is None:
++            permissions = {"read": True, "write": False}
++            
++        api_key = secrets.token_urlsafe(32)
++        self._api_keys[api_key] = {
++            "name": name,
++            "permissions": permissions,
++            "created": time.time(),
++            "last_used": None,
++        }
++        
++        logger.info(f"API key generated for '{name}'")
++        return api_key
++    
++    def validate_api_key(self, api_key: str, required_permission: str = "read") -> bool:
++        """Validate API key and check permissions.
++        
++        Args:
++            api_key: API key to validate
++            required_permission: Required permission level
++            
++        Returns:
++            True if key is valid and has required permission
++        """
++        if api_key not in self._api_keys:
++            logger.warning(f"Invalid API key access attempt")
++            return False
++            
++        key_info = self._api_keys[api_key]
++        if not key_info["permissions"].get(required_permission, False):
++            logger.warning(f"Insufficient permissions for API key '{key_info['name']}'")
++            return False
++            
++        # Update last used timestamp
++        key_info["last_used"] = time.time()
++        return True
+diff --git a/src/exabgp/bgp/message/message.py b/src/exabgp/bgp/message/message.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/bgp/message/message.py
++++ b/src/exabgp/bgp/message/message.py
+@@ -11,6 +11,7 @@ from struct import pack, unpack
+ from typing import Optional, Union, Dict, Any, ClassVar
+ from exabgp.types import BGPMessage
+ from exabgp.exceptions import MessageError, ProtocolError, ValidationError
++from exabgp.security.validation import InputValidator
+ 
+ from __future__ import annotations
+ import logging
+@@ -21,6 +22,10 @@ from exabgp.bgp.message.direction import Direction
+ from exabgp.bgp.message.action import Action
+ from exabgp.util.od import od
+ 
++# Global rate limiter for BGP messages
++from exabgp.security.rate_limiter import RateLimiter
++message_rate_limiter = RateLimiter(max_requests=100, window_seconds=60)
++
+ 
+ class Message:
+     """Base class for all BGP messages.
+@@ -97,7 +102,7 @@ class Message:
+ 
+     @classmethod
+     def unpack(cls, data: bytes) -> Optional[Message]:
+-        """Unpack BGP wire format into Message object."""
++        def unpack(cls, data: bytes, source_ip: str = "unknown") -> Optional[Message]:
+         """Unpack binary data into a Message object.
+         
+         Parses BGP wire format and validates the message structure.
+@@ -105,19 +110,31 @@ class Message:
+         Args:
+             data: Raw BGP message bytes from network
+             
++            source_ip: Source IP address for rate limiting
++            
+         Returns:
+             Parsed Message object, or None if parsing fails
+             
+         Raises:
+             MessageError: If data format is invalid or message fails validation
++            ValidationError: If rate limit is exceeded or validation fails
+         """
+         try:
+-            if len(data) < cls.HEADER_LEN:
+-                raise MessageError("BGP message too short", raw_data=data)
++            # Rate limiting
++            if not message_rate_limiter.is_allowed(source_ip):
++                raise ValidationError(f"Rate limit exceeded for {source_ip}")
++            
++            # Size validation
++            data = InputValidator.validate_bgp_message_size(data)
++            
++            # Marker validation
++            InputValidator.validate_bgp_marker(data)
+             
+-            # Validate BGP marker
+-            if not data.startswith(cls.MARKER):
+-                raise MessageError("Invalid BGP message marker", raw_data=data[:16])
++            # Length validation from header
++            if len(data) < cls.HEADER_LEN:
++                raise MessageError(
++                    f"BGP message too short: {len(data)} < {cls.HEADER_LEN}",
++                    raw_data=data
++                )
+             
+             # Extract length and type
+             length = unpack('!H', data[16:18])[0]
+@@ -125,7 +142,10 @@ class Message:
+             
+             if length < cls.HEADER_LEN or length > 4096:
+-                raise MessageError(f"Invalid BGP message length: {length}", raw_data=data)
++                raise MessageError(
++                    f"Invalid BGP message length: {length}",
++                    message_type=msg_type,
++                    raw_data=data
++                )
+             
+             # Log successful message parsing
+             log_bgp_message(
+@@ -137,7 +157,12 @@ class Message:
+             
+             return cls(msg_type)
+         
+-        except (struct.error, IndexError) as e:
+-            raise MessageError(f"Failed to unpack BGP message: {e}", raw_data=data) from e
++        except ValidationError:
++            # Re-raise validation errors as-is
++            raise
++        except (struct.error, IndexError) as e:
++            raise MessageError(
++                f"Failed to unpack BGP message: {e}",
++                raw_data=data
++            ) from e
+
+     def __str__(self):
+diff --git a/tests/unit/test_security.py b/tests/unit/test_security.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/tests/unit/test_security.py
+@@ -0,0 +1,156 @@
++"""Unit tests for security functionality."""
++from __future__ import annotations
++
++import pytest
++import time
++import ipaddress
++from exabgp.security.validation import InputValidator
++from exabgp.security.rate_limiter import RateLimiter
++from exabgp.security.auth import AuthenticationManager
++from exabgp.exceptions import ValidationError
++
++
++class TestInputValidator:
++    """Test input validation functionality."""
++    
++    def test_validate_ip_address_valid(self):
++        """Test validation of valid IP addresses."""
++        # IPv4
++        ipv4 = InputValidator.validate_ip_address("192.168.1.1")
++        assert isinstance(ipv4, ipaddress.IPv4Address)
++        assert str(ipv4) == "192.168.1.1"
++        
++        # IPv6
++        ipv6 = InputValidator.validate_ip_address("2001:db8::1")
++        assert isinstance(ipv6, ipaddress.IPv6Address)
++        assert str(ipv6) == "2001:db8::1"
++    
++    def test_validate_ip_address_invalid(self):
++        """Test validation of invalid IP addresses."""
++        with pytest.raises(ValidationError):
++            InputValidator.validate_ip_address("256.1.1.1")
++            
++        with pytest.raises(ValidationError):
++            InputValidator.validate_ip_address("not.an.ip")
++            
++        with pytest.raises(ValidationError):
++            InputValidator.validate_ip_address("")
++    
++    def test_validate_asn_valid(self):
++        """Test validation of valid AS numbers."""
++        assert InputValidator.validate_asn(65001) == 65001
++        assert InputValidator.validate_asn("65001") == 65001
++        assert InputValidator.validate_asn(1) == 1
++        assert InputValidator.validate_asn(4294967295) == 4294967295
++    
++    def test_validate_asn_invalid(self):
++        """Test validation of invalid AS numbers."""
++        with pytest.raises(ValidationError):
++            InputValidator.validate_asn(0)
++            
++        with pytest.raises(ValidationError):
++            InputValidator.validate_asn(4294967296)  # Too large
++            
++        with pytest.raises(ValidationError):
++            InputValidator.validate_asn("invalid")
++    
++    def test_validate_bgp_message_size(self):
++        """Test BGP message size validation."""
++        # Valid message size
++        data = b'\xff' * 100
++        validated = InputValidator.validate_bgp_message_size(data)
++        assert validated == data
++        
++        # Too short
++        with pytest.raises(ValidationError):
++            InputValidator.validate_bgp_message_size(b'\xff' * 10)
++            
++        # Too long
++        with pytest.raises(ValidationError):
++            InputValidator.validate_bgp_message_size(b'\xff' * 5000)
++    
++    def test_validate_bgp_marker(self):
++        """Test BGP marker validation."""
++        # Valid marker
++        valid_data = b'\xff' * 16 + b'extra'
++        InputValidator.validate_bgp_marker(valid_data)  # Should not raise
++        
++        # Invalid marker
++        with pytest.raises(ValidationError):
++            invalid_data = b'\x00' * 16 + b'extra'
++            InputValidator.validate_bgp_marker(invalid_data)
++    
++    def test_sanitize_string_input(self):
++        """Test string sanitization."""
++        # Normal string
++        result = InputValidator.sanitize_string_input("normal string")
++        assert result == "normal string"
++        
++        # String with control characters
++        result = InputValidator.sanitize_string_input("text\x00with\x01control")
++        assert result == "textwithcontrol"
++        
++        # String too long
++        with pytest.raises(ValidationError):
++            long_string = "x" * 300
++            InputValidator.sanitize_string_input(long_string, max_length=255)
++    
++    def test_validate_bgp_community(self):
++        """Test BGP community validation."""
++        # Valid community
++        result = InputValidator.validate_bgp_community("65001:100")
++        assert result == "65001:100"
++        
++        # Invalid format
++        with pytest.raises(ValidationError):
++            InputValidator.validate_bgp_community("invalid")
++            
++        # Out of range values
++        with pytest.raises(ValidationError):
++            InputValidator.validate_bgp_community("70000:100")
+
+
++class TestRateLimiter:
++    """Test rate limiting functionality."""
++    
++    def test_rate_limiter_basic(self):
++        """Test basic rate limiting."""
++        limiter = RateLimiter(max_requests=3, window_seconds=1)
++        
++        # Should allow first 3 requests
++        assert limiter.is_allowed("test_id") is True
++        assert limiter.is_allowed("test_id") is True
++        assert limiter.is_allowed("test_id") is True
++        
++        # Should block 4th request
++        assert limiter.is_allowed("test_id") is False
++    
++    def test_rate_limiter_window(self):
++        """Test rate limiter time window."""
++        limiter = RateLimiter(max_requests=1, window_seconds=1)
++        
++        # First request should be allowed
++        assert limiter.is_allowed("test_id") is True
++        
++        # Second request should be blocked
++        assert limiter.is_allowed("test_id") is False
++        
++        # Wait for window to expire
++        time.sleep(1.1)
++        
++        # Should be allowed again
++        assert limiter.is_allowed("test_id") is True
++    
++    def test_rate_limiter_different_ids(self):
++        """Test that different identifiers are tracked separately."""
++        limiter = RateLimiter(max_requests=1, window_seconds=1)
++        
++        # Each ID should get its own allowance
++        assert limiter.is_allowed("id1") is True
++        assert limiter.is_allowed("id2") is True
++        
++        # But second request for same ID should be blocked
++        assert limiter.is_allowed("id1") is False
++        assert limiter.is_allowed("id2") is False
+
+
++class TestAuthenticationManager:
++    """Test authentication functionality."""
++    
++    def test_md5_key_management(self):
++        """Test MD5 key management."""
++        auth = AuthenticationManager()
++        
++        # Add MD5 key
++        auth.add_md5_key("192.168.1.1", "secret123")
++        
++        # Retrieve key
++        assert auth.get_md5_key("192.168.1.1") == "secret123"
++        assert auth.get_md5_key("192.168.1.2") is None
++        
++        # Remove key
++        assert auth.remove_md5_key("192.168.1.1") is True
++        assert auth.get_md5_key("192.168.1.1") is None
++    
++    def test_api_key_generation(self):
++        """Test API key generation and validation."""
++        auth = AuthenticationManager()
++        
++        # Generate API key
++        api_key = auth.generate_api_key("test_key", {"read": True, "write": True})
++        
++        # Validate key
++        assert auth.validate_api_key(api_key, "read") is True
++        assert auth.validate_api_key(api_key, "write") is True
++        
++        # Invalid key
++        assert auth.validate_api_key("invalid_key", "read") is False

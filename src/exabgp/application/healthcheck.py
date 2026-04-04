@@ -1,0 +1,627 @@
+#!/usr/bin/env python3
+
+"""Healthchecker for exabgp.
+
+This program is to be used as a process for exabgp. It will announce
+some VIP depending on the state of a check whose a third-party program
+wrapped by this program.
+
+To use, declare this program as a process in your
+:file:`/etc/exabgp/exabgp.conf`::
+
+    neighbor 192.0.2.1 {
+       router-id 192.0.2.2;
+       local-as 64496;
+       peer-as 64497;
+    }
+    process watch-haproxy {
+       run python -m exabgp healthcheck --cmd "curl -sf http://127.0.0.1/healthcheck" --label haproxy;
+    }
+    process watch-mysql {
+       run python -m exabgp healthcheck --cmd "mysql -u check -e 'SELECT 1'" --label mysql;
+    }
+
+Use :option:`--help` to get options accepted by this program. A
+configuration file is also possible. Such a configuration file looks
+like this::
+
+     debug
+     name = haproxy
+     interval = 10
+     fast-interval = 1
+     command = curl -sf http://127.0.0.1/healthcheck
+
+The left-part of each line is the corresponding long option.
+
+When using label for loopback selection, the provided value should
+match the beginning of the label without the interface prefix. In the
+example above, this means that you should have addresses on lo
+labelled ``lo:haproxy1``, ``lo:haproxy2``, etc.
+
+"""
+
+from __future__ import annotations
+
+import sys
+import os
+import subprocess
+import re
+import logging
+import logging.handlers
+import argparse
+import signal
+import time
+import collections
+
+from ipaddress import ip_network
+from ipaddress import ip_address
+
+# Interface name validation constants
+IFNAME_MAX_LENGTH = 15  # Maximum interface name length (Linux kernel limit)
+IP_CMD_ADD_ERROR_CODE = 2  # Error code when 'ip address add' fails (address already exists)
+IP_IFNAME_PARTS = 2  # Expected format: ip%ifname
+
+logger = logging.getLogger('healthcheck')
+
+
+def neighbor_address(value):
+    """Parse a neighbor value: an IP address or '*' for all peers."""
+    if value.strip() == '*':
+        return '*'
+    return ip_address(value)
+
+
+def enum(*sequential):
+    """Create a simple enumeration."""
+    return type(str('Enum'), (), dict(zip(sequential, sequential)))
+
+
+def setargs(parser):
+    # fmt: off
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument('--silent', '-s', action='store_true', default=False, help="don't log to console")
+    g.add_argument('--syslog-facility', '-sF', metavar='FACILITY', nargs='?', const='daemon', default='daemon', help='log to syslog using FACILITY, default FACILITY is daemon')
+    g.add_argument('--no-syslog', action='store_true', help='disable syslog logging')
+
+    parser.add_argument('--debug', '-d', action='store_true', default=False, help='enable debugging')
+    parser.add_argument('--no-ack', '-a', action='store_true', default=False, help='set for exabgp 3.4 or 4.x when exabgp.api.ack=false')
+    parser.add_argument('--sudo', action='store_true', default=False, help='use sudo to setup ip addresses')
+    parser.add_argument('--name', '-n', metavar='NAME', help='name for this healthchecker')
+    parser.add_argument('--config', '-F', metavar='FILE', type=open, help='read configuration from a file')
+    parser.add_argument('--pid', '-p', metavar='FILE', type=argparse.FileType('w'), help='write PID to the provided file')
+    parser.add_argument('--user', metavar='USER', help='set user after setting ip addresses')
+    parser.add_argument('--group', metavar='GROUP', help='set group after setting ip addresses')
+
+    g = parser.add_argument_group('checking healthiness')
+    g.add_argument('--interval', '-i', metavar='N', default=5, type=float, help='wait N seconds between each healthcheck (zero to exit after first announcement)')
+    g.add_argument('--fast-interval', '-f', metavar='N', default=1, type=float, dest='fast', help='when a state change is about to occur, wait N seconds between each healthcheck')
+    g.add_argument('--timeout', '-t', metavar='N', default=5, type=int, help='wait N seconds for the check command to execute')
+    g.add_argument('--rise', metavar='N', default=3, type=int, help='check N times before considering the service up')
+    g.add_argument('--fall', metavar='N', default=3, type=int, help='check N times before considering the service down')
+    g.add_argument('--disable', metavar='FILE', type=str, help='if FILE exists, the service is considered disabled')
+    g.add_argument('--command', '--cmd', '-c', metavar='CMD', type=str, help='command to use for healthcheck')
+
+    g = parser.add_argument_group('advertising options')
+    g.add_argument('--next-hop', '-N', metavar='IP', type=ip_address, help='self IP address to use as next hop')
+    g.add_argument('--ip', metavar='IP', type=ip_network, dest='ips', action='append', help='advertise this IP address or network (CIDR notation)')
+    g.add_argument('--ip-ifname', metavar='IP%IFNAME', dest='ip_ifnames', action='append', help='bind this IP address or network (CIDR) to the given physical or logical interface (i.e. 192.165.14.1%%eth0)')
+    g.add_argument('--local-preference', metavar='P', type=int, default=-1, help='advertise with local preference P')
+    g.add_argument('--deaggregate-networks', dest='deaggregate_networks', action='store_true', help='Deaggregate Networks specified in --ip')
+    g.add_argument('--no-ip-setup', action='store_false', dest='ip_setup', help="don't setup missing IP addresses")
+    g.add_argument('--dynamic-ip-setup', default=False, action='store_true', dest='ip_dynamic', help='delete setup ips on state down and ' 'disabled, then restore them when up')
+    g.add_argument('--label', default=None, help='use the provided label to match setup ip addresses')
+    g.add_argument('--label-exact-match', default=False, action='store_true', help='use the provided label to exactly match setup ip addresses, not a prefix match')
+    g.add_argument('--start-ip', metavar='N', type=int, default=0, help='index of the first IP in the list of IP addresses')
+    g.add_argument('--up-metric', metavar='M', type=int, default=100, help='first IP get the metric M when the service is up')
+    g.add_argument('--down-metric', metavar='M', type=int, default=1000, help='first IP get the metric M when the service is down')
+    g.add_argument('--disabled-metric', metavar='M', type=int, default=500, help='first IP get the metric M when the service is disabled')
+    g.add_argument('--increase', metavar='M', type=int, default=1, help='for each additional IP address, increase metric value by M')
+    g.add_argument('--community', metavar='COMMUNITY', type=str, default=None, help='announce IPs with the supplied community')
+    g.add_argument('--extended-community', metavar='EXTENDEDCOMMUNITY', type=str, default=None, help='announce IPs with the supplied extended community')
+    g.add_argument('--large-community', metavar='LARGECOMMUNITY', type=str, default=None, help='announce IPs with the supplied large community')
+    g.add_argument('--disabled-community', metavar='DISABLEDCOMMUNITY', type=str, default=None, help='announce IPs with the supplied community when disabled')
+    g.add_argument('--as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path')
+    g.add_argument('--up-as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path when the service is up')
+    g.add_argument('--down-as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path when the service is down')
+    g.add_argument('--disabled-as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path when the service is disabled')
+    g.add_argument('--withdraw-on-down', action='store_true', help='Instead of increasing the metric on health failure, withdraw the route')
+    g.add_argument('--path-id', metavar='PATHID', type=int, default=None, help='path ID to advertise for the route')
+    g.add_argument('--neighbor', metavar='NEIGHBOR', type=neighbor_address, dest='neighbors', action='append', help='advertise the route to the selected neighbors (* for all)')
+    g.add_argument('--debounce', action='store_true', dest='debounce', help='announce only on state changes, instead of every iteration')
+
+    g = parser.add_argument_group('reporting')
+    g.add_argument('--execute', metavar='CMD', type=str, action='append', help='execute CMD on state change')
+    g.add_argument('--up-execute', metavar='CMD', type=str, action='append', help='execute CMD when the service becomes available')
+    g.add_argument('--down-execute', metavar='CMD', type=str, action='append', help='execute CMD when the service becomes unavailable')
+    g.add_argument('--disabled-execute', metavar='CMD', type=str, action='append', help='execute CMD when the service is disabled')
+    # fmt: on
+
+
+def parse():
+    """Parse arguments"""
+
+    def parse_ip_ifnames(ip_ifnames, ips):
+        """Parse ip interfaces and return a dict of ip:ifname"""
+        keyval = {}
+        for val in ip_ifnames or []:
+            ip_ifname = val.split(r'%')
+            if len(ip_ifname) != IP_IFNAME_PARTS:
+                raise ValueError(f"Expected IP to IFNAME parameter: <ip_address>%<ifname>, got '{val}'")
+            # Is the ip address valid?
+            try:
+                ip = ip_network(ip_ifname[0])
+            except ValueError as e:
+                raise e
+            # Is the ip address defined
+            if ip not in ips:
+                raise ValueError(f"No 'ip' parameter has been defined for the ip_ifname pair '{val}'")
+            # Is the interface name valid?
+            if not re.match(rf'^[a-zA-Z0-9._:-]{{1,{IFNAME_MAX_LENGTH}}}$', ip_ifname[1]):
+                raise ValueError(f"Expected NIC interface name but got '{ip_ifname[1]}'")
+            keyval[ip] = ip_ifname[1]
+        return keyval
+
+    formatter = argparse.RawDescriptionHelpFormatter
+    parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__, formatter_class=formatter)
+    setargs(parser)
+
+    options = parser.parse_args()
+    if options.config is not None:
+        # A configuration file has been provided. Read each line and
+        # build an equivalent command line.
+        args = sum(
+            [
+                f'--{line.strip()}'.split('=', 1)
+                for line in options.config.readlines()
+                if not line.strip().startswith('#') and line.strip()
+            ],
+            [],
+        )
+        args = [x.strip() for x in args]
+        args.extend(sys.argv[1:])
+        options = parser.parse_args(args)
+    options.ip_ifnames = parse_ip_ifnames(options.ip_ifnames, options.ips)
+    return options
+
+
+def setup_logging(debug, silent, name, syslog_facility, syslog):
+    """Setup logger"""
+
+    def syslog_address():
+        """Return a sensible syslog address"""
+        if sys.platform == 'darwin':
+            return '/var/run/syslog'
+        if sys.platform.startswith('freebsd'):
+            return '/var/run/log'
+        if sys.platform.startswith('netbsd'):
+            return '/var/run/log'
+        if sys.platform.startswith('linux'):
+            return '/dev/log'
+        raise OSError('Unable to guess syslog address for your platform, try to disable syslog')
+
+    logger.setLevel(debug and logging.DEBUG or logging.INFO)
+    enable_syslog = syslog and not debug
+    # To syslog
+    if enable_syslog:
+        facility = getattr(logging.handlers.SysLogHandler, f'LOG_{syslog_facility.upper()}')
+        sh = logging.handlers.SysLogHandler(address=str(syslog_address()), facility=facility)
+        if name:
+            healthcheck_name = f'healthcheck-{name}'
+        else:
+            healthcheck_name = 'healthcheck'
+        sh.setFormatter(logging.Formatter(f'{healthcheck_name}[{os.getpid()}]: %(message)s'))
+        logger.addHandler(sh)
+    # To console
+    if not silent:
+        ch = logging.StreamHandler()
+        ch.setFormatter(logging.Formatter('%(levelname)s[%(name)s] %(message)s'))
+        logger.addHandler(ch)
+
+
+def system_ips(ip_ifnames, label, label_only, label_exact_match):
+    """Retrieve IP addresses for loopback and ip-ifname given interfaces"""
+    logger.debug('Retrieve IP addresses for loopback and ip-ifname interfaces')
+    addresses = []
+    ifnames = set(ip_ifnames.values()) | {'lo'} if ip_ifnames else {'lo'}
+    output = []
+
+    if sys.platform.startswith('linux'):
+        # Use "ip" (ifconfig is not able to see all addresses)
+        ipre = re.compile(r'^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+' r'(?P<ip>[\da-f.:]+)/(?P<mask>\d+)\s+.*')
+        labelre = re.compile(r'.*\s+(?:' + '|'.join(ifnames) + r'):(?P<label>[^\\\s]+).*')
+        for ifname in ifnames:
+            cmd = subprocess.Popen(
+                f'/sbin/ip -o address show dev {ifname}'.split(), shell=False, stdout=subprocess.PIPE
+            )
+            output += [line for line in cmd.stdout]
+    else:
+        # Try with ifconfig
+        ipre = re.compile(
+            r'^inet6?\s+(alias\s+)?(?P<ip>[\da-f.:]+)\s+'
+            r'(?:netmask 0x(?P<netmask>[0-9a-f]+)|'
+            r'prefixlen (?P<mask>\d+)).*',
+        )
+        labelre = re.compile(r'')
+        for ifname in ifnames:
+            cmd = subprocess.Popen(f'/sbin/ifconfig {ifname}'.split(), shell=False, stdout=subprocess.PIPE)
+            output += [line for line in cmd.stdout]
+    for line in output or []:
+        line = line.decode('ascii', 'ignore').strip()
+        mo = ipre.match(line)
+        if not mo:
+            continue
+        if mo.group('mask'):
+            mask = int(mo.group('mask'))
+        else:
+            mask = bin(int(mo.group('netmask'), 16)).count('1')
+        try:
+            ip = ip_network(f'{mo.group("ip")}/{mask}')
+        except ValueError:
+            continue
+        if not ip.is_loopback:
+            if label:
+                lmo = labelre.match(line)
+                if not lmo:
+                    continue
+                if label_exact_match:
+                    if lmo.groupdict().get('label', '') == label:
+                        addresses.append(ip)
+                elif lmo.groupdict().get('label', '').startswith(label):
+                    addresses.append(ip)
+            elif not label_only or label is None:
+                addresses.append(ip)
+
+    logger.debug(f'System addresses ({ifnames}) detected: {addresses}')
+    return addresses
+
+
+def ip_ifname(ip, ip_ifnames):
+    ifname = ip_ifnames.get(ip)
+    if not ifname:
+        ifname = 'lo0'
+        if sys.platform.startswith('linux'):
+            ifname = 'lo'
+    return ifname
+
+
+def setup_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
+    """Setup missing IP on loopback or physical interface"""
+
+    existing = set(system_ips(ip_ifnames, label, False, label_exact_match))
+    toadd = set([ip_network(ip) for net in ips for ip in net]) - existing
+    for ip in toadd:
+        ifname = ip_ifname(ip, ip_ifnames)
+        logger.debug('Setup %s IP address %s', ifname, ip)
+        with open(os.devnull, 'w') as fnull:
+            cmd = ['ip', 'address', 'add', str(ip), 'dev', ifname]
+            if sudo:
+                cmd.insert(0, 'sudo')
+            if label:
+                cmd += ['label', f'{ifname}:{label}']
+            try:
+                subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
+            except subprocess.CalledProcessError as e:
+                # the IP address is already setup, ignoring
+                if cmd[0] == 'ip' and cmd[2] == 'add' and e.returncode == IP_CMD_ADD_ERROR_CODE:
+                    continue
+                raise e
+
+
+def remove_ips(ips, ip_ifnames, label, label_exact_match, sudo=False):
+    """Remove added IP on loopback or physical interface"""
+    existing = set(system_ips(ip_ifnames, label, True, label_exact_match))
+
+    # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
+    toremove = set([ip_network(ip) for net in ips for ip in net]) & existing
+    for ip in toremove:
+        ifname = ip_ifname(ip, ip_ifnames)
+        logger.debug('Remove %s IP address %s', ifname, ip)
+        with open(os.devnull, 'w') as fnull:
+            cmd = ['ip', 'address', 'delete', str(ip), 'dev', ifname]
+            if sudo:
+                cmd.insert(0, 'sudo')
+            if label:
+                cmd += ['label', f'{ifname}:{label}']
+            try:
+                subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
+            except subprocess.CalledProcessError:
+                logger.warning(
+                    'Unable to remove %s IP address %s - is \
+                    healthcheck running as root?',
+                    ifname,
+                    str(ip),
+                )
+
+
+def drop_privileges(user, group):
+    """Drop privileges to specified user and group"""
+    if group is not None:
+        import grp
+
+        gid = grp.getgrnam(group).gr_gid
+        logger.debug(f'Dropping privileges to group {group}/{gid}')
+        try:
+            os.setresgid(gid, gid, gid)
+        except AttributeError:
+            os.setregid(gid, gid)
+    if user is not None:
+        import pwd
+
+        uid = pwd.getpwnam(user).pw_uid
+        logger.debug(f'Dropping privileges to user {user}/{uid}')
+        try:
+            os.setresuid(uid, uid, uid)
+        except AttributeError:
+            os.setreuid(uid, uid)
+
+
+def check(cmd, timeout):
+    """Check the return code of the given command.
+
+    :param cmd: command to execute. If :keyword:`None`, no command is executed.
+    :param timeout: how much time we should wait for command completion.
+    :return: :keyword:`True` if the command was successful or
+             :keyword:`False` if not or if the timeout was triggered.
+    """
+    if cmd is None:
+        return True
+
+    class Alarm(Exception):
+        """Exception to signal an alarm condition."""
+
+    def alarm_handler(number, frame):  # pylint: disable=W0613
+        """Handle SIGALRM signal."""
+        raise Alarm
+
+    logger.debug('Checking command %s', repr(cmd))
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
+    if timeout:
+        signal.signal(signal.SIGALRM, alarm_handler)
+        signal.alarm(timeout)
+    try:
+        stdout = None
+        stdout, _ = p.communicate()
+        if timeout:
+            signal.alarm(0)
+        if p.returncode != 0:
+            logger.warning('Check command was unsuccessful: %s', p.returncode)
+            if stdout.strip():
+                logger.info('Output of check command: %s', stdout)
+            return False
+        logger.debug('Command was executed successfully %s %s', p.returncode, stdout)
+        return True
+    except Alarm:
+        logger.warning('Timeout (%s) while running check command %s', timeout, cmd)
+        os.killpg(p.pid, signal.SIGKILL)
+        return False
+
+
+def loop(options):
+    """Main loop."""
+    states = enum(
+        'INIT',  # Initial state
+        'DISABLED',  # Disabled state
+        'RISING',  # Checks are currently succeeding.
+        'FALLING',  # Checks are currently failing.
+        'UP',  # Service is considered as up.
+        'DOWN',  # Service is considered as down.
+        'EXIT',  # Exit state
+        'END',  # End state, exiting but without removing setup ips and/or announced routes
+    )
+
+    def exabgp(target):
+        """Communicate new state to ExaBGP"""
+        if target not in (states.UP, states.DOWN, states.DISABLED, states.EXIT, states.END):
+            return
+        if target in (states.END,):
+            return
+        # if ips was deleted with dyn ip, re-setup them
+        if target == states.UP and options.ip_dynamic:
+            logger.info('service up, restoring loopback and ip-ifname ips')
+            setup_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+
+        logger.info(f'send announces for {target} state to ExaBGP')
+        metric = vars(options).get(f'{str(target).lower()}_metric', 0)
+        as_path = vars(options).get(f'{str(target).lower()}_as_path', None)
+        if as_path is None:
+            as_path = options.as_path
+        if options.neighbors and not any(n == '*' for n in options.neighbors):
+            prefix = ', '.join(f'neighbor {neighbor}' for neighbor in options.neighbors)
+        else:
+            prefix = 'neighbor *'
+        for ip in options.ips:
+            if options.withdraw_on_down or target is states.EXIT:
+                action = 'announce' if target is states.UP else 'withdraw'
+            else:
+                action = 'announce'
+            command = f'{prefix} {action}'
+            announce = f'route {ip} next-hop {options.next_hop or "self"}'
+
+            if action == 'announce':
+                announce = f'{announce} med {metric}'
+                if options.local_preference >= 0:
+                    announce = f'{announce} local-preference {options.local_preference}'
+                if options.community or options.disabled_community:
+                    community = options.community
+                    if target in (states.DOWN, states.DISABLED):
+                        if options.disabled_community:
+                            community = options.disabled_community
+                    if community:
+                        announce = f'{announce} community [ {community} ]'
+                if options.extended_community:
+                    announce = f'{announce} extended-community [ {options.extended_community} ]'
+                if options.large_community:
+                    announce = f'{announce} large-community [ {options.large_community} ]'
+                if as_path:
+                    announce = f'{announce} as-path [ {as_path} ]'
+
+            # append path ID if required
+            if options.path_id:
+                announce = f'{announce} path-information {options.path_id}'
+
+            metric += options.increase
+
+            # Send and flush command
+            logger.debug(f'exabgp: {command} {announce}')
+            sys.stdout.write(f'{command} {announce}\n')
+            sys.stdout.flush()
+
+            # Wait for confirmation from ExaBGP if expected
+            if options.no_ack:
+                continue
+            # if the program is not ran manually, do not read the input
+            if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
+                continue
+            sys.stdin.readline()
+
+        # dynamic ip management. When the service fail, remove the setup ips
+        if target in (states.EXIT,) and (options.ip_dynamic or options.ip_setup):
+            logger.info('exiting, deleting setup ips')
+            remove_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+        # dynamic ip management. When the service fail, remove the setup ips
+        if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
+            logger.info('service down, deleting setup ips')
+            remove_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+
+    def trigger(target):
+        """Trigger a state change and execute the appropriate commands"""
+        # Shortcut for RISING->UP and FALLING->UP
+        if target == states.RISING and options.rise <= 1:
+            target = states.UP
+        elif target == states.FALLING and options.fall <= 1:
+            target = states.DOWN
+
+        # Log and execute commands
+        logger.debug(f'Transition to {target}')
+        cmds = []
+        cmds.extend(vars(options).get(f'{str(target).lower()}_execute', []) or [])
+        cmds.extend(vars(options).get('execute', []) or [])
+        for cmd in cmds:
+            logger.debug(f'Transition to {target}, execute `{cmd}`')
+            env = os.environ.copy()
+            env.update({'STATE': str(target)})
+            with open(os.devnull, 'w') as fnull:
+                subprocess.call(cmd, shell=True, stdout=fnull, stderr=fnull, env=env)
+
+        return target
+
+    def one(checks, state):
+        """Execute one loop iteration."""
+        disabled = options.disable is not None and os.path.exists(options.disable)
+        successful = disabled or check(options.command, options.timeout)
+        state_before_iteration = state
+        # FSM
+        if state != states.DISABLED and disabled:
+            state = trigger(states.DISABLED)
+        elif state == states.INIT:
+            if successful and options.rise <= 1:
+                state = trigger(states.UP)
+            elif successful:
+                state = trigger(states.RISING)
+                checks = 1
+            else:
+                state = trigger(states.FALLING)
+                checks = 1
+        elif state == states.DISABLED:
+            if not disabled:
+                state = trigger(states.INIT)
+        elif state == states.RISING:
+            if successful:
+                checks += 1
+                if checks >= options.rise:
+                    state = trigger(states.UP)
+            else:
+                state = trigger(states.FALLING)
+                checks = 1
+        elif state == states.FALLING:
+            if not successful:
+                checks += 1
+                if checks >= options.fall:
+                    state = trigger(states.DOWN)
+            else:
+                state = trigger(states.RISING)
+                checks = 1
+        elif state == states.UP:
+            if not successful:
+                state = trigger(states.FALLING)
+                checks = 1
+        elif state == states.DOWN:
+            if successful:
+                state = trigger(states.RISING)
+                checks = 1
+        else:
+            raise ValueError(f'Unhandled state: {state}')
+
+        # Send announces. We announce them on a regular basis (unless --debounce flag is set),
+        # in case we lose connection with a peer and the adj-rib-out is disabled.
+        if not options.debounce or state != state_before_iteration:
+            exabgp(state)
+
+        return checks, state
+
+    checks = 0
+    state = states.INIT
+
+    # Do cleanups on SIGTERM
+    def sigterm_handler(signum, frame):  # pylint: disable=W0612,W0613
+        exabgp(states.EXIT)
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
+    while True:
+        checks, state = one(checks, state)
+
+        try:
+            # How much we should sleep?
+            if state in (states.FALLING, states.RISING):
+                time.sleep(options.fast)
+            elif options.interval == 0:
+                logger.info('interval set to zero, exiting after the announcement')
+                exabgp(states.END)
+                break
+            else:
+                time.sleep(options.interval)
+        except KeyboardInterrupt:
+            exabgp(states.EXIT)
+            break
+
+
+def cmdline(cmdarg):
+    sys.argv = [f'{sys.argv[0]} {sys.argv[1]}'] + sys.argv[2:]
+    main()
+
+
+def main():
+    """Entry point."""
+    options = parse()
+    setup_logging(options.debug, options.silent, options.name, options.syslog_facility, not options.no_syslog)
+    if options.pid:
+        options.pid.write(f'{os.getpid()}\n')
+        options.pid.close()
+    try:
+        # Setup IP to use
+        options.ips = options.ips or system_ips(None, options.label, False, options.label_exact_match)
+        if not options.ips:
+            logger.error('No IP found')
+            sys.exit(1)
+        if options.ip_setup:
+            setup_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+        drop_privileges(options.user, options.group)
+
+        # Parse defined networks into a list of IPs for advertisement
+        if options.deaggregate_networks:
+            options.ips = [ip_network(ip) for net in options.ips for ip in net]
+
+        options.ips = collections.deque(options.ips)
+        options.ips.rotate(-options.start_ip)
+        options.ips = list(options.ips)
+        # Main loop
+        loop(options)
+    except Exception as e:  # pylint: disable=W0703
+        logger.exception(f'Uncaught exception: {e}')
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,112 @@
+[project]
+name = 'exabgp'
+version = '5.0.6'
+description = 'BGP swiss army knife'
+authors = [
+	{ name = "Thomas Mangin", email = "thomas.mangin@exa-networks.co.uk" },
+]
+dynamic = ['license']
+requires-python = ">=3.8.1,<3.14"
+keywords = [
+	'bgp',
+	'ddos-protection',
+	'health-check',
+	'flowspec',
+	'bgp-ls',
+	'mpls',
+	'vpls',
+]
+classifiers = [
+	'Development Status :: 5 - Production/Stable',
+	'Environment :: Console',
+	'Intended Audience :: System Administrators',
+	'Intended Audience :: Telecommunications Industry',
+	'Operating System :: POSIX',
+	'Operating System :: MacOS :: MacOS X',
+	'Programming Language :: Python',
+	'Programming Language :: Python :: 3.7',
+	'Topic :: Internet',
+]
+readme = 'README.md'
+dependencies = []
+
+
+[project.urls]
+Repository = 'https://github.com/exa-networks/exabgp'
+Homepage = 'https://github.com/exa-networks/exabgp'
+Documentation = 'https://github.com/Exa-Networks/exabgp/wiki'
+Issues = "https://github.com/exa-networks/exabgp/issues"
+
+
+[project.scripts]
+exabgp = 'exabgp.application.main:main'
+exabgp-cli = 'exabgp.application.cli:main'
+exabgp-healthcheck = 'exabgp.application.healthcheck:main'
+
+
+[tool.uv]
+environments = ["sys_platform == 'darwin'", "sys_platform == 'linux'"]
+dev-dependencies = [
+	"ruff",
+	"pytest",
+	"pytest-asyncio",
+	"pytest-cov",
+	"coveralls",
+	"psutil",
+	"hypothesis>=6.0",
+	"pytest-benchmark>=4.0",
+	"pytest-xdist>=3.0",
+	"pytest-timeout>=2.0",
+]
+
+
+[build-system]
+requires = ["setuptools", "wheel"]
+# include = ["*.txt", "*.rst"]
+
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+markers = [
+	"fuzz: Fuzzing tests using Hypothesis (deselect with '-m \"not fuzz\"')",
+	"asyncio: Async tests using pytest-asyncio",
+]
+
+[tool.ruff]
+line-length = 120
+exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages", "src/exabgp/vendoring", ".claude/worktrees"]
+
+[tool.ruff.lint]
+# Select same critical error codes as flake8 configuration:
+# E9: Runtime/syntax errors
+# F63: Invalid print statements
+# F7: Syntax errors in docstrings and type comments
+# F82: Undefined names in __all__
+# select = ["E9", "F63", "F7", "F82"]
+
+# Ignore specific rules:
+# ERA001: Commented-out code (intentional in this codebase)
+ignore = ["ERA001"]
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+docstring-quotes = "double"
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+
+
+# E131 continuation line unaligned for hanging indent
+# E203 whitespace before ':'
+# E222 multiple spaces after operator
+# E231 missing whitespace after ','
+# E241 multiple spaces after ':'
+# E266
+# E501 line too long
+# W191
+# W503
+# F401 imported but unused
+# F403
+# the last , is required otherwise the last error ignore is not applied

@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+
+"""
+Author: Nick Russo (njrusmc@gmail.com)
+Purpose: Simple REST API front-end for exabgp that exposes
+endpoints relevant to the BGP Traffic Server (BTS) solution
+developed by the author.
+"""
+
+import os
+
+import typing
+import pydantic
+
+import time
+import hashlib
+import ipaddress
+import itertools
+
+import uvicorn
+import fastapi
+
+MAX_32 = pow(2,32)-1
+
+read = None
+send = None
+
+APP_HOST = "127.0.0.1"
+APP_PORT = 8000
+
+app = fastapi.FastAPI()
+
+# A better API would have a real database; use a dict for now.
+# The keys are hashes and the values are Route objects
+route_db = {}
+
+
+class Attributes(pydantic.BaseModel):
+    nexthop: pydantic.IPvAnyAddress
+    neighbor: typing.Optional[pydantic.IPvAnyAddress] = None
+    originator: typing.Optional[ipaddress.IPv4Address] = None
+    aspath: typing.Optional[str] = None
+    community: typing.Optional[str] = None
+    pathid: int = pydantic.Field(ge=0, le=MAX_32, default_factory=itertools.count().__next__)
+
+class Route(Attributes):
+    prefix: pydantic.IPvAnyNetwork
+
+class Routes(pydantic.BaseModel):
+    prefixes: List[pydantic.IPvAnyNetwork]
+
+
+def _send_command(command):
+    command = cmd_str.strip()
+
+    with open(PIPE_READ, 'w', encoding='utf-8') as pipe:
+        pipe.write(f"{command}\n")
+        pipe.flush()
+
+    with open(PIPE_WRITE, 'r', encoding='utf-8') as pipe:
+        response = pipe.read()
+
+        # Some commands generate many lines of output; introduce a short wait
+        # Keep looping until we see "done" or "error" in the response text
+        while not ("done" in response or "error" in response):
+            time.sleep(0.3)
+            response += pipe.read()
+
+    # The last line of the response has a status code; all other lines are data
+    lines = response.strip().split("\n")
+    return {
+          "command": command,
+         "status": lines[-1],
+          "response": lines[:-1],
+     }
+
+
+# add = List[pydantic.IPvAnyNetwork]
+# not fixing names ...
+def send_routes(routes: List[Route]):
+    """
+    Announces (advertises) a new route into the BGP network. Must include
+    "prefix" and "nexthop" fields in the JSON body. Optionally includes
+    the "neighbor" field for a targeted announcement. Optionally includes
+    the "pathid" field if BGP additional-paths has been negotiated.
+    """
+
+    route = Route()
+    route.nexthop = routes.nexthop
+    route.neighbor = routes.neighbor
+    route.pathid = routes.pathid
+    route.community = routes.community
+    route.aspath = routes.aspath
+    route.originator = routes.originator
+
+    # Collect the individual fields from the body (prefix/nexthop required)
+    nexthop = routes.nexthop
+    neighbor = routes.neighbor
+    pathid = ipaddress.IPv4Address(route.pathid)
+    community = routes.community
+    aspath = route.aspath
+    originator = route.originator
+
+    add = List[pydantic.IPvAnyNetwork]
+
+    for prefix in routes.prefixes:
+        # Create new hash based on route values
+        route.prefix = prefix
+        route_str = ",".join([str(v) for v in route_dict.values()])
+        route_hash = hashlib.sha256(route_str.encode()).hexdigest()
+
+        # or ignore it ...
+        # If hash already exists, return a Conflict error
+        if route_hash in route_db:
+            raise fastapi.HTTPException(status_code=409, detail=f"Duplicate {route_hash}")
+
+    # Hash is new; assemble the path ID, neighbor, and command strings
+    path_str = f"path-information {pathid} " if pathid else ""
+    nbr_str = f"neighbor {neighbor} " if neighbor else ""
+
+    community_str = f" community [ {community} ]" if community else ""
+    aspath_str = f" as-path [ {aspath} ]" if aspath else ""
+    originator_str = f" originator-id {originator}" if originator else ""
+
+    prefixes = " ".join(routes.prefixes)
+    command = f"{nbr_str}announce attribute {path_str}next-hop {nexthop}{community_str}{aspath_str}{originator_str} nlri {prefixes}"
+
+    # Issue the command and raise Bad Request error if it fails
+    response = _send_command(command)
+    if response["status"].lower() != "done":
+       raise fastapi.HTTPException(status_code=400, detail=response)
+
+    entries = []
+
+    for prefix in routes.prefixes:
+        route.prefix = prefix
+        # Create new hash based on route values
+        route.prefix = prefix
+     
+        route_dict = route.dict()
+        route_str = ",".join([str(v) for v in route_dict.values()])
+        route_hash = hashlib.sha256(route_str.encode()).hexdigest()
+     
+        # Announcement succeeded; add route to database and return it
+        route_entry = {route_hash: route_dict}
+        route_db.update(route_entry)
+          
+        entries.append({route_hash: copy.copy(route_dict)})
+     
+    return route_entry
+
+@app.get("/version")
+def version():
+    """
+    Returns the FastAPI and exabgp versions in a two-key dictionary.
+    This is useful for ensuring the API and underlying BGP engine are working.
+    """
+
+    response = _send_command("version")
+    exabgp_ver = response["response"][0].split(" ")[-1].strip()
+    return {"fastapi_version": fastapi.__version__, "exabgp_version": exabgp_ver}
+
+
+@app.get("/routes")
+def get_routes():
+    """
+    Returns all routes in the database by simplying returning the
+    database itself. An empty dictionary indicates that no routes
+    have been announced (advertised).
+    """
+    return route_db
+
+
+@app.get("/routes/{route_hash}")
+def get_specific_route(route_hash: str):
+    """
+    Returns an existing route from BGP without any changes. Must include
+    the route hash appended to the path URL to target a specific route to
+    delete. If the hash is not found, a 404 error is returned.
+    """
+
+    # If the hash is in the database, return the specified route
+    if route_hash in route_db:
+        specific_route = route_db[route_hash]
+        return specific_route
+
+    # Hash not present in database; return Not Found error
+    raise fastapi.HTTPException(status_code=404, detail=f"{route_hash} not found")
+
+
+@app.post("/routes", status_code=201)
+def announce_route(routes: Routes):
+    """
+    Announces (advertises) a new route into the BGP network. Must include
+    "prefix" and "nexthop" fields in the JSON body. Optionally includes
+    the "neighbor" field for a targeted announcement. Optionally includes
+    the "pathid" field if BGP additional-paths has been negotiated.
+    """
+    send_routes(routes)
+    
+    
+    # Collect the individual fields from the body (prefix/nexthop required)
+    prefix = route.prefix
+    nexthop = route.nexthop
+    neighbor = route.neighbor
+    pathid = ipaddress.IPv4Address(route.pathid)
+    community = route.community.replace("NO_EXPORT", "NO-EXPORT")
+    aspath = route.aspath
+    originator = route.originator
+
+    # Create new hash based on route values
+    route_dict = route.dict()
+    route_str = ",".join([str(v) for v in route_dict.values()])
+    route_hash = hashlib.sha256(route_str.encode()).hexdigest()
+
+    # If hash already exists, return a Conflict error
+    if route_hash in route_db:
+        raise fastapi.HTTPException(status_code=409, detail=f"Duplicate {route_hash}")
+
+    # Hash is new; assemble the path ID, neighbor, and command strings
+    path_str = f"path-information {pathid} " if pathid else ""
+    nbr_str = f"neighbor {neighbor} " if neighbor else ""
+
+    community_str = f" community [ {community} ]" if community else ""
+    aspath_str = f" as-path [ {aspath} ]" if aspath else ""
+    originator_str = f" originator-id {originator}" if originator else ""
+
+    cmd_str = f"{nbr_str}announce route {prefix} {path_str}next-hop {nexthop}{community_str}{aspath_str}{originator_str}"
+
+    # Issue the command and raise Bad Request error if it fails
+    response = _send_command(cmd_str)
+    if response["status"].lower() != "done":
+        raise fastapi.HTTPException(status_code=400, detail=response)
+
+    # Announcement succeeded; add route to database and return it
+    route_entry = {route_hash: route_dict}
+    route_db.update(route_entry)
+    return route_entry
+
+
+@app.delete("/routes/{route_hash}")
+def withdraw_route(route_hash: str):
+    """
+    Withdraws (un-advertises) an existing route from BGP. Must include
+    the route hash appended to the path URL to target a specific route to
+    delete. If the hash is not found, a 404 error is returned.
+    """
+
+    # If the hash is not in the database, return Not Found error
+    if not route_hash in route_db:
+        raise fastapi.HTTPException(status_code=404, detail=f"{route_hash} not found")
+
+    # Hash is present in database, collect route information
+    route_entry = route_db[route_hash]
+
+    # Collect the individual fields from the body (prefix required)
+    prefix = route_entry["prefix"]
+    neighbor = route_entry["neighbor"]
+    pathid = ipaddress.IPv4Address(route_entry["pathid"])
+
+    # Assemble the neighbor and command strings
+    path_str = f"path-information {pathid}" if pathid else ""
+    nbr_str = f"neighbor {neighbor} " if neighbor else ""
+    cmd_str = f"{nbr_str}withdraw route {prefix} {path_str}"
+
+    # Issue the command and raise Bad Request error if it fails
+    response = _send_command(cmd_str)
+    if response["status"].lower() != "done":
+        raise fastapi.HTTPException(status_code=400, detail=response)
+
+    # Withdrawal succeeded; remove route from database and return it
+    return route_db.pop(route_hash)
+
+@app.post("/reset")
+def withdraw_all_routes():
+    """
+    Withdraws (un-advertises) ALL existing routes from BGP.
+    """
+
+    # Clear dictionary
+    route_db.clear()
+    
+    # Issue the command and raise Bad Request error if it fails
+    response = _send_command("clear adj-rib out")
+    if response["status"].lower() != "done":
+        raise fastapi.HTTPException(status_code=400, detail=response)
+
+    # Withdrawal succeeded
+    return route_db
+
+
+if __name__ == '__main__':
+
+     PIPE = "./run/control"
+     PIPE_READ = PIPE + '.in'
+     PIPE_WRITE = PIPE + '.out'
+
+     try:
+          read = os.open(PIPE_READ, os.O_RDONLY)
+          send = os.open(PIPE_WRITE, os.O_WRONLY)
+
+          uvicorn.run(app, host=APP_HOST, port=APP_PORT)
+
+     except OSError as oe:
+          print(f"Failed to open on FIFO: {oe}")
+          exit(1)
+
+     finally:
+          os.close(read)
+          os.close(write)

@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import os
+import sys
+import astunparse
+
+import pprint
+
+from exabgp.conf.yang import Parser
+from exabgp.conf.yang import Code
+
+
+class Generate:
+    intro = '# yang model structure and validation\n# autogenerate by exabgp\n\n'
+    variable = '{name} = {data}\n'
+
+    def __init__(self, fname):
+        self.fname = fname
+        self.dicts = []
+        self.codes = []
+
+    def add_dict(self, name, data):
+        self.dicts.append((name, data))
+
+    def add_code(self, block):
+        self.codes.append(block)
+
+    def _generate(self):
+        returned = self.intro
+        for name, data in self.dicts:
+            # NOTE: Do not convert to f-string! This uses a template pattern from self.variable
+            # which is defined as a class attribute and allows customization.
+            returned += self.variable.format(name=name, data=data)
+            returned += '\n'
+        for section in self.codes:
+            returned += section
+            returned += '\n'
+        return returned
+
+    def save(self):
+        sys.stdout.write(f'generating {self.fname}\n')
+        with open(self.fname, 'w') as w:
+            w.write(self._generate())
+
+    def output(self):
+        for name, data in self.dicts:
+            pprint.pprint(name)
+            pprint.pprint(data)
+        for section in self.codes:
+            sys.stdout.write(f'{section}\n')
+
+
+def main():
+    folder = os.path.abspath(os.path.dirname(__file__))
+    data = os.path.join(folder, '..', '..', '..', '..', 'data')
+    os.chdir(os.path.abspath(data))
+
+    library = 'yang-library-data.json'
+    module = 'exabgp'
+    models = 'models'
+    fname = 'cache.py'
+
+    gen = Generate(fname)
+
+    tree = Parser(library, models, module).parse()
+
+    gen.add_dict('model', tree)
+
+    code = Code(tree)
+    ast = code.generate(module)
+    block = astunparse.unparse(ast)
+    gen.add_code(block)
+
+    os.chdir(folder)
+    # gen.output()
+    gen.save()
+
+
+if __name__ == '__main__':
+    main()

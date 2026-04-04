@@ -1,0 +1,192 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 1234567..abcdefg 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,5 +1,15 @@
+ [build-system]
+ requires = ["setuptools", "wheel"]
+ 
++[tool.mypy]
++python_version = "3.8"
++strict = true
++ignore_missing_imports = true
++exclude = [
++    "src/exabgp/vendoring/",
++    "src/exabgp/conf/yang/"
++]
++
+ [project]
+ name = "exabgp"
+ dynamic = ["version"]
+diff --git a/src/exabgp/types.py b/src/exabgp/types.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/src/exabgp/types.py
+@@ -0,0 +1,29 @@
++"""Common type definitions for ExaBGP."""
++from __future__ import annotations
++
++from typing import Union, Optional, Dict, List, Any, Protocol, TypeVar
++from ipaddress import IPv4Address, IPv6Address
++
++# Type aliases for common ExaBGP types
++IPAddress = Union[IPv4Address, IPv6Address]
++BGPMessage = Dict[str, Any]
++ConfigDict = Dict[str, Any]
++T = TypeVar('T')
++
++class BGPCapable(Protocol):
++    """Protocol for objects that can be packed/unpacked as BGP messages."""
++    
++    def pack(self) -> bytes:
++        """Pack the object into BGP wire format."""
++        ...
++    
++    def unpack(self, data: bytes) -> BGPCapable:
++        """Unpack BGP wire format into object."""
++        ...
++
++class Neighbor(Protocol):
++    """Protocol for BGP neighbor objects."""
++    
++    peer_address: str
++    local_as: int
++    peer_as: int
+diff --git a/src/exabgp/bgp/message/message.py b/src/exabgp/bgp/message/message.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/bgp/message/message.py
++++ b/src/exabgp/bgp/message/message.py
+@@ -8,6 +8,10 @@
+ """
+ 
+ from struct import pack, unpack
++from typing import Optional, Union, Dict, Any, ClassVar
++from exabgp.types import BGPMessage
++
++from __future__ import annotations
+ 
+ from exabgp.bgp.message.direction import Direction
+ from exabgp.bgp.message.action import Action
+@@ -18,14 +22,16 @@ from exabgp.util.od import od
+ class Message:
+     # Header of a BGP message
+     MARKER = b'\xff' * 16
+-    HEADER_LEN = 19
++    HEADER_LEN: ClassVar[int] = 19
+ 
+-    def __init__(self, msgid, action=Action.ANNOUNCE, direction=Direction.OUT):
+-        self.ID = msgid
+-        self.action = action
+-        self.direction = direction
++    def __init__(self, msgid: int, action: Action = Action.ANNOUNCE, 
++                 direction: Direction = Direction.OUT) -> None:
++        self.ID: int = msgid
++        self.action: Action = action
++        self.direction: Direction = direction
+ 
+-    def pack(self):
++    def pack(self) -> bytes:
++        """Pack the message into BGP wire format."""
+         length = pack('!H', self.HEADER_LEN)
+         return self.MARKER + length + pack('!B', self.ID)
+ 
+@@ -34,7 +40,8 @@ class Message:
+         return body
+ 
+     @classmethod
+-    def unpack(cls, data):
++    def unpack(cls, data: bytes) -> Optional[Message]:
++        """Unpack BGP wire format into Message object."""
+         if len(data) < cls.HEADER_LEN:
+             return None
+         
+diff --git a/src/exabgp/util/ip.py b/src/exabgp/util/ip.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/util/ip.py
++++ b/src/exabgp/util/ip.py
+@@ -8,15 +8,18 @@
+ """
+ 
+ import socket
++from ipaddress import IPv4Address, IPv6Address, AddressValueError
++from typing import Union, Optional
+ 
+-def isipv4(address):
++def isipv4(address: str) -> bool:
++    """Check if address is a valid IPv4 address."""
+     try:
+-        socket.inet_aton(address)
++        IPv4Address(address)
+         return True
+-    except socket.error:
++    except AddressValueError:
+         return False
+ 
+-def isipv6(address):
++def isipv6(address: str) -> bool:
++    """Check if address is a valid IPv6 address."""
+     try:
+-        socket.inet_pton(socket.AF_INET6, address)
++        IPv6Address(address)
+         return True
+-    except socket.error:
++    except AddressValueError:
+         return False
+diff --git a/src/exabgp/bgp/neighbor.py b/src/exabgp/bgp/neighbor.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/bgp/neighbor.py
++++ b/src/exabgp/bgp/neighbor.py
+@@ -8,12 +8,19 @@
+ """
+ 
+ import time
++from typing import Optional, Dict, Any, List
++from ipaddress import IPv4Address, IPv6Address
++from exabgp.types import IPAddress
+ 
+ class Neighbor:
+-    def __init__(self, peer_address, local_as, peer_as):
+-        self.peer_address = peer_address
+-        self.local_as = local_as
+-        self.peer_as = peer_as
+-        self.state = 'idle'
++    """BGP neighbor configuration and state management."""
++    
++    def __init__(self, peer_address: str, local_as: int, peer_as: int) -> None:
++        self.peer_address: str = peer_address
++        self.local_as: int = local_as
++        self.peer_as: int = peer_as
++        self.state: str = 'idle'
++        self.capabilities: Dict[str, Any] = {}
++        self.timers: Dict[str, float] = {}
+ 
+-    def __str__(self):
++    def __str__(self) -> str:
+         return f"Neighbor {self.peer_address} (AS{self.peer_as})"
+diff --git a/src/exabgp/configuration/configuration.py b/src/exabgp/configuration/configuration.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/configuration/configuration.py
++++ b/src/exabgp/configuration/configuration.py
+@@ -8,6 +8,9 @@
+ """
+ 
+ import os
++from typing import List, Dict, Any, Optional
++from pathlib import Path
++from exabgp.types import ConfigDict
+ 
+ from exabgp.configuration.core.error import Error
+ from exabgp.configuration.core.format import formated
+@@ -15,8 +18,9 @@ from exabgp.configuration.core.format import formated
+ 
+ class Configuration:
+ 
+-    def __init__(self, configurations):
+-        self.configurations = configurations
++    def __init__(self, configurations: List[str]) -> None:
++        self.configurations: List[str] = configurations
++        self.config_data: ConfigDict = {}
+ 
+     def reload(self):
+         pass

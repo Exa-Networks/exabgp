@@ -1,0 +1,105 @@
+[project]
+name = 'exabgp'
+version = '5.0.0'
+description = 'BGP swiss army knife'
+authors = [
+	{ name = "Thomas Mangin", email = "thomas.mangin@exa-networks.co.uk" },
+]
+dynamic = ['license']
+requires-python = ">=3.8.1,<=3.13"
+keywords = [
+	'bgp',
+	'ddos-protection',
+	'health-check',
+	'flowspec',
+	'bgp-ls',
+	'mpls',
+	'vpls',
+]
+classifiers = [
+	'Development Status :: 5 - Production/Stable',
+	'Environment :: Console',
+	'Intended Audience :: System Administrators',
+	'Intended Audience :: Telecommunications Industry',
+	'Operating System :: POSIX',
+	'Operating System :: MacOS :: MacOS X',
+	'Programming Language :: Python',
+	'Programming Language :: Python :: 3.7',
+	'Topic :: Internet',
+]
+readme = 'README.md'
+dependencies = []
+
+
+[project.urls]
+Repository = 'https://github.com/exa-networks/exabgp'
+Homepage = 'https://github.com/exa-networks/exabgp'
+Documentation = 'https://github.com/Exa-Networks/exabgp/wiki'
+Issues = "https://github.com/exa-networks/exabgp/issues"
+
+
+[project.scripts]
+exabgp = 'exabgp.application.main:main'
+exabgp-cli = 'exabgp.application.cli:main'
+exabgp-healthcheck = 'exabgp.application.healthcheck:main'
+
+
+[tool.uv]
+environments = ["sys_platform == 'darwin'", "sys_platform == 'linux'"]
+dev-dependencies = [
+	"ruff",
+	"pytest",
+	"pytest-cov",
+	"coveralls",
+	"psutil",
+]
+
+
+[build-system]
+requires = ["setuptools", "wheel"]
+# include = ["*.txt", "*.rst"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--strict-markers --strict-config"
+markers = [
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "slow: marks tests as slow running",
+]
+
+[tool.mypy]
+python_version = "3.8"
+strict = true
+ignore_missing_imports = true
+exclude = [
+    "src/exabgp/vendoring/",
+    "src/exabgp/conf/yang/"
+]
+
+[tool.ruff]
+line-length = 120
+exclude = ["dev", "lib/exabgp/vendoring"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+
+
+# E131 continuation line unaligned for hanging indent
+# E203 whitespace before ':'
+# E222 multiple spaces after operator
+# E231 missing whitespace after ','
+# E241 multiple spaces after ':'
+# E266
+# E501 line too long
+# W191
+# W503
+# F401 imported but unused
+# F403
+# the last , is required otherwise the last error ignore is not applied

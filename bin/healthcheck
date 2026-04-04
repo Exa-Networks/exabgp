@@ -2,19 +2,24 @@
 
 path="$(cd "$(dirname "$0")"/.. ; pwd)"
 
-export PYTHONPATH="$path"/lib:/usr/share/exabgp/lib/3.4.4
+export PYTHONPATH="$path"/src
 
-for INTERPRETER in "$INTERPRETER" pypy python2.7 python2.6 python2 python; do
-	INTERPRETER="$(command -v "$INTERPRETER")" && break
+for INTERPRETER in "$INTERPRETER" python3 pypy3; do
+    INTERPRETER="$(command -v "$INTERPRETER")" && break
 done
+
+if [ "$INTERPRETER" = "" ]; then
+    echo "ExaBGP could not find a python3 interpreter"
+    exit 1
+fi
 
 APPLICATION="$("$INTERPRETER" -c "
 import sys
 import os
 
-print [os.path.join(_, 'exabgp', 'application', 'healthcheck.py')
+print([os.path.join(_, 'exabgp', 'application', 'healthcheck.py')
        for _ in sys.path
        if os.path.isfile('/'.join((_, 'exabgp', 'application', 'healthcheck.py')))][0]
-")"
+)")"
 
-exec "$INTERPRETER" "$APPLICATION" "$@"
+exec env "$INTERPRETER" "$APPLICATION" "$@"

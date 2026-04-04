@@ -1,6 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-from __future__ import print_function
 import sys
 import time
 import random
@@ -13,7 +12,7 @@ def write(data):
 
 def main():
     if len(sys.argv) < 2:
-        print("%s <number of routes> <updates per second thereafter>")
+        sys.stdout.write('%s <number of routes> <updates per second thereafter>\n')
         sys.exit(1)
 
     initial = sys.argv[1]
@@ -37,18 +36,18 @@ def main():
         for _ in range(200)
     ]
 
-    for ip1 in range(0, range1):
-        for ip2 in range(0, 256):
-            for ip3 in range(0, 256):
+    for ip1 in range(range1):
+        for ip2 in range(256):
+            for ip3 in range(256):
                 generated = '%d.%d.%d.%d' % (random.randint(1, 200), ip1, ip2, ip3)
                 ip[generated] = random.choice(nexthop)
 
-    for ip2 in range(0, range2):
-        for ip3 in range(0, 256):
+    for ip2 in range(range2):
+        for ip3 in range(256):
             generated = '%d.%d.%d.%d' % (random.randint(1, 200), range1, ip2, ip3)
             ip[generated] = random.choice(nexthop)
 
-    for ip3 in range(0, range3):
+    for ip3 in range(range3):
         generated = '%d.%d.%d.%d' % (random.randint(1, 200), range1, range2, ip3)
         ip[generated] = random.choice(nexthop)
 
@@ -59,7 +58,7 @@ def main():
         count += 1
         write(
             'announce route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'
-            % (k, v, len(k))
+            % (k, v, len(k)),
         )
         if count % 10000 == 0:
             sys.stderr.write('initial : announced %d\n' % count)
@@ -80,12 +79,12 @@ def main():
             count += 2
             write(
                 'withdraw route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'
-                % (k, v, len(k))
+                % (k, v, len(k)),
             )
             ip[k] = random.choice(nexthop)
             write(
                 'announce route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'
-                % (k, ip[k], len(k))
+                % (k, ip[k], len(k)),
             )
             if count % 100 == 0:
                 sys.stderr.write('updates : announced %d\n' % count)

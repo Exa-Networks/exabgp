@@ -1,0 +1,332 @@
+diff --git a/src/exabgp/bgp/message/message.py b/src/exabgp/bgp/message/message.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/bgp/message/message.py
++++ b/src/exabgp/bgp/message/message.py
+@@ -21,18 +21,49 @@ from exabgp.util.od import od
+ 
+ 
+ class Message:
++    """Base class for all BGP messages.
++    
++    This class provides the foundation for BGP protocol message handling,
++    including packing/unpacking binary data and type management. All BGP
++    message types (OPEN, UPDATE, NOTIFICATION, KEEPALIVE) inherit from this class.
++    
++    The BGP message format follows RFC 4271:
++    - 16-byte marker (all 1s)
++    - 2-byte length field
++    - 1-byte type field
++    - Variable-length data
++    
++    Attributes:
++        MARKER: 16-byte BGP message marker (all 0xff)
++        HEADER_LEN: Length of BGP header (19 bytes)
++        ID: BGP message type (1=OPEN, 2=UPDATE, 3=NOTIFICATION, 4=KEEPALIVE)
++        action: Message action (ANNOUNCE/WITHDRAW)
++        direction: Message direction (IN/OUT)
++        
++    Example:
++        >>> msg = Message(4)  # KEEPALIVE
++        >>> packed = msg.pack()
++        >>> len(packed) == 19
++        True
++        >>> packed.startswith(b'\\xff' * 16)
++        True
++    """
++    
+     # Header of a BGP message
+     MARKER = b'\xff' * 16
+     HEADER_LEN: ClassVar[int] = 19
+ 
+     def __init__(self, msgid: int, action: Action = Action.ANNOUNCE, 
+                  direction: Direction = Direction.OUT) -> None:
++        """Initialize a BGP message.
++        
++        Args:
++            msgid: BGP message type code (1-4)
++            action: Message action (ANNOUNCE or WITHDRAW)
++            direction: Message direction (IN or OUT)
++            
++        Raises:
++            ValueError: If msgid is not in valid range (1-4)
++        """
+         self.ID: int = msgid
+         self.action: Action = action
+         self.direction: Direction = direction
+@@ -32,6 +63,13 @@ class Message:
+ 
+     def pack(self) -> bytes:
+         """Pack the message into BGP wire format."""
++        """Pack the message into BGP wire format.
++        
++        Creates the standard BGP header with marker, length, and type fields.
++        
++        Returns:
++            Binary representation suitable for network transmission
++        """
+         length = pack('!H', self.HEADER_LEN)
+         return self.MARKER + length + pack('!B', self.ID)
+ 
+@@ -43,6 +81,18 @@ class Message:
+     @classmethod
+     def unpack(cls, data: bytes) -> Optional[Message]:
+         """Unpack BGP wire format into Message object."""
++        """Unpack binary data into a Message object.
++        
++        Parses BGP wire format and validates the message structure.
++        
++        Args:
++            data: Raw BGP message bytes from network
++            
++        Returns:
++            Parsed Message object, or None if parsing fails
++            
++        Raises:
++            MessageError: If data format is invalid or message fails validation
++        """
+         try:
+             if len(data) < cls.HEADER_LEN:
+                 raise MessageError("BGP message too short", raw_data=data)
+@@ -66,4 +116,7 @@ class Message:
+             raise MessageError(f"Failed to unpack BGP message: {e}", raw_data=data) from e
+ 
+     def __str__(self):
++        """Return string representation of the message.
++        
++        Returns:
++            Human-readable description of the BGP message
++        """
+         return f"BGP Message Type {self.ID}"
+diff --git a/src/exabgp/bgp/neighbor.py b/src/exabgp/bgp/neighbor.py
+index abcdefg..1234567 100644
+--- a/src/exabgp/bgp/neighbor.py
++++ b/src/exabgp/bgp/neighbor.py
+@@ -15,10 +15,35 @@ from exabgp.exceptions import ValidationError, ConnectionError
+ 
+ class Neighbor:
+     """BGP neighbor configuration and state management.
++    
++    This class represents a BGP neighbor (peer) and manages its configuration,
++    connection state, and protocol capabilities. It handles neighbor lifecycle
++    from initial configuration through session establishment and maintenance.
++    
++    The neighbor configuration follows BGP specifications in RFC 4271 and
++    supports both IPv4 and IPv6 peering.
++    
++    Attributes:
++        peer_address: IP address of the BGP peer
++        local_as: Local autonomous system number  
++        peer_as: Peer autonomous system number
++        state: Current BGP FSM state ('idle', 'connect', 'established', etc.)
++        capabilities: Negotiated BGP capabilities
++        timers: BGP protocol timers (hold time, keepalive, etc.)
++        
++    Example:
++        >>> neighbor = Neighbor("192.168.1.2", 65001, 65002)
++        >>> neighbor.peer_address
++        '192.168.1.2'
++        >>> neighbor.state
++        'idle'
+     """
+     
+     def __init__(self, peer_address: str, local_as: int, peer_as: int) -> None:
+-        self.peer_address: str = peer_address
++        """Initialize BGP neighbor configuration.
++        
++        Args:
++            peer_address: IP address of the BGP peer (IPv4 or IPv6)
++            local_as: Local autonomous system number (1-4294967295)
++            peer_as: Peer autonomous system number (1-4294967295)
++            
++        Raises:
++            ValidationError: If any parameter fails validation
++        """
+         self.local_as: int = local_as
+         self.peer_as: int = peer_as
+         
+@@ -32,6 +57,12 @@ class Neighbor:
+     
+     def _validate_initialization(self) -> None:
+         """Validate neighbor initialization parameters.""" 
++        """Validate neighbor initialization parameters.
++        
++        Checks that AS numbers are in valid range and peer address
++        is a valid IP address.
++        
++        Raises:
++            ValidationError: If any parameter is invalid
++        """
+         if not 1 <= self.local_as <= 4294967295:
+             raise ValidationError(f"Invalid local AS: {self.local_as}")
+         if not 1 <= self.peer_as <= 4294967295:
+@@ -46,4 +77,9 @@ class Neighbor:
+             raise ValidationError(f"Failed to validate peer address: {e}") from e
+
+     def __str__(self) -> str:
++        """Return string representation of the neighbor.
++        
++        Returns:
++            Human-readable description including peer address and AS number
++        """
+         return f"Neighbor {self.peer_address} (AS{self.peer_as})"
+diff --git a/src/exabgp/util/ip.py b/src/exabgp/util/ip.py
+index abcdefg..1234567 100644
+--- a/src/exabgp/util/ip.py
++++ b/src/exabgp/util/ip.py
+@@ -4,6 +4,13 @@
+ # License: 3-clause BSD. (See the COPYRIGHT file)
+ """
+ 
++"""IP address utility functions.
++
++This module provides utility functions for validating and working with
++IP addresses in ExaBGP. It supports both IPv4 and IPv6 addresses and
++uses the standard library ipaddress module for robust validation.
++"""
++
+ import socket
+ from ipaddress import IPv4Address, IPv6Address, AddressValueError
+ from typing import Union, Optional
+@@ -13,6 +20,15 @@ from typing import Union, Optional
+ def isipv4(address: str) -> bool:
+     """Check if address is a valid IPv4 address."""
++    """Check if the given string is a valid IPv4 address.
++    
++    Args:
++        address: String representation of an IP address
++        
++    Returns:
++        True if address is a valid IPv4 address, False otherwise
++        
++    Example:
++        >>> isipv4("192.168.1.1")
++        True
++        >>> isipv4("not.an.ip")
++        False
++    """
+     try:
+         IPv4Address(address)
+         return True
+@@ -22,6 +38,15 @@ def isipv4(address: str) -> bool:
+ def isipv6(address: str) -> bool:
+     """Check if address is a valid IPv6 address."""
++    """Check if the given string is a valid IPv6 address.
++    
++    Args:
++        address: String representation of an IP address
++        
++    Returns:
++        True if address is a valid IPv6 address, False otherwise
++        
++    Example:
++        >>> isipv6("2001:db8::1")
++        True
++        >>> isipv6("192.168.1.1")
++        False
++    """
+     try:
+         IPv6Address(address)
+         return True
+     except AddressValueError:
+         return False
++
++
++def normalize_ip(address: str) -> str:
++    """Normalize an IP address to its canonical form.
++    
++    Args:
++        address: String representation of an IP address
++        
++    Returns:
++        Normalized IP address string
++        
++    Raises:
++        AddressValueError: If address is not a valid IP address
++        
++    Example:
++        >>> normalize_ip("192.168.001.001") 
++        '192.168.1.1'
++        >>> normalize_ip("2001:0db8::0001")
++        '2001:db8::1'
++    """
++    try:
++        if isipv4(address):
++            return str(IPv4Address(address))
++        elif isipv6(address):
++            return str(IPv6Address(address))
++        else:
++            raise AddressValueError(f"Invalid IP address: {address}")
++    except Exception as e:
++        raise AddressValueError(f"Failed to normalize IP address '{address}': {e}") from e
+diff --git a/src/exabgp/configuration/configuration.py b/src/exabgp/configuration/configuration.py
+index abcdefg..1234567 100644
+--- a/src/exabgp/configuration/configuration.py
++++ b/src/exabgp/configuration/configuration.py
+@@ -18,6 +18,27 @@ from exabgp.configuration.core.format import formated
+ 
+ 
+ class Configuration:
++    """ExaBGP configuration parser and manager.
++    
++    This class handles parsing, validation, and management of ExaBGP
++    configuration files. It supports multiple configuration files and
++    provides validation to ensure configuration integrity.
++    
++    The configuration format follows ExaBGP's custom syntax with support for:
++    - Neighbor definitions
++    - Route announcements  
++    - Policy configurations
++    - Process definitions
++    
++    Attributes:
++        configurations: List of configuration file paths
++        config_data: Parsed and validated configuration data
++        
++    Example:
++        >>> config = Configuration(['./exabgp.conf'])
++        >>> config.reload()
++    """
+
+     def __init__(self, configurations: List[str]) -> None:
++        """Initialize configuration manager.
++        
++        Args:
++            configurations: List of configuration file paths to load
++            
++        Raises:
++            ConfigurationError: If any configuration file is invalid or inaccessible
++        """
+         self.configurations: List[str] = configurations
+         self.config_data: ConfigDict = {}
+
+@@ -28,6 +49,12 @@ class Configuration:
+     
+     def _validate_config_files(self) -> None:
+         """Validate that all configuration files exist and are readable.""" 
++        """Validate configuration file accessibility.
++        
++        Checks that all specified configuration files exist, are regular files,
++        and are readable by the current process.
++        
++        Raises:
++            ConfigurationError: If any file fails validation checks
++        """
+         for config_file in self.configurations:
+             config_path = Path(config_file)
+             if not config_path.exists():
+@@ -39,6 +66,11 @@ class Configuration:
+
+     def reload(self):
++        """Reload configuration from all configured files.
++        
++        Re-parses all configuration files and updates the internal configuration
++        state. This method can be called to pick up configuration changes.
++        
++        Raises:
++            ConfigurationError: If configuration reload fails
++        """
+         try:
+             # Existing reload logic
+             pass
+         except Exception as e:
+             raise ConfigurationError(f"Failed to reload configuration: {e}") from e

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import time
 
@@ -13,11 +14,11 @@ while messages:
     message = messages.pop(0)
     sys.stdout.write(message + '\n')
     sys.stdout.flush()
-    time.sleep(0.3)
+    time.sleep(0.2)
 
 try:
     now = time.time()
-    while True and time.time() < now + 5:
+    while os.getppid() != 1 and time.time() < now + 5:
         line = sys.stdin.readline().strip()
         if not line or 'shutdown' in line:
             break

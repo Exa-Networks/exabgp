@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import time
-import random
 
 
 def write(data):
@@ -14,21 +13,23 @@ def main():
     count = 0
 
     ip = {}
-    nexthop = "1.2.3.4"
+    nexthop = '1.2.3.4'
 
-    for ip1 in range(0, 223):
+    for ip1 in range(223):
         generated = '%d.0.0.0/8' % (ip1)
         ip[generated] = nexthop
 
-    for ip1 in range(0, 223):
-        for ip2 in range(0, 256):
+    for ip1 in range(223):
+        for ip2 in range(256):
             generated = '%d.%d.0.0/16' % (ip1, ip2)
             ip[generated] = nexthop
 
     # initial table dump
     for k, v in ip.iteritems():
         count += 1
-        write('announce route %s next-hop %s med 100 as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]' % (k, v))
+        write(
+            'announce route {} next-hop {} med 100 as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'.format(k, v)
+        )
         if count % 100 == 0:
             sys.stderr.write('initial : announced %d\n' % count)
 

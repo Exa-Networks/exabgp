@@ -1,7 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-from __future__ import print_function
-import os
 import sys
 import time
 
@@ -16,20 +14,20 @@ time.sleep(1)
 while True:
     try:
         if counter % 2:
-            print('announce route 10.0.%d.%d next-hop 1.2.3.4' % (counter >> 8, counter % 256))
+            sys.stdout.write('announce route 10.0.%d.%d next-hop 1.2.3.4\n' % (counter >> 8, counter % 256))
             sys.stdout.flush()
             time.sleep(1)
-            print('withdraw route 10.0.%d.%d next-hop 1.2.3.4' % (counter >> 8, counter % 256))
+            sys.stdout.write('withdraw route 10.0.%d.%d next-hop 1.2.3.4\n' % (counter >> 8, counter % 256))
             sys.stdout.flush()
         else:
-            print('announce route 2001:%d:: next-hop ::1' % counter)
+            sys.stdout.write('announce route 2001:%d:: next-hop ::1\n' % counter)
             sys.stdout.flush()
             time.sleep(1)
-            print('withdraw route 2001:%d:: next-hop ::1' % counter)
+            sys.stdout.write('withdraw route 2001:%d:: next-hop ::1\n' % counter)
             sys.stdout.flush()
 
         counter += 1
     except KeyboardInterrupt:
         pass
-    except IOError:
+    except OSError:
         break

@@ -1,5 +1,5 @@
-%{!?__python2:        %global __python2 /usr/bin/python2}
-%{!?python2_sitelib:  %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
+%{!?__python3:        %global __python3 /usr/bin/python3}
+%{!?python3_sitelib:  %global python3_sitelib %(%{__python3} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 %define version %(echo "$(python setup.py next).git$(git rev-parse --short HEAD)")
 
 # Warning: This .spec is meant to be used with https://github.com/iovation/git-build-rpm
@@ -22,8 +22,7 @@ BuildRequires:  sed
 BuildRequires:  git
 BuildRequires:  git-extras
 BuildRequires:  python-setuptools
-Requires:       python2 >= 2.6
-Requires:       python-ipaddr
+Requires:       python3 >= 3.7
 
 %description
 ExaBGP python module
@@ -45,10 +44,10 @@ Find what other users have done with it. Current documented use cases include DD
 %setup -q -n exabgp-%{version}
 
 %build
-%{__python2} setup.py build
+%{__python3} setup.py build
 
 %install
-%{__python2} setup.py install -O1 --root ${RPM_BUILD_ROOT}
+%{__python3} setup.py install -O1 --root ${RPM_BUILD_ROOT}
 
 # fix file locations
 install bin/healthcheck ${RPM_BUILD_ROOT}%{_bindir}
@@ -85,23 +84,24 @@ ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/ex
 
 %files
 %defattr(-,root,root,-)
-%{python2_sitelib}/*
-%doc COPYRIGHT CHANGELOG README.md
+%{python3_sitelib}/*
+%doc CHANGELOG.rst README.md
 
 %files -n exabgp
 %defattr(-,root,root,-)
 %attr(755, root, root) %{_sbindir}/exabgp
 %attr(755, root, root) %{_sbindir}/exabgpcli
+%attr(755, root, root) %{_sbindir}/exabgp-cli
 %attr(755, root, root) %{_sbindir}/exabgp-healthcheck
 %dir %{_sysconfdir}/exabgp
 %{_sysconfdir}/exabgp/exabgp.conf
 %dir %{_sysconfdir}/exabgp/examples
-%attr(744, root, root) %{_prefix}/share/exabgp/*
+%attr(744, root, root) %{_prefix}/etc/exabgp/*
 %attr(744, root, root) %{_sysconfdir}/exabgp/examples/*
 %{_unitdir}/exabgp.service
 %{_unitdir}/exabgp@.service
 %attr(644, root, root) %{_unitdir}/*
-%doc COPYRIGHT CHANGELOG README.md
+%doc CHANGELOG.rst README.md
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 

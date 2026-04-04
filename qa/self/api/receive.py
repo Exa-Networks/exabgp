@@ -1,9 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 
 match = {
-    0: ['neighbor 127.0.0.1 update start',] * 20,
+    0: [
+        'neighbor 127.0.0.1 update start',
+    ]
+    * 20,
     1: [
         'neighbor 127.0.0.1 announced route %d%d.0.0.0/8 next-hop 1.1.1.1 origin igp as-path [ 1 2 3 4 ] med 100'
         % (number, number)
@@ -25,15 +28,20 @@ match = {
             (25, 65, 'l2vpn vpls'),
         )
     ],
-    2: ['neighbor 127.0.0.1 update end',] * 20,
-    3: ['',] * 20,
+    2: [
+        'neighbor 127.0.0.1 update end',
+    ]
+    * 20,
+    3: [
+        '',
+    ]
+    * 20,
 }
 
 count = 0
 
 while True:
     line = sys.stdin.readline().strip()
-    # print >> sys.stderr, '[%s]' % line.replace('\n','\\n'), start, end
 
     options = match[count % 4]
 

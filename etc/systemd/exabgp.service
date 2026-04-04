@@ -7,21 +7,18 @@ After=network.target
 ConditionPathExists=/etc/exabgp/exabgp.conf
 
 [Service]
-#User=exabgp
-#Group=exabgp
+User=exabgp
+Group=exabgp
 Environment=exabgp_daemon_daemonize=false
-PermissionsStartOnly=true
-ExecStartPre=-mkfifo /run/exabgp.in
-ExecStartPre=-mkfifo /run/exabgp.out
-ExecStartPre=chmod 600 /run/exabgp.in
-ExecStartPre=chmod 600 /run/exabgp.out
-ExecStartPre=chown exabgp.exabgp /run/exabgp.in
-ExecStartPre=chown exabgp.exabgp /run/exabgp.out
+RuntimeDirectory=exabgp
+RuntimeDirectoryMode=0750
+ExecStartPre=-/usr/bin/mkfifo /run/exabgp/exabgp.in
+ExecStartPre=-/usr/bin/mkfifo /run/exabgp/exabgp.out
 ExecStart=/usr/sbin/exabgp /etc/exabgp/exabgp.conf
 ExecReload=/bin/kill -USR1 $MAINPID
 Restart=always
-CapabilityBoundingSet=CAP_NET_ADMIN
-AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target

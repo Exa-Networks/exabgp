@@ -5,6 +5,10 @@ __pycache__/
 /dist/
 /sdist/
 /cover/
+/htmlcov/
+/lib/
+.hypothesis/
+.pytest_cache/
 
 *.sln
 
@@ -31,3 +35,8 @@ __pycache__/
 develop-eggs
 eggs
 fake-eggs
+init
+artifacts
+requirements.txt
+
+.codegptbaseline_tests.log

@@ -1,0 +1,60 @@
+"""mac.py
+
+Created by Thomas Mangin on 2012-07-08.
+Copyright (c) 2014-2017 Orange. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
+
+# ========================================================================== MAC
+#
+
+
+class MAC:
+    def __init__(self, mac=None, packed=None):
+        self.mac = mac
+        self._packed = packed if packed else b''.join(bytes([int(_, 16)]) for _ in mac.split(':'))
+
+    def __eq__(self, other):
+        # Compare packed representation to handle case-insensitive MAC addresses
+        return self._packed == other._packed
+
+    def __neq__(self, other):
+        return self.mac != other.mac
+
+    def __lt__(self, other):
+        raise RuntimeError('comparing MAC for ordering does not make sense')
+
+    def __le__(self, other):
+        raise RuntimeError('comparing MAC for ordering does not make sense')
+
+    def __gt__(self, other):
+        raise RuntimeError('comparing MAC for ordering does not make sense')
+
+    def __ge__(self, other):
+        raise RuntimeError('comparing MAC for ordering does not make sense')
+
+    def __str__(self):
+        return ':'.join('{:02X}'.format(_) for _ in self._packed)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def pack(self):
+        return self._packed
+
+    # Orange code was returning 10 !
+    def __len__(self):
+        return 6
+
+    # XXX: FIXME: improve for better performance ?
+    def __hash__(self):
+        return hash(str(self))
+
+    @classmethod
+    def unpack(cls, data):
+        return cls(':'.join('{:02X}'.format(_) for _ in data[:6]), data[:6])
+
+    def json(self, compact=None):
+        return '"mac": "{}"'.format(str(self))

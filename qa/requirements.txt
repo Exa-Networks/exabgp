@@ -1,6 +1,9 @@
 # running the test suite/code
-six
+ruff
 coveralls
 nose
 psutil
-pyasyncore
+pytest
+pytest-asyncio
+pytest-cov
+hypothesis

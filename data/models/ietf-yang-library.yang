@@ -1,0 +1,244 @@
+module ietf-yang-library {
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-library";
+  prefix "yanglib";
+
+  import ietf-yang-types {
+    prefix yang;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  organization
+    "IETF NETCONF (Network Configuration) Working Group";
+
+  contact
+    "WG Web:   <https://datatracker.ietf.org/wg/netconf/>
+     WG List:  <mailto:netconf@ietf.org>
+
+     WG Chair: Mehmet Ersue
+               <mailto:mehmet.ersue@nsn.com>
+
+     WG Chair: Mahesh Jethanandani
+               <mailto:mjethanandani@gmail.com>
+
+     Editor:   Andy Bierman
+               <mailto:andy@yumaworks.com>
+
+     Editor:   Martin Bjorklund
+               <mailto:mbj@tail-f.com>
+
+     Editor:   Kent Watsen
+               <mailto:kwatsen@juniper.net>";
+
+  description
+    "This module contains monitoring information about the YANG
+     modules and submodules that are used within a YANG-based
+     server.
+
+     Copyright (c) 2016 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC 7895; see
+     the RFC itself for full legal notices.";
+
+  revision 2016-06-21 {
+    description
+      "Initial revision.";
+    reference
+      "RFC 7895: YANG Module Library.";
+  }
+
+  /*
+   * Typedefs
+   */
+
+  typedef revision-identifier {
+    type string {
+      pattern '\d{4}-\d{2}-\d{2}';
+    }
+    description
+      "Represents a specific date in YYYY-MM-DD format.";
+  }
+
+  /*
+   * Groupings
+   */
+
+  grouping module-list {
+    description
+      "The module data structure is represented as a grouping
+       so it can be reused in configuration or another monitoring
+       data structure.";
+
+    grouping common-leafs {
+      description
+        "Common parameters for YANG modules and submodules.";
+
+      leaf name {
+        type yang:yang-identifier;
+        description
+          "The YANG module or submodule name.";
+      }
+      leaf revision {
+        type union {
+          type revision-identifier;
+          type string { length 0; }
+        }
+        description
+          "The YANG module or submodule revision date.
+           A zero-length string is used if no revision statement
+           is present in the YANG module or submodule.";
+      }
+    }
+
+    grouping schema-leaf {
+      description
+        "Common schema leaf parameter for modules and submodules.";
+
+      leaf schema {
+        type inet:uri;
+        description
+          "Contains a URL that represents the YANG schema
+           resource for this module or submodule.
+
+           This leaf will only be present if there is a URL
+           available for retrieval of the schema for this entry.";
+      }
+    }
+
+    list module {
+      key "name revision";
+      description
+        "Each entry represents one revision of one module
+         currently supported by the server.";
+
+      uses common-leafs;
+      uses schema-leaf;
+
+      leaf namespace {
+        type inet:uri;
+        mandatory true;
+        description
+          "The XML namespace identifier for this module.";
+      }
+      leaf-list feature {
+        type yang:yang-identifier;
+        description
+          "List of YANG feature names from this module that are
+           supported by the server, regardless of whether they are
+           defined in the module or any included submodule.";
+      }
+      list deviation {
+        key "name revision";
+        description
+          "List of YANG deviation module names and revisions
+           used by this server to modify the conformance of
+           the module associated with this entry.  Note that
+           the same module can be used for deviations for
+           multiple modules, so the same entry MAY appear
+           within multiple 'module' entries.
+
+           The deviation module MUST be present in the 'module'
+           list, with the same name and revision values.
+           The 'conformance-type' value will be 'implement' for
+           the deviation module.";
+        uses common-leafs;
+      }
+      leaf conformance-type {
+        type enumeration {
+          enum implement {
+            description
+              "Indicates that the server implements one or more
+               protocol-accessible objects defined in the YANG module
+               identified in this entry.  This includes deviation
+               statements defined in the module.
+
+               For YANG version 1.1 modules, there is at most one
+               module entry with conformance type 'implement' for a
+               particular module name, since YANG 1.1 requires that,
+               at most, one revision of a module is implemented.
+
+               For YANG version 1 modules, there SHOULD NOT be more
+               than one module entry for a particular module name.";
+          }
+          enum import {
+            description
+              "Indicates that the server imports reusable definitions
+               from the specified revision of the module but does
+               not implement any protocol-accessible objects from
+               this revision.
+
+               Multiple module entries for the same module name MAY
+               exist.  This can occur if multiple modules import the
+               same module but specify different revision dates in
+               the import statements.";
+          }
+        }
+        mandatory true;
+        description
+          "Indicates the type of conformance the server is claiming
+           for the YANG module identified by this entry.";
+      }
+      list submodule {
+        key "name revision";
+        description
+          "Each entry represents one submodule within the
+           parent module.";
+        uses common-leafs;
+        uses schema-leaf;
+      }
+    }
+  }
+
+  /*
+   * Operational state data nodes
+   */
+
+  container modules-state {
+    config false;
+    description
+      "Contains YANG module monitoring information.";
+
+    leaf module-set-id {
+      type string;
+      mandatory true;
+      description
+        "Contains a server-specific identifier representing
+         the current set of modules and submodules.  The
+         server MUST change the value of this leaf if the
+         information represented by the 'module' list instances
+         has changed.";
+    }
+
+    uses module-list;
+  }
+
+  /*
+   * Notifications
+   */
+
+  notification yang-library-change {
+    description
+      "Generated when the set of modules and submodules supported
+       by the server has changed.";
+    leaf module-set-id {
+      type leafref {
+        path "/yanglib:modules-state/yanglib:module-set-id";
+      }
+      mandatory true;
+      description
+        "Contains the module-set-id value representing the
+         set of modules and submodules supported at the server at
+         the time the notification is generated.";
+    }
+  }
+
+}

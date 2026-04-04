@@ -1,0 +1,533 @@
+diff --git a/src/exabgp/logging/__init__.py b/src/exabgp/logging/__init__.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/logging/__init__.py
++++ b/src/exabgp/logging/__init__.py
+@@ -1,3 +1,169 @@
++"""Standard logging infrastructure for ExaBGP.
++
++This module provides centralized logging configuration that replaces the
++custom logging system with Python's standard logging module. It includes
++structured JSON logging for production use and human-readable console
++logging for development.
++
++Key features:
++- Structured JSON logging with BGP-specific context
++- Configurable log levels and formats
++- Automatic log rotation
++- Support for both console and file output
++- BGP session tracking and correlation
++"""
++
++import logging
++import logging.config
++import logging.handlers
++from typing import Dict, Any, Optional
++import json
++import sys
++from pathlib import Path
++import os
++
++
++class BGPJSONFormatter(logging.Formatter):
++    """JSON formatter for structured BGP logging.
++    
++    Formats log records as JSON with BGP-specific context fields.
++    This enables easy parsing and analysis of logs in production systems.
++    """
++    
++    def format(self, record: logging.LogRecord) -> str:
++        """Format log record as JSON.
++        
++        Args:
++            record: Log record to format
++            
++        Returns:
++            JSON-formatted log string
++        """
++        log_data = {
++            'timestamp': self.formatTime(record, self.datefmt),
++            'level': record.levelname,
++            'logger': record.name,
++            'message': record.getMessage(),
++            'module': record.module,
++            'function': record.funcName,
++            'line': record.lineno,
++            'process': record.process,
++            'thread': record.thread,
++        }
++        
++        # Add exception information if present
++        if record.exc_info:
++            log_data['exception'] = self.formatException(record.exc_info)
++        
++        # Add BGP-specific context if available
++        if hasattr(record, 'neighbor'):
++            log_data['neighbor'] = record.neighbor
++        if hasattr(record, 'session_id'):
++            log_data['session_id'] = record.session_id
++        if hasattr(record, 'message_type'):
++            log_data['bgp_message_type'] = record.message_type
++        if hasattr(record, 'peer_as'):
++            log_data['peer_as'] = record.peer_as
++        if hasattr(record, 'local_as'):
++            log_data['local_as'] = record.local_as
++        if hasattr(record, 'route_prefix'):
++            log_data['route_prefix'] = record.route_prefix
++            
++        return json.dumps(log_data, default=str)
++
++
++class BGPContextFilter(logging.Filter):
++    """Filter to add BGP context to log records.
++    
++    Automatically adds BGP-specific context information to log records
++    when available in thread-local storage or record attributes.
++    """
++    
++    def filter(self, record: logging.LogRecord) -> bool:
++        """Add BGP context to record if available.
++        
++        Args:
++            record: Log record to enhance
++            
++        Returns:
++            True (always pass the record)
++        """
++        # Add default BGP context fields if not present
++        if not hasattr(record, 'neighbor'):
++            record.neighbor = getattr(record, 'neighbor', None)
++        if not hasattr(record, 'session_id'):
++            record.session_id = getattr(record, 'session_id', None)
++            
++        return True
++
++
++def setup_logging(config_path: Optional[Path] = None, 
++                  log_level: str = "INFO",
++                  enable_console: bool = True,
++                  enable_file: bool = True,
++                  log_file: str = "exabgp.log") -> None:
++    """Setup centralized logging configuration.
++    
++    Args:
++        config_path: Path to logging configuration file (JSON)
++        log_level: Default log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
++        enable_console: Enable console logging
++        enable_file: Enable file logging
++        log_file: Log file path
++    """
++    
++    # Default logging configuration
++    config = {
++        'version': 1,
++        'disable_existing_loggers': False,
++        'formatters': {
++            'json': {
++                '()': 'exabgp.logging.BGPJSONFormatter',
++            },
++            'console': {
++                'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
++                'datefmt': '%Y-%m-%d %H:%M:%S'
++            },
++            'detailed': {
++                'format': '%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(funcName)s:%(lineno)d - %(message)s',
++                'datefmt': '%Y-%m-%d %H:%M:%S'
++            }
++        },
++        'filters': {
++            'bgp_context': {
++                '()': 'exabgp.logging.BGPContextFilter',
++            }
++        },
++        'handlers': {},
++        'loggers': {
++            'exabgp': {
++                'handlers': [],
++                'level': log_level,
++                'propagate': False,
++            }
++        },
++        'root': {
++            'level': 'WARNING',
++            'handlers': [],
++        }
++    }
++    
++    # Add console handler if enabled
++    if enable_console:
++        config['handlers']['console'] = {
++            'class': 'logging.StreamHandler',
++            'formatter': 'console',
++            'level': log_level,
++            'stream': 'ext://sys.stdout',
++            'filters': ['bgp_context'],
++        }
++        config['loggers']['exabgp']['handlers'].append('console')
++        config['root']['handlers'].append('console')
++    
++    # Add file handler if enabled
++    if enable_file:
++        config['handlers']['file'] = {
++            'class': 'logging.handlers.RotatingFileHandler',
++            'filename': log_file,
++            'formatter': 'json',
++            'maxBytes': 10485760,  # 10MB
++            'backupCount': 5,
++            'level': 'DEBUG',
++            'filters': ['bgp_context'],
++        }
++        config['loggers']['exabgp']['handlers'].append('file')
++    
++    # Load custom configuration if provided
++    if config_path and config_path.exists():
++        try:
++            with open(config_path) as f:
++                custom_config = json.load(f)
++                # Merge custom config with defaults
++                config.update(custom_config)
++        except Exception as e:
++            print(f"Warning: Failed to load logging config from {config_path}: {e}", 
++                  file=sys.stderr)
++    
++    # Apply configuration
++    logging.config.dictConfig(config)
++
++
++def get_logger(name: str) -> logging.Logger:
++    """Get a logger with BGP-specific configuration.
++    
++    Args:
++        name: Logger name (usually __name__)
++        
++    Returns:
++        Configured logger instance
++    """
++    return logging.getLogger(f"exabgp.{name}")
++
++
++def log_bgp_message(logger: logging.Logger, 
++                   level: int,
++                   message: str,
++                   neighbor: Optional[str] = None,
++                   session_id: Optional[str] = None,
++                   message_type: Optional[int] = None,
++                   **kwargs) -> None:
++    """Log a BGP-related message with context.
++    
++    Args:
++        logger: Logger instance
++        level: Log level (logging.DEBUG, INFO, etc.)
++        message: Log message
++        neighbor: BGP neighbor address
++        session_id: BGP session identifier
++        message_type: BGP message type (1-4)
++        **kwargs: Additional context fields
++    """
++    extra = {
++        'neighbor': neighbor,
++        'session_id': session_id,
++        'message_type': message_type,
++    }
++    extra.update(kwargs)
++    
++    logger.log(level, message, extra=extra)
++
++
+ # Legacy compatibility - preserve existing logger interface
+ from exabgp.logger.handler import Logger as LegacyLogger
++
++# Initialize default logging
++if not logging.getLogger('exabgp').handlers:
++    setup_logging()
+diff --git a/src/exabgp/bgp/neighbor.py b/src/exabgp/bgp/neighbor.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/bgp/neighbor.py
++++ b/src/exabgp/bgp/neighbor.py
+@@ -13,6 +13,9 @@ from ipaddress import IPv4Address, IPv6Address
+ from exabgp.types import IPAddress
+ from exabgp.exceptions import ValidationError, ConnectionError
+ 
++# Use new logging system
++from exabgp.logging import get_logger, log_bgp_message
++logger = get_logger(__name__)
++
+ class Neighbor:
+     """BGP neighbor configuration and state management.
+     
+@@ -54,6 +57,14 @@ class Neighbor:
+         # Validate inputs
+         self._validate_initialization()
+         
++        # Log neighbor initialization
++        log_bgp_message(
++            logger, logging.INFO,
++            f"Initializing BGP neighbor {peer_address}",
++            neighbor=peer_address,
++            local_as=local_as,
++            peer_as=peer_as
++        )
++        
+         self.state: str = 'idle'
+         self.capabilities: Dict[str, Any] = {}
+         self.timers: Dict[str, float] = {}
+@@ -82,4 +93,15 @@ class Neighbor:
+         """
+         return f"Neighbor {self.peer_address} (AS{self.peer_as})"
++    
++    def update_state(self, new_state: str) -> None:
++        """Update neighbor BGP state with logging.
++        
++        Args:
++            new_state: New BGP FSM state
++        """
++        old_state = self.state
++        self.state = new_state
++        
++        log_bgp_message(
++            logger, logging.INFO,
++            f"BGP state transition: {old_state} -> {new_state}",
++            neighbor=self.peer_address,
++            session_id=f"{self.local_as}-{self.peer_as}-{self.peer_address}",
++            old_state=old_state,
++            new_state=new_state
++        )
+diff --git a/src/exabgp/bgp/message/message.py b/src/exabgp/bgp/message/message.py
+index abcdefg..1234567 100644
+--- a/src/exabgp/bgp/message/message.py
++++ b/src/exabgp/bgp/message/message.py
+@@ -13,6 +13,9 @@ from exabgp.types import BGPMessage
+ from exabgp.exceptions import MessageError, ProtocolError, ValidationError
+ 
+ from __future__ import annotations
++import logging
++from exabgp.logging import get_logger, log_bgp_message
++logger = get_logger(__name__)
+ 
+ from exabgp.bgp.message.direction import Direction
+ from exabgp.bgp.message.action import Action
+@@ -107,6 +110,13 @@ class Message:
+             if length < cls.HEADER_LEN or length > 4096:
+                 raise MessageError(f"Invalid BGP message length: {length}", raw_data=data)
+             
++            # Log successful message parsing
++            log_bgp_message(
++                logger, logging.DEBUG,
++                f"Parsed BGP message type {msg_type}, length {length}",
++                message_type=msg_type,
++                message_length=length
++            )
++            
+             return cls(msg_type)
+         
+         except (struct.error, IndexError) as e:
+             raise MessageError(f"Failed to unpack BGP message: {e}", raw_data=data) from e
+diff --git a/src/exabgp/application/main.py b/src/exabgp/application/main.py
+index 1234567..abcdefg 100644
+--- a/src/exabgp/application/main.py
++++ b/src/exabgp/application/main.py
+@@ -8,6 +8,12 @@
+ """
+ 
+ import sys
++import logging
++from pathlib import Path
++
++# Initialize logging early
++from exabgp.logging import setup_logging, get_logger
++logger = get_logger(__name__)
+ 
+ from exabgp.application.cli import main as cli_main
+ from exabgp.application.server import main as server_main
+@@ -17,14 +23,29 @@ from exabgp.environment import Env
+ 
+ 
+ def main():
++    """Main entry point for ExaBGP application."""
++    
++    # Setup logging based on environment
++    log_level = Env().log.level or "INFO"
++    log_file = Env().log.destination or "exabgp.log"
++    
++    setup_logging(
++        log_level=log_level,
++        enable_console=True,
++        enable_file=True,
++        log_file=log_file
++    )
++    
++    logger.info("Starting ExaBGP application")
++    
+     try:
+         if len(sys.argv) <= 1:
++            logger.info("Starting ExaBGP server mode")
+             return server_main()
+         
+         command = sys.argv[1]
+         
+         if command in ('cli', 'healthcheck', 'decode', 'validate'):
++            logger.info(f"Starting ExaBGP {command} command")
+             return cli_main()
+         
+         return server_main()
+     except KeyboardInterrupt:
++        logger.info("ExaBGP shutdown requested")
+         return 0
+     except Exception as exc:
++        logger.error("ExaBGP application error", exc_info=True)
+         sys.stderr.write(f'exabgp: {exc}\n')
+         return 1
++    finally:
++        logger.info("ExaBGP application terminated")
+diff --git a/logging.json b/logging.json
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/logging.json
+@@ -0,0 +1,54 @@
++{
++  "version": 1,
++  "disable_existing_loggers": false,
++  "formatters": {
++    "json": {
++      "()": "exabgp.logging.BGPJSONFormatter"
++    },
++    "console": {
++      "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
++      "datefmt": "%Y-%m-%d %H:%M:%S"
++    }
++  },
++  "filters": {
++    "bgp_context": {
++      "()": "exabgp.logging.BGPContextFilter"
++    }
++  },
++  "handlers": {
++    "console": {
++      "class": "logging.StreamHandler",
++      "formatter": "console",
++      "level": "INFO",
++      "stream": "ext://sys.stdout",
++      "filters": ["bgp_context"]
++    },
++    "file": {
++      "class": "logging.handlers.RotatingFileHandler",
++      "filename": "exabgp.log",
++      "formatter": "json",
++      "maxBytes": 10485760,
++      "backupCount": 5,
++      "level": "DEBUG",
++      "filters": ["bgp_context"]
++    },
++    "syslog": {
++      "class": "logging.handlers.SysLogHandler",
++      "formatter": "json",
++      "level": "WARNING",
++      "address": "/dev/log"
++    }
++  },
++  "loggers": {
++    "exabgp": {
++      "handlers": ["console", "file"],
++      "level": "DEBUG",
++      "propagate": false
++    }
++  },
++  "root": {
++    "level": "WARNING",
++    "handlers": ["console"]
++  }
++}
+diff --git a/tests/unit/test_logging.py b/tests/unit/test_logging.py
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/tests/unit/test_logging.py
+@@ -0,0 +1,67 @@
++"""Unit tests for logging functionality."""
++from __future__ import annotations
++
++import pytest
++import logging
++import json
++import tempfile
++from pathlib import Path
++from unittest.mock import patch, MagicMock
++
++from exabgp.logging import (
++    BGPJSONFormatter, BGPContextFilter, setup_logging, 
++    get_logger, log_bgp_message
++)
++
++
++class TestBGPJSONFormatter:
++    """Test JSON logging formatter."""
++    
++    def test_basic_formatting(self):
++        """Test basic log record formatting."""
++        formatter = BGPJSONFormatter()
++        
++        record = logging.LogRecord(
++            name="exabgp.test",
++            level=logging.INFO,
++            pathname="/test/path.py",
++            lineno=42,
++            msg="Test message",
++            args=(),
++            exc_info=None
++        )
++        
++        formatted = formatter.format(record)
++        data = json.loads(formatted)
++        
++        assert data['level'] == 'INFO'
++        assert data['logger'] == 'exabgp.test'
++        assert data['message'] == 'Test message'
++        assert data['line'] == 42
++        
++    def test_bgp_context_formatting(self):
++        """Test formatting with BGP context."""
++        formatter = BGPJSONFormatter()
++        
++        record = logging.LogRecord(
++            name="exabgp.bgp",
++            level=logging.INFO,
++            pathname="/test/bgp.py",
++            lineno=100,
++            msg="BGP message received",
++            args=(),
++            exc_info=None
++        )
++        
++        # Add BGP context
++        record.neighbor = "192.168.1.2"
++        record.session_id = "session-123"
++        record.message_type = 4
++        
++        formatted = formatter.format(record)
++        data = json.loads(formatted)
++        
++        assert data['neighbor'] == '192.168.1.2'
++        assert data['session_id'] == 'session-123'
++        assert data['bgp_message_type'] == 4
+
+
++class TestLoggingSetup:
++    """Test logging setup and configuration."""
++    
++    def test_default_setup(self):
++        """Test default logging setup."""
++        with patch('logging.config.dictConfig') as mock_config:
++            setup_logging()
++            
++        mock_config.assert_called_once()
++        config = mock_config.call_args[0][0]
++        
++        assert 'exabgp' in config['loggers']
++        assert 'console' in config['handlers']
++        
++    def test_get_logger(self):
++        """Test logger retrieval."""
++        logger = get_logger('test_module')
++        
++        assert logger.name == 'exabgp.test_module'
++        assert isinstance(logger, logging.Logger)

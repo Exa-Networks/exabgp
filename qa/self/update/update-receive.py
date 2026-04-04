@@ -1,8 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import os
 import sys
-import time
 
 # When the parent dies we are seeing continual newlines, so we only access so many before stopping
 counter = 0
@@ -10,7 +8,7 @@ counter = 0
 while True:
     try:
         line = sys.stdin.readline().strip()
-        if line == "":
+        if line == '':
             counter += 1
             if counter > 100:
                 break
@@ -18,11 +16,11 @@ while True:
 
         counter = 0
 
-        send = '\n%s %s %s\n' % ('-' * 10, line, '-' * 10)
-        print >>sys.stderr, send
+        send = '\n{} {} {}\n'.format('-' * 10, line, '-' * 10)
+        sys.stderr.write(f'{send}\n')
         sys.stderr.flush()
     except KeyboardInterrupt:
         pass
-    except IOError:
+    except OSError:
         # most likely a signal during readline
         pass

@@ -1,26 +1,32 @@
 #!/bin/sh
 
-GIT_TAG=`git status | egrep 'detached at 3|4' | wc -l`
 git status 2> /dev/null > /dev/null
 
 # returns 128 if not in a git repo
 # returns 127 if git is not installed
 
-if [ $? -eq  0 ] && [ $GIT_TAG -eq 0 ]; then
-   GIT_BRANCH=`git branch | grep "*" | awk '{ print $2}'`
-   GIT_COMMIT=`git log -1 | head -1 | awk '{ print $2 }'`
-   export EXABGP_VERSION="${GIT_BRANCH}-${GIT_COMMIT}"
+if [ -z "$exabgp_version" ]; then
+    if [ $? -eq  0 ]; then
+        GIT_TAG=`git status | egrep 'detached at 3|4' | wc -l`
+        if [ $GIT_TAG -eq 0 ]; then
+            GIT_BRANCH=`git branch | grep "*" | awk '{ print $2}'`
+            GIT_COMMIT=`git rev-parse --short=10 HEAD`
+            export exabgp_version="5.0.6-$(date +%Y%m%d)+${GIT_BRANCH}-${GIT_COMMIT}"
+        fi
+    else
+        export exabgp_version="5.0.6-$(date -r $0 +%Y%m%d)+uncontrolled"
+    fi
 fi
-
 
 path="$(cd "$(dirname "$0")"/.. ; pwd)"
 
-export PYTHONPATH="$path"/lib
+export EXABGP_ROOT=$path
+export PYTHONPATH="$path"/src
 
 # Prefer `python` binary when in a venv
-INTS="$INTERPRETER python3 pypy3 python pyp"
+INTS="$INTERPRETER python3 python pypy3"
 if [ -d "${VIRTUAL_ENV}" ]; then
-    INTS="$INTERPRETER python pypy python3 pypy3"
+    INTS="$INTERPRETER python3 python pypy3"
 fi
 
 for INTERPRETER in $(echo $INTS); do
@@ -38,9 +44,9 @@ import os
 
 path = [os.path.join(_,'exabgp')
         for _ in sys.path
-        if os.path.isfile('/'.join((_, 'exabgp', 'application', 'bgp.py')))][0]
+        if os.path.isfile('/'.join((_, 'exabgp', 'application', 'main.py')))][0]
 
-print(os.path.join(path,'application','bgp.py'))
+print(os.path.join(path,'application','main.py'))
 
 def remove (file):
     try: os.remove(file)
@@ -51,4 +57,4 @@ if 'exabgp' not in os.environ.get('SKIPCLEANUP',''):
 
 ")"
 
-exec "$INTERPRETER" "$APPLICATION" --root "$path" "$@"
+exec "$INTERPRETER" "$APPLICATION" "$@"
