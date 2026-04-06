@@ -3,8 +3,8 @@
 set -e
 
 if [ "$1" = "configure" ] ; then
-	update-alternatives --install /usr/sbin/exabgp exabgp /usr/sbin/python3-exabgp 200 \
-                            --slave /usr/sbin/exabgpcli exabgpcli /usr/sbin/python3-exabgpcli
+    update-alternatives --install /usr/sbin/exabgp exabgp /usr/sbin/python3-exabgp 200 \
+                        --slave /usr/sbin/exabgp-cli exabgp-cli /usr/sbin/python3-exabgp-cli
 fi
 
 #DEBHELPER#
