@@ -20,7 +20,7 @@ override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 	set -e; set -x; for pyvers in $(PYTHON3S); do \
 		env INTERPRETER=python$$pyvers sbin/exabgp env > etc/exabgp/exabgp.env ; \
-        env INTERPRETER=python$$pyvers PYTHONPATH=./src exabgp_log_enable=false python$$pyvers -m pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py ; \
+        env INTERPRETER=python$$pyvers PYTHONPATH=./src exabgp_log_enable=false python$$pyvers -m pytest ./tests/unit/test_*.py ./tests/fuzz/test_*.py ; \
 		env INTERPRETER=python$$pyvers ./qa/bin/functional parsing ; \
 	done
 endif
