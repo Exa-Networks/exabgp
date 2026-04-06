@@ -8,7 +8,7 @@ TMPCONF="/etc/exabgp/exabgp.env.dpkg-tmp"
 gen_env_config() {
     echo "Generating /etc/exabgp/exabgp.env."
     trap 'rm -f $TMPCONF' TERM INT EXIT QUIT
-    exabgp --fi >> "$TMPCONF" 2>/dev/null
+    exabgp env >> "$TMPCONF" 2>/dev/null
     sed -i "s#nobody#exabgp#" "$TMPCONF"
     ucf $TMPCONF $CONFIGFILE
     rm -f $TMPCONF

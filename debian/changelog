@@ -3,6 +3,7 @@ exabgp (5.0.6-1) unstable; urgency=medium
   * New upstream version.
   * d/patches: drop systemd patch applied upstream.
   * d/patches: add patch to avoid using git to lookup version.
+  * d/rules: update test workflow.
 
  -- Vincent Bernat <bernat@debian.org>  Sat, 04 Apr 2026 13:47:41 +0200
 
