@@ -1,0 +1,25 @@
+From: Vincent Bernat <vincent@bernat.ch>
+Date: Mon, 6 Apr 2026 14:11:37 +0200
+Subject: fix: check git repository a bit later
+
+---
+ sbin/exabgp | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/sbin/exabgp b/sbin/exabgp
+index ba10671..bb5b12f 100755
+--- a/sbin/exabgp
++++ b/sbin/exabgp
+@@ -1,11 +1,7 @@
+ #!/bin/sh
+ 
+-git status 2> /dev/null > /dev/null
+-
+-# returns 128 if not in a git repo
+-# returns 127 if git is not installed
+-
+ if [ -z "$exabgp_version" ]; then
++    git status 2> /dev/null > /dev/null
+     if [ $? -eq  0 ]; then
+         GIT_TAG=`git status | egrep 'detached at 3|4' | wc -l`
+         if [ $GIT_TAG -eq 0 ]; then
