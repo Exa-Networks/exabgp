@@ -246,6 +246,10 @@ class Capabilities(dict):
 
         # Extended optional parameters
         option_len = data[0]
+
+        if not option_len:
+            return capabilities
+
         option_type = data[1]
 
         if option_len == Capabilities.EXTENDED_LENGTH and option_type == Capabilities.EXTENDED_LENGTH:
@@ -256,8 +260,6 @@ class Capabilities(dict):
             data = data[1 : option_len + 1]
             decoder = _key_values
 
-        if not option_len:
-            return capabilities
 
         while data:
             key, value, data = decoder('parameter', data)
