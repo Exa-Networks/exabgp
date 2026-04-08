@@ -3,6 +3,14 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.8:
+ * Fix: handle OPEN message with zero capabilities without crashing
+   Capabilities.unpack() read the parameter type byte before checking
+   whether the Optional Parameters Length was zero, raising IndexError
+   when a peer sent an OPEN with no optional parameters at all (a valid
+   single 0x00 byte payload per RFC 4271). The early-return guard sat
+   below the offending read so it never helped. Alternative to PR #1375.
+
 Version 5.0.7:
  * Fix: send zero-length capabilities in OPEN message (#1371)
    Route Refresh (RFC 2918), Enhanced Route Refresh (RFC 7313), and
