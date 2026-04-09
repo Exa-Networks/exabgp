@@ -1,63 +1,56 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: ExaBGP
-Upstream-Contact: Thomas Mangin <thomas.mangin@exa-networks.co.uk>
 Source: https://github.com/Exa-Networks/exabgp
+Upstream-Name: ExaBGP
+Upstream-Contact:
+ Thomas Mangin <thomas.mangin@exa-networks.co.uk>,
 
 Files: *
-Copyright: Copyright (c) 2009-2017, Exa Networks Limited
-           Copyright (c) 2009-2017, Thomas Mangin
-           Copyright (c) 2014-2017, Orange
-           Copyright (c) 2014-2017, Nikita Shirokov
-           Copyright (c) 2015-2017, Alcatel-Lucent
-           Copyright (c) 2016-2017, Job Snijders
-           Copyright (c) 2016-2017, Evelio Vila
+Copyright: 2020, Hiroki Shirokura
+ 2016-2020, Job Snijders <job@ntt.net>
+ 2016-2020, Evelio Vila <eveliovila@gmail.com>
+ 2015-2020, Alcatel-Lucent
+ 2014-2020, Orange
+ 2014-2020, Nikita Shirokov
+ 2009-2020, Thomas Mangin
+ 2009-2020, Exa Networks Limited
 License: BSD-3-clause
+
+Files: data/models/ietf-inet-types.yang
+ data/models/ietf-yang-library.yang
+ data/models/ietf-yang-types.yang
+ data/models/openconfig-inet-types.yang
+Copyright: 2013, 2016, IETF Trust and the persons identified as
+License: BSD-3-clause
+ Please fill license UNKNOWN from header of data/models/ietf-inet-types.yang
+ data/models/ietf-yang-library.yang
+ data/models/ietf-yang-types.yang
 
 Files: debian/*
-Copyright: Copyright (c) 2011-2012 Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>
-           Copyright (c) 2015 Vincent Bernat <bernat@debian.org>
+Copyright: 2015, Vincent Bernat <bernat@debian.org>
+ 2011, 2012, Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>
 License: BSD-3-clause
 
-Files: dev/profile/pyprof2calltree.py
-       lib/exabgp/vendoring/lsprofcalltree.py
-Copyright: Copyright (c) 2006-2008 David Allouche, Jp Calderone, Itamar Shtull-Trauring,
-                                   Johan Dahlin, Olivier Grisel <olivier.grisel@ensta.org>
+Files: dev/*
+Copyright: Johan Dahlin, Olivier Grisel <olivier.grisel@ensta.org>
+ 2006-2008, David Allouche, Jp Calderone, Itamar Shtull-Trauring
 License: Expat
 
-Files: lib/exabgp/vendoring/bitstring.py
-Copyright: Copyright (c) 2006-2016 Scott Griffiths (dr.scottgriffiths@gmail.com)
-License: Expat
-
-Files: lib/exabgp/vendoring/cmd2.py
-Copyright: Copyright (c) 2008-2016 Catherine Devlin and others
-License: Expat
-
-Files: lib/exabgp/vendoring/docopt.py
-Copyright: Copyright (c) 2013 Vladimir Keleshev, vladimir@keleshev.com
-License: Expat
-
-Files: lib/exabgp/vendoring/ipaddress.py
-Copyright: Copyright 2007 Google Inc
-License: PSFv2
- The complete text of the license is available in
- `/usr/share/doc/pythonX.Y/copyright'. This is the same license as for
- Python.
-
-Files: lib/exabgp/vendoring/objgraph.py
-Copyright: Copyright (c) 2008 Marius Gedminas <marius@pov.lt>
-License: Expat
-
-Files: lib/exabgp/vendoring/profiler.py
-Copyright: Copyright (c) 2007–2014 Fabian Pedregosa
+Files: qa/bin/*
+ qa/sbin/*
+Copyright: 2009-2022, Exa Networks.
 License: BSD-3-clause
 
-Files: lib/exabgp/vendoring/pyparsing.py
-Copyright: Copyright (c) 2003-2013  Paul T. McGuire
+Files: src/*
+Copyright: 2009-2022, Exa Networks.
+License: BSD-3-clause
+
+Files: src/exabgp/vendoring/objgraph.py
+Copyright: 2008-2015, Marius Gedminas <marius@pov.lt> and contributors
 License: Expat
 
-Files: lib/exabgp/vendoring/six.py
-Copyright: Copyright (c) 2010-2015 Benjamin Peterson
-License: Expat
+Files: tests/unit/*.py
+Copyright: 2009-2022, Exa Networks.
+License: BSD-3-clause
 
 License: BSD-3-clause
  Redistribution and use in source and binary forms, with or without
