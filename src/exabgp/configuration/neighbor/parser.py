@@ -39,9 +39,11 @@ def inherit(tokeniser):
 
 def hostname(tokeniser):
     value = string(tokeniser)
+    if not value:
+        raise ValueError('bad host-name')
     if not value[0].isalnum():
         raise ValueError('bad host-name (alphanumeric)')
-    if not value[-1].isalnum() or value[-1].isdigit():
+    if not value[-1].isalnum():
         raise ValueError('bad host-name (alphanumeric)')
     if '..' in value:
         raise ValueError('bad host-name (double period)')
@@ -57,9 +59,9 @@ def domainname(tokeniser):
     value = string(tokeniser)
     if not value:
         raise ValueError('bad domain-name')
-    if not value[0].isalnum() or value[0].isdigit():
+    if not value[0].isalnum():
         raise ValueError('bad domain-name')
-    if not value[-1].isalnum() or value[-1].isdigit():
+    if not value[-1].isalnum():
         raise ValueError('bad domain-name')
     if '..' in value:
         raise ValueError('bad domain-name')
