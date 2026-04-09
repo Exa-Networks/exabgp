@@ -1,4 +1,4 @@
-exabgp (5.0.6-1) unstable; urgency=medium
+exabgp (5.0.8-1) unstable; urgency=medium
 
   * New upstream version.
   * d/patches: drop systemd patch applied upstream.
@@ -6,7 +6,7 @@ exabgp (5.0.6-1) unstable; urgency=medium
   * d/rules: update test workflow.
   * d/rules: rename exabgpcli to exabgp-cli.
 
- -- Vincent Bernat <bernat@debian.org>  Sat, 04 Apr 2026 13:47:41 +0200
+ -- Vincent Bernat <bernat@debian.org>  Thu, 09 Apr 2026 09:24:28 +0200
 
 exabgp (4.2.25-1) unstable; urgency=medium
 
