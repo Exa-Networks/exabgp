@@ -3,6 +3,29 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.8:
+ * Fix: handle OPEN message with zero capabilities without crashing
+   Capabilities.unpack() read the parameter type byte before checking
+   whether the Optional Parameters Length was zero, raising IndexError
+   when a peer sent an OPEN with no optional parameters at all (a valid
+   single 0x00 byte payload per RFC 4271). The early-return guard sat
+   below the offending read so it never helped. Alternative to PR #1375.
+
+Version 5.0.7:
+ * Fix: send zero-length capabilities in OPEN message (#1371)
+   Route Refresh (RFC 2918), Enhanced Route Refresh (RFC 7313), and
+   Extended Message (RFC 8654) capabilities were silently dropped from
+   the wire OPEN message despite appearing in debug logs. These are
+   valid zero-length capabilities that were incorrectly filtered out
+   by a too-broad check added in PR #1221 (fcf6bb029).
+ * Fix: do not send empty Hostname capability when hostname is not configured
+   When hostname was None, HostName.extract() returned an invalid
+   zero-length payload instead of suppressing the capability entirely.
+   Also hardens the parser against truncated hostname data from peers.
+ * Fix: wrap log message in lambda for lazy evaluation
+   The named pipes error message in server.py triggered a non-callable
+   log message warning at runtime.
+
 Version 5.0.6:
  * Feature: add --env-file flag and EXABGP_ENVFILE env var for custom env file (#1367)
    The exabgp 5.x CLI had no way to specify a custom exabgp.env file path,

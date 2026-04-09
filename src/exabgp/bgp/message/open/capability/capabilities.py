@@ -188,8 +188,6 @@ class Capabilities(dict):
         parameters = b''
         for k, capabilities in self.items():
             for capability in capabilities.extract():
-                if len(capability) == 0:
-                    continue
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += bytes([2, len(encoded)]) + encoded
 
@@ -202,8 +200,6 @@ class Capabilities(dict):
         parameters = b''
         for k, capabilities in self.items():
             for capability in capabilities.extract():
-                if len(capability) == 0:
-                    continue
                 encoded = bytes([k, len(capability)]) + capability
                 parameters += pack('!BH', 2, len(encoded)) + encoded
 
@@ -248,20 +244,21 @@ class Capabilities(dict):
 
         capabilities = Capabilities()
 
-        # Extended optional parameters
+        # Optional Parameters Length (RFC 4271). A length of zero is a valid
+        # OPEN with no capabilities and must not be parsed any further.
         option_len = data[0]
-        option_type = data[1]
+        if not option_len:
+            return capabilities
 
-        if option_len == Capabilities.EXTENDED_LENGTH and option_type == Capabilities.EXTENDED_LENGTH:
+        # RFC 9072 extended length: the length byte is 0xFF and is followed
+        # by a parameter type byte also set to 0xFF, then a 2-byte length.
+        if option_len == Capabilities.EXTENDED_LENGTH and data[1] == Capabilities.EXTENDED_LENGTH:
             option_len = unpack('!H', data[2:4])[0]
             data = data[4 : option_len + 4]
             decoder = _extended_type_length
         else:
             data = data[1 : option_len + 1]
             decoder = _key_values
-
-        if not option_len:
-            return capabilities
 
         while data:
             key, value, data = decoder('parameter', data)
