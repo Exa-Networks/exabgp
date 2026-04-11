@@ -83,9 +83,18 @@ class option:
 
         if destination in ('stdout', 'stderr', 'syslog'):
             cls.destination = destination
+        elif destination.startswith('host:'):
+            cls.destination = destination
         elif destination.startswith('file:'):
             cls.destination = destination[5:]
+        elif destination.startswith('/') or destination.startswith('~'):
+            cls.destination = os.path.expanduser(destination)
         else:
+            sys.stderr.write(
+                f'warning: invalid log destination {destination!r}, '
+                f'expected stdout, stderr, syslog, or an absolute file path; '
+                f'falling back to stdout\n'
+            )
             cls.destination = 'stdout'
 
     @classmethod
@@ -117,11 +126,6 @@ class option:
             cls.formater = formater(env.log.short, 'stderr')
             return
 
-        # if cls.destination == 'file':
-        #     os.path.realpath(os.path.normpath(os.path.join(cls._cwd, destination)))
-        #     _logger = get_logger('ExaBGP file', filename='')
-        #     _format = formater(cls.enabled, 'stderr')
-
         if cls.destination == 'syslog':
             cls.logger = get_logger(
                 f'ExaBGP syslog {now}',
@@ -130,5 +134,28 @@ class option:
                 level=cls.level,
             )
             cls.formater = formater(env.log.short, 'syslog')
+            return
 
         # need to re-add remote syslog
+
+        # anything else is treated as a file path
+        filename = os.path.realpath(os.path.normpath(os.path.join(cls.cwd, cls.destination)))
+        try:
+            cls.logger = get_logger(
+                f'ExaBGP file {now}',
+                format='%(message)s',
+                filename=filename,
+                level=cls.level,
+            )
+        except OSError as exc:
+            sys.stderr.write(f'warning: could not open log file {filename!r}: {exc}; falling back to stdout\n')
+            cls.destination = 'stdout'
+            cls.logger = get_logger(
+                f'ExaBGP stdout {now}',
+                format='%(message)s',
+                stream=sys.stderr,
+                level=cls.level,
+            )
+            cls.formater = formater(env.log.short, 'stdout')
+            return
+        cls.formater = formater(env.log.short, 'file')

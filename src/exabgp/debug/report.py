@@ -29,12 +29,12 @@ def string_exception(exception):
 
 def format_exception(exception):
     return '\n'.join(
-        [_NO_PANIC + _INFO, '', '', str(type(exception)), str(exception), string_exception(exception), _FOOTER],
+        [_NO_PANIC + _info(), '', '', str(type(exception)), str(exception), string_exception(exception), _FOOTER],
     )
 
 
 def format_panic(dtype, value, trace):
-    result = _PANIC + _INFO
+    result = _PANIC + _info()
 
     result += '-- Traceback\n\n'
     result += ''.join(traceback.format_exception(dtype, value, trace))
@@ -48,9 +48,11 @@ def format_panic(dtype, value, trace):
     return result
 
 
-# NOTE: Do not convert to f-string! F-strings cannot contain backslashes in expression
-# parts (like \n in .replace('\n', ' ')). This must use % formatting.
-_INFO = """
+# Built lazily: calling Env.iter_env() triggers Env.setup() which locks
+# in the environment file path. If this were evaluated at module load,
+# it would run before main() has a chance to honour --env-file.
+def _info():
+    return """
 ExaBGP version : {}
 Python version : {}
 System Uname   : {}
@@ -60,13 +62,13 @@ Root           : {}
 Environment:
 {}
 """.format(
-    version,
-    sys.version.replace('\n', ' '),
-    platform.version(),
-    str(sys.maxsize),
-    ROOT,
-    '\n'.join(Env.iter_env(diff=True)),
-)
+        version,
+        sys.version.replace('\n', ' '),
+        platform.version(),
+        str(sys.maxsize),
+        ROOT,
+        '\n'.join(Env.iter_env(diff=True)),
+    )
 
 
 _PANIC = """
