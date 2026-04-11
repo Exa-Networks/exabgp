@@ -18,4 +18,4 @@ _std = {
 
 
 def istty(std):
-    return _istty(_std[std])
+    return _istty(_std.get(std, None))
