@@ -3,6 +3,12 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.9:
+ * Fix: --env-file was ignored, it is now honoured. (#1378)
+ * Fix: logging to a file was silently dropped. Bare absolute paths,
+   ~-expanded paths, file:<path> and host:<addr> destinations now
+   work, with a warning on invalid destinations. (#1378)
+
 Version 5.0.8:
  * Fix: handle OPEN message with zero capabilities without crashing
    Capabilities.unpack() read the parameter type byte before checking
