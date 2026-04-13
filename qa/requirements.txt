@@ -59,7 +59,7 @@ pygments==2.20.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     #   pytest
     #   rich
     #   textual
-pytest==9.0.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
+pytest==9.0.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   mutmut
     #   pytest-asyncio
