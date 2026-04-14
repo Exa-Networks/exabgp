@@ -72,25 +72,15 @@ class log(_log):
     def logger(logger, message, source, level):
         # DEVELOPER WARNING: Log messages must always be callable (lambda) for lazy evaluation
         if not callable(message):
-            import sys
-
             warning = (
-                f'\n'
-                f'================================================================================\n'
-                f'WARNING: Non-callable log message detected!\n'
-                f'================================================================================\n'
-                f'Source: {source}\n'
-                f'Level: {level}\n'
-                f'Message type: {type(message).__name__}\n'
-                f'Message preview: {str(message)[:100]}...\n'
-                f'\n'
-                f'All log messages MUST be wrapped in lambda for lazy evaluation:\n'
-                f'  WRONG: log.{level.lower()}("message", "{source}")\n'
-                f'  RIGHT: log.{level.lower()}(lambda: "message", "{source}")\n'
-                f'================================================================================\n'
+                f'non-callable log message detected'
+                f' source={source} level={level}'
+                f' type={type(message).__name__}'
+                f' preview={str(message)[:100]}'
             )
-            sys.stderr.write(warning)
-            sys.stderr.flush()
+            timestamp = time.localtime()
+            logger(option.formater(warning, source, 'WARNING', timestamp))
+            record(warning, source, 'WARNING', timestamp)
 
         # Early exit if logging is disabled
         if not option.log_enabled(source, level):

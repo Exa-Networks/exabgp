@@ -106,14 +106,14 @@ class Listener:
             self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
             md5_suffix = ' with MD5' if md5_password else ''
             log.debug(
-                f'listening for BGP session(s) on {local_addr}:{port}{md5_suffix}',
+                lambda local_addr=local_addr, port=port, md5_suffix=md5_suffix: f'listening for BGP session(s) on {local_addr}:{port}{md5_suffix}',
                 'network',
             )
             return True
         except NetworkError as exc:
             if os.geteuid() != 0 and port <= MAX_PRIVILEGED_PORT:
                 log.critical(
-                    f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root',
+                    lambda local_addr=local_addr, port=port: f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root',
                     'network',
                 )
             else:
@@ -208,7 +208,7 @@ class Listener:
                 matched = len(ranged_neighbor)
                 if matched > 1:
                     log.debug(
-                        f'could not accept connection from {connection.name()} (more than one neighbor match)',
+                        lambda connection=connection: f'could not accept connection from {connection.name()} (more than one neighbor match)',
                         'network',
                     )
                     reactor.asynchronous.schedule(

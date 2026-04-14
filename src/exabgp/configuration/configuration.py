@@ -72,7 +72,8 @@ class _Configuration:
                     result = True
                 else:
                     log.error(
-                        f'the route family ({change.nlri.short()}) is not configured on neighbor {neighbor_name}',
+                        lambda change=change,
+                        neighbor_name=neighbor_name: f'the route family ({change.nlri.short()}) is not configured on neighbor {neighbor_name}',
                         'configuration',
                     )
         return result
