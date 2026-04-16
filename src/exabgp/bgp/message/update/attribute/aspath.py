@@ -162,6 +162,15 @@ class ASPath(Attribute):
         self._json = json.dumps(jason)
         return self._json
 
+    def as_dict(self):
+        result = {}
+        for pos, content in enumerate(self.aspath):
+            result[pos] = {
+                'element': content.NAME,
+                'value': list(content),
+            }
+        return result
+
     @classmethod
     def _new_aspaths(cls, data, asn4, klass=None):
         backup = data

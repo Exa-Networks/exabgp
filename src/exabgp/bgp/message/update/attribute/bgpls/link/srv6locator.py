@@ -61,3 +61,12 @@ class Srv6Locator(FlagLS):
             },
             indent=compact,
         )
+
+    def as_dict(self):
+        return {
+            "srv6-locator": {
+                "flags": self.flags,
+                "algorithm": self.algorithm,
+                "metric": self.metric,
+            }
+        }

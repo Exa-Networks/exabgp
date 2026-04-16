@@ -213,6 +213,19 @@ class Type1SessionTransformedRoute(MUP):
 
         return cls(rd, prefix_ip_len, prefix_ip, teid, qfi, endpoint_ip_len, endpoint_ip, source_ip_len, source_ip, afi)
 
+    def as_dict(self):
+        nlri = MUP.as_dict(self)
+        nlri["rd"] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri["prefix_ip_len"] = self.prefix_ip_len
+        nlri["prefix_ip"] = str(self.prefix_ip)
+        nlri["teid"] = self.teid
+        nlri["qfi"] = self.qfi
+        nlri["endpoint_ip_len"] = self.endpoint_ip_len
+        nlri["endpoint_ip"] = str(self.endpoint_ip)
+        nlri["source_ip_len"] = self.source_ip_len
+        nlri["source_ip"] = str(self.source_ip)
+        return nlri
+
     def json(self, compact=None):
         content = '"name": "{}", '.format(self.NAME)
         content += '"arch": %d, ' % self.ARCHTYPE

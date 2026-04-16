@@ -633,6 +633,27 @@ class Flow(NLRI):
     def __str__(self):
         return self.extensive()
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        r = {}
+        for index in sorted(self.rules):
+            rules = self.rules[index]
+            s = []
+            for idx, rule in enumerate(rules):
+                if idx and rule.operations & NumericOperator.AND:
+                    s[-1] = f"{s[-1]}{rule}"
+                else:
+                    s.append(f"{rule}")
+            r[rules[0].NAME] = s
+
+        flow = {
+            "rules": r,
+            "nexthop": None if self.nexthop is NoNextHop else str(self.nexthop),
+            "rd": None if self.rd is RouteDistinguisher.NORD else self.rd._str(),
+            "family": {"afi": f"{family[0]}", "safi": f"{family[1]}"}
+        }
+        return flow
+
     def json(self, compact=None):
         string = []
         for index in sorted(self.rules):

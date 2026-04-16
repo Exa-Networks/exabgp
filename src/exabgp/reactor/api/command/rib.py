@@ -45,29 +45,21 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
         jason = {}
         neighbor = reactor.neighbor(key)
         neighbor_ip = reactor.neighbor_ip(key)
-        routes = jason.setdefault(neighbor_ip, {'routes': []})['routes']
+        jason = {"peer": {"address": neighbor_ip}}
 
         if extensive:
-            jason[neighbor_ip].update(NeighborTemplate.to_json(neighbor))
+            jason.update(NeighborTemplate.as_dict(reactor.neighbor_cli_data(key)))
 
         for change in changes:
             if not isinstance(change.nlri, route_type):
                 # log something about this drop?
                 continue
-
-            routes.append(
-                {
-                    'prefix': str(change.nlri.cidr.prefix()),
-                    'family': str(change.nlri.family()).strip('()').replace(',', ''),
-                },
-            )
-
-            for line in json.dumps(jason).split('\n'):
-                reactor.processes.write(service, line)
+            jason["route"] = change.as_dict()
+            reactor.processes.write(service, json.dumps(jason))
 
     def callback():
         lines_per_yield = getenv().api.chunk
-        if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
+        if last in ('routes', 'extensive', 'static', 'inet', 'flow', 'l2vpn'):
             peers = reactor.peers()
         else:
             peers = [n for n in reactor.peers() if f'neighbor {last}' in n]

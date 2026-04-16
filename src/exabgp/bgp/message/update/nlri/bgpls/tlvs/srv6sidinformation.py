@@ -39,6 +39,9 @@ class Srv6SIDInformation:
     def json(self, compact=None):
         return '"srv6-sid": "{}"'.format(str(self.sid))
 
+    def as_dict(self):
+        return {"srv6-sid": str(self.sid)}
+
     def __eq__(self, other):
         return self.sid == other.sid
 

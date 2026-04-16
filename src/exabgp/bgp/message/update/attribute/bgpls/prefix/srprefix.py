@@ -86,3 +86,11 @@ class SrPrefix(FlagLS):
 
     def json(self, compact=None):
         return f'"sr-prefix-flags": {json.dumps(self.flags)}, "sids": {json.dumps(self.sids)}, "undecoded-sids": {json.dumps(self.undecoded)}, "sr-algorithm": {json.dumps(self.sr_algo)}'
+
+    def as_dict(self):
+        return {
+            "sr-prefix-flags": self.flags,
+            "sids": self.sids,
+            "undecoded-sids": self.undecoded,
+            "sr-algorithm": self.sr_algo,
+        }

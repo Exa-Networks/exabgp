@@ -76,6 +76,15 @@ class Multicast(EVPN):
         ip = IP.unpack(data[13 : 13 + iplen // 8])
         return cls(rd, etag, ip, data)
 
+    def as_dict(self):
+        nlri = EVPN.as_dict(self)
+        nlri["parsed"] = True
+        nlri["nexthop"] = None if self.nexthop is None else str(self.nexthop)
+        nlri["rd"] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri["ethernet-tag"] = self.etag.tag
+        nlri["ip"] = None if self.ip is None else str(self.ip)
+        return nlri
+
     def json(self, compact=None):
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '

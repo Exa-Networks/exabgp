@@ -68,6 +68,9 @@ class MTID:
         # tids = ', '.join(_ for _ in self.topologies)
         # return f'[{tids}]'
 
+    def as_dict(self):
+        return self.topologies
+
     def __eq__(self, other):
         return self.topologies == other.topologies
 

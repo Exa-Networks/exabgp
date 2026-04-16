@@ -201,6 +201,20 @@ class LINK(BGPLS):
             return self._packed
         raise RuntimeError('Not implemented')
 
+    def as_dict(self):
+        nlri = BGPLS.as_dict(self)
+        nlri["parsed"] = True
+        nlri["l3-routing-topology"] = int(self.domain)
+        nlri["protocol-id"] = int(self.proto_id)
+        nlri["local-node-descriptors"] = [n.as_dict() for n in self.local_node]
+        nlri["remote-node-descriptors"] = [n.as_dict() for n in self.remote_node]
+        nlri["interface-addresses"] = [a.as_dict() for a in self.iface_addrs]
+        nlri["neighbor-addresses"] = [a.as_dict() for a in self.neigh_addrs]
+        nlri["multi-topology-ids"] = [t.as_dict() for t in self.topology_ids]
+        nlri["link-identifiers"] = [l.as_dict() for l in self.link_ids]
+        nlri["rd"] = None if self.route_d is None else self.route_d._str()
+        return nlri
+
     def json(self, compact=None):
         content = f'"ls-nlri-type": "{self.NAME}", '
         content += f'"l3-routing-topology": {int(self.domain)}, '

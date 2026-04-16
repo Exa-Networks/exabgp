@@ -80,6 +80,12 @@ class DirectSegmentDiscoveryRoute(MUP):
 
         return cls(rd, ip, afi)
 
+    def as_dict(self):
+        nlri = MUP.as_dict(self)
+        nlri["rd"] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri["ip"] = str(self.ip)
+        return nlri
+
     def json(self, compact=None):
         content = '"name": "{}", '.format(self.NAME)
         content += '"arch": %d, ' % self.ARCHTYPE
