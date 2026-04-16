@@ -76,3 +76,6 @@ class Srv6L2Service:
     def json(self, compact=None):
         content = '[ ' + ', '.join(subtlv.json() for subtlv in self.subtlvs) + ' ]'
         return '"l2-service": {}'.format(content)
+
+    def as_dict(self):
+        return {"l2-service": [subtlv.as_dict() for subtlv in self.subtlvs]}

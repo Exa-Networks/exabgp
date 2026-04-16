@@ -105,6 +105,14 @@ class SourceAD(MVPN):
 
         return cls(afi=afi, rd=rd, source=sourceip, group=groupip, packed=data)
 
+    def as_dict(self):
+        nlri = MVPN.as_dict(self)
+        nlri["parsed"] = True
+        nlri["rd"] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri["source"] = str(self.source)
+        nlri["group"] = str(self.group)
+        return nlri
+
     def json(self, compact=None):
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '

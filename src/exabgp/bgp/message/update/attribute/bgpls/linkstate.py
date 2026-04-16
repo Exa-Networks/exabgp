@@ -93,6 +93,12 @@ class LinkState(Attribute):
         content = ', '.join(d.json() for d in self.ls_attrs)
         return f'{{ {content} }}'
 
+    def as_dict(self):
+        result = {}
+        for d in self.ls_attrs:
+            result.update(d.as_dict())
+        return result
+
     def __str__(self):
         return ', '.join(str(d) for d in self.ls_attrs)
 
@@ -115,6 +121,11 @@ class BaseLS:
         except TypeError:
             # not a basic type
             return f'"{self.JSON}": "{self.content.decode("utf-8")}"'
+
+    def as_dict(self):
+        if isinstance(self.content, bytes):
+            return {self.JSON: self.content.decode("utf-8")}
+        return {self.JSON: self.content}
 
     def __repr__(self):
         return '{}: {}'.format(self.REPR, self.content)
@@ -153,6 +164,9 @@ class GenericLSID(BaseLS):
         merged = ', '.join([f'"{hexstring(_)}"' for _ in self.content])
         return f'"generic-lsid-{self.TLV}": [{merged}]'
 
+    def as_dict(self):
+        return {f"generic-lsid-{self.TLV}": [hexstring(c) for c in self.content]}
+
     @classmethod
     def unpack(cls, data):
         return cls(data)
@@ -167,6 +181,9 @@ class FlagLS(BaseLS):
 
     def json(self, compact=None):
         return f'"{self.JSON}": {json.dumps(self.flags)}'
+
+    def as_dict(self):
+        return {self.JSON: self.flags}
 
     @classmethod
     def unpack_flags(cls, data):

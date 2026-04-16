@@ -52,6 +52,9 @@ class ClusterList(Attribute):
     def json(self):
         return '[ {} ]'.format(', '.join(['"{}"'.format(str(_)) for _ in self.clusters]))
 
+    def as_dict(self):
+        return [str(_) for _ in self.clusters]
+
     @classmethod
     def unpack(cls, data, direction, negotiated):
         clusters = []

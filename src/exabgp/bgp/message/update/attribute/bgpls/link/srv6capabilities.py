@@ -58,3 +58,6 @@ class Srv6Capabilities(BaseLS):
             },
             indent=compact,
         )
+
+    def as_dict(self):
+        return {"srv6-capabilities": {"flags": self.flags}}

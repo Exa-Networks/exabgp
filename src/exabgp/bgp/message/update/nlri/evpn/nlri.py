@@ -68,6 +68,16 @@ class EVPN(NLRI):
     def _prefix(self):
         return 'evpn:{}:'.format(self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower())
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        return {
+            "code": self.CODE,
+            "parsed": False,
+            "raw": self._raw(),
+            "name": self.NAME,
+            "family": {"afi": str(family[0]), "safi": str(family[1])},
+        }
+
     def pack_nlri(self, negotiated=None):
         # XXX: addpath not supported yet
         return pack('!BB', self.CODE, len(self._packed)) + self._packed

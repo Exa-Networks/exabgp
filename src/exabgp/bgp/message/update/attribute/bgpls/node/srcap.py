@@ -98,3 +98,8 @@ class SrCapabilities(FlagLS):
 
     def json(self, compact=None):
         return f'{FlagLS.json(self)}, "sids": {self.sids}'
+
+    def as_dict(self):
+        result = FlagLS.as_dict(self)
+        result["sids"] = self.sids
+        return result

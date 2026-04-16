@@ -64,6 +64,16 @@ class MUP(NLRI):
     def _prefix(self):
         return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        return {
+            "arch": self.ARCHTYPE,
+            "code": self.CODE,
+            "raw": self._raw(),
+            "name": self.NAME,
+            "family": {"afi": str(family[0]), "safi": str(family[1])},
+        }
+
     def pack_nlri(self, negotiated=None):
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 

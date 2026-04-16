@@ -124,6 +124,9 @@ class Srv6LanEndXISIS(FlagLS):
     def json(self, compact=None):
         return '"srv6-lan-endx-isis": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
 
+    def as_dict(self):
+        return {"srv6-lan-endx-isis": self.content}
+
 
 @LinkState.register()
 class Srv6LanEndXOSPF(FlagLS):
@@ -162,3 +165,6 @@ class Srv6LanEndXOSPF(FlagLS):
 
     def json(self, compact=None):
         return '"srv6-lan-endx-ospf": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
+
+    def as_dict(self):
+        return {"srv6-lan-endx-ospf": self.content}

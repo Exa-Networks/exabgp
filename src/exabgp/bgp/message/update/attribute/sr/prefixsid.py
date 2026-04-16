@@ -67,6 +67,12 @@ class PrefixSid(Attribute):
         content = ', '.join(d.json() for d in self.sr_attrs)
         return f'{{ {content} }}'
 
+    def as_dict(self):
+        result = {}
+        for d in self.sr_attrs:
+            result.update(d.as_dict())
+        return result
+
     def __str__(self):
         # First, we try to decode path attribute for SR-MPLS
         label_index = next((i for i in self.sr_attrs if i.TLV == 1), None)
@@ -99,3 +105,6 @@ class GenericSRId:
 
     def json(self, compact=None):
         return '"attribute-not-implemented-{}": "{}"'.format(self.code, hexstring(self.rep))
+
+    def as_dict(self):
+        return {f"attribute-not-implemented-{self.code}": hexstring(self.rep)}

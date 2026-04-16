@@ -106,6 +106,15 @@ class SharedJoin(MVPN):
         groupip = IP.unpack(data[cursor : cursor + groupiplen])
         return cls(afi=afi, rd=rd, source=sourceip, group=groupip, source_as=source_as, packed=data)
 
+    def as_dict(self):
+        nlri = MVPN.as_dict(self)
+        nlri["parsed"] = True
+        nlri["rd"] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri["source-as"] = self.source_as
+        nlri["source"] = str(self.source)
+        nlri["group"] = str(self.group)
+        return nlri
+
     def json(self, compact=None):
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '

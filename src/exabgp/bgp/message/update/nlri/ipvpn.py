@@ -90,6 +90,12 @@ class IPVPN(Label):
             r.append(self.rd.json())
         return r
 
+    def as_dict(self):
+        nlri = Label.as_dict(self)
+        if self.rd is not RouteDistinguisher.NORD:
+            nlri["rd"] = self.rd._str()
+        return nlri
+
     # @classmethod
     # def _rd (cls, data, mask):
     # 	mask -= 8*8  # the 8 bytes of the route distinguisher

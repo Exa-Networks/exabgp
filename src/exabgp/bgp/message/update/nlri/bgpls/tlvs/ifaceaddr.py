@@ -40,6 +40,9 @@ class IfaceAddr:
     def json(self, compact=None):
         return '"{}"'.format(self.iface_address)
 
+    def as_dict(self):
+        return str(self.iface_address)
+
     def __eq__(self, other):
         return self.iface_address == other.iface_address
 

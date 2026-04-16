@@ -70,6 +70,19 @@ class VPLS(NLRI):
             + pack('!L', (self.base << 4) | 0x1)[1:]  # setting the bottom of stack, should we ?
         )
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        nlri = {
+            "rd": self.rd._str() if self.rd.rd else None,
+            "endpoint": self.endpoint,
+            "base": self.base,
+            "offset": self.offset,
+            "size": self.size,
+            "nexthop": None if self.nexthop is None else str(self.nexthop),
+            "family": {"afi": str(family[0]), "safi": str(family[1])},
+        }
+        return nlri
+
     # XXX: FIXME: we need an unique key here.
     # XXX: What can we use as unique key ?
     def json(self, compact=None):

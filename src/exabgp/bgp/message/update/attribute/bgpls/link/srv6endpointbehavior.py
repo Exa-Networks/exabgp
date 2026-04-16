@@ -62,3 +62,12 @@ class Srv6EndpointBehavior(BaseLS):
             },
             indent=compact,
         )
+
+    def as_dict(self):
+        return {
+            "srv6-endpoint-behavior": {
+                "endpoint-behavior": self.endpoint_behavior,
+                "flags": self.flags,
+                "algorithm": self.algorithm,
+            }
+        }

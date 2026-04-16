@@ -81,6 +81,19 @@ class EthernetAD(EVPN):
 
         return cls(rd, esi, etag, label, data)
 
+    def as_dict(self):
+        nlri = EVPN.as_dict(self)
+        nlri["parsed"] = True
+        nlri["nexthop"] = None if self.nexthop is None else str(self.nexthop)
+        nlri["rd"] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri["esi"] = str(self.esi)
+        nlri["ethernet-tag"] = self.etag.tag
+        label = []
+        for value, raw in zip(self.label.labels, self.label.raw_labels):
+            label.append([value] if raw is None else [value, raw])
+        nlri["label"] = label
+        return nlri
+
     def json(self, compact=None):
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '

@@ -77,3 +77,6 @@ class SrGb:
 
     def json(self, compact=None):
         return f'"sr-srgbs": {json.dumps(self.srgbs)}'
+
+    def as_dict(self):
+        return {"sr-srgbs": self.srgbs}

@@ -38,6 +38,9 @@ class NeighAddr:
     def json(self):
         return '"{}"'.format(self.addr)
 
+    def as_dict(self):
+        return str(self.addr)
+
     def __eq__(self, other):
         return self.addr == other.addr
 

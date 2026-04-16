@@ -96,3 +96,15 @@ class Srv6SidStructure:
         }
 
         return '"structure": {}'.format(json.dumps(pairs))
+
+    def as_dict(self):
+        return {
+            "structure": {
+                "locator-block-length": self.loc_block_len,
+                "locator-node-length": self.loc_node_len,
+                "function-length": self.func_len,
+                "argument-length": self.arg_len,
+                "transposition-length": self.tpose_len,
+                "transposition-offset": self.tpose_offset,
+            }
+        }

@@ -71,6 +71,15 @@ class Label(INET):
             r.append(self.labels.json())
         return r
 
+    def as_dict(self):
+        nlri = INET.as_dict(self)
+        if self.labels.labels:
+            label = []
+            for value, raw in zip(self.labels.labels, self.labels.raw_labels):
+                label.append([value] if raw is None else [value, raw])
+            nlri["label"] = label
+        return nlri
+
     # @classmethod
     # def _labels (cls, data, action):
     # 	mask = data[0]

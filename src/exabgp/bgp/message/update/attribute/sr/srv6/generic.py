@@ -17,6 +17,9 @@ class GenericSrv6ServiceSubTlv:
         # TODO:
         return ''
 
+    def as_dict(self):
+        return {"generic-sub-tlv": self.code}
+
     def pack(self):
         return self.packed
 
@@ -32,6 +35,9 @@ class GenericSrv6ServiceDataSubSubTlv:
     def json(self, compact=None):
         # TODO:
         return ''
+
+    def as_dict(self):
+        return {"generic-sub-sub-tlv": self.code}
 
     def pack(self):
         return self.packed

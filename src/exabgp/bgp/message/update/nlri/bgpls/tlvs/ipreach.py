@@ -87,6 +87,12 @@ class IpReach:
             ],
         )
 
+    def as_dict(self):
+        return {
+            "ip-reachability-tlv": str(self.prefix),
+            "ip-reach-prefix": f"{self.prefix}/{self.plength}",
+        }
+
     def __eq__(self, other):
         return self.prefix == other.prefix
 
