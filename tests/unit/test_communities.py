@@ -22,6 +22,7 @@ Phase 3: Extended Communities - Other Types (tests 11-22)
   - Bandwidth (Link Bandwidth)
   - Encapsulation (RFC 5512)
   - Traffic Engineering
+  - Flowspec traffic-rate-packets (RFC 8955)
   - L2 Info
   - MAC Mobility
   - FlowSpec Scope
@@ -491,6 +492,42 @@ def test_traffic_engineering_community() -> None:
     # Verify pack
     packed = tr.pack_attribute(negotiated)
     assert len(packed) == 8
+
+
+def test_flowspec_packet_rate_community() -> None:
+    """Test FlowSpec packet rate extended community."""
+    from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRatePackets
+
+    negotiated = create_negotiated()
+    trp = TrafficRatePackets.make_traffic_rate_packets(ASN(0), 1000)
+
+    assert len(trp) == 8
+    assert trp.asn == ASN(0)
+    assert trp.rate == 1000
+    assert repr(trp) == 'rate-limit-packets:1000'
+
+    packed = trp.pack_attribute(negotiated)
+    assert len(packed) == 8
+    assert packed[0] == 0x80
+    assert packed[1] == 0x0C
+
+    unpacked = TrafficRatePackets.unpack_attribute(packed, None)  # type: ignore[arg-type]
+    assert unpacked.asn == ASN(0)
+    assert unpacked.rate == 1000
+    assert repr(unpacked) == 'rate-limit-packets:1000'
+
+    # Negative decoded FlowSpec packet rates must be treated as discard.
+    packed = struct.pack('!BBHf', 0x80, 0x0C, 0, -1.5)
+    unpacked = TrafficRatePackets.unpack_attribute(packed, None)  # type: ignore[arg-type]
+
+    assert unpacked.asn == ASN(0)
+    assert unpacked.rate == 0
+    assert repr(unpacked) == 'rate-limit-packets:0'
+
+    # Negative FlowSpec packet rates must not be encoded.
+    with pytest.raises(ValueError, match='traffic-rate-packets must not be negative'):
+        TrafficRatePackets.make_traffic_rate_packets(ASN(0), -1)
 
 
 def test_l2info_community() -> None:

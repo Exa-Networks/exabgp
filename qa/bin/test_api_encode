@@ -978,6 +978,9 @@ neighbor {neighbor_ip} {{
                             if ec.startswith("rate-limit:"):
                                 rate = ec.split(":")[1]
                                 config_parts.append(f"rate-limit {rate}")
+                            elif ec.startswith("rate-limit-packets:"):
+                                rate = ec.split(":")[1]
+                                config_parts.append(f"rate-limit-packets {rate}")
                             elif ec == "copy-to-nexthop":
                                 # copy X sets both nexthop and copy-to-nexthop EC
                                 if next_hop:

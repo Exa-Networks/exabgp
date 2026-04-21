@@ -6,6 +6,7 @@ to traffic matching a FlowSpec rule.
 
 Actions:
     TrafficRate: Rate-limit matching traffic (rate in bytes/sec)
+    TrafficRatePackets: Rate-limit matching traffic (rate in packets/sec)
     TrafficAction: Sample and/or terminate rule evaluation
     TrafficRedirect: Redirect to VRF by Route Target
     TrafficMark: Set DSCP marking on matching packets
@@ -77,6 +78,47 @@ class TrafficRate(ExtendedCommunity):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRate:
         return cls(data[:8])
+
+
+# ============================================================ TrafficRatePackets
+
+
+@ExtendedCommunity.register_subtype
+class TrafficRatePackets(ExtendedCommunity):
+    """Rate-limit matching traffic in packets per second (RFC 8955)."""
+
+    COMMUNITY_TYPE: ClassVar[int] = 0x80
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
+
+    def __init__(self, packed: Buffer) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_traffic_rate_packets(cls, asn: ASN, rate: float) -> TrafficRatePackets:
+        """Create TrafficRatePackets from semantic values."""
+        if rate < 0:
+            raise ValueError(f'traffic-rate-packets must not be negative: {rate}')
+        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, rate)
+        return cls(packed)
+
+    @property
+    def asn(self) -> ASN:
+        return ASN(unpack('!H', self._packed[2:4])[0])
+
+    @property
+    def rate(self) -> float:
+        value: float = unpack('!f', self._packed[4:8])[0]
+        return max(value, 0.0)
+
+    def __repr__(self) -> str:
+        return 'rate-limit-packets:%d' % self.rate
+
+    @classmethod
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRatePackets:
+        asn, rate = unpack('!Hf', data[2:8])
+        if rate < 0:
+            rate = 0.0
+        return cls.make_traffic_rate_packets(ASN(asn), rate)
 
 
 # ================================================================ TrafficAction

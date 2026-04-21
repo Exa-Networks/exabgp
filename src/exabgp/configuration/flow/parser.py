@@ -12,6 +12,7 @@ Match conditions:
 Traffic actions:
     accept/discard: Allow or drop traffic
     rate_limit: Limit traffic rate (bytes/sec)
+    rate_limit_packets: Limit traffic rate (packets/sec)
     redirect: Redirect to VRF or next-hop
     mark: Set DSCP marking
     action: Sample and/or terminal flags
@@ -37,6 +38,7 @@ from exabgp.bgp.message.update.attribute.community.extended import (
     TrafficNextHopIPv6IETF,
     TrafficNextHopSimpson,
     TrafficRate,
+    TrafficRatePackets,
     TrafficRedirect,
     TrafficRedirectASN4,
     TrafficRedirectIPv6,
@@ -360,6 +362,12 @@ def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
             'configuration',
         )
     return ExtendedCommunities().add(TrafficRate.make_traffic_rate(ASN(0), speed))
+
+
+def rate_limit_packets(tokeniser: 'Tokeniser') -> ExtendedCommunities:
+    # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
+    speed: int = int(tokeniser())
+    return ExtendedCommunities().add(TrafficRatePackets.make_traffic_rate_packets(ASN(0), speed))
 
 
 def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
