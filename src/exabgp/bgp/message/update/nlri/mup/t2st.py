@@ -149,6 +149,14 @@ class Type2SessionTransformedRoute(MUP):
 
         return cls(rd, endpoint_len, endpoint_ip, teid, afi)
 
+    def as_dict(self):
+        nlri = MUP.as_dict(self)
+        nlri["rd"] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri["endpoint_len"] = self.endpoint_len
+        nlri["endpoint_ip"] = str(self.endpoint_ip)
+        nlri["teid"] = self.teid
+        return nlri
+
     def json(self, compact=None):
         content = '"name": "{}", '.format(self.NAME)
         content += ' "arch": %d, ' % self.ARCHTYPE

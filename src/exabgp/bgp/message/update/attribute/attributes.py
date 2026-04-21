@@ -144,6 +144,33 @@ class Attributes(dict):
             else:
                 yield ' {} {}'.format(name, presentation % str(attribute))
 
+    def _generate_dict(self):
+        for code in sorted(self.keys()):
+            if code in Attributes.NO_GENERATION:
+                continue
+
+            attribute = self[code]
+
+            if code not in self.representation:
+                key = f"attribute-0x{code:02X}-0x{attribute.FLAG:02X}"
+                yield key, str(attribute)
+                continue
+
+            how, _, name, _, presentation = self.representation[code]
+            if how == 'boolean':
+                yield name, self.has(code)
+            elif how == 'string':
+                yield name, str(attribute)
+            elif how == 'list':
+                yield name, attribute.as_dict()
+            elif how == 'integer':
+                yield name, int(str(attribute))
+            elif how == 'inet':
+                yield name, str(attribute)
+            # Should never be ran
+            else:
+                yield name, str(attribute)
+
     def _generate_json(self):
         for code in sorted(self.keys()):
             # remove the next-hop from the attribute as it is define with the NLRI
@@ -180,6 +207,7 @@ class Attributes(dict):
         self._str = ''
         self._idx = ''
         self._json = ''
+        self._dict = {}
         # The parsed attributes have no mp routes and/or those are last
         self.cacheable = True
 
@@ -201,6 +229,7 @@ class Attributes(dict):
 
             self._str = ''
             self._json = ''
+            self._dict = {}
 
             for community in attribute.communities:
                 self[attribute.ID].add(community)
@@ -208,6 +237,8 @@ class Attributes(dict):
 
         self._str = ''
         self._json = ''
+        self._dict = {}
+
         self[attribute.ID] = attribute
 
     def remove(self, attrid):
@@ -267,6 +298,11 @@ class Attributes(dict):
             message += attribute.pack(negotiated)
 
         return message
+
+    def as_dict(self):
+        if not self._dict:
+            self._dict = dict(self._generate_dict())
+        return self._dict
 
     def json(self):
         if not self._json:

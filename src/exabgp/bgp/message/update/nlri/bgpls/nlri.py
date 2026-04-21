@@ -105,6 +105,16 @@ class BGPLS(NLRI):
             '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        return {
+            "code": self.CODE,
+            "parsed": False,
+            "raw": self._raw(),
+            "name": self.NAME,
+            "family": {"afi": str(family[0]), "safi": str(family[1])},
+        }
+
     @classmethod
     def register(cls, klass):
         if klass.CODE in cls.registered_bgpls:

@@ -147,6 +147,22 @@ class NodeDescriptor:
         content = ', '.join(_ for _ in [node, designated, psn] if _)
         return f'{{ {content} }}'
 
+    def as_dict(self):
+        result = {}
+        if self.node_type == NODE_DESC_TLV_AS:
+            result["autonomous-system"] = self.node_id
+        if self.node_type == NODE_DESC_TLV_BGPLS_ID:
+            result["bgp-ls-identifier"] = str(self.node_id)
+        if self.node_type == NODE_DESC_TLV_OSPF_AREA:
+            result["ospf-area-id"] = str(self.node_id)
+        if self.node_type == NODE_DESC_TLV_IGP_ROUTER:
+            result["router-id"] = str(self.node_id[0])
+        if self.dr_id:
+            result["designated-router-id"] = str(self.dr_id)
+        if self.psn:
+            result["psn"] = str(self.psn)
+        return result
+
     def __eq__(self, other):
         return isinstance(other, NodeDescriptor) and self.node_id == other.node_id
 

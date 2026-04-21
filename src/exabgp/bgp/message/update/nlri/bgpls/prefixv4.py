@@ -134,6 +134,19 @@ class PREFIXv4(BGPLS):
     def __hash__(self):
         return hash((self.CODE, self.domain, self.proto_id, self.route_d))
 
+    def as_dict(self):
+        nlri = BGPLS.as_dict(self)
+        nlri["parsed"] = True
+        nlri["l3-routing-topology"] = int(self.domain)
+        nlri["protocol-id"] = int(self.proto_id)
+        nlri["node-descriptors"] = [d.as_dict() for d in self.local_node]
+        nlri.update(self.prefix.as_dict())
+        nlri["nexthop"] = None if self.nexthop is None else str(self.nexthop)
+        if self.ospf_type:
+            nlri.update(self.ospf_type.as_dict())
+        nlri["rd"] = None if self.route_d is None else self.route_d._str()
+        return nlri
+
     def json(self, compact=None):
         nodes = ', '.join(d.json() for d in self.local_node)
         content = ', '.join(

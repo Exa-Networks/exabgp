@@ -85,3 +85,13 @@ class SrAdjacency(FlagLS):
                 'undecoded-sids': self.undecoded,
             },
         )
+
+    def as_dict(self):
+        return {
+            "sr-adj": {
+                "flags": self.flags,
+                "sids": self.sids,
+                "weight": self.weight,
+                "undecoded-sids": self.undecoded,
+            }
+        }

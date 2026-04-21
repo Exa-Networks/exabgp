@@ -59,6 +59,16 @@ class RTC(NLRI):
     def __repr__(self):
         return str(self)
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        nlri = {
+            "origin": int(self.origin) if self.rt else None,
+            "rt": str(self.rt) if self.rt else None,
+            "nexthop": None if self.nexthop is NoNextHop else str(self.nexthop),
+            "family": {"afi": str(family[0]), "safi": str(family[1])},
+        }
+        return nlri
+
     @staticmethod
     def resetFlags(char):
         return char & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL)

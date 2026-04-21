@@ -52,6 +52,9 @@ class Communities(Attribute):
             return repr(self.communities[0])
         return ''
 
+    def as_dict(self):
+        return [str(community) for community in self.communities]
+
     def json(self):
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 

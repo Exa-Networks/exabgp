@@ -84,6 +84,14 @@ class INET(NLRI):
             return '"{}"'.format(self.cidr.prefix())
         return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        nlri = {"prefix": self.cidr.prefix(),
+                "nexthop": None if self.nexthop is NoNextHop else str(self.nexthop),
+                "family": {"afi": str(family[0]), "safi": str(family[1])}
+               }
+        return nlri
+
     @classmethod
     def _pathinfo(cls, data, addpath):
         if addpath:

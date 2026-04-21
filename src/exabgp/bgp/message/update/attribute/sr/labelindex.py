@@ -62,3 +62,6 @@ class SrLabelIndex:
 
     def json(self, compact=None):
         return '"sr-label-index": %d' % (self.labelindex)
+
+    def as_dict(self):
+        return {"sr-label-index": self.labelindex}
