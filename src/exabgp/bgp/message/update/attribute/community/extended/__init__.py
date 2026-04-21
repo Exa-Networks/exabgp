@@ -28,6 +28,7 @@ Common Extended Community Types:
 | 0x80 | 0x07| FlowSpec Traffic Action | TrafficAction        |
 | 0x80 | 0x08| FlowSpec Redirect       | TrafficRedirect      |
 | 0x80 | 0x09| FlowSpec Traffic Mark   | TrafficMark          |
+| 0x80 | 0x0c| FlowSpec Packet Rate    | TrafficRatePackets   |
 | 0x0c | -   | MUP Extended Community  | MUPExtendedCommunity |
 
 Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#extended-community-rfc-4360
@@ -59,6 +60,7 @@ from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarge
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetIPNumber
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN4Number
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRatePackets
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectASN4
@@ -89,6 +91,7 @@ __all__ = [
     'RouteTargetIPNumber',
     'RouteTargetASN4Number',
     'TrafficRate',
+    'TrafficRatePackets',
     'TrafficAction',
     'TrafficRedirect',
     'TrafficRedirectASN4',
