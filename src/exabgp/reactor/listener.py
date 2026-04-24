@@ -63,8 +63,7 @@ class Listener:
                 continue
             if local_port != port:
                 continue
-            if use_md5:
-                md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
+            md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
             if ttl_in:
                 min_ttl(sock, peer_ip, ttl_in)
             return
