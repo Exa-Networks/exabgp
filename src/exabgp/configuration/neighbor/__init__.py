@@ -498,6 +498,38 @@ class ParseNeighbor(Section):
                 continue
             neighbor.add_nexthop(afi, safi, nhafi)
 
+    def _post_capa_pathslimit(self, neighbor: Neighbor, local: dict[str, Any], families: list[FamilyTuple]) -> None:
+        capability = local.get('capability', {})
+        value = capability.get('paths-limit', None)
+        if value is None:
+            return
+
+        from exabgp.configuration.neighbor.family import ParsePathsLimit
+
+        if isinstance(value, int):
+            neighbor.capability.paths_limit = value
+            return
+
+        if not isinstance(value, dict):
+            return
+
+        if 'all' in value:
+            neighbor.capability.paths_limit = value['all']
+
+        for afi_name in ParsePathsLimit.convert:
+            for family_limit in value.get(afi_name, []):
+                family, limit = family_limit
+                if family not in families:
+                    log.debug(
+                        lazymsg(
+                            'paths-limit.skipped family={f} reason=not_negotiated',
+                            f=family,
+                        ),
+                        'configuration',
+                    )
+                    continue
+                neighbor.capability.paths_limit_per_family[family] = limit
+
     def _post_capa_rr(self, neighbor: Neighbor) -> None:
         if neighbor.capability.route_refresh:
             if not neighbor.adj_rib_out:
@@ -554,6 +586,7 @@ class ParseNeighbor(Section):
 
         self._post_capa_default(neighbor, local)
         self._post_capa_addpath(neighbor, local, families)
+        self._post_capa_pathslimit(neighbor, local, families)
         self._post_capa_nexthop(neighbor, local)
         self._post_capa_rr(neighbor)
         self._post_routes(neighbor, local)

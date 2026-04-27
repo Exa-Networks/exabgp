@@ -461,6 +461,10 @@ Neighbor {peer-address}
         for afi, safi in neighbor.addpaths():
             addpaths += f'\n\t\t{afi.name()} {safi.name()};'
 
+        pathslimits = ''
+        for (afi, safi), limit in neighbor.capability.paths_limit_per_family.items():
+            pathslimits += f'\n\t\t\t{afi.name()} {safi.name()} {limit};'
+
         codes = Message.CODE
 
         _extension_global = {
@@ -586,7 +590,12 @@ Neighbor {peer-address}
             f'\t\tsoftware-version {"enable" if cap.software_version else "disable"};\n'
             f'\t\tnexthop {"enable" if cap.nexthop.is_enabled() else "disable"};\n'
             f'\t\tadd-path {add_path_str};\n'
-            f'\t\tmulti-session {"enable" if cap.multi_session.is_enabled() else "disable"};\n'
+            + (
+                f'\t\tpaths-limit {{\n\t\t\tall {cap.paths_limit};{pathslimits}\n\t\t}}\n'
+                if pathslimits
+                else (f'\t\tpaths-limit {cap.paths_limit};\n' if cap.paths_limit else '')
+            )
+            + f'\t\tmulti-session {"enable" if cap.multi_session.is_enabled() else "disable"};\n'
             f'\t\toperational {"enable" if cap.operational.is_enabled() else "disable"};\n'
             f'\t\taigp {"enable" if cap.aigp.is_enabled() else "disable"};\n'
             f'\t}}\n'
@@ -596,7 +605,7 @@ Neighbor {peer-address}
             f'\t}}\n'
             f'\tadd-path {{{addpaths}\n'
             f'\t}}\n'
-            f'{apis}{routes_str}'
+            + f'{apis}{routes_str}'
             f'}}'
         )
 

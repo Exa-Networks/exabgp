@@ -16,6 +16,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.addpath import AddPath
+from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
@@ -170,6 +171,30 @@ class Capabilities(dict[int, Capability]):
             return
         self[Capability.CODE.OPERATIONAL] = Operational()
 
+    def _pathslimit(self, neighbor: Neighbor) -> None:
+        has_per_family = bool(neighbor.capability.paths_limit_per_family)
+        has_default = bool(neighbor.capability.paths_limit)
+        if not has_per_family and not has_default:
+            return
+        if not neighbor.capability.add_path:
+            return
+
+        addpath_cap = self.get(Capability.CODE.ADD_PATH, None)
+        if not isinstance(addpath_cap, AddPath):
+            return
+
+        from exabgp.bgp.message.open.capability.negotiated import RequirePath
+
+        families_with_limit: dict[FamilyTuple, int] = {}
+        for family, direction in addpath_cap.items():
+            if direction & RequirePath.RECEIVE:
+                limit = neighbor.capability.paths_limit_per_family.get(family, neighbor.capability.paths_limit)
+                if limit > 0:
+                    families_with_limit[family] = limit
+
+        if families_with_limit:
+            self[Capability.CODE.PATHS_LIMIT] = PathsLimit(families_with_limit)
+
     def _linklocal(self, neighbor: Neighbor) -> None:
         if not neighbor.capability.link_local_nexthop.is_enabled():
             return
@@ -188,6 +213,7 @@ class Capabilities(dict[int, Capability]):
         self._asn4(neighbor)
         self._nexthop(neighbor)
         self._addpath(neighbor)
+        self._pathslimit(neighbor)
         self._graceful(neighbor, restarted)
         self._refresh(neighbor)
         self._operational(neighbor)

@@ -420,7 +420,10 @@ class Protocol:
         """
         assert self.connection is not None
         log.debug(lazymsg('update.generator.started'), self._session())
-        updates = self.neighbor.rib.outgoing.updates(self.neighbor.group_updates)
+        updates = self.neighbor.rib.outgoing.updates(
+            self.neighbor.group_updates,
+            paths_limit=self.negotiated.paths_limit or None,
+        )
         number: int = 0
         for update in updates:
             for message in update.messages(self.negotiated, include_withdraw):
@@ -441,7 +444,10 @@ class Protocol:
         """Send BGP UPDATE messages (runs to completion)."""
         assert self.connection is not None
         log.debug(lazymsg('update.started'), self._session())
-        updates = self.neighbor.rib.outgoing.updates(self.neighbor.group_updates)
+        updates = self.neighbor.rib.outgoing.updates(
+            self.neighbor.group_updates,
+            paths_limit=self.negotiated.paths_limit or None,
+        )
         number: int = 0
         for update in updates:
             current_update = update

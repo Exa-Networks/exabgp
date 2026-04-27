@@ -240,6 +240,9 @@ class BgpSection(ConfigSection):
 
     passive: bool = option(False, 'ignore the peer configuration and make all peers passive')
     openwait: int = option(60, 'how many seconds we wait for an open once the TCP session is established')
+    paths_limit_audit: bool = option(
+        True, 'log a warning when a peer sends more paths per prefix than our advertised PATHS-LIMIT'
+    )
 
 
 class CacheSection(ConfigSection):

@@ -347,6 +347,11 @@ class INET(NLRI):
         # No AddPath - add discriminator to distinguish from has_addpath=True with 0x00000000
         return bytes(Family.index(self)) + b'disabled' + self._packed
 
+    def prefix_index(self) -> bytes:
+        if self._has_addpath:
+            return bytes(Family.index(self)) + self._packed[PATH_INFO_SIZE:]
+        return self.index()
+
     def prefix(self) -> str:
         return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
 

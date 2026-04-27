@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from exabgp.protocol.family import FamilyTuple
 from exabgp.util.enumeration import TriState
 
 
@@ -77,6 +78,8 @@ class NeighborCapability:
     multi_session: TriState = TriState.FALSE
     operational: TriState = TriState.FALSE
     add_path: int = 0  # 0=disabled, 1=receive, 2=send, 3=send/receive
+    paths_limit: int = 0  # 0=disabled
+    paths_limit_per_family: dict[FamilyTuple, int] = field(default_factory=dict)
     route_refresh: int = 0  # REFRESH enum: ABSENT=1, NORMAL=2, ENHANCED=4
     nexthop: TriState = TriState.UNSET
     aigp: TriState = TriState.UNSET
@@ -96,6 +99,8 @@ class NeighborCapability:
             multi_session=self.multi_session,
             operational=self.operational,
             add_path=self.add_path,
+            paths_limit=self.paths_limit,
+            paths_limit_per_family=dict(self.paths_limit_per_family),
             route_refresh=self.route_refresh,
             nexthop=self.nexthop,
             aigp=self.aigp,
@@ -115,6 +120,8 @@ class NeighborCapability:
             and self.multi_session == other.multi_session
             and self.operational == other.operational
             and self.add_path == other.add_path
+            and self.paths_limit == other.paths_limit
+            and self.paths_limit_per_family == other.paths_limit_per_family
             and self.route_refresh == other.route_refresh
             and self.nexthop == other.nexthop
             and self.aigp == other.aigp

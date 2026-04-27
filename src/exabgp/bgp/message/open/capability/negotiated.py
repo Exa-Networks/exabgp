@@ -61,6 +61,8 @@ class Negotiated:
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
         self.aigp: bool = neighbor.capability.aigp.is_enabled()
         self.linklocal_nexthop: bool = False
+        self.paths_limit: dict[FamilyTuple, int] = {}
+        self.advertised_paths_limit: dict[FamilyTuple, int] = {}
         self.mismatch: list[tuple[str, FamilyTuple]] = []
 
     @classmethod
@@ -80,6 +82,8 @@ class Negotiated:
         instance.refresh = REFRESH.ABSENT
         instance.aigp = False
         instance.linklocal_nexthop = False
+        instance.paths_limit = {}
+        instance.advertised_paths_limit = {}
         instance.mismatch = []
         instance.sent_open = None
         instance.received_open = None
@@ -154,6 +158,32 @@ class Negotiated:
         self.linklocal_nexthop = sent_capa.announced(Capability.CODE.LINK_LOCAL_NEXTHOP) and recv_capa.announced(
             Capability.CODE.LINK_LOCAL_NEXTHOP,
         )
+
+        self.paths_limit = {}
+        self.advertised_paths_limit = {}
+        if recv_capa.announced(Capability.CODE.ADD_PATH) and sent_capa.announced(Capability.CODE.ADD_PATH):
+            from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
+            from exabgp.bgp.message.open.capability.addpath import AddPath
+
+            recv_pl = recv_capa.get(Capability.CODE.PATHS_LIMIT, None)
+            recv_ap = recv_capa.get(Capability.CODE.ADD_PATH, None)
+            if isinstance(recv_pl, PathsLimit) and isinstance(recv_ap, AddPath):
+                for family, limit in recv_pl.items():
+                    if family not in recv_ap:
+                        continue
+                    afi, safi = family
+                    if self.addpath.send(afi, safi):
+                        self.paths_limit[family] = limit
+
+            sent_pl = sent_capa.get(Capability.CODE.PATHS_LIMIT, None)
+            sent_ap = sent_capa.get(Capability.CODE.ADD_PATH, None)
+            if isinstance(sent_pl, PathsLimit) and isinstance(sent_ap, AddPath):
+                for family, limit in sent_pl.items():
+                    if family not in sent_ap:
+                        continue
+                    afi, safi = family
+                    if self.addpath.receive(afi, safi):
+                        self.advertised_paths_limit[family] = limit
 
         self.multisession = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(
             Capability.CODE.MULTISESSION,

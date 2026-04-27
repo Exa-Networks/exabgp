@@ -343,7 +343,11 @@ class OutgoingRIB(Cache):
         new_attr[route_attr_index] = route.attributes
         self.update_cache(route)
 
-    def updates(self, grouped: bool) -> Iterator[UpdateCollection | RouteRefresh]:
+    def updates(
+        self,
+        grouped: bool,
+        paths_limit: dict[FamilyTuple, int] | None = None,
+    ) -> Iterator[UpdateCollection | RouteRefresh]:
         if not self.enabled:
             return
         attr_af_nlri = self._new_attr_af_nlri
@@ -388,6 +392,8 @@ class OutgoingRIB(Cache):
                 # Withdraws include attributes for proper BGP encoding (e.g., FlowSpec rate-limit)
                 yield UpdateCollection([], [nlri], attrs)
 
+        prefix_counts: dict[FamilyTuple, dict[bytes, int]] = {}
+
         # Generate Updates for announces from _new_attr_af_nlri
         # All routes here are announces (add_to_rib only handles announces)
         for attr_index, per_family in attr_af_nlri.items():
@@ -396,6 +402,31 @@ class OutgoingRIB(Cache):
                     continue
 
                 attributes = new_attr[attr_index]
+
+                limit = paths_limit.get(family, 0) if paths_limit else 0
+
+                if limit > 0:
+                    family_counts = prefix_counts.setdefault(family, {})
+                    filtered: dict[bytes, 'Route'] = {}
+                    for route_index, route in routes.items():
+                        pkey = route.nlri.prefix_index()
+                        count = family_counts.get(pkey, 0)
+                        if count < limit:
+                            filtered[route_index] = route
+                            family_counts[pkey] = count + 1
+                        else:
+                            log.debug(
+                                lazymsg(
+                                    'rib.paths_limit.exceeded family={f} prefix={p} limit={l}',
+                                    f=family,
+                                    p=route.nlri,
+                                    l=limit,
+                                ),
+                                'rib',
+                            )
+                    routes = filtered
+                    if not routes:
+                        continue
 
                 # All routes are announces - create RoutedNLRI (nlri + nexthop)
                 announces = [RoutedNLRI(route.nlri, route.nexthop) for route in routes.values()]

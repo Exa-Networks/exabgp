@@ -574,5 +574,137 @@ class TestCacheEdgeCases:
         assert str(cached[0].nlri) == '10.0.2.0/24'
 
 
+class TestIncomingRIBPathAuditTrack:
+    """Tests for IncomingRIB.track_path()."""
+
+    def test_track_path_first_call_returns_one(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        assert rib.track_path(family, b'p1') == 1
+
+    def test_track_path_increments_each_call(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        assert rib.track_path(family, b'p1') == 1
+        assert rib.track_path(family, b'p1') == 2
+        assert rib.track_path(family, b'p1') == 3
+
+    def test_track_path_different_prefixes_independent(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        rib.track_path(family, b'p1')
+        rib.track_path(family, b'p1')
+        assert rib.track_path(family, b'p2') == 1
+
+    def test_track_path_different_families_independent(self):
+        families = {(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)}
+        rib = IncomingRIB(cache=True, families=families)
+        f4 = (AFI.ipv4, SAFI.unicast)
+        f6 = (AFI.ipv6, SAFI.unicast)
+        rib.track_path(f4, b'p1')
+        rib.track_path(f4, b'p1')
+        assert rib.track_path(f6, b'p1') == 1
+
+    def test_track_path_works_when_cache_disabled(self):
+        rib = IncomingRIB(cache=False, families={(AFI.ipv4, SAFI.unicast)})
+        family = (AFI.ipv4, SAFI.unicast)
+        assert rib.track_path(family, b'p1') == 1
+        assert rib.track_path(family, b'p1') == 2
+
+
+class TestIncomingRIBPathAuditUntrack:
+    """Tests for IncomingRIB.untrack_path()."""
+
+    def test_untrack_path_decrements(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        rib.track_path(family, b'p1')
+        rib.track_path(family, b'p1')
+        rib.untrack_path(family, b'p1')
+        assert rib.track_path(family, b'p1') == 2
+
+    def test_untrack_path_removes_when_zero(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        rib.track_path(family, b'p1')
+        rib.untrack_path(family, b'p1')
+        assert rib.track_path(family, b'p1') == 1
+
+    def test_untrack_path_missing_family_safe(self):
+        rib = create_incoming_rib()
+        rib.untrack_path((AFI.ipv4, SAFI.unicast), b'p1')
+
+    def test_untrack_path_missing_prefix_safe(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        rib.track_path(family, b'p1')
+        rib.untrack_path(family, b'p_unknown')
+
+    def test_untrack_path_clears_warned_flag_at_zero(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        rib.track_path(family, b'p1')
+        rib.mark_warned(family, b'p1')
+        rib.untrack_path(family, b'p1')
+        assert rib.mark_warned(family, b'p1') is True
+
+    def test_untrack_path_keeps_warned_flag_above_zero(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        rib.track_path(family, b'p1')
+        rib.track_path(family, b'p1')
+        rib.mark_warned(family, b'p1')
+        rib.untrack_path(family, b'p1')
+        assert rib.mark_warned(family, b'p1') is False
+
+
+class TestIncomingRIBPathAuditMarkWarned:
+    """Tests for IncomingRIB.mark_warned()."""
+
+    def test_mark_warned_first_returns_true(self):
+        rib = create_incoming_rib()
+        assert rib.mark_warned((AFI.ipv4, SAFI.unicast), b'p1') is True
+
+    def test_mark_warned_second_returns_false(self):
+        rib = create_incoming_rib()
+        rib.mark_warned((AFI.ipv4, SAFI.unicast), b'p1')
+        assert rib.mark_warned((AFI.ipv4, SAFI.unicast), b'p1') is False
+
+    def test_mark_warned_independent_per_prefix(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        rib.mark_warned(family, b'p1')
+        assert rib.mark_warned(family, b'p2') is True
+
+    def test_mark_warned_independent_per_family(self):
+        families = {(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)}
+        rib = IncomingRIB(cache=True, families=families)
+        rib.mark_warned((AFI.ipv4, SAFI.unicast), b'p1')
+        assert rib.mark_warned((AFI.ipv6, SAFI.unicast), b'p1') is True
+
+
+class TestIncomingRIBPathAuditClear:
+    """Tests for IncomingRIB.clear()."""
+
+    def test_clear_resets_path_counts(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        rib.track_path(family, b'p1')
+        rib.track_path(family, b'p1')
+        rib.clear()
+        assert rib.track_path(family, b'p1') == 1
+
+    def test_clear_resets_warned(self):
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        rib.mark_warned(family, b'p1')
+        rib.clear()
+        assert rib.mark_warned(family, b'p1') is True
+
+    def test_clear_does_not_affect_audit_when_no_state(self):
+        rib = create_incoming_rib()
+        rib.clear()
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

@@ -177,6 +177,9 @@ class NLRI(Family):
 
         return bytes(Family.index(self)) + self.pack_nlri(Negotiated.UNSET)
 
+    def prefix_index(self) -> bytes:
+        return self.index()
+
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         raise Exception('unimplemented in NLRI children class')
 

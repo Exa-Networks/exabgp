@@ -37,7 +37,7 @@ from exabgp.configuration.flow import ParseFlow, ParseFlowMatch, ParseFlowRoute,
 from exabgp.configuration.l2vpn import ParseL2VPN, ParseVPLS
 from exabgp.configuration.neighbor import ParseNeighbor
 from exabgp.configuration.neighbor.api import ParseAPI, ParseReceive, ParseSend
-from exabgp.configuration.neighbor.family import ParseAddPath, ParseFamily
+from exabgp.configuration.neighbor.family import ParseAddPath, ParseFamily, ParsePathsLimit
 from exabgp.configuration.neighbor.nexthop import ParseNextHop
 from exabgp.configuration.operational import ParseOperational
 from exabgp.configuration.process import ParseProcess
@@ -293,6 +293,7 @@ class Configuration(_Configuration):
         self.neighbor = ParseNeighbor(*params)
         self.family = ParseFamily(*params)
         self.addpath = ParseAddPath(*params)
+        self.pathslimit = ParsePathsLimit(*params)
         self.nexthop = ParseNextHop(*params)
         self.capability = ParseCapability(*params)
         self.tcpao = ParseTCPAO(*params)
@@ -324,6 +325,7 @@ class Configuration(_Configuration):
                 self.neighbor,
                 self.family,
                 self.addpath,
+                self.pathslimit,
                 self.nexthop,
                 self.capability,
                 self.tcpao,

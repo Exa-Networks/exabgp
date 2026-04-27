@@ -34,8 +34,9 @@ class CapabilityCode(int):
     MULTISESSION: ClassVar[int] = 0x44  # [draft-ietf-idr-bgp-multisession]
     ADD_PATH: ClassVar[int] = 0x45  # [draft-ietf-idr-add-paths]
     ENHANCED_ROUTE_REFRESH: ClassVar[int] = 0x46  # [draft-ietf-idr-bgp-enhanced-route-refresh]
+    PATHS_LIMIT: ClassVar[int] = 0x4C  # [draft-abraitis-idr-addpath-paths-limit]
     LINK_LOCAL_NEXTHOP: ClassVar[int] = 0x4D  # [draft-ietf-idr-linklocal-capability]
-    # 70-127    Unassigned
+    # 78-127    Unassigned
     ROUTE_REFRESH_CISCO: ClassVar[int] = 0x80  # I Can only find reference to this in the router logs
     # 128-255   Reserved for Private Use [RFC5492]
     MULTISESSION_CISCO: ClassVar[int] = (
@@ -65,6 +66,7 @@ class CapabilityCode(int):
         MULTISESSION: 'multi-session',
         ADD_PATH: 'add-path',
         ENHANCED_ROUTE_REFRESH: 'enhanced-route-refresh',
+        PATHS_LIMIT: 'paths-limit',
         LINK_LOCAL_NEXTHOP: 'link-local-nexthop',
         OPERATIONAL: 'operational',
         ROUTE_REFRESH_CISCO: 'cisco-route-refresh',
@@ -114,6 +116,7 @@ class Capability:
         MULTISESSION: ClassVar[CapabilityCode] =             CapabilityCode(CapabilityCode.MULTISESSION)
         ADD_PATH: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.ADD_PATH)
         ENHANCED_ROUTE_REFRESH: ClassVar[CapabilityCode] =   CapabilityCode(CapabilityCode.ENHANCED_ROUTE_REFRESH)
+        PATHS_LIMIT: ClassVar[CapabilityCode] =              CapabilityCode(CapabilityCode.PATHS_LIMIT)
         LINK_LOCAL_NEXTHOP: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.LINK_LOCAL_NEXTHOP)
         ROUTE_REFRESH_CISCO: ClassVar[CapabilityCode] =      CapabilityCode(CapabilityCode.ROUTE_REFRESH_CISCO)
         MULTISESSION_CISCO: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.MULTISESSION_CISCO)

@@ -44,6 +44,19 @@ def addpath(tokeniser: 'Tokeniser') -> int:
     raise ValueError(f"'{ap}' is not a valid add-path option\n  Valid options: send, receive, send/receive, disable")
 
 
+def pathslimit(tokeniser: 'Tokeniser') -> dict[str, int]:
+    token = tokeniser()
+    if not token:
+        raise ValueError('paths-limit requires a value\n  Example: paths-limit 10;')
+    try:
+        limit = int(token)
+    except ValueError:
+        raise ValueError(f'paths-limit must be a number, got: {token}')
+    if not (0 <= limit <= 65535):
+        raise ValueError(f'paths-limit must be 0-65535, got {limit}')
+    return {'all': limit}
+
+
 class ParseCapability(Section):
     TTL_SECURITY = 255
 
@@ -63,6 +76,15 @@ class ParseCapability(Section):
                 type=ValueType.ENUMERATION,
                 description='ADD-PATH capability mode',
                 choices=['disable', 'receive', 'send', 'send/receive'],
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+            ),
+            'paths-limit': Leaf(
+                type=ValueType.INTEGER,
+                description='Maximum paths to receive per AFI/SAFI (PATHS-LIMIT capability, 0=disabled)',
+                default=0,
+                validator=IntValidators.range(0, 65535),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -154,6 +176,7 @@ class ParseCapability(Section):
     syntax = (
         'capability {\n'
         '   add-path disable|send|receive|send/receive;\n'
+        '   paths-limit <0-65535>;\n'
         '   asn4 enable|disable;\n'
         '   graceful-restart <time in second>;\n'
         '   multi-session enable|disable;\n'
@@ -170,6 +193,7 @@ class ParseCapability(Section):
     # Only entries with special parsing logic remain in known:
     known = {
         'add-path': addpath,  # Returns int (0,1,2,3), not string
+        'paths-limit': pathslimit,  # Returns dict {'all': N}
     }
 
     # action dict removed - derived from schema (defaults to 'set-command')
@@ -201,3 +225,10 @@ class ParseCapability(Section):
 
     def clear(self) -> None:
         pass
+
+    @classmethod
+    def get_subsection_keywords(cls) -> list[str]:
+        keywords = super().get_subsection_keywords()
+        if 'paths-limit' not in keywords:
+            keywords.append('paths-limit')
+        return keywords
