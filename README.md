@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/exa-networks-exabgp-badge.png)](https://mseep.ai/app/exa-networks-exabgp)
+
 # ExaBGP
 
 **BGP Swiss Army Knife of Networking**
