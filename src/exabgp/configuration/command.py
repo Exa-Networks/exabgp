@@ -174,6 +174,15 @@ def format_attributes(attrs: dict[str, Any]) -> list[str]:
                     ecomm_strs.append(str(ec))
             if ecomm_strs:
                 parts.append(f'extended-community [{" ".join(ecomm_strs)}]')
+    if 'extended-community-ipv6' in attrs:
+        ecomms_v6 = attrs['extended-community-ipv6']
+        if ecomms_v6:
+            raw_hex = ''
+            for ec in ecomms_v6:
+                if isinstance(ec, dict) and 'value' in ec:
+                    raw_hex += f'{ec["value"]:040x}'
+            if raw_hex:
+                parts.append(f'attribute [0x19 0xc0 0x{raw_hex}]')
     if 'originator-id' in attrs:
         parts.append(f'originator-id {attrs["originator-id"]}')
     if 'cluster-list' in attrs:
@@ -267,6 +276,16 @@ def format_flow_announce(
                     ecomm_strs.append(formatted)
             if ecomm_strs:
                 cmd_parts.append(f'extended-community [{" ".join(ecomm_strs)}]')
+
+    if 'extended-community-ipv6' in attributes:
+        ecomms_v6 = attributes['extended-community-ipv6']
+        if ecomms_v6:
+            raw_hex = ''
+            for ec in ecomms_v6:
+                if isinstance(ec, dict) and 'value' in ec:
+                    raw_hex += f'{ec["value"]:040x}'
+            if raw_hex:
+                cmd_parts.append(f'attribute [0x19 0xc0 0x{raw_hex}]')
 
     if 'community' in attributes:
         comms = attributes['community']

@@ -1583,6 +1583,17 @@ def format_flow_announce(
             if ecomm_strs:
                 cmd_parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
 
+    # Add IPv6 extended-community as generic attribute (type 0x19)
+    if "extended-community-ipv6" in attributes:
+        ecomms_v6 = attributes["extended-community-ipv6"]
+        if ecomms_v6:
+            raw_hex = ""
+            for ec in ecomms_v6:
+                if isinstance(ec, dict) and "value" in ec:
+                    raw_hex += f"{ec['value']:040x}"
+            if raw_hex:
+                cmd_parts.append(f"attribute [0x19 0xc0 0x{raw_hex}]")
+
     # Add community attribute
     if "community" in attributes:
         comms = attributes["community"]
