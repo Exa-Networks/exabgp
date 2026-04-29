@@ -1651,7 +1651,7 @@ def parse_ci_file_for_verify(
         cmd_match = re.match(r"^(\d+):cmd:(.+)$", stripped)
         if cmd_match:
             prev_cmd_step = cmd_match.group(1)
-            prev_cmd = cmd_match.group(2)
+            prev_cmd = re.sub(r"^neighbor\s+\S+\s+", "", cmd_match.group(2))
             prev_cmd_line = line_num
             continue
 
