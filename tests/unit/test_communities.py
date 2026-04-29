@@ -505,7 +505,7 @@ def test_flowspec_packet_rate_community() -> None:
     assert len(trp) == 8
     assert trp.asn == ASN(0)
     assert trp.rate == 1000
-    assert repr(trp) == 'rate-limit-packets:1000'
+    assert repr(trp) == 'rate-limit:1000:packets'
 
     packed = trp.pack_attribute(negotiated)
     assert len(packed) == 8
@@ -515,7 +515,7 @@ def test_flowspec_packet_rate_community() -> None:
     unpacked = TrafficRatePackets.unpack_attribute(packed, None)  # type: ignore[arg-type]
     assert unpacked.asn == ASN(0)
     assert unpacked.rate == 1000
-    assert repr(unpacked) == 'rate-limit-packets:1000'
+    assert repr(unpacked) == 'rate-limit:1000:packets'
 
     # Negative decoded FlowSpec packet rates must be treated as discard.
     packed = struct.pack('!BBHf', 0x80, 0x0C, 0, -1.5)
@@ -523,7 +523,7 @@ def test_flowspec_packet_rate_community() -> None:
 
     assert unpacked.asn == ASN(0)
     assert unpacked.rate == 0
-    assert repr(unpacked) == 'rate-limit-packets:0'
+    assert repr(unpacked) == 'rate-limit:0:packets'
 
     # Negative FlowSpec packet rates must not be encoded.
     with pytest.raises(ValueError, match='traffic-rate-packets must not be negative'):

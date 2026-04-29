@@ -11,8 +11,7 @@ Match conditions:
 
 Traffic actions:
     accept/discard: Allow or drop traffic
-    rate_limit: Limit traffic rate (bytes/sec)
-    rate_limit_packets: Limit traffic rate (packets/sec)
+    rate_limit: Limit traffic rate (bytes/sec or packets/sec)
     redirect: Redirect to VRF or next-hop
     mark: Set DSCP marking
     action: Sample and/or terminal flags
@@ -346,6 +345,15 @@ def discard(tokeniser: 'Tokeniser') -> ExtendedCommunities:
 def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
     speed: int = int(tokeniser())
+    unit = tokeniser.peek()
+    if unit in ('bytes', 'packets'):
+        tokeniser()
+    else:
+        unit = 'bytes'
+
+    if unit == 'packets':
+        return ExtendedCommunities().add(TrafficRatePackets.make_traffic_rate_packets(ASN(0), speed))
+
     if speed < MIN_RATE_LIMIT_BPS and speed != 0:
         log.warning(
             lazymsg('flow.rate_limit.warning reason=too_low min_bps={min_bps}', min_bps=MIN_RATE_LIMIT_BPS),
@@ -362,12 +370,6 @@ def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
             'configuration',
         )
     return ExtendedCommunities().add(TrafficRate.make_traffic_rate(ASN(0), speed))
-
-
-def rate_limit_packets(tokeniser: 'Tokeniser') -> ExtendedCommunities:
-    # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
-    speed: int = int(tokeniser())
-    return ExtendedCommunities().add(TrafficRatePackets.make_traffic_rate_packets(ASN(0), speed))
 
 
 def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:

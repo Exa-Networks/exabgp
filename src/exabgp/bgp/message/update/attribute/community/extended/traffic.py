@@ -111,14 +111,11 @@ class TrafficRatePackets(ExtendedCommunity):
         return max(value, 0.0)
 
     def __repr__(self) -> str:
-        return 'rate-limit-packets:%d' % self.rate
+        return 'rate-limit:%d:packets' % self.rate
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRatePackets:
-        asn, rate = unpack('!Hf', data[2:8])
-        if rate < 0:
-            rate = 0.0
-        return cls.make_traffic_rate_packets(ASN(asn), rate)
+        return cls(data[:8])
 
 
 # ================================================================ TrafficAction

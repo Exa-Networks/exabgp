@@ -976,11 +976,12 @@ neighbor {neighbor_ip} {{
                         while k < len(ec_parts):
                             ec = ec_parts[k]
                             if ec.startswith("rate-limit:"):
-                                rate = ec.split(":")[1]
-                                config_parts.append(f"rate-limit {rate}")
-                            elif ec.startswith("rate-limit-packets:"):
-                                rate = ec.split(":")[1]
-                                config_parts.append(f"rate-limit-packets {rate}")
+                                ec_fields = ec.split(":")
+                                rate = ec_fields[1]
+                                if len(ec_fields) > 2 and ec_fields[2] == "packets":
+                                    config_parts.append(f"rate-limit {rate} packets")
+                                else:
+                                    config_parts.append(f"rate-limit {rate}")
                             elif ec == "copy-to-nexthop":
                                 # copy X sets both nexthop and copy-to-nexthop EC
                                 if next_hop:

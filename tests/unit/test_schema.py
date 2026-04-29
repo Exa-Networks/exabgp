@@ -605,7 +605,6 @@ class TestParserSchemaIntegration:
         assert 'accept' in keywords
         assert 'discard' in keywords
         assert 'rate-limit' in keywords
-        assert 'rate-limit-packets' in keywords
         assert 'redirect' in keywords
 
     def test_parse_vpls_has_schema(self):

@@ -52,7 +52,6 @@ from exabgp.configuration.flow.parser import flow_label
 from exabgp.configuration.flow.parser import accept
 from exabgp.configuration.flow.parser import discard
 from exabgp.configuration.flow.parser import rate_limit
-from exabgp.configuration.flow.parser import rate_limit_packets
 from exabgp.configuration.flow.parser import redirect
 from exabgp.configuration.flow.parser import redirect_next_hop
 from exabgp.configuration.flow.parser import redirect_next_hop_ietf
@@ -261,19 +260,11 @@ class AnnounceFlow(ParseAnnounce):
             ),
             'rate-limit': Leaf(
                 type=ValueType.INTEGER,
-                description='Rate limit in bytes/second',
+                description='Rate limit (bytes/sec default, or specify packets)',
                 target=ActionTarget.ATTRIBUTE,
                 operation=ActionOperation.ADD,
                 key=ActionKey.NAME,
                 validator=LegacyParserValidator(parser_func=rate_limit, name='rate-limit'),
-            ),
-            'rate-limit-packets': Leaf(
-                type=ValueType.INTEGER,
-                description='Rate limit in packets/second',
-                target=ActionTarget.ATTRIBUTE,
-                operation=ActionOperation.ADD,
-                key=ActionKey.NAME,
-                validator=LegacyParserValidator(parser_func=rate_limit_packets, name='rate-limit-packets'),
             ),
             'redirect': Leaf(
                 type=ValueType.STRING,

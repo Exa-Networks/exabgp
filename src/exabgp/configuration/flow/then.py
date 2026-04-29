@@ -18,7 +18,6 @@ from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget
 from exabgp.configuration.flow.parser import accept
 from exabgp.configuration.flow.parser import discard
 from exabgp.configuration.flow.parser import rate_limit
-from exabgp.configuration.flow.parser import rate_limit_packets
 from exabgp.configuration.flow.parser import redirect
 from exabgp.configuration.flow.parser import redirect_next_hop
 from exabgp.configuration.flow.parser import redirect_next_hop_ietf
@@ -52,14 +51,7 @@ class ParseFlowThen(Section):
             ),
             'rate-limit': Leaf(
                 type=ValueType.INTEGER,
-                description='Rate limit in bytes per second',
-                target=ActionTarget.ATTRIBUTE,
-                operation=ActionOperation.ADD,
-                key=ActionKey.NAME,
-            ),
-            'rate-limit-packets': Leaf(
-                type=ValueType.INTEGER,
-                description='Rate limit in packets per second',
+                description='Rate limit (bytes/sec default, or specify packets)',
                 target=ActionTarget.ATTRIBUTE,
                 operation=ActionOperation.ADD,
                 key=ActionKey.NAME,
@@ -134,7 +126,7 @@ class ParseFlowThen(Section):
         'accept',
         'discard',
         'rate-limit 9600',
-        'rate-limit-packets 1000',
+        'rate-limit 1000 packets',
         'redirect 30740:12345',
         'redirect 1.2.3.4:5678',
         'redirect 1.2.3.4',
@@ -153,7 +145,6 @@ class ParseFlowThen(Section):
         'accept': accept,
         'discard': discard,
         'rate-limit': rate_limit,
-        'rate-limit-packets': rate_limit_packets,
         'redirect': redirect,
         'redirect-to-nexthop': redirect_next_hop,
         'redirect-to-nexthop-ietf': redirect_next_hop_ietf,

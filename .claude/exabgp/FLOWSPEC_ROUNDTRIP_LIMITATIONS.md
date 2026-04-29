@@ -139,6 +139,22 @@ Supported for all families: IPv4/IPv6, FlowSpec, MCAST-VPN, MUP, VPLS.
 
 ---
 
+## 7. FlowSpec `rate-limit:` Not Parseable via `extended-community [...]`
+
+**Status:** Known limitation (pre-existing)
+
+The `_extended_community()` parser in `static/parser.py` cannot handle `rate-limit:VALUE` or `rate-limit:VALUE:packets` strings. The `rate-limit` prefix is not in `_HEADER`, so `_encode()` raises `ValueError`.
+
+This applies to both `TrafficRate` (bytes, subtype 0x06) and `TrafficRatePackets` (packets, subtype 0x0C).
+
+**Workaround:** Use the native config keyword `rate-limit <value> [packets]` inside a `then {}` block instead of `extended-community [rate-limit:...]`.
+
+**In `test_api_encode`:** The round-trip test script intercepts `rate-limit:` strings from JSON output and converts them to native config syntax before feeding to exabgp. This is why CI tests pass despite the parser limitation.
+
+**To fix:** Add `rate-limit` to `_HEADER`/`_ENCODE` in `static/parser.py` with special handling for the optional `:packets` suffix. Same issue affects `mark`, `action`, and other FlowSpec communities that use space-separated repr formats.
+
+---
+
 ## Summary Table
 
 | Case | Count | Status | Resolution |
