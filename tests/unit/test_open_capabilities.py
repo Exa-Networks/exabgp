@@ -1297,16 +1297,15 @@ def test_neighbor_capability_paths_limit_per_family_copy() -> None:
     assert cap.paths_limit_per_family[(AFI.ipv4, SAFI.unicast)] == 5
 
 
-def test_pathslimit_capability_per_family_override() -> None:
-    """Test _pathslimit() uses per-family override over default."""
+def test_pathslimit_capability_per_family() -> None:
+    """Test _pathslimit() emits only families with explicit limits."""
     from unittest.mock import Mock
     from exabgp.bgp.neighbor.capability import NeighborCapability
 
     neighbor = Mock()
     cap = NeighborCapability()
     cap.add_path = 3
-    cap.paths_limit = 10
-    cap.paths_limit_per_family = {(AFI.ipv4, SAFI.unicast): 5}
+    cap.paths_limit_per_family = {(AFI.ipv4, SAFI.unicast): 5, (AFI.ipv6, SAFI.unicast): 10}
     neighbor.capability = cap
 
     addpath = AddPath()

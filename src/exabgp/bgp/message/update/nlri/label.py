@@ -385,6 +385,10 @@ class Label(INET):
         mask = bytes([self.cidr.mask])
         return Family.index(self) + bytes(addpath) + mask + self.cidr.pack_ip()
 
+    def prefix_index(self) -> bytes:
+        mask = bytes([self.cidr.mask])
+        return Family.index(self) + mask + self.cidr.pack_ip()
+
     def _internal(self, announced: bool = True) -> list[str]:
         r = INET._internal(self, announced)
         labels = self.labels

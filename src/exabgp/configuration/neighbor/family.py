@@ -212,7 +212,7 @@ class ParseAddPath(ParseFamily):
     # Schema definition for ADD-PATH configuration
     # Uses TupleLeaf like ParseFamily - inherits _get_stateful_validator and convert
     schema = Container(
-        description='ADD-PATH address families to negotiate',
+        description='ADD-PATH address families to negotiate (with optional paths-limit)',
         children={
             'ipv4': TupleLeaf(
                 type=ValueType.ENUMERATION,
@@ -278,97 +278,24 @@ class ParseAddPath(ParseFamily):
         },
     )
 
-    name = 'add-path'
-
-
-class ParsePathsLimit(Section):
-    convert = ParseFamily.convert
-
-    schema = Container(
-        description='Per-family PATHS-LIMIT configuration',
-        children={
-            'all': Leaf(
-                type=ValueType.INTEGER,
-                description='Default paths-limit for all unspecified families',
-                target=ActionTarget.SCOPE,
-                operation=ActionOperation.SET,
-                key=ActionKey.COMMAND,
-            ),
-            'ipv4': Leaf(
-                type=ValueType.STRING,
-                description='IPv4 paths-limit (e.g. "unicast 10")',
-                target=ActionTarget.SCOPE,
-                operation=ActionOperation.APPEND,
-                key=ActionKey.COMMAND,
-            ),
-            'ipv6': Leaf(
-                type=ValueType.STRING,
-                description='IPv6 paths-limit (e.g. "unicast 20")',
-                target=ActionTarget.SCOPE,
-                operation=ActionOperation.APPEND,
-                key=ActionKey.COMMAND,
-            ),
-            'l2vpn': Leaf(
-                type=ValueType.STRING,
-                description='L2VPN paths-limit',
-                target=ActionTarget.SCOPE,
-                operation=ActionOperation.APPEND,
-                key=ActionKey.COMMAND,
-            ),
-            'bgp-ls': Leaf(
-                type=ValueType.STRING,
-                description='BGP-LS paths-limit',
-                target=ActionTarget.SCOPE,
-                operation=ActionOperation.APPEND,
-                key=ActionKey.COMMAND,
-            ),
-        },
+    syntax = (
+        'add-path {\n   ipv4 unicast;\n   ipv4 unicast limit 10;   # with PATHS-LIMIT\n   ipv6 unicast limit 20;\n}'
     )
 
-    syntax = 'paths-limit {\n   all 10;\n   ipv4 unicast 32;\n   ipv6 mpls-vpn 0;\n}\n'
-
-    name = 'paths-limit'
+    name = 'add-path'
 
     def __init__(self, parser: Parser, scope: Scope, error: Error) -> None:
         Section.__init__(self, parser, scope, error)
-        self.known = {'all': self._parse_all}
-        for afi in self.convert:
-            self.known[afi] = partial(self._parse_family_limit, afi_name=afi)
+        self.known: dict[str | tuple[Any, ...], Any] = {'all': self.all}
+        for afi_name in self.convert:
+            self.known[afi_name] = partial(self._parse_addpath_family, afi_name=afi_name)
+        self._all: bool = False
         self._seen: set[FamilyTuple] = set()
-        self._all_set: bool = False
 
-    def clear(self) -> None:
-        self._seen = set()
-        self._all_set = False
-
-    def pre(self) -> bool:
-        self.clear()
-        return True
-
-    def post(self) -> bool:
-        return True
-
-    def _parse_all(self, tokeniser: Tokeniser) -> int:
-        if self._all_set:
-            raise ValueError('duplicate "all" entry in paths-limit block')
-        limit_str = tokeniser()
-        if not limit_str:
-            raise ValueError('paths-limit "all" requires a limit value\n  Example: all 10')
-        try:
-            limit = int(limit_str)
-        except ValueError:
-            raise ValueError(f'paths-limit "all" must be a number, got: {limit_str}')
-        if not (0 <= limit <= 65535):
-            raise ValueError(f'paths-limit "all" must be 0-65535, got {limit}')
-        self._all_set = True
-        return limit
-
-    def _parse_family_limit(self, tokeniser: Tokeniser, afi_name: str) -> tuple[FamilyTuple, int]:
+    def _parse_addpath_family(self, tokeniser: Tokeniser, afi_name: str) -> tuple[FamilyTuple, int]:
         safi_name = tokeniser()
-        limit_str = tokeniser()
-
-        if not safi_name or not limit_str:
-            raise ValueError(f'paths-limit {afi_name} requires SAFI and limit value\n  Example: {afi_name} unicast 10')
+        if not safi_name:
+            raise ValueError(f'add-path {afi_name} requires a SAFI\n  Example: {afi_name} unicast')
 
         afi_safis = self.convert.get(afi_name)
         if afi_safis is None:
@@ -379,16 +306,29 @@ class ParsePathsLimit(Section):
             valid = ', '.join(sorted(afi_safis.keys()))
             raise ValueError(f'unknown SAFI for {afi_name}: {safi_name}\n  Valid: {valid}')
 
-        try:
-            limit = int(limit_str)
-        except ValueError:
-            raise ValueError(f'paths-limit must be a number, got: {limit_str}')
-
-        if not (0 <= limit <= 65535):
-            raise ValueError(f'paths-limit must be 0-65535, got {limit}')
-
+        if self._all:
+            raise ValueError('cannot add specific families after "all"')
         if family in self._seen:
-            raise ValueError(f'duplicate paths-limit for {afi_name} {safi_name}')
+            raise ValueError(f'duplicate add-path entry for {afi_name} {safi_name}')
         self._seen.add(family)
+
+        limit = 0
+        next_token = tokeniser()
+        if next_token == 'limit':
+            limit_str = tokeniser()
+            if not limit_str:
+                raise ValueError(
+                    f'add-path {afi_name} {safi_name} limit requires a value\n  Example: {afi_name} {safi_name} limit 10'
+                )
+            try:
+                limit = int(limit_str)
+            except ValueError:
+                raise ValueError(f'paths-limit must be a number, got: {limit_str}')
+            if not (1 <= limit <= 65535):
+                raise ValueError(f'paths-limit must be 1-65535, got {limit}')
+        elif next_token:
+            raise ValueError(
+                f'unexpected token after {afi_name} {safi_name}: {next_token}\n  Did you mean: {afi_name} {safi_name} limit {next_token}'
+            )
 
         return (family, limit)

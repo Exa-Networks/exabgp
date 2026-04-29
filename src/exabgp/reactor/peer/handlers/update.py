@@ -37,7 +37,6 @@ class UpdateHandler(MessageHandler):
         return message.TYPE == Update.TYPE
 
     def _audit_announce(self, ctx: PeerContext, nlri: NLRI) -> None:
-        """If PATHS-LIMIT auditing is on, count this path and warn on violation."""
         advertised = ctx.negotiated.advertised_paths_limit
         if not advertised:
             return
@@ -48,7 +47,8 @@ class UpdateHandler(MessageHandler):
         if limit <= 0:
             return
         prefix_index = nlri.prefix_index()
-        count = ctx.neighbor.rib.incoming.track_path(family, prefix_index)
+        path_index = nlri.index()
+        count = ctx.neighbor.rib.incoming.track_path(family, prefix_index, path_index)
         if count > limit and ctx.neighbor.rib.incoming.mark_warned(family, prefix_index):
             log.warning(
                 lazymsg(
@@ -63,11 +63,10 @@ class UpdateHandler(MessageHandler):
             )
 
     def _audit_withdraw(self, ctx: PeerContext, nlri: NLRI) -> None:
-        """Decrement audit counter for a withdrawn NLRI (no-op if untracked)."""
         if not ctx.negotiated.advertised_paths_limit:
             return
         family = nlri.family().afi_safi()
-        ctx.neighbor.rib.incoming.untrack_path(family, nlri.prefix_index())
+        ctx.neighbor.rib.incoming.untrack_path(family, nlri.prefix_index(), nlri.index())
 
     def handle(self, ctx: PeerContext, message: Message) -> Generator[Message, None, None]:
         """Process the UPDATE message synchronously.

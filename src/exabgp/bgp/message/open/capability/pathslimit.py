@@ -38,9 +38,7 @@ class PathsLimit(Capability, dict[FamilyTuple, int]):
         return f'PathsLimit({entries})'
 
     def json(self) -> str:
-        families = ', '.join(
-            f'"{afi}/{safi}": {self[(afi, safi)]}' for afi, safi in self
-        )
+        families = ', '.join(f'"{afi}/{safi}": {self[(afi, safi)]}' for afi, safi in self)
         return '{{ "name": "paths-limit"{}{} }}'.format(', ' if families else '', families)
 
     def extract_capability_bytes(self) -> list[bytes]:
@@ -61,15 +59,15 @@ class PathsLimit(Capability, dict[FamilyTuple, int]):
             afi = AFI.unpack_afi(data[:2])
             safi = SAFI.unpack_safi(data[2:3])
             limit = (data[3] << 8) | data[4]
+            data = data[5:]
             if limit == 0:
-                data = data[5:]
                 continue
             if (afi, safi) in instance:
+
                 def _log_dup(afi: AFI = afi, safi: SAFI = safi) -> str:
                     return f'duplicate AFI/SAFI in PathsLimit capability: {afi}/{safi}'
+
                 log.debug(_log_dup, 'parser')
-                data = data[5:]
                 continue
             instance.set_limit(afi, safi, limit)
-            data = data[5:]
         return instance

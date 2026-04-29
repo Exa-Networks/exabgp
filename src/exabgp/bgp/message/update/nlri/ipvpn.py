@@ -429,6 +429,13 @@ class IPVPN(Label):
         rd_packed = self._packed[label_end : label_end + RD_SIZE] if self._has_rd else b''
         return Family.index(self) + bytes(addpath) + mask + bytes(rd_packed) + self.cidr.pack_ip()
 
+    def prefix_index(self) -> bytes:
+        rd_bits = RD_SIZE_BITS if self._has_rd else 0
+        mask = bytes([rd_bits + self.cidr.mask])
+        label_end = self._label_end_offset
+        rd_packed = self._packed[label_end : label_end + RD_SIZE] if self._has_rd else b''
+        return Family.index(self) + mask + bytes(rd_packed) + self.cidr.pack_ip()
+
     def _internal(self, announced: bool = True) -> list[str]:
         r = Label._internal(self, announced)
         if announced and self._has_rd:

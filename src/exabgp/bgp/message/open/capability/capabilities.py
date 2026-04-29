@@ -172,9 +172,7 @@ class Capabilities(dict[int, Capability]):
         self[Capability.CODE.OPERATIONAL] = Operational()
 
     def _pathslimit(self, neighbor: Neighbor) -> None:
-        has_per_family = bool(neighbor.capability.paths_limit_per_family)
-        has_default = bool(neighbor.capability.paths_limit)
-        if not has_per_family and not has_default:
+        if not neighbor.capability.paths_limit_per_family:
             return
         if not neighbor.capability.add_path:
             return
@@ -186,11 +184,9 @@ class Capabilities(dict[int, Capability]):
         from exabgp.bgp.message.open.capability.negotiated import RequirePath
 
         families_with_limit: dict[FamilyTuple, int] = {}
-        for family, direction in addpath_cap.items():
-            if direction & RequirePath.RECEIVE:
-                limit = neighbor.capability.paths_limit_per_family.get(family, neighbor.capability.paths_limit)
-                if limit > 0:
-                    families_with_limit[family] = limit
+        for family, limit in neighbor.capability.paths_limit_per_family.items():
+            if family in addpath_cap and addpath_cap[family] & RequirePath.RECEIVE and limit > 0:
+                families_with_limit[family] = limit
 
         if families_with_limit:
             self[Capability.CODE.PATHS_LIMIT] = PathsLimit(families_with_limit)

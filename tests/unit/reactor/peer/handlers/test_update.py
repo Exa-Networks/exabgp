@@ -172,9 +172,17 @@ class TestUpdateHandlerAsync:
         assert handler._number == 2
 
 
-def _make_announce(prefix_index_bytes: bytes, family: tuple) -> Mock:
+_path_counter = 0
+
+
+def _make_announce(prefix_index_bytes: bytes, family: tuple, path_id: bytes | None = None) -> Mock:
+    global _path_counter
+    if path_id is None:
+        _path_counter += 1
+        path_id = prefix_index_bytes + b':' + str(_path_counter).encode()
     nlri = Mock()
     nlri.prefix_index = Mock(return_value=prefix_index_bytes)
+    nlri.index = Mock(return_value=path_id)
     afi_safi_mock = Mock()
     afi_safi_mock.afi_safi = Mock(return_value=family)
     nlri.family = Mock(return_value=afi_safi_mock)
@@ -185,9 +193,14 @@ def _make_announce(prefix_index_bytes: bytes, family: tuple) -> Mock:
     return routed
 
 
-def _make_withdraw(prefix_index_bytes: bytes, family: tuple) -> Mock:
+def _make_withdraw(prefix_index_bytes: bytes, family: tuple, path_id: bytes | None = None) -> Mock:
+    global _path_counter
+    if path_id is None:
+        _path_counter += 1
+        path_id = prefix_index_bytes + b':' + str(_path_counter).encode()
     nlri = Mock()
     nlri.prefix_index = Mock(return_value=prefix_index_bytes)
+    nlri.index = Mock(return_value=path_id)
     afi_safi_mock = Mock()
     afi_safi_mock.afi_safi = Mock(return_value=family)
     nlri.family = Mock(return_value=afi_safi_mock)
@@ -231,49 +244,67 @@ class TestUpdateHandlerPathsLimitAudit:
         ctx_with_real_rib.negotiated.advertised_paths_limit = {}
         msg = _make_update([_make_announce(b'p1', self.FAMILY)], [])
         list(handler.handle(ctx_with_real_rib, msg))
-        assert ctx_with_real_rib.neighbor.rib.incoming._path_counts == {}
+        assert ctx_with_real_rib.neighbor.rib.incoming._path_sets == {}
 
     def test_audit_disabled_via_env_var(self, handler, ctx_with_real_rib):
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
             mock_env.return_value.bgp.paths_limit_audit = False
-            msg = _make_update([_make_announce(b'p1', self.FAMILY)] * 5, [])
+            msg = _make_update([_make_announce(b'p1', self.FAMILY, path_id=b'id1')], [])
             list(handler.handle(ctx_with_real_rib, msg))
-        assert ctx_with_real_rib.neighbor.rib.incoming._path_counts == {}
+        assert ctx_with_real_rib.neighbor.rib.incoming._path_sets == {}
 
-    def test_within_limit_no_warning(self, handler, ctx_with_real_rib, caplog):
+    def test_within_limit_no_warning(self, handler, ctx_with_real_rib):
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
             mock_env.return_value.bgp.paths_limit_audit = True
-            with caplog.at_level('WARNING'):
-                msg = _make_update([_make_announce(b'p1', self.FAMILY)] * 2, [])
-                list(handler.handle(ctx_with_real_rib, msg))
-        assert ctx_with_real_rib.neighbor.rib.incoming._path_counts[self.FAMILY][b'p1'] == 2
-        assert ctx_with_real_rib.neighbor.rib.incoming._path_warned == set()
-
-    def test_violation_logs_warning(self, handler, ctx_with_real_rib, caplog):
-        with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
-            mock_env.return_value.bgp.paths_limit_audit = True
-            with caplog.at_level('WARNING'):
-                msg = _make_update([_make_announce(b'p1', self.FAMILY)] * 3, [])
-                list(handler.handle(ctx_with_real_rib, msg))
+            msg = _make_update(
+                [
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id1'),
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id2'),
+                ],
+                [],
+            )
+            list(handler.handle(ctx_with_real_rib, msg))
         rib = ctx_with_real_rib.neighbor.rib.incoming
-        assert rib._path_counts[self.FAMILY][b'p1'] == 3
+        assert rib.path_count(self.FAMILY, b'p1') == 2
+        assert rib._path_warned == set()
+
+    def test_violation_logs_warning(self, handler, ctx_with_real_rib):
+        with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
+            mock_env.return_value.bgp.paths_limit_audit = True
+            msg = _make_update(
+                [
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id1'),
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id2'),
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id3'),
+                ],
+                [],
+            )
+            list(handler.handle(ctx_with_real_rib, msg))
+        rib = ctx_with_real_rib.neighbor.rib.incoming
+        assert rib.path_count(self.FAMILY, b'p1') == 3
         assert (self.FAMILY, b'p1') in rib._path_warned
 
-    def test_dedup_warns_once_per_prefix(self, handler, ctx_with_real_rib):
+    def test_reannounce_same_path_no_inflate(self, handler, ctx_with_real_rib):
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
             mock_env.return_value.bgp.paths_limit_audit = True
             for _ in range(5):
-                msg = _make_update([_make_announce(b'p1', self.FAMILY)], [])
+                msg = _make_update([_make_announce(b'p1', self.FAMILY, path_id=b'id1')], [])
                 list(handler.handle(ctx_with_real_rib, msg))
         rib = ctx_with_real_rib.neighbor.rib.incoming
-        assert rib._path_counts[self.FAMILY][b'p1'] == 5
-        assert rib._path_warned == {(self.FAMILY, b'p1')}
+        assert rib.path_count(self.FAMILY, b'p1') == 1
 
     def test_independent_prefixes_independent_warnings(self, handler, ctx_with_real_rib):
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
             mock_env.return_value.bgp.paths_limit_audit = True
             msg = _make_update(
-                [_make_announce(b'p1', self.FAMILY)] * 3 + [_make_announce(b'p2', self.FAMILY)] * 3,
+                [
+                    _make_announce(b'p1', self.FAMILY, path_id=b'a1'),
+                    _make_announce(b'p1', self.FAMILY, path_id=b'a2'),
+                    _make_announce(b'p1', self.FAMILY, path_id=b'a3'),
+                    _make_announce(b'p2', self.FAMILY, path_id=b'b1'),
+                    _make_announce(b'p2', self.FAMILY, path_id=b'b2'),
+                    _make_announce(b'p2', self.FAMILY, path_id=b'b3'),
+                ],
                 [],
             )
             list(handler.handle(ctx_with_real_rib, msg))
@@ -285,46 +316,68 @@ class TestUpdateHandlerPathsLimitAudit:
         other = (AFI.ipv6, SAFI.unicast)
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
             mock_env.return_value.bgp.paths_limit_audit = True
-            msg = _make_update([_make_announce(b'p1', other)] * 5, [])
+            msg = _make_update([_make_announce(b'p1', other, path_id=b'id1')], [])
             list(handler.handle(ctx_with_real_rib, msg))
-        assert other not in ctx_with_real_rib.neighbor.rib.incoming._path_counts
+        assert other not in ctx_with_real_rib.neighbor.rib.incoming._path_sets
 
     def test_withdraw_decrements_counter(self, handler, ctx_with_real_rib):
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
             mock_env.return_value.bgp.paths_limit_audit = True
-            msg = _make_update([_make_announce(b'p1', self.FAMILY)] * 2, [])
+            msg = _make_update(
+                [
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id1'),
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id2'),
+                ],
+                [],
+            )
             list(handler.handle(ctx_with_real_rib, msg))
-            wmsg = _make_update([], [_make_withdraw(b'p1', self.FAMILY)])
+            wmsg = _make_update([], [_make_withdraw(b'p1', self.FAMILY, path_id=b'id2')])
             list(handler.handle(ctx_with_real_rib, wmsg))
-        assert ctx_with_real_rib.neighbor.rib.incoming._path_counts[self.FAMILY][b'p1'] == 1
+        assert ctx_with_real_rib.neighbor.rib.incoming.path_count(self.FAMILY, b'p1') == 1
 
     def test_withdraw_to_zero_clears_warning(self, handler, ctx_with_real_rib):
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
             mock_env.return_value.bgp.paths_limit_audit = True
-            list(handler.handle(ctx_with_real_rib, _make_update([_make_announce(b'p1', self.FAMILY)] * 3, [])))
+            msg = _make_update(
+                [
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id1'),
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id2'),
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id3'),
+                ],
+                [],
+            )
+            list(handler.handle(ctx_with_real_rib, msg))
             rib = ctx_with_real_rib.neighbor.rib.incoming
             assert (self.FAMILY, b'p1') in rib._path_warned
-            list(
-                handler.handle(
-                    ctx_with_real_rib,
-                    _make_update([], [_make_withdraw(b'p1', self.FAMILY)] * 3),
-                )
+            wmsg = _make_update(
+                [],
+                [
+                    _make_withdraw(b'p1', self.FAMILY, path_id=b'id1'),
+                    _make_withdraw(b'p1', self.FAMILY, path_id=b'id2'),
+                    _make_withdraw(b'p1', self.FAMILY, path_id=b'id3'),
+                ],
             )
+            list(handler.handle(ctx_with_real_rib, wmsg))
             assert (self.FAMILY, b'p1') not in rib._path_warned
-            list(handler.handle(ctx_with_real_rib, _make_update([_make_announce(b'p1', self.FAMILY)] * 3, [])))
-            assert (self.FAMILY, b'p1') in rib._path_warned
 
     def test_withdraw_no_audit_when_no_limit(self, handler, ctx_with_real_rib):
         ctx_with_real_rib.negotiated.advertised_paths_limit = {}
-        wmsg = _make_update([], [_make_withdraw(b'p1', self.FAMILY)])
+        wmsg = _make_update([], [_make_withdraw(b'p1', self.FAMILY, path_id=b'id1')])
         list(handler.handle(ctx_with_real_rib, wmsg))
 
     @pytest.mark.asyncio
     async def test_audit_in_async_path(self, handler, ctx_with_real_rib):
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
             mock_env.return_value.bgp.paths_limit_audit = True
-            msg = _make_update([_make_announce(b'p1', self.FAMILY)] * 3, [])
+            msg = _make_update(
+                [
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id1'),
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id2'),
+                    _make_announce(b'p1', self.FAMILY, path_id=b'id3'),
+                ],
+                [],
+            )
             await handler.handle_async(ctx_with_real_rib, msg)
         rib = ctx_with_real_rib.neighbor.rib.incoming
-        assert rib._path_counts[self.FAMILY][b'p1'] == 3
+        assert rib.path_count(self.FAMILY, b'p1') == 3
         assert (self.FAMILY, b'p1') in rib._path_warned
