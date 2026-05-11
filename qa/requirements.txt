@@ -102,5 +102,5 @@ typing-extensions==4.15.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     #   textual
 uc-micro-py==2.0.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via linkify-it-py
-urllib3==2.6.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
+urllib3==2.7.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests
