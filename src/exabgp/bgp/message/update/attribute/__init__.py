@@ -84,6 +84,7 @@ from exabgp.bgp.message.update.attribute.pmsi import PMSI
 from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
+from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap  # noqa: F401
 
 __all__ = [
     'Attribute',
@@ -121,4 +122,5 @@ __all__ = [
     'AIGP',
     'LinkState',
     'PrefixSid',
+    'TunnelEncap',
 ]

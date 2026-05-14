@@ -181,7 +181,7 @@ class Parser:
                         self.index_line += 1
                         current = current.rstrip()
                         if current.endswith('\\'):
-                            line += current
+                            line += current[:-1]  # strip trailing backslash before concatenating
                             continue
                         if line:
                             yield line + current
