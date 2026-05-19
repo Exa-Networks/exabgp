@@ -20,7 +20,7 @@ coveralls==4.1.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 execnet==2.1.2 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via pytest-xdist
 hypothesis==6.151.13 ; sys_platform == 'darwin' or sys_platform == 'linux'
-idna==3.11 ; sys_platform == 'darwin' or sys_platform == 'linux'
+idna==3.15 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests
 iniconfig==2.3.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via pytest
