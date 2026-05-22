@@ -4,6 +4,7 @@ Section: net
 Priority: optional
 Build-Depends: debhelper-compat (= 13),
                dh-python,
+               dh-sequence-installsysusers,
                python3-all,
                python3-setuptools,
 Build-Depends-Indep: python3-hypothesis,
@@ -38,8 +39,7 @@ Description: BGP swiss army knife of networking - Python 3 module
 Package: exabgp
 Architecture: all
 Pre-Depends: ${misc:Pre-Depends}
-Depends: adduser,
-         python3-exabgp (= ${binary:Version}),
+Depends: python3-exabgp (= ${binary:Version}),
          ucf,
          ${misc:Depends},
          ${python3:Depends},
