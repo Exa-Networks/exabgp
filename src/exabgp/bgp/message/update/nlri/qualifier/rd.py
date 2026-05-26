@@ -54,6 +54,16 @@ class RouteDistinguisher:
     def __len__(self):
         return self._len
 
+    def __copy__(self):
+        if self == RouteDistinguisher.NORD:
+            return RouteDistinguisher.NORD
+        return RouteDistinguisher(self.rd)
+
+    def __deepcopy__(self, memo):
+        if self == RouteDistinguisher.NORD:
+            return RouteDistinguisher.NORD
+        return RouteDistinguisher(self.rd)
+
     def _str(self):
         t, c1, c2, c3 = unpack('!HHHH', self.rd)
         if t == self.TYPE_AS2_ADMIN:

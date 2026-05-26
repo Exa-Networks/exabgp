@@ -59,6 +59,13 @@ def api(_):
     return encoder
 
 
+def show_routes_format(_):
+    fmt = _.lower()
+    if fmt not in ('v1', 'v2'):
+        raise TypeError('invalid show-routes-format (must be v1 or v2)')
+    return fmt
+
+
 def methods(_):
     return _.upper().split()
 

@@ -260,6 +260,12 @@ CONFIGURATION = {
             'value': '1',
             'help': 'maximum lines to print before yielding in show routes api',
         },
+        'show-routes-format': {
+            'read': parsing.show_routes_format,
+            'write': parsing.lower,
+            'value': 'v1',
+            'help': 'json output format for show adj-rib (v1 or v2)',
+        },
         'encoder': {
             'read': parsing.api,
             'write': parsing.lower,

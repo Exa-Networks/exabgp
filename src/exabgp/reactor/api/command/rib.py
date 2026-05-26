@@ -41,9 +41,31 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
             msg = f'{neighbor} {family} {details}'
             reactor.processes.write(service, msg)
 
-    def to_json(key, changes):
+    def to_json_v1(key, changes):
         jason = {}
-        neighbor = reactor.neighbor(key)
+        neighbor_ip = reactor.neighbor_ip(key)
+        routes = jason.setdefault(neighbor_ip, {'routes': []})['routes']
+
+        if extensive:
+            jason[neighbor_ip].update(NeighborTemplate.as_dict(reactor.neighbor_cli_data(key)))
+
+        for change in changes:
+            if not isinstance(change.nlri, route_type):
+                # log something about this drop?
+                continue
+            if not hasattr(change.nlri, 'cidr'):
+                continue
+
+            routes.append(
+                {
+                    'prefix': str(change.nlri.cidr.prefix()),
+                    'family': str(change.nlri.family()).strip('()').replace(',', ''),
+                },
+            )
+
+            reactor.processes.write(service, json.dumps(jason))
+
+    def to_json_v2(key, changes):
         neighbor_ip = reactor.neighbor_ip(key)
         jason = {"peer": {"address": neighbor_ip}}
 
@@ -58,7 +80,9 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
             reactor.processes.write(service, json.dumps(jason))
 
     def callback():
-        lines_per_yield = getenv().api.chunk
+        env = getenv()
+        lines_per_yield = env.api.chunk
+        to_json = to_json_v2 if env.api.show_routes_format == 'v2' else to_json_v1
         if last in ('routes', 'extensive', 'static', 'inet', 'flow', 'l2vpn'):
             peers = reactor.peers()
         else:
