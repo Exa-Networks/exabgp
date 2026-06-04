@@ -63,7 +63,7 @@ class option:
 
         cls._set_level(env.log.level)
 
-        cls.option = {
+        cls.enabled = {
             'pdb': env.debug.pdb,
             'reactor': env.log.enable and (env.log.all or env.log.reactor),
             'daemon': env.log.enable and (env.log.all or env.log.daemon),
