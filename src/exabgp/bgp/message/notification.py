@@ -164,7 +164,10 @@ class Notification(Message, Exception):
     def __str__(self) -> str:
         code_str = self._str_code.get(self.code, 'unknown error')
         subcode_str = self._str_subcode.get((self.code, self.subcode), 'unknow reason')
-        data_str = f' / {self.data.decode("ascii")}' if self.data else ''
+        try:
+            data_str = f' / {self.data.decode("ascii")}' if self.data else ''
+        except UnicodeDecodeError:
+            data_str = f' / {hexstring(self.data)}'
         return f'{code_str} / {subcode_str}{data_str}'
 
     @classmethod
