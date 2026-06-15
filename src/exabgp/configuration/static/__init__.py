@@ -17,6 +17,7 @@ from exabgp.configuration.schema import Container, ActionTarget, ActionOperation
 from exabgp.configuration.static.mpls import label, route_distinguisher
 from exabgp.configuration.static.parser import path_information, prefix
 from exabgp.configuration.static.route import ParseStaticRoute as ParseStaticRoute  # Re-export
+from exabgp.configuration.static.sr_policy import sr_policy_route  # noqa: F401
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.rib.route import Route
@@ -267,3 +268,26 @@ def attributes(tokeniser: Any) -> list[Route]:
         return [Route(empty_nlri, attr)]
 
     return routes
+
+
+@ParseStatic.register_command('sr-policy', ActionTarget.ROUTE, ActionOperation.EXTEND)
+def static_sr_policy(tokeniser: Any) -> list[Route]:
+    """Parse SR-Policy route from static section.
+
+    Syntax: sr-policy distinguisher <N> color <N> endpoint <IP> next-hop <IP> [<options>...]
+    AFI is determined from the endpoint IP address.
+    """
+    # Determine AFI by peeking at the endpoint token
+    afi = AFI.ipv4  # default
+    try:
+        ep_idx = tokeniser.tokens.index('endpoint')
+        endpoint_str = tokeniser.tokens[ep_idx + 1]
+        afi = IP.toafi(endpoint_str)
+    except (ValueError, IndexError):
+        pass
+
+    nlri, nexthop, tunnel_encap = sr_policy_route(tokeniser, afi)
+    attributes = AttributeCollection()
+    if tunnel_encap is not None:
+        attributes.add(tunnel_encap)
+    return [Route(nlri, attributes, nexthop=nexthop)]

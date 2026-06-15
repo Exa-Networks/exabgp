@@ -225,9 +225,113 @@ def format_attributes(attrs: dict[str, Any]) -> list[str]:
 
 def family_to_api_format(family: str) -> str:
     """Convert JSON family format to API command format."""
+    if 'sr-policy' in family:
+        return family
     if family.startswith('ipv4'):
         return 'route'
     return family
+
+
+def _format_segment(seg: dict[str, Any]) -> str:
+    """Format a single segment JSON dict to CLI token string."""
+    t = seg.get('type', '')
+    if t == 'A':
+        return f'segment type-a mpls {seg["label"]}'
+    if t == 'B':
+        cmd = f'segment type-b srv6 {seg["sid"]}'
+        eb = seg.get('endpoint-behavior')
+        if eb:
+            cmd += f' endpoint-behavior {eb["behavior"]} {eb["lb-length"]} {eb["ln-length"]} {eb["fun-length"]} {eb["arg-length"]}'
+        return cmd
+    if t == 'C':
+        cmd = f'segment type-c ipv4 {seg["ipv4_node"]} algorithm {seg["algorithm"]}'
+        if 'sid' in seg:
+            cmd += f' sid {seg["sid"]}'
+        return cmd
+    if t == 'D':
+        cmd = f'segment type-d ipv6 {seg["ipv6_node"]} algorithm {seg["algorithm"]}'
+        if 'sid' in seg:
+            cmd += f' sid {seg["sid"]}'
+        return cmd
+    if t == 'E':
+        cmd = f'segment type-e local-if-id {seg["local_if_id"]} ipv4 {seg["ipv4_node"]}'
+        if 'sid' in seg:
+            cmd += f' sid {seg["sid"]}'
+        return cmd
+    if t == 'F':
+        cmd = f'segment type-f local {seg["local_ipv4"]} remote {seg["remote_ipv4"]}'
+        if 'sid' in seg:
+            cmd += f' sid {seg["sid"]}'
+        return cmd
+    if t == 'G':
+        cmd = f'segment type-g local-if-id {seg["local_if_id"]} local-ipv6 {seg["local_ipv6"]} remote-if-id {seg["remote_if_id"]} remote-ipv6 {seg["remote_ipv6"]}'
+        if 'sid' in seg:
+            cmd += f' sid {seg["sid"]}'
+        return cmd
+    if t == 'H':
+        cmd = f'segment type-h local {seg["local_ipv6"]} remote {seg["remote_ipv6"]}'
+        if 'sid' in seg:
+            cmd += f' sid {seg["sid"]}'
+        return cmd
+    if t == 'I':
+        cmd = f'segment type-i ipv6 {seg["ipv6_node"]} algorithm {seg["algorithm"]}'
+        if 'sid' in seg:
+            cmd += f' sid {seg["sid"]}'
+        eb = seg.get('endpoint-behavior')
+        if eb:
+            cmd += f' endpoint-behavior {eb["behavior"]} {eb["lb-length"]} {eb["ln-length"]} {eb["fun-length"]} {eb["arg-length"]}'
+        return cmd
+    if t == 'J':
+        cmd = f'segment type-j local-if-id {seg["local_if_id"]} local-ipv6 {seg["local_ipv6"]} remote-if-id {seg["remote_if_id"]} remote-ipv6 {seg["remote_ipv6"]} algorithm {seg["algorithm"]}'
+        if 'sid' in seg:
+            cmd += f' sid {seg["sid"]}'
+        eb = seg.get('endpoint-behavior')
+        if eb:
+            cmd += f' endpoint-behavior {eb["behavior"]} {eb["lb-length"]} {eb["ln-length"]} {eb["fun-length"]} {eb["arg-length"]}'
+        return cmd
+    if t == 'K':
+        cmd = f'segment type-k local {seg["local_ipv6"]} remote {seg["remote_ipv6"]} algorithm {seg["algorithm"]}'
+        if 'sid' in seg:
+            cmd += f' sid {seg["sid"]}'
+        eb = seg.get('endpoint-behavior')
+        if eb:
+            cmd += f' endpoint-behavior {eb["behavior"]} {eb["lb-length"]} {eb["ln-length"]} {eb["fun-length"]} {eb["arg-length"]}'
+        return cmd
+    return ''
+
+
+def _format_sr_policy_tunnel(sr: dict[str, Any]) -> list[str]:
+    """Convert SR-Policy tunnel sub-TLV JSON dict to CLI token list."""
+    parts = []
+    if 'preference' in sr:
+        parts.append(f'preference {sr["preference"]}')
+    if 'priority' in sr:
+        parts.append(f'priority {sr["priority"]}')
+    if 'binding-sid' in sr:
+        bsid = sr['binding-sid']
+        if bsid is None:
+            parts.append('binding-sid null')
+        elif isinstance(bsid, dict) and bsid.get('type') == 'mpls':
+            parts.append(f'binding-sid mpls {bsid["label"]}')
+    if 'srv6-binding-sid' in sr:
+        sid_val = sr['srv6-binding-sid']
+        if isinstance(sid_val, str):
+            parts.append(f'srv6-binding-sid {sid_val}')
+        elif isinstance(sid_val, dict):
+            parts.append(f'srv6-binding-sid {sid_val.get("sid", "")}')
+    for sl in sr.get('segment-lists', []):
+        weight = sl.get('weight', 1)
+        seg_parts = [f'segment-list weight {weight}']
+        for seg in sl.get('segments', []):
+            seg_cmd = _format_segment(seg)
+            if seg_cmd:
+                seg_parts.append(seg_cmd)
+        parts.append(' '.join(seg_parts))
+    if 'policy-name' in sr:
+        parts.append(f'policy-name "{sr["policy-name"]}"')
+    if 'candidate-path-name' in sr:
+        parts.append(f'candidate-path-name "{sr["candidate-path-name"]}"')
+    return parts
 
 
 def format_flow_announce(
@@ -538,6 +642,23 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                         commands.append(' '.join(cmd_parts))
                 continue
 
+            # Handle SR-Policy
+            if 'sr-policy' in family:
+                afi = 'ipv4' if 'ipv4' in family else 'ipv6'
+                tunnel_encap = attributes.get('tunnel-encap', {})
+                sr = tunnel_encap.get('sr-policy', {}) if isinstance(tunnel_encap, dict) else {}
+                for nexthop, nlris in nexthops.items():
+                    for nlri_info in nlris:
+                        distinguisher = nlri_info.get('distinguisher', 0)
+                        color = nlri_info.get('color', 0)
+                        endpoint = nlri_info.get('endpoint', '')
+                        cmd_parts = [
+                            f'announce {afi} sr-policy distinguisher {distinguisher} color {color} endpoint {endpoint} next-hop {nexthop}'
+                        ]
+                        cmd_parts.extend(_format_sr_policy_tunnel(sr))
+                        commands.append(' '.join(cmd_parts))
+                continue
+
             # Standard families
             for nexthop, nlris in nexthops.items():
                 # Check for EOR
@@ -665,6 +786,18 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                             f'withdraw vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop 0.0.0.0'
                         ]
                         commands.append(' '.join(cmd_parts))
+                continue
+
+            if 'sr-policy' in family:
+                afi = 'ipv4' if 'ipv4' in family else 'ipv6'
+                for nlri_info in nlris:
+                    if isinstance(nlri_info, dict):
+                        distinguisher = nlri_info.get('distinguisher', 0)
+                        color = nlri_info.get('color', 0)
+                        endpoint = nlri_info.get('endpoint', '')
+                        commands.append(
+                            f'withdraw {afi} sr-policy distinguisher {distinguisher} color {color} endpoint {endpoint}'
+                        )
                 continue
 
             api_family = family_to_api_format(family)

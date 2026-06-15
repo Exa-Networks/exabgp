@@ -106,6 +106,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         Attribute.CODE.AIGP: ('integer', '', 'aigp', '%s', '%s'),
         Attribute.CODE.BGP_LS: ('list', '', 'bgp-ls', '%s', '%s'),
         Attribute.CODE.BGP_PREFIX_SID: ('list', '', 'bgp-prefix-sid', '%s', '%s'),
+        Attribute.CODE.TUNNEL_ENCAP: ('list', '', 'tunnel-encap', '%s', '%s'),
         Attribute.CODE.INTERNAL_NAME: ('string', '', 'name', '%s', '%s'),
         Attribute.CODE.INTERNAL_DISCARD: ('string', '', 'error', '%s', '%s'),
         Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW: ('string', '', 'error', '%s', '%s'),

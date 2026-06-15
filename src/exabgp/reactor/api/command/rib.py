@@ -65,14 +65,15 @@ def _show_adjrib_callback(
                 continue
 
             # After isinstance check, change.nlri is one of the route_type(s)
-            # which have a cidr attribute (INET, Flow, etc.)
             nlri: Any = change.nlri
-            routes.append(
-                {
-                    'prefix': str(nlri.cidr.prefix()),
-                    'family': str(change.nlri.family()).strip('()').replace(',', ''),
-                },
-            )
+            route_entry: dict[str, Any] = {
+                'family': str(change.nlri.family()).strip('()').replace(',', ''),
+            }
+            if hasattr(nlri, 'cidr'):
+                route_entry['prefix'] = str(nlri.cidr.prefix())
+            else:
+                route_entry['nlri'] = str(nlri)
+            routes.append(route_entry)
 
             for line in json.dumps(jason).split('\n'):
                 reactor.processes.write(service, line)

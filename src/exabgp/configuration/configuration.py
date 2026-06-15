@@ -27,6 +27,7 @@ from exabgp.configuration.announce.ip import AnnounceIP  # noqa: F401,E261,E501
 from exabgp.configuration.announce.label import AnnounceLabel  # noqa: F401,E261,E501
 from exabgp.configuration.announce.mup import AnnounceMup  # noqa: F401,E261,E501
 from exabgp.configuration.announce.mvpn import AnnounceMVPN  # noqa: F401,E261,E501
+from exabgp.configuration.announce.sr_policy import sr_policy_ipv4, sr_policy_ipv6  # noqa: F401,E261,E501
 from exabgp.configuration.announce.path import AnnouncePath  # noqa: F401,E261,E501
 from exabgp.configuration.announce.vpls import AnnounceVPLS  # noqa: F401,E261,E501
 from exabgp.configuration.announce.vpn import AnnounceVPN  # noqa: F401,E261,E501
@@ -408,6 +409,7 @@ class Configuration(_Configuration):
                 'flow',
                 'flow-vpn',
                 'mup',
+                'sr-policy',
             ],
             'ipv6': [
                 'unicast',
@@ -419,9 +421,10 @@ class Configuration(_Configuration):
                 'flow',
                 'flow-vpn',
                 'mup',
+                'sr-policy',
             ],
             'l2vpn': ['vpls'],
-            'static': ['route', 'attributes'],
+            'static': ['route', 'attributes', 'sr-policy'],
         }
 
         # Build sections dict from schema Container children

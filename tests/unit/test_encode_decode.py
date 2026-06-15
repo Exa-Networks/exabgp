@@ -530,6 +530,125 @@ class TestEncodeDecodeRoundTrip(unittest.TestCase):
         self.assertEqual(attrs['local-preference'], 200, 'Should preserve local-preference')
 
 
+class TestSRPolicyDecode(unittest.TestCase):
+    """Tests for SR-Policy decode (JSON and --command modes)."""
+
+    # From qa/encoding/conf-sr-policy.ci — IPv4 SR-Policy with MPLS preference +
+    # binding-sid + one Type-A segment.
+    SR_POLICY_PKT_1 = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF006902000000524001010040020040050400000064C01728000F00240C060000000000640D06100005DC01008000110009060000000000010106000003E81100800E1600014904C0000201006000000000000000640A000001'
+    # IPv4 SR-Policy with SRv6 binding-sid + Type-B segment + policy/candidate names.
+    SR_POLICY_PKT_2 = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00A1020000008A4001010040020040050400000064C01760000F005C0C060000000000C814120000FC0000000000000000000000000000018000250009060000000000020D1A1000FC000000000000000000000000000001004100002000100082000A006D792D706F6C696379810008007072696D617279800E1600014904C0000201006000000001000000C80A000002'
+
+    def setUp(self):
+        log.silence()
+
+    def _decode_json(self, hex_payload, family='ipv4 sr-policy'):
+        from exabgp.application import decode
+
+        args = Namespace(
+            payload=hex_payload.replace('\n', ''),
+            nlri=False,
+            update=False,
+            open=False,
+            debug=False,
+            pdb=False,
+            configuration=None,
+            family=family,
+            path_information=False,
+            generic=False,
+            json=True,
+            command=False,
+        )
+        captured = io.StringIO()
+        with patch.object(sys, 'stdout', captured):
+            result = decode.cmdline(args)
+        self.assertEqual(result, 0)
+        raw = captured.getvalue()
+        start = raw.find('{')
+        end = raw.rfind('}') + 1
+        return json.loads(raw[start:end])
+
+    def _decode_command(self, hex_payload, family='ipv4 sr-policy'):
+        from exabgp.application import decode
+
+        args = Namespace(
+            payload=hex_payload.replace('\n', ''),
+            nlri=False,
+            update=False,
+            open=False,
+            debug=False,
+            pdb=False,
+            configuration=None,
+            family=family,
+            path_information=False,
+            generic=False,
+            json=True,
+            command=True,
+        )
+        captured = io.StringIO()
+        with patch.object(sys, 'stdout', captured):
+            result = decode.cmdline(args)
+        self.assertEqual(result, 0)
+        return captured.getvalue().strip()
+
+    def test_sr_policy_json_tunnel_encap_key(self):
+        """tunnel-encap must appear as structured key, not generic attribute-0x17-0xC0."""
+        data = self._decode_json(self.SR_POLICY_PKT_1)
+        attrs = data['neighbor']['message']['update']['attribute']
+        self.assertIn('tunnel-encap', attrs, 'tunnel-encap must be a named key')
+        self.assertNotIn('attribute-0x17-0xC0', attrs)
+
+    def test_sr_policy_json_nlri_fields(self):
+        """SR-Policy NLRI JSON must include distinguisher, color, and endpoint."""
+        data = self._decode_json(self.SR_POLICY_PKT_1)
+        announce = data['neighbor']['message']['update']['announce']
+        self.assertIn('ipv4 sr-policy', announce)
+        nlris = list(announce['ipv4 sr-policy'].values())[0]
+        self.assertEqual(len(nlris), 1)
+        self.assertEqual(nlris[0]['distinguisher'], 0)
+        self.assertEqual(nlris[0]['color'], 100)
+        self.assertEqual(nlris[0]['endpoint'], '10.0.0.1')
+
+    def test_sr_policy_json_tunnel_content(self):
+        """SR-Policy tunnel sub-TLVs must decode to structured JSON."""
+        data = self._decode_json(self.SR_POLICY_PKT_1)
+        attrs = data['neighbor']['message']['update']['attribute']
+        sr = attrs['tunnel-encap']['sr-policy']
+        self.assertEqual(sr['preference'], 100)
+        self.assertEqual(sr['binding-sid']['type'], 'mpls')
+        self.assertEqual(sr['binding-sid']['label'], 24000)
+        seg = sr['segment-lists'][0]['segments'][0]
+        self.assertEqual(seg['type'], 'A')
+        self.assertEqual(seg['label'], 16001)
+
+    def test_sr_policy_command_mpls(self):
+        """decode --command must produce a re-injectable SR-Policy announce (MPLS path)."""
+        cmd = self._decode_command(self.SR_POLICY_PKT_1)
+        self.assertTrue(cmd.startswith('announce ipv4 sr-policy'), repr(cmd))
+        self.assertIn('distinguisher 0', cmd)
+        self.assertIn('color 100', cmd)
+        self.assertIn('endpoint 10.0.0.1', cmd)
+        self.assertIn('next-hop 192.0.2.1', cmd)
+        self.assertIn('preference 100', cmd)
+        self.assertIn('binding-sid mpls 24000', cmd)
+        self.assertIn('segment-list weight 1', cmd)
+        self.assertIn('segment type-a mpls 16001', cmd)
+
+    def test_sr_policy_command_srv6(self):
+        """decode --command must produce a re-injectable announce (SRv6 path + names)."""
+        cmd = self._decode_command(self.SR_POLICY_PKT_2)
+        self.assertTrue(cmd.startswith('announce ipv4 sr-policy'), repr(cmd))
+        self.assertIn('distinguisher 1', cmd)
+        self.assertIn('color 200', cmd)
+        self.assertIn('endpoint 10.0.0.2', cmd)
+        self.assertIn('preference 200', cmd)
+        self.assertIn('srv6-binding-sid fc00::1', cmd)
+        self.assertIn('segment type-b srv6 fc00::1', cmd)
+        self.assertIn('endpoint-behavior 65', cmd)
+        self.assertIn('policy-name "my-policy"', cmd)
+        self.assertIn('candidate-path-name "primary"', cmd)
+
+
 class TestIsBgpFunction(unittest.TestCase):
     """Tests for the is_bgp helper function."""
 
