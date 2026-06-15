@@ -80,7 +80,7 @@ def test_sr_policy_nlri_ipv4_pack_unpack():
     assert len(packed) == 13
     assert packed[0] == 96  # Length byte = 96 bits (12 bytes * 8)
 
-    nlri2, remaining = SRPolicyNLRI.unpack_nlri(AFI.ipv4, SAFI.sr_policy, packed, None, None)
+    nlri2, remaining = SRPolicyNLRI.unpack_nlri(AFI.ipv4, SAFI.sr_policy, packed, None, None, None)
     assert remaining == b''
     assert isinstance(nlri2, SRPolicyNLRI)
     assert nlri2.distinguisher == 42
@@ -95,7 +95,7 @@ def test_sr_policy_nlri_ipv6_pack_unpack():
     assert len(packed) == 25
     assert packed[0] == 192  # Length byte = 192 bits (24 bytes * 8)
 
-    nlri2, remaining = SRPolicyNLRI.unpack_nlri(AFI.ipv6, SAFI.sr_policy, packed, None, None)
+    nlri2, remaining = SRPolicyNLRI.unpack_nlri(AFI.ipv6, SAFI.sr_policy, packed, None, None, None)
     assert remaining == b''
     assert nlri2.distinguisher == 0
     assert nlri2.color == 500

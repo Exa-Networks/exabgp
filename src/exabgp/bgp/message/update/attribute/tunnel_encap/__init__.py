@@ -32,9 +32,7 @@ import exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy  # noqa: F401,
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import TunnelTypeTLV
-
-# Type alias for buffer (bytes or bytearray)
-Buffer = bytes | bytearray
+from exabgp.util.types import Buffer
 
 _TUNNEL_TLV_HEADER = 4  # type(2) + length(2)
 

@@ -38,9 +38,7 @@ from typing import Any, ClassVar, Type
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.util import hexstring
-
-# Type alias for buffer (bytes or bytearray)
-Buffer = bytes | bytearray
+from exabgp.util.types import Buffer
 
 
 class TunnelTypeTLV:
@@ -154,12 +152,12 @@ class SubTLV:
             if subtype < 128:
                 if len(data) < 2:
                     raise Notify(3, 1, f'Sub-TLV header truncated: need 2 bytes for type {subtype}, got {len(data)}')
-                length = data[1]
+                length: int = data[1]
                 header_size = 2
             else:
                 if len(data) < 3:
                     raise Notify(3, 1, f'Sub-TLV header truncated: need 3 bytes for type {subtype}, got {len(data)}')
-                length: int = unpack('!H', data[1:3])[0]
+                length = unpack('!H', data[1:3])[0]
                 header_size = 3
 
             if len(data) < header_size + length:

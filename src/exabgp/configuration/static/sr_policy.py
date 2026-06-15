@@ -66,6 +66,8 @@ def _parse_segment_list(tokeniser: Any) -> SegmentListSubTLV:
         SegmentTypeA
         | SegmentTypeB
         | SegmentTypeC
+        | SegmentTypeD
+        | SegmentTypeE
         | SegmentTypeF
         | SegmentTypeG
         | SegmentTypeH
@@ -202,7 +204,7 @@ def _parse_segment_list(tokeniser: Any) -> SegmentListSubTLV:
                 tokeniser()  # consume 'sid'
                 sid = tokeniser()
             # Check for optional endpoint-behavior
-            eb: SRv6EndpointBehavior | None = None
+            eb = None
             if tokeniser.peek() == 'endpoint-behavior':
                 tokeniser()  # consume 'endpoint-behavior'
                 behavior = int(tokeniser(), 0)  # allow 0x prefix
@@ -243,7 +245,7 @@ def _parse_segment_list(tokeniser: Any) -> SegmentListSubTLV:
                 tokeniser()  # consume 'sid'
                 sid = tokeniser()
             # Check for optional endpoint-behavior
-            eb: SRv6EndpointBehavior | None = None
+            eb = None
             if tokeniser.peek() == 'endpoint-behavior':
                 tokeniser()  # consume 'endpoint-behavior'
                 behavior = int(tokeniser(), 0)  # allow 0x prefix
@@ -289,7 +291,7 @@ def _parse_segment_list(tokeniser: Any) -> SegmentListSubTLV:
                 tokeniser()  # consume 'sid'
                 sid = tokeniser()
             # Check for optional endpoint-behavior
-            eb: SRv6EndpointBehavior | None = None
+            eb = None
             if tokeniser.peek() == 'endpoint-behavior':
                 tokeniser()  # consume 'endpoint-behavior'
                 behavior = int(tokeniser(), 0)  # allow 0x prefix

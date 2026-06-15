@@ -16,9 +16,7 @@ from struct import pack
 from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
-
-# Type alias for buffer (bytes or bytearray)
-Buffer = bytes | bytearray
+from exabgp.util.types import Buffer
 
 
 @SubTLV.register(129)

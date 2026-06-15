@@ -27,9 +27,7 @@ from struct import pack, unpack
 from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
-
-# Type alias for buffer (bytes or bytearray)
-Buffer = bytes | bytearray
+from exabgp.util.types import Buffer
 
 _BSID_FLAG_SPECIFIED = 0x10  # B flag: BSID is explicitly specified
 

@@ -36,9 +36,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
-
-# Type alias for buffer (bytes or bytearray)
-Buffer = bytes | bytearray
+from exabgp.util.types import Buffer
 
 # IPv4 NLRI body: distinguisher(4) + color(4) + endpoint(4) = 12
 _IPV4_NLRI_SIZE = 12
@@ -57,8 +55,8 @@ class SRPolicyNLRI(NLRI):
 
     __slots__ = ()
 
-    def __init__(self, afi: AFI, packed: Buffer, action: Action = Action.UNSET) -> None:
-        NLRI.__init__(self, afi, SAFI.sr_policy, action)
+    def __init__(self, afi: AFI, packed: Buffer) -> None:
+        NLRI.__init__(self, afi, SAFI.sr_policy)
         self._packed = bytes(packed)
 
     @property
@@ -78,21 +76,19 @@ class SRPolicyNLRI(NLRI):
         return socket.inet_ntop(socket.AF_INET, self._packed[8:12])
 
     @classmethod
-    def create(
-        cls, afi: AFI, distinguisher: int, color: int, endpoint: str, action: Action = Action.ANNOUNCE
-    ) -> 'SRPolicyNLRI':
+    def create(cls, afi: AFI, distinguisher: int, color: int, endpoint: str) -> 'SRPolicyNLRI':
         """Create from semantic values."""
         packed = pack('!II', distinguisher, color)
         if afi == AFI.ipv6:
             packed += socket.inet_pton(socket.AF_INET6, endpoint)
         else:
             packed += socket.inet_pton(socket.AF_INET, endpoint)
-        return cls(afi, packed, action)
+        return cls(afi, packed)
 
     def feedback(self, action: Action) -> str:
         return ''
 
-    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
+    def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
         """Pack NLRI with 1-byte length prefix per RFC 9830 Section 3.
 
         Wire format: Length(1) + Distinguisher(4) + Color(4) + Endpoint(4 or 16)
@@ -102,6 +98,17 @@ class SRPolicyNLRI(NLRI):
 
     def index(self) -> bytes:
         return bytes(Family.index(self)) + self._packed
+
+    def __copy__(self) -> 'SRPolicyNLRI':
+        new = self.__class__.__new__(self.__class__)
+        self._copy_nlri_slots(new)
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'SRPolicyNLRI':
+        new = self.__class__.__new__(self.__class__)
+        memo[id(self)] = new
+        self._deepcopy_nlri_slots(new, memo)
+        return new
 
     def __hash__(self) -> int:
         return hash('{}:{}:{}'.format(self.afi, self.safi, self._packed.hex()))
@@ -134,7 +141,7 @@ class SRPolicyNLRI(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Any = None
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: 'Negotiated'
     ) -> tuple[NLRI, Buffer]:
         """Unpack SR-Policy NLRI with 1-byte length prefix per RFC 9830 Section 3."""
         if len(data) < 1:
@@ -159,6 +166,6 @@ class SRPolicyNLRI(NLRI):
             raise Notify(3, 10, f'SR Policy NLRI too short: need {1 + nlri_bytes} bytes, got {len(data)}')
 
         # Skip length byte, extract NLRI data
-        nlri = cls(afi, data[1 : 1 + nlri_bytes], action)
+        nlri = cls(afi, data[1 : 1 + nlri_bytes])
         nlri.addpath = addpath
         return nlri, data[1 + nlri_bytes :]

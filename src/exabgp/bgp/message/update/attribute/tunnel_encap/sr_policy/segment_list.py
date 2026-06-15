@@ -207,9 +207,7 @@ from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
-
-# Type alias for buffer (bytes or bytearray)
-Buffer = bytes | bytearray
+from exabgp.util.types import Buffer
 
 # Segment Type B and C Flags (RFC 9830 Section 2.4.4.2.1, RFC 9831 Section 2.10)
 # Bit layout: V|A|S|B|Rsv (bits 0-3 in RFC = bits 7-4 in byte order)
@@ -1615,10 +1613,11 @@ class SegmentListSubTLV(SubTLV):
         # Find the index of the last segment with MPLS label (Type A or Type C with SID)
         last_mpls_idx = -1
         for i in range(len(self.segments) - 1, -1, -1):
-            if isinstance(self.segments[i], SegmentTypeA):
+            seg_i = self.segments[i]
+            if isinstance(seg_i, SegmentTypeA):
                 last_mpls_idx = i
                 break
-            elif isinstance(self.segments[i], SegmentTypeC) and self.segments[i].sid is not None:
+            elif isinstance(seg_i, SegmentTypeC) and seg_i.sid is not None:
                 last_mpls_idx = i
                 break
 
