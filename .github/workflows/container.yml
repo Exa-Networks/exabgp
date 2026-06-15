@@ -5,7 +5,7 @@ on:
     workflows:
       - "Unit Testing"
       - "Linting"
-      - "Testing (Python 3.8 to 3.12)"
+      - "Testing (Python 3.8+)"
     branches:
       - "main"
     types:
