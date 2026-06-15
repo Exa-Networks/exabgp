@@ -2261,8 +2261,9 @@ class DecodingTests(Tests):
         if test.state != State.SUCCESS:
             self._print_debug_hints_header(test.state == State.TIMEOUT, duration)
             flush(f'    - run single test: ./qa/bin/functional decoding {test.nick}')
+            family_flag = f'-f "{test.conf["family"]}" ' if test.conf['family'] else ''
             flush(
-                f'    - decode command:  ./sbin/exabgp decode -f "{test.conf["family"]}" --{test.conf["type"]} {test.conf["packet"]}'
+                f'    - decode command:  ./sbin/exabgp decode {family_flag}--{test.conf["type"]} {test.conf["packet"]}'
             )
 
     def run_selected(
@@ -2280,7 +2281,7 @@ class DecodingTests(Tests):
             test.running()
             self.display()
             message = test.conf['type']
-            if message == 'open':
+            if message == 'open' or not test.conf['family']:
                 cmd = [Path.EXABGP, 'decode', '--%s' % test.conf['type'], test.conf['packet']]
             elif message in ['update', 'nlri']:
                 cmd = [
