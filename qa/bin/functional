@@ -2224,7 +2224,7 @@ class DecodingTests(Tests):
             with open(filename, 'r') as reader:
                 words = reader.readline().split()
                 test.conf['type'] = words[0]
-                test.conf['family'] = '' if words[0] == 'open' else f'{words[1]} {words[2]}'
+                test.conf['family'] = f'{words[1]} {words[2]}' if len(words) >= 3 else ''
                 packet = reader.readline().replace(' ', '').strip()
                 test.conf['packet'] = packet
                 expected = reader.readline().strip()

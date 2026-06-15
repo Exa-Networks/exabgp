@@ -393,7 +393,7 @@ def _make_update(neighbor: Neighbor, raw: bytes) -> UpdateCollection | None:
     while raw:
         if raw.startswith(b'\xff' * 16):
             kind = raw[18]
-            size = (raw[16] << 16) + raw[17]
+            size = (raw[16] << 8) + raw[17]
 
             injected, raw = raw[19:size], raw[size:]
 
@@ -438,7 +438,7 @@ def _make_notification(neighbor: Neighbor, raw: bytes) -> Notification | None:
 
     if raw.startswith(b'\xff' * 16):
         kind = raw[18]
-        size = (raw[16] << 16) + raw[17]
+        size = (raw[16] << 8) + raw[17]
 
         injected, raw = raw[19:size], raw[size:]
 

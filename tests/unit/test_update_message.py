@@ -76,6 +76,7 @@ def create_negotiated_mock(families: Any = None, asn4: Any = False) -> Any:
     negotiated.addpath.send = Mock(return_value=False)
     negotiated.required = Mock(return_value=False)
     negotiated.families = families if families else []
+    negotiated.nexthop = []
     negotiated.msg_size = 4096  # Standard BGP message size
     return negotiated
 
