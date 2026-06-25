@@ -1,0 +1,255 @@
+#!/usr/bin/env python3
+
+"""DDoS auto-mitigation via FlowSpec.
+
+A webhook-driven ExaBGP process script that receives attack alerts from
+a DDoS detection system and dynamically announces or withdraws FlowSpec
+rules to mitigate attack traffic at the network edge.
+
+The script runs an HTTP server on a configurable port.  When an attack
+is detected, the detection system sends a POST request with attack
+details (source prefix, destination prefix, protocol, port).  The
+script translates these into FlowSpec announce/withdraw commands that
+ExaBGP pushes to upstream routers.
+
+Environment variables (all optional):
+    WEBHOOK_PORT   - HTTP port for the webhook listener (default: 5000)
+    RATE_LIMIT     - FlowSpec rate-limit value in bytes/s (default: 0, meaning drop)
+    LOG_LEVEL      - Logging verbosity: DEBUG, INFO, WARNING (default: INFO)
+
+Tested with:
+    - Flowtriq (https://flowtriq.com) -- webhook alerts
+    - Any system that can POST JSON attack events
+
+Usage:
+    Configure this script as an ExaBGP process (see api-ddos-flowspec.conf).
+"""
+
+import json
+import logging
+import os
+import signal
+import sys
+import threading
+import time
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+WEBHOOK_PORT = int(os.environ.get("WEBHOOK_PORT", "5000"))
+RATE_LIMIT = int(os.environ.get("RATE_LIMIT", "0"))
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+
+logging.basicConfig(
+    stream=sys.stderr,
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format="%(asctime)s [ddos-flowspec] %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+log = logging.getLogger("ddos-flowspec")
+
+# ---------------------------------------------------------------------------
+# Active mitigations -- keyed by a deterministic rule ID so we can withdraw
+# ---------------------------------------------------------------------------
+
+active_rules: dict[str, str] = {}  # rule_id -> announce command
+lock = threading.Lock()
+
+
+# ---------------------------------------------------------------------------
+# ExaBGP helpers
+# ---------------------------------------------------------------------------
+
+def exabgp_send(command: str) -> None:
+    """Write a command to stdout (ExaBGP reads from our stdout)."""
+    try:
+        sys.stdout.write(command + "\n")
+        sys.stdout.flush()
+        log.debug("sent: %s", command)
+    except IOError:
+        log.error("broken pipe -- ExaBGP exited?")
+
+
+def build_flowspec_announce(src: str, dst: str, proto: str, port: int | None) -> str:
+    """Build a FlowSpec announce command.
+
+    Example output:
+        announce flow route {
+            match { source 203.0.113.0/24; destination 198.51.100.0/24;
+                    protocol udp; destination-port =53; }
+            then { rate-limit 0; }
+        }
+    """
+    match_parts = []
+    if src:
+        match_parts.append(f"source {src}")
+    if dst:
+        match_parts.append(f"destination {dst}")
+    if proto:
+        match_parts.append(f"protocol {proto}")
+    if port:
+        match_parts.append(f"destination-port ={port}")
+
+    match_str = "; ".join(match_parts) + ";"
+    then_str = f"rate-limit {RATE_LIMIT};"
+
+    return (
+        f"announce flow route {{ match {{ {match_str} }} "
+        f"then {{ {then_str} }} }}"
+    )
+
+
+def build_flowspec_withdraw(src: str, dst: str, proto: str, port: int | None) -> str:
+    """Build a FlowSpec withdraw command."""
+    match_parts = []
+    if src:
+        match_parts.append(f"source {src}")
+    if dst:
+        match_parts.append(f"destination {dst}")
+    if proto:
+        match_parts.append(f"protocol {proto}")
+    if port:
+        match_parts.append(f"destination-port ={port}")
+
+    match_str = "; ".join(match_parts) + ";"
+    return f"withdraw flow route {{ match {{ {match_str} }} }}"
+
+
+def rule_id(src: str, dst: str, proto: str, port: int | None) -> str:
+    """Deterministic key for deduplication."""
+    return f"{src}|{dst}|{proto}|{port}"
+
+
+# ---------------------------------------------------------------------------
+# Webhook handler
+# ---------------------------------------------------------------------------
+
+class WebhookHandler(BaseHTTPRequestHandler):
+    """HTTP handler that accepts attack start/stop events.
+
+    Expected JSON payload:
+
+        {
+            "action":   "mitigate" | "clear",
+            "source":   "203.0.113.0/24",       // optional
+            "destination": "198.51.100.0/24",    // optional
+            "protocol": "udp",                   // optional
+            "port":     53,                      // optional
+            "attack_id": "abc-123"               // optional, for logging
+        }
+    """
+
+    def do_POST(self) -> None:
+        content_length = int(self.headers.get("Content-Length", 0))
+        if content_length == 0:
+            self._respond(400, {"error": "empty body"})
+            return
+
+        try:
+            body = json.loads(self.rfile.read(content_length))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._respond(400, {"error": "invalid JSON"})
+            return
+
+        action = body.get("action", "").lower()
+        src = body.get("source", "")
+        dst = body.get("destination", "")
+        proto = body.get("protocol", "")
+        port = body.get("port")
+        attack_id = body.get("attack_id", "unknown")
+
+        if action not in ("mitigate", "clear"):
+            self._respond(400, {"error": "action must be 'mitigate' or 'clear'"})
+            return
+        if not src and not dst:
+            self._respond(400, {"error": "at least source or destination required"})
+            return
+
+        rid = rule_id(src, dst, proto, port)
+
+        if action == "mitigate":
+            cmd = build_flowspec_announce(src, dst, proto, port)
+            with lock:
+                if rid in active_rules:
+                    log.info("rule already active for %s (attack %s)", rid, attack_id)
+                    self._respond(200, {"status": "already_active", "rule_id": rid})
+                    return
+                active_rules[rid] = cmd
+            exabgp_send(cmd)
+            log.info("mitigating attack %s -- %s", attack_id, cmd)
+            self._respond(200, {"status": "mitigating", "rule_id": rid})
+
+        elif action == "clear":
+            cmd = build_flowspec_withdraw(src, dst, proto, port)
+            with lock:
+                removed = active_rules.pop(rid, None)
+            if removed:
+                exabgp_send(cmd)
+                log.info("cleared attack %s -- %s", attack_id, cmd)
+                self._respond(200, {"status": "cleared", "rule_id": rid})
+            else:
+                log.warning("clear for unknown rule %s (attack %s)", rid, attack_id)
+                self._respond(200, {"status": "not_found", "rule_id": rid})
+
+    def do_GET(self) -> None:
+        """Return currently active FlowSpec rules (useful for debugging)."""
+        with lock:
+            rules = dict(active_rules)
+        self._respond(200, {"active_rules": rules, "count": len(rules)})
+
+    def _respond(self, code: int, body: dict) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(body).encode())
+
+    def log_message(self, fmt, *args) -> None:  # type: ignore[override]
+        """Route HTTP access logs through our logger."""
+        log.debug(fmt, *args)
+
+
+# ---------------------------------------------------------------------------
+# ExaBGP stdin reader -- watches for shutdown signal
+# ---------------------------------------------------------------------------
+
+def stdin_reader() -> None:
+    """Read ExaBGP messages from stdin in a background thread."""
+    while True:
+        try:
+            line = sys.stdin.readline().strip()
+        except (IOError, KeyboardInterrupt):
+            break
+        if line == "shutdown":
+            log.info("received shutdown from ExaBGP")
+            os._exit(0)
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+    # Start the stdin reader so we notice when ExaBGP shuts down
+    reader_thread = threading.Thread(target=stdin_reader, daemon=True)
+    reader_thread.start()
+
+    # Give ExaBGP a moment to finish the EOR exchange
+    time.sleep(0.5)
+
+    # Start the webhook HTTP server
+    server = HTTPServer(("0.0.0.0", WEBHOOK_PORT), WebhookHandler)
+    log.info("webhook listener started on port %d", WEBHOOK_PORT)
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        log.info("shutting down")
+        server.shutdown()
+
+
+if __name__ == "__main__":
+    main()
