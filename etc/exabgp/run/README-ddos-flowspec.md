@@ -40,7 +40,7 @@ Detection System                ExaBGP              Upstream Router
    curl for testing):
 
    ```bash
-   # Mitigate: drop UDP traffic from 203.0.113.0/24 to port 53
+   # Mitigate: drop reflected DNS replies from source port 53
    curl -X POST http://localhost:5000/ \
      -H 'Content-Type: application/json' \
      -d '{
@@ -48,7 +48,7 @@ Detection System                ExaBGP              Upstream Router
        "source": "203.0.113.0/24",
        "destination": "198.51.100.0/24",
        "protocol": "udp",
-       "port": 53,
+       "source_port": 53,
        "attack_id": "dns-amp-001"
      }'
 
@@ -60,7 +60,7 @@ Detection System                ExaBGP              Upstream Router
        "source": "203.0.113.0/24",
        "destination": "198.51.100.0/24",
        "protocol": "udp",
-       "port": 53,
+       "source_port": 53,
        "attack_id": "dns-amp-001"
      }'
    ```
@@ -77,20 +77,50 @@ Detection System                ExaBGP              Upstream Router
 |---------------|--------|----------|------------------------------------------|
 | `action`      | string | yes      | `"mitigate"` to announce, `"clear"` to withdraw |
 | `source`      | string | no*      | Source prefix (e.g. `"203.0.113.0/24"`)  |
-| `destination`  | string | no*      | Destination prefix                       |
+| `destination` | string | no*      | Destination prefix                       |
 | `protocol`    | string | no       | `"tcp"`, `"udp"`, `"icmp"`, etc.         |
 | `port`        | int    | no       | Destination port number                  |
+| `source_port` | int    | no       | Source port number                       |
 | `attack_id`   | string | no       | Identifier for logging                   |
 
 \* At least one of `source` or `destination` is required.
 
+All fields are validated before being passed to ExaBGP:
+- `source` and `destination` must be valid CIDR prefixes
+- `protocol` must be a known IP protocol (tcp, udp, icmp, etc.)
+- `port` and `source_port` must be integers between 1 and 65535
+
 ## Environment variables
 
-| Variable       | Default | Description                          |
-|----------------|---------|--------------------------------------|
-| `WEBHOOK_PORT` | `5000`  | Port for the HTTP webhook listener   |
-| `RATE_LIMIT`   | `0`     | FlowSpec rate-limit (0 = drop)       |
-| `LOG_LEVEL`    | `INFO`  | Logging verbosity                    |
+| Variable       | Default     | Description                                     |
+|----------------|-------------|-------------------------------------------------|
+| `WEBHOOK_PORT` | `5000`      | Port for the HTTP webhook listener              |
+| `WEBHOOK_BIND` | `127.0.0.1` | Bind address for the HTTP listener              |
+| `API_KEY`      | (none)      | Bearer token for authentication (see below)     |
+| `RATE_LIMIT`   | `0`         | FlowSpec rate-limit in bytes/s (0 = drop)       |
+| `LOG_LEVEL`    | `INFO`      | Logging verbosity                               |
+
+## Authentication
+
+By default the webhook listener binds to `127.0.0.1`, so only processes on
+the same machine can reach it.  This is safe for setups where the detection
+system runs locally or sends alerts through a local relay.
+
+To accept webhooks from a remote detection system:
+
+1. Set `WEBHOOK_BIND=0.0.0.0` (or a specific interface address).
+2. Set `API_KEY` to a strong random value, e.g.:
+   ```bash
+   export API_KEY=$(openssl rand -hex 32)
+   ```
+3. Configure the detection system to include the header:
+   ```
+   Authorization: Bearer <your-api-key>
+   ```
+
+When `API_KEY` is set, all POST requests without a valid
+`Authorization: Bearer <key>` header receive a 401 response.
+GET requests (listing active rules) are not authenticated.
 
 ## Detection systems
 
@@ -109,6 +139,8 @@ Some platforms that support webhook-based alerting:
 - The script tracks active rules and deduplicates announcements.
 - On ExaBGP shutdown, all announced routes are implicitly withdrawn when
   the BGP session goes down.
-- For production use, consider adding authentication to the webhook
-  endpoint (e.g. an API key header check) and binding to 127.0.0.1
-  instead of 0.0.0.0.
+- The HTTP server uses `ThreadingHTTPServer` so concurrent webhook calls
+  are handled in parallel.
+- The server waits for ExaBGP to signal a session-up before accepting
+  webhooks (with a 10-second fallback timeout).
+- For a more detailed setup guide, see `doc/ddos-flowspec.md`.
