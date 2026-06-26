@@ -354,30 +354,29 @@ Comprehensive documentation is available in the [**ExaBGP Wiki**](https://github
 
 **🚀 Getting Started:**
 - [**Home**](https://github.com/Exa-Networks/exabgp/wiki/Home) - Main documentation hub
-- [**Quick Start**](https://github.com/Exa-Networks/exabgp/wiki/Getting-Started/Quick-Start) - 5-minute tutorial
-- [**Installation Guide**](https://github.com/Exa-Networks/exabgp/wiki/Getting-Started/Installation-Guide) - Detailed installation for all platforms
-- [**First BGP Session**](https://github.com/Exa-Networks/exabgp/wiki/Getting-Started/First-BGP-Session) - Step-by-step BGP setup
+- [**Quick Start**](https://github.com/Exa-Networks/exabgp/wiki/Quick-Start) - 5-minute tutorial
+- [**Installation Guide**](https://github.com/Exa-Networks/exabgp/wiki/Installation-Guide) - Detailed installation for all platforms
+- [**First BGP Session**](https://github.com/Exa-Networks/exabgp/wiki/First-BGP-Session) - Step-by-step BGP setup
 
 **🔧 API Documentation:**
-- [**API Overview**](https://github.com/Exa-Networks/exabgp/wiki/API/API-Overview) - Architecture and patterns
-- [**Text API Reference**](https://github.com/Exa-Networks/exabgp/wiki/API/Text-API-Reference) - Complete text command reference
-- [**JSON API Reference**](https://github.com/Exa-Networks/exabgp/wiki/API/JSON-API-Reference) - JSON message format
-- [**API Commands**](https://github.com/Exa-Networks/exabgp/wiki/API/API-Commands) - A-Z command reference
+- [**API Overview**](https://github.com/Exa-Networks/exabgp/wiki/API-Overview) - Architecture and patterns
+- [**Text API Reference**](https://github.com/Exa-Networks/exabgp/wiki/Text-API-Reference) - Complete text command reference
+- [**JSON API Reference**](https://github.com/Exa-Networks/exabgp/wiki/JSON-API-Reference) - JSON message format
+- [**API Commands**](https://github.com/Exa-Networks/exabgp/wiki/API-Commands) - A-Z command reference
 
 **🛡️ FlowSpec & DDoS Mitigation:**
-- [**FlowSpec Overview**](https://github.com/Exa-Networks/exabgp/wiki/Address-Families/FlowSpec/FlowSpec-Overview) - DDoS mitigation guide
-- [**Match Conditions**](https://github.com/Exa-Networks/exabgp/wiki/Address-Families/FlowSpec/Match-Conditions) - All match types
-- [**Actions Reference**](https://github.com/Exa-Networks/exabgp/wiki/Address-Families/FlowSpec/Actions-Reference) - All actions (discard, rate-limit, redirect)
+- [**FlowSpec Overview**](https://github.com/Exa-Networks/exabgp/wiki//FlowSpec-Overview) - DDoS mitigation guide
+- [**Match Conditions**](https://github.com/Exa-Networks/exabgp/wiki/Match-Conditions) - All match types
+- [**Actions Reference**](https://github.com/Exa-Networks/exabgp/wiki/Actions-Reference) - All actions (discard, rate-limit, redirect)
 
 **⚙️ Configuration:**
-- [**Configuration Syntax**](https://github.com/Exa-Networks/exabgp/wiki/Configuration/Configuration-Syntax) - Complete syntax guide
-- [**Directives Reference**](https://github.com/Exa-Networks/exabgp/wiki/Configuration/Directives-Reference) - A-Z configuration directives
+- [**Configuration Syntax**](https://github.com/Exa-Networks/exabgp/wiki/Configuration-Syntax) - Complete syntax guide
+- [**Directives Reference**](https://github.com/Exa-Networks/exabgp/wiki/Directives-Reference) - A-Z configuration directives
 
 **📖 Additional Resources:**
 - [**RFC Compliance**](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) - 55+ RFCs implemented
-- [**Migration Guide**](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.x) - Upgrading from 3.4 to 4.x
-- [**Related Projects**](https://github.com/Exa-Networks/exabgp/wiki/related) - Community tools and integrations
-- [**User Articles**](https://github.com/Exa-Networks/exabgp/wiki/Related-articles) - Tutorials and blog posts
+- [**Migration Guide**](https://github.com/Exa-Networks/exabgp/wiki/From-3.4-to-4.x) - Upgrading from 3.4 to 4.x
+- [**Related Projects**](https://github.com/Exa-Networks/exabgp/wiki/Projects) - Community tools and integrations
 
 ### 💡 Examples
 
