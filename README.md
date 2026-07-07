@@ -6,6 +6,8 @@ ExaBGP is a BGP implementation designed to enable network engineers and develope
 
 **Key Differentiator**: Unlike traditional BGP daemons (BIRD, FRRouting), ExaBGP does **not** manipulate the FIB (Forwarding Information Base). Instead, it focuses on BGP protocol implementation and provides an API for external process.
 
+ExaBGP has a fully backward-compatible successor written in Go, called Ze (**[ze-software.net](https://ze-software.net)**). If you need more performance than a Python program can deliver, take a look.
+
 ## Table of Contents
 
 <table width="100%">
