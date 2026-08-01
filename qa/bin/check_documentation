@@ -12,9 +12,14 @@ What it checks, per markdown file:
 
   settings    every exabgp.<section>.<name> / exabgp_<section>_<name> named in
               the text exists in the environment configuration
-  shell       `export exabgp.a.b=value` is invalid shell (dots are not allowed
-              in a variable name), and the legacy `--run` / `--version` /
-              `--test` flags no longer exist
+  shell       `export exabgp.a.b=value` cannot work. The dotted name is the
+              primary spelling and the one ExaBGP looks for first, but the
+              `export` builtin of bash, zsh, sh, dash and ksh only accepts
+              identifiers, so the variable is never set (bash even carries on,
+              leaving the default in place). Pass it with
+              `env 'exabgp.a.b=value' exabgp ...`, which keeps the dotted name.
+              Also flags the legacy `--run` / `--version` / `--test` options.
+              See tests/unit/test_environment_naming.py
   subcommand  every `exabgp <word>` in a shell example is a real subcommand
   api         every `peer|rib|session|daemon|system|group ...` command in
               backticks is accepted by the v6 API dispatcher
@@ -167,6 +172,12 @@ def check_settings(path: str, lines: list[str], known: set[str]) -> Iterator[Rep
 
 
 def check_shell(path: str, lines: list[str]) -> Iterator[Report]:
+    """Flag shell examples which cannot run.
+
+    A dotted setting name is a perfectly good environment variable, ExaBGP reads it, but the
+    `export` builtin of every common shell only accepts identifiers, so the line dies before
+    ExaBGP is reached. `env 'exabgp.a.b=value' exabgp ...` and `export exabgp_a_b=value` both work.
+    """
     export = re.compile(r'\bexport (exabgp\.[a-z][a-z0-9_.]*)=')
     legacy = re.compile(r'\bexabgp (--run|--version|--test)\b')
     for number, line in code(lines):
@@ -174,12 +185,14 @@ def check_shell(path: str, lines: list[str]) -> Iterator[Report]:
             continue
         match = export.search(line)
         if match:
-            underscore = match.group(1).replace('.', '_')
+            dotted = match.group(1)
+            underscore = dotted.replace('.', '_')
             yield Report(
                 'shell',
                 path,
                 number,
-                f'export {match.group(1)}= is not valid shell, use export {underscore}=',
+                f"the export builtin cannot set a dotted name, use env '{dotted}=value' exabgp ... "
+                f'(or export {underscore}=value)',
             )
         match = legacy.search(line)
         if match and not dated(lines, number):
