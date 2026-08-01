@@ -114,15 +114,20 @@ See [Installation](#installation) for detailed options and [Documentation](#docu
 
 ## Version Notice
 
-**For production use, we recommend the 5.0 branch until version 6.0 is officially released.**
+Two branches are maintained and both are supported:
 
-The `main` branch contains development work for the upcoming 6.0 release, which includes significant changes (async reactor default, Python 3.12+ requirement). Until 6.0 is released, use the stable 5.0 branch:
+- **`5.0` is the stable branch.** It is the released version (currently 5.0.9), it is what `pip`/`pipx` and most OS packages install, and it runs on Python 3.8 or later. Pick it if you want a tagged release, or if you are not on Python 3.12 yet.
+- **`main` is the development branch**, and the default branch of the repository. It will become 6.0, but it is not 6.0 yet and nothing is tagged: expect the odd rough edge, even though the full unit and functional test suites run on every commit. It requires Python 3.12 or later. Pick it if you want the features being built for 6.0: asyncio engine, the interactive CLI with shell completion, and health monitoring API commands.
+
+If you have no preference, use the stable branch:
 
 ```sh
 git clone https://github.com/Exa-Networks/exabgp
 cd exabgp
 git checkout 5.0
 ```
+
+Beware that `git clone` without a checkout, and `docker pull ghcr.io/exa-networks/exabgp:latest`, both give you `main`, while `pip install exabgp` gives you the latest 5.0 release.
 
 See [Version Information](#version-information) for details on differences between versions.
 
@@ -204,8 +209,8 @@ python3 -m exabgp healthcheck --help
 It is also possible to download releases from GitHub:
 
 ```sh
-curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.1.tar.gz | tar zx
-cd exabgp-5.0.1
+curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.9.tar.gz | tar zx
+cd exabgp-5.0.9
 ./sbin/exabgp --version
 ./sbin/exabgp --help
 
@@ -216,7 +221,7 @@ env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 
 ### git (stable)
 
-For production use, clone and checkout the stable 5.0 branch:
+For the released version, clone and checkout the stable 5.0 branch (Python 3.8+):
 
 ```sh
 git clone https://github.com/Exa-Networks/exabgp exabgp-git
@@ -228,7 +233,7 @@ git checkout 5.0
 
 ### git (development)
 
-For testing upcoming features or debugging issues, use the main branch (development towards 6.0):
+For the features listed in [Version Notice](#version-notice), use the `main` branch (Python 3.12+), which will become 6.0. It is the branch you get by default:
 
 ```sh
 git clone https://github.com/Exa-Networks/exabgp exabgp-git
@@ -245,8 +250,8 @@ You can switch between branches or checkout specific releases:
 
 ```sh
 git checkout 5.0      # Stable branch
-git checkout main     # Development branch
-git checkout 5.0.1    # Specific release tag
+git checkout main     # Development branch (future 6.0)
+git checkout 5.0.9    # Specific release tag
 ./sbin/exabgp --version
 ```
 
@@ -332,13 +337,13 @@ ExaBGP is self-contained and easy to upgrade/downgrade by:
 
 **ExaBGP 5.0.0 introduces new features** including the `silence-ack` API command. The acknowledgment feature caused issues with simple programs that did not expect ACK messages. The `silence-ack` command resolves this problem by allowing external processes to disable acknowledgment messages.
 
-**ExaBGP 6.0.0 (upcoming release) will introduce significant improvements** since 5.0.0:
+**ExaBGP 6.0.0 (not released yet, in development on main) will introduce significant improvements** since 5.0.0:
 
-⚠️ **BREAKING CHANGE - Async Reactor Default:**
-- **Async mode is now the default** - Uses modern async/await-based event loop
-- **Legacy mode available** - Set `exabgp_reactor_legacy=true` to use the original generator-based reactor
-- **100% test parity** - Both modes pass all 72 functional tests and 1376 unit tests
-- **Why the change?** Modern event loop integration, potential performance benefits, production-ready after extensive validation
+⚠️ **BREAKING CHANGE - asyncio engine:**
+- **The engine runs on asyncio** - the homemade generator-based core engine was replaced by an async/await event loop, there is no option to switch back
+- **Same behaviour** - the full unit and functional test suites pass on both 5.0 and main
+- **Why the change?** Modern event loop integration and easier integration with other asyncio code
+- **Python 3.12+ required** - use the 5.0 branch if you run an older interpreter
 
 🎯 **New Features:**
 - **Shell completion** - Install with `exabgp shell install [bash|zsh|fish]` for smart command completion
@@ -400,22 +405,23 @@ Documentation contributions are genuinely welcomed! Even small improvements help
 
 ### Requirements
 
-- **Python 3.12+** required for ExaBGP 6.0 (supports versions 3.12, 3.13, 3.14)
-- **No asyncio**: Uses custom reactor pattern predating asyncio adoption
+- **Python 3.12+** required on main / future 6.0 (supports versions 3.12, 3.13, 3.14), Python 3.8+ on the 5.0 branch
+- **Engine**: asyncio on main, homemade generator-based reactor on 5.0
 - **Compatibility**: Focus on reliability over adopting latest Python features
 
 **Version 3.x** supported Python 2 only. **Version 4.x** introduced Python 3 support while maintaining Python 2 compatibility (minimum: Python 3.6). **Version 5.0** requires Python 3.8 or later. **Version 6.0** requires Python 3.12 or later, enabling use of modern type annotation syntax, buffer protocol improvements, and other language features.
 
-ExaBGP is nearly as old as Python 3. A lot has changed since 2009; the application does not use Python 3's async-io (as we run a homemade async core engine). It may never do as development slowed, and our primary goal is ensuring reliability for current and new users.
+ExaBGP is nearly as old as Python 3: Python 3.0 was released in December 2008, the first ExaBGP commit is from September 2009. A lot has changed since then, and asyncio only reached the standard library with Python 3.4 in March 2014. The 5.0 branch still runs the homemade async core engine written years before that, while main hands the job to asyncio. Our primary goal remains ensuring reliability for current and new users.
 
 ### Version Information
 
-- **Current stable**: 5.0 branch (recommended for production until 6.0 is released)
-- **Development**: main branch (working towards 6.0.0 release)
-  - **Breaking changes**: Command-line arguments changed from 4.x, Python 3.12+ required
-  - **Note**: main is under heavy development with major async reactor and mypy compatibility work, and may undergo non-backward compatible changes
+- **Stable**: 5.0 branch, released as 5.0.9, Python 3.8+
+- **Development**: main branch, will become 6.0, nothing tagged yet, Python 3.12+
+  - **Changes since 5.0**: Python 3.12+ required, the engine runs on asyncio, some BGP-LS JSON keys renamed
+  - **New features**: interactive CLI with tab completion, shell completion, health monitoring API commands
+  - **Note**: the configuration syntax and API remain compatible, but until 6.0 is released, non-backward compatible changes are still possible
 
-**We recommend using the 5.0 branch for production deployments until version 6.0 is officially released.** The main branch is working towards the ExaBGP 6.0.0 release with significant changes including async reactor as default. Use `git checkout 5.0` after cloning for stable production use.
+Both branches are supported. Use `git checkout 5.0` if you want the released version, stay on `main` if you want the features being built for 6.0. See [Version Notice](#version-notice).
 
 ### Testing
 
