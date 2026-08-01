@@ -98,7 +98,7 @@ docker run -it --rm ghcr.io/exa-networks/exabgp:latest --help
 git clone https://github.com/Exa-Networks/exabgp
 cd exabgp
 ./release binary /usr/local/sbin/exabgp
-/usr/local/sbin/exabgp --version
+/usr/local/sbin/exabgp version
 
 # Using pip
 pip install exabgp
@@ -178,7 +178,7 @@ From the source folder, it is possible to create a self-contained executable whi
 git clone https://github.com/Exa-Networks/exabgp exabgp-git
 cd exabgp-git
 ./release binary /usr/local/sbin/exabgp
-/usr/local/sbin/exabgp --version
+/usr/local/sbin/exabgp version
 ```
 
 which is a helper function and creates a python3 zipapp:
@@ -187,7 +187,7 @@ which is a helper function and creates a python3 zipapp:
 git clone https://github.com/Exa-Networks/exabgp exabgp-git
 cd exabgp-git
 python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main -p "/usr/bin/env python3" src
-/usr/local/sbin/exabgp --version
+/usr/local/sbin/exabgp version
 ```
 
 ### pip releases
@@ -197,10 +197,10 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 ```sh
 pip install exabgp
 
-exabgp --version
+exabgp version
 exabgp --help
 
-exabgp --run healthcheck --help
+exabgp healthcheck --help
 python3 -m exabgp healthcheck --help
 ```
 
@@ -211,10 +211,10 @@ It is also possible to download releases from GitHub:
 ```sh
 curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.9.tar.gz | tar zx
 cd exabgp-5.0.9
-./sbin/exabgp --version
+./sbin/exabgp version
 ./sbin/exabgp --help
 
-./sbin/exabgp --run healthcheck --help
+./sbin/exabgp healthcheck --help
 env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 ./bin/healthcheck --help
 ```
@@ -227,7 +227,7 @@ For the released version, clone and checkout the stable 5.0 branch (Python 3.8+)
 git clone https://github.com/Exa-Networks/exabgp exabgp-git
 cd exabgp-git
 git checkout 5.0
-./sbin/exabgp --version
+./sbin/exabgp version
 ./sbin/exabgp --help
 ```
 
@@ -238,10 +238,10 @@ For the features listed in [Version Notice](#version-notice), use the `main` bra
 ```sh
 git clone https://github.com/Exa-Networks/exabgp exabgp-git
 cd exabgp-git
-./sbin/exabgp --version
+./sbin/exabgp version
 ./sbin/exabgp --help
 
-./sbin/exabgp --run healthcheck --help
+./sbin/exabgp healthcheck --help
 env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 ./bin/healthcheck --help
 ```
@@ -252,14 +252,14 @@ You can switch between branches or checkout specific releases:
 git checkout 5.0      # Stable branch
 git checkout main     # Development branch (future 6.0)
 git checkout 5.0.9    # Specific release tag
-./sbin/exabgp --version
+./sbin/exabgp version
 ```
 
 ### OS packages
 
 The program is packaged for many systems such as [Debian](https://packages.debian.org/search?keywords=exabgp), [Ubuntu](https://packages.ubuntu.com/search?keywords=exabgp), [ArchLinux](https://aur.archlinux.org/packages/exabgp), [Gentoo](https://packages.gentoo.org/packages/net-misc/exabgp), [FreeBSD](https://www.freshports.org/net/exabgp/), [OSX](https://ports.macports.org/port/exabgp/).
 
-RHEL users can find help [here](https://github.com/Exa-Networks/exabgp/wiki/RedHat).
+RHEL users can find help [here](https://github.com/Exa-Networks/exabgp/wiki/Building-From-Source#creating-rpm-packages).
 
 Many OS distributions provide older releases, but on the plus side, the packaged version will be integrated with systemd.
 
@@ -301,7 +301,7 @@ The completion script will be generated dynamically and installed to your user's
 
 ```sh
 exabgp <TAB>
-# Should show: cli  decode  env  healthcheck  run  server  shell  validate  version
+# Should show: cli  configuration  decode  encode  env  healthcheck  migrate  run  schema  server  shell  version
 ```
 
 **Manual Generation (advanced):**
@@ -333,7 +333,7 @@ ExaBGP is self-contained and easy to upgrade/downgrade by:
 - running `pip install -U exabgp`, for pip installations
 - running `apt update; apt upgrade exabgp` for Debian/Ubuntu
 
-**If you are migrating your application from ExaBGP 3.4 to 4.x please read this [wiki](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.0) entry**.
+**If you are migrating your application from ExaBGP 3.4 to 4.x please read this [wiki](https://github.com/Exa-Networks/exabgp/wiki/From-3.4-to-4.x) entry**.
 
 **ExaBGP 5.0.0 introduces new features** including the `silence-ack` API command. The acknowledgment feature caused issues with simple programs that did not expect ACK messages. The `silence-ack` command resolves this problem by allowing external processes to disable acknowledgment messages.
 
@@ -360,7 +360,7 @@ The configuration file and API format may change occasionally, but every effort 
 Comprehensive documentation is available in the [**ExaBGP Wiki**](https://github.com/Exa-Networks/exabgp/wiki):
 
 **🚀 Getting Started:**
-- [**Home**](https://github.com/Exa-Networks/exabgp/wiki/Home) - Main documentation hub
+- [**Home**](https://github.com/Exa-Networks/exabgp/wiki) - Main documentation hub
 - [**Quick Start**](https://github.com/Exa-Networks/exabgp/wiki/Quick-Start) - 5-minute tutorial
 - [**Installation Guide**](https://github.com/Exa-Networks/exabgp/wiki/Installation-Guide) - Detailed installation for all platforms
 - [**First BGP Session**](https://github.com/Exa-Networks/exabgp/wiki/First-BGP-Session) - Step-by-step BGP setup
@@ -372,7 +372,7 @@ Comprehensive documentation is available in the [**ExaBGP Wiki**](https://github
 - [**API Commands**](https://github.com/Exa-Networks/exabgp/wiki/API-Commands) - A-Z command reference
 
 **🛡️ FlowSpec & DDoS Mitigation:**
-- [**FlowSpec Overview**](https://github.com/Exa-Networks/exabgp/wiki//FlowSpec-Overview) - DDoS mitigation guide
+- [**FlowSpec Overview**](https://github.com/Exa-Networks/exabgp/wiki/FlowSpec-Overview) - DDoS mitigation guide
 - [**Match Conditions**](https://github.com/Exa-Networks/exabgp/wiki/Match-Conditions) - All match types
 - [**Actions Reference**](https://github.com/Exa-Networks/exabgp/wiki/Actions-Reference) - All actions (discard, rate-limit, redirect)
 
@@ -381,13 +381,13 @@ Comprehensive documentation is available in the [**ExaBGP Wiki**](https://github
 - [**Directives Reference**](https://github.com/Exa-Networks/exabgp/wiki/Directives-Reference) - A-Z configuration directives
 
 **📖 Additional Resources:**
-- [**RFC Compliance**](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) - 55+ RFCs implemented
+- [**RFC Compliance**](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) - the RFCs and drafts implemented
 - [**Migration Guide**](https://github.com/Exa-Networks/exabgp/wiki/From-3.4-to-4.x) - Upgrading from 3.4 to 4.x
 - [**Related Projects**](https://github.com/Exa-Networks/exabgp/wiki/Projects) - Community tools and integrations
 
 ### 💡 Examples
 
-To understand ExaBGP configuration in practice, explore the **98 configuration examples** in the [`etc/exabgp`](https://github.com/Exa-Networks/exabgp/tree/main/etc/exabgp) folder covering:
+To understand ExaBGP configuration in practice, explore the **100+ configuration examples** in the [`etc/exabgp`](https://github.com/Exa-Networks/exabgp/tree/main/etc/exabgp) folder covering:
 - Basic BGP peering
 - FlowSpec rules
 - IPv4/IPv6 unicast and multicast
@@ -461,13 +461,13 @@ You can also manually run both the server and client for any given test:
 A test suite is present to complement the functional testing (requires `pip3 install pytest pytest-cov`):
 
 ```sh
-env exabgp_log_enable=false pytest --cov --cov-reset ./tests/*_test.py
+env exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/
 ```
 
 **Configuration parsing tests**:
 
 ```sh
-./qa/bin/parsing
+./qa/bin/test_parsing
 ```
 
 ### Debug Options
@@ -490,14 +490,14 @@ env exabgp_tcp_bind='' ./sbin/exabgp decode -c ./etc/exabgp/api-open.conf \
   FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
 ```
 
-Output (JSON format):
+Output (JSON format, reformatted for readability):
 ```json
 {
-  "exabgp": "4.0.1",
-  "time": 1560371099.404008,
-  "host": "ptr-41.212.219.82.rev.exa.net.uk",
-  "pid": 37750,
-  "ppid": 10834,
+  "exabgp": "6.0.0",
+  "time": 1785586660.872494,
+  "host": "localhost",
+  "pid": 10696,
+  "ppid": 10691,
   "counter": 1,
   "type": "update",
   "neighbor": {
@@ -508,24 +508,25 @@ Output (JSON format):
     "asn": {
       "local": 1,
       "peer": 1
-    }
-  },
-  "direction": "in",
-  "message": {
-    "update": {
-      "attribute": {
-        "origin": "igp",
-        "med": 200,
-        "local-preference": 100
-      },
-      "announce": {
-        "ipv4 unicast": {
-          "101.1.101.1": [
-            {
-              "nlri": "1.1.1.1/32",
-              "path-information": "0.0.0.0"
-            }
-          ]
+    },
+    "router-id": "1.2.3.4",
+    "direction": "in",
+    "message": {
+      "update": {
+        "attribute": {
+          "origin": "igp",
+          "med": 200,
+          "local-preference": 100
+        },
+        "announce": {
+          "ipv4 unicast": {
+            "101.1.101.1": [
+              {
+                "nlri": "1.1.1.1/32",
+                "path-information": "0.0.0.0"
+              }
+            ]
+          }
         }
       }
     }
@@ -535,7 +536,7 @@ Output (JSON format):
 
 ## Support
 
-**The most common issue reported (ExaBGP hangs after some time) is caused by using code written for ExaBGP 3.4 with current versions (5.0+) without having read [this wiki entry](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.x)**
+**The most common issue reported (ExaBGP hangs after some time) is caused by using code written for ExaBGP 3.4 with current versions (5.0+) without having read [this wiki entry](https://github.com/Exa-Networks/exabgp/wiki/From-3.4-to-4.x)**
 
 ExaBGP is supported through GitHub's [issue tracker](https://github.com/Exa-Networks/exabgp/issues). So should you encounter any problems, please do not hesitate to [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you.
 

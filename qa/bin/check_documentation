@@ -1,0 +1,379 @@
+#!/usr/bin/env python3
+"""check_documentation
+
+Check documentation claims against the running code.
+
+Documentation goes stale silently: an option is renamed, a command moves, a
+flag disappears, and the markdown keeps telling users to do the impossible.
+This script re-derives the truth from the code and reports every place the
+documentation disagrees with it.
+
+What it checks, per markdown file:
+
+  settings    every exabgp.<section>.<name> / exabgp_<section>_<name> named in
+              the text exists in the environment configuration
+  shell       `export exabgp.a.b=value` is invalid shell (dots are not allowed
+              in a variable name), and the legacy `--run` / `--version` /
+              `--test` flags no longer exist
+  subcommand  every `exabgp <word>` in a shell example is a real subcommand
+  api         every `peer|rib|session|daemon|system|group ...` command in
+              backticks is accepted by the v6 API dispatcher
+  config      every fenced code block that looks like a complete configuration
+              is accepted by the configuration parser
+
+Usage:
+    qa/bin/check_documentation                    # README.md, doc/, .claude/
+    qa/bin/check_documentation path ...           # named files or directories
+    qa/bin/check_documentation --wiki ../exabgp.wiki
+    qa/bin/check_documentation --skip config      # skip a check (repeatable)
+
+A line which deliberately names something that does not exist can carry the marker
+`check-documentation: ignore` (inside an HTML comment) to be left alone.
+
+Exit code is 0 when nothing is reported, 1 otherwise.
+
+Copyright (c) 2009-2026 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+SRC = os.path.join(ROOT, 'src')
+EXABGP = os.path.join(ROOT, 'sbin', 'exabgp')
+
+sys.path.insert(0, SRC)
+
+DEFAULT_TARGETS = ['README.md', 'doc', '.claude']
+
+CHECKS = ('settings', 'shell', 'subcommand', 'api', 'config')
+
+# words which follow "exabgp " in an example without being a subcommand
+NOT_SUBCOMMANDS = {
+    'healthcheck',  # is one, listed for clarity
+}
+
+
+# a line carrying this marker is left alone: it documents what does not exist
+IGNORE = 'check-documentation: ignore'
+
+# an example introduced as being for an older release is not describing this branch
+OLDER = re.compile(r'\b(3\.4|3\.x|4\.0|4\.2|4\.x|5\.0|5\.x)\b')
+CONTEXT = 4
+
+
+def dated(lines: list[str], number: int) -> bool:
+    """True when an older release is named on the line or just above it."""
+    return any(OLDER.search(lines[index]) for index in range(max(0, number - CONTEXT), number))
+
+
+@dataclass
+class Report:
+    check: str
+    path: str
+    line: int
+    detail: str
+
+    def __str__(self) -> str:
+        return f'{self.path}:{self.line} [{self.check}] {self.detail}'
+
+
+def settings() -> set[str]:
+    """Every environment setting name, in dotted form.
+
+    The declared sections, plus the names the code reads straight from os.environ
+    (aliases kept for backward compatibility, such as exabgp_tcp_connections).
+    """
+    from exabgp.environment import getenv
+
+    env = getenv()
+    names = set()
+    for section, values in env._sections().items():
+        for name in values.options():
+            names.add(f'{section}.{name.replace("_", ".")}')
+
+    direct = re.compile(r"""os\.environ(?:\.get)?[(\[]\s*['"]exabgp[._]([a-z][a-z0-9_.]*)['"]""")
+    for folder, dirnames, filenames in os.walk(SRC):
+        dirnames[:] = [d for d in dirnames if d != '__pycache__']
+        for filename in filenames:
+            if not filename.endswith('.py'):
+                continue
+            content = open(os.path.join(folder, filename), encoding='utf-8').read()
+            for name in direct.findall(content):
+                names.add(name.replace('_', '.'))
+    return names
+
+
+def subcommands() -> set[str]:
+    """Every top level subcommand of the exabgp command."""
+    from exabgp.application.main import main  # noqa: F401  (import check)
+
+    output = subprocess.run(
+        [EXABGP, '--help'],
+        capture_output=True,
+        text=True,
+        env={**os.environ, 'exabgp_log_enable': 'false'},
+    ).stdout
+    match = re.search(r'\{([a-z,]+)\}', output)
+    if not match:
+        raise RuntimeError('could not read the subcommand list from exabgp --help')
+    return set(match.group(1).split(','))
+
+
+def markdown(targets: list[str]) -> Iterator[str]:
+    for target in targets:
+        path = target if os.path.isabs(target) else os.path.join(ROOT, target)
+        if os.path.isfile(path) and path.endswith('.md'):
+            yield path
+            continue
+        for folder, dirnames, filenames in os.walk(path):
+            # archives and migration notes describe the past, they are not a promise
+            dirnames[:] = [d for d in dirnames if d not in ('.git', 'node_modules', 'archive', 'asyncio-migration')]
+            for filename in sorted(filenames):
+                if filename.endswith('.md'):
+                    yield os.path.join(folder, filename)
+
+
+def check_settings(path: str, lines: list[str], known: set[str]) -> Iterator[Report]:
+    """Flag settings which do not exist.
+
+    Only assignments are considered (`exabgp_api_ack=false`, `export exabgp.api.ack=true`)
+    and names written as a setting in backticks. Anything else with the same shape is a
+    python module path (exabgp.bgp.message.update), a file name, or a Prometheus metric
+    (exabgp_bgp_session_up).
+    """
+    sections = '|'.join(sorted({name.split('.')[0] for name in known}))
+    assignment = re.compile(r'(?<![\w.])exabgp[._](%s)[._]([a-z][a-z0-9_]*)=(?!=)' % sections)
+    # only the dotted form in backticks: the underscore form is also how metrics are named
+    quoted = re.compile(r'`exabgp\.(%s)\.([a-z][a-z0-9_]*)`' % sections)
+    for number, line in enumerate(lines, 1):
+        if IGNORE in line:
+            continue
+        for pattern in (assignment, quoted):
+            for match in pattern.finditer(line):
+                name = f'{match.group(1)}.{match.group(2).replace("_", ".")}'
+                if name not in known:
+                    yield Report('settings', path, number, f'unknown setting {match.group(0).rstrip("=` ")}')
+
+
+def check_shell(path: str, lines: list[str]) -> Iterator[Report]:
+    export = re.compile(r'\bexport (exabgp\.[a-z][a-z0-9_.]*)=')
+    legacy = re.compile(r'\bexabgp (--run|--version|--test)\b')
+    for number, line in code(lines):
+        if IGNORE in line:
+            continue
+        match = export.search(line)
+        if match:
+            underscore = match.group(1).replace('.', '_')
+            yield Report(
+                'shell',
+                path,
+                number,
+                f'export {match.group(1)}= is not valid shell, use export {underscore}=',
+            )
+        match = legacy.search(line)
+        if match and not dated(lines, number):
+            flag = match.group(1)
+            fix = {
+                '--run': 'exabgp <subcommand>',
+                '--version': 'exabgp version',
+                '--test': 'exabgp configuration validate',
+            }[flag]
+            yield Report('shell', path, number, f'exabgp {flag} no longer exists, use {fix}')
+
+
+def code(lines: list[str]) -> Iterator[tuple[int, str]]:
+    """Yield (line number, text) for command text only: fenced blocks and inline spans."""
+    fenced = False
+    for number, line in enumerate(lines, 1):
+        if line.startswith('```'):
+            fenced = not fenced
+            continue
+        if fenced:
+            yield number, line
+            continue
+        for span in re.findall(r'`([^`]+)`', line):
+            yield number, span
+
+
+def check_subcommand(path: str, lines: list[str], known: set[str]) -> Iterator[Report]:
+    """Flag `exabgp <word>` where <word> is not a subcommand.
+
+    Only invocations are considered: exabgp must start the command, so `chown exabgp user`
+    and `sudo -u exabgp ps` are left alone.
+    """
+    pattern = re.compile(
+        r'(?:^|\||&&|;)\s*(?:\$\s*)?(?:sudo\s+)?(?:env\s+\S+=\S*\s+)*(?:[\w./-]*/)?exabgp\s+([a-z][\w./-]*)'
+    )
+    for number, line in code(lines):
+        if IGNORE in line:
+            continue
+        for match in pattern.finditer(line):
+            word = match.group(1)
+            if word in known or word in NOT_SUBCOMMANDS:
+                continue
+            # a path or a file name is a configuration to run, not a subcommand
+            if '/' in word or '.' in word:
+                continue
+            # a single letter is a permission in an apparmor or selinux rule
+            if len(word) == 1:
+                continue
+            if dated(lines, number):
+                continue
+            yield Report('subcommand', path, number, f'`exabgp {word}` is not a subcommand')
+
+
+def check_api(path: str, lines: list[str]) -> Iterator[Report]:
+    from exabgp.reactor.api.dispatch import UnknownCommand
+    from exabgp.reactor.api.dispatch.v6 import dispatch_v6
+
+    class Reactor:
+        def peers(self, service: str) -> list[str]:
+            return ['peer']
+
+    pattern = re.compile(r'`((?:peer|rib|session|daemon|system|group)(?: [^`<>|]+))`')
+    for number, line in enumerate(lines, 1):
+        if IGNORE in line:
+            continue
+        for match in pattern.finditer(line):
+            command = match.group(1).strip()
+            if '...' in command:
+                continue
+            try:
+                dispatch_v6(command, Reactor(), 'service')
+            except UnknownCommand:
+                yield Report('api', path, number, f'the API does not accept `{command}`')
+            except Exception:  # noqa: BLE001  the dispatcher only needs to find a handler
+                pass
+
+
+def configurations(lines: list[str]) -> Iterator[tuple[int, str]]:
+    """Yield (line number, body) for each fenced block holding a full configuration."""
+    number = 0
+    while number < len(lines):
+        fence = re.match(r'^```(\w*)\s*$', lines[number])
+        if not fence:
+            number += 1
+            continue
+        start = number + 1
+        end = start
+        while end < len(lines) and not lines[end].startswith('```'):
+            end += 1
+        body = '\n'.join(lines[start:end])
+        language = fence.group(1)
+        # a complete configuration has a neighbor with both AS numbers, balanced braces,
+        # and no placeholder for the reader to fill in
+        complete = (
+            'neighbor ' in body
+            and 'local-as' in body
+            and 'peer-as' in body
+            and body.count('{') >= 2
+            and body.count('{') == body.count('}')
+        )
+        placeholder = '<' in body or '...' in body or 'YOUR' in body
+        # an example introduced as being for an older release is not describing this branch,
+        # and a block carrying the marker documents something the parser does not accept yet
+        marked = any(IGNORE in lines[index] for index in range(max(0, start - CONTEXT), start))
+        if (
+            language in ('', 'ini', 'conf', 'text', 'bash')
+            and complete
+            and not placeholder
+            and not dated(lines, start)
+            and not marked
+        ):
+            yield start, body
+        number = end + 1
+
+
+def validate(work: tuple[str, int, str]) -> Report | None:
+    """Run one configuration through the parser, in its own process."""
+    path, number, body = work
+    with tempfile.NamedTemporaryFile('w', suffix='.conf', delete=False) as handle:
+        handle.write(body + '\n')
+        name = handle.name
+    try:
+        result = subprocess.run(
+            [EXABGP, 'configuration', 'validate', '-nrv', name],
+            capture_output=True,
+            text=True,
+            env={**os.environ, 'exabgp_log_enable': 'false'},
+        )
+        if not result.returncode:
+            return None
+        reason = (result.stdout + result.stderr).strip().split('\n')
+        detail = reason[-1][:120]
+        # the parser checks that the programs of a process section exist: the reader's
+        # filesystem is not the documentation's fault
+        if 'can not locate the program' in detail:
+            return None
+        return Report('config', path, number, f'configuration rejected: {detail}')
+    finally:
+        os.unlink(name)
+
+
+def check_config(work: list[tuple[str, int, str]]) -> list[Report]:
+    """Validate every extracted configuration, several at a time."""
+    if not work:
+        return []
+    with ThreadPoolExecutor(max_workers=min(16, (os.cpu_count() or 2))) as pool:
+        return [report for report in pool.map(validate, work) if report]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description='check the documentation against the code')
+    parser.add_argument('targets', nargs='*', help='markdown files or folders (default: README.md doc .claude)')
+    parser.add_argument('--wiki', help='path to a checkout of the wiki repository to check as well')
+    parser.add_argument('--skip', action='append', choices=CHECKS, default=[], help='skip a check')
+    parser.add_argument('-q', '--quiet', action='store_true', help='only report the summary')
+    cmdarg = parser.parse_args()
+
+    targets = cmdarg.targets or list(DEFAULT_TARGETS)
+    if cmdarg.wiki:
+        targets.append(os.path.abspath(cmdarg.wiki))
+
+    known_settings = settings()
+    known_subcommands = subcommands()
+
+    reports: list[Report] = []
+    work: list[tuple[str, int, str]] = []
+    for path in markdown(targets):
+        lines = open(path, encoding='utf-8', errors='replace').read().split('\n')
+        shown = os.path.relpath(path, ROOT)
+        if 'settings' not in cmdarg.skip:
+            reports.extend(check_settings(shown, lines, known_settings))
+        if 'shell' not in cmdarg.skip:
+            reports.extend(check_shell(shown, lines))
+        if 'subcommand' not in cmdarg.skip:
+            reports.extend(check_subcommand(shown, lines, known_subcommands))
+        if 'api' not in cmdarg.skip:
+            reports.extend(check_api(shown, lines))
+        if 'config' not in cmdarg.skip:
+            work.extend((shown, number, body) for number, body in configurations(lines))
+
+    reports.extend(check_config(work))
+    reports.sort(key=lambda report: (report.path, report.line))
+
+    if not cmdarg.quiet:
+        for report in reports:
+            print(report)
+
+    counts: dict[str, int] = {}
+    for report in reports:
+        counts[report.check] = counts.get(report.check, 0) + 1
+    summary = ', '.join(f'{check}: {counts[check]}' for check in CHECKS if check in counts)
+    print(f'{len(reports)} issue(s){" (" + summary + ")" if summary else ""}')
+    return 1 if reports else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

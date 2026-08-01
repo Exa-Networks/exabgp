@@ -278,7 +278,7 @@ Verify no unexpected changes. If found: STOP and ask user.
    - `message/update/` - Attributes, NLRI, address families
 
 2. **Reactor** (`src/exabgp/reactor/`):
-   - Event-driven (custom, not asyncio)
+   - Event-driven (asyncio)
    - `peer.py` - BGP peer handling
    - `api/` - External process communication
 
@@ -404,22 +404,13 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
 
 ## AsyncIO Support
 
-**Dual-mode:** Generator (default) vs Async (opt-in)
+**Single mode:** asyncio only. `Reactor.run()` is `asyncio.run(self.run_async())` (`src/exabgp/reactor/loop.py`).
 
-**Both are async I/O** - differ in syntax only:
-- Generator: `yield` + `select.poll()`
-- Async: `await` + asyncio
+There is **no** switch back to the generator engine, and no environment variable to select one. The 5.0 branch is where the generator engine lives.
 
-**Current:** Phase 2 (Production Validation)
+Generator-based API callbacks still work, they run inside the asyncio loop.
 
-**Enable async:**
-```bash
-exabgp_reactor_asyncio=true ./sbin/exabgp config.conf
-```
-
-**Test parity:** 100% (72/72 functional, 1376/1376 unit)
-
-**See:** `.claude/asyncio-migration/` for details.
+**See:** `.claude/asyncio-migration/` for the migration history (its env variables are historical).
 
 ---
 
@@ -436,7 +427,7 @@ def pack(self, negotiated: Negotiated) -> bytes: pass
 ```
 Unused `negotiated` parameters are OK and EXPECTED.
 
-**No asyncio introduction** - uses custom reactor
+**The engine runs on asyncio** - `Reactor.run()` calls `asyncio.run(self.run_async())`
 **No FIB manipulation** - BGP protocol only
 
 **Buffer Protocol (Zero-Copy) - IMPORTANT:**
@@ -473,7 +464,7 @@ Before declaring success:
 - [ ] Plan files updated (if working on a plan)
 - [ ] User approval for commit/push
 - [ ] Python 3.12+ syntax
-- [ ] No asyncio introduced
+- [ ] No FIB manipulation introduced
 
 Before ending session:
 - [ ] Run SESSION_END_CHECKLIST.md (mandatory)

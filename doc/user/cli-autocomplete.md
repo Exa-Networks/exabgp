@@ -88,15 +88,6 @@ export exabgp_cli_fuzzy_matching=false
 export exabgp_cli_fuzzy_matching=true
 ```
 
-**Schema Validation:**
-```bash
-# Disable schema validation
-export exabgp_cli_schema_validation=false
-
-# Enable schema validation (default)
-export exabgp_cli_schema_validation=true
-```
-
 **Command History (Future):**
 ```bash
 # Disable command history tracking

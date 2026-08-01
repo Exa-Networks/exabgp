@@ -279,7 +279,7 @@ Typical settings:
 ### Issue Templates for exabgp
 
 Bug reports should require:
-- ExaBGP version (`exabgp --version`)
+- ExaBGP version (`exabgp version`)
 - Python version
 - OS/platform
 - Configuration file (sanitized)

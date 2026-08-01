@@ -359,7 +359,7 @@ When enabled, logs warnings for slow operations:
 
 **Example:**
 ```bash
-exabgp_debug_timing=true exabgp_reactor_asyncio=true ./sbin/exabgp config.conf
+exabgp_debug_timing=true ./sbin/exabgp config.conf
 ```
 
 **Use case:** Diagnosing reactor responsiveness issues, identifying blocking operations.
