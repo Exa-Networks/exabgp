@@ -236,6 +236,22 @@ killall -9 Python  # macOS uses capital P
 
 ---
 
+## Posting on GitHub
+
+**🚨 EVERY post must be attributed to Claude, not to Thomas 🚨**
+
+Comments, issues, pull request bodies and reviews go out under Thomas's account. Start the body with
+a line saying Claude wrote it, e.g.:
+
+```
+*Posted by Claude (AI assistant) working on Thomas's machine, not written by Thomas.*
+```
+
+Without it the text reads as Thomas's own words and opinions, which misrepresents him. This applies
+to ALL posts, on every repository, with no exception. See `.claude/memory/posting-attribution.md`.
+
+---
+
 ## Git Workflow
 
 **🚨 CRITICAL RULES 🚨**
