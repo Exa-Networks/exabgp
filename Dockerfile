@@ -34,7 +34,8 @@ ENV PATH=/opt/exabgp/bin:$PATH
 # install deps
 RUN apt-get update \
     && apt-get install -y iproute2 dumb-init \
-    && apt-get clean
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Add ExaBGP
 RUN useradd -r exa \
