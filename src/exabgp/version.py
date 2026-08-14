@@ -12,8 +12,8 @@ def get_root():
     return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-1]))
 
 
-commit = 'f08a242ff'
-release = '5.0.9'
+commit = '947f668f6'
+release = '5.0.10'
 json = '5.0.0'
 text = '5.0.0'
 version = os.environ.get('exabgp_version', release)
