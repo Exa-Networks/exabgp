@@ -7,6 +7,9 @@ Version 5.0.10:
  * Fix: the package can be installed on Python 3.13 and 3.14. The
    requires-python upper bound is removed, the PyPI classifiers list
    both versions, and the CI matrix tests them. (#1392)
+ * Fix: reload crashed on a neighbor that was not established. The code
+   read Neighbor.routes, which does not exist, in place of
+   Neighbor.changes. (#1404)
  * Fix: every named log source stayed silent whatever the configuration
    asked for. option.load() wrote the flags to option.option while
    log_enabled() reads option.enabled, so the all-False class default
