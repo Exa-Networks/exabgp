@@ -3,6 +3,31 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.10:
+ * Fix: the package can be installed on Python 3.13 and 3.14. The
+   requires-python upper bound is removed, the PyPI classifiers list
+   both versions, and the CI matrix tests them. (#1392)
+ * Fix: every named log source stayed silent whatever the configuration
+   asked for. option.load() wrote the flags to option.option while
+   log_enabled() reads option.enabled, so the all-False class default
+   was never replaced. (#1396)
+ * Fix: a NOTIFICATION carrying non-ASCII data raised UnicodeDecodeError
+   when the message was formatted. Data that does not decode as ASCII is
+   now shown as a hex string. (#1397)
+ * Fix: the TCP MD5 socket option is now cleared when the password is
+   removed. The setsockopt call that clears the key was commented out,
+   so the socket kept the key set earlier. (#1388)
+ * Fix: the "Non-callable log message detected" warning was written to
+   stderr and bypassed the configured log destination. It now goes
+   through the log handler. Seven log calls that passed a string instead
+   of a lambda are also fixed. (#1378)
+ * Fix: show adj-rib json output. extensive raised an exception, route
+   listing only worked for inet NLRI, and the routes array never held
+   more than one entry when api.chunk was above 1. (#1385)
+ * Feature: api show-routes-format selects the show adj-rib json shape.
+   v1 is the default and keeps the output of 5.0.9 and earlier. v2 is
+   the reworked shape, which reports non-inet NLRI. (#1390)
+
 Version 5.0.9:
  * Fix: --env-file was ignored, it is now honoured. (#1378)
  * Fix: logging to a file was silently dropped. Bare absolute paths,
