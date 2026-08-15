@@ -5,7 +5,9 @@ description = 'BGP swiss army knife'
 authors = [
 	{ name = "Thomas Mangin", email = "thomas.mangin@exa-networks.co.uk" },
 ]
-dynamic = ['license']
+# the table form, not the PEP 639 SPDX string: this branch supports Python 3.8,
+# where pip can only install setuptools < 77, which rejects the string form
+license = { text = 'BSD-3-Clause' }
 requires-python = ">=3.8.1"
 keywords = [
 	'bgp',
@@ -15,12 +17,17 @@ keywords = [
 	'bgp-ls',
 	'mpls',
 	'vpls',
+	'ipv4',
+	'ipv6',
+	'sdn',
+	'high-availability',
 ]
 classifiers = [
 	'Development Status :: 5 - Production/Stable',
 	'Environment :: Console',
 	'Intended Audience :: System Administrators',
 	'Intended Audience :: Telecommunications Industry',
+	'License :: OSI Approved :: BSD License',
 	'Operating System :: POSIX',
 	'Operating System :: MacOS :: MacOS X',
 	'Programming Language :: Python',
@@ -38,10 +45,11 @@ dependencies = []
 
 
 [project.urls]
-Repository = 'https://github.com/exa-networks/exabgp'
-Homepage = 'https://github.com/exa-networks/exabgp'
+Repository = 'https://github.com/Exa-Networks/exabgp'
+Homepage = 'https://github.com/Exa-Networks/exabgp'
 Documentation = 'https://github.com/Exa-Networks/exabgp/wiki'
-Issues = "https://github.com/exa-networks/exabgp/issues"
+Issues = 'https://github.com/Exa-Networks/exabgp/issues'
+Changelog = 'https://github.com/Exa-Networks/exabgp/blob/5.0/doc/CHANGELOG.rst'
 
 
 [project.scripts]
