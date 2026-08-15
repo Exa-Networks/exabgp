@@ -186,13 +186,13 @@ which is a helper function and creates a python3 zipapp:
 ```sh
 git clone https://github.com/Exa-Networks/exabgp exabgp-git
 cd exabgp-git
-python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main -p "/usr/bin/env python3" src
+python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application.main:main -p "/usr/bin/env python3" src
 /usr/local/sbin/exabgp version
 ```
 
 ### pip releases
 
-The latest version is available on [`pypi`](https://pypi.python.org/pypi), the Python Package Index:
+The latest version is available on [`pypi`](https://pypi.org/project/exabgp/), the Python Package Index:
 
 ```sh
 pip install exabgp
@@ -351,7 +351,7 @@ ExaBGP is self-contained and easy to upgrade/downgrade by:
 - **Health monitoring** - New API commands for ping and status checks
 - **Python 3.12+ support** - Updated compatibility and bug fixes
 
-The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://raw.githubusercontent.com/Exa-Networks/exabgp/main/CHANGELOG) and check their setup after any upgrade.
+The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://github.com/Exa-Networks/exabgp/blob/main/doc/CHANGELOG.rst) and check their setup after any upgrade.
 
 ## Documentation
 
