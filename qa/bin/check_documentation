@@ -226,6 +226,8 @@ def check_subcommand(path: str, lines: list[str], known: set[str]) -> Iterator[R
     and `sudo -u exabgp ps` are left alone.
     """
     pattern = re.compile(
+        # the env key is [^\s=]+ rather than \S+ on purpose: \S+=\S* can split a
+        # token many ways, and under the outer * that backtracks exponentially
         r'(?:^|\||&&|;)\s*(?:\$\s*)?(?:sudo\s+)?(?:env\s+[^\s=]+=\S*\s+)*(?:[\w./-]*/)?exabgp\s+([a-z][\w./-]*)'
     )
     for number, line in code(lines):
