@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # ExaBGP Interactive CLI launcher
 # Launches the interactive REPL mode
 
