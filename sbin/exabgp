@@ -1,54 +1,115 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
+"""Development launcher for ExaBGP.
 
-# Get the project root path
-path="$(cd "$(dirname "$0")"/.. ; pwd)"
+Runs exabgp straight from the source tree, without installing it.
 
-# Get base version from pyproject.toml (single source of truth)
-BASE_VERSION=$(grep "^version = " "$path/pyproject.toml" | sed "s/version = '\\(.*\\)'/\\1/")
+This is python rather than a shell script on purpose: dash (which is /bin/sh on most
+Linux distributions) drops the environment variables whose name is not a valid shell
+identifier, so `env 'exabgp.api.ack=false' ./sbin/exabgp ...` used to lose the setting
+before python was started.
+"""
 
-if [ -z "$exabgp_version" ]; then
-    git status 2> /dev/null > /dev/null
-    if [ $? -eq 0 ]; then
-        GIT_TAG=$(git status | egrep 'detached at 3|4' | wc -l)
-        if [ $GIT_TAG -eq 0 ]; then
-            GIT_BRANCH=$(git branch | grep "*" | awk '{ print $2}')
-            GIT_COMMIT=$(git rev-parse --short=10 HEAD)
-            export exabgp_version="${BASE_VERSION}-$(date +%Y%m%d)+${GIT_BRANCH}-${GIT_COMMIT}"
-        fi
-    else
-        export exabgp_version="${BASE_VERSION}-$(date -r $0 +%Y%m%d)+uncontrolled"
-    fi
-fi
+from __future__ import annotations
 
-export EXABGP_ROOT=$path
-export PYTHONPATH="$path"/src
-
-for INTERPRETER in $INTERPRETER python3 python pypy3; do
-    INTERPRETER="$(command -v "$INTERPRETER")" && break
-done
-
-if [ "$INTERPRETER" = "" ]; then
-	echo "ExaBGP could not find a python interpreter"
-	exit 1
-fi
-
-APPLICATION="$("$INTERPRETER" -c "
-import sys
 import os
+import shutil
+import subprocess
+import sys
+import time
 
-path = [os.path.join(_,'exabgp')
-        for _ in sys.path
-        if os.path.isfile('/'.join((_, 'exabgp', 'application', 'main.py')))][0]
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC = os.path.join(ROOT, 'src')
 
-print(os.path.join(path,'application','main.py'))
 
-def remove (file):
-    try: os.remove(file)
-    except: pass
+def base_version() -> str:
+    """The version from pyproject.toml, the single source of truth."""
+    try:
+        with open(os.path.join(ROOT, 'pyproject.toml')) as reader:
+            for line in reader:
+                if line.startswith('version = '):
+                    return line.split('=', 1)[1].strip().strip('\'"')
+    except OSError:
+        pass
+    return ''
 
-if 'exabgp' not in os.environ.get('SKIPCLEANUP',''):
-	[remove(os.path.join(r,f)) for r,d,fs in os.walk(path) for f in fs if f.endswith('.pyc')]
 
-")"
+def git(*command: str) -> str | None:
+    try:
+        result = subprocess.run(('git',) + command, cwd=ROOT, capture_output=True, text=True)
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
 
-exec "$INTERPRETER" "$APPLICATION" "$@"
+
+def version() -> str | None:
+    """The version to report, or None to leave the packaged one alone."""
+    status = git('status')
+    if status is None:
+        stamp = time.strftime('%Y%m%d', time.localtime(os.path.getmtime(os.path.abspath(__file__))))
+        return f'{base_version()}-{stamp}+uncontrolled'
+
+    # on a release tag the packaged version is the right one
+    if 'detached at 3' in status or 'detached at 4' in status:
+        return None
+
+    branch = git('rev-parse', '--abbrev-ref', 'HEAD')
+    commit = git('rev-parse', '--short=10', 'HEAD')
+    if not branch or not commit:
+        return None
+
+    return f'{base_version()}-{time.strftime("%Y%m%d")}+{branch}-{commit}'
+
+
+def interpreter() -> str:
+    for name in (os.environ.get('INTERPRETER', ''), 'python3', 'python', 'pypy3'):
+        if not name:
+            continue
+        found = shutil.which(name)
+        if found:
+            return found
+    sys.exit('ExaBGP could not find a python interpreter')
+
+
+def application() -> str:
+    """The main.py to run, the first one found on the path."""
+    for folder in [SRC] + sys.path:
+        main = os.path.join(folder, 'exabgp', 'application', 'main.py')
+        if os.path.isfile(main):
+            return main
+    sys.exit('ExaBGP could not find its application code')
+
+
+def cleanup(main: str) -> None:
+    if 'exabgp' in os.environ.get('SKIPCLEANUP', ''):
+        return
+    package = os.path.dirname(os.path.dirname(main))
+    for folder, _, files in os.walk(package):
+        for name in files:
+            if not name.endswith('.pyc'):
+                continue
+            try:
+                os.remove(os.path.join(folder, name))
+            except OSError:
+                pass
+
+
+def main() -> None:
+    if not os.environ.get('exabgp_version', ''):
+        reported = version()
+        if reported:
+            os.environ['exabgp_version'] = reported
+
+    os.environ['EXABGP_ROOT'] = ROOT
+    os.environ['PYTHONPATH'] = SRC
+
+    python = interpreter()
+    program = application()
+    cleanup(program)
+
+    os.execv(python, [python, program] + sys.argv[1:])
+
+
+if __name__ == '__main__':
+    main()

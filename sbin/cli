@@ -1,7 +1,11 @@
-#!/usr/bin/env bash
-# ExaBGP Interactive CLI launcher
-# Launches the interactive REPL mode
+#!/usr/bin/env python3
+"""Launcher for the ExaBGP interactive CLI (the REPL mode)."""
 
-path="$(cd "$(dirname "$0")" ; pwd)"
+from __future__ import annotations
 
-exec "$path"/exabgp cli "$@"
+import os
+import sys
+
+EXABGP = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'exabgp')
+
+os.execv(sys.executable, [sys.executable, EXABGP, 'cli'] + sys.argv[1:])
