@@ -17,6 +17,7 @@ import time
 import signal
 import argparse
 import subprocess
+import tempfile
 from enum import Enum
 
 
@@ -111,13 +112,17 @@ class Exec(object):
         self.message = ''
         self._process = None
         self.command = []
+        self._stdout = None
+        self._stderr = None
 
     def run(self, command):
         self.command = ' '.join([_ if ' ' not in _ else f"'{_}'" for _ in command])
+        self._stdout = tempfile.TemporaryFile()
+        self._stderr = tempfile.TemporaryFile()
         self._process = subprocess.Popen(
             command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=self._stdout,
+            stderr=self._stderr,
         )
         return self
 
@@ -154,15 +159,19 @@ class Exec(object):
         signal.signal(signal.SIGALRM, alarm_handler)
         try:
             signal.alarm(15)
-            self.stdout, self.stderr = self._process.communicate()
-            self.code = self._process.returncode
+            self.code = self._process.poll()
+            if self.code is None:
+                signal.alarm(0)
+                return
+            self._stdout.seek(0)
+            self._stderr.seek(0)
+            self.stdout = self._stdout.read()
+            self.stderr = self._stderr.read()
             signal.alarm(0)
         except ValueError as exc:  # I/O operation on closed file
             self.message = str(exc)
-            pass
         except Alarm as exc:
             self.message = str(exc)
-            pass
 
     def terminate(self):
         try:
