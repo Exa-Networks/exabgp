@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
 
 from __future__ import annotations
+import json
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -30,7 +31,7 @@ class Software(Capability):
         return 'Software({})'.format(self.software_version)
 
     def json(self) -> str:
-        return '{{ "software": "{}" }}'.format(self.software_version)
+        return '{{ "software": {} }}'.format(json.dumps(self.software_version))
 
     def extract_capability_bytes(self) -> list[bytes]:
         return [bytes([len(self.software_version)]) + self.software_version.encode('utf-8')]

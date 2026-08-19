@@ -4,6 +4,8 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: Escape peer-controlled strings in JSON API events
+   HostName, Software Version, and NOTIFICATION data can no longer inject JSON members into API streams.
  * Fix: Route Refresh messages sent after new updates instead of before
    When flush adj-rib out and a new announce arrived in the same reactor
    cycle, the new route UPDATE was sent before the ROUTE_REFRESH start
