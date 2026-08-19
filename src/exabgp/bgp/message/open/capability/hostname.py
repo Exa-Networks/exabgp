@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
 
 from __future__ import annotations
+import json
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -28,7 +29,10 @@ class HostName(Capability):
         return 'Hostname({} {})'.format(self.host_name, self.domain_name)
 
     def json(self):
-        return '{{ "host-name": "{}", "domain-name": "{}" }}'.format(self.host_name, self.domain_name)
+        return '{{ "host-name": {}, "domain-name": {} }}'.format(
+            json.dumps(self.host_name),
+            json.dumps(self.domain_name),
+        )
 
     def extract(self):
         if not self.host_name:

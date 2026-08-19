@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import json
 import os
 import socket
 import time
@@ -27,6 +28,10 @@ def nop(_):
     return _
 
 
+class _RawJSON(str):
+    """JSON fragment already encoded by this module."""
+
+
 class JSON:
     _count = {}
 
@@ -44,17 +49,20 @@ class JSON:
         self._count[neighbor.uid] = increased
         return increased
 
-    def _string(self, object):
-        if issubclass(object.__class__, bool):
-            return 'true' if object else 'false'
-        if issubclass(object.__class__, int):
-            return str(object)
-        string = str(object)
-        if '{' in string:
-            return string
-        if '[' in string:
-            return string
-        return f'"{object}"'
+    def _safi_display_name(self, afi, safi):
+        return str(safi)
+
+    def _string(self, obj):
+        if isinstance(obj, _RawJSON):
+            return str(obj)
+        if issubclass(obj.__class__, bool):
+            return 'true' if obj else 'false'
+        if issubclass(obj.__class__, int):
+            return str(obj)
+        return json.dumps(str(obj))
+
+    def _json(self, content):
+        return _RawJSON(content)
 
     def _header(self, content, header, body, neighbor, message_type=None):
         peer = f'"host" : "{socket.gethostname()}", '
@@ -130,7 +138,7 @@ class JSON:
         def escape_quote(reason):
             # the {} and [] change is an horrible hack until we generate python objects
             # as otherwise we interpret the string as a list or dict
-            return reason.replace('[', '(').replace(']', ')').replace('{', '(').replace('}', ')').replace('"', '\\"')
+            return reason.replace('[', '(').replace(']', ')').replace('{', '(').replace('}', ')')
 
         return self._header(
             self._neighbor(
@@ -163,8 +171,18 @@ class JSON:
         )
 
     def _negotiated(self, negotiated):
-        families_str = ' ,'.join([f'{family[0]} {family[1]}' for family in negotiated.families])
-        nexthop_str = ' ,'.join([f'{family[0]} {family[1]} {family[2]}' for family in negotiated.nexthop])
+        families = [f'{family[0]} {self._safi_display_name(family[0], family[1])}' for family in negotiated.families]
+        nexthop = [f'{nh[0]} {self._safi_display_name(nh[0], nh[1])} {nh[2]}' for nh in negotiated.nexthop]
+        add_path_send = [
+            f'{family[0]} {self._safi_display_name(family[0], family[1])}'
+            for family in negotiated.families
+            if negotiated.addpath.send(*family)
+        ]
+        add_path_receive = [
+            f'{family[0]} {self._safi_display_name(family[0], family[1])}'
+            for family in negotiated.families
+            if negotiated.addpath.receive(*family)
+        ]
         kv_content = self._kv(
             {
                 'message_size': negotiated.msg_size,
@@ -173,33 +191,12 @@ class JSON:
                 'multisession': negotiated.multisession,
                 'operational': negotiated.operational,
                 'refresh': REFRESH.json(negotiated.refresh),
-                'families': f'[ {families_str} ]',
-                'nexthop': f'[ {nexthop_str} ]',
-                # NOTE: Do not convert to f-string! The nested % formatting with complex
-                # comprehensions and conditional logic is more readable with % formatting.
-                'add_path': '{{ "send": {}, "receive": {} }}'.format(
-                    '[ {} ]'.format(
-                        ', '.join(
-                            [
-                                '"{} {}"'.format(*family)
-                                for family in negotiated.families
-                                if negotiated.addpath.send(*family)
-                            ]
-                        )
-                    ),
-                    '[ {} ]'.format(
-                        ', '.join(
-                            [
-                                '"{} {}"'.format(*family)
-                                for family in negotiated.families
-                                if negotiated.addpath.receive(*family)
-                            ],
-                        )
-                    ),
-                ),
+                'families': self._json(json.dumps(families)),
+                'nexthop': self._json(json.dumps(nexthop)),
+                'add_path': self._json(json.dumps({'send': add_path_send, 'receive': add_path_receive})),
             },
         )
-        return {'negotiated': f'{{ {kv_content} }} '}
+        return {'negotiated': self._json(f'{{ {kv_content} }} ')}
 
     def negotiated(self, neighbor, negotiated):
         return self._header(
@@ -243,7 +240,7 @@ class JSON:
                 'code': message.code,
                 'subcode': message.subcode,
                 'data': hexstring(message.data),
-                'message': message.data.decode(),
+                'message': message.data.decode('utf-8', 'replace'),
             },
         )
         return self._header(
@@ -252,7 +249,7 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'notification': f'{{ {kv_content} }} ',
+                        'notification': self._json(f'{{ {kv_content} }} '),
                     },
                 ),
             ),
@@ -270,8 +267,8 @@ class JSON:
                 'body': hexstring(body),
             },
         )
-        message = {
-            'message': f'{{ {kv_content} }} ',
+        message: dict[str, str] = {
+            'message': self._json(f'{{ {kv_content} }} '),
         }
         if negotiated:
             message.update(self._negotiated(negotiated))
@@ -294,7 +291,7 @@ class JSON:
                 'asn': message.asn,
                 'hold_time': message.hold_time,
                 'router_id': message.router_id,
-                'capabilities': f'{{ {capabilities_content} }}',
+                'capabilities': self._json(f'{{ {capabilities_content} }}'),
             },
         )
         return self._header(
@@ -303,7 +300,7 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'open': f'{{ {kv_content} }}',
+                        'open': self._json(f'{{ {kv_content} }}'),
                     },
                 ),
             ),
@@ -353,7 +350,7 @@ class JSON:
         nlri = ''
         if not add and not remove:
             if update.nlris:  # an EOR
-                return {'message': f'{{ {update.nlris[0].json()} }}'}
+                return {'message': self._json(f'{{ {update.nlris[0].json()} }}')}
         if add:
             add_str = ', '.join(add)
             nlri += f'"announce": {{ {add_str} }}'
@@ -369,7 +366,7 @@ class JSON:
         else:
             update = f'"update": {{ {attributes}, {nlri} }}'
 
-        return {'message': f'{{ {update} }}'}
+        return {'message': self._json(f'{{ {update} }}')}
 
     def update(self, neighbor, direction, update, negotiated, header, body):
         message = self._update(update)
@@ -386,9 +383,9 @@ class JSON:
     def refresh(self, neighbor, direction, refresh, negotiated, header, body):
         kv_content = self._kv(
             {
-                'afi': f'"{refresh.afi}"',
-                'safi': f'"{refresh.safi}"',
-                'subtype': f'"{refresh.reserved}"',
+                'afi': str(refresh.afi),
+                'safi': str(refresh.safi),
+                'subtype': str(refresh.reserved),
             },
         )
         return self._header(
@@ -397,7 +394,7 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'route-refresh': f'{{ {kv_content} }}',
+                        'route-refresh': self._json(f'{{ {kv_content} }}'),
                     },
                 ),
             ),
@@ -410,9 +407,9 @@ class JSON:
     def _operational_query(self, neighbor, direction, operational, header, body):
         kv_content = self._kv(
             {
-                'name': f'"{operational.name}"',
-                'afi': f'"{operational.afi}"',
-                'safi': f'"{operational.safi}"',
+                'name': operational.name,
+                'afi': str(operational.afi),
+                'safi': str(operational.safi),
             },
         )
         return self._header(
@@ -421,7 +418,7 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'operational': f'{{ {kv_content} }}',
+                        'operational': self._json(f'{{ {kv_content} }}'),
                     },
                 ),
             ),
@@ -434,10 +431,12 @@ class JSON:
     def _operational_advisory(self, neighbor, direction, operational, header, body):
         kv_content = self._kv(
             {
-                'name': f'"{operational.name}"',
-                'afi': f'"{operational.afi}"',
-                'safi': f'"{operational.safi}"',
-                'advisory': f'"{operational.data}"',
+                'name': operational.name,
+                'afi': str(operational.afi),
+                'safi': str(operational.safi),
+                'advisory': operational.data.decode('utf-8', 'replace')
+                if isinstance(operational.data, bytes)
+                else operational.data,
             },
         )
         return self._header(
@@ -446,7 +445,7 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'operational': f'{{ {kv_content} }}',
+                        'operational': self._json(f'{{ {kv_content} }}'),
                     },
                 ),
             ),
@@ -459,10 +458,10 @@ class JSON:
     def _operational_counter(self, neighbor, direction, operational, header, body):
         kv_content = self._kv(
             {
-                'name': f'"{operational.name}"',
-                'afi': f'"{operational.afi}"',
-                'safi': f'"{operational.safi}"',
-                'router-id': operational.routerid,
+                'name': operational.name,
+                'afi': str(operational.afi),
+                'safi': str(operational.safi),
+                'router-id': str(operational.routerid),
                 'sequence': operational.sequence,
                 'counter': operational.counter,
             },
@@ -473,7 +472,7 @@ class JSON:
                 direction,
                 self._kv(
                     {
-                        'operational': f'{{ {kv_content} }}',
+                        'operational': self._json(f'{{ {kv_content} }}'),
                     },
                 ),
             ),
