@@ -4,6 +4,8 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 5.0.10:
+ * Fix: peer-controlled HostName, Software Version, and NOTIFICATION
+   strings are escaped before they are written to JSON API streams.
  * Fix: the package can be installed on Python 3.13 and 3.14. The
    requires-python upper bound is removed, the PyPI classifiers list
    both versions, and the CI matrix tests them. (#1392)
