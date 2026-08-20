@@ -155,3 +155,17 @@ def test_vpls_with_the_right_length_still_decodes() -> None:
     assert nlri.endpoint == 1
     assert nlri.offset == 2
     assert nlri.block_size == 8
+
+
+# ============================================================================
+# BGP-LS VPN: the announced length covers the route distinguisher
+# ============================================================================
+
+
+@pytest.mark.parametrize('length', [0, 1, 7])
+def test_bgpls_vpn_length_below_a_route_distinguisher_raises_notify(length: int) -> None:
+    """The route distinguisher size was subtracted from the announced length
+    without checking, and packing the negative result raised struct.error."""
+    for code in (1, 2, 3, 4):
+        with pytest.raises(Notify):
+            decode(AFI.bgpls, SAFI.bgp_ls_vpn, code.to_bytes(2, 'big') + length.to_bytes(2, 'big') + bytes(16))

@@ -218,6 +218,10 @@ class BGPLS(NLRI):
         if safi == SAFI.bgp_ls_vpn:
             if len(data) < 12:
                 raise Notify(3, 10, f'BGP-LS VPN NLRI too short: need at least 12 bytes, got {len(data)}')
+            # the announced length covers the route distinguisher, so anything below
+            # its size leaves a negative payload length
+            if length < 8:
+                raise Notify(3, 10, f'BGP-LS VPN NLRI announces {length} bytes, less than its route distinguisher')
 
         if len(data) < length + 4:
             raise Notify(3, 10, f'BGP-LS NLRI truncated: need {length + 4} bytes, got {len(data)}')
