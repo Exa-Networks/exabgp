@@ -19,6 +19,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.configuration.configuration import Configuration
 from exabgp.environment import getenv
 from exabgp.logger import log
+from exabgp.util.psk import PSKError, decode_base64
 
 log.init(getenv())
 
@@ -99,3 +100,33 @@ def test_negative_local_as_is_rejected_by_the_configuration():
     ok, configuration = load(NEIGHBOR % '    local-as -1;\n    peer-as 65001;')
     assert not ok
     assert 'ASN' in configuration.error.message
+
+
+# ============================================================================
+# Authentication keys
+# ============================================================================
+
+
+@pytest.mark.parametrize('value', ['ab!c', 'YWJ j', 'not-valid-base64!!!', ''])
+def test_invalid_base64_key_is_rejected(value):
+    """b64decode() without validate=True discards characters outside the alphabet,
+    so a mistyped key silently became a different key. An empty key was accepted."""
+    with pytest.raises(PSKError):
+        decode_base64(value)
+
+
+def test_valid_base64_key_is_accepted():
+    assert decode_base64('YWJj') == b'abc'
+
+
+def test_configuration_rejects_a_malformed_base64_md5_password():
+    """binascii.Error is a ValueError, not a TypeError, so the configuration check
+    and the socket setup both let a malformed key through."""
+    ok, configuration = load(
+        NEIGHBOR % "    local-as 65000;\n    peer-as 65001;\n    md5-password 'not-valid!!';\n    md5-base64 true;"
+    )
+    assert not ok
+    assert 'not valid base64' in configuration.error.message
+
+    ok, _ = load(NEIGHBOR % "    local-as 65000;\n    peer-as 65001;\n    md5-password 'YWJj';\n    md5-base64 true;")
+    assert ok
