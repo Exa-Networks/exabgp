@@ -12,6 +12,7 @@ from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
 # +---------------------------------------+
@@ -74,6 +75,10 @@ class EthernetAD(EVPN):
 
     @classmethod
     def unpack(cls, data):
+        # RD(8) + ESI(10) + ETag(4), the label stack follows
+        cls.check_length(data, 22)
+        if (len(data) - 22) % 3:
+            raise Notify(3, 10, 'Ethernet A-D EVPN NLRI has a truncated label stack')
         rd = RouteDistinguisher.unpack(data[:8])
         esi = ESI.unpack(data[8:18])
         etag = EthernetTag.unpack(data[18:22])

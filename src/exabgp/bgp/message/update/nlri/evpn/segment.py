@@ -83,6 +83,7 @@ class EthernetSegment(EVPN):
 
     @classmethod
     def unpack(cls, data):
+        cls.check_length(data, 19)
         rd = RouteDistinguisher.unpack(data[:8])
         esi = ESI.unpack(data[8:18])
         iplen = data[18]
@@ -92,6 +93,14 @@ class EthernetSegment(EVPN):
                 3,
                 5,
                 'IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits' % iplen,
+            )
+
+        if len(data) != 19 + iplen // 8:
+            raise Notify(
+                3,
+                10,
+                'Ethernet Segment EVPN NLRI is %d bytes, expecting %d for an IP of %d bits'
+                % (len(data), 19 + iplen // 8, iplen),
             )
 
         ip = IP.unpack(data[19 : 19 + (iplen // 8)])

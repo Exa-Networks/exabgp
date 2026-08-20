@@ -121,6 +121,9 @@ class MAC(EVPN):
     @classmethod
     def unpack(cls, data):
         datalen = len(data)
+        # The known total lengths are checked below, but MAClen and IPlen are read
+        # first, so the size must be established before indexing into the payload.
+        cls.check_length(data, 30)
         rd = RouteDistinguisher.unpack(data[:8])
         esi = ESI.unpack(data[8:18])
         etag = EthernetTag.unpack(data[18:22])
@@ -132,35 +135,33 @@ class MAC(EVPN):
 
         mac = MACQUAL.unpack(data[23:end])
 
-        length = data[end]
-        iplen = length / 8
+        iplen = data[end]
 
-        if datalen in [33, 36]:  # No IP information (1 or 2 labels)
-            iplenUnpack = 0
-            if iplen != 0:
-                raise Notify(3, 5, 'IP length is given as %d, but current MAC route has no IP information' % iplen)
-        elif datalen in [37, 40]:  # Using IPv4 addresses (1 or 2 labels)
-            iplenUnpack = 4
-            if iplen > IPV4_ADDRESS_LEN_BITS or iplen < 0:
-                raise Notify(
-                    3,
-                    5,
-                    'IP field length is given as %d, but current MAC route is IPv4 and valus is out of range' % iplen,
-                )
-        elif datalen in [49, 52]:  # Using IPv6 addresses (1 or 2 labels)
-            iplenUnpack = 16
-            if iplen > IPV6_ADDRESS_LEN_BITS or iplen < 0:
-                raise Notify(
-                    3,
-                    5,
-                    'IP field length is given as %d, but current MAC route is IPv6 and valus is out of range' % iplen,
-                )
-        else:
+        # The IP is read as iplen // 8 bytes, so the announced length must be one of
+        # the sizes an IP can have and must agree with the size of the whole route.
+        expected = {
+            0: (33, 36),  # No IP information (1 or 2 labels)
+            IPV4_ADDRESS_LEN_BITS: (37, 40),  # Using IPv4 addresses (1 or 2 labels)
+            IPV6_ADDRESS_LEN_BITS: (49, 52),  # Using IPv6 addresses (1 or 2 labels)
+        }.get(iplen)
+
+        if expected is None:
             raise Notify(
                 3,
                 5,
-                'Data field length is given as %d, but does not match one of the expected lengths' % datalen,
+                'IP field length is given as %d bits in %s, expecting 0, %d (IPv4) or %d (IPv6)'
+                % (iplen, cls.NAME, IPV4_ADDRESS_LEN_BITS, IPV6_ADDRESS_LEN_BITS),
             )
+
+        if datalen not in expected:
+            raise Notify(
+                3,
+                5,
+                'Data field length is given as %d, expecting %s for an IP field of %d bits'
+                % (datalen, ' or '.join(str(_) for _ in expected), iplen),
+            )
+
+        iplenUnpack = iplen // 8
 
         payload = data[end + 1 : end + 1 + iplenUnpack]
         if payload:

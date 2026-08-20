@@ -133,6 +133,14 @@ class Prefix(EVPN):
         # Get the data length to understand if addresses are IPv4 or IPv6
         datalen = len(data)
 
+        if datalen not in (26 + 8, 26 + 32):
+            raise Notify(
+                3,
+                5,
+                'Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6 (34 or 58)'
+                % datalen,
+            )
+
         rd = RouteDistinguisher.unpack(data[:8])
         data = data[8:]
 
