@@ -75,15 +75,7 @@ def asn(tokeniser, value=None):
             raise ValueError('an asn is required')
 
     value = tokeniser()
-    try:
-        if value.count('.'):
-            high, low = value.split('.', 1)
-            as_number = (int(high) << 16) + int(low)
-        else:
-            as_number = int(value)
-        return ASN(as_number)
-    except ValueError:
-        raise ValueError('"{}" is an invalid ASN'.format(value)) from None
+    return ASN.from_string(value)
 
 
 def peer_ip(tokeniser):

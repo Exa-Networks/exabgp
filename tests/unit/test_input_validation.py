@@ -13,6 +13,8 @@ none of those features.
 
 from __future__ import annotations
 
+import pytest
+
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.configuration.configuration import Configuration
 from exabgp.environment import getenv
@@ -70,3 +72,30 @@ def test_explicit_auto_as_is_still_accepted():
 def test_both_as_given_is_accepted():
     ok, configuration = load(NEIGHBOR % '    local-as 65000;\n    peer-as 65001;')
     assert ok
+
+
+# ============================================================================
+# Configuration: ASN range
+# ============================================================================
+
+
+@pytest.mark.parametrize('value', ['-1', '4294967296', '1.2.3', '1.65536', '65_000', '+5', '0x10', ''])
+def test_invalid_asn_is_rejected(value):
+    """Negative, out of range and malformed ASNs used to load: int() accepts a
+    leading sign and underscores, and the dotted form never checked its parts."""
+    with pytest.raises(ValueError):
+        ASN.from_string(value)
+
+
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [('0', 0), ('65001', 65001), ('4294967295', 4294967295), ('1.1', 65537), ('0.65535', 65535)],
+)
+def test_valid_asn_is_accepted(value, expected):
+    assert ASN.from_string(value) == expected
+
+
+def test_negative_local_as_is_rejected_by_the_configuration():
+    ok, configuration = load(NEIGHBOR % '    local-as -1;\n    peer-as 65001;')
+    assert not ok
+    assert 'ASN' in configuration.error.message
