@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import re
@@ -69,18 +70,48 @@ class ACL:
             return b''
 
     @staticmethod
-    def _build(flow: dict[str, Any], action: str) -> str:
+    def _prefix(value: Any, what: str) -> str:
+        """Validate an IPv4 prefix before it goes into an ACL rule."""
+        if not isinstance(value, str):
+            raise ValueError(f'{what} is not a string')
+        return str(ipaddress.IPv4Network(value, strict=False))
+
+    @staticmethod
+    def _number(value: Any, what: str, maximum: int) -> str:
+        """Validate a numeric flow component before it goes into an ACL rule.
+
+        FlowSpec numbers arrive with their comparison operator attached (">=1024"),
+        which iptables can not express, so the operator is dropped as it always was.
+        Only a plain decimal number is accepted once it is gone.
+        """
+        if not isinstance(value, str):
+            raise ValueError(f'{what} is not a string')
+        number = re.sub('[!<>=]', '', value)
+        if not number.isascii() or not number.isdigit():
+            raise ValueError(f'{what} "{value}" is not a number')
+        if int(number) > maximum:
+            raise ValueError(f'{what} "{value}" is larger than {maximum}')
+        return number
+
+    @classmethod
+    def _build(cls, flow: dict[str, Any], action: str) -> str:
+        """Render an iptables rule from a flow.
+
+        Every component is validated and re-rendered from the parsed value, so no
+        part of the flow can inject anything into the rule which is not a number
+        or a prefix.
+        """
         acl = '[iptables]\n-A FORWARD --in-interface swp+'
         if 'protocol' in flow:
-            acl += ' -p ' + re.sub('[!<>=]', '', flow['protocol'][0])
+            acl += ' -p ' + cls._number(flow['protocol'][0], 'protocol', 255)
         if 'source-ipv4' in flow:
-            acl += ' -s ' + flow['source-ipv4'][0]
+            acl += ' -s ' + cls._prefix(flow['source-ipv4'][0], 'source-ipv4')
         if 'destination-ipv4' in flow:
-            acl += ' -d ' + flow['destination-ipv4'][0]
+            acl += ' -d ' + cls._prefix(flow['destination-ipv4'][0], 'destination-ipv4')
         if 'source-port' in flow:
-            acl += ' --sport ' + re.sub('[!<>=]', '', flow['source-port'][0])
+            acl += ' --sport ' + cls._number(flow['source-port'][0], 'source-port', 65535)
         if 'destination-port' in flow:
-            acl += ' --dport ' + re.sub('[!<>=]', '', flow['destination-port'][0])
+            acl += ' --dport ' + cls._number(flow['destination-port'][0], 'destination-port', 65535)
         acl = acl + ' -j DROP\n'
         return acl
 
@@ -89,8 +120,13 @@ class ACL:
         key: str = flow['string']
         if key in cls._known:
             return
+        try:
+            acl = cls._build(flow, action)
+        except (ValueError, IndexError, KeyError, TypeError) as exc:
+            sys.stderr.write(f'ignoring a flow which can not be turned into an ACL: {exc}\n')
+            sys.stderr.flush()
+            return
         uid = cls._uid()
-        acl = cls._build(flow, action)
         cls._known[key] = (uid, acl)
         try:
             with open(cls._file(uid), 'w') as f:
@@ -127,49 +163,53 @@ class ACL:
         sys.stderr.flush()
 
 
-signal.signal(signal.SIGTERM, ACL.end)
+def main() -> None:
+    signal.signal(signal.SIGTERM, ACL.end)
 
+    opened = 0
+    buffered = ''
 
-opened = 0
-buffered = ''
+    while True:
+        try:
+            line = sys.stdin.readline()
+            if not line or 'shutdown' in line:
+                ACL.end()
+            buffered += line
+            opened += line.count('{')
+            opened -= line.count('}')
+            if opened:
+                continue
+            line, buffered = buffered, ''
+            message = json.loads(line)
 
-while True:
-    try:
-        line = sys.stdin.readline()
-        if not line or 'shutdown' in line:
+            if message['type'] == 'state' and message['neighbor']['state'] == 'down':
+                ACL.clear()
+                continue
+
+            if message['type'] != 'update':
+                continue
+
+            update = message['neighbor']['message']['update']
+
+            if 'announce' in update:
+                flow = update['announce']['ipv4 flow']
+                # The RFC allows both encoding
+                flow = flow['no-nexthop'][0] if 'no-nexthop' in flow else flow[0]
+
+                community = update['attribute']['extended-community'][0]
+                ACL.insert(flow, community)
+                continue
+
+            if 'withdraw' in update:
+                flow = update['withdraw']['ipv4 flow'][0]
+                ACL.remove(flow)
+                continue
+
+        except KeyboardInterrupt:
             ACL.end()
-        buffered += line
-        opened += line.count('{')
-        opened -= line.count('}')
-        if opened:
-            continue
-        line, buffered = buffered, ''
-        message = json.loads(line)
+        except Exception as exc:
+            print(f'flow: error processing message: {exc}', file=sys.stderr)
 
-        if message['type'] == 'state' and message['neighbor']['state'] == 'down':
-            ACL.clear()
-            continue
 
-        if message['type'] != 'update':
-            continue
-
-        update = message['neighbor']['message']['update']
-
-        if 'announce' in update:
-            flow = update['announce']['ipv4 flow']
-            # The RFC allows both encoding
-            flow = flow['no-nexthop'][0] if 'no-nexthop' in flow else flow[0]
-
-            community = update['attribute']['extended-community'][0]
-            ACL.insert(flow, community)
-            continue
-
-        if 'withdraw' in update:
-            flow = update['withdraw']['ipv4 flow'][0]
-            ACL.remove(flow)
-            continue
-
-    except KeyboardInterrupt:
-        ACL.end()
-    except Exception as exc:
-        print(f'flow: error processing message: {exc}', file=sys.stderr)
+if __name__ == '__main__':
+    main()
