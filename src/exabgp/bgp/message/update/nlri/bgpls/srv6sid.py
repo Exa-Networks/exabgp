@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if TYPE_CHECKING:
     pass
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
@@ -144,35 +145,34 @@ class SRv6SID(BGPLS):
             rd: Route Distinguisher (ignored for SRv6SID - not supported)
         """
         # Data includes 4-byte header, payload starts at offset 4
-        proto_id = unpack('!B', data[4:5])[0]
+        cls.check_length(data, cls.DESCRIPTOR_OFFSET)
+        proto_id = unpack('!B', bytes(data[4:5]))[0]
         if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
+            raise Notify(3, 10, f'Protocol-ID {proto_id} is not valid')
 
         # Validate node descriptor TLV type
         # Offset by 4-byte header: TLVs start at byte 13 (4 + 1 + 8)
-        tlvs = data[13:]
-        node_type, node_length = unpack('!HH', tlvs[0:4])
-        if node_type != TLV_LOCAL_NODE_DESC:
-            raise Exception(
-                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
-            )
+        # iter_tlvs also checks the SRv6 SID descriptors which follow the node descriptor
+        first = True
+        for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
+            if not first:
+                continue
+            first = False
+            if tlv_type != TLV_LOCAL_NODE_DESC:
+                raise Notify(
+                    3,
+                    10,
+                    f'Unknown type: {tlv_type}. Only Local Node descriptors are allowed in a Node type msg',
+                )
+            # Validate node descriptors can be parsed
+            while value:
+                _node_id, left = NodeDescriptor.unpack_node(value, proto_id)
+                if left == value:
+                    raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
+                value = left
 
-        # Validate node descriptors can be parsed
-        tlvs = tlvs[4:]
-        local_node_data = tlvs[:node_length]
-        while local_node_data:
-            _node_id, left = NodeDescriptor.unpack_node(local_node_data, proto_id)
-            if left == local_node_data:
-                raise RuntimeError('sub-calls should consume data')
-            local_node_data = left
-
-        # Validate SRv6 SID descriptors
-        tlvs = tlvs[node_length:]
-        while tlvs:
-            if len(tlvs) < MIN_TLV_HEADER_SIZE:
-                raise RuntimeError('SRv6 SID Descriptors are too short')
-            _sid_type, sid_length = unpack('!HH', tlvs[:4])
-            tlvs = tlvs[sid_length + 4 :]
+        if first:
+            raise Notify(3, 10, 'BGP-LS SRv6 SID NLRI has no Local Node descriptor')
 
         # Store complete wire format including header
         return cls(data)

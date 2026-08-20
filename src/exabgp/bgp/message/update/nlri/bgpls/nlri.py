@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar
 
 from exabgp.util.types import Buffer
@@ -154,6 +155,55 @@ class BGPLS(NLRI):
             raise RuntimeError('only one BGP LINK_STATE registration allowed')
         cls.registered_bgpls[klass.CODE] = klass
         return klass
+
+    # [type(2)][length(2)][protocol-id(1)][identifier(8)] before the first TLV
+    DESCRIPTOR_OFFSET = 13
+
+    @classmethod
+    def check_length(cls, data: Buffer, minimum: int) -> None:
+        """Reject wire data too short for this NLRI type.
+
+        Args:
+            data: Complete wire format, header included
+            minimum: Smallest acceptable size, header included
+
+        Raises:
+            Notify: If the data is shorter than the minimum
+        """
+        if len(data) < minimum:
+            raise Notify(
+                3,
+                10,
+                'BGP-LS {} NLRI is too short: need at least {} bytes, got {}'.format(cls.__name__, minimum, len(data)),
+            )
+
+    @classmethod
+    def iter_tlvs(cls, data: Buffer) -> 'Iterator[tuple[int, Buffer]]':
+        """Walk a sequence of TLVs, checking every boundary as it goes.
+
+        Args:
+            data: The TLV sequence
+
+        Yields:
+            (type, value) for each TLV
+
+        Raises:
+            Notify: If a TLV header is truncated or a TLV runs past the data
+        """
+        while data:
+            if len(data) < 4:
+                raise Notify(3, 10, 'BGP-LS {} NLRI ends with a truncated TLV header'.format(cls.__name__))
+            tlv_type, tlv_length = unpack('!HH', bytes(data[:4]))
+            if len(data) < 4 + tlv_length:
+                raise Notify(
+                    3,
+                    10,
+                    'BGP-LS {} NLRI TLV {} claims {} bytes but only {} remain'.format(
+                        cls.__name__, tlv_type, tlv_length, len(data) - 4
+                    ),
+                )
+            yield tlv_type, data[4 : 4 + tlv_length]
+            data = data[4 + tlv_length :]
 
     @classmethod
     def unpack_nlri(

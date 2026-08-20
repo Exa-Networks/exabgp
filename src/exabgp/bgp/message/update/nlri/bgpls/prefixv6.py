@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     pass
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
@@ -135,26 +136,32 @@ class PREFIXv6(BGPLS):
             rd: Route Distinguisher (for VPN SAFI), NORD if none
         """
         # Data includes 4-byte header, payload starts at offset 4
-        proto_id = unpack('!B', data[4:5])[0]
+        cls.check_length(data, cls.DESCRIPTOR_OFFSET)
+        proto_id = unpack('!B', bytes(data[4:5]))[0]
         if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
+            raise Notify(3, 10, f'Protocol-ID {proto_id} is not valid')
 
         # Validate TLVs can be parsed (logging unknown TLVs)
         # Offset by 4-byte header: TLVs start at byte 13 (4 + 1 + 8)
-        tlvs = data[13:]
-        while tlvs:
-            tlv_type, tlv_length = unpack('!HH', tlvs[:4])
-            value = tlvs[4 : 4 + tlv_length]
-            tlvs = tlvs[4 + tlv_length :]
-
+        seen = set()
+        for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
+            seen.add(tlv_type)
             if tlv_type == TLV_LOCAL_NODE_DESC:
                 while value:
                     _node, left = NodeDescriptor.unpack_node(value, proto_id)
                     if left == value:
-                        raise RuntimeError('sub-calls should consume data')
+                        raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
                     value = left
             elif tlv_type not in [TLV_OSPF_ROUTE_TYPE, TLV_IP_REACHABILITY]:
                 log.critical(lazymsg('unknown prefix v6 TLV {tlv_type}', tlv_type=tlv_type))
+
+        # both are mandatory (RFC 7752 section 3.2), and the accessors assume they are there
+        for mandatory, mandatory_name in (
+            (TLV_LOCAL_NODE_DESC, 'Local Node Descriptors'),
+            (TLV_IP_REACHABILITY, 'IP Reachability Information'),
+        ):
+            if mandatory not in seen:
+                raise Notify(3, 10, f'BGP-LS {cls.NAME} NLRI is missing the {mandatory_name} TLV')
 
         # Store complete wire format including header
         return cls(data, route_d=rd)

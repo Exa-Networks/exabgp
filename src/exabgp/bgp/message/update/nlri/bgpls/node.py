@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     pass
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
@@ -156,23 +157,28 @@ class NODE(BGPLS):
             rd: Route Distinguisher (for VPN SAFI), NORD if none
         """
         # Data includes 4-byte header, payload starts at offset 4
-        proto_id = unpack('!B', data[4:5])[0]
+        cls.check_length(data, cls.DESCRIPTOR_OFFSET)
+        proto_id = unpack('!B', bytes(data[4:5]))[0]
         if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
+            raise Notify(3, 10, f'Protocol-ID {proto_id} is not valid')
 
         # Validate node descriptor TLV type (offset by 4-byte header)
-        node_type, node_length = unpack('!HH', data[13:17])
+        tlvs = list(cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]))
+        if not tlvs:
+            raise Notify(3, 10, 'BGP-LS Node NLRI has no Local Node descriptor')
+        node_type, values = tlvs[0]
         if node_type != NODE_DESCRIPTOR_TYPE:
-            raise Exception(
-                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
+            raise Notify(
+                3,
+                10,
+                f'Unknown type: {node_type}. Only Local Node descriptors are allowed in a Node type msg',
             )
 
         # Validate node descriptors can be parsed (ensures data integrity)
-        values = data[17 : 17 + node_length]
         while values:
             _node_id, left = NodeDescriptor.unpack_node(values, proto_id)
             if left == values:
-                raise RuntimeError('sub-calls should consume data')
+                raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
             values = left
 
         # Store complete wire format including header
