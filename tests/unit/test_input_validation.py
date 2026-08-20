@@ -10,6 +10,7 @@ NOTIFICATION or a ValueError.
 from __future__ import annotations
 
 import platform
+from struct import pack
 
 import pytest
 
@@ -18,6 +19,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.hostname import HostName
 from exabgp.bgp.message.open.capability.software import Software
+from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.configuration.configuration import Configuration
 from exabgp.util.psk import PSKError, decode_base64
 
@@ -177,3 +179,29 @@ def test_hostname_capability_rejects_invalid_utf8() -> None:
 def test_software_capability_rejects_invalid_utf8() -> None:
     with pytest.raises(Notify):
         Software.unpack_capability(Software(), b'\x04\xff\xfe\xfd\xfc', None)
+
+
+# ============================================================================
+# AIGP attribute
+# ============================================================================
+
+
+def test_aigp_rejects_trailing_bytes() -> None:
+    """13 bytes used to build an AIGP holding only the first 11: the trailing
+    bytes were dropped and the attribute re-advertised as if well formed."""
+    with pytest.raises(ValueError):
+        AIGP.from_packet(b'\x01\x00\x0b' + pack('!Q', 5) + b'\xaa\xbb')
+
+
+def test_aigp_accepts_an_exact_tlv() -> None:
+    assert AIGP.from_packet(b'\x01\x00\x0b' + pack('!Q', 5)).aigp == 5
+
+
+def test_aigp_ignores_unknown_trailing_tlvs() -> None:
+    """RFC 7311: unknown TLVs are ignored, but they must still be well formed."""
+    assert AIGP.from_packet(b'\x01\x00\x0b' + pack('!Q', 5) + b'\x02\x00\x05\x00\x00').aigp == 5
+
+
+def test_aigp_requires_an_aigp_tlv() -> None:
+    with pytest.raises(ValueError):
+        AIGP.from_packet(b'\x02\x00\x05\x00\x00')

@@ -75,17 +75,32 @@ class AIGP(Attribute):
         Raises:
             ValueError: If data is malformed
         """
-        if len(data) < 3:
-            raise ValueError(f'AIGP TLV too short: {len(data)} bytes')
-        tlv_type = data[0]
-        tlv_length = unpack('!H', data[1:3])[0]
-        if tlv_type != 1:
-            raise ValueError(f'Unknown AIGP TLV type: {tlv_type}')
-        if tlv_length != cls._TLV_LENGTH:
-            raise ValueError(f'Invalid AIGP TLV length: {tlv_length}')
-        if len(data) < tlv_length:
-            raise ValueError(f'AIGP data truncated: got {len(data)}, expected {tlv_length}')
-        return cls(data[:tlv_length])
+        # RFC 7311 section 3: the attribute is a sequence of TLVs. Every TLV must be
+        # walked, otherwise trailing bytes are silently dropped and a malformed
+        # attribute is re-advertised as if it had been well formed.
+        metric = None
+        offset = 0
+        while offset < len(data):
+            if len(data) - offset < 3:
+                raise ValueError(f'AIGP TLV header truncated at offset {offset}')
+            tlv_type = data[offset]
+            tlv_length = unpack('!H', bytes(data[offset + 1 : offset + 3]))[0]
+            if tlv_length < 3:
+                raise ValueError(f'AIGP TLV length {tlv_length} is smaller than its own header')
+            if len(data) - offset < tlv_length:
+                raise ValueError(f'AIGP TLV truncated: {tlv_length} bytes announced, {len(data) - offset} available')
+            if tlv_type == 1:
+                if tlv_length != cls._TLV_LENGTH:
+                    raise ValueError(f'Invalid AIGP TLV length: {tlv_length}')
+                if metric is None:
+                    metric = data[offset : offset + tlv_length]
+            offset += tlv_length
+
+        # unknown TLV types are ignored per RFC 7311, but the AIGP TLV itself is required
+        if metric is None:
+            raise ValueError('AIGP attribute has no AIGP TLV')
+
+        return cls(metric)
 
     @classmethod
     def from_int(cls, value: int) -> 'AIGP':
