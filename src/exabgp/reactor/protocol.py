@@ -407,7 +407,9 @@ class Protocol:
         for _ in self.write(notification):
             yield _NOP
         log.debug(
-            lambda: f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")',
+            lambda: (
+                f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")'
+            ),
             self.connection.session(),
         )
         yield notification

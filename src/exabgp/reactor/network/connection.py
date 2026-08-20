@@ -205,7 +205,9 @@ class Connection:
             except OSError as exc:
                 if exc.args[0] in error.block:
                     log.debug(
-                        lambda exc=exc: f'{self.name()} {self.peer} blocking io problem mid-way through writing a message {errstr(exc)}, trying to complete',
+                        lambda exc=exc: (
+                            f'{self.name()} {self.peer} blocking io problem mid-way through writing a message {errstr(exc)}, trying to complete'
+                        ),
                         self.session(),
                     )
                     yield False
