@@ -148,7 +148,7 @@ class Exec(object):
         flush(f'stderr: {self.stderr.decode()}')
         flush(f'message: {self.message}')
 
-    def collect(self):
+    def collect(self, wait=False):
         if self.stdout:
             return
         if self.stderr:
@@ -159,10 +159,15 @@ class Exec(object):
         signal.signal(signal.SIGALRM, alarm_handler)
         try:
             signal.alarm(15)
-            self.code = self._process.poll()
-            if self.code is None:
+            # the run loops call this on tests which are still going so that they can
+            # keep refreshing the display: only a process being torn down is waited for
+            code = self._process.wait() if wait else self._process.poll()
+            if code is None:
+                # still running, leave self.code alone: it is the "not collected yet"
+                # marker this function checks on the next call
                 signal.alarm(0)
                 return
+            self.code = code
             self._stdout.seek(0)
             self._stderr.seek(0)
             self.stdout = self._stdout.read()
@@ -178,7 +183,7 @@ class Exec(object):
             self._process.send_signal(signal.SIGTERM)
         except OSError:  # No such process, Errno 3
             pass
-        self.collect()
+        self.collect(wait=True)
 
     def __del__(self):
         self.terminate
@@ -670,11 +675,6 @@ class DecodingTests(Tests):
                 raise ValueError(f'invalid message type: {message}')
             test.run(cmd)
 
-        for test in self.selected():
-            self.display()
-            success = test.result(test.success()) and success
-            time.sleep(0.05)
-
         exit_time = time.time() + timeout
         running = set(self.selected())
 
@@ -745,16 +745,11 @@ class ParsingTests(Tests):
             test.run([Path.EXABGP, 'validate', '-nrv', test.conf['fname']])
             time.sleep(0.005)
 
-        time.sleep(0.02)
-
-        for test in self.selected():
-            success = test.result(test.success()) and success
-            time.sleep(0.005)
-
         exit_time = time.time() + timeout
         running = set(self.selected())
 
         while running and time.time() < exit_time:
+            self.display()
             for test in list(running):
                 if not test.ready():
                     continue
@@ -867,7 +862,7 @@ if __name__ == '__main__':
         encoding,
         ['list', 'short_list', 'edit', 'dry', 'timeout', 'port', 'server', 'client'],
     )
-    add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit'])
+    add_test(subparser, 'parsing', parsing, ['list', 'short_list', 'dry', 'edit', 'timeout'])
 
     parsed = parser.parse_args()
     if vars(parsed):
