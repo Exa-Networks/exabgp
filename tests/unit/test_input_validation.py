@@ -14,6 +14,7 @@ none of those features.
 from __future__ import annotations
 
 import os
+import pathlib
 from struct import pack
 
 import pytest
@@ -33,6 +34,7 @@ from exabgp.configuration.static.parser import _extended_community
 from exabgp.environment import getenv
 from exabgp.logger import log
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.util.backlog import Backlog
 from exabgp.util.psk import PSKError, decode_base64
 
 log.init(getenv())
@@ -322,3 +324,49 @@ def test_mup_fuzz_never_raises_a_raw_exception():
                 data = bytes([arch]) + code.to_bytes(2, 'big') + bytes([length]) + os.urandom(length)
                 for afi in (AFI.ipv4, AFI.ipv6):
                     unpack_or_notify(MUP.unpack_nlri, afi, SAFI.mup, data, Action.ANNOUNCE, None)
+
+
+# ============================================================================
+# API and CLI buffering limits
+# ============================================================================
+
+
+def test_backlog_counts_bytes_not_chunks():
+    """The pipe helper compared len(backlog), the number of sources in the dict
+    and always two, against a 100 MB limit, so the guard could never fire."""
+    backlog = Backlog()
+    assert backlog.nbytes == 0
+    assert not backlog
+
+    backlog.append(b'a' * 1024)
+    backlog.append(b'b' * 512)
+    assert len(backlog) == 2
+    assert backlog.nbytes == 1536
+
+    assert backlog.popleft() == b'a' * 1024
+    assert backlog.nbytes == 512
+
+    backlog.clear()
+    assert backlog.nbytes == 0
+    assert not backlog
+
+
+def test_pipe_bounds_its_buffer_by_bytes():
+    """Guard against reintroducing the exact bug. The check is on the source
+    because the buffering lives inside a closure in the select loop."""
+    source = (pathlib.Path(__file__).resolve().parents[2] / 'src' / 'exabgp' / 'application' / 'pipe.py').read_text()
+    assert 'if len(backlog) >' not in source
+    assert 'backlog[source].nbytes' in source
+    assert 'MAX_COMMAND_SIZE' in source
+
+
+def test_processes_caps_a_command_without_a_newline():
+    """A helper process which never sends a newline grew _buffer without bound."""
+    from exabgp.reactor.api.processes import Processes
+
+    assert Processes.MAX_COMMAND_SIZE > 0
+    source = (
+        pathlib.Path(__file__).resolve().parents[2] / 'src' / 'exabgp' / 'reactor' / 'api' / 'processes.py'
+    ).read_text()
+    assert 'self.MAX_COMMAND_SIZE' in source
+    assert 'self._buffer.pop(process_name, None)' in source

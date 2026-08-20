@@ -50,6 +50,9 @@ def preexec_helper():
 class Processes:
     # how many time can a process can respawn in the time interval
     respawn_timemask = 0xFFFFFF - 0b111111
+    # A single API command must fit on one line: without a cap a helper process which
+    # never sends a newline would grow _buffer until the daemon runs out of memory.
+    MAX_COMMAND_SIZE = 1024 * 1024
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
     _dispatch = {}
@@ -92,6 +95,8 @@ class Processes:
         log.debug(lambda: f'terminating process {process_name}', 'process')
         process = self._process[process_name]
         del self._process[process_name]
+        # nothing will ever complete the partial line this process left behind
+        self._buffer.pop(process_name, None)
         self._update_fds()
         thread = Thread(target=self._terminate_run, args=(process, process_name))
         thread.start()
@@ -260,6 +265,15 @@ class Processes:
                         continue
 
                     raw = self._buffer.get(process, '') + buf
+                    if '\n' not in raw and len(raw) > self.MAX_COMMAND_SIZE:
+                        log.error(
+                            lambda process=process,
+                            size=len(raw): f'oversized command from process {process} : {size} bytes',
+                            'process',
+                        )
+                        self._buffer.pop(process, None)
+                        self._handle_problem(process)
+                        continue
 
                     while '\n' in raw:
                         line, raw = raw.split('\n', 1)
