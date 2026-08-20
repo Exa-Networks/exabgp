@@ -21,6 +21,7 @@ from exabgp.bgp.message.open.capability.hostname import HostName
 from exabgp.bgp.message.open.capability.software import Software
 from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.static.parser import _extended_community
 from exabgp.util.psk import PSKError, decode_base64
 
 
@@ -205,3 +206,33 @@ def test_aigp_ignores_unknown_trailing_tlvs() -> None:
 def test_aigp_requires_an_aigp_tlv() -> None:
     with pytest.raises(ValueError):
         AIGP.from_packet(b'\x02\x00\x05\x00\x00')
+
+
+# ============================================================================
+# Extended communities
+# ============================================================================
+
+
+def test_extended_community_rejects_a_short_ip() -> None:
+    """target:1.2.3:100 used to raise IndexError out of the configuration parser."""
+    with pytest.raises(ValueError):
+        _extended_community('target:1.2.3:100')
+
+
+@pytest.mark.parametrize('value', ['target:1.2.3.4.5:100', 'target:1.2.3.256:100', 'target:1.2.3.x:100'])
+def test_extended_community_rejects_malformed_ips(value: str) -> None:
+    with pytest.raises(ValueError):
+        _extended_community(value)
+
+
+@pytest.mark.parametrize('value', ['target:65000:100', 'target:1.2.3.4:100'])
+def test_extended_community_accepts_valid_values(value: str) -> None:
+    assert str(_extended_community(value)) == value
+
+
+def test_data_check_extended_community_does_not_raise() -> None:
+    """data_check.extendedcommunity() compared an int to a str and raised TypeError."""
+    from exabgp.data import check as data_check
+
+    assert data_check.extendedcommunity('target:65000:1.2.3.4') is True
+    assert data_check.extendedcommunity('target:not-a-number:1.2.3.4') is False

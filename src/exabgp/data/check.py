@@ -292,7 +292,7 @@ def extendedcommunity(data: Any) -> bool:  # TODO: improve, incomplete see https
         _, __, ___ = data.split(':')
         if _.lower() not in ('origin', 'target'):
             return False
-        return (__.isdigit() and asn16(__) and ipv4(___)) or (ipv4(__) and ___.isdigit() and asn16(___))
+        return (__.isdigit() and asn16(int(__)) and ipv4(___)) or (ipv4(__) and ___.isdigit() and asn16(int(___)))
     return False
 
 
@@ -365,6 +365,6 @@ def redirect(data: Any) -> bool:  # TODO: check that we are not too restrictive 
     if len(parts) != ROUTE_DISTINGUISHER_PARTS:
         return False
     _, __ = parts
-    if not __.isdigit() and asn16(int(__)):
+    if not (__.isdigit() and asn16(int(__))):
         return False
     return ipv4(_) or (_.isdigit() and asn16(int(_)))
