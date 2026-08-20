@@ -10,6 +10,7 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from struct import pack
 
@@ -126,25 +127,35 @@ class Type2SessionTransformedRoute(MUP):
 
     @classmethod
     def unpack(cls, data, afi):
+        cls.check_length(data, cls.PAYLOAD_OFFSET)
         afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
         afi_bytes_size = 4 if afi == AFI.ipv4 else 16
+        max_endpoint = MUP_T2ST_IPV4_MAX_ENDPOINT if afi == AFI.ipv4 else MUP_T2ST_IPV6_MAX_ENDPOINT
         rd = RouteDistinguisher.unpack(data[:8])
         endpoint_len = data[8]
+
+        # the endpoint is the full address followed by an optional TEID of up to 32 bits
+        if endpoint_len < afi_bit_size or endpoint_len > max_endpoint:
+            raise Notify(
+                3,
+                10,
+                'endpoint length is %d, expecting %d to %d for %s' % (endpoint_len, afi_bit_size, max_endpoint, afi),
+            )
+
+        teid_len = endpoint_len - afi_bit_size
+        expected = 9 + afi_bytes_size + (teid_len + 7) // 8
+        if len(data) != expected:
+            raise Notify(
+                3,
+                10,
+                'mup t2st is %d bytes, expecting %d for an endpoint of %d bits' % (len(data), expected, endpoint_len),
+            )
+
         end = 9 + afi_bytes_size
         endpoint_ip = IP.unpack(data[9:end])
 
         teid = 0
         if endpoint_len > afi_bit_size:
-            teid_len = endpoint_len - afi_bit_size
-            if afi == AFI.ipv4 and teid_len > MUP_T2ST_TEID_MAX_SIZE:
-                raise Exception(
-                    'endpoint length is too large %d (max %d for Ipv4)' % (endpoint_len, MUP_T2ST_IPV4_MAX_ENDPOINT)
-                )
-            if afi == AFI.ipv6 and teid_len > MUP_T2ST_TEID_MAX_SIZE:
-                raise Exception(
-                    'endpoint length is too large %d (max %d for Ipv6)' % (endpoint_len, MUP_T2ST_IPV6_MAX_ENDPOINT)
-                )
-
             teid = int.from_bytes(data[end:], 'big')
 
         return cls(rd, endpoint_len, endpoint_ip, teid, afi)

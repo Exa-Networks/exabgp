@@ -72,6 +72,7 @@ class DirectSegmentDiscoveryRoute(MUP):
     @classmethod
     def unpack(cls, data, afi):
         data_len = len(data)
+        cls.check_length(data, 8)
         rd = RouteDistinguisher.unpack(data[:8])
         size = data_len - 8
         if size not in [4, 16]:
