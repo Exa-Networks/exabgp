@@ -14,8 +14,16 @@ from exabgp.protocol.resource import Resource
 # =================================================================== ASN
 
 
+def _decimal(value):
+    """True if the string is a plain ASCII decimal number (no sign, no separator)."""
+    return bool(value) and value.isascii() and value.isdigit()
+
+
 class ASN(Resource):
     MAX = pow(2, 16) - 1
+    MAX_4BYTE = pow(2, 32) - 1
+
+    DOTTED_PARTS = 2  # <high>.<low> notation has two components
 
     # ASN encoding size constants
     SIZE_4BYTE = 4  # 4-byte ASN encoding size
@@ -53,7 +61,33 @@ class ASN(Resource):
 
     @classmethod
     def from_string(cls, value):
-        return cls(int(value))
+        """Parse an ASN from its plain or dotted textual representation.
+
+        Accepts "65001" (0 to 4294967295) and "1.1" (two components, each 0 to 65535).
+        Anything else, a negative value, an out of range value, a wrong number of
+        dotted components or a non decimal digit, raises ValueError.
+        """
+        if '.' in value:
+            parts = value.split('.')
+            if len(parts) != cls.DOTTED_PARTS:
+                raise ValueError('"{}" is an invalid ASN, expecting <high>.<low> (for example 1.1)'.format(value))
+            components = []
+            for part in parts:
+                if not _decimal(part):
+                    raise ValueError('"{}" is an invalid ASN, "{}" is not a decimal number'.format(value, part))
+                number = int(part)
+                if number > cls.MAX:
+                    raise ValueError('"{}" is an invalid ASN, each part must be 0 to {}'.format(value, cls.MAX))
+                components.append(number)
+            return cls((components[0] << 16) + components[1])
+
+        if not _decimal(value):
+            raise ValueError('"{}" is an invalid ASN, expecting a number or <high>.<low>'.format(value))
+
+        as_number = int(value)
+        if as_number > cls.MAX_4BYTE:
+            raise ValueError('"{}" is an invalid ASN, must be 0 to {}'.format(value, cls.MAX_4BYTE))
+        return cls(as_number)
 
 
 AS_TRANS = ASN(23456)
