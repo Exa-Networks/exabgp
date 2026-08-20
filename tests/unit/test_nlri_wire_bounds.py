@@ -169,3 +169,42 @@ def test_bgpls_vpn_length_below_a_route_distinguisher_raises_notify(length: int)
     for code in (1, 2, 3, 4):
         with pytest.raises(Notify):
             decode(AFI.bgpls, SAFI.bgp_ls_vpn, code.to_bytes(2, 'big') + length.to_bytes(2, 'big') + bytes(16))
+
+
+# ============================================================================
+# Flow: a component announces the size of its value
+# ============================================================================
+
+
+def test_flow_component_value_cut_short_is_rejected() -> None:
+    """A numeric component announcing more bytes than are left reached the value
+    decoder with an empty string, which raised TypeError out of ord()."""
+    # a two byte component: 0x03 is the protocol, whose operator byte announces no value
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, b'\x02\x03\x00', Action.ANNOUNCE, None, None)
+    assert nlri is NLRI.INVALID
+
+
+def test_flow_component_with_its_value_still_decodes() -> None:
+    # component 3 (protocol) with a one byte value, end of list set
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, b'\x03\x03\x81\x06', Action.ANNOUNCE, None, None)
+    assert nlri is not NLRI.INVALID
+    assert 'protocol' in nlri.json()
+
+
+@pytest.mark.parametrize('length_bits', [0x10, 0x20, 0x30])
+def test_flow_component_value_larger_than_it_holds_is_rejected(length_bits: int) -> None:
+    """The protocol component holds one byte, but the operator byte can announce two,
+    four or eight, and the value decoder was handed more than ord() can read."""
+    components = bytes([0x03, length_bits]) + bytes(8)
+    data = bytes([len(components)]) + components
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, None, None)
+    assert nlri is NLRI.INVALID
+
+
+def test_flow_port_accepts_the_two_byte_value_it_holds() -> None:
+    # component 4 (any port), operator announces a two byte value, end of list set
+    components = bytes([0x04, 0x91, 0x1F, 0x90])
+    data = bytes([len(components)]) + components
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, None, None)
+    assert nlri is not NLRI.INVALID
+    assert '8080' in nlri.json()

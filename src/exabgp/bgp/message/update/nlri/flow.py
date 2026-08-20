@@ -380,6 +380,10 @@ class IOperation(IComponent):
 
     operations: int
     value: BaseValue
+
+    # the value sizes this component can hold, in bytes: the operator byte can announce
+    # 1, 2, 4 or 8, but each component only encodes some of them (RFC 8955 section 4)
+    VALUE_SIZES: ClassVar[tuple[int, ...]] = (1, 2, 4, 8)
     first: bool | None
 
     def __init__(self, operations: int, value: BaseValue) -> None:
@@ -410,6 +414,8 @@ class IOperation(IComponent):
 
 
 class IOperationByte(IOperation):
+    VALUE_SIZES: ClassVar[tuple[int, ...]] = (1,)
+
     def encode(self, value: BaseValue) -> tuple[int, bytes]:
         return 1, bytes([value])
 
@@ -418,6 +424,8 @@ class IOperationByte(IOperation):
 
 
 class IOperationByteShort(IOperation):
+    VALUE_SIZES: ClassVar[tuple[int, ...]] = (1, 2)
+
     def encode(self, value: BaseValue) -> tuple[int, bytes]:
         if value < (1 << 8):
             return 1, bytes([value])
@@ -425,6 +433,8 @@ class IOperationByteShort(IOperation):
 
 
 class IOperationByteShortLong(IOperation):
+    VALUE_SIZES: ClassVar[tuple[int, ...]] = (1, 2, 4)
+
     def encode(self, value: BaseValue) -> tuple[int, bytes]:
         if value < (1 << 8):
             return 1, bytes([value])
@@ -911,7 +921,20 @@ class Flow(NLRI):
                         end = CommonOperator.eol(byte)
                         operator = CommonOperator.operator(byte)
                         length = CommonOperator.length(byte)
+                        if issubclass(klass, IOperation) and length not in klass.VALUE_SIZES:
+                            raise Notify(
+                                3,
+                                10,
+                                'flow component %d announces a %d byte value, which it can not hold' % (what, length),
+                            )
                         value_bytes, bgp = bytes(bgp[:length]), bgp[length:]
+                        if len(value_bytes) != length:
+                            raise Notify(
+                                3,
+                                10,
+                                'flow component %d announces a %d byte value but only %d are left'
+                                % (what, length, len(value_bytes)),
+                            )
                         adding_val = klass.decoder(value_bytes)
                         # klass is IOperation subclass with (operator, value) constructor
                         # decoder returns object but IOperation expects BaseValue
