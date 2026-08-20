@@ -577,12 +577,7 @@ class ASNValidator(Validator['ASN | None']):
             return None
 
         try:
-            if '.' in value:
-                high, low = value.split('.', 1)
-                as_number = (int(high) << 16) + int(low)
-            else:
-                as_number = int(value)
-            return ASN(as_number)
+            return ASN.from_string(value)
         except ValueError:
             expected = 'ASN (e.g., 65001 or 1.1)'
             if self.allow_auto:

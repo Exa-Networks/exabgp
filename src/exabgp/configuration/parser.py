@@ -81,17 +81,7 @@ def asn(tokeniser: Tokeniser, value: str | None = None) -> ASN:
             raise ValueError('an ASN is required (e.g., 65001 or 1.1)')
 
     value = tokeniser()
-    try:
-        if value.count('.'):
-            high, low = value.split('.', 1)
-            as_number = (int(high) << 16) + int(low)
-        else:
-            as_number = int(value)
-        return ASN(as_number)
-    except ValueError:
-        raise ValueError(
-            f"'{value}' is not a valid ASN\n  Format: <number> or <high>.<low> (e.g., 65001 or 1.1)"
-        ) from None
+    return ASN.from_string(value)
 
 
 def peer_ip(tokeniser: Tokeniser) -> IPRange:
