@@ -313,3 +313,40 @@ def test_mup_fuzz_never_raises_a_raw_exception() -> None:
                 data = bytes([arch]) + code.to_bytes(2, 'big') + bytes([length]) + os.urandom(length)
                 for afi in (AFI.ipv4, AFI.ipv6):
                     unpack_or_notify(MUP.unpack_nlri, afi, SAFI.mup, data, Action.ANNOUNCE, None, None)
+
+
+# ============================================================================
+# API and CLI buffering limits
+# ============================================================================
+
+
+def test_group_buffer_is_capped_and_cleared() -> None:
+    """ "group start" created an unbounded per-service list which was only ever
+    released by "group end", and never on process disconnect."""
+    from exabgp.reactor.api.command import group as group_module
+
+    service = 'test-service'
+    group_module.clear_group(service)
+    group_module._start_group(service)
+
+    assert group_module._add_to_group(service, [], 'announce route 10.0.0.0/24 next-hop 1.2.3.4')
+    assert group_module._is_grouping(service)
+
+    group_module.clear_group(service)
+    assert not group_module._is_grouping(service)
+
+
+def test_group_buffer_refuses_to_grow_past_its_limit(monkeypatch) -> None:
+    from exabgp.reactor.api.command import group as group_module
+
+    service = 'test-service-limit'
+    monkeypatch.setattr(group_module, 'MAX_GROUP_COMMANDS', 3)
+    group_module.clear_group(service)
+    group_module._start_group(service)
+
+    assert group_module._add_to_group(service, [], 'one')
+    assert group_module._add_to_group(service, [], 'two')
+    assert group_module._add_to_group(service, [], 'three')
+    assert not group_module._add_to_group(service, [], 'four')
+    # the group is dropped rather than kept half full
+    assert not group_module._is_grouping(service)

@@ -43,8 +43,15 @@ def register_group() -> None:
     pass
 
 
+# A group is only closed by the client sending "group end", so a client which never
+# does would otherwise let the buffer grow until the daemon runs out of memory.
+MAX_GROUP_COMMANDS = 100000
+MAX_GROUP_BYTES = 100 * 1024 * 1024
+
 # Per-service group buffers: service -> list of (peers, command) tuples
 _GROUP_BUFFERS: dict[str, list[tuple[list[str], str]]] = {}
+# Per-service byte count of the buffered commands
+_GROUP_BYTES: dict[str, int] = {}
 
 
 def _is_grouping(service: str) -> bool:
@@ -55,17 +62,50 @@ def _is_grouping(service: str) -> bool:
 def _start_group(service: str) -> None:
     """Start buffering commands for service."""
     _GROUP_BUFFERS[service] = []
+    _GROUP_BYTES[service] = 0
 
 
 def _end_group(service: str) -> list[tuple[list[str], str]]:
     """End grouping and return buffered commands."""
+    _GROUP_BYTES.pop(service, None)
     return _GROUP_BUFFERS.pop(service, [])
 
 
-def _add_to_group(service: str, peers: list[str], command: str) -> None:
-    """Add command to group buffer."""
-    if service in _GROUP_BUFFERS:
-        _GROUP_BUFFERS[service].append((peers, command))
+def clear_group(service: str) -> None:
+    """Drop any group state held for a service.
+
+    Called when the process behind the service is gone: it will never send the
+    "group end" which would otherwise release the buffer.
+    """
+    _GROUP_BYTES.pop(service, None)
+    _GROUP_BUFFERS.pop(service, None)
+
+
+def _add_to_group(service: str, peers: list[str], command: str) -> bool:
+    """Add command to group buffer.
+
+    Returns:
+        True if the command was buffered, False if the group is over its limits
+        (in which case the group state has been dropped).
+    """
+    if service not in _GROUP_BUFFERS:
+        return False
+
+    if len(_GROUP_BUFFERS[service]) >= MAX_GROUP_COMMANDS:
+        log.error(
+            lazymsg('api.group.overflow service={s} commands={n}', s=service, n=len(_GROUP_BUFFERS[service])), 'api'
+        )
+        clear_group(service)
+        return False
+
+    if _GROUP_BYTES[service] + len(command) > MAX_GROUP_BYTES:
+        log.error(lazymsg('api.group.overflow service={s} bytes={n}', s=service, n=_GROUP_BYTES[service]), 'api')
+        clear_group(service)
+        return False
+
+    _GROUP_BUFFERS[service].append((peers, command))
+    _GROUP_BYTES[service] += len(command)
+    return True
 
 
 def group_start(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
@@ -348,7 +388,15 @@ def group_add_command(
     This is used internally when a service is in grouping mode and sends
     announce/withdraw commands.
     """
-    _add_to_group(service, peers, command)
+    if not _add_to_group(service, peers, command):
+        error_msg = 'group buffer limit reached, group discarded'
+        if use_json:
+            reactor.processes.write(service, json.dumps({'error': error_msg}))
+        else:
+            reactor.processes.write(service, f'error: {error_msg}')
+        reactor.processes.answer_error_sync(service)
+        return False
+
     log.debug(lazymsg('api.group.add service={s} command={c}', s=service, c=command[:50]), 'api')
     reactor.processes.answer_done_sync(service)
     return True
