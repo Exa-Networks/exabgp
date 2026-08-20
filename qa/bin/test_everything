@@ -82,6 +82,7 @@ DEFAULT_TIMES: dict[str, int] = {
     'api': 90,
     'cli': 10,
     'type-ignore': 1,
+    'tiger-style': 2,
 }
 
 CACHE_FILE = Path.home() / '.cache' / 'exabgp' / 'test_times.json'
@@ -164,6 +165,7 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     'api': './qa/bin/functional api --quiet',
     'cli': './qa/bin/functional cli --quiet',
     'type-ignore': './qa/bin/check_type_ignores',
+    'tiger-style': './qa/bin/check_tiger_style',
     'documentation': './qa/bin/check_documentation',
 }
 
@@ -185,6 +187,7 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'api': 'Functional API tests',
     'cli': 'Functional CLI tests',
     'type-ignore': 'Prohibited # type: comments check',
+    'tiger-style': 'Tiger style check',
     'documentation': 'Documentation matches the code',
 }
 
@@ -207,6 +210,7 @@ TEST_ORDER = [
     'cli',
     'api',
     'type-ignore',
+    'tiger-style',
     'documentation',
 ]
 

@@ -7,7 +7,7 @@ Run ALL tests before declaring code ready.
 ## Required Test Sequence
 
 ```bash
-./qa/bin/test_everything  # ALL 15 tests, exits on first failure
+./qa/bin/test_everything  # ALL 19 tests, exits on first failure
 ```
 
 **Individual commands (for debugging only):**
@@ -20,13 +20,15 @@ env exabgp_log_enable=false uv run pytest ./tests/unit/
 ./qa/bin/test_api_encode              # cmd→raw verification
 ./qa/bin/test_api_encode --self-check # raw→cmd→raw round-trip
 ./qa/bin/test_json                    # JSON decode regression tests
+./qa/bin/check_tiger_style            # tiger style checks (.claude/TIGER_STYLE.md)
+./qa/bin/check_tiger_style --show     # list every violation it counts
 ```
 
 ---
 
 ## Pre-Commit Checklist
 
-- [ ] `./qa/bin/test_everything` passes all 15 tests
+- [ ] `./qa/bin/test_everything` passes all 19 tests (including `tiger-style`)
 - [ ] `git status` reviewed
 - [ ] User approval
 

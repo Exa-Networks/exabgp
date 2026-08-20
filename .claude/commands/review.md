@@ -48,6 +48,21 @@ For each significant change, verify:
 - Is it documented?
 - Does it handle errors gracefully?
 
+### Step 3.5: Tiger style (MANDATORY, see `.claude/TIGER_STYLE.md`)
+
+Every change is reviewed against the safety rules:
+
+- **Wire data:** is every read preceded by a length check? Does malformed input raise `Notify`
+  rather than `IndexError`, `struct.error`, `ValueError` or `UnicodeDecodeError`?
+- **Assertions:** is any `assert` validating peer or operator input? (`-O` removes it, so that is a
+  `Notify` or a `ValueError`, never an assert)
+- **Bounds:** is every new loop bounded, every buffer capped by a named constant, per client state
+  cleared on disconnect?
+- **Errors:** no bare `except:`, no new `except X: pass` without a comment saying why
+- **Size:** are new and modified functions under 70 lines?
+- **Names:** units in names, positive booleans, no new abbreviations
+- **Tests:** does the fix come with a test that fails without it?
+
 ### Step 4: Check for missing pieces
 
 - **Tests:** New code should have tests. Modified code should have passing tests.
@@ -81,5 +96,6 @@ This is about understanding the code and catching semantic issues.
 ## Reference
 
 For coding standards details, see:
+- `.claude/TIGER_STYLE.md`
 - `.claude/CODING_STANDARDS.md`
 - `.claude/ESSENTIAL_PROTOCOLS.md`

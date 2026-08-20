@@ -12,6 +12,7 @@
 - [ ] MANDATORY_REFACTORING_PROTOCOL.md
 - [ ] ERROR_RECOVERY_PROTOCOL.md
 - [ ] CODING_STANDARDS.md
+- [ ] TIGER_STYLE.md (mandatory, safety rules)
 - [ ] TESTING_PROTOCOL.md
 - [ ] PLANNING_GUIDE.md
 - [ ] CI_TESTING.md

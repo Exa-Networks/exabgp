@@ -84,6 +84,7 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 - VERIFICATION_PROTOCOL.md - Complete verification rules
 - TESTING_PROTOCOL.md - Complete testing requirements
 - CODING_STANDARDS.md - All coding standards
+- TIGER_STYLE.md - Safety rules, MANDATORY, enforced by qa/bin/check_tiger_style
 - output-styles/exabgp.md - Communication style (activate with `/output-style exabgp`)
 
 ### Tier 3: Reference Materials (Consult When Needed)
@@ -109,6 +110,7 @@ If ANY files modified/staged: ASK user how to handle before starting work.
 ├── MANDATORY_REFACTORING_PROTOCOL.md
 ├── ERROR_RECOVERY_PROTOCOL.md
 ├── CODING_STANDARDS.md
+├── TIGER_STYLE.md                      # 🐯 MANDATORY safety rules
 ├── TESTING_PROTOCOL.md
 ├── PLANNING_GUIDE.md
 ├── CI_TESTING.md
@@ -202,7 +204,8 @@ Major completed projects:
 
 **Task** | **Read These Docs** | **Protocols to Load**
 ---------|---------------------|----------------------
-Fix a bug | exabgp/CODEBASE_ARCHITECTURE.md (summary in ESSENTIAL) | *(none - covered in ESSENTIAL)*
+Fix a bug | exabgp/CODEBASE_ARCHITECTURE.md (summary in ESSENTIAL) | TIGER_STYLE.md
+Decode wire data | doc/RFC_WIRE_FORMAT_REFERENCE.md, exabgp/DATA_FLOW_GUIDE.md | TIGER_STYLE.md
 Add a feature | exabgp/REGISTRY_AND_EXTENSION_PATTERNS.md, exabgp/DATA_FLOW_GUIDE.md | *(none - covered in ESSENTIAL)*
 Commit changes | *(none)* | GIT_VERIFICATION_PROTOCOL.md
 Refactor code | exabgp/CODEBASE_ARCHITECTURE.md | MANDATORY_REFACTORING_PROTOCOL.md
@@ -225,7 +228,7 @@ Recover from error | ERROR_RECOVERY_PROTOCOL.md | ERROR_RECOVERY_PROTOCOL.md
 3. If files modified: ASK user before proceeding
 
 **For any code changes:**
-1. Make changes following CODING_STANDARDS.md
+1. Make changes following CODING_STANDARDS.md and TIGER_STYLE.md
 2. Follow MANDATORY_REFACTORING_PROTOCOL.md if refactoring
 3. Run ALL tests per TESTING_PROTOCOL.md
 4. Only THEN claim success

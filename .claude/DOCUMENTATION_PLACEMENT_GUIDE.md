@@ -67,6 +67,7 @@ Examples:
 - `MANDATORY_REFACTORING_PROTOCOL.md` - Refactoring steps
 - `ERROR_RECOVERY_PROTOCOL.md` - Slow down after mistakes
 - `CODING_STANDARDS.md` - Python 3.12+, APIs
+- `TIGER_STYLE.md` - Safety rules (bounds, assertions, error handling)
 - `TESTING_PROTOCOL.md` - Testing requirements
 - `PLANNING_GUIDE.md` - Project planning
 - `CI_TESTING.md` - CI test requirements

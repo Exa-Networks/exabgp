@@ -12,9 +12,9 @@ Guidance for Claude Code (claude.ai/code) working with this repository.
 
 ### MANDATORY FIRST ACTION
 
-**Read `.claude/ESSENTIAL_PROTOCOLS.md` (~5 KB)**
+**Read `.claude/ESSENTIAL_PROTOCOLS.md` (~5 KB) and `.claude/TIGER_STYLE.md`**
 
-This single file contains ALL core rules:
+Together they contain ALL core rules:
 - Verification before claiming
 - Communication style
 - Testing requirements
@@ -30,6 +30,7 @@ This single file contains ALL core rules:
 
 | Task Type | Load Protocol |
 |-----------|---------------|
+| Writing ANY code | TIGER_STYLE.md (mandatory, always) |
 | Git work (commit/push) | GIT_VERIFICATION_PROTOCOL.md |
 | Refactoring code | TESTING_BEFORE_REFACTORING_PROTOCOL.md, then MANDATORY_REFACTORING_PROTOCOL.md |
 | Test failures | FUNCTIONAL_TEST_DEBUGGING_GUIDE.md |
@@ -432,6 +433,15 @@ Generator-based API callbacks still work, they run inside the asyncio loop.
 
 ## Key Requirements
 
+**Tiger Style (MANDATORY):**
+- `.claude/TIGER_STYLE.md` applies to every line of code in this repository
+- Check the length before reading wire data, raise `Notify` on malformed peer input
+- `assert` states OUR invariants, never validates input (`-O` removes it)
+- Bound every loop, cap every buffer with a named constant
+- New and modified functions under 70 lines
+- A bug fix comes with the test that fails without it
+- Enforced by `./qa/bin/check_tiger_style`, part of `./qa/bin/test_everything`
+
 **Python 3.12+ ONLY:**
 - Prefer `int | str` over `Union[int, str]`
 - Prefer `str | None` over `Optional[str]`
@@ -474,7 +484,8 @@ Unused `negotiated` parameters are OK and EXPECTED.
 ## Quick Checklist
 
 Before declaring success:
-- [ ] Read ESSENTIAL_PROTOCOLS.md
+- [ ] Read ESSENTIAL_PROTOCOLS.md and TIGER_STYLE.md
+- [ ] Tiger style review checklist completed (TIGER_STYLE.md § 6)
 - [ ] `./qa/bin/test_everything` passes
 - [ ] `git status` reviewed
 - [ ] Plan files updated (if working on a plan)

@@ -305,6 +305,26 @@ uv run ruff format src && uv run ruff check src  # Must pass
 
 ---
 
+### 4.5. Tiger Style (MANDATORY) 🐯
+
+**Core principle:** Safety first, then performance, then developer experience.
+
+✅ **Required for every line you write:**
+- Check the length before every read of wire data
+- Malformed peer input raises `Notify`, never `IndexError`, `struct.error` or `ValueError`
+- `assert` is for OUR invariants only, never for peer or operator input (`-O` removes it)
+- Every loop bounded, every buffer capped by a named constant, state cleared on disconnect
+- No bare `except:`, no new `except X: pass` without a comment saying why
+- New and modified functions under 70 lines
+- Units in names (`size_bytes`, `timeout_ms`, `_at`), positive booleans, no abbreviations
+- A bug fix arrives with the test that fails without it
+
+**Enforced by:** `./qa/bin/check_tiger_style` (the `tiger-style` step of `test_everything`)
+
+**See:** TIGER_STYLE.md for the full standard and the review checklist
+
+---
+
 ### 5. Solution Quality (Right Solution, Not Easy Solution)
 
 **Core principle:** Always implement the RIGHT solution, not the easiest or lowest-impact one.
@@ -349,13 +369,16 @@ When fixing bugs or refactoring code:
 
 ### 1. Read this file (you just did) ✅
 
-### 2. Read CODING_STANDARDS.md (MANDATORY every session)
+### 2. Read CODING_STANDARDS.md and TIGER_STYLE.md (MANDATORY every session)
 
 ```bash
 # Read .claude/CODING_STANDARDS.md
+# Read .claude/TIGER_STYLE.md
 ```
 
-This file contains Python style requirements, type annotation rules, and project-specific conventions that MUST be followed.
+CODING_STANDARDS.md contains Python style requirements, type annotation rules, and project-specific conventions that MUST be followed.
+
+TIGER_STYLE.md contains the safety rules: bounds, assertions, error handling, function size, naming and commit hygiene. Both are mandatory.
 
 ### 3. Check git state
 
