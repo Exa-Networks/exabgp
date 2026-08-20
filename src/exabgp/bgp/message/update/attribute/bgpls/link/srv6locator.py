@@ -64,9 +64,9 @@ class Srv6Locator(FlagLS):
 
     def as_dict(self):
         return {
-            "srv6-locator": {
-                "flags": self.flags,
-                "algorithm": self.algorithm,
-                "metric": self.metric,
+            'srv6-locator': {
+                'flags': self.flags,
+                'algorithm': self.algorithm,
+                'metric': self.metric,
             }
         }

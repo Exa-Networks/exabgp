@@ -93,7 +93,7 @@ class IPVPN(Label):
     def as_dict(self):
         nlri = Label.as_dict(self)
         if self.rd is not RouteDistinguisher.NORD:
-            nlri["rd"] = self.rd._str()
+            nlri['rd'] = self.rd._str()
         return nlri
 
     # @classmethod

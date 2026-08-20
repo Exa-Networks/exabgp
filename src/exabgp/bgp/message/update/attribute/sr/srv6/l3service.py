@@ -78,4 +78,4 @@ class Srv6L3Service:
         return '"l3-service": {}'.format(content)
 
     def as_dict(self):
-        return {"l3-service": [subtlv.as_dict() for subtlv in self.subtlvs]}
+        return {'l3-service': [subtlv.as_dict() for subtlv in self.subtlvs]}

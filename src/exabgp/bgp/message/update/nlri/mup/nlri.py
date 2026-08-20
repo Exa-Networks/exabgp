@@ -81,11 +81,11 @@ class MUP(NLRI):
     def as_dict(self):
         family = self.family().afi_safi()
         return {
-            "arch": self.ARCHTYPE,
-            "code": self.CODE,
-            "raw": self._raw(),
-            "name": self.NAME,
-            "family": {"afi": str(family[0]), "safi": str(family[1])},
+            'arch': self.ARCHTYPE,
+            'code': self.CODE,
+            'raw': self._raw(),
+            'name': self.NAME,
+            'family': {'afi': str(family[0]), 'safi': str(family[1])},
         }
 
     def pack_nlri(self, negotiated=None):

@@ -89,8 +89,8 @@ class SrPrefix(FlagLS):
 
     def as_dict(self):
         return {
-            "sr-prefix-flags": self.flags,
-            "sids": self.sids,
-            "undecoded-sids": self.undecoded,
-            "sr-algorithm": self.sr_algo,
+            'sr-prefix-flags': self.flags,
+            'sids': self.sids,
+            'undecoded-sids': self.undecoded,
+            'sr-algorithm': self.sr_algo,
         }

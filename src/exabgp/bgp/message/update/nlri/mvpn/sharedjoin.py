@@ -108,11 +108,11 @@ class SharedJoin(MVPN):
 
     def as_dict(self):
         nlri = MVPN.as_dict(self)
-        nlri["parsed"] = True
-        nlri["rd"] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
-        nlri["source-as"] = self.source_as
-        nlri["source"] = str(self.source)
-        nlri["group"] = str(self.group)
+        nlri['parsed'] = True
+        nlri['rd'] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri['source-as'] = self.source_as
+        nlri['source'] = str(self.source)
+        nlri['group'] = str(self.group)
         return nlri
 
     def json(self, compact=None):

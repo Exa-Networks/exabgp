@@ -43,7 +43,7 @@ class Change:
         raise RuntimeError('comparing Change for ordering does not make sense')
 
     def as_dict(self):
-        return {"nlri": self.nlri.as_dict(), "attributes": self.attributes.as_dict()}
+        return {'nlri': self.nlri.as_dict(), 'attributes': self.attributes.as_dict()}
 
     def extensive(self):
         # If you change this you must change as well extensive in Update

@@ -38,7 +38,7 @@ class LinkIdentifier:
         return content
 
     def as_dict(self):
-        return {"link-local-id": self.local_id, "link-remote-id": self.remote_id}
+        return {'link-local-id': self.local_id, 'link-remote-id': self.remote_id}
 
     def __eq__(self, other):
         return (self.local_id == other.local_id) and (self.remote_id == other.remote_id)

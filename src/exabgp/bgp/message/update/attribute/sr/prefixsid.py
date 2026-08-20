@@ -107,4 +107,4 @@ class GenericSRId:
         return '"attribute-not-implemented-{}": "{}"'.format(self.code, hexstring(self.rep))
 
     def as_dict(self):
-        return {f"attribute-not-implemented-{self.code}": hexstring(self.rep)}
+        return {f'attribute-not-implemented-{self.code}': hexstring(self.rep)}

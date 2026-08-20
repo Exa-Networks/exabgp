@@ -73,10 +73,10 @@ class Srv6SidStructure(BaseLS):
 
     def as_dict(self):
         return {
-            "srv6-sid-structure": {
-                "loc_block_len": self.loc_block_len,
-                "loc_node_len": self.loc_node_len,
-                "func_len": self.func_len,
-                "arg_len": self.arg_len,
+            'srv6-sid-structure': {
+                'loc_block_len': self.loc_block_len,
+                'loc_node_len': self.loc_node_len,
+                'func_len': self.func_len,
+                'arg_len': self.arg_len,
             }
         }

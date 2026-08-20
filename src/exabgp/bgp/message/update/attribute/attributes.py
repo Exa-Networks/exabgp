@@ -152,7 +152,7 @@ class Attributes(dict):
             attribute = self[code]
 
             if code not in self.representation:
-                key = f"attribute-0x{code:02X}-0x{attribute.FLAG:02X}"
+                key = f'attribute-0x{code:02X}-0x{attribute.FLAG:02X}'
                 yield key, str(attribute)
                 continue
 
