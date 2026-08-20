@@ -69,3 +69,37 @@ def test_inet_valid_prefix_still_decodes() -> None:
     assert str(nlri) == '10.0.0.0/24'
     assert decode(AFI.ipv4, SAFI.unicast, bytes([0])) is not None
     assert str(decode(AFI.ipv6, SAFI.unicast, bytes([32, 0x20, 0x01, 0x0D, 0xB8]))) == '2001:db8::/32'
+
+
+# ============================================================================
+# RTC: length bounds and JSON
+# ============================================================================
+
+
+def test_rtc_without_data_raises_notify() -> None:
+    """The length byte was read before checking there was one (IndexError)."""
+    with pytest.raises(Notify):
+        decode(AFI.ipv4, SAFI.rtc, b'')
+
+
+@pytest.mark.parametrize('length', [1, 8, 31])
+def test_rtc_length_below_an_origin_raises_notify(length: int) -> None:
+    """A short RT length raised a bare Exception, which no caller expects."""
+    with pytest.raises(Notify):
+        decode(AFI.ipv4, SAFI.rtc, bytes([length]) + bytes(12))
+
+
+@pytest.mark.parametrize('size', [1, 5, 12])
+def test_rtc_truncated_route_target_raises_notify(size: int) -> None:
+    """A route target cut short indexed past the payload (IndexError)."""
+    with pytest.raises(Notify):
+        decode(AFI.ipv4, SAFI.rtc, bytes([96]) + bytes(size - 1))
+
+
+def test_rtc_wildcard_and_route_target_have_a_json_representation() -> None:
+    """RTC had no json(), so any received RTC route broke the API output."""
+    wildcard = decode(AFI.ipv4, SAFI.rtc, bytes([0]))
+    assert wildcard.json() == '{ "origin": 0, "route-target": null }'
+
+    route = decode(AFI.ipv4, SAFI.rtc, bytes([96]) + (65000).to_bytes(4, 'big') + b'\x00\x02\xfd\xe8\x00\x00\x00\x01')
+    assert route.json() == '{ "origin": 65000, "route-target": "target:65000:1" }'

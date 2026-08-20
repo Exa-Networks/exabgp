@@ -13,6 +13,7 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 import pytest
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number as RouteTarget
 from exabgp.bgp.message.update.nlri.rtc import RTC
@@ -344,14 +345,14 @@ class TestRTCEdgeCases:
         assert unpacked.origin == 4200000000
 
     def test_unpack_with_invalid_length(self) -> None:
-        """Test unpacking with invalid length raises exception"""
+        """Test unpacking with invalid length raises Notify"""
         # Create a packed RTC with length less than 32 bits (invalid)
         invalid_packed = b'\x10\x00\x00\xfd\xe8'  # length=16 (too short)
 
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Notify) as exc_info:
             RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, invalid_packed, Action.UNSET, None, negotiated=create_negotiated())
 
-        assert 'incorrect RT length' in str(exc_info.value)
+        assert 'incorrect RTC length' in str(exc_info.value)
 
     def test_rtc_different_safi_unpack(self) -> None:
         """Test unpacking RTC works with different SAFI in unpack_nlri"""

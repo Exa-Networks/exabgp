@@ -20,6 +20,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended import RouteTarget
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
 
@@ -127,6 +128,12 @@ class RTC(NLRI):
     def __repr__(self) -> str:
         return str(self)
 
+    def json(self, announced: bool = True, compact: bool = False) -> str:
+        rt = self.rt
+        if rt is None:
+            return '{ "origin": 0, "route-target": null }'
+        return '{{ "origin": {}, "route-target": "{}" }}'.format(self.origin, rt)
+
     def __copy__(self) -> 'RTC':
         new = self.__class__.__new__(self.__class__)
         self._copy_nlri_slots(new)
@@ -158,6 +165,9 @@ class RTC(NLRI):
     ) -> tuple[T, Buffer]:
         data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # Note: afi/safi parameters are ignored - RTC is always ipv4/rtc
+        if not data:
+            raise Notify(3, 10, 'not enough data to extract the length of the RTC NLRI')
+
         length = data[0]
 
         if length == 0:
@@ -165,7 +175,14 @@ class RTC(NLRI):
             return nlri, data[1:]
 
         if length < 8 * 4:
-            raise Exception('incorrect RT length: %d (should be >=32,<=96)' % length)
+            raise Notify(3, 10, 'incorrect RTC length: %d (should be >=32,<=96)' % length)
+
+        if len(data) < cls.PACKED_LENGTH_FULL:
+            raise Notify(
+                3,
+                10,
+                'RTC NLRI truncated: need %d bytes, got %d' % (cls.PACKED_LENGTH_FULL, len(data)),
+            )
 
         # Store complete wire format with flags reset on RT
         # Wire format: [length(1)][origin(4)][rt(8)]
