@@ -15,7 +15,11 @@ from __future__ import annotations
 
 import pytest
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.asn4 import ASN4
+from exabgp.bgp.message.open.capability.hostname import HostName
+from exabgp.bgp.message.open.capability.software import Software
 from exabgp.configuration.configuration import Configuration
 from exabgp.environment import getenv
 from exabgp.logger import log
@@ -130,3 +134,40 @@ def test_configuration_rejects_a_malformed_base64_md5_password():
 
     ok, _ = load(NEIGHBOR % "    local-as 65000;\n    peer-as 65001;\n    md5-password 'YWJj';\n    md5-base64 true;")
     assert ok
+
+
+# ============================================================================
+# OPEN capabilities
+# ============================================================================
+
+
+def test_as4_capability_must_be_four_bytes():
+    """RFC 6793 section 3: the value is a 4 octet AS number. A 2 byte value used
+    to be accepted and quietly decoded as a 16 bit ASN."""
+    with pytest.raises(Notify):
+        ASN4.unpack_capability(None, b'\xfd\xe8')
+
+
+def test_as4_capability_accepts_four_bytes():
+    assert ASN4.unpack_capability(None, b'\x00\x00\xfd\xe8') == 65000
+
+
+def test_hostname_capability_rejects_invalid_utf8():
+    """Invalid UTF-8 used to escape as UnicodeDecodeError."""
+    with pytest.raises(Notify):
+        HostName.unpack_capability(HostName(), b'\x04\xff\xfe\xfd\xfc\x00')
+
+
+def test_hostname_capability_rejects_a_truncated_name():
+    with pytest.raises(Notify):
+        HostName.unpack_capability(HostName(), b'\x40ab')
+
+
+def test_software_capability_rejects_invalid_utf8():
+    with pytest.raises(Notify):
+        Software.unpack_capability(Software(), b'\x04\xff\xfe\xfd\xfc')
+
+
+def test_software_capability_rejects_an_empty_value():
+    with pytest.raises(Notify):
+        Software.unpack_capability(Software(), b'')

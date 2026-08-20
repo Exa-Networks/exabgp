@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.capability import Capability
 
@@ -28,6 +29,9 @@ class ASN4(Capability, ASN):
     @staticmethod
     def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
         # XXX: FIXME: if instance is not ASN(0) we have two ASN - raise
+        # RFC 6793 section 3: the capability value is always a 4 octet AS number
+        if len(data) != ASN.SIZE_4BYTE:
+            raise Notify(2, 0, 'AS4 capability must be {} bytes long, got {}'.format(ASN.SIZE_4BYTE, len(data)))
         instance = ASN.unpack(data, ASN4)
         return instance
 
