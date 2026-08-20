@@ -25,6 +25,10 @@ from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
 
 
+# RD(8) + endpoint(2) + offset(2) + size(2) + base(3), the length the two byte header announces
+VPLS_PAYLOAD_SIZE = 17
+
+
 @NLRI.register(AFI.l2vpn, SAFI.vpls)
 class VPLS(NLRI):
     """VPLS NLRI using packed-bytes-first pattern.
@@ -217,6 +221,12 @@ class VPLS(NLRI):
         if len(data) < 2:
             raise Notify(3, 10, f'VPLS NLRI too short: need at least 2 bytes, got {len(data)}')
         (length,) = unpack('!H', bytes(data[0:2]))
+        if length != VPLS_PAYLOAD_SIZE:
+            raise Notify(
+                3,
+                10,
+                'l2vpn vpls length is %d, the only valid value is %d' % (length, VPLS_PAYLOAD_SIZE),
+            )
         if len(data) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
 

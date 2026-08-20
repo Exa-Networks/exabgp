@@ -132,3 +132,26 @@ def test_mpls_label_stack_without_bottom_of_stack_keeps_the_prefix() -> None:
 
     assert bytes(leftover) == b''
     assert nlri.cidr.prefix() == '10.0.0.0/24'
+
+
+# ============================================================================
+# VPLS: the payload has one valid size
+# ============================================================================
+
+
+@pytest.mark.parametrize('length', [0, 1, 16, 18, 255])
+def test_vpls_with_the_wrong_length_raises_notify(length: int) -> None:
+    """Any length was accepted as long as the payload matched it, and the
+    accessors then unpacked the endpoint from bytes which were not there."""
+    with pytest.raises(Notify):
+        decode(AFI.l2vpn, SAFI.vpls, length.to_bytes(2, 'big') + bytes(length))
+
+
+def test_vpls_with_the_right_length_still_decodes() -> None:
+    payload = (
+        bytes(8) + (1).to_bytes(2, 'big') + (2).to_bytes(2, 'big') + (8).to_bytes(2, 'big') + bytes([0, 0x10, 0x00])
+    )
+    nlri = decode(AFI.l2vpn, SAFI.vpls, (17).to_bytes(2, 'big') + payload)
+    assert nlri.endpoint == 1
+    assert nlri.offset == 2
+    assert nlri.block_size == 8

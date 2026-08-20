@@ -328,13 +328,22 @@ class TestVPLSEdgeCases:
 
     def test_unpack_length_mismatch(self) -> None:
         """Test unpacking with length mismatch raises exception"""
-        # Create invalid data with wrong length
-        invalid = b'\x00\x10' + b'\x00' * 18  # Says 16 bytes but provides 18
+        # Says 17 bytes, the only valid length, but provides 18
+        invalid = b'\x00\x11' + b'\x00' * 18
 
         with pytest.raises(Notify) as exc_info:
             VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, None, negotiated=create_negotiated())
 
         assert 'length is not consistent' in str(exc_info.value)
+
+    def test_unpack_invalid_length(self) -> None:
+        """Test unpacking a length which is not the VPLS payload size"""
+        invalid = b'\x00\x10' + b'\x00' * 16  # says 16 bytes, VPLS is always 17
+
+        with pytest.raises(Notify) as exc_info:
+            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, None, negotiated=create_negotiated())
+
+        assert 'the only valid value is 17' in str(exc_info.value)
 
     def test_pack_sets_bottom_of_stack(self) -> None:
         """Test that pack_nlri sets the bottom of stack bit"""
