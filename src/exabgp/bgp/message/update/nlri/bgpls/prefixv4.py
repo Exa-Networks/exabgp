@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
@@ -73,17 +74,14 @@ class PREFIXv4(BGPLS):
         ospf_type = None
         local_node = []
         prefix = None
+        cls.check_length(data, cls.DESCRIPTOR_OFFSET)
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
+            raise Notify(3, 10, f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
-        tlvs = data[9:]
-
-        while tlvs:
-            tlv_type, tlv_length = unpack('!HH', tlvs[:4])
-            value = tlvs[4 : 4 + tlv_length]
-            tlvs = tlvs[4 + tlv_length :]
-
+        seen = set()
+        for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
+            seen.add(tlv_type)
             if tlv_type == TLV_LOCAL_NODE_DESC:
                 while value:
                     # Unpack Local Node Descriptor Sub-TLVs
@@ -92,7 +90,7 @@ class PREFIXv4(BGPLS):
                     node, left = NodeDescriptor.unpack(value, proto_id)
                     local_node.append(node)
                     if left == value:
-                        raise RuntimeError('sub-calls should consume data')
+                        raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
                     value = left
                 continue
 
@@ -105,6 +103,14 @@ class PREFIXv4(BGPLS):
                 continue
 
             log.critical(lambda tlv_type=tlv_type: f'unknown prefix v4 TLV {tlv_type}')
+
+        # both are mandatory (RFC 7752 section 3.2), and json() assumes they are there
+        for mandatory, mandatory_name in (
+            (TLV_LOCAL_NODE_DESC, 'Local Node Descriptors'),
+            (TLV_IP_REACHABILITY, 'IP Reachability Information'),
+        ):
+            if mandatory not in seen:
+                raise Notify(3, 10, f'BGP-LS {cls.NAME} NLRI is missing the {mandatory_name} TLV')
 
         return cls(
             domain=domain,

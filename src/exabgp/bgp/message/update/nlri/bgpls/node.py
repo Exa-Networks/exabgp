@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
@@ -78,18 +79,23 @@ class NODE(BGPLS):
 
     @classmethod
     def unpack_nlri(cls, data, rd):
+        cls.check_length(data, cls.DESCRIPTOR_OFFSET)
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
+            raise Notify(3, 10, f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
 
         # unpack list of node descriptors
-        node_type, node_length = unpack('!HH', data[9:13])
+        tlvs = list(cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]))
+        if not tlvs:
+            raise Notify(3, 10, 'BGP-LS Node NLRI has no Local Node descriptor')
+        node_type, values = tlvs[0]
         if node_type != NODE_DESCRIPTOR_TYPE:
-            raise Exception(
-                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
+            raise Notify(
+                3,
+                10,
+                f'Unknown type: {node_type}. Only Local Node descriptors are allowed in a Node type msg',
             )
-        values = data[13 : 13 + node_length]
 
         node_ids = []
         while values:
@@ -97,7 +103,7 @@ class NODE(BGPLS):
             node_id, left = NodeDescriptor.unpack(values, proto_id)
             node_ids.append(node_id)
             if left == values:
-                raise RuntimeError('sub-calls should consume data')
+                raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
             values = left
 
         return cls(domain=domain, proto_id=proto_id, node_ids=node_ids, route_d=rd, packed=data)
