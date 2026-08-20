@@ -172,6 +172,17 @@ def main() -> None:
     while True:
         try:
             line = sys.stdin.readline()
+        except KeyboardInterrupt:
+            ACL.end()
+            return
+        except OSError as exc:
+            # a broken stdin never recovers: without this the handler below would
+            # swallow the error and the loop would spin without ever making progress
+            print(f'flow: can not read from stdin: {exc}', file=sys.stderr)
+            ACL.end()
+            return
+
+        try:
             if not line or 'shutdown' in line:
                 ACL.end()
             buffered += line

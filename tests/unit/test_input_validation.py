@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import pathlib
 import platform
+import sys
 from struct import pack
 
 import pytest
@@ -432,6 +433,27 @@ def test_flow_acl_renders_a_valid_rule() -> None:
     assert '-s 10.0.0.0/24' in acl
     assert '-d 192.0.2.1/32' in acl
     assert '--dport 80' in acl
+
+
+@pytest.mark.timeout(15)
+def test_flow_exits_when_stdin_can_not_be_read() -> None:
+    """A read error was caught by the "except Exception" wrapping the whole loop
+    body, so the loop kept going without ever making progress and burned a core."""
+    import io
+
+    from exabgp.application.flow import main
+
+    class Broken(io.IOBase):
+        def readline(self, *args: object) -> str:
+            raise OSError('simulated stdin failure')
+
+    stdin = sys.stdin
+    sys.stdin = Broken()  # type: ignore[assignment]
+    try:
+        with pytest.raises(SystemExit):
+            main()
+    finally:
+        sys.stdin = stdin
 
 
 def test_healthcheck_rejects_a_newline_in_an_attribute() -> None:
