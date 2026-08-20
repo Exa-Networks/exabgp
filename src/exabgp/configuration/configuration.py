@@ -72,8 +72,9 @@ class _Configuration:
                     result = True
                 else:
                     log.error(
-                        lambda change=change,
-                        neighbor_name=neighbor_name: f'the route family ({change.nlri.short()}) is not configured on neighbor {neighbor_name}',
+                        lambda change=change, neighbor_name=neighbor_name: (
+                            f'the route family ({change.nlri.short()}) is not configured on neighbor {neighbor_name}'
+                        ),
                         'configuration',
                     )
         return result
@@ -97,8 +98,9 @@ class _Configuration:
                     self.neighbors[neighbor].messages.append(operational)
                 else:
                     log.error(
-                        lambda neighbor=neighbor,
-                        family=family: f'the route family {family} is not configured on neighbor {neighbor}',
+                        lambda neighbor=neighbor, family=family: (
+                            f'the route family {family} is not configured on neighbor {neighbor}'
+                        ),
                         'configuration',
                     )
                     result = False
@@ -114,8 +116,9 @@ class _Configuration:
                         self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi, refresh.safi))
                     else:
                         log.error(
-                            lambda family=family,
-                            neighbor=neighbor: f'the route family {family} is not configured on neighbor {neighbor}',
+                            lambda family=family, neighbor=neighbor: (
+                                f'the route family {family} is not configured on neighbor {neighbor}'
+                            ),
                             'configuration',
                         )
                         result = False

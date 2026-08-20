@@ -267,8 +267,9 @@ class Processes:
                     raw = self._buffer.get(process, '') + buf
                     if '\n' not in raw and len(raw) > self.MAX_COMMAND_SIZE:
                         log.error(
-                            lambda process=process,
-                            size=len(raw): f'oversized command from process {process} : {size} bytes',
+                            lambda process=process, size=len(raw): (
+                                f'oversized command from process {process} : {size} bytes'
+                            ),
                             'process',
                         )
                         self._buffer.pop(process, None)
@@ -338,7 +339,9 @@ class Processes:
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(
-                        lambda exc=exc: f'error received while sending data to helper program, retrying ({errstr(exc)})',
+                        lambda exc=exc: (
+                            f'error received while sending data to helper program, retrying ({errstr(exc)})'
+                        ),
                         'process',
                     )
                     continue

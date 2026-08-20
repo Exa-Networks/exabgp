@@ -446,8 +446,10 @@ class Attributes(dict):
                 return self.parse(left, direction, negotiated)
             # XXX: Check if we are missing any
             log.debug(
-                lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) unspecified (should not happen)'.format(
-                    Attribute.CODE.names.get(aid, 'unset'), flag, aid
+                lambda: (
+                    'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) unspecified (should not happen)'.format(
+                        Attribute.CODE.names.get(aid, 'unset'), flag, aid
+                    )
                 ),
                 'parser',
             )

@@ -192,7 +192,9 @@ def run(comment, configurations, pid=0):
 
             if os.getuid() != 0:
                 log.error(
-                    lambda pipename=pipename: f'> chown {os.getuid()}:{os.getgid()} {os.getcwd()}/run/{pipename}.{{in,out}}',
+                    lambda pipename=pipename: (
+                        f'> chown {os.getuid()}:{os.getgid()} {os.getcwd()}/run/{pipename}.{{in,out}}'
+                    ),
                     'cli control',
                 )
         else:

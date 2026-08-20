@@ -308,8 +308,10 @@ class Peer:
 
             if remote_id < local_id:
                 log.debug(
-                    lambda: 'closing incoming connection as we have an outgoing connection with higher router-id for {}'.format(
-                        connection.name()
+                    lambda: (
+                        'closing incoming connection as we have an outgoing connection with higher router-id for {}'.format(
+                            connection.name()
+                        )
                     ),
                     self.id(),
                 )
@@ -322,8 +324,10 @@ class Peer:
         # accept the connection
         if self.proto:
             log.debug(
-                lambda: 'closing outgoing connection as we have another incoming on with higher router-id for {}'.format(
-                    connection.name()
+                lambda: (
+                    'closing outgoing connection as we have another incoming on with higher router-id for {}'.format(
+                        connection.name()
+                    )
                 ),
                 self.id(),
             )
