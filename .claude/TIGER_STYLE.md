@@ -65,21 +65,47 @@ The property tests in `tests/fuzz/test_nlri_decoder_properties.py` hold every re
 this rule. New decoders are covered the day they are registered. Falsifying examples become plain
 regression tests in `tests/unit/test_nlri_wire_bounds.py`.
 
-### 1.2 Assertions are for programmer errors, never for input
+### 1.2 Assert your invariants, never your input
 
 Python strips `assert` under `-O`. An assertion is therefore a statement about *our* code, checked
-during development, and never a validation of anything that arrives from outside the process.
+during development and during every test run, and never a validation of anything that arrives from
+outside the process.
 
 | Source of the problem | What to raise |
 |---|---|
 | Peer supplied bytes | `Notify` |
 | Operator configuration | `ValueError` with the parser context |
 | API or CLI client input | An error response, never an exception through the reactor |
-| Our own invariant broken | `assert`, or an explicit `raise RuntimeError` on a hot path that must hold under `-O` |
+| Our own invariant broken | `assert`, or an explicit `raise RuntimeError` on a path that must hold under `-O` |
 
-Assert liberally on invariants: non-trivial functions deserve their pre and postconditions written
-down. Assert the negative space too, not only that a value is what you expect but that it is not
-what it must never be.
+**Assert liberally.** An invariant which is only in your head is one refactor away from being false.
+Write it down where the code can check it:
+
+- **Preconditions.** What the function needs from its caller. `assert self._label_size % 3 == 0`.
+- **Postconditions.** What the function promises. `assert len(packed) == self.LENGTH`.
+- **The negative space.** Not only that a value is what you expect, but that it is not what it must
+  never be. An offset which must stay inside the buffer, a counter which must never go negative, a
+  cache which must never hold a mutable NLRI.
+- **Structural agreement.** When two representations of the same thing exist, assert they agree. The
+  label stack bug lived exactly there: the decoder and the accessors disagreed, and nothing said so.
+
+Two assertions in a non-trivial function is a reasonable habit, not a quota. An assertion which
+cannot fail is noise, and an assertion which restates the line above it is worse.
+
+```python
+# WRONG: the peer decides whether this holds, and -O deletes the check
+assert len(data) >= 8
+
+# RIGHT: the peer decides, so the peer gets told
+if len(data) < 8:
+    raise Notify(3, 10, 'not enough data to extract the route distinguisher of the NLRI')
+
+# RIGHT: we decide this, and it must hold for the slice below to mean anything
+assert self._label_size % 3 == 0, 'a label stack is made of three byte labels'
+```
+
+ExaBGP is not run with `-O`, and must not be: the assertions are part of how the daemon fails
+loudly in testing rather than quietly in production. Nothing may *depend* on them running.
 
 ### 1.3 Bound everything
 
@@ -197,6 +223,7 @@ why, not left as a silent gap.
 | Record structure, do not re-guess it | `_label_size` in `bgp/message/update/nlri/label.py` |
 | Named caps on remote input | `MAX_COMMAND_SIZE` in `reactor/api/processes.py`, `MAX_GROUP_BYTES` in `reactor/api/command/group.py` |
 | Strict validation of operator secrets | `util/psk.py` |
+| Invariants written down where the code checks them | `_label_end_offset` in `bgp/message/update/nlri/label.py` |
 | Property tests over a whole registry | `tests/fuzz/test_nlri_decoder_properties.py` |
 
 ---
@@ -208,9 +235,12 @@ Mechanical, in `./qa/bin/check_tiger_style` (part of `./qa/bin/test_everything`)
 | Check | Rule | How it fails |
 |---|---|---|
 | `bare_except` | 1.4 | Any occurrence fails |
+| `input_assert` | 1.2 | Any occurrence fails: an `assert` which tests a wire data parameter (`data`, `bgp`, `payload`, `raw`, `packed`, `buffer`) |
 | `long_function` | 1.5 | Fails if the count rises above the baseline |
 | `silent_except` | 1.4 | Fails if the count rises above the baseline |
-| `wire_assert` | 1.2 | Fails if the count of `assert` under `bgp/message/` rises above the baseline |
+
+Assertions about our own state are not counted: they are the point of rule 1.2, not a violation of
+it. Only the ones which validate the bytes a function was handed are.
 
 The baseline lives in `qa/tiger_style.json` and only ever goes **down**. Lower it with
 `./qa/bin/check_tiger_style --update-baseline` after removing violations, and say so in the commit.

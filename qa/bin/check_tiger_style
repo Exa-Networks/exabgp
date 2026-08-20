@@ -5,13 +5,17 @@ Check the mechanical part of TIGER STYLE (.claude/TIGER_STYLE.md).
 Four rules can be checked without reading the code:
 
   bare_except    no bare `except:`, any occurrence fails (rule 1.4)
+  input_assert   no `assert` about the bytes a function was handed (rule 1.2)
   long_function  functions over 70 lines (rule 1.5)
   silent_except  `except SomeError: pass`, an error swallowed without a word (rule 1.4)
-  wire_assert    `assert` under bgp/message, where the data comes from a peer (rule 1.2)
 
-bare_except must be zero. The other three are ratcheted: the counts in
-qa/tiger_style.json are a ceiling which only ever goes down, so the tree can carry the
-violations it already has while no new one gets in.
+bare_except and input_assert must be zero: the first is never right, and the second is a
+validation of peer data written with a statement `-O` deletes. Assertions about our own
+invariants are wanted, so only the ones which test a wire data parameter are counted.
+
+long_function and silent_except are ratcheted: the counts in qa/tiger_style.json are a
+ceiling which only ever goes down, so the tree can carry the violations it already has
+while no new one gets in.
 
 Usage:
     ./qa/bin/check_tiger_style                    # check, fail if a count went up
@@ -34,13 +38,13 @@ BASELINE_FILE = ROOT / 'qa' / 'tiger_style.json'
 # a function longer than this does more than one thing (TIGER_STYLE 1.5)
 MAX_FUNCTION_LINES = 70
 
-# the decoders below this path read bytes sent by a peer, where assert is never the answer
-WIRE_PATH = 'bgp/message'
+# a parameter with one of these names holds bytes which came from outside the process
+WIRE_PARAMETERS = frozenset(('data', 'bgp', 'payload', 'raw', 'packed', 'buffer'))
 
-RULES = ('bare_except', 'long_function', 'silent_except', 'wire_assert')
+RULES = ('bare_except', 'input_assert', 'long_function', 'silent_except')
 
-# a rule which must always be zero, whatever the baseline says
-ALWAYS_ZERO = ('bare_except',)
+# rules which must always be zero, whatever the baseline says
+ALWAYS_ZERO = ('bare_except', 'input_assert')
 
 
 class Violation:
@@ -69,7 +73,6 @@ def inspect(path: Path) -> list[Violation]:
     except SyntaxError as exc:
         return [Violation('bare_except', relative, exc.lineno or 0, f'file does not parse: {exc.msg}')]
 
-    is_wire = WIRE_PATH in relative
     found: list[Violation] = []
 
     for node in ast.walk(tree):
@@ -77,6 +80,7 @@ def inspect(path: Path) -> list[Violation]:
             lines = (node.end_lineno or node.lineno) - node.lineno + 1
             if lines > MAX_FUNCTION_LINES:
                 found.append(Violation('long_function', relative, node.lineno, f'{node.name} is {lines} lines'))
+            found.extend(input_asserts(node, relative))
             continue
 
         if isinstance(node, ast.ExceptHandler):
@@ -86,9 +90,34 @@ def inspect(path: Path) -> list[Violation]:
                 found.append(Violation('silent_except', relative, node.lineno, 'error swallowed by pass'))
             continue
 
-        if isinstance(node, ast.Assert) and is_wire:
-            found.append(Violation('wire_assert', relative, node.lineno, 'assert on a path which reads peer data'))
+    return found
 
+
+def wire_parameters(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    """The names this function uses for the bytes it was handed."""
+    arguments = function.args
+    declared = arguments.posonlyargs + arguments.args + arguments.kwonlyargs
+    return {argument.arg for argument in declared if argument.arg in WIRE_PARAMETERS}
+
+
+def input_asserts(function: ast.FunctionDef | ast.AsyncFunctionDef, relative: str) -> list[Violation]:
+    """Assertions which validate the bytes the function was handed.
+
+    An assertion about our own state is wanted, and is not reported. An assertion about
+    the input is a check the peer can delete by having the daemon started with -O.
+    """
+    wire = wire_parameters(function)
+    if not wire:
+        return []
+
+    found: list[Violation] = []
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Assert):
+            continue
+        named = {used.id for used in ast.walk(node.test) if isinstance(used, ast.Name)}
+        tested = sorted(named & wire)
+        if tested:
+            found.append(Violation('input_assert', relative, node.lineno, f'{function.name} asserts about {tested[0]}'))
     return found
 
 

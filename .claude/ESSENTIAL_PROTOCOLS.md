@@ -312,7 +312,7 @@ uv run ruff format src && uv run ruff check src  # Must pass
 ✅ **Required for every line you write:**
 - Check the length before every read of wire data
 - Malformed peer input raises `Notify`, never `IndexError`, `struct.error` or `ValueError`
-- `assert` is for OUR invariants only, never for peer or operator input (`-O` removes it)
+- `assert` your invariants liberally (preconditions, postconditions, the negative space), never your input (`-O` removes it)
 - Every loop bounded, every buffer capped by a named constant, state cleared on disconnect
 - No bare `except:`, no new `except X: pass` without a comment saying why
 - New and modified functions under 70 lines
