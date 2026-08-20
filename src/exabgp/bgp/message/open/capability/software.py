@@ -11,6 +11,7 @@ import json
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.open.capability.capability import decode_utf8 as _decode_utf8
 from exabgp.bgp.message.notification import Notify
 from exabgp.version import version
 from exabgp.util.types import Buffer
@@ -45,5 +46,5 @@ class Software(Capability):
         l1 = data[0]
         if len(data) < l1 + 1:
             raise Notify(2, 0, f'Software capability truncated: need {l1 + 1} bytes, got {len(data)}')
-        instance.software_version = bytes(data[1 : l1 + 1]).decode('utf-8')
+        instance.software_version = _decode_utf8(data[1 : l1 + 1], 'software version')
         return instance

@@ -12,6 +12,7 @@ import json
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.open.capability.capability import decode_utf8 as _decode_utf8
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.dns import host, domain
 from exabgp.util.types import Buffer
@@ -64,9 +65,9 @@ class HostName(Capability):
         l1 = data[0]
         if len(data) < l1 + 2:
             raise Notify(2, 0, f'Hostname capability truncated: need {l1 + 2} bytes for hostname, got {len(data)}')
-        instance.host_name = bytes(data[1 : l1 + 1]).decode('utf-8')
+        instance.host_name = _decode_utf8(data[1 : l1 + 1], 'host name')
         l2 = data[l1 + 1]
         if len(data) < l1 + 2 + l2:
             raise Notify(2, 0, f'Hostname capability truncated: need {l1 + 2 + l2} bytes total, got {len(data)}')
-        instance.domain_name = bytes(data[l1 + 2 : l1 + 2 + l2]).decode('utf-8')
+        instance.domain_name = _decode_utf8(data[l1 + 2 : l1 + 2 + l2], 'domain name')
         return instance

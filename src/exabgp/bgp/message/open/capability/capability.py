@@ -15,6 +15,28 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 
+def decode_utf8(data: Buffer, what: str) -> str:
+    """Decode a peer supplied string from a capability.
+
+    The peer controls these bytes, so a decoding failure must end the session with
+    a NOTIFICATION and not with a UnicodeDecodeError escaping the parser.
+
+    Args:
+        data: The raw bytes to decode
+        what: Name of the field, used in the error message
+
+    Returns:
+        The decoded string
+
+    Raises:
+        Notify: If the bytes are not valid UTF-8
+    """
+    try:
+        return bytes(data).decode('utf-8')
+    except UnicodeDecodeError as exc:
+        raise Notify(2, 0, f'the {what} in the capability is not valid UTF-8 ({exc})') from None
+
+
 class CapabilityCode(int):
     _cache: ClassVar[dict[int, CapabilityCode]] = dict()
 
