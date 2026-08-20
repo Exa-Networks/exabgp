@@ -207,7 +207,7 @@ class LINK(BGPLS):
         nlri["interface-addresses"] = [a.as_dict() for a in self.iface_addrs]
         nlri["neighbor-addresses"] = [a.as_dict() for a in self.neigh_addrs]
         nlri["multi-topology-ids"] = [t.as_dict() for t in self.topology_ids]
-        nlri["link-identifiers"] = [l.as_dict() for l in self.link_ids]
+        nlri["link-identifiers"] = [identifier.as_dict() for identifier in self.link_ids]
         nlri["rd"] = None if self.route_d is None else self.route_d._str()
         return nlri
 
