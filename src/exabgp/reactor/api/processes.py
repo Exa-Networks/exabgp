@@ -128,6 +128,9 @@ class Processes:
 
     # Write queue backpressure thresholds
     WRITE_QUEUE_HIGH_WATER: int = 1000  # Pause writes when queue exceeds this
+    # A single API command must fit on one line: without a cap a helper process which
+    # never sends a newline would grow _buffer until the daemon runs out of memory.
+    MAX_COMMAND_SIZE: int = 1024 * 1024
     WRITE_QUEUE_LOW_WATER: int = 100  # Resume writes when queue drops below this
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
@@ -194,6 +197,11 @@ class Processes:
                 pass  # Reader might not be registered or FD already closed
 
         del self._process[process_name]
+        # nothing will ever complete the partial line, and the group buffer is dead too
+        from exabgp.reactor.api.command.group import clear_group
+
+        self._buffer.pop(process_name, None)
+        clear_group(process_name)
         self._update_fds()
         thread = Thread(target=self._terminate_run, args=(process, process_name))
         thread.start()
@@ -464,6 +472,18 @@ class Processes:
                         continue
 
                     raw = self._buffer.get(process, '') + buf
+                    if '\n' not in raw and len(raw) > self.MAX_COMMAND_SIZE:
+                        log.error(
+                            lazymsg(
+                                'api.command.oversized process={pr} size={size}',
+                                pr=process,
+                                size=len(raw),
+                            ),
+                            'processes',
+                        )
+                        self._buffer.pop(process, None)
+                        self._handle_problem(process)
+                        continue
 
                     while '\n' in raw:
                         line, raw = raw.split('\n', 1)
@@ -583,6 +603,14 @@ class Processes:
 
             # Buffer incomplete lines
             raw = self._buffer.get(process_name, '') + buf
+            if '\n' not in raw and len(raw) > self.MAX_COMMAND_SIZE:
+                log.error(
+                    lazymsg('api.command.oversized process={pn} size={size}', pn=process_name, size=len(raw)),
+                    'processes',
+                )
+                self._buffer.pop(process_name, None)
+                self._handle_problem(process_name)
+                return
 
             # Extract complete lines and queue as commands
             # Note: We queue all available commands here, but received_async() will

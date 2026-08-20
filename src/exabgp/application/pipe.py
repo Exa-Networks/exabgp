@@ -15,12 +15,16 @@ import time
 import signal
 import select
 import traceback
-from collections import deque
+from exabgp.util.backlog import Backlog
 
 from exabgp.reactor.network.error import error
 
 kb = 1024
 mb = kb * 1024
+
+# a single API command must fit in one line, and the backlog is what we could not forward yet
+MAX_COMMAND_SIZE = mb
+MAX_BACKLOG_SIZE = 100 * mb
 
 
 def named_pipe(root: str, pipename: str = 'exabgp') -> list[str]:
@@ -242,9 +246,9 @@ class Control:
             self.r_pipe: std_writer,
         }
 
-        backlog: dict[int | None, deque[bytes]] = {
-            standard_in: deque(),
-            self.r_pipe: deque(),
+        backlog: dict[int | None, Backlog] = {
+            standard_in: Backlog(),
+            self.r_pipe: Backlog(),
         }
 
         store = {
@@ -255,12 +259,16 @@ class Control:
         def consume(source: int) -> None:
             if not backlog[source] and b'\n' not in store[source]:
                 store[source] += read[source](1024)
+                # a source which never sends a newline would otherwise grow store forever
+                if len(store[source]) > MAX_COMMAND_SIZE and b'\n' not in store[source]:
+                    sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
+                    sys.exit(1)
             else:
                 backlog[source].append(read[source](1024))
                 # assuming a route takes 80 chars, 100 Mb is over 1Millions routes
                 # something is really wrong if it was not consummed
-                if len(backlog) > 100 * mb:
-                    sys.stderr.write('using too much memory - exiting')
+                if backlog[source].nbytes + len(store[source]) > MAX_BACKLOG_SIZE:
+                    sys.stderr.write('using too much memory - exiting\n')
                     sys.exit(1)
 
         reading = [standard_in, self.r_pipe]

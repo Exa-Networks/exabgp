@@ -10,6 +10,7 @@ NOTIFICATION or a ValueError.
 from __future__ import annotations
 
 import os
+import pathlib
 import platform
 from struct import pack
 
@@ -350,3 +351,51 @@ def test_group_buffer_refuses_to_grow_past_its_limit(monkeypatch) -> None:
     assert not group_module._add_to_group(service, [], 'four')
     # the group is dropped rather than kept half full
     assert not group_module._is_grouping(service)
+
+
+def test_backlog_counts_bytes_not_chunks() -> None:
+    """The CLI helpers compared len(backlog) - the number of sources, always two -
+    against a 100 MB limit, so the memory guard could never fire."""
+    from exabgp.util.backlog import Backlog
+
+    backlog = Backlog()
+    assert backlog.nbytes == 0
+    assert not backlog
+
+    backlog.append(b'a' * 1024)
+    backlog.append(b'b' * 512)
+    assert len(backlog) == 2
+    assert backlog.nbytes == 1536
+
+    assert backlog.popleft() == b'a' * 1024
+    assert backlog.nbytes == 512
+
+    backlog.clear()
+    assert backlog.nbytes == 0
+    assert not backlog
+
+
+def test_cli_helpers_bound_their_buffers_by_bytes() -> None:
+    """Guard against reintroducing the exact bug: the limit was written as
+    len(backlog), the number of sources in the dict and always two, rather than
+    the number of bytes queued. The check is on the source because the buffering
+    lives inside a closure in the select loop of each helper.
+    """
+    root = pathlib.Path(__file__).resolve().parents[2] / 'src' / 'exabgp' / 'application'
+    for name in ('pipe.py', 'unixsocket.py'):
+        source = (root / name).read_text()
+        assert 'if len(backlog) >' not in source, f'{name} bounds its buffer by source count'
+        assert 'backlog[source].nbytes' in source, f'{name} does not bound its buffer by bytes'
+        assert 'MAX_COMMAND_SIZE' in source, f'{name} has no maximum command length'
+
+
+def test_processes_caps_a_command_without_a_newline() -> None:
+    """A helper process which never sends a newline grew _buffer without bound."""
+    from exabgp.reactor.api.processes import Processes
+
+    assert Processes.MAX_COMMAND_SIZE > 0
+    source = (
+        pathlib.Path(__file__).resolve().parents[2] / 'src' / 'exabgp' / 'reactor' / 'api' / 'processes.py'
+    ).read_text()
+    # both the sync and the async reader must enforce it
+    assert source.count('self.MAX_COMMAND_SIZE') == 2

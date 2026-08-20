@@ -20,6 +20,8 @@ import re
 import time
 import threading
 from collections import deque
+
+from exabgp.util.backlog import Backlog
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable
@@ -28,6 +30,10 @@ from exabgp.reactor.network.error import error
 
 kb = 1024
 mb = kb * 1024
+
+# a single API command must fit in one line, and the backlog is what we could not forward yet
+MAX_COMMAND_SIZE = mb
+MAX_BACKLOG_SIZE = 100 * mb
 
 
 class ResponseType(Enum):
@@ -495,16 +501,21 @@ class Control:
         write: dict[int, Callable[[bytes], int] | None] = {
             standard_in: None
         }  # Will be set to socket_writer when client connects
-        backlog: dict[int, deque[bytes]] = {standard_in: deque()}
+        backlog: dict[int, Backlog] = {standard_in: Backlog()}
         store: dict[int, bytes] = {standard_in: b''}
 
         def consume(source: int) -> None:
             if not backlog[source] and b'\n' not in store[source]:
                 store[source] += read[source](1024)
+                # a source which never sends a newline would otherwise grow store forever
+                if len(store[source]) > MAX_COMMAND_SIZE and b'\n' not in store[source]:
+                    sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
+                    sys.stderr.flush()
+                    sys.exit(1)
             else:
                 backlog[source].append(read[source](1024))
-                # Memory limit check
-                if len(backlog) > 100 * mb:
+                # Memory limit check, on the bytes queued and not on the number of sources
+                if backlog[source].nbytes + len(store[source]) > MAX_BACKLOG_SIZE:
                     sys.stderr.write('using too much memory - exiting\n')
                     sys.stderr.flush()
                     sys.exit(1)
@@ -597,7 +608,7 @@ class Control:
                             # Initialize data structures for client
                             read[new_fd] = make_socket_reader(new_fd)
                             write[new_fd] = make_std_writer_for_client(new_fd)
-                            backlog[new_fd] = deque()
+                            backlog[new_fd] = Backlog()
                             store[new_fd] = b''
                     else:
                         # Single-client mode (legacy)
@@ -625,7 +636,7 @@ class Control:
                             # Initialize data structures for client
                             read[self.client_fd] = socket_reader
                             write[self.client_fd] = std_writer  # Forward socket commands to ExaBGP stdout
-                            backlog[self.client_fd] = deque()
+                            backlog[self.client_fd] = Backlog()
                             store[self.client_fd] = b''
 
                             # Update write destinations
