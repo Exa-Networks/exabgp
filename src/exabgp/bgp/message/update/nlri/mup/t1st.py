@@ -11,6 +11,7 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import Family
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from struct import pack
 
@@ -167,12 +168,21 @@ class Type1SessionTransformedRoute(MUP):
     @classmethod
     def unpack(cls, data, afi):
         datasize = len(data)
+        cls.check_length(data, cls.PAYLOAD_OFFSET)
         rd = RouteDistinguisher.unpack(data[:8])
         prefix_ip_len = data[8]
-        ip_offset = prefix_ip_len // 8
-        ip_remainder = prefix_ip_len % 8
-        if ip_remainder != 0:
-            ip_offset += 1
+        max_bits = 32 if afi != AFI.ipv6 else 128
+        if prefix_ip_len > max_bits:
+            raise Notify(
+                3,
+                10,
+                'mup t1st prefix length is %d bits, more than the %d of an %s address' % (prefix_ip_len, max_bits, afi),
+            )
+
+        ip_offset = (prefix_ip_len + 7) // 8
+
+        # RD(8) + prefix_len(1) + prefix + teid(4) + qfi(1) + endpoint_len(1)
+        cls.check_length(data, 9 + ip_offset + 6)
 
         ip = data[9 : 9 + ip_offset]
         ip_size = 4 if afi != AFI.ipv6 else 16
@@ -191,9 +201,12 @@ class Type1SessionTransformedRoute(MUP):
         size += 1
 
         if endpoint_ip_len not in [32, 128]:
-            raise RuntimeError('mup t1st endpoint ip length is not 32bit or 128bit, unexpect len: %d' % endpoint_ip_len)
+            raise Notify(
+                3, 10, 'mup t1st endpoint ip length is not 32bit or 128bit, unexpect len: %d' % endpoint_ip_len
+            )
 
         ep_len = endpoint_ip_len // 8
+        cls.check_length(data, size + ep_len)
         endpoint_ip = IP.unpack(data[size : size + ep_len])
         size += ep_len
 
@@ -206,8 +219,17 @@ class Type1SessionTransformedRoute(MUP):
             source_ip_len = data[size]
             size += 1
             if source_ip_len not in [32, 128]:
-                raise RuntimeError('mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len)
+                raise Notify(
+                    3, 10, 'mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len
+                )
             sip_len = source_ip_len // 8
+            if datasize != size + sip_len:
+                raise Notify(
+                    3,
+                    10,
+                    'mup t1st is %d bytes, expecting %d for a source ip of %d bits'
+                    % (datasize, size + sip_len, source_ip_len),
+                )
             source_ip = IP.unpack(data[size : size + sip_len])
             size += sip_len
 

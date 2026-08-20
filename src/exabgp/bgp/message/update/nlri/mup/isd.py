@@ -10,6 +10,7 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 
 from struct import pack
@@ -83,9 +84,26 @@ class InterworkSegmentDiscoveryRoute(MUP):
 
     @classmethod
     def unpack(cls, data, afi):
+        cls.check_length(data, cls.PAYLOAD_OFFSET)
         rd = RouteDistinguisher.unpack(data[:8])
         prefix_ip_len = data[8]
         size = 4 if afi != AFI.ipv6 else 16
+        max_bits = size * 8
+        if prefix_ip_len > max_bits:
+            raise Notify(
+                3,
+                10,
+                'mup isd prefix length is %d bits, more than the %d of an %s address' % (prefix_ip_len, max_bits, afi),
+            )
+
+        expected = 9 + (prefix_ip_len + 7) // 8
+        if len(data) != expected:
+            raise Notify(
+                3,
+                10,
+                'mup isd is %d bytes, expecting %d for a prefix of %d bits' % (len(data), expected, prefix_ip_len),
+            )
+
         ip = data[9:]
         padding = size - len(ip)
         if padding != 0 and padding > 0:
