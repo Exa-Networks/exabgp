@@ -64,4 +64,4 @@ class SrLabelIndex:
         return '"sr-label-index": %d' % (self.labelindex)
 
     def as_dict(self):
-        return {"sr-label-index": self.labelindex}
+        return {'sr-label-index': self.labelindex}

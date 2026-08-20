@@ -90,7 +90,7 @@ class SrAdjacencyLan(FlagLS):
         return f'"sr-adj-lan-sids": {json.dumps(self.sr_adj_lan_sids)}'
 
     def as_dict(self):
-        return {"sr-adj-lan-sids": self.sr_adj_lan_sids}
+        return {'sr-adj-lan-sids': self.sr_adj_lan_sids}
 
     def merge(self, klass):
         self.sr_adj_lan_sids.extend(klass.sr_adj_lan_sids)

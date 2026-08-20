@@ -73,13 +73,13 @@ class VPLS(NLRI):
     def as_dict(self):
         family = self.family().afi_safi()
         nlri = {
-            "rd": self.rd._str() if self.rd.rd else None,
-            "endpoint": self.endpoint,
-            "base": self.base,
-            "offset": self.offset,
-            "size": self.size,
-            "nexthop": None if self.nexthop is None else str(self.nexthop),
-            "family": {"afi": str(family[0]), "safi": str(family[1])},
+            'rd': self.rd._str() if self.rd.rd else None,
+            'endpoint': self.endpoint,
+            'base': self.base,
+            'offset': self.offset,
+            'size': self.size,
+            'nexthop': None if self.nexthop is None else str(self.nexthop),
+            'family': {'afi': str(family[0]), 'safi': str(family[1])},
         }
         return nlri
 

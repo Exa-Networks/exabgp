@@ -60,4 +60,4 @@ class Srv6Capabilities(BaseLS):
         )
 
     def as_dict(self):
-        return {"srv6-capabilities": {"flags": self.flags}}
+        return {'srv6-capabilities': {'flags': self.flags}}

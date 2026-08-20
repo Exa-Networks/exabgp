@@ -109,9 +109,9 @@ class Srv6SidInformation:
 
     def as_dict(self):
         result = {
-            "sid": str(self.sid),
-            "flags": 0,
-            "endpoint_behavior": self.behavior,
+            'sid': str(self.sid),
+            'flags': 0,
+            'endpoint_behavior': self.behavior,
         }
         for subsubtlv in self.subsubtlvs:
             result.update(subsubtlv.as_dict())

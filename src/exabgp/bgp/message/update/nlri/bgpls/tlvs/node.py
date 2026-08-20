@@ -159,17 +159,17 @@ class NodeDescriptor:
     def as_dict(self):
         result = {}
         if self.node_type == NODE_DESC_TLV_AS:
-            result["autonomous-system"] = self.node_id
+            result['autonomous-system'] = self.node_id
         if self.node_type == NODE_DESC_TLV_BGPLS_ID:
-            result["bgp-ls-identifier"] = str(self.node_id)
+            result['bgp-ls-identifier'] = str(self.node_id)
         if self.node_type == NODE_DESC_TLV_OSPF_AREA:
-            result["ospf-area-id"] = str(self.node_id)
+            result['ospf-area-id'] = str(self.node_id)
         if self.node_type == NODE_DESC_TLV_IGP_ROUTER:
-            result["router-id"] = str(self.node_id[0])
+            result['router-id'] = str(self.node_id[0])
         if self.dr_id:
-            result["designated-router-id"] = str(self.dr_id)
+            result['designated-router-id'] = str(self.dr_id)
         if self.psn:
-            result["psn"] = str(self.psn)
+            result['psn'] = str(self.psn)
         return result
 
     def __eq__(self, other):

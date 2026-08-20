@@ -124,7 +124,7 @@ class BaseLS:
 
     def as_dict(self):
         if isinstance(self.content, bytes):
-            return {self.JSON: self.content.decode("utf-8")}
+            return {self.JSON: self.content.decode('utf-8')}
         return {self.JSON: self.content}
 
     def __repr__(self):
@@ -165,7 +165,7 @@ class GenericLSID(BaseLS):
         return f'"generic-lsid-{self.TLV}": [{merged}]'
 
     def as_dict(self):
-        return {f"generic-lsid-{self.TLV}": [hexstring(c) for c in self.content]}
+        return {f'generic-lsid-{self.TLV}': [hexstring(c) for c in self.content]}
 
     @classmethod
     def unpack(cls, data):

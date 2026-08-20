@@ -104,4 +104,4 @@ class Srv6EndX(FlagLS):
         return '"srv6-endx": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
 
     def as_dict(self):
-        return {"srv6-endx": self.content}
+        return {'srv6-endx': self.content}

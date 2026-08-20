@@ -79,4 +79,4 @@ class SrGb:
         return f'"sr-srgbs": {json.dumps(self.srgbs)}'
 
     def as_dict(self):
-        return {"sr-srgbs": self.srgbs}
+        return {'sr-srgbs': self.srgbs}

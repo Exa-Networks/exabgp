@@ -641,16 +641,16 @@ class Flow(NLRI):
             s = []
             for idx, rule in enumerate(rules):
                 if idx and rule.operations & NumericOperator.AND:
-                    s[-1] = f"{s[-1]}{rule}"
+                    s[-1] = f'{s[-1]}{rule}'
                 else:
-                    s.append(f"{rule}")
+                    s.append(f'{rule}')
             r[rules[0].NAME] = s
 
         flow = {
-            "rules": r,
-            "nexthop": None if self.nexthop is NoNextHop else str(self.nexthop),
-            "rd": None if self.rd is RouteDistinguisher.NORD else self.rd._str(),
-            "family": {"afi": f"{family[0]}", "safi": f"{family[1]}"}
+            'rules': r,
+            'nexthop': None if self.nexthop is NoNextHop else str(self.nexthop),
+            'rd': None if self.rd is RouteDistinguisher.NORD else self.rd._str(),
+            'family': {'afi': f'{family[0]}', 'safi': f'{family[1]}'},
         }
         return flow
 

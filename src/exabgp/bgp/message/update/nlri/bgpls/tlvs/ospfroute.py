@@ -50,7 +50,7 @@ class OspfRoute:
         return content
 
     def as_dict(self):
-        return {"ospf-route-type": self.ospf_type}
+        return {'ospf-route-type': self.ospf_type}
 
     def __eq__(self, other):
         return self.ospf_type == other.ospf_type

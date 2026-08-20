@@ -86,10 +86,11 @@ class INET(NLRI):
 
     def as_dict(self):
         family = self.family().afi_safi()
-        nlri = {"prefix": self.cidr.prefix(),
-                "nexthop": None if self.nexthop is NoNextHop else str(self.nexthop),
-                "family": {"afi": str(family[0]), "safi": str(family[1])}
-               }
+        nlri = {
+            'prefix': self.cidr.prefix(),
+            'nexthop': None if self.nexthop is NoNextHop else str(self.nexthop),
+            'family': {'afi': str(family[0]), 'safi': str(family[1])},
+        }
         return nlri
 
     @classmethod

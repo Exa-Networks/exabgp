@@ -77,7 +77,7 @@ class Label(INET):
             label = []
             for value, raw in zip(self.labels.labels, self.labels.raw_labels):
                 label.append([value] if raw is None else [value, raw])
-            nlri["label"] = label
+            nlri['label'] = label
         return nlri
 
     # @classmethod

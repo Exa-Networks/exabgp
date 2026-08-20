@@ -114,11 +114,11 @@ class SRv6SID(BGPLS):
 
     def as_dict(self):
         nlri = BGPLS.as_dict(self)
-        nlri["parsed"] = True
-        nlri["l3-routing-topology"] = int(self.domain)
-        nlri["protocol-id"] = int(self.proto_id)
-        nlri["node-descriptors"] = [d.as_dict() for d in self.local_node_descriptors]
-        nlri["srv6-sid-descriptors"] = self.srv6_sid_descriptors
+        nlri['parsed'] = True
+        nlri['l3-routing-topology'] = int(self.domain)
+        nlri['protocol-id'] = int(self.proto_id)
+        nlri['node-descriptors'] = [d.as_dict() for d in self.local_node_descriptors]
+        nlri['srv6-sid-descriptors'] = self.srv6_sid_descriptors
         return nlri
 
     def json(self, compact=None):

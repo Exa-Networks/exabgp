@@ -54,12 +54,12 @@ class NODE(BGPLS):
 
     def as_dict(self):
         nlri = BGPLS.as_dict(self)
-        nlri["parsed"] = True
-        nlri["l3-routing-topology"] = int(self.domain)
-        nlri["protocol-id"] = int(self.proto_id)
-        nlri["node-descriptors"] = [d.as_dict() for d in self.node_ids]
-        nlri["nexthop"] = None if self.nexthop is None else str(self.nexthop)
-        nlri["rd"] = None if self.route_d is None else self.route_d._str()
+        nlri['parsed'] = True
+        nlri['l3-routing-topology'] = int(self.domain)
+        nlri['protocol-id'] = int(self.proto_id)
+        nlri['node-descriptors'] = [d.as_dict() for d in self.node_ids]
+        nlri['nexthop'] = None if self.nexthop is None else str(self.nexthop)
+        nlri['rd'] = None if self.route_d is None else self.route_d._str()
         return nlri
 
     def json(self, compact=None):

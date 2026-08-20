@@ -67,7 +67,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
 
     def to_json_v2(key, changes):
         neighbor_ip = reactor.neighbor_ip(key)
-        jason = {"peer": {"address": neighbor_ip}}
+        jason = {'peer': {'address': neighbor_ip}}
 
         if extensive:
             jason.update(NeighborTemplate.as_dict(reactor.neighbor_cli_data(key)))
@@ -76,7 +76,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
             if not isinstance(change.nlri, route_type):
                 # log something about this drop?
                 continue
-            jason["route"] = change.as_dict()
+            jason['route'] = change.as_dict()
             reactor.processes.write(service, json.dumps(jason))
 
     def callback():
