@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -116,6 +117,25 @@ class InterworkSegmentDiscoveryRoute(MUP):
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
         # Parent provides complete wire format including 4-byte header
+        # Offsets: header(0-3), RD(4-11), prefix_ip_len(12), prefix(13+)
+        cls.check_length(data, 13)
+        prefix_ip_len = data[12]
+        max_bits = 32 if afi != AFI.ipv6 else 128
+        if prefix_ip_len > max_bits:
+            raise Notify(
+                3,
+                10,
+                'mup isd prefix length is %d bits, more than the %d of an %s address' % (prefix_ip_len, max_bits, afi),
+            )
+
+        expected = 13 + (prefix_ip_len + 7) // 8
+        if len(data) != expected:
+            raise Notify(
+                3,
+                10,
+                'mup isd is %d bytes, expecting %d for a prefix of %d bits' % (len(data), expected, prefix_ip_len),
+            )
+
         instance = cls(data, afi)
         return instance, b''
 

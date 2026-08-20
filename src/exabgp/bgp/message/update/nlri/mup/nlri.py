@@ -125,6 +125,27 @@ class MUP(NLRI):
 
         return decorator
 
+    # [arch(1)][code(2)][length(1)][RD(8)] before the route type specific fields
+    PAYLOAD_OFFSET = 12
+
+    @classmethod
+    def check_length(cls, data: Buffer, minimum: int) -> None:
+        """Reject wire data too short for this route type.
+
+        Args:
+            data: Complete wire format, header included
+            minimum: Smallest acceptable size, header included
+
+        Raises:
+            Notify: If the data is shorter than the minimum
+        """
+        if len(data) < minimum:
+            raise Notify(
+                3,
+                10,
+                '{} MUP NLRI is too short: need at least {} bytes, got {}'.format(cls.NAME, minimum, len(data)),
+            )
+
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated

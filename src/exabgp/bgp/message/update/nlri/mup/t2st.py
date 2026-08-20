@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -158,19 +159,28 @@ class Type2SessionTransformedRoute(MUP):
     ) -> tuple[NLRI, Buffer]:
         # Parent provides complete wire format including 4-byte header
         # Offsets: header(0-3), RD(4-11), endpoint_len(12)
+        cls.check_length(data, 13)
         afi_bit_size = MUP_T2ST_IPV4_SIZE_BITS if afi == AFI.ipv4 else MUP_T2ST_IPV6_SIZE_BITS
+        afi_byte_size = afi_bit_size // 8
+        max_endpoint = MUP_T2ST_IPV4_MAX_ENDPOINT if afi == AFI.ipv4 else MUP_T2ST_IPV6_MAX_ENDPOINT
         endpoint_len = data[12]
 
-        if endpoint_len > afi_bit_size:
-            teid_len = endpoint_len - afi_bit_size
-            if afi == AFI.ipv4 and teid_len > MUP_T2ST_TEID_MAX_SIZE:
-                raise Exception(
-                    'endpoint length is too large %d (max %d for Ipv4)' % (endpoint_len, MUP_T2ST_IPV4_MAX_ENDPOINT)
-                )
-            if afi == AFI.ipv6 and teid_len > MUP_T2ST_TEID_MAX_SIZE:
-                raise Exception(
-                    'endpoint length is too large %d (max %d for Ipv6)' % (endpoint_len, MUP_T2ST_IPV6_MAX_ENDPOINT)
-                )
+        # the endpoint is the full address followed by an optional TEID of up to 32 bits
+        if endpoint_len < afi_bit_size or endpoint_len > max_endpoint:
+            raise Notify(
+                3,
+                10,
+                'endpoint length is %d, expecting %d to %d for %s' % (endpoint_len, afi_bit_size, max_endpoint, afi),
+            )
+
+        teid_len = endpoint_len - afi_bit_size
+        expected = 13 + afi_byte_size + (teid_len + 7) // 8
+        if len(data) != expected:
+            raise Notify(
+                3,
+                10,
+                'mup t2st is %d bytes, expecting %d for an endpoint of %d bits' % (len(data), expected, endpoint_len),
+            )
 
         instance = cls(data, afi)
         return instance, b''
