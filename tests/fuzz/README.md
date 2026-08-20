@@ -120,6 +120,19 @@ tests/fuzz/test_random_input_validation.py::test_bgp_header_validation PASSED
 ============================== 14 passed in 2.15s ==============================
 ```
 
+## Mutation Testing
+
+Fuzzing asks whether the code survives strange input. Mutation testing asks the opposite
+question, whether the tests survive strange code:
+
+```bash
+./qa/bin/mutmut_run exabgp.bgp.message.update.nlri.inet
+./qa/bin/mutmut_run --results
+```
+
+It edits the module under test and reports the edits no test noticed. See
+`.claude/TIGER_STYLE.md` for what to do with a survivor.
+
 ## Adding New Fuzz Tests
 
 To add new fuzz tests:

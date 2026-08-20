@@ -45,3 +45,4 @@ artifacts
 requirements.txt
 
 .codegptbaseline_tests.log
+mutants/

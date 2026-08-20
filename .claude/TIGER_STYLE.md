@@ -247,6 +247,23 @@ The baseline lives in `qa/tiger_style.json` and only ever goes **down**. Lower i
 
 Everything else is a review responsibility.
 
+### Mutation testing
+
+`./qa/bin/mutmut_run` changes the meaning of the validation code, one edit at a time, and reports
+the edits the test suite did not notice. Coverage says a line ran; mutation testing says a line is
+defended. It is not part of `test_everything` (it takes a long time), it is what you run after
+writing the tests for a fix, on the module you touched:
+
+```bash
+./qa/bin/mutmut_run exabgp.bgp.message.update.nlri.inet   # one module
+./qa/bin/mutmut_run --results                             # what survived
+./qa/bin/mutmut_run --show <mutant>                       # the diff of one survivor
+```
+
+A survivor is a question. Either a test is missing, or the edit changed something nobody depends
+on, an error message or a log line, which is a fine reason to leave it alone. The modules under
+test are listed in `[tool.mutmut]` in `pyproject.toml`: add the module you are hardening.
+
 ## 6. Review checklist
 
 - [ ] Every read from wire data is preceded by a length check

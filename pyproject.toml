@@ -164,3 +164,24 @@ exclude = [
 
 # All modules now use global strict settings (2025-12-17)
 # No per-module overrides needed
+
+[tool.mutmut]
+# mutation testing: does the test suite notice when the code changes meaning?
+# scoped to the code which validates what a peer or an operator sends, mutating all of
+# src/exabgp would take hours and say little about the parts under test
+paths_to_mutate = [
+	"src/exabgp/util/psk.py",
+	"src/exabgp/bgp/message/update/nlri/cidr.py",
+	"src/exabgp/bgp/message/update/nlri/inet.py",
+	"src/exabgp/bgp/message/update/nlri/ipvpn.py",
+	"src/exabgp/bgp/message/update/nlri/label.py",
+	"src/exabgp/bgp/message/update/nlri/rtc.py",
+	"src/exabgp/bgp/message/update/nlri/vpls.py",
+	"src/exabgp/bgp/message/update/attribute/aigp.py",
+	"src/exabgp/reactor/api/command/group.py",
+]
+tests_dir = ["tests/unit/", "tests/fuzz/"]
+do_not_mutate = ["*/vendoring/*"]
+# the tests import the whole package, so the modules which are not mutated have to be
+# there too, copied before the mutants are written over the files being mutated
+also_copy = ["src/", "sbin/", "etc/", "qa/"]

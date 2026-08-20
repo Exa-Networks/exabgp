@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""
+Run mutation testing over the code which validates what a peer or an operator sends.
+
+Mutation testing changes the meaning of the code, one edit at a time, and reports the
+edits the test suite did not notice. A line covered by a test is not the same as a line
+whose behaviour a test would defend: mutmut tells the two apart.
+
+The modules it mutates are listed under [tool.mutmut] in pyproject.toml. Mutating all of
+src/exabgp would take hours, so the list is the validation surface: the NLRI decoders,
+the key handling and the API group buffer.
+
+Usage:
+    ./qa/bin/mutmut_run                          # every configured module
+    ./qa/bin/mutmut_run exabgp.util.psk          # one module, by its import path
+    ./qa/bin/mutmut_run --results                # what the last run found
+    ./qa/bin/mutmut_run --show <mutant>          # the diff of one mutant
+
+A surviving mutant is a question, not a verdict: it either means a test is missing, or
+that the edit did not change anything anybody depends on (an error message, a log line).
+Read the diff before writing a test for it.
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.parent
+
+# the tests are noisy under mutmut, and the daemon logs would drown the report
+ENVIRONMENT = {'exabgp_log_enable': 'false'}
+
+
+def mutmut(arguments: list[str]) -> int:
+    environment = dict(os.environ)
+    environment.update(ENVIRONMENT)
+    command = ['uv', 'run', 'mutmut', *arguments]
+    print('running', ' '.join(command))
+    return subprocess.call(command, cwd=ROOT, env=environment)
+
+
+def main(argv: list[str]) -> int:
+    if argv and argv[0] == '--results':
+        return mutmut(['results'])
+
+    if argv and argv[0] == '--show':
+        if len(argv) < 2:
+            print('--show needs the name of a mutant, as printed by --results')
+            return 1
+        return mutmut(['show', argv[1]])
+
+    # mutmut names its mutants after the module, so a module path filters them
+    selection = [f'{name}.*' if not name.endswith('*') else name for name in argv]
+    code = mutmut(['run', *selection])
+
+    print()
+    print('the mutants which survived, if any, are listed by:')
+    print('    ./qa/bin/mutmut_run --results')
+    print('and explained one by one by:')
+    print('    ./qa/bin/mutmut_run --show <mutant>')
+    print()
+    print('mutmut works in ./mutants, which is not tracked and can be deleted at any time')
+    return code
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
