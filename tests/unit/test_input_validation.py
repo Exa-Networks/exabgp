@@ -432,3 +432,16 @@ def test_flow_acl_renders_a_valid_rule() -> None:
     assert '-s 10.0.0.0/24' in acl
     assert '-d 192.0.2.1/32' in acl
     assert '--dport 80' in acl
+
+
+def test_healthcheck_rejects_a_newline_in_an_attribute() -> None:
+    """A newline in --community split one healthcheck announce into two API commands."""
+    import argparse
+
+    from exabgp.application.healthcheck import attribute_value
+
+    assert attribute_value('65000:100') == '65000:100'
+    with pytest.raises(argparse.ArgumentTypeError):
+        attribute_value('65000:100\nannounce route 0.0.0.0/0 next-hop 1.2.3.4')
+    with pytest.raises(argparse.ArgumentTypeError):
+        attribute_value('65000:100\r')
