@@ -390,11 +390,14 @@ class INET(NLRI):
         # Parse path_info if AddPath is enabled
         if addpath:
             if len(data) <= PATH_INFO_SIZE:
-                raise ValueError('Trying to extract path-information but we do not have enough data')
+                raise Notify(3, 10, 'not enough data to extract the path-information of the NLRI')
             path_info = PathInfo(bytes(data[:PATH_INFO_SIZE]))
             data = data[PATH_INFO_SIZE:]
         else:
             path_info = PathInfo.DISABLED
+
+        if not data:
+            raise Notify(3, 10, 'not enough data to extract the mask of the NLRI')
 
         mask = data[0]
         data = data[1:]
@@ -407,6 +410,8 @@ class INET(NLRI):
         if safi.has_label():
             labels_list = []
             while mask - rd_mask >= LABEL_SIZE_BITS:
+                if len(data) < 3:
+                    raise Notify(3, 10, 'not enough data to extract the label stack of the NLRI')
                 label = int(unpack('!L', bytes([0]) + bytes(data[:3]))[0])
                 data = data[3:]
                 mask -= LABEL_SIZE_BITS  # 3 bytes
@@ -426,11 +431,17 @@ class INET(NLRI):
         rd: RouteDistinguisher | None = None
         if rd_size:
             mask -= rd_mask  # the route distinguisher
+            if len(data) < rd_size:
+                raise Notify(3, 10, 'not enough data to extract the route distinguisher of the NLRI')
             rd = RouteDistinguisher(bytes(data[:rd_size]))
             data = data[rd_size:]
 
         if mask < 0:
             raise Notify(3, 10, 'invalid length in NLRI prefix')
+
+        # a mask longer than the address family allows would index past the prefix
+        if mask > IP.length(afi) * 8:
+            raise Notify(3, 10, 'invalid mask %d in NLRI prefix for %s' % (mask, AFI(afi)))
 
         if not data and mask:
             raise Notify(3, 10, 'not enough data for the mask provided to decode the NLRI')

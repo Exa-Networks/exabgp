@@ -220,7 +220,14 @@ class CIDR:
 
     @staticmethod
     def decode(afi: AFI, bgp: Buffer) -> tuple[bytes, int]:
+        if not bgp:
+            raise Notify(3, 10, 'could not decode CIDR, no data')
+
         mask = bgp[0]
+        # a mask larger than the family holds would make the padding below negative
+        if mask > IP.length(afi) * 8:
+            raise Notify(3, 10, 'could not decode CIDR, invalid mask %d for %s' % (mask, afi))
+
         size = CIDR.size(mask)
 
         if len(bgp) < size + 1:

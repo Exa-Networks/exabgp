@@ -122,7 +122,8 @@ class TestINETUnpackErrors:
     def test_unpack_insufficient_data_for_pathinfo(self) -> None:
         """Test unpacking with insufficient data for path info"""
         # Try to unpack with addpath but insufficient data (less than 4 bytes)
-        with pytest.raises(ValueError) as exc_info:
+        # wire data comes from the peer, so a truncated path-id is a Notify, not a ValueError
+        with pytest.raises(Notify) as exc_info:
             INET.unpack_nlri(
                 AFI.ipv4, SAFI.unicast, b'\x18\xc0\xa8', Action.UNSET, addpath=True, negotiated=create_negotiated()
             )

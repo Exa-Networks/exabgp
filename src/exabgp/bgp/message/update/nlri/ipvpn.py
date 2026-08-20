@@ -116,6 +116,7 @@ from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
 from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.ip import IP
 
 # ====================================================== IPVPN
 # RFC 4364
@@ -457,11 +458,14 @@ class IPVPN(Label):
         # Parse path_info if AddPath is enabled
         if addpath:
             if len(data) <= PATH_INFO_SIZE:
-                raise ValueError('Trying to extract path-information but we do not have enough data')
+                raise Notify(3, 10, 'not enough data to extract the path-information of the NLRI')
             path_info = PathInfo(bytes(data[:PATH_INFO_SIZE]))
             data = data[PATH_INFO_SIZE:]
         else:
             path_info = PathInfo.DISABLED
+
+        if not data:
+            raise Notify(3, 10, 'not enough data to extract the mask of the NLRI')
 
         original_mask = data[0]
         data = data[1:]
@@ -477,6 +481,8 @@ class IPVPN(Label):
         # Parse labels using mask (original algorithm from INET.unpack_nlri)
         if safi.has_label():
             while mask - rd_bits >= LABEL_SIZE_BITS:
+                if len(data) < 3:
+                    raise Notify(3, 10, 'not enough data to extract the label stack of the NLRI')
                 label_chunk = bytes(data[:3])
                 label = int(unpack('!L', bytes([0]) + label_chunk)[0])
                 labels_bytes_list.append(label_chunk)
@@ -496,12 +502,18 @@ class IPVPN(Label):
         has_rd = False
         if rd_size:
             mask -= rd_bits
+            if len(data) < rd_size:
+                raise Notify(3, 10, 'not enough data to extract the route distinguisher of the NLRI')
             rd_packed = bytes(data[:rd_size])
             has_rd = True
             data = data[rd_size:]
 
         if mask < 0:
             raise Notify(3, 10, 'invalid length in NLRI prefix')
+
+        # a mask longer than the address family allows would index past the prefix
+        if mask > IP.length(afi) * 8:
+            raise Notify(3, 10, 'invalid mask %d in NLRI prefix for %s' % (mask, AFI(afi)))
 
         if not data and mask:
             raise Notify(3, 10, 'not enough data for the mask provided')
