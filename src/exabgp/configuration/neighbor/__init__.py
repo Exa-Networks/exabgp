@@ -282,8 +282,18 @@ class ParseNeighbor(Section):
                     neighbor.messages.append(message)
         self.neighbors[neighbor.name()] = neighbor
 
+    # a neighbor is not usable without them, and "auto" must be asked for explicitly
+    MANDATORY = ('local-as', 'peer-as')
+
     def post(self):
         local = self._post_get_scope()
+
+        # the value of local-as and peer-as is None when the configuration says "auto",
+        # so only the presence of the key tells a missing setting from an explicit auto
+        missing_mandatory = [option for option in self.MANDATORY if option not in local]
+        if missing_mandatory:
+            return self.error.set('incomplete neighbor, missing {}'.format(', '.join(missing_mandatory)))
+
         families = self._post_families(local)
         neighbor = self._post_neighbor(local, families)
 
