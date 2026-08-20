@@ -7,6 +7,7 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 import json
 from struct import pack, unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
@@ -54,46 +55,48 @@ class SRv6SID(BGPLS):
         self.srv6_sid_descriptors = srv6_sid_descriptors
 
     @classmethod
-    def unpack_nlri(cls, data, length):
+    def unpack_nlri(cls, data, rd):
+        cls.check_length(data, cls.DESCRIPTOR_OFFSET)
         proto_id = unpack('!B', data[0:1])[0]
         if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
+            raise Notify(3, 10, f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
 
-        tlvs = data[9:length]
-        node_type, node_length = unpack('!HH', tlvs[0:4])
-        if node_type != TLV_LOCAL_NODE_DESC:
-            raise Exception(
-                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
-            )
-        tlvs = tlvs[4:]
-        local_node_descriptors = tlvs[:node_length]
-        node_ids = []
-        while local_node_descriptors:
-            node_id, left = NodeDescriptor.unpack(local_node_descriptors, proto_id)
-            node_ids.append(node_id)
-            if left == local_node_descriptors:
-                raise RuntimeError('sub-calls should consume data')
-            local_node_descriptors = left
-
-        tlvs = tlvs[node_length:]
         srv6_sid_descriptors = {}
         srv6_sid_descriptors['multi-topology-ids'] = []
+        node_ids = []
+        first = True
 
-        while tlvs:
-            if len(tlvs) < MIN_TLV_HEADER_SIZE:
-                raise RuntimeError('SRv6 SID Descriptors are too short')
-            sid_type, sid_length = unpack('!HH', tlvs[:4])
-            if sid_type == TLV_MULTI_TOPO_ID:
-                srv6_sid_descriptors['multi-topology-ids'].append(MTID.unpack(tlvs[4 : sid_length + 4]).json())
-            elif sid_type == TLV_SRV6_SID_INFO:
-                srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack(tlvs[4 : sid_length + 4]))
+        for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
+            if first:
+                first = False
+                if tlv_type != TLV_LOCAL_NODE_DESC:
+                    raise Notify(
+                        3,
+                        10,
+                        f'Unknown type: {tlv_type}. Only Local Node descriptors are allowed in a Node type msg',
+                    )
+                local_node_descriptors = value
+                while local_node_descriptors:
+                    node_id, left = NodeDescriptor.unpack(local_node_descriptors, proto_id)
+                    node_ids.append(node_id)
+                    if left == local_node_descriptors:
+                        raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
+                    local_node_descriptors = left
+                continue
+
+            if tlv_type == TLV_MULTI_TOPO_ID:
+                srv6_sid_descriptors['multi-topology-ids'].append(MTID.unpack(value).json())
+            elif tlv_type == TLV_SRV6_SID_INFO:
+                srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack(value))
             else:
-                if f'generic-tlv-{sid_type}' not in srv6_sid_descriptors:
-                    srv6_sid_descriptors[f'generic-tlv-{sid_type}'] = []
-                srv6_sid_descriptors[f'generic-tlv-{sid_type}'].append(hexstring(tlvs[4 : sid_length + 4]))
+                if f'generic-tlv-{tlv_type}' not in srv6_sid_descriptors:
+                    srv6_sid_descriptors[f'generic-tlv-{tlv_type}'] = []
+                srv6_sid_descriptors[f'generic-tlv-{tlv_type}'].append(hexstring(value))
 
-            tlvs = tlvs[sid_length + 4 :]
+        if first:
+            raise Notify(3, 10, 'BGP-LS SRv6 SID NLRI has no Local Node descriptor')
+
         return cls(proto_id, domain, node_ids, srv6_sid_descriptors)
 
     def pack(self, packed=None):

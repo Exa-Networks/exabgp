@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
@@ -101,6 +102,7 @@ class LINK(BGPLS):
 
     @classmethod
     def unpack_nlri(cls, data, rd):
+        cls.check_length(data, cls.DESCRIPTOR_OFFSET)
         proto_id = unpack('!B', data[0:1])[0]
         # FIXME: all these list should probably be defined in the objects
         iface_addrs = []
@@ -110,15 +112,9 @@ class LINK(BGPLS):
         remote_node = []
         local_node = []
         if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
+            raise Notify(3, 10, f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
-        tlvs = data[9:]
-
-        while tlvs:
-            tlv_type, tlv_length = unpack('!HH', tlvs[:4])
-            value = tlvs[4 : 4 + tlv_length]
-            tlvs = tlvs[4 + tlv_length :]
-
+        for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
             if tlv_type == TLV_LOCAL_NODE_DESC:
                 local_node = []
                 while value:
@@ -128,7 +124,7 @@ class LINK(BGPLS):
                     node, left = NodeDescriptor.unpack(value, proto_id)
                     local_node.append(node)
                     if left == value:
-                        raise RuntimeError('sub-calls should consume data')
+                        raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
                     value = left
                 continue
 
@@ -139,7 +135,7 @@ class LINK(BGPLS):
                     node, left = NodeDescriptor.unpack(value, proto_id)
                     remote_node.append(node)
                     if left == value:
-                        raise RuntimeError('sub-calls should consume data')
+                        raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
                     value = left
                 continue
 

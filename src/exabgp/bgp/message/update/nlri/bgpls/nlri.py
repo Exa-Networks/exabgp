@@ -15,6 +15,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import Action
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
@@ -80,6 +81,44 @@ PROTO_CODES = {
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls)
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls_vpn)
 class BGPLS(NLRI):
+    # [protocol-id(1)][identifier(8)] before the first TLV, the header is stripped already
+    DESCRIPTOR_OFFSET = 9
+
+    @classmethod
+    def check_length(cls, data, minimum):
+        """Reject wire data too short for this NLRI type."""
+        if len(data) < minimum:
+            raise Notify(
+                3,
+                10,
+                'BGP-LS {} NLRI is too short: need at least {} bytes, got {}'.format(cls.__name__, minimum, len(data)),
+            )
+
+    @classmethod
+    def iter_tlvs(cls, data):
+        """Walk a sequence of TLVs, checking every boundary as it goes.
+
+        Yields:
+            (type, value) for each TLV
+
+        Raises:
+            Notify: If a TLV header is truncated or a TLV runs past the data
+        """
+        while data:
+            if len(data) < 4:
+                raise Notify(3, 10, 'BGP-LS {} NLRI ends with a truncated TLV header'.format(cls.__name__))
+            tlv_type, tlv_length = unpack('!HH', data[:4])
+            if len(data) < 4 + tlv_length:
+                raise Notify(
+                    3,
+                    10,
+                    'BGP-LS {} NLRI TLV {} claims {} bytes but only {} remain'.format(
+                        cls.__name__, tlv_type, tlv_length, len(data) - 4
+                    ),
+                )
+            yield tlv_type, data[4 : 4 + tlv_length]
+            data = data[4 + tlv_length :]
+
     registered_bgpls = dict()
 
     CODE = -1
@@ -124,10 +163,19 @@ class BGPLS(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # BGP-LS NLRI header: type(2) + length(2) = 4 bytes minimum
+        if len(bgp) < 4:
+            raise Notify(3, 10, 'BGP-LS NLRI too short: need at least 4 bytes, got {}'.format(len(bgp)))
         code, length = unpack('!HH', bgp[:4])
+
+        if len(bgp) < length + 4:
+            raise Notify(3, 10, 'BGP-LS NLRI truncated: need {} bytes, got {}'.format(length + 4, len(bgp)))
+
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:
                 # Extract Route Distinguisher
+                if len(bgp) < 12:
+                    raise Notify(3, 10, 'BGP-LS VPN NLRI too short: need at least 12 bytes, got {}'.format(len(bgp)))
                 rd = RouteDistinguisher.unpack(bgp[4:12])
                 klass = cls.registered_bgpls[code].unpack_nlri(bgp[12 : length + 4], rd)
             else:

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPv6
 from exabgp.protocol.iso import ISO
@@ -74,7 +75,15 @@ class NodeDescriptor:
 
     @classmethod
     def unpack(cls, data, igp):
+        if len(data) < 4:
+            raise Notify(3, 10, f'BGP-LS node descriptor is too short: need 4 bytes of header, got {len(data)}')
         node_type, length = unpack('!HH', data[0:4])
+        if len(data) < 4 + length:
+            raise Notify(
+                3,
+                10,
+                f'BGP-LS node descriptor sub-tlv {node_type} claims {length} bytes but only {len(data) - 4} remain',
+            )
         packed = data[: 4 + length]
         payload = packed[4:]
         remaining = data[4 + length :]
@@ -86,21 +95,21 @@ class NodeDescriptor:
         # autonomous-system
         if node_type == NODE_DESC_TLV_AS:
             if length != NODE_DESC_AS_LENGTH:
-                raise Exception(cls._error_tlvs[node_type])
+                raise Notify(3, 10, cls._error_tlvs[node_type])
             node_id = unpack('!L', payload)[0]
             return cls(node_id, node_type, psn, dr_id, packed), remaining
 
         # bgp-ls-id
         if node_type == NODE_DESC_TLV_BGPLS_ID:
             if length != NODE_DESC_BGPLS_ID_LENGTH:
-                raise Exception(cls._error_tlvs[node_type])
+                raise Notify(3, 10, cls._error_tlvs[node_type])
             node_id = unpack('!L', payload)[0]
             return cls(node_id, node_type, psn, dr_id, packed), remaining
 
         # ospf-area-id
         if node_type == NODE_DESC_TLV_OSPF_AREA:
             if length not in (NODE_DESC_OSPF_AREA_LENGTH, IPv6.BYTES):  # FIXME: it may only need to be 4
-                raise Exception(cls._error_tlvs[node_type])
+                raise Notify(3, 10, cls._error_tlvs[node_type])
             node_id = IP.unpack(payload)
             return cls(node_id, node_type, psn, dr_id, packed), remaining
 
@@ -111,7 +120,7 @@ class NodeDescriptor:
             # IS-IS non-pseudonode
             if igp in (IGP_ISIS_L1, IGP_ISIS_L2):
                 if length not in (ISIS_SYSID_LENGTH, ISIS_SYSID_PSN_LENGTH):
-                    raise Exception(cls._error_tlvs[node_type])
+                    raise Notify(3, 10, cls._error_tlvs[node_type])
                 node_id = (ISO.unpack_sysid(payload),)
                 if length == ISIS_SYSID_PSN_LENGTH:
                     psn = unpack('!B', payload[6:7])[0]
@@ -120,13 +129,13 @@ class NodeDescriptor:
             # OSPFv{2,3} non-pseudonode
             if igp in (IGP_OSPFV2, IGP_DIRECT, IGP_OSPFV3, IGP_STATIC):
                 if length not in (OSPF_ROUTER_ID_LENGTH, OSPF_ROUTER_DR_LENGTH):
-                    raise Exception(cls._error_tlvs[node_type])
+                    raise Notify(3, 10, cls._error_tlvs[node_type])
                 node_id = (IP.unpack(payload[:4]),)
                 if length == OSPF_ROUTER_DR_LENGTH:
                     dr_id = IP.unpack(payload[4:8])
                 return cls(node_id, node_type, psn, dr_id, packed), remaining
 
-        raise Exception(f'unknown node descriptor sub-tlv (node-type: {node_type}, igp: {igp})')
+        raise Notify(3, 10, f'unknown node descriptor sub-tlv (node-type: {node_type}, igp: {igp})')
 
     def json(self, compact=None):
         node = None

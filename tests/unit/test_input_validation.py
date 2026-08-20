@@ -25,6 +25,7 @@ from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.hostname import HostName
 from exabgp.bgp.message.open.capability.software import Software
 from exabgp.bgp.message.update.attribute.aigp import AIGP
+from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.static.parser import _extended_community
@@ -282,3 +283,20 @@ def test_evpn_fuzz_never_raises_a_raw_exception():
             for _ in range(5):
                 data = bytes([code, length]) + os.urandom(length)
                 unpack_or_notify(EVPN.unpack_nlri, AFI.l2vpn, SAFI.evpn, data, Action.ANNOUNCE, None)
+
+
+@pytest.mark.parametrize('code', [1, 2, 3, 4, 6])
+@pytest.mark.parametrize('length', [0, 1, 4, 9, 13, 20])
+def test_bgpls_short_nlri_raises_notify(code, length):
+    """BGP-LS decoders used to raise a bare Exception, a RuntimeError, a
+    struct.error or an AttributeError depending on where they fell over."""
+    data = pack('!HH', code, length) + bytes(length)
+    unpack_or_notify(BGPLS.unpack_nlri, AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None)
+
+
+def test_bgpls_fuzz_never_raises_a_raw_exception():
+    for code in (1, 2, 3, 4, 6):
+        for length in range(0, 60):
+            for _ in range(5):
+                data = pack('!HH', code, length) + os.urandom(length)
+                unpack_or_notify(BGPLS.unpack_nlri, AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None)
