@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import re
-import base64
 import socket
 import select
 import platform
@@ -16,6 +15,7 @@ import platform
 from struct import pack, calcsize
 
 from exabgp.util.errstr import errstr
+from exabgp.util.psk import PSKError, decode_base64
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
@@ -139,16 +139,16 @@ def md5(io, ip, port, md5, md5_base64):
             if md5:
                 if md5_base64 is True:
                     try:
-                        md5_bytes = base64.b64decode(md5)
-                    except TypeError:
-                        raise MD5Error('Failed to decode base 64 encoded PSK') from None
+                        md5_bytes = decode_base64(md5)
+                    except PSKError as exc:
+                        raise MD5Error('Failed to decode base 64 encoded PSK: {}'.format(exc)) from None
                 elif md5_base64 is None and not re.match('.*[^a-f0-9].*', md5):  # auto
-                    options = [md5 + '==', md5 + '=', md5]
-                    for md5 in options:
+                    # the key looks like hex, so it may be base64 with the padding left out
+                    for candidate in (md5 + '==', md5 + '=', md5):
                         try:
-                            md5_bytes = base64.b64decode(md5)
+                            md5_bytes = decode_base64(candidate)
                             break
-                        except TypeError:
+                        except PSKError:
                             pass
 
             # __kernel_sockaddr_storage

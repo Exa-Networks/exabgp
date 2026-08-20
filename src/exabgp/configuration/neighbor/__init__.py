@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # import sys
 from __future__ import annotations
 
-import base64
 from copy import deepcopy
 
 from exabgp.protocol.family import AFI
@@ -48,6 +47,7 @@ from exabgp.configuration.neighbor.parser import rate_limit
 from exabgp.environment import getenv
 
 from exabgp.logger import log
+from exabgp.util.psk import PSKError, decode_base64
 
 # MD5 password length constraint (RFC 2385)
 MAX_MD5_PASSWORD_LENGTH = 80  # Maximum length for TCP MD5 signature password
@@ -323,9 +323,9 @@ class ParseNeighbor(Section):
 
         if neighbor['md5-password']:
             try:
-                md5 = base64.b64decode(neighbor['md5-password']) if neighbor['md5-base64'] else neighbor['md5-password']
-            except TypeError as e:
-                return self.error.set(f'Invalid base64 encoding of MD5 password ({e})')
+                md5 = decode_base64(neighbor['md5-password']) if neighbor['md5-base64'] else neighbor['md5-password']
+            except PSKError as e:
+                return self.error.set(f'Invalid MD5 password: {e}')
             else:
                 if len(md5) > MAX_MD5_PASSWORD_LENGTH:
                     return self.error.set(f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} characters')
