@@ -120,6 +120,7 @@ class EthernetSegment(EVPN):
             EthernetSegment instance with stored wire bytes
         """
         # IPlen is at offset 20 (after 2-byte header + 8-byte RD + 10-byte ESI)
+        cls.check_length(packed, 21)
         iplen = packed[20]
 
         if iplen not in (32, 128):
@@ -127,6 +128,14 @@ class EthernetSegment(EVPN):
                 3,
                 5,
                 'IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits' % iplen,
+            )
+
+        if len(packed) != 21 + iplen // 8:
+            raise Notify(
+                3,
+                10,
+                'Ethernet Segment EVPN NLRI is %d bytes, expecting %d for an IP of %d bits'
+                % (len(packed), 21 + iplen // 8, iplen),
             )
 
         return cls(packed)

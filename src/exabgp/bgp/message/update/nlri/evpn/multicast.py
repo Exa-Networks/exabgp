@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
@@ -114,9 +115,17 @@ class Multicast(EVPN):
             Multicast instance with stored wire bytes
         """
         # IPlen is at offset 14 (after 2-byte header + 8-byte RD + 4-byte ETag)
+        cls.check_length(packed, 15)
         iplen = packed[14]
         if iplen not in (4 * 8, 16 * 8):
-            raise Exception('IP len is %d, but EVPN route currently support only IPv4 or IPv6' % iplen)
+            raise Notify(3, 10, 'IP len is %d, but EVPN route currently support only IPv4 or IPv6' % iplen)
+        if len(packed) != 15 + iplen // 8:
+            raise Notify(
+                3,
+                10,
+                'Inclusive Multicast EVPN NLRI is %d bytes, expecting %d for an IP of %d bits'
+                % (len(packed), 15 + iplen // 8, iplen),
+            )
         return cls(packed)
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:

@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
@@ -122,6 +123,10 @@ class EthernetAD(EVPN):
         Returns:
             EthernetAD instance with stored wire bytes
         """
+        # header(2) + RD(8) + ESI(10) + ETag(4), the label stack follows
+        cls.check_length(packed, 24)
+        if (len(packed) - 24) % 3:
+            raise Notify(3, 10, 'Ethernet A-D EVPN NLRI has a truncated label stack')
         return cls(packed)
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:

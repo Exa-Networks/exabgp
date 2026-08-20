@@ -138,6 +138,28 @@ class EVPN(NLRI):
         return decorator
 
     @classmethod
+    def check_length(cls, packed: Buffer, minimum: int) -> None:
+        """Reject wire data too short for this route type.
+
+        The per-route-type unpack methods index into the payload, so the length
+        must be checked before any field is read, otherwise a truncated NLRI
+        surfaces as an IndexError instead of a NOTIFICATION.
+
+        Args:
+            packed: Complete wire format (type + length + payload)
+            minimum: Smallest acceptable size, header included
+
+        Raises:
+            Notify: If the data is shorter than the minimum
+        """
+        if len(packed) < minimum:
+            raise Notify(
+                3,
+                10,
+                '{} EVPN NLRI is too short: need at least {} bytes, got {}'.format(cls.NAME, minimum, len(packed)),
+            )
+
+    @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
