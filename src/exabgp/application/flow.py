@@ -143,12 +143,15 @@ class ACL:
 
     @classmethod
     def clear(cls):
-        for key in cls._known:
+        # iterate over a copy of the keys: _delete pops the entry it is given
+        for key in list(cls._known.keys()):
             cls._delete(key)
         cls._commit()
 
     @classmethod
-    def end(cls):
+    def end(cls, signum=0, frame=None):  # pylint: disable=W0613
+        # signum and frame are what python passes a signal handler, and are unused:
+        # they are here so ACL.end can be installed as one and still be called bare
         cls.clear()
         sys.exit(1)
 
