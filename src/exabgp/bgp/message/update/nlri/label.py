@@ -119,7 +119,9 @@ class Label(INET):
     Uses class-level SAFI (always nlri_mpls) - no instance storage needed.
     """
 
-    __slots__ = ('_has_labels',)  # Track whether labels are present
+    # _label_size is the number of label bytes in _packed, -1 when it is not known
+    # and the stack has to be found by scanning for the bottom of stack bit
+    __slots__ = ('_has_labels', '_label_size')
 
     # Fixed SAFI for Label NLRI - AFI varies (ipv4/ipv6) and is set at instance level by INET
     @property
@@ -139,6 +141,7 @@ class Label(INET):
         """
         INET.__init__(self, packed, afi, self.safi, has_addpath=has_addpath)
         self._has_labels = has_labels
+        self._label_size = -1
         # Note: inherited rd=None from INET is fine (IPVPN overrides)
 
     @property
@@ -155,6 +158,12 @@ class Label(INET):
         # If no labels flag is set, return immediately after mask
         if not self._has_labels:
             return base + 1
+
+        # The decoder knows how many bytes it read, and a label stack does not always
+        # end with the bottom of stack bit: RFC 3107 withdraws use 0x800000, which
+        # does not set it, and scanning would then swallow the rd and the prefix
+        if self._label_size >= 0:
+            return base + 1 + self._label_size
 
         # Scan labels starting after mask byte
         label_start = base + 1
@@ -257,6 +266,7 @@ class Label(INET):
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = has_labels
+        instance._label_size = len(labels_packed)
         instance._rd = None
         return instance
 
@@ -332,6 +342,7 @@ class Label(INET):
         new._rd = self._rd
         # Label slots
         new._has_labels = self._has_labels
+        new._label_size = self._label_size
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'Label':
@@ -346,6 +357,7 @@ class Label(INET):
         new._rd = deepcopy(self._rd, memo) if self._rd else None
         # Label slots
         new._has_labels = self._has_labels  # bool - immutable
+        new._label_size = self._label_size  # int - immutable
         return new
 
     def prefix(self) -> str:

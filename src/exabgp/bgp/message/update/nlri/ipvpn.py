@@ -270,6 +270,7 @@ class IPVPN(Label):
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = has_labels
+        instance._label_size = len(labels_packed)
         instance._has_rd = has_rd
         return instance
 
@@ -368,6 +369,7 @@ class IPVPN(Label):
         new._has_addpath = self._has_addpath
         # Label slots
         new._has_labels = self._has_labels
+        new._label_size = self._label_size
         # IPVPN slots
         new._has_rd = self._has_rd
         return new
@@ -381,6 +383,7 @@ class IPVPN(Label):
         new._has_addpath = self._has_addpath  # bool - immutable
         # Label slots
         new._has_labels = self._has_labels  # bool - immutable
+        new._label_size = self._label_size  # int - immutable
         # IPVPN slots
         new._has_rd = self._has_rd  # bool - immutable
         return new
@@ -541,6 +544,7 @@ class IPVPN(Label):
         instance._packed = packed
         instance._has_addpath = has_addpath
         instance._has_labels = len(labels_packed) > 0
+        instance._label_size = len(labels_packed)
         instance._has_rd = has_rd
 
         return instance, data

@@ -103,3 +103,32 @@ def test_rtc_wildcard_and_route_target_have_a_json_representation() -> None:
 
     route = decode(AFI.ipv4, SAFI.rtc, bytes([96]) + (65000).to_bytes(4, 'big') + b'\x00\x02\xfd\xe8\x00\x00\x00\x01')
     assert route.json() == '{ "origin": 65000, "route-target": "target:65000:1" }'
+
+
+# ============================================================================
+# MPLS: the label stack does not always end with the bottom of stack bit
+# ============================================================================
+
+
+def test_mpls_vpn_withdraw_label_keeps_the_route_distinguisher() -> None:
+    """RFC 3107 withdraws use label 0x800000, which does not set the bottom of
+    stack bit. The accessors scanned for that bit and swallowed the rd and the
+    prefix, so a withdrawn VPN route raised ValueError on rd and on json."""
+    # mask 112 = 24 bits of label + 64 bits of rd + 24 bits of prefix
+    data = bytes([112, 0x80, 0x00, 0x00]) + bytes(8) + bytes([10, 0, 0])
+    nlri, leftover = NLRI.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, data, Action.WITHDRAW, None, None)
+
+    assert bytes(leftover) == b''
+    assert str(nlri.rd) == ' rd 0:0'
+    assert nlri.cidr.prefix() == '10.0.0.0/24'
+    assert '"nlri": "10.0.0.0/24"' in nlri.json()
+
+
+def test_mpls_label_stack_without_bottom_of_stack_keeps_the_prefix() -> None:
+    """Same problem without a route distinguisher."""
+    # mask 48 = 24 bits of label + 24 bits of prefix
+    data = bytes([48, 0x80, 0x00, 0x00, 10, 0, 0])
+    nlri, leftover = NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.WITHDRAW, None, None)
+
+    assert bytes(leftover) == b''
+    assert nlri.cidr.prefix() == '10.0.0.0/24'
