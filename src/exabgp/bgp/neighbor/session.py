@@ -7,13 +7,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import base64
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
+from exabgp.util.psk import PSKError, decode_base64
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.routerid import RouterID
@@ -115,9 +115,9 @@ class Session:
             return 'MD5 and TCP-AO are mutually exclusive - cannot use both'
 
         try:
-            password = base64.b64decode(self.md5_password) if self.md5_base64 else self.md5_password
-        except (TypeError, ValueError) as e:
-            return f'Invalid base64 encoding of MD5 password ({e})'
+            password = decode_base64(self.md5_password) if self.md5_base64 else self.md5_password
+        except PSKError as e:
+            return f'Invalid MD5 password: {e}'
 
         if len(password) > MAX_MD5_PASSWORD_LENGTH:
             return f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} characters'
@@ -154,11 +154,11 @@ class Session:
         # Validate key length (must check byte length, not character length)
         try:
             if self.tcp_ao_base64:
-                key_bytes = base64.b64decode(self.tcp_ao_password)
+                key_bytes = decode_base64(self.tcp_ao_password)
             else:
                 key_bytes = self.tcp_ao_password.encode('utf-8')
-        except (TypeError, ValueError) as e:
-            return f'Invalid base64 encoding of TCP-AO key ({e})'
+        except PSKError as e:
+            return f'Invalid TCP-AO key: {e}'
 
         if len(key_bytes) > MAX_TCP_AO_KEY_LENGTH:
             return f'TCP-AO key must be no larger than {MAX_TCP_AO_KEY_LENGTH} bytes'

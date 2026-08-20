@@ -175,7 +175,7 @@ class TestSessionValidateMd5:
         """Test validate_md5 returns error for invalid base64."""
         session = Session(md5_password='not-valid-base64!!!', md5_base64=True)
         error = session.validate_md5()
-        assert 'Invalid base64' in error
+        assert 'not valid base64' in error
 
     def test_validate_md5_password_too_long(self) -> None:
         """Test validate_md5 returns error for password > 80 chars."""
@@ -291,7 +291,7 @@ class TestSessionValidateTcpAo:
             tcp_ao_base64=True,
         )
         error = session.validate_tcp_ao()
-        assert 'Invalid base64' in error
+        assert 'not valid base64' in error
 
     def test_validate_tcp_ao_mutual_exclusion_with_md5(self) -> None:
         """Test TCP-AO and MD5 are mutually exclusive."""

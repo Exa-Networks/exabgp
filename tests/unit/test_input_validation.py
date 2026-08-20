@@ -9,10 +9,13 @@ NOTIFICATION or a ValueError.
 
 from __future__ import annotations
 
+import platform
+
 import pytest
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.configuration.configuration import Configuration
+from exabgp.util.psk import PSKError, decode_base64
 
 
 # ============================================================================
@@ -103,3 +106,43 @@ def test_negative_local_as_is_rejected_by_the_configuration() -> None:
     ok, configuration = load(NEIGHBOR % '    local-as -1;\n    peer-as 65001;')
     assert not ok
     assert 'ASN' in configuration.error.message
+
+
+# ============================================================================
+# Authentication keys
+# ============================================================================
+
+
+@pytest.mark.parametrize('value', ['ab!c', 'YWJ j', 'not-valid-base64!!!', ''])
+def test_invalid_base64_key_is_rejected(value: str) -> None:
+    """b64decode() without validate=True discards characters outside the alphabet,
+    so a mistyped key silently became a different key. An empty key was accepted."""
+    with pytest.raises(PSKError):
+        decode_base64(value)
+
+
+def test_valid_base64_key_is_accepted() -> None:
+    assert decode_base64('YWJj') == b'abc'
+
+
+def test_session_rejects_a_malformed_base64_md5_password() -> None:
+    """binascii.Error is a ValueError, not a TypeError: the runtime path in tcp.py
+    only caught TypeError, so a bad key escaped instead of raising MD5Error."""
+    from exabgp.bgp.neighbor.session import Session
+
+    assert Session(md5_password='', md5_base64=True).validate_md5() == ''
+    assert 'not valid base64' in Session(md5_password='====', md5_base64=True).validate_md5()
+    assert 'not valid base64' in Session(md5_password='not-valid!!', md5_base64=True).validate_md5()
+    assert Session(md5_password='YWJj', md5_base64=True).validate_md5() == ''
+
+
+@pytest.mark.skipif(platform.system() != 'Linux', reason='TCP_MD5SIG is only set on Linux')
+def test_tcp_md5_runtime_rejects_a_malformed_base64_key() -> None:
+    import socket
+
+    from exabgp.reactor.network.error import MD5Error
+    from exabgp.reactor.network.tcp import md5
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        with pytest.raises(MD5Error):
+            md5(sock, '127.0.0.1', 179, 'not-valid!!', True)
