@@ -275,6 +275,34 @@ class Section(Error):
         return None
 
     @classmethod
+    def missing_mandatory(cls, values: dict[str, Any], schema: 'Container | None' = None) -> list[str]:
+        """Return the mandatory schema leaves absent from the parsed values.
+
+        The check is presence-based, not truthiness-based: a leaf explicitly set
+        to a falsy value (such as "local-as auto", which parses to None) counts
+        as provided.
+
+        Args:
+            values: The configuration collected for this section
+            schema: Schema to check against, defaults to the section schema
+
+        Returns:
+            Names of the mandatory leaves which were not configured
+        """
+        from exabgp.configuration.schema import Leaf
+
+        container = cls.schema if schema is None else schema
+        if container is None:
+            return []
+
+        # only Leaf carries "mandatory", a LeafList is a list and an empty one is no value
+        return [
+            name
+            for name, child in container.children.items()
+            if isinstance(child, Leaf) and child.mandatory and name not in values
+        ]
+
+    @classmethod
     def get_schema_completions(cls) -> list['Completion']:
         """Get completions from this section's schema.
 

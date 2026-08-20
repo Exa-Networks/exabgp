@@ -31,6 +31,7 @@ from exabgp.configuration.parser import auto_asn, auto_boolean
 # Removed imports migrated to schema validators:
 # description, domainname, hostname, md5, rate_limit, source_interface
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
+from exabgp.configuration.tcpao import ParseTCPAO
 from exabgp.configuration.validator import IntValidators
 
 # Removed imports migrated to schema validators: boolean, ip, peer_ip, port
@@ -553,6 +554,17 @@ class ParseNeighbor(Section):
 
     def post(self) -> bool:
         local = self._post_get_scope()
+
+        missing_mandatory = self.missing_mandatory(local)
+        if missing_mandatory:
+            return self.error.set('incomplete neighbor, missing {}'.format(', '.join(missing_mandatory)))
+
+        tcp_ao = local.get('tcp-ao', {})
+        if tcp_ao:
+            missing_tcp_ao = ParseTCPAO.missing_mandatory(tcp_ao, ParseTCPAO.schema)
+            if missing_tcp_ao:
+                return self.error.set('incomplete tcp-ao, missing {}'.format(', '.join(missing_tcp_ao)))
+
         families = self._post_families(local)
         neighbor = self._post_neighbor(local, families)
 
