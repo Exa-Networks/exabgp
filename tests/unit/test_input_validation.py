@@ -370,3 +370,36 @@ def test_processes_caps_a_command_without_a_newline():
     ).read_text()
     assert 'self.MAX_COMMAND_SIZE' in source
     assert 'self._buffer.pop(process_name, None)' in source
+
+
+# ============================================================================
+# Helper processes
+# ============================================================================
+
+
+def test_flow_acl_rejects_injection():
+    """The Cumulus helper concatenated flow fields straight into an iptables rule."""
+    from exabgp.application.flow import ACL
+
+    with pytest.raises(ValueError):
+        ACL._build({'source-ipv4': ['10.0.0.0/24 -j ACCEPT\n-A FORWARD']}, 'drop')
+    with pytest.raises(ValueError):
+        ACL._build({'protocol': ['6; rm -rf /']}, 'drop')
+    with pytest.raises(ValueError):
+        ACL._build({'destination-port': ['99999']}, 'drop')
+
+
+def test_flow_acl_renders_a_valid_rule():
+    from exabgp.application.flow import ACL
+
+    flow = {
+        'source-ipv4': ['10.0.0.0/24'],
+        'destination-ipv4': ['192.0.2.1/32'],
+        'protocol': ['=6'],
+        'destination-port': ['=80'],
+    }
+    acl = ACL._build(flow, 'drop')
+    assert acl.count('\n') == 2
+    assert '-s 10.0.0.0/24' in acl
+    assert '-d 192.0.2.1/32' in acl
+    assert '--dport 80' in acl
