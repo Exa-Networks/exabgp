@@ -10,6 +10,7 @@ from __future__ import annotations
 from struct import pack
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -87,9 +88,43 @@ class AIGP(Attribute):
     def __repr__(self):
         return '0x' + ''.join('{:02x}'.format(_) for _ in self.aigp[-8:])
 
+    # AIGP TLV for the IGP metric: type(1) + length(2) + value(8)
+    TLV_AIGP = 1
+    TLV_LENGTH = 11
+
     @classmethod
     def unpack(cls, data, direction, negotiated):
         if not negotiated.aigp:
             # AIGP must only be accepted on configured sessions
             return None
-        return cls(unpack('!Q', data[:8] & 0x000000FFFFFFFFFF), data[:8])
+
+        # RFC 7311 section 3: the attribute is a sequence of TLVs. Every TLV must be
+        # walked, otherwise trailing bytes are silently dropped and a malformed
+        # attribute is re-advertised as if it had been well formed.
+        metric = None
+        offset = 0
+        while offset < len(data):
+            if len(data) - offset < 3:
+                raise Notify(3, 9, 'AIGP TLV header truncated at offset {}'.format(offset))
+            tlv_type = data[offset]
+            tlv_length = unpack('!H', data[offset + 1 : offset + 3])[0]
+            if tlv_length < 3:
+                raise Notify(3, 9, 'AIGP TLV length {} is smaller than its own header'.format(tlv_length))
+            if len(data) - offset < tlv_length:
+                raise Notify(
+                    3,
+                    9,
+                    'AIGP TLV truncated: {} bytes announced, {} available'.format(tlv_length, len(data) - offset),
+                )
+            if tlv_type == cls.TLV_AIGP:
+                if tlv_length != cls.TLV_LENGTH:
+                    raise Notify(3, 9, 'Invalid AIGP TLV length: {}'.format(tlv_length))
+                if metric is None:
+                    metric = data[offset : offset + tlv_length]
+            offset += tlv_length
+
+        # unknown TLV types are ignored per RFC 7311, but the AIGP TLV itself is required
+        if metric is None:
+            raise Notify(3, 9, 'AIGP attribute has no AIGP TLV')
+
+        return cls(metric)
