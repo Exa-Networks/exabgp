@@ -14,6 +14,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import Action
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
 # https://tools.ietf.org/html/rfc7432
@@ -32,6 +33,21 @@ from exabgp.bgp.message.update.nlri import NLRI
 @NLRI.register(AFI.l2vpn, SAFI.evpn)
 class EVPN(NLRI):
     registered_evpn = dict()
+
+    @classmethod
+    def check_length(cls, data, minimum):
+        """Reject wire data too short for this route type.
+
+        The per route type unpack methods index into the payload, so the length
+        must be checked before any field is read, otherwise a truncated NLRI
+        surfaces as an IndexError instead of a NOTIFICATION.
+        """
+        if len(data) < minimum:
+            raise Notify(
+                3,
+                10,
+                '{} EVPN NLRI is too short: need at least {} bytes, got {}'.format(cls.NAME, minimum, len(data)),
+            )
 
     # NEED to be defined in the subclasses
     CODE = -1
@@ -91,8 +107,14 @@ class EVPN(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # EVPN NLRI: route_type(1) + length(1) + route_data(length)
+        if len(bgp) < 2:
+            raise Notify(3, 10, 'EVPN NLRI too short: need at least 2 bytes, got {}'.format(len(bgp)))
         code = bgp[0]
         length = bgp[1]
+
+        if len(bgp) < length + 2:
+            raise Notify(3, 10, 'EVPN NLRI truncated: need {} bytes, got {}'.format(length + 2, len(bgp)))
 
         if code in cls.registered_evpn:
             klass = cls.registered_evpn[code].unpack(bgp[2 : length + 2])

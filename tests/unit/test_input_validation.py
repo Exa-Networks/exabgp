@@ -13,20 +13,24 @@ none of those features.
 
 from __future__ import annotations
 
+import os
 from struct import pack
 
 import pytest
 
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.hostname import HostName
 from exabgp.bgp.message.open.capability.software import Software
 from exabgp.bgp.message.update.attribute.aigp import AIGP
+from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.static.parser import _extended_community
 from exabgp.environment import getenv
 from exabgp.logger import log
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.psk import PSKError, decode_base64
 
 log.init(getenv())
@@ -244,3 +248,37 @@ def test_data_check_extended_community_does_not_raise():
     assert data_check.extendedcommunity('target:65000:1.2.3.4') is True
     assert data_check.extendedcommunity('target:not-a-number:1.2.3.4') is False
     assert data_check.redirect('1.2.3.4:100') is True
+
+
+# ============================================================================
+# Wire decoders: no raw exception may escape
+# ============================================================================
+
+
+def unpack_or_notify(unpack, *args):
+    """Run a decoder and let a Notify through, but not a raw Python exception."""
+    try:
+        nlri, _ = unpack(*args)
+    except Notify:
+        return
+    nlri.json()
+    str(nlri)
+    nlri.index()
+    nlri.as_dict()
+
+
+@pytest.mark.parametrize('code', [1, 2, 3, 4, 5])
+@pytest.mark.parametrize('length', [0, 3, 10, 20, 30, 34, 58])
+def test_evpn_short_nlri_raises_notify(code, length):
+    """Truncated EVPN routes used to escape as IndexError or ValueError, and the
+    Inclusive Multicast decoder raised a bare Exception."""
+    data = bytes([code, length]) + bytes(length)
+    unpack_or_notify(EVPN.unpack_nlri, AFI.l2vpn, SAFI.evpn, data, Action.ANNOUNCE, None)
+
+
+def test_evpn_fuzz_never_raises_a_raw_exception():
+    for code in range(0, 8):
+        for length in range(0, 60):
+            for _ in range(5):
+                data = bytes([code, length]) + os.urandom(length)
+                unpack_or_notify(EVPN.unpack_nlri, AFI.l2vpn, SAFI.evpn, data, Action.ANNOUNCE, None)
