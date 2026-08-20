@@ -76,6 +76,20 @@ def enum(*sequential):
     return type(str('Enum'), (), dict(zip(sequential, sequential)))
 
 
+def attribute_value(value):
+    """Validate a BGP attribute passed as raw text.
+
+    These strings are spliced into the API commands written on stdout, one command
+    per line, so a newline in them would turn a single announce into several
+    commands. Reject anything which is not printable on one line.
+    """
+    for character in value:
+        if character == '\t' or (character.isprintable() and character != '\x7f'):
+            continue
+        raise argparse.ArgumentTypeError('%r contains the control character %r' % (value, character))
+    return value
+
+
 def setargs(parser):
     # fmt: off
     g = parser.add_mutually_exclusive_group()
@@ -116,14 +130,14 @@ def setargs(parser):
     g.add_argument('--down-metric', metavar='M', type=int, default=1000, help='first IP get the metric M when the service is down')
     g.add_argument('--disabled-metric', metavar='M', type=int, default=500, help='first IP get the metric M when the service is disabled')
     g.add_argument('--increase', metavar='M', type=int, default=1, help='for each additional IP address, increase metric value by M')
-    g.add_argument('--community', metavar='COMMUNITY', type=str, default=None, help='announce IPs with the supplied community')
-    g.add_argument('--extended-community', metavar='EXTENDEDCOMMUNITY', type=str, default=None, help='announce IPs with the supplied extended community')
-    g.add_argument('--large-community', metavar='LARGECOMMUNITY', type=str, default=None, help='announce IPs with the supplied large community')
-    g.add_argument('--disabled-community', metavar='DISABLEDCOMMUNITY', type=str, default=None, help='announce IPs with the supplied community when disabled')
-    g.add_argument('--as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path')
-    g.add_argument('--up-as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path when the service is up')
-    g.add_argument('--down-as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path when the service is down')
-    g.add_argument('--disabled-as-path', metavar='ASPATH', type=str, default=None, help='announce IPs with the supplied as-path when the service is disabled')
+    g.add_argument('--community', metavar='COMMUNITY', type=attribute_value, default=None, help='announce IPs with the supplied community')
+    g.add_argument('--extended-community', metavar='EXTENDEDCOMMUNITY', type=attribute_value, default=None, help='announce IPs with the supplied extended community')
+    g.add_argument('--large-community', metavar='LARGECOMMUNITY', type=attribute_value, default=None, help='announce IPs with the supplied large community')
+    g.add_argument('--disabled-community', metavar='DISABLEDCOMMUNITY', type=attribute_value, default=None, help='announce IPs with the supplied community when disabled')
+    g.add_argument('--as-path', metavar='ASPATH', type=attribute_value, default=None, help='announce IPs with the supplied as-path')
+    g.add_argument('--up-as-path', metavar='ASPATH', type=attribute_value, default=None, help='announce IPs with the supplied as-path when the service is up')
+    g.add_argument('--down-as-path', metavar='ASPATH', type=attribute_value, default=None, help='announce IPs with the supplied as-path when the service is down')
+    g.add_argument('--disabled-as-path', metavar='ASPATH', type=attribute_value, default=None, help='announce IPs with the supplied as-path when the service is disabled')
     g.add_argument('--withdraw-on-down', action='store_true', help='Instead of increasing the metric on health failure, withdraw the route')
     g.add_argument('--path-id', metavar='PATHID', type=int, default=None, help='path ID to advertise for the route')
     g.add_argument('--neighbor', metavar='NEIGHBOR', type=neighbor_address, dest='neighbors', action='append', help='advertise the route to the selected neighbors (* for all)')
