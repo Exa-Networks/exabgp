@@ -67,8 +67,11 @@ def _start_group(service: str) -> None:
 
 def _end_group(service: str) -> list[tuple[list[str], str]]:
     """End grouping and return buffered commands."""
-    _GROUP_BYTES.pop(service, None)
-    return _GROUP_BUFFERS.pop(service, [])
+    counted = _GROUP_BYTES.pop(service, 0)
+    buffered = _GROUP_BUFFERS.pop(service, [])
+    # the cap is only worth anything if the count follows what the buffer holds
+    assert counted == sum(len(command) for _, command in buffered), 'the group byte count has to follow its buffer'
+    return buffered
 
 
 def clear_group(service: str) -> None:
@@ -90,6 +93,8 @@ def _add_to_group(service: str, peers: list[str], command: str) -> bool:
     """
     if service not in _GROUP_BUFFERS:
         return False
+
+    assert service in _GROUP_BYTES, 'a buffered group always has a byte count'
 
     if len(_GROUP_BUFFERS[service]) >= MAX_GROUP_COMMANDS:
         log.error(

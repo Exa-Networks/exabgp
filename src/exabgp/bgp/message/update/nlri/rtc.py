@@ -153,6 +153,9 @@ class RTC(NLRI):
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         """Pack NLRI - returns stored wire bytes directly (zero-copy)."""
+        assert len(self._packed) in (self.PACKED_LENGTH_WILDCARD, self.PACKED_LENGTH_FULL), (
+            'an RTC NLRI is either a wildcard or a full route target'
+        )
         return self._packed
 
     def index(self) -> bytes:

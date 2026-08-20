@@ -169,6 +169,7 @@ class VPLS(NLRI):
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for VPLS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.l2vpn, SAFI.vpls)
+        assert len(self._packed) == VPLS_PAYLOAD_SIZE + 2, 'a VPLS NLRI is its two byte length and seventeen bytes'
         return self._packed
 
     def index(self) -> bytes:

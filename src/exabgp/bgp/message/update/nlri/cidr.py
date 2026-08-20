@@ -213,9 +213,12 @@ class CIDR:
         return bytes([self.mask]) + self._packed[: CIDR.size(self.mask)]
 
     def pack_ip(self) -> bytes:
+        # a mask which asks for more bytes than the prefix holds would silently pack short
+        assert CIDR.size(self.mask) <= len(self._packed), 'the mask and the stored prefix have to agree'
         return bytes(self._packed[: CIDR.size(self.mask)])
 
     def pack_nlri(self) -> bytes:
+        assert CIDR.size(self.mask) <= len(self._packed), 'the mask and the stored prefix have to agree'
         return bytes([self.mask]) + bytes(self._packed[: CIDR.size(self.mask)])
 
     @staticmethod

@@ -193,6 +193,7 @@ class IPVPN(Label):
         if not self._has_rd:
             return RouteDistinguisher.NORD
         label_end = self._label_end_offset
+        assert label_end + RD_SIZE <= len(self._packed), 'the route distinguisher has to fit in the wire bytes'
         return RouteDistinguisher(self._packed[label_end : label_end + RD_SIZE])
 
     @property
@@ -212,6 +213,8 @@ class IPVPN(Label):
         label_bits = label_bytes_count * 8
         rd_bits = RD_SIZE_BITS if self._has_rd else 0
         prefix_mask = combined_mask - label_bits - rd_bits
+        assert prefix_mask >= 0, 'the labels and the route distinguisher can not exceed the announced mask'
+        assert prefix_mask <= IP.length(self.afi) * 8, 'the prefix can not be longer than its address family'
 
         # Extract prefix bytes from after RD
         prefix_bytes = self._packed[rd_end:]

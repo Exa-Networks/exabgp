@@ -163,6 +163,8 @@ class Label(INET):
         # end with the bottom of stack bit: RFC 3107 withdraws use 0x800000, which
         # does not set it, and scanning would then swallow the rd and the prefix
         if self._label_size >= 0:
+            assert self._label_size % LABEL_SIZE_BYTES == 0, 'a label stack is a whole number of labels'
+            assert base + 1 + self._label_size <= len(self._packed), 'the label stack has to fit in the wire bytes'
             return base + 1 + self._label_size
 
         # Scan labels starting after mask byte
@@ -197,6 +199,7 @@ class Label(INET):
 
         if not label_bytes:
             return Labels.NOLABEL
+        assert len(label_bytes) % LABEL_SIZE_BYTES == 0, 'a label stack is a whole number of labels'
         return Labels(label_bytes)
 
     @property
