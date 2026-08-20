@@ -13,6 +13,8 @@ none of those features.
 
 from __future__ import annotations
 
+from struct import pack
+
 import pytest
 
 from exabgp.bgp.message.notification import Notify
@@ -20,6 +22,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.hostname import HostName
 from exabgp.bgp.message.open.capability.software import Software
+from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.configuration.configuration import Configuration
 from exabgp.environment import getenv
 from exabgp.logger import log
@@ -171,3 +174,40 @@ def test_software_capability_rejects_invalid_utf8():
 def test_software_capability_rejects_an_empty_value():
     with pytest.raises(Notify):
         Software.unpack_capability(Software(), b'')
+
+
+# ============================================================================
+# AIGP attribute
+# ============================================================================
+
+
+class _AigpNegotiated:
+    aigp = True
+
+
+def test_aigp_decodes_a_well_formed_tlv():
+    """AIGP.unpack() did "data[:8] & 0x...", a bytes and an int, so every AIGP
+    attribute on a configured session raised a TypeError."""
+    attribute = AIGP.unpack(b'\x01\x00\x0b' + pack('!Q', 5), None, _AigpNegotiated())
+    assert attribute.aigp == b'\x01\x00\x0b' + pack('!Q', 5)
+
+
+def test_aigp_rejects_trailing_bytes():
+    with pytest.raises(Notify):
+        AIGP.unpack(b'\x01\x00\x0b' + pack('!Q', 5) + b'\xaa\xbb', None, _AigpNegotiated())
+
+
+def test_aigp_ignores_unknown_trailing_tlvs():
+    """RFC 7311: unknown TLVs are ignored, but they must still be well formed."""
+    data = b'\x01\x00\x0b' + pack('!Q', 5) + b'\x02\x00\x05\x00\x00'
+    assert AIGP.unpack(data, None, _AigpNegotiated()).aigp == b'\x01\x00\x0b' + pack('!Q', 5)
+
+
+def test_aigp_requires_an_aigp_tlv():
+    with pytest.raises(Notify):
+        AIGP.unpack(b'\x02\x00\x05\x00\x00', None, _AigpNegotiated())
+
+
+def test_aigp_rejects_a_truncated_tlv():
+    with pytest.raises(Notify):
+        AIGP.unpack(b'\x01\x00\x0b\x00', None, _AigpNegotiated())
