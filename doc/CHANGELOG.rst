@@ -3,6 +3,78 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.12:
+ * Fix: the OPEN capabilities a peer sends are validated. HostName and
+   Software Version decoded peer supplied bytes without checking the
+   announced length fitted inside the capability, and invalid UTF-8 left
+   the parser as a UnicodeDecodeError instead of ending the session with
+   a NOTIFICATION. The AS4 capability accepted a 2 octet value, which
+   RFC 6793 section 3 does not allow.
+ * Fix: the AIGP attribute is parsed as the sequence of TLV it is
+   (RFC 7311 section 3). AIGP.unpack() applied a bitmask to a bytes
+   object, so every AIGP attribute received raised a TypeError, and it
+   kept only the value, so anything which had decoded would have been
+   re-advertised malformed.
+ * Fix: an EVPN NLRI is length checked before it is decoded. A truncated
+   route left the parser as an IndexError, a ValueError or a bare
+   Exception, and a short payload was often accepted in silence because
+   nothing compared it to the announced length. Each route type now
+   checks its own length fields against the size of the route.
+ * Fix: a BGP-LS NLRI is length checked and its TLV boundaries are
+   verified. Malformed input came back as a bare Exception, a
+   RuntimeError, a struct.error or an AttributeError depending on where
+   it fell over, and never as a NOTIFICATION. The prefix routes now
+   require the Local Node Descriptors and IP Reachability TLV which
+   RFC 7752 section 3.2 makes mandatory.
+ * Fix: a MUP NLRI is length checked before it is decoded. The route
+   type decoders read their own length fields without knowing the
+   payload held them, and the announced lengths were never compared to
+   the size of the route.
+ * Fix: the IP part of an extended community is validated.
+   "target:1.2.3:100" raised an IndexError out of the route parser
+   instead of reporting a configuration error, and "1.2.3.256" was
+   accepted.
+ * Fix: the API and CLI command buffers are bounded by bytes. The memory
+   guard in the pipe helper measured the number of sources rather than
+   what those sources had queued, so it could never fire, and a source
+   which never sends a newline grew the pending line without bound.
+ * Fix: an ASN given in the configuration is range checked and its
+   format validated. A negative value, a value above 4294967295, an
+   underscore separator, a leading sign, and dotted forms such as
+   "1.2.3" or "1.65536" all loaded.
+ * Fix: a base64 encoded MD5 password is validated. b64decode() was
+   called without validate=True, so a character outside the base64
+   alphabet was discarded rather than rejected and a mistyped password
+   became a different key than the one intended. A password decoding to
+   nothing was accepted as well.
+ * Fix: a neighbor must be given both local-as and peer-as. Leaving
+   peer-as out was indistinguishable from asking for "peer-as auto" and
+   quietly turned off the check that the peer announces the ASN
+   expected.
+ * Fix: the cumulus flow helper validates the flow fields it writes into
+   an ACL. The components were concatenated into an iptables rule as
+   they came, so whatever reached those fields ended up in a file handed
+   to cl-acltool. Each component is now parsed and the rule rendered
+   from the parsed value.
+ * Fix: the cumulus flow helper exits instead of spinning when it can
+   not read stdin. The read sat inside the handler which exists so that
+   one malformed message does not kill the helper, but a read error does
+   not recover, so every iteration failed alike and the loop spun at
+   100% CPU without making progress.
+ * Fix: the cumulus flow helper removes the ACL it installed when it is
+   asked to stop. ACL.end was installed as the SIGTERM handler without
+   accepting the arguments python passes one, so every SIGTERM raised a
+   TypeError which the broad handler swallowed, and ACL.clear() deleted
+   a single rule before raising RuntimeError for a dictionary changed
+   during iteration.
+ * Fix: the healthcheck refuses control characters in the community,
+   extended community, large community and as-path options. A newline in
+   any of them split a single announce into several API commands.
+ * QA: the functional test runner collects the output of a test without
+   blocking the loop which drives it, so the parsing and decoding suites
+   report progress as they run rather than failing every test. Parsing
+   gains the --timeout its two sibling suites already had.
+
 Version 5.0.11:
  * Fix: peer-controlled HostName, Software Version, and NOTIFICATION
    strings are escaped before they are written to JSON API streams.
