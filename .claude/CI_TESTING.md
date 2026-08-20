@@ -23,6 +23,7 @@ env exabgp_log_enable=false uv run pytest ./tests/unit/
 ./qa/bin/check_tiger_style            # tiger style checks (.claude/TIGER_STYLE.md)
 ./qa/bin/check_tiger_style --show     # list every violation it counts
 ./qa/bin/mutmut_run <module>          # mutation testing, slow, not part of test_everything
+./qa/bin/fuzz_hunt                    # deeper property tests with a fresh seed, slow
 ```
 
 ---

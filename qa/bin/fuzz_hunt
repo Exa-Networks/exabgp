@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""
+Hunt for new bugs with the property tests, deeper and with a fresh seed.
+
+test_everything runs the fuzz suite as a gate: derandomized, so it fails on what the code
+does rather than on which examples Hypothesis drew. That is the right behaviour for a
+commit gate and the wrong one for finding bugs, which needs a seed nobody has tried.
+
+This runs the same tests with the hunt profile: ten times the examples and a different
+seed every time. It is what you run after touching a decoder, and what to leave running
+when you want the suite to earn its keep.
+
+Usage:
+    ./qa/bin/fuzz_hunt                       # the whole fuzz suite
+    ./qa/bin/fuzz_hunt nlri_decoder          # only the files whose name matches
+    ./qa/bin/fuzz_hunt --rounds 5            # five rounds, each with its own seed
+
+A failure prints the seed which found it. Reproduce it with:
+
+    uv run pytest tests/fuzz -k <test> --hypothesis-seed=<seed>
+
+and once the cause is understood, write the falsifying example into
+tests/unit/test_nlri_wire_bounds.py as a plain test, where it is read by whoever breaks
+it next.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.parent
+FUZZ_DIR = 'tests/fuzz'
+
+
+def run_round(pattern: str | None, seed: int | None) -> int:
+    command = ['uv', 'run', 'pytest', FUZZ_DIR, '-q', '--tb=short']
+    if pattern:
+        command += ['-k', pattern]
+    if seed is not None:
+        command += [f'--hypothesis-seed={seed}']
+
+    environment = dict(os.environ)
+    environment['HYPOTHESIS_PROFILE'] = 'hunt'
+    environment['exabgp_log_enable'] = 'false'
+
+    print('running', ' '.join(command))
+    return subprocess.call(command, cwd=ROOT, env=environment)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description='run the property tests deeper, with a fresh seed')
+    parser.add_argument('pattern', nargs='?', help='only the tests whose name matches')
+    parser.add_argument('--rounds', type=int, default=1, help='how many times to run, each with its own seed')
+    parser.add_argument('--seed', type=int, help='a seed to reproduce a run rather than hunt')
+    options = parser.parse_args()
+
+    if options.seed is not None:
+        return run_round(options.pattern, options.seed)
+
+    for round_number in range(1, options.rounds + 1):
+        if options.rounds > 1:
+            print(f'--- round {round_number} of {options.rounds}')
+        # each round draws its own seed, which pytest prints when a test fails
+        code = run_round(options.pattern, None)
+        if code != 0:
+            print(f'\nround {round_number} found something, the seed is in the output above')
+            print('reproduce it with ./qa/bin/fuzz_hunt --seed <seed>')
+            return code
+
+    print(f'\n{options.rounds} round(s) found nothing new')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

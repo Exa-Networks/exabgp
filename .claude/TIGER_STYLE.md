@@ -65,6 +65,10 @@ The property tests in `tests/fuzz/test_nlri_decoder_properties.py` hold every re
 this rule. New decoders are covered the day they are registered. Falsifying examples become plain
 regression tests in `tests/unit/test_nlri_wire_bounds.py`.
 
+They run derandomized as part of `test_everything`, so the gate fails on what the code does rather
+than on which examples Hypothesis drew. Hunting for new ones is a separate, deeper run:
+`./qa/bin/fuzz_hunt`. Run it after touching a decoder.
+
 ### 1.2 Assert your invariants, never your input
 
 Python strips `assert` under `-O`. An assertion is therefore a statement about *our* code, checked

@@ -120,6 +120,33 @@ tests/fuzz/test_random_input_validation.py::test_bgp_header_validation PASSED
 ============================== 14 passed in 2.15s ==============================
 ```
 
+## Two Profiles: Gate and Hunt
+
+The property tests are run for two different reasons, which want opposite settings, so
+`conftest.py` registers a profile for each:
+
+| Profile | Examples | Seed | Used by |
+|---------|----------|------|---------|
+| `gate` (default) | 200 | fixed (derandomized) | `test_everything`, every local run |
+| `hunt` | 2000 | fresh every run | `./qa/bin/fuzz_hunt` |
+
+As a commit gate, a random seed means a commit is blocked by a bug someone else
+introduced last month, or waved through because the draw was kind. The gate is therefore
+derandomized: it fails on what the code does, not on what Hypothesis drew.
+
+Hunting for bugs wants the opposite:
+
+```bash
+./qa/bin/fuzz_hunt                    # the whole suite, deeper, fresh seed
+./qa/bin/fuzz_hunt nlri_decoder       # only the matching tests
+./qa/bin/fuzz_hunt --rounds 5         # five rounds, each with its own seed
+./qa/bin/fuzz_hunt --seed 1234        # reproduce what a round found
+```
+
+When a hunt finds something, write the falsifying example into
+`tests/unit/test_nlri_wire_bounds.py` as a plain test. The gate then defends it on every
+run, whatever the profile draws.
+
 ## Mutation Testing
 
 Fuzzing asks whether the code survives strange input. Mutation testing asks the opposite

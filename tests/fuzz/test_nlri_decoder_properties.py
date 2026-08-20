@@ -1,5 +1,8 @@
 """Property based tests covering every registered NLRI decoder.
 
+The number of examples and whether the seed varies come from the Hypothesis profiles in
+conftest.py: derandomized for the gate, random and deeper for ./qa/bin/fuzz_hunt.
+
 The hand written corpus in tests/unit/test_input_validation.py checks a fixed
 list of truncated EVPN, BGP-LS and MUP routes.  These tests generalise it: for
 *every* family in NLRI.registered_nlri, arbitrary wire bytes must either decode
@@ -12,7 +15,7 @@ not the process killed by a traceback.
 """
 
 import pytest
-from hypothesis import HealthCheck, given, settings, strategies as st
+from hypothesis import given, strategies as st
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
@@ -52,7 +55,6 @@ def decode(afi: AFI, safi: SAFI, data: bytes) -> NLRI | None:
 @pytest.mark.fuzz
 @pytest.mark.parametrize('family', FAMILIES, ids=FAMILY_IDS)
 @given(data=st.binary(min_size=0, max_size=80))
-@settings(deadline=None, max_examples=200, suppress_health_check=[HealthCheck.too_slow])
 def test_random_bytes_only_raise_notify(family: tuple[AFI, SAFI], data: bytes) -> None:
     """Arbitrary bytes decode or Notify, they never crash the parser."""
     afi, safi = family
@@ -65,7 +67,6 @@ def test_random_bytes_only_raise_notify(family: tuple[AFI, SAFI], data: bytes) -
     length=st.integers(min_value=0, max_value=255),
     payload=st.binary(min_size=0, max_size=80),
 )
-@settings(deadline=None, max_examples=200, suppress_health_check=[HealthCheck.too_slow])
 def test_lying_length_prefix_only_raises_notify(family: tuple[AFI, SAFI], length: int, payload: bytes) -> None:
     """A length byte which does not match the payload must not be trusted.
 
@@ -83,7 +84,6 @@ def test_lying_length_prefix_only_raises_notify(family: tuple[AFI, SAFI], length
     length=st.integers(min_value=0, max_value=60),
     payload=st.binary(min_size=0, max_size=60),
 )
-@settings(deadline=None, max_examples=100, suppress_health_check=[HealthCheck.too_slow])
 def test_evpn_route_types_only_raise_notify(code: int, length: int, payload: bytes) -> None:
     """EVPN routes are a type byte, a length byte, then the route itself."""
     decode(AFI.l2vpn, SAFI.evpn, bytes([code, length]) + payload)
@@ -95,7 +95,6 @@ def test_evpn_route_types_only_raise_notify(code: int, length: int, payload: byt
     length=st.integers(min_value=0, max_value=0xFFFF),
     payload=st.binary(min_size=0, max_size=60),
 )
-@settings(deadline=None, max_examples=100, suppress_health_check=[HealthCheck.too_slow])
 def test_bgpls_tlv_only_raises_notify(code: int, length: int, payload: bytes) -> None:
     """BGP-LS NLRI are a 16 bit type and a 16 bit length, followed by TLVs."""
     header = code.to_bytes(2, 'big') + length.to_bytes(2, 'big')
@@ -110,7 +109,6 @@ def test_bgpls_tlv_only_raises_notify(code: int, length: int, payload: bytes) ->
     length=st.integers(min_value=0, max_value=255),
     payload=st.binary(min_size=0, max_size=60),
 )
-@settings(deadline=None, max_examples=60, suppress_health_check=[HealthCheck.too_slow])
 def test_mup_routes_only_raise_notify(architecture: int, code: int, length: int, payload: bytes) -> None:
     """MUP NLRI are an architecture byte, a 16 bit type, a length, then the route."""
     header = bytes([architecture]) + code.to_bytes(2, 'big') + bytes([length])
@@ -121,7 +119,6 @@ def test_mup_routes_only_raise_notify(architecture: int, code: int, length: int,
 @pytest.mark.fuzz
 @pytest.mark.parametrize('family', FAMILIES, ids=FAMILY_IDS)
 @given(data=st.binary(min_size=0, max_size=80))
-@settings(deadline=None, max_examples=200, suppress_health_check=[HealthCheck.too_slow])
 def test_decoding_is_idempotent(family: tuple[AFI, SAFI], data: bytes) -> None:
     """What a decoder accepts, it must re-encode into something it accepts again.
 
