@@ -9,7 +9,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import decode_utf8
 from exabgp.util.dns import host, domain
 
 
@@ -53,8 +55,16 @@ class HostName(Capability):
         if not data:
             return instance
         l1 = data[0]
-        instance.host_name = data[1 : l1 + 1].decode('utf-8')
+        if len(data) < l1 + 1:
+            raise Notify(
+                2, 0, 'Hostname capability truncated: need {} bytes for the host name, got {}'.format(l1 + 1, len(data))
+            )
+        instance.host_name = decode_utf8(data[1 : l1 + 1], 'host name')
         if l1 + 1 < len(data):
             l2 = data[l1 + 1]
-            instance.domain_name = data[l1 + 2 : l1 + 2 + l2].decode('utf-8')
+            if len(data) < l1 + 2 + l2:
+                raise Notify(
+                    2, 0, 'Hostname capability truncated: need {} bytes total, got {}'.format(l1 + 2 + l2, len(data))
+                )
+            instance.domain_name = decode_utf8(data[l1 + 2 : l1 + 2 + l2], 'domain name')
         return instance
