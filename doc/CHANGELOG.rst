@@ -3,9 +3,19 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
-Version 5.0.10:
+Version 5.0.11:
  * Fix: peer-controlled HostName, Software Version, and NOTIFICATION
    strings are escaped before they are written to JSON API streams.
+ * Fix: package metadata and PyPI page content. Project metadata now has
+   one source of truth in pyproject.toml, declares the BSD license,
+   restores keywords, fixes project URLs, and removes the stale
+   exabgpcli entry point.
+ * Fix: README install, zipapp, version command, GitHub release archive,
+   PyPI, and changelog links now point at working commands and URLs.
+ * QA: avoid functional test deadlocks when child stdout or stderr fills
+   a pipe before process exit.
+
+Version 5.0.10:
  * Fix: the package can be installed on Python 3.13 and 3.14. The
    requires-python upper bound is removed, the PyPI classifiers list
    both versions, and the CI matrix tests them. (#1392)
