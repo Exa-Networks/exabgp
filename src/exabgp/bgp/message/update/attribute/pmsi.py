@@ -89,14 +89,16 @@ class PMSI(Attribute):
         tunnel_type = data[1]
         klass = cls._pmsi_known.get(tunnel_type)
         if klass is None:
-            return cls(data)
+            return PMSI(data)
         # a subclass exists to read a tunnel identifier of one shape, and its accessors say
         # so: PMSIIngressReplication.ip hands four bytes to IPv4.ntop(). A peer which sends
         # another size has not sent that shape, so it does not get that class. Refusing the
         # attribute instead would drop a route this release accepts today; the generic PMSI
         # holds the same bytes and prints the identifier as hex.
         if klass.TUNNEL_SIZE is not None and len(data) - 5 != klass.TUNNEL_SIZE:
-            return cls(data)
+            # PMSI, not cls: called on a subclass, cls is that subclass, and returning it
+            # is the very thing this check exists to prevent
+            return PMSI(data)
         return klass(data)
 
     @classmethod
@@ -118,9 +120,12 @@ class PMSI(Attribute):
         else:
             packed_label = pack('!L', label << 4)[1:4]
         packed = pack('!BB', flags, tunnel_type) + packed_label + tunnel
-        if tunnel_type in cls._pmsi_known:
-            return cls._pmsi_known[tunnel_type](packed)
-        return cls(packed)
+        # the same rule as from_packet: a subclass only gets the identifier it can read,
+        # otherwise its accessors are handed something they cannot make sense of
+        klass = cls._pmsi_known.get(tunnel_type)
+        if klass is not None and (klass.TUNNEL_SIZE is None or len(tunnel) == klass.TUNNEL_SIZE):
+            return klass(packed)
+        return PMSI(packed)
 
     @property
     def flags(self) -> int:
@@ -269,9 +274,10 @@ class PMSIIngressReplication(PMSI):
     def prettytunnel(self) -> str:
         """The endpoint as an address.
 
-        from_packet only builds this class when the identifier is the four bytes ip needs,
-        so IPv4.ntop() cannot be handed anything else. The assertion is here because that
-        is an invariant of the dispatch rather than something the caller can see.
+        Every path which builds this class, from_packet for the wire and make_pmsi for our
+        own callers, checks the identifier against TUNNEL_SIZE first, so IPv4.ntop() cannot
+        be handed anything else. The assertion states that invariant rather than testing
+        input: nothing a peer sends can make it false.
         """
         assert len(self.tunnel) == self.TUNNEL_SIZE, 'ingress replication holds an IPv4 address'
         return self.ip
