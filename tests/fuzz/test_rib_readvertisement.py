@@ -105,10 +105,21 @@ def _first_route(family):
 class TestEveryRegisteredFamilyHasItsSizes:
     """A family which decodes but has no Family.size entry cannot be received
 
-    ipv6 multicast was in exactly that state: configurable, announceable,
-    encoded into an MP_REACH, and refused on the way back in with
-    'unsupported ipv6 multicast', so two speakers which agreed on the family
-    dropped the session on the first route.
+    ipv6 multicast and bgp-ls-vpn were both in that state: an NLRI decoder, an
+    announce parser in the case of multicast, and no entry in the table, so
+    MPRNLRI.unpack refused them outright.
+
+    Neither was reachable in practice, and an earlier commit message here said
+    otherwise. configuration/neighbor/family.py has no 'ipv6 multicast' keyword,
+    so the family cannot be configured, cannot be negotiated, and MPRNLRI
+    refuses a non-negotiated family BEFORE it consults this table. The announce
+    parser registered for it is unreachable code.
+
+    The entries are still right: this table and the NLRI registry describe the
+    same set of families, and letting them drift is how a family ends up
+    half-supported. But the fix is correctness, not a live failure, and the
+    honest reachability statement belongs next to the test rather than in a
+    commit message nobody re-reads.
     """
 
     def test_no_registered_family_is_missing(self) -> None:
