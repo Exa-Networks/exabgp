@@ -145,10 +145,12 @@ class Operational(Message):
             counter = unpack('!L', data[sequence_end:counter_end])[0]
             return klass(afi, safi, routerid, sequence, counter)
 
-        # this used to be sys.stdout.write(). In daemon mode stdout is the pipe
-        # feeding the API subprocesses, so an unknown operational type from a
-        # peer wrote an unparseable line straight into every consumer's stream.
-        raise Notify(5, 0, 'unknown operational message type %d' % int(what))
+        # an unknown type has always been ignored, and refusing it now would drop
+        # sessions which work today.  What must not survive is the reporting: this
+        # was sys.stdout.write(), and in daemon mode stdout is the pipe feeding the
+        # API subprocesses, so a peer could write an unparseable line straight into
+        # every consumer's stream.
+        return None
 
 
 # ============================================================ OperationalFamily

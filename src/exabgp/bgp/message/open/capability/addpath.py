@@ -29,7 +29,13 @@ class AddPath(Capability, dict):
     }
 
     ENTRY_SIZE = 4  # AFI(2) + SAFI(1) + Send/Receive(1)
-    SEND_RECEIVE_MAX = 3  # RFC 7911 defines 1, 2 and 3
+
+    @classmethod
+    def send_receive_name(cls, value):
+        # RFC 7911 defines 1, 2 and 3.  A peer can send anything, and looking an
+        # unknown value up in the table raised KeyError from json() and __str__(),
+        # which is to say from the API writer and the logger.
+        return cls.string.get(value, 'invalid ({})'.format(value))
 
     def __init__(self, families=(), send_receive=0):
         for afi, safi in families:
@@ -43,7 +49,7 @@ class AddPath(Capability, dict):
             'AddPath('
             + ','.join(
                 [
-                    '{} {} {}'.format(self.string[self[aafi]], xafi, xsafi)
+                    '{} {} {}'.format(self.send_receive_name(self[aafi]), xafi, xsafi)
                     for (aafi, xafi, xsafi) in [((afi, safi), str(afi), str(safi)) for (afi, safi) in self]
                 ],
             )
@@ -52,7 +58,7 @@ class AddPath(Capability, dict):
 
     def json(self):
         families = ','.join(
-            '"{}/{}": "{}"'.format(xafi, xsafi, self.string[self[aafi]])
+            '"{}/{}": "{}"'.format(xafi, xsafi, self.send_receive_name(self[aafi]))
             for (aafi, xafi, xsafi) in (((afi, safi), str(afi), str(safi)) for (afi, safi) in self)
         )
         return '{{ "name": "addpath"{}{} }}'.format(', ' if families else '', families)
@@ -75,9 +81,9 @@ class AddPath(Capability, dict):
             afi = AFI.unpack(data[:2])
             safi = SAFI.unpack(data[2])
             sr = data[3]
-            # an unknown value has no name, and json() and __str__() would raise KeyError
-            if sr > AddPath.SEND_RECEIVE_MAX:
-                raise Notify(2, 0, 'invalid ADD-PATH capability, unknown send/receive value %d' % sr)
+            # the value is consumed as a bitmask during negotiation, so refusing an
+            # unknown one would change which sessions come up.  It is kept, and the
+            # rendering below is what stops it raising KeyError.
             instance.add_path(afi, safi, sr)
             data = data[AddPath.ENTRY_SIZE :]
         return instance
