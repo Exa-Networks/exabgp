@@ -701,7 +701,9 @@ class FlowFragment(IOperationByteShort, BinaryString, FlowIPv4, FlowIPv6):
     NAME: ClassVar[str] = 'fragment'
     FLAG: ClassVar[bool] = True
     converter: ClassVar[Callable[[str], BaseValue]] = converter(Fragment.named, Fragment)
-    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(ord, Fragment)
+    # IOperationByteShort, so the operator byte may announce a two byte value: decode with
+    # _number rather than ord, which takes a single byte and raised TypeError on the rest
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, Fragment)
 
 
 # draft-raszuk-idr-flow-spec-v6-01
