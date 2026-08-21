@@ -210,8 +210,13 @@ def test_what_this_cannot_tell_apart_is_written_down() -> None:
     well formed.  The ambiguity is in the encoding, not in this decoder: the mask covers
     labels, RD and prefix together and nothing else marks the boundary.
 
-    Session 5.0 hit this writing the same test, with 192.168.1 as the prefix.  Recorded so
-    that the limit of the check is a known thing rather than a surprise.
+    Session 5.0 hit this writing the same test, with 192.168.1 as the prefix.
+
+    IF THIS TEST EVER FAILS, DELETE IT.  It asserts an incompleteness, so a failure means
+    the incompleteness is gone and the right response is to remove the test, not to adjust
+    it until it passes again.  A comment saying "this is incomplete" ages into a comment
+    nobody believes; a test asserting the incompleteness fails the day somebody fixes it.
+    That framing is 5.0's and it is better than the comment it replaced.
     """
     # 0xc0a801: the last byte is odd, so it reads as a bottom of stack label
     wire = bytes([48]) + bytes([0x00, 0x00, 0x10]) + bytes([0xC0, 0xA8, 0x01])
@@ -219,4 +224,54 @@ def test_what_this_cannot_tell_apart_is_written_down() -> None:
 
     assert str(nlri.cidr) == '0.0.0.0/0', (
         'the prefix now survives an over-long stack: the encoding gained a boundary marker, or this decoder learned something it could not know'
+    )
+
+
+def test_the_same_prefix_one_bit_different_is_refused() -> None:
+    """The twin of the case above, and the two together say where the boundary is.
+
+    0xc0a801 ends in an odd byte and reads as a bottom of stack label, so the over-long
+    stack looks terminated.  0xc0a800 does not, so the same shape is refused.  One bit of
+    peer data decides which, and neither the decoder nor the encoding can do better.
+    """
+    wire = bytes([48]) + bytes([0x00, 0x00, 0x10]) + bytes([0xC0, 0xA8, 0x00])
+
+    with pytest.raises(Notify, match='never ends'):
+        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.ANNOUNCE, None, None)
+
+
+def test_the_two_label_decoders_agree() -> None:
+    """main has TWO live copies of the label loop and a fix can land in one.
+
+    INET.unpack_nlri decodes nlri-mpls; IPVPN.unpack_nlri is a second copy which decodes
+    mpls-vpn.  The first version of this fix went into inet.py alone and changed nothing
+    for mpls-vpn, which stayed at 0.0.0.0/0, and every nlri-mpls test passed.  Session 5.0
+    found it by measuring rather than by reading, and their branch does not have the hazard
+    at all: their second copy is commented out, so their single edit reached both families.
+
+    This asserts the two agree about what terminates a stack, so the next fix to one is a
+    failure rather than a silence.
+    """
+    unterminated = bytes([0x00, 0x00, 0x10])
+    terminated = bytes([0x00, 0x00, 0x11])
+    prefix = bytes([10, 0, 0])
+    rd = bytes(8)
+
+    def outcome(afi: AFI, safi: SAFI, wire: bytes) -> str:
+        try:
+            nlri, _ = NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, None, None)
+        except Notify:
+            return 'refused'
+        return str(nlri.cidr)
+
+    plain_bad = outcome(AFI.ipv4, SAFI.nlri_mpls, bytes([48]) + unterminated + prefix)
+    vpn_bad = outcome(AFI.ipv4, SAFI.mpls_vpn, bytes([112]) + unterminated + rd + prefix)
+    assert plain_bad == vpn_bad == 'refused', (
+        f'the two decoders disagree about an unterminated stack: nlri-mpls {plain_bad}, mpls-vpn {vpn_bad}'
+    )
+
+    plain_good = outcome(AFI.ipv4, SAFI.nlri_mpls, bytes([48]) + terminated + prefix)
+    vpn_good = outcome(AFI.ipv4, SAFI.mpls_vpn, bytes([112]) + terminated + rd + prefix)
+    assert plain_good == vpn_good == '10.0.0.0/24', (
+        f'the two decoders disagree about a good stack: nlri-mpls {plain_good}, mpls-vpn {vpn_good}'
     )
