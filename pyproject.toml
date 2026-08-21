@@ -177,6 +177,7 @@ paths_to_mutate = [
 	"src/exabgp/bgp/message/update/nlri/label.py",
 	"src/exabgp/bgp/message/update/nlri/rtc.py",
 	"src/exabgp/bgp/message/update/nlri/vpls.py",
+	"src/exabgp/bgp/message/update/nlri/flow.py",
 	"src/exabgp/bgp/message/update/attribute/aigp.py",
 	"src/exabgp/reactor/api/command/group.py",
 ]

@@ -21,7 +21,23 @@ import sys
 
 import pytest
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+def _repository_root() -> str:
+    """The repository, even when the tests are running from a copy of it.
+
+    mutmut copies the tree into ./mutants and rewrites the modules it mutates with an
+    in-process trampoline which reads MUTANT_UNDER_TEST.  These tests launch `exabgp` as
+    a subprocess, which the trampoline is not prepared for, and a subprocess would not
+    carry the mutant anyway.  Run the real launcher: what is under test here is how a
+    setting is named, not how an NLRI decodes.
+    """
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    if os.path.basename(root) == 'mutants':
+        return os.path.dirname(root)
+    return root
+
+
+ROOT = _repository_root()
 EXABGP = os.path.join(ROOT, 'sbin', 'exabgp')
 
 DOTTED = 'exabgp.api.ack'
