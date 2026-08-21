@@ -130,7 +130,10 @@ class BGPLS(NLRI):
         self._packed = b''
 
     def pack_nlri(self, negotiated=None):
-        return pack('!BB', self.CODE, len(self._packed)) + self._packed
+        # RFC 7752: NLRI Type (2 octets) then Total NLRI Length (2 octets), which is
+        # what unpack_nlri reads.  A one byte header could not hold a code above 255
+        # and struct raised on it, from json() rather than from the decoder.
+        return pack('!HH', self.CODE, len(self._packed)) + self._packed
 
     def __len__(self):
         return len(self._packed) + 2
