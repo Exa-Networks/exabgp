@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
 from exabgp.protocol.ip import IPv6
 from exabgp.util import hexstring
@@ -35,6 +36,7 @@ from exabgp.util import hexstring
 
 @LinkState.register()
 class Srv6EndX(FlagLS):
+    FIXED_SIZE = 22
     TLV = 1106
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     MERGE = True
@@ -46,8 +48,9 @@ class Srv6EndX(FlagLS):
     def __repr__(self):
         return '\n'.join(
             [
+                # content holds dicts, attribute access raised AttributeError from str()
                 'behavior: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
-                    d.behavior, d.flags, d.algorithm, d.weight, d.sid
+                    d['behavior'], d['flags'], d['algorithm'], d['weight'], d['sid']
                 )
                 for d in self.content
             ],
@@ -66,6 +69,9 @@ class Srv6EndX(FlagLS):
 
     @classmethod
     def unpack(cls, data):
+        # Behavior(2) + Flags(1) + Algorithm(1) + Weight(1) + Reserved(1) + SID(16)
+        if len(data) < cls.FIXED_SIZE:
+            raise Notify(3, 5, f'Unable to decode attribute, not enough data for {cls.REPR}')
         behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]

@@ -135,11 +135,6 @@ class JSON:
         )
 
     def down(self, neighbor, reason=''):
-        def escape_quote(reason):
-            # the {} and [] change is an horrible hack until we generate python objects
-            # as otherwise we interpret the string as a list or dict
-            return reason.replace('[', '(').replace(']', ')').replace('{', '(').replace('}', ')')
-
         return self._header(
             self._neighbor(
                 neighbor,
@@ -147,7 +142,7 @@ class JSON:
                 self._kv(
                     {
                         'state': 'down',
-                        'reason': escape_quote(reason),
+                        'reason': reason,
                     },
                 ),
             ),

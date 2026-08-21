@@ -11,6 +11,7 @@ from struct import unpack
 from exabgp.protocol.iso import ISO
 from exabgp.util import hexstring
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.protocol.ip import IP, IPv6
@@ -47,7 +48,15 @@ ISIS = 1
 OSPF = 2
 
 
+# Behavior(2) + Flags(1) + Algorithm(1) + Weight(1) + Reserved(1) + Neighbor Id + SID(16)
+FIXED_SIZE_ISIS = 28
+FIXED_SIZE_OSPF = 22
+
+
 def unpack_data(cls, data, type):
+    needed = FIXED_SIZE_ISIS if type == ISIS else FIXED_SIZE_OSPF
+    if len(data) < needed:
+        raise Notify(3, 5, f'Unable to decode attribute, not enough data for {cls.__name__}')
     behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
     flags = cls.unpack_flags(data[2:3])
     algorithm = data[3]
@@ -99,8 +108,9 @@ class Srv6LanEndXISIS(FlagLS):
     def __repr__(self):
         return '\n'.join(
             [
+                # content holds dicts, attribute access raised AttributeError from str()
                 'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
-                    d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid
+                    d['behavior'], d['neighbor-id'], d['flags'], d['algorithm'], d['weight'], d['sid']
                 )
                 for d in self.content
             ],
@@ -141,8 +151,9 @@ class Srv6LanEndXOSPF(FlagLS):
     def __repr__(self):
         return '\n'.join(
             [
+                # content holds dicts, attribute access raised AttributeError from str()
                 'behavior: {}, neighbor-id: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
-                    d.behavior, d.neighbor_id, d.flags, d.algorithm, d.weight, d.sid
+                    d['behavior'], d['neighbor-id'], d['flags'], d['algorithm'], d['weight'], d['sid']
                 )
                 for d in self.content
             ],
