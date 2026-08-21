@@ -11,6 +11,7 @@ from struct import unpack
 from exabgp.util import hexstring
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
@@ -31,6 +32,10 @@ class SrAdjacency(FlagLS):
     TLV = 1099
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
 
+    HEADER_SIZE = 4  # Flags(1) + Weight(1) + Reserved(2)
+    SID_LABEL_SIZE = 3  # V and L set: a 3 octet local label
+    SID_INDEX_SIZE = 4  # V and L unset: a 4 octet index
+
     def __init__(self, flags, sids, weight, undecoded=()):
         self.flags = flags
         self.sids = sids
@@ -42,12 +47,14 @@ class SrAdjacency(FlagLS):
 
     @classmethod
     def unpack(cls, data):
+        if len(data) < cls.HEADER_SIZE:
+            raise Notify(3, 5, f'Unable to decode attribute, not enough data for {cls.REPR}')
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])
         # Parse adj weight
         weight = data[1]
         # Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
-        data = data[4:]
+        data = data[cls.HEADER_SIZE :]
         # SID/Index/Label: according to the V and L flags, it contains
         # either:
         # *  A 3 octet local label where the 20 rightmost bits are used for
@@ -63,12 +70,16 @@ class SrAdjacency(FlagLS):
             # Range Size: 3 octet value indicating the number of labels in
             # the range.
             if int(flags['V']) and int(flags['L']):
-                sid = unpack('!L', bytes([0]) + data[:3])[0]
-                data = data[3:]
+                if len(data) < cls.SID_LABEL_SIZE:
+                    raise Notify(3, 5, f'Unable to decode attribute, truncated SID in {cls.REPR}')
+                sid = unpack('!L', bytes([0]) + data[: cls.SID_LABEL_SIZE])[0]
+                data = data[cls.SID_LABEL_SIZE :]
                 sids.append(sid)
             elif (not flags['V']) and (not flags['L']):
-                sid = unpack('!I', data[:4])[0]
-                data = data[4:]
+                if len(data) < cls.SID_INDEX_SIZE:
+                    raise Notify(3, 5, f'Unable to decode attribute, truncated SID in {cls.REPR}')
+                sid = unpack('!I', data[: cls.SID_INDEX_SIZE])[0]
+                data = data[cls.SID_INDEX_SIZE :]
                 sids.append(sid)
             else:
                 raw.append(hexstring(data))

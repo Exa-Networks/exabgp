@@ -35,5 +35,5 @@ class IgpTags(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        cls.check(data)
+        cls.check_multiple(data, 4)
         return cls([unpack('!L', _)[0] for _ in split(data, 4)])
