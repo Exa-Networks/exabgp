@@ -164,11 +164,29 @@ class ExtendedCommunityBase(Attribute):
             h += byte
         return h
 
+    def _hexadecimal(self) -> str:
+        """The bytes as they arrived, at their own width.
+
+        '0x{:016X}' was hardcoded to eight bytes: a twenty byte IPv6 extended community
+        came out with its leading zeros gone, so it was neither the wire bytes nor
+        something which could be turned back into them.
+        """
+        return '0x' + bytes(self._packed).hex().upper()
+
+    def _description(self) -> str:
+        """What both renderings show, so that they cannot disagree.
+
+        json() and __repr__() used to describe a community two different ways, and for the
+        two which do not describe themselves that meant the text API printed the hex while
+        the JSON API printed an empty string.
+        """
+        return self._described() or self._hexadecimal()
+
     def json(self) -> str:
-        return '{{ "value": {}, "string": {} }}'.format(self._value(), json.dumps(self._described()))
+        return '{{ "value": {}, "string": {} }}'.format(self._value(), json.dumps(self._description()))
 
     def __repr__(self) -> str:
-        return self._described() or '0x{:016X}'.format(self._value())
+        return self._description()
 
     def __hash__(self) -> int:
         return hash(self._packed)
