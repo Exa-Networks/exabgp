@@ -94,6 +94,36 @@ class TestAnAliasPairBecomesOneMember:
         assert json.loads(attribute.json())['local-te-router-ids'] == ['10.0.202.1']
 
 
+# Ratchets on what the registry-driven tests below actually reach. Without these
+# the sweeps report "nothing wrong" over a registry which import order left
+# nearly empty, and the file still goes red from its hand written seeds, which
+# looks like the sweep noticing and is not. A test which breaks because its
+# fixtures broke has told you about its fixtures.
+#
+# The session working main found two of its six sweeps in exactly that state,
+# passing a wipe and failing a partial fill for the wrong reason.
+MERGE_CLASS_FLOOR = 6  # registered classes setting MERGE
+NAMED_MERGE_FLOOR = 2  # of those, the ones which chose a JSON name (1028 and 1029)
+REGISTERED_LSID_FLOOR = 30
+
+
+class TestTheRegistryIsPopulatedBeforeAnythingIsSweptOverIt:
+    """Assert the haystack before reporting on the needles"""
+
+    def test_enough_lsids_are_registered(self) -> None:
+        assert len(LinkState.registered_lsids) >= REGISTERED_LSID_FLOOR, len(LinkState.registered_lsids)
+
+    def test_enough_merge_classes_are_reached(self) -> None:
+        merging = [k for k in LinkState.registered_lsids.values() if getattr(k, 'MERGE', False)]
+        assert len(merging) >= MERGE_CLASS_FLOOR, [k.__name__ for k in merging]
+
+    def test_enough_of_them_named_their_member(self) -> None:
+        # the grouping tests below say what happens to named and unnamed classes;
+        # with none of either they say nothing and pass
+        named = [k for k in LinkState.registered_lsids.values() if getattr(k, 'MERGE', False) and k.JSON != BaseLS.JSON]
+        assert len(named) >= NAMED_MERGE_FLOOR, [k.__name__ for k in named]
+
+
 class TestTheGroupingCannotSwallowUnrelatedTlvs:
     """Grouping on the JSON name is only safe where a name was actually chosen
 

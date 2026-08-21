@@ -96,3 +96,25 @@ class TestEveryNlriFamilyIsReached:
                 return
 
         raise AssertionError(f'{family}: the corpus never decoded a single NLRI, so it proves nothing')
+
+
+# Ratchets on the registries these sweeps walk. Both files parametrise over a
+# registry, so a registry which import order left nearly empty collapses the
+# parametrisation instead of failing: this file reported 22 passing tests over
+# the full registry and 4 passing tests over a thinned one, and 4 green tests
+# look exactly like 22 green tests in a summary line.
+#
+# "The suite went red" is not evidence the suite noticed, and "the suite went
+# green" over a shrunken parametrisation is not evidence there was nothing to
+# find. Assert the haystack before reporting on the needles.
+NLRI_FAMILY_FLOOR = 18
+LSID_FLOOR = 30
+
+
+def test_the_nlri_registry_is_populated() -> None:
+    registered = sorted(NLRI.registered_nlri)
+    assert len(registered) >= NLRI_FAMILY_FLOOR, registered
+
+
+def test_the_linkstate_registry_is_populated() -> None:
+    assert len(LinkState.registered_lsids) >= LSID_FLOOR, sorted(LinkState.registered_lsids)
