@@ -24,11 +24,39 @@ class PathInfo:
             self.path_info = b''
         # sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))
 
+    def __copy__(self):
+        """NOPATH is a singleton and index() tests it with `is`
+
+        INET.index(), Label.index() and IPVPN.index() all read
+
+            addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
+
+        so a copy which mints a new object stops being NOPATH, the index gains
+        four zero bytes where it had b'no-pi', and the route is no longer equal
+        to itself.  A deepcopied route did not match its original, hashed
+        differently and could not be found in a dict keyed on it: the RIB would
+        hold the same prefix twice.  A singleton has to copy to itself.
+        """
+        if self is PathInfo.NOPATH:
+            return self
+        return PathInfo(packed=self.path_info)
+
+    def __deepcopy__(self, memo=None):
+        # copy.deepcopy is the one the RIB actually uses
+        if self is PathInfo.NOPATH:
+            return self
+        return PathInfo(packed=self.path_info)
+
     def __eq__(self, other):
+        if not isinstance(other, PathInfo):
+            return NotImplemented
         return self.path_info == other.path_info
 
-    def __neq__(self, other):
-        return self.path_info != other.path_info
+    def __ne__(self, other):
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def __lt__(self, other):
         raise RuntimeError('comparing PathInfo for ordering does not make sense')
