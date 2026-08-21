@@ -28,10 +28,20 @@ PATH_ID = bytes([0x00, 0x00, 0x00, 0x07])
 
 
 def negotiated(send_addpath: bool) -> Negotiated:
+    """A session which does, or does not, send add-path for this family.
+
+    The assertion is not decoration. A setup which silently fails to enable add-path leaves
+    every assertion in this file passing against a session with it OFF, which is exactly how
+    the branch went unexercised in the first place: instrumenting the suite before this file
+    existed showed pack_nlri entered with add-path negotiated zero times out of twelve
+    thousand. If the negotiation stops working, this fails first and nothing after it is
+    believed.
+    """
     neighbor = Mock()
     neighbor.__getitem__ = Mock(return_value={'aigp': False})
     result = Negotiated.make_negotiated(neighbor, Direction.OUT)
     result.addpath.send = Mock(return_value=send_addpath)  # type: ignore[method-assign]
+    assert bool(result.addpath.send(AFI.ipv4, SAFI.unicast)) is send_addpath
     return result
 
 
