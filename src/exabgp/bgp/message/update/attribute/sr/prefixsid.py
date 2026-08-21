@@ -6,7 +6,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, TypeVar
 
 if TYPE_CHECKING:
@@ -57,6 +57,9 @@ class PrefixSid(Attribute):
     @classmethod
     def unpack_attribute(cls: Type[T], data: Buffer, negotiated: Negotiated) -> T:
         sr_attrs: list[Any] = []
+        # keep what the peer sent: rebuilding it from the parsed TLVs would announce
+        # something else, and a TLV we do not know cannot be rebuilt at all
+        original: Buffer = data
         while data:
             # TLV header: Type(1) + Length(2) = 3 bytes minimum
             if len(data) < 3:
@@ -73,7 +76,7 @@ class PrefixSid(Attribute):
                 klass = GenericSRId(scode, data[3 : length + 3])
             sr_attrs.append(klass)
             data = data[length + 3 :]
-        return cls(sr_attrs=sr_attrs)
+        return cls(sr_attrs=sr_attrs, packed=original)
 
     def json(self, compact: bool | None = None) -> str:
         content: str = ', '.join(d.json() for d in self.sr_attrs)
@@ -106,6 +109,14 @@ class GenericSRId:
 
     def __repr__(self) -> str:
         return 'Attribute with code [ {} ] not implemented'.format(self.code)
+
+    def pack_tlv(self) -> bytes:
+        """Re-emit the TLV exactly as the peer sent it.
+
+        Without this, PrefixSid.__init__ raised AttributeError out of the decoder for any
+        TLV type which is not registered, which is every code a peer picks but 1 and 3.
+        """
+        return bytes([self.code]) + pack('!H', len(self.rep)) + bytes(self.rep)
 
     @classmethod
     def unpack_attribute(cls, scode: int, data: Buffer) -> GenericSRId:

@@ -320,6 +320,22 @@ def test_a_whole_update_carrying_a_redirect_community_renders() -> None:
     assert jsonlib.loads('{' + collection.json() + '}')
 
 
+@pytest.mark.parametrize('tlv', [0, 2, 4, 7, 8, 255])
+def test_unregistered_prefix_sid_tlv_decodes(tlv: int) -> None:
+    """GenericSRId had no pack_tlv(), and __init__ rebuilt the attribute from its TLVs.
+
+    So every TLV type a peer picks other than 1 and 3 raised AttributeError out of the
+    decoder.  The wire bytes are kept now, which is also what stops the attribute being
+    re-encoded into something the peer never sent.
+    """
+    payload = b'\x01\x02\x03'
+    attribute = _decode_attribute(
+        Attribute.CODE.BGP_PREFIX_SID, bytes([tlv]) + struct.pack('!H', len(payload)) + payload
+    )
+    parsed(attribute.json())
+    str(attribute)
+
+
 @pytest.mark.parametrize(
     'code, payload, why',
     [
