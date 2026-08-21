@@ -71,8 +71,13 @@ except Exception:
     LSIDS = []
 
 out = {}
+seen = {}
 
-def record(key, fn):
+def record(key, fn, given=b''):
+    # the input is recorded with the verdict, so the driver can prove both trees decoded the
+    # same bytes. A corpus built inside the probe is built from that tree's own registries,
+    # and two trees quietly comparing different inputs is a gate which reports nothing.
+    seen[key] = given.hex()
     try:
         value = fn()
     except Notify:
@@ -114,6 +119,7 @@ for afi, safi in sorted(set(NLRI.known_families()), key=lambda f: (int(f[0]), in
                     lambda a=afi, s=safi, d=prefix + body: NLRI.unpack_nlri(
                         a, s, d, Action.ANNOUNCE, None, None
                     )[0],
+                    prefix + body,
                 )
 
 for key in sorted(Attribute.registered_attributes, key=str):
@@ -123,6 +129,7 @@ for key in sorted(Attribute.registered_attributes, key=str):
             record(
                 'attr/%d/%d/%d/%s' % (key[0], key[1], length, fill.hex()),
                 lambda k=klass, d=fill * length: k.unpack_attribute(d, Negotiated.UNSET),
+                fill * length,
             )
 
 for code in sorted(Capability.registered_capability, key=int):
@@ -131,6 +138,7 @@ for code in sorted(Capability.registered_capability, key=int):
             record(
                 'cap/%d/%d/%s' % (int(code), length, fill.hex()),
                 lambda c=code, d=fill * length: Capability.klass(c).unpack_capability(Capability.klass(c)(), d, c),
+                fill * length,
             )
 
 # BGP-LS TLVs need a real Type(2) Length(2) header before their decoder sees anything, so
@@ -144,9 +152,10 @@ for code in LSIDS:
                 lambda a=attribute, c=code, ln=length, f=fill: a.unpack_attribute(
                     struct.pack('!HH', c, ln) + f * ln, Negotiated.UNSET
                 ),
+                struct.pack('!HH', code, length) + fill * length,
             )
 
-json.dump(out, open(sys.argv[1], 'w'), sort_keys=True)
+json.dump({'verdict': out, 'input': seen}, open(sys.argv[1], 'w'), sort_keys=True)
 sys.stderr.write('%d observations\\n' % len(out))
 """
 
@@ -175,7 +184,7 @@ def observe(tree: Path, destination: Path) -> dict[str, str]:
         check=True,
     )
     program.unlink()
-    loaded: dict[str, str] = json.loads(destination.read_text())
+    loaded: dict[str, dict[str, str]] = json.loads(destination.read_text())
     return loaded
 
 
@@ -200,8 +209,26 @@ def main(argv: list[str]) -> int:
         archive = subprocess.run(['git', 'archive', against], cwd=ROOT, capture_output=True, check=True)
         subprocess.run(['tar', '-x', '-C', str(old_tree)], input=archive.stdout, check=True)
 
-        before = observe(old_tree, Path(scratch) / 'before.json')
-        after = observe(ROOT, Path(scratch) / 'after.json')
+        before_run = observe(old_tree, Path(scratch) / 'before.json')
+        after_run = observe(ROOT, Path(scratch) / 'after.json')
+
+    before, after = before_run['verdict'], after_run['verdict']
+    given_before, given_after = before_run['input'], after_run['input']
+
+    # a corpus built inside the probe is built from that tree's own registries. If the two
+    # trees ever hand their decoders different bytes under the same name, every verdict for
+    # that name is meaningless, and the gate says nothing while looking like it says a lot.
+    shared = set(before) & set(after)
+    mismatched = sorted(key for key in shared if given_before.get(key) != given_after.get(key))
+    if mismatched:
+        sys.stderr.write('the two trees decoded different bytes for %d inputs, starting with:\n' % len(mismatched))
+        for key in mismatched[:5]:
+            sys.stderr.write('  %-44s %s vs %s\n' % (key, given_before.get(key), given_after.get(key)))
+        sys.stderr.write('the comparison is meaningless until that is fixed\n')
+        return 2
+    if not shared:
+        sys.stderr.write('the two trees share no input at all, so nothing was compared\n')
+        return 2
 
     regressions = []
     for key in sorted(before):
