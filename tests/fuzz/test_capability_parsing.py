@@ -222,17 +222,29 @@ def test_addpath_empty() -> None:
 @given(send_receive=st.integers(min_value=0, max_value=255))
 @settings(deadline=None, max_examples=50)
 def test_addpath_send_receive_values(send_receive: int) -> None:
-    """Test AddPath with various send/receive flag values."""
+    """A send/receive value RFC 7911 does not define is refused at the decoder.
+
+    Accepting it used to move the failure to json() and to __str__(), which look the
+    value up in a table holding only 0 to 3, so the KeyError landed in the API writer
+    and in the logger instead of closing the session.
+    """
     from exabgp.bgp.message.open.capability.addpath import AddPath
     from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.notification import Notify
 
     data = struct.pack('!H', 1) + bytes([1, send_receive])
 
     instance = AddPath()
-    result = AddPath.unpack_capability(instance, data, CapabilityCode(Capability.CODE.ADD_PATH))
+    try:
+        result = AddPath.unpack_capability(instance, data, CapabilityCode(Capability.CODE.ADD_PATH))
+    except Notify:
+        assert send_receive > AddPath.SEND_RECEIVE_MAX
+        return
 
     assert isinstance(result, AddPath)
-    # Only values 0-3 are defined, but others shouldn't crash
+    # what decoded has to survive everything the API and the logs ask of it
+    result.json()
+    str(result)
 
 
 # =============================================================================

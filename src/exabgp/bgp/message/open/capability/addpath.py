@@ -32,6 +32,10 @@ class AddPath(Capability, dict[FamilyTuple, int]):
         3: 'send/receive',
     }
 
+    # RFC 7911 section 4 defines 1, 2 and 3.  0 is how this implementation records a
+    # family it did not negotiate, and is never sent, so it is accepted but not emitted.
+    SEND_RECEIVE_MAX: ClassVar[int] = 3
+
     def __init__(self, families: Iterable[FamilyTuple] = (), send_receive: int = 0) -> None:
         for afi, safi in families:
             self.add_path(afi, safi, send_receive)
@@ -80,6 +84,10 @@ class AddPath(Capability, dict[FamilyTuple, int]):
             afi = AFI.unpack_afi(data[:2])
             safi = SAFI.unpack_safi(data[2:3])
             sr = data[3]
+            # a value the RFC does not define has no meaning to give the operator, and
+            # used to reach json() and __str__() where the lookup raised KeyError
+            if sr > cls.SEND_RECEIVE_MAX:
+                raise Notify(2, 0, f'ADD-PATH capability has an undefined send/receive value: {sr}')
             if (afi, safi) in instance:
 
                 def _log_dup(afi: AFI = afi, safi: SAFI = safi) -> str:

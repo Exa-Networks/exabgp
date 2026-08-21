@@ -119,6 +119,24 @@ def _addpath(data: bytes) -> Capability:
     return klass.unpack_capability(klass(), data, code)
 
 
+@pytest.mark.parametrize('send_receive', [4, 5, 103, 255])
+def test_addpath_rejects_an_undefined_send_receive(send_receive: int) -> None:
+    """RFC 7911 defines 1, 2 and 3.  Anything else has no meaning to give the operator.
+
+    The value was accepted and then looked up in a table holding only 0 to 3, so json()
+    and str() raised KeyError from the API writer and from the logger.
+    """
+    with pytest.raises(Notify):
+        _addpath(bytes([0x00, 0x01, 0x01, send_receive]))
+
+
+@pytest.mark.parametrize('send_receive', [1, 2, 3])
+def test_addpath_accepts_what_the_rfc_defines(send_receive: int) -> None:
+    capability = _addpath(bytes([0x00, 0x01, 0x01, send_receive]))
+    assert jsonlib.loads(capability.json())['name'] == 'addpath'
+    str(capability)
+
+
 def _decode_attribute(code: int, data: bytes) -> Attribute:
     klass = Attribute.klass_by_id(code)
     assert klass is not None, f'attribute {code} is not registered'
