@@ -192,15 +192,20 @@ class Prefix(EVPN):
         return nlri
 
     def json(self, compact=None):
-        content = ' "code": %d, ' % self.CODE
-        content += '"parsed": true, '
-        content += '"raw": "{}", '.format(self._raw())
-        content += '"name": "{}", '.format(self.NAME)
-        content += '{}, '.format(self.rd.json())
-        content += '{}, '.format(self.esi.json())
-        content += '{}, '.format(self.etag.json())
-        content += '{}, '.format(self.label.json())
-        content += '"ip": "{}", '.format(str(self.ip))
-        content += '"iplen": %d, ' % self.iplen
-        content += '"gateway": "{}" '.format(str(self.gwip))
-        return '{{{}}}'.format(content)
+        # members are collected and joined: a member which renders empty (an
+        # absent label stack, an absent route distinguisher) used to leave a
+        # doubled or trailing comma and the line stopped being JSON
+        members = [
+            '"code": %d' % self.CODE,
+            '"parsed": true',
+            '"raw": "{}"'.format(self._raw()),
+            '"name": "{}"'.format(self.NAME),
+            self.rd.json(),
+            self.esi.json(),
+            self.etag.json(),
+            self.label.json(),
+            '"ip": "{}"'.format(str(self.ip)),
+            '"iplen": %d' % self.iplen,
+            '"gateway": "{}"'.format(str(self.gwip)),
+        ]
+        return '{{ {} }}'.format(', '.join(_ for _ in members if _))
