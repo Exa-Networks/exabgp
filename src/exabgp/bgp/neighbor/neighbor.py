@@ -555,7 +555,7 @@ Neighbor {peer-address}
             else 'auto'
         )
         cap = neighbor.capability
-        add_path_str = AddPath.string[cap.add_path] if cap.add_path else 'disable'
+        add_path_str = AddPath().named(cap.add_path) if cap.add_path else 'disable'
         graceful_str = str(cap.graceful_restart.time) if cap.graceful_restart.is_enabled() else 'disable'
 
         returned = (

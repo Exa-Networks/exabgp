@@ -33,11 +33,6 @@ class AddPath(Capability, dict[FamilyTuple, int]):
         3: 'send/receive',
     }
 
-    # RFC 7911 section 4 defines 1, 2 and 3.  A peer sending anything else is not refused:
-    # RequirePath.setup reads the value as a bitmask, so a session which comes up today
-    # against such a peer must keep coming up after an upgrade.  It is named, not judged.
-    SEND_RECEIVE_MAX: ClassVar[int] = 3
-
     def __init__(self, families: Iterable[FamilyTuple] = (), send_receive: int = 0) -> None:
         for afi, safi in families:
             self.add_path(afi, safi, send_receive)
