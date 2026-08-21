@@ -74,6 +74,44 @@ def bgpls(address):
     return pack('!HH', 1028, 4) + bytes(address)
 
 
+def _ip(octet):
+    return bytes([octet, octet, octet, octet])
+
+
+def _aspath(asn):
+    return bytes([2, 1]) + pack('!L', asn)
+
+
+# The floor is a ratchet: raise it when a new attribute gains a seed, never lower
+# it to make a red sweep go green.
+SWEEP_FLOOR = 18
+
+# Shaped payloads, one pair per attribute, chosen so BOTH decode to the attribute
+# itself and render differently. Deliberately absent:
+#   atomic-aggregate  carries no value at all, so two of them are equal and right
+#   mp-reach-nlri     their payload is a whole NLRI encoding; they are covered by
+#   mp-unreach-nlri   the round trip tests rather than by a two byte seed here
+SHAPED_SEEDS = {
+    1: (bytes([0]), bytes([1])),  # origin
+    2: (_aspath(64500), _aspath(64501)),  # as-path
+    3: (_ip(10), _ip(9)),  # next-hop
+    4: (pack('!L', 10), pack('!L', 99)),  # med
+    5: (pack('!L', 100), pack('!L', 200)),  # local-preference
+    7: (pack('!L', 64500) + _ip(10), pack('!L', 64501) + _ip(9)),  # aggregator
+    8: (pack('!L', 0xFFFF0001), pack('!L', 0xFFFF0002)),  # community
+    9: (_ip(10), _ip(9)),  # originator-id
+    10: (_ip(10), _ip(9)),  # cluster-list
+    16: (bytes([0, 2]) + pack('!HL', 1, 1), bytes([0, 2]) + pack('!HL', 2, 2)),  # extended-community
+    17: (_aspath(64500), _aspath(64501)),  # as4-path
+    18: (pack('!L', 64500) + _ip(10), pack('!L', 64501) + _ip(9)),  # as4-aggregator
+    22: (bytes([1, 1, 1, 1] * 3), bytes([9, 9, 9, 9] * 3)),  # pmsi-tunnel
+    25: (bytes([0, 2]) + b'\x00' * 16 + pack('!H', 1), bytes([0, 2]) + b'\x00' * 16 + pack('!H', 2)),
+    26: (bytes([1]) + pack('!H', 11) + pack('!Q', 10), bytes([1]) + pack('!H', 11) + pack('!Q', 99)),  # aigp
+    29: (pack('!HH', 1028, 4) + _ip(10), pack('!HH', 1028, 4) + _ip(9)),  # bgp-ls
+    32: (pack('!LLL', 1, 1, 1), pack('!LLL', 9, 9, 9)),  # large-community
+    40: (bytes([1, 0, 7]) + b'\x00' * 7, bytes([1, 0, 7]) + b'\x00' * 6 + b'\x09'),  # bgp-prefix-sid
+}
+
 # (attribute code, one payload, a different payload)
 PAIRS = [
     pytest.param(ORIGIN, bytes([0]), bytes([1]), id='origin'),
@@ -170,20 +208,58 @@ class TestAnOverrideDoesNotReintroduceIt:
         assert one == decode(ORIGINATOR_ID, bytes([10, 0, 0, 1]))
 
     def test_no_registered_class_still_ignores_its_value(self) -> None:
-        # a class whose __eq__ is blind to the value answers True for any two
-        # instances of itself; find that by comparing decodes of different bytes
-        blind = []
+        """Sweep the registry, not a hand picked list
+
+        A class whose __eq__ is blind to the value answers True for any two
+        instances of itself, so decode two different payloads and compare.
+
+        The seeds have to be SHAPED. A blob of repeated bytes is the wrong shape
+        for most attributes: they raise Notify before a value exists, and the
+        sweep then reports no failures because it built almost nothing. Twelve
+        repeated bytes reached 5 of the 21 registered attributes and looked
+        exactly as green as this does.
+        """
+        blind, reached = [], []
         for aid in sorted(Attribute.attributes_known):
+            seeds = SHAPED_SEEDS.get(int(aid))
+            if seeds is None:
+                continue
             try:
-                one = decode(aid, bytes([1, 1, 1, 1] * 3))
-                two = decode(aid, bytes([9, 9, 9, 9] * 3))
+                one, two = decode(aid, seeds[0]), decode(aid, seeds[1])
             except Exception:
                 continue
             if one is None or two is None or str(one) == str(two):
                 continue
+            reached.append(Attribute.CODE.names.get(aid, str(aid)))
             try:
                 if one == two:
                     blind.append(type(one).__name__)
             except RuntimeError:
                 continue
+
         assert not blind, f'these compare equal while rendering differently: {blind}'
+        # a sweep which builds nothing reports no failures, so the coverage is
+        # asserted as well as the result
+        assert len(reached) >= SWEEP_FLOOR, f'only reached {len(reached)} attributes: {reached}'
+
+    def test_the_sweep_reaches_what_it_claims(self) -> None:
+        """The seeds must decode to the attribute they are seeds for
+
+        AIGP is the cautionary one: it decodes to a Discard unless the neighbour
+        enables it, and two Discards are equal for a reason which is correct and
+        says nothing whatever about AIGP. A sweep counting that as coverage is
+        counting a class it never compared.
+        """
+        wrong = []
+        for aid, seeds in sorted(SHAPED_SEEDS.items()):
+            try:
+                value = decode(aid, seeds[0])
+            except Exception as exc:
+                wrong.append(f'{aid} raised {type(exc).__name__}')
+                continue
+            if value is None:
+                wrong.append(f'{aid} decoded to None')
+                continue
+            if type(value).__name__ in ('Discard', 'TreatAsWithdraw', 'GenericAttribute'):
+                wrong.append(f'{aid} decoded to {type(value).__name__}, not the attribute itself')
+        assert not wrong, wrong
