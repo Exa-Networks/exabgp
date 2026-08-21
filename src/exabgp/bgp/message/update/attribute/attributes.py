@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import json
+
 from struct import unpack
 
 from exabgp.environment import getenv
@@ -47,6 +49,14 @@ NOTHING = _NOTHING()
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
+def _is_json_number(value):
+    """Whether this rendering is already a JSON number and must not be quoted"""
+    try:
+        return isinstance(json.loads(value), (int, float))
+    except (ValueError, TypeError):
+        return False
+
+
 class Attributes(dict):
     INTERNAL = (
         Attribute.CODE.INTERNAL_SPLIT,
@@ -71,6 +81,9 @@ class Attributes(dict):
     DISCARD = (
         Attribute.CODE.ATOMIC_AGGREGATE,
         Attribute.CODE.AGGREGATOR,
+        # RFC 7752 section 5.3 and RFC 9552 section 7.2.1: a malformed BGP-LS
+        # attribute costs the attribute, not the peering
+        Attribute.CODE.BGP_LS,
     )
 
     MANDATORY = (Attribute.CODE.ORIGIN, Attribute.CODE.AS_PATH, Attribute.CODE.LOCAL_PREF)
@@ -180,14 +193,14 @@ class Attributes(dict):
             attribute = self[code]
 
             if code not in self.representation:
-                yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, str(attribute))
+                yield '"attribute-0x{:02X}-0x{:02X}": {}'.format(code, attribute.FLAG, json.dumps(str(attribute)))
                 continue
 
             how, _, name, _, presentation = self.representation[code]
             if how == 'boolean':
                 yield '"{}": {}'.format(name, 'true' if self.has(code) else 'false')
             elif how == 'string':
-                yield '"{}": "{}"'.format(name, presentation % str(attribute))
+                yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute)))
             elif how == 'list':
                 yield '"{}": {}'.format(name, presentation % attribute.json())
             elif how == 'multiple':
@@ -196,10 +209,16 @@ class Attributes(dict):
                     if value:
                         yield '"{}": {}'.format(n, presentation % value)
             elif how == 'inet':
-                yield '"{}": "{}"'.format(name, presentation % str(attribute))
-            # Should never be ran
+                yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute)))
             else:
-                yield '"{}": {}'.format(name, presentation % str(attribute))
+                # this branch was marked 'Should never be ran' and every integer
+                # attribute lands in it.  MED and local-preference render as
+                # decimal and must stay JSON NUMBERS, because that is what they
+                # have always been and consumers do arithmetic on them.  AIGP
+                # renders as 0x000000000000000a, which unquoted is not JSON at
+                # all and takes the whole line with it, so that one is quoted.
+                value = presentation % str(attribute)
+                yield '"{}": {}'.format(name, value if _is_json_number(value) else json.dumps(value))
 
     def __init__(self):
         dict.__init__(self)

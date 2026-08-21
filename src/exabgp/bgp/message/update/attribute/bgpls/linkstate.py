@@ -9,6 +9,7 @@ import binascii
 import itertools
 import json
 from struct import unpack
+from struct import error as struct_error
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -68,21 +69,24 @@ class LinkState(Attribute):
 
     @classmethod
     def _decode_tlv(cls, klass, scode, payload):
-        """Decode one TLV and prove the result can be rendered
+        """Decode one TLV, turning a short read into the protocol error it is
 
-        A decoder which returns, but whose object raises from json() or repr(),
-        moves the failure into the API writer, where nothing treats it as a
-        protocol error and the line is already half written.  Rendering once
-        here costs less than a dead session later.
+        Only the exceptions which mean the peer sent us less than it claimed are
+        converted.  AttributeError and TypeError out of a decoder are OUR bug,
+        and converting them would blame the peer and tear down a session
+        carrying valid traffic: that is how the SRv6 End.X __repr__ defect in
+        this series was found, because it escaped loudly.
+
+        Nothing is rendered here.  Proving every TLV survives json(), str() and
+        repr() belongs in the test suite, which does it for every registered
+        code, and doing it again per UPDATE costs the reactor 1.6x on decode
+        for a result nothing keeps.
         """
         try:
-            instance = klass.unpack(payload)
-            instance.json()
-            repr(instance)
-            return instance
+            return klass.unpack(payload)
         except Notify:
             raise
-        except Exception as exc:
+        except (IndexError, KeyError, ValueError, struct_error) as exc:
             raise Notify(3, 5, f'Invalid BGP-LS attribute TLV {scode} ({type(exc).__name__})') from None
 
     @classmethod
