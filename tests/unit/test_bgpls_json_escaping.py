@@ -66,7 +66,27 @@ class TestNameTlvEscaping:
 
 
 class TestNameTlvDecoding:
-    """RFC 7752 mandates 7-bit ASCII, but a peer can send any bytes"""
+    """The RFC says ASCII; accepting anything else is our choice, not its permission
+
+    RFC 9552 5.3.1.3 and 5.3.2.7, for Node Name and Link Name both: "The Value
+    field is encoded in 7-bit ASCII. If a user interface for configuring or
+    displaying this field permits Unicode characters, then the user interface is
+    responsible for applying the ToASCII and/or ToUnicode algorithm as described
+    in RFC 5890". So the conformant way to carry an accented hostname is the
+    ToASCII form, xn--caf-dma-rtr1, and a peer putting raw UTF-8 on the wire is
+    not following the RFC.
+
+    We accept it anyway, and these tests hold that. The reason is proportion, not
+    permission: the name is a descriptive field, and the alternative is raising
+    from the decoder, which discards the WHOLE BGP-LS attribute and takes the
+    router-ids, the metrics and the SIDs with it. Refusing an entire attribute
+    over a cosmetic field is the worse failure.
+
+    This branch decoded Node Name with data.decode('ascii') from November 2016
+    until it was replaced by utf-8 with 'replace' in 6960a1859. That was a nine
+    year old refusal, removed as part of the JSON escaping work rather than as a
+    decision about encodings, which is exactly why it is pinned here.
+    """
 
     def test_node_name_non_ascii_does_not_raise(self) -> None:
         parsed = emitted(NodeName.unpack('réuter'.encode('utf-8')))
