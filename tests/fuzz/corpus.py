@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
+"""Hand built seeds for the decoder corpora
+
+Random bytes and simple fill patterns never construct a valid-but-non-canonical
+message, and several families cannot be reached by them at all: a flow-vpn NLRI
+needs a route distinguisher in front of its rules, a VPLS NLRI needs a two byte
+length which agrees with the buffer.
+
+Those families were being swept with inputs their decoder rejected at the first
+byte, so the property tests over them asserted nothing while reporting green.
+
+Seeds are RFC-legal shapes, not fuzz. The fuzzing happens around them.
+"""
+
+FILLS = (b'A', b'\x00', b'\xff', b'\x80', b'\x01\x02\x03')
+
+
+def filled(length, fill):
+    """A payload of the requested length made of a repeating pattern"""
+    return (fill * (length // len(fill) + 1))[:length]
+
+
+# one or more shapes a real speaker could send, per family
+NLRI_SEEDS = {
+    'ipv4/unicast': [bytes([24, 10, 0, 0]), bytes([0])],
+    'ipv6/unicast': [bytes([32, 0x20, 0x01, 0x0D, 0xB8])],
+    'ipv4/flow': [
+        bytes([3, 0x03, 0x81, 0x06]),  # protocol = tcp
+        bytes([0]),  # no rule at all
+        bytes([5, 0x03, 0x81, 0x06, 0x04, 0x81, 0x19]),
+    ],
+    'ipv6/flow': [bytes([3, 0x03, 0x81, 0x06])],
+    # a flow-vpn carries an eight byte route distinguisher before its rules
+    'ipv4/flow-vpn': [bytes([11]) + b'\x00' * 8 + bytes([0x03, 0x81, 0x06]), bytes([8]) + b'\x00' * 8],
+    'ipv6/flow-vpn': [bytes([11]) + b'\x00' * 8 + bytes([0x03, 0x81, 0x06])],
+    # RD(8) + endpoint(2) + offset(2) + size(2) + base(3) announced as one length
+    'l2vpn/vpls': [b'\x00\x11' + b'\x00' * 17, b'\x00\x12' + b'\x00' * 18],
+    'ipv4/rtc': [b'\x00', bytes.fromhex('60' + '0000fde8' + '0002fde800000064')],
+    'ipv4/mpls-vpn': [bytes([88]) + b'\x00\x01\x01' + b'\x00' * 8 + bytes([10, 0, 0])],
+    'ipv4/nlri-mpls': [bytes([48, 0x00, 0x01, 0x01, 10, 0, 0])],
+    'ipv6/nlri-mpls': [bytes([48, 0x00, 0x01, 0x01, 0x20, 0x01, 0x0D])],
+    'ipv4/mcast-vpn': [bytes([1, 4]) + b'\x00\x01\x02\x03'],
+    'ipv6/mcast-vpn': [bytes([1, 4]) + b'\x00\x01\x02\x03'],
+    'l2vpn/evpn': [bytes([1, 25]) + b'\x00' * 25],
+    'bgp-ls/bgp-ls': [
+        bytes.fromhex('00010025')
+        + bytes([3])
+        + b'\x00' * 8
+        + bytes.fromhex('01000018')
+        + b'\x02\x00\x00\x04\x00\x00\xff\xfd'
+        + b'\x02\x01\x00\x04\x00\x00\x00\x00'
+        + b'\x02\x03\x00\x04\x0a\x71\x3f\xf0'
+    ],
+}
+
+
+def seeds_for(family):
+    """Every seed for a family, plus the plain fill patterns"""
+    payloads = list(NLRI_SEEDS.get(family, ()))
+    for length in range(0, 33):
+        for fill in FILLS:
+            payloads.append(filled(length, fill))
+    return payloads
