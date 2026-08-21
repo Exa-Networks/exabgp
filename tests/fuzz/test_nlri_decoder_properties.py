@@ -14,6 +14,8 @@ peer supplied bytes is a bug: the session must be closed with a NOTIFICATION,
 not the process killed by a traceback.
 """
 
+import json as jsonlib
+
 import pytest
 from hypothesis import given, strategies as st
 
@@ -43,13 +45,30 @@ def decode(afi: AFI, safi: SAFI, data: bytes) -> NLRI | None:
     if nlri is NLRI.INVALID:
         return None
     # a decoded NLRI must survive every representation the API and the RIB use
-    nlri.json()
-    nlri.json(announced=False)
+    parses(nlri.json())
+    parses(nlri.json(announced=False))
     str(nlri)
     repr(nlri)
     nlri.index()
     hash(nlri)
     return nlri
+
+
+def parses(fragment: str) -> None:
+    """A json() fragment must be readable by the API consumer it is written to.
+
+    The fragments are members of a larger object, so they are wrapped before parsing.
+    A fragment which needs no wrapping is already a complete object.  Emitting one
+    which parses as neither corrupts every line ExaBGP writes to that subprocess:
+    the CWE-116 half of GHSA-jcrv-p53f-v5w5 which escaping alone does not close.
+    """
+    for candidate in (fragment, '{' + fragment + '}', '[' + fragment + ']'):
+        try:
+            jsonlib.loads(candidate)
+            return
+        except ValueError:
+            continue
+    raise AssertionError(f'json() returned something no JSON parser accepts: {fragment[:200]}')
 
 
 @pytest.mark.fuzz

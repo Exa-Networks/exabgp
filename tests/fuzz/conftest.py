@@ -18,7 +18,9 @@ A failure found by the hunt profile is reproduced by passing the seed it printed
 
 from __future__ import annotations
 
+import importlib
 import os
+import pkgutil
 
 from hypothesis import HealthCheck, settings
 
@@ -44,3 +46,26 @@ settings.register_profile(
 )
 
 settings.load_profile(os.environ.get('HYPOTHESIS_PROFILE', 'gate'))
+
+
+def _populate_the_registries() -> None:
+    """Import every attribute module, so the registries are whole before collection.
+
+    The registries fill by import side effect, and the property tests parametrise from
+    them at collection time.  A test module which imports only what it names therefore
+    sweeps a half empty registry and reports a clean run over a fraction of the codes:
+    PrefixSid held only TLV 1 and 3 until sr/srv6/l2service and l3service were imported,
+    which is how 5 and 6 went unswept.  Silent under-coverage is worse than a failure.
+    """
+    import exabgp.bgp.message.update.attribute as package
+
+    for _finder, name, _is_package in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
+        try:
+            importlib.import_module(name)
+        except ImportError:
+            # a module which cannot be imported is a problem for its own tests, not a
+            # reason to stop filling the registries the property tests parametrise from
+            continue
+
+
+_populate_the_registries()
