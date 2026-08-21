@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.ip import IP, IPv4, IPv6
 
 #   https://tools.ietf.org/html/rfc5305#section-3.2
@@ -29,12 +30,22 @@ class IfaceAddr:
 
     @classmethod
     def unpack(cls, data):
+        # any other length used to leave addr unbound and an UnboundLocalError
+        # escaped the decoder, so the peer was never told what was wrong.
+        # the accepted widths are named once here: a guard listing them and an
+        # else assuming the rest states the same rule twice, and the else would
+        # silently decode as IPv6 any width later added to the guard.
         if len(data) == IPv4.BYTES:
-            # IPv4 address
             addr = IP.unpack(data[: IPv4.BYTES])
         elif len(data) == IPv6.BYTES:
-            # IPv6
             addr = IP.unpack(data[: IPv6.BYTES])
+        else:
+            raise Notify(
+                3,
+                10,
+                'invalid BGP-LS interface address sub-TLV, expected %d or %d bytes, got %d'
+                % (IPv4.BYTES, IPv6.BYTES, len(data)),
+            )
         return cls(iface_addr=addr)
 
     def json(self, compact=None):

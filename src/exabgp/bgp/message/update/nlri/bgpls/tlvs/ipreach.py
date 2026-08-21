@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 
+from exabgp.bgp.message.notification import Notify
 from struct import unpack
 from ipaddress import ip_address
 
@@ -51,6 +52,8 @@ class IpReach:
         # octets for prefix length 9 to 16, 3 octets for prefix length 17 up to
         # 24, 4 octets for prefix length 25 up to 32, etc.
 
+        if not data:
+            raise Notify(3, 10, 'invalid BGP-LS IP reachability sub-TLV, no prefix length')
         plength = unpack('!B', data[0:1])[0]
         # octet = int(math.ceil(plength / 8))
         octet = len(data[1:])

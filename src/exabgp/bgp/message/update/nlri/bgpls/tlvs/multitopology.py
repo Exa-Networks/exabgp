@@ -46,7 +46,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.bgp.message.notification import Notify
 import struct
+
+
+MULTI_TOPOLOGY_SIZE = 2
 
 
 class MTID:
@@ -60,6 +64,12 @@ class MTID:
         # for i in range(0, len(data), 2):
         #     payload = struct.unpack('!H', data[i:i+2])[0]
         #     tids.append(payload & 0x0FFF)
+        if len(data) < MULTI_TOPOLOGY_SIZE:
+            raise Notify(
+                3,
+                10,
+                'invalid BGP-LS multi-topology sub-TLV, expected %d bytes, got %d' % (MULTI_TOPOLOGY_SIZE, len(data)),
+            )
         tids = struct.unpack('!H', data[:2])[0]
         return cls(tids, data)
 
