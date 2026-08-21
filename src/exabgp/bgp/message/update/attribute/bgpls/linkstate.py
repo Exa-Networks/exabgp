@@ -22,7 +22,7 @@ from __future__ import annotations
 import binascii
 import itertools
 import json
-from struct import unpack
+from struct import error as struct_error, unpack
 from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 if TYPE_CHECKING:
@@ -65,13 +65,22 @@ class LinkState(Attribute):
     prefix_lsids: list[int] = []
 
     def __init__(self, packed: Buffer) -> None:
-        """Initialize with raw attribute bytes (stores, parses on demand)."""
+        """Initialize with raw attribute bytes (stores, parses on first access)."""
         self._packed = packed
+        self._ls_attrs: list[BaseLS] | None = None
 
     @property
     def ls_attrs(self) -> list[BaseLS]:
-        """Parse TLVs on demand from stored packed bytes."""
-        return self._parse_tlvs(self._packed)
+        """The TLVs this attribute holds, parsed once by the decoder.
+
+        unpack_attribute parses before returning, so a malformed TLV is a Notify raised
+        from the decode path, where the reactor answers it with a NOTIFICATION.  Parsing
+        here on every access instead meant json() and __str__() raised, from the API
+        writer, long after the UPDATE had been accepted.
+        """
+        if self._ls_attrs is None:
+            self._ls_attrs = self._parse_tlvs(self._packed)
+        return self._ls_attrs
 
     @classmethod
     def _parse_tlvs(cls, data: Buffer) -> list[BaseLS]:
@@ -91,10 +100,35 @@ class LinkState(Attribute):
 
             data = data[length + 4 :]
             klass = cls.get_ls_class(scode)
-            instance = klass.unpack_bgpls(payload)
-            ls_attrs.append(instance)
+            ls_attrs.append(cls._decode_tlv(klass, scode, payload))
 
         return ls_attrs
+
+    @staticmethod
+    def _decode_tlv(klass: type[LSClass], scode: int, payload: Buffer) -> BaseLS:
+        """Decode one TLV and prove it can be rendered, here rather than in the API.
+
+        The TLV classes store their payload and unpack it in a property, so unpack_bgpls
+        returning is not the same as the TLV being decodable: several of them read past
+        their payload the first time json() or __repr__() touches it.  Exercising both
+        now means a peer's bad TLV is a Notify from the decode path, where the reactor
+        answers it with a NOTIFICATION, instead of a struct.error out of the writer
+        feeding the API subprocesses.
+
+        It costs one extra render per TLV.  A wrong route, or a dead session, costs more.
+        """
+        try:
+            instance = klass.unpack_bgpls(payload)
+            instance.json()
+            repr(instance)
+            if klass.MERGE:
+                # a MERGE class is rendered from its content, not from its own json()
+                instance.content
+        except Notify:
+            raise
+        except (IndexError, KeyError, ValueError, TypeError, AttributeError, struct_error) as exc:
+            raise Notify(3, 5, f'BGP-LS: TLV {scode} could not be decoded: {exc}') from None
+        return instance
 
     @classmethod
     def register_lsid(
@@ -150,8 +184,11 @@ class LinkState(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
-        """Store raw bytes - parsing happens on demand via ls_attrs property."""
-        return cls(data)
+        """Decode the TLVs, so malformed ones are refused here rather than in json()."""
+        instance = cls(data)
+        # accessing the property is what parses, and what raises Notify on a bad TLV
+        assert instance.ls_attrs is not None, 'the TLVs of a decoded BGP-LS attribute are known'
+        return instance
 
     def json(self, compact: bool = False) -> str:
         """Output JSON for all TLVs. MERGE classes are grouped into arrays by JSON key."""

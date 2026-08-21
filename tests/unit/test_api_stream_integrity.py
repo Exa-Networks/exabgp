@@ -166,6 +166,24 @@ def _linkstate(data: bytes) -> Attribute:
     return _decode_attribute(Attribute.CODE.BGP_LS, data)
 
 
+def test_bgpls_rejects_a_truncated_tlv_when_it_decodes() -> None:
+    """A TLV claiming more bytes than the attribute holds must be refused at decode.
+
+    unpack_attribute only stored the bytes, so the Notify surfaced later, from json()
+    and from str(), by which point the UPDATE had been accepted and the API writer was
+    the one holding an exception nothing there treats as a protocol error.
+    """
+    with pytest.raises(Notify):
+        _linkstate(b'\x04\x00\xff\xff\x01\x02\x03')
+
+
+def test_bgpls_renders_a_well_formed_tlv() -> None:
+    # TLV 1088 (administrative group), a four byte mask
+    attribute = _linkstate(b'\x04\x40\x00\x04\x00\x00\x00\x0a')
+    assert parsed(attribute.json()) is not None
+    str(attribute)
+
+
 def _tlv(code: int, payload: bytes) -> Attribute:
     return _linkstate(struct.pack('!HH', code, len(payload)) + payload)
 
@@ -211,3 +229,24 @@ def test_bgpls_opaque_tlv_escapes_control_characters(code: int) -> None:
     """Raw control bytes inside a JSON string are rejected by a standard parser."""
     attribute = _tlv(code, b'\x00\x01\x02\x03')
     parsed(attribute.json())
+
+
+@pytest.mark.parametrize(
+    'code, payload',
+    [
+        (1099, b'AAAAAAAA'),  # AdjacencySid: unpack('!L', ...) past the end
+        (1100, b'AAAA'),  # LanAdjacencySid
+        (1153, b'A'),  # IgpTags: LEN is 0 so check_length checks nothing
+        (1154, b'A'),  # IgpExTags: the same, with 8 byte elements
+        (1158, b'AAAAAAAAAAAAAAAA'),  # PrefixSid
+    ],
+)
+def test_bgpls_short_tlv_raises_notify_at_the_decoder(code: int, payload: bytes) -> None:
+    """A TLV which cannot be decoded is the peer's error, and it is ours to report.
+
+    struct.error is not caught by AttributeCollection.parse, so it escaped into the
+    reactor.  It has to be a Notify, and it has to come from the decode path and not
+    from the API writer half a second later.
+    """
+    with pytest.raises(Notify):
+        _tlv(code, payload)
