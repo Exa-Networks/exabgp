@@ -251,6 +251,36 @@ The baseline lives in `qa/tiger_style.json` and only ever goes **down**. Lower i
 
 Everything else is a review responsibility.
 
+### A sweep is evidence only once it has gone red
+
+A test suite, a fuzz run or a corpus which reports no problem has said one of two things,
+and they look identical: *the code is correct*, or *the code never ran*. Four times in one
+piece of work the second was true and was read as the first:
+
+| what was measured | why it was empty |
+|---|---|
+| every registered attribute decoder | the registries fill by import side effect, and the module imported only what it named |
+| every BGP-LS TLV, no backstop needed | a catch-all converted every escape, so a TLV with no length checks looked like one with them |
+| tunnel encapsulation, no problem found | RFC 9012 gives a sub-TLV type of 128 or more a two byte length; the probe wrote one, so nothing above 127 was framed |
+| every NLRI family, no regression | VPLS carries a two byte length prefix and the corpus emitted one byte, so that family was never decoded |
+
+Each of those numbers was reported, believed, and repeated to somebody else before the hole
+was found. None of them was found by reading the code.
+
+**So: before a green sweep is evidence of anything, break the thing it is watching and
+require it to fail.** Revert the fix, neuter the comparison, delete the check, and re-run.
+If it stays green, it is measuring nothing and the number is worse than useless, because it
+reads as coverage.
+
+This applies to a test as much as to a sweep. `./qa/bin/check_tiger_style` cannot tell you
+whether a test asserts anything: three tests guarding the API command size cap read the
+source file as *text* and asserted the constant's name appeared in it, and disabling all
+three comparisons left the whole suite green.
+
+The mechanical parts of this are `tests/fuzz/test_decoder_coverage.py`, which fails when a
+registered decoder is never entered, and `qa/bin/compat_gate`, which fails when this tree
+refuses something the last release accepts. Neither replaces the rule.
+
 ### Mutation testing
 
 `./qa/bin/mutmut_run` changes the meaning of the validation code, one edit at a time, and reports
