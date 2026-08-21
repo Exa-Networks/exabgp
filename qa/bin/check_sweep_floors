@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""
+Check that a test which sweeps a registry NOTICES when the registry is nearly empty.
+
+A sweep parametrised from a registry does not fail when the registry is short: the
+parametrisation shrinks instead. 296 passing tests read exactly like 2060 in a summary
+line, and 4 read like 22. So a registry half filled by import order, which is the most
+common way this tree has lied to us, produces a green suite covering almost nothing.
+
+This runs each test file twice, once normally and once with every registry thinned to
+three entries, and reports any file whose coverage SHRANK without anything failing.
+
+Two things it took to make this trustworthy, both found by measuring rather than by
+reading the code:
+
+  registered_families is a separate list from registered_nlri, reached through
+  known_families(). Thinning the dict leaves the list untouched, so a file
+  parametrised from known_families() looks immune when it is simply unperturbed.
+
+  Running one file at a time, a registry is only partly filled when pytest_configure
+  runs. registered_message held three entries at that point and grew to six during
+  collection, so thinning to three removed NOTHING and the file reported itself sound.
+  The registries are filled here before they are thinned, and the fill is asserted.
+
+An unaffected file is not automatically a finding. A file which merely asserts one
+membership, and whose test count does not change, does not depend on the registry for
+its coverage and needs no floor. Only a file whose count SHRINKS is reporting less than
+it appears to.
+"""
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+TESTS = ROOT / 'tests'
+
+REGISTRY_NAMES = (
+    'registered_lsids',
+    'registered_nlri',
+    'registered_attributes',
+    'attributes_known',
+    'known_families()',
+    'registered_capability',
+    'registered_message',
+)
+
+PLUGIN = """
+import importlib
+import pkgutil
+import sys
+
+
+def _fill():
+    sys.path.insert(0, 'src')
+    for package_name in ('exabgp.bgp.message', 'exabgp.reactor.api'):
+        try:
+            package = importlib.import_module(package_name)
+        except Exception:
+            continue
+        for _finder, name, _ispkg in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
+            try:
+                importlib.import_module(name)
+            except Exception:
+                pass
+
+
+def _thin(registry, keep=3):
+    if isinstance(registry, dict):
+        for key in list(registry)[keep:]:
+            registry.pop(key, None)
+    elif isinstance(registry, list):
+        del registry[keep:]
+
+
+def pytest_configure(config):
+    _fill()
+    from exabgp.bgp.message import Message
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+    from exabgp.bgp.message.update.nlri import NLRI
+
+    registries = (
+        LinkState.registered_lsids,
+        Attribute.registered_attributes,
+        NLRI.registered_nlri,
+        NLRI.registered_families,
+        Capability.registered_capability,
+        Message.registered_message,
+    )
+    sizes = [len(_) for _ in registries]
+    assert all(size > 3 for size in sizes), 'filled too little to thin: %s' % sizes
+
+    for registry in registries:
+        _thin(registry)
+    for name in ('attributes_known', 'registered_id', 'registered_flag'):
+        holder = getattr(Attribute, name, None)
+        if holder is not None:
+            try:
+                _thin(holder)
+            except Exception:
+                pass
+"""
+
+
+def sweeping_files():
+    """Test files which read a registry, so whose coverage may depend on one"""
+    for path in sorted(TESTS.rglob('test_*.py')):
+        text = path.read_text(encoding='utf-8', errors='replace')
+        if any(name in text for name in REGISTRY_NAMES):
+            yield path
+
+
+def run(path, plugin_dir=None):
+    """(passed, failed) for one file, optionally with the registries thinned"""
+    env_prefix = ['env', 'exabgp_log_enable=false']
+    command = env_prefix + [sys.executable, '-m', 'pytest', str(path), '-q', '--no-header']
+    environment = None
+    if plugin_dir:
+        import os
+
+        environment = dict(os.environ)
+        environment['PYTHONPATH'] = f'{plugin_dir}:{environment.get("PYTHONPATH", "")}'
+        command += ['-p', 'thinned_registries']
+    result = subprocess.run(command, capture_output=True, text=True, cwd=str(ROOT), env=environment)
+
+    def count(word):
+        found = re.search(r'(\d+) ' + word, result.stdout)
+        return int(found.group(1)) if found else 0
+
+    return count('passed'), count('failed') + count('error')
+
+
+def main():
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as plugin_dir:
+        Path(plugin_dir, 'thinned_registries.py').write_text(PLUGIN)
+
+        shrinking = []
+        checked = 0
+        for path in sweeping_files():
+            full_passed, _ = run(path)
+            thin_passed, thin_failed = run(path, plugin_dir)
+            checked += 1
+            if thin_failed:
+                continue
+            if thin_passed < full_passed:
+                shrinking.append((path.relative_to(ROOT), full_passed, thin_passed))
+
+    if not checked:
+        print('no test file reads a registry, which cannot be right')
+        return 1
+
+    if shrinking:
+        print('these sweeps lose coverage silently when a registry is short:')
+        for path, full, thin in shrinking:
+            print(f'   {path}   {full} passing -> {thin} passing, nothing failed')
+        print('\nassert the size of the registry each one walks before sweeping it')
+        return 1
+
+    print(f'ok   every registry sweep notices a short registry ({checked} files checked)')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
