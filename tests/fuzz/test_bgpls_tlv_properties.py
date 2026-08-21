@@ -136,3 +136,35 @@ class TestValidTlvRenders:
             pytest.skip('payload rejected by the decoder, nothing to render')
         json.loads(emitted)
         assert 'neighbor-id' in as_str
+
+
+class TestNoTlvRelyOnTheBoundary:
+    """LinkState.unpack converts stray exceptions into Notify, which is a backstop
+    and not a substitute for a decoder checking its own reads.
+
+    A catch-all makes a fuzz sweep come back clean while the reads are still
+    unchecked, and because it also converts AttributeError and TypeError, any
+    render bug on VALID traffic becomes a session teardown.  That is not
+    hypothetical: it is how Srv6EndX, Srv6LanEndXOSPF, Srv6EndpointBehavior and
+    Srv6SidStructure were found, all four of them broken on well formed input.
+
+    So the boundary must catch only what nobody anticipated.  If this test fails,
+    the named TLV has a read nobody checked.
+    """
+
+    BOUNDARY = 'Invalid BGP-LS attribute TLV'
+
+    @pytest.mark.parametrize('scode', TLVS)
+    def test_tlv_checks_its_own_reads(self, scode) -> None:
+        masked = []
+        for length in range(0, 40):
+            for filler in (b'A', b'\x00', b'\xff', b'\x80', b'\x01\x02\x03'):
+                payload = (filler * (length // len(filler) + 1))[:length]
+                try:
+                    render(scode, payload)
+                except Notify as exc:
+                    if self.BOUNDARY in str(exc):
+                        masked.append((length, str(exc)))
+                except Exception:  # noqa: BLE001 - the property tests above cover these
+                    pass
+        assert not masked, f'TLV {scode} relies on the decode boundary: {masked[0][1]}'

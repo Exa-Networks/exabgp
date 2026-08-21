@@ -31,6 +31,7 @@ from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEn
 @LinkState.register()
 class Srv6SidStructure(BaseLS):
     TLV = 1252
+    REPR = 'SRv6 SID Structure'
     LEN = 4  # LB Length(1) + LN Length(1) + Fun Length(1) + Arg Length(1)
 
     def __init__(self, loc_block_len, loc_node_len, func_len, arg_len):
@@ -60,6 +61,13 @@ class Srv6SidStructure(BaseLS):
             self.loc_node_len,
             self.func_len,
             self.arg_len,
+        )
+
+    def __repr__(self):
+        # this class keeps named fields, not a content attribute, so the
+        # inherited __repr__ raised AttributeError from str()
+        return '{}: [{}, {}, {}, {}]'.format(
+            self.REPR, self.loc_block_len, self.loc_node_len, self.func_len, self.arg_len
         )
 
     def json(self, compact=None):

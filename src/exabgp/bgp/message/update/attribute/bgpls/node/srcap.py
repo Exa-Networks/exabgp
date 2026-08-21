@@ -71,6 +71,10 @@ class SrCapabilities(FlagLS):
         sids = []
 
         while data:
+            # each iteration reads a range size and a sub-TLV header before it
+            # reads the label, so check the whole prefix once
+            if len(data) < SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE:
+                raise Notify(3, 5, f'Unable to decode attribute, truncated range in {cls.REPR}')
             # Range Size: 3 octet value indicating the number of labels in
             # the range.
             range_size = unpack('!L', bytes([0]) + data[:SRCAP_RANGE_SIZE_BYTES])[0]

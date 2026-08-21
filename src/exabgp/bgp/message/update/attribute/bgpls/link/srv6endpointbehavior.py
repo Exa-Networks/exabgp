@@ -27,6 +27,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register()
 class Srv6EndpointBehavior(BaseLS):
     TLV = 1250
+    REPR = 'SRv6 Endpoint Behavior'
     LEN = 4  # Endpoint Behavior(2) + Flags(1) + Algorithm(1)
 
     def __init__(
@@ -53,6 +54,13 @@ class Srv6EndpointBehavior(BaseLS):
             self.endpoint_behavior,
             self.flags,
             self.algorithm,
+        )
+
+    def __repr__(self):
+        # this class keeps named fields, not a content attribute, so the
+        # inherited __repr__ raised AttributeError from str()
+        return '{}: endpoint-behavior {}, flags {}, algorithm {}'.format(
+            self.REPR, self.endpoint_behavior, self.flags, self.algorithm
         )
 
     def json(self, compact=None):
