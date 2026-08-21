@@ -55,13 +55,16 @@ def test_update_split_with_random_data(data: bytes) -> None:
         assert expected_len == len(data), f'Length mismatch: {expected_len} != {len(data)}'
 
     except Notify as e:
-        # Expected for malformed data
-        # UPDATE errors should be code 3 (Update Message Error)
-        assert e.code == 3, f'Expected code 3, got {e.code}'
-        assert e.subcode == 1, f'Expected subcode 1 (Malformed Attribute List), got {e.subcode}'
-    except struct.error:
-        # Expected when data is too short for unpack
-        pass
+        # RFC 4271 draws the line between these two and this test used to assert only the
+        # second, so a message too short to read reported a malformed attribute list.
+        #
+        #   6.1  the message is shorter than its own minimum  ->  1/2 Bad Message Length
+        #   6.3  the lengths inside it disagree with a message
+        #        long enough to hold them                     ->  3/1 Malformed Attribute List
+        assert (e.code, e.subcode) in ((1, 2), (3, 1)), f'unexpected notification {e.code}/{e.subcode}'
+        # struct.error used to be caught here with the comment "Expected when data is too
+        # short for unpack", which is the defect written down as the contract.  split() is
+        # gated now, and if it ever stops being, this test is where that shows up
 
 
 @pytest.mark.fuzz

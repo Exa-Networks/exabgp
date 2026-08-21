@@ -263,8 +263,11 @@ def test_open_truncated(data_len: int) -> None:
     with pytest.raises(Notify) as exc_info:
         Open.unpack_message(truncated, negotiated)
 
-    assert exc_info.value.code == 2  # OPEN message error
-    assert exc_info.value.subcode == 0  # Unspecific (for length errors)
+    # RFC 4271 6.1: an OPEN shorter than the minimum OPEN length is a Message Header
+    # Error with the Bad Message Length subcode.  This asserted 2/0 with the comment
+    # "Unspecific (for length errors)", which wrote the defect down as the contract
+    assert exc_info.value.code == 1  # Message Header Error
+    assert exc_info.value.subcode == 2  # Bad Message Length
 
 
 @pytest.mark.fuzz

@@ -245,7 +245,14 @@ class UpdateCollection(Message):
 
         # UPDATE minimum: withdrawn_len(2) + attr_len(2) = 4 bytes
         if length < UPDATE_ATTR_LENGTH_HEADER_SIZE:
-            raise Notify(3, 1, f'UPDATE message too short: need {UPDATE_ATTR_LENGTH_HEADER_SIZE} bytes, got {length}')
+            # RFC 4271 6.1 lists "the Length field of an UPDATE message is less than the
+            # minimum length of the UPDATE message" among the Bad Message Length
+            # conditions, so this is a Message Header Error.  3/1 Malformed Attribute List
+            # is for what 6.3 describes: a Withdrawn Routes Length or Total Attribute
+            # Length which disagrees with a message long enough to hold them, which is the
+            # gate below rather than this one
+            # RFC 4271 6.1: the Data field carries the erroneous Length field itself
+            raise Notify(1, 2, pack('!H', Message.HEADER_LEN + length))
 
         len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
 

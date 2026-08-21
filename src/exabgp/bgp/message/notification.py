@@ -202,9 +202,17 @@ class Notification(Message, Exception):
 
 
 class Notify(Notification):
-    def __init__(self, code: int, subcode: int, data: str | None = None) -> None:
+    def __init__(self, code: int, subcode: int, data: str | bytes | None = None) -> None:
         if data is None:
             data = self._str_subcode.get((code, subcode), 'unknown notification type')
+        if isinstance(data, (bytes, bytearray)):
+            # RFC 4271 6.1 requires the Data field of a Bad Message Length notification to
+            # carry the erroneous Length field itself, two octets, not a sentence about it.
+            # Every caller passed text, which a peer reading those octets as a number sees
+            # as ASCII, so the octets have to be able to get through here at all
+            packed = bytes([code, subcode]) + bytes(data)
+            Notification.__init__(self, packed)
+            return
         if (code, subcode) in [(6, 2), (6, 4)]:
             data = chr(len(data)) + data
         # Build packed bytes directly: code + subcode + data

@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import unpack
+from struct import pack, unpack
 from typing import TYPE_CHECKING
 
 from exabgp.util.types import Buffer
@@ -70,7 +70,8 @@ class Open(Message):
     TYPE = bytes([Message.CODE.OPEN])
 
     # Fixed header size: version(1) + asn(2) + hold_time(2) + router_id(4)
-    HEADER_SIZE = 9
+    HEADER_SIZE = 9  # the fixed fields this class stores, without the optional parameters length
+    MINIMUM_BODY_SIZE = 10  # RFC 4271 4.2, the fixed fields plus the optional parameters length
 
     def __init__(self, packed: Buffer, capabilities: Capabilities) -> None:
         # Convert to bytearray first - this gives us length and ownership
@@ -123,9 +124,21 @@ class Open(Message):
 
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Open:
-        # OPEN header: version(1) + asn(2) + hold_time(2) + router_id(4) = 9 bytes minimum
-        if len(data) < cls.HEADER_SIZE:
-            raise Notify(2, 0, f'OPEN message too short: need {cls.HEADER_SIZE} bytes, got {len(data)}')
+        # RFC 4271 4.2: the fixed portion is version(1) + my AS(2) + hold time(2) +
+        # identifier(4) + optional parameters length(1) = 10 octets, and the RFC states the
+        # minimum OPEN is 29 octets including the 19 octet header.  This required 9, so an
+        # OPEN with no Optional Parameters Length octet at all was accepted, and the error
+        # text said "need 9" so the off by one was written down twice.
+        #
+        # RFC 4271 6.1: "if the Length field of an OPEN message is less than the minimum
+        # length of the OPEN message, then the Error Subcode MUST be set to Bad Message
+        # Length".  That is a Message Header Error, code 1 subcode 2, and not the OPEN
+        # message error this used to send: 2/0 is Unspecific, which names nothing, and the
+        # OPEN subcodes in 6.2 have no entry for a message which is too short to read.
+        if len(data) < cls.MINIMUM_BODY_SIZE:
+            # RFC 4271 6.1: "The Data field MUST contain the erroneous Length field", which
+            # is the two octet Length from the message header, not a sentence describing it
+            raise Notify(1, 2, pack('!H', Message.HEADER_LEN + len(data)))
 
         version = data[0]
         if version != Version.BGP_4:

@@ -14,9 +14,10 @@ from exabgp.util.types import Buffer
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
+from struct import pack
+
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
-from exabgp.util import hexstring
 
 # =================================================================== KeepAlive
 #
@@ -50,5 +51,7 @@ class KeepAlive(Message):
         # This can not happen at decode time as we check the length of the KEEPALIVE message
         # But could happen when calling the function programmatically
         if data:
-            raise Notify(1, 2, 'Keepalive can not have any payload but contains %s' % hexstring(bytes(data)))
+            # RFC 4271 6.1: a KEEPALIVE whose Length is not 19 is a Bad Message Length,
+            # and the Data field carries that Length rather than the payload's hex
+            raise Notify(1, 2, pack('!H', Message.HEADER_LEN + len(data)))
         return cls(data)
