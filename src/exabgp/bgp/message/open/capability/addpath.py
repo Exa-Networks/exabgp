@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import json
 from struct import pack
 from typing import ClassVar, Iterable
 
@@ -32,8 +33,9 @@ class AddPath(Capability, dict[FamilyTuple, int]):
         3: 'send/receive',
     }
 
-    # RFC 7911 section 4 defines 1, 2 and 3.  0 is how this implementation records a
-    # family it did not negotiate, and is never sent, so it is accepted but not emitted.
+    # RFC 7911 section 4 defines 1, 2 and 3.  A peer sending anything else is not refused:
+    # RequirePath.setup reads the value as a bitmask, so a session which comes up today
+    # against such a peer must keep coming up after an upgrade.  It is named, not judged.
     SEND_RECEIVE_MAX: ClassVar[int] = 3
 
     def __init__(self, families: Iterable[FamilyTuple] = (), send_receive: int = 0) -> None:
@@ -43,12 +45,22 @@ class AddPath(Capability, dict[FamilyTuple, int]):
     def add_path(self, afi: AFI, safi: SAFI, send_receive: int) -> None:
         self[(afi, safi)] = send_receive
 
+    def named(self, send_receive: int) -> str:
+        """How a send/receive value is shown, including one the RFC does not define.
+
+        A peer picks this byte, and RequirePath.setup reads it as a bitmask rather than as
+        one of the four names, so a value outside the table establishes a session today.
+        Looking it up without a default put a KeyError in the writer feeding the API
+        subprocesses and in the logger instead.
+        """
+        return self.string.get(send_receive, f'invalid ({send_receive})')
+
     def __str__(self) -> str:
         return (
             'AddPath('
             + ','.join(
                 [
-                    '{} {} {}'.format(self.string[self[aafi]], xafi, xsafi)
+                    '{} {} {}'.format(self.named(self[aafi]), xafi, xsafi)
                     for (aafi, xafi, xsafi) in [((afi, safi), str(afi), str(safi)) for (afi, safi) in self]
                 ],
             )
@@ -57,7 +69,7 @@ class AddPath(Capability, dict[FamilyTuple, int]):
 
     def json(self) -> str:
         families = ','.join(
-            '"{}/{}": "{}"'.format(xafi, xsafi, self.string[self[aafi]])
+            '"{}/{}": {}'.format(xafi, xsafi, json.dumps(self.named(self[aafi])))
             for (aafi, xafi, xsafi) in (((afi, safi), str(afi), str(safi)) for (afi, safi) in self)
         )
         return '{{ "name": "addpath"{}{} }}'.format(', ' if families else '', families)
@@ -84,10 +96,6 @@ class AddPath(Capability, dict[FamilyTuple, int]):
             afi = AFI.unpack_afi(data[:2])
             safi = SAFI.unpack_safi(data[2:3])
             sr = data[3]
-            # a value the RFC does not define has no meaning to give the operator, and
-            # used to reach json() and __str__() where the lookup raised KeyError
-            if sr > cls.SEND_RECEIVE_MAX:
-                raise Notify(2, 0, f'ADD-PATH capability has an undefined send/receive value: {sr}')
             if (afi, safi) in instance:
 
                 def _log_dup(afi: AFI = afi, safi: SAFI = safi) -> str:

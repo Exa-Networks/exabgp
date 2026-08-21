@@ -222,24 +222,20 @@ def test_addpath_empty() -> None:
 @given(send_receive=st.integers(min_value=0, max_value=255))
 @settings(deadline=None, max_examples=50)
 def test_addpath_send_receive_values(send_receive: int) -> None:
-    """A send/receive value RFC 7911 does not define is refused at the decoder.
+    """A send/receive value RFC 7911 does not define is named rather than refused.
 
-    Accepting it used to move the failure to json() and to __str__(), which look the
-    value up in a table holding only 0 to 3, so the KeyError landed in the API writer
-    and in the logger instead of closing the session.
+    RequirePath.setup reads the byte as a bitmask, so a peer sending one establishes a
+    session today and must keep establishing one. Looking the name up in a table holding
+    only 0 to 3, without a default, is what put a KeyError in the writer feeding the API
+    subprocesses and in the logger.
     """
     from exabgp.bgp.message.open.capability.addpath import AddPath
     from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
-    from exabgp.bgp.message.notification import Notify
 
     data = struct.pack('!H', 1) + bytes([1, send_receive])
 
     instance = AddPath()
-    try:
-        result = AddPath.unpack_capability(instance, data, CapabilityCode(Capability.CODE.ADD_PATH))
-    except Notify:
-        assert send_receive > AddPath.SEND_RECEIVE_MAX
-        return
+    result = AddPath.unpack_capability(instance, data, CapabilityCode(Capability.CODE.ADD_PATH))
 
     assert isinstance(result, AddPath)
     # what decoded has to survive everything the API and the logs ask of it

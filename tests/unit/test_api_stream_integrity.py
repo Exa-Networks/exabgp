@@ -120,14 +120,19 @@ def _addpath(data: bytes) -> Capability:
 
 
 @pytest.mark.parametrize('send_receive', [4, 5, 103, 255])
-def test_addpath_rejects_an_undefined_send_receive(send_receive: int) -> None:
-    """RFC 7911 defines 1, 2 and 3.  Anything else has no meaning to give the operator.
+def test_addpath_names_an_undefined_send_receive(send_receive: int) -> None:
+    """RFC 7911 defines 1, 2 and 3, and a peer sending anything else is not refused.
 
-    The value was accepted and then looked up in a table holding only 0 to 3, so json()
-    and str() raised KeyError from the API writer and from the logger.
+    RequirePath.setup reads the value as a bitmask, so such a peer establishes a session
+    today and has to keep establishing one after an upgrade. What was wrong was the name
+    lookup: a table holding only 0 to 3, consulted without a default, raised KeyError from
+    json() and from __str__(), which is the writer feeding the API subprocesses and the
+    logger.
     """
-    with pytest.raises(Notify):
-        _addpath(bytes([0x00, 0x01, 0x01, send_receive]))
+    capability = _addpath(bytes([0x00, 0x01, 0x01, send_receive]))
+    described = jsonlib.loads(capability.json())
+    assert described['ipv4/unicast'] == f'invalid ({send_receive})'
+    assert str(send_receive) in str(capability)
 
 
 @pytest.mark.parametrize('send_receive', [1, 2, 3])
