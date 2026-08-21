@@ -171,16 +171,48 @@ class TestINETUnpackLabels:
     """Test unpacking INET with labels"""
 
     def test_unpack_with_withdraw_label(self) -> None:
-        """Test unpacking route with withdraw label (0x800000)"""
-        # Label 0x800000 indicates withdrawal
-        # Format: mask (1 byte) + label (3 bytes) + network
-        withdraw_label = b'\x00\x80\x00\x00'  # Label 0x800000
-        data = b'\x38' + withdraw_label + b'\xc0\xa8\x01'  # mask=56 (24 for label + 32 for prefix)
+        """RFC 3107 withdraw label 0x800000, which carries no bottom of stack bit
+
+        This built the label as FOUR bytes, b'\\x00\\x80\\x00\\x00', so the decoder
+        read the first three as 0x008000 and the value the test is named for
+        never appeared on the wire. It then asserted only that the result was an
+        INET with the action it was given, neither of which could fail, over a
+        route which decoded to 0.0.0.0/0.
+
+        A test named for a case, not exercising the case, asserting nothing that
+        could tell. Found by the session working main.
+        """
+        withdraw_label = b'\x80\x00\x00'  # three bytes: label 0x800000
+        # mask 48 = 24 bits of label plus 24 of prefix
+        data = b'\x30' + withdraw_label + b'\xc0\xa8\x01'
 
         nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.WITHDRAW, addpath=False)
 
         assert isinstance(nlri, INET)
         assert nlri.action == Action.WITHDRAW
+        # the assertions which say the stack was read as one label and the prefix
+        # survived it, rather than being eaten as more labels
+        assert str(nlri.cidr) == '192.168.1.0/24'
+        assert nlri.labels.labels == [0x800000 >> 4]
+        assert leftover == b''
+
+    def test_a_withdraw_label_does_not_terminate_a_stack_below_the_top(self) -> None:
+        """The sentinel describes the whole stack, not a label inside one
+
+        Accepting it at any depth is what let an unterminated first label read
+        the route distinguisher and find a false terminator in its zero bytes.
+        """
+        from exabgp.bgp.message.notification import Notify
+
+        # first label has no bottom of stack bit, second is the withdraw value.
+        # The prefix ends in an EVEN byte on purpose: the gate can only catch a
+        # stack which never terminates, and prefix bytes whose low bit happens to
+        # be set still read as a bottom of stack label. That residual ambiguity is
+        # in the encoding, not in this check, and it is why the first label having
+        # no terminator is the thing worth refusing.
+        data = b'\x48' + b'\x00\x00\x10' + b'\x80\x00\x00' + b'\xc0\xa8\x02'
+        with pytest.raises(Notify):
+            INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.WITHDRAW, addpath=False)
 
     def test_unpack_with_null_label(self) -> None:
         """Test unpacking route with null label (0x000000)"""

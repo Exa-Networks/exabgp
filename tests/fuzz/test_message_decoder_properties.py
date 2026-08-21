@@ -179,9 +179,11 @@ CAPABILITY_FLOOR = 10
 ATTRIBUTE_FLOOR = 18
 
 
+@pytest.mark.registry_floor
 def test_the_capability_registry_is_populated() -> None:
     assert len(CAPABILITIES) >= CAPABILITY_FLOOR, CAPABILITIES
 
 
+@pytest.mark.registry_floor
 def test_the_attribute_registry_is_populated() -> None:
     assert len(ATTRIBUTES) >= ATTRIBUTE_FLOOR, ATTRIBUTES

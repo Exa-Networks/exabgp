@@ -127,6 +127,13 @@ class INET(NLRI):
 
         if safi.has_label():
             labels = []
+            # RFC 3107: the mask covers the label stack AND the prefix together, so
+            # the only thing on the wire saying where the stack ends is a terminator.
+            # Without one this loop ran until the mask was spent, read the PREFIX
+            # bytes as more labels, and left nothing behind: the NLRI decoded to
+            # 0.0.0.0/0, which we would then re-advertise.  A peer choosing to omit
+            # the bottom of stack bit could make us originate a default route.
+            terminated = False
             while mask - rd_mask >= LABEL_SIZE_BITS:
                 if len(bgp) < 3:
                     raise Notify(3, 10, 'not enough data to extract the label stack of the NLRI')
@@ -136,14 +143,30 @@ class INET(NLRI):
                 # The last 4 bits are the bottom of Stack
                 # The last bit is set for the last label
                 labels.append(label >> 4)
+                if label & LABEL_BOTTOM_OF_STACK_BIT:
+                    terminated = True
+                    break
+                # RFC 3107 gives two whole-stack conventions which carry no bottom
+                # of stack bit: 0x800000 on a withdrawal, and 0x000000 for a
+                # next-hop.  They describe the stack rather than a label within
+                # one, so they only end it when they ARE the stack.  Accepting
+                # them at any depth is what let the mpls-vpn case through the
+                # first version of this gate: an unterminated first label made the
+                # loop read the route distinguisher, whose leading zero bytes look
+                # exactly like the next-hop convention, and the stack "terminated"
+                # on the peer's RD.
+                if len(labels) > 1:
+                    continue
                 # This is a route withdrawal
                 if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
+                    terminated = True
                     break
                 # This is a next-hop
                 if label == LABEL_NEXTHOP_VALUE:
+                    terminated = True
                     break
-                if label & LABEL_BOTTOM_OF_STACK_BIT:
-                    break
+            if labels and not terminated:
+                raise Notify(3, 10, 'invalid label stack in the NLRI, no bottom of stack bit and no terminator')
             nlri.labels = Labels(labels)
 
         if rd_size:

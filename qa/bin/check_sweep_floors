@@ -36,6 +36,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 TESTS = ROOT / 'tests'
 
+NO_TESTS_COLLECTED = 5  # pytest's exit status when a selection matches nothing
+
 REGISTRY_NAMES = (
     'registered_lsids',
     'registered_nlri',
@@ -90,11 +92,15 @@ def pytest_configure(config):
         Capability.registered_capability,
         Message.registered_message,
     )
-    sizes = [len(_) for _ in registries]
-    assert all(size > 3 for size in sizes), 'filled too little to thin: %s' % sizes
-
+    # the property needed is that thinning REMOVED something, not that every
+    # registry is bigger than some number: registered_message holds six when it
+    # is complete, so a single size threshold either fails on a healthy tree or
+    # is too low to prove the thinner works
+    before = [len(_) for _ in registries]
     for registry in registries:
         _thin(registry)
+    after = [len(_) for _ in registries]
+    assert all(b > a for b, a in zip(before, after)), 'thinner removed nothing: %s -> %s' % (before, after)
     for name in ('attributes_known', 'registered_id', 'registered_flag'):
         holder = getattr(Attribute, name, None)
         if holder is not None:
@@ -113,24 +119,63 @@ def sweeping_files():
             yield path
 
 
-def run(path, plugin_dir=None):
-    """(passed, failed) for one file, optionally with the registries thinned"""
-    env_prefix = ['env', 'exabgp_log_enable=false']
-    command = env_prefix + [sys.executable, '-m', 'pytest', str(path), '-q', '--no-header']
-    environment = None
-    if plugin_dir:
-        import os
+def floor_fires(path, plugin_dir):
+    """Does this file's registry_floor test FAIL when the registries are short?
 
-        environment = dict(os.environ)
+    Counting alone is not enough, and neither is "nothing failed". A file whose
+    seeds break under thinning goes red whether or not it has a floor, so any red
+    excuses a missing one: deleting the floor from test_attribute_equality left
+    this gate green, because 57 of its seeded cases failed first.
+
+    So the floor is asked for by name. It carries @pytest.mark.registry_floor and
+    it, specifically, has to fail.
+    """
+    import os
+
+    environment = dict(os.environ)
+    environment['PYTHONPATH'] = f'{plugin_dir}:{environment.get("PYTHONPATH", "")}'
+    environment['exabgp_log_enable'] = 'false'
+    result = subprocess.run(
+        [
+            sys.executable,
+            '-m',
+            'pytest',
+            str(path),
+            '-q',
+            '--no-header',
+            '-m',
+            'registry_floor',
+            '-p',
+            'thinned_registries',
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        env=environment,
+    )
+    # pytest exits 5 for "no tests collected", which is a file with NO floor at
+    # all.  Reading any non-zero status as "the floor fired" turns the absence of
+    # a floor into evidence that one exists
+    if result.returncode == NO_TESTS_COLLECTED:
+        return False, 'no registry_floor test'
+    if result.returncode == 0:
+        return False, 'its registry_floor test passed over a short registry'
+    return True, ''
+
+
+def collected(path, plugin_dir=None):
+    """How many tests this file runs, with or without the registries thinned"""
+    import os
+
+    environment = dict(os.environ)
+    environment['exabgp_log_enable'] = 'false'
+    command = [sys.executable, '-m', 'pytest', str(path), '-q', '--no-header', '--collect-only']
+    if plugin_dir:
         environment['PYTHONPATH'] = f'{plugin_dir}:{environment.get("PYTHONPATH", "")}'
         command += ['-p', 'thinned_registries']
     result = subprocess.run(command, capture_output=True, text=True, cwd=str(ROOT), env=environment)
-
-    def count(word):
-        found = re.search(r'(\d+) ' + word, result.stdout)
-        return int(found.group(1)) if found else 0
-
-    return count('passed'), count('failed') + count('error')
+    found = re.search(r'(\d+) test', result.stdout)
+    return int(found.group(1)) if found else 0
 
 
 def main():
@@ -139,26 +184,30 @@ def main():
     with tempfile.TemporaryDirectory() as plugin_dir:
         Path(plugin_dir, 'thinned_registries.py').write_text(PLUGIN)
 
-        shrinking = []
+        findings = []
         checked = 0
         for path in sweeping_files():
-            full_passed, _ = run(path)
-            thin_passed, thin_failed = run(path, plugin_dir)
+            full = collected(path)
+            thin = collected(path, plugin_dir)
             checked += 1
-            if thin_failed:
+            if thin >= full:
+                # its coverage does not depend on the registry, so it needs no
+                # floor: a file which merely asserts one membership is not a gap
                 continue
-            if thin_passed < full_passed:
-                shrinking.append((path.relative_to(ROOT), full_passed, thin_passed))
+            fires, why = floor_fires(path, plugin_dir)
+            if not fires:
+                findings.append((path.relative_to(ROOT), full, thin, why))
 
     if not checked:
         print('no test file reads a registry, which cannot be right')
         return 1
 
-    if shrinking:
+    if findings:
         print('these sweeps lose coverage silently when a registry is short:')
-        for path, full, thin in shrinking:
-            print(f'   {path}   {full} passing -> {thin} passing, nothing failed')
-        print('\nassert the size of the registry each one walks before sweeping it')
+        for path, full, thin, why in findings:
+            print(f'   {path}')
+            print(f'      collects {full} tests, {thin} with the registries thinned, and {why}')
+        print('\nassert the size of the registry each one walks, marked @pytest.mark.registry_floor')
         return 1
 
     print(f'ok   every registry sweep notices a short registry ({checked} files checked)')

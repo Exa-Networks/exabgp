@@ -145,5 +145,6 @@ class TestSeededShapes:
 NLRI_FAMILY_FLOOR = 18
 
 
+@pytest.mark.registry_floor
 def test_the_registry_this_file_sweeps_is_populated() -> None:
     assert len(FAMILIES) >= NLRI_FAMILY_FLOOR, FAMILIES

@@ -238,8 +238,20 @@ class TestAnOverrideDoesNotReintroduceIt:
                 continue
 
         assert not blind, f'these compare equal while rendering differently: {blind}'
-        # a sweep which builds nothing reports no failures, so the coverage is
-        # asserted as well as the result
+
+    @pytest.mark.registry_floor
+    def test_the_sweep_reaches_enough_attributes(self) -> None:
+        """The coverage, asserted separately so it can fail on its own
+
+        This lived inside the test above, which meant it could only be reached
+        after that test's own assertion passed, and a checker looking for the
+        floor to fire could not tell it apart from the seeds failing first.
+        """
+        reached = [
+            Attribute.CODE.names.get(aid, str(aid))
+            for aid in sorted(Attribute.attributes_known)
+            if SHAPED_SEEDS.get(int(aid)) is not None
+        ]
         assert len(reached) >= SWEEP_FLOOR, f'only reached {len(reached)} attributes: {reached}'
 
     def test_the_sweep_reaches_what_it_claims(self) -> None:

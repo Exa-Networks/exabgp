@@ -198,3 +198,16 @@ class TestTlvChecksAreMinimumsNotExactLengths:
         # only the flags and the byte behind them are read before the SID loop
         emitted, _, _ = render(scode, b'\x00' * length)
         json.loads(emitted)
+
+
+# Ratchet on the registry this file parametrises over. A short registry does not
+# fail these tests, it collects fewer of them, and a smaller green number reads
+# exactly like a larger one. Marked so qa/bin/check_sweep_floors can ask for the
+# floor BY NAME: a file whose seeds break under thinning goes red with or without
+# a floor, so "something failed" cannot stand in for "the floor fired".
+LSID_FLOOR = 30
+
+
+@pytest.mark.registry_floor
+def test_the_registry_this_file_sweeps_is_populated() -> None:
+    assert len(TLVS) >= LSID_FLOOR, sorted(TLVS)
