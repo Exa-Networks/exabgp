@@ -91,7 +91,11 @@ class Update(Message):
         # left struct.error here rather than a NOTIFICATION: one stray byte on
         # the wire was enough
         if length < UPDATE_ATTR_LENGTH_HEADER_SIZE:
-            raise Notify(3, 1, 'invalid UPDATE, %d bytes cannot hold the two length fields' % length)
+            # RFC 4271 6.1: a Length field below the minimum length of an UPDATE
+            # is Bad Message Length, with the erroneous Length field as the data.
+            # 6.3 Malformed Attribute List is for the lengths INSIDE a message
+            # which is itself long enough, which is the check further down
+            raise Notify(1, 2, pack('!H', Message.HEADER_LEN + length))
 
         len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
         withdrawn = data[UPDATE_WITHDRAWN_LENGTH_OFFSET : len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET]

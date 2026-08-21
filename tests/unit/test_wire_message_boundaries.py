@@ -72,22 +72,46 @@ def negotiated():
 EMPTY_UPDATE = pack('!HH', 0, 0)
 
 
+HEADER_LEN = 19  # RFC 4271 4.1
+
+
+def bad_message_length(caught, body_size):
+    """RFC 4271 6.1 asks for a specific code, subcode AND data field
+
+    "if the Length field of an OPEN message is less than the minimum length of
+    the OPEN message ... then the Error Subcode MUST be set to Bad Message
+    Length. The Data field MUST contain the erroneous Length field."
+
+    The Length field is the one in the header, so it counts the 19 header octets
+    the body arrives without.
+    """
+    assert (caught.code, caught.subcode) == (1, 2)
+    assert caught.data == pack('!H', HEADER_LEN + body_size), 'the data must be the erroneous Length field'
+
+
 class TestATruncatedUpdate:
     def test_the_one_byte_body_which_raised_struct_error(self) -> None:
-        with pytest.raises(Notify):
+        with pytest.raises(Notify) as caught:
             Update.unpack_message(bytes([0x4F]), Direction.IN, negotiated())
+        bad_message_length(caught.value, 1)
 
     @pytest.mark.parametrize('size', [0, 1, 2, 3])
     def test_anything_too_short_for_the_two_length_fields(self, size) -> None:
-        with pytest.raises(Notify):
+        with pytest.raises(Notify) as caught:
             Update.unpack_message(bytes(size), Direction.IN, negotiated())
+        # a header Length error, NOT 3/1 Malformed Attribute List: 6.3 is for
+        # the lengths inside a message which is itself long enough
+        bad_message_length(caught.value, size)
 
     def test_a_withdrawn_length_which_eats_the_attribute_length(self) -> None:
         # says 2 bytes of withdrawn routes and supplies them, leaving nothing for
         # the total path attribute length which must follow
         wire = pack('!H', 2) + bytes([0, 0])
-        with pytest.raises(Notify):
+        with pytest.raises(Notify) as caught:
             Update.unpack_message(wire, Direction.IN, negotiated())
+        # the message is long enough, its own lengths are not consistent, which
+        # RFC 4271 6.3 calls a Malformed Attribute List
+        assert (caught.value.code, caught.value.subcode) == (3, 1)
 
     def test_the_empty_update_still_decodes(self) -> None:
         # the gate must not refuse the smallest well formed UPDATE there is
@@ -159,3 +183,45 @@ class TestNothingRawEscapesTheMessageParser:
             pass
         except Exception as exc:  # noqa: BLE001 - naming it is the assertion
             pytest.fail(f'type {msg_type} with {size} bytes raised {type(exc).__name__}: {exc}')
+
+
+class TestATruncatedOpen:
+    @pytest.mark.parametrize('size', [0, 1, 5, 9])
+    def test_below_the_ten_byte_fixed_header(self, size) -> None:
+        with pytest.raises(Notify) as caught:
+            Message.unpack(1, bytes(size), Direction.IN, negotiated())
+        bad_message_length(caught.value, size)
+
+    def test_the_smallest_valid_open_is_accepted(self) -> None:
+        # version 4, AS, hold time, identifier, no optional parameters
+        body = bytes([4]) + pack('!HH', 65000, 180) + bytes([10, 0, 0, 1]) + bytes([0])
+        assert Message.unpack(1, body, Direction.IN, negotiated()) is not None
+
+
+class TestAKeepaliveWithAPayload:
+    """RFC 4271 4.4: a KEEPALIVE is the header and nothing else
+
+    The refusal read `Notify(text, hexstring(data))`: the text became the code
+    and the hexstring became the subcode, neither was ever formatted, and
+    message() would have raised on bytes([self.code, self.subcode]) rather than
+    sending anything at all. A peer only had to attach one byte.
+    """
+
+    @pytest.mark.parametrize('size', [1, 2, 40])
+    def test_it_is_bad_message_length(self, size) -> None:
+        with pytest.raises(Notify) as caught:
+            Message.unpack(4, bytes(size), Direction.IN, negotiated())
+        bad_message_length(caught.value, size)
+
+    @pytest.mark.parametrize('size', [1, 40])
+    def test_and_the_refusal_can_actually_be_sent(self, size) -> None:
+        # the assertion the old code fails: code and subcode must be integers,
+        # because message() packs them as bytes
+        with pytest.raises(Notify) as caught:
+            Message.unpack(4, bytes(size), Direction.IN, negotiated())
+        assert isinstance(caught.value.code, int)
+        assert isinstance(caught.value.subcode, int)
+        assert caught.value.message()
+
+    def test_an_empty_keepalive_is_still_accepted(self) -> None:
+        assert Message.unpack(4, b'', Direction.IN, negotiated()) is not None

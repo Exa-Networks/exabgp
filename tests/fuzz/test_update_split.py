@@ -54,13 +54,20 @@ def test_update_split_with_random_data(data: bytes) -> None:
         assert expected_len == len(data), f'Length mismatch: {expected_len} != {len(data)}'
 
     except Notify as e:
-        # Expected for malformed data
-        # UPDATE errors should be code 3 (Update Message Error)
-        assert e.code == 3, f'Expected code 3, got {e.code}'
-        assert e.subcode == 1, f'Expected subcode 1 (Malformed Attribute List), got {e.subcode}'
+        # RFC 4271 puts these in two different classes and the distinction is
+        # the point, not a detail:
+        #   6.1  a Length below the minimum length of an UPDATE is a MESSAGE
+        #        HEADER error, Bad Message Length (1/2)
+        #   6.3  lengths which do not agree inside a message long enough to hold
+        #        them are a Malformed Attribute List (3/1)
+        assert (e.code, e.subcode) in ((1, 2), (3, 1)), f'unexpected Notify({e.code}, {e.subcode})'
+        if len(data) < 4:
+            assert (e.code, e.subcode) == (1, 2), 'a body too short for the length fields is a header error'
     except struct.error:
-        # Expected when data is too short for unpack
-        pass
+        # this used to be allowed here, which is why the defect survived: split()
+        # computed len(data) and never consulted it, so one stray byte raised
+        # struct.error out of the message parser and this test called it expected
+        raise AssertionError('struct.error escaped Update.split')
 
 
 @pytest.mark.fuzz

@@ -175,6 +175,12 @@ class Notify(Notification):
     def __init__(self, code, subcode, data=None):
         if data is None:
             data = self._str_subcode.get((code, subcode), 'unknown notification type')
+        if isinstance(data, (bytes, bytearray, memoryview)):
+            # RFC 4271 6.1 for a Message Header Error: "The Data field MUST
+            # contain the erroneous Length field", which is two octets and not
+            # text, so it cannot go through the ascii encoding below
+            Notification.__init__(self, code, subcode, bytes(data), False)
+            return
         if (code, subcode) in [(6, 2), (6, 4)]:
             data = chr(len(data)) + data
         Notification.__init__(self, code, subcode, bytes(data, 'ascii'), False)

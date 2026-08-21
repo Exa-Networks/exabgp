@@ -58,16 +58,33 @@ Version 5.0.13:
    CONSTRUCTED an Exception and returned it as though it were a message.
    Type 0 is listed in CODE.MESSAGES, so it passed the reactor's own check
    and reached that line straight off the wire.
- * Fix: OPEN, UPDATE and NOTIFICATION are length checked before their
-   fixed headers are read. Update.split computed the body length and then
-   never consulted it, so a one byte UPDATE raised struct.error; OPEN read
-   its version, AS, hold time and identifier without checking the ten
-   bytes RFC 4271 4.2 requires were present; and NOTIFICATION read its
-   error code and subcode off a body which might be empty, raising
-   IndexError. Each was a traceback out of the message parser where a
-   NOTIFICATION belongs, on input a peer chooses the length of. A
-   NOTIFICATION too short to carry a code now closes the connection
-   without a reply, which is what RFC 4271 6.5 asks for.
+ * Fix: every message is length checked before its fixed header is read,
+   and refused the way RFC 4271 6.1 asks. Update.split computed the body
+   length and then never consulted it, so a one byte UPDATE raised
+   struct.error; OPEN read its version, AS, hold time and identifier
+   without checking the ten bytes 4.2 requires were present; NOTIFICATION
+   read its error code and subcode off a body which might be empty,
+   raising IndexError; and a KEEPALIVE carrying a payload raised
+   Notify(text, hexstring) with the message as the error code and the
+   hexstring as the subcode, so both were strings and sending it would
+   have raised rather than reaching the peer. Each was a traceback out of
+   the message parser where a NOTIFICATION belongs, on input a peer
+   chooses the length of.
+
+   6.1 lists these together and is explicit about the answer: a Length
+   field below the minimum length of an OPEN, of an UPDATE, or of a
+   NOTIFICATION, or a KEEPALIVE Length which is not 19, "MUST be set to
+   Bad Message Length", and "The Data field MUST contain the erroneous
+   Length field". So all of them now send 1/2 carrying the two octet
+   Length, where OPEN previously sent nothing at all and the UPDATE case
+   would have sent 3/1 Malformed Attribute List. 6.3 Malformed Attribute
+   List is kept for what it is actually for: lengths which do not agree
+   inside a message long enough to hold them.
+
+   The exception is NOTIFICATION, where 6.4 overrides: an error detected
+   in a NOTIFICATION a peer sent cannot be reported back with a
+   NOTIFICATION of our own. A truncated one closes the connection in
+   silence instead.
  * Fix: two attributes are equal when they carry the same value. The
    comparison read the attribute ID and flag and never the value, and 40
    of the 59 registered classes inherit it, so any two BGP-LS attributes,
