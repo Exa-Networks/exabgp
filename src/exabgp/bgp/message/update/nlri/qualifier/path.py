@@ -92,7 +92,11 @@ class PathInfo:
         if self is PathInfo.NOPATH or self is PathInfo.DISABLED:
             return self
         # Regular PathInfo: create a new instance with same data
-        new = PathInfo.__new__(PathInfo)
+        # type(self), so a subclass copies to its own class rather than to this one.  Not a
+        # live fault: PathInfo has no subclass and its slots are fixed.  Changed because
+        # naming the class here is the same habit which lost route_d one attribute later,
+        # and session 5.0 found the constructor-rerun version of it in their own PathInfo.
+        new = type(self).__new__(type(self))
         new._disabled = self._disabled
         new._packed = self._packed
         return new
@@ -103,7 +107,11 @@ class PathInfo:
             return self
         # Regular PathInfo: create a new instance with same data
         # _packed is bytes (immutable), so no need to deepcopy it
-        new = PathInfo.__new__(PathInfo)
+        # type(self), so a subclass copies to its own class rather than to this one.  Not a
+        # live fault: PathInfo has no subclass and its slots are fixed.  Changed because
+        # naming the class here is the same habit which lost route_d one attribute later,
+        # and session 5.0 found the constructor-rerun version of it in their own PathInfo.
+        new = type(self).__new__(type(self))
         new._disabled = self._disabled
         new._packed = self._packed
         memo[id(self)] = new
