@@ -50,6 +50,9 @@ from exabgp.bgp.message.open.capability import Capabilities
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
+OPEN_MINIMUM_SIZE = 10  # RFC 4271 4.2: 1 + 2 + 2 + 4 + 1
+
+
 @Message.register
 class Open(Message):
     ID = Message.CODE.OPEN
@@ -82,6 +85,15 @@ class Open(Message):
 
     @classmethod
     def unpack_message(cls, data, direction=None, negotiated=None):
+        # RFC 4271 4.2: version(1) my AS(2) hold time(2) BGP identifier(4) and the
+        # optional parameter length(1).  Nothing checked they were there, so an
+        # empty body left IndexError and a short one struct.error, out of the
+        # message parser rather than as a NOTIFICATION
+        if len(data) < OPEN_MINIMUM_SIZE:
+            raise Notify(
+                1, 2, 'invalid OPEN, %d bytes is short of the %d byte fixed header' % (len(data), OPEN_MINIMUM_SIZE)
+            )
+
         version = data[0]
         if version != Version.BGP_4:
             # Only version 4 is supported nowdays ..

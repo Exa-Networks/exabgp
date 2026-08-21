@@ -12,6 +12,9 @@ import pytest
 from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
 
+from exabgp.bgp.message.notification import Notification, Notify
+from exabgp.bgp.message.direction import Direction
+
 pytestmark = pytest.mark.fuzz
 
 
@@ -21,6 +24,55 @@ pytestmark = pytest.mark.fuzz
 
 
 @pytest.mark.fuzz
+@pytest.fixture(autouse=True)
+def mocked_logger():
+    """The decoders log, and the logger is not initialised under pytest"""
+    from unittest.mock import Mock
+
+    from exabgp.logger.option import option
+
+    saved = option.logger
+    option.logger = Mock()
+    yield
+    option.logger = saved
+
+
+def negotiated_stub():
+    """Enough of a Negotiated for the decoders which consult it"""
+    from unittest.mock import Mock
+
+    stub = Mock()
+    stub.families = []
+    stub.asn4 = True
+    return stub
+
+
+def reported(exc, allowed, what):
+    """Fail unless the exception is one this code is allowed to raise
+
+    Every one of these sites used to assert
+
+        reported(e, (Exception,), 'the code')
+
+    inside `except Exception`.  SystemExit and KeyboardInterrupt derive from
+    BaseException, so `except Exception` can never bind either and the assertion
+    could not fail whatever the code did.  Four decoder defects on peer supplied
+    input passed it, and so did three configuration parser crashes.
+
+    The distinction which matters is between the code REPORTING bad input and the
+    code FALLING OVER on it.  Notify and Notification are reports.  ValueError is
+    the configuration parser's own "invalid syntax".  struct.error, IndexError,
+    TypeError, AttributeError and UnboundLocalError are the code falling over.
+
+    Only the tokeniser and Update.unpack_message sites are reached in practice;
+    the others never raise, so their call here asserts nothing today and exists
+    to catch the day they start to.
+    """
+    if isinstance(exc, allowed):
+        return
+    raise AssertionError(f'{what} raised {type(exc).__name__}: {exc}')
+
+
 @given(text=st.text(alphabet=st.characters(blacklist_categories=('Cs',)), max_size=500))
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=100)
 def test_tokeniser_robustness(text: str) -> None:
@@ -43,7 +95,7 @@ def test_tokeniser_robustness(text: str) -> None:
                 break
     except Exception as e:
         # Should handle errors gracefully, not crash
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+        reported(e, (ValueError,), 'the tokeniser')
 
 
 @pytest.mark.fuzz
@@ -192,7 +244,7 @@ def test_connection_reader_robustness(data: bytes) -> None:
             assert len(header) == 19
     except (StopIteration, Exception) as e:
         # Expected for random data
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+        reported(e, (Notify, Notification, StopIteration), 'the connection reader')
 
 
 @pytest.mark.fuzz
@@ -244,7 +296,7 @@ def test_bgp_header_validation(valid_marker: bool, length: int, msg_type: int) -
                 assert result_type == msg_type
     except (StopIteration, Exception) as e:
         # May fail for invalid combinations
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+        reported(e, (Notify, Notification, StopIteration), 'header validation')
 
 
 @pytest.mark.fuzz
@@ -288,18 +340,11 @@ def test_open_message_basic_structure(version: int, my_as: int, hold_time: int) 
         bytes([version]) + struct.pack('!H', my_as) + struct.pack('!H', hold_time) + bgp_id + bytes([opt_params_len])
     )
 
-    try:
-        from exabgp.environment import Env
-
-        env = Env()
-
-        open_msg = Open.unpack(env, open_data, None, None)
-
-        # Successfully parsed
-        assert open_msg is not None
-    except (ValueError, AttributeError, Exception):
-        # May fail due to environment setup or other requirements
-        pass
+    # same defect as the UPDATE test: Open.unpack(env, ...) went through
+    # Message.unpack and never reached the OPEN decoder.  The except swallowed
+    # everything without asserting anything at all
+    open_msg = Open.unpack_message(open_data, Direction.IN, negotiated_stub())
+    assert open_msg is not None
 
 
 @pytest.mark.fuzz
@@ -309,20 +354,18 @@ def test_update_message_robustness(data: bytes) -> None:
     """Test UPDATE message parsing doesn't crash on random data."""
     from exabgp.bgp.message.update import Update
 
+    # this called Update.unpack(env, data, None, None): four arguments to
+    # Message.unpack(message, data, direction, negotiated), so `message` was an
+    # Env object, no registered type matched, and every single example raised
+    # "unknown message type" before touching the data.  The test named "UPDATE
+    # parsing doesn't crash on random data" had never parsed an UPDATE
     try:
-        from exabgp.environment import Env
-
-        env = Env()
-
-        # Try to parse as UPDATE message
-        update = Update.unpack(env, data, None, None)
+        update = Update.unpack_message(data, Direction.IN, negotiated_stub())
 
         if update:
-            # Successfully parsed
             assert hasattr(update, 'nlris') or hasattr(update, 'attributes')
-    except (ValueError, IndexError, struct.error, NotImplementedError, Exception) as e:
-        # Expected for random data
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+    except Exception as e:
+        reported(e, (Notify, Notification), 'Update.unpack_message')
 
 
 # =============================================================================
@@ -349,7 +392,7 @@ def test_empty_configuration() -> None:
         # Empty config should return empty line or no data
     except Exception as e:
         # May fail due to iterator setup
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+        reported(e, (ValueError,), 'an empty configuration')
 
 
 @pytest.mark.fuzz
@@ -375,7 +418,7 @@ def test_whitespace_only_config(whitespace: str) -> None:
                 break
     except Exception as e:
         # Should not crash
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+        reported(e, (ValueError,), 'a whitespace only configuration')
 
 
 @pytest.mark.fuzz
@@ -419,7 +462,7 @@ def test_truncated_bgp_header(truncate_at: int) -> None:
             assert result_length == 0 or error is not None
     except (StopIteration, Exception) as e:
         # Expected for truncated data
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+        reported(e, (Notify, Notification, StopIteration), 'a truncated header')
 
 
 @pytest.mark.fuzz

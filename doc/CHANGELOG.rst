@@ -46,6 +46,44 @@ Version 5.0.13:
    receives. On a stable branch that is the worse trade, and they are
    left as they are on purpose. Use the 5.1 or later API if you need
    them.
+ * COMPATIBILITY: a message whose type we do not recognise is now refused
+   with NOTIFICATION 1/3 Bad Message Type, which RFC 4271 6.1 requires,
+   rather than 1/0 Unspecific. The text drops the word "update", since the
+   type in question is by definition not an UPDATE. What a peer receives
+   on that error path therefore changes.
+
+   The same path had a second defect. Message.unpack fell through to
+   klass_unknown, which is bound to Exception unless
+   exabgp.bgp.message.unknown is imported, and nothing imports it, so it
+   CONSTRUCTED an Exception and returned it as though it were a message.
+   Type 0 is listed in CODE.MESSAGES, so it passed the reactor's own check
+   and reached that line straight off the wire.
+ * Fix: OPEN, UPDATE and NOTIFICATION are length checked before their
+   fixed headers are read. Update.split computed the body length and then
+   never consulted it, so a one byte UPDATE raised struct.error; OPEN read
+   its version, AS, hold time and identifier without checking the ten
+   bytes RFC 4271 4.2 requires were present; and NOTIFICATION read its
+   error code and subcode off a body which might be empty, raising
+   IndexError. Each was a traceback out of the message parser where a
+   NOTIFICATION belongs, on input a peer chooses the length of. A
+   NOTIFICATION too short to carry a code now closes the connection
+   without a reply, which is what RFC 4271 6.5 asks for.
+ * Fix: two attributes are equal when they carry the same value. The
+   comparison read the attribute ID and flag and never the value, and 40
+   of the 59 registered classes inherit it, so any two BGP-LS attributes,
+   prefix SIDs, large or extended community sets were equal whatever they
+   held. Attributes.sameValuesAs is built on it, and that is what decides
+   whether a route has changed, so a route whose attribute had changed was
+   not re-advertised. OriginatorID overrode the method with a copy of the
+   same defect. Sixteen classes also raised AttributeError rather than
+   answering when compared with something which was not an attribute.
+ * Fix: the configuration parser reports bad escapes instead of failing.
+   A text ending in a backslash raised IndexError; every \uXXXX escape
+   raised TypeError, because bytes were yielded into a join over strings,
+   so that escape had never once worked; and after a configuration file
+   failed to open the tokeniser assigned its off switch uncalled, so the
+   next read raised TypeError. \uXXXX now decodes, above 255 included.
+
  * Fix: the BGP-LS NLRI descriptor sub-TLVs are length checked. link.py
    sized every sub-TLV from the peer's own tlv_length and handed the
    slice to a decoder reading a fixed width off it, so a short value

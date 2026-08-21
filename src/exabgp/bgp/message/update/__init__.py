@@ -86,6 +86,13 @@ class Update(Message):
     def split(data):
         length = len(data)
 
+        # RFC 4271 4.3: the body opens with two 2 byte length fields. length was
+        # computed and never consulted, so a body shorter than the first of them
+        # left struct.error here rather than a NOTIFICATION: one stray byte on
+        # the wire was enough
+        if length < UPDATE_ATTR_LENGTH_HEADER_SIZE:
+            raise Notify(3, 1, 'invalid UPDATE, %d bytes cannot hold the two length fields' % length)
+
         len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
         withdrawn = data[UPDATE_WITHDRAWN_LENGTH_OFFSET : len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET]
 
@@ -93,6 +100,10 @@ class Update(Message):
             raise Notify(3, 1, 'invalid withdrawn routes length, not enough data available')
 
         start_attributes = len_withdrawn + UPDATE_ATTR_LENGTH_HEADER_SIZE
+        # the withdrawn routes are accounted for, but the total path attribute
+        # length which follows them still has to be present
+        if length < start_attributes:
+            raise Notify(3, 1, 'invalid UPDATE, no room for the total path attribute length')
         len_attributes = unpack('!H', data[len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET : start_attributes])[0]
         start_announced = len_withdrawn + len_attributes + UPDATE_ATTR_LENGTH_HEADER_SIZE
         attributes = data[start_attributes:start_announced]
