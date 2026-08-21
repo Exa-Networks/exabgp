@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from copy import deepcopy
 from struct import pack
 from struct import unpack
 
@@ -64,6 +65,36 @@ class Labels:
 
     def __ge__(self, other):
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')
+
+    def __copy__(self):
+        """NOLABEL is a singleton and two callers test it with `is`
+
+        configuration/announce/label.py and configuration/static/route.py both
+        read `nlri.labels is Labels.NOLABEL`, so a copy which mints a new object
+        stops being NOLABEL and those tests silently change answer.
+
+        Not reachable today: those two sites run at configuration time and the
+        RIB's deepcopy does not pass through them. It is fixed because NORD,
+        NOPATH and NoNextHop are all protected this way already and this was the
+        one that was not, which makes it a trap for whoever next writes
+        `is NOLABEL` rather than a defect today.
+
+        The state is copied rather than rebuilt through __init__, which is not
+        idempotent: it sets raw_labels to [None, ...] for a label stack given as
+        integers, and feeding that back takes the raw branch and packs None.
+        """
+        if self is Labels.NOLABEL:
+            return self
+        duplicate = Labels.__new__(Labels)
+        duplicate.__dict__.update(self.__dict__)
+        return duplicate
+
+    def __deepcopy__(self, memo=None):
+        if self is Labels.NOLABEL:
+            return self
+        duplicate = Labels.__new__(Labels)
+        duplicate.__dict__.update(deepcopy(self.__dict__, memo))
+        return duplicate
 
     def pack(self):
         return self.packed
