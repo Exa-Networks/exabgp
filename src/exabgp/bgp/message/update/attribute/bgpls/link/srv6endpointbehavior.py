@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
@@ -28,7 +29,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 class Srv6EndpointBehavior(BaseLS):
     TLV = 1250
     REPR = 'SRv6 Endpoint Behavior'
-    LEN = 4  # Endpoint Behavior(2) + Flags(1) + Algorithm(1)
+    MINIMUM = 4  # Endpoint Behavior(2) + Flags(1) + Algorithm(1)
 
     def __init__(
         self,
@@ -42,7 +43,10 @@ class Srv6EndpointBehavior(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        cls.check(data)
+        # a minimum, not an exact length: this release renders a longer TLV and a
+        # future field must not turn a working route into a protocol error
+        if len(data) < cls.MINIMUM:
+            raise Notify(3, 5, f'Unable to decode attribute, not enough data for {cls.REPR}')
         flags = []  # No flags defined according to RFC 9514 and 9352
         algorithm = data[3]
         endpoint_behavior = unpack('!H', data[0:2])[0]

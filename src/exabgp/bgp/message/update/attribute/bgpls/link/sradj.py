@@ -33,6 +33,7 @@ class SrAdjacency(FlagLS):
     FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
 
     HEADER_SIZE = 4  # Flags(1) + Weight(1) + Reserved(2)
+    MINIMUM = 2  # only the flags and the weight are read
     SID_LABEL_SIZE = 3  # V and L set: a 3 octet local label
     SID_INDEX_SIZE = 4  # V and L unset: a 4 octet index
 
@@ -47,7 +48,9 @@ class SrAdjacency(FlagLS):
 
     @classmethod
     def unpack(cls, data):
-        if len(data) < cls.HEADER_SIZE:
+        # only the flags and the weight are read here; the reserved bytes behind
+        # them may be absent, and this release renders such a TLV
+        if len(data) < cls.MINIMUM:
             raise Notify(3, 5, f'Unable to decode attribute, not enough data for {cls.REPR}')
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])

@@ -176,8 +176,11 @@ class BaseLS:
 
     @classmethod
     def check_multiple(cls, data, size):
-        # LEN is 0 for the repeated value TLVs, which makes check() a no-op for them
-        if not data or len(data) % size:
+        # LEN is 0 for the repeated value TLVs, which makes check() a no-op for them.
+        # An EMPTY TLV is not refused: none is a whole number of elements, this
+        # release renders it as an empty list, and refusing it drops a route on
+        # upgrade for something no decoder has trouble with.
+        if len(data) % size:
             raise Notify(3, 5, f'Unable to decode attribute, wrong size for {cls.REPR}')
 
     def merge(self, other):
