@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
+from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -26,6 +27,9 @@ class AddPath(Capability, dict):
         2: 'send',
         3: 'send/receive',
     }
+
+    ENTRY_SIZE = 4  # AFI(2) + SAFI(1) + Send/Receive(1)
+    SEND_RECEIVE_MAX = 3  # RFC 7911 defines 1, 2 and 3
 
     def __init__(self, families=(), send_receive=0):
         for afi, safi in families:
@@ -66,9 +70,14 @@ class AddPath(Capability, dict):
     def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
         # XXX: FIXME: should check that we have not yet seen the capability
         while data:
+            if len(data) < AddPath.ENTRY_SIZE:
+                raise Notify(2, 0, 'invalid ADD-PATH capability, trailing data')
             afi = AFI.unpack(data[:2])
             safi = SAFI.unpack(data[2])
             sr = data[3]
+            # an unknown value has no name, and json() and __str__() would raise KeyError
+            if sr > AddPath.SEND_RECEIVE_MAX:
+                raise Notify(2, 0, 'invalid ADD-PATH capability, unknown send/receive value %d' % sr)
             instance.add_path(afi, safi, sr)
-            data = data[4:]
+            data = data[AddPath.ENTRY_SIZE :]
         return instance
