@@ -19,6 +19,19 @@ Version 6.0.0:
    - "srv6-locator" becomes "srv6-locators" (RFC 9514 7.1, one per algorithm)
    - Each is an array whether one TLV arrives or several, so the member keeps one type
    - Prefix-SID also emitted four loose members with no object around them
+ * Fix: BGP-LS reserved bits are ignored on receipt rather than refused or read.
+   RFC 8667 2.2.1, which RFC 9085 defers to: "Other bits: MUST be zero when originated
+   and ignored when received".
+   - Thirteen flag TLVs refused any octet whose reserved bits were not all zero, and
+     LinkState carries DISCARD, so a peer setting one lost its whole BGP-LS attribute.
+     That is the forward compatibility failure reserving bits exists to prevent: every
+     ExaBGP peer would discard the attribute on the day a later RFC assigns one.
+   - The Multi-Topology descriptor (TLV 263) read all sixteen bits of a field which is
+     four reserved bits and a 12 bit MT-ID (RFC 9552 5.2.2.1), so a peer setting them
+     reported MT-ID 2 as 61442. Identity is the wire bytes, so the same link in the
+     same topology also indexed twice; that half is unchanged and is noted in the test.
+   - Nothing accepted before renders differently: a reserved bit could only ever have
+     been zero to get through.
  * Compatibility: BGP-LS renders a byte string by what RFC 9552 says it carries, and
    the two kinds were being rendered as one.
    - The opaque envelopes (1025, 1097, 1157) carry IGP TLVs this decoder does not look

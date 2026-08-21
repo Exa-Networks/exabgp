@@ -52,7 +52,8 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 
-MTID_SIZE = 2  # RFC 7752 3.2.1.5: each topology identifier is a 2 byte field
+MTID_SIZE = 2  # RFC 9552 5.2.2.1: each topology identifier is a 2 byte field
+MTID_MASK = 0x0FFF  # the low 12 bits are the MT-ID, the top 4 are reserved R bits
 
 
 class MTID:
@@ -62,13 +63,19 @@ class MTID:
 
     @classmethod
     def unpack_mtid(cls, data: Buffer) -> 'MTID':
-        # tids = []
-        # for i in range(0, len(data), 2):
-        #     payload = struct.unpack('!H', data[i:i+2])[0]
-        #     tids.append(payload & 0x0FFF)
         if len(data) < MTID_SIZE:
             raise Notify(3, 10, f'BGP-LS multi-topology sub-tlv is {len(data)} bytes, expected at least {MTID_SIZE}')
-        tids = struct.unpack('!H', data[:MTID_SIZE])[0]
+        # RFC 9552 5.2.2.1: the field is four reserved R bits then a 12 bit MT-ID, and
+        # "the Bits R are reserved and MUST be set to 0 when originated and ignored on
+        # receipt".  This read all sixteen, so a peer setting them reported MT-ID 2 as
+        # 61442 and, because identity here is the wire bytes, gave the same link in the
+        # same topology a second entry decided by bits we are told to disregard.
+        #
+        # The mask was in this file already, in the loop commented out above the live
+        # code.  Known once, lost, and then a length check was added around the raw read
+        # which made reading sixteen bits look chosen.  Found by session 5.0 auditing
+        # their own gates for the same thing.
+        tids = struct.unpack('!H', data[:MTID_SIZE])[0] & MTID_MASK
         return cls(tids, data)
 
     def json(self, compact: bool = False) -> str:

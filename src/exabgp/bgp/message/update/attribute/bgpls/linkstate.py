@@ -19,8 +19,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import binascii
-import itertools
 import json
 from struct import error as struct_error, unpack
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol
@@ -428,6 +426,9 @@ class GenericLSID(BaseLS):
         return cls(data)
 
 
+RESERVED = 'RSV'  # the FLAGS entry standing for a bit the RFC tells us to ignore
+
+
 class FlagLS(BaseLS):
     """Base class for flag-based BGP-LS TLVs (SR flags, etc.).
 
@@ -478,42 +479,29 @@ class FlagLS(BaseLS):
         return f'"{self.JSON}": {json.dumps(self.flags)}'
 
     @classmethod
-    def _valid_flags(cls) -> frozenset[str]:
-        """The bit patterns this TLV allows, built once per class rather than per call.
-
-        This rebuilt 2**n strings on every access, and the flags are read several times
-        per render: it was 73% of the time spent decoding a BGP-LS attribute.
-        """
-        cached = cls.__dict__.get('_valid_flags_cache')
-        if cached is None:
-            pad = cls.FLAGS.count('RSV')
-            repeat = len(cls.FLAGS) - pad
-            cached = frozenset(
-                [''.join(item) + '0' * pad for item in itertools.product('01', repeat=repeat)] + ['0000']
-            )
-            setattr(cls, '_valid_flags_cache', cached)
-        return cached
-
-    @classmethod
     def unpack_flags(cls, data: Buffer) -> dict[str, int]:
+        """The flags this TLV defines, with the reserved bits ignored.
+
+        This refused any octet whose reserved bits were not all zero, with "Invalid SR
+        flags mask", and LinkState carries DISCARD, so a peer setting one lost its whole
+        BGP-LS attribute: the router-ids, the metrics and every other TLV alongside it.
+
+        RFC 8667 2.2.1, which RFC 9085 defers to for these flags, says the opposite:
+        "Other bits: MUST be zero when originated and ignored when received."  Ignoring
+        them is the whole purpose of reserving them, and refusing means every ExaBGP peer
+        discards the attribute on the day a later RFC assigns one.
+
+        Thirteen registered TLVs were refusing on this.  Nothing which is accepted today
+        renders differently: a reserved bit could only ever have been zero to get here.
+        """
         if not data:
             raise Notify(3, 5, 'BGP-LS: empty data for flag unpacking')
-        hex_rep = int(binascii.b2a_hex(data), 16)
-        bits = f'{hex_rep:08b}'
-        valid_flags = cls._valid_flags()
-        if bits in valid_flags:
-            flags = dict(
-                zip(
-                    cls.FLAGS,
-                    [
-                        0,
-                    ]
-                    * len(cls.FLAGS),
-                ),
-            )
-            flags.update(dict((k, int(v)) for k, v in zip(cls.FLAGS, bits)))
-        else:
-            raise Notify(3, 5, 'Invalid SR flags mask')
+        bits = f'{data[0]:08b}'
+        flags = {name: 0 for name in cls.FLAGS}
+        for name, bit in zip(cls.FLAGS, bits):
+            if name == RESERVED:
+                continue
+            flags[name] = int(bit)
         return flags
 
     @classmethod

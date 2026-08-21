@@ -282,7 +282,12 @@ def test_bgpls_opaque_tlv_escapes_control_characters(code: int) -> None:
 @pytest.mark.parametrize(
     'code, payload',
     [
-        (1099, b'AAAAAAAA'),  # AdjacencySid: unpack('!L', ...) past the end
+        # AdjacencySid, shorter than the SID field it must read.  This used to be eight
+        # bytes of b'A', which is not short at all: 0x41 sets one of the two reserved
+        # flag bits, and what refused it was the reserved bit check, not a length check.
+        # Reserved bits are ignored now, per RFC 8667 2.2.1, so the seed has to actually
+        # be too short to say anything about lengths.  0x40 sets a DEFINED flag only.
+        (1099, bytes([0x40, 0x00])),
         (1100, b'AAAA'),  # LanAdjacencySid
         (1153, b'A'),  # IgpTags: LEN is 0 so check_length checks nothing
         (1154, b'A'),  # IgpExTags: the same, with 8 byte elements
