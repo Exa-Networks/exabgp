@@ -172,7 +172,7 @@ class LinkState(Attribute):
         parts = []
         # Output MERGE groups as arrays
         for key, attrs in merge_groups.items():
-            contents = [a.content for a in attrs]
+            contents = [jsonable(a.content) for a in attrs]
             parts.append(f'"{key}": {json.dumps(contents)}')
         # Output non-MERGE individually
         for attr in non_merge:
@@ -182,6 +182,29 @@ class LinkState(Attribute):
 
     def __str__(self) -> str:
         return ', '.join(str(d) for d in self.ls_attrs)
+
+
+def jsonable(content: Any) -> Any:
+    """Turn what a TLV holds into something json.dumps will accept.
+
+    A TLV whose content is raw bytes used to fall out of json.dumps with a TypeError, and
+    the fallback interpolated `content.decode("utf-8")` into the output unescaped. That is
+    the CWE-116 of GHSA-jcrv-p53f-v5w5, reachable through TLV 1097 and 1157 by a peer
+    attaching attribute 29 to a plain IPv4 unicast UPDATE: no BGP-LS session needed, since
+    the attribute is dispatched by code with no family gate.
+
+    Bytes the peer chose are not guaranteed to be text, so they are decoded with 'replace'
+    rather than raising UnicodeDecodeError out of the API writer.
+    """
+    if isinstance(content, (bytes, bytearray, memoryview)):
+        return bytes(content).decode('utf-8', 'replace')
+    if isinstance(content, dict):
+        return {str(jsonable(key)): jsonable(value) for key, value in content.items()}
+    if isinstance(content, (list, tuple)):
+        return [jsonable(item) for item in content]
+    if isinstance(content, (str, int, float, bool)) or content is None:
+        return content
+    return str(content)
 
 
 class BaseLS:
@@ -224,11 +247,7 @@ class BaseLS:
         return self._packed
 
     def json(self, compact: bool = False) -> str:
-        try:
-            return f'"{self.JSON}": {json.dumps(self.content)}'
-        except TypeError:
-            # not a basic type
-            return f'"{self.JSON}": "{self.content.decode("utf-8")}"'
+        return f'"{self.JSON}": {json.dumps(jsonable(self.content))}'
 
     def __repr__(self) -> str:
         return '{}: {}'.format(self.REPR, self.content)

@@ -188,3 +188,26 @@ def keys_anywhere(decoded: object) -> set[str]:
             found |= keys_anywhere(item)
         return found
     return set()
+
+
+@pytest.mark.parametrize('code', [1097, 1157])
+def test_bgpls_opaque_tlv_cannot_inject_a_json_member(code: int) -> None:
+    """A peer must not be able to add a member of its choosing to the API stream.
+
+    This is GHSA-jcrv-p53f-v5w5 reached by a different road: attribute 29 is dispatched
+    by attribute code with no family gate, so it rides on a plain IPv4 unicast UPDATE
+    and needs no BGP-LS capability.
+    """
+    attribute = _tlv(code, b'x", "injected": "owned')
+    decoded = jsonlib.loads(attribute.json())
+    assert 'injected' not in keys_anywhere(decoded), 'a peer chose a key in the API stream'
+    assert len(decoded) == 1
+    # the payload is still there, as a value, which is the whole point of escaping it
+    assert 'x", "injected": "owned' in str(list(decoded.values())[0])
+
+
+@pytest.mark.parametrize('code', [1097, 1157])
+def test_bgpls_opaque_tlv_escapes_control_characters(code: int) -> None:
+    """Raw control bytes inside a JSON string are rejected by a standard parser."""
+    attribute = _tlv(code, b'\x00\x01\x02\x03')
+    parsed(attribute.json())
