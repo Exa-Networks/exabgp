@@ -216,35 +216,61 @@ def test_a_copy_keeps_its_class() -> None:
 
 
 def test_nothing_builds_a_route_distinguisher_which_impersonates_NORD() -> None:
-    """The 'is NORD' tests are only sound while no path builds an equal-but-separate one.
+    """The `is NORD` tests are only sound while no path builds an equal-but-separate one.
 
     RouteDistinguisher(b'') equals NORD and is not NORD, so a route carrying one would take
-    the wrong branch at every `is RouteDistinguisher.NORD` site: five of them here, two in
-    the configuration and three in the decoders and renderers.
+    the wrong branch at every `is RouteDistinguisher.NORD` site: five here, two in the
+    configuration and three in the decoders and renderers.
 
-    Nothing constructs one today.  A route with no distinguisher is given the singleton,
-    and the wire path only builds one when the family says there are eight bytes to read.
-    Session 5.0 solved the same hazard the other way, by having their copy hook canonicalise
-    an equal RD TO the singleton, which is a real difference between the branches and worth
-    knowing about before someone makes the two match.
+    Measured rather than read off the code, and the first version of this docstring is why
+    that distinction matters.  It said the wire path "only builds one when the family says
+    there are eight bytes to read", which is a claim about a mechanism I had read, offered
+    in a test docstring where the next reader would take it as measured.  Session 5.0 put
+    the same kind of unmeasured claim in the same kind of place and caught it in theirs.
+
+    What IS measured: every family and every generic fill, 7484 successful decodes, zero
+    RouteDistinguisher constructions.  That result cannot carry the assertion on its own,
+    because a sweep which builds none proves nothing about what it builds, so the seeds
+    below are shaped to reach the construction path and the test requires them to.
+
+    5.0 solved the same hazard the other way, by having their copy hook canonicalise an
+    equal RD TO the singleton.  Neither branch has a lookalike, so both choices are sound
+    and neither is load bearing; the difference should not be removed for tidiness without
+    measuring what it buys on that branch.
     """
     from exabgp.bgp.message import Action
     from exabgp.protocol.family import AFI, SAFI
 
+    distinguisher = bytes([0, 1]) + bytes([10, 0, 0, 1]) + bytes([0, 7])
     seeds = [
+        ('ipv4 mpls-vpn', AFI.ipv4, SAFI.mpls_vpn, bytes([112, 0, 0, 0x11]) + distinguisher + bytes([10, 0, 0])),
+        (
+            'ipv6 mpls-vpn',
+            AFI.ipv6,
+            SAFI.mpls_vpn,
+            bytes([112, 0, 0, 0x11]) + distinguisher + bytes([0x20, 0x01, 0x0D]),
+        ),
+        ('ipv4 flow-vpn', AFI.ipv4, SAFI.flow_vpn, bytes([11]) + distinguisher + bytes([0x03, 0x81, 0x06])),
+        ('l2vpn vpls', AFI.l2vpn, SAFI.vpls, bytes([0, 17]) + distinguisher + bytes(9)),
         ('ipv4 flow', AFI.ipv4, SAFI.flow_ip, bytes([3, 0x03, 0x81, 0x06])),
-        ('ipv4 mpls-vpn', AFI.ipv4, SAFI.mpls_vpn, bytes([112, 0, 0, 0x11]) + bytes(8) + bytes([10, 0, 0])),
     ]
-    checked = 0
+
+    real = 0
+    singleton = 0
     for name, afi, safi, wire in seeds:
         nlri, _ = NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, None, None)
         rd = getattr(nlri, 'rd', None)
-        if rd is None:
-            continue
-        checked += 1
+        assert rd is not None, f'{name} has no rd, so it pins nothing'
+
         for candidate in (rd, deepcopy(rd), copy(rd)):
             assert (candidate == RouteDistinguisher.NORD) == (candidate is RouteDistinguisher.NORD), (
                 f'{name} carries a route distinguisher which equals NORD without being it'
             )
+        if rd is RouteDistinguisher.NORD:
+            singleton += 1
+        else:
+            real += 1
 
-    assert checked, 'no seed carried a route distinguisher, so this pins nothing'
+    # both halves, or the test passes by never reaching the construction path at all
+    assert real >= 4, f'only {real} seeds built a real route distinguisher'
+    assert singleton >= 1, 'no seed took the no-distinguisher path, which is the one handed the singleton'
