@@ -662,13 +662,17 @@ class Flow(NLRI):
         members = []
         for index in sorted(self.rules):
             rules = self.rules[index]
-            s = []
+            # rules joined by AND belong to one value, the rest are separate ones.
+            # This used to be built from quoted fragments and then repaired with
+            # .replace('""', ''), which ate the quotes of any rule rendering empty
+            # and left '[ , "is-fragment" ]' behind.
+            values = []
             for idx, rule in enumerate(rules):
-                # only add ' ' after the first element
-                if idx and not rule.operations & NumericOperator.AND:
-                    s.append(', ')
-                s.append('"{}"'.format(rule))
-            members.append('"{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
+                if idx and rule.operations & NumericOperator.AND:
+                    values[-1] += str(rule)
+                else:
+                    values.append(str(rule))
+            members.append('"{}": [ {} ]'.format(rules[0].NAME, ', '.join(json.dumps(_) for _ in values)))
         # an RD which is not NORD can still render empty, and an empty member breaks the join
         rd = '' if self.rd is RouteDistinguisher.NORD else self.rd.json()
         if rd:
