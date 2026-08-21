@@ -240,7 +240,10 @@ class Protocol:
                 raise Notify(notify.code, notify.subcode, str(notify))
 
             if msg_id not in Message.CODE.MESSAGES:
-                raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
+                # RFC 4271 6.1: an unrecognised type is Bad Message Type (3), not
+                # Unspecific (0).  The catch-all further down keeps 0, because there
+                # we genuinely do not know what went wrong.
+                raise Notify(1, 3, 'can not decode message of type "%d"' % msg_id)
 
             if not length:
                 yield _NOP

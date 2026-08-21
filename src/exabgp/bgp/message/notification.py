@@ -153,8 +153,17 @@ class Notification(Message, Exception):
             data_str = f' / {hexstring(self.data)}'
         return f'{code_str} / {subcode_str}{data_str}'
 
+    NOTIFICATION_HEADER_SIZE = 2  # RFC 4271 4.5: error code and error subcode
+
     @classmethod
     def unpack_message(cls, data, direction=None, negotiated=None):
+        # RFC 4271 4.5 makes the error code and subcode mandatory, and 6.5 says
+        # an error found while processing a NOTIFICATION closes the connection
+        # WITHOUT sending one back.  Returning a Notification is what does that
+        # here: the reactor raises it and resets in silence.  Reading data[1] off
+        # a shorter body raised IndexError instead, out of the message parser.
+        if len(data) < cls.NOTIFICATION_HEADER_SIZE:
+            return cls(0, 0, b'peer sent a NOTIFICATION of %d bytes, too short to carry a code' % len(data))
         return cls(data[0], data[1], data[2:])
 
 

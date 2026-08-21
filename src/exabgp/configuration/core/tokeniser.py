@@ -69,6 +69,13 @@ class Tokeniser:
     def _off():
         return iter([])
 
+    @staticmethod
+    def _last(line):
+        # a configuration whose last line is a lone backslash tokenises to
+        # nothing, and line[-1] raised IndexError out of the parser instead of
+        # reporting a configuration error
+        return line[-1] if line else ''
+
     def __init__(self, scope, error):
         self.scope = scope
         self.error = error
@@ -82,8 +89,10 @@ class Tokeniser:
         self.fname = ''
         self.type = 'unset'
 
-        self._tokens = Tokeniser._off
-        self._next = None
+        self._tokens = Tokeniser._off()
+        # every other path sets this to [], and __call__ hands it to line[:-1],
+        # so None was a TypeError waiting for the first call
+        self._next = []
         self._data = None
 
     def clear(self):
@@ -126,11 +135,11 @@ class Tokeniser:
                 self.error.set(error.split(']')[1].strip())
             else:
                 self.error.set(error)
-            self._tokens = Tokeniser._off
+            self._tokens = Tokeniser._off()
             self._next = []
             return self.error.set('issue setting the configuration parser')
         except StopIteration:
-            self._tokens = Tokeniser._off
+            self._tokens = Tokeniser._off()
             self._next = []
             return self.error.set('issue setting the configuration parser, no data')
         return True
@@ -181,12 +190,12 @@ class Tokeniser:
         self.number += 1
         try:
             self.line, self._next = self._next, next(self._tokens)
-            self.end = self.line[-1]
+            self.end = self._last(self.line)
         except StopIteration:
             if not self.finished:
                 self.finished = True
                 self.line, self._next = self._next, []
-                self.end = self.line[-1]
+                self.end = self._last(self.line)
             else:
                 self.line = []
                 self.end = ''

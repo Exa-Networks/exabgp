@@ -30,6 +30,9 @@ def formated(line):
 # convert special caracters
 
 
+UNICODE_ESCAPE_DIGITS = 4  # \uXXXX
+
+
 @coroutine.join
 def unescape(string):
     start = 0
@@ -40,6 +43,11 @@ def unescape(string):
             break
         yield string[start:pos]
         pos += 1
+        # a line ending in a backslash stepped past the end of the string and
+        # left IndexError out of the configuration parser.  ValueError is what
+        # tokens() already raises for bad syntax, so the loader reports it
+        if pos >= len(string):
+            raise ValueError('invalid escape sequence: the text ends with a backslash')
         esc = string[pos]
         if esc == 'b':
             yield '\b'
@@ -52,8 +60,18 @@ def unescape(string):
         elif esc == 't':
             yield '\t'
         elif esc == 'u':
-            yield bytes([int(string[pos + 1 : pos + 5], 16)])
-            pos += 4
+            # this yielded bytes into a str join, so EVERY \uXXXX escape raised
+            # TypeError and the feature had never worked at all.  Out of range
+            # and non hexadecimal digits raised out of int() and bytes() rather
+            # than being reported as the configuration errors they are
+            hexadecimal = string[pos + 1 : pos + 5]
+            if len(hexadecimal) != UNICODE_ESCAPE_DIGITS:
+                raise ValueError(f'invalid \\u escape sequence: expected {UNICODE_ESCAPE_DIGITS} hexadecimal digits')
+            try:
+                yield chr(int(hexadecimal, 16))
+            except ValueError:
+                raise ValueError(f'invalid \\u escape sequence: "{hexadecimal}" is not hexadecimal') from None
+            pos += UNICODE_ESCAPE_DIGITS
         else:
             yield esc
         start = pos + 1

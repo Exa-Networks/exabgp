@@ -167,7 +167,14 @@ class Message:
     def unpack(cls, message, data, direction, negotiated):
         if message in cls.registered_message:
             return cls.klass(message).unpack_message(data, direction, negotiated)
-        return cls.klass_unknown(message, data, direction, negotiated)
+        # klass_unknown is bound to Exception unless exabgp.bgp.message.unknown is
+        # imported, and nothing imports it, so this CONSTRUCTED an Exception and
+        # returned it as if it were a message.  Type 0 is in CODE.MESSAGES, so it
+        # passes the reactor's own check and reached here from the wire.
+        # RFC 4271 6.1: an unrecognised type is Bad Message Type.
+        from exabgp.bgp.message.notification import Notify
+
+        raise Notify(1, 3, 'unknown message type %s' % (message,))
 
     @classmethod
     def code(cls, name):
