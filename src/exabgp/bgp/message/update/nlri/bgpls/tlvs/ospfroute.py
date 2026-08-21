@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from struct import pack, unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 
@@ -36,6 +37,9 @@ from exabgp.util.types import Buffer
 OSPF_ROUTE = {1: 'intra-area', 2: 'inter-area', 3: 'external-1', 4: 'external-2', 5: 'nssa-1', 6: 'nssa-2'}
 
 
+OSPF_ROUTE_TYPE_SIZE = 1  # RFC 7752 3.2.3.1: a single octet route type
+
+
 class OspfRoute:
     def __init__(self, ospf_type: int, packed: Buffer | None = None) -> None:
         self.ospf_type = ospf_type
@@ -43,8 +47,9 @@ class OspfRoute:
 
     @classmethod
     def unpack_ospfroute(cls, data: Buffer) -> 'OspfRoute':
-        if len(data) == 1:
-            ospf_type = unpack('!B', data[0:1])[0]
+        if len(data) != OSPF_ROUTE_TYPE_SIZE:
+            raise Notify(3, 10, f'BGP-LS ospf route type sub-tlv is {len(data)} bytes, expected {OSPF_ROUTE_TYPE_SIZE}')
+        ospf_type = unpack('!B', data[0:1])[0]
         return cls(ospf_type=ospf_type, packed=data)
 
     def json(self, compact: bool = False) -> str:

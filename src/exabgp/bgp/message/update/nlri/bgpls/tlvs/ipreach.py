@@ -11,6 +11,7 @@ from __future__ import annotations
 from struct import unpack
 from ipaddress import ip_address
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 #   The IP Reachability Information TLV is a mandatory TLV that contains
@@ -56,6 +57,8 @@ class IpReach:
         # Store original data for _packed before any modification
         original_data = bytes(data)
 
+        if len(data) < 1:
+            raise Notify(3, 10, 'BGP-LS ip reachability sub-tlv is empty, expected at least a prefix length byte')
         plength = unpack('!B', data[0:1])[0]
         # octet = int(math.ceil(plength / 8))
         octet = len(data[1:])

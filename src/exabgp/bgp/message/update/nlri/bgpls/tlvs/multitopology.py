@@ -48,7 +48,11 @@ from __future__ import annotations
 
 import struct
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
+
+
+MTID_SIZE = 2  # RFC 7752 3.2.1.5: each topology identifier is a 2 byte field
 
 
 class MTID:
@@ -62,7 +66,9 @@ class MTID:
         # for i in range(0, len(data), 2):
         #     payload = struct.unpack('!H', data[i:i+2])[0]
         #     tids.append(payload & 0x0FFF)
-        tids = struct.unpack('!H', data[:2])[0]
+        if len(data) < MTID_SIZE:
+            raise Notify(3, 10, f'BGP-LS multi-topology sub-tlv is {len(data)} bytes, expected at least {MTID_SIZE}')
+        tids = struct.unpack('!H', data[:MTID_SIZE])[0]
         return cls(tids, data)
 
     def json(self, compact: bool = False) -> str:

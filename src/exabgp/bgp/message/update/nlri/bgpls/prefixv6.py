@@ -74,6 +74,10 @@ class PREFIXv6(BGPLS):
         self._packed = packed
         self.route_d: RouteDistinguisher = route_d
 
+    def check(self) -> None:
+        """Parse the prefix descriptors now, so a malformed sub-tlv is refused at the boundary."""
+        self._parse_tlvs()
+
     @property
     def proto_id(self) -> int:
         # Offset by 4-byte header: proto_id at byte 4

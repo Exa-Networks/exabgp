@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 #  https://tools.ietf.org/html/rfc5305#section-3.3
@@ -28,13 +29,13 @@ class NeighAddr:
 
     @classmethod
     def unpack_neighaddr(cls, data: Buffer) -> 'NeighAddr':
-        if len(data) == IPv4.BYTES:
-            # IPv4 address
-            addr = IP.create_ip(data[: IPv4.BYTES])
-        elif len(data) == IPv6.BYTES:
-            # IPv6
-            addr = IP.create_ip(data[: IPv6.BYTES])
-        return cls(addr=addr, packed=data)
+        if len(data) not in (IPv4.BYTES, IPv6.BYTES):
+            raise Notify(
+                3,
+                10,
+                f'BGP-LS neighbor address sub-tlv is {len(data)} bytes, expected {IPv4.BYTES} or {IPv6.BYTES}',
+            )
+        return cls(addr=IP.create_ip(data), packed=data)
 
     def json(self, compact: bool = False) -> str:
         return '"{}"'.format(self.addr)

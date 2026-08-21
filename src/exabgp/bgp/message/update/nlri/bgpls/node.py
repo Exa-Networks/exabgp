@@ -94,6 +94,10 @@ class NODE(BGPLS):
         packed = pack('!HH', cls.CODE, len(payload)) + payload
         return cls(packed, route_d, addpath)
 
+    def check(self) -> None:
+        """Parse the node descriptors now, so a malformed sub-tlv is refused at the boundary."""
+        self.node_ids
+
     @property
     def proto_id(self) -> int:
         # Offset by 4-byte header: proto_id at byte 4

@@ -75,6 +75,10 @@ class SRv6SID(BGPLS):
         BGPLS.__init__(self, addpath)
         self._packed = packed
 
+    def check(self) -> None:
+        """Parse the SRv6 SID descriptors now, so a malformed sub-tlv is refused at the boundary."""
+        self._parse_tlvs()
+
     @property
     def proto_id(self) -> int:
         # Offset by 4-byte header: proto_id at byte 4

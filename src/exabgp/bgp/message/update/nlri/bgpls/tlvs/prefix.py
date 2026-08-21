@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 #   https://tools.ietf.org/html/rfc5305#section-3.2
@@ -30,12 +31,13 @@ class Prefix:
 
     @classmethod
     def unpack_prefix(cls, data: Buffer) -> 'Prefix':
-        if len(data) == IPv4.BYTES:
-            # IPv4 address
-            addr = IP.create_ip(data[: IPv4.BYTES])
-        elif len(data) == IPv6.BYTES:
-            # IPv6
-            addr = IP.create_ip(data[: IPv6.BYTES])
+        if len(data) not in (IPv4.BYTES, IPv6.BYTES):
+            raise Notify(
+                3,
+                10,
+                f'BGP-LS prefix sub-tlv is {len(data)} bytes, expected {IPv4.BYTES} or {IPv6.BYTES}',
+            )
+        addr = IP.create_ip(data)
         return cls(iface_addr=addr, packed=data)
 
     def json(self, compact: bool = False) -> str:

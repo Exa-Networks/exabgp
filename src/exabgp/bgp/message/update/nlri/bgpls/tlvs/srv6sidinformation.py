@@ -8,6 +8,7 @@ from __future__ import annotations
 
 
 from exabgp.protocol.ip import IPv6
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 #     RFC 9514 6.1.  SRv6 SID Information TLV
@@ -35,6 +36,8 @@ class Srv6SIDInformation:
 
     @classmethod
     def unpack_srv6sid(cls, data: Buffer) -> 'Srv6SIDInformation':
+        if len(data) != IPv6.BYTES:
+            raise Notify(3, 10, f'BGP-LS SRv6 SID information sub-tlv is {len(data)} bytes, expected {IPv6.BYTES}')
         sid = IPv6.ntop(data)
         return cls(sid, data)
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from struct import pack, unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 
@@ -23,6 +24,9 @@ from exabgp.util.types import Buffer
 # ================================================================== Link Local/Remote Identifiers
 
 
+LINK_ID_SIZE = 8  # RFC 5307 3.1: a 4 byte local and a 4 byte remote identifier
+
+
 class LinkIdentifier:
     def __init__(self, local_id: int, remote_id: int, packed: Buffer | None = None) -> None:
         self.local_id = local_id
@@ -31,9 +35,13 @@ class LinkIdentifier:
 
     @classmethod
     def unpack_linkid(cls, data: Buffer) -> 'LinkIdentifier':
+        # RFC 5307 3.1: two 4 byte identifiers.  Reading them from a shorter payload
+        # raised struct.error out of json(), long after the message was accepted.
+        if len(data) < LINK_ID_SIZE:
+            raise Notify(3, 10, f'BGP-LS link identifier sub-tlv is {len(data)} bytes, expected {LINK_ID_SIZE}')
         local_id = unpack('!L', data[:4])[0]
         remote_id = unpack('!L', data[4:8])[0]
-        return cls(local_id=local_id, remote_id=remote_id, packed=data[:8])
+        return cls(local_id=local_id, remote_id=remote_id, packed=data[:LINK_ID_SIZE])
 
     def json(self) -> str:
         return f'{{ "link-local-id": {self.local_id}, "link-remote-id": {self.remote_id} }}'

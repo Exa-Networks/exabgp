@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 #   https://tools.ietf.org/html/rfc5305#section-3.2
@@ -30,13 +31,16 @@ class IfaceAddr:
 
     @classmethod
     def unpack_ifaceaddr(cls, data: Buffer) -> 'IfaceAddr':
-        if len(data) == IPv4.BYTES:
-            # IPv4 address
-            addr = IP.create_ip(data[: IPv4.BYTES])
-        elif len(data) == IPv6.BYTES:
-            # IPv6
-            addr = IP.create_ip(data[: IPv6.BYTES])
-        return cls(iface_addr=addr, packed=data)
+        # a length this decoder cannot read left addr unbound, which unpack_nlri did not
+        # see: the descriptors parse lazily, so the peer's message was accepted and the
+        # UnboundLocalError surfaced in the API writer calling json()
+        if len(data) not in (IPv4.BYTES, IPv6.BYTES):
+            raise Notify(
+                3,
+                10,
+                f'BGP-LS interface address sub-tlv is {len(data)} bytes, expected {IPv4.BYTES} or {IPv6.BYTES}',
+            )
+        return cls(iface_addr=IP.create_ip(data), packed=data)
 
     def json(self, compact: bool = False) -> str:
         return '"{}"'.format(self.iface_address)

@@ -250,7 +250,21 @@ class BGPLS(NLRI):
 
         klass.addpath = addpath
 
+        # the descriptors parse lazily, so a sub-tlv this decoder cannot read used to be
+        # accepted here and fail later in the API writer calling json(): a raw exception
+        # several layers from the wire, where nothing treats it as a protocol error.
+        # Parse now, so a malformed sub-tlv is the NOTIFICATION it always should have been
+        klass.check()
+
         return klass, data[length + 4 :]
+
+    def check(self) -> None:
+        """Parse eagerly whatever this NLRI parses lazily, at the boundary.
+
+        A class with no lazy descriptors has nothing to do.  A class with them overrides
+        this and touches its own parse, so the Notify comes out of unpack_nlri and reaches
+        the peer as a NOTIFICATION: TIGER_STYLE.md 1.1, validate once, at the boundary.
+        """
 
     def _raw(self) -> str:
         # _packed includes 4-byte header
