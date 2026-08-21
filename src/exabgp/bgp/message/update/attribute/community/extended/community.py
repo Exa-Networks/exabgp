@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import json
+
 from typing import TYPE_CHECKING, ClassVar, Type
 
 if TYPE_CHECKING:
@@ -140,22 +142,33 @@ class ExtendedCommunityBase(Attribute):
             self.COMMUNITY_SUBTYPE,
         )
 
-    def json(self) -> str:
+    def _described(self) -> str:
+        """How the registered class describes this community, or empty if it cannot.
+
+        A registered class which does not define one inherits this class's, so delegating
+        to it calls straight back here: TrafficRedirectASN4 and TrafficRedirectIPv6 both
+        did, and eight bytes on the wire were enough to exhaust the stack inside the writer
+        feeding the API subprocesses.  A RecursionError there is a dead process, not a
+        dead session, and both are FlowSpec redirect communities: exactly what the
+        controllers this API exists for receive.
+        """
+        klass = self.registered_klass
+        if klass is None or klass.__repr__ is ExtendedCommunityBase.__repr__:
+            return ''
+        return klass.__repr__(self)
+
+    def _value(self) -> int:
         h = 0x00
         for byte in self._packed:
             h <<= 8
             h += byte
-        s = self.registered_klass.__repr__(self) if self.registered_klass else ''
-        return '{{ "value": {}, "string": "{}" }}'.format(h, s)
+        return h
+
+    def json(self) -> str:
+        return '{{ "value": {}, "string": {} }}'.format(self._value(), json.dumps(self._described()))
 
     def __repr__(self) -> str:
-        if self.registered_klass:
-            return self.registered_klass.__repr__(self)
-        h = 0x00
-        for byte in self._packed:
-            h <<= 8
-            h += byte
-        return '0x{:016X}'.format(h)
+        return self._described() or '0x{:016X}'.format(self._value())
 
     def __hash__(self) -> int:
         return hash(self._packed)

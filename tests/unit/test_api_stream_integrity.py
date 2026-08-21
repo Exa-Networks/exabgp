@@ -293,6 +293,34 @@ def test_evpn_route_json_has_no_stray_separator(code: int, payload: bytes) -> No
 
 
 @pytest.mark.parametrize(
+    'code, value',
+    [
+        (Attribute.CODE.EXTENDED_COMMUNITY, bytes.fromhex('0208359d0f6f18f2')),  # redirect to ASN4
+        (Attribute.CODE.IPV6_EXTENDED_COMMUNITY, bytes.fromhex('000b') + bytes(18)),  # redirect to IPv6
+    ],
+)
+def test_extended_community_without_its_own_repr_does_not_recurse(code: int, value: bytes) -> None:
+    """__repr__ delegated to the registered class, which had inherited it back.
+
+    Eight bytes of FlowSpec redirect community exhausted the stack inside the writer
+    feeding the API subprocesses.  A RecursionError there is a dead process rather than a
+    dead session, and both affected types are redirect communities: what the FlowSpec
+    controllers this API exists for actually receive.
+    """
+    attribute = _decode_attribute(code, value)
+    parsed(attribute.json())
+    str(attribute)
+    repr(attribute)
+
+
+def test_a_whole_update_carrying_a_redirect_community_renders() -> None:
+    """The recursion was reached by a plain IPv4 unicast UPDATE, not by a FlowSpec one."""
+    collection = AttributeCollection()
+    collection.add(_decode_attribute(Attribute.CODE.EXTENDED_COMMUNITY, bytes.fromhex('0208359d0f6f18f2')))
+    assert jsonlib.loads('{' + collection.json() + '}')
+
+
+@pytest.mark.parametrize(
     'code, payload, why',
     [
         (1153, b'AA', 'route tags are four bytes each'),
