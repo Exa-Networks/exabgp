@@ -29,12 +29,17 @@ class Aggregator(Attribute):
         self._str = None
 
     def __eq__(self, other):
+        if not isinstance(other, Aggregator):
+            return NotImplemented
         return (
             self.ID == other.ID and self.FLAG == other.FLAG and self.asn == other.asn and self.speaker == other.speaker
         )
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def pack(self, negotiated):
         if negotiated.asn4:

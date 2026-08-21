@@ -34,10 +34,15 @@ class RouteTarget(ExtendedCommunity):
         return self.community[self.LIMIT : 8]
 
     def __eq__(self, other):
+        if not isinstance(other, RouteTarget):
+            return NotImplemented
         return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
 
 # ============================================================= RouteTargetASN2Number

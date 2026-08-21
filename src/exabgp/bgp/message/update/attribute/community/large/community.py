@@ -23,6 +23,8 @@ class LargeCommunity(Attribute):
         self._str = '%d:%d:%d' % unpack('!LLL', self.large_community)
 
     def __eq__(self, other):
+        if not isinstance(other, LargeCommunity):
+            return NotImplemented
         return self.large_community == other.large_community
 
     def __ne__(self, other):

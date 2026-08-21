@@ -63,6 +63,8 @@ class PMSI(Attribute):
         self.tunnel = tunnel  # tunnel id, packed data
 
     def __eq__(self, other):
+        if not isinstance(other, PMSI):
+            return NotImplemented
         return (
             self.ID == other.ID
             and self.FLAG == other.FLAG
@@ -72,7 +74,10 @@ class PMSI(Attribute):
         )
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     @staticmethod
     def name(tunnel_type):

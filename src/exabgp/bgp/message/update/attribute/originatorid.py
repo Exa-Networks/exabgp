@@ -23,10 +23,18 @@ class OriginatorID(Attribute, IPv4):
     CACHING = True
 
     def __eq__(self, other):
-        return self.ID == other.ID and self.FLAG == other.FLAG
+        # this compared the ID and the FLAG and never the address, so every
+        # originator-id was equal to every other one, and overriding the base
+        # class meant fixing the base class did not reach it
+        if not isinstance(other, OriginatorID):
+            return NotImplemented
+        return self.ID == other.ID and self.FLAG == other.FLAG and self.ton() == other.ton()
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def pack(self, negotiated=None):
         return self._attribute(self.ton())
