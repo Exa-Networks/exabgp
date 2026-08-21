@@ -57,15 +57,6 @@ MAX_REPORTED = 40
 
 TESTS_FAILED = 1  # pytest: some test failed.  5 is no tests collected, which is not the same
 
-REGISTRY_NAMES = (
-    'registered_lsids',
-    'registered_attributes',
-    'registered_nlri',
-    'registered_families',
-    'registered_capability',
-    'registered_message',
-)
-
 THINNER = """
 import importlib, pkgutil
 import exabgp.bgp.message.update.attribute as package
@@ -114,30 +105,41 @@ raise SystemExit(pytest.main({args!r}))
 """
 
 
-def reads_a_registry(path: Path) -> bool:
-    text = path.read_text()
-    return any(name in text for name in REGISTRY_NAMES) or 'known_families' in text
-
-
 def run(args: list[str], thinned: bool) -> subprocess.CompletedProcess[str]:
+    """One pytest invocation, with the registries whole or thinned to KEEP entries."""
     if thinned:
         program = THINNER.format(keep=KEEP, floor=FILL_FLOOR, args=args)
         return subprocess.run([sys.executable, '-c', program], capture_output=True, text=True, cwd=ROOT)
     return subprocess.run([sys.executable, '-m', 'pytest', *args], capture_output=True, text=True, cwd=ROOT)
 
 
-def collected(args: list[str], thinned: bool) -> int | None:
-    """How many tests this file offers, with the registries whole or thinned."""
+def counts(thinned: bool) -> dict[str, int] | None:
+    """How many tests every file offers, from ONE collection of the whole tree.
+
+    This used to pick candidate files by looking for a registry name in their text, then
+    collect each one separately: a heuristic, and 352 pytest invocations to check 17 files.
+    The heuristic is the part which could be wrong, and being wrong there is silent, since
+    a file it does not pick is never measured.  Measured once by hand over every skipped
+    file and none shrank, which is exactly the kind of one-off check this whole series has
+    been about not relying on.
+
+    Collecting the tree twice costs two invocations and needs no heuristic at all, so there
+    is no selection left to get wrong.
+    """
+    args = [str(TESTS), '-q', '--collect-only', '-p', 'no:randomly', '-p', 'no:cacheprovider']
     result = run(args, thinned)
     if 'thinner cannot thin' in result.stdout + result.stderr:
         print(result.stdout.strip() or result.stderr.strip())
         return None
-    for line in reversed(result.stdout.splitlines()):
-        if 'test' in line and 'collected' in line:
-            for word in line.split():
-                if word.isdigit():
-                    return int(word)
-    return 0
+
+    per_file: dict[str, int] = {}
+    for line in result.stdout.splitlines():
+        if '::' not in line:
+            continue
+        name = line.split('::', 1)[0].strip()
+        if name.endswith('.py'):
+            per_file[name] = per_file.get(name, 0) + 1
+    return per_file
 
 
 def notices(relative: str) -> bool:
@@ -147,7 +149,8 @@ def notices(relative: str) -> bool:
     you about its seeds, so accepting any red excuses a missing floor with collateral
     damage.  Measured: with the floor removed from test_attribute_error_handling, a version
     of this check which accepted any failure reported the whole tree clean, because another
-    test in that file broke first.
+    test in that file broke first.  Session 5.0 had the same bug and it was hiding three
+    files on their branch, every one parametrised from a registry with no floor at all.
 
     So the floors carry a marker and only they are run.  The marker is also what makes this
     cheap: one test per file rather than a Hypothesis sweep per file.
@@ -164,31 +167,32 @@ def notices(relative: str) -> bool:
 
 
 def main() -> int:
-    candidates = sorted(path for path in TESTS.rglob('test_*.py') if reads_a_registry(path))
-    if not candidates:
-        print('no test file reads a registry, which cannot be right')
+    whole = counts(thinned=False)
+    if whole is None:
+        return 1
+    thin = counts(thinned=True)
+    if thin is None:
+        return 1
+
+    if not whole:
+        print('collected no tests at all, which cannot be right')
         return 1
 
     shrinking = []
-    for path in candidates:
-        relative = path.relative_to(ROOT)
-        args = [str(relative), '-q', '--collect-only', '-p', 'no:randomly', '-p', 'no:cacheprovider']
-        whole = collected(args, thinned=False)
-        thin = collected(args, thinned=True)
-        if thin is None:
-            return 1
-        if whole and thin < whole and not notices(str(relative)):
-            shrinking.append((relative, whole, thin))
+    for name, before in sorted(whole.items()):
+        after = thin.get(name, 0)
+        if after < before and not notices(name):
+            shrinking.append((name, before, after))
 
     if not shrinking:
-        print(f'{len(candidates)} registry reading files, none can shrink silently')
+        print(f'{len(whole)} test files, none can shrink silently')
         return 0
 
     print(f'{len(shrinking)} file(s) run fewer tests on a half filled registry and do not say so:')
-    for relative, whole, thin in shrinking[:MAX_REPORTED]:
-        print(f'  {relative}  {whole} -> {thin}')
+    for name, before, after in shrinking[:MAX_REPORTED]:
+        print(f'  {name}  {before} -> {after}')
     print()
-    print('add an assertion that the registry it parametrises from is whole.')
+    print('add a test marked registry_floor asserting the registry it parametrises from is whole.')
     return 1
 
 

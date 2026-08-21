@@ -85,7 +85,7 @@ DEFAULT_TIMES: dict[str, int] = {
     'type-ignore': 1,
     'tiger-style': 2,
     'tests-run': 6,
-    'sweep-floors': 60,
+    'sweep-floors': 20,
 }
 
 CACHE_FILE = Path.home() / '.cache' / 'exabgp' / 'test_times.json'
