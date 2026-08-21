@@ -37,8 +37,10 @@ SID_LABEL_LENGTH_NO_FLAGS = 4  # Length of SID/Label when V and L flags are both
 SRPREFIX_MIN_LENGTH = 4
 
 
-@LinkState.register_lsid(tlv=1158, json_key='sr-prefix-sid', repr_name='Prefix SID')
+@LinkState.register_lsid(tlv=1158, json_key='sr-prefix-sids', repr_name='Prefix SIDs')
 class PrefixSid(FlagLS):
+    # RFC 9085 2.3.1: multiple Prefix-SID TLVs may be present, one per algorithm
+    MERGE = True
     FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
 
     # flags property is inherited from FlagLS and unpacks from _packed[0:1]
@@ -104,8 +106,21 @@ class PrefixSid(FlagLS):
             raise Notify(3, 5, "SID/Label size doesn't match V and L flag state")
         return cls(data)
 
+    @property
+    def content(self) -> dict[str, object]:
+        """The structured value, which is also what the merge groups into its array."""
+        return {
+            'sr-prefix-flags': self.flags,
+            'sids': self.sids,
+            'undecoded-sids': self.undecoded,
+            'sr-algorithm': self.sr_algo,
+        }
+
     def json(self, compact: bool = False) -> str:
-        return f'"sr-prefix-flags": {json.dumps(self.flags)}, "sids": {json.dumps(self.sids)}, "undecoded-sids": {json.dumps(self.undecoded)}, "sr-algorithm": {json.dumps(self.sr_algo)}'
+        # this used to return four loose members with no object around them, so a caller
+        # wrapping the result in a list produced a JSON array of bare keys.  It went
+        # unnoticed because nothing put two of these side by side
+        return f'"{self.JSON}": {json.dumps([self.content])}'
 
     @classmethod
     def make_prefix_sid(cls, flags: dict[str, int], sids: list[int], sr_algo: int) -> PrefixSid:

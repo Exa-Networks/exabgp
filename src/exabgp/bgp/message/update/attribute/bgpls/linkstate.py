@@ -89,6 +89,7 @@ class LinkState(Attribute):
     def _parse_tlvs(cls, data: Buffer) -> list[BaseLS]:
         """Parse TLVs from raw bytes."""
         ls_attrs: list[BaseLS] = []
+        seen: set[int] = set()
 
         while data:
             if len(data) < 4:
@@ -103,9 +104,35 @@ class LinkState(Attribute):
 
             data = data[length + 4 :]
             klass = cls.get_ls_class(scode)
+            cls._check_not_repeated(klass, scode, seen)
             ls_attrs.append(cls._decode_tlv(klass, scode, payload))
 
         return ls_attrs
+
+    @classmethod
+    def _check_not_repeated(cls, klass: type[LSClass], scode: int, seen: set[int]) -> None:
+        """RFC 9552 5.3.2: a TLV which may not repeat, repeated, makes the attribute malformed.
+
+        The RFC calls for the attribute discard approach, and DISCARD is set on this class,
+        so AttributeCollection.parse drops the BGP-LS attribute and keeps the route.
+
+        MERGE is already this implementation's marker for "may appear more than once", so
+        it is the marker used here rather than a second list which could disagree with it.
+        A repeated TLV without it rendered its JSON key twice, and every parser resolves
+        that by keeping one of them, so the other was lost silently: the peer chose which
+        of its own values the API consumer saw.
+
+        A code nothing has registered is not held to this.  get_ls_class synthesises a
+        GenericLSID for it, and we cannot claim a TLV we do not implement may not repeat:
+        refusing it would drop the attribute of a deployment using an extension we simply
+        have not caught up with.  It renders under a code specific name, so two of them do
+        not collide either.
+        """
+        if getattr(klass, 'MERGE', False) or getattr(klass, 'GENERIC', False):
+            return
+        if scode in seen:
+            raise Notify(3, 5, f'BGP-LS: TLV {scode} appears more than once and may not repeat')
+        seen.add(scode)
 
     @staticmethod
     def _decode_tlv(klass: type[LSClass], scode: int, payload: Buffer) -> BaseLS:
@@ -182,6 +209,10 @@ class LinkState(Attribute):
             return klass
         unknown = type('GenericLSID_%d' % code, GenericLSID.__bases__, dict(GenericLSID.__dict__))
         setattr(unknown, 'TLV', code)
+        # the JSON name has to be set here as well as the TLV.  GenericLSID merges, and
+        # the merge groups by name, so leaving every synthesised class on the inherited
+        # default would collapse every unknown code the peer sent into one member
+        setattr(unknown, 'JSON', f'generic-lsid-{code}')
         cls.registered_lsids[code] = unknown
         return unknown
 
@@ -345,6 +376,19 @@ class GenericLSID(BaseLS):
     Returns raw bytes as hex string. Dynamically sets JSON key from TLV code.
     """
 
+    # get_ls_class builds each unknown code its own class from GenericLSID.__bases__, so
+    # the result is a SIBLING of this class and not a subclass: issubclass says no.  The
+    # flag is copied with the rest of __dict__ and does say yes, which is what callers
+    # need to ask.  Session 5.0 hit the same identity trap in register_lsid, where two
+    # aliases of one class never compared equal to each other.
+    GENERIC: ClassVar[bool] = True
+
+    # we do not know whether a TLV we have not implemented may repeat, so it is neither
+    # refused nor collapsed: it merges, and both values reach the API under one key.  Two
+    # of the same unknown code otherwise emitted that key twice, and every JSON parser
+    # resolves a duplicate key by keeping one of them
+    MERGE = True
+
     TLV: int = 0
 
     def __init__(self, packed: Buffer) -> None:
@@ -364,10 +408,12 @@ class GenericLSID(BaseLS):
         return 'Attribute with code [ {} ] not implemented'.format(self.TLV)
 
     def json(self, compact: bool = False) -> str:
-        # Always output as array for backward compatibility
-        # Compute JSON key inline to avoid overriding class attribute with property
-        json_key = f'generic-lsid-{self.TLV}'
-        return f'"{json_key}": ["{self.content}"]'
+        # the key is computed rather than read from JSON, so an instance built directly
+        # rather than through get_ls_class still names its own code.  get_ls_class sets
+        # JSON to the same string, so the merge groups by the same name this renders.
+        # Always an array, which is what the merge produces when the peer sends the same
+        # unknown code twice, so the member keeps one type either way
+        return f'"generic-lsid-{self.TLV}": ["{self.content}"]'
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> GenericLSID:

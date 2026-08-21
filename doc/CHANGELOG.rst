@@ -4,12 +4,6 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
- * Fix: Escape peer-controlled strings in JSON API events
-   HostName, Software Version, and NOTIFICATION data can no longer inject JSON members into API streams.
- * Fix: Route Refresh messages sent after new updates instead of before
-   When flush adj-rib out and a new announce arrived in the same reactor
-   cycle, the new route UPDATE was sent before the ROUTE_REFRESH start
-   marker, violating the Enhanced Route Refresh sequence.
  * Compatibility: BGP-LS ip-reachability-tlv JSON key changed from "ip" to "prefix"
    - Now includes prefix length in CIDR notation (e.g., "10.134.2.88/30")
  * Compatibility: BGP-LS Adjacency SID JSON key changed from "sr-adj" to "sr-adjs"
@@ -17,6 +11,20 @@ Version 6.0.0:
  * Compatibility: BGP-LS Remote Router ID JSON key changed to "remote-router-ids"
    - Now outputs as array of strings instead of duplicate keys
    - IPv4 and IPv6 router IDs properly merged into single array
+ * Compatibility: three more BGP-LS members become arrays, completing what 5.0.13
+   left to this release. Each repeated its JSON key when the peer sent the TLV more
+   than once, and a JSON parser keeps only one of a duplicate pair.
+   - "area-id" becomes "area-ids" (RFC 9552 5.3.1.2, a node may be in several areas)
+   - "sr-prefix-sid" becomes "sr-prefix-sids" (RFC 9085 2.3.1, one per algorithm)
+   - "srv6-locator" becomes "srv6-locators" (RFC 9514 7.1, one per algorithm)
+   - Each is an array whether one TLV arrives or several, so the member keeps one type
+   - Prefix-SID also emitted four loose members with no object around them
+ * Fix: a BGP-LS TLV the RFC does not allow to repeat, repeated, makes the attribute
+   malformed. RFC 9552 5.3.2 attribute discard applies, so the route survives without
+   its BGP-LS attribute rather than the member being silently overwritten. Measured
+   before the fix: 33 of the 38 non-repeating TLVs collided this way. A TLV ExaBGP
+   does not implement is neither refused nor merged away, since we cannot claim an
+   extension we have not caught up with may not repeat.
  * Compatibility: Drop support for Python 3.7
  * Feature: Add type annotations to the codebase for better type safety
  * Change: **BREAKING** - The engine now runs on asyncio

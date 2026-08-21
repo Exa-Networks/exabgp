@@ -34,8 +34,10 @@ SRV6_LOCATOR_MIN_LENGTH = 8
 #                      Figure 4: SRv6 Locator TLV Format
 
 
-@LinkState.register_lsid(tlv=1162, json_key='srv6-locator', repr_name='SRv6 Locator')
+@LinkState.register_lsid(tlv=1162, json_key='srv6-locators', repr_name='SRv6 Locators')
 class Srv6Locator(FlagLS):
+    # RFC 9514 7.1: a node may advertise a locator per algorithm
+    MERGE = True
     FLAGS = ['D'] + ['RSV' for _ in range(7)]
     registered_subsubtlvs: dict[int, type] = dict()
 
@@ -86,12 +88,14 @@ class Srv6Locator(FlagLS):
             raise Notify(3, 5, f'SRv6 Locator: data too short, need {SRV6_LOCATOR_MIN_LENGTH} bytes, got {len(data)}')
         return cls(data)
 
+    @property
+    def content(self) -> dict[str, object]:
+        """The structured value, which is also what the merge groups into its array."""
+        return {
+            'flags': self.flags,
+            'algorithm': self.algorithm,
+            'metric': self.metric,
+        }
+
     def json(self, compact: bool = False) -> str:
-        return '"srv6-locator": ' + json.dumps(
-            {
-                'flags': self.flags,
-                'algorithm': self.algorithm,
-                'metric': self.metric,
-            },
-            indent=None,
-        )
+        return f'"{self.JSON}": {json.dumps([self.content])}'

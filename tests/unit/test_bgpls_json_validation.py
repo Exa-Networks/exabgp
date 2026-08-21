@@ -243,7 +243,10 @@ class TestLinkAttributesJson:
         flags = {'D': 0}
         attr = Srv6Locator.make_srv6_locator(flags=flags, algorithm=0, metric=100)
         result = validate_json(attr.json(), 'Srv6Locator')
-        assert 'srv6-locator' in result
+        # a locator may repeat, one per algorithm, so it is a list under a plural key
+        assert 'srv6-locators' in result
+        assert isinstance(result['srv6-locators'], list)
+        assert result['srv6-locators'][0]['metric'] == 100
 
     def test_srv6_endpoint_behavior_json(self) -> None:
         """Srv6EndpointBehavior (TLV 1250) produces valid JSON"""
@@ -288,7 +291,9 @@ class TestNodeAttributesJson:
         # IsisArea expects integer area ID (hex converted to int)
         attr = IsisArea.make_isis_area(areaid=0x490001)
         result = validate_json(attr.json(), 'IsisArea')
-        assert 'area-id' in result
+        # a node may belong to several areas, so it is a list under a plural key
+        assert 'area-ids' in result
+        assert isinstance(result['area-ids'], list)
 
     def test_local_te_rid_json(self) -> None:
         """LocalRouterId (TLV 1028/1029) produces valid JSON"""
@@ -363,8 +368,12 @@ class TestPrefixAttributesJson:
         flags = {'R': 0, 'N': 1, 'P': 0, 'E': 0, 'V': 0, 'L': 0}
         attr = PrefixSid.make_prefix_sid(flags=flags, sids=[100], sr_algo=0)
         result = validate_json(attr.json(), 'PrefixSid')
-        assert 'sr-prefix-flags' in result
-        assert 'sids' in result
+        # multiple Prefix-SID TLVs may be present, one per algorithm, and they used to
+        # be rendered as four loose members with no object around them
+        assert 'sr-prefix-sids' in result
+        assert isinstance(result['sr-prefix-sids'], list)
+        assert 'sr-prefix-flags' in result['sr-prefix-sids'][0]
+        assert result['sr-prefix-sids'][0]['sids'] == [100]
 
     def test_sr_source_router_id_json(self) -> None:
         """SourceRouterId (TLV 1171) produces valid JSON"""
