@@ -415,15 +415,31 @@ class INETBase(NLRI):
                 # The last 4 bits are the bottom of Stack
                 # The last bit is set for the last label
                 labels_list.append(label >> 4)
+
+                # The bottom of stack bit is tested FIRST.  A genuine second label whose
+                # value happens to equal one of the two sentinels below is a label, not a
+                # terminator, and testing the sentinels first refuses it.
+                if label & LABEL_BOTTOM_OF_STACK_BIT:
+                    ended = True
+                    break
+
+                # Both sentinels describe a WHOLE stack rather than a label inside one, so
+                # they only end a stack when they ARE the stack.  Below depth one they mean
+                # nothing, and honouring them there is how an unterminated FIRST label went
+                # on decoding: for mpls-vpn the loop reads the route distinguisher next, and
+                # an RD's leading zero bytes are indistinguishable from the 0x000000
+                # next-hop convention, so the stack "ended" on the peer's RD and the prefix
+                # vanished anyway.  Session 5.0 found that half; a fix which only counted
+                # whether the loop terminated passed nlri-mpls and still lost mpls-vpn.
+                if len(labels_list) > 1:
+                    continue
+
                 # This is a route withdrawal
                 if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
                     ended = True
                     break
                 # This is a next-hop
                 if label == LABEL_NEXTHOP_VALUE:
-                    ended = True
-                    break
-                if label & LABEL_BOTTOM_OF_STACK_BIT:
                     ended = True
                     break
             # RFC 3107 3: the bottom of stack bit is set on the last label, and it is the

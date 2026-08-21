@@ -144,3 +144,79 @@ def test_a_stack_which_never_ends_is_refused(name: str, action: Action, label: b
     """
     with pytest.raises(Notify, match='never ends'):
         NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, bytes([48]) + label + PREFIX, action, None, None)
+
+
+# The route distinguisher is why mpls-vpn needs its own cases.  IPVPN has its OWN
+# unpack_nlri, a second copy of the label loop, so a fix to inet.py leaves it untouched:
+# the pair rule, on two decoders rather than two accessors.
+#
+# And the RD is what makes the depth rule necessary.  Below depth one the loop is reading
+# the distinguisher, whose leading bytes are zero for most encodings, and 0x000000 is the
+# next-hop convention.  So an unterminated FIRST label 'ended' the stack on the peer's own
+# RD, a check which only counted whether the loop terminated was satisfied, and the prefix
+# vanished anyway.  Session 5.0 found that half after I had fixed the other.
+RD = bytes(8)
+
+
+@pytest.mark.parametrize(
+    'name, afi, safi, wire',
+    [
+        ('ipv4 vpn', AFI.ipv4, SAFI.mpls_vpn, bytes([112]) + bytes([0x00, 0x00, 0x10]) + RD + bytes([10, 0, 0])),
+        (
+            'ipv6 vpn',
+            AFI.ipv6,
+            SAFI.mpls_vpn,
+            bytes([112]) + bytes([0x00, 0x00, 0x10]) + RD + bytes([0x20, 0x01, 0x0D]),
+        ),
+    ],
+    ids=['ipv4 vpn', 'ipv6 vpn'],
+)
+def test_a_vpn_stack_which_never_ends_is_refused(name: str, afi: AFI, safi: SAFI, wire: bytes) -> None:
+    """The half a fix to inet.py does not reach, because IPVPN decodes for itself."""
+    with pytest.raises(Notify, match='never ends'):
+        NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, None, None)
+
+
+def test_a_second_label_may_carry_a_sentinel_value() -> None:
+    """The reorder the depth rule needs, and the reason the sentinels are tested last.
+
+    0x000000 is the next-hop convention for a whole stack.  As the second label of a real
+    stack it is just a label, and a decoder which tests the sentinels before the bottom of
+    stack bit refuses a route which is perfectly well formed.
+    """
+    wire = bytes([72]) + bytes([0x00, 0x00, 0x10]) + bytes([0x00, 0x00, 0x21]) + bytes([10, 0, 0])
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.ANNOUNCE, None, None)
+
+    assert str(nlri.cidr) == '10.0.0.0/24'
+    assert nlri.labels.labels == [1, 2], (
+        'a two label stack lost a label, or the sentinel test ran before the bottom of stack test'
+    )
+
+
+def test_a_well_formed_vpn_route_still_decodes() -> None:
+    """The refusals must not have closed the path they guard."""
+    wire = bytes([112]) + bytes([0x00, 0x00, 0x11]) + RD + bytes([10, 0, 0])
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, wire, Action.ANNOUNCE, None, None)
+
+    assert str(nlri.cidr) == '10.0.0.0/24'
+    assert nlri.labels.labels == [1]
+
+
+def test_what_this_cannot_tell_apart_is_written_down() -> None:
+    """A stack which terminates on the WRONG byte cannot be detected, only one which never does.
+
+    Prefix bytes whose low bit is set read as a label with the bottom of stack bit, so a
+    stack running one label too long into a prefix like 192.168.1.0 terminates and looks
+    well formed.  The ambiguity is in the encoding, not in this decoder: the mask covers
+    labels, RD and prefix together and nothing else marks the boundary.
+
+    Session 5.0 hit this writing the same test, with 192.168.1 as the prefix.  Recorded so
+    that the limit of the check is a known thing rather than a surprise.
+    """
+    # 0xc0a801: the last byte is odd, so it reads as a bottom of stack label
+    wire = bytes([48]) + bytes([0x00, 0x00, 0x10]) + bytes([0xC0, 0xA8, 0x01])
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.ANNOUNCE, None, None)
+
+    assert str(nlri.cidr) == '0.0.0.0/0', (
+        'the prefix now survives an over-long stack: the encoding gained a boundary marker, or this decoder learned something it could not know'
+    )
