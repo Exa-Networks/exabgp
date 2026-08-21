@@ -742,6 +742,16 @@ class Flow(NLRI):
                         end = CommonOperator.eol(byte)
                         operator = CommonOperator.operator(byte)
                         length = CommonOperator.length(byte)
+                        # the operator says how many bytes the value takes. If they
+                        # are not there the slice is short or empty, and the decoder
+                        # either raises out of the reactor, or worse invents a value
+                        # and the filter carries a match the peer never sent.
+                        if len(bgp) < length:
+                            raise Notify(
+                                3,
+                                10,
+                                'flow component announces a %d byte value with %d left' % (length, len(bgp)),
+                            )
                         value, bgp = bgp[:length], bgp[length:]
                         adding = klass.decoder(value)
                         nlri.add(klass(operator, adding))

@@ -29,7 +29,7 @@ NLRI_SEEDS = {
     'ipv4/flow': [
         bytes([3, 0x03, 0x81, 0x06]),  # protocol = tcp
         bytes([0]),  # no rule at all
-        bytes([5, 0x03, 0x81, 0x06, 0x04, 0x81, 0x19]),
+        bytes([6, 0x03, 0x81, 0x06, 0x04, 0x81, 0x19]),
     ],
     'ipv6/flow': [bytes([3, 0x03, 0x81, 0x06])],
     # a flow-vpn carries an eight byte route distinguisher before its rules
@@ -56,10 +56,30 @@ NLRI_SEEDS = {
 }
 
 
+def framed(body):
+    """The same body behind a one byte and a two byte length prefix
+
+    Families do not agree on the width of their length prefix: a flow NLRI
+    writes one byte, a VPLS one writes two. A corpus which emits only one width
+    never frames the other family at all, so its decoder is never entered and
+    the sweep reports clean over code it did not run.
+
+    Emitting both costs nothing: the wrong framing is rejected at the first byte,
+    which is what would have happened anyway.
+    """
+    out = []
+    if len(body) < 256:
+        out.append(bytes([len(body)]) + body)
+    out.append(len(body).to_bytes(2, 'big') + body)
+    return out
+
+
 def seeds_for(family):
-    """Every seed for a family, plus the plain fill patterns"""
+    """Every seed for a family, framed both ways, plus the plain fill patterns"""
     payloads = list(NLRI_SEEDS.get(family, ()))
     for length in range(0, 33):
         for fill in FILLS:
-            payloads.append(filled(length, fill))
+            body = filled(length, fill)
+            payloads.append(body)
+            payloads.extend(framed(body))
     return payloads

@@ -42,12 +42,6 @@ from .corpus import seeds_for
 #                               meaning of the route it passes on.
 #   mup                         an unknown architecture type re-encodes as a
 #                               known one.
-#   ipv4/flow, ipv6/flow        a component whose value is truncated is accepted
-#                               and re-encoded with a value of zero, so a filter
-#                               carries a match the peer never sent. RFC 8955
-#                               section 4.3 says a malformed FlowSpec NLRI is a
-#                               withdraw. Changing that is a behaviour change and
-#                               needs a decision, so it is recorded not fixed.
 #   bgp-ls                      the four byte NLRI header is dropped entirely on
 #                               re-encode, because the registered subclasses
 #                               never populate _packed. Harmless today: there is
@@ -55,7 +49,6 @@ from .corpus import seeds_for
 #                               and nothing re-advertises it.
 KNOWN = {
     'bgp-ls/bgp-ls',
-    'ipv4/flow',
     'ipv4/mpls-vpn',
     'ipv4/mup',
     'ipv4/nlri-mpls',

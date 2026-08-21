@@ -42,6 +42,15 @@ ALLOWED = {
     # 5.0.12 accepted an MVPN NLRI announcing more data than it carried, and
     # stored the truncated body as an un-parsed route it could not re-encode.
     # A conforming speaker never sends one.
+    # a flow component whose operator declares a value the NLRI does not carry
+    # used to be decoded with an invented value of zero, so the filter carried a
+    # match the peer never sent. On a mitigation box that is a filter doing
+    # something nobody asked for. RFC 8955 4.3 makes a malformed FlowSpec NLRI a
+    # withdraw, so it is dropped.
+    'ipv4/flow': 'component announces a value it does not carry',
+    'ipv6/flow': 'component announces a value it does not carry',
+    'ipv4/flow-vpn': 'component announces a value it does not carry',
+    'ipv6/flow-vpn': 'component announces a value it does not carry',
     'ipv4/mcast-vpn': 'announces more data than it carries',
     'ipv6/mcast-vpn': 'announces more data than it carries',
     # 5.0.12 trusted the mask byte, so an IPv4 prefix could announce /255 and be
@@ -160,13 +169,19 @@ def run(cwd, seeds):
 
 
 def collect_seeds():
-    """Read the hand built corpus so both trees decode the SAME bytes"""
+    """Build the corpus once, here, so both trees decode exactly the same bytes
+
+    Every registered family must be listed. A family missing from this map makes
+    the probe fall back to whatever it can generate itself, and the older tree
+    has no corpus module at all, so the two sides would compare different inputs
+    and every verdict for that family would be meaningless.
+    """
     sys.path.insert(0, os.path.join(ROOT, 'tests', 'fuzz'))
-    try:
-        import corpus
-    except ImportError:
-        return {}
-    return {family: [bytes(p).hex() for p in corpus.seeds_for(family)] for family in corpus.NLRI_SEEDS}
+    sys.path.insert(0, os.path.join(ROOT, 'src'))
+    import corpus
+    from exabgp.bgp.message.update.nlri.nlri import NLRI
+
+    return {family: [bytes(payload).hex() for payload in corpus.seeds_for(family)] for family in NLRI.registered_nlri}
 
 
 def main():
@@ -179,7 +194,9 @@ def main():
         raise SystemExit('no tag to compare against, pass one explicitly')
 
     seeds = collect_seeds()
-    print('comparing this tree against %s' % tag)
+    if not seeds:
+        raise SystemExit('no corpus: both trees would decode different bytes, which proves nothing')
+    print('comparing this tree against %s over %d NLRI families' % (tag, len(seeds)))
 
     worktree = tempfile.mkdtemp(prefix='compat-gate-')
     try:
@@ -199,14 +216,14 @@ def main():
             counts['identical'] = counts.get('identical', 0) + 1
             continue
         kind = '%s -> %s' % (old.split(':')[0], new.split(':')[0])
+        if key.split(':')[1] in ALLOWED:
+            counts['allowed (see ALLOWED)'] = counts.get('allowed (see ALLOWED)', 0) + 1
+            continue
         counts[kind] = counts.get(kind, 0) + 1
         # a line the consumer cannot parse is not a service worth keeping,
         # so INVALID-JSON becoming a protocol error is the work landing
         accepted = old == 'VALID'
         refused = new in ('NOTIFY', 'DROPPED')
-        if key.split(':')[1] in ALLOWED:
-            counts['allowed'] = counts.get('allowed', 0) + 1
-            continue
         if (accepted and refused) or new.startswith('PYERROR'):
             regressions.append((key, old, new))
 
