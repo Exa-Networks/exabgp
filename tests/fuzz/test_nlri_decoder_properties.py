@@ -137,3 +137,13 @@ class TestSeededShapes:
             parsed = json.loads('{"nlri": %s}' % out[0])
             assert 'injected' not in set(all_keys(parsed))
         assert decoded, f'{family}: not one seed decoded, this test proves nothing'
+
+
+# Ratchet on the registry this file parametrises over. With the registry nearly
+# empty the parametrisation shrinks rather than failing: 2060 passing tests over
+# the full registry, 296 over a thinned one, and both read as success.
+NLRI_FAMILY_FLOOR = 18
+
+
+def test_the_registry_this_file_sweeps_is_populated() -> None:
+    assert len(FAMILIES) >= NLRI_FAMILY_FLOOR, FAMILIES

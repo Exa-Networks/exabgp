@@ -167,3 +167,21 @@ class TestEveryAttributeThroughTheParser:
             return
         except Exception as exc:  # noqa: BLE001
             raise AssertionError(f'attribute {key} raised {type(exc).__name__} on {payload.hex()}')
+
+
+# Ratchets on the two registries this file parametrises over. Shrink either and
+# the parametrisation shrinks with it: the tests do not fail, there are simply
+# fewer of them, and a smaller green number reads exactly like a larger one.
+#
+# This file passed 357 tests with the attribute registry thinned to three
+# entries, which is the failure the floors exist to make loud.
+CAPABILITY_FLOOR = 10
+ATTRIBUTE_FLOOR = 18
+
+
+def test_the_capability_registry_is_populated() -> None:
+    assert len(CAPABILITIES) >= CAPABILITY_FLOOR, CAPABILITIES
+
+
+def test_the_attribute_registry_is_populated() -> None:
+    assert len(ATTRIBUTES) >= ATTRIBUTE_FLOOR, ATTRIBUTES
