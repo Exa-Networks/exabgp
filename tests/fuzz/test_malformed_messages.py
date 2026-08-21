@@ -19,6 +19,7 @@ import struct
 from typing import Any
 from unittest.mock import MagicMock, Mock
 from hypothesis import given, strategies as st, settings, HealthCheck, assume
+from exabgp.bgp.message.notification import Notify
 
 pytestmark = pytest.mark.fuzz
 
@@ -318,7 +319,7 @@ def test_update_withdrawn_length_exceeds_data(withdrawn_len: int) -> None:
         # Accessing parsed data should fail
         _ = update.parse()
         pytest.fail('Expected exception for truncated UPDATE')
-    except (Notify, IndexError, struct.error, ValueError):
+    except Notify:
         # Expected - malformed data detected
         pass
 
@@ -340,7 +341,7 @@ def test_update_attribute_length_exceeds_data(attr_len: int) -> None:
         update = Update(update_data, negotiated)
         _ = update.parse()
         pytest.fail('Expected exception for truncated UPDATE')
-    except (Notify, IndexError, struct.error, ValueError):
+    except Notify:
         # Expected - malformed data detected
         pass
 
@@ -357,9 +358,8 @@ def test_update_random_payload(random_data: bytes) -> None:
     try:
         update = Update(random_data, negotiated)
         _ = update.parse()
-    except Exception as e:
-        # Should handle gracefully, not crash
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz

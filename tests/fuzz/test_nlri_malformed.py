@@ -21,6 +21,7 @@ from hypothesis import given, strategies as st, settings, HealthCheck, assume
 
 from exabgp.bgp.message import Action
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.bgp.message.notification import Notify
 
 pytestmark = pytest.mark.fuzz
 
@@ -73,11 +74,9 @@ def test_ipv4_prefix_length_too_large(mask: int) -> None:
         nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, None)
         # If it parses, should at least not crash
         # Some implementations may accept > 32 masks
-    except (Notify, ValueError, IndexError):
+    except Notify:
         # Expected - invalid mask
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -93,11 +92,9 @@ def test_ipv6_prefix_length_too_large(mask: int) -> None:
 
     try:
         nlri, _ = INET.unpack_nlri(AFI.ipv6, SAFI.unicast, data, Action.ANNOUNCE, False, None)
-    except (Notify, ValueError, IndexError):
+    except Notify:
         # Expected - invalid mask
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -117,11 +114,9 @@ def test_ipv4_truncated_prefix(mask: int) -> None:
 
     try:
         nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, None)
-    except (Notify, ValueError, IndexError, struct.error):
+    except Notify:
         # Expected - truncated data
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -132,11 +127,9 @@ def test_inet_empty_data() -> None:
 
     try:
         nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, b'', Action.ANNOUNCE, False, None)
-    except (Notify, ValueError, IndexError):
+    except Notify:
         # Expected - no data
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -148,9 +141,8 @@ def test_inet_random_data(random_data: bytes) -> None:
 
     try:
         nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, random_data, Action.ANNOUNCE, False, None)
-    except Exception as e:
-        # Should handle gracefully
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -176,8 +168,8 @@ def test_inet_with_addpath(path_id: bytes, mask: int) -> None:
         nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, True, negotiated)
         # If successful, verify path_id is preserved
         assert nlri.path_info.pack_path() == path_id
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -193,11 +185,9 @@ def test_inet_addpath_truncated() -> None:
 
     try:
         nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, True, negotiated)
-    except (Notify, ValueError, IndexError):
+    except Notify:
         # Expected - truncated path_id
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 # =============================================================================
@@ -230,10 +220,10 @@ def test_labeled_nlri_valid(label_count: int) -> None:
     data = bytes([total_mask]) + labels + b'\xc0\xa8\x01'
 
     try:
-        nlri, _ = Label.unpack_nlri(AFI.ipv4, SAFI.unicast_label, data, Action.ANNOUNCE, False, None)
+        nlri, _ = Label.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, False, None)
         assert nlri.labels is not None
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -249,13 +239,11 @@ def test_labeled_nlri_no_bottom_of_stack() -> None:
     data = bytes([48]) + label + b'\xc0\xa8\x01'
 
     try:
-        nlri, _ = Label.unpack_nlri(AFI.ipv4, SAFI.unicast_label, data, Action.ANNOUNCE, False, None)
+        nlri, _ = Label.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, False, None)
         # May parse but labels may be incomplete
-    except (Notify, ValueError, IndexError):
+    except Notify:
         # Expected - no bottom of stack
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -266,9 +254,9 @@ def test_labeled_nlri_random_data(random_data: bytes) -> None:
     from exabgp.bgp.message.update.nlri.label import Label
 
     try:
-        nlri, _ = Label.unpack_nlri(AFI.ipv4, SAFI.unicast_label, random_data, Action.ANNOUNCE, False, None)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+        nlri, _ = Label.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, random_data, Action.ANNOUNCE, False, None)
+    except Notify:
+        pass
 
 
 # =============================================================================
@@ -301,8 +289,8 @@ def test_vpn_nlri_rd_types(rd_type: int, rd_value: bytes) -> None:
     try:
         nlri, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, data, Action.ANNOUNCE, False, None)
         assert nlri.rd is not None
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -320,11 +308,9 @@ def test_vpn_nlri_truncated_rd() -> None:
 
     try:
         nlri, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, data, Action.ANNOUNCE, False, None)
-    except (Notify, ValueError, IndexError, struct.error):
+    except Notify:
         # Expected - truncated RD
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -336,8 +322,8 @@ def test_vpn_nlri_random_data(random_data: bytes) -> None:
 
     try:
         nlri, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, random_data, Action.ANNOUNCE, False, None)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 # =============================================================================
@@ -356,8 +342,8 @@ def test_cidr_mask_zero() -> None:
     try:
         nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, None)
         assert nlri.cidr.mask == 0
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -469,9 +455,8 @@ def test_labels_boundary_values(label_value: int) -> None:
         packed = labels.pack_labels()
         assert isinstance(packed, bytes)
         assert len(packed) == 3  # One label = 3 bytes
-    except Exception as e:
-        # Some values may be invalid
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -483,8 +468,8 @@ def test_labels_empty() -> None:
         labels = Labels.make_labels([])
         packed = labels.pack_labels()
         assert isinstance(packed, bytes)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz

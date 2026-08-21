@@ -8,11 +8,35 @@ This module provides property-based fuzz tests for critical parsing components:
 - Binary protocol data handling
 """
 
+from typing import Any
+
 import pytest
 from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
 
+from exabgp.bgp.message.notification import Notify
+
 pytestmark = pytest.mark.fuzz
+
+
+def negotiated_for_fuzzing() -> Any:
+    """The smallest session state Update.unpack_message reads, with no family negotiated."""
+    from unittest.mock import Mock
+
+    from exabgp.bgp.message import Action
+
+    negotiated = Mock()
+    negotiated.asn4 = False
+    negotiated.addpath = Mock()
+    negotiated.addpath.receive = Mock(return_value=False)
+    negotiated.addpath.send = Mock(return_value=False)
+    negotiated.required = Mock(return_value=False)
+    negotiated.families = []
+    negotiated.nexthop = []
+    negotiated.msg_size = 4096
+    negotiated.direction = Action.ANNOUNCE
+    negotiated.neighbor = {'aigp': False}
+    return negotiated
 
 
 # =============================================================================
@@ -41,9 +65,11 @@ def test_parser_robustness(text: str) -> None:
             line = parser()
             if not line:
                 break
-    except Exception as e:
-        # Should handle errors gracefully, not crash
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+    except (Notify, ValueError):
+        # ValueError is the configuration layer's own error channel rather than an escape:
+        # section.py catches it and the CLI reports "is not a valid config file" with no
+        # traceback.  It is listed here because it is documented, not because it is tidy
+        return
 
 
 @pytest.mark.fuzz
@@ -190,9 +216,8 @@ def test_connection_reader_robustness(data: bytes) -> None:
         elif length > 0:
             assert 19 <= length <= 4096
             assert len(header) == 19
-    except (StopIteration, Exception) as e:
-        # Expected for random data
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -242,9 +267,8 @@ def test_bgp_header_validation(valid_marker: bool, length: int, msg_type: int) -
             if error is None:
                 assert result_length == length
                 assert result_type == msg_type
-    except (StopIteration, Exception) as e:
-        # May fail for invalid combinations
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -306,23 +330,21 @@ def test_open_message_basic_structure(version: int, my_as: int, hold_time: int) 
 @given(data=st.binary(min_size=0, max_size=200))
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=100)
 def test_update_message_robustness(data: bytes) -> None:
-    """Test UPDATE message parsing doesn't crash on random data."""
+    """Random bytes reach the UPDATE decoder and leave as an Update or as a Notify.
+
+    This called Update.unpack(env, data, None, None), a signature which has not existed
+    for a long time, so every example raised TypeError straight into a handler asserting
+    only that the exception was not SystemExit.  The test named "UPDATE message parsing
+    doesn't crash on random data" had never once parsed an UPDATE.
+    """
     from exabgp.bgp.message.update import Update
 
     try:
-        from exabgp.environment import Env
+        update = Update.unpack_message(data, negotiated_for_fuzzing())
+    except Notify:
+        return
 
-        env = Env()
-
-        # Try to parse as UPDATE message
-        update = Update.unpack(env, data, None, None)
-
-        if update:
-            # Successfully parsed
-            assert hasattr(update, 'nlris') or hasattr(update, 'attributes')
-    except (ValueError, IndexError, struct.error, NotImplementedError, Exception) as e:
-        # Expected for random data
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+    assert hasattr(update, 'nlris') or hasattr(update, 'attributes')
 
 
 # =============================================================================
@@ -347,9 +369,8 @@ def test_empty_configuration() -> None:
         # Should not crash
         parser()
         # Empty config should return empty line or no data
-    except Exception as e:
-        # May fail due to iterator setup
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -373,9 +394,8 @@ def test_whitespace_only_config(whitespace: str) -> None:
             line = parser()
             if not line:
                 break
-    except Exception as e:
-        # Should not crash
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -417,9 +437,8 @@ def test_truncated_bgp_header(truncate_at: int) -> None:
         if truncate_at < 19:
             # Not enough data - should wait or error
             assert result_length == 0 or error is not None
-    except (StopIteration, Exception) as e:
-        # Expected for truncated data
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz

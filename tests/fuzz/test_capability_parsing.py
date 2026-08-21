@@ -16,6 +16,7 @@ Test Categories:
 import pytest
 import struct
 from hypothesis import given, strategies as st, settings, HealthCheck
+from exabgp.bgp.message.notification import Notify
 
 pytestmark = pytest.mark.fuzz
 
@@ -82,8 +83,6 @@ def test_capabilities_random_data(random_data: bytes) -> None:
     except Notify:
         # Expected for malformed data
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -267,8 +266,8 @@ def test_multiprotocol_afi_safi_values(afi: int, safi: int) -> None:
     try:
         result = MultiProtocol.unpack_capability(instance, data, CapabilityCode(Capability.CODE.MULTIPROTOCOL))
         assert isinstance(result, MultiProtocol)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -287,11 +286,9 @@ def test_multiprotocol_truncated(data_len: int) -> None:
 
     try:
         MultiProtocol.unpack_capability(instance, data, CapabilityCode(Capability.CODE.MULTIPROTOCOL))
-    except (Notify, IndexError, struct.error):
+    except Notify:
         # Expected - truncated
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 # =============================================================================
@@ -320,8 +317,8 @@ def test_graceful_restart_valid(family_count: int) -> None:
     try:
         result = Graceful.unpack_capability(instance, data, CapabilityCode(Capability.CODE.GRACEFUL_RESTART))
         assert isinstance(result, Graceful)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -335,11 +332,9 @@ def test_graceful_restart_empty() -> None:
 
     try:
         Graceful.unpack_capability(instance, b'', CapabilityCode(Capability.CODE.GRACEFUL_RESTART))
-    except (Notify, IndexError, struct.error):
+    except Notify:
         # Expected - need at least 2 bytes
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -358,11 +353,9 @@ def test_graceful_restart_not_aligned(extra_bytes: int) -> None:
 
     try:
         Graceful.unpack_capability(instance, data, CapabilityCode(Capability.CODE.GRACEFUL_RESTART))
-    except (Notify, IndexError, struct.error):
+    except Notify:
         # Expected - incomplete family
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 # =============================================================================
@@ -385,8 +378,8 @@ def test_asn4_valid_values(asn: int) -> None:
     try:
         result = ASN4.unpack_capability(instance, data, CapabilityCode(Capability.CODE.FOUR_BYTES_ASN))
         assert isinstance(result, ASN4)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -404,11 +397,9 @@ def test_asn4_truncated(data_len: int) -> None:
 
     try:
         ASN4.unpack_capability(instance, data, CapabilityCode(Capability.CODE.FOUR_BYTES_ASN))
-    except (Notify, IndexError, struct.error):
+    except Notify:
         # Expected - need 4 bytes
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 # =============================================================================
@@ -439,11 +430,9 @@ def test_hostname_length_combinations(hostname_len: int, domain_len: int) -> Non
     try:
         result = HostName.unpack_capability(instance, data, CapabilityCode(Capability.CODE.HOSTNAME))
         assert isinstance(result, HostName)
-    except (Notify, IndexError):
+    except Notify:
         # Expected for invalid lengths
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -457,11 +446,9 @@ def test_hostname_empty() -> None:
 
     try:
         HostName.unpack_capability(instance, b'', CapabilityCode(Capability.CODE.HOSTNAME))
-    except (Notify, IndexError):
+    except Notify:
         # Expected - need at least length byte
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -478,11 +465,9 @@ def test_hostname_truncated_hostname() -> None:
 
     try:
         HostName.unpack_capability(instance, data, CapabilityCode(Capability.CODE.HOSTNAME))
-    except (Notify, IndexError):
+    except Notify:
         # Expected - truncated
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 # =============================================================================
@@ -510,8 +495,8 @@ def test_nexthop_valid_entries(entry_count: int) -> None:
     try:
         result = NextHop.unpack_capability(instance, data, CapabilityCode(Capability.CODE.NEXTHOP))
         assert isinstance(result, NextHop)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -530,11 +515,9 @@ def test_nexthop_not_multiple_of_6(extra_bytes: int) -> None:
 
     try:
         NextHop.unpack_capability(instance, data, CapabilityCode(Capability.CODE.NEXTHOP))
-    except (Notify, IndexError, struct.error):
+    except Notify:
         # Expected - incomplete entry
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 # =============================================================================
@@ -561,8 +544,8 @@ def test_unknown_capability(code: int, value_len: int) -> None:
         capabilities = Capabilities.unpack(data)
         # Unknown capabilities should be stored or ignored, not crash
         assert isinstance(capabilities, Capabilities)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 # =============================================================================
@@ -588,11 +571,9 @@ def test_software_version_lengths(version_len: int) -> None:
     try:
         result = Software.unpack_capability(instance, data, CapabilityCode(Capability.CODE.SOFTWARE_VERSION))
         assert isinstance(result, Software)
-    except (Notify, IndexError):
+    except Notify:
         # Expected for invalid lengths
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 # =============================================================================

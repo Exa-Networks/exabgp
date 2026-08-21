@@ -19,6 +19,7 @@ import struct
 from typing import Any
 from unittest.mock import Mock
 from hypothesis import given, strategies as st, settings, HealthCheck, assume
+from exabgp.bgp.message.notification import Notify
 
 pytestmark = pytest.mark.fuzz
 
@@ -95,9 +96,8 @@ def test_attribute_flag_combinations(flag: int, attr_id: int, value_len: int) ->
         result = AttributeCollection.unpack(data, negotiated)
         # Should either parse successfully or add TreatAsWithdraw/Discard
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        # Should handle gracefully, not crash
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -119,13 +119,12 @@ def test_extended_length_attribute(value_len: int) -> None:
     try:
         result = AttributeCollection.unpack(data, negotiated)
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
-
-# =============================================================================
-# Attribute Length Mismatch Tests
-# =============================================================================
+    # =============================================================================
+    # Attribute Length Mismatch Tests
+    # =============================================================================
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -155,11 +154,9 @@ def test_length_mismatch(claimed_len: int, actual_len: int) -> None:
         # May parse successfully if we provided enough data
         # or may treat as withdraw/discard
         assert isinstance(result, AttributeCollection)
-    except (Notify, IndexError, struct.error):
+    except Notify:
         # Expected for mismatched lengths
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -178,8 +175,8 @@ def test_zero_length_mandatory_attribute() -> None:
         result = AttributeCollection.unpack(data, negotiated)
         # May treat as withdraw or parse with default
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 # =============================================================================
@@ -260,8 +257,6 @@ def test_aspath_random_data(random_data: bytes) -> None:
     except Notify:
         # Expected for invalid data
         pass
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
 
 @pytest.mark.fuzz
@@ -310,8 +305,8 @@ def test_community_values(community_count: int) -> None:
     try:
         result = AttributeCollection.unpack(data, negotiated)
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -335,8 +330,8 @@ def test_community_misaligned(extra_bytes: int) -> None:
         result = AttributeCollection.unpack(data, negotiated)
         # May parse and ignore extra bytes, or treat as error
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -360,8 +355,8 @@ def test_extended_community_values(ext_community_count: int) -> None:
     try:
         result = AttributeCollection.unpack(data, negotiated)
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -385,13 +380,12 @@ def test_large_community_values(large_community_count: int) -> None:
     try:
         result = AttributeCollection.unpack(data, negotiated)
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
-
-# =============================================================================
-# ORIGIN Attribute Tests
-# =============================================================================
+    # =============================================================================
+    # ORIGIN Attribute Tests
+    # =============================================================================
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -412,8 +406,8 @@ def test_origin_values(origin_value: int) -> None:
         result = AttributeCollection.unpack(data, negotiated)
         assert isinstance(result, AttributeCollection)
         # Only 0, 1, 2 are valid - others may be treated as error
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 # =============================================================================
@@ -439,8 +433,8 @@ def test_nexthop_invalid_length(nh_len: int) -> None:
         result = AttributeCollection.unpack(data, negotiated)
         # Should treat as withdraw or discard for invalid length
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -529,8 +523,8 @@ def test_aggregator_format(asn4: bool) -> None:
     try:
         result = AttributeCollection.unpack(data, negotiated)
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -551,13 +545,12 @@ def test_aggregator_invalid_length(agg_len: int) -> None:
         result = AttributeCollection.unpack(data, negotiated)
         # May treat as withdraw/discard or parse with defaults
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
-
-# =============================================================================
-# Unknown Attribute Tests
-# =============================================================================
+    # =============================================================================
+    # Unknown Attribute Tests
+    # =============================================================================
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -580,8 +573,8 @@ def test_unknown_optional_attribute(attr_id: int, value_len: int) -> None:
         result = AttributeCollection.unpack(data, negotiated)
         # Unknown optional attributes should be handled gracefully
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -601,13 +594,12 @@ def test_unknown_well_known_attribute(attr_id: int) -> None:
         result = AttributeCollection.unpack(data, negotiated)
         # Unknown well-known should trigger error handling
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
-
-# =============================================================================
-# Multiple Attributes Tests
-# =============================================================================
+    # =============================================================================
+    # Multiple Attributes Tests
+    # =============================================================================
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -638,8 +630,8 @@ def test_multiple_attributes(attr_count: int) -> None:
     try:
         result = AttributeCollection.unpack(data, negotiated)
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -658,13 +650,12 @@ def test_duplicate_attribute() -> None:
         result = AttributeCollection.unpack(data, negotiated)
         # Should handle duplicate gracefully (use last or error)
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
 
-
-# =============================================================================
-# Random Data Tests
-# =============================================================================
+    # =============================================================================
+    # Random Data Tests
+    # =============================================================================
+    except Notify:
+        pass
 
 
 @pytest.mark.fuzz
@@ -679,9 +670,8 @@ def test_attributes_random_data(random_data: bytes) -> None:
     try:
         result = AttributeCollection.unpack(random_data, negotiated)
         assert isinstance(result, AttributeCollection)
-    except Exception as e:
-        # Should handle gracefully, not crash
-        assert not isinstance(e, (SystemExit, KeyboardInterrupt, RecursionError))
+    except Notify:
+        pass
 
 
 if __name__ == '__main__':
