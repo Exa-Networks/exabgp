@@ -207,3 +207,33 @@ def test_group_buffer_counts_the_bytes_it_holds(monkeypatch) -> None:
         assert group._GROUP_BYTES[service] == 6
     finally:
         group.clear_group(service)
+
+
+def test_group_buffer_refuses_a_service_which_never_started_one() -> None:
+    """Buffering for a service with no group open must report that it did not buffer.
+
+    Mutation testing turned the `return False` on that branch into `return True` and no
+    test noticed, so a caller could be told its command was held when nothing holds it.
+    """
+    from exabgp.reactor.api.command import group
+
+    assert not group._add_to_group('never-started', [], 'announce route 10.0.0.0/24')
+
+
+def test_group_buffer_accepts_a_command_which_exactly_reaches_the_limit(monkeypatch) -> None:
+    """The cap is on passing the limit, not on reaching it.
+
+    Mutation testing turned `>` into `>=` and nothing failed: no test sat on the boundary,
+    so the difference between refusing at the limit and refusing past it was undefended.
+    """
+    from exabgp.reactor.api.command import group
+
+    service = 'test-boundary'
+    monkeypatch.setattr(group, 'MAX_GROUP_BYTES', 10)
+    group._start_group(service)
+    try:
+        assert group._add_to_group(service, [], 'x' * 10), 'exactly the limit is allowed'
+        assert group._GROUP_BYTES[service] == 10
+        assert not group._add_to_group(service, [], 'x'), 'one byte past it is not'
+    finally:
+        group.clear_group(service)
