@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from exabgp.util import hexstring
 from exabgp.reactor.api.response.json import JSON
+from exabgp.reactor.api.response.text import oneline
 from exabgp.version import json as json_version
 
 if TYPE_CHECKING:
@@ -61,7 +62,7 @@ class V4Text:
 
     def down(self, neighbor: 'Neighbor', reason: str = '') -> str:
         _ = self._v6.down(neighbor, reason)
-        return f'neighbor {neighbor.session.peer_address} down - {reason}\n'
+        return f'neighbor {neighbor.session.peer_address} down - {oneline(reason)}\n'
 
     def shutdown(self) -> str:
         _ = self._v6.shutdown()
@@ -124,7 +125,8 @@ class V4Text:
         negotiated: 'Negotiated',
     ) -> str:
         _ = self._v6.open(neighbor, direction, sent_open, header, body, negotiated)
-        capabilities_str = str(sent_open.capabilities).lower()
+        # the capabilities hold the peer's hostname and software version, free text it chose
+        capabilities_str = oneline(str(sent_open.capabilities).lower())
         header_body = self._header_body(header, body)
         return f'neighbor {neighbor.session.peer_address} {direction} open version {sent_open.version} asn {sent_open.asn} hold_time {sent_open.hold_time} router_id {sent_open.router_id} capabilities [{capabilities_str}]{header_body}\n'
 
@@ -142,23 +144,24 @@ class V4Text:
         prefix = f'neighbor {neighbor.session.peer_address} {direction} update'
         r = f'{prefix} start\n'
 
-        attributes = str(update.attributes)
+        # escaped once, above the loop: it is the same string for every NLRI
+        attributes = oneline(str(update.attributes))
 
         # EOR messages have .nlris directly but no .announces/.withdraws
         if getattr(update, 'IS_EOR', False):
             for nlri in update.nlris:
-                r += f'{prefix} route {nlri.extensive()}\n'
+                r += f'{prefix} route {oneline(nlri.extensive())}\n'
         else:
             # Process announces - get nexthop from RoutedNLRI container
             for routed in update.announces:
                 nlri = routed.nlri
                 nexthop = routed.nexthop
                 nexthop_str = f' next-hop {nexthop}' if nexthop else ''
-                r += f'{prefix} announced {nlri.extensive()}{nexthop_str}{attributes}\n'
+                r += f'{prefix} announced {oneline(nlri.extensive())}{nexthop_str}{attributes}\n'
 
             # Process withdraws
             for nlri in update.withdraws:
-                r += f'{prefix} withdrawn {nlri.extensive()}\n'
+                r += f'{prefix} withdrawn {oneline(nlri.extensive())}\n'
 
         if header or body:
             r += f'{self._header_body(header, body)}\n'
@@ -181,8 +184,10 @@ class V4Text:
     def _operational_advisory(
         self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
     ) -> str:
-        data = operational.data.decode('utf-8') if isinstance(operational.data, bytes) else operational.data
-        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi} advisory "{data}"{self._header_body(header, body)}'
+        # free text the peer chose, and not promised to be UTF-8
+        raw = operational.data
+        data = bytes(raw).decode('utf-8', 'replace') if isinstance(raw, (bytes, bytearray, memoryview)) else raw
+        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi} advisory "{oneline(data)}"{self._header_body(header, body)}'
 
     def _operational_query(
         self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
@@ -213,4 +218,6 @@ class V4Text:
             return self._operational_query(neighbor, direction, operational, header, body)
         if what == 'counter':
             return self._operational_counter(neighbor, direction, operational, header, body)
-        raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
+        # a peer choosing an unregistered type arrives here with category 'unknown'
+        data = hexstring(bytes(getattr(operational, 'data', b'')))
+        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} type {operational.what} data {data}{self._header_body(header, body)}'

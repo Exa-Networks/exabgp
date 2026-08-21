@@ -26,6 +26,7 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.operational import Operational
 from exabgp.configuration.setup import create_minimal_configuration
 from exabgp.reactor.api.response.text import Text, oneline
+from exabgp.reactor.api.response.v4.text import V4Text
 from exabgp.version import version
 
 FORGED = 'a\nneighbor 1.2.3.4 down - forged'
@@ -38,16 +39,26 @@ def neighbor():
     return list(configuration.neighbors.values())[0]
 
 
-@pytest.fixture(scope='module')
-def encoder() -> Text:
-    return Text(version)
+# Response.V4.Text is the ONLY text encoder production builds (reactor/api/processes.py):
+# v6 refuses text outright, so every fixture runs against both, and a fix applied to one
+# and not the other fails here rather than in the field.
+@pytest.fixture(scope='module', params=['v6', 'v4'], ids=['Text', 'V4Text'])
+def encoder(request):
+    return Text(version) if request.param == 'v6' else V4Text(version)
 
 
 def one_line(produced: str) -> None:
-    """What the encoder emits must be a single event, whatever the peer put in it."""
+    """A single event, and nothing in it that a reader has to guess at.
+
+    Checking only for newlines let the NUL and escape parametrisations pass with the fix
+    reverted: they are not line endings, so nothing caught them. Every character which is
+    not printable is escaped, so the assertion is on that.
+    """
     body = produced[:-1] if produced.endswith('\n') else produced
     assert '\n' not in body, f'a peer ended the line early: {produced!r}'
     assert '\r' not in body, f'a peer ended the line early: {produced!r}'
+    unprintable = [c for c in body if not c.isprintable() and c != ' ']
+    assert not unprintable, f'a peer put {unprintable[0]!r} in the stream unescaped: {produced!r}'
 
 
 def _open_with_capability(code: int, value: bytes) -> bytes:
