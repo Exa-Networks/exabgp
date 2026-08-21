@@ -28,10 +28,15 @@ class LocalPreference(Attribute):
         self._packed = self._attribute(packed if packed is not None else pack('!L', localpref))
 
     def __eq__(self, other):
+        if not isinstance(other, LocalPreference):
+            return NotImplemented
         return self.ID == other.ID and self.FLAG == other.FLAG and self.localpref == other.localpref
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def pack(self, negotiated=None):
         return self._packed

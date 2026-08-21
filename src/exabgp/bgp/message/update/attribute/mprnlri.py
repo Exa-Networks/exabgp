@@ -41,10 +41,15 @@ class MPRNLRI(Attribute, Family):
         self.nlris = nlris
 
     def __eq__(self, other):
+        if not isinstance(other, MPRNLRI):
+            return NotImplemented
         return self.ID == other.ID and self.FLAG == other.FLAG and self.nlris == other.nlris
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def packed_attributes(self, negotiated, maximum=Negotiated.FREE_SIZE):
         if not self.nlris:

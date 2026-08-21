@@ -83,12 +83,17 @@ class ASPath(Attribute):
         self._json = ''
 
     def __eq__(self, other):
+        if not isinstance(other, ASPath):
+            return NotImplemented
         return (
             self.ID == other.ID and self.FLAG == other.FLAG and self.ASN4 == other.ASN4 and self.aspath == other.aspath
         )
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     @classmethod
     def _segment(cls, seg_type, values, asn4):

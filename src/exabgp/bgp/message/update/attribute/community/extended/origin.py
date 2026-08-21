@@ -33,6 +33,8 @@ class Origin(ExtendedCommunity):
         return self.community[self.LIMIT : 8]
 
     def __eq__(self, other):
+        if not isinstance(other, Origin):
+            return NotImplemented
         return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)
 
 

@@ -219,11 +219,42 @@ class Attribute:
         length = len(value)
         return length + 3 if length <= ATTR_LENGTH_EXTENDED_MAX else length + 4
 
+    def _comparable(self):
+        """What makes two attributes of the same kind the same attribute
+
+        This branch keeps no packed form on its attributes, so the default reads
+        the rendered value, which every one of them has.  vars(self) is the
+        tempting shortcut and it is wrong: the decoded state holds nested objects
+        which define no __eq__ of their own, so they compare by identity and two
+        attributes decoded from the very same bytes come out unequal.  That fails
+        in the opposite direction to the bug this replaced and re-advertises
+        everything forever.
+
+        A class whose __str__ does not distinguish two different values overrides
+        this.
+        """
+        return (self.ID, self.FLAG, str(self))
+
     def __eq__(self, other):
-        return self.ID == other.ID and self.FLAG == other.FLAG
+        """Same attribute, same value
+
+        This compared the ID and the FLAG and never the value, so any two BGP-LS
+        attributes, prefix SIDs, large or extended community sets compared equal
+        whatever they carried: 40 of the 59 registered classes inherit it.
+        Attributes.sameValuesAs falls through to this for everything its
+        Communities branch does not cover, so "do these two routes carry the same
+        attributes?" was answered by counting them, and a route whose BGP-LS
+        attribute had changed was never re-advertised.
+        """
+        if not isinstance(other, Attribute):
+            return NotImplemented
+        return self._comparable() == other._comparable()
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def __lt__(self, other):
         return self.ID < other.ID
