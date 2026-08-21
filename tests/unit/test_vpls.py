@@ -336,14 +336,26 @@ class TestVPLSEdgeCases:
 
         assert 'length is not consistent' in str(exc_info.value)
 
-    def test_unpack_invalid_length(self) -> None:
-        """Test unpacking a length which is not the VPLS payload size"""
-        invalid = b'\x00\x10' + b'\x00' * 16  # says 16 bytes, VPLS is always 17
+    def test_unpack_shorter_than_the_accessors_read(self) -> None:
+        """A length below the payload size leaves the accessors with nothing to read."""
+        invalid = b'\x00\x10' + b'\x00' * 16  # says 16, and every accessor needs 17
 
         with pytest.raises(Notify) as exc_info:
             VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, None, negotiated=create_negotiated())
 
-        assert 'the only valid value is 17' in str(exc_info.value)
+        assert 'needs at least 17' in str(exc_info.value)
+
+    def test_unpack_longer_than_the_accessors_read(self) -> None:
+        """A longer NLRI is read, not refused.
+
+        Every accessor reads a fixed offset inside the first 17 bytes, so a sender carrying
+        a field we do not know about yet has always decoded correctly here. Demanding the
+        length be exactly 17 refused it, which drops a route on upgrade.
+        """
+        longer = b'\x00\x14' + b'\x00' * 20  # says 20
+
+        nlri, _ = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, longer, Action.ANNOUNCE, None, negotiated=create_negotiated())
+        assert nlri.json()
 
     def test_pack_sets_bottom_of_stack(self) -> None:
         """Test that pack_nlri sets the bottom of stack bit"""

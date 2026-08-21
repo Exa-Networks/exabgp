@@ -168,11 +168,22 @@ def test_tcp_md5_runtime_rejects_a_malformed_base64_key() -> None:
 # ============================================================================
 
 
-def test_as4_capability_must_be_four_bytes() -> None:
-    """RFC 6793 section 3: the value is a 4 octet AS number. A 2 byte value used
-    to be accepted and quietly decoded as a 16 bit ASN."""
-    with pytest.raises(Notify):
-        ASN4.unpack_capability(None, b'\xfd\xe8', None)
+def test_as4_capability_length_is_one_it_can_read() -> None:
+    """RFC 6793 says four octets, and a peer sending two has its session up today.
+
+    Refusing the shorter form would drop that peering on upgrade, so it is read as the ASN
+    it encodes. A length which encodes no ASN at all still has no reading.
+    """
+    from exabgp.bgp.message.open.capability import Capability
+    from exabgp.bgp.message.open.capability.capability import CapabilityCode
+
+    code = CapabilityCode.FOUR_BYTES_ASN
+    klass = Capability.klass(code)
+    for data in (b'\xfd\xe8', b'\x00\x00\xfd\xe8'):
+        assert int(klass.unpack_capability(klass(), data, code)) == 65000
+    for data in (b'', b'\x00', b'\x00\xfd\xe8', b'\x00' * 5):
+        with pytest.raises(Notify):
+            klass.unpack_capability(klass(), data, code)
 
 
 def test_as4_capability_accepts_four_bytes() -> None:

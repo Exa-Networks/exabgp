@@ -37,8 +37,15 @@ class ASN4(Capability, ASN):
     def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         # RFC 5492: duplicate capabilities use the last one received
         # RFC 6793 section 3: the capability value is always a 4 octet AS number
-        if len(data) != ASN.SIZE_4BYTE:
-            raise Notify(2, 0, f'AS4 capability must be {ASN.SIZE_4BYTE} bytes long, got {len(data)}')
+        # RFC 6793 says four octets, and a peer which sends two has its session up today:
+        # refusing it would drop that peering the moment someone upgraded. A shorter value
+        # is read as the ASN it encodes; anything else has no reading at all.
+        if len(data) not in (ASN.SIZE_2BYTE, ASN.SIZE_4BYTE):
+            raise Notify(
+                2,
+                0,
+                f'AS4 capability must be {ASN.SIZE_2BYTE} or {ASN.SIZE_4BYTE} bytes long, got {len(data)}',
+            )
         # ASN4 extends both Capability and ASN, so the result is a Capability
         result: ASN4 = ASN.unpack_asn(data, cls)
         return result

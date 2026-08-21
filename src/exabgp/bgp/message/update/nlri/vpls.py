@@ -222,16 +222,21 @@ class VPLS(NLRI):
         if len(data) < 2:
             raise Notify(3, 10, f'VPLS NLRI too short: need at least 2 bytes, got {len(data)}')
         (length,) = unpack('!H', bytes(data[0:2]))
-        if length != VPLS_PAYLOAD_SIZE:
+        # every accessor reads a fixed offset inside the first VPLS_PAYLOAD_SIZE bytes, so
+        # what has to hold is that they are there. Demanding the length be exactly that
+        # refused a longer NLRI which this decoder has always read correctly, and which a
+        # peer is entitled to send: RFC 4761 gives the layout, not a maximum, and a sender
+        # may carry a field we do not know about yet.
+        if length < VPLS_PAYLOAD_SIZE:
             raise Notify(
                 3,
                 10,
-                'l2vpn vpls length is %d, the only valid value is %d' % (length, VPLS_PAYLOAD_SIZE),
+                'l2vpn vpls length is %d, it needs at least %d' % (length, VPLS_PAYLOAD_SIZE),
             )
         if len(data) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
 
-        # Store wire format directly
-        packed = bytes(data[0 : 2 + length])
+        # only what the accessors read is kept, so what is packed back is what was understood
+        packed = bytes(data[0:2]) + bytes(data[2 : 2 + VPLS_PAYLOAD_SIZE])
         nlri = cls(packed)
         return nlri, data[2 + length :]

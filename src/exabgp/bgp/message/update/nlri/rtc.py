@@ -27,6 +27,12 @@ from exabgp.protocol.family import AFI, SAFI, Family
 T = TypeVar('T', bound='RTC')
 
 
+# RFC 4684 section 4: the RTC prefix covers the origin AS and the route target, so it is
+# between the origin alone and the whole of both
+RTC_PREFIX_MIN_BITS = 32
+RTC_PREFIX_MAX_BITS = 96
+
+
 @NLRI.register(AFI.ipv4, SAFI.rtc)
 class RTC(NLRI):
     """RTC (Route Target Constraint) NLRI using packed-bytes-first pattern.
@@ -177,8 +183,15 @@ class RTC(NLRI):
             nlri = cls(bytes(data[0:1]))
             return nlri, data[1:]
 
-        if length < 8 * 4:
-            raise Notify(3, 10, 'incorrect RTC length: %d (should be >=32,<=96)' % length)
+        # RFC 4684 section 4: the prefix is 32 to 96 bits, the origin AS and then as much of
+        # the route target as the sender chose to carry. The message has always advertised
+        # the upper bound; it was never checked, so a length of 200 got past it.
+        if not RTC_PREFIX_MIN_BITS <= length <= RTC_PREFIX_MAX_BITS:
+            raise Notify(
+                3,
+                10,
+                'incorrect RTC length: %d (should be >=%d,<=%d)' % (length, RTC_PREFIX_MIN_BITS, RTC_PREFIX_MAX_BITS),
+            )
 
         if len(data) < cls.PACKED_LENGTH_FULL:
             raise Notify(

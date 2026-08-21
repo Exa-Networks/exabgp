@@ -156,13 +156,18 @@ class PREFIXv4(BGPLS):
             elif tlv_type not in [TLV_OSPF_ROUTE_TYPE, TLV_IP_REACHABILITY]:
                 log.critical(lazymsg('unknown prefix v4 TLV {tlv_type}', tlv_type=tlv_type))
 
-        # both are mandatory (RFC 7752 section 3.2), and the accessors assume they are there
-        for mandatory, mandatory_name in (
-            (TLV_LOCAL_NODE_DESC, 'Local Node Descriptors'),
-            (TLV_IP_REACHABILITY, 'IP Reachability Information'),
-        ):
-            if mandatory not in seen:
-                raise Notify(3, 10, f'BGP-LS {cls.NAME} NLRI is missing the {mandatory_name} TLV')
+        # RFC 7752 section 3.2 makes both mandatory, but only one of them is load bearing
+        # here: without the reachability TLV the accessors had nothing to read and json()
+        # raised AssertionError, which is why it is checked. The Local Node Descriptors are
+        # not read by anything on this path, and a prefix NLRI without them decoded and
+        # rendered correctly before, so refusing it now would drop a route on upgrade.
+        if TLV_IP_REACHABILITY not in seen:
+            raise Notify(3, 10, f'BGP-LS {cls.NAME} NLRI is missing the IP Reachability Information TLV')
+        if TLV_LOCAL_NODE_DESC not in seen:
+            log.debug(
+                lazymsg('bgpls.prefix.missing type=local-node-descriptors nlri={name}', name=cls.NAME),
+                'parser',
+            )
 
         # Store complete wire format including header
         return cls(data, route_d=rd)
