@@ -21,6 +21,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import json
 from struct import unpack
 from collections.abc import Callable, Iterator, MutableMapping
 from typing import TYPE_CHECKING, Any, ClassVar, Generator, cast
@@ -171,16 +172,16 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 # For generic mode, output hex; otherwise use str() which may be human-readable
                 if generic and hasattr(attribute, '_packed'):
                     hex_value = '0x' + attribute._packed.hex()
-                    yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, hex_value)
+                    yield '"attribute-0x{:02X}-0x{:02X}": {}'.format(code, attribute.FLAG, json.dumps(hex_value))
                 else:
-                    yield '"attribute-0x{:02X}-0x{:02X}": "{}"'.format(code, attribute.FLAG, str(attribute))
+                    yield '"attribute-0x{:02X}-0x{:02X}": {}'.format(code, attribute.FLAG, json.dumps(str(attribute)))
                 continue
 
             how, _, name, _, presentation = self.representation[code]
             if how == 'boolean':
                 yield '"{}": {}'.format(name, 'true' if self.has(code) else 'false')
             elif how == 'string':
-                yield '"{}": "{}"'.format(name, presentation % str(attribute))
+                yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute)))
             elif how == 'list':
                 json_value = attribute.json()
                 if json_value != '{}':  # Skip empty lists (e.g., empty AS_PATH)
@@ -191,7 +192,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                     if value:
                         yield '"{}": {}'.format(n, presentation % value)
             elif how == 'inet':
-                yield '"{}": "{}"'.format(name, presentation % str(attribute))
+                yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute)))
             # Should never be ran
             else:
                 yield '"{}": {}'.format(name, presentation % str(attribute))
