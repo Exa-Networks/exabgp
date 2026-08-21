@@ -117,7 +117,6 @@ class Message:
     HEADER_LEN: ClassVar[int] = 19
 
     registered_message: ClassVar[dict[int, Type[Message]]] = {}
-    klass_unknown: ClassVar[Callable[[int, Buffer, Negotiated], Message]]
 
     # TYPE attribute set by subclasses
     TYPE: ClassVar[bytes]
@@ -221,7 +220,14 @@ class Message:
         """
         if message in cls.registered_message:
             return cls.klass(message).unpack_message(data, negotiated)
-        return cls.klass_unknown(message, data, negotiated)
+        # klass_unknown was declared here and bound by unknown.py, which nothing imports,
+        # so this line raised AttributeError for every unregistered code.  The reactor's
+        # catch-all laundered it into Notify(1, 0, 'can not decode update message of type
+        # 252'), which names the wrong error and the wrong message.  RFC 4271 6.1: an
+        # unrecognised Type field is Bad Message Type
+        from exabgp.bgp.message.notification import Notify
+
+        raise Notify(1, 3, f'unknown message type {message}')
 
     @classmethod
     def code_from_name(cls, name: str) -> _MessageCode:
