@@ -23,9 +23,18 @@ class HostName(Capability):
     ID = Capability.CODE.HOSTNAME
     HOSTNAME_MAX_LEN = 64
 
-    def __init__(self, host_name: str = host(), domain_name: str = domain()) -> None:
-        self.host_name: str = host_name
-        self.domain_name: str = domain_name
+    def __init__(self, host_name: str | None = None, domain_name: str | None = None) -> None:
+        """The names default to this host's, looked up when one is built.
+
+        They used to be default *arguments*, so socket.gethostname() and socket.getfqdn()
+        ran when this module was imported: 129ms on every start, a name frozen at import
+        rather than read when it is used, and a resolver initialised in every process which
+        merely imports exabgp. On macOS that last one makes the process unsafe to fork,
+        which is why every mutmut worker died with SIGSEGV and mutation testing has never
+        produced a verdict on this tree.
+        """
+        self.host_name: str = host() if host_name is None else host_name
+        self.domain_name: str = domain() if domain_name is None else domain_name
 
     def __str__(self) -> str:
         return 'Hostname({} {})'.format(self.host_name, self.domain_name)

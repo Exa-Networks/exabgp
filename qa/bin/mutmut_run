@@ -33,10 +33,47 @@ ROOT = Path(__file__).parent.parent.parent
 # the tests are noisy under mutmut, and the daemon logs would drown the report
 ENVIRONMENT = {'exabgp_log_enable': 'false'}
 
+# mutmut names each worker with setproctitle, whose darwin_set_process_title calls into
+# CoreFoundation through CFBundleGetFunctionPointerForName. On recent macOS that segfaults,
+# so every worker died with SIGSEGV, every mutant came back as mutmut's 💥 (which is its
+# glyph for exactly that), and mutation testing has never produced a verdict on this tree.
+# It also left a crash report on the operator's screen per worker.
+#
+# ExaBGP does not use setproctitle: it arrives only as a dependency of mutmut. A no-op shim
+# ahead of it on the path costs nothing but the process name in ps, which matters to nobody
+# here, and it is the only part of the crash we can reach from this side.
+SHIM = """def setproctitle(title):
+    # setproctitle segfaults on macOS; see qa/bin/mutmut_run for why this shim exists
+    return None
+
+
+def getproctitle():
+    return ''
+
+
+def setthreadtitle(title):
+    return None
+
+
+def getthreadtitle():
+    return ''
+"""
+
+
+def shim_directory() -> Path:
+    """A directory holding the no-op setproctitle, created once per run."""
+    directory = ROOT / '.mutmut-shim'
+    directory.mkdir(exist_ok=True)
+    (directory / 'setproctitle.py').write_text(SHIM)
+    return directory
+
 
 def mutmut(arguments: list[str]) -> int:
     environment = dict(os.environ)
     environment.update(ENVIRONMENT)
+    shim = shim_directory()
+    existing = environment.get('PYTHONPATH', '')
+    environment['PYTHONPATH'] = f'{shim}{os.pathsep}{existing}' if existing else str(shim)
     command = ['uv', 'run', 'mutmut', *arguments]
     print('running', ' '.join(command))
     return subprocess.call(command, cwd=ROOT, env=environment)
