@@ -5,6 +5,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from copy import deepcopy
+
 
 # ===================================================================== PathInfo
 # RFC draft-ietf-idr-add-paths-09
@@ -39,13 +41,26 @@ class PathInfo:
         """
         if self is PathInfo.NOPATH:
             return self
-        return PathInfo(packed=self.path_info)
+        # The state is copied and the class comes from type(self), so a subclass
+        # copies as itself and an attribute added later travels without anyone
+        # revisiting this method. Naming the attributes here is how the defect
+        # this guards against was introduced in the first place: a general
+        # mechanism, the default which copies __dict__, traded for a specific one
+        # while fixing a bug that a specific mechanism caused.
+        duplicate = type(self).__new__(type(self))
+        duplicate.__dict__.update(self.__dict__)
+        return duplicate
 
     def __deepcopy__(self, memo=None):
         # copy.deepcopy is the one the RIB actually uses
         if self is PathInfo.NOPATH:
             return self
-        return PathInfo(packed=self.path_info)
+        duplicate = type(self).__new__(type(self))
+        # the values are deepcopied rather than shared: path_info is immutable
+        # bytes today, and a mutable attribute added later would otherwise be
+        # shared between a route and its copy
+        duplicate.__dict__.update(deepcopy(self.__dict__, memo))
+        return duplicate
 
     def __eq__(self, other):
         if not isinstance(other, PathInfo):
