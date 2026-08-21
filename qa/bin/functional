@@ -813,6 +813,10 @@ class Tests:
         self._daemons_count: int = 0
         self._clients_count: int = 0
         self._retries_done: bool = False
+        # which tests needed a second run to pass.  A retry rewrites the test state to
+        # SUCCESS, so without this the summary reports a clean suite and a flake is
+        # indistinguishable from a test which never wobbled
+        self._retried: list[str] = []
 
     def new(self, name: str) -> Record:
         test = self.klass.new(name)
@@ -1412,7 +1416,8 @@ class Tests:
         # Quiet mode: single line on success, verbose on failure
         if quiet and not all_failed:
             success_rate = (len(passed) / total_run) * 100 if total_run > 0 else 0
-            flush(f'{green()}passed{reset()} {len(passed)}/{total_run} ({success_rate:.1f}%)')
+            retried = f' {yellow()}({len(self._retried)} needed a retry: {", ".join(self._retried)}){reset()}' if self._retried else ''
+            flush(f'{green()}passed{reset()} {len(passed)}/{total_run} ({success_rate:.1f}%){retried}')
             return
 
         flush()
@@ -1725,6 +1730,8 @@ class EncodingTests(Tests):
         failed_tests = [t for t in self.registered() if t.state in (State.FAIL, State.TIMEOUT)]
         if not failed_tests:
             return True
+
+        self._retried.extend(test.nick for test in failed_tests)
 
         if not quiet:
             flush()
