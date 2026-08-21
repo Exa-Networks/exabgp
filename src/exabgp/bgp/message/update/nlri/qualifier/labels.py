@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from exabgp.util.types import Buffer
 
@@ -139,6 +139,32 @@ class Labels:
             if raw & 0x001:  # bottom-of-stack bit
                 break
         return cls(b''.join(packed_parts))
+
+    def __copy__(self) -> 'Labels':
+        """Preserve the NOLABEL singleton across a copy.
+
+        NOLABEL is compared with `is` by callers, so a copy which is a different object
+        makes a copied route stop recognising it.  Session 5.0 hit this on PathInfo.NOPATH,
+        where the identity test sat inside index(), so a deep copied route indexed
+        differently from the route it was copied from and the RIB lost it on withdraw.
+        """
+        if self is Labels.NOLABEL:
+            return self
+        new = Labels.__new__(Labels)
+        new._packed = self._packed
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'Labels':
+        """Preserve the NOLABEL singleton across a deep copy.
+
+        _packed is bytes and immutable, so there is nothing under it to copy.
+        """
+        if self is Labels.NOLABEL:
+            return self
+        new = Labels.__new__(Labels)
+        memo[id(self)] = new
+        new._packed = self._packed
+        return new
 
 
 Labels.NOLABEL = Labels(b'')

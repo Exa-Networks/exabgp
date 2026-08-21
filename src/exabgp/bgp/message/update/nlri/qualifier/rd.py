@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from exabgp.util import hexstring
 from exabgp.util.types import Buffer
@@ -110,6 +110,32 @@ class RouteDistinguisher:
             return cls(distinguisher)
         except ValueError:
             raise ValueError('invalid route-distinguisher {}:{}'.format(prefix, suffix)) from None
+
+    def __copy__(self) -> 'RouteDistinguisher':
+        """Preserve the NORD singleton across a copy.
+
+        NORD is compared with `is` by callers, so a copy which is a different object
+        makes a copied route stop recognising it.  Session 5.0 hit this on PathInfo.NOPATH,
+        where the identity test sat inside index(), so a deep copied route indexed
+        differently from the route it was copied from and the RIB lost it on withdraw.
+        """
+        if self is RouteDistinguisher.NORD:
+            return self
+        new = RouteDistinguisher.__new__(RouteDistinguisher)
+        new._packed = self._packed
+        return new
+
+    def __deepcopy__(self, memo: dict[Any, Any]) -> 'RouteDistinguisher':
+        """Preserve the NORD singleton across a deep copy.
+
+        _packed is bytes and immutable, so there is nothing under it to copy.
+        """
+        if self is RouteDistinguisher.NORD:
+            return self
+        new = RouteDistinguisher.__new__(RouteDistinguisher)
+        memo[id(self)] = new
+        new._packed = self._packed
+        return new
 
 
 RouteDistinguisher.NORD = RouteDistinguisher(b'')
