@@ -28,6 +28,8 @@ from exabgp.protocol.family import AFI, SAFI
 # de-duplicated: the registry lists (ipv4, multicast) twice
 FAMILIES = sorted(set(NLRI.known_families()), key=lambda family: (int(family[0]), int(family[1])))
 
+MIN_FAMILIES = 23  # a ratchet: raise it as families are added, never lower it
+
 FAMILY_IDS = [f'{afi}/{safi}' for afi, safi in FAMILIES]
 
 
@@ -152,3 +154,21 @@ def test_decoding_is_idempotent(family: tuple[AFI, SAFI], data: bytes) -> None:
     again = decode(afi, safi, packed)
     assert again is not None, f'{afi}/{safi} refuses to decode what it just packed: {packed.hex()}'
     assert again.index() == nlri.index(), f'{afi}/{safi} is not stable across a pack and unpack cycle'
+
+
+def test_the_registry_this_file_parametrises_from_is_whole() -> None:
+    """A parametrised sweep does not FAIL on a thin registry, it SHRINKS.
+
+    This one parametrises over NLRI.known_families(), which reads registered_families
+    and NOT registered_nlri: thinning the dict left the parametrisation at full width, so
+    the first version of the experiment reported this file clean for the wrong reason.
+
+    Session 5.0 found this shape on their branch: 2060 passing tests became 296 passing
+    tests, still green, and a summary line reads the same either way.  It is the import
+    order failure from the top of the list, so it is the one which actually happens.
+
+    Measured here by thinning the registries to three entries and counting: 104 tests became 41, all green.
+    """
+    assert len(FAMILIES) >= MIN_FAMILIES, (
+        f'only {len(FAMILIES)} families are registered, so this file sweeps a fraction of them'
+    )

@@ -44,6 +44,8 @@ SIZES = list(range(0, 20)) + [24, 32, 64, 255]
 IPV4_PREFIX = bytes([24, 10, 0, 0])
 
 CODES = sorted({code for code, flag in Attribute.registered_attributes})
+
+MIN_ATTRIBUTE_CODES = 22  # a ratchet: raise it as attributes are registered, never lower it
 IDS = [f'{code}-{Attribute.CODE.name(code)}' for code in CODES]
 
 
@@ -136,3 +138,19 @@ def test_a_next_hop_which_is_unset_does_not_become_an_address() -> None:
     parsed = Update.unpack_message(update_with(0x50, int(Attribute.CODE.NEXT_HOP), 1), session()).parse(session())
 
     assert parsed is not None
+
+
+def test_the_registry_this_file_parametrises_from_is_whole() -> None:
+    """A parametrised sweep does not fail on a thin registry, it shrinks.
+
+    Both tests here are per attribute code, and the codes come from the registry, so a
+    registry holding three of them runs three parameters and reports success.  45 tests
+    became 7 when the registries were thinned to three entries, and the one failure was a
+    seed breaking rather than this file noticing.
+
+    That is the import order failure at the top of the list, and a summary line reads the
+    same at 45 as at 7.
+    """
+    assert len(CODES) >= MIN_ATTRIBUTE_CODES, (
+        f'only {len(CODES)} attribute codes are registered, so this file sweeps a fraction of them'
+    )

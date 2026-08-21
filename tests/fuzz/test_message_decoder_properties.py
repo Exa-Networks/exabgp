@@ -43,6 +43,10 @@ ATTRIBUTE_IDS = [f'{aid}-{Attribute.registered_attributes[(aid, flag)].__name__}
 LSID_CODES = sorted(LinkState.registered_lsids)
 LSID_IDS = [f'{code}-{LinkState.registered_lsids[code].__name__}' for code in LSID_CODES]
 
+MIN_CAPABILITIES = 16
+MIN_ATTRIBUTES = 22
+MIN_LSIDS = 47  # ratchets: raise them as decoders are registered, never lower one
+
 
 def parses(fragment: str) -> None:
     """A json() fragment must be readable by the API consumer it is written to.
@@ -164,3 +168,20 @@ def test_bgpls_tlv_text_cannot_escape_its_json_string(code: int, payload: str) -
     except Notify:
         return
     representations(decoded)
+
+
+def test_the_registry_this_file_parametrises_from_is_whole() -> None:
+    """A parametrised sweep does not FAIL on a thin registry, it SHRINKS.
+
+    Three registries drive this file, so all three have to be whole for it to mean what
+    its name says.
+
+    Session 5.0 found this shape on their branch: 2060 passing tests became 296 passing
+    tests, still green, and a summary line reads the same either way.  It is the import
+    order failure from the top of the list, so it is the one which actually happens.
+
+    Measured here by thinning the registries to three entries and counting: 148 tests became 15, of which 9 were green.
+    """
+    assert len(CAPABILITY_CODES) >= MIN_CAPABILITIES, f'only {len(CAPABILITY_CODES)} capabilities registered'
+    assert len(ATTRIBUTE_KEYS) >= MIN_ATTRIBUTES, f'only {len(ATTRIBUTE_KEYS)} attributes registered'
+    assert len(LSID_CODES) >= MIN_LSIDS, f'only {len(LSID_CODES)} BGP-LS TLVs registered'
