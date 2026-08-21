@@ -77,3 +77,50 @@ class TestExtendedCommunityHexWidth:
             # sixteen digit format
             assert rendered[2:].lower() == wire
             assert len(rendered) == 2 + 40
+
+
+class TestJsonNumberDetection:
+    """The helper deciding whether to quote a value must not use json.loads()
+
+    json.loads accepts NaN, Infinity and -Infinity, none of which are JSON per
+    RFC 8259, and it accepts true, which an isinstance check against int does
+    not reject because bool is a subclass of int. Any of those emitted unquoted
+    is a line a strict consumer refuses.
+
+    No attribute renders those today, so nothing else in the suite exercises
+    this. It is tested directly because it is a trap for the next one added.
+    """
+
+    @pytest.mark.parametrize('value', ['100', '-5', '0', '-0', '  5  '])
+    def test_decimal_integers_stay_unquoted(self, value) -> None:
+        from exabgp.bgp.message.update.attribute.attributes import _is_json_number
+
+        assert _is_json_number(value)
+
+    @pytest.mark.parametrize(
+        'value',
+        [
+            'NaN',  # json.loads accepts it, JSON does not
+            'Infinity',
+            '-Infinity',
+            'true',  # bool is a subclass of int
+            'null',
+            '1e400',  # becomes inf
+            '0x0a',  # what AIGP renders
+            '010',  # redundant leading zero
+            '00',
+            '1.5',
+            '1_000',
+            '',
+            '"7"',
+        ],
+    )
+    def test_everything_else_is_quoted(self, value) -> None:
+        from exabgp.bgp.message.update.attribute.attributes import _is_json_number
+
+        assert not _is_json_number(value)
+
+    def test_a_non_string_is_quoted(self) -> None:
+        from exabgp.bgp.message.update.attribute.attributes import _is_json_number
+
+        assert not _is_json_number(None)
