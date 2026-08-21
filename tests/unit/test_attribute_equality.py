@@ -213,6 +213,7 @@ def test_no_registered_attribute_calls_two_different_values_equal() -> None:
     assert not blind, f'these classes compare two different values as equal: {blind}'
 
 
+@pytest.mark.registry_floor
 def test_the_sweep_above_reaches_the_classes_it_claims_to() -> None:
     """A sweep which builds nothing reports no failures, which is the trap this series keeps hitting.
 

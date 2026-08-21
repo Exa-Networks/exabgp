@@ -85,6 +85,7 @@ DEFAULT_TIMES: dict[str, int] = {
     'type-ignore': 1,
     'tiger-style': 2,
     'tests-run': 6,
+    'sweep-floors': 60,
 }
 
 CACHE_FILE = Path.home() / '.cache' / 'exabgp' / 'test_times.json'
@@ -173,6 +174,7 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     'type-ignore': './qa/bin/check_type_ignores',
     'tiger-style': './qa/bin/check_tiger_style',
     'tests-run': './qa/bin/check_tests_run',
+    'sweep-floors': './qa/bin/check_sweep_floors',
     'documentation': './qa/bin/check_documentation',
 }
 
@@ -197,6 +199,7 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'type-ignore': 'Prohibited # type: comments check',
     'tiger-style': 'Tiger style check',
     'tests-run': 'Every test file is collected',
+    'sweep-floors': 'No sweep shrinks silently',
     'documentation': 'Documentation matches the code',
 }
 
@@ -222,6 +225,7 @@ TEST_ORDER = [
     'type-ignore',
     'tiger-style',
     'tests-run',
+    'sweep-floors',
     'documentation',
 ]
 

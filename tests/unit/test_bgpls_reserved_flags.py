@@ -120,6 +120,7 @@ def test_the_defined_flags_still_reach_the_api(code: int) -> None:
     )
 
 
+@pytest.mark.registry_floor
 def test_the_sweep_reaches_the_tlvs_it_claims_to() -> None:
     """A sweep over an empty registry reports no failures."""
     found = flag_classes()

@@ -159,6 +159,7 @@ def test_the_sweep_found_something_to_check() -> None:
     assert len(CARRIED) >= MIN_SINGLETONS_COMPARED, f'only {len(CARRIED)} singletons are covered'
 
 
+@pytest.mark.registry_floor
 def test_the_source_walk_actually_resolves_something() -> None:
     """The walk itself, held to the same standard as everything else this series checked.
 

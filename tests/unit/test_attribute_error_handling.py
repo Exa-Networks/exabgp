@@ -102,6 +102,7 @@ def test_no_attribute_leaves_the_parser_as_a_raw_exception(code: int) -> None:
 
 
 @pytest.mark.parametrize('code', CODES, ids=IDS)
+@pytest.mark.registry_floor
 def test_the_sweep_reaches_the_attribute_it_names(code: int) -> None:
     """A decoder no input reaches reports no failures.
 
@@ -140,6 +141,7 @@ def test_a_next_hop_which_is_unset_does_not_become_an_address() -> None:
     assert parsed is not None
 
 
+@pytest.mark.registry_floor
 def test_the_registry_this_file_parametrises_from_is_whole() -> None:
     """A parametrised sweep does not fail on a thin registry, it shrinks.
 

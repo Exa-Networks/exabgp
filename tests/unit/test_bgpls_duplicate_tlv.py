@@ -197,6 +197,7 @@ def test_no_tlv_can_make_the_api_emit_the_same_key_twice() -> None:
     assert not duplicated, f'these TLVs emit a duplicate JSON key when sent twice: {duplicated}'
 
 
+@pytest.mark.registry_floor
 def test_the_registry_sweep_had_a_registry_to_sweep() -> None:
     """test_no_tlv_can_make_the_api_emit_the_same_key_twice walks registered_lsids.
 

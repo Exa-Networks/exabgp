@@ -170,6 +170,7 @@ def test_bgpls_tlv_text_cannot_escape_its_json_string(code: int, payload: str) -
     representations(decoded)
 
 
+@pytest.mark.registry_floor
 def test_the_registry_this_file_parametrises_from_is_whole() -> None:
     """A parametrised sweep does not FAIL on a thin registry, it SHRINKS.
 

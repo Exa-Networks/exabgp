@@ -74,3 +74,10 @@ jobs:
       - name: every test file is collected
         run: |
           uv run ./qa/bin/check_tests_run
+
+      # A sweep parametrised from a registry does not fail when the registry is half
+      # filled by import order, it runs fewer tests and stays green. 104 and 41 read the
+      # same in a summary line.
+      - name: no sweep shrinks silently
+        run: |
+          uv run ./qa/bin/check_sweep_floors

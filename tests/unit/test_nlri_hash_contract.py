@@ -151,6 +151,7 @@ def test_no_registered_nlri_defines_equality_without_hashing() -> None:
     assert not unhashable, f'these define __eq__ and lose __hash__: {unhashable}'
 
 
+@pytest.mark.registry_floor
 def test_the_registry_sweep_had_a_registry_to_sweep() -> None:
     """test_no_registered_nlri_defines_equality_without_hashing walks registered_nlri.
 

@@ -219,6 +219,7 @@ def test_no_tlv_renders_something_its_content_does_not_hold() -> None:
     assert not mismatched, f'these TLVs render something their content does not hold: {mismatched}'
 
 
+@pytest.mark.registry_floor
 def test_the_sweeps_in_this_file_had_something_to_sweep() -> None:
     """The registries fill by import side effect, and a half filled one sweeps clean.
 

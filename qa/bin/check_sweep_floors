@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""Fail when a test file's coverage can shrink without anything going red.
+
+The registries fill by import side effect, and a test which parametrises from one does not
+FAIL when the registry is half filled: it runs fewer parameters and passes. 104 green tests
+and 41 green tests read identically in a summary line, and a half filled registry is the
+failure which actually happens, from import order.
+
+This runs each registry reading test file twice, once normally and once with every registry
+thinned to a few entries, and compares the number of tests COLLECTED. Comparing counts
+rather than looking for failures is the whole idea, and it came from a pair of files which
+behave identically under thinning and mean opposite things:
+
+    a file whose seeds stop decoding fails, and has told you about its seeds
+    a file whose count shrinks and whose FLOOR does not fire is the finding
+
+Both halves are needed.  Counting alone flags a file which already has a floor, because
+the parametrisation shrinks at collection time whatever the floor does at run time.  And
+the second half has to look for the FLOOR failing rather than for any failure: a broken
+seed is a red which says nothing about coverage, and accepting it excuses the gap.
+Floors carry @pytest.mark.registry_floor so this can ask for them by name.
+
+A file which shrinks needs an assertion that its registry is whole. A file whose count is
+unchanged is either seed driven or already floored, and needs nothing.
+
+Two ways this check itself went wrong before it worked, both recorded here rather than
+remembered:
+
+  the thinner has to reach the registry the file actually reads. known_families() returns
+  registered_families, a different collection from registered_nlri, so thinning the dict
+  left a family parametrisation at full width and the file looked immune
+
+  the thinner has to run after the registries are filled. Session 5.0 thinned at
+  pytest_configure, before the file under test had imported anything, so it removed nothing
+  and reported every file sound. The floor is per registry rather than one number: the
+  message registry holds six when complete, fewer than others hold when broken
+
+The second is why FILL_FLOOR exists: a thinner which cannot thin fails loudly instead of
+reporting everything clean.
+"""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+TESTS = ROOT / 'tests'
+
+KEEP = 3  # what a half filled registry looks like, rather than an empty one
+# the thinner must REMOVE something from every registry, or it is reporting on a run it
+# did not perturb.  A single count for all of them is wrong: registered_message holds
+# six when it is complete, which is fewer than some registries hold when broken.
+FILL_FLOOR = KEEP + 1
+MAX_REPORTED = 40
+
+TESTS_FAILED = 1  # pytest: some test failed.  5 is no tests collected, which is not the same
+
+REGISTRY_NAMES = (
+    'registered_lsids',
+    'registered_attributes',
+    'registered_nlri',
+    'registered_families',
+    'registered_capability',
+    'registered_message',
+)
+
+THINNER = """
+import importlib, pkgutil
+import exabgp.bgp.message.update.attribute as package
+for _finder, _name, _is_pkg in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
+    try:
+        importlib.import_module(_name)
+    except Exception:
+        pass
+import exabgp.reactor.protocol  # noqa: F401  fills the capability and message registries
+
+from exabgp.bgp.message import Message
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.nlri import NLRI
+
+KEEP = {keep}
+FILL_FLOOR = {floor}
+
+_registries = [
+    ('registered_lsids', LinkState.registered_lsids),
+    ('registered_attributes', Attribute.registered_attributes),
+    ('registered_nlri', NLRI.registered_nlri),
+    ('registered_capability', Capability.registered_capability),
+    ('registered_message', Message.registered_message),
+]
+
+for _label, _registry in _registries:
+    if len(_registry) < FILL_FLOOR:
+        raise SystemExit(f'thinner cannot thin: {{_label}} holds {{len(_registry)}} before thinning')
+    _kept = dict(list(_registry.items())[:KEEP])
+    _registry.clear()
+    _registry.update(_kept)
+
+# a list rather than a dict, and read by known_families() rather than through
+# registered_nlri: a separate collection behind what looks like one dependency
+if len(NLRI.registered_families) < FILL_FLOOR:
+    raise SystemExit('thinner cannot thin: registered_families is already short')
+_families = list(NLRI.registered_families)[:KEEP]
+NLRI.registered_families.clear()
+NLRI.registered_families.extend(_families)
+
+import pytest
+
+raise SystemExit(pytest.main({args!r}))
+"""
+
+
+def reads_a_registry(path: Path) -> bool:
+    text = path.read_text()
+    return any(name in text for name in REGISTRY_NAMES) or 'known_families' in text
+
+
+def run(args: list[str], thinned: bool) -> subprocess.CompletedProcess[str]:
+    if thinned:
+        program = THINNER.format(keep=KEEP, floor=FILL_FLOOR, args=args)
+        return subprocess.run([sys.executable, '-c', program], capture_output=True, text=True, cwd=ROOT)
+    return subprocess.run([sys.executable, '-m', 'pytest', *args], capture_output=True, text=True, cwd=ROOT)
+
+
+def collected(args: list[str], thinned: bool) -> int | None:
+    """How many tests this file offers, with the registries whole or thinned."""
+    result = run(args, thinned)
+    if 'thinner cannot thin' in result.stdout + result.stderr:
+        print(result.stdout.strip() or result.stderr.strip())
+        return None
+    for line in reversed(result.stdout.splitlines()):
+        if 'test' in line and 'collected' in line:
+            for word in line.split():
+                if word.isdigit():
+                    return int(word)
+    return 0
+
+
+def notices(relative: str) -> bool:
+    """Does this file have a floor which FAILS when the registry is thinned?
+
+    Not "does anything fail".  A file whose seeds stop decoding fails too, and it has told
+    you about its seeds, so accepting any red excuses a missing floor with collateral
+    damage.  Measured: with the floor removed from test_attribute_error_handling, a version
+    of this check which accepted any failure reported the whole tree clean, because another
+    test in that file broke first.
+
+    So the floors carry a marker and only they are run.  The marker is also what makes this
+    cheap: one test per file rather than a Hypothesis sweep per file.
+    """
+    args = [relative, '-q', '-m', 'registry_floor', '-p', 'no:randomly', '-p', 'no:cacheprovider']
+    result = run(args, thinned=True)
+
+    # pytest's exit codes, read as codes.  A file with no floor at all exits 5, NO TESTS
+    # COLLECTED, which `returncode != 0` reads as "something failed, so it noticed": the
+    # first version of this passed every file whose floor I deleted.  Checking a string
+    # instead of the code is what put it there, one message after session 5.0 described
+    # reading `tail`'s status instead of their gate's.
+    return result.returncode == TESTS_FAILED
+
+
+def main() -> int:
+    candidates = sorted(path for path in TESTS.rglob('test_*.py') if reads_a_registry(path))
+    if not candidates:
+        print('no test file reads a registry, which cannot be right')
+        return 1
+
+    shrinking = []
+    for path in candidates:
+        relative = path.relative_to(ROOT)
+        args = [str(relative), '-q', '--collect-only', '-p', 'no:randomly', '-p', 'no:cacheprovider']
+        whole = collected(args, thinned=False)
+        thin = collected(args, thinned=True)
+        if thin is None:
+            return 1
+        if whole and thin < whole and not notices(str(relative)):
+            shrinking.append((relative, whole, thin))
+
+    if not shrinking:
+        print(f'{len(candidates)} registry reading files, none can shrink silently')
+        return 0
+
+    print(f'{len(shrinking)} file(s) run fewer tests on a half filled registry and do not say so:')
+    for relative, whole, thin in shrinking[:MAX_REPORTED]:
+        print(f'  {relative}  {whole} -> {thin}')
+    print()
+    print('add an assertion that the registry it parametrises from is whole.')
+    return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

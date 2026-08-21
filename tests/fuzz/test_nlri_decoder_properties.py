@@ -156,6 +156,7 @@ def test_decoding_is_idempotent(family: tuple[AFI, SAFI], data: bytes) -> None:
     assert again.index() == nlri.index(), f'{afi}/{safi} is not stable across a pack and unpack cycle'
 
 
+@pytest.mark.registry_floor
 def test_the_registry_this_file_parametrises_from_is_whole() -> None:
     """A parametrised sweep does not FAIL on a thin registry, it SHRINKS.
 

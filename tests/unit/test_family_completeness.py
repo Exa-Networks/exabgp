@@ -13,6 +13,8 @@ Found by the session working the 5.0 branch, sweeping the adj-rib-out.
 
 from __future__ import annotations
 
+import pytest
+
 import exabgp.bgp.message.update.attribute  # noqa: F401  registers every decoder
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import Family
@@ -38,6 +40,7 @@ def test_every_sized_family_has_a_decoder() -> None:
     assert not orphan, f'Family.size describes families with no registered decoder: {orphan}'
 
 
+@pytest.mark.registry_floor
 def test_the_family_tables_are_populated_at_all() -> None:
     """Both tests here assert a table contains no gaps, which an empty table satisfies.
 
