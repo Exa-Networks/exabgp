@@ -50,11 +50,26 @@ NOTHING = _NOTHING()
 
 
 def _is_json_number(value):
-    """Whether this rendering is already a JSON number and must not be quoted"""
-    try:
-        return isinstance(json.loads(value), (int, float))
-    except (ValueError, TypeError):
+    """Whether this rendering is already a JSON number and must not be quoted
+
+    Deliberately not json.loads(): it accepts NaN, Infinity and -Infinity, none
+    of which are JSON per RFC 8259, and it accepts true, which an isinstance
+    check against int does not reject because bool is a subclass of int. Any of
+    those emitted unquoted is a line a strict consumer refuses.
+
+    A decimal integer, optionally negative, with no redundant leading zero. That
+    is what the attributes taking this branch render, and anything else is safer
+    quoted than guessed at.
+    """
+    if not isinstance(value, str):
         return False
+    text = value.strip()
+    if not text:
+        return False
+    digits = text[1:] if text[0] == '-' else text
+    if not digits.isdigit():
+        return False
+    return digits == '0' or digits[0] != '0'
 
 
 class Attributes(dict):
