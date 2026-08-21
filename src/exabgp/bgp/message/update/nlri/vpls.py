@@ -121,8 +121,11 @@ class VPLS(NLRI):
         if len(bgp) < VPLS_HEADER_SIZE:
             raise Notify(3, 10, 'not enough data to extract the length of the l2vpn vpls NLRI')
         (length,) = unpack('!H', bgp[0:2])
-        if length != VPLS_PAYLOAD_SIZE:
-            raise Notify(3, 10, 'l2vpn vpls length is %d, the only valid value is %d' % (length, VPLS_PAYLOAD_SIZE))
+        # a MINIMUM, not an exact length: this release reads the seventeen bytes it
+        # knows and ignores anything behind them, so a longer NLRI decodes today
+        # and refusing it would drop a route on upgrade
+        if length < VPLS_PAYLOAD_SIZE:
+            raise Notify(3, 10, 'l2vpn vpls length is %d, it must be at least %d' % (length, VPLS_PAYLOAD_SIZE))
         if len(bgp) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
         rd = RouteDistinguisher(bgp[2:10])

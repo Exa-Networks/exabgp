@@ -396,14 +396,26 @@ class TestVPLSEdgeCases:
 
         assert 'length is not consistent' in str(exc_info.value)
 
-    def test_unpack_invalid_announced_length(self) -> None:
-        """A VPLS NLRI has exactly one valid payload length"""
-        invalid = b'\x00\x10' + b'\x00' * 16  # announces 16, only 17 is valid
+    def test_unpack_announced_length_below_the_minimum(self) -> None:
+        """A VPLS NLRI shorter than the fields it must carry is a protocol error"""
+        invalid = b'\x00\x10' + b'\x00' * 16  # announces 16, the fixed fields need 17
 
         with pytest.raises(Notify) as exc_info:
             VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, None)
 
-        assert 'the only valid value' in str(exc_info.value)
+        assert 'at least' in str(exc_info.value)
+
+    @pytest.mark.parametrize('extra', [1, 2, 8])
+    def test_unpack_accepts_a_longer_nlri(self, extra) -> None:
+        """5.0.12 reads the seventeen bytes it knows and ignores the rest
+
+        Refusing a longer NLRI would drop a route which decodes today, so the
+        check is a minimum.
+        """
+        length = 17 + extra
+        data = length.to_bytes(2, 'big') + b'\x00' * length
+        nlri, _ = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, data, Action.ANNOUNCE, None)
+        assert nlri is not None
 
     def test_unpack_truncated_header(self) -> None:
         """A VPLS NLRI shorter than its two byte length header is a protocol error"""
