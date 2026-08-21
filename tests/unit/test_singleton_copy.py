@@ -187,3 +187,64 @@ def test_the_walk_finds_every_singleton_this_file_claims_to_cover() -> None:
 
     stale = sorted(name for name in CARRIED if name not in found)
     assert not stale, f'CARRIED names these, and nothing compares them with `is` any more: {stale}'
+
+
+def test_a_copy_keeps_its_class() -> None:
+    """The property, rather than the mechanism, because the mechanism differs per class.
+
+    A slotted class must name its slots and copying __dict__ gets it nothing; a class with
+    a __dict__ must copy that and naming one attribute loses the rest.  So an assertion
+    about HOW a hook copies is wrong for half the tree.  What holds either way is that a
+    copy is the same class carrying the same state.
+
+    Session 5.0 arrived at this from the opposite side: their tree has one slotted class
+    and mine has ten, so the correct fix is opposite on the two branches and only the
+    property survives being stated once.
+    """
+    for name, singleton in CARRIED.items():
+        assert type(deepcopy(singleton)) is type(singleton), f'{name} deep copies to another class'
+        assert type(copy(singleton)) is type(singleton), f'{name} copies to another class'
+
+    for name, value in (
+        ('a route distinguisher', RouteDistinguisher.make_from_elements('10.0.0.1', 7)),
+        ('a label stack', Labels.make_labels([42], True)),
+        ('a path identifier', PathInfo.make_from_integer(1)),
+    ):
+        for made in (copy(value), deepcopy(value)):
+            assert type(made) is type(value), f'{name} copies to another class'
+            assert made == value, f'{name} does not equal its copy'
+
+
+def test_nothing_builds_a_route_distinguisher_which_impersonates_NORD() -> None:
+    """The 'is NORD' tests are only sound while no path builds an equal-but-separate one.
+
+    RouteDistinguisher(b'') equals NORD and is not NORD, so a route carrying one would take
+    the wrong branch at every `is RouteDistinguisher.NORD` site: five of them here, two in
+    the configuration and three in the decoders and renderers.
+
+    Nothing constructs one today.  A route with no distinguisher is given the singleton,
+    and the wire path only builds one when the family says there are eight bytes to read.
+    Session 5.0 solved the same hazard the other way, by having their copy hook canonicalise
+    an equal RD TO the singleton, which is a real difference between the branches and worth
+    knowing about before someone makes the two match.
+    """
+    from exabgp.bgp.message import Action
+    from exabgp.protocol.family import AFI, SAFI
+
+    seeds = [
+        ('ipv4 flow', AFI.ipv4, SAFI.flow_ip, bytes([3, 0x03, 0x81, 0x06])),
+        ('ipv4 mpls-vpn', AFI.ipv4, SAFI.mpls_vpn, bytes([112, 0, 0, 0x11]) + bytes(8) + bytes([10, 0, 0])),
+    ]
+    checked = 0
+    for name, afi, safi, wire in seeds:
+        nlri, _ = NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, None, None)
+        rd = getattr(nlri, 'rd', None)
+        if rd is None:
+            continue
+        checked += 1
+        for candidate in (rd, deepcopy(rd), copy(rd)):
+            assert (candidate == RouteDistinguisher.NORD) == (candidate is RouteDistinguisher.NORD), (
+                f'{name} carries a route distinguisher which equals NORD without being it'
+            )
+
+    assert checked, 'no seed carried a route distinguisher, so this pins nothing'
