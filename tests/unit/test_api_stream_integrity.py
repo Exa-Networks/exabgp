@@ -93,6 +93,26 @@ def test_flow_truncated_before_its_end_of_list_is_refused(family: tuple[AFI, SAF
     assert nlri is NLRI.INVALID
 
 
+@pytest.mark.parametrize('family', FLOW_FAMILIES, ids=lambda f: f'{f[0]}/{f[1]}')
+def test_flow_without_a_parsed_rule_still_emits_json(family: tuple[AFI, SAFI]) -> None:
+    """A flow with no rule produced '{, "string": "flow" }', a leading comma.
+
+    Concatenating the fragments meant the first one being empty left the separator of
+    the next one at the front, and no JSON parser accepts that.
+    """
+    afi, safi = family
+    # component 0xFF is not a flow component, so the decoder stops with no rule
+    payload = b'\xff\x00'
+    if safi == SAFI.flow_vpn:
+        payload = bytes(8) + payload
+    data = bytes([len(payload)]) + payload
+    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+    if nlri is None or nlri is NLRI.INVALID:
+        return
+    assert 'string' in parsed(nlri.json())
+    assert 'string' in parsed(nlri.json(announced=False))
+
+
 def _addpath(data: bytes) -> Capability:
     code: CapabilityCode = CapabilityCode.ADD_PATH
     klass = Capability.klass(code)

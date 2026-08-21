@@ -35,6 +35,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import json
 from struct import pack
 from typing import (
     TYPE_CHECKING,
@@ -1103,9 +1104,16 @@ class Flow(NLRI):
         new._rd_override = deepcopy(self._rd_override, memo) if self._rd_override else None
         return new
 
-    def _json_core(self, compact: bool = False) -> tuple[str, str, str]:
-        """Build JSON core components: rules, rd, compatibility string."""
-        string: list[str] = []
+    def _json_members(self, compact: bool = False) -> list[str]:
+        """Build the JSON members of this flow, each one complete on its own.
+
+        A flow which parsed no rule contributes no rule member, and one without a route
+        distinguisher contributes no rd member, so the members are returned as a list and
+        joined by the caller.  Concatenating pre-separated fragments used to leave the
+        separator of the first surviving one at the front, and `{, "string": "flow" }` is
+        a line no API consumer can parse.
+        """
+        members: list[str] = []
         for index in sorted(self.rules):
             rules = self.rules[index]
             s: list[str] = []
@@ -1113,24 +1121,26 @@ class Flow(NLRI):
                 # only add ' ' after the first element
                 if idx and not rule.operations & NumericOperator.AND:
                     s.append(', ')
-                s.append('"{}"'.format(rule))
-            string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
-        rules_str = ','.join(string)
-        rd = '' if self.rd is RouteDistinguisher.NORD else ', {}'.format(self.rd.json())
-        compatibility = ', "string": "{}"'.format(self.extensive())
-        return rules_str, rd, compatibility
+                s.append(json.dumps(str(rule)))
+            members.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
+        if self.rd is not RouteDistinguisher.NORD:
+            members.append(self.rd.json())
+        return members
 
     def json(self, announced: bool = True, compact: bool = False) -> str:
         """Serialize Flow NLRI to JSON (v6 format - no nexthop)."""
-        rules_str, rd, compatibility = self._json_core(compact)
-        return '{' + rules_str + rd + compatibility + ' }'
+        members = self._json_members(compact)
+        members.append('"string": {}'.format(json.dumps(self.extensive())))
+        return '{' + ', '.join(members) + ' }'
 
     def v4_json(self, compact: bool = False, nexthop: IP | None = None) -> str:
         """Serialize Flow NLRI to JSON for API v4 backward compatibility (includes nexthop)."""
-        rules_str, rd, compatibility = self._json_core(compact)
+        members = self._json_members(compact)
         nh = nexthop if nexthop is not None else IP.NoNextHop
-        nexthop_str = ', "next-hop": "{}"'.format(nh) if nh is not IP.NoNextHop else ''
-        return '{' + rules_str + rd + nexthop_str + compatibility + ' }'
+        if nh is not IP.NoNextHop:
+            members.append('"next-hop": "{}"'.format(nh))
+        members.append('"string": {}'.format(json.dumps(self.extensive())))
+        return '{' + ', '.join(members) + ' }'
 
     @classmethod
     def unpack_nlri(
