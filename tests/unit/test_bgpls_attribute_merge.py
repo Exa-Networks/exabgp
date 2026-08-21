@@ -154,3 +154,79 @@ class TestWhatThisBranchDeliberatelyLeavesAlone:
     def test_and_still_renders_a_bare_string(self) -> None:
         attribute = unpack_attribute(tlv(1030, IPV4))
         assert isinstance(json.loads(attribute.json())['remote-te-router-id'], str)
+
+
+class TestAnUnimplementedCodeDoesNotCollapse:
+    """The hazard the guard exists for, arriving through a different door
+
+    get_ls_class mints one class per unknown code with
+
+        type('GenericLSID_%d' % code, GenericLSID.__bases__, dict(GenericLSID.__dict__))
+
+    which makes each one a SIBLING of GenericLSID rather than a subclass, the
+    same identity trap as register(lsid=N). Every one of them sets MERGE and
+    none of them sets JSON, so they all share BaseLS's unset default. Grouping
+    on the name without checking it was ever chosen would collapse every
+    unimplemented TLV a peer sends into a single member.
+
+    Found by the session working main, where it had to be solved by setting JSON
+    per generic class and by making GENERIC a flag rather than an issubclass
+    check, precisely because the sibling relationship defeats issubclass. Here
+    merge_key() already answers None for anything still on the default, so the
+    generics group on nothing and keep their per-code names.
+    """
+
+    def test_two_unknown_codes_stay_apart(self) -> None:
+        attribute = unpack_attribute(tlv(1234, b'\xaa\xbb'), tlv(5678, b'\xcc\xdd'))
+        rendered = json.loads(attribute.json())
+        assert rendered['generic-lsid-1234'] == ['0xAABB']
+        assert rendered['generic-lsid-5678'] == ['0xCCDD']
+
+    def test_the_same_unknown_code_twice_still_merges(self) -> None:
+        # they may repeat: we cannot claim a TLV we have not implemented is
+        # forbidden from repeating, so this half must keep working
+        attribute = unpack_attribute(tlv(1234, b'\xaa\xbb'), tlv(1234, b'\xcc\xdd'))
+        assert json.loads(attribute.json())['generic-lsid-1234'] == ['0xAABB', '0xCCDD']
+
+    def test_a_generic_groups_on_nothing(self) -> None:
+        klass = LinkState.registered_lsids.get(1234) or LinkState.klass(1234)
+        instance = klass.__new__(klass)
+        assert instance.MERGE is True, 'the same code repeating must still merge'
+        assert instance.JSON == BaseLS.JSON, 'and it never chose a name'
+        assert instance.merge_key() is None, 'so it must group on nothing'
+
+
+class TestAKnownDisagreementLeftAlone:
+    """IsisArea renders one value as two different types
+
+    content is an int and json() wraps it in quotes, so the JSON API says
+    "area-id": "4784129" while as_dict() says 4784129. Two renderers over one
+    value, disagreeing.
+
+    NOT fixed here. Either side of it is a compatibility break on a stable
+    branch: making json() emit a number changes the type every JSON consumer
+    receives, and making as_dict() emit a string changes it for the others. It
+    is pinned instead, so that changing it is a decision rather than a side
+    effect of some later merge work, which is exactly how it would happen.
+
+    Flagged by the session working main, who hit it while turning area-id into
+    an array and would have silently changed a string into a number for every
+    consumer.
+    """
+
+    @staticmethod
+    def isis_area():
+        klass = LinkState.registered_lsids[1027]
+        return klass.unpack(bytes([0x49, 0x00, 0x01]))
+
+    def test_the_json_api_renders_it_as_a_string(self) -> None:
+        assert self.isis_area().json() == '"area-id": "4784129"'
+
+    def test_as_dict_renders_it_as_a_number(self) -> None:
+        assert self.isis_area().as_dict() == {'area-id': 4784129}
+
+    def test_and_they_disagree_which_is_the_point(self) -> None:
+        area = self.isis_area()
+        rendered = json.loads('{%s}' % area.json())['area-id']
+        assert isinstance(rendered, str)
+        assert isinstance(area.as_dict()['area-id'], int)
