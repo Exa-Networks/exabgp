@@ -111,6 +111,7 @@ def classify(render):
         return 'INVALID-JSON'
 
 results = {}
+inputs = {}
 
 for family, klass in sorted(NLRI.registered_nlri.items()):
     afi_name, safi_name = family.split('/')
@@ -129,12 +130,14 @@ for family, klass in sorted(NLRI.registered_nlri.items()):
             results[key] = 'NOTIFY'
         except Exception as exc:
             results[key] = 'PYERROR:' + type(exc).__name__
+        inputs[key] = payload.hex()
 
 for aid, entry in sorted(getattr(Attribute, 'registered_attributes', {}).items(), key=lambda i: str(i[0])):
     klass = entry[1] if isinstance(entry, tuple) else entry
     for length in range(0, 26):
         key = 'attr:%s:%d' % (aid, length)
         data = bytes(range(1, length + 1))
+        inputs[key] = data.hex()
         try:
             decoded = klass.unpack(data, None, None)
             results[key] = classify(decoded.json()) if hasattr(decoded, 'json') else 'VALID'
@@ -143,7 +146,7 @@ for aid, entry in sorted(getattr(Attribute, 'registered_attributes', {}).items()
         except Exception as exc:
             results[key] = 'PYERROR:' + type(exc).__name__
 
-print(json.dumps(results, sort_keys=True))
+print(json.dumps({'results': results, 'inputs': inputs}, sort_keys=True))
 """
 
 
@@ -208,6 +211,21 @@ def main():
 
     after = run(ROOT, seeds)
 
+    # "the two trees decode the same bytes" is a claim, not a fact. This gate
+    # already got that wrong once: the corpus was built per tree, the older one
+    # had no generator and fell back to something else, and every verdict for
+    # those families compared different inputs while reporting a number.
+    shared = set(before['inputs']) & set(after['inputs'])
+    if not shared:
+        raise SystemExit(2, 'the two runs share no input at all, nothing here is comparable')
+    differing = sorted(key for key in shared if before['inputs'][key] != after['inputs'][key])
+    if differing:
+        print('the two trees were handed DIFFERENT bytes for %d inputs, refusing to compare' % len(differing))
+        for key in differing[:5]:
+            print('  %-34s %s vs %s' % (key, before['inputs'][key][:24], after['inputs'][key][:24]))
+        return 2
+
+    before, after = before['results'], after['results']
     counts = {}
     regressions = []
     for key in sorted(set(before) | set(after)):
