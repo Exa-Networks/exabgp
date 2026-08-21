@@ -29,6 +29,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
 # SID/Label data length when flags are not set
 HEADER_SIZE = 4  # Flags(1) + Algorithm(1) + Reserved(2)
+SRPREFIX_MINIMUM = 2  # only the flags and the algorithm are read
 SID_LABEL_LENGTH_FLAGS = 3
 SID_LABEL_LENGTH_NO_FLAGS = 4  # Length of SID/Label when V and L flags are both false
 
@@ -50,7 +51,9 @@ class SrPrefix(FlagLS):
     @classmethod
     def unpack(cls, data):
         # We only support IS-IS flags for now.
-        if len(data) < HEADER_SIZE:
+        # only the flags and the algorithm are read here; the reserved bytes
+        # behind them may be absent, and this release renders such a TLV
+        if len(data) < SRPREFIX_MINIMUM:
             raise Notify(3, 5, 'Unable to decode attribute, not enough data for SR Prefix')
         flags = cls.unpack_flags(data[0:1])
         #

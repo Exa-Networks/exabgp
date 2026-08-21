@@ -168,3 +168,33 @@ class TestNoTlvRelyOnTheBoundary:
                 except Exception:  # noqa: BLE001 - the property tests above cover these
                     pass
         assert not masked, f'TLV {scode} relies on the decode boundary: {masked[0][1]}'
+
+
+class TestTlvChecksAreMinimumsNotExactLengths:
+    """A length check must not refuse what the previous release renders
+
+    Every case here decodes and renders on 5.0.12. A check stricter than the
+    decoder needs turns a working route into a closed session on upgrade, which
+    is a worse outcome than the crash it was written to prevent.
+    """
+
+    @pytest.mark.parametrize('scode', [1153, 1154])
+    def test_an_empty_tag_list_is_not_refused(self, scode) -> None:
+        # none is a whole number of elements, and 5.0.12 renders an empty list
+        emitted, _, _ = render(scode, b'')
+        parsed = json.loads(emitted)
+        assert list(parsed.values()) == [[]]
+
+    @pytest.mark.parametrize('scode', [1250, 1252])
+    @pytest.mark.parametrize('length', range(4, 20))
+    def test_a_longer_tlv_is_not_refused(self, scode, length) -> None:
+        # the fixed fields are a MINIMUM: a TLV may carry fields added later
+        emitted, _, _ = render(scode, b'\x01' * length)
+        json.loads(emitted)
+
+    @pytest.mark.parametrize('scode', [1099, 1158])
+    @pytest.mark.parametrize('length', [2, 3])
+    def test_a_tlv_without_its_reserved_bytes_is_not_refused(self, scode, length) -> None:
+        # only the flags and the byte behind them are read before the SID loop
+        emitted, _, _ = render(scode, b'\x00' * length)
+        json.loads(emitted)

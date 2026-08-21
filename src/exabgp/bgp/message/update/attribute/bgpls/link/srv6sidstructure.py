@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEndXISIS, Srv6LanEndXOSPF
@@ -32,7 +33,7 @@ from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEn
 class Srv6SidStructure(BaseLS):
     TLV = 1252
     REPR = 'SRv6 SID Structure'
-    LEN = 4  # LB Length(1) + LN Length(1) + Fun Length(1) + Arg Length(1)
+    MINIMUM = 4  # LB Length(1) + LN Length(1) + Fun Length(1) + Arg Length(1)
 
     def __init__(self, loc_block_len, loc_node_len, func_len, arg_len):
         self.loc_block_len = loc_block_len
@@ -42,7 +43,10 @@ class Srv6SidStructure(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        cls.check(data)
+        # a minimum, not an exact length: this release renders a longer TLV and a
+        # future field must not turn a working route into a protocol error
+        if len(data) < cls.MINIMUM:
+            raise Notify(3, 5, f'Unable to decode attribute, not enough data for {cls.REPR}')
         loc_block_len = data[0]
         loc_node_len = data[1]
         func_len = data[2]
