@@ -17,6 +17,10 @@ import exabgp.bgp.message.update.attribute  # noqa: F401  registers every decode
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import Family
 
+# ratchets: raise them as families are added, never lower one
+MIN_SIZED_FAMILIES = 20
+MIN_REGISTERED_FAMILIES = 10
+
 
 def test_every_registered_family_has_a_next_hop_encoding() -> None:
     missing = sorted(f'{afi}/{safi}' for afi, safi in NLRI.known_families() if (afi, safi) not in Family.size)
@@ -32,3 +36,16 @@ def test_every_sized_family_has_a_decoder() -> None:
     registered = set(NLRI.known_families())
     orphan = sorted(f'{afi}/{safi}' for afi, safi in Family.size if (afi, safi) not in registered)
     assert not orphan, f'Family.size describes families with no registered decoder: {orphan}'
+
+
+def test_the_family_tables_are_populated_at_all() -> None:
+    """Both tests here assert a table contains no gaps, which an empty table satisfies.
+
+    Measured by clearing the registries and re-running: this file passed clean.  The
+    tables fill by import side effect, so a change to import order is enough to empty one
+    without anything looking wrong.
+    """
+    assert len(Family.size) >= MIN_SIZED_FAMILIES, f'only {len(Family.size)} families have a size entry'
+    assert len(NLRI.registered_nlri) >= MIN_REGISTERED_FAMILIES, (
+        f'only {len(NLRI.registered_nlri)} NLRI families are registered, so these sweeps prove little'
+    )

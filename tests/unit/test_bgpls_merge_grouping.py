@@ -48,6 +48,10 @@ MERGE_IDS = [f'{code}-{LinkState.registered_lsids[code].__name__}' for code in M
 # the pairs which are deliberately one key under two codes
 ALIAS_PAIRS = [(1028, 1029), (1030, 1031)]
 
+# ratchets: raise them when the registry grows, never lower one to make a red run green
+MIN_REGISTERED_TLVS = 45
+MIN_MERGE_CODES = 9
+
 TLV_HEADER = 4
 MAX_TLV_WIDTH = 40
 
@@ -213,3 +217,17 @@ def test_no_tlv_renders_something_its_content_does_not_hold() -> None:
             mismatched.append((code, klass.__name__))
 
     assert not mismatched, f'these TLVs render something their content does not hold: {mismatched}'
+
+
+def test_the_sweeps_in_this_file_had_something_to_sweep() -> None:
+    """The registries fill by import side effect, and a half filled one sweeps clean.
+
+    Every assertion here is of the form "nothing in the registry is wrong", which an empty
+    registry satisfies.  Session 5.0 shipped a source walk with this exact shape, resolved
+    nothing, and got fifteen green parameters over an empty list; only their floor caught
+    it.  Measured here by clearing the registries and re-running: this file passed.
+    """
+    assert len(LinkState.registered_lsids) >= MIN_REGISTERED_TLVS, (
+        f'only {len(LinkState.registered_lsids)} BGP-LS TLVs are registered, so these sweeps prove little'
+    )
+    assert len(MERGE_CODES) >= MIN_MERGE_CODES, f'only {len(MERGE_CODES)} TLVs merge, down from {MIN_MERGE_CODES}'

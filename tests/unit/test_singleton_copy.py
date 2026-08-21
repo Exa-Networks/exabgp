@@ -67,7 +67,43 @@ NOT_A_ROUTE_VALUE = {
     'ExtendedCommunityBase.__repr__',
 }
 
+# resolved from this file rather than the working directory.  Path('src/exabgp') is
+# relative to the CWD, and another test in the suite changes it, so the walk found nothing
+# in a full run while passing when this file ran alone: the guard below is what caught it.
+SOURCE_ROOT = pathlib.Path(__file__).resolve().parents[2] / 'src' / 'exabgp'
+
 MIN_SINGLETONS_COMPARED = 8
+# a ratchet on the WALK, not on the list: raise it, never lower it to make a red run green
+MIN_COMPARISONS_FOUND = 18
+
+
+def compared_by_identity() -> set[str]:
+    """Every `x is Some.SINGLETON` this source contains, read from the source.
+
+    A list of names goes stale the day someone adds one.  A walk does not, with one
+    caveat session 5.0 paid for: a walk which resolves nothing reports success over an
+    empty set, and that is a more convincing kind of nothing than the list it replaced.
+    So what this returns is asserted to be non-empty, and to contain everything CARRIED
+    claims, by the two tests below.
+    """
+    found: set[str] = set()
+    for path in SOURCE_ROOT.rglob('*.py'):
+        if 'vendoring' in str(path):
+            continue
+        try:
+            tree = ast.parse(path.read_text())
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Compare):
+                continue
+            for operator, other in zip(node.ops, node.comparators):
+                if not isinstance(operator, (ast.Is, ast.IsNot)) or not isinstance(other, ast.Attribute):
+                    continue
+                rendered = ast.unparse(other)
+                if rendered.split('.')[0][:1].isupper():
+                    found.add(rendered)
+    return found
 
 
 @pytest.mark.parametrize('name', sorted(CARRIED), ids=sorted(CARRIED))
@@ -109,23 +145,7 @@ def test_every_singleton_this_codebase_compares_by_identity_is_covered() -> None
     list somebody remembered.  A new singleton compared that way, and not carried by a
     route, has to be named in NOT_CARRIED deliberately.
     """
-    found: set[str] = set()
-    for path in pathlib.Path('src/exabgp').rglob('*.py'):
-        if 'vendoring' in str(path):
-            continue
-        try:
-            tree = ast.parse(path.read_text())
-        except SyntaxError:
-            continue
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Compare):
-                continue
-            for operator, other in zip(node.ops, node.comparators):
-                if not isinstance(operator, (ast.Is, ast.IsNot)) or not isinstance(other, ast.Attribute):
-                    continue
-                rendered = ast.unparse(other)
-                if rendered.split('.')[0][:1].isupper():
-                    found.add(rendered)
+    found = compared_by_identity()
 
     known = set(CARRIED) | set(NOT_CARRIED)
     unclassified = sorted(found - known - NOT_A_ROUTE_VALUE)
@@ -137,3 +157,32 @@ def test_every_singleton_this_codebase_compares_by_identity_is_covered() -> None
 def test_the_sweep_found_something_to_check() -> None:
     """A list which emptied would pass every test above."""
     assert len(CARRIED) >= MIN_SINGLETONS_COMPARED, f'only {len(CARRIED)} singletons are covered'
+
+
+def test_the_source_walk_actually_resolves_something() -> None:
+    """The walk itself, held to the same standard as everything else this series checked.
+
+    test_every_singleton_this_codebase_compares_by_identity_is_covered subtracts what the
+    walk found from what is known, so a walk which found NOTHING subtracts an empty set
+    and passes.  Session 5.0 shipped exactly that shape and only their floor assertion
+    caught it: fifteen green parameters over an empty list, which looks like coverage of
+    a category rather than coverage of five names.
+    """
+    found = compared_by_identity()
+
+    assert len(found) >= MIN_COMPARISONS_FOUND, (
+        f'the source walk found only {len(found)} identity comparisons, so it is not walking anything'
+    )
+
+
+def test_the_walk_finds_every_singleton_this_file_claims_to_cover() -> None:
+    """The list must not drift ahead of the code either.
+
+    A name in CARRIED which nothing compares by identity any more is a test protecting an
+    invariant nobody depends on, which is cheap but misleading: it says the codebase has a
+    constraint it has stopped having.
+    """
+    found = compared_by_identity()
+
+    stale = sorted(name for name in CARRIED if name not in found)
+    assert not stale, f'CARRIED names these, and nothing compares them with `is` any more: {stale}'
