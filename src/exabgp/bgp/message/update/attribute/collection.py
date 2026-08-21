@@ -465,6 +465,14 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 if kls and kls.TREAT_AS_WITHDRAW:
                     self.add(TreatAsWithdraw(aid))
                     return self.parse(left, negotiated)
+                # DISCARD was honoured for Notify below but not here, so an attribute
+                # RFC 7606 says to drop escaped as a raw ValueError instead: AGGREGATOR
+                # at any length but 0 or 6 came out of Update.unpack_message untyped,
+                # where the reactor's catch-all turned RFC 7606 7.7 attribute discard
+                # into a session reset
+                if kls and kls.DISCARD:
+                    self.add(Discard())
+                    return self.parse(left, negotiated)
                 raise exc
             except Notify as exc:
                 if kls and kls.TREAT_AS_WITHDRAW:
