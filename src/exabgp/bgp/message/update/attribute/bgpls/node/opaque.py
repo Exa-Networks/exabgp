@@ -34,7 +34,19 @@ class NodeOpaque(BaseLS):
 
     @property
     def content(self) -> Buffer:
-        """Opaque data as bytes."""
+        """Opaque data as bytes.
+
+        This deliberately does NOT match what json() renders, which is the hex of the same
+        bytes.  content is the packed-bytes-first accessor and the tests assert it as such,
+        so aligning the two here would change an accessor rather than a rendering.
+
+        The consequence is that this class must not be marked MERGE without deciding how
+        opaque bytes should reach the API first: the merge renders content through
+        jsonable(), which decodes bytes as text with replacement characters, where json()
+        renders hex.  TLV 1097 and 1157 already take the decoding route and lose peer data
+        to U+FFFD.  Choosing one encoding for all three is a change to what a consumer
+        receives and is recorded as a question rather than made here.
+        """
         return self._packed
 
     def json(self, compact: bool = False) -> str:

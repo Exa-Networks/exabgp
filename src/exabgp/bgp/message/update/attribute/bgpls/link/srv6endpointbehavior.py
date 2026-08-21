@@ -84,12 +84,14 @@ class Srv6EndpointBehavior(BaseLS):
             self.algorithm,
         )
 
+    @property
+    def content(self) -> dict[str, object]:
+        """What json() renders, so the two agree and the merge would group the same value."""
+        return {
+            'endpoint-behavior': self.endpoint_behavior,
+            'flags': self.flags,
+            'algorithm': self.algorithm,
+        }
+
     def json(self, compact: bool = False) -> str:
-        return '"srv6-endpoint-behavior": ' + json.dumps(
-            {
-                'endpoint-behavior': self.endpoint_behavior,
-                'flags': self.flags,
-                'algorithm': self.algorithm,
-            },
-            indent=None,
-        )
+        return f'"{self.JSON}": {json.dumps(self.content)}'

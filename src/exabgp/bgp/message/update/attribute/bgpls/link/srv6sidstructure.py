@@ -93,13 +93,15 @@ class Srv6SidStructure(BaseLS):
             self.arg_len,
         )
 
+    @property
+    def content(self) -> dict[str, object]:
+        """What json() renders, so the two agree and the merge would group the same value."""
+        return {
+            'loc_block_len': self.loc_block_len,
+            'loc_node_len': self.loc_node_len,
+            'func_len': self.func_len,
+            'arg_len': self.arg_len,
+        }
+
     def json(self, compact: bool = False) -> str:
-        return '"srv6-sid-structure": ' + json.dumps(
-            {
-                'loc_block_len': self.loc_block_len,
-                'loc_node_len': self.loc_node_len,
-                'func_len': self.func_len,
-                'arg_len': self.arg_len,
-            },
-            indent=None,
-        )
+        return f'"{self.JSON}": {json.dumps(self.content)}'

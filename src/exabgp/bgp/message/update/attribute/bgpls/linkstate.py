@@ -447,6 +447,22 @@ class FlagLS(BaseLS):
             self._flags_cache = cached
         return cached
 
+    @property
+    def content(self) -> Any:
+        """The flags, which is what json() renders and therefore what the merge must group.
+
+        BaseLS.content returns the raw packed bytes, and every flag TLV which did not
+        override it disagreed with its own json(): one rendered a decoded object, the other
+        the wire bytes.  Nothing showed, because json() is what the API calls and content is
+        only reached through the merge, which none of these classes used.
+
+        That made each of them one MERGE = True away from emitting raw bytes to the API,
+        which is exactly what happened when PrefixSid and Srv6Locator were marked as
+        repeatable.  Session 5.0 raised the general case after IsisArea disagreed the same
+        way.  The two renderers now read one value.
+        """
+        return self.flags
+
     def __repr__(self) -> str:
         return '{}: {}'.format(self.REPR, self.flags)
 

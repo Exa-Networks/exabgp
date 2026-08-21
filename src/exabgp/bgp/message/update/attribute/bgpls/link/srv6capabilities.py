@@ -83,10 +83,12 @@ class Srv6Capabilities(BaseLS):
         cls.check(data)
         return cls(data)
 
+    @property
+    def content(self) -> dict[str, object]:
+        """What json() renders, so the two agree and the merge would group the same value."""
+        return {
+            'flags': self.flags,
+        }
+
     def json(self, compact: bool = False) -> str:
-        return '"srv6-capabilities": ' + json.dumps(
-            {
-                'flags': self.flags,
-            },
-            indent=None,
-        )
+        return f'"{self.JSON}": {json.dumps(self.content)}'

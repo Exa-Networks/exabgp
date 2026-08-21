@@ -27,7 +27,7 @@ import pytest
 
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState, jsonable
 
 
 def _populate() -> None:
@@ -142,3 +142,84 @@ def test_the_alias_pair_lands_in_one_array_rather_than_two_keys(first: int, seco
     assert key in document, f'{key} is missing entirely'
     assert isinstance(document[key], list), f'{key} is not a list'
     assert len(document[key]) == 2, f'{key} holds {document[key]}, so one of the two aliases was dropped'
+
+
+# Every TLV has two renderers over one value: its own json(), and content, which is what
+# LinkState.json() groups when the class merges.  Nothing made them agree.
+#
+# Twelve classes disagreed: nine FlagLS subclasses and three SRv6 ones rendered a decoded
+# object from json() while content returned the raw wire bytes, and NodeOpaque rendered hex
+# while content returned the bytes.  None of it showed, because json() is what the API calls
+# and content is only reached through the merge, which none of those classes used.
+#
+# That left each of them one MERGE = True away from putting wire bytes into the API stream,
+# which is exactly what happened the day PrefixSid and Srv6Locator were marked repeatable.
+# Session 5.0 raised the general case after finding IsisArea disagreed the same way.
+
+MAX_SEED_WIDTH = 40
+
+# The opaque TLVs disagree for a reason which is not drift: content is the packed-bytes
+# accessor and the tests assert it as such, while json() renders the hex of those bytes.
+# Aligning them means choosing how opaque peer bytes reach the API, and the three do not
+# agree today: 1025 renders hex, 1097 and 1157 go through jsonable(), which decodes bytes
+# as text and loses anything which is not valid UTF-8 to a replacement character.  That is
+# a change to what a consumer receives, so it is recorded here rather than made silently.
+ENCODING_UNDECIDED = {1025}
+
+
+def smallest_instance(code: int) -> BaseLS | None:
+    """A decoded TLV at the shortest width its own decoder accepts."""
+    klass = LinkState.registered_lsids[code]
+    for width in range(1, MAX_SEED_WIDTH):
+        try:
+            instance = klass.unpack_bgpls(bytes(width))
+        except Exception:
+            continue
+        instance.json()
+        return instance
+    return None
+
+
+@pytest.mark.parametrize('code', MERGE_CODES, ids=MERGE_IDS)
+def test_what_the_api_emits_for_a_merged_tlv_is_what_content_says(code: int) -> None:
+    """The merge renders content, so content is what a merging class must hold.
+
+    A class whose content is the wire bytes puts the wire bytes in the API the moment it
+    merges.  Asserting against the attribute's rendered output rather than the TLV's own
+    json() is deliberate: LinkState.json() is the path which actually reaches a consumer.
+    """
+    instance = smallest_instance(code)
+    if instance is None:
+        pytest.skip(f'TLV {code} decodes none of the seed widths')
+
+    payload = pack('!HH', code, len(instance._packed)) + bytes(instance._packed)
+    document = jsonlib.loads(render(payload))
+
+    key = LinkState.registered_lsids[code].JSON
+    assert document[key] == [jsonable(instance.content)], f'{key} does not carry what content holds'
+
+
+def test_no_tlv_renders_something_its_content_does_not_hold() -> None:
+    """The other side of the pair, for the classes which do not merge.
+
+    They are the ones which can acquire the defect: their content is unused today, so
+    nothing notices it drifting until somebody marks the class repeatable.  Checking it
+    now is what makes marking one a one line change rather than a silent regression.
+    """
+    mismatched = []
+    for code, klass in sorted(LinkState.registered_lsids.items()):
+        if getattr(klass, 'MERGE', False) or getattr(klass, 'GENERIC', False):
+            continue
+        if code in ENCODING_UNDECIDED:
+            continue
+        instance = smallest_instance(code)
+        if instance is None:
+            continue
+        rendered = jsonlib.loads('{' + instance.json() + '}')
+        key = klass.JSON if klass.JSON in rendered else next(iter(rendered), None)
+        if key is None:
+            continue
+        if rendered[key] != jsonable(instance.content):
+            mismatched.append((code, klass.__name__))
+
+    assert not mismatched, f'these TLVs render something their content does not hold: {mismatched}'
