@@ -216,11 +216,44 @@ class Attribute:
         """Return JSON representation. Must be overridden by subclasses."""
         raise NotImplementedError(f'{self.__class__.__name__} must implement json()')
 
+    def _comparable(self) -> tuple[int, int, object]:
+        """What makes two attributes the same attribute carrying the same value.
+
+        The wire bytes are the value, for every attribute which keeps them.  The few which
+        build their value from a structure instead override this and say what theirs is,
+        and the sentinels which stand for a decision rather than a value override it to
+        say they have none.
+
+        Written as a hook rather than as `self._packed` inside __eq__ so that an attribute
+        which keeps neither fails loudly here instead of quietly comparing equal to every
+        other instance of its kind, which is what the previous __eq__ did.
+        """
+        packed = getattr(self, '_packed', None)
+        if packed is None:
+            # a class which keeps neither wire bytes nor an override has no value to
+            # compare, and answering "equal" for it is exactly the defect this replaced
+            raise NotImplementedError(f'{type(self).__name__} must override _comparable() or keep _packed')
+        return (self.ID, self.FLAG, bytes(packed))
+
     def __eq__(self, other: Any) -> bool:
-        return bool(self.ID == other.ID and self.FLAG == other.FLAG)
+        """Same attribute, same value.
+
+        This compared the ID and the FLAG and never the value, so any two extended
+        community sets, large community sets, BGP-LS attributes or prefix SIDs compared
+        equal whatever they carried.  AttributeCollection.sameValuesAs falls through to
+        this for everything its community branch does not cover, and Route.__eq__ is built
+        on that, so "these two routes carry the same attributes" was answered by counting
+        the attributes rather than by reading them.
+        """
+        if not isinstance(other, Attribute):
+            return NotImplemented
+        return self._comparable() == other._comparable()
 
     def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+        equal = self.__eq__(other)
+        if equal is NotImplemented:
+            return NotImplemented
+        return not equal
 
     def __lt__(self, other: Any) -> bool:
         return bool(self.ID < other.ID)
@@ -321,6 +354,10 @@ class TreatAsWithdraw(Attribute):
     def __init__(self, aid: int | None = None) -> None:
         self.aid = aid
 
+    def _comparable(self) -> tuple[int, int, object]:
+        """A decision, not a value: two of these are the same when they name the same cause."""
+        return (self.ID, self.FLAG, self.aid)
+
     def __str__(self) -> str:
         if self.aid is None:
             return 'treat-as-withdraw'
@@ -343,6 +380,10 @@ class Discard(Attribute):
 
     def __init__(self, aid: int | None = None) -> None:
         self.aid = aid
+
+    def _comparable(self) -> tuple[int, int, object]:
+        """A decision, not a value: two of these are the same when they name the same cause."""
+        return (self.ID, self.FLAG, self.aid)
 
     def __str__(self) -> str:
         if self.aid is None:

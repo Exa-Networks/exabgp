@@ -48,6 +48,10 @@ class TunnelEncap(Attribute):
     def __init__(self, tunnel_tlvs: list[Any]) -> None:
         self.tunnel_tlvs = tunnel_tlvs
 
+    def _comparable(self) -> tuple[int, int, object]:
+        """Built from a structure rather than kept as wire bytes, so the structure is it."""
+        return (self.ID, self.FLAG, tuple(str(tlv) for tlv in self.tunnel_tlvs))
+
     # ExaBGP's Attributes.pack() calls attribute.pack(negotiated), so we
     # provide a thin wrapper that reuses the pack_attribute implementation.
     def pack(self, negotiated: 'Negotiated') -> Buffer:  # pragma: no cover - simple delegation
