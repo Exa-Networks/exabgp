@@ -308,18 +308,26 @@ class TestEveryCopyHookInTheTree:
 
 
 class TestTheRouteDistinguisherCanonicalises:
-    """It tests its singleton with == where the others use `is`, on purpose
+    """It tests its singleton with == where the others use `is`
 
-    A RouteDistinguisher built separately but equal to NORD copies TO NORD. The
-    other three singletons test identity, so an equal-but-separate value stays
-    separate. The difference is deliberate here and it points the safe way: the
-    twenty `is RouteDistinguisher.NORD` sites in src see the singleton after a
-    copy rather than a lookalike which would answer False.
+    A RouteDistinguisher built separately but equal to NORD copies TO NORD, so
+    anything else it carried goes with it. The other three test identity and an
+    equal-but-separate value stays separate.
 
-    Pinned because the copy sweep flags it, and because someone reading the three
-    hooks side by side will see the inconsistency and want to make them match.
-    Making them match in the `is` direction would turn twenty identity tests into
-    tests which can now fail on a copied route.
+    I first wrote here that the canonicalisation protects the twenty
+    `is RouteDistinguisher.NORD` sites from a lookalike. That claim was never
+    measured and it is NOT TRUE. Instrumenting every RouteDistinguisher
+    construction across 11534 successful decodes over every family and seed, and
+    across six configuration parses, gives 2089 constructions and ZERO empty
+    ones: a route with no distinguisher is handed the singleton rather than given
+    an empty one, and the wire path only constructs when the family says there
+    are eight bytes to read. So no lookalike exists to protect anything from,
+    and the test below asserts that rather than my reasoning about it.
+
+    Which means == and `is` are BOTH sound here, and the branches differ: main
+    uses `is`. It is left as == because changing it is a behaviour change on a
+    stable branch with nothing measured to gain, not because it earns its place.
+    That is a weaker reason than the one I gave first and it is the true one.
     """
 
     def test_an_equal_route_distinguisher_copies_to_the_singleton(self) -> None:
@@ -334,3 +342,63 @@ class TestTheRouteDistinguisherCanonicalises:
         made = RouteDistinguisher(bytes(8))
         assert copy.deepcopy(made) is not RouteDistinguisher.NORD
         assert copy.deepcopy(made) == made
+
+
+class TestNoLookalikeIsEverBuilt:
+    """The invariant which makes both == and `is` sound
+
+    Whether a singleton may be tested by identity depends on whether an equal but
+    separate one can exist. Here none can, and nothing said so, which is how I
+    came to justify the canonicalisation with a protection it does not provide.
+
+    The session working main measured the same property there and made it a test,
+    which is what prompted this one. If either branch ever starts handing out
+    RouteDistinguisher(b'') instead of the singleton, this fails on the branch
+    where it happens, and the identity tests in src become answerable by a
+    lookalike.
+    """
+
+    @staticmethod
+    def constructions_during(decode):
+        from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+
+        built = []
+        original = RouteDistinguisher.__init__
+
+        def spy(self, rd):
+            built.append(bytes(rd) if rd is not None else None)
+            return original(self, rd)
+
+        RouteDistinguisher.__init__ = spy
+        try:
+            decode()
+        finally:
+            RouteDistinguisher.__init__ = original
+        return built
+
+    def test_a_route_without_one_is_handed_the_singleton(self) -> None:
+        from exabgp.bgp.message.action import Action
+        from exabgp.bgp.message.update.nlri import NLRI
+        from exabgp.protocol.family import AFI, SAFI
+
+        def decode():
+            NLRI.registered_nlri['ipv4/flow'].unpack_nlri(
+                AFI.ipv4, SAFI.flow_ip, bytes([3, 0x03, 0x81, 0x06]), Action.ANNOUNCE, False
+            )
+
+        assert self.constructions_during(decode) == [], 'an rd was constructed for a route which has none'
+
+    def test_a_vpn_route_builds_a_real_one(self) -> None:
+        # the other half: the check must not pass by nothing ever being built
+        from exabgp.bgp.message.action import Action
+        from exabgp.bgp.message.update.nlri import NLRI
+        from exabgp.protocol.family import AFI, SAFI
+
+        wire = bytes([112]) + b'\x00\x01\x01' + b'\x00' * 8 + bytes([10, 0, 0])
+
+        def decode():
+            NLRI.registered_nlri['ipv4/mpls-vpn'].unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, wire, Action.ANNOUNCE, False)
+
+        built = self.constructions_during(decode)
+        assert built, 'no rd was built for a VPN route, so this proves nothing'
+        assert all(value != b'' for value in built), built
