@@ -160,13 +160,17 @@ sys.stderr.write('%d observations\\n' % len(out))
 """
 
 
+class CannotObserve(Exception):
+    """The other tree could not run the probe, so there is nothing to compare."""
+
+
 def observe(tree: Path, destination: Path) -> dict[str, str]:
     program = tree / 'compat_corpus.py'
     program.write_text(corpus_program())
     environment = dict(os.environ)
     environment['exabgp_log_enable'] = 'false'
     environment['PYTHONPATH'] = str(tree / 'src')
-    subprocess.run(
+    result = subprocess.run(
         [
             'uv',
             'run',
@@ -181,18 +185,51 @@ def observe(tree: Path, destination: Path) -> dict[str, str]:
         ],
         cwd=tree,
         env=environment,
-        check=True,
+        capture_output=True,
+        text=True,
     )
+    if result.returncode != 0:
+        raise CannotObserve(
+            f'the probe did not run in {tree}:\n{result.stderr.strip()[-700:]}\n'
+            'a tree which cannot execute this probe cannot be compared against it'
+        )
+    sys.stderr.write(result.stderr)
     program.unlink()
     loaded: dict[str, dict[str, str]] = json.loads(destination.read_text())
     return loaded
 
 
 def previous_release() -> str:
-    tags = subprocess.run(
-        ['git', 'tag', '--sort=-v:refname'], cwd=ROOT, capture_output=True, text=True, check=True
-    ).stdout.split()
-    return tags[0] if tags else 'HEAD~20'
+    """What to compare against when nobody said.
+
+    Not the newest tag. The newest tag reachable from main is from the 4.2 series, whose
+    source cannot execute this probe at all, so a release comparison needs a tag someone
+    chose deliberately:
+
+        ./qa/bin/compat_gate 5.0.10
+
+    What CI wants is different and more useful continuously: this change must not refuse
+    what the branch already accepts. So the default walks back from the most specific thing
+    available, the base of a pull request, then the upstream branch, then the previous
+    commit.
+    """
+    for candidate in (
+        os.environ.get('GITHUB_BASE_REF') and f'origin/{os.environ["GITHUB_BASE_REF"]}',
+        '@{upstream}',
+        'HEAD~1',
+    ):
+        if not candidate:
+            continue
+        found = subprocess.run(
+            ['git', 'rev-parse', '--verify', '--quiet', f'{candidate}^{{commit}}'],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        if found.returncode == 0:
+            return candidate
+    sys.stderr.write('nothing to compare against: no base ref, no upstream, no parent commit\n')
+    sys.exit(2)
 
 
 def main(argv: list[str]) -> int:
@@ -209,8 +246,12 @@ def main(argv: list[str]) -> int:
         archive = subprocess.run(['git', 'archive', against], cwd=ROOT, capture_output=True, check=True)
         subprocess.run(['tar', '-x', '-C', str(old_tree)], input=archive.stdout, check=True)
 
-        before_run = observe(old_tree, Path(scratch) / 'before.json')
-        after_run = observe(ROOT, Path(scratch) / 'after.json')
+        try:
+            before_run = observe(old_tree, Path(scratch) / 'before.json')
+            after_run = observe(ROOT, Path(scratch) / 'after.json')
+        except CannotObserve as exc:
+            sys.stderr.write(f'{exc}\n')
+            return 2
 
     before, after = before_run['verdict'], after_run['verdict']
     given_before, given_after = before_run['input'], after_run['input']

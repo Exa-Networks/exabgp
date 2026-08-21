@@ -24,6 +24,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # compat_gate compares this change against the base of the pull request, so the
+          # base commit has to be in the clone
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -41,3 +45,26 @@ jobs:
       - name: pytest
         run: |
           env PYTHONPATH=src exabgp_log_enable=false uv run pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py
+
+      # An assert which is doing real work passes every normal run and vanishes in
+      # production. The BGP-LS decoder boundary was one statement of that shape: the assert
+      # WAS the parse, so -O deleted it and the Notify came back out of the API writer.
+      # 83 tests passed normally and 12 failed under -O. Nothing else catches it.
+      - name: pytest with assertions removed
+        run: |
+          env PYTHONPATH=src PYTHONOPTIMIZE=1 exabgp_log_enable=false uv run pytest -q ./tests/unit/test_*.py ./tests/fuzz/test_*.py
+
+      # A unit test asserts the NEW behaviour, so it can never notice that the new
+      # behaviour is a peering somebody loses on upgrade. This decodes the same corpus in
+      # this tree and in the last release and fails on anything the release accepts and
+      # this one refuses. It found the VPLS exact length, the PMSI refusal, the empty IGP
+      # tag list, a FlowSpec value in four bytes and a two byte AS4 capability.
+      - name: compatibility with what the branch already accepts
+        run: |
+          uv run ./qa/bin/compat_gate
+
+      # The ratchets: no bare except, no assert on wire data, and the long function and
+      # silent except counts only ever go down.
+      - name: tiger style
+        run: |
+          uv run ./qa/bin/check_tiger_style
