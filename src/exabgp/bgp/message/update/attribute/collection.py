@@ -748,9 +748,16 @@ class Attributes:
                 attr = Attribute.unpack(code, flag, value_slice, self._context)
                 if attr is not None:
                     yield attr
-            except (Notify, ValueError):
-                # Skip invalid attributes
-                pass
+            except (Notify, ValueError) as exc:
+                # This iterator is a read-only view over bytes already accepted, so it has
+                # no session to close and skipping is the only thing it can do. It says so
+                # rather than saying nothing: a malformed attribute vanishing without a word
+                # is how a route ends up different from what the peer sent, with nothing
+                # anywhere to trace it back to.
+                log.debug(
+                    lazymsg('attributes.wire.skipped code={code} error={error}', code=code, error=str(exc)),
+                    'parser',
+                )
 
             data = data[offset + length :]
 

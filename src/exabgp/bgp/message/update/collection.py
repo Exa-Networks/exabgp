@@ -576,9 +576,15 @@ class UpdateCollection(Message):
                             ),
                             'parser',
                         )
-            except (TypeError, KeyError):
-                # negotiated.neighbor may be a mock or not support subscripting
-                pass
+            except (TypeError, KeyError) as exc:
+                # Every access above is already guarded, so reaching here means the
+                # neighbour is not shaped the way this check assumes. That is worth knowing
+                # about rather than passing over: the comment which used to be here said
+                # "may be a mock", which is a reason from the tests and not from production.
+                log.debug(
+                    lazymsg('update.nexthop.check.skipped error={error}', error=str(exc)),
+                    'parser',
+                )
 
         announces: list[RoutedNLRI] = []
         withdraws: list[NLRI] = []
