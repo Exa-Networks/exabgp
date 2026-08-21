@@ -27,6 +27,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register()
 class Srv6EndpointBehavior(BaseLS):
     TLV = 1250
+    LEN = 4  # Endpoint Behavior(2) + Flags(1) + Algorithm(1)
 
     def __init__(
         self,
@@ -40,6 +41,7 @@ class Srv6EndpointBehavior(BaseLS):
 
     @classmethod
     def unpack(cls, data):
+        cls.check(data)
         flags = []  # No flags defined according to RFC 9514 and 9352
         algorithm = data[3]
         endpoint_behavior = unpack('!H', data[0:2])[0]

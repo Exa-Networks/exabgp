@@ -31,6 +31,7 @@ from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEn
 @LinkState.register()
 class Srv6SidStructure(BaseLS):
     TLV = 1252
+    LEN = 4  # LB Length(1) + LN Length(1) + Fun Length(1) + Arg Length(1)
 
     def __init__(self, loc_block_len, loc_node_len, func_len, arg_len):
         self.loc_block_len = loc_block_len
@@ -40,6 +41,7 @@ class Srv6SidStructure(BaseLS):
 
     @classmethod
     def unpack(cls, data):
+        cls.check(data)
         loc_block_len = data[0]
         loc_node_len = data[1]
         func_len = data[2]

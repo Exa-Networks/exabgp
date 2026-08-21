@@ -6,6 +6,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
@@ -30,6 +31,9 @@ class IsisArea(BaseLS):
 
     @classmethod
     def unpack(cls, data):
+        # int() has nothing to parse when the TLV carries no area id
+        if not data:
+            raise Notify(3, 5, f'Unable to decode attribute, no data for {cls.REPR}')
         return cls(int(data.hex(), 16))
 
     def json(self, compact=None):

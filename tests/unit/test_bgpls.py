@@ -1161,10 +1161,11 @@ class TestBGPLSLinkAttributes:
         attr = SrAdjacencyLan.unpack(data)
 
         assert attr.TLV == 1100
-        # Note: The __init__ method has a bug that doesn't properly store content,
-        # so we just verify it unpacks without error
         json_output = attr.json()
         assert 'sr-adj-lan-sids' in json_output
+        # __init__ used to drop its argument, so this list was always empty
+        assert attr.sr_adj_lan_sids[0]['sids'] == [200]
+        assert attr.sr_adj_lan_sids[0]['weight'] == 10
 
     def test_srv6_endx(self) -> None:
         """Test Srv6EndX attribute (TLV 1106)"""
