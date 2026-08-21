@@ -9,8 +9,14 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$PROJECT_ROOT"
 
-# Default minimum coverage threshold
-MIN_COVERAGE=${MIN_COVERAGE:-75}
+# The floor, and it is a ratchet: raise it when coverage improves, never lower it.
+#
+# It was 75 against a config which hid the code it was measuring: branch coverage was off,
+# every */__init__.py was omitted, `pass` and three raises were excluded by name so no
+# silent except body counted, and no source was set, so the test files themselves went
+# into the total as fully covered code.  With those fixed the same suite measures 64.
+# Nothing got worse; the number started counting what was already there.
+MIN_COVERAGE=${MIN_COVERAGE:-64}
 
 # Colors
 RED='\033[0;31m'
@@ -59,8 +65,8 @@ run_coverage() {
     esac
 
     # Run pytest with coverage
-    if uv run pytest tests/unit/ \
-        --cov=exabgp \
+    if uv run pytest tests/unit/ tests/fuzz/ \
+        --cov \
         $extra_args \
         --cov-fail-under=$MIN_COVERAGE \
         -q 2>&1; then

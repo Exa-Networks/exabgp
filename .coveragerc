@@ -1,34 +1,40 @@
-#[run]
-#branch = True
-
-[report]
-exclude_lines =
-	pragma: no cover
-	pass
-	def __repr__
-	if __name__ == .__main__.:
-	if self\.debug
-	raise AssertionError
-	raise NotImplementedError
-	raise RuntimeError
-	if 0:
-	if False:
-
-ignore_errors = True
+# The number this produces is only worth having if it can move.  Three settings here used
+# to stop it moving, each by removing code from the denominator rather than by covering it:
+#
+#   branch was off        so `if x: return` counted as covered once either side ran, and
+#                         the untaken side of five thousand branches was invisible
+#   */__init__.py omitted so 1973 statements were never measured at all, including the API
+#                         command dispatcher and Update.unpack_message, the most peer
+#                         exposed decoder in the tree
+#   pass and the raises   so every `except X: pass` body was excluded by definition, and
+#     in exclude_lines    coverage structurally could not tell you whether one ran
+#
+# The percentage went down when these were fixed.  That is the point: it now counts the
+# code TIGER_STYLE.md 1.1 and 1.4 are about.
 
 [run]
+branch = True
+# without a source, `pytest --cov` measured the test files as well as the code, which
+# inflated the total with a body of code that is by definition fully executed
+source =
+	src/exabgp
 omit =
 	*/python?.?/*
 	*/lib-python/?.?/*.py
 	*/lib_pypy/_*.py
-	*/site-packages/ordereddict.py
-	*/site-packages/nose/*
-	*/__init__.py
-	/src/exabgp/dep/*
+	*/site-packages/*
+	*/exabgp/vendoring/*
+	*/exabgp/dep/*
 	/qa/*
 	/dev/*
 	/debian/*
 	/service/*
 
-#[path]
-#source =
+[report]
+exclude_lines =
+	pragma: no cover
+	if __name__ == .__main__.:
+	if TYPE_CHECKING:
+	if typing.TYPE_CHECKING:
+
+ignore_errors = True

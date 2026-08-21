@@ -1,2 +1,4 @@
 #!/bin/sh
-env exabgp_log_enable=false uv run pytest --cov --cov-reset --cov-report=html ./tests/*_test.py
+# tests/*_test.py matched nothing: the files are named test_*.py, so this ran zero tests
+# and produced a coverage report over an empty run for as long as it has existed
+env exabgp_log_enable=false uv run pytest --cov --cov-reset --cov-report=html ./tests/unit ./tests/fuzz

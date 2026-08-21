@@ -453,47 +453,35 @@ def test_large_rib_stress():
     """
     rib = OutgoingRIB(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
-    import time
-
     # Add 10,000 routes
-    start = time.time()
     for i in range(10000):
         # Generate prefix: 10.0-39.0-255.0-255/32
         octet2 = i // 256
         octet3 = i % 256
         add_route_to_rib(rib, f'10.{octet2}.{octet3}.1/32')
-    elapsed_add = time.time() - start
-
-    # Should complete quickly
-    assert elapsed_add < 5.0  # 5 seconds for 10k routes
+    # a wall clock bound in the unit suite fails whenever the machine is busy or the
+    # run is instrumented: this one failed every coverage run, which is how the
+    # coverage script came to report a passing suite as a coverage failure.  Timing
+    # belongs in tests/performance, which has a baseline to compare against
 
     # Verify all pending
     assert rib.pending()
     assert len(rib._new_nlri) == 10000
 
     # Consume all updates
-    start = time.time()
     updates = consume_updates(rib)
-    elapsed_consume = time.time() - start
 
     # Should yield updates (may be batched)
     assert len(updates) >= 1
     assert not rib.pending()
 
-    # Consume should be fast
-    assert elapsed_consume < 5.0
-
     # Verify all cached
     cached = list(rib.cached_routes(None))
     assert len(cached) == 10000
 
-    # Test resend performance
-    start = time.time()
     rib.resend(False)
-    elapsed_resend = time.time() - start
 
     assert rib.pending()
-    assert elapsed_resend < 2.0  # Resend should be fast (just appends to list)
 
     # Clean up (consume resent routes)
     consume_updates(rib)
