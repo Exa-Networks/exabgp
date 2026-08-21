@@ -101,6 +101,29 @@ class TestNameTlvDecoding:
         parsed = emitted(LinkName.unpack(b'\xff\xfe'))
         assert parsed['link-name'] == '��'
 
+    def test_a_conformant_ascii_name_is_unchanged(self) -> None:
+        """The half of the range the RFC actually specifies
+
+        Every other test here feeds this decoder something the RFC does not
+        allow, and a lenient decode is a superset, so nothing was checking that
+        what the RFC DOES ask for still comes back untouched. ToASCII output is
+        the conformant way to carry an accented hostname, so it is the case a
+        real router following 5.3.1.3 puts on the wire.
+
+        Suggested by the session working main, who added it after I pushed back
+        on the encoding, and who was right that correcting the words was not
+        enough on its own.
+        """
+        for name in (b'router1', b'xn--caf-dma-rtr1', b'core-1.example.net', b'a' * 255):
+            assert emitted(NodeName.unpack(name)) == {'node-name': name.decode('ascii')}
+            assert emitted(LinkName.unpack(name)) == {'link-name': name.decode('ascii')}
+
+    def test_every_printable_ascii_byte_survives(self) -> None:
+        # the whole 7 bit printable range in one name, quotes and backslashes
+        # included, so the escaping cannot be confused with the decoding
+        name = bytes(range(0x20, 0x7F))
+        assert emitted(NodeName.unpack(name)) == {'node-name': name.decode('ascii')}
+
     def test_as_dict_matches_json(self) -> None:
         for tlv in (NodeName.unpack(b'\xff\xfe'), LinkName.unpack(b'q"uote')):
             assert tlv.as_dict() == json.loads('{' + tlv.json() + '}')
