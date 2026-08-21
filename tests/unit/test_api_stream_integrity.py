@@ -243,12 +243,19 @@ def test_bgpls_opaque_tlv_cannot_inject_a_json_member(code: int) -> None:
     by attribute code with no family gate, so it rides on a plain IPv4 unicast UPDATE
     and needs no BGP-LS capability.
     """
-    attribute = _tlv(code, b'x", "injected": "owned')
+    payload = b'x", "injected": "owned'
+    attribute = _tlv(code, payload)
     decoded = jsonlib.loads(attribute.json())
     assert 'injected' not in keys_anywhere(decoded), 'a peer chose a key in the API stream'
     assert len(decoded) == 1
-    # the payload is still there, as a value, which is the whole point of escaping it
-    assert 'x", "injected": "owned' in str(list(decoded.values())[0])
+
+    # The payload is still recoverable, which is the point: escaping it kept the bytes and
+    # so does hex.  These TLVs render hex now, because RFC 9552 makes them envelopes for
+    # IGP TLVs rather than text, so this asserts the bytes round trip rather than that a
+    # particular rendering of them appears.  Hex is the stronger position of the two: an
+    # escaped string still has to be escaped correctly, and hex has no quotes to escape.
+    rendered = list(decoded.values())[0]
+    assert bytes.fromhex(rendered) == payload, 'the opaque payload did not survive the render'
 
 
 @pytest.mark.parametrize('code', [1026, 1097, 1098, 1157])

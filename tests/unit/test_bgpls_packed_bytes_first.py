@@ -400,7 +400,8 @@ class TestNodeOpaquePackedBytesFirst:
         instance = NodeOpaque(packed)
 
         assert instance._packed == packed
-        assert instance.content == packed
+        # opaque payloads are arbitrary IGP TLVs, so content is their hex, not the bytes
+        assert instance.content == packed.hex()
 
     def test_node_opaque_make_factory(self) -> None:
         """NodeOpaque.make_node_opaque() factory method"""
@@ -409,7 +410,8 @@ class TestNodeOpaquePackedBytesFirst:
         data = b'opaque-data-123'
         instance = NodeOpaque.make_node_opaque(data)
 
-        assert instance.content == data
+        # opaque payloads are arbitrary IGP TLVs, so content is their hex, not the bytes
+        assert instance.content == data.hex()
         assert instance._packed == data
 
 

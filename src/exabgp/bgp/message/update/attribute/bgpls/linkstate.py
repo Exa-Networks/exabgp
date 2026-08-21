@@ -271,11 +271,19 @@ def jsonable(content: Any) -> Any:
     a peer attaching attribute 29 to a plain IPv4 unicast UPDATE: no BGP-LS session
     needed, since the attribute is dispatched by code with no family gate.
 
-    Bytes the peer chose are not guaranteed to be text, so they are decoded with
-    'replace' rather than raising UnicodeDecodeError out of the API writer.
+    Bytes reaching here are hex encoded rather than decoded as text.  They used to be
+    decoded with 'replace', which kept the API writer alive and destroyed the value: a
+    payload which was not valid UTF-8 arrived as U+FFFD and could not be recovered from
+    what we published.
+
+    No TLV reaches this branch today.  The two which carry a name say so and decode
+    themselves, and the three opaque envelopes render hex, so this is the answer for a
+    class which declares neither.  Hex is the right default for that case: it is lossless,
+    and a value which is really text will look wrong in the output, which is a reason for
+    someone to go and declare it.
     """
     if isinstance(content, (bytes, bytearray, memoryview)):
-        return bytes(content).decode('utf-8', 'replace')
+        return bytes(content).hex()
     if isinstance(content, dict):
         return {str(jsonable(key)): jsonable(value) for key, value in content.items()}
     if isinstance(content, (list, tuple)):

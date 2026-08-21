@@ -19,6 +19,20 @@ Version 6.0.0:
    - "srv6-locator" becomes "srv6-locators" (RFC 9514 7.1, one per algorithm)
    - Each is an array whether one TLV arrives or several, so the member keeps one type
    - Prefix-SID also emitted four loose members with no object around them
+ * Compatibility: BGP-LS renders a byte string by what RFC 9552 says it carries, and
+   the two kinds were being rendered as one.
+   - The opaque envelopes (1025, 1097, 1157) carry IGP TLVs this decoder does not look
+     into, so they render hex. 1097 and 1157 decoded them as text with replacement
+     characters, so anything not valid UTF-8 reached the API as U+FFFD and the value the
+     peer sent could not be recovered. 1025 already rendered hex, so the three did not
+     agree with each other either.
+   - The names (1026 Node Name, 1098 Link Name) are read leniently. RFC 9552 5.3.1.3 and
+     5.3.2.7 both say the field "is encoded in 7-bit ASCII" and make RFC 5890 ToASCII the
+     sender's job, so a peer putting raw UTF-8 on the wire is not conformant. ExaBGP
+     accepted only ASCII and discarded the whole BGP-LS attribute otherwise, which is a
+     router losing its router-ids, metrics and SIDs over a descriptive field. Non-ASCII
+     names now render as UTF-8, best effort. A conformant name is unaffected, since
+     UTF-8 is a superset of ASCII.
  * Fix: a BGP-LS TLV the RFC does not allow to repeat, repeated, makes the attribute
    malformed. RFC 9552 5.3.2 attribute discard applies, so the route survives without
    its BGP-LS attribute rather than the member being silently overwritten. Measured

@@ -23,7 +23,19 @@ from exabgp.util.types import Buffer
 
 @LinkState.register_lsid(tlv=1157, json_key='opaque-prefix', repr_name='Opaque Prefix Attribute')
 class PrefixOpaque(BaseLS):
-    # content property inherited from BaseLS returns self._packed (raw bytes)
+    @property
+    def content(self) -> str:
+        """The opaque payload as hex.
+
+        RFC 9552 5.3.3.6 makes this an envelope carrying IGP TLVs which this decoder does
+        not look into, so the payload is arbitrary binary.  Inheriting BaseLS.content gave
+        the raw bytes to jsonable(), which decodes with 'replace', so any byte which is not
+        valid UTF-8 reached the API as U+FFFD and what the peer sent could not be recovered
+        from what we published.
+
+        Hex is lossless and is already what TLV 1025 renders.
+        """
+        return bytes(self._packed).hex()
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> PrefixOpaque:

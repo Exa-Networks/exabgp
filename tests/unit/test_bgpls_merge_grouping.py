@@ -158,14 +158,6 @@ def test_the_alias_pair_lands_in_one_array_rather_than_two_keys(first: int, seco
 
 MAX_SEED_WIDTH = 40
 
-# The opaque TLVs disagree for a reason which is not drift: content is the packed-bytes
-# accessor and the tests assert it as such, while json() renders the hex of those bytes.
-# Aligning them means choosing how opaque peer bytes reach the API, and the three do not
-# agree today: 1025 renders hex, 1097 and 1157 go through jsonable(), which decodes bytes
-# as text and loses anything which is not valid UTF-8 to a replacement character.  That is
-# a change to what a consumer receives, so it is recorded here rather than made silently.
-ENCODING_UNDECIDED = {1025}
-
 
 def smallest_instance(code: int) -> BaseLS | None:
     """A decoded TLV at the shortest width its own decoder accepts."""
@@ -209,8 +201,6 @@ def test_no_tlv_renders_something_its_content_does_not_hold() -> None:
     mismatched = []
     for code, klass in sorted(LinkState.registered_lsids.items()):
         if getattr(klass, 'MERGE', False) or getattr(klass, 'GENERIC', False):
-            continue
-        if code in ENCODING_UNDECIDED:
             continue
         instance = smallest_instance(code)
         if instance is None:

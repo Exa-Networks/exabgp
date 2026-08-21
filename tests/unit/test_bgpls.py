@@ -1144,7 +1144,8 @@ class TestBGPLSLinkAttributes:
 
         assert attr.TLV == 1098
         # LinkName stores raw bytes, not decoded string
-        assert attr.content == b'link-to-router-2'
+        # a link name is text: RFC 9552 5.3.2.7 says 7-bit ASCII, read leniently as UTF-8
+        assert attr.content == 'link-to-router-2'
 
     def test_sr_adjacency(self) -> None:
         """Test AdjacencySid attribute (TLV 1099)"""
@@ -1256,7 +1257,9 @@ class TestBGPLSNodeAttributes:
         attr = NodeOpaque.unpack_bgpls(data)
 
         assert attr.TLV == 1025
-        assert attr.content == data
+        # opaque payloads are arbitrary IGP TLVs, so content is their hex, not the bytes
+        assert attr.content == data.hex()
+        assert bytes.fromhex(attr.content) == data
 
     def test_node_name(self) -> None:
         """Test NodeName attribute (TLV 1026)"""
@@ -1410,7 +1413,9 @@ class TestBGPLSPrefixAttributes:
         attr = PrefixOpaque.unpack_bgpls(data)
 
         assert attr.TLV == 1157
-        assert attr.content == data
+        # opaque payloads are arbitrary IGP TLVs, so content is their hex, not the bytes
+        assert attr.content == data.hex()
+        assert bytes.fromhex(attr.content) == data
 
     def test_sr_prefix(self) -> None:
         """Test PrefixSid attribute (TLV 1158)"""
