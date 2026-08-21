@@ -87,9 +87,17 @@ class PMSI(Attribute):
         if len(data) < 5:
             raise ValueError(f'PMSI requires at least 5 bytes, got {len(data)}')
         tunnel_type = data[1]
-        if tunnel_type in cls._pmsi_known:
-            return cls._pmsi_known[tunnel_type](data)
-        return cls(data)
+        klass = cls._pmsi_known.get(tunnel_type)
+        if klass is None:
+            return cls(data)
+        # a subclass exists to read a tunnel identifier of one shape, and its accessors say
+        # so: PMSIIngressReplication.ip hands four bytes to IPv4.ntop(). A peer which sends
+        # another size has not sent that shape, so it does not get that class. Refusing the
+        # attribute instead would drop a route this release accepts today; the generic PMSI
+        # holds the same bytes and prints the identifier as hex.
+        if klass.TUNNEL_SIZE is not None and len(data) - 5 != klass.TUNNEL_SIZE:
+            return cls(data)
+        return klass(data)
 
     @classmethod
     def make_pmsi(cls, tunnel_type: int, flags: int, label: int, tunnel: bytes, raw_label: int | None = None) -> 'PMSI':
@@ -259,13 +267,11 @@ class PMSIIngressReplication(PMSI):
         return IPv4.ntop(self.tunnel)
 
     def prettytunnel(self) -> str:
-        """The endpoint as an address, or as hex when it is not one.
+        """The endpoint as an address.
 
-        IPv4.ntop() wants exactly four bytes and raises ValueError otherwise, which used to
-        surface from str() and repr(): the logger and the text API, long after the UPDATE
-        was accepted.  A peer which sends another size still announced something, so it is
-        printed the way an unknown tunnel type is printed rather than refused.
+        from_packet only builds this class when the identifier is the four bytes ip needs,
+        so IPv4.ntop() cannot be handed anything else. The assertion is here because that
+        is an invariant of the dispatch rather than something the caller can see.
         """
-        if len(self.tunnel) != self.TUNNEL_SIZE:
-            return PMSI.prettytunnel(self)
+        assert len(self.tunnel) == self.TUNNEL_SIZE, 'ingress replication holds an IPv4 address'
         return self.ip

@@ -152,17 +152,22 @@ def _pmsi(data: bytes) -> Attribute:
     return _decode_attribute(Attribute.CODE.PMSI_TUNNEL, data)
 
 
-def test_pmsi_ingress_replication_shows_a_short_tunnel_as_hex() -> None:
-    """Ingress Replication carries an IPv4 address, and IPv4.ntop() wants four bytes.
+@pytest.mark.parametrize('tunnel', [b'', b'\xff', b'\xff\xff', b'\x0a\x00\x00\x01\x05', b'\x00' * 8])
+def test_pmsi_gives_a_mismatched_tunnel_the_generic_class(tunnel: bytes) -> None:
+    """A subclass exists to read one shape of tunnel identifier, and its accessors say so.
 
-    Only the five byte header was checked, so a seven byte PMSI decoded and then raised
-    ValueError from str() and repr(): the logger and the text API, long after the UPDATE
-    was accepted. The peer still announced something, and an installation which accepts it
-    today has to keep accepting it, so it is printed the way an unknown tunnel type is
-    printed rather than refused.
+    PMSIIngressReplication.ip hands four bytes to IPv4.ntop(), which raises ValueError on
+    anything else: that surfaced from str() and repr(), which is the logger and the text
+    API, long after the UPDATE was accepted. Selecting the class on the type byte alone
+    meant the class and the data disagreed.
+
+    Refusing the attribute would drop a route this release accepts, so the dispatch is what
+    gives way: the identifier has to fit the class, or the generic PMSI holds the same
+    bytes and prints them as hex.
     """
-    attribute = _pmsi(b'\x00\x06\x00\x00\x00\xff\xff')
-    assert '0xFFFF' in str(attribute)
+    attribute = _pmsi(b'\x00\x06\x00\x00\x00' + tunnel)
+    assert type(attribute).__name__ == 'PMSI'
+    assert str(attribute)
     repr(attribute)
 
 
