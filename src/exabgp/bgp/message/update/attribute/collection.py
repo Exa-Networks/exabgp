@@ -152,6 +152,15 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             else:
                 yield ' {} {}'.format(name, presentation % str(attribute))
 
+    @staticmethod
+    def _as_json_scalar(text: str) -> str:
+        """Emit a number as a number, and anything else as a quoted string."""
+        try:
+            int(text)
+        except ValueError:
+            return json.dumps(text)
+        return text
+
     def _generate_json(self, include_nexthop: bool = False, generic: bool = False) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
             # Skip internal pseudo-attributes
@@ -180,6 +189,11 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             how, _, name, _, presentation = self.representation[code]
             if how == 'boolean':
                 yield '"{}": {}'.format(name, 'true' if self.has(code) else 'false')
+            elif how == 'integer':
+                # MED and local preference print as decimal, which is a JSON number, but
+                # AIGP prints as 0x000000000000000a, which is not: unquoted it made the
+                # line unparseable. Whether the text is a number decides how it is emitted.
+                yield '"{}": {}'.format(name, self._as_json_scalar(presentation % str(attribute)))
             elif how == 'string':
                 yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute)))
             elif how == 'list':
