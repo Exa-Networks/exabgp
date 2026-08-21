@@ -179,3 +179,158 @@ class TestTheHooksCopyStateRatherThanNamedAttributes:
         duplicate = copy.deepcopy(original)
         duplicate.mutable.append('no')
         assert original.mutable == ['shared?']
+
+
+class TestEveryCopyHookInTheTree:
+    """Walk the source for copy hooks rather than listing the three I fixed
+
+    I fixed PathInfo, Labels and RouteDistinguisher because they were the ones I
+    had written or had just been told about. That is scope set by AUTHORSHIP, and
+    it is only complete here by luck: 5.0 has four copy hooks in total. The
+    session working main scoped their own review the same way, to their last ten
+    commits, and missed a hook which had been in the tree the whole time one
+    function along.
+
+    So this walks for the hooks instead of naming them.
+
+    ONE CAVEAT THIS SWEEP ENCODES. Copying __dict__ is right for a class which
+    HAS one and wrong for a slotted class, where it copies nothing at all. 5.0
+    has exactly one slotted class and it has no copy hooks, so __dict__ is
+    correct for all four today. main is the opposite: ten of its hooks name their
+    slots, which is the only way to copy a class with no __dict__. The same
+    finding has opposite fixes on the two branches, and the assertion below is
+    about the PROPERTY, state and class survive a copy, rather than the mechanism.
+    """
+
+    @staticmethod
+    def template_instance(module, klass):
+        """A well formed instance to clone, rather than a bare __new__
+
+        __new__ skips __init__, so the object has none of the attributes its own
+        __eq__ reads: RouteDistinguisher.__copy__ compares against NORD, which
+        reads self.rd, and the probe raised AttributeError before reaching the
+        assertion. Every one of these classes keeps a canonical instance as a
+        class or module attribute, so that is used as the template and the probe
+        is added to a copy of ITS state.
+        """
+        for holder in (klass, module):
+            for name in dir(holder):
+                if name.startswith('__'):
+                    continue
+                value = getattr(holder, name, None)
+                if isinstance(value, klass):
+                    return value
+        return None
+
+    @staticmethod
+    def classes_with_hooks():
+        import ast
+        import importlib
+        import pathlib
+
+        root = pathlib.Path(__file__).resolve().parent.parent.parent / 'src'
+        found = []
+        for path in sorted(root.rglob('*.py')):
+            try:
+                tree = ast.parse(path.read_text(encoding='utf-8', errors='replace'))
+            except SyntaxError:
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                methods = {n.name for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+                if not ({'__copy__', '__deepcopy__'} & methods):
+                    continue
+                module_name = '.'.join(path.relative_to(root).with_suffix('').parts)
+                try:
+                    module = importlib.import_module(module_name)
+                except Exception:  # noqa: BLE001 - a module which will not import cannot be swept
+                    continue
+                klass = getattr(module, node.name, None)
+                if klass is not None:
+                    found.append((f'{module_name}.{node.name}', klass, module))
+        return found
+
+    HOOK_FLOOR = 4  # ratchet: a walk which finds nothing asserts nothing
+
+    def test_the_walk_finds_the_hooks(self) -> None:
+        found = self.classes_with_hooks()
+        assert len(found) >= self.HOOK_FLOOR, [name for name, _k, _m in found]
+
+    def test_none_of_them_copies_nothing(self) -> None:
+        """A hook which returns an object with no state is the failure to catch
+
+        Copying __dict__ on a slotted class does exactly that, silently. So does
+        naming an attribute the class no longer has. Either way the copy is a
+        husk, and this is the assertion which sees it regardless of which
+        mechanism the hook chose.
+        """
+        empty, checked = [], 0
+        for name, klass, module in self.classes_with_hooks():
+            template = self.template_instance(module, klass)
+            if template is None or not hasattr(template, '__dict__'):
+                continue  # slotted, or no canonical instance: a different check
+            instance = klass.__new__(klass)
+            instance.__dict__.update(template.__dict__)
+            instance.__dict__['probe'] = 'carried'
+            checked += 1
+            for duplicate in (copy.copy, copy.deepcopy):
+                made = duplicate(instance)
+                if made is instance:
+                    continue  # a singleton copying to itself, which is correct
+                if made is template:
+                    # canonicalisation: RouteDistinguisher tests its singleton
+                    # with == rather than is, so a separately built RD equal to
+                    # NORD copies TO NORD. That is deliberate and it helps the
+                    # twenty `is NORD` sites, because an equal-but-separate RD
+                    # becomes the singleton rather than staying a lookalike.
+                    # The probe attribute cannot survive it, and no such
+                    # attribute can exist while rd is the only field.
+                    continue
+                if getattr(made, 'probe', None) != 'carried':
+                    empty.append(f'{name} via {duplicate.__name__}')
+        assert not empty, f'these copies lose the object state: {empty}'
+        assert checked >= self.HOOK_FLOOR - 1, f'only exercised {checked} hooks'
+
+    def test_none_of_them_changes_class(self) -> None:
+        wrong = []
+        for name, klass, module in self.classes_with_hooks():
+            template = self.template_instance(module, klass)
+            if template is None or not hasattr(template, '__dict__'):
+                continue
+            instance = klass.__new__(klass)
+            instance.__dict__.update(template.__dict__)
+            for duplicate in (copy.copy, copy.deepcopy):
+                made = duplicate(instance)
+                if made is not instance and type(made) is not klass:
+                    wrong.append(f'{name} via {duplicate.__name__} -> {type(made).__name__}')
+        assert not wrong, wrong
+
+
+class TestTheRouteDistinguisherCanonicalises:
+    """It tests its singleton with == where the others use `is`, on purpose
+
+    A RouteDistinguisher built separately but equal to NORD copies TO NORD. The
+    other three singletons test identity, so an equal-but-separate value stays
+    separate. The difference is deliberate here and it points the safe way: the
+    twenty `is RouteDistinguisher.NORD` sites in src see the singleton after a
+    copy rather than a lookalike which would answer False.
+
+    Pinned because the copy sweep flags it, and because someone reading the three
+    hooks side by side will see the inconsistency and want to make them match.
+    Making them match in the `is` direction would turn twenty identity tests into
+    tests which can now fail on a copied route.
+    """
+
+    def test_an_equal_route_distinguisher_copies_to_the_singleton(self) -> None:
+        made = RouteDistinguisher(b'')
+        assert made is not RouteDistinguisher.NORD
+        assert made == RouteDistinguisher.NORD
+        assert copy.copy(made) is RouteDistinguisher.NORD
+        assert copy.deepcopy(made) is RouteDistinguisher.NORD
+
+    def test_a_real_route_distinguisher_does_not(self) -> None:
+        # the canonicalisation must only reach values which ARE the empty one
+        made = RouteDistinguisher(bytes(8))
+        assert copy.deepcopy(made) is not RouteDistinguisher.NORD
+        assert copy.deepcopy(made) == made
