@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import json
+
 from struct import pack
 from struct import unpack
 
@@ -22,7 +24,12 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import Action
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
+
+
+RTC_LENGTH_MIN_BITS = 8 * 4
+RTC_PACKED_SIZE = 13  # length(1) + origin ASN(4) + route target(8)
 
 
 @NLRI.register(AFI.ipv4, SAFI.rtc)
@@ -59,6 +66,11 @@ class RTC(NLRI):
     def __repr__(self):
         return str(self)
 
+    def json(self, announced=True, compact=None):
+        if self.rt is None:
+            return '{ "origin": 0, "route-target": null }'
+        return '{{ "origin": {}, "route-target": {} }}'.format(int(self.origin), json.dumps(str(self.rt)))
+
     def as_dict(self):
         family = self.family().afi_safi()
         nlri = {
@@ -84,13 +96,19 @@ class RTC(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        if not bgp:
+            raise Notify(3, 10, 'not enough data to extract the length of the RTC NLRI')
+
         length = bgp[0]
 
         if length == 0:
             return cls(afi, safi, action, ASN(0), None), bgp[1:]
 
-        if length < 8 * 4:
-            raise Exception('incorrect RT length: %d (should be >=32,<=96)' % length)
+        if length < RTC_LENGTH_MIN_BITS:
+            raise Notify(3, 10, 'incorrect RTC length: %d (should be >=32,<=96)' % length)
+
+        if len(bgp) < RTC_PACKED_SIZE:
+            raise Notify(3, 10, 'RTC NLRI truncated: need %d bytes, got %d' % (RTC_PACKED_SIZE, len(bgp)))
 
         # We are reseting the flags on the RouteTarget extended
         # community, because they do not make sense for an RTC route

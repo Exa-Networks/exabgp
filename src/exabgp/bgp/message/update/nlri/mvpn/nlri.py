@@ -7,6 +7,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import Action
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
 # https://datatracker.ietf.org/doc/html/rfc6514
@@ -26,6 +27,8 @@ from exabgp.bgp.message.update.nlri import NLRI
 @NLRI.register(AFI.ipv6, SAFI.mcast_vpn)
 class MVPN(NLRI):
     registered_mvpn = dict()
+
+    HEADER_SIZE = 2  # Route Type(1) + Length(1)
 
     # NEED to be defined in the subclasses
     CODE = -1
@@ -85,8 +88,14 @@ class MVPN(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        if len(bgp) < cls.HEADER_SIZE:
+            raise Notify(3, 10, 'not enough data to extract the header of the mvpn NLRI')
+
         code = bgp[0]
         length = bgp[1]
+
+        if len(bgp) < length + cls.HEADER_SIZE:
+            raise Notify(3, 10, 'the mvpn NLRI announces more data than it carries')
 
         if code in cls.registered_mvpn:
             klass = cls.registered_mvpn[code].unpack(bgp[2 : length + 2], afi)

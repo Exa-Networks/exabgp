@@ -112,9 +112,12 @@ class INET(NLRI):
 
         if addpath:
             if len(bgp) <= PATH_INFO_SIZE:
-                raise ValueError('Trying to extract path-information but we do not have enough data')
+                raise Notify(3, 10, 'not enough data to extract the path-information of the NLRI')
             nlri.path_info = PathInfo(bgp[:PATH_INFO_SIZE])
             bgp = bgp[PATH_INFO_SIZE:]
+
+        if not bgp:
+            raise Notify(3, 10, 'not enough data to extract the mask of the NLRI')
 
         mask = bgp[0]
         bgp = bgp[1:]
@@ -125,6 +128,8 @@ class INET(NLRI):
         if safi.has_label():
             labels = []
             while mask - rd_mask >= LABEL_SIZE_BITS:
+                if len(bgp) < 3:
+                    raise Notify(3, 10, 'not enough data to extract the label stack of the NLRI')
                 label = int(unpack('!L', bytes([0]) + bgp[:3])[0])
                 bgp = bgp[3:]
                 mask -= LABEL_SIZE_BITS  # 3 bytes
@@ -143,12 +148,18 @@ class INET(NLRI):
 
         if rd_size:
             mask -= rd_mask  # the route distinguisher
+            if len(bgp) < rd_size:
+                raise Notify(3, 10, 'not enough data to extract the route distinguisher of the NLRI')
             rd = bgp[:rd_size]
             bgp = bgp[rd_size:]
             nlri.rd = RouteDistinguisher(rd)
 
         if mask < 0:
             raise Notify(3, 10, 'invalid length in NLRI prefix')
+
+        # a mask longer than the address family allows would index past the prefix
+        if mask > IP.length(afi) * 8:
+            raise Notify(3, 10, 'invalid mask %d in NLRI prefix for %s' % (mask, AFI(afi)))
 
         if not bgp and mask:
             raise Notify(3, 10, 'not enough data for the mask provided to decode the NLRI')

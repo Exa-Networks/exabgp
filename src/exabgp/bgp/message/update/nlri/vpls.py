@@ -28,6 +28,11 @@ def _unique():
 unique = _unique()
 
 
+VPLS_HEADER_SIZE = 2
+# RD(8) + endpoint(2) + offset(2) + size(2) + base(3), the length the header announces
+VPLS_PAYLOAD_SIZE = 17
+
+
 @NLRI.register(AFI.l2vpn, SAFI.vpls)
 class VPLS(NLRI):
     # XXX: Should take AFI, SAFI and OUT.direction as parameter to match other NLRI
@@ -113,7 +118,11 @@ class VPLS(NLRI):
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
         # label is 20bits, stored using 3 bytes, 24 bits
+        if len(bgp) < VPLS_HEADER_SIZE:
+            raise Notify(3, 10, 'not enough data to extract the length of the l2vpn vpls NLRI')
         (length,) = unpack('!H', bgp[0:2])
+        if length != VPLS_PAYLOAD_SIZE:
+            raise Notify(3, 10, 'l2vpn vpls length is %d, the only valid value is %d' % (length, VPLS_PAYLOAD_SIZE))
         if len(bgp) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
         rd = RouteDistinguisher(bgp[2:10])
