@@ -202,18 +202,22 @@ class TestLabelUnpack:
     """
 
     def test_unpack_with_withdraw_label(self) -> None:
-        """Test unpacking route with withdraw label (0x800000)"""
-        # Label 0x800000 indicates withdrawal
-        # Format: mask (1 byte) + label (3 bytes) + network
-        withdraw_label = b'\x00\x80\x00\x00'  # Label 0x800000
-        data = b'\x38' + withdraw_label + b'\xc0\xa8\x01'  # mask=56 (24 for label + 32 for prefix)
+        """A withdraw carrying the RFC 3107 label 0x800000, which does not set BOS.
+
+        The label used to be four bytes, b'\\x00\\x80\\x00\\x00', so the first three read as
+        0x008000 and the withdraw value never appeared at all.  The test passed because it
+        asserted only isinstance: the prefix it decoded was 0.0.0.0/0 and nothing looked.
+        """
+        # mask covering label(24) + prefix(24), then the label, then 192.168.1
+        data = b'\x30' + b'\x80\x00\x00' + b'\xc0\xa8\x01'
 
         nlri, leftover = Label.unpack_nlri(
             AFI.ipv4, SAFI.nlri_mpls, data, Action.WITHDRAW, addpath=False, negotiated=create_negotiated()
         )
 
         assert isinstance(nlri, Label)
-        # Action is no longer stored in NLRI - it's determined by which RIB method is called
+        assert str(nlri.cidr) == '192.168.1.0/24', 'the withdraw label swallowed the prefix'
+        assert leftover == b''
 
     def test_unpack_with_null_label(self) -> None:
         """Test unpacking route with null label (0x000000)"""

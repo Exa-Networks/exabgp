@@ -78,7 +78,6 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from struct import unpack
 from typing import Any, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -165,23 +164,24 @@ class LabelBase(INET):
             assert base + 1 + self._label_size <= len(self._packed), 'the label stack has to fit in the wire bytes'
             return base + 1 + self._label_size
 
-        # Scan labels starting after mask byte
-        label_start = base + 1
-        offset = label_start
-        data = self._packed[offset:]
-
-        while len(data) >= LABEL_SIZE_BYTES:
-            # Read 24-bit label value
-            raw = unpack('!L', bytes([0]) + bytes(data[:LABEL_SIZE_BYTES]))[0]
-            offset += LABEL_SIZE_BYTES
-            data = data[LABEL_SIZE_BYTES:]
-
-            # Check BOS bit (lowest bit)
-            if raw & LABEL_BOS_MASK:
-                return offset
-
-        # No BOS found - return current offset (all data was labels)
-        return offset
+        # There is no scanning fallback, because scanning cannot be made correct.  A label
+        # stack does not always end with the bottom of stack bit: RFC 3107 uses 0x800000 to
+        # withdraw, and that value does not set BOS, so a scanner runs past the stack and
+        # eats the route distinguisher and the prefix behind it.  Measured on the loop this
+        # replaces, with one withdraw label and a 10.0.0.0/24 prefix:
+        #
+        #     labels  label [ 524288 (8388608) 40960 (655360) ]   two, from one
+        #     cidr    0.0.0.0/0                                   the prefix, gone
+        #
+        # So it answered plausibly and wrongly, and the comment above it described the bug
+        # rather than preventing it.  Every factory records the size; nothing in src builds
+        # one of these without going through a factory, and the suite reached this branch
+        # zero times in 6479 calls.  A construction which forgets is a bug in us, and the
+        # answer to it is to say so rather than to publish a default route.
+        raise ValueError(
+            f'{type(self).__name__} was built without recording its label size, '
+            'so the end of the label stack cannot be found: use a factory method'
+        )
 
     @property
     def labels(self) -> Labels:

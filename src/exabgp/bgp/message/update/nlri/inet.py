@@ -405,6 +405,7 @@ class INETBase(NLRI):
         labels_list: list[int] | None = None
         if safi.has_label():
             labels_list = []
+            ended = False
             while mask - rd_mask >= LABEL_SIZE_BITS:
                 if len(data) < 3:
                     raise Notify(3, 10, 'not enough data to extract the label stack of the NLRI')
@@ -416,12 +417,28 @@ class INETBase(NLRI):
                 labels_list.append(label >> 4)
                 # This is a route withdrawal
                 if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
+                    ended = True
                     break
                 # This is a next-hop
                 if label == LABEL_NEXTHOP_VALUE:
+                    ended = True
                     break
                 if label & LABEL_BOTTOM_OF_STACK_BIT:
+                    ended = True
                     break
+            # RFC 3107 3: the bottom of stack bit is set on the last label, and it is the
+            # only thing on the wire which says where the stack ends.  Running out of mask
+            # instead means every remaining byte was eaten as a label, INCLUDING the prefix,
+            # and the route was then reported with whatever was left, which is nothing:
+            #
+            #   announce, label 0x800000, prefix 10.0.0.0/24  ->  0.0.0.0/0
+            #   withdraw, a stack with no BOS at all          ->  0.0.0.0/0
+            #
+            # A peer could hand us a default route by sending a label stack which does not
+            # terminate.  0x800000 is the RFC 3107 withdraw value and only ends a stack on a
+            # withdraw, so an announce carrying it took that path.
+            if labels_list and not ended:
+                raise Notify(3, 10, 'the label stack of the NLRI never ends: no bottom of stack bit')
 
         # Parse route distinguisher if present
         rd: RouteDistinguisher | None = None

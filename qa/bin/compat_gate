@@ -40,9 +40,40 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 
+# A label stack of 0x30 bytes never sets the bottom of stack bit, so the decoder read every
+# remaining byte as a label, including the prefix, and reported the route as 0.0.0.0/0.  A
+# peer could hand us a default route that way.  RFC 3107 3 puts the bit on the last label
+# and it is the only thing on the wire which says where the stack ends, so a stack without
+# one is malformed and is refused now.  Nothing can be depending on the old answer: a
+# deployment sending these was having its prefix replaced with a default route.
+#
+# Listed one key at a time rather than as 'nlri-mpls', which would match every labelled
+# entry in the corpus and blind the gate to a real regression in that family.
+_NO_BOTTOM_OF_STACK = 'a labelled NLRI whose stack has no bottom of stack bit; it decoded to 0.0.0.0/0'
+
 # deliberate changes, each with the reason it is worth the cost
 ALLOWED: dict[str, str] = {
     'flow': 'a flow which parsed no component matched everything; RFC 8955 4.3 withdraws it',
+    'nlri/ipv4/nlri-mpls/24/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv4/nlri-mpls/25/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv4/nlri-mpls/26/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv4/nlri-mpls/27/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv4/nlri-mpls/28/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv4/nlri-mpls/29/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv4/nlri-mpls/30/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv4/nlri-mpls/31/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv4/nlri-mpls/32/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv4/nlri-mpls/33/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv6/nlri-mpls/24/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv6/nlri-mpls/25/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv6/nlri-mpls/26/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv6/nlri-mpls/27/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv6/nlri-mpls/28/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv6/nlri-mpls/29/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv6/nlri-mpls/30/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv6/nlri-mpls/31/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv6/nlri-mpls/32/30/b': _NO_BOTTOM_OF_STACK,
+    'nlri/ipv6/nlri-mpls/33/30/b': _NO_BOTTOM_OF_STACK,
 }
 
 
