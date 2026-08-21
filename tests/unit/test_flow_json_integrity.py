@@ -50,6 +50,23 @@ class TestFlowJsonAlwaysParses:
         emitted = rendered(AFI.ipv4, SAFI.flow_ip, bytes.fromhex('06038106048119'))
         assert emitted == '{ "protocol": [ "=tcp" ], "port": [ "=25" ], "string": "flow protocol =tcp port =25" }'
 
+    def test_a_declared_zero_and_a_missing_value_differ_by_one_byte(self) -> None:
+        """The malformed and the well formed form are one byte apart
+
+        06 03 81 06 04 81 00   six declared bytes and a real 00: the peer DID
+                               send a zero, and "port =0" is the truth
+        05 03 81 06 04 81      five declared bytes for six, so the port value is
+                               not there at all, and "port =0" would be invented
+
+        A fixture written with the wrong one pins the bug as the expected
+        output, which is how this defect survived its own regression test.
+        """
+        well_formed = rendered(AFI.ipv4, SAFI.flow_ip, bytes.fromhex('06038106048100'))
+        assert well_formed is not None
+        assert '"=0"' in well_formed
+
+        assert rendered(AFI.ipv4, SAFI.flow_ip, bytes.fromhex('050381060481')) is None
+
     @pytest.mark.parametrize('afi,safi', FAMILIES)
     def test_every_flow_family(self, afi, safi) -> None:
         for wire in (bytes.fromhex('00'), bytes.fromhex('050C00008002')):
