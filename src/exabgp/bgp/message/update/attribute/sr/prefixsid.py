@@ -6,8 +6,10 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from struct import pack
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 from exabgp.util import hexstring
@@ -27,6 +29,8 @@ class PrefixSid(Attribute):
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
     CACHING = True
     TLV = -1
+
+    TLV_HEADER_SIZE = 3  # Type(1) + Length(2)
 
     # Registered subclasses we know how to decode
     registered_srids = dict()
@@ -48,12 +52,20 @@ class PrefixSid(Attribute):
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
+        # keep what the peer sent: rebuilding the attribute from the parsed TLVs
+        # re-encodes something it never sent, and an unregistered TLV cannot be
+        # re-encoded at all
+        packed = bytes(data)
         sr_attrs = []
         while data:
+            if len(data) < cls.TLV_HEADER_SIZE:
+                raise Notify(3, 5, 'invalid BGP prefix SID attribute, truncated TLV header')
             # Type = 1 octet
             scode = data[0]
             # L = 2 octet  :|
             length = unpack('!H', data[1:3])[0]
+            if len(data) < length + cls.TLV_HEADER_SIZE:
+                raise Notify(3, 5, 'invalid BGP prefix SID attribute, TLV announces more than it carries')
             if scode in cls.registered_srids:
                 klass = cls.registered_srids[scode].unpack(data[3 : length + 3], length)
             else:
@@ -61,7 +73,7 @@ class PrefixSid(Attribute):
             klass.TLV = scode
             sr_attrs.append(klass)
             data = data[length + 3 :]
-        return cls(sr_attrs=sr_attrs)
+        return cls(sr_attrs=sr_attrs, packed=packed)
 
     def json(self, compact=None):
         content = ', '.join(d.json() for d in self.sr_attrs)
@@ -102,6 +114,10 @@ class GenericSRId:
     @classmethod
     def unpack(cls, scode, data):
         return cls(code=scode, rep=data)
+
+    def pack(self):
+        # re-emit exactly the bytes which arrived, header included
+        return bytes([self.code]) + pack('!H', len(self.rep)) + bytes(self.rep)
 
     def json(self, compact=None):
         return '"attribute-not-implemented-{}": "{}"'.format(self.code, hexstring(self.rep))
