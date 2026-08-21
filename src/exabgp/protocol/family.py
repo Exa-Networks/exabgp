@@ -365,6 +365,10 @@ class Family:
         (AFI.ipv4, SAFI.flow_vpn): ((0, 4), 0),
         (AFI.ipv4, SAFI.rtc): ((4, 16), 0),
         (AFI.ipv6, SAFI.unicast): ((16, 32), 0),
+        # RFC 4760: multicast reachability carries the same next-hop encoding as unicast,
+        # so this mirrors ipv6 unicast. It was the only registered decoder with an announce
+        # parser and no entry here, which made the family announceable and undecodable.
+        (AFI.ipv6, SAFI.multicast): ((16, 32), 0),
         (AFI.ipv6, SAFI.nlri_mpls): ((16, 32), 0),
         (AFI.ipv6, SAFI.mup): ((4, 16), 0),
         (AFI.ipv6, SAFI.mpls_vpn): ((24, 40), 8),
@@ -374,6 +378,10 @@ class Family:
         (AFI.l2vpn, SAFI.vpls): ((4,), 0),
         (AFI.l2vpn, SAFI.evpn): ((4,), 0),
         (AFI.bgpls, SAFI.bgp_ls): ((4, 16), 0),
+        # RFC 7752 section 3.2.1: for the VPN SAFI the next hop is a VPN-IPv4 or VPN-IPv6
+        # address with the route distinguisher set to zero, which is the shape the mpls-vpn
+        # families use. 12 = RD(8) + IPv4(4), 24 = RD(8) + IPv6(16), and 8 is the RD to skip.
+        (AFI.bgpls, SAFI.bgp_ls_vpn): ((12, 24), 8),
         (AFI.ipv4, SAFI.sr_policy): ((4,), 0),
         (AFI.ipv6, SAFI.sr_policy): ((16,), 0),
     }
