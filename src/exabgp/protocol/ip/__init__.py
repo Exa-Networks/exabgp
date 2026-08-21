@@ -239,10 +239,12 @@ class _NoNextHop:
     def __str__(self):
         return 'no-nexthop'
 
-    def __deepcopy__(self, _):
+    def __deepcopy__(self, memo=None):
+        # a singleton copies to itself: there is only one no-nexthop
         return self
 
-    def __copy__(self, _):
+    def __copy__(self):
+        # copy.copy() calls this with no argument; taking one made it raise
         return self
 
 
