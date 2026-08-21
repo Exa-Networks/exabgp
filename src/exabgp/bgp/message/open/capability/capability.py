@@ -33,14 +33,10 @@ def decode_utf8(data, what):
     except UnicodeDecodeError as exc:
         raise Notify(2, 0, 'the {} in the capability is not valid UTF-8 ({})'.format(what, exc)) from None
 
-    # the text API writes one event per line, so a newline here would let the peer
-    # forge a whole event in the stream a controller reads.  Same rule the
-    # healthcheck applies to its own attributes.
-    for character in decoded:
-        if character == '\t' or (character.isprintable() and character != '\x7f'):
-            continue
-        raise Notify(2, 0, 'the {} in the capability holds the control character {!r}'.format(what, character))
-
+    # a control character here would let a peer forge an event in the text API,
+    # which writes one line per event.  That is handled by the encoders, which
+    # escape what they are given: refusing the capability outright would drop
+    # sessions which come up today against routers with odd hostnames.
     return decoded
 
 
