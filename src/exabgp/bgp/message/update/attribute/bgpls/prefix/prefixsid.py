@@ -29,6 +29,7 @@ from exabgp.util.types import Buffer
 # 	draft-ietf-isis-segment-routing-extensions Prefix-SID Sub-TLV
 
 # SID/Label data length when flags are not set
+SID_LABEL_LENGTH_WITH_FLAGS = 3  # a label, when the V and L flags are set
 SID_LABEL_LENGTH_NO_FLAGS = 4  # Length of SID/Label when V and L flags are both false
 
 # Minimum data length for SR Prefix SID TLV
@@ -55,13 +56,15 @@ class PrefixSid(FlagLS):
         sids = []
         while data:
             if flags['V'] and flags['L']:
-                sid = unpack('!L', bytes([0]) + data[:3])[0]
-                data = data[3:]
+                if len(data) < SID_LABEL_LENGTH_WITH_FLAGS:
+                    break  # a label needs three bytes, and the peer sent fewer
+                sid = unpack('!L', bytes([0]) + bytes(data[:SID_LABEL_LENGTH_WITH_FLAGS]))[0]
+                data = data[SID_LABEL_LENGTH_WITH_FLAGS:]
                 sids.append(sid)
             elif (not flags['V']) and (not flags['L']):
                 if len(data) < SID_LABEL_LENGTH_NO_FLAGS:
                     break
-                sid = unpack('!I', data[:SID_LABEL_LENGTH_NO_FLAGS])[0]
+                sid = unpack('!I', bytes(data[:SID_LABEL_LENGTH_NO_FLAGS]))[0]
                 data = data[SID_LABEL_LENGTH_NO_FLAGS:]
                 sids.append(sid)
             else:

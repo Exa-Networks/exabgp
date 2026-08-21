@@ -51,6 +51,12 @@ class NodeName(BaseLS):
     def unpack_bgpls(cls, data: Buffer) -> NodeName:
         if len(data) > MAX_NODE_NAME_LENGTH:
             raise Notify(3, 5, 'Node Name TLV length too large')
+        # content decodes as ASCII, so bytes which are not ASCII have to be refused here:
+        # leaving it to the accessor put a UnicodeDecodeError in the API writer
+        try:
+            bytes(data).decode('ascii')
+        except UnicodeDecodeError as exc:
+            raise Notify(3, 5, f'Node Name TLV is not ASCII ({exc})') from None
         return cls(data)
 
     def json(self, compact: bool = False) -> str:

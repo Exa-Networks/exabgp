@@ -35,7 +35,8 @@ class IgpExTags(BaseLS):
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> IgpExTags:
-        cls.check(data)
+        # each tag is 8 bytes and LEN is 0, so check() alone validates nothing
+        cls.check_multiple(data, 8)
         return cls(data)
 
     @classmethod

@@ -224,14 +224,14 @@ class LinkState(Attribute):
 def jsonable(content: Any) -> Any:
     """Turn what a TLV holds into something json.dumps will accept.
 
-    A TLV whose content is raw bytes used to fall out of json.dumps with a TypeError, and
-    the fallback interpolated `content.decode("utf-8")` into the output unescaped. That is
-    the CWE-116 of GHSA-jcrv-p53f-v5w5, reachable through TLV 1097 and 1157 by a peer
-    attaching attribute 29 to a plain IPv4 unicast UPDATE: no BGP-LS session needed, since
-    the attribute is dispatched by code with no family gate.
+    A TLV whose content is raw bytes used to fall out of json.dumps with a TypeError,
+    and the fallback interpolated `content.decode("utf-8")` into the output unescaped.
+    That is the CWE-116 of GHSA-jcrv-p53f-v5w5, reachable through TLV 1097 and 1157 by
+    a peer attaching attribute 29 to a plain IPv4 unicast UPDATE: no BGP-LS session
+    needed, since the attribute is dispatched by code with no family gate.
 
-    Bytes the peer chose are not guaranteed to be text, so they are decoded with 'replace'
-    rather than raising UnicodeDecodeError out of the API writer.
+    Bytes the peer chose are not guaranteed to be text, so they are decoded with
+    'replace' rather than raising UnicodeDecodeError out of the API writer.
     """
     if isinstance(content, (bytes, bytearray, memoryview)):
         return bytes(content).decode('utf-8', 'replace')
@@ -297,6 +297,23 @@ class BaseLS:
     @classmethod
     def check(cls, data: Buffer) -> None:
         return cls.check_length(data, cls.LEN)
+
+    @classmethod
+    def check_multiple(cls, data: Buffer, size_bytes: int) -> None:
+        """A TLV built of fixed size elements holds a whole number of them.
+
+        check_length() cannot say this: a variable length TLV has LEN 0, and zero is
+        falsy, so `if length and ...` checks nothing at all.  A TLV which unpacks its
+        elements in a loop needs this instead, or the last read runs off the end.
+        """
+        assert size_bytes > 0, 'an element has a size'
+        if not data or len(data) % size_bytes:
+            raise Notify(
+                3,
+                5,
+                f'Unable to decode attribute, {cls.REPR} holds {len(data)} bytes '
+                f'which is not a whole number of {size_bytes} byte elements',
+            )
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> BaseLS:

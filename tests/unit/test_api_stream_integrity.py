@@ -224,6 +224,20 @@ def test_bgpls_opaque_tlv_cannot_inject_a_json_member(code: int) -> None:
     assert 'x", "injected": "owned' in str(list(decoded.values())[0])
 
 
+@pytest.mark.parametrize('code', [1026, 1097, 1098, 1157])
+def test_bgpls_text_tlv_survives_bytes_which_are_not_text(code: int) -> None:
+    """Bytes a peer sent are not guaranteed to be UTF-8, or ASCII.
+
+    decode() without an error handler raised UnicodeDecodeError out of the API writer.
+    """
+    try:
+        attribute = _tlv(code, b'\xff\xfe\xfd')
+    except Notify:
+        return
+    parsed(attribute.json())
+    str(attribute)
+
+
 @pytest.mark.parametrize('code', [1097, 1157])
 def test_bgpls_opaque_tlv_escapes_control_characters(code: int) -> None:
     """Raw control bytes inside a JSON string are rejected by a standard parser."""
@@ -250,3 +264,26 @@ def test_bgpls_short_tlv_raises_notify_at_the_decoder(code: int, payload: bytes)
     """
     with pytest.raises(Notify):
         _tlv(code, payload)
+
+
+@pytest.mark.parametrize(
+    'code, payload, why',
+    [
+        (1153, b'AA', 'route tags are four bytes each'),
+        (1154, b'AAAA', 'extended route tags are eight bytes each'),
+        (1099, b'\x30\x00\x00\x00\xff', 'a label needs three bytes'),
+        (1100, b'\x30\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff', 'a label needs three bytes'),
+        (1158, b'\x0c\x00\x00\x00\xff', 'a label needs three bytes'),
+        (1026, b'\xff\xfe', 'a node name is ASCII'),
+        (1098, b'\xff\xfe', 'a link name is UTF-8'),
+    ],
+)
+def test_bgpls_tlv_checks_its_own_reads(code: int, payload: bytes, why: str) -> None:
+    """Whatever happens, it is not the central catch-all that has to notice."""
+    try:
+        attribute = _tlv(code, payload)
+    except Notify as exc:
+        assert 'could not be decoded' not in str(exc), f'{code} still leans on the boundary: {why}'
+        return
+    parsed(attribute.json())
+    str(attribute)

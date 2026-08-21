@@ -61,11 +61,15 @@ class AdjacencySid(FlagLS):
         sids = []
         while data:
             if int(flags['V']) and int(flags['L']):
-                sid = unpack('!L', bytes([0]) + data[:3])[0]
+                if len(data) < 3:
+                    break  # a label needs three bytes, and the peer sent fewer
+                sid = unpack('!L', bytes([0]) + bytes(data[:3]))[0]
                 data = data[3:]
                 sids.append(sid)
             elif (not flags['V']) and (not flags['L']):
-                sid = unpack('!I', data[:4])[0]
+                if len(data) < 4:
+                    break  # an index needs four bytes, and the peer sent fewer
+                sid = unpack('!I', bytes(data[:4]))[0]
                 data = data[4:]
                 sids.append(sid)
             else:

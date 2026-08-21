@@ -45,4 +45,10 @@ class LinkName(BaseLS):
     def unpack_bgpls(cls, data: Buffer) -> LinkName:
         if len(data) > cls.BGPLS_TLV_MAX_LENGTH:
             raise Notify(3, 5, 'Link Name TLV length too large')
+        # json() decodes as UTF-8, so bytes which are not UTF-8 have to be refused here:
+        # leaving it to json() put a UnicodeDecodeError in the API writer
+        try:
+            bytes(data).decode('utf-8')
+        except UnicodeDecodeError as exc:
+            raise Notify(3, 5, f'Link Name TLV is not valid UTF-8 ({exc})') from None
         return cls(data)
