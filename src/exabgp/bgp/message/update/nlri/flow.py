@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import json
+
 from struct import pack
 
 from exabgp.protocol.ip import NoNextHop
@@ -480,7 +482,8 @@ class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
     NAME = 'fragment'
     FLAG = True
     converter = staticmethod(converter(Fragment.named))
-    decoder = staticmethod(decoder(ord, Fragment))
+    # the value is one or two bytes, so ord() would raise on the two byte form
+    decoder = staticmethod(decoder(_number, Fragment))
 
 
 # draft-raszuk-idr-flow-spec-v6-01
@@ -655,7 +658,8 @@ class Flow(NLRI):
         return flow
 
     def json(self, compact=None):
-        string = []
+        # build the members and join them, a flow with no rule used to emit '{, ...'
+        members = []
         for index in sorted(self.rules):
             rules = self.rules[index]
             s = []
@@ -664,17 +668,26 @@ class Flow(NLRI):
                 if idx and not rule.operations & NumericOperator.AND:
                     s.append(', ')
                 s.append('"{}"'.format(rule))
-            string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
-        nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not NoNextHop else ''
-        rd = '' if self.rd is RouteDistinguisher.NORD else ', {}'.format(self.rd.json())
-        compatibility = ', "string": "{}"'.format(self.extensive())
-        return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
+            members.append('"{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
+        # an RD which is not NORD can still render empty, and an empty member breaks the join
+        rd = '' if self.rd is RouteDistinguisher.NORD else self.rd.json()
+        if rd:
+            members.append(rd)
+        if self.nexthop is not NoNextHop:
+            members.append('"next-hop": {}'.format(json.dumps(str(self.nexthop))))
+        members.append('"string": {}'.format(json.dumps(self.extensive())))
+        return '{ ' + ', '.join(members) + ' }'
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        if not bgp:
+            raise Notify(3, 10, 'not enough data to extract the length of the flow NLRI')
+
         length, bgp = bgp[0], bgp[1:]
 
         if length & FLOW_LENGTH_EXTENDED_MASK == FLOW_LENGTH_EXTENDED_VALUE:  # bigger than 240
+            if not bgp:
+                raise Notify(3, 10, 'not enough data to extract the extended length of the flow NLRI')
             extra, bgp = bgp[0], bgp[1:]
             length = ((length & FLOW_LENGTH_LOWER_MASK) << FLOW_LENGTH_EXTENDED_SHIFT) + extra
 
@@ -688,8 +701,10 @@ class Flow(NLRI):
 
         try:
             if safi == SAFI.flow_vpn:
-                nlri.rd = RouteDistinguisher(bgp[:8])
-                bgp = bgp[8:]
+                if len(bgp) < RouteDistinguisher.LENGTH:
+                    raise Notify(3, 10, 'not enough data to extract the route distinguisher of the flow NLRI')
+                nlri.rd = RouteDistinguisher(bgp[: RouteDistinguisher.LENGTH])
+                bgp = bgp[RouteDistinguisher.LENGTH :]
 
             seen = []
 
