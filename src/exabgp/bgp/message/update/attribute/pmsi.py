@@ -42,6 +42,9 @@ class PMSI(Attribute):
     FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
     CACHING = True
     TUNNEL_TYPE: ClassVar[int] = -1  # Used for subclass registration
+    # the size of the tunnel identifier this tunnel type carries, None when the type
+    # does not constrain it (RFC 6514 section 5)
+    TUNNEL_SIZE: ClassVar[int | None] = None
 
     _pmsi_known: ClassVar[dict[int, Type[PMSI]]] = dict()
     _name: ClassVar[dict[int, str]] = {
@@ -82,9 +85,17 @@ class PMSI(Attribute):
         if len(data) < 5:
             raise ValueError(f'PMSI requires at least 5 bytes, got {len(data)}')
         tunnel_type = data[1]
-        if tunnel_type in cls._pmsi_known:
-            return cls._pmsi_known[tunnel_type](data)
-        return cls(data)
+        if tunnel_type not in cls._pmsi_known:
+            return cls(data)
+        klass = cls._pmsi_known[tunnel_type]
+        # the accessors of a tunnel type read a fixed width identifier, so a peer which
+        # sends fewer bytes than that decoded here and raised from str() much later
+        tunnel_size = len(data) - 5
+        if klass.TUNNEL_SIZE is not None and tunnel_size != klass.TUNNEL_SIZE:
+            raise ValueError(
+                f'PMSI {cls.name(tunnel_type)} requires a {klass.TUNNEL_SIZE} byte tunnel identifier, got {tunnel_size}'
+            )
+        return klass(data)
 
     @classmethod
     def make_pmsi(cls, tunnel_type: int, flags: int, label: int, tunnel: bytes, raw_label: int | None = None) -> 'PMSI':
@@ -194,6 +205,7 @@ class PMSI(Attribute):
 @PMSI.register_tunnel_type
 class PMSINoTunnel(PMSI):
     TUNNEL_TYPE: ClassVar[int] = 0
+    TUNNEL_SIZE: ClassVar[int | None] = 0
 
     @classmethod
     def make_no_tunnel(cls, flags: int = 0, label: int = 0, raw_label: int | None = None) -> 'PMSINoTunnel':
@@ -224,6 +236,7 @@ class PMSINoTunnel(PMSI):
 @PMSI.register_tunnel_type
 class PMSIIngressReplication(PMSI):
     TUNNEL_TYPE: ClassVar[int] = 6
+    TUNNEL_SIZE: ClassVar[int | None] = 4  # an IPv4 address
 
     @classmethod
     def make_ingress_replication(

@@ -147,6 +147,21 @@ def _pmsi(data: bytes) -> Attribute:
     return _decode_attribute(Attribute.CODE.PMSI_TUNNEL, data)
 
 
+def test_pmsi_ingress_replication_needs_a_full_address() -> None:
+    """Ingress Replication carries an IPv4 address, so the tunnel identifier is 4 bytes.
+
+    Only the 5 byte header was checked, so a 7 byte PMSI decoded and then raised
+    ValueError from str() when IPv4.ntop() was handed two bytes.
+    """
+    with pytest.raises((Notify, ValueError)):
+        _pmsi(b'\x00\x06\x00\x00\x00\xff\xff')
+
+
+def test_pmsi_ingress_replication_accepts_an_address() -> None:
+    attribute = _pmsi(b'\x00\x06\x00\x00\x00\x0a\x00\x00\x01')
+    assert '10.0.0.1' in str(attribute)
+
+
 def _linkstate(data: bytes) -> Attribute:
     return _decode_attribute(Attribute.CODE.BGP_LS, data)
 
