@@ -95,3 +95,57 @@ def test_a_deepcopy_survives_a_cycle(afi: AFI, safi: SAFI, data: bytes, name: st
     copied = deepcopy(held)
 
     assert copied['first'] is copied['again'], f'{name} was copied twice from one route'
+
+
+@pytest.mark.parametrize('afi, safi, data, name', SEEDS, ids=[s[3] for s in SEEDS])
+def test_a_deepcopy_carries_every_slot(afi: AFI, safi: SAFI, data: bytes, name: str) -> None:
+    """Each slot the original holds, the copy holds with the same value.
+
+    __deepcopy__ is written by hand, slot by slot, in ten classes. Mutation testing set
+    individual slots to None in the copy, dropping the route distinguisher and the add-path
+    flag, and nothing failed: index() equality alone does not see a slot the key does not
+    include, and a container check does not see a slot which is not a container.
+
+    This is the whole promise of the method, stated once.
+    """
+    original = decoded(afi, safi, data)
+    assert original is not None
+
+    copy = deepcopy(original)
+
+    checked = 0
+    for owner in type(original).__mro__:
+        for slot in getattr(owner, '__slots__', ()):
+            if not hasattr(original, slot):
+                continue
+            checked += 1
+            mine, theirs = getattr(original, slot), getattr(copy, slot)
+            assert type(mine) is type(theirs), f'{name} copied {slot} as a different type'
+            if isinstance(mine, (bytes, bytearray, memoryview)):
+                assert bytes(mine) == bytes(theirs), f'{name} copied {slot} with different bytes'
+            else:
+                assert mine == theirs, f'{name} copied {slot} with a different value'
+
+    assert checked, f'{name} has no slots to check, so this pins nothing'
+
+
+def test_a_deepcopy_carries_the_flags_a_default_seed_leaves_unset() -> None:
+    """A seed which leaves a slot at its default cannot show that dropping it matters.
+
+    A labelled VPN route sets the ones which do: _has_rd, _has_labels and the label size are
+    all true or non-zero, and the packed-bytes-first classes derive everything they render
+    from them. A copy which loses one is a copy which renders a different route.
+    """
+    labelled_vpn = decoded(AFI.ipv4, SAFI.mpls_vpn, bytes([112, 0, 0, 0x11]) + bytes(8) + bytes([10, 0, 0]))
+    assert labelled_vpn is not None
+    assert labelled_vpn._has_rd, 'the seed has to set the flag for this to pin anything'
+    assert labelled_vpn._has_labels
+    assert labelled_vpn._label_size
+
+    copy = deepcopy(labelled_vpn)
+
+    assert copy._has_rd == labelled_vpn._has_rd
+    assert copy._has_labels == labelled_vpn._has_labels
+    assert copy._label_size == labelled_vpn._label_size
+    assert copy.index() == labelled_vpn.index()
+    assert copy.json() == labelled_vpn.json()
