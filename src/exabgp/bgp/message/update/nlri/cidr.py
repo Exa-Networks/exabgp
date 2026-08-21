@@ -38,22 +38,42 @@ class CIDR:
     # have a .mask for the mask
     # have a .bgp with the bgp wire format of the prefix
 
+    # comparing with anything which is not a CIDR returns NotImplemented rather
+    # than reaching for a .mask it does not have. Python then falls back, so
+    # `cidr == None` is False instead of an AttributeError, which is what the
+    # data model promises and what any caller holding a mixed collection expects.
+
     def __eq__(self, other):
+        if not isinstance(other, CIDR):
+            return NotImplemented
         return self.mask == other.mask and self._packed == other._packed
 
     def __ne__(self, other):
-        return self.mask != other.mask or self._packed != other._packed
+        # the exact negation of __eq__, not a re-derivation: writing the
+        # condition out twice is how the two drift apart
+        equal = self.__eq__(other)
+        if equal is NotImplemented:
+            return equal
+        return not equal
 
     def __lt__(self, other):
+        if not isinstance(other, CIDR):
+            return NotImplemented
         return self._packed < other._packed
 
     def __le__(self, other):
+        if not isinstance(other, CIDR):
+            return NotImplemented
         return self._packed <= other._packed
 
     def __gt__(self, other):
+        if not isinstance(other, CIDR):
+            return NotImplemented
         return self._packed > other._packed
 
     def __ge__(self, other):
+        if not isinstance(other, CIDR):
+            return NotImplemented
         return self._packed >= other._packed
 
     def top(self, negotiated=None, afi=AFI.undefined):
