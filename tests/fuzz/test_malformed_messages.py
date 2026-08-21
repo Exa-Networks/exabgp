@@ -210,18 +210,15 @@ def test_invalid_message_type(msg_type: int) -> None:
 
     negotiated = create_mock_negotiated()
 
-    try:
-        # Should raise Notify for unknown message type
+    # this used to accept AttributeError with the comment "klass_unknown not registered -
+    # this is acceptable behavior", which is how the defect stayed: the test wrote the bug
+    # down as the contract.  RFC 4271 6.1 says an unrecognised Type field is Bad Message
+    # Type, and Message.unpack now says so
+    with pytest.raises(Notify) as caught:
         Message.unpack(msg_type, data, negotiated)
-        # If it doesn't raise, klass_unknown may not be registered
-    except Notify as e:
-        # Expected for unknown message types
-        assert e.code == 2  # OPEN message error (used for capability/type errors)
-        assert e.subcode == 4  # Unsupported Optional Parameter
-    except AttributeError:
-        # klass_unknown not registered - this is acceptable behavior
-        # Unknown message types may not have a handler
-        pass
+
+    assert caught.value.code == 1  # Message Header Error
+    assert caught.value.subcode == 3  # Bad Message Type
 
 
 # =============================================================================
