@@ -13,7 +13,7 @@ a route which changes under whoever is holding it.
 
 from __future__ import annotations
 
-from copy import deepcopy
+from copy import copy as shallow_copy, deepcopy
 
 import pytest
 
@@ -149,3 +149,41 @@ def test_a_deepcopy_carries_the_flags_a_default_seed_leaves_unset() -> None:
     assert copy._label_size == labelled_vpn._label_size
     assert copy.index() == labelled_vpn.index()
     assert copy.json() == labelled_vpn.json()
+
+
+@pytest.mark.parametrize('afi, safi, data, name', SEEDS, ids=[s[3] for s in SEEDS])
+def test_a_shallow_copy_is_the_same_route(afi: AFI, safi: SAFI, data: bytes, name: str) -> None:
+    """copy.copy() is a second hook, with sixteen implementations, and its own way to break.
+
+    The two are not interchangeable and the difference hides bugs: copy.copy(x) calls
+    __copy__() with NO argument while deepcopy passes a memo, so a __copy__ written with an
+    extra parameter raises TypeError on one path and works perfectly on the other. The 5.0
+    branch had exactly that, and its deepcopy tests could not see it.
+
+    Nothing in src copies an NLRI either way. Both are public dunders a library user reaches.
+    """
+    original = decoded(afi, safi, data)
+    assert original is not None
+
+    copy = shallow_copy(original)
+
+    assert copy is not original
+    assert type(copy) is type(original)
+    assert copy.index() == original.index()
+    assert copy.json() == original.json()
+
+
+def test_the_copy_hooks_take_the_arguments_python_passes_them() -> None:
+    """__copy__ takes only self, __deepcopy__ takes self and a memo.
+
+    Getting this wrong raises on one path and not the other, which is why it survives: the
+    RIB deep-copies on the withdraw path, so a broken __copy__ leaves the object looking
+    perfectly copyable.
+    """
+    import inspect
+
+    from exabgp.bgp.message.update.nlri.inet import INETBase
+
+    for klass in (INETBase,):
+        assert list(inspect.signature(klass.__copy__).parameters) == ['self'], f'{klass.__name__}.__copy__'
+        assert list(inspect.signature(klass.__deepcopy__).parameters) == ['self', 'memo'], f'{klass.__name__}'
