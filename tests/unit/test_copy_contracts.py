@@ -388,17 +388,51 @@ class TestNoLookalikeIsEverBuilt:
 
         assert self.constructions_during(decode) == [], 'an rd was constructed for a route which has none'
 
-    def test_a_vpn_route_builds_a_real_one(self) -> None:
-        # the other half: the check must not pass by nothing ever being built
+    # A ratchet on the families which must actually build one. The session
+    # working main measured ZERO constructions across 7484 decodes and nearly
+    # took it as a strong result: their generic fill patterns never assemble a
+    # valid VPN route, so the mask checks refuse them before an rd is reached. A
+    # sweep which builds NONE says nothing about what it builds.
+    VPN_FAMILY_FLOOR = 8
+
+    def test_every_vpn_family_builds_a_real_one(self) -> None:
+        """The other half, and the half which stops this passing vacuously
+
+        Driven off the shaped seeds rather than a hand written list, so a family
+        added to the corpus is covered without editing this, and the floor says
+        the drive found something.
+        """
+        import sys
+        from pathlib import Path
+
+        tests = str(Path(__file__).resolve().parent.parent)
+        if tests not in sys.path:
+            sys.path.insert(0, tests)
+
         from exabgp.bgp.message.action import Action
         from exabgp.bgp.message.update.nlri import NLRI
         from exabgp.protocol.family import AFI, SAFI
+        from fuzz.corpus import NLRI_SEEDS
 
-        wire = bytes([112]) + b'\x00\x01\x01' + b'\x00' * 8 + bytes([10, 0, 0])
+        with_rd, empty = [], []
+        for family in sorted(NLRI_SEEDS):
+            afi_name, safi_name = family.split('/')
+            klass = NLRI.registered_nlri.get(family)
+            if klass is None:
+                continue
 
-        def decode():
-            NLRI.registered_nlri['ipv4/mpls-vpn'].unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, wire, Action.ANNOUNCE, False)
+            def decode(klass=klass, afi_name=afi_name, safi_name=safi_name, family=family):
+                for payload in NLRI_SEEDS[family]:
+                    try:
+                        klass.unpack_nlri(AFI.value(afi_name), SAFI.value(safi_name), payload, Action.ANNOUNCE, False)
+                    except Exception:  # noqa: BLE001 - a seed which will not decode is not the subject
+                        continue
 
-        built = self.constructions_during(decode)
-        assert built, 'no rd was built for a VPN route, so this proves nothing'
-        assert all(value != b'' for value in built), built
+            built = [value for value in self.constructions_during(decode) if value is not None]
+            if not built:
+                continue
+            with_rd.append(family)
+            empty.extend(f'{family}: {value!r}' for value in built if value == b'')
+
+        assert not empty, f'these built an empty rd rather than using the singleton: {empty}'
+        assert len(with_rd) >= self.VPN_FAMILY_FLOOR, f'only {len(with_rd)} families built one: {with_rd}'
