@@ -32,6 +32,9 @@ def formated(line: str) -> str:
 # convert special caracters
 
 
+UNICODE_ESCAPE_DIGITS = 4  # \\uXXXX, as many hexadecimal digits as JSON asks for
+
+
 @coroutine.join
 def unescape(string: str) -> Iterator[str]:
     start = 0
@@ -42,6 +45,13 @@ def unescape(string: str) -> Iterator[str]:
             break
         yield string[start:pos]
         pos += 1
+        if pos >= len(string):
+            # a backslash with nothing after it read one character past the end.  An
+            # unknown escape yields the character itself below, so a backslash which
+            # escapes nothing yields the backslash, rather than raising IndexError out
+            # of a helper whose callers only expect the configuration ValueError
+            yield '\\'
+            break
         esc = string[pos]
         if esc == 'b':
             yield '\b'
@@ -54,8 +64,17 @@ def unescape(string: str) -> Iterator[str]:
         elif esc == 't':
             yield '\t'
         elif esc == 'u':
-            yield chr(int(string[pos + 1 : pos + 5], 16))
-            pos += 4
+            digits = string[pos + 1 : pos + 1 + UNICODE_ESCAPE_DIGITS]
+            # a truncated escape used to be read as however many digits were there, so
+            # "\\u12" quietly became chr(0x12) rather than being reported: a wrong
+            # character in the configuration is worse than a refused one
+            if len(digits) != UNICODE_ESCAPE_DIGITS:
+                raise ValueError(f'unicode escape \\u{digits} needs {UNICODE_ESCAPE_DIGITS} hexadecimal digits')
+            try:
+                yield chr(int(digits, 16))
+            except ValueError:
+                raise ValueError(f'unicode escape \\u{digits} is not hexadecimal')
+            pos += UNICODE_ESCAPE_DIGITS
         else:
             yield esc
         start = pos + 1

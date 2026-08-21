@@ -218,12 +218,16 @@ class Parser:
         self.number += 1
         try:
             self.line, self._next = self._next, next(self._tokens)
-            self.end = self.line[-1]
+            # an empty line has no last token.  The file readers reject an empty or blank
+            # configuration before the parser is built, so this is reached by calling the
+            # parser directly rather than by any production path, but a bare [-1] over a
+            # list the code itself may have just emptied is an unhandled case either way
+            self.end = self.line[-1] if self.line else ''
         except StopIteration:
             if not self.finished:
                 self.finished = True
                 self.line, self._next = self._next, []
-                self.end = self.line[-1]
+                self.end = self.line[-1] if self.line else ''
             else:
                 self.line = []
                 self.end = ''
