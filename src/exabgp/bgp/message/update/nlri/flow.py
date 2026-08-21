@@ -911,6 +911,8 @@ class Flow(NLRI):
                     break  # Unknown component, stop parsing
 
                 decoded = decode[self.afi][what]
+                if what not in factory.get(self.afi, {}):
+                    raise Notify(3, 10, 'flow component %d has no decoder for this family' % what)
                 klass = factory[self.afi][what]
 
                 if decoded == 'prefix':
@@ -919,6 +921,8 @@ class Flow(NLRI):
                 else:
                     end: int = 0
                     while not end:
+                        if not bgp:
+                            raise Notify(3, 10, 'flow component %d ends without its end of list operator' % what)
                         byte, bgp = bgp[0], bgp[1:]
                         end = CommonOperator.eol(byte)
                         operator = CommonOperator.operator(byte)
@@ -943,8 +947,10 @@ class Flow(NLRI):
                         if issubclass(klass, IOperation) and isinstance(adding_val, BaseValue):
                             component = klass(operator, adding_val)
                             rules.setdefault(what, []).append(component)
-        except (IndexError, KeyError):
-            pass  # Incomplete data, return what we have
+        except IndexError:
+            # every read above is now bounded, so this is our own bug and not the peer's:
+            # tell the caller rather than announcing a route which is not what was sent
+            raise Notify(3, 10, 'flow NLRI ran past the end of its own payload') from None
 
         return rules
 

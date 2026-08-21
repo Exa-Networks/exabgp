@@ -75,6 +75,24 @@ def test_flow_fragment_with_a_two_byte_value_does_not_crash(family: tuple[AFI, S
     assert 'fragment' in parsed(nlri.json())
 
 
+@pytest.mark.parametrize('family', FLOW_FAMILIES, ids=lambda f: f'{f[0]}/{f[1]}')
+def test_flow_truncated_before_its_end_of_list_is_refused(family: tuple[AFI, SAFI]) -> None:
+    """A rule list which stops before its end of list operator must not be kept.
+
+    _parse_rules ended in `except (IndexError, KeyError): pass`, so a truncated flow was
+    accepted as a shorter route than the peer announced.  A route nobody sent is worse
+    than no route at all: TIGER_STYLE.md 1.1.
+    """
+    afi, safi = family
+    # operator 0x10 asks for a two byte value and does not end the list, but nothing follows
+    payload = b'\x0c\x10\x00\x01'
+    if safi == SAFI.flow_vpn:
+        payload = bytes(8) + payload
+    data = bytes([len(payload)]) + payload
+    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+    assert nlri is NLRI.INVALID
+
+
 def _addpath(data: bytes) -> Capability:
     code: CapabilityCode = CapabilityCode.ADD_PATH
     klass = Capability.klass(code)
