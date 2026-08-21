@@ -85,14 +85,14 @@ class Labels:
         """
         if self is Labels.NOLABEL:
             return self
-        duplicate = Labels.__new__(Labels)
+        duplicate = type(self).__new__(type(self))
         duplicate.__dict__.update(self.__dict__)
         return duplicate
 
     def __deepcopy__(self, memo=None):
         if self is Labels.NOLABEL:
             return self
-        duplicate = Labels.__new__(Labels)
+        duplicate = type(self).__new__(type(self))
         duplicate.__dict__.update(deepcopy(self.__dict__, memo))
         return duplicate
 

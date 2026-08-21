@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 from struct import pack
 from struct import unpack
 
@@ -55,14 +57,24 @@ class RouteDistinguisher:
         return self._len
 
     def __copy__(self):
+        # The state is copied and the class comes from type(self), so a subclass
+        # copies as itself and an attribute added later travels without anyone
+        # revisiting this method. Naming the attributes here is how the defect
+        # this guards against was introduced in the first place: a general
+        # mechanism, the default which copies __dict__, traded for a specific one
+        # while fixing a bug that a specific mechanism caused.
         if self == RouteDistinguisher.NORD:
             return RouteDistinguisher.NORD
-        return RouteDistinguisher(self.rd)
+        duplicate = type(self).__new__(type(self))
+        duplicate.__dict__.update(self.__dict__)
+        return duplicate
 
     def __deepcopy__(self, memo):
         if self == RouteDistinguisher.NORD:
             return RouteDistinguisher.NORD
-        return RouteDistinguisher(self.rd)
+        duplicate = type(self).__new__(type(self))
+        duplicate.__dict__.update(deepcopy(self.__dict__, memo))
+        return duplicate
 
     def _str(self):
         t, c1, c2, c3 = unpack('!HHHH', self.rd)

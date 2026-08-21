@@ -196,6 +196,43 @@ class TestINETUnpackLabels:
         assert nlri.labels.labels == [0x800000 >> 4]
         assert leftover == b''
 
+    def test_the_withdraw_sentinel_below_the_top_is_now_refused(self) -> None:
+        """The depth rule narrows more than the route distinguisher case
+
+        Before it, the second label here IS the withdraw value, so the loop broke
+        on it and the route was accepted with two labels. After it, below depth
+        one the sentinel is an ordinary label, no bottom of stack bit ever
+        arrives, and the route is refused.
+
+        That follows from the same reading: RFC 3107 has 0x800000 REPLACE a stack
+        rather than sit inside one. But it is a wider change to what we accept
+        than "a peer's route distinguisher can no longer terminate a stack", and
+        the commit which made it described only the narrower half.
+
+        compat_gate cannot see this: the corpus never produces a two label stack
+        ending in the sentinel, so it is asserted here instead.
+
+        Raised by the session working main, reviewing their own commit message
+        against what their change actually did.
+        """
+        data = b'\x48' + b'\x00\x00\x10' + b'\x80\x00\x00' + b'\x0a\x00\x00'
+        with pytest.raises(Notify):
+            INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.WITHDRAW, addpath=False)
+
+    def test_but_the_value_itself_is_not_refused_wherever_it_appears(self) -> None:
+        """The other direction, without which the test above proves the wrong thing
+
+        A decoder which started refusing 0x800000 anywhere below the top would
+        pass the assertion above equally, and that is a different behaviour we did
+        not intend. Here the sentinel sits mid-stack and a LATER label carries the
+        bottom of stack bit, so the stack terminates properly and the route is
+        good.
+        """
+        data = b'\x60' + b'\x00\x00\x10' + b'\x80\x00\x00' + b'\x00\x00\x21' + b'\x0a\x00\x00'
+        nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.WITHDRAW, addpath=False)
+        assert str(nlri.cidr) == '10.0.0.0/24'
+        assert nlri.labels.labels == [1, 524288, 2]
+
     def test_a_sentinel_inside_a_well_formed_stack_is_just_a_label(self) -> None:
         """Why the bottom of stack test has to come FIRST
 

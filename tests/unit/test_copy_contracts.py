@@ -114,3 +114,68 @@ class TestTheNopathSingletonStaysItself:
         # __eq__ read other.path_info with nothing checking what other was
         assert (PathInfo(integer=1) == 42) is False
         assert (PathInfo(integer=1) != 42) is True
+
+
+class TestTheHooksCopyStateRatherThanNamedAttributes:
+    """Fixing a specific bug with a specific mechanism is how it comes back
+
+    The default copy carries the whole __dict__ and respects subclasses. Every
+    hook written in this series replaced that with a constructor call naming the
+    attributes it knew about:
+
+        return PathInfo(packed=self.path_info)
+        return RouteDistinguisher(self.rd)
+
+    which is a general mechanism traded for a specific one, while fixing a bug
+    that a specific mechanism caused. Nothing is broken today, because none of
+    these classes has a second attribute or a subclass, and that is exactly the
+    condition under which the next person adds one and nobody revisits the copy.
+
+    Reported by the session working main, who found the same property in their own
+    fix for the route_d loss: the fix carried route_d BY NAME, one attribute later
+    and the same bug returns in the same method.
+    """
+
+    CLASSES = None  # filled below, after the imports it needs
+
+    @staticmethod
+    def real_values():
+        from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
+
+        return [
+            ('PathInfo', PathInfo(integer=42)),
+            ('Labels', Labels([16, 24])),
+            ('RouteDistinguisher', RouteDistinguisher(bytes(8))),
+        ]
+
+    @pytest.mark.parametrize('duplicate', [copy.copy, copy.deepcopy], ids=['copy', 'deepcopy'])
+    def test_a_real_value_keeps_its_class(self, duplicate) -> None:
+        for name, value in self.real_values():
+            assert type(duplicate(value)) is type(value), name
+
+    @pytest.mark.parametrize('duplicate', [copy.copy, copy.deepcopy], ids=['copy', 'deepcopy'])
+    def test_a_subclass_copies_as_itself(self, duplicate) -> None:
+        # naming the class rather than type(self) turns a subclass into its base
+        class Marked(PathInfo):
+            pass
+
+        original = Marked(integer=7)
+        assert type(duplicate(original)) is Marked
+
+    @pytest.mark.parametrize('duplicate', [copy.copy, copy.deepcopy], ids=['copy', 'deepcopy'])
+    def test_an_attribute_the_hook_does_not_know_about_travels(self, duplicate) -> None:
+        # the property that makes this general: a field added later needs no edit
+        # here. Naming the attributes is what silently drops it.
+        original = PathInfo(integer=7)
+        original.added_later = 'carried'
+        assert getattr(duplicate(original), 'added_later', None) == 'carried'
+
+    def test_deepcopy_does_not_share_the_values(self) -> None:
+        # _packed is immutable bytes today, so this cannot be observed yet; it is
+        # asserted because a mutable attribute added later would otherwise be
+        # shared between a route and its copy
+        original = PathInfo(integer=7)
+        original.mutable = ['shared?']
+        duplicate = copy.deepcopy(original)
+        duplicate.mutable.append('no')
+        assert original.mutable == ['shared?']
