@@ -117,9 +117,10 @@ class TestEveryRegisteredFamilyHasItsSizes:
             afi_name, safi_name = family.split('/')
             if (AFI.value(afi_name), SAFI.value(safi_name)) not in Family.size:
                 missing.append(family)
-        assert missing == ['bgp-ls/bgp-ls-vpn'], (
+        assert missing == [], (
             f'families registered as NLRI but absent from Family.size: {missing}. '
-            'A new one here can be announced and not received.'
+            'A family here decodes as an NLRI but is refused by MPRNLRI.unpack, so it '
+            'can be announced and never received.'
         )
 
 

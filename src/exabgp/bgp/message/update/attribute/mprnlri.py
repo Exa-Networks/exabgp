@@ -163,8 +163,11 @@ class MPRNLRI(Attribute, Family):
         nhs = data[offset + rd : offset + rd + size]
         nexthops = [nhs[pos : pos + 16] for pos in range(0, len(nhs), 16)]
 
-        # chech the RD is well zero
-        if rd and sum([int(_) for _ in data[offset:8]]) != 0:
+        # check the route distinguisher is indeed zero. This read the fixed slice
+        # data[offset:8], which with an offset of 4 and an eight byte RD inspected
+        # only its first four bytes, and inspected nothing at all had the offset
+        # ever passed 8. Every VPN family was half checked.
+        if rd and sum(data[offset : offset + rd]) != 0:
             raise Notify(3, 0, "MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 
         offset += len_nh
