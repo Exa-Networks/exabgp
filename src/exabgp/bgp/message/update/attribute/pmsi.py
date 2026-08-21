@@ -39,6 +39,9 @@ from exabgp.protocol.ip import IPv4
 @Attribute.register()
 class PMSI(Attribute):
     ID = Attribute.CODE.PMSI_TUNNEL
+    # RFC 6514 5: an UPDATE carrying a malformed PMSI Tunnel attribute is treated as a
+    # withdraw of its routes
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
     FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
     CACHING = True
     TUNNEL_TYPE: ClassVar[int] = -1  # Used for subclass registration

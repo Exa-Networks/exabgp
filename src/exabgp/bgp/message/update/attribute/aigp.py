@@ -42,6 +42,9 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard
 
 class AIGPBase(Attribute):
     ID = Attribute.CODE.AIGP
+    # RFC 7311: the accumulated IGP metric decides best path, so a route whose metric we
+    # could not read must not be kept with the metric quietly missing
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
     TYPES: ClassVar[list[int]] = [1]

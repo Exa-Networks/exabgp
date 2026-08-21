@@ -29,6 +29,9 @@ class OriginatorID(Attribute):
     """
 
     ID: int = Attribute.CODE.ORIGINATOR_ID
+    # RFC 7606: a malformed ORIGINATOR_ID cannot be dropped silently, it is what stops a
+    # route being reflected back to where it came from
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
     FLAG: int = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
 

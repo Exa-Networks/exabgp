@@ -608,8 +608,15 @@ class UpdateCollection(Message):
                     packed = nexthop._packed
                     if len(packed) == IPv4.BYTES:
                         routed = RoutedNLRI(nlri, IPv4(packed))
-                    else:
+                    elif len(packed) == IPv6.BYTES:
                         routed = RoutedNLRI(nlri, IPv6(packed))
+                    else:
+                        # the else used to be IPv6(packed) for every other length, and
+                        # NextHop.UNSET carries no address at all, so its empty bytes went
+                        # to inet_ntop and came back as a ValueError from here: past the
+                        # decoders, in the semantic transformation, where the TREAT_AS_WITHDRAW
+                        # flag on NextHop can no longer catch anything
+                        routed = RoutedNLRI(nlri, IP.NoNextHop)
                 else:
                     # Should not happen, but use NoNextHop as fallback
                     routed = RoutedNLRI(nlri, IP.NoNextHop)

@@ -37,6 +37,9 @@ class ClusterList(Attribute):
     """
 
     ID: int = Attribute.CODE.CLUSTER_LIST
+    # RFC 7606: CLUSTER_LIST is the reflector loop check, so discarding it invites the
+    # loop it exists to prevent
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
     FLAG: int = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
 
