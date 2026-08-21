@@ -599,4 +599,32 @@ class JSON:
             return self._operational_counter(neighbor, direction, operational, header, body)
         # elif what == 'interface':
         #     return self._operational_interface(peer,operational)
-        raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
+        # a peer choosing an unregistered type reaches this with category 'unknown', so it
+        # is reported rather than raised: the reactor must not die of a type we do not know
+        return self._operational_unknown(neighbor, direction, operational, header, body)
+
+    def _operational_unknown(
+        self, neighbor: 'Neighbor', direction: str, operational: Any, header: bytes, body: bytes
+    ) -> str:
+        kv_content = self._kv(
+            {
+                'name': operational.name,
+                'type': str(operational.what),
+                'data': hexstring(bytes(getattr(operational, 'data', b''))),
+            },
+        )
+        return self._header(
+            self._neighbor(
+                neighbor,
+                direction,
+                self._kv(
+                    {
+                        'operational': self._json(f'{{ {kv_content} }}'),
+                    },
+                ),
+            ),
+            header,
+            body,
+            neighbor,
+            message_type='operational',
+        )

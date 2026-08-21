@@ -207,4 +207,6 @@ class Text:
             return self._operational_counter(neighbor, direction, operational, header, body)
         # elif what == 'interface':
         # 	return self._operational_interface(peer,operational)
-        raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
+        # a peer choosing an unregistered type arrives here with category 'unknown'
+        data = hexstring(bytes(getattr(operational, 'data', b'')))
+        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} type {operational.what} data {data}{self._header_body(header, body)}'

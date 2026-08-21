@@ -26,7 +26,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import sys
 from exabgp.util.types import Buffer
 from struct import pack
 from struct import unpack
@@ -35,6 +34,8 @@ from typing import ClassVar, Type as TypingType, TypeVar, TYPE_CHECKING
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.message import Message
+from exabgp.bgp.message.notification import Notify
+from exabgp.logger import log, lazymsg
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -61,7 +62,9 @@ class Type(int):
         return 2
 
     def __str__(self) -> str:
-        raise NotImplementedError('Type.__str__ must be implemented by subclasses')
+        # a peer picks this code, and an unregistered one still has to be printable:
+        # raising here put a NotImplementedError in the logger rather than in a test
+        return f'operational-type-{int(self)}'
 
 
 # ================================================================== Operational
@@ -146,12 +149,21 @@ class Operational(Message):
         """
         from typing import Any, cast
 
+        # the header the peer must have sent: a two byte type and a two byte length
+        if len(data) < 4:
+            raise Notify(5, 0, f'operational message too short: need 4 bytes for the header, got {len(data)}')
         what = Type(unpack('!H', data[0:2])[0])
         length = unpack('!H', data[2:4])[0]
+        if len(data) < length + 4:
+            raise Notify(
+                5, 0, f'operational message announces {length} bytes of payload but only {len(data) - 4} follow'
+            )
 
         entry = cls.registered_operational.get(what)
         if entry is None:
-            sys.stdout.write('ignoring ATM this kind of message\n')
+            # never write to stdout from a decoder: in daemon mode that is the pipe
+            # feeding the API subprocesses, and this would be a line they cannot parse
+            log.debug(lazymsg('operational.unknown type={what}', what=int(what)), 'parser')
             return UnknownOperational(what, data[4 : length + 4])
 
         decode, klass = entry
@@ -160,17 +172,21 @@ class Operational(Message):
         # The return cast validates we return an Operational subclass.
         factory: Any = klass
 
+        # every read below is from bytes the peer chose, so every one is checked first
         if decode == 'advisory':
+            cls._check_size(data, 7, what, 'an afi, a safi and its advisory')
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             return cast(Operational, factory(afi, safi, data[7 : length + 4]))
         if decode == 'query':
+            cls._check_size(data, 15, what, 'an afi, a safi, a router-id and a sequence')
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack_routerid(data[7:11])
             sequence = unpack('!L', data[11:15])[0]
             return cast(Operational, factory(afi, safi, routerid, sequence))
         if decode == 'counter':
+            cls._check_size(data, 19, what, 'an afi, a safi, a router-id, a sequence and a counter')
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
             routerid = RouterID.unpack_routerid(data[7:11])
@@ -178,9 +194,18 @@ class Operational(Message):
             counter = unpack('!L', data[15:19])[0]
             return cast(Operational, factory(afi, safi, routerid, sequence, counter))
 
-        # Unknown category in registered_operational
-        sys.stdout.write(f'unknown operational category {decode}\n')
+        # a category we registered but cannot decode is our bug, not the peer's
+        log.debug(lazymsg('operational.category.unknown category={category}', category=decode), 'parser')
         return UnknownOperational(what, data[4 : length + 4])
+
+    @staticmethod
+    def _check_size(data: Buffer, needed: int, what: int, holds: str) -> None:
+        if len(data) < needed:
+            raise Notify(
+                5,
+                0,
+                f'operational message {int(what)} needs {needed} bytes to hold {holds}, got {len(data)}',
+            )
 
 
 # ============================================================ UnknownOperational
@@ -200,6 +225,8 @@ class UnknownOperational(Operational):
     def __init__(self, what: int, data: Buffer) -> None:
         Operational.__init__(self, what)
         self.raw_data: Buffer = data
+        # the encoders read .data on every operational message, this one included
+        self.data: Buffer = data
 
     def extensive(self) -> str:
         return f'operational unknown type={self.what}'

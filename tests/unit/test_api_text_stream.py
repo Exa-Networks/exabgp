@@ -113,3 +113,59 @@ def test_operational_advisory_survives_bytes_which_are_not_text(neighbor, encode
     body = struct.pack('!HH', 1, len(advisory) + 3) + struct.pack('!H', 1) + bytes([1]) + advisory
     operational = Operational.unpack_message(body, Negotiated.UNSET)
     one_line(encoder.operational(neighbor, 'in', operational.category, operational, b'', b'', Negotiated.UNSET))
+
+
+@pytest.mark.parametrize(
+    'body',
+    [
+        b'',
+        b'\x00',
+        b'\x00\x01',
+        b'\x00\x01\x00',
+        b'\x00\x01\x00\xff',  # announces 255 bytes of payload and sends none
+        b'\x00\x01\x00\x03\x00\x01',  # advisory, one byte short of its safi
+        b'\x00\x03\x00\x0f\x00\x01\x01\xff\xfe',  # query, truncated router-id
+        b'\x00\x06\x00\x13\x00\x01\x01\x0a\x00\x00\x01\x00\x00',  # counter, truncated sequence
+    ],
+)
+def test_truncated_operational_message_raises_notify(body: bytes) -> None:
+    """Every read was unchecked: struct.error and ValueError escaped into the reactor.
+
+    Neither is caught by anything on the way out, and struct.error is not even one of the
+    types AttributeCollection.parse converts.
+    """
+    with pytest.raises(Notify):
+        Operational.unpack_message(body, Negotiated.UNSET)
+
+
+def test_unknown_operational_type_is_reported_not_raised(neighbor, encoder: Text) -> None:
+    """A type we do not know is the peer's choice, and must not kill the encoder.
+
+    Both encoders ended their dispatch with `raise RuntimeError('the code is broken')`,
+    which an UnknownOperational reached simply by having category 'unknown'.
+    """
+    payload = b'\x01\x02\x03'
+    body = struct.pack('!HH', 0xBEEF, len(payload)) + payload
+    operational = Operational.unpack_message(body, Negotiated.UNSET)
+    assert operational.category == 'unknown'
+    str(operational)
+    repr(operational)
+    one_line(encoder.operational(neighbor, 'in', operational.category, operational, b'', b'', Negotiated.UNSET))
+
+
+def test_unknown_operational_type_has_a_printable_type() -> None:
+    """Type.__str__ raised NotImplementedError, so the logger raised instead of logging."""
+    body = struct.pack('!HH', 0xBEEF, 0)
+    operational = Operational.unpack_message(body, Negotiated.UNSET)
+    assert '48879' in str(operational.what)
+
+
+def test_the_operational_decoder_does_not_write_to_stdout(capsys) -> None:
+    """In daemon mode stdout is the pipe feeding the API subprocesses.
+
+    The decoder used to print 'ignoring ATM this kind of message' there, which is a line
+    no consumer can parse, on a message any peer can send.
+    """
+    Operational.unpack_message(struct.pack('!HH', 0xBEEF, 0), Negotiated.UNSET)
+    captured = capsys.readouterr()
+    assert captured.out == ''
