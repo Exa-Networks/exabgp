@@ -124,7 +124,7 @@ def test_large_communities_are_read_rather_than_counted() -> None:
 # said so, so an edit to any one of them was invisible.
 
 MAX_PROBE_WIDTH = 33
-MIN_CLASSES_REACHED = 16  # a ratchet: raise it when a probe reaches more, never lower it
+MIN_CLASSES_REACHED = 19  # a ratchet: raise it when a probe reaches more, never lower it
 
 # a payload of zeroes decodes for most attributes and for some decodes only to a sentinel,
 # which pins nothing about the class.  These carry a header the generic probe cannot guess.
@@ -138,6 +138,17 @@ SHAPED: dict[str, tuple[bytes, bytes]] = {
         bytes([PREFIX_SID_LABEL_INDEX]) + pack('!H', 7) + bytes(7),
         bytes([PREFIX_SID_LABEL_INDEX]) + pack('!H', 7) + bytes(6) + bytes([1]),
     ),
+    # AS_SEQUENCE of one two byte ASN, since the sweep runs with asn4 off
+    'ASPath': (bytes([2, 1]) + pack('!H', 65000), bytes([2, 1]) + pack('!H', 65001)),
+    'AS4Path': (bytes([2, 1]) + pack('!L', 65000), bytes([2, 1]) + pack('!L', 65001)),
+    'TunnelEncap': (pack('!HH', 1, 4) + bytes(4), pack('!HH', 2, 4) + bytes(4)),
+}
+
+# named rather than silently absent, so "not covered" is a decision and not an oversight
+NO_TWO_VALUES = {
+    'AtomicAggregate': 'carries no value at all, so two of them are equal and must be',
+    'MPRNLRI': 'takes a whole NLRI encoding as its payload, covered by the round trip tests',
+    'MPURNLRI': 'takes a whole NLRI encoding as its payload, covered by the round trip tests',
 }
 
 
@@ -152,6 +163,9 @@ def session_with_aigp() -> object:
 
     session = Mock()
     session.neighbor = {'aigp': True}
+    # a Mock auto-creates a truthy attribute for anything unset, so asn4 read as True and
+    # ASPath expected four byte ASNs: the mock was answering a question nobody had set
+    session.asn4 = False
     return session
 
 
@@ -159,7 +173,12 @@ def two_decodings(klass: type[Attribute], session: object) -> tuple[Attribute, A
     """The shortest width at which this class decodes two payloads which differ."""
     shaped = SHAPED.get(klass.__name__)
     if shaped is not None:
-        one, other = (klass.unpack_attribute(payload, session) for payload in shaped)
+        try:
+            one, other = (klass.unpack_attribute(payload, session) for payload in shaped)
+        except Exception:
+            # a seed which no longer decodes is a broken seed, and the shape test below
+            # says so by name rather than letting it error out of every test in the file
+            return None
         return (one, other) if type(one) is klass and type(other) is klass else None
 
     for width in range(1, MAX_PROBE_WIDTH):
@@ -231,3 +250,42 @@ def test_every_registered_attribute_can_be_compared_at_all() -> None:
             break
 
     assert not uncomparable, f'these classes raise when compared: {uncomparable}'
+
+
+def test_every_shaped_seed_still_decodes_to_its_own_attribute() -> None:
+    """A seed which decays into a sentinel keeps the sweep green while testing nothing.
+
+    Session 5.0 asked for this after finding their own sweep reached five attributes of
+    twenty one.  The reachability ratchet above notices the count dropping; this says
+    which seed went wrong and what it became, which is the difference between a number
+    moving and knowing why.
+    """
+    session = session_with_aigp()
+    wrong = {}
+    for name, payloads in SHAPED.items():
+        klass = next((k for k in Attribute.registered_attributes.values() if k.__name__ == name), None)
+        assert klass is not None, f'{name} has a seed but is not registered'
+        for payload in payloads:
+            try:
+                decoded = klass.unpack_attribute(payload, session)
+            except Exception as exc:
+                wrong[name] = f'raises {type(exc).__name__}'
+                break
+            if type(decoded) is not klass:
+                wrong[name] = f'decodes to {type(decoded).__name__}'
+                break
+
+    assert not wrong, f'these seeds no longer build the attribute they are seeds for: {wrong}'
+
+
+def test_the_classes_left_out_are_left_out_on_purpose() -> None:
+    """Anything not reached is either named as a deliberate exclusion or it is a gap.
+
+    Without this, an attribute quietly stops decoding the probe and the only signal is the
+    ratchet, which says a number moved and not which class went missing.
+    """
+    reached = set(reachable_classes())
+    registered = {klass.__name__ for klass in Attribute.registered_attributes.values()}
+
+    unexplained = sorted(registered - reached - set(NO_TWO_VALUES))
+    assert not unexplained, f'these registered attributes are neither reached nor named as an exclusion: {unexplained}'
