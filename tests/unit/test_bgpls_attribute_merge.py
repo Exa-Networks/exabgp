@@ -110,13 +110,16 @@ REGISTERED_LSID_FLOOR = 30
 class TestTheRegistryIsPopulatedBeforeAnythingIsSweptOverIt:
     """Assert the haystack before reporting on the needles"""
 
+    @pytest.mark.registry_floor
     def test_enough_lsids_are_registered(self) -> None:
         assert len(LinkState.registered_lsids) >= REGISTERED_LSID_FLOOR, len(LinkState.registered_lsids)
 
+    @pytest.mark.registry_floor
     def test_enough_merge_classes_are_reached(self) -> None:
         merging = [k for k in LinkState.registered_lsids.values() if getattr(k, 'MERGE', False)]
         assert len(merging) >= MERGE_CLASS_FLOOR, [k.__name__ for k in merging]
 
+    @pytest.mark.registry_floor
     def test_enough_of_them_named_their_member(self) -> None:
         # the grouping tests below say what happens to named and unnamed classes;
         # with none of either they say nothing and pass

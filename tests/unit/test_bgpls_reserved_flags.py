@@ -72,6 +72,7 @@ def reserved_bit(klass):
 
 
 class TestTheSweepCoversWhatItClaims:
+    @pytest.mark.registry_floor
     def test_every_flag_class_is_found(self) -> None:
         assert len(FLAG_CLASSES) == EXPECTED_FLAG_CLASSES, [p.id for p in FLAG_CLASSES]
 

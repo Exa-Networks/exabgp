@@ -111,10 +111,12 @@ NLRI_FAMILY_FLOOR = 18
 LSID_FLOOR = 30
 
 
+@pytest.mark.registry_floor
 def test_the_nlri_registry_is_populated() -> None:
     registered = sorted(NLRI.registered_nlri)
     assert len(registered) >= NLRI_FAMILY_FLOOR, registered
 
 
+@pytest.mark.registry_floor
 def test_the_linkstate_registry_is_populated() -> None:
     assert len(LinkState.registered_lsids) >= LSID_FLOOR, sorted(LinkState.registered_lsids)

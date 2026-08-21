@@ -49,11 +49,9 @@ from .corpus import seeds_for
 #                               and nothing re-advertises it.
 KNOWN = {
     'bgp-ls/bgp-ls',
-    'ipv4/mpls-vpn',
     'ipv4/mup',
     'ipv4/nlri-mpls',
     'ipv4/rtc',
-    'ipv6/mpls-vpn',
     'ipv6/mup',
     'ipv6/nlri-mpls',
     'l2vpn/vpls',
@@ -101,3 +99,16 @@ def test_the_ratchet_only_shrinks() -> None:
     still_broken = {family for family in KNOWN if mismatches(family)[1]}
     fixed = KNOWN - still_broken
     assert not fixed, f'these now round trip and must be removed from KNOWN: {sorted(fixed)}'
+
+
+# Ratchet on the registry this file parametrises over. A short registry does not
+# fail these tests, it collects fewer of them, and a smaller green number reads
+# exactly like a larger one. Marked so qa/bin/check_sweep_floors can ask for the
+# floor BY NAME: a file whose seeds break under thinning goes red with or without
+# a floor, so "something failed" cannot stand in for "the floor fired".
+NLRI_FAMILY_FLOOR = 18
+
+
+@pytest.mark.registry_floor
+def test_the_registry_this_file_sweeps_is_populated() -> None:
+    assert len(FAMILIES) >= NLRI_FAMILY_FLOOR, sorted(FAMILIES)

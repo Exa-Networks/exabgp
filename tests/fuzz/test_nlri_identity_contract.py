@@ -98,6 +98,7 @@ IDS = [f'{f}-{i}' for i, (f, _p, _n) in enumerate(ROUTES)]
 
 
 class TestTheSweepMeansSomething:
+    @pytest.mark.registry_floor
     def test_enough_families_decode(self) -> None:
         families = {family for family, _p, _n in ROUTES}
         assert len(families) >= FAMILY_FLOOR, sorted(families)

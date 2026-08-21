@@ -26,6 +26,7 @@ exactly the class these checks break.
 """
 
 import json
+from pathlib import Path
 import os
 import shutil
 import subprocess
@@ -187,8 +188,29 @@ def collect_seeds():
     return {family: [bytes(payload).hex() for payload in corpus.seeds_for(family)] for family in NLRI.registered_nlri}
 
 
+ALLOWED_FILE = Path(__file__).resolve().parent.parent / 'compat_allowed.json'
+
+
+def load_allowed():
+    """The individual inputs whose change against the last release is intended
+
+    One key per input rather than one per family. ALLOWED above holds the REASONS,
+    by family, which is the right granularity for prose; this holds what is
+    actually excused, which has to be the granularity of the thing that changed.
+    """
+    if not ALLOWED_FILE.exists():
+        return set()
+    return set(json.loads(ALLOWED_FILE.read_text())['allowed'])
+
+
+def record_allowed(keys):
+    ALLOWED_FILE.write_text(json.dumps({'allowed': sorted(keys)}, indent=2) + '\n')
+
+
 def main():
-    tag = sys.argv[1] if len(sys.argv) > 1 else None
+    argv = [_ for _ in sys.argv[1:] if _ != '--record']
+    recording = '--record' in sys.argv
+    tag = argv[0] if argv else None
     if tag is None:
         tag = subprocess.run(
             ['git', 'describe', '--tags', '--abbrev=0'], capture_output=True, text=True, cwd=ROOT
@@ -226,6 +248,7 @@ def main():
         return 2
 
     before, after = before['results'], after['results']
+    allowed = load_allowed()
     counts = {}
     regressions = []
     for key in sorted(set(before) | set(after)):
@@ -234,8 +257,14 @@ def main():
             counts['identical'] = counts.get('identical', 0) + 1
             continue
         kind = '%s -> %s' % (old.split(':')[0], new.split(':')[0])
-        if key.split(':')[1] in ALLOWED:
-            counts['allowed (see ALLOWED)'] = counts.get('allowed (see ALLOWED)', 0) + 1
+        # Keyed on the INPUT, not the family. Keying on the family meant one
+        # entry excused every future change in it: 14 of the 21 families carried
+        # a blanket allowance, so this gate reported "no regression" while being
+        # structurally unable to see one in two thirds of the tree. It waved
+        # through 80 newly refused label stacks under a reason about prefix
+        # masks, which is how it was noticed.
+        if key in allowed:
+            counts['allowed (see qa/compat_allowed.json)'] = counts.get('allowed (see qa/compat_allowed.json)', 0) + 1
             continue
         counts[kind] = counts.get(kind, 0) + 1
         # a line the consumer cannot parse is not a service worth keeping,
@@ -250,6 +279,25 @@ def main():
 
     if not regressions:
         print('\nno regression: nothing %s accepts is refused here, and no new crash' % tag)
+        return 0
+
+    if recording:
+        # bless the current change set as the baseline. Every key is written
+        # individually, so the NEXT change against the last release is a
+        # regression rather than something a family wide entry absorbed.
+        # merged with what is already blessed, never replacing it: writing only
+        # the CURRENT regressions silently drops every key which is passing, so
+        # one --record from a half fixed tree would erase the baseline and the
+        # next run would call the erased entries clean
+        record_allowed(allowed | {key for key, _old, _new in regressions})
+        print('\nrecorded %d intended changes to %s' % (len(regressions), ALLOWED_FILE.name))
+        by_family = {}
+        for key, old_state, new_state in regressions:
+            family = key.split(':')[1]
+            transition = '%s -> %s' % (old_state.split(':')[0], new_state.split(':')[0])
+            by_family[(family, transition)] = by_family.get((family, transition), 0) + 1
+        for (family, transition), count in sorted(by_family.items(), key=lambda kv: -kv[1]):
+            print('  %-22s %-22s %d' % (family, transition, count))
         return 0
 
     print('\n%d REGRESSIONS against %s:' % (len(regressions), tag))

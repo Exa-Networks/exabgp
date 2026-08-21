@@ -158,3 +158,16 @@ class TestRoutesSurviveTheAdjRibOut:
                 seen.extend(str(each) for each in back.nlris)
 
         assert announced in seen, f'{family}: announced {announced!r}, re-advertised {seen}'
+
+
+# Ratchet on the registry this file parametrises over. A short registry does not
+# fail these tests, it collects fewer of them, and a smaller green number reads
+# exactly like a larger one. Marked so qa/bin/check_sweep_floors can ask for the
+# floor BY NAME: a file whose seeds break under thinning goes red with or without
+# a floor, so "something failed" cannot stand in for "the floor fired".
+NLRI_FAMILY_FLOOR = 18
+
+
+@pytest.mark.registry_floor
+def test_the_registry_this_file_sweeps_is_populated() -> None:
+    assert len(FAMILIES) >= NLRI_FAMILY_FLOOR, sorted(FAMILIES)

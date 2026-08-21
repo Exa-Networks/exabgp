@@ -95,6 +95,7 @@ class TestTheTwoRenderersAgree:
                 found.append(f'TLV {code}: {detail}')
         assert not found, found
 
+    @pytest.mark.registry_floor
     def test_the_sweep_reaches_enough_to_mean_something(self) -> None:
         reached = [code for code, _ in decoded_tlvs()]
         assert len(reached) >= COVERAGE_FLOOR, f'only reached {len(reached)}: {reached}'

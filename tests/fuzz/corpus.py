@@ -38,7 +38,16 @@ NLRI_SEEDS = {
     # RD(8) + endpoint(2) + offset(2) + size(2) + base(3) announced as one length
     'l2vpn/vpls': [b'\x00\x11' + b'\x00' * 17, b'\x00\x12' + b'\x00' * 18],
     'ipv4/rtc': [b'\x00', bytes.fromhex('60' + '0000fde8' + '0002fde800000064')],
-    'ipv4/mpls-vpn': [bytes([88]) + b'\x00\x01\x01' + b'\x00' * 8 + bytes([10, 0, 0])],
+    # A labelled VPN NLRI: mask(1) covers label(24) + rd(64) + prefix, and the
+    # label MUST carry the bottom of stack bit, 0x01, or the decoder reads the
+    # route distinguisher as more labels and the prefix disappears.
+    'ipv4/mpls-vpn': [
+        bytes([88]) + b'\x00\x01\x01' + b'\x00' * 8 + bytes([10, 0, 0]),  # 24+64+0, a VPN default route
+        bytes([112]) + b'\x00\x01\x01' + b'\x00' * 8 + bytes([10, 0, 0]),  # 24+64+24, 10.0.0.0/24
+    ],
+    'ipv6/mpls-vpn': [
+        bytes([120]) + b'\x00\x01\x01' + b'\x00' * 8 + bytes([0x20, 0x01, 0x0D, 0xB8]),  # 24+64+32
+    ],
     'ipv4/nlri-mpls': [bytes([48, 0x00, 0x01, 0x01, 10, 0, 0])],
     'ipv6/nlri-mpls': [bytes([48, 0x00, 0x01, 0x01, 0x20, 0x01, 0x0D])],
     # MVPN Source Active A-D (type 5): RD(8) + srclen(1) + src(4) + grouplen(1) + group(4)
