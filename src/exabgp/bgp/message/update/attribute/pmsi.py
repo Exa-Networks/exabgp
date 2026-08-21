@@ -127,15 +127,12 @@ class PMSI(Attribute):
         label = raw_label >> 4
         tunnel = data[cls.HEADER_SIZE :]
         # should we check for bottom of stack before the shift ?
-        if subtype in cls._pmsi_known:
-            klass = cls._pmsi_known[subtype]
-            # the tunnel is handed to a decoder which knows how wide it must be
-            if klass.TUNNEL_SIZE >= 0 and len(tunnel) != klass.TUNNEL_SIZE:
-                raise Notify(
-                    3,
-                    5,
-                    'could not decode PMSI tunnel, wrong size %d for tunnel type %d' % (len(tunnel), subtype),
-                )
+        # the width decides WHICH CLASS can represent these bytes, not whether to
+        # accept them. A tunnel which does not fit its subclass falls through to
+        # the generic form, which prints hex, so the class and the data agree and
+        # nothing which decodes today is refused.
+        klass = cls._pmsi_known.get(subtype)
+        if klass is not None and (klass.TUNNEL_SIZE < 0 or len(tunnel) == klass.TUNNEL_SIZE):
             return klass.unpack(tunnel, label, flags, raw_label)
         return cls.pmsi_unknown(subtype, tunnel, label, flags, raw_label)
 
