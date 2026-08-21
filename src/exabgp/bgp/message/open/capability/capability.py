@@ -29,9 +29,19 @@ def decode_utf8(data, what):
         Notify: If the bytes are not valid UTF-8
     """
     try:
-        return bytes(data).decode('utf-8')
+        decoded = bytes(data).decode('utf-8')
     except UnicodeDecodeError as exc:
         raise Notify(2, 0, 'the {} in the capability is not valid UTF-8 ({})'.format(what, exc)) from None
+
+    # the text API writes one event per line, so a newline here would let the peer
+    # forge a whole event in the stream a controller reads.  Same rule the
+    # healthcheck applies to its own attributes.
+    for character in decoded:
+        if character == '\t' or (character.isprintable() and character != '\x7f'):
+            continue
+        raise Notify(2, 0, 'the {} in the capability holds the control character {!r}'.format(what, character))
+
+    return decoded
 
 
 class _CapabilityCode(int):

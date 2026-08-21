@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import sys
 from struct import pack
 from struct import unpack
 
@@ -15,6 +14,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.message import Message
+from exabgp.bgp.message.notification import Notify
 
 # ========================================================================= Type
 #
@@ -97,32 +97,58 @@ class Operational(Message):
         Operational.registered_operational[klass.code] = (klass.category, klass)
         return klass
 
+    HEADER_SIZE = 4  # Type(2) + Length(2)
+    ROUTER_ID_SIZE = 4
+    FAMILY_SIZE = 3  # AFI(2) + SAFI(1)
+    SEQUENCE_SIZE = 4
+    COUNTER_SIZE = 4
+
     @classmethod
     def unpack_message(cls, data, direction, negotiated):  # pylint: disable=W0613
+        # every read below is peer supplied, and nothing here checked a length,
+        # so struct.error and IndexError escaped into the reactor
+        if len(data) < cls.HEADER_SIZE:
+            raise Notify(5, 0, 'invalid operational message, not enough data for the header')
+
         what = Type(unpack('!H', data[0:2])[0])
         length = unpack('!H', data[2:4])[0]
 
         decode, klass = cls.registered_operational.get(what, ('unknown', None))
 
+        family_end = cls.HEADER_SIZE + cls.FAMILY_SIZE
+        routerid_end = family_end + cls.ROUTER_ID_SIZE
+        sequence_end = routerid_end + cls.SEQUENCE_SIZE
+        counter_end = sequence_end + cls.COUNTER_SIZE
+
         if decode == 'advisory':
+            if len(data) < family_end:
+                raise Notify(5, 0, 'invalid operational advisory, not enough data for the family')
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
-            data = data[7 : length + 4]
+            data = data[family_end : length + cls.HEADER_SIZE]
             return klass(afi, safi, data)
         if decode == 'query':
+            if len(data) < sequence_end:
+                raise Notify(5, 0, 'invalid operational query, not enough data')
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
-            routerid = RouterID.unpack(data[7:11])
-            sequence = unpack('!L', data[11:15])[0]
+            routerid = RouterID.unpack(data[family_end:routerid_end])
+            sequence = unpack('!L', data[routerid_end:sequence_end])[0]
             return klass(afi, safi, routerid, sequence)
         if decode == 'counter':
+            if len(data) < counter_end:
+                raise Notify(5, 0, 'invalid operational counter, not enough data')
             afi = unpack('!H', data[4:6])[0]
             safi = data[6]
-            routerid = RouterID.unpack(data[7:11])
-            sequence = unpack('!L', data[11:15])[0]
-            counter = unpack('!L', data[15:19])[0]
+            routerid = RouterID.unpack(data[family_end:routerid_end])
+            sequence = unpack('!L', data[routerid_end:sequence_end])[0]
+            counter = unpack('!L', data[sequence_end:counter_end])[0]
             return klass(afi, safi, routerid, sequence, counter)
-        sys.stdout.write('ignoring ATM this kind of message\n')
+
+        # this used to be sys.stdout.write(). In daemon mode stdout is the pipe
+        # feeding the API subprocesses, so an unknown operational type from a
+        # peer wrote an unparseable line straight into every consumer's stream.
+        raise Notify(5, 0, 'unknown operational message type %d' % int(what))
 
 
 # ============================================================ OperationalFamily
