@@ -42,8 +42,10 @@ class PMSI(Attribute):
     FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
     CACHING = True
     TUNNEL_TYPE: ClassVar[int] = -1  # Used for subclass registration
-    # the size of the tunnel identifier this tunnel type carries, None when the type
-    # does not constrain it (RFC 6514 section 5)
+    # the size of the tunnel identifier this tunnel type carries, None when the type does
+    # not constrain it (RFC 6514 section 5).  A peer which sends another size is not
+    # refused: the route is still the route it announced, and an installation which
+    # accepts it today has to keep accepting it.  It is shown as hex instead.
     TUNNEL_SIZE: ClassVar[int | None] = None
 
     _pmsi_known: ClassVar[dict[int, Type[PMSI]]] = dict()
@@ -85,17 +87,9 @@ class PMSI(Attribute):
         if len(data) < 5:
             raise ValueError(f'PMSI requires at least 5 bytes, got {len(data)}')
         tunnel_type = data[1]
-        if tunnel_type not in cls._pmsi_known:
-            return cls(data)
-        klass = cls._pmsi_known[tunnel_type]
-        # the accessors of a tunnel type read a fixed width identifier, so a peer which
-        # sends fewer bytes than that decoded here and raised from str() much later
-        tunnel_size = len(data) - 5
-        if klass.TUNNEL_SIZE is not None and tunnel_size != klass.TUNNEL_SIZE:
-            raise ValueError(
-                f'PMSI {cls.name(tunnel_type)} requires a {klass.TUNNEL_SIZE} byte tunnel identifier, got {tunnel_size}'
-            )
-        return klass(data)
+        if tunnel_type in cls._pmsi_known:
+            return cls._pmsi_known[tunnel_type](data)
+        return cls(data)
 
     @classmethod
     def make_pmsi(cls, tunnel_type: int, flags: int, label: int, tunnel: bytes, raw_label: int | None = None) -> 'PMSI':
@@ -265,4 +259,13 @@ class PMSIIngressReplication(PMSI):
         return IPv4.ntop(self.tunnel)
 
     def prettytunnel(self) -> str:
+        """The endpoint as an address, or as hex when it is not one.
+
+        IPv4.ntop() wants exactly four bytes and raises ValueError otherwise, which used to
+        surface from str() and repr(): the logger and the text API, long after the UPDATE
+        was accepted.  A peer which sends another size still announced something, so it is
+        printed the way an unknown tunnel type is printed rather than refused.
+        """
+        if len(self.tunnel) != self.TUNNEL_SIZE:
+            return PMSI.prettytunnel(self)
         return self.ip

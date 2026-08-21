@@ -152,14 +152,18 @@ def _pmsi(data: bytes) -> Attribute:
     return _decode_attribute(Attribute.CODE.PMSI_TUNNEL, data)
 
 
-def test_pmsi_ingress_replication_needs_a_full_address() -> None:
-    """Ingress Replication carries an IPv4 address, so the tunnel identifier is 4 bytes.
+def test_pmsi_ingress_replication_shows_a_short_tunnel_as_hex() -> None:
+    """Ingress Replication carries an IPv4 address, and IPv4.ntop() wants four bytes.
 
-    Only the 5 byte header was checked, so a 7 byte PMSI decoded and then raised
-    ValueError from str() when IPv4.ntop() was handed two bytes.
+    Only the five byte header was checked, so a seven byte PMSI decoded and then raised
+    ValueError from str() and repr(): the logger and the text API, long after the UPDATE
+    was accepted. The peer still announced something, and an installation which accepts it
+    today has to keep accepting it, so it is printed the way an unknown tunnel type is
+    printed rather than refused.
     """
-    with pytest.raises((Notify, ValueError)):
-        _pmsi(b'\x00\x06\x00\x00\x00\xff\xff')
+    attribute = _pmsi(b'\x00\x06\x00\x00\x00\xff\xff')
+    assert '0xFFFF' in str(attribute)
+    repr(attribute)
 
 
 def test_pmsi_ingress_replication_accepts_an_address() -> None:
@@ -362,3 +366,47 @@ def test_bgpls_tlv_checks_its_own_reads(code: int, payload: bytes, why: str) -> 
         return
     parsed(attribute.json())
     str(attribute)
+
+
+# ============================================================================
+# SR Policy names: escaping the quotes and nothing else is the half fix
+# ============================================================================
+
+
+SR_POLICY_TUNNEL_TYPE = 15
+POLICY_NAME_SUBTYPE = 130
+CANDIDATE_PATH_NAME_SUBTYPE = 129
+
+
+def _sr_policy_name(subtype: int, name: bytes) -> Attribute:
+    """A tunnel encapsulation attribute holding one SR Policy name sub-TLV.
+
+    RFC 9012: a sub-TLV type of 128 or more carries a two byte length, which is what makes
+    these reachable at all. A sweep which writes a one byte length there never gets past
+    the framing and reports a clean run over code it never ran.
+    """
+    value = b'\x00' + name  # a flags byte, then the name
+    sub = bytes([subtype]) + struct.pack('!H', len(value)) + value
+    return _decode_attribute(Attribute.CODE.TUNNEL_ENCAP, struct.pack('!HH', SR_POLICY_TUNNEL_TYPE, len(sub)) + sub)
+
+
+@pytest.mark.parametrize('subtype', [POLICY_NAME_SUBTYPE, CANDIDATE_PATH_NAME_SUBTYPE])
+@pytest.mark.parametrize(
+    'name',
+    [
+        b'a\\',  # a backslash ate its own closing quote
+        b'x", "injected": "owned',  # the quotes were escaped, the backslashes were not
+        b'a\nb',  # a raw control character inside a JSON string
+        b'\x00\x01\x02',
+        b'my-policy',
+    ],
+)
+def test_sr_policy_name_stays_one_json_value(subtype: int, name: bytes) -> None:
+    """json() escaped the quotes by hand, which handles one character out of several.
+
+    A peer names its policy through the Tunnel Encapsulation attribute, so this is peer
+    supplied text on the API path: the corruption half of GHSA-jcrv-p53f-v5w5.
+    """
+    attribute = _sr_policy_name(subtype, name)
+    decoded = parsed(attribute.json())
+    assert 'injected' not in keys_anywhere(decoded)
