@@ -23,6 +23,8 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
 
+from .corpus import seeds_for
+
 FAMILIES = sorted(NLRI.registered_nlri)
 
 INJECTION = b'x", "injected": "owned'
@@ -110,3 +112,28 @@ def test_arbitrary_text(family, text) -> None:
         return
     parsed = json.loads('{"nlri": %s}' % rendered[0])
     assert 'injected' not in set(all_keys(parsed))
+
+
+class TestSeededShapes:
+    """The fill patterns above never reach some families at all
+
+    A flow-vpn NLRI needs a route distinguisher before its rules and a VPLS one
+    needs a length which agrees with its buffer, so those families were being
+    swept with input their decoder rejected at the first byte. These are RFC
+    legal shapes, and every one of them must render as parseable JSON.
+    """
+
+    @pytest.mark.parametrize('family', FAMILIES)
+    def test_every_seed_renders(self, family) -> None:
+        decoded = 0
+        for payload in seeds_for(family):
+            try:
+                out = render(family, payload)
+            except Notify:
+                continue
+            if out is None:
+                continue
+            decoded += 1
+            parsed = json.loads('{"nlri": %s}' % out[0])
+            assert 'injected' not in set(all_keys(parsed))
+        assert decoded, f'{family}: not one seed decoded, this test proves nothing'

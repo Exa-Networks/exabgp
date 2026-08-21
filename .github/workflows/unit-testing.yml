@@ -37,3 +37,8 @@ jobs:
       - name: pytest
         run: |
           env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py
+
+      - name: compatibility against the last release
+        run: |
+          git fetch --tags --force
+          ./qa/bin/compat_gate
