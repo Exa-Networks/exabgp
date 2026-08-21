@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""
+Check that every file which defines tests is one pytest actually collects.
+
+pytest collects `test_*.py` and nothing else. A file full of working tests under any
+other name is never run, and nothing says so: the suite reports a healthy number and
+the tests inside it have not executed since the day the file was named.
+
+This branch carried four such files. Two of them held 24 tests which all passed the
+moment they were collected, and one of those is the file which found the attribute
+equality defect. The other two were a manual probe which opened a TCP connection to a
+hard coded public address, and a file commented out since 2009.
+
+Two ways this check could lie, both closed here:
+
+  an empty answer      if pytest cannot even import the tree, it collects nothing, and
+                       "no uncollected files" would be indistinguishable from "nothing
+                       was looked at". Collection failing is a failure, not a pass.
+
+  a file with no tests      a helper module named without `test_` is fine and must not
+                       be reported, so a file is only interesting when it actually
+                       defines a test function or a unittest.TestCase.
+"""
+
+import ast
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+TESTS = ROOT / 'tests'
+
+# a directory whose contents are inputs rather than tests
+SKIP_DIRS = {'__pycache__', 'data', 'fixtures'}
+
+
+def defines_tests(path):
+    """True when the file holds something pytest would run if it could see it"""
+    try:
+        tree = ast.parse(path.read_text(encoding='utf-8', errors='replace'))
+    except SyntaxError:
+        return False
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('test'):
+            return True
+        if isinstance(node, ast.ClassDef) and node.name.startswith('Test'):
+            return True
+        # unittest.TestCase under any name
+        if isinstance(node, ast.ClassDef):
+            for base in node.bases:
+                if isinstance(base, ast.Attribute) and base.attr == 'TestCase':
+                    return True
+                if isinstance(base, ast.Name) and base.id == 'TestCase':
+                    return True
+    return False
+
+
+def collected():
+    """The files pytest reports it will run, or None when collection failed"""
+    result = subprocess.run(
+        [sys.executable, '-m', 'pytest', str(TESTS), '--collect-only', '-q', '--no-header'],
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+    )
+    # 0 is a clean collection, 5 is "no tests found" which is itself a problem here
+    if result.returncode not in (0,):
+        print('pytest could not collect the tests, so this check proves nothing:')
+        print((result.stdout + result.stderr).strip()[-2000:])
+        return None
+
+    seen = set()
+    for line in result.stdout.splitlines():
+        if '::' not in line:
+            continue
+        seen.add((ROOT / line.split('::')[0].strip()).resolve())
+    return seen
+
+
+def main():
+    run = collected()
+    if run is None:
+        return 1
+
+    if not run:
+        print('pytest collected no tests at all, which cannot be right')
+        return 1
+
+    stranded = []
+    for path in sorted(TESTS.rglob('*.py')):
+        if any(part in SKIP_DIRS for part in path.parts):
+            continue
+        if path.resolve() in run:
+            continue
+        if not defines_tests(path):
+            continue
+        stranded.append(path.relative_to(ROOT))
+
+    if stranded:
+        print('these files define tests pytest never collects:')
+        for path in stranded:
+            print(f'   {path}')
+        print('\nrename them to test_*.py, or delete them if they are not tests')
+        return 1
+
+    print(f'ok   every file defining tests is collected ({len(run)} files)')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
