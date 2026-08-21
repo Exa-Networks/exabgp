@@ -180,21 +180,46 @@ class CIDR:
         return self.mask == other.mask and self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
+        # the negation of __eq__ rather than the same condition written out a second time:
+        # two independently maintained copies of one invariant only have to agree with
+        # each other to look correct, which is a mutation testing blind spot by
+        # construction, and this pair had exactly that survivor
+        equal = self.__eq__(other)
+        if equal is NotImplemented:
+            return NotImplemented
+        return not equal
+
+    def _order(self) -> tuple[bytes, int]:
+        """The key the ordering operators compare, address first and mask second.
+
+        Update.messages() packs sorted(self.nlris), so this decides the order prefixes go
+        onto the wire.  The address stays the primary key, so nothing which already had a
+        defined order moves; the mask is only a tiebreak.  Without it 10.0.0.0/24 and
+        10.0.0.0/25 compared both <= and >= while __eq__ and __hash__ told them apart,
+        which is an ordering inconsistent with equality: bisect and sorted-merge callers
+        are entitled to assume those agree.
+        """
+        return bytes(self._packed), self.mask
+
+    def __lt__(self, other: object) -> bool:
         if not isinstance(other, CIDR):
             return NotImplemented
-        return self.mask != other.mask or self._packed != other._packed
+        return self._order() < other._order()
 
-    def __lt__(self, other: CIDR) -> bool:
-        return self._packed < other._packed
+    def __le__(self, other: object) -> bool:
+        if not isinstance(other, CIDR):
+            return NotImplemented
+        return self._order() <= other._order()
 
-    def __le__(self, other: CIDR) -> bool:
-        return self._packed <= other._packed
+    def __gt__(self, other: object) -> bool:
+        if not isinstance(other, CIDR):
+            return NotImplemented
+        return self._order() > other._order()
 
-    def __gt__(self, other: CIDR) -> bool:
-        return self._packed > other._packed
-
-    def __ge__(self, other: CIDR) -> bool:
-        return self._packed >= other._packed
+    def __ge__(self, other: object) -> bool:
+        if not isinstance(other, CIDR):
+            return NotImplemented
+        return self._order() >= other._order()
 
     def top(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> str:
         """Return the IP address as a string."""
