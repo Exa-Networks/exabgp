@@ -98,10 +98,14 @@ class Notification(Message, Exception):
         (7, 2): 'Malformed Message Subtype',
     }
 
+    HEADER_SIZE: ClassVar[int] = 2  # RFC 4271 4.5: an error code and an error subcode
+
     def __init__(self, packed: Buffer) -> None:
-        # Convert to bytearray first - this gives us length and ownership
-        if len(packed) < 2:
-            raise ValueError(f'Notification requires at least 2 bytes, got {len(packed)}')
+        # this guards our own construction, not the wire: unpack_message pads a short body
+        # rather than letting a peer reach it, because a raw exception here is answered
+        # with a NOTIFICATION and RFC 4271 6.5 forbids that
+        if len(packed) < self.HEADER_SIZE:
+            raise ValueError(f'Notification requires at least {self.HEADER_SIZE} bytes, got {len(packed)}')
         Exception.__init__(self)
         self._packed = packed
 
@@ -172,6 +176,24 @@ class Notification(Message, Exception):
 
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Notification:
+        """A NOTIFICATION the peer truncated is still the peer closing the session.
+
+        RFC 4271 6.5 is explicit that an error found while processing a NOTIFICATION must
+        not be reported back with a NOTIFICATION.  So this cannot raise Notify, and it must
+        not raise anything raw either: a ValueError out of __init__ reached
+        reactor/protocol.py's catch-all, which turned it into
+
+            Notify(1, 0, 'can not decode update message of type "3"')
+
+        and sent the peer exactly the message the RFC forbids, naming the wrong error.
+
+        Returning a Notification instead lets protocol.py raise it, and the reactor closes
+        the session without replying, which is what the RFC asks for.  A body too short to
+        hold a code renders as "unknown error / unknow reason", which is accurate: the peer
+        did not say.
+        """
+        if len(data) < cls.HEADER_SIZE:
+            return cls(bytes(cls.HEADER_SIZE))
         return cls(data)
 
 
