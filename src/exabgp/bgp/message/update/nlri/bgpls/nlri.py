@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 from struct import pack, unpack
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar
@@ -134,11 +136,29 @@ class BGPLS(NLRI):
             '0x' + ''.join('{:02x}'.format(_) for _ in payload),
         )
 
+    # Every BGP-LS NLRI type sets route_d in its own __init__ and reads it in __eq__,
+    # __hash__ and json().  It is an instance attribute rather than a slot, so the copy
+    # methods below have to name it: they used to say "BGPLS has empty __slots__ - nothing
+    # else to copy", which is true of this class and false of every subclass of it.  A
+    # copied route lost its route distinguisher, and then comparing or hashing it raised
+    # AttributeError rather than answering.
+    ROUTE_DISTINGUISHER = 'route_d'
+
+    def _copy_route_distinguisher(self, new: 'BGPLS', memo: dict[Any, Any] | None = None) -> None:
+        """Carry route_d across a copy, when the subclass has one.
+
+        GenericBGPLS carries an unregistered code and no descriptors, so it has none.
+        """
+        route_d = getattr(self, self.ROUTE_DISTINGUISHER, None)
+        if route_d is None:
+            return
+        setattr(new, self.ROUTE_DISTINGUISHER, deepcopy(route_d, memo) if memo is not None else route_d)
+
     def __copy__(self) -> 'BGPLS':
         new = self.__class__.__new__(self.__class__)
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
-        # BGPLS has empty __slots__ - nothing else to copy
+        self._copy_route_distinguisher(new)
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'BGPLS':
@@ -146,7 +166,7 @@ class BGPLS(NLRI):
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
-        # BGPLS has empty __slots__ - nothing else to copy
+        self._copy_route_distinguisher(new, memo)
         return new
 
     @classmethod
