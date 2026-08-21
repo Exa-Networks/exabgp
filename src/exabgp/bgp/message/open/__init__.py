@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.message import Message
@@ -90,9 +91,10 @@ class Open(Message):
         # empty body left IndexError and a short one struct.error, out of the
         # message parser rather than as a NOTIFICATION
         if len(data) < OPEN_MINIMUM_SIZE:
-            raise Notify(
-                1, 2, 'invalid OPEN, %d bytes is short of the %d byte fixed header' % (len(data), OPEN_MINIMUM_SIZE)
-            )
+            # RFC 4271 6.1: a Length field below the minimum length of an OPEN is
+            # Bad Message Length, and "The Data field MUST contain the erroneous
+            # Length field"
+            raise Notify(1, 2, pack('!H', Message.HEADER_LEN + len(data)))
 
         version = data[0]
         if version != Version.BGP_4:
