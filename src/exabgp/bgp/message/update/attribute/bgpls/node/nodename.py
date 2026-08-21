@@ -6,8 +6,6 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-import json
-
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
@@ -42,7 +40,4 @@ class NodeName(BaseLS):
         if len(data) > MAX_NODE_NAME_LENGTH:
             raise Notify(3, 5, 'Node Name TLV length too large')
 
-        return cls(data.decode('ascii'))
-
-    def json(self, compact=None):
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return cls(bytes(data).decode('utf-8', 'replace'))

@@ -284,3 +284,12 @@ class TestPeerStringEscaping:
         assert notification_json['message'] == payload.decode()
         assert notification_json['data'] == '0x79222C2022696E6A65637465642D6E6F746966223A20226F776E656432'
         assert 'injected-notif' not in notification_json
+
+    def test_down_reason_round_trips_verbatim(self, json_encoder, api_neighbor):
+        # _string() escapes with json.dumps, so the brackets no longer need
+        # to be mangled into parentheses before being emitted
+        reason = 'notification received (6,0) [hold timer] {peer "a"}'
+
+        event = json.loads(json_encoder.down(api_neighbor, reason))
+
+        assert event['neighbor']['reason'] == reason

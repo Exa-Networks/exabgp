@@ -21,6 +21,8 @@ class LinkState(Attribute):
     FLAG = Attribute.Flag.OPTIONAL
     TLV = -1
 
+    TLV_HEADER_SIZE = 4  # Type(2) + Length(2)
+
     # Registered subclasses we know how to decode
     registered_lsids = dict()
 
@@ -65,16 +67,37 @@ class LinkState(Attribute):
         return lsid in cls.registered_lsids
 
     @classmethod
+    def _decode_tlv(cls, klass, scode, payload):
+        """Decode one TLV and prove the result can be rendered
+
+        A decoder which returns, but whose object raises from json() or repr(),
+        moves the failure into the API writer, where nothing treats it as a
+        protocol error and the line is already half written.  Rendering once
+        here costs less than a dead session later.
+        """
+        try:
+            instance = klass.unpack(payload)
+            instance.json()
+            repr(instance)
+            return instance
+        except Notify:
+            raise
+        except Exception as exc:
+            raise Notify(3, 5, f'Invalid BGP-LS attribute TLV {scode} ({type(exc).__name__})') from None
+
+    @classmethod
     def unpack(cls, data, direction, negotiated):
         ls_attrs = []
         while data:
-            scode, length = unpack('!HH', data[:4])
-            payload = data[4 : length + 4]
+            if len(data) < cls.TLV_HEADER_SIZE:
+                raise Notify(3, 5, 'Invalid BGP-LS attribute, truncated TLV header')
+            scode, length = unpack('!HH', data[: cls.TLV_HEADER_SIZE])
+            payload = data[cls.TLV_HEADER_SIZE : length + cls.TLV_HEADER_SIZE]
             BaseLS.check_length(payload, length)
 
-            data = data[length + 4 :]
+            data = data[length + cls.TLV_HEADER_SIZE :]
             klass = cls.klass(scode)
-            instance = klass.unpack(payload)
+            instance = cls._decode_tlv(klass, scode, payload)
 
             if not instance.MERGE:
                 ls_attrs.append(instance)
@@ -103,6 +126,24 @@ class LinkState(Attribute):
         return ', '.join(str(d) for d in self.ls_attrs)
 
 
+def jsonable(value):
+    """Make a decoded TLV value safe to hand to json.dumps
+
+    The content comes from the wire and is not trusted, so decoding it must
+    never raise at emission time, and it must never be inlined into the JSON
+    by hand as that would let a peer inject its own keys into the API stream.
+    """
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value).decode('utf-8', 'replace')
+    if isinstance(value, (list, tuple)):
+        return [jsonable(_) for _ in value]
+    if isinstance(value, dict):
+        return {str(k): jsonable(v) for k, v in value.items()}
+    if value is None or isinstance(value, (str, bool, int, float)):
+        return value
+    return str(value)
+
+
 class BaseLS:
     TLV = -1
     JSON = 'json-name-unset'
@@ -116,16 +157,10 @@ class BaseLS:
         self.content = content
 
     def json(self, compact=None):
-        try:
-            return f'"{self.JSON}": {json.dumps(self.content)}'
-        except TypeError:
-            # not a basic type
-            return f'"{self.JSON}": "{self.content.decode("utf-8")}"'
+        return f'"{self.JSON}": {json.dumps(jsonable(self.content))}'
 
     def as_dict(self):
-        if isinstance(self.content, bytes):
-            return {self.JSON: self.content.decode('utf-8')}
-        return {self.JSON: self.content}
+        return {self.JSON: jsonable(self.content)}
 
     def __repr__(self):
         return '{}: {}'.format(self.REPR, self.content)
@@ -138,6 +173,12 @@ class BaseLS:
     @classmethod
     def check(cls, data):
         return cls.check_length(data, cls.LEN)
+
+    @classmethod
+    def check_multiple(cls, data, size):
+        # LEN is 0 for the repeated value TLVs, which makes check() a no-op for them
+        if not data or len(data) % size:
+            raise Notify(3, 5, f'Unable to decode attribute, wrong size for {cls.REPR}')
 
     def merge(self, other):
         if not self.MERGE:
@@ -187,6 +228,9 @@ class FlagLS(BaseLS):
 
     @classmethod
     def unpack_flags(cls, data):
+        # b2a_hex of an empty buffer gives int() nothing to parse
+        if not data:
+            raise Notify(3, 5, f'Unable to decode attribute, no flags for {cls.REPR}')
         pad = cls.FLAGS.count('RSV')
         repeat = len(cls.FLAGS) - pad
         hex_rep = int(binascii.b2a_hex(data), 16)
