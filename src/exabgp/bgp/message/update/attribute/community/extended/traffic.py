@@ -14,6 +14,7 @@ from struct import unpack
 
 from exabgp.protocol.ip import IPv4
 from exabgp.protocol.ip import IPv6
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
@@ -252,6 +253,9 @@ class TrafficNextHopSimpson(ExtendedCommunity):
         return TrafficNextHopSimpson(bool(bit & 0x01), data[:8])
 
 
+IPV6_COMMUNITY_SIZE = 20  # RFC 5701
+
+
 # ============================================================ TrafficRedirectIPv6
 # https://tools.ietf.org/html/rfc5701
 
@@ -278,8 +282,12 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
 
     @staticmethod
     def unpack(data):
-        ip, asn = unpack('!16sH', data[2:11])
-        return TrafficRedirectIPv6(socket.inet_ntop(socket.AF_INET6, ip), asn, data[:11])
+        # an RFC 5701 community is 20 bytes: type(1) subtype(1) IPv6(16) asn(2).
+        # this sliced 9 bytes for a format needing 18, so it never decoded at all
+        if len(data) < IPV6_COMMUNITY_SIZE:
+            raise Notify(3, 5, 'invalid IPv6 extended community, too short for a redirect')
+        ip, asn = unpack('!16sH', data[2:IPV6_COMMUNITY_SIZE])
+        return TrafficRedirectIPv6(socket.inet_ntop(socket.AF_INET6, ip), asn, data[:IPV6_COMMUNITY_SIZE])
 
 
 # ============================================================ TrafficRedirectIP
