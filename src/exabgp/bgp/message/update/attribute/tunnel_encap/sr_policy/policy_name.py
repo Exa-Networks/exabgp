@@ -12,6 +12,8 @@ Wire format:
 
 from __future__ import annotations
 
+import json
+
 from struct import pack
 from typing import ClassVar
 
@@ -33,8 +35,14 @@ class PolicyNameSubTLV(SubTLV):
         return pack('!B', self.flags) + self.name.encode('utf-8')
 
     def json(self) -> str:
-        escaped = self.name.replace('"', '\\"')
-        return f'"policy-name": "{escaped}"'
+        """The name a peer chose, escaped by the one thing which escapes everything.
+
+        Replacing the quotes by hand is the half fix: a name holding a backslash ate its
+        own closing quote, and a name holding a newline put a raw control character inside
+        a JSON string. Both make the line unreadable to every API consumer, which is the
+        corruption half of GHSA-jcrv-p53f-v5w5.
+        """
+        return f'"policy-name": {json.dumps(self.name)}'
 
     def __str__(self) -> str:
         return f'policy-name "{self.name}"'
