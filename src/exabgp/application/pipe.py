@@ -24,6 +24,23 @@ mb = kb * 1024
 
 # a single API command must fit in one line, and the backlog is what we could not forward yet
 MAX_COMMAND_SIZE = mb
+
+
+def command_too_large(pending: bytes, limit: int = MAX_COMMAND_SIZE) -> bool:
+    """Whether what has been read can never be dispatched and must stop growing.
+
+    A command is dispatched on its newline, so bytes with no newline in them are a command
+    still arriving. If they pass the limit, no newline is coming: either the sender is
+    broken or it is trying to make us hold its data forever.
+
+    This is a function so that a test can hand it bytes. The checks it replaced were tested
+    by reading this file as text and asserting the constant's name appeared in it, which is
+    a test that passes whether or not the comparison is still there: neutering all three
+    comparisons left the whole suite green.
+    """
+    return b'\n' not in pending and len(pending) > limit
+
+
 MAX_BACKLOG_SIZE = 100 * mb
 
 
@@ -256,13 +273,21 @@ class Control:
             self.r_pipe: b'',
         }
 
-        def consume(source: int) -> None:
+        def grow(source: 'int | None', chunk: bytes) -> None:
+            """store only grows here, so the cap is only checked here.
+
+            It used to be checked in the first branch of consume() alone, and the drain at
+            the bottom of the loop appended to store without it: a newline followed by a
+            megabyte of newline-free data walked straight past the limit.
+            """
+            store[source] += chunk
+            if command_too_large(store[source]):
+                sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
+                sys.exit(1)
+
+        def consume(source: 'int | None') -> None:
             if not backlog[source] and b'\n' not in store[source]:
-                store[source] += read[source](1024)
-                # a source which never sends a newline would otherwise grow store forever
-                if len(store[source]) > MAX_COMMAND_SIZE and b'\n' not in store[source]:
-                    sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
-                    sys.exit(1)
+                grow(source, read[source](1024))
             else:
                 backlog[source].append(read[source](1024))
                 # assuming a route takes 80 chars, 100 Mb is over 1Millions routes
@@ -295,7 +320,7 @@ class Control:
                         continue
                     break
                 if backlog[source]:
-                    store[source] += backlog[source].popleft()
+                    grow(source, backlog[source].popleft())
 
     def run(self) -> None:
         if not self.init():

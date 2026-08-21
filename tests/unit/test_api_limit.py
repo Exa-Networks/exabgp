@@ -175,3 +175,35 @@ class TestMatchNeighbors:
         descriptions = [['neighbor 10.0.0.1'], ['router-id 1.2.3.4']]
         result = list(match_neighbors(peers, descriptions))
         assert len(result) == 1
+
+
+def test_group_buffer_refuses_to_grow_past_its_byte_limit(monkeypatch) -> None:
+    """The byte cap is the one TIGER_STYLE 1.3 asks for, and it had no test.
+
+    Only the command count was tested, so disabling the byte comparison left the whole
+    suite green: a peer sending few but enormous commands was bounded by nothing.
+    """
+    from exabgp.reactor.api.command import group
+
+    service = 'test-bytes'
+    monkeypatch.setattr(group, 'MAX_GROUP_BYTES', 100)
+    group._start_group(service)
+
+    assert group._add_to_group(service, [], 'x' * 60)
+    # the second one crosses the limit, so the group is refused and dropped
+    assert not group._add_to_group(service, [], 'x' * 60)
+    assert service not in group._GROUP_BUFFERS, 'a group over its limit is cleared'
+
+
+def test_group_buffer_counts_the_bytes_it_holds(monkeypatch) -> None:
+    """The count has to follow what was buffered, or the cap watches the wrong number."""
+    from exabgp.reactor.api.command import group
+
+    service = 'test-count'
+    group._start_group(service)
+    try:
+        assert group._add_to_group(service, [], 'abcd')
+        assert group._add_to_group(service, [], 'ef')
+        assert group._GROUP_BYTES[service] == 6
+    finally:
+        group.clear_group(service)

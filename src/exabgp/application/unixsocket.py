@@ -33,6 +33,20 @@ mb = kb * 1024
 
 # a single API command must fit in one line, and the backlog is what we could not forward yet
 MAX_COMMAND_SIZE = mb
+
+
+def command_too_large(pending: bytes, limit: int = MAX_COMMAND_SIZE) -> bool:
+    """Whether what has been read can never be dispatched and must stop growing.
+
+    A command is dispatched on its newline, so bytes with no newline in them are a command
+    still arriving.  If they pass the limit, no newline is coming.
+
+    A function, so a test can hand it bytes: the check it replaced was tested by reading
+    this file as text and asserting the constant's name appeared in it.
+    """
+    return b'\n' not in pending and len(pending) > limit
+
+
 MAX_BACKLOG_SIZE = 100 * mb
 
 
@@ -504,14 +518,21 @@ class Control:
         backlog: dict[int, Backlog] = {standard_in: Backlog()}
         store: dict[int, bytes] = {standard_in: b''}
 
+        def grow(source: int, chunk: bytes) -> None:
+            """store only grows here, so the cap is only checked here.
+
+            It used to be checked in the first branch of consume() alone, and the three
+            drains below appended to store without it.
+            """
+            store[source] += chunk
+            if command_too_large(store[source]):
+                sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
+                sys.stderr.flush()
+                sys.exit(1)
+
         def consume(source: int) -> None:
             if not backlog[source] and b'\n' not in store[source]:
-                store[source] += read[source](1024)
-                # a source which never sends a newline would otherwise grow store forever
-                if len(store[source]) > MAX_COMMAND_SIZE and b'\n' not in store[source]:
-                    sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
-                    sys.stderr.flush()
-                    sys.exit(1)
+                grow(source, read[source](1024))
             else:
                 backlog[source].append(read[source](1024))
                 # Memory limit check, on the bytes queued and not on the number of sources
@@ -703,7 +724,7 @@ class Control:
                     store[standard_in] = rest
 
                 if backlog[standard_in]:
-                    store[standard_in] += backlog[standard_in].popleft()
+                    grow(standard_in, backlog[standard_in].popleft())
 
                 # Flush client write queues
                 for client_fd in list(self.clients.keys()):
@@ -754,7 +775,7 @@ class Control:
                         break
 
                     if backlog.get(client_fd):
-                        store[client_fd] += backlog[client_fd].popleft()
+                        grow(client_fd, backlog[client_fd].popleft())
             else:
                 # Legacy single-client mode
                 sources = list(store.keys())
@@ -777,7 +798,7 @@ class Control:
                         break
 
                     if backlog[source]:
-                        store[source] += backlog[source].popleft()
+                        grow(source, backlog[source].popleft())
 
     def run(self) -> None:
         """Run the socket server."""

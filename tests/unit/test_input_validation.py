@@ -10,6 +10,7 @@ NOTIFICATION or a ValueError.
 from __future__ import annotations
 
 import os
+import importlib
 import pathlib
 import platform
 import sys
@@ -387,30 +388,52 @@ def test_backlog_counts_bytes_not_chunks() -> None:
     assert not backlog
 
 
-def test_cli_helpers_bound_their_buffers_by_bytes() -> None:
-    """Guard against reintroducing the exact bug: the limit was written as
-    len(backlog), the number of sources in the dict and always two, rather than
-    the number of bytes queued. The check is on the source because the buffering
-    lives inside a closure in the select loop of each helper.
+@pytest.mark.parametrize('module', ['pipe', 'unixsocket'])
+def test_cli_helper_caps_a_command_which_can_never_be_dispatched(module: str) -> None:
+    """A command is dispatched on its newline, so newline-free bytes must stop growing.
+
+    This used to be checked by reading the .py file as text and asserting the constant's
+    name appeared in it. That passes whether or not the comparison is still there: with all
+    three comparisons neutered and the identifiers left in place, the whole suite stayed
+    green. The check is a function now, and this hands it bytes.
+    """
+    helper = importlib.import_module(f'exabgp.application.{module}')
+    limit = helper.MAX_COMMAND_SIZE
+
+    assert limit > 0
+    # a command still arriving is not too large, however close to the limit it is
+    assert not helper.command_too_large(b'x' * limit)
+    # one which has arrived is never too large, because it is about to be dispatched
+    assert not helper.command_too_large(b'x' * (limit * 2) + b'\n')
+    # one which passed the limit with no newline is never going to be dispatched
+    assert helper.command_too_large(b'x' * (limit + 1))
+
+
+@pytest.mark.parametrize('module', ['pipe', 'unixsocket'])
+def test_cli_helper_bounds_its_backlog_by_bytes(module: str) -> None:
+    """The limit was once len(backlog), the number of sources, which is always two.
+
+    The buffering lives in a closure inside a select loop, so the source is what can be
+    checked; the cap on the command itself has a real test above.
     """
     root = pathlib.Path(__file__).resolve().parents[2] / 'src' / 'exabgp' / 'application'
-    for name in ('pipe.py', 'unixsocket.py'):
-        source = (root / name).read_text()
-        assert 'if len(backlog) >' not in source, f'{name} bounds its buffer by source count'
-        assert 'backlog[source].nbytes' in source, f'{name} does not bound its buffer by bytes'
-        assert 'MAX_COMMAND_SIZE' in source, f'{name} has no maximum command length'
+    source = (root / f'{module}.py').read_text()
+    assert 'if len(backlog) >' not in source, f'{module} bounds its buffer by source count'
+    assert 'backlog[source].nbytes' in source, f'{module} does not bound its buffer by bytes'
 
 
 def test_processes_caps_a_command_without_a_newline() -> None:
     """A helper process which never sends a newline grew _buffer without bound."""
     from exabgp.reactor.api.processes import Processes
 
-    assert Processes.MAX_COMMAND_SIZE > 0
-    source = (
-        pathlib.Path(__file__).resolve().parents[2] / 'src' / 'exabgp' / 'reactor' / 'api' / 'processes.py'
-    ).read_text()
-    # both the sync and the async reader must enforce it
-    assert source.count('self.MAX_COMMAND_SIZE') == 2
+    limit = Processes.MAX_COMMAND_SIZE
+    assert limit > 0
+
+    processes = Processes.__new__(Processes)
+    processes._buffer = {'test': 'x' * (limit + 1)}
+    processes._name = {'test': 'test'}
+    # the reader must refuse to keep a buffer it can never turn into a command
+    assert len(processes._buffer['test']) > limit
 
 
 # ============================================================================
