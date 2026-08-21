@@ -84,6 +84,7 @@ pythonpath = ["src"]
 markers = [
 	"fuzz: Fuzzing tests using Hypothesis (deselect with '-m \"not fuzz\"')",
 	"asyncio: Async tests using pytest-asyncio",
+	"registry_floor: asserts a registry is populated before a sweep reports on it",
 ]
 
 [tool.ruff]
