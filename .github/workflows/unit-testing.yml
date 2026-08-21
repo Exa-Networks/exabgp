@@ -38,6 +38,10 @@ jobs:
         run: |
           env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py
 
+      - name: pytest under python -O
+        run: |
+          env PYTHONPATH=src PYTHONOPTIMIZE=1 exabgp_log_enable=false pytest -q ./tests/unit/test_*.py ./tests/fuzz/test_*.py
+
       - name: compatibility against the last release
         run: |
           git fetch --tags --force

@@ -32,7 +32,7 @@ class TestFlowJsonAlwaysParses:
             (bytes.fromhex('00'), 'a flow with no rule at all'),
             (bytes.fromhex('050C00008002'), 'a fragment rule which renders empty'),
             (bytes.fromhex('050900008002'), 'a tcp-flags rule which renders empty'),
-            (bytes.fromhex('05038106048119'), 'an ordinary two rule flow'),
+            (bytes.fromhex('06038106048119'), 'an ordinary two rule flow'),
             (bytes.fromhex('040C900001'), 'a two byte fragment value'),
         ],
     )
@@ -44,8 +44,11 @@ class TestFlowJsonAlwaysParses:
 
     def test_an_ordinary_flow_is_unchanged(self) -> None:
         # byte for byte what 5.0.12 emitted, so a consumer sees no difference
-        emitted = rendered(AFI.ipv4, SAFI.flow_ip, bytes.fromhex('05038106048119'))
-        assert emitted == '{ "protocol": [ "=tcp" ], "port": [ "=0" ], "string": "flow protocol =tcp port =0" }'
+        # the length byte must agree with the rules behind it: 05 here declared
+        # five bytes for six, and the truncated port used to decode as "=0", a
+        # match the peer never sent
+        emitted = rendered(AFI.ipv4, SAFI.flow_ip, bytes.fromhex('06038106048119'))
+        assert emitted == '{ "protocol": [ "=tcp" ], "port": [ "=25" ], "string": "flow protocol =tcp port =25" }'
 
     @pytest.mark.parametrize('afi,safi', FAMILIES)
     def test_every_flow_family(self, afi, safi) -> None:
