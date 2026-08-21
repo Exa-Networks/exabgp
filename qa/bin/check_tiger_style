@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+"""
+Check the mechanical part of TIGER STYLE (.claude/TIGER_STYLE.md).
+
+Four rules can be checked without reading the code:
+
+  bare_except    no bare `except:`, any occurrence fails (rule 1.4)
+  input_assert   no `assert` about the bytes a function was handed (rule 1.2)
+  long_function  functions over 70 lines (rule 1.5)
+  silent_except  `except SomeError: pass` or `: return None`, an error swallowed
+                 without a word (rule 1.4)
+
+bare_except and input_assert must be zero: the first is never right, and the second is a
+validation of peer data written with a statement `-O` deletes. Assertions about our own
+invariants are wanted, so only the ones which test a wire data parameter are counted.
+
+long_function and silent_except are ratcheted: the counts in qa/tiger_style.json are a
+ceiling which only ever goes down, so the tree can carry the violations it already has
+while no new one gets in.
+
+Usage:
+    ./qa/bin/check_tiger_style                    # check, fail if a count went up
+    ./qa/bin/check_tiger_style --show             # list every violation
+    ./qa/bin/check_tiger_style --update-baseline  # record the current counts
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.parent
+SRC_DIR = ROOT / 'src' / 'exabgp'
+BASELINE_FILE = ROOT / 'qa' / 'tiger_style.json'
+
+# a function longer than this does more than one thing (TIGER_STYLE 1.5)
+MAX_FUNCTION_LINES = 70
+
+# a parameter with one of these names holds bytes which came from outside the process
+WIRE_PARAMETERS = frozenset(('data', 'bgp', 'payload', 'raw', 'packed', 'buffer'))
+
+RULES = ('bare_except', 'input_assert', 'long_function', 'silent_except')
+
+# rules which must always be zero, whatever the baseline says
+ALWAYS_ZERO = ('bare_except', 'input_assert')
+
+
+class Violation:
+    """One rule broken at one place."""
+
+    def __init__(self, rule: str, path: str, line: int, detail: str) -> None:
+        self.rule = rule
+        self.path = path
+        self.line = line
+        self.detail = detail
+
+    def __str__(self) -> str:
+        return f'{self.path}:{self.line} {self.detail}'
+
+
+def source_files() -> list[Path]:
+    """Every source file we hold to the standard, vendored code excluded."""
+    return sorted(path for path in SRC_DIR.rglob('*.py') if 'vendoring' not in str(path))
+
+
+def inspect(path: Path) -> list[Violation]:
+    """Collect every violation in one file."""
+    relative = str(path.relative_to(ROOT))
+    try:
+        tree = ast.parse(path.read_text(encoding='utf-8'))
+    except SyntaxError as exc:
+        return [Violation('bare_except', relative, exc.lineno or 0, f'file does not parse: {exc.msg}')]
+
+    found: list[Violation] = []
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            lines = (node.end_lineno or node.lineno) - node.lineno + 1
+            if lines > MAX_FUNCTION_LINES:
+                found.append(Violation('long_function', relative, node.lineno, f'{node.name} is {lines} lines'))
+            found.extend(input_asserts(node, relative))
+            continue
+
+        if isinstance(node, ast.ExceptHandler):
+            if node.type is None:
+                found.append(Violation('bare_except', relative, node.lineno, 'bare except'))
+            elif len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
+                found.append(Violation('silent_except', relative, node.lineno, 'error swallowed by pass'))
+            elif len(node.body) == 1 and isinstance(node.body[0], ast.Return):
+                # `except SomeError: return None` swallows exactly as much as
+                # `pass` does, and it is the shape which hid the FlowSpec
+                # truncation: a malformed NLRI became a dropped route with no
+                # log and no NOTIFICATION. Only a bare or None return counts;
+                # returning a real value is a decision, not a shrug.
+                returned = node.body[0].value
+                if returned is None or (isinstance(returned, ast.Constant) and returned.value is None):
+                    found.append(Violation('silent_except', relative, node.lineno, 'error swallowed by return'))
+            continue
+
+    return found
+
+
+def wire_parameters(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    """The names this function uses for the bytes it was handed."""
+    arguments = function.args
+    declared = arguments.posonlyargs + arguments.args + arguments.kwonlyargs
+    return {argument.arg for argument in declared if argument.arg in WIRE_PARAMETERS}
+
+
+def input_asserts(function: ast.FunctionDef | ast.AsyncFunctionDef, relative: str) -> list[Violation]:
+    """Assertions which validate the bytes the function was handed.
+
+    An assertion about our own state is wanted, and is not reported. An assertion about
+    the input is a check the peer can delete by having the daemon started with -O.
+    """
+    wire = wire_parameters(function)
+    if not wire:
+        return []
+
+    found: list[Violation] = []
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Assert):
+            continue
+        named = {used.id for used in ast.walk(node.test) if isinstance(used, ast.Name)}
+        tested = sorted(named & wire)
+        if tested:
+            found.append(Violation('input_assert', relative, node.lineno, f'{function.name} asserts about {tested[0]}'))
+    return found
+
+
+def collect() -> list[Violation]:
+    violations: list[Violation] = []
+    for path in source_files():
+        violations.extend(inspect(path))
+    return violations
+
+
+def count(violations: list[Violation]) -> dict[str, int]:
+    counted = {rule: 0 for rule in RULES}
+    for violation in violations:
+        counted[violation.rule] += 1
+    return counted
+
+
+def read_baseline() -> dict[str, int]:
+    if not BASELINE_FILE.exists():
+        return {rule: 0 for rule in RULES}
+    stored = json.loads(BASELINE_FILE.read_text(encoding='utf-8'))
+    return {rule: int(stored.get(rule, 0)) for rule in RULES}
+
+
+def write_baseline(counted: dict[str, int]) -> None:
+    BASELINE_FILE.write_text(json.dumps(counted, indent=4, sort_keys=True) + '\n', encoding='utf-8')
+
+
+def report(violations: list[Violation], rule: str) -> None:
+    for violation in violations:
+        if violation.rule == rule:
+            print(f'  {violation}')
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description='check the mechanical part of TIGER STYLE')
+    parser.add_argument('--show', action='store_true', help='list every violation')
+    parser.add_argument('--update-baseline', action='store_true', help='record the current counts')
+    options = parser.parse_args()
+
+    violations = collect()
+    counted = count(violations)
+
+    if options.update_baseline:
+        write_baseline(counted)
+        print(f'baseline written to {BASELINE_FILE.relative_to(ROOT)}')
+        for rule in RULES:
+            print(f'  {rule}: {counted[rule]}')
+        return 0
+
+    baseline = read_baseline()
+    failed = False
+    improved = False
+
+    for rule in RULES:
+        allowed = 0 if rule in ALWAYS_ZERO else baseline[rule]
+        current = counted[rule]
+        if current > allowed:
+            failed = True
+            print(f'FAIL {rule}: {current} found, {allowed} allowed')
+            report(violations, rule)
+        elif current < allowed:
+            improved = True
+            print(f'ok   {rule}: {current} found, down from {allowed}')
+        else:
+            print(f'ok   {rule}: {current}')
+            if options.show:
+                report(violations, rule)
+
+    if failed:
+        print('\nsee .claude/TIGER_STYLE.md for what each rule asks for')
+        return 1
+
+    if improved:
+        print('\nviolations were removed, lower the ceiling with --update-baseline')
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
