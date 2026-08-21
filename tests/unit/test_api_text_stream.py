@@ -1,0 +1,115 @@
+"""The text API is one event per line, so a peer must not be able to end a line.
+
+GHSA-jcrv-p53f-v5w5 was about the JSON encoder: a peer chose a member in the stream every
+API subprocess reads.  The text encoder has the same shape of defect and the advisory did
+not cover it.  A consumer of the text stream splits on newlines, so a peer supplied string
+carrying one forges a whole event:
+
+    neighbor 127.0.0.1 in open ... capabilities [hostname(a
+    neighbor 1.2.3.4 down - forged ...
+
+The reader sees a session go down which never did.  For a DDoS mitigation or FlowSpec
+controller, a forged event is the same class of problem as an injected JSON member.
+
+Two defences, and both are tested here: the peer's strings are refused at the decoder when
+they hold a control character, and the encoder escapes anything which reaches it anyway.
+"""
+
+import struct
+
+import pytest
+
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open import Open
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.operational import Operational
+from exabgp.configuration.setup import create_minimal_configuration
+from exabgp.reactor.api.response.text import Text, oneline
+from exabgp.version import version
+
+FORGED = 'a\nneighbor 1.2.3.4 down - forged'
+
+
+@pytest.fixture(scope='module')
+def neighbor():
+    configuration = create_minimal_configuration(families='all', add_path=False)
+    configuration.reload()
+    return list(configuration.neighbors.values())[0]
+
+
+@pytest.fixture(scope='module')
+def encoder() -> Text:
+    return Text(version)
+
+
+def one_line(produced: str) -> None:
+    """What the encoder emits must be a single event, whatever the peer put in it."""
+    body = produced[:-1] if produced.endswith('\n') else produced
+    assert '\n' not in body, f'a peer ended the line early: {produced!r}'
+    assert '\r' not in body, f'a peer ended the line early: {produced!r}'
+
+
+def _open_with_capability(code: int, value: bytes) -> bytes:
+    capability = bytes([code, len(value)]) + value
+    params = bytes([2, len(capability)]) + capability
+    body = bytes([4]) + struct.pack('!H', 65001) + struct.pack('!H', 180)
+    return body + bytes([10, 0, 0, 1]) + bytes([len(params)]) + params
+
+
+@pytest.mark.parametrize('control', [b'\n', b'\r', b'\r\n', b'\x00', b'\x1b'])
+def test_hostname_holding_a_control_character_is_refused(control: bytes) -> None:
+    """Nothing legitimate sends one, and accepting it hands the peer a line of its own."""
+    name = b'a' + control + b'b'
+    value = bytes([len(name)]) + name + bytes([len(name)]) + name
+    with pytest.raises(Notify):
+        Open.unpack_message(_open_with_capability(CapabilityCode.HOSTNAME, value), Negotiated.UNSET)
+
+
+@pytest.mark.parametrize('control', [b'\n', b'\r', b'\x00'])
+def test_software_version_holding_a_control_character_is_refused(control: bytes) -> None:
+    name = b'a' + control + b'b'
+    with pytest.raises(Notify):
+        Open.unpack_message(
+            _open_with_capability(CapabilityCode.SOFTWARE_VERSION, bytes([len(name)]) + name),
+            Negotiated.UNSET,
+        )
+
+
+def test_a_hostname_without_control_characters_still_decodes() -> None:
+    name = b'router1.example.net'
+    value = bytes([len(name)]) + name + bytes([len(name)]) + name
+    message = Open.unpack_message(_open_with_capability(CapabilityCode.HOSTNAME, value), Negotiated.UNSET)
+    assert 'router1.example.net' in str(message.capabilities)
+
+
+def test_oneline_escapes_every_line_ending() -> None:
+    assert '\n' not in oneline(FORGED)
+    assert '\r' not in oneline('a\rb')
+    assert '\n' not in oneline('a\r\nb')
+
+
+def test_oneline_leaves_ordinary_text_alone() -> None:
+    assert oneline('router1.example.net') == 'router1.example.net'
+    assert oneline('a name with spaces') == 'a name with spaces'
+
+
+def test_down_reason_cannot_forge_an_event(neighbor, encoder: Text) -> None:
+    one_line(encoder.down(neighbor, FORGED))
+
+
+def test_operational_advisory_cannot_forge_an_event(neighbor, encoder: Text) -> None:
+    """The advisory is free text a peer sends, which makes it the easiest one to reach."""
+    advisory = FORGED.encode('utf-8')
+    body = struct.pack('!HH', 1, len(advisory) + 3) + struct.pack('!H', 1) + bytes([1]) + advisory
+    operational = Operational.unpack_message(body, Negotiated.UNSET)
+    produced = encoder.operational(neighbor, 'in', operational.category, operational, b'', b'', Negotiated.UNSET)
+    one_line(produced)
+
+
+def test_operational_advisory_survives_bytes_which_are_not_text(neighbor, encoder: Text) -> None:
+    """decode() without an error handler put a UnicodeDecodeError in the API writer."""
+    advisory = b'\xff\xfe\xfd'
+    body = struct.pack('!HH', 1, len(advisory) + 3) + struct.pack('!H', 1) + bytes([1]) + advisory
+    operational = Operational.unpack_message(body, Negotiated.UNSET)
+    one_line(encoder.operational(neighbor, 'in', operational.category, operational, b'', b'', Negotiated.UNSET))

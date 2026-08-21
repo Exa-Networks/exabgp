@@ -156,11 +156,6 @@ class JSON:
         )
 
     def down(self, neighbor: 'Neighbor', reason: str = '') -> str:
-        def escape_quote(reason: str) -> str:
-            # the {} and [] change is an horrible hack until we generate python objects
-            # as otherwise we interpret the string as a list or dict
-            return reason.replace('[', '(').replace(']', ')').replace('{', '(').replace('}', ')').replace('"', '\\"')
-
         return self._header(
             self._neighbor(
                 neighbor,
@@ -168,7 +163,9 @@ class JSON:
                 self._kv(
                     {
                         'state': 'down',
-                        'reason': escape_quote(reason),
+                        # _string() escapes with json.dumps; the hand rolled escaper which
+                        # used to be here ran first and left the reason double escaped
+                        'reason': reason,
                     },
                 ),
             ),
@@ -524,7 +521,13 @@ class JSON:
     def _operational_advisory(
         self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
     ) -> str:
-        data = operational.data.decode('utf-8') if isinstance(operational.data, bytes) else operational.data
+        # the advisory is free text the peer chose, and it is not promised to be UTF-8:
+        # decoding without an error handler put a UnicodeDecodeError in the API writer
+        data = (
+            bytes(operational.data).decode('utf-8', 'replace')
+            if isinstance(operational.data, (bytes, bytearray, memoryview))
+            else operational.data
+        )
         kv_content = self._kv(
             {
                 'name': operational.name,
