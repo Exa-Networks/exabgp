@@ -10,6 +10,7 @@ from __future__ import annotations
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip import IPv4
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 # =============================================================== AGGREGATOR (7)
@@ -58,6 +59,9 @@ class Aggregator(Attribute):
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
+        expected = 8 if negotiated.asn4 else 6
+        if len(data) != expected:
+            raise Notify(3, 5, 'invalid AGGREGATOR, expected %d bytes, got %d' % (expected, len(data)))
         if negotiated.asn4:
             return cls(ASN.unpack(data[:4]), IPv4.unpack(data[-4:]))
         return cls(ASN.unpack(data[:2]), IPv4.unpack(data[-4:]))

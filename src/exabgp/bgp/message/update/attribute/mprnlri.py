@@ -113,6 +113,8 @@ class MPRNLRI(Attribute, Family):
         nlris = []
 
         # -- Reading AFI/SAFI
+        if len(data) < 3:
+            raise Notify(3, 0, 'invalid %s, not enough data for the family' % cls.__name__)
         _afi, _safi = unpack('!HB', data[:3])
         afi, safi = AFI.create(_afi), SAFI.create(_safi)
         offset = 3

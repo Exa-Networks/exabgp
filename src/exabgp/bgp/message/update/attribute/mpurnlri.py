@@ -80,6 +80,8 @@ class MPURNLRI(Attribute, Family):
         nlris = []
 
         # -- Reading AFI/SAFI
+        if len(data) < 3:
+            raise Notify(3, 0, 'invalid %s, not enough data for the family' % cls.__name__)
         afi, safi = unpack('!HB', data[:3])
         offset = 3
         data = data[offset:]

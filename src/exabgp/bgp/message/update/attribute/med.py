@@ -10,6 +10,7 @@ from __future__ import annotations
 from struct import pack
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 # ====================================================================== MED (4)
@@ -46,4 +47,6 @@ class MED(Attribute):
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
+        if len(data) != 4:
+            raise Notify(3, 5, 'invalid MED, expected 4 bytes, got %d' % len(data))
         return cls(unpack('!L', data)[0])
