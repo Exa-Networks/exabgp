@@ -41,8 +41,18 @@ NLRI_SEEDS = {
     'ipv4/mpls-vpn': [bytes([88]) + b'\x00\x01\x01' + b'\x00' * 8 + bytes([10, 0, 0])],
     'ipv4/nlri-mpls': [bytes([48, 0x00, 0x01, 0x01, 10, 0, 0])],
     'ipv6/nlri-mpls': [bytes([48, 0x00, 0x01, 0x01, 0x20, 0x01, 0x0D])],
-    'ipv4/mcast-vpn': [bytes([1, 4]) + b'\x00\x01\x02\x03'],
-    'ipv6/mcast-vpn': [bytes([1, 4]) + b'\x00\x01\x02\x03'],
+    # MVPN Source Active A-D (type 5): RD(8) + srclen(1) + src(4) + grouplen(1) + group(4)
+    'ipv4/mcast-vpn': [
+        bytes([5, 18]) + b'\x00' * 8 + bytes([32]) + b'\x0a\x00\x00\x01' + bytes([32]) + b'\xe0\x00\x00\x01',
+        bytes([1, 4]) + b'\x00\x01\x02\x03',
+    ],
+    'ipv6/mcast-vpn': [
+        bytes([5, 18]) + b'\x00' * 8 + bytes([32]) + b'\x0a\x00\x00\x01' + bytes([32]) + b'\xe0\x00\x00\x01',
+        bytes([1, 4]) + b'\x00\x01\x02\x03',
+    ],
+    # MUP Direct Segment Discovery (arch 1, type 2): arch(1) + type(2) + length(1) + data
+    'ipv4/mup': [bytes([1]) + (2).to_bytes(2, 'big') + bytes([12]) + b'\x00' * 12],
+    'ipv6/mup': [bytes([1]) + (2).to_bytes(2, 'big') + bytes([12]) + b'\x00' * 12],
     'l2vpn/evpn': [bytes([1, 25]) + b'\x00' * 25],
     'bgp-ls/bgp-ls': [
         bytes.fromhex('00010025')

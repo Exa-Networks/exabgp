@@ -294,6 +294,11 @@ class Family:
         (AFI.ipv4, SAFI.flow_vpn): ((0, 4), 0),
         (AFI.ipv4, SAFI.rtc): ((4, 16), 0),
         (AFI.ipv6, SAFI.unicast): ((16, 32), 0),
+        # RFC 4760: multicast reachability uses the same next-hop encoding as
+        # unicast. Without this the family can be configured and announced but
+        # not received, so two speakers agreeing on it drop the session on the
+        # first route.
+        (AFI.ipv6, SAFI.multicast): ((16, 32), 0),
         (AFI.ipv6, SAFI.nlri_mpls): ((16, 32), 0),
         (AFI.ipv6, SAFI.mup): ((4, 16), 0),
         (AFI.ipv6, SAFI.mpls_vpn): ((24, 40), 8),
