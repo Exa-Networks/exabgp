@@ -207,6 +207,10 @@ def _bit_to_len(value: int) -> int:
     return NumericOperator.power[(value & CommonOperator.len_position) >> 4]
 
 
+# RFC 8955 section 4.2.1.1: the two length bits encode one, two, four or eight bytes
+_VALUE_WIDTHS: tuple[int, ...] = (1, 2, 4, 8)
+
+
 def _number(string: bytes) -> NumericValue:
     value = 0
     for c in string:
@@ -613,7 +617,10 @@ class FlowIPProtocol(IOperationByte, NumericString, FlowIPv4):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'protocol'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(Protocol.from_string, Protocol)
-    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(ord, Protocol)
+    # _number, not ord: RFC 8955 lets the operator announce any of the four widths, and
+    # ord() reads exactly one byte. The width is checked against the RFC, not against
+    # what this component encodes, so the decoder has to read whatever arrives.
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, Protocol)
 
 
 class FlowNextHeader(IOperationByte, NumericString, FlowIPv6):
@@ -622,7 +629,10 @@ class FlowNextHeader(IOperationByte, NumericString, FlowIPv6):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'next-header'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(Protocol.from_string, Protocol)
-    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(ord, Protocol)
+    # _number, not ord: RFC 8955 lets the operator announce any of the four widths, and
+    # ord() reads exactly one byte. The width is checked against the RFC, not against
+    # what this component encodes, so the decoder has to read whatever arrives.
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, Protocol)
 
 
 class FlowAnyPort(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
@@ -909,51 +919,77 @@ class Flow(NLRI):
                 what, bgp = bgp[0], bgp[1:]
 
                 if what not in decode.get(self.afi, {}):
-                    break  # Unknown component, stop parsing
+                    # not `break`: keeping the rules parsed so far turns the peer's filter
+                    # into a shorter one, and a flow with no component at all matches
+                    # everything, so a controller reading it would rate limit or discard
+                    # all traffic. RFC 8955 section 4.3 treats a malformed FlowSpec NLRI
+                    # as a withdraw, which is what returning INVALID does here.
+                    raise Notify(3, 10, 'flow component %d is not one this family defines' % what)
 
                 decoded = decode[self.afi][what]
-                if what not in factory.get(self.afi, {}):
-                    raise Notify(3, 10, 'flow component %d has no decoder for this family' % what)
+                # decode and factory are filled in the same loop, so a component in one and
+                # not the other is our own tables disagreeing, not the peer's doing
+                assert what in factory.get(self.afi, {}), 'every flow component has a decoder'
                 klass = factory[self.afi][what]
 
                 if decoded == 'prefix':
                     adding, bgp = klass.make(bgp)
                     rules.setdefault(adding.ID, []).append(adding)
                 else:
-                    end: int = 0
-                    while not end:
-                        if not bgp:
-                            raise Notify(3, 10, 'flow component %d ends without its end of list operator' % what)
-                        byte, bgp = bgp[0], bgp[1:]
-                        end = CommonOperator.eol(byte)
-                        operator = CommonOperator.operator(byte)
-                        length = CommonOperator.length(byte)
-                        if issubclass(klass, IOperation) and length not in klass.VALUE_SIZES:
-                            raise Notify(
-                                3,
-                                10,
-                                'flow component %d announces a %d byte value, which it can not hold' % (what, length),
-                            )
-                        value_bytes, bgp = bytes(bgp[:length]), bgp[length:]
-                        if len(value_bytes) != length:
-                            raise Notify(
-                                3,
-                                10,
-                                'flow component %d announces a %d byte value but only %d are left'
-                                % (what, length, len(value_bytes)),
-                            )
-                        adding_val = klass.decoder(value_bytes)
-                        # klass is IOperation subclass with (operator, value) constructor
-                        # decoder returns object but IOperation expects BaseValue
-                        if issubclass(klass, IOperation) and isinstance(adding_val, BaseValue):
-                            component = klass(operator, adding_val)
-                            rules.setdefault(what, []).append(component)
+                    bgp = self._parse_operations(what, klass, bgp, rules)
         except IndexError:
             # every read above is now bounded, so this is our own bug and not the peer's:
             # tell the caller rather than announcing a route which is not what was sent
             raise Notify(3, 10, 'flow NLRI ran past the end of its own payload') from None
 
         return rules
+
+    @staticmethod
+    def _parse_operations(
+        what: int,
+        klass: Any,
+        bgp: Buffer,
+        rules: dict[int, list[IComponent]],
+    ) -> Buffer:
+        """Read the operator and value pairs of one component, up to its end of list.
+
+        Returns what is left of the payload.
+        """
+        end: int = 0
+        while not end:
+            if not bgp:
+                raise Notify(3, 10, 'flow component %d ends without its end of list operator' % what)
+            byte, bgp = bgp[0], bgp[1:]
+            end = CommonOperator.eol(byte)
+            operator = CommonOperator.operator(byte)
+            length = CommonOperator.length(byte)
+            # RFC 8955 section 4.2.1.1: the operator's length field says how many bytes the
+            # value takes, and a sender may use any of the four. VALUE_SIZES says what this
+            # component *encodes*, which is a different question: refusing a wider encoding
+            # dropped a destination port of 80 sent in four bytes, silently, as an INVALID
+            # NLRI. The decoders read whatever width is announced, so what has to be checked
+            # is that the bytes are actually there.
+            if length not in _VALUE_WIDTHS:
+                raise Notify(
+                    3,
+                    10,
+                    'flow component %d announces a %d byte value, which is not a width RFC 8955 defines'
+                    % (what, length),
+                )
+            value_bytes, bgp = bytes(bgp[:length]), bgp[length:]
+            if len(value_bytes) != length:
+                raise Notify(
+                    3,
+                    10,
+                    'flow component %d announces a %d byte value but only %d are left'
+                    % (what, length, len(value_bytes)),
+                )
+            adding_val = klass.decoder(value_bytes)
+            # klass is an IOperation subclass taking (operator, value); the decoder is typed
+            # as returning object, so the value is narrowed before it is used
+            if issubclass(klass, IOperation) and isinstance(adding_val, BaseValue):
+                rules.setdefault(what, []).append(klass(operator, adding_val))
+        return bgp
 
     def feedback(self, action: Action) -> str:
         # Nexthop validation handled by Route.feedback()
@@ -1116,13 +1152,18 @@ class Flow(NLRI):
         members: list[str] = []
         for index in sorted(self.rules):
             rules = self.rules[index]
-            s: list[str] = []
+            # rules joined by AND belong to one element, the rest are separate elements
+            elements: list[str] = []
             for idx, rule in enumerate(rules):
-                # only add ' ' after the first element
-                if idx and not rule.operations & NumericOperator.AND:
-                    s.append(', ')
-                s.append(json.dumps(str(rule)))
-            members.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
+                if idx and rule.operations & NumericOperator.AND:
+                    elements[-1] += str(rule)
+                else:
+                    elements.append(str(rule))
+            # an element is quoted once, by json.dumps, rather than being assembled out of
+            # quoted pieces and then repaired with .replace('""', ''): a rule which renders
+            # as the empty string had its quotes deleted and left `[ , "is-fragment" ]`,
+            # which is the same unreadable line the leading comma used to produce
+            members.append('"{}": [ {} ]'.format(rules[0].NAME, ', '.join(json.dumps(e) for e in elements)))
         if self.rd is not RouteDistinguisher.NORD:
             members.append(self.rd.json())
         return members

@@ -191,14 +191,20 @@ def test_flow_component_with_its_value_still_decodes() -> None:
     assert 'protocol' in nlri.json()
 
 
-@pytest.mark.parametrize('length_bits', [0x10, 0x20, 0x30])
-def test_flow_component_value_larger_than_it_holds_is_rejected(length_bits: int) -> None:
-    """The protocol component holds one byte, but the operator byte can announce two,
-    four or eight, and the value decoder was handed more than ord() can read."""
-    components = bytes([0x03, length_bits]) + bytes(8)
+@pytest.mark.parametrize('length_bits, width', [(0x10, 2), (0x20, 4), (0x30, 8)])
+def test_flow_component_value_wider_than_it_encodes_still_decodes(length_bits: int, width: int) -> None:
+    """The operator byte announces the width, and RFC 8955 4.2.1.1 allows all four.
+
+    This used to assert the NLRI was rejected, because the value decoder was ord() and was
+    handed more than one byte. Refusing the width was the wrong half of that fix: it made
+    a protocol match sent in four bytes disappear as an INVALID NLRI, silently. The
+    decoders read whatever width arrives now, so the route survives.
+    """
+    components = bytes([0x03, 0x80 | length_bits | 0x01]) + bytes(width - 1) + bytes([0x06])
     data = bytes([len(components)]) + components
     nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, None, None)
-    assert nlri is NLRI.INVALID
+    assert nlri is not NLRI.INVALID
+    assert 'protocol' in nlri.json()
 
 
 def test_flow_port_accepts_the_two_byte_value_it_holds() -> None:

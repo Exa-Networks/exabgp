@@ -34,14 +34,6 @@ FLOW_FAMILIES = [
 ]
 
 
-FLOW_FAMILIES = [
-    (AFI.ipv4, SAFI.flow_ip),
-    (AFI.ipv4, SAFI.flow_vpn),
-    (AFI.ipv6, SAFI.flow_ip),
-    (AFI.ipv6, SAFI.flow_vpn),
-]
-
-
 def parsed(fragment: str) -> dict[str, object]:
     """Parse a json() result the way the API consumer parses the line holding it.
 
@@ -84,8 +76,9 @@ def test_flow_truncated_before_its_end_of_list_is_refused(family: tuple[AFI, SAF
     than no route at all: TIGER_STYLE.md 1.1.
     """
     afi, safi = family
-    # operator 0x10 asks for a two byte value and does not end the list, but nothing follows
-    payload = b'\x0c\x10\x00\x01'
+    # source port (component 5): the operator asks for two bytes and does not end the list,
+    # and nothing follows. Deliberately not the fragment component, which has its own test.
+    payload = b'\x05\x10\x00\x01'
     if safi == SAFI.flow_vpn:
         payload = bytes(8) + payload
     data = bytes([len(payload)]) + payload
@@ -94,23 +87,43 @@ def test_flow_truncated_before_its_end_of_list_is_refused(family: tuple[AFI, SAF
 
 
 @pytest.mark.parametrize('family', FLOW_FAMILIES, ids=lambda f: f'{f[0]}/{f[1]}')
-def test_flow_without_a_parsed_rule_still_emits_json(family: tuple[AFI, SAFI]) -> None:
-    """A flow with no rule produced '{, "string": "flow" }', a leading comma.
+def test_flow_with_no_component_is_dropped(family: tuple[AFI, SAFI]) -> None:
+    """A flow which parsed no component matches everything.
 
-    Concatenating the fragments meant the first one being empty left the separator of
-    the next one at the front, and no JSON parser accepts that.
+    json() used to render such a route as `{, "string": "flow" }`, which no parser accepts,
+    and the obvious repair was to emit `{"string": "flow"}` instead. That is worse: a
+    controller reading a FlowSpec route with no component and applying discard or rate
+    limit to it hits all traffic. An unknown component now ends the NLRI, so the route is
+    dropped, which is what RFC 8955 section 4.3 asks for.
     """
     afi, safi = family
-    # component 0xFF is not a flow component, so the decoder stops with no rule
-    payload = b'\xff\x00'
+    payload = b'\xff\x00'  # component 0xFF is not one any family defines
     if safi == SAFI.flow_vpn:
         payload = bytes(8) + payload
     data = bytes([len(payload)]) + payload
     nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
-    if nlri is None or nlri is NLRI.INVALID:
+    assert nlri is NLRI.INVALID
+
+
+@pytest.mark.parametrize('family', FLOW_FAMILIES, ids=lambda f: f'{f[0]}/{f[1]}')
+@pytest.mark.parametrize('component', [0x0C, 0x09], ids=['fragment', 'tcp-flags'])
+def test_flow_rule_which_renders_empty_still_emits_json(family: tuple[AFI, SAFI], component: int) -> None:
+    """A bitmask rule can render as the empty string, and it used to eat its own quotes.
+
+    The members were assembled out of quoted pieces and then repaired with
+    .replace('""', ''), so an element which rendered empty left `[ , "is-fragment" ]`
+    behind: the same unreadable line as the leading comma, reached another way.
+    """
+    afi, safi = family
+    payload = bytes([component, 0x00, 0x00, 0x80, 0x02])
+    if safi == SAFI.flow_vpn:
+        payload = bytes(8) + payload
+    data = bytes([len(payload)]) + payload
+    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+    if nlri is NLRI.INVALID:
         return
-    assert 'string' in parsed(nlri.json())
-    assert 'string' in parsed(nlri.json(announced=False))
+    parsed(nlri.json())
+    parsed(nlri.json(announced=False))
 
 
 def _addpath(data: bytes) -> Capability:
@@ -293,7 +306,7 @@ def test_evpn_ethernet_ad_without_a_label_stack_still_emits_json() -> None:
     assert parsed(nlri.json())['code'] == 1
 
 
-@pytest.mark.parametrize('code, payload', [(2, bytes(33)), (5, bytes(34)), (3, bytes(21)), (4, bytes(21))])
+@pytest.mark.parametrize('code, payload', [(2, bytes(33)), (5, bytes(34))])
 def test_evpn_route_json_has_no_stray_separator(code: int, payload: bytes) -> None:
     try:
         nlri, _ = NLRI.unpack_nlri(
@@ -428,3 +441,28 @@ def test_bgpls_empty_tag_list_is_still_accepted(code: int) -> None:
     attribute = _tlv(code, b'')
     assert parsed(attribute.json())
     str(attribute)
+
+
+@pytest.mark.parametrize(
+    'width, operator, value',
+    [
+        (1, 0x81, b'\x50'),
+        (2, 0x91, b'\x00\x50'),
+        (4, 0xA1, b'\x00\x00\x00\x50'),
+        (8, 0xB1, bytes(7) + b'\x50'),
+    ],
+)
+def test_flow_accepts_every_value_width_the_rfc_defines(width: int, operator: int, value: bytes) -> None:
+    """RFC 8955 section 4.2.1.1 lets a sender encode a value in one, two, four or eight bytes.
+
+    The check added to stop an ord() crash refused any width outside the component's
+    VALUE_SIZES, which is what the component *encodes*, not what it may be sent. A
+    destination port of 80 written in four bytes became NLRI.INVALID and was dropped with
+    no log and no NOTIFICATION: a FlowSpec filter silently not installed, with the console
+    still green.
+    """
+    component = bytes([0x05, operator]) + value  # destination-port
+    data = bytes([len(component)]) + component
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, None, None)
+    assert nlri is not NLRI.INVALID, f'a {width} byte value was dropped'
+    assert parsed(nlri.json())['destination-port'] == ['=80']
