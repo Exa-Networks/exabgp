@@ -415,3 +415,16 @@ def test_sr_policy_name_stays_one_json_value(subtype: int, name: bytes) -> None:
     attribute = _sr_policy_name(subtype, name)
     decoded = parsed(attribute.json())
     assert 'injected' not in keys_anywhere(decoded)
+
+
+@pytest.mark.parametrize('code', [1153, 1154])
+def test_bgpls_empty_tag_list_is_still_accepted(code: int) -> None:
+    """None is a whole number of elements, and this release renders it as an empty list.
+
+    check_multiple() started out refusing an empty TLV as well as a partial one. RFC 7752
+    says one or more, but a peer sending none has its route accepted today, and a check
+    added to stop a crash must not take that with it.
+    """
+    attribute = _tlv(code, b'')
+    assert parsed(attribute.json())
+    str(attribute)

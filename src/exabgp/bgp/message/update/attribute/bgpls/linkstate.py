@@ -307,7 +307,10 @@ class BaseLS:
         elements in a loop needs this instead, or the last read runs off the end.
         """
         assert size_bytes > 0, 'an element has a size'
-        if not data or len(data) % size_bytes:
+        # an empty TLV is a whole number of elements, none of them, and renders as an empty
+        # list: RFC 7752 says one or more, but this release accepts it and refusing it now
+        # would drop a route on upgrade
+        if len(data) % size_bytes:
             raise Notify(
                 3,
                 5,
