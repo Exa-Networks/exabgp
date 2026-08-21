@@ -196,6 +196,54 @@ class TestINETUnpackLabels:
         assert nlri.labels.labels == [0x800000 >> 4]
         assert leftover == b''
 
+    def test_a_sentinel_inside_a_well_formed_stack_is_just_a_label(self) -> None:
+        """Why the bottom of stack test has to come FIRST
+
+        The two RFC 3107 conventions are only terminators at depth one, but the
+        check for them must run AFTER the bottom of stack bit, not before. A
+        three label stack whose middle label happens to equal 0x000000, with the
+        last carrying the bit, is a perfectly well formed route, and testing the
+        sentinels first would refuse it.
+
+        The ordering was pointed out by the session working main, who added the
+        same case there after taking the depth rule from here.
+        """
+        data = b'\x60' + b'\x00\x00\x10' + b'\x00\x00\x00' + b'\x00\x00\x21' + b'\x0a\x00\x00'
+        nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False)
+        assert str(nlri.cidr) == '10.0.0.0/24'
+        assert nlri.labels.labels == [1, 0, 2]
+        assert leftover == b''
+
+    def test_what_this_check_cannot_catch(self) -> None:
+        """The residual ambiguity, pinned rather than described in a comment
+
+        A stack which never terminates can be refused. One which terminates on
+        the WRONG byte cannot be told apart, because a prefix octet whose low bit
+        is set reads exactly like a bottom of stack label. 0xc0a801 is 192.168.1.0
+        and its last byte is odd, so an unterminated stack followed by it still
+        decodes to a default route.
+
+        This asserts the limit rather than hiding it. For this assertion to start
+        failing, the encoding would have to carry the stack depth somewhere the
+        prefix cannot imitate, which RFC 3107 does not provide. If someone ever
+        makes it fail, the fix is real and this test should be deleted, not
+        adjusted.
+        """
+        data = b'\x30' + b'\x00\x00\x10' + b'\xc0\xa8\x01'
+        nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False)
+        assert str(nlri.cidr) == '0.0.0.0/0'
+        assert nlri.labels.labels == [1, 789120]
+
+    def test_the_same_stack_with_an_even_final_byte_is_refused(self) -> None:
+        # the companion to the test above: identical shape, one bit different in
+        # the prefix, and the gate catches it. Which is the whole of what the
+        # gate can promise
+        from exabgp.bgp.message.notification import Notify
+
+        data = b'\x30' + b'\x00\x00\x10' + b'\xc0\xa8\x02'
+        with pytest.raises(Notify):
+            INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False)
+
     def test_a_withdraw_label_does_not_terminate_a_stack_below_the_top(self) -> None:
         """The sentinel describes the whole stack, not a label inside one
 
