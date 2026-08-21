@@ -308,6 +308,12 @@ class Family:
         (AFI.l2vpn, SAFI.vpls): ((4,), 0),
         (AFI.l2vpn, SAFI.evpn): ((4,), 0),
         (AFI.bgpls, SAFI.bgp_ls): ((4, 16), 0),
+        # RFC 7752 section 3.2.1: for the VPN SAFI the next hop is a VPN-IPv4 or
+        # VPN-IPv6 address with the route distinguisher set to zero, which is the
+        # same shape as the mpls-vpn families. 12 = RD(8) + IPv4(4),
+        # 24 = RD(8) + IPv6(16), and the 8 is the RD the decoder skips and checks
+        # is all zeros.
+        (AFI.bgpls, SAFI.bgp_ls_vpn): ((12, 24), 8),
     }
 
     def __init__(self, afi, safi):
