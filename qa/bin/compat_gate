@@ -1,0 +1,231 @@
+#!/usr/bin/env python3
+"""Fail if this tree refuses something a previous release accepts.
+
+A unit test asserts the new behaviour, so it can never notice that the new behaviour is a
+peering somebody loses on upgrade.  This decodes the same corpus in both trees and compares.
+
+It is the check which found, across the work following GHSA-jcrv-p53f-v5w5: a VPLS length
+other than exactly 17, a PMSI whose tunnel does not match its type, an empty IGP tag TLV, a
+FlowSpec value encoded in four bytes, a two byte AS4 capability, and a BGP-LS prefix NLRI
+without its Local Node Descriptors.  Not one was visible to a unit test.
+
+    ./qa/bin/compat_gate                 # against the previous release tag
+    ./qa/bin/compat_gate 5.0.10          # against a tag or a commit
+    ./qa/bin/compat_gate --write-corpus  # print what the corpus covers
+
+What counts as a regression:
+
+  ACCEPT  -> refused        a peer which works today stops working
+  ACCEPT  -> exception      a new crash
+
+What does not:
+
+  exception -> anything     a crash is not a service worth preserving
+  unparseable JSON -> anything
+                            a line the consumer cannot read is not one either
+  anything in ALLOWED       a deliberate change, with its reason
+
+Every entry in ALLOWED is a deployment which stops working on upgrade.  Keep it short and
+argue each one.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+
+# deliberate changes, each with the reason it is worth the cost
+ALLOWED: dict[str, str] = {
+    'flow': 'a flow which parsed no component matched everything; RFC 8955 4.3 withdraws it',
+}
+
+
+def corpus_program() -> str:
+    """The probe, run inside each tree with that tree's own source."""
+    return """
+import hashlib, json, struct, sys
+from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.nlri import NLRI
+import importlib, pkgutil
+import exabgp.bgp.message.update.attribute as package
+for _finder, _name, _is in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
+    try:
+        importlib.import_module(_name)
+    except Exception:
+        pass
+
+try:
+    from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+    LSIDS = sorted(LinkState.registered_lsids)
+except Exception:
+    LSIDS = []
+
+out = {}
+
+def record(key, fn):
+    try:
+        value = fn()
+    except Notify:
+        out[key] = 'REFUSED'
+        return
+    except Exception as exc:
+        out[key] = 'ERROR:' + type(exc).__name__
+        return
+    if value is None or value is NLRI.INVALID:
+        out[key] = 'REFUSED'
+        return
+    try:
+        rendered = value.json()
+    except Exception as exc:
+        out[key] = 'RENDER-ERROR:' + type(exc).__name__
+        return
+    try:
+        json.loads(rendered if rendered.startswith('{') else '{' + rendered + '}')
+    except ValueError:
+        out[key] = 'UNPARSEABLE'
+        return
+    out[key] = 'ACCEPT:' + hashlib.sha1(rendered.encode()).hexdigest()[:10]
+
+# every length of every family, plus a few fill patterns: enough to find a check written
+# tighter than what the decoder reads.
+#
+# BOTH length framings. Most families put a one byte length in front, VPLS puts two, and a
+# corpus which emits only one shape reports a clean run over every family using the other:
+# the first version of this gate stayed green while the VPLS check it was written to catch
+# was put back. That is the same framing hole which hid the SR Policy names from a
+# tunnel encapsulation sweep, and it is why the gate has to be shown to go red.
+for afi, safi in sorted(set(NLRI.known_families()), key=lambda f: (int(f[0]), int(f[1]))):
+    for length in range(0, 34):
+        for fill in (b'\\x00', b'\\xff', b'\\x30'):
+            body = fill * length
+            for shape, prefix in (('b', bytes([length])), ('h', struct.pack('!H', length))):
+                record(
+                    'nlri/%s/%s/%d/%s/%s' % (afi, safi, length, fill.hex(), shape),
+                    lambda a=afi, s=safi, d=prefix + body: NLRI.unpack_nlri(
+                        a, s, d, Action.ANNOUNCE, None, None
+                    )[0],
+                )
+
+for key in sorted(Attribute.registered_attributes, key=str):
+    klass = Attribute.registered_attributes[key]
+    for length in range(0, 26):
+        for fill in (b'\\x00', b'\\xff'):
+            record(
+                'attr/%d/%d/%d/%s' % (key[0], key[1], length, fill.hex()),
+                lambda k=klass, d=fill * length: k.unpack_attribute(d, Negotiated.UNSET),
+            )
+
+for code in sorted(Capability.registered_capability, key=int):
+    for length in range(0, 22):
+        for fill in (b'\\x00', b'\\xff'):
+            record(
+                'cap/%d/%d/%s' % (int(code), length, fill.hex()),
+                lambda c=code, d=fill * length: Capability.klass(c).unpack_capability(Capability.klass(c)(), d, c),
+            )
+
+# BGP-LS TLVs need a real Type(2) Length(2) header before their decoder sees anything, so
+# random bytes never reach one: this is the sub-registry a flat corpus silently skips
+attribute = Attribute.klass_by_id(Attribute.CODE.BGP_LS) if LSIDS else None
+for code in LSIDS:
+    for length in range(0, 26):
+        for fill in (b'\\x00', b'\\xff', b'\\x30'):
+            record(
+                'lsid/%d/%d/%s' % (code, length, fill.hex()),
+                lambda a=attribute, c=code, ln=length, f=fill: a.unpack_attribute(
+                    struct.pack('!HH', c, ln) + f * ln, Negotiated.UNSET
+                ),
+            )
+
+json.dump(out, open(sys.argv[1], 'w'), sort_keys=True)
+sys.stderr.write('%d observations\\n' % len(out))
+"""
+
+
+def observe(tree: Path, destination: Path) -> dict[str, str]:
+    program = tree / 'compat_corpus.py'
+    program.write_text(corpus_program())
+    environment = dict(os.environ)
+    environment['exabgp_log_enable'] = 'false'
+    environment['PYTHONPATH'] = str(tree / 'src')
+    subprocess.run(
+        [
+            'uv',
+            'run',
+            '--no-project',
+            '--with',
+            'hypothesis',
+            '--python',
+            '3.12',
+            'python',
+            str(program),
+            str(destination),
+        ],
+        cwd=tree,
+        env=environment,
+        check=True,
+    )
+    program.unlink()
+    loaded: dict[str, str] = json.loads(destination.read_text())
+    return loaded
+
+
+def previous_release() -> str:
+    tags = subprocess.run(
+        ['git', 'tag', '--sort=-v:refname'], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.split()
+    return tags[0] if tags else 'HEAD~20'
+
+
+def main(argv: list[str]) -> int:
+    if '--write-corpus' in argv:
+        sys.stdout.write(corpus_program())
+        return 0
+
+    against = argv[0] if argv else previous_release()
+    sys.stderr.write('comparing this tree against %s\n' % against)
+
+    with tempfile.TemporaryDirectory() as scratch:
+        old_tree = Path(scratch) / 'old'
+        old_tree.mkdir()
+        archive = subprocess.run(['git', 'archive', against], cwd=ROOT, capture_output=True, check=True)
+        subprocess.run(['tar', '-x', '-C', str(old_tree)], input=archive.stdout, check=True)
+
+        before = observe(old_tree, Path(scratch) / 'before.json')
+        after = observe(ROOT, Path(scratch) / 'after.json')
+
+    regressions = []
+    for key in sorted(before):
+        old, new = before[key], after.get(key, 'MISSING')
+        if old == new or not old.startswith('ACCEPT'):
+            continue
+        if new.startswith('ACCEPT'):
+            continue
+        if any(allowed in key for allowed in ALLOWED):
+            continue
+        regressions.append((key, old, new))
+
+    for key, old, new in regressions[:40]:
+        sys.stderr.write('  %-40s %s -> %s\n' % (key, old[:12], new[:22]))
+    if len(regressions) > 40:
+        sys.stderr.write('  ... and %d more\n' % (len(regressions) - 40))
+
+    sys.stderr.write('\n%d inputs compared, %d regressions\n' % (len(before), len(regressions)))
+    if ALLOWED:
+        sys.stderr.write('allowed, each a deployment which stops working on upgrade:\n')
+        for name, why in ALLOWED.items():
+            sys.stderr.write('  %-12s %s\n' % (name, why))
+    return 1 if regressions else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

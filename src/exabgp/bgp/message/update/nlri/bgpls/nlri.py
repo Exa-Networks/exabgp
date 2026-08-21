@@ -218,9 +218,12 @@ class BGPLS(NLRI):
         if safi == SAFI.bgp_ls_vpn:
             if len(data) < 12:
                 raise Notify(3, 10, f'BGP-LS VPN NLRI too short: need at least 12 bytes, got {len(data)}')
-            # the announced length covers the route distinguisher, so anything below
-            # its size leaves a negative payload length
-            if length < 8:
+            # the announced length covers the route distinguisher, so anything below its
+            # size leaves a negative payload length. Only a registered code does that
+            # subtraction: an unregistered one keeps the whole wire format, and refusing it
+            # here reset the session over an NLRI which used to be stored as a generic and
+            # rendered perfectly well.
+            if length < 8 and code in cls.registered_bgpls:
                 raise Notify(3, 10, f'BGP-LS VPN NLRI announces {length} bytes, less than its route distinguisher')
 
         if len(data) < length + 4:
