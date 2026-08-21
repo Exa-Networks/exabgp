@@ -19,6 +19,7 @@ import copy
 
 import pytest
 
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.protocol.ip import NoNextHop
 
@@ -66,3 +67,50 @@ class TestTheRouteDistinguisherCopies:
         # them is what makes the copy cheap, and asserting nothing is shared
         # fails on classes which are right
         assert copy.deepcopy(self.FILLED).rd == self.FILLED.rd
+
+
+class TestTheNopathSingletonStaysItself:
+    """index() tests it with `is`, so a copy which mints a new object moves the route
+
+    INET.index(), Label.index() and IPVPN.index() all read
+
+        addpath = b'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
+
+    so a NOPATH which stopped being NOPATH turned b'no-pi' into four zero bytes
+    in the index. The deepcopied route then did not equal its original, hashed
+    differently, and could not be found in a dict keyed on it. The RIB deep
+    copies a change on the withdraw path, so this is on the wire path: ipv4 and
+    ipv6 unicast, nlri-mpls and mpls-vpn were all affected.
+
+    Same defect as _NoNextHop above, in a second singleton, found by asserting
+    the identity contract across every family rather than by reading this class.
+    """
+
+    @pytest.mark.parametrize('duplicate', [copy.copy, copy.deepcopy], ids=['copy', 'deepcopy'])
+    def test_the_singleton_copies_to_itself(self, duplicate) -> None:
+        assert duplicate(PathInfo.NOPATH) is PathInfo.NOPATH
+
+    def test_deepcopy_inside_a_container_returns_the_singleton(self) -> None:
+        # the shape the RIB actually produces: the singleton reached through the
+        # object holding it, where memo handling is what goes wrong
+        assert copy.deepcopy({'pi': PathInfo.NOPATH})['pi'] is PathInfo.NOPATH
+        assert copy.deepcopy([PathInfo.NOPATH])[0] is PathInfo.NOPATH
+
+    @pytest.mark.parametrize('duplicate', [copy.copy, copy.deepcopy], ids=['copy', 'deepcopy'])
+    def test_a_real_path_info_is_copied_not_shared(self, duplicate) -> None:
+        # returning self unconditionally would pass every assertion above and is
+        # wrong: only the singleton is a singleton
+        original = PathInfo(integer=42)
+        made = duplicate(original)
+        assert made is not original
+        assert made == original
+        assert made.pack() == original.pack()
+
+    @pytest.mark.parametrize('duplicate', [copy.copy, copy.deepcopy], ids=['copy', 'deepcopy'])
+    def test_a_real_path_info_is_not_mistaken_for_the_singleton(self, duplicate) -> None:
+        assert duplicate(PathInfo(integer=42)) is not PathInfo.NOPATH
+
+    def test_comparing_with_something_else_answers(self) -> None:
+        # __eq__ read other.path_info with nothing checking what other was
+        assert (PathInfo(integer=1) == 42) is False
+        assert (PathInfo(integer=1) != 42) is True
