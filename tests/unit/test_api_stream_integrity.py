@@ -266,6 +266,32 @@ def test_bgpls_short_tlv_raises_notify_at_the_decoder(code: int, payload: bytes)
         _tlv(code, payload)
 
 
+def test_evpn_ethernet_ad_without_a_label_stack_still_emits_json() -> None:
+    """json() was built by concatenating members which carried their own separators.
+
+    self.label.json() is empty when there is no label stack, so the route came out as
+    `..., "ethernet-tag": 0,  }` and no consumer could read the line.  Found by the
+    property tests in tests/fuzz once they started checking that json() parses.
+    """
+    payload = bytes(22)
+    nlri, _ = NLRI.unpack_nlri(AFI.l2vpn, SAFI.evpn, bytes([1, len(payload)]) + payload, Action.ANNOUNCE, None, None)
+    assert nlri is not NLRI.INVALID
+    assert parsed(nlri.json())['code'] == 1
+
+
+@pytest.mark.parametrize('code, payload', [(2, bytes(33)), (5, bytes(34)), (3, bytes(21)), (4, bytes(21))])
+def test_evpn_route_json_has_no_stray_separator(code: int, payload: bytes) -> None:
+    try:
+        nlri, _ = NLRI.unpack_nlri(
+            AFI.l2vpn, SAFI.evpn, bytes([code, len(payload)]) + payload, Action.ANNOUNCE, None, None
+        )
+    except Notify:
+        return  # refusing the route is a fine answer, it is a stray comma we are after
+    if nlri is None or nlri is NLRI.INVALID:
+        return
+    assert parsed(nlri.json())['code'] == code
+
+
 @pytest.mark.parametrize(
     'code, payload, why',
     [

@@ -234,15 +234,24 @@ class MAC(EVPN):
         return cls(packed)
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        content = ' "code": %d, ' % self.CODE
-        content += '"parsed": true, '
-        content += '"raw": "{}", '.format(self._raw())
-        content += '"name": "{}", '.format(self.NAME)
-        content += '{}, '.format(self.rd.json())
-        content += '{}, '.format(self.esi.json())
-        content += '{}, '.format(self.etag.json())
-        content += '{}, '.format(self.mac.json())
-        content += self.label.json()
+        """Serialise to JSON.
+
+        The members are collected and joined rather than concatenated with their own
+        separators: a member which renders empty, an EVPN route with no label stack being
+        the one Hypothesis found, otherwise leaves a stray comma behind and the line is
+        not JSON any more.
+        """
+        members = [
+            '"code": %d' % self.CODE,
+            '"parsed": true',
+            '"raw": "{}"'.format(self._raw()),
+            '"name": "{}"'.format(self.NAME),
+        ]
+        members.append(self.rd.json())
+        members.append(self.esi.json())
+        members.append(self.etag.json())
+        members.append(self.mac.json())
+        members.append(self.label.json())
         if self.ip:
-            content += ', "ip": "{}"'.format(str(self.ip))
-        return '{{{} }}'.format(content)
+            members.append('"ip": "{}"'.format(str(self.ip)))
+        return '{{ {} }}'.format(', '.join(member for member in members if member))
