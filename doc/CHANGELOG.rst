@@ -3,6 +3,60 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.13:
+ * COMPATIBILITY: three BGP-LS members of the JSON API change shape. Each
+   was emitting output which silently lost data, and there is no way to
+   return the data without changing what a consumer receives, so the
+   break is deliberate and unavoidable rather than a cleanup.
+
+   "link-identifiers" was always an empty array. LinkIdentifier.unpack
+   built its object without a packed form, __len__ read that absence as
+   zero, and the object was therefore falsy, so
+
+       self.link_ids = link_ids if link_ids else []
+
+   replaced every well formed identifier with an empty list. The sub-TLV
+   decoded correctly, the UPDATE was accepted, nothing raised, and the
+   value simply never reached the API. The array now carries the Link
+   Local/Remote Identifiers the peer sent (RFC 5307 section 1.1), each as
+   a JSON object. Anything reading this member has only ever seen [] and
+   gains content it could not previously have depended on.
+
+   Each identifier renders as a self contained object. Its json() used to
+   return a bare pair of keys with no braces, which the caller joins
+   inside an array, so an array of one identifier or ten would have been
+   a JSON array of loose keys and would not have parsed at all. That
+   renderer was unreachable while the array was always empty, so filling
+   the array and bracing the object had to land together.
+
+   "local-te-router-ids" appeared twice when a router announced both of
+   its Traffic Engineering Router IDs. LocalTeRid is registered for TLV
+   1028 (IPv4) and 1029 (IPv6), and register(lsid=N) creates one subclass
+   per lsid, so the two spellings of one TLV became two classes with two
+   TLV values and the merge, which paired attributes by TLV, could never
+   pair them. The member was emitted once per address. Duplicate names in
+   a JSON object are legal but lossy: json.loads keeps the last, so every
+   consumer using a JSON parser silently discarded the IPv4 address. The
+   member is now emitted once and carries both addresses. It was already
+   a list, so its type is unchanged and only its contents grow.
+
+   NOT changed, and still lossy: "remote-te-router-id" (TLV 1030/1031)
+   and "sr-adj" collide in the same way, but they render a string and an
+   object respectively, so merging them would change the type a consumer
+   receives. On a stable branch that is the worse trade, and they are
+   left as they are on purpose. Use the 5.1 or later API if you need
+   them.
+ * Fix: the BGP-LS NLRI descriptor sub-TLVs are length checked. link.py
+   sized every sub-TLV from the peer's own tlv_length and handed the
+   slice to a decoder reading a fixed width off it, so a short value
+   escaped as a raw Python exception rather than ending the session with
+   a NOTIFICATION: the IPv4/IPv6 interface and neighbour address sub-TLVs
+   (259, 260, 261, 262) left their variable unbound and raised
+   UnboundLocalError, the Link Local/Remote Identifiers (258) and
+   Multi-Topology (263) sub-TLVs raised struct.error, the OSPF Route Type
+   (264) sub-TLV raised AttributeError, and the IP Reachability (265)
+   sub-TLV read a prefix length byte from a possibly empty slice.
+
 Version 5.0.12:
  * Fix: the OPEN capabilities a peer sends are validated. HostName and
    Software Version decoded peer supplied bytes without checking the

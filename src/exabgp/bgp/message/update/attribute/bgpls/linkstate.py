@@ -107,8 +107,9 @@ class LinkState(Attribute):
                 ls_attrs.append(instance)
                 continue
 
+            group = instance.merge_key()
             for k in ls_attrs:
-                if k.TLV == instance.TLV:
+                if k.TLV == instance.TLV or (group is not None and k.merge_key() == group):
                     k.merge(instance)
                     break
             else:
@@ -186,6 +187,24 @@ class BaseLS:
         # upgrade for something no decoder has trouble with.
         if len(data) % size:
             raise Notify(3, 5, f'Unable to decode attribute, wrong size for {cls.REPR}')
+
+    def merge_key(self):
+        """What groups two decoded TLVs into a single JSON member, or None
+
+        register(lsid=N) mints one subclass per lsid, so a class registered
+        under several of them (1028 and 1029 are the IPv4 and IPv6 spellings of
+        the same Local TE Router ID) becomes two subclasses with two different
+        TLV values.  Grouping on TLV can never pair them, so each emitted its
+        own copy of the key and the object carried the same name twice.  That is
+        data loss, not cosmetics: json.loads keeps the last, so every consumer
+        silently dropped the IPv4 address.
+
+        Classes which never set JSON share the unset default and would all group
+        together, so they group on nothing and keep the TLV behaviour.
+        """
+        if not self.MERGE or self.JSON == BaseLS.JSON:
+            return None
+        return self.JSON
 
     def merge(self, other):
         if not self.MERGE:
