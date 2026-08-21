@@ -96,11 +96,9 @@ class ExtendedCommunityBase(Attribute):
         klass = self.klass
         if klass is not None and klass.__repr__ is not ExtendedCommunityBase.__repr__:
             return klass.__repr__(self)
-        h = 0x00
-        for byte in self.community:
-            h <<= 8
-            h += byte
-        return '0x{:016X}'.format(h)
+        # the width comes from the community, not from a constant: '0x{:016X}' is
+        # eight bytes wide and dropped the leading zeros of a twenty byte IPv6 one
+        return '0x' + bytes(self.community).hex().upper()
 
     def __hash__(self):
         return hash(self.community)
