@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from exabgp.protocol.ip import IPv4
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -57,6 +58,11 @@ class ClusterList(Attribute):
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
+        # not `not data or ...`: an empty cluster list is zero clusters, which IS a
+        # whole number of them, and 5.0.12 renders it. Refusing it drops a route on
+        # upgrade. The same clause was wrong in BaseLS.check_multiple.
+        if len(data) % 4:
+            raise Notify(3, 5, 'invalid CLUSTER_LIST, %d bytes is not a whole number of clusters' % len(data))
         clusters = []
         while data:
             clusters.append(IPv4.unpack(data[:4]))

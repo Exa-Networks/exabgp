@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from exabgp.protocol.ip import IPv4
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -32,4 +33,6 @@ class OriginatorID(Attribute, IPv4):
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
+        if len(data) != 4:
+            raise Notify(3, 5, 'invalid ORIGINATOR_ID, expected 4 bytes, got %d' % len(data))
         return IPv4.unpack(data, cls)

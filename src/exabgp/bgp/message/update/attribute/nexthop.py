@@ -10,6 +10,7 @@ from __future__ import annotations
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -46,6 +47,8 @@ class NextHop(Attribute, IP):
     def unpack(cls, data, direction=None, negotiated=None):
         if not data:
             return NoNextHop
+        if len(data) not in (4, 16):
+            raise Notify(3, 5, 'invalid NEXT_HOP, expected 4 or 16 bytes, got %d' % len(data))
         return IP.unpack(data, NextHop)
 
     def __repr__(self):
