@@ -170,24 +170,27 @@ exclude = [
 # scoped to the code which validates what a peer or an operator sends, mutating all of
 # src/exabgp would take hours and say little about the parts under test
 #
-# WHAT MUTMUT CANNOT SEE HERE. It does not mutate the methods of a DECORATED class, and
-# every NLRI decoder is @NLRI.register decorated, so listing one buys nothing: inet, ipvpn,
-# label, rtc and vpls each produce zero mutants. cidr produces 42 because its class carries
-# no decorator, and flow produces 81 from its module level functions and its undecorated
-# component classes, not from Flow itself.
+# mutmut does not mutate the methods of a DECORATED class. Every decoder here used to carry
+# its register decorator directly, so the code which parses what a peer sends was the one
+# part of this tree mutation testing could not see: inet, ipvpn, label, rtc, vpls and aigp
+# each produced zero mutants while sitting in this list as though they were covered.
 #
-# The list below is therefore what mutmut can actually report on. Adding a module whose
-# validation lives in a decorated class makes the configuration claim a coverage it does
-# not have, which is the failure this whole series kept running into.
+# Each now keeps its body in an undecorated <Name>Base and registers an empty subclass, so
+# all of them are reachable. Anything added here should be checked the same way: run it and
+# count the mutants, because a module which produces none is a claim of coverage this
+# configuration cannot deliver.
 paths_to_mutate = [
 	"src/exabgp/util/psk.py",
 	"src/exabgp/bgp/message/update/nlri/cidr.py",
+	"src/exabgp/bgp/message/update/nlri/inet.py",
+	"src/exabgp/bgp/message/update/nlri/ipvpn.py",
+	"src/exabgp/bgp/message/update/nlri/label.py",
+	"src/exabgp/bgp/message/update/nlri/rtc.py",
+	"src/exabgp/bgp/message/update/nlri/vpls.py",
 	"src/exabgp/bgp/message/update/nlri/flow.py",
+	"src/exabgp/bgp/message/update/attribute/aigp.py",
 	"src/exabgp/reactor/api/command/group.py",
 ]
-# produce no mutants, because their validation lives in a decorated class:
-#   src/exabgp/bgp/message/update/nlri/{inet,ipvpn,label,rtc,vpls}.py
-#   src/exabgp/bgp/message/update/attribute/aigp.py
 tests_dir = ["tests/unit/", "tests/fuzz/"]
 do_not_mutate = ["*/vendoring/*"]
 # the tests import the whole package, so the modules which are not mutated have to be

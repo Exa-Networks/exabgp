@@ -94,7 +94,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any, Self, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -126,9 +126,7 @@ RD_SIZE = 8
 RD_SIZE_BITS = RD_SIZE * 8
 
 
-@NLRI.register(AFI.ipv4, SAFI.mpls_vpn)
-@NLRI.register(AFI.ipv6, SAFI.mpls_vpn)
-class IPVPN(Label):
+class IPVPNBase(Label):
     """IPVPN NLRI using complete packed-bytes-first pattern.
 
     Wire format stored in _packed: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
@@ -234,7 +232,7 @@ class IPVPN(Label):
         path_info: PathInfo = PathInfo.DISABLED,
         labels: Labels | None = None,
         rd: RouteDistinguisher | None = None,
-    ) -> 'IPVPN':
+    ) -> Self:
         """Factory method to create IPVPN from a CIDR object.
 
         Args:
@@ -278,7 +276,7 @@ class IPVPN(Label):
         return instance
 
     @classmethod
-    def from_settings(cls, settings: 'INETSettings') -> 'IPVPN':
+    def from_settings(cls, settings: 'INETSettings') -> Self:
         """Create IPVPN NLRI from validated settings.
 
         This factory method validates settings and creates an immutable IPVPN
@@ -329,7 +327,7 @@ class IPVPN(Label):
         labels: Labels,
         rd: RouteDistinguisher,
         path_info: PathInfo = PathInfo.DISABLED,
-    ) -> 'IPVPN':
+    ) -> Self:
         """Factory method to create an IPVPN route.
 
         Note: nexthop is stored in Route, not NLRI. Pass nexthop to Route constructor.
@@ -364,7 +362,7 @@ class IPVPN(Label):
             return hash(self._packed)
         return hash(b'disabled' + self._packed)
 
-    def __copy__(self) -> 'IPVPN':
+    def __copy__(self) -> Self:
         new = self.__class__.__new__(self.__class__)
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
@@ -377,7 +375,7 @@ class IPVPN(Label):
         new._has_rd = self._has_rd
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'IPVPN':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
@@ -551,3 +549,20 @@ class IPVPN(Label):
         instance._has_rd = has_rd
 
         return instance, data
+
+
+@NLRI.register(AFI.ipv4, SAFI.mpls_vpn)
+@NLRI.register(AFI.ipv6, SAFI.mpls_vpn)
+class IPVPN(IPVPNBase):
+    """The registered form of IPVPNBase, which holds the code.
+
+    The split is not architectural: mutmut does not mutate the methods of a decorated class,
+    and every decoder here carries a register decorator, so the code which parses what a
+    peer sends was the one part of this tree mutation testing could not see. Keeping the
+    body in an undecorated base and registering an empty subclass puts it back in reach.
+
+    __slots__ is empty on purpose. Without it every instance would grow a __dict__,
+    which is the memory the packed-bytes-first work went to some trouble to avoid.
+    """
+
+    __slots__ = ()

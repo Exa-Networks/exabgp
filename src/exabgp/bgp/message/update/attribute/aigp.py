@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from exabgp.util.types import Buffer
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -40,8 +40,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard
 #   Value (8 bytes): uint64 metric value
 
 
-@Attribute.register()
-class AIGP(Attribute):
+class AIGPBase(Attribute):
     ID = Attribute.CODE.AIGP
     FLAG = Attribute.Flag.OPTIONAL
     CACHING = True
@@ -63,7 +62,7 @@ class AIGP(Attribute):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'AIGP':
+    def from_packet(cls, data: Buffer) -> Self:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -103,7 +102,7 @@ class AIGP(Attribute):
         return cls(metric)
 
     @classmethod
-    def from_int(cls, value: int) -> 'AIGP':
+    def from_int(cls, value: int) -> Self:
         """Create AIGP from metric value.
 
         Args:
@@ -145,3 +144,14 @@ class AIGP(Attribute):
             # AIGP must only be accepted on configured sessions
             return Discard(cls.ID)
         return cls.from_packet(data)
+
+
+@Attribute.register()
+class AIGP(AIGPBase):
+    """The registered form of AIGPBase, which holds the code.
+
+    The split is not architectural: mutmut does not mutate the methods of a decorated class,
+    and every decoder here carries a register decorator, so the code which parses what a
+    peer sends was the one part of this tree mutation testing could not see. Keeping the
+    body in an undecorated base and registering an empty subclass puts it back in reach.
+    """

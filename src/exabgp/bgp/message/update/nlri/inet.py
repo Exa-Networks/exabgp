@@ -70,7 +70,7 @@ Class Hierarchy:
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any
+from typing import Any, Self, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -96,11 +96,7 @@ LABEL_BOTTOM_OF_STACK_BIT: int = 1  # Bottom of stack bit in label
 PATH_INFO_SIZE: int = 4  # Path Identifier is 4 bytes (RFC 7911)
 
 
-@NLRI.register(AFI.ipv4, SAFI.unicast)
-@NLRI.register(AFI.ipv6, SAFI.unicast)
-@NLRI.register(AFI.ipv4, SAFI.multicast)
-@NLRI.register(AFI.ipv6, SAFI.multicast)
-class INET(NLRI):
+class INETBase(NLRI):
     """INET NLRI using packed-bytes-first pattern.
 
     Wire format stored in _packed: [addpath:4?][mask:1][prefix:var]
@@ -175,7 +171,7 @@ class INET(NLRI):
         afi: AFI,
         safi: SAFI,
         path_info: PathInfo = PathInfo.DISABLED,
-    ) -> 'INET':
+    ) -> Self:
         """Factory method to create INET from a CIDR object.
 
         Args:
@@ -215,7 +211,7 @@ class INET(NLRI):
         action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
         nexthop: 'IP | None' = None,
-    ) -> 'INET':
+    ) -> Self:
         """Factory method to create an INET route.
 
         Args:
@@ -236,7 +232,7 @@ class INET(NLRI):
         return instance
 
     @classmethod
-    def from_settings(cls, settings: 'INETSettings') -> 'INET':
+    def from_settings(cls, settings: 'INETSettings') -> Self:
         """Create INET NLRI from validated settings.
 
         This factory method validates settings and creates an immutable INET
@@ -287,7 +283,7 @@ class INET(NLRI):
             return hash(self._packed)
         return hash(b'disabled' + self._packed)
 
-    def __copy__(self) -> 'INET':
+    def __copy__(self) -> Self:
         new = self.__class__.__new__(self.__class__)
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
@@ -297,7 +293,7 @@ class INET(NLRI):
         new._rd = self._rd
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'INET':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
         from copy import deepcopy
 
         new = self.__class__.__new__(self.__class__)
@@ -473,3 +469,22 @@ class INET(NLRI):
 
         nlri = cls.from_cidr(cidr, afi, safi, path_info, **kwargs)
         return nlri, data
+
+
+@NLRI.register(AFI.ipv4, SAFI.unicast)
+@NLRI.register(AFI.ipv6, SAFI.unicast)
+@NLRI.register(AFI.ipv4, SAFI.multicast)
+@NLRI.register(AFI.ipv6, SAFI.multicast)
+class INET(INETBase):
+    """The registered form of INETBase, which holds the code.
+
+    The split is not architectural: mutmut does not mutate the methods of a decorated class,
+    and every NLRI decoder carries @NLRI.register, so the decoders which parse what a peer
+    sends were the one part of this tree mutation testing could not see. Keeping the body in
+    an undecorated base and registering an empty subclass puts them back in reach.
+
+    __slots__ is empty on purpose. Without it every INET would grow a __dict__, which is
+    exactly the memory the packed-bytes-first work went to some trouble to avoid.
+    """
+
+    __slots__ = ()

@@ -79,7 +79,7 @@ Class Hierarchy:
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, Any
+from typing import Any, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -102,9 +102,7 @@ LABEL_BOS_MASK = 0x01
 # RFC 3107
 
 
-@NLRI.register(AFI.ipv4, SAFI.nlri_mpls)
-@NLRI.register(AFI.ipv6, SAFI.nlri_mpls)
-class Label(INET):
+class LabelBase(INET):
     """Label NLRI using packed-bytes-first pattern.
 
     Wire format stored in _packed: [addpath:4?][mask:1][labels:3n][prefix:var]
@@ -235,7 +233,7 @@ class Label(INET):
         safi: SAFI = SAFI.nlri_mpls,  # Default to class SAFI; parameter kept for API compat
         path_info: PathInfo = PathInfo.DISABLED,
         labels: Labels | None = None,
-    ) -> 'Label':
+    ) -> Self:
         """Factory method to create Label from a CIDR object.
 
         Args:
@@ -274,7 +272,7 @@ class Label(INET):
         return instance
 
     @classmethod
-    def from_settings(cls, settings: 'INETSettings') -> 'Label':
+    def from_settings(cls, settings: 'INETSettings') -> Self:
         """Create Label NLRI from validated settings.
 
         This factory method validates settings and creates an immutable Label
@@ -336,7 +334,7 @@ class Label(INET):
             return hash(self._packed)
         return hash(b'disabled' + self._packed)
 
-    def __copy__(self) -> 'Label':
+    def __copy__(self) -> Self:
         new = self.__class__.__new__(self.__class__)
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
@@ -348,7 +346,7 @@ class Label(INET):
         new._label_size = self._label_size
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'Label':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
         from copy import deepcopy
 
         new = self.__class__.__new__(self.__class__)
@@ -445,3 +443,20 @@ class Label(INET):
     # @classmethod
     # def unpack_nlri (cls, afi, safi, data, addpath):
     # 	return cls.unpack_label(afi,safi,data,addpath)
+
+
+@NLRI.register(AFI.ipv4, SAFI.nlri_mpls)
+@NLRI.register(AFI.ipv6, SAFI.nlri_mpls)
+class Label(LabelBase):
+    """The registered form of LabelBase, which holds the code.
+
+    The split is not architectural: mutmut does not mutate the methods of a decorated class,
+    and every decoder here carries a register decorator, so the code which parses what a
+    peer sends was the one part of this tree mutation testing could not see. Keeping the
+    body in an undecorated base and registering an empty subclass puts it back in reach.
+
+    __slots__ is empty on purpose. Without it every instance would grow a __dict__,
+    which is the memory the packed-bytes-first work went to some trouble to avoid.
+    """
+
+    __slots__ = ()

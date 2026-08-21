@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any
+from typing import Any, Self, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -29,8 +29,7 @@ from exabgp.protocol.family import AFI, SAFI, Family
 VPLS_PAYLOAD_SIZE = 17
 
 
-@NLRI.register(AFI.l2vpn, SAFI.vpls)
-class VPLS(NLRI):
+class VPLSBase(NLRI):
     """VPLS NLRI using packed-bytes-first pattern.
 
     _packed stores wire format:
@@ -69,7 +68,7 @@ class VPLS(NLRI):
         offset: int,
         size: int,
         addpath: PathInfo = PathInfo.DISABLED,
-    ) -> 'VPLS':
+    ) -> Self:
         """Factory method to create a VPLS NLRI from components.
 
         Args:
@@ -94,7 +93,7 @@ class VPLS(NLRI):
         return instance
 
     @classmethod
-    def from_settings(cls, settings: 'VPLSSettings') -> 'VPLS':
+    def from_settings(cls, settings: 'VPLSSettings') -> Self:
         """Create VPLS NLRI from validated settings.
 
         This factory method validates settings and creates an immutable VPLS
@@ -201,13 +200,13 @@ class VPLS(NLRI):
     def __str__(self) -> str:
         return self.extensive()
 
-    def __copy__(self) -> 'VPLS':
+    def __copy__(self) -> Self:
         new = self.__class__.__new__(self.__class__)
         # Family/NLRI slots - _packed is in NLRI slots
         self._copy_nlri_slots(new)
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'VPLS':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
         # Family/NLRI slots - _packed is in NLRI slots and is immutable bytes
@@ -217,7 +216,7 @@ class VPLS(NLRI):
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
-    ) -> tuple[VPLS, Buffer]:
+    ) -> tuple[Self, Buffer]:
         # Wire format: length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3) = 19 bytes
         if len(data) < 2:
             raise Notify(3, 10, f'VPLS NLRI too short: need at least 2 bytes, got {len(data)}')
@@ -240,3 +239,19 @@ class VPLS(NLRI):
         packed = bytes(data[0:2]) + bytes(data[2 : 2 + VPLS_PAYLOAD_SIZE])
         nlri = cls(packed)
         return nlri, data[2 + length :]
+
+
+@NLRI.register(AFI.l2vpn, SAFI.vpls)
+class VPLS(VPLSBase):
+    """The registered form of VPLSBase, which holds the code.
+
+    The split is not architectural: mutmut does not mutate the methods of a decorated class,
+    and every decoder here carries a register decorator, so the code which parses what a
+    peer sends was the one part of this tree mutation testing could not see. Keeping the
+    body in an undecorated base and registering an empty subclass puts it back in reach.
+
+    __slots__ is empty on purpose. Without it every instance would grow a __dict__,
+    which is the memory the packed-bytes-first work went to some trouble to avoid.
+    """
+
+    __slots__ = ()

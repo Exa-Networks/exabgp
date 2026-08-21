@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, Type, TypeVar
+from typing import Any, Self, TYPE_CHECKING, Type, TypeVar
 
 from exabgp.util.types import Buffer
 
@@ -24,7 +24,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
 
-T = TypeVar('T', bound='RTC')
+T = TypeVar('T', bound='RTCBase')
 
 
 # RFC 4684 section 4: the RTC prefix covers the origin AS and the route target, so it is
@@ -33,8 +33,7 @@ RTC_PREFIX_MIN_BITS = 32
 RTC_PREFIX_MAX_BITS = 96
 
 
-@NLRI.register(AFI.ipv4, SAFI.rtc)
-class RTC(NLRI):
+class RTCBase(NLRI):
     """RTC (Route Target Constraint) NLRI using packed-bytes-first pattern.
 
     Wire format (13 bytes for full RTC, 1 byte for wildcard):
@@ -95,7 +94,7 @@ class RTC(NLRI):
         cls,
         origin: ASN,
         rt: RouteTarget | None,
-    ) -> 'RTC':
+    ) -> Self:
         """Factory method to create an RTC NLRI from components.
 
         Args:
@@ -140,13 +139,13 @@ class RTC(NLRI):
             return '{ "origin": 0, "route-target": null }'
         return '{{ "origin": {}, "route-target": "{}" }}'.format(self.origin, rt)
 
-    def __copy__(self) -> 'RTC':
+    def __copy__(self) -> Self:
         new = self.__class__.__new__(self.__class__)
         self._copy_nlri_slots(new)
         new._packed = self._packed  # bytes - immutable
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'RTC':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
         new = self.__class__.__new__(self.__class__)
         memo[id(self)] = new
         self._deepcopy_nlri_slots(new, memo)
@@ -210,3 +209,19 @@ class RTC(NLRI):
 
         nlri = cls(packed)
         return nlri, data[13:]
+
+
+@NLRI.register(AFI.ipv4, SAFI.rtc)
+class RTC(RTCBase):
+    """The registered form of RTCBase, which holds the code.
+
+    The split is not architectural: mutmut does not mutate the methods of a decorated class,
+    and every decoder here carries a register decorator, so the code which parses what a
+    peer sends was the one part of this tree mutation testing could not see. Keeping the
+    body in an undecorated base and registering an empty subclass puts it back in reach.
+
+    __slots__ is empty on purpose. Without it every instance would grow a __dict__,
+    which is the memory the packed-bytes-first work went to some trouble to avoid.
+    """
+
+    __slots__ = ()
