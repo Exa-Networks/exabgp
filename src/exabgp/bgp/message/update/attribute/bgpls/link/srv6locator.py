@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
@@ -30,6 +31,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
 @LinkState.register()
 class Srv6Locator(FlagLS):
+    FIXED_SIZE = 8
     TLV = 1162
     FLAGS = ['D'] + ['RSV' for _ in range(7)]
     registered_subsubtlvs = dict()
@@ -45,6 +47,9 @@ class Srv6Locator(FlagLS):
 
     @classmethod
     def unpack(cls, data):
+        # Flags(1) + Algorithm(1) + Reserved(2) + Metric(4)
+        if len(data) < cls.FIXED_SIZE:
+            raise Notify(3, 5, f'Unable to decode attribute, not enough data for {cls.REPR}')
         flags = cls.unpack_flags(bytes(data[0:1]))
         algorithm = data[1]
         metric = unpack('!I', data[4:8])[0]

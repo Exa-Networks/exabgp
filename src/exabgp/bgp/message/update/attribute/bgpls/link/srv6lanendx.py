@@ -64,7 +64,8 @@ def unpack_data(cls, data, type):
     if type == ISIS:
         neighbor_id = ISO.unpack_sysid(data[6:12])
     else:
-        neighbor_id = IP.unpack(data[6:10])
+        # json.dumps cannot serialise an IP object, and this reaches it through content
+        neighbor_id = str(IP.unpack(data[6:10]))
     start_offset = 12 if type == ISIS else 6
     sid = IPv6.ntop(data[start_offset : start_offset + 16])
     data = data[start_offset + 16 :]
