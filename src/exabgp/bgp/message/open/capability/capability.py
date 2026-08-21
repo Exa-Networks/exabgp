@@ -32,16 +32,9 @@ def decode_utf8(data: Buffer, what: str) -> str:
         Notify: If the bytes are not valid UTF-8
     """
     try:
-        decoded = bytes(data).decode('utf-8')
+        return bytes(data).decode('utf-8')
     except UnicodeDecodeError as exc:
         raise Notify(2, 0, f'the {what} in the capability is not valid UTF-8 ({exc})') from None
-    # a hostname is not a place for a newline: the text API writes one event per line, so a
-    # control character here lets the peer forge an event in a consumer's stream, the same
-    # CWE-116 as GHSA-jcrv-p53f-v5w5.  Nothing legitimate sends one, so refuse it outright.
-    control = [character for character in decoded if not character.isprintable() and character != ' ']
-    if control:
-        raise Notify(2, 0, f'the {what} in the capability holds a control character ({control[0]!r})')
-    return decoded
 
 
 class CapabilityCode(int):

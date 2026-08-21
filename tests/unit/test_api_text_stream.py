@@ -58,22 +58,29 @@ def _open_with_capability(code: int, value: bytes) -> bytes:
 
 
 @pytest.mark.parametrize('control', [b'\n', b'\r', b'\r\n', b'\x00', b'\x1b'])
-def test_hostname_holding_a_control_character_is_refused(control: bytes) -> None:
-    """Nothing legitimate sends one, and accepting it hands the peer a line of its own."""
-    name = b'a' + control + b'b'
+def test_a_hostname_holding_a_control_character_cannot_forge_an_event(control: bytes, neighbor, encoder: Text) -> None:
+    """A peer's hostname is not refused for holding one, it is escaped when printed.
+
+    Refusing it at the decoder would drop the session, and a router which pads its
+    hostname to a fixed width has done nothing wrong: an installation which works today
+    has to keep working after an upgrade.  So the encoder is where the line is held.
+    """
+    name = b'a' + control + b'neighbor 1.2.3.4 down - forged'
     value = bytes([len(name)]) + name + bytes([len(name)]) + name
-    with pytest.raises(Notify):
-        Open.unpack_message(_open_with_capability(CapabilityCode.HOSTNAME, value), Negotiated.UNSET)
+    message = Open.unpack_message(_open_with_capability(CapabilityCode.HOSTNAME, value), Negotiated.UNSET)
+    one_line(encoder.open(neighbor, 'in', message, b'', b'', Negotiated.UNSET))
 
 
 @pytest.mark.parametrize('control', [b'\n', b'\r', b'\x00'])
-def test_software_version_holding_a_control_character_is_refused(control: bytes) -> None:
-    name = b'a' + control + b'b'
-    with pytest.raises(Notify):
-        Open.unpack_message(
-            _open_with_capability(CapabilityCode.SOFTWARE_VERSION, bytes([len(name)]) + name),
-            Negotiated.UNSET,
-        )
+def test_a_software_version_holding_a_control_character_cannot_forge_an_event(
+    control: bytes, neighbor, encoder: Text
+) -> None:
+    name = b'a' + control + b'shutdown 1 1'
+    message = Open.unpack_message(
+        _open_with_capability(CapabilityCode.SOFTWARE_VERSION, bytes([len(name)]) + name),
+        Negotiated.UNSET,
+    )
+    one_line(encoder.open(neighbor, 'in', message, b'', b'', Negotiated.UNSET))
 
 
 def test_a_hostname_without_control_characters_still_decodes() -> None:
