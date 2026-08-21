@@ -119,7 +119,11 @@ class MTID:
         return len(self._packed)
 
     def __hash__(self):
-        return hash(str(self))
+        # must agree with __eq__, which compares the masked MT-ID.  hashing
+        # str(self) reached the packed bytes instead, so two MTIDs which compare
+        # equal hashed differently the moment the reserved bits were masked: the
+        # RIB would index one link twice and a lookup could miss it
+        return hash(self.topologies)
 
     def pack(self):
         if self._packed:

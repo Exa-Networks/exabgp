@@ -71,6 +71,45 @@ class TestItChangesIdentity:
     def test_two_mtids_differing_only_in_reserved_bits_are_equal(self) -> None:
         assert mtid(0xF002) == mtid(0x0002)
 
+    def test_equal_mtids_hash_equal(self) -> None:
+        """Python requires a == b to imply hash(a) == hash(b)
+
+        Masking created this hazard rather than removing it. Before the mask,
+        __eq__ compared raw 16 bit values and __hash__ hashed str(self), which
+        renders the packed bytes: both said "different", wrongly but
+        consistently. Masking made __eq__ say "same" while __hash__ still
+        reached the bytes, so the invariant broke and a set or dict keyed on
+        these would hold one link twice and a lookup could miss it.
+        """
+        assert mtid(0xF002) == mtid(0x0002)
+        assert hash(mtid(0xF002)) == hash(mtid(0x0002))
+        assert len({mtid(0xF002), mtid(0x0002)}) == 1
+
+    def test_the_link_nlri_indexes_once(self) -> None:
+        # the consequence at the level that matters: topology_ids feeds the link
+        # NLRI's __eq__ AND __hash__, so both halves have to agree or the RIB
+        # holds the same link under two keys
+        from struct import pack
+
+        from exabgp.bgp.message.action import Action
+        from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
+        from exabgp.protocol.family import AFI, SAFI
+
+        local = pack('!HH', 256, 8) + pack('!HH', 512, 4) + b'\x00\x00\xff\xfd'
+
+        def link(topology):
+            body = b'\x03' + b'\x00' * 8 + local + pack('!HH', 263, 2) + pack('!H', topology)
+            nlri, _ = BGPLS.unpack_nlri(
+                AFI.bgpls, SAFI.bgp_ls, pack('!HH', 2, len(body)) + body, Action.ANNOUNCE, False
+            )
+            return nlri
+
+        clean, reserved = link(0x0002), link(0xF002)
+        assert clean == reserved
+        assert hash(clean) == hash(reserved)
+        assert len({clean, reserved}) == 1
+        assert len({clean, link(0x0003)}) == 2
+
     def test_and_different_topologies_still_differ(self) -> None:
         # the gate must not make everything equal, which masking too hard would
         assert mtid(2) != mtid(3)

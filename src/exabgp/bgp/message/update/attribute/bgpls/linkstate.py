@@ -6,7 +6,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import binascii
-import itertools
 import json
 from struct import unpack
 from struct import error as struct_error
@@ -257,26 +256,26 @@ class FlagLS(BaseLS):
         # b2a_hex of an empty buffer gives int() nothing to parse
         if not data:
             raise Notify(3, 5, f'Unable to decode attribute, no flags for {cls.REPR}')
-        pad = cls.FLAGS.count('RSV')
-        repeat = len(cls.FLAGS) - pad
+        # RFC 8667 2.2.1, and the same wording throughout the IGP specifications
+        # these TLVs are carried from: "Other bits: MUST be zero when originated
+        # and ignored when received".
+        #
+        # This built the set of octets whose reserved positions were zero and
+        # refused everything else with Notify(3, 5, 'Invalid SR flags mask').
+        # LinkState is in DISCARD, so a peer setting a bit we are REQUIRED to
+        # ignore lost its entire BGP-LS attribute: the router-ids, the metrics
+        # and the SIDs, over a bit with no meaning yet.  Thirteen registered TLVs
+        # did this, which is the forward compatibility failure that reserving
+        # bits exists to prevent.  The day a later RFC assigns one of them, every
+        # peer running this code would have discarded the attribute.
+        #
+        # A reserved position is reported unset whatever arrived, because that is
+        # what ignoring it means, and it keeps the rendering identical for every
+        # input which was accepted before: a reserved bit could only ever have
+        # been zero to get this far.
         hex_rep = int(binascii.b2a_hex(data), 16)
         bits = f'{hex_rep:08b}'
-        valid_flags = [''.join(item) + '0' * pad for item in itertools.product('01', repeat=repeat)]
-        valid_flags.append('0000')
-        if bits in valid_flags:
-            flags = dict(
-                zip(
-                    cls.FLAGS,
-                    [
-                        0,
-                    ]
-                    * len(cls.FLAGS),
-                ),
-            )
-            flags.update(dict((k, int(v)) for k, v in zip(cls.FLAGS, bits)))
-        else:
-            raise Notify(3, 5, 'Invalid SR flags mask')
-        return flags
+        return {name: 0 if name == 'RSV' else int(bit) for name, bit in zip(cls.FLAGS, bits)}
 
     @classmethod
     def unpack(cls, data):
