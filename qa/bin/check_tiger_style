@@ -7,7 +7,7 @@ Four rules can be checked without reading the code:
   bare_except    no bare `except:`, any occurrence fails (rule 1.4)
   input_assert   no `assert` about the bytes a function was handed (rule 1.2)
   long_function  functions over 70 lines (rule 1.5)
-  silent_except  `except SomeError: pass`, an error swallowed without a word (rule 1.4)
+  silent_except  `except SomeError: pass`, or `: return None`, swallowed without a word (rule 1.4)
 
 bare_except and input_assert must be zero: the first is never right, and the second is a
 validation of peer data written with a statement `-O` deletes. Assertions about our own
@@ -88,6 +88,14 @@ def inspect(path: Path) -> list[Violation]:
                 found.append(Violation('bare_except', relative, node.lineno, 'bare except'))
             elif len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                 found.append(Violation('silent_except', relative, node.lineno, 'error swallowed by pass'))
+            elif len(node.body) == 1 and isinstance(node.body[0], ast.Return):
+                # `except X: return None` swallows exactly as much as `pass`, and it is the
+                # shape which hid a malformed FlowSpec NLRI becoming a dropped route with no
+                # log and no NOTIFICATION. Returning a real value is a decision about what
+                # to do instead; returning nothing is the same shrug written differently.
+                returned = node.body[0].value
+                if returned is None or (isinstance(returned, ast.Constant) and returned.value is None):
+                    found.append(Violation('silent_except', relative, node.lineno, 'error swallowed by return'))
             continue
 
     return found
