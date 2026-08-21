@@ -51,6 +51,7 @@ from exabgp.bgp.message.update.nlri.qualifier.mac import MAC
 from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.open.asn import ASN
 
 
 def create_negotiated() -> Negotiated:
@@ -75,7 +76,7 @@ class TestNLRIs(unittest.TestCase):
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv4,
             safi=SAFI.mcast_vpn,
-            bgp=packed,
+            data=packed,
             action=Action.UNSET,
             addpath=None,
             negotiated=create_negotiated(),
@@ -98,7 +99,7 @@ class TestNLRIs(unittest.TestCase):
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv6,
             safi=SAFI.mcast_vpn,
-            bgp=packed,
+            data=packed,
             action=Action.UNSET,
             addpath=None,
             negotiated=create_negotiated(),
@@ -124,7 +125,7 @@ class TestNLRIs(unittest.TestCase):
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv4,
             safi=SAFI.mcast_vpn,
-            bgp=packed,
+            data=packed,
             action=Action.UNSET,
             addpath=None,
             negotiated=create_negotiated(),
@@ -149,7 +150,7 @@ class TestNLRIs(unittest.TestCase):
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv6,
             safi=SAFI.mcast_vpn,
-            bgp=packed,
+            data=packed,
             action=Action.UNSET,
             addpath=None,
             negotiated=create_negotiated(),
@@ -176,7 +177,7 @@ class TestNLRIs(unittest.TestCase):
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv4,
             safi=SAFI.mcast_vpn,
-            bgp=packed,
+            data=packed,
             action=Action.UNSET,
             addpath=None,
             negotiated=create_negotiated(),
@@ -201,7 +202,7 @@ class TestNLRIs(unittest.TestCase):
         unpacked, leftover = MVPN.unpack_nlri(
             afi=AFI.ipv6,
             safi=SAFI.mcast_vpn,
-            bgp=packed,
+            data=packed,
             action=Action.UNSET,
             addpath=None,
             negotiated=create_negotiated(),
@@ -218,7 +219,7 @@ class TestNLRIs(unittest.TestCase):
 
     def test200_IPVPNCreatePackUnpack(self) -> None:
         """Test pack/unpack for IPVPN routes"""
-        nlri = IPVPN.new(
+        nlri = IPVPN.make_vpn_route(
             AFI.ipv4,
             SAFI.mpls_vpn,
             IP.pton('1.2.3.0'),
@@ -246,7 +247,7 @@ class TestNLRIs(unittest.TestCase):
 
     def test99_EVPNMACCreatePackUnpack(self) -> None:
         """Test pack/unpack for E-VPN MAC routes"""
-        nlri = EVPNMAC(
+        nlri = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI.make_default(),
             EthernetTag.make_etag(111),
@@ -280,7 +281,7 @@ class TestNLRIs(unittest.TestCase):
     def test99_EVPNMulticastCreatePackUnpack(self) -> None:
         """Test pack/unpack for E-VPN Multicast routes"""
 
-        nlri = EVPNMulticast(
+        nlri = EVPNMulticast.make_multicast(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             EthernetTag.make_etag(111),
             IP.from_string('1.1.1.1'),
@@ -304,7 +305,7 @@ class TestNLRIs(unittest.TestCase):
     def test99_EVPNPrefixCreatePackUnpack(self) -> None:
         """Test pack/unpack for E-VPN Prefix routes"""
 
-        nlri = EVPNPrefix(
+        nlri = EVPNPrefix.make_prefix(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI.make_default(),
             EthernetTag.make_etag(111),
@@ -339,7 +340,7 @@ class TestNLRIs(unittest.TestCase):
         hash to the same value, and be equal
         """
 
-        nlri1 = EVPNMAC(
+        nlri1 = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI.make_default(),
             EthernetTag.make_etag(111),
@@ -349,7 +350,7 @@ class TestNLRIs(unittest.TestCase):
             IP.from_string('1.1.1.1'),
         )
 
-        nlri2 = EVPNMAC(
+        nlri2 = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI.make_default(),
             EthernetTag.make_etag(111),
@@ -368,7 +369,7 @@ class TestNLRIs(unittest.TestCase):
         and be equal
         """
 
-        nlri0 = EVPNMAC(
+        nlri0 = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI.make_default(),
             EthernetTag.make_etag(111),
@@ -379,7 +380,7 @@ class TestNLRIs(unittest.TestCase):
         )
 
         # ESI
-        nlri1 = EVPNMAC(
+        nlri1 = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI(
                 bytes(
@@ -397,7 +398,7 @@ class TestNLRIs(unittest.TestCase):
         )
 
         # label
-        nlri2 = EVPNMAC(
+        nlri2 = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI.make_default(),
             EthernetTag.make_etag(111),
@@ -408,7 +409,7 @@ class TestNLRIs(unittest.TestCase):
         )
 
         # IP: different IPs, but same MACs: different route
-        nlri3 = EVPNMAC(
+        nlri3 = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI.make_default(),
             EthernetTag.make_etag(111),
@@ -419,7 +420,7 @@ class TestNLRIs(unittest.TestCase):
         )
 
         # with a next hop...
-        nlri4 = EVPNMAC(
+        nlri4 = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI.make_default(),
             EthernetTag.make_etag(111),
@@ -429,7 +430,7 @@ class TestNLRIs(unittest.TestCase):
             IP.from_string('1.1.1.1'),
             IP.pton('10.10.10.10'),
         )
-        nlri5 = EVPNMAC(
+        nlri5 = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI.make_default(),
             EthernetTag.make_etag(111),
@@ -462,7 +463,7 @@ class TestNLRIs(unittest.TestCase):
     def test99_RTCCreatePackUnpack(self) -> None:
         """Test pack/unpack for RTC routes"""
 
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, 64512, RouteTarget.make_route_target(64577, 123))
+        nlri = RTC.make_rtc(ASN(64512), RouteTarget.make_route_target(64577, 123))
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
@@ -483,7 +484,7 @@ class TestNLRIs(unittest.TestCase):
     def test98_RTCWildcardPackUnpack(self) -> None:
         """Test pack/unpack for RTC routes"""
 
-        nlri = RTC.new(AFI.ipv4, SAFI.rtc, 0, None)
+        nlri = RTC.make_rtc(ASN(0), None)
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
@@ -539,19 +540,49 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(atts1, atts2)
 
     def test10_Ecoms(self) -> None:
-        eComs1 = ExtendedCommunities()
-        eComs1.communities.append(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
+        """One extended community is not the same value as two.
+
+        This built its communities with eComs.communities.append(...), and communities is
+        a property which unpacks a fresh list out of the wire bytes every time it is read,
+        so both appends went to a list nobody kept.  The test compared two empty sets, and
+        was right to fail.  add() is the builder, and it sorts and repacks, which is what
+        makes the comparison below independent of the order they went in.
+        """
+        eComs1 = ExtendedCommunities().add(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
         atts1 = AttributeCollection()
         atts1.add(eComs1)
 
-        eComs2 = ExtendedCommunities()
-        eComs2.communities.append(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
-        eComs2.communities.append(RouteTarget.make_route_target(64512, 1))
+        eComs2 = (
+            ExtendedCommunities()
+            .add(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
+            .add(RouteTarget.make_route_target(64512, 1))
+        )
         atts2 = AttributeCollection()
         atts2.add(eComs2)
 
+        self.assertEqual(1, len(eComs1.communities))
+        self.assertEqual(2, len(eComs2.communities))
+
         self.assertFalse(atts1.sameValuesAs(atts2))
         self.assertFalse(atts2.sameValuesAs(atts1))
+
+    def test10_Ecoms_order_does_not_matter(self) -> None:
+        """The same two communities in either order are the same value.
+
+        sameValuesAs says so for extended communities because add() sorts before packing,
+        not because the comparison sorts.  If a later change stops sorting there, this is
+        what says so.
+        """
+        encapsulation = Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN)
+        route_target = RouteTarget.make_route_target(64512, 1)
+
+        one = AttributeCollection()
+        one.add(ExtendedCommunities().add(encapsulation).add(route_target))
+        other = AttributeCollection()
+        other.add(ExtendedCommunities().add(route_target).add(encapsulation))
+
+        self.assertTrue(one.sameValuesAs(other))
+        self.assertTrue(other.sameValuesAs(one))
 
     def test11_RTs(self) -> None:
         rt1a = RouteTarget.make_route_target(64512, 1)

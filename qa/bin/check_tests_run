@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""Fail when a file which defines tests is never collected.
+
+tests/unit/nlri_tests.py held eighteen NLRI pack and unpack round trip tests, twelve of
+which had rotted to the point of raising AttributeError on a constructor signature.  It
+did not fail anything, because pytest collects test_*.py and nothing else, so the file had
+not run in a long time and nobody could tell from a green suite.
+
+Three more were in the same state.  A test which is not collected is worse than a test
+which is missing: the file is there, it looks like coverage, and it reports nothing.
+
+This compares what pytest collects against every file under tests/ which defines a test,
+and names the difference.  It is the same discipline the fuzz corpus needed: a number is
+only evidence once you have checked it can move.
+"""
+
+from __future__ import annotations
+
+import ast
+import subprocess
+import sys
+from pathlib import Path
+
+TESTS = Path('tests')
+
+# a file may hold shared machinery rather than tests; these are allowed to define helpers
+# whose names begin with test only if pytest is meant to ignore the file entirely
+NOT_COLLECTED_BY_DESIGN = {'conftest.py', '__init__.py'}
+
+MAX_REPORTED = 40
+
+
+def defines_tests(path: Path) -> bool:
+    """True when the file holds something pytest would run, were it collected."""
+    try:
+        tree = ast.parse(path.read_text())
+    except (OSError, SyntaxError):
+        # a file which will not parse is a problem for its own suite, and pytest reports
+        # it as a collection error rather than as silence, so it is not this check's job
+        return False
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('test'):
+            return True
+        if isinstance(node, ast.ClassDef) and node.name.startswith('Test'):
+            return True
+    return False
+
+
+def collected() -> set[Path]:
+    """The files pytest actually collects, asked of pytest rather than guessed."""
+    result = subprocess.run(
+        [sys.executable, '-m', 'pytest', str(TESTS), '--collect-only', '-q', '-p', 'no:randomly'],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    files = set()
+    for line in result.stdout.splitlines():
+        if '::' in line:
+            files.add(Path(line.split('::', 1)[0]))
+    if not files:
+        # an empty answer means the collection itself failed, which must not read as
+        # "nothing is uncollected": that is the exact confusion this check exists to end
+        print('check_tests_run: pytest collected nothing at all, so this check proves nothing')
+        print(result.stdout[-2000:])
+        print(result.stderr[-2000:])
+        sys.exit(1)
+    return files
+
+
+def main() -> int:
+    seen = collected()
+    orphans = sorted(
+        path
+        for path in TESTS.rglob('*.py')
+        if path.name not in NOT_COLLECTED_BY_DESIGN and path not in seen and defines_tests(path)
+    )
+
+    if not orphans:
+        print(f'all {len(seen)} test files are collected')
+        return 0
+
+    print(f'{len(orphans)} file(s) define tests which pytest never collects:')
+    for path in orphans[:MAX_REPORTED]:
+        print(f'  {path}')
+    if len(orphans) > MAX_REPORTED:
+        print(f'  ... and {len(orphans) - MAX_REPORTED} more')
+    print()
+    print('rename them to test_*.py so they run, or move the helpers out of them.')
+    return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

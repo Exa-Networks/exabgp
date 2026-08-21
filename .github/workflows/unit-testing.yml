@@ -68,3 +68,9 @@ jobs:
       - name: tiger style
         run: |
           uv run ./qa/bin/check_tiger_style
+
+      # A test file pytest does not collect reports nothing and looks like coverage.
+      # tests/unit/nlri_tests.py held eighteen of them, twelve rotted, for a long time.
+      - name: every test file is collected
+        run: |
+          uv run ./qa/bin/check_tests_run
