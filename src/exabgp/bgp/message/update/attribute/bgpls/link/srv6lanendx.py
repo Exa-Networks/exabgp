@@ -161,7 +161,14 @@ class Srv6LanEndXISIS(Srv6):
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> Srv6LanEndXISIS:
-        return cls(data)
+        """Parse here, so a payload too short for this TLV is the decoder's answer.
+
+        The content is unpacked in a property, so returning cls(data) left the Notify to
+        the first render, which is the writer feeding the API subprocesses.
+        """
+        instance = cls(data)
+        instance.content
+        return instance
 
     @classmethod
     def make_srv6_lan_endx_isis(
@@ -250,7 +257,14 @@ class Srv6LanEndXOSPF(Srv6):
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> Srv6LanEndXOSPF:
-        return cls(data)
+        """Parse here, so a payload too short for this TLV is the decoder's answer.
+
+        The content is unpacked in a property, so returning cls(data) left the Notify to
+        the first render, which is the writer feeding the API subprocesses.
+        """
+        instance = cls(data)
+        instance.content
+        return instance
 
     @classmethod
     def make_srv6_lan_endx_ospf(

@@ -23,7 +23,7 @@ import binascii
 import itertools
 import json
 from struct import error as struct_error, unpack
-from typing import TYPE_CHECKING, Any, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -55,6 +55,9 @@ class LinkState(Attribute):
     ID = Attribute.CODE.BGP_LS
     FLAG = Attribute.Flag.OPTIONAL
     TLV = -1
+    # RFC 7752 section 5.3 and RFC 9552 section 7.2.1: a malformed BGP-LS attribute is
+    # discarded, the session is not reset. AttributeCollection.parse honours this flag.
+    DISCARD: ClassVar[bool] = True
 
     # Registered subclasses we know how to decode
     registered_lsids: dict[int, type] = dict()
@@ -106,27 +109,32 @@ class LinkState(Attribute):
 
     @staticmethod
     def _decode_tlv(klass: type[LSClass], scode: int, payload: Buffer) -> BaseLS:
-        """Decode one TLV and prove it can be rendered, here rather than in the API.
+        """Decode one TLV, turning a short read into a Notify the peer can be told about.
 
-        The TLV classes store their payload and unpack it in a property, so unpack_bgpls
-        returning is not the same as the TLV being decodable: several of them read past
-        their payload the first time json() or __repr__() touches it.  Exercising both
-        now means a peer's bad TLV is a Notify from the decode path, where the reactor
-        answers it with a NOTIFICATION, instead of a struct.error out of the writer
-        feeding the API subprocesses.
-
-        It costs one extra render per TLV.  A wrong route, or a dead session, costs more.
+        This used to render the TLV here as well, to prove it could be rendered, because
+        the TLV classes unpack in properties and several of them read past their payload
+        the first time json() touched it.  They check their own reads now, and rendering
+        twice cost 31x on the decode path: 312us for an eleven TLV attribute against 9us,
+        which is half a minute of CPU for a hundred thousand object table, inside the
+        reactor.  The registry wide property tests are what hold the renders now.
         """
         try:
             instance = klass.unpack_bgpls(payload)
-            instance.json()
-            repr(instance)
-            if klass.MERGE:
-                # a MERGE class is rendered from its content, not from its own json()
-                instance.content
+            if isinstance(instance, FlagLS):
+                # these unpack their flags in a property, and nine of the thirteen override
+                # unpack_bgpls, so the read goes here where every one of them passes. A bit
+                # pattern we do not know is the peer's error and belongs to the decoder;
+                # leaving it to the first render put the Notify in the API writer. The
+                # instance caches it, so the render does not pay for it again.
+                instance.flags
         except Notify:
             raise
-        except (IndexError, KeyError, ValueError, TypeError, AttributeError, struct_error) as exc:
+        except (IndexError, struct_error) as exc:
+            # only the shapes a short read takes. TypeError and AttributeError out of a
+            # property are our bug, and converting them would blame the peer for it and
+            # tear down a session carrying perfectly valid traffic: the missing
+            # GenericSRId.pack_tlv in this same series was found precisely because its
+            # AttributeError escaped loudly rather than being renamed a protocol error.
             raise Notify(3, 5, f'BGP-LS: TLV {scode} could not be decoded: {exc}') from None
         return instance
 
@@ -186,8 +194,10 @@ class LinkState(Attribute):
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         """Decode the TLVs, so malformed ones are refused here rather than in json()."""
         instance = cls(data)
-        # accessing the property is what parses, and what raises Notify on a bad TLV
-        assert instance.ls_attrs is not None, 'the TLVs of a decoded BGP-LS attribute are known'
+        # a statement, never an assertion: -O deletes an assert, and with it the whole
+        # boundary this commit exists to create (TIGER_STYLE.md 1.2, nothing may depend on
+        # an assertion running). Reading the property is what parses.
+        instance.ls_attrs
         return instance
 
     def json(self, compact: bool = False) -> str:
@@ -384,8 +394,12 @@ class FlagLS(BaseLS):
 
     @property
     def flags(self) -> dict[str, int]:
-        """Unpack and return flags from packed bytes."""
-        return self.unpack_flags(self._packed[0:1])
+        """The flags this TLV carries, unpacked once."""
+        cached = getattr(self, '_flags_cache', None)
+        if cached is None:
+            cached = self.unpack_flags(self._packed[0:1])
+            self._flags_cache = cached
+        return cached
 
     def __repr__(self) -> str:
         return '{}: {}'.format(self.REPR, self.flags)
@@ -394,15 +408,29 @@ class FlagLS(BaseLS):
         return f'"{self.JSON}": {json.dumps(self.flags)}'
 
     @classmethod
+    def _valid_flags(cls) -> frozenset[str]:
+        """The bit patterns this TLV allows, built once per class rather than per call.
+
+        This rebuilt 2**n strings on every access, and the flags are read several times
+        per render: it was 73% of the time spent decoding a BGP-LS attribute.
+        """
+        cached = cls.__dict__.get('_valid_flags_cache')
+        if cached is None:
+            pad = cls.FLAGS.count('RSV')
+            repeat = len(cls.FLAGS) - pad
+            cached = frozenset(
+                [''.join(item) + '0' * pad for item in itertools.product('01', repeat=repeat)] + ['0000']
+            )
+            setattr(cls, '_valid_flags_cache', cached)
+        return cached
+
+    @classmethod
     def unpack_flags(cls, data: Buffer) -> dict[str, int]:
         if not data:
             raise Notify(3, 5, 'BGP-LS: empty data for flag unpacking')
-        pad = cls.FLAGS.count('RSV')
-        repeat = len(cls.FLAGS) - pad
         hex_rep = int(binascii.b2a_hex(data), 16)
         bits = f'{hex_rep:08b}'
-        valid_flags = [''.join(item) + '0' * pad for item in itertools.product('01', repeat=repeat)]
-        valid_flags.append('0000')
+        valid_flags = cls._valid_flags()
         if bits in valid_flags:
             flags = dict(
                 zip(
