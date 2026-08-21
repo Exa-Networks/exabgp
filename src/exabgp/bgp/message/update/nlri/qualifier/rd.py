@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 from struct import pack, unpack
 from typing import Any, ClassVar
 
@@ -121,8 +123,11 @@ class RouteDistinguisher:
         """
         if self is RouteDistinguisher.NORD:
             return self
-        new = RouteDistinguisher.__new__(RouteDistinguisher)
-        new._packed = self._packed
+        # type(self) and the whole __dict__, not RouteDistinguisher and _packed by name.  The default
+        # copy carried everything this object held; naming one attribute means a second one
+        # added later is silently dropped by a method nobody will think to revisit.
+        new = type(self).__new__(type(self))
+        new.__dict__.update(self.__dict__)
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'RouteDistinguisher':
@@ -132,9 +137,12 @@ class RouteDistinguisher:
         """
         if self is RouteDistinguisher.NORD:
             return self
-        new = RouteDistinguisher.__new__(RouteDistinguisher)
+        new = type(self).__new__(type(self))
         memo[id(self)] = new
-        new._packed = self._packed
+        # deepcopy the values rather than sharing them: _packed is bytes and immutable
+        # today, and a mutable attribute added later would otherwise be shared silently
+        for attribute, value in self.__dict__.items():
+            setattr(new, attribute, deepcopy(value, memo))
         return new
 
 

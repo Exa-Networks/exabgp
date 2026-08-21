@@ -136,29 +136,25 @@ class BGPLS(NLRI):
             '0x' + ''.join('{:02x}'.format(_) for _ in payload),
         )
 
-    # Every BGP-LS NLRI type sets route_d in its own __init__ and reads it in __eq__,
-    # __hash__ and json().  It is an instance attribute rather than a slot, so the copy
-    # methods below have to name it: they used to say "BGPLS has empty __slots__ - nothing
-    # else to copy", which is true of this class and false of every subclass of it.  A
-    # copied route lost its route distinguisher, and then comparing or hashing it raised
-    # AttributeError rather than answering.
-    ROUTE_DISTINGUISHER = 'route_d'
-
-    def _copy_route_distinguisher(self, new: 'BGPLS', memo: dict[Any, Any] | None = None) -> None:
-        """Carry route_d across a copy, when the subclass has one.
-
-        GenericBGPLS carries an unregistered code and no descriptors, so it has none.
-        """
-        route_d = getattr(self, self.ROUTE_DISTINGUISHER, None)
-        if route_d is None:
-            return
-        setattr(new, self.ROUTE_DISTINGUISHER, deepcopy(route_d, memo) if memo is not None else route_d)
+    # BGP-LS NLRI keep their descriptors in slots and everything else in an instance
+    # __dict__: route_d today, set by every subclass and read by __eq__, __hash__ and
+    # json().  The copy methods used to say "BGPLS has empty __slots__ - nothing else to
+    # copy", which is true of this class and false of every subclass of it, so a copied
+    # route lost its route distinguisher and then raised AttributeError when compared.
+    #
+    # This copies whatever the instance holds rather than naming route_d.  Naming it would
+    # be the same mistake one attribute later, which is exactly what the first version of
+    # this fix did.
+    def _copy_instance_state(self, new: 'BGPLS', memo: dict[Any, Any] | None = None) -> None:
+        """Carry the instance dictionary across a copy, deeply when asked to."""
+        for attribute, value in getattr(self, '__dict__', {}).items():
+            setattr(new, attribute, deepcopy(value, memo) if memo is not None else value)
 
     def __copy__(self) -> 'BGPLS':
         new = self.__class__.__new__(self.__class__)
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
-        self._copy_route_distinguisher(new)
+        self._copy_instance_state(new)
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'BGPLS':
@@ -166,7 +162,7 @@ class BGPLS(NLRI):
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
-        self._copy_route_distinguisher(new, memo)
+        self._copy_instance_state(new, memo)
         return new
 
     @classmethod

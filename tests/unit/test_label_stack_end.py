@@ -275,3 +275,34 @@ def test_the_two_label_decoders_agree() -> None:
     assert plain_good == vpn_good == '10.0.0.0/24', (
         f'the two decoders disagree about a good stack: nlri-mpls {plain_good}, mpls-vpn {vpn_good}'
     )
+
+
+def test_a_sentinel_below_depth_one_no_longer_ends_a_stack() -> None:
+    """A narrowing the depth rule brings which is wider than "unterminated stacks".
+
+    A withdraw whose SECOND label is 0x800000 used to terminate there and be accepted with
+    two labels.  It is refused now: the sentinel describes a whole stack, so below depth
+    one it is an ordinary label and the stack still has to reach a bottom of stack bit.
+
+    RFC 3107 has the withdraw value replace the stack rather than sit inside one, so there
+    is no defined encoding for what this used to accept.  compat_gate cannot see the change
+    because the corpus does not produce this shape, which is why it is asserted here.
+    """
+    wire = bytes([72]) + bytes([0x00, 0x00, 0x10]) + WITHDRAW_LABEL + PREFIX
+
+    with pytest.raises(Notify, match='never ends'):
+        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.WITHDRAW, None, None)
+
+
+def test_a_sentinel_below_depth_one_is_still_a_usable_label() -> None:
+    """The other half: it is refused for not terminating, not for containing the value.
+
+    The same stack with a third label carrying the bottom of stack bit is accepted, and
+    0x800000 sits in the middle of it as an ordinary label.  Without this, the test above
+    would pass equally if the decoder had started refusing the VALUE anywhere it appeared.
+    """
+    wire = bytes([96]) + bytes([0x00, 0x00, 0x10]) + WITHDRAW_LABEL + bytes([0x00, 0x00, 0x21]) + PREFIX
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.WITHDRAW, None, None)
+
+    assert str(nlri.cidr) == '10.0.0.0/24'
+    assert nlri.labels.labels == [1, 0x800000 >> 4, 2]
