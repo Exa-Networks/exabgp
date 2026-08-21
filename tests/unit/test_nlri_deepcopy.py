@@ -32,7 +32,36 @@ SEEDS: list[tuple[AFI, SAFI, bytes, str]] = [
     (AFI.ipv4, SAFI.mpls_vpn, bytes([112]) + bytes([0, 0, 0x11]) + bytes(8) + bytes([10, 0, 0]), 'ipv4 mpls-vpn'),
     (AFI.ipv4, SAFI.rtc, bytes([96]) + bytes(12), 'rtc'),
     (AFI.l2vpn, SAFI.vpls, bytes([0, 17]) + bytes(17), 'vpls'),
+    # Flow is here because it is the only seeded family with a container slot, and without
+    # it test_a_deepcopy_shares_no_container executed zero assertions across all seven
+    # parameters while reporting seven passes
+    (AFI.ipv4, SAFI.flow_ip, bytes([3, 0x03, 0x81, 0x06]), 'ipv4 flow'),
 ]
+
+
+def comparable(value: object) -> object:
+    """A slot's value in a form two copies of it can be compared by.
+
+    Wire data comes back as bytes, memoryview or bytearray depending on where it was
+    sliced, and only the bytes matter.
+
+    A container of decoded components needs rendering rather than comparing: Flow keeps its
+    parsed rules in a cache, and the component classes define no __eq__, so a correctly
+    copied rule is a different object holding the same value and compares unequal to its
+    original.  Their str() is the value, which is what this test is asking about.  Giving
+    those classes value equality would be the other way round, and is worth doing, but it
+    is a change to thirty decoders with no caller today which depends on it.
+    """
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    if isinstance(value, dict):
+        return {
+            key: [str(item) for item in entry] if isinstance(entry, list) else str(entry)
+            for key, entry in value.items()
+        }
+    if isinstance(value, (list, tuple, set)):
+        return [str(item) for item in value]
+    return value
 
 
 def decoded(afi: AFI, safi: SAFI, data: bytes) -> NLRI | None:
@@ -81,6 +110,33 @@ def test_a_deepcopy_shares_no_container(afi: AFI, safi: SAFI, data: bytes, name:
             assert mine is not theirs, f'{name} shares its {slot} container with its copy'
 
 
+def container_slots(nlri: NLRI) -> list[str]:
+    """The slots the test above actually asserts anything about."""
+    found = []
+    for owner in type(nlri).__mro__:
+        for slot in getattr(owner, '__slots__', ()):
+            if hasattr(nlri, slot) and isinstance(getattr(nlri, slot), (list, dict, set, bytearray)):
+                found.append(slot)
+    return found
+
+
+def test_the_container_test_above_asserts_something() -> None:
+    """Its filter skips every slot which is not a container, and most families have none.
+
+    Measured before this was added: zero assertions executed across all seven parameters,
+    seven passes reported.  A test which cannot fail is worse than one which is missing,
+    because the passes look like coverage.  This is the guard which says the filter did
+    not skip everything.
+    """
+    holders = {name: container_slots(nlri) for afi, safi, data, name in SEEDS if (nlri := decoded(afi, safi, data))}
+
+    with_containers = {name: slots for name, slots in holders.items() if slots}
+    assert with_containers, (
+        'no seeded family has a container slot, so test_a_deepcopy_shares_no_container '
+        'asserts nothing at all: add a family which holds one'
+    )
+
+
 @pytest.mark.parametrize('afi, safi, data, name', SEEDS, ids=[s[3] for s in SEEDS])
 def test_a_deepcopy_survives_a_cycle(afi: AFI, safi: SAFI, data: bytes, name: str) -> None:
     """The memo must be honoured, or a structure holding one route twice copies it twice.
@@ -121,10 +177,7 @@ def test_a_deepcopy_carries_every_slot(afi: AFI, safi: SAFI, data: bytes, name: 
             checked += 1
             mine, theirs = getattr(original, slot), getattr(copy, slot)
             assert type(mine) is type(theirs), f'{name} copied {slot} as a different type'
-            if isinstance(mine, (bytes, bytearray, memoryview)):
-                assert bytes(mine) == bytes(theirs), f'{name} copied {slot} with different bytes'
-            else:
-                assert mine == theirs, f'{name} copied {slot} with a different value'
+            assert comparable(mine) == comparable(theirs), f'{name} copied {slot} with a different value'
 
     assert checked, f'{name} has no slots to check, so this pins nothing'
 

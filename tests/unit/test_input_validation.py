@@ -14,6 +14,7 @@ import importlib
 import pathlib
 import platform
 import sys
+from typing import Any
 from struct import pack
 
 import pytest
@@ -422,18 +423,106 @@ def test_cli_helper_bounds_its_backlog_by_bytes(module: str) -> None:
     assert 'backlog[source].nbytes' in source, f'{module} does not bound its buffer by bytes'
 
 
-def test_processes_caps_a_command_without_a_newline() -> None:
-    """A helper process which never sends a newline grew _buffer without bound."""
+def reader_over_a_pipe(read_fd: int) -> Any:
+    """A Processes wired to one fake helper whose stdout is a real pipe.
+
+    _async_reader_callback is the only production path which reads helper output, and it
+    lives inside a select loop, so the way to test it is to give it a real descriptor and
+    call it.  Everything it touches is set here rather than mocked away, so a change to
+    what it reads shows up as a failure rather than as a mock which no longer matches.
+    """
+    from unittest.mock import Mock
+
     from exabgp.reactor.api.processes import Processes
 
-    limit = Processes.MAX_COMMAND_SIZE
-    assert limit > 0
-
     processes = Processes.__new__(Processes)
-    processes._buffer = {'test': 'x' * (limit + 1)}
-    processes._name = {'test': 'test'}
-    # the reader must refuse to keep a buffer it can never turn into a command
-    assert len(processes._buffer['test']) > limit
+    helper = Mock()
+    helper.poll = Mock(return_value=None)  # still running
+    processes._process = {'helper': helper}
+    processes._buffer = {}
+    processes._command_queue = []
+    processes._async_mode = False
+    processes._loop = None
+
+    stdout = Mock()
+    stdout.fileno = Mock(return_value=read_fd)
+    processes._get_stdout = Mock(return_value=stdout)
+
+    processes.problems = []
+    processes._handle_problem = lambda name: processes.problems.append(name)
+    return processes
+
+
+def test_processes_caps_a_command_without_a_newline() -> None:
+    """A helper which never sends a newline grew _buffer without bound.
+
+    This asserted its own setup line: it built a Processes with an oversized _buffer and
+    then checked the buffer it had just written was oversized, without ever calling the
+    reader.  Deleting both cap checks in processes.py left it green.
+    """
+    import os
+
+    from exabgp.reactor.api.processes import Processes
+
+    read_fd, write_fd = os.pipe()
+    try:
+        processes = reader_over_a_pipe(read_fd)
+        # os.read takes 16k at a time, so a single write cannot cross a one megabyte cap:
+        # the buffer grows across reads, which is how a helper actually reaches it
+        processes._buffer['helper'] = 'x' * Processes.MAX_COMMAND_SIZE
+        os.write(write_fd, b'y' * 100)
+
+        processes._async_reader_callback('helper')
+
+        assert 'helper' not in processes._buffer, 'the reader kept a buffer it can never turn into a command'
+        assert processes.problems == ['helper'], 'the oversized helper was not reported'
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+
+def test_processes_survives_a_helper_writing_bytes_which_are_not_ascii() -> None:
+    """The reader decodes as ascii, and a helper is free to emit any byte it likes.
+
+    An exception escaping here does not close a session, it kills the callback the reactor
+    depends on to read that helper at all.
+    """
+    import os
+
+    read_fd, write_fd = os.pipe()
+    try:
+        processes = reader_over_a_pipe(read_fd)
+        os.write(write_fd, b'\xff\n')
+
+        processes._async_reader_callback('helper')
+
+        assert processes.problems == ['helper'], 'a helper writing a non-ascii byte was not reported'
+        assert processes._command_queue == [], 'undecodable bytes were queued as a command'
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+
+def test_processes_still_queues_an_ordinary_command() -> None:
+    """The caps must not have closed the path they guard.
+
+    Both tests above are satisfied by a reader which drops everything, so one of them has
+    to show a command still arrives.
+    """
+    import os
+
+    read_fd, write_fd = os.pipe()
+    try:
+        processes = reader_over_a_pipe(read_fd)
+        os.write(write_fd, b'announce route 10.0.0.0/24 next-hop 1.2.3.4\n')
+
+        processes._async_reader_callback('helper')
+
+        assert processes.problems == [], 'an ordinary command was reported as a problem'
+        assert processes._command_queue == [('helper', 'announce route 10.0.0.0/24 next-hop 1.2.3.4')]
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
 
 
 # ============================================================================
