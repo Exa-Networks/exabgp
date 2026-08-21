@@ -54,6 +54,8 @@ def _populate() -> None:
 _populate()
 
 MAX_TLV_WIDTH = 40
+# a ratchet: raise it as TLVs are added, never lower it to make a red run green
+MIN_REGISTERED_TLVS = 45
 UNKNOWN_CODES = (9999, 60000)
 
 # name, code, a width it decodes at
@@ -193,3 +195,20 @@ def test_no_tlv_can_make_the_api_emit_the_same_key_twice() -> None:
             duplicated.append((code, sorted(repeated)))
 
     assert not duplicated, f'these TLVs emit a duplicate JSON key when sent twice: {duplicated}'
+
+
+def test_the_registry_sweep_had_a_registry_to_sweep() -> None:
+    """test_no_tlv_can_make_the_api_emit_the_same_key_twice walks registered_lsids.
+
+    It reports the TLVs which duplicate a key, so a registry holding three entries reports
+    nothing and passes.  The rest of this file fails on a thinned registry only because its
+    seeds stop decoding, which is luck rather than a check: make the seeds tolerant and the
+    file goes green while covering almost nothing.
+
+    Session 5.0's harder experiment is what found this.  An emptied registry makes almost
+    any floor fire; a registry thinned to three entries only makes a well chosen one fire,
+    and a half filled registry is the failure which actually happens, from import order.
+    """
+    assert len(LinkState.registered_lsids) >= MIN_REGISTERED_TLVS, (
+        f'only {len(LinkState.registered_lsids)} BGP-LS TLVs are registered, so the duplicate key sweep proves little'
+    )

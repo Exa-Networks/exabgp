@@ -31,6 +31,8 @@ from exabgp.protocol.family import AFI, SAFI
 
 MULTI_TOPOLOGY_TLV = 263
 RESERVED_BITS = 0xF000
+# a ratchet: raise it as families are added, never lower it
+MIN_REGISTERED_FAMILIES = 10
 
 
 def bgpls_prefix_vpn() -> bytes:
@@ -147,3 +149,15 @@ def test_no_registered_nlri_defines_equality_without_hashing() -> None:
     ]
 
     assert not unhashable, f'these define __eq__ and lose __hash__: {unhashable}'
+
+
+def test_the_registry_sweep_had_a_registry_to_sweep() -> None:
+    """test_no_registered_nlri_defines_equality_without_hashing walks registered_nlri.
+
+    It reports the classes which lose __hash__, so an empty or thinned registry reports
+    none and passes.  The seeded tests above fail on a thinned registry because the seeds
+    stop decoding, which is the file falling over rather than the file noticing.
+    """
+    assert len(NLRI.registered_nlri) >= MIN_REGISTERED_FAMILIES, (
+        f'only {len(NLRI.registered_nlri)} NLRI families are registered, so the hash sweep proves little'
+    )
