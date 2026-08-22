@@ -28,6 +28,23 @@ from .corpus import seeds_for
 
 # every member name a family emits for a representative route, at any depth
 MEMBERS = {
+    # The VPN variant renders a LINK NLRI plus the route distinguisher. It had no
+    # corpus seed until now, so nothing had ever pinned what it puts in the API
+    # stream, and its 'rd' member was being spliced in as a nameless nested
+    # object which made the whole line unparseable.
+    'bgp-ls/bgp-ls-vpn': [
+        'autonomous-system',
+        'interface-addresses',
+        'l3-routing-topology',
+        'link-identifiers',
+        'local-node-descriptors',
+        'ls-nlri-type',
+        'multi-topology-ids',
+        'neighbor-addresses',
+        'protocol-id',
+        'rd',
+        'remote-node-descriptors',
+    ],
     'bgp-ls/bgp-ls': [
         'autonomous-system',
         'bgp-ls-identifier',

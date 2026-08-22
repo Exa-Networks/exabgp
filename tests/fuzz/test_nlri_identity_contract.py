@@ -32,7 +32,6 @@ a populated one survives.
 
 import copy
 
-from struct import pack
 
 import pytest
 
@@ -43,22 +42,13 @@ from exabgp.protocol.family import AFI, SAFI
 
 from .corpus import NLRI_SEEDS
 
-# A BGP-LS VPN route: an eight byte route distinguisher, then the NLRI. The plain
-# bgp-ls seed has no route distinguisher at all, so it cannot say whether one is
-# carried through a copy: the field it would lose is empty.
-BGPLS_LOCAL_NODE = pack('!HH', 256, 8) + pack('!HH', 512, 4) + b'\x00\x00\xff\xfd'
-BGPLS_VPN_BODY = bytes([0, 1]) + bytes([10, 0, 0, 1]) + bytes([0, 7]) + b'\x03' + b'\x00' * 8 + BGPLS_LOCAL_NODE
-EXTRA_SEEDS = {
-    'bgp-ls/bgp-ls-vpn': [pack('!HH', 2, len(BGPLS_VPN_BODY)) + BGPLS_VPN_BODY],
-}
-
 # Ratchet. A sweep which decodes nothing satisfies every assertion below, so the
 # number of families which actually yielded an NLRI is asserted too.
 FAMILY_FLOOR = 14
 
 
 def seeds(family):
-    return list(NLRI_SEEDS.get(family, ())) + list(EXTRA_SEEDS.get(family, ()))
+    return list(NLRI_SEEDS.get(family, ()))
 
 
 def decode(family, payload):
@@ -74,9 +64,28 @@ def decode(family, payload):
     return nlri
 
 
+# BGP-LS calls it route_d; every other family calls it rd. Reading one name only
+# is how a test which exists to prove something about route distinguishers ends up
+# examining a single family and skipping the rest.
+RD_NAMES = ('rd', 'route_d')
+
+# Ratchet on how many routes actually reach the copy assertion below. Without it
+# a skip covers for an accessor which finds nothing.
+ROUTE_DISTINGUISHER_FLOOR = 15
+
+
+def route_distinguisher(nlri):
+    """(name, value) for whichever spelling this family uses, or (None, None)"""
+    for name in RD_NAMES:
+        value = getattr(nlri, name, None)
+        if value is not None:
+            return name, value
+    return None, None
+
+
 def routes():
     """One decoded NLRI per seed, across every family which has one"""
-    for family in sorted(set(NLRI_SEEDS) | set(EXTRA_SEEDS)):
+    for family in sorted(NLRI_SEEDS):
         for payload in seeds(family):
             nlri = decode(family, payload)
             if nlri is not None:
@@ -103,10 +112,34 @@ class TestTheSweepMeansSomething:
         families = {family for family, _p, _n in ROUTES}
         assert len(families) >= FAMILY_FLOOR, sorted(families)
 
+    def test_every_family_declaring_a_route_distinguisher_has_a_seed(self) -> None:
+        """The seed table checked against the declaration, not against memory
+
+        Family.size DECLARES which families carry a route distinguisher. The seed
+        table is typed by hand. bgp-ls/bgp-ls-vpn declared one and had no seed,
+        so every corpus driven sweep about route distinguishers had never seen one
+        of the families that carries one, and the seed I had written for it lived
+        in this file's own table rather than the corpus, where nothing else could
+        reach it.
+
+        Reported by the session working main, who found the identical omission by
+        checking their table against Family.size rather than reading it again.
+        """
+        from exabgp.protocol.family import Family
+
+        missing = []
+        for (afi, safi), (_sizes, rd_size) in Family.size.items():
+            if not rd_size:
+                continue
+            family = f'{afi}/{safi}'
+            if family in NLRI.registered_nlri and family not in NLRI_SEEDS:
+                missing.append(family)
+        assert not missing, f'these declare a route distinguisher and have no seed: {missing}'
+
     def test_the_vpn_bgpls_seed_decodes_and_carries_a_route_distinguisher(self) -> None:
         # the seed this file exists to add: without it nothing here exercises a
         # populated route distinguisher, and a field which is empty cannot be lost
-        nlri = decode('bgp-ls/bgp-ls-vpn', EXTRA_SEEDS['bgp-ls/bgp-ls-vpn'][0])
+        nlri = decode('bgp-ls/bgp-ls-vpn', NLRI_SEEDS['bgp-ls/bgp-ls-vpn'][0])
         assert nlri is not None
         assert getattr(nlri, 'route_d', None), 'the seed carries no route distinguisher, so it proves nothing'
 
@@ -141,10 +174,35 @@ class TestARouteAndItsCopy:
         # the shape of the defect on the main branch: the copy methods reasoned
         # from a base class __slots__ which did not mention route_d, so a copied
         # VPN route lost it and could not be compared to itself afterwards
-        original = getattr(nlri, 'route_d', None)
+        name, original = route_distinguisher(nlri)
         if original is None:
             pytest.skip('this family carries no route distinguisher')
-        assert getattr(copy.deepcopy(nlri), 'route_d', None) == original
+        assert getattr(copy.deepcopy(nlri), name, None) == original
+
+    def test_that_assertion_is_not_skipping_almost_everything(self) -> None:
+        """27 of 28 routes skipped, and the skip read as deliberate
+
+        The assertion above looked for route_d, which is what BGP-LS calls it.
+        Every other family calls it rd. So it examined ONE route and skipped
+        seventeen which carry a populated one, and pytest reported 27 skips as
+        though those families simply had none.
+
+        The session working main hit the mirror image: their test read rd and the
+        family it was added to cover uses route_d, so the seed and the accessor
+        were wrong in a way that cancelled and the test passed having looked at
+        nothing.
+
+        A skip is a silence. This is the assertion that says how much of it there
+        should be.
+        """
+        carried = [family for family, _p, nlri in ROUTES if route_distinguisher(nlri)[1] is not None]
+        assert len(carried) >= ROUTE_DISTINGUISHER_FLOOR, sorted(set(carried))
+
+    def test_both_spellings_are_reached(self) -> None:
+        # the two names are not interchangeable: one family uses route_d and the
+        # rest use rd, so reading either alone silently covers only its half
+        names = {route_distinguisher(nlri)[0] for _f, _p, nlri in ROUTES if route_distinguisher(nlri)[1] is not None}
+        assert names == {'rd', 'route_d'}, names
 
 
 class TestTheConsequenceTheRibSees:

@@ -236,6 +236,12 @@ class LINK(BGPLS):
         # # content is ending without a , here in purpose
 
         if self.route_d:
-            content += f', {{ {self.route_d.json()} }}'
+            # RouteDistinguisher.json() returns a MEMBER, '"rd": "10.0.0.1:7"',
+            # so wrapping it in braces spliced a nameless object into the middle
+            # of this one and every BGP-LS VPN link NLRI rendered unparseable
+            # JSON. node.py, prefixv4.py and prefixv6.py never had the braces;
+            # this was the only one, and the family had no corpus seed, so
+            # nothing decoded a route which reached the line.
+            content += f', {self.route_d.json()}'
 
         return f'{{ {content} }}'
