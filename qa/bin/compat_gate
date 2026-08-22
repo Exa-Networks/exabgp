@@ -105,11 +105,29 @@ except ImportError:
 SEEDS = json.loads(sys.argv[1]) if len(sys.argv) > 1 else {}
 
 def classify(render):
-    try:
-        json.loads('{"x": %s}' % render)
-        return 'VALID'
-    except Exception:
-        return 'INVALID-JSON'
+    # VALID if the fragment parses in ANY of the three shapes json() may return.
+    #
+    # A json() may return a complete object, a bare value the caller assigns to a
+    # key, or a MEMBER the caller splices into an object it is building. Wrapping
+    # only as a value covers the first two and calls every member unparseable.
+    #
+    # No NLRI level json() on this branch returns a member today, so all three
+    # agree and this is a no-op: 4622 renders, zero INVALID-JSON either way. It is
+    # written now BECAUSE it is a no-op. The moment a renderer splices a member
+    # the way link.py did, nlri.json() returns one and a value-only wrap fails a
+    # clean tree, which is the same edit that produced the bug this gate catches.
+    #
+    # Comments rather than a docstring: this function lives inside PROBE, a
+    # triple quoted string, and a docstring closes it. That mistake made the
+    # whole gate a SyntaxError while still exiting 1 on the test I was using to
+    # prove it worked.
+    for shape in ('{"x": %s}', '%s', '{%s}'):
+        try:
+            json.loads(shape % render)
+            return 'VALID'
+        except Exception:
+            continue
+    return 'INVALID-JSON'
 
 results = {}
 inputs = {}
