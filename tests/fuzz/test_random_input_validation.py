@@ -23,7 +23,6 @@ pytestmark = pytest.mark.fuzz
 # =============================================================================
 
 
-@pytest.mark.fuzz
 @pytest.fixture(autouse=True)
 def mocked_logger():
     """The decoders log, and the logger is not initialised under pytest"""
