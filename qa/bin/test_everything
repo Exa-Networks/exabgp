@@ -156,11 +156,11 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     'ruff-format': 'uv run ruff format src tests',
     'ruff-check': 'uv run ruff check src qa tests',
     'mypy': 'uv run mypy src/exabgp/',
-    'unit': 'env exabgp_log_enable=false uv run pytest ./tests/unit/ ./tests/fuzz/ -q',
+    'unit': 'env exabgp_log_enable=false uv run pytest ./tests/ -q',
     # the same suite with assertions removed. An assert which is doing real work passes
     # every normal run and vanishes in production: the BGP-LS decoder boundary was one
     # statement of that shape, and this is the only thing which catches it.
-    'optimised': 'env exabgp_log_enable=false PYTHONOPTIMIZE=1 uv run pytest ./tests/unit/ ./tests/fuzz/ -q',
+    'optimised': 'env exabgp_log_enable=false PYTHONOPTIMIZE=1 uv run pytest ./tests/ -q',
     'config': './sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf',
     'no-neighbor': './qa/scripts/test_no_neighbor.py',
     'encode-decode': './qa/scripts/test_encode_decode.py',
@@ -176,7 +176,6 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     'type-ignore': './qa/bin/check_type_ignores',
     'tiger-style': './qa/bin/check_tiger_style',
     'tests-run': './qa/bin/check_tests_run',
-    'integration': 'env exabgp_log_enable=false uv run pytest ./tests/integration/ ./tests/async_debug/ -q',
     'sweep-floors': './qa/bin/check_sweep_floors',
     'renders-json': './qa/bin/compat_gate --this-tree-only',
     'documentation': './qa/bin/check_documentation',
@@ -203,7 +202,6 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'type-ignore': 'Prohibited # type: comments check',
     'tiger-style': 'Tiger style check',
     'tests-run': 'Every test file is collected',
-    'integration': 'Connection lifecycle and RIB behaviour under concurrency',
     'sweep-floors': 'No sweep shrinks silently',
     'renders-json': 'Every corpus input renders JSON a consumer can parse',
     'documentation': 'Documentation matches the code',
@@ -231,7 +229,6 @@ TEST_ORDER = [
     'type-ignore',
     'tiger-style',
     'tests-run',
-    'integration',
     'sweep-floors',
     'renders-json',
     'documentation',
@@ -241,17 +238,28 @@ TEST_ORDER = [
 # "All N tests passed" because N counts what ran.  That is how renders-json was added,
 # reported green, and had not executed once.  A gate which does not run is worse than a
 # missing gate: the missing one does not tell you it is fine.
-# Every directory under tests/ which defines tests is either run by a stage above or
-# named here with the reason it is not.
+# Every directory under tests/ which defines tests has to be REACHED by a pytest stage.
 #
 # check_tests_run asks whether pytest COLLECTS a file, which is a different question from
-# whether anything RUNS it, and the difference had a cost: tests/async_debug held two
-# tests broken against the packed-bytes-first refactor, calling INET(action=...) and
-# rib._refresh_changes, both gone.  They failed for months.  The suite was green because
-# no stage named that directory, and check_tests_run was green because collection is not
-# execution.  Same sentence as the qa/bin walk below: the number is what ran.
-NOT_A_SUITE = {
-    'performance': 'measures against tests/performance/baseline.json; a timing number on a loaded machine is not a pass or a fail',
+# whether anything RUNS it, and the difference had a cost twice over.
+#
+# tests/async_debug held two tests broken against the packed-bytes-first refactor, calling
+# INET(action=...) and rib._refresh_changes, both long gone.  No stage named the directory
+# and check_tests_run was green, because collection is not execution.
+#
+# Worse in CI, which ran ./tests/unit/test_*.py ./tests/fuzz/test_*.py.  That glob does not
+# recurse, so 34 files in subdirectories of tests/unit never ran there either: 4341 tests of
+# the 5193 in the tree, green about 84% of itself.  Session 5.0 found the same enumeration
+# on their branch and made the argument this now follows: adding the missing paths to a hand
+# written list reloads the same gun, so name the root instead.
+#
+# Hence the check below is not "is this directory listed" but "does a stage reach it".  A
+# stage naming ./tests reaches all of them and a list of children reaches only what it names.
+NOT_A_SUITE: dict[str, str] = {
+    # empty on purpose.  tests/performance looked like a timing suite and is not: all 52 of
+    # its assertions are counts and equalities, the wall clock it samples is reported and
+    # never asserted against, and baseline.json is referenced by no test.  Grepping for
+    # 'time' said otherwise, which is how it nearly ended up excused here.
 }
 
 _test_root = Path(__file__).resolve().parent.parent.parent / 'tests'
@@ -259,13 +267,37 @@ if _test_root.is_dir():
     _stage_text = ' '.join(
         part for command in TEST_COMMANDS.values() for part in ([command] if isinstance(command, str) else command)
     )
+    _whole_tree = './tests/ ' in _stage_text or './tests ' in _stage_text
     _with_tests = {entry.name for entry in _test_root.iterdir() if entry.is_dir() and any(entry.rglob('test_*.py'))}
-    _unrun = sorted(name for name in _with_tests if f'tests/{name}' not in _stage_text and name not in NOT_A_SUITE)
+    _unrun = sorted(
+        name
+        for name in _with_tests
+        if not _whole_tree and f'tests/{name}' not in _stage_text and name not in NOT_A_SUITE
+    )
     _gone = sorted(NOT_A_SUITE.keys() - _with_tests)
     if _unrun or _gone:
         raise SystemExit(
-            'tests/ is inconsistent: %s defines tests which no stage runs, %s named as not-a-suite but holds no tests'
+            'tests/ is inconsistent: %s defines tests which no stage reaches, %s named as not-a-suite but holds no tests'
             % (_unrun or 'none', _gone or 'none')
+        )
+
+# CI has to reach the whole tree too, or the two disagree about what "the tests" means and
+# only one of them is right.  This is the check for the shape which caused it: a pytest
+# invocation naming children of tests/ rather than the root.  A glob like tests/unit/test_*.py
+# reads as thorough and silently skips every subdirectory.
+_workflows = Path(__file__).resolve().parent.parent.parent / '.github' / 'workflows'
+if _workflows.is_dir():
+    _narrow = []
+    for _flow in sorted(_workflows.glob('*.yml')):
+        for _number, _line in enumerate(_flow.read_text().splitlines(), 1):
+            if 'pytest' not in _line or _line.lstrip().startswith('#'):
+                continue
+            if 'tests/unit' in _line or 'tests/fuzz' in _line or 'test_*.py' in _line:
+                _narrow.append(f'{_flow.name}:{_number}')
+    if _narrow:
+        raise SystemExit(
+            'a workflow runs pytest over children of tests/ rather than the root, which skips '
+            'whatever is added next: %s' % ', '.join(_narrow)
         )
 
 # Everything in qa/bin is a gate unless it is named here as a tool, with the reason.

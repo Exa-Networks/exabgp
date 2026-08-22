@@ -42,9 +42,15 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
+      # ./tests, not a list of paths.  This said ./tests/unit/test_*.py ./tests/fuzz/test_*.py,
+      # which is a hand written enumeration of a tree that grew: the glob does not recurse,
+      # so 34 files in subdirectories of tests/unit never ran here, nor did tests/integration,
+      # tests/performance or tests/async_debug.  4341 tests ran of 5193 in the tree, and CI
+      # was green about the 84%.  Naming the root is the only version of this which cannot
+      # go stale as directories are added.
       - name: pytest
         run: |
-          env PYTHONPATH=src exabgp_log_enable=false uv run pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py
+          env PYTHONPATH=src exabgp_log_enable=false uv run pytest --cov --cov-reset ./tests
 
       # An assert which is doing real work passes every normal run and vanishes in
       # production. The BGP-LS decoder boundary was one statement of that shape: the assert
@@ -52,7 +58,7 @@ jobs:
       # 83 tests passed normally and 12 failed under -O. Nothing else catches it.
       - name: pytest with assertions removed
         run: |
-          env PYTHONPATH=src PYTHONOPTIMIZE=1 exabgp_log_enable=false uv run pytest -q ./tests/unit/test_*.py ./tests/fuzz/test_*.py
+          env PYTHONPATH=src PYTHONOPTIMIZE=1 exabgp_log_enable=false uv run pytest -q ./tests
 
       # A unit test asserts the NEW behaviour, so it can never notice that the new
       # behaviour is a peering somebody loses on upgrade. This decodes the same corpus in
