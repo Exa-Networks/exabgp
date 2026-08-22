@@ -96,6 +96,11 @@ FlowConditionT = TypeVar(
 SINGLE_SLASH = 1  # Format with single slash (IP/prefix)
 DOUBLE_SLASH = 2  # IPv6 format with offset (IP/prefix/offset)
 
+# FlowSpec prefix netmask bounds (RFC 4271 / RFC 4291): the mask is packed into a
+# single wire byte alongside the prefix, but only these ranges are meaningful.
+IPV4_MAX_NETMASK = 32
+IPV6_MAX_NETMASK = 128
+
 # Bit width constants for local administrator field validation
 LOCAL_ADMIN_16_BITS = 16  # 16-bit local administrator field
 LOCAL_ADMIN_32_BITS = 32  # 32-bit local administrator field
@@ -124,6 +129,35 @@ def flow() -> Route:
     return Route(nlri, AttributeCollection(), nexthop=IP.NoNextHop)
 
 
+def _bounded_netmask(netmask: str, max_netmask: int) -> int:
+    """Parse a FlowSpec prefix netmask, rejecting anything outside 0..max_netmask.
+
+    make_prefix4()/make_prefix6() pack the mask into a single wire byte without
+    checking it, so an out-of-range value (e.g. an IPv4 /99) would otherwise reach
+    the wire as a malformed prefix length rather than fail at configuration time.
+    """
+    mask = int(netmask)
+    if not 0 <= mask <= max_netmask:
+        raise ValueError(f'netmask {mask} is not in the range 0-{max_netmask}')
+    return mask
+
+
+def _bounded_offset(offset: str, netmask: int) -> int:
+    """Parse an IPv6 FlowSpec prefix offset, rejecting anything outside 0..netmask.
+
+    RFC 8956 encodes (netmask - offset) significant bits following the offset, so
+    an offset past the netmask leaves nothing for it to offset into. The bound is
+    inclusive of netmask itself (zero significant bits remaining is accepted, not
+    rejected) as the policy chosen for this fix -- make_prefix6() stores whatever
+    offset it is given without checking it, so nothing in this codebase already
+    settles which side of that boundary is correct.
+    """
+    value = int(offset)
+    if not 0 <= value <= netmask:
+        raise ValueError(f'offset {value} is not in the range 0-{netmask}')
+    return value
+
+
 def source(tokeniser: 'Tokeniser') -> Generator[Flow4Source | Flow6Source, None, None]:
     """Update source to handle both IPv4 and IPv6 flows."""
     data: str = tokeniser()
@@ -132,22 +166,27 @@ def source(tokeniser: 'Tokeniser') -> Generator[Flow4Source | Flow6Source, None,
     is_ipv6_offset: bool = data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH
     if not (is_ipv4 or is_ipv6 or is_ipv6_offset):
         raise ValueError(f'unrecognised flow source "{data}"')
+    component: Flow4Source | Flow6Source
     try:
         ip: str
         netmask: str
         if is_ipv4:
             ip, netmask = data.split('/')
+            mask: int = _bounded_netmask(netmask, IPV4_MAX_NETMASK)
             raw: bytes = b''.join(bytes([int(_)]) for _ in ip.split('.'))
-            yield Flow4Source.make_prefix4(raw, int(netmask))
+            component = Flow4Source.make_prefix4(raw, mask)
         elif is_ipv6:
             ip, netmask = data.split('/')
-            yield Flow6Source.make_prefix6(IP.pton(ip), int(netmask), 0)
+            mask = _bounded_netmask(netmask, IPV6_MAX_NETMASK)
+            component = Flow6Source.make_prefix6(IP.pton(ip), mask, 0)
         else:
             offset: str
             ip, netmask, offset = data.split('/')
-            yield Flow6Source.make_prefix6(IP.pton(ip), int(netmask), int(offset))
+            mask = _bounded_netmask(netmask, IPV6_MAX_NETMASK)
+            component = Flow6Source.make_prefix6(IP.pton(ip), mask, _bounded_offset(offset, mask))
     except (OSError, IndexError, ValueError) as exc:
         raise ValueError(f'invalid flow source "{data}": {exc}') from None
+    yield component
 
 
 def destination(tokeniser: 'Tokeniser') -> Generator[Flow4Destination | Flow6Destination, None, None]:
@@ -158,22 +197,27 @@ def destination(tokeniser: 'Tokeniser') -> Generator[Flow4Destination | Flow6Des
     is_ipv6_offset: bool = data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH
     if not (is_ipv4 or is_ipv6 or is_ipv6_offset):
         raise ValueError(f'unrecognised flow destination "{data}"')
+    component: Flow4Destination | Flow6Destination
     try:
         ip: str
         netmask: str
         if is_ipv4:
             ip, netmask = data.split('/')
+            mask: int = _bounded_netmask(netmask, IPV4_MAX_NETMASK)
             raw: bytes = b''.join(bytes([int(_)]) for _ in ip.split('.'))
-            yield Flow4Destination.make_prefix4(raw, int(netmask))
+            component = Flow4Destination.make_prefix4(raw, mask)
         elif is_ipv6:
             ip, netmask = data.split('/')
-            yield Flow6Destination.make_prefix6(IP.pton(ip), int(netmask), 0)
+            mask = _bounded_netmask(netmask, IPV6_MAX_NETMASK)
+            component = Flow6Destination.make_prefix6(IP.pton(ip), mask, 0)
         else:
             offset: str
             ip, netmask, offset = data.split('/')
-            yield Flow6Destination.make_prefix6(IP.pton(ip), int(netmask), int(offset))
+            mask = _bounded_netmask(netmask, IPV6_MAX_NETMASK)
+            component = Flow6Destination.make_prefix6(IP.pton(ip), mask, _bounded_offset(offset, mask))
     except (OSError, IndexError, ValueError) as exc:
         raise ValueError(f'invalid flow destination "{data}": {exc}') from None
+    yield component
 
 
 # Expressions
