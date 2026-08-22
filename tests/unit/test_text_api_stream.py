@@ -161,3 +161,86 @@ class TestOperationalDecoder:
         with contextlib.redirect_stdout(captured):
             assert Operational.unpack_message(b'\xff\xff\x00\x00', None, None) is None
         assert captured.getvalue() == ''
+
+
+class TestTheShutdownCommunicationIsFlattenedOnPurpose:
+    """A sanitise-by-deleting which is deliberate, and said so nowhere
+
+    RFC 9003 shutdown communication is text the peer chose. Both paths that
+    render it replace CR and LF with spaces rather than escaping them:
+
+        data[:length].decode('utf-8').replace('\r', ' ').replace('\n', ' ')
+
+    That is the shape this series has been treating as a defect everywhere else,
+    and here it is a display choice: the message is meant to be one line for an
+    operator, the same reason the text encoder has oneline(). Both the decoder
+    and the transcoder do it identically, so a consumer sees the same thing
+    either way.
+
+    It is pinned rather than changed because the encoder now escapes correctly,
+    which makes the replace redundant for JSON, which makes it look exactly like
+    a bug to the next person applying the escaping lens. Turning it into escaping
+    would change what every operator sees on a shutdown, and that is a decision
+    rather than a cleanup.
+
+    The distinction this file exists to hold: a peer must not be able to FORGE a
+    line, and that is served by escaping. Whether a multi-line human message is
+    flattened for display is a different question with a different answer.
+    """
+
+    @staticmethod
+    def shutdown(text):
+        from exabgp.bgp.message.notification import Notification
+
+        encoded = text.encode('utf-8')
+        return Notification.unpack_message(bytes([6, 2, len(encoded)]) + encoded)
+
+    def test_a_newline_becomes_a_space(self) -> None:
+        data = self.shutdown('maintenance\nwindow')
+        rendered = data.data.decode() if isinstance(data.data, bytes) else str(data.data)
+        assert '\n' not in rendered
+        assert 'maintenance window' in rendered
+
+    def test_the_exact_flattened_text(self) -> None:
+        # The exact text, rather than two properties of it.
+        #
+        # I added this believing the two assertions above let a strip-rather-than
+        # -space implementation through, and they do not: 'maintenance window' is
+        # spelled with the space, so it is already absent from 'maintenancewindow'
+        # and the words-survive assertion fails. I claimed otherwise without
+        # running it, which is the whole failure this series keeps finding, made
+        # while writing the fix for a neighbouring instance of it.
+        #
+        # It stays because the exact string is the honest statement of a display
+        # choice: what an operator sees is the thing being pinned, and two
+        # properties of it are a description. The carriage return case below is
+        # the gap that WAS real, and no measurement was needed to see it, because
+        # nothing in the tree passed a \r at all.
+        data = self.shutdown('maintenance\nwindow')
+        rendered = data.data.decode() if isinstance(data.data, bytes) else str(data.data)
+        assert rendered == 'Shutdown Communication: "maintenance window"'
+
+    def test_a_carriage_return_is_flattened_too(self) -> None:
+        # the replace handles \r as well as \n, and only \n was pinned
+        data = self.shutdown('maintenance\r\nwindow')
+        rendered = data.data.decode() if isinstance(data.data, bytes) else str(data.data)
+        assert rendered == 'Shutdown Communication: "maintenance  window"'
+
+    def test_the_words_survive_the_flattening(self) -> None:
+        # the half which separates flattening from discarding: an implementation
+        # which dropped the message entirely also has no newline in it
+        data = self.shutdown('urgent\nreboot at 0300')
+        rendered = data.data.decode() if isinstance(data.data, bytes) else str(data.data)
+        assert 'urgent' in rendered
+        assert 'reboot at 0300' in rendered
+
+    def test_a_quote_in_it_cannot_forge_a_member(self) -> None:
+        # flattening is a display choice; NOT being forgeable is the property
+        # this file is about, and it is the encoder's job rather than the
+        # replace's
+        from exabgp.reactor.api.response.json import JSON
+
+        data = self.shutdown('x", "injected": "owned')
+        rendered = data.data.decode() if isinstance(data.data, bytes) else str(data.data)
+        line = JSON('5.0.0')._string(rendered)
+        assert json.loads('{"shutdown": %s}' % line)['shutdown'] == rendered
