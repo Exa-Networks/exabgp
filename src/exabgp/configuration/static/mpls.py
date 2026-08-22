@@ -61,9 +61,17 @@ def route_distinguisher(tokeniser: Any) -> RouteDistinguisher:
     data = tokeniser()
 
     separator = data.find(':')
-    if separator > 0:
-        prefix = data[:separator]
+    if separator <= 0:
+        raise ValueError(
+            f"'{data}' is not a valid route-distinguisher\n"
+            f"  Expected format: ASN:nn or IP:nn (e.g., '65000:100' or '192.0.2.1:100')"
+        )
+
+    prefix = data[:separator]
+    try:
         suffix = int(data[separator + 1 :])
+    except ValueError:
+        raise ValueError(f"'{data}' is not a valid route-distinguisher\n  Suffix must be a number") from None
 
     if '.' in prefix:
         data_list: list[bytes] = [bytes([0, 1])]
@@ -90,34 +98,40 @@ def prefix_sid(tokeniser: Any) -> PrefixSid:  # noqa: C901
     value = tokeniser()
     get_range = False
     consume_extra = False
+
+    if value != '[':
+        raise ValueError(
+            f"'{value}' is not a valid bgp-prefix-sid\n"
+            f'  Format: [ <label-index> ] or [ <label-index>, [ ( <srgb-base>,<srgb-range> ) ] ]'
+        )
+
     try:
-        if value == '[':
-            label_sid = tokeniser()
-            while True:
-                value = tokeniser()
-                if value == '[':
-                    consume_extra = True
-                    continue
-                if value == ',':
-                    continue
-                if value == '(':
-                    while True:
-                        value = tokeniser()
-                        if value == ')':
-                            break
-                        if value == ',':
-                            get_range = True
-                            continue
-                        if get_range:
-                            srange = value
-                            get_range = False
-                        else:
-                            base = value
-                if value == ')':
-                    srgb_data.append((base, srange))
-                    continue
-                if value == ']':
-                    break
+        label_sid = tokeniser()
+        while True:
+            value = tokeniser()
+            if value == '[':
+                consume_extra = True
+                continue
+            if value == ',':
+                continue
+            if value == '(':
+                while True:
+                    value = tokeniser()
+                    if value == ')':
+                        break
+                    if value == ',':
+                        get_range = True
+                        continue
+                    if get_range:
+                        srange = value
+                        get_range = False
+                    else:
+                        base = value
+            if value == ')':
+                srgb_data.append((base, srange))
+                continue
+            if value == ']':
+                break
         if consume_extra:
             tokeniser()
     except Exception as e:

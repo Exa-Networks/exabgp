@@ -60,6 +60,9 @@ def run(tokeniser: 'Tokeniser') -> list[str]:
     """
     prg = tokeniser()
 
+    if not prg:
+        raise ValueError('the "run" command requires a program path\n  Format: run <path-to-executable>;')
+
     if prg[0] != '/':
         if prg.startswith('etc/exabgp'):
             options = _make_path(prg)
