@@ -186,8 +186,33 @@ def run(cwd, seeds):
         os.unlink(probe)
     if not finished.stdout.strip():
         sys.stderr.write(finished.stderr[-2000:])
-        raise SystemExit('the probe produced nothing in %s' % cwd)
+        cannot_run('the probe produced nothing in %s' % cwd)
     return json.loads(finished.stdout)
+
+
+
+CANNOT_RUN = 2  # distinct from 1, which means the gate ran and found something
+
+
+def cannot_run(message):
+    """Exit 2, never 1
+
+    A gate which cannot execute must not use the exit code that means it found
+    something. SystemExit('text') exits 1, and so does SystemExit(2, 'text'),
+    whose .code is a TUPLE: both of those were in this file, so a dead probe was
+    indistinguishable from a real regression.
+
+    That matters because the test which proves this gate works is "reinstate the
+    bug, expect exit 1", and a gate broken while making it would pass that test.
+    It happened: a docstring added to a function inside the PROBE string closed
+    the string, and the resulting SyntaxError exited 1 on the very run being used
+    as proof.
+
+    Confirming the tool still runs is the discipline. A different exit code is
+    the part which does not depend on remembering.
+    """
+    sys.stderr.write('cannot run: %s\n' % message)
+    raise SystemExit(CANNOT_RUN)
 
 
 def collect_seeds():
@@ -234,11 +259,11 @@ def main():
             ['git', 'describe', '--tags', '--abbrev=0'], capture_output=True, text=True, cwd=ROOT
         ).stdout.strip()
     if not tag:
-        raise SystemExit('no tag to compare against, pass one explicitly')
+        cannot_run('no tag to compare against, pass one explicitly')
 
     seeds = collect_seeds()
     if not seeds:
-        raise SystemExit('no corpus: both trees would decode different bytes, which proves nothing')
+        cannot_run('no corpus: both trees would decode different bytes, which proves nothing')
     print('comparing this tree against %s over %d NLRI families' % (tag, len(seeds)))
 
     worktree = tempfile.mkdtemp(prefix='compat-gate-')
@@ -257,7 +282,7 @@ def main():
     # those families compared different inputs while reporting a number.
     shared = set(before['inputs']) & set(after['inputs'])
     if not shared:
-        raise SystemExit(2, 'the two runs share no input at all, nothing here is comparable')
+        cannot_run('the two runs share no input at all, nothing here is comparable')
     differing = sorted(key for key in shared if before['inputs'][key] != after['inputs'][key])
     if differing:
         print('the two trees were handed DIFFERENT bytes for %d inputs, refusing to compare' % len(differing))
