@@ -82,6 +82,7 @@ def corpus_program() -> str:
     return """
 import hashlib, json, struct, sys
 from exabgp.bgp.message import Action
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -123,11 +124,25 @@ def record(key, fn, given=b''):
     try:
         rendered = value.json()
     except Exception as exc:
-        out[key] = 'RENDER-ERROR:' + type(exc).__name__
+        # NotImplementedError is a choice, not a failure: some attributes are rendered by
+        # AttributeCollection through str().  It keeps a distinct verdict so the relative
+        # comparison still catches a NEW one, and is not read as a broken line below.
+        out[key] = 'NO-JSON' if isinstance(exc, NotImplementedError) else 'RENDER-ERROR:' + type(exc).__name__
         return
-    try:
-        json.loads(rendered if rendered.startswith('{') else '{' + rendered + '}')
-    except ValueError:
+    # json() returns a FRAGMENT, and there are three valid shapes: a complete object, a
+    # member to be spliced into one ('"rd": "1.2.3.4:7"'), and a bare value the caller
+    # assigns to a key (ClusterList returns '[ "0.0.0.0" ]').  Trying only the first two
+    # called every ClusterList unparseable.  That was invisible while this verdict was
+    # only ever compared against the same mistake in the other tree, and became 155 false
+    # failures the moment the verdict was read on its own.  Same wrappings as parses() in
+    # tests/fuzz/test_message_decoder_properties.py; the two must agree.
+    for candidate in (rendered, '{' + rendered + '}', '[' + rendered + ']'):
+        try:
+            json.loads(candidate)
+            break
+        except ValueError:
+            continue
+    else:
         out[key] = 'UNPARSEABLE'
         return
     out[key] = 'ACCEPT:' + hashlib.sha1(rendered.encode()).hexdigest()[:10]
@@ -152,6 +167,49 @@ for afi, safi in sorted(set(NLRI.known_families()), key=lambda f: (int(f[0]), in
                     )[0],
                     prefix + body,
                 )
+
+# Shaped seeds, for the families a fill pattern cannot reach.
+#
+# The loop above emits length bytes followed by a repeated fill, which the mask and route
+# distinguisher checks refuse before a VPN decoder reads anything. So every VPN family was
+# covered only by inputs which never got past the first check, and the gate reported them
+# green while testing nothing about them. That is the corpus-cannot-reach-the-code failure,
+# inside the tool built to catch regressions.
+#
+# It cost a real bug: a BGP-LS VPN link NLRI rendered a nameless object into the middle of
+# its own JSON, so the whole line was unparseable, and neither this corpus nor 5.0's had a
+# seed which reached the renderer.
+RD = bytes([0, 1]) + bytes([10, 0, 0, 1]) + bytes([0, 7])
+LABEL = bytes([0, 0, 0x11])
+IFACE = struct.pack('!HH', 259, 4) + bytes([192, 0, 2, 1])
+REACH = struct.pack('!HH', 265, 4) + bytes([24, 192, 0, 2])
+
+
+def bgpls(code, descriptor, rd=b''):
+    body = bytes([3]) + bytes(8) + descriptor
+    return struct.pack('!HH', code, len(body) + len(rd)) + rd + body
+
+
+SHAPED = [
+    ('ipv4/nlri-mpls', AFI.ipv4, SAFI.nlri_mpls, bytes([48]) + LABEL + bytes([10, 0, 0])),
+    ('ipv6/nlri-mpls', AFI.ipv6, SAFI.nlri_mpls, bytes([48]) + LABEL + bytes([0x20, 0x01, 0x0D])),
+    ('ipv4/mpls-vpn', AFI.ipv4, SAFI.mpls_vpn, bytes([112]) + LABEL + RD + bytes([10, 0, 0])),
+    ('ipv6/mpls-vpn', AFI.ipv6, SAFI.mpls_vpn, bytes([112]) + LABEL + RD + bytes([0x20, 0x01, 0x0D])),
+    ('ipv4/flow-vpn', AFI.ipv4, SAFI.flow_vpn, bytes([11]) + RD + bytes([0x03, 0x81, 0x06])),
+    ('l2vpn/vpls', AFI.l2vpn, SAFI.vpls, bytes([0, 17]) + RD + bytes(9)),
+    ('bgp-ls/link', AFI.bgpls, SAFI.bgp_ls, bgpls(2, IFACE)),
+    ('bgp-ls/prefixv4', AFI.bgpls, SAFI.bgp_ls, bgpls(3, REACH)),
+    ('bgp-ls-vpn/link', AFI.bgpls, SAFI.bgp_ls_vpn, bgpls(2, IFACE, RD)),
+    ('bgp-ls-vpn/prefixv4', AFI.bgpls, SAFI.bgp_ls_vpn, bgpls(3, REACH, RD)),
+]
+
+for name, afi, safi, wire in SHAPED:
+    for action_name, action in (('announce', Action.ANNOUNCE), ('withdraw', Action.WITHDRAW)):
+        record(
+            'shaped/%s/%s' % (name, action_name),
+            lambda a=afi, s=safi, d=wire, act=action: NLRI.unpack_nlri(a, s, d, act, None, None)[0],
+            wire,
+        )
 
 for key in sorted(Attribute.registered_attributes, key=str):
     klass = Attribute.registered_attributes[key]
@@ -283,6 +341,25 @@ def main(argv: list[str]) -> int:
         except CannotObserve as exc:
             sys.stderr.write(f'{exc}\n')
             return 2
+
+    # UNPARSEABLE and RENDER-ERROR are wrong ABSOLUTELY, not relative to the old tree.
+    #
+    # Everything else this gate does is a comparison, and a comparison cannot see a defect
+    # both trees share.  Measured: a BGP-LS VPN link rendered a nameless object into the
+    # middle of its own JSON, upstream did it too, and putting the bug back produced "0
+    # regressions" because both sides agreed.  I had just added the seed which reaches that
+    # renderer and claimed it would have caught the bug.  It would not have; only this does.
+    #
+    # A line no JSON parser accepts is a broken line whatever the previous release did with
+    # it, so it fails here rather than being compared.
+    broken = sorted(
+        key for key, verdict in after_run['verdict'].items() if verdict.startswith(('UNPARSEABLE', 'RENDER-ERROR'))
+    )
+    if broken:
+        sys.stderr.write('%d input(s) render something no JSON parser accepts:\n' % len(broken))
+        for key in broken[:20]:
+            sys.stderr.write('  %-44s %s\n' % (key, after_run['verdict'][key]))
+        return 1
 
     before, after = before_run['verdict'], after_run['verdict']
     given_before, given_after = before_run['input'], after_run['input']
