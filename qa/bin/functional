@@ -26,6 +26,7 @@ from typing import (
     Any,
     Dict,
     Generator,
+    IO,
     List,
     Optional,
     Pattern,
@@ -531,9 +532,17 @@ class Exec:
         self.stderr: bytes = b''
         self.message: str = ''
         self._process: Optional[subprocess.Popen] = None
-        self._stdout_file: Optional[Any] = None
-        self._stderr_file: Optional[Any] = None
+        self._stdout_file: Optional[IO[bytes]] = None
+        self._stderr_file: Optional[IO[bytes]] = None
         self.command: str = ''
+
+    def _close_temp_files(self) -> None:
+        """Release the temp files backing stdout/stderr. Safe to call more than once
+        (e.g. once from an exception path and again from terminate())."""
+        if self._stdout_file is not None and not self._stdout_file.closed:
+            self._stdout_file.close()
+        if self._stderr_file is not None and not self._stderr_file.closed:
+            self._stderr_file.close()
 
     def run(self, command: List[str], env: Optional[Dict[str, str]]) -> 'Exec':
         self.command = ' '.join([_ if ' ' not in _ else f"'{_}'" for _ in command])
@@ -543,21 +552,31 @@ class Exec:
             env['exabgp_log_enable'] = 'false'
             env['exabgp_api_version'] = '4'  # v6 is default, v4 for backward compatibility (text encoder)
 
+        # Guard against reusing an Exec (e.g. a retry) without the previous
+        # run's files having been closed first.
+        self._close_temp_files()
+
         # Back stdout/stderr with real files, not pipes: a pipe's kernel buffer
         # is bounded (8192-65536 bytes here) and nothing reads it until collect()
         # runs, so a daemon that logs past that cap blocks in write() forever.
         # Files never apply that backpressure, so the daemon can always proceed.
         self._stdout_file = tempfile.TemporaryFile()
         self._stderr_file = tempfile.TemporaryFile()
-        self._process = subprocess.Popen(
-            command,
-            stdout=self._stdout_file,
-            stderr=self._stderr_file,
-            close_fds=True,
-            stdin=subprocess.DEVNULL,
-            env=env,
-            start_new_session=True,  # Detach from controlling terminal
-        )
+        try:
+            self._process = subprocess.Popen(
+                command,
+                stdout=self._stdout_file,
+                stderr=self._stderr_file,
+                close_fds=True,
+                stdin=subprocess.DEVNULL,
+                env=env,
+                start_new_session=True,  # Detach from controlling terminal
+            )
+        except Exception:
+            # Popen takes no ownership of externally supplied file objects: on
+            # a fork/exec failure it never touches them, so we must close them.
+            self._close_temp_files()
+            raise
         return self
 
     def ready(self) -> bool:
@@ -598,16 +617,20 @@ class Exec:
             self._process.wait()  # type: ignore
             self.code = self._process.returncode  # type: ignore
             _ = signal.alarm(0)
-            self._stdout_file.seek(0)  # type: ignore
-            self.stdout = self._stdout_file.read()  # type: ignore
-            self._stdout_file.close()  # type: ignore
-            self._stderr_file.seek(0)  # type: ignore
-            self.stderr = self._stderr_file.read()  # type: ignore
-            self._stderr_file.close()  # type: ignore
+            if self._stdout_file is not None:
+                self._stdout_file.seek(0)
+                self.stdout = self._stdout_file.read()
+            if self._stderr_file is not None:
+                self._stderr_file.seek(0)
+                self.stderr = self._stderr_file.read()
         except ValueError as exc:  # I/O operation on closed file
             self.message = str(exc)
         except Alarm as exc:
             self.message = str(exc)
+        finally:
+            # Always release the temp files, including on the Alarm/ValueError
+            # paths above where a partial seek/read may have already happened.
+            self._close_temp_files()
 
     def _get_process_tree(self) -> List[Any]:
         """Get all descendant processes recursively using psutil if available"""
@@ -1086,6 +1109,10 @@ class Tests:
                     running.remove(test)
                     test.mark_timeout()
                     test.terminate(collect=False)
+                    # terminate() already confirmed the process is dead, so this
+                    # won't block; it releases the temp files backing stdout/stderr
+                    # instead of leaving them open until the test object is GC'd.
+                    test.collect()
                     success = False
                     if self._verbose or test.nick in self._debug_tests:
                         self._print_test_output(test)
@@ -1110,6 +1137,7 @@ class Tests:
         for test in running:
             test.mark_timeout()
             test.terminate(collect=False)
+            test.collect()  # release the temp files backing stdout/stderr
             success = False
 
         return success
@@ -1817,6 +1845,9 @@ class EncodingTests(Tests):
 
             # Check result
             test_passed = test.result(test.success())
+            # success() already collected the server; also collect the client
+            # so its temp files close here instead of leaking.
+            client[test.nick].collect()
             if test_passed:
                 if not quiet:
                     flush(f'{green()}✓{reset()}')
@@ -2067,11 +2098,15 @@ class EncodingTests(Tests):
                     test.terminate(collect=False)  # Don't block on collect in hot loop
                     client[test.nick].terminate(collect=False)
                     success = False
+                    # Both terminate()s above already confirmed the processes are
+                    # dead, so these won't block: always collect so the temp files
+                    # backing stdout/stderr close here, not just for the first
+                    # failure (they would otherwise leak until the run ends).
+                    test.collect()
+                    client[test.nick].collect()
                     # Capture first failure for debug output
                     if first_failed_test is None:
                         first_failed_test = test
-                        test.collect()
-                        client[test.nick].collect()
                         first_failed_server = test
                         first_failed_client = client[test.nick]
                     # Show per-test output in verbose mode or if test is in debug list
@@ -2089,13 +2124,13 @@ class EncodingTests(Tests):
                 test.terminate(collect=False)  # Also terminate server
                 test_passed = test.result(test.success())
                 success = test_passed and success
+                # success() already collected the server; always collect the
+                # client too so its temp files close here, not just on failure.
+                client[test.nick].collect()
 
                 # Capture first failure for debug output
                 if not test_passed and first_failed_test is None:
                     first_failed_test = test
-                    # Collect output now before it's lost
-                    test.collect()
-                    client[test.nick].collect()
                     first_failed_server = test
                     first_failed_client = client[test.nick]
 
@@ -2116,6 +2151,8 @@ class EncodingTests(Tests):
             test.mark_timeout()
             test.terminate(collect=False)
             client[test.nick].terminate(collect=False)
+            test.collect()  # release the temp files backing stdout/stderr
+            client[test.nick].collect()
             success = False
 
         # Comprehensive cleanup pass to ensure all processes are dead
@@ -2387,6 +2424,7 @@ class ParsingTests(Tests):
             # Check result
             if not test.ready():
                 test.terminate(collect=False)
+                test.collect()  # release the temp files backing stdout/stderr
                 test.state = State.TIMEOUT
                 all_retries_passed = False
                 flush(f'{red()}✗ (timeout){reset()}')
