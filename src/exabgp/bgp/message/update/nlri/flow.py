@@ -910,8 +910,12 @@ class Flow(NLRI):
         rules: dict[int, list[IComponent]] = {}
         bgp = self._packed
 
-        # Skip RD for flow_vpn
-        if self.safi in (SAFI.flow_vpn,) and len(bgp) >= 8:
+        # flow_vpn carries a mandatory 8-byte Route Distinguisher before any rule bytes.
+        # A payload shorter than that has no RD to strip: reject it here, before the rule
+        # loop below gets a chance to read what should have been RD bytes as a rule.
+        if self.safi in (SAFI.flow_vpn,):
+            if len(bgp) < 8:
+                raise Notify(3, 10, 'flow-vpn NLRI too short for its route distinguisher')
             bgp = bgp[8:]
 
         try:
