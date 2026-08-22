@@ -251,8 +251,21 @@ def main():
     allowed = load_allowed()
     counts = {}
     regressions = []
+    unparseable = []
     for key in sorted(set(before) | set(after)):
         old, new = before.get(key, 'ABSENT'), after.get(key, 'ABSENT')
+        # ABSOLUTE, and checked BEFORE the comparison. A gate which only compares
+        # against the last release cannot see a defect both trees share: with the
+        # BGP-LS VPN brace bug reinstated this printed "no regression" and exited
+        # 0, because 5.0.12 renders the same unparseable line and the two trees
+        # agreed. A line no JSON parser accepts is wrong whatever the previous
+        # release did with it.
+        #
+        # Two mistakes cancelling is what a pure comparison rewards, which is the
+        # whole class this gate exists to catch.
+        if new == 'INVALID-JSON' or new.startswith('RENDER-ERROR'):
+            unparseable.append((key, old, new))
+            continue
         if old == new:
             counts['identical'] = counts.get('identical', 0) + 1
             continue
@@ -276,6 +289,15 @@ def main():
 
     for kind, count in sorted(counts.items(), key=lambda i: -i[1]):
         print('  %-28s %d' % (kind, count))
+
+    if unparseable:
+        print('\n%d inputs render JSON no consumer can parse:' % len(unparseable))
+        for key, old_state, new_state in unparseable[:20]:
+            print('  %-34s was %s, is %s' % (key, old_state, new_state))
+        if len(unparseable) > 20:
+            print('  ... and %d more' % (len(unparseable) - 20))
+        print('\nthis is absolute: the last release rendering the same line does not make it valid')
+        return 1
 
     if not regressions:
         print('\nno regression: nothing %s accepts is refused here, and no new crash' % tag)
