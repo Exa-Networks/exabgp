@@ -24,6 +24,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import sys
 import time
 from pathlib import Path
@@ -308,6 +309,18 @@ SCOPED_ON_PURPOSE = {
 }
 
 
+def workflow_files(root: Path) -> list[Path]:
+    """Every CI workflow in the tree, whatever forge and whichever spelling.
+
+    Takes a root so the control below runs THIS function rather than a second glob beside
+    it.  The first version of that control had its own copy of the pattern, so narrowing
+    this walk back to .github left the control green: it was asserting about a glob nothing
+    used.  Caught by running the mutation instead of reading the two lines and seeing that
+    they matched.
+    """
+    return sorted(set(root.glob('.*/workflows/*.yml')) | set(root.glob('.*/workflows/*.yaml')))
+
+
 def _pytest_lines() -> list[tuple[str, str]]:
     """Every pytest invocation in the pipeline: the stages, the workflows, the shell tools.
 
@@ -328,12 +341,19 @@ def _pytest_lines() -> list[tuple[str, str]]:
         for part in [command] if isinstance(command, str) else command:
             if 'pytest' in part:
                 lines.append(('a stage in this file', part))
-    # EVERY workflow directory, not .github alone.  This read .github/workflows only, and
-    # .forgejo/workflows/unit-testing.yml sat outside it running the old glob, so the
-    # codeberg CI, which is the remote this repository actually pushes to, went on running
-    # 4341 of 5193 tests after the github one was fixed.  The gate confirmed the half it
-    # could see and said nothing about the half it could not.
-    for flow in sorted(root.glob('.*/workflows/*.yml')):
+    # EVERY workflow directory and BOTH spellings.  Two assumptions were wearing one
+    # hardcoded path here.
+    #
+    # This read .github/workflows only, and .forgejo/workflows/unit-testing.yml sat outside
+    # it running the old glob, so the codeberg CI, which is the remote this repository
+    # actually pushes to, went on running 4341 of 5193 tests after the github one was fixed.
+    #
+    # Widening that left the second assumption in place: the glob was *.yml, so a workflow
+    # named unit-testing.yaml stayed invisible.  Measured by planting one, and the gate
+    # exited 0 without a word.  Session 5.0 found this half on their branch, where the forge
+    # half was not live, which is why it is worth widening both rather than the one your own
+    # tree happens to punish you for.
+    for flow in workflow_files(root):
         for number, line in enumerate(flow.read_text().splitlines(), 1):
             if 'pytest' in line and not line.lstrip().startswith('#'):
                 lines.append((f'{flow.parent.parent.name}/{flow.name}:{number}', line))
@@ -381,6 +401,41 @@ def _paths_selecting_nothing() -> list[str]:
                 empty.append(f'{where}: {token} does not exist')
     return empty
 
+
+# Controls for the walk itself.  A walk which resolves the directories the hardcoded path
+# used to resolve agrees with what it replaced and says nothing about the cases it was
+# widened for, so those are asserted by name, through the same function the reader uses.
+_WORKFLOW_DIRECTORIES = {'.github', '.forgejo'}
+_root = Path(__file__).resolve().parent.parent.parent
+_seen_forges = {flow.parent.parent.name for flow in workflow_files(_root)}
+if not _WORKFLOW_DIRECTORIES <= _seen_forges:
+    raise SystemExit(
+        'the workflow walk no longer reaches %s, so the form check below is not reading the '
+        'CI it claims to read' % ', '.join(sorted(_WORKFLOW_DIRECTORIES - _seen_forges))
+    )
+
+# A positive control for the spelling, on a planted tree.
+#
+# The forge control above cannot cover it: .github and .forgejo both resolve through .yml
+# files, so narrowing the walk to *.yml leaves it green while a workflow named .yaml goes
+# unread.  There is no .yaml workflow in this repository to assert against, which is exactly
+# the case a control is for, so one is built in a temporary directory and the walk is
+# pointed at it.  That is why workflow_files takes a root.
+#
+# Not an assert.  python -O deletes those, and a control which vanishes under -O reads as
+# rigour in the file while being absent from the run: session 5.0 measured their own
+# positive control passing under -O with the detector deliberately broken.
+with tempfile.TemporaryDirectory() as _planted:
+    _tree = Path(_planted)
+    for _forge, _name in (('.github', 'a.yml'), ('.forgejo', 'b.yaml')):
+        (_tree / _forge / 'workflows').mkdir(parents=True)
+        (_tree / _forge / 'workflows' / _name).write_text('jobs: {}\n')
+    _found = {flow.name for flow in workflow_files(_tree)}
+    if _found != {'a.yml', 'b.yaml'}:
+        raise SystemExit(
+            'the workflow walk found %s on a planted tree holding a.yml and b.yaml, so it '
+            'reads one spelling and a workflow named the other way is invisible to it' % (sorted(_found) or 'nothing')
+        )
 
 _narrow = _narrow_pytest_paths()
 if _narrow:
