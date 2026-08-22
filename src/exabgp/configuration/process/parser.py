@@ -60,6 +60,11 @@ def _resolve_relative_program(tokeniser: 'Tokeniser', prg: str) -> str:
             os.path.abspath(os.path.join(os.path.dirname(tokeniser.fname), prg)),
         ]
         options.extend(os.path.abspath(os.path.join(p, prg)) for p in os.getenv('PATH', '').split(':'))
+    # `options` is ordered most-specific-first: /etc/exabgp, then the config
+    # file's own directory, then $PATH entries in order. Returning on the
+    # first match (rather than scanning to the end) is deliberate, so a
+    # more specific candidate always wins over a less specific later one -
+    # do not turn this back into a fall-through that keeps the last match.
     for option in options:
         if os.path.exists(option):
             return option

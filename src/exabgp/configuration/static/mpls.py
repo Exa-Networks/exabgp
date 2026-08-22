@@ -79,6 +79,10 @@ def route_distinguisher(tokeniser: Any) -> RouteDistinguisher:
             data_list.extend([bytes([int(_)]) for _ in prefix.split('.')])
             data_list.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
             rtd = b''.join(data_list)
+        # IndexError is not currently reachable from this block (int()/bytes() on a
+        # split octet only ever raise ValueError); kept defensively, matching
+        # RouteDistinguisherValidator._parse in configuration/validator.py, the model
+        # this mirrors, in case a future change to the octet-parsing above introduces one.
         except (ValueError, IndexError):
             raise ValueError(f"'{data}' is not a valid route-distinguisher (invalid IPv4 address)") from None
     else:
