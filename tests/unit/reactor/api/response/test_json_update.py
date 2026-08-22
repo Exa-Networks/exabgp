@@ -212,6 +212,39 @@ class TestEventJSONSemantics:
             'subtype': 'begin',
         }
 
+    ADVERSARIAL_ADVISORIES = [
+        ('a quote', 'say "hello"'),
+        ('a backslash', 'C:\\path'),
+        ('a newline', 'one\ntwo'),
+        ('an injection attempt', 'x", "injected": "owned'),
+        ('a control character', 'bell\x07here'),
+        ('a NUL', 'x\x00y'),
+        ('a tab', 'a\tb'),
+        ('unicode', 'caf\u00e9 \u2603'),
+        ('a nested object', '{"not":"json"}'),
+        ('the maximum text', 'A' * 200),
+    ]
+
+    @pytest.mark.parametrize('label,text', ADVERSARIAL_ADVISORIES, ids=[c[0] for c in ADVERSARIAL_ADVISORIES])
+    def test_an_advisory_a_peer_chose_cannot_break_the_stream(self, json_encoder, api_neighbor, label, text):
+        """The ADM/ASM advisory is free text the peer picks
+
+        This path was covered by exactly one string, 'maintenance', which cannot
+        fail whatever the encoder does with quotes, newlines or braces.
+
+        TWO assertions, and the second is the one that earns its place. A fix
+        which sanitises by DELETING the offending characters satisfies "the line
+        still parses" perfectly, and only the round trip says the operator can
+        still read what the peer sent. The session working main measured it:
+        removing the escaping fails 15 of their 20 assertions, stripping the
+        characters instead fails 4, and all 4 are the round trip.
+        """
+        advisory = Advisory.ADM(AFI.ipv4, SAFI.unicast, text)
+        line = json_encoder.operational(api_neighbor, 'receive', 'advisory', advisory, None, b'', b'')
+
+        event = json.loads(line)
+        assert event['neighbor']['operational']['advisory'] == text
+
     def test_operational_events_values_are_strings(self, json_encoder, api_neighbor):
         advisory = Advisory.ADM(AFI.ipv4, SAFI.unicast, 'maintenance')
         query = Query.RPCQ(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7)

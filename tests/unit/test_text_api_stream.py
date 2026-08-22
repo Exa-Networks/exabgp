@@ -67,6 +67,21 @@ class TestCapabilityControlCharacters:
 
         assert '\n' not in Text('5.0.12').oneline(decode_utf8(self.FORGED, 'host name'))
 
+    def test_the_text_encoder_keeps_the_name_it_neutralised(self) -> None:
+        """Deleting the newline also satisfies the assertion above
+
+        A fix which stripped the offending character, or dropped the value
+        entirely, passes "no newline in the output" perfectly. This is the half
+        which says the operator can still see what the peer called itself.
+        """
+        from exabgp.bgp.message.open.capability.capability import decode_utf8
+        from exabgp.reactor.api.response.text import Text
+
+        rendered = Text('5.0.12').oneline(decode_utf8(self.FORGED, 'host name'))
+        assert 'victim' in rendered
+        assert 'forged' in rendered
+        assert '\\x0a' in rendered, 'the newline should be escaped, not removed'
+
     def test_the_json_encoder_neutralises_it(self) -> None:
         from exabgp.bgp.message.open.capability.capability import decode_utf8
         from exabgp.bgp.message.open.capability.hostname import HostName
@@ -74,6 +89,28 @@ class TestCapabilityControlCharacters:
         capability = HostName(decode_utf8(self.FORGED, 'host name'), 'example.com')
         parsed = json.loads('{ "capability": ' + capability.json() + ' }')
         assert sorted(parsed['capability']) == ['domain-name', 'host-name']
+
+    def test_the_json_encoder_keeps_the_name_it_neutralised(self) -> None:
+        """The keys surviving says nothing about the value
+
+        Asserting only that both members are present passes for an encoder which
+        emits "host-name": "" , or which strips the newline out of the middle of
+        the name. Escaping and deleting are different fixes and only this tells
+        them apart.
+
+        The question came from the session working main, who found their
+        operational advisory tested with a single string which could not fail,
+        and measured that sanitising-by-deleting passes a corruption check and
+        fails only a round trip.
+        """
+        from exabgp.bgp.message.open.capability.capability import decode_utf8
+        from exabgp.bgp.message.open.capability.hostname import HostName
+
+        decoded = decode_utf8(self.FORGED, 'host name')
+        capability = HostName(decoded, 'example.com')
+        parsed = json.loads('{ "capability": ' + capability.json() + ' }')
+        assert parsed['capability']['host-name'] == decoded
+        assert parsed['capability']['domain-name'] == 'example.com'
 
 
 class TestAddPathUnknownSendReceive:
