@@ -38,6 +38,8 @@ TESTS = ROOT / 'tests'
 
 NO_TESTS_COLLECTED = 5  # pytest's exit status when a selection matches nothing
 
+CANNOT_RUN = 2  # distinct from 1, which means the gate ran and found something
+
 REGISTRY_NAMES = (
     'registered_lsids',
     'registered_nlri',
@@ -199,8 +201,10 @@ def main():
                 findings.append((path.relative_to(ROOT), full, thin, why))
 
     if not checked:
-        print('no test file reads a registry, which cannot be right')
-        return 1
+        # cannot-run, not a finding: 1 says the gate ran and something is wrong with
+        # the tree, and this says the gate never got to look at anything
+        print('check_sweep_floors cannot run: no test file reads a registry')
+        return CANNOT_RUN
 
     if findings:
         print('these sweeps lose coverage silently when a registry is short:')

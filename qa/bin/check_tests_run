@@ -34,6 +34,65 @@ TESTS = ROOT / 'tests'
 SKIP_DIRS = {'__pycache__', 'data', 'fixtures'}
 
 
+# Directories where a function called test_something is production code rather
+# than a test: the CLI has a `test` subcommand, and build/ is a stale artefact.
+NOT_TEST_TREES = {'src', 'build', '.git', '.venv', '.ruff_cache', 'node_modules'}
+
+# A positive control for the walk below. It finds nothing today, and a walk which
+# resolves nothing is decoration unless the detector is shown to detect.
+PLANTED = 'class TestPlanted:\n    def test_it(self):\n        pass\n'
+
+# A gate which cannot run must not use the exit code that means it found
+# something. 1 is a finding, 2 is "do not believe this run".
+CANNOT_RUN = 2
+
+
+def cannot_run(why):
+    print(f'check_tests_run cannot run: {why}')
+    return CANNOT_RUN
+
+
+def defines_tests_in_source(source):
+    """defines_tests, for a string rather than a file, so it can be self tested"""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('test'):
+            return True
+        if isinstance(node, ast.ClassDef) and node.name.startswith('Test'):
+            return True
+    return False
+
+
+def stranded_outside_tests():
+    """Files defining tests which do not live under tests/, so nothing selects them
+
+    testpaths pins bare pytest to tests/, which stops a developer's local run and
+    CI selecting different sets. It also means a test file written ANYWHERE else
+    is now ignored by both rather than only by CI, which is quieter than what it
+    replaced. This is the check that keeps that from being a silent loss.
+
+    The detector is checked against a planted source first, in main() rather than
+    here, and with an if rather than an assert. `python -O` strips asserts, and a
+    control which vanishes under -O is worse than none: measured, a broken detector
+    under -O exited 0 and the gate reported itself fine. Same shape as the
+    compat_gate fix earlier in this series, where a cannot-run path exited 1 and
+    impersonated a finding.
+    """
+    found = []
+    for path in sorted(ROOT.rglob('*.py')):
+        parts = path.relative_to(ROOT).parts
+        if parts[0] in NOT_TEST_TREES or parts[0] == 'tests':
+            continue
+        if any(part in SKIP_DIRS for part in parts):
+            continue
+        if defines_tests(path):
+            found.append(path.relative_to(ROOT))
+    return found
+
+
 def defines_tests(path):
     """True when the file holds something pytest would run if it could see it"""
     try:
@@ -81,11 +140,10 @@ def collected():
 def main():
     run = collected()
     if run is None:
-        return 1
+        return cannot_run('pytest could not collect the tests')
 
     if not run:
-        print('pytest collected no tests at all, which cannot be right')
-        return 1
+        return cannot_run('pytest collected no tests at all')
 
     stranded = []
     for path in sorted(TESTS.rglob('*.py')):
@@ -96,6 +154,17 @@ def main():
         if not defines_tests(path):
             continue
         stranded.append(path.relative_to(ROOT))
+
+    if not defines_tests_in_source(PLANTED):
+        return cannot_run('the test detector does not detect a planted test, so the walk proves nothing')
+
+    outside = stranded_outside_tests()
+    if outside:
+        print('these files define tests and live outside tests/, so nothing runs them:')
+        for path in outside:
+            print(f'   {path}')
+        print('\nmove them under tests/, or rename them if they are not tests')
+        return 1
 
     if stranded:
         print('these files define tests pytest never collects:')
