@@ -4,113 +4,72 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 5.0.13:
- * COMPATIBILITY: three BGP-LS members of the JSON API change shape. Each
-   was emitting output which silently lost data, and there is no way to
-   return the data without changing what a consumer receives, so the
-   break is deliberate and unavoidable rather than a cleanup.
-
-   "link-identifiers" was always an empty array. LinkIdentifier.unpack
-   built its object without a packed form, __len__ read that absence as
-   zero, and the object was therefore falsy, so
-
-       self.link_ids = link_ids if link_ids else []
-
-   replaced every well formed identifier with an empty list. The sub-TLV
-   decoded correctly, the UPDATE was accepted, nothing raised, and the
-   value simply never reached the API. The array now carries the Link
-   Local/Remote Identifiers the peer sent (RFC 5307 section 1.1), each as
-   a JSON object. Anything reading this member has only ever seen [] and
-   gains content it could not previously have depended on.
-
-   Each identifier renders as a self contained object. Its json() used to
-   return a bare pair of keys with no braces, which the caller joins
-   inside an array, so an array of one identifier or ten would have been
-   a JSON array of loose keys and would not have parsed at all. That
-   renderer was unreachable while the array was always empty, so filling
-   the array and bracing the object had to land together.
-
-   "local-te-router-ids" appeared twice when a router announced both of
-   its Traffic Engineering Router IDs. LocalTeRid is registered for TLV
-   1028 (IPv4) and 1029 (IPv6), and register(lsid=N) creates one subclass
-   per lsid, so the two spellings of one TLV became two classes with two
-   TLV values and the merge, which paired attributes by TLV, could never
-   pair them. The member was emitted once per address. Duplicate names in
-   a JSON object are legal but lossy: json.loads keeps the last, so every
-   consumer using a JSON parser silently discarded the IPv4 address. The
-   member is now emitted once and carries both addresses. It was already
-   a list, so its type is unchanged and only its contents grow.
-
-   NOT changed, and still lossy: "remote-te-router-id" (TLV 1030/1031)
-   and "sr-adj" collide in the same way, but they render a string and an
-   object respectively, so merging them would change the type a consumer
-   receives. On a stable branch that is the worse trade, and they are
-   left as they are on purpose. Use the 5.1 or later API if you need
-   them.
- * COMPATIBILITY: a message whose type we do not recognise is now refused
-   with NOTIFICATION 1/3 Bad Message Type, which RFC 4271 6.1 requires,
-   rather than 1/0 Unspecific. The text drops the word "update", since the
-   type in question is by definition not an UPDATE. What a peer receives
-   on that error path therefore changes.
-
-   The same path had a second defect. Message.unpack fell through to
-   klass_unknown, which is bound to Exception unless
-   exabgp.bgp.message.unknown is imported, and nothing imports it, so it
-   CONSTRUCTED an Exception and returned it as though it were a message.
-   Type 0 is listed in CODE.MESSAGES, so it passed the reactor's own check
-   and reached that line straight off the wire.
- * Fix: every message is length checked before its fixed header is read,
-   and refused the way RFC 4271 6.1 asks. Update.split computed the body
-   length and then never consulted it, so a one byte UPDATE raised
-   struct.error; OPEN read its version, AS, hold time and identifier
-   without checking the ten bytes 4.2 requires were present; NOTIFICATION
-   read its error code and subcode off a body which might be empty,
-   raising IndexError; and a KEEPALIVE carrying a payload raised
-   Notify(text, hexstring) with the message as the error code and the
-   hexstring as the subcode, so both were strings and sending it would
-   have raised rather than reaching the peer. Each was a traceback out of
-   the message parser where a NOTIFICATION belongs, on input a peer
-   chooses the length of.
-
-   6.1 lists these together and is explicit about the answer: a Length
-   field below the minimum length of an OPEN, of an UPDATE, or of a
-   NOTIFICATION, or a KEEPALIVE Length which is not 19, "MUST be set to
-   Bad Message Length", and "The Data field MUST contain the erroneous
-   Length field". So all of them now send 1/2 carrying the two octet
-   Length, where OPEN previously sent nothing at all and the UPDATE case
-   would have sent 3/1 Malformed Attribute List. 6.3 Malformed Attribute
-   List is kept for what it is actually for: lengths which do not agree
-   inside a message long enough to hold them.
-
-   The exception is NOTIFICATION, where 6.4 overrides: an error detected
-   in a NOTIFICATION a peer sent cannot be reported back with a
-   NOTIFICATION of our own. A truncated one closes the connection in
-   silence instead.
- * Fix: two attributes are equal when they carry the same value. The
-   comparison read the attribute ID and flag and never the value, and 40
-   of the 59 registered classes inherit it, so any two BGP-LS attributes,
-   prefix SIDs, large or extended community sets were equal whatever they
-   held. Attributes.sameValuesAs is built on it, and that is what decides
-   whether a route has changed, so a route whose attribute had changed was
-   not re-advertised. OriginatorID overrode the method with a copy of the
-   same defect. Sixteen classes also raised AttributeError rather than
-   answering when compared with something which was not an attribute.
- * Fix: the configuration parser reports bad escapes instead of failing.
-   A text ending in a backslash raised IndexError; every \uXXXX escape
-   raised TypeError, because bytes were yielded into a join over strings,
-   so that escape had never once worked; and after a configuration file
-   failed to open the tokeniser assigned its off switch uncalled, so the
-   next read raised TypeError. \uXXXX now decodes, above 255 included.
-
- * Fix: the BGP-LS NLRI descriptor sub-TLVs are length checked. link.py
-   sized every sub-TLV from the peer's own tlv_length and handed the
-   slice to a decoder reading a fixed width off it, so a short value
-   escaped as a raw Python exception rather than ending the session with
-   a NOTIFICATION: the IPv4/IPv6 interface and neighbour address sub-TLVs
-   (259, 260, 261, 262) left their variable unbound and raised
-   UnboundLocalError, the Link Local/Remote Identifiers (258) and
-   Multi-Topology (263) sub-TLVs raised struct.error, the OSPF Route Type
-   (264) sub-TLV raised AttributeError, and the IP Reachability (265)
-   sub-TLV read a prefix length byte from a possibly empty slice.
+ * SECURITY: a peer could write data of its own into the API streams:
+   fields into the JSON stream through a BGP-LS attribute, and whole
+   events into the text stream through its hostname, its software
+   version or a shutdown message. The output stayed parseable, so a
+   program reading the API acted on data no peer had sent. BGP-LS did
+   not need to be negotiated. 5.0.11 closed the JSON hostname, software
+   version and NOTIFICATION cases only. Upgrade if any process reads the
+   API.
+ * COMPATIBILITY: three BGP-LS fields of the JSON API change.
+   "link-identifiers" and "sr-adj-lan-sids" were always empty and now
+   carry what the peer sent. "local-te-router-ids" was published twice
+   for a router announcing an IPv4 and an IPv6 TE Router ID, and a JSON
+   parser keeps only the second, so the IPv4 address was lost; it is
+   published once now, holding both. "remote-te-router-id" and "sr-adj"
+   have the same fault and are left alone, since fixing them changes
+   their type. 6.0 renames and fixes those two.
+ * COMPATIBILITY: a message of an unknown type is refused with
+   NOTIFICATION 1/3 Bad Message Type, where 5.0.12 sent 1/0 Unspecific
+   (RFC 4271 section 6.1).
+ * COMPATIBILITY: five kinds of malformed message which 5.0.12 accepted
+   are now refused, because it invented the missing data and produced a
+   route or a filter the peer had not sent: a FlowSpec rule whose
+   operator announces a value it does not carry, a prefix whose mask is
+   longer than its address family allows, a labelled route with no
+   bottom of stack bit, an MCAST-VPN route announcing more than it
+   carries, and a VPN next hop whose route distinguisher is not zero.
+ * Fix: comparing two attributes ignored their content, so any two
+   BGP-LS attributes, prefix SIDs, or large or extended community sets
+   compared as equal. ExaBGP does not use that comparison itself, so
+   this only affects code using it as a library.
+ * Fix: a peer could stop ExaBGP with a truncated message, attribute,
+   capability, route, BGP-LS TLV or operational message. These are now
+   refused with a NOTIFICATION.
+ * Fix: a peer could stop ExaBGP as it wrote the API stream, dropping
+   every session on the machine, with a FlowSpec redirect community, a
+   BGP-LS route of an unknown type, an undefined ADD-PATH value or a
+   valid SRv6 TLV.
+ * Fix: FlowSpec, EVPN, BGP-LS VPN and AIGP routes could produce API
+   output which is not valid JSON, so a consumer lost the whole line.
+ * Fix: a BGP-LS attribute was refused when a reserved flag bit was set,
+   and a Multi-Topology identifier with reserved bits set was read as a
+   different topology. The RFCs ask for those bits to be ignored. A
+   malformed BGP-LS attribute now costs the attribute and not the
+   session (RFC 7752 section 5.3).
+ * Fix: an IPv6 multicast route could be configured and sent, but a
+   route received in that family was refused and the session dropped. A
+   BGP-LS VPN route was refused on receipt whatever the peer sent.
+ * Fix: a twenty byte IPv6 extended community lost its leading zeros
+   when printed.
+ * Fix: a PMSI tunnel attribute whose tunnel identifier is not the
+   expected width was refused or silently truncated. It is printed in
+   hexadecimal now.
+ * Fix: a BGP prefix SID attribute holding a TLV we do not know stopped
+   the parser.
+ * Fix: withdrawing a route could file it in the RIB under a second key,
+   so one prefix was held twice.
+ * Fix: two prefixes with the same address and a different mask had no
+   defined order, so the order they were packed into an UPDATE was
+   arbitrary.
+ * Fix: a backslash at the end of a text, and any \uXXXX escape, stopped
+   the configuration parser instead of being reported.
+ * Fix: the package metadata uses the SPDX license expression of PEP 639
+   and ships LICENCE.txt (#1413). The wheel still installs on Python
+   3.8; building the source distribution now needs 3.9.
+ * QA: CI runs every test in the tree, and every change is compared
+   against 5.0.12 before it is committed.
 
 Version 5.0.12:
  * Fix: the OPEN capabilities a peer sends are validated. HostName and
