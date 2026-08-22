@@ -478,3 +478,102 @@ def test_flow_accepts_every_value_width_the_rfc_defines(width: int, operator: in
     nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, None, None)
     assert nlri is not NLRI.INVALID, f'a {width} byte value was dropped'
     assert parsed(nlri.json())['destination-port'] == ['=80']
+
+
+# The operational message carries the other peer-controlled free text which reaches this
+# stream, and it arrives by a different route than everything above: not through an NLRI
+# or an attribute, but as the body of a whole message type, rendered by JSON.operational
+# rather than by anything the corpus in qa/bin/compat_gate drives.
+#
+# It was already escaped correctly.  It was also tested with the single advisory string
+# 'maintenance', which is exactly the shape that cannot fail, so nothing here was held to
+# the rule the rest of the file states.  Correct and untested is one refactor away from
+# broken and untested, and the text encoder next door already carries its FORGED case.
+ADVISORIES = [
+    ('a quote', '"evil"'),
+    ('an injected member', '", "hijacked": "yes'),
+    ('a whole object', '{"a": 1}'),
+    ('a newline', 'line1\nline2'),
+    ('a carriage return', 'line1\rline2'),
+    ('control characters', 'a\x01\x02b'),
+    ('a backslash', 'a\\b'),
+    ('a lone backslash at the end', 'trailing\\'),
+    ('bytes which are not utf8', b'\xff\xfe'),
+    ('an empty advisory', ''),
+]
+
+
+@pytest.fixture(scope='module')
+def api_neighbor():
+    from exabgp.configuration.setup import create_minimal_configuration
+
+    configuration = create_minimal_configuration(families='all', add_path=False)
+    configuration.reload()
+    return list(configuration.neighbors.values())[0]
+
+
+@pytest.mark.parametrize('description, advisory', ADVISORIES, ids=[name for name, _ in ADVISORIES])
+def test_operational_advisory_cannot_corrupt_the_stream(description: str, advisory: str | bytes, api_neighbor) -> None:
+    """A peer's advisory text is one JSON string, whatever it holds.
+
+    ADM and ASM are free text the peer chose, capped at MAX_ADVISORY and otherwise
+    unexamined.  A consumer reads this stream a line at a time, so an unescaped newline
+    splits one event into two and an unescaped quote lets the peer name its own members.
+    """
+    from exabgp.bgp.message.operational import Advisory
+    from exabgp.reactor.api.response.json import JSON
+
+    message = Advisory.ADM(AFI.ipv4, SAFI.unicast, advisory)
+    line = JSON('5.0.0').operational(api_neighbor, 'receive', 'advisory', message, b'', b'', Negotiated.UNSET)
+
+    assert '\n' not in line.rstrip('\n'), f'{description} split one event across lines'
+    assert '\r' not in line, f'{description} put a carriage return in the stream'
+
+    event = jsonlib.loads(line)['neighbor']['operational']
+    assert set(event) == {'name', 'afi', 'safi', 'advisory'}, f'{description} changed which members are present'
+    assert event['name'] == 'ADM'
+
+
+@pytest.mark.parametrize('description, advisory', ADVISORIES, ids=[name for name, _ in ADVISORIES])
+def test_operational_advisory_reaches_the_consumer_unchanged(
+    description: str, advisory: str | bytes, api_neighbor
+) -> None:
+    """Escaping has to be reversible: the consumer reads back what the peer sent.
+
+    An encoder which drops the offending characters also passes the test above, and it
+    loses the operator's message.  Bytes which are not UTF-8 are the documented exception,
+    decoded with 'replace' before they reach the stream.
+    """
+    from exabgp.bgp.message.operational import Advisory
+    from exabgp.reactor.api.response.json import JSON
+
+    message = Advisory.ADM(AFI.ipv4, SAFI.unicast, advisory)
+    line = JSON('5.0.0').operational(api_neighbor, 'receive', 'advisory', message, b'', b'', Negotiated.UNSET)
+    read_back = jsonlib.loads(line)['neighbor']['operational']['advisory']
+
+    expected = advisory.decode('utf-8', 'replace') if isinstance(advisory, bytes) else advisory
+    assert read_back == expected, f'{description} did not survive the round trip'
+
+
+@pytest.mark.parametrize('code', [0, 9, 255, 4096, 65535])
+def test_operational_type_a_peer_invented_still_renders(code: int, api_neighbor) -> None:
+    """The peer picks the operational type, including one we never registered.
+
+    Those arrive with category 'unknown' and are reported rather than raised, so the
+    renderer for them is reachable by any peer and is held to the same rule: it renders,
+    the line parses, and the bytes it could not interpret are hex rather than free text.
+    """
+    from exabgp.bgp.message.operational import Operational
+    from exabgp.reactor.api.response.json import JSON
+
+    payload = b'\x00\x01\x01\xff\xfe\xfd'
+    body = struct.pack('!HH', code, len(payload)) + payload
+    message = Operational.unpack_message(body, Negotiated.UNSET)
+    assert message.category == 'unknown', f'type {code} is registered; this test needs an unregistered one'
+
+    line = JSON('5.0.0').operational(api_neighbor, 'receive', message.category, message, b'', b'', Negotiated.UNSET)
+    event = jsonlib.loads(line)['neighbor']['operational']
+    # the WHOLE payload is data here: an unregistered type has no afi/safi we may assume,
+    # so nothing is parsed out of it, and hexstring() writes it 0x prefixed and uppercase
+    assert event['data'] == '0x' + payload.hex().upper(), 'undecodable bytes must reach the stream as hex, not text'
+    assert event['type'] == f'operational-type-{code}'
