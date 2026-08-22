@@ -503,6 +503,32 @@ ADVISORIES = [
 ]
 
 
+# Both JSON encoders, for the reason test_api_text_stream.py gives about its own pair:
+# processes.py builds Response.V4.JSON for an api version 4 process and Response.JSON for
+# a version 6 one, so both are production.  V4 delegates to V6 and then runs an UNANCHORED
+# replace over the whole rendered line, peer text included:
+#
+#     result.replace(f'"exabgp": "{json_version}"', ...)
+#
+# A peer cannot forge a match today, because its quotes reach the line as \" and the
+# pattern has bare ones.  That is escaping holding up a second property in a different
+# file, so if escaping ever goes, this replace corrupts the line as well as the value.
+# Running both encoders over the same strings is what would say so.
+@pytest.fixture(scope='module', params=['v6', 'v4'], ids=['JSON', 'V4Json'])
+def json_encoder(request):
+    from exabgp.reactor.api.response.json import JSON
+    from exabgp.reactor.api.response.v4.json import V4JSON
+
+    # V4JSON, not JSON: v4/json.py imports the v6 JSON under that name for its own use, so
+    # `from ...v4.json import JSON` is a plausible line which silently hands back the v6
+    # encoder.  It did here, and the v4 half of this fixture ran the v6 encoder twice for
+    # 32 tests which named a class they never built.  Nothing failed, because the two
+    # halves agreed with each other perfectly.
+    encoder = JSON('5.0.0') if request.param == 'v6' else V4JSON('4.2.0')
+    assert (type(encoder) is JSON) == (request.param == 'v6'), 'the fixture built the wrong encoder'
+    return encoder
+
+
 @pytest.fixture(scope='module')
 def api_neighbor():
     from exabgp.configuration.setup import create_minimal_configuration
@@ -513,7 +539,9 @@ def api_neighbor():
 
 
 @pytest.mark.parametrize('description, advisory', ADVISORIES, ids=[name for name, _ in ADVISORIES])
-def test_operational_advisory_cannot_corrupt_the_stream(description: str, advisory: str | bytes, api_neighbor) -> None:
+def test_operational_advisory_cannot_corrupt_the_stream(
+    description: str, advisory: str | bytes, api_neighbor, json_encoder
+) -> None:
     """A peer's advisory text is one JSON string, whatever it holds.
 
     ADM and ASM are free text the peer chose, capped at MAX_ADVISORY and otherwise
@@ -521,10 +549,9 @@ def test_operational_advisory_cannot_corrupt_the_stream(description: str, adviso
     splits one event into two and an unescaped quote lets the peer name its own members.
     """
     from exabgp.bgp.message.operational import Advisory
-    from exabgp.reactor.api.response.json import JSON
 
     message = Advisory.ADM(AFI.ipv4, SAFI.unicast, advisory)
-    line = JSON('5.0.0').operational(api_neighbor, 'receive', 'advisory', message, b'', b'', Negotiated.UNSET)
+    line = json_encoder.operational(api_neighbor, 'receive', 'advisory', message, b'', b'', Negotiated.UNSET)
 
     assert '\n' not in line.rstrip('\n'), f'{description} split one event across lines'
     assert '\r' not in line, f'{description} put a carriage return in the stream'
@@ -536,7 +563,7 @@ def test_operational_advisory_cannot_corrupt_the_stream(description: str, adviso
 
 @pytest.mark.parametrize('description, advisory', ADVISORIES, ids=[name for name, _ in ADVISORIES])
 def test_operational_advisory_reaches_the_consumer_unchanged(
-    description: str, advisory: str | bytes, api_neighbor
+    description: str, advisory: str | bytes, api_neighbor, json_encoder
 ) -> None:
     """Escaping has to be reversible: the consumer reads back what the peer sent.
 
@@ -545,10 +572,9 @@ def test_operational_advisory_reaches_the_consumer_unchanged(
     decoded with 'replace' before they reach the stream.
     """
     from exabgp.bgp.message.operational import Advisory
-    from exabgp.reactor.api.response.json import JSON
 
     message = Advisory.ADM(AFI.ipv4, SAFI.unicast, advisory)
-    line = JSON('5.0.0').operational(api_neighbor, 'receive', 'advisory', message, b'', b'', Negotiated.UNSET)
+    line = json_encoder.operational(api_neighbor, 'receive', 'advisory', message, b'', b'', Negotiated.UNSET)
     read_back = jsonlib.loads(line)['neighbor']['operational']['advisory']
 
     expected = advisory.decode('utf-8', 'replace') if isinstance(advisory, bytes) else advisory
@@ -556,7 +582,7 @@ def test_operational_advisory_reaches_the_consumer_unchanged(
 
 
 @pytest.mark.parametrize('code', [0, 9, 255, 4096, 65535])
-def test_operational_type_a_peer_invented_still_renders(code: int, api_neighbor) -> None:
+def test_operational_type_a_peer_invented_still_renders(code: int, api_neighbor, json_encoder) -> None:
     """The peer picks the operational type, including one we never registered.
 
     Those arrive with category 'unknown' and are reported rather than raised, so the
@@ -564,14 +590,13 @@ def test_operational_type_a_peer_invented_still_renders(code: int, api_neighbor)
     the line parses, and the bytes it could not interpret are hex rather than free text.
     """
     from exabgp.bgp.message.operational import Operational
-    from exabgp.reactor.api.response.json import JSON
 
     payload = b'\x00\x01\x01\xff\xfe\xfd'
     body = struct.pack('!HH', code, len(payload)) + payload
     message = Operational.unpack_message(body, Negotiated.UNSET)
     assert message.category == 'unknown', f'type {code} is registered; this test needs an unregistered one'
 
-    line = JSON('5.0.0').operational(api_neighbor, 'receive', message.category, message, b'', b'', Negotiated.UNSET)
+    line = json_encoder.operational(api_neighbor, 'receive', message.category, message, b'', b'', Negotiated.UNSET)
     event = jsonlib.loads(line)['neighbor']['operational']
     # the WHOLE payload is data here: an unregistered type has no afi/safi we may assume,
     # so nothing is parsed out of it, and hexstring() writes it 0x prefixed and uppercase
@@ -604,7 +629,7 @@ DOWN_REASONS = [
 
 @pytest.mark.parametrize('description, communication', DOWN_REASONS, ids=[name for name, _ in DOWN_REASONS])
 def test_down_reason_carrying_peer_text_cannot_corrupt_the_stream(
-    description: str, communication: str, api_neighbor
+    description: str, communication: str, api_neighbor, json_encoder
 ) -> None:
     """A peer's shutdown communication reaches the stream as one escaped string.
 
@@ -612,11 +637,9 @@ def test_down_reason_carrying_peer_text_cannot_corrupt_the_stream(
     to look like one: the point is that peer bytes get this far, and a test which passes
     its own literal does not show that they do.
     """
-    from exabgp.reactor.api.response.json import JSON
-
     notify = Notify(6, 0, communication)
     reason = f'peer reset, message [] error[{notify}]'
-    line = JSON('5.0.0').down(api_neighbor, reason)
+    line = json_encoder.down(api_neighbor, reason)
 
     assert '\n' not in line.rstrip('\n'), f'{description} split one event across lines'
     assert '\r' not in line, f'{description} put a carriage return in the stream'
