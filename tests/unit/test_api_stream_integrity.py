@@ -577,3 +577,53 @@ def test_operational_type_a_peer_invented_still_renders(code: int, api_neighbor)
     # so nothing is parsed out of it, and hexstring() writes it 0x prefixed and uppercase
     assert event['data'] == '0x' + payload.hex().upper(), 'undecodable bytes must reach the stream as hex, not text'
     assert event['type'] == f'operational-type-{code}'
+
+
+# The down reason is the third route peer text takes into this stream, and the least
+# obvious of the three: it reads like an operator string.  peer.py builds it as
+#
+#     f'peer reset, message [{message}] error[{error}]'
+#
+# where error is the exception which ended the session, and a session ended by a peer's
+# NOTIFICATION ends with a Notify whose str() carries the data that peer chose.  RFC 8203
+# makes that field free text on purpose, so a shutdown communication is peer-authored
+# prose arriving in an API event about the peer that authored it.
+#
+# Escaped correctly, and tested only with 'manual maintenance'.  Same shape as the
+# advisory: the one string which cannot fail.
+DOWN_REASONS = [
+    ('a quote', '"evil"'),
+    ('an injected member', '", "injected": "yes'),
+    ('a newline', 'shutdown\nrequested'),
+    ('a carriage return', 'shutdown\rrequested'),
+    ('control characters', 'a\x01\x02b'),
+    ('a backslash', 'a\\b'),
+    ('an empty communication', ''),
+]
+
+
+@pytest.mark.parametrize('description, communication', DOWN_REASONS, ids=[name for name, _ in DOWN_REASONS])
+def test_down_reason_carrying_peer_text_cannot_corrupt_the_stream(
+    description: str, communication: str, api_neighbor
+) -> None:
+    """A peer's shutdown communication reaches the stream as one escaped string.
+
+    Built the way peer.py builds it, from a real Notify, rather than from a string shaped
+    to look like one: the point is that peer bytes get this far, and a test which passes
+    its own literal does not show that they do.
+    """
+    from exabgp.reactor.api.response.json import JSON
+
+    notify = Notify(6, 0, communication)
+    reason = f'peer reset, message [] error[{notify}]'
+    line = JSON('5.0.0').down(api_neighbor, reason)
+
+    assert '\n' not in line.rstrip('\n'), f'{description} split one event across lines'
+    assert '\r' not in line, f'{description} put a carriage return in the stream'
+
+    neighbor = jsonlib.loads(line)['neighbor']
+    # the peer names no members: 'injected' may appear INSIDE the reason string, which is
+    # the text surviving as text, and must never appear as a key
+    assert set(neighbor) == {'address', 'asn', 'router-id', 'state', 'reason'}, f'{description} added a member'
+    assert neighbor['state'] == 'down'
+    assert neighbor['reason'] == reason, f'{description} did not survive the round trip'
