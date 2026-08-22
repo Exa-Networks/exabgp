@@ -56,25 +56,40 @@ class CIDR:
             return equal
         return not equal
 
+    def _order(self):
+        """The key the ordering operators compare: address first, mask second.
+
+        Update.messages() packs sorted(self.nlris), so this decides the order prefixes
+        go onto the wire. The address stays the primary key, so nothing which already
+        had a defined order moves; the mask is only a tiebreak.
+
+        Without it 10.0.0.0/24 and 10.0.0.0/25 compared both <= and >= while __eq__ and
+        __hash__ told them apart. An ordering which disagrees with equality breaks what
+        bisect and every sorted-merge caller are entitled to assume, and sorted() on a
+        list holding both returned them in the order they were given rather than a
+        defined one.
+        """
+        return bytes(self._packed), self.mask
+
     def __lt__(self, other):
         if not isinstance(other, CIDR):
             return NotImplemented
-        return self._packed < other._packed
+        return self._order() < other._order()
 
     def __le__(self, other):
         if not isinstance(other, CIDR):
             return NotImplemented
-        return self._packed <= other._packed
+        return self._order() <= other._order()
 
     def __gt__(self, other):
         if not isinstance(other, CIDR):
             return NotImplemented
-        return self._packed > other._packed
+        return self._order() > other._order()
 
     def __ge__(self, other):
         if not isinstance(other, CIDR):
             return NotImplemented
-        return self._packed >= other._packed
+        return self._order() >= other._order()
 
     def top(self, negotiated=None, afi=AFI.undefined):
         if not self._ip:
