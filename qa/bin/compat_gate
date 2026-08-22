@@ -369,8 +369,21 @@ def main(argv: list[str]) -> int:
     with tempfile.TemporaryDirectory() as scratch:
         old_tree = Path(scratch) / 'old'
         old_tree.mkdir()
-        archive = subprocess.run(['git', 'archive', against], cwd=ROOT, capture_output=True, check=True)
-        subprocess.run(['tar', '-x', '-C', str(old_tree)], input=archive.stdout, check=True)
+        # A tree we cannot fetch is a CANNOT RUN, not a finding.  check=True raised
+        # CalledProcessError out of main and python exited 1, which is the code this gate
+        # uses for "the previous release accepts something this tree refuses".  So a typo
+        # in a ref, or a shallow clone without the base commit, reported as a regression.
+        # Session 5.0 found the same impersonation on their branch in a different path.
+        archive = subprocess.run(['git', 'archive', against], cwd=ROOT, capture_output=True)
+        if archive.returncode != 0:
+            sys.stderr.write(
+                'cannot read the tree at %s: %s\n' % (against, archive.stderr.decode('utf-8', 'replace').strip())
+            )
+            return 2
+        unpacked = subprocess.run(['tar', '-x', '-C', str(old_tree)], input=archive.stdout, capture_output=True)
+        if unpacked.returncode != 0:
+            sys.stderr.write('cannot unpack the tree at %s\n' % against)
+            return 2
 
         try:
             before_run = observe(old_tree, Path(scratch) / 'before.json')

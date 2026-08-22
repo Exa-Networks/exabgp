@@ -22,6 +22,7 @@ import importlib.machinery
 import importlib.util
 from pathlib import Path
 
+import subprocess
 import types
 
 import pytest
@@ -152,3 +153,36 @@ def test_the_workflow_walk_reads_both_spellings(tmp_path: Path) -> None:
         (tmp_path / forge / 'workflows').mkdir(parents=True)
         (tmp_path / forge / 'workflows' / name).write_text('jobs: {}\n')
     assert {flow.name for flow in module.workflow_files(tmp_path)} == {'a.yml', 'b.yaml'}
+
+
+# A gate has three answers and they must not share a number.
+#
+#   0  it ran and found nothing
+#   1  it ran and found something
+#   2  it could not run
+#
+# Two and one collapsing is the dangerous pair, because the way both of us validate these
+# gates is "reinstate the bug, expect 1", and a gate which has DIED passes that test.
+# Session 5.0 found four such paths on their branch, one of them `raise SystemExit(2, msg)`
+# whose .code is a tuple and so exits 1.
+#
+# Here it was the ref: `compat_gate does-not-exist-ref` let CalledProcessError out of main
+# and python exited 1, so a typo in a ref, or a shallow clone missing the base commit,
+# reported as a compatibility regression.
+GATE_ROOT = ROOT / 'qa' / 'bin'
+
+
+def run_gate(*arguments: str) -> subprocess.CompletedProcess:
+    return subprocess.run([str(GATE_ROOT / 'compat_gate'), *arguments], cwd=str(ROOT), capture_output=True, timeout=600)
+
+
+def test_a_tree_it_cannot_read_is_not_reported_as_a_finding() -> None:
+    """Exit 2, and say which tree, rather than exit 1 and look like a regression."""
+    result = run_gate('does-not-exist-ref')
+    assert result.returncode == 2, f'a ref which does not exist exited {result.returncode}, not 2'
+    assert b'does-not-exist-ref' in result.stderr, 'it did not say which tree it could not read'
+
+
+def test_a_clean_tree_exits_zero() -> None:
+    """The control for the test above: 2 means something only if 0 is reachable."""
+    assert run_gate('--this-tree-only').returncode == 0
