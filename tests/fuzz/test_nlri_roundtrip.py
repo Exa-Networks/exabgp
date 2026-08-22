@@ -49,6 +49,14 @@ from .corpus import seeds_for
 #                               and nothing re-advertises it.
 KNOWN = {
     'bgp-ls/bgp-ls',
+    # The VPN variant shares the plain family's re-encode limitation: pack_nlri
+    # emits the descriptors and drops the type/length header and the route
+    # distinguisher. It is added rather than removed, which a ratchet normally
+    # forbids, because the decoder did not start accepting anything new: the
+    # family simply had no corpus seed until now, so its existing limitation had
+    # never been visible. Adding an entry for a NEW acceptance would be the
+    # thing to refuse.
+    'bgp-ls/bgp-ls-vpn',
     'ipv4/mup',
     'ipv4/nlri-mpls',
     'ipv4/rtc',

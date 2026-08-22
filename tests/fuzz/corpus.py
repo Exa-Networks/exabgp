@@ -14,6 +14,8 @@ byte, so the property tests over them asserted nothing while reporting green.
 Seeds are RFC-legal shapes, not fuzz. The fuzzing happens around them.
 """
 
+from struct import pack
+
 FILLS = (b'A', b'\x00', b'\xff', b'\x80', b'\x01\x02\x03')
 
 
@@ -23,6 +25,9 @@ def filled(length, fill):
 
 
 # one or more shapes a real speaker could send, per family
+_BGPLS_LOCAL_NODE = pack('!HH', 256, 8) + pack('!HH', 512, 4) + b'\x00\x00\xff\xfd'
+_BGPLS_VPN_BODY = bytes([0, 1]) + bytes([10, 0, 0, 1]) + bytes([0, 7]) + b'\x03' + b'\x00' * 8 + _BGPLS_LOCAL_NODE
+
 NLRI_SEEDS = {
     'ipv4/unicast': [bytes([24, 10, 0, 0]), bytes([0])],
     'ipv6/unicast': [bytes([32, 0x20, 0x01, 0x0D, 0xB8])],
@@ -63,6 +68,15 @@ NLRI_SEEDS = {
     'ipv4/mup': [bytes([1]) + (2).to_bytes(2, 'big') + bytes([12]) + b'\x00' * 12],
     'ipv6/mup': [bytes([1]) + (2).to_bytes(2, 'big') + bytes([12]) + b'\x00' * 12],
     'l2vpn/evpn': [bytes([1, 25]) + b'\x00' * 25],
+    # A BGP-LS VPN route: an eight byte route distinguisher, then the NLRI. It
+    # lives here rather than in one test file because every corpus driven sweep
+    # needs it: bgp-ls/bgp-ls-vpn DECLARES a route distinguisher in Family.size
+    # and was the only such family with no seed, so the sweeps which exist to
+    # prove things about route distinguishers had never seen one of the families
+    # that carries one.
+    'bgp-ls/bgp-ls-vpn': [
+        pack('!HH', 2, len(_BGPLS_VPN_BODY)) + _BGPLS_VPN_BODY,
+    ],
     'bgp-ls/bgp-ls': [
         bytes.fromhex('00010025')
         + bytes([3])
