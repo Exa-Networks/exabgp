@@ -24,7 +24,7 @@ from exabgp.util.types import Buffer
 
 @Capability.register()
 class AddPath(Capability, dict[FamilyTuple, int]):
-    ID: ClassVar[int] = Capability.CODE.ADD_PATH
+    ID = Capability.CODE.ADD_PATH
 
     string: ClassVar[dict[int, str]] = {
         0: 'disabled',

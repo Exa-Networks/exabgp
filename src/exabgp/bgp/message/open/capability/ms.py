@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -21,7 +21,7 @@ from exabgp.util.types import Buffer
 @Capability.register()
 @Capability.register(Capability.CODE.MULTISESSION_CISCO)
 class MultiSession(Capability, list[CapabilityCode]):
-    ID: ClassVar[int] = Capability.CODE.MULTISESSION
+    ID = Capability.CODE.MULTISESSION
     _seen: bool = False
 
     def set(self, data: list[Any]) -> MultiSession:

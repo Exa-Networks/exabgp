@@ -177,8 +177,10 @@ class Capability:
     registered_capability: ClassVar[dict[int, Type[Capability]]] = dict()
     unknown_capability: ClassVar[Type[Capability] | None] = None
 
-    # ID attribute set by subclasses
-    ID: ClassVar[int]
+    # Class-level default set by subclasses; unpack() shadows this per instance
+    # for capabilities registered under more than one wire code (see unpack()),
+    # so this is intentionally NOT a ClassVar.
+    ID: int
 
     def extract_capability_bytes(self) -> list[bytes]:
         """Extract capability data for encoding. Subclasses must implement."""
@@ -215,9 +217,7 @@ class Capability:
     @classmethod
     def klass(cls, what: int) -> Type[Capability]:
         if what in cls.registered_capability:
-            kls: Type[Capability] = cls.registered_capability[what]
-            kls.ID = what
-            return kls
+            return cls.registered_capability[what]
         if cls.unknown_capability:
             return cls.unknown_capability
         raise Notify(2, 4, 'can not handle capability {}'.format(what))
@@ -225,4 +225,10 @@ class Capability:
     @classmethod
     def unpack(cls, capability: CapabilityCode, capabilities: Any, data: Buffer) -> Capability:
         instance: Capability = capabilities.get(capability, Capability.klass(capability)())
+        # Record the wire code actually received on this instance (not the shared class):
+        # some capabilities (RouteRefresh, MultiSession) are registered under both an RFC
+        # and a Cisco code, and klass() resolves the same class object for either. Setting
+        # ID here shadows the ClassVar per-instance so one peer's variant never leaks into
+        # another already-unpacked instance's str()/json() output.
+        instance.ID = capability
         return cls.klass(capability).unpack_capability(instance, data, capability)
