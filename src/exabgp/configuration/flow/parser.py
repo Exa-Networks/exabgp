@@ -127,43 +127,53 @@ def flow() -> Route:
 def source(tokeniser: 'Tokeniser') -> Generator[Flow4Source | Flow6Source, None, None]:
     """Update source to handle both IPv4 and IPv6 flows."""
     data: str = tokeniser()
-    # Check if it's IPv4
-    if data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0:
+    is_ipv4: bool = data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0
+    is_ipv6: bool = data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH
+    is_ipv6_offset: bool = data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH
+    if not (is_ipv4 or is_ipv6 or is_ipv6_offset):
+        raise ValueError(f'unrecognised flow source "{data}"')
+    try:
         ip: str
         netmask: str
-        ip, netmask = data.split('/')
-        raw: bytes = b''.join(bytes([int(_)]) for _ in ip.split('.'))
-        yield Flow4Source.make_prefix4(raw, int(netmask))
-    # Check if it's IPv6 without an offset
-    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH:
-        ip, netmask = data.split('/')
-        yield Flow6Source.make_prefix6(IP.pton(ip), int(netmask), 0)
-    # Check if it's IPv6 with an offset
-    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH:
-        offset: str
-        ip, netmask, offset = data.split('/')
-        yield Flow6Source.make_prefix6(IP.pton(ip), int(netmask), int(offset))
+        if is_ipv4:
+            ip, netmask = data.split('/')
+            raw: bytes = b''.join(bytes([int(_)]) for _ in ip.split('.'))
+            yield Flow4Source.make_prefix4(raw, int(netmask))
+        elif is_ipv6:
+            ip, netmask = data.split('/')
+            yield Flow6Source.make_prefix6(IP.pton(ip), int(netmask), 0)
+        else:
+            offset: str
+            ip, netmask, offset = data.split('/')
+            yield Flow6Source.make_prefix6(IP.pton(ip), int(netmask), int(offset))
+    except (OSError, IndexError, ValueError) as exc:
+        raise ValueError(f'invalid flow source "{data}": {exc}') from None
 
 
 def destination(tokeniser: 'Tokeniser') -> Generator[Flow4Destination | Flow6Destination, None, None]:
     """Update destination to handle both IPv4 and IPv6 flows."""
     data: str = tokeniser()
-    # Check if it's IPv4
-    if data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0:
+    is_ipv4: bool = data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0
+    is_ipv6: bool = data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH
+    is_ipv6_offset: bool = data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH
+    if not (is_ipv4 or is_ipv6 or is_ipv6_offset):
+        raise ValueError(f'unrecognised flow destination "{data}"')
+    try:
         ip: str
         netmask: str
-        ip, netmask = data.split('/')
-        raw: bytes = b''.join(bytes([int(_)]) for _ in ip.split('.'))
-        yield Flow4Destination.make_prefix4(raw, int(netmask))
-    # Check if it's IPv6 without an offset
-    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH:
-        ip, netmask = data.split('/')
-        yield Flow6Destination.make_prefix6(IP.pton(ip), int(netmask), 0)
-    # Check if it's IPv6 with an offset
-    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH:
-        offset: str
-        ip, netmask, offset = data.split('/')
-        yield Flow6Destination.make_prefix6(IP.pton(ip), int(netmask), int(offset))
+        if is_ipv4:
+            ip, netmask = data.split('/')
+            raw: bytes = b''.join(bytes([int(_)]) for _ in ip.split('.'))
+            yield Flow4Destination.make_prefix4(raw, int(netmask))
+        elif is_ipv6:
+            ip, netmask = data.split('/')
+            yield Flow6Destination.make_prefix6(IP.pton(ip), int(netmask), 0)
+        else:
+            offset: str
+            ip, netmask, offset = data.split('/')
+            yield Flow6Destination.make_prefix6(IP.pton(ip), int(netmask), int(offset))
+    except (OSError, IndexError, ValueError) as exc:
+        raise ValueError(f'invalid flow destination "{data}": {exc}') from None
 
 
 # Expressions
