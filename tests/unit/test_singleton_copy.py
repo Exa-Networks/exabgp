@@ -21,6 +21,7 @@ from __future__ import annotations
 import ast
 import pathlib
 from copy import copy, deepcopy
+from struct import pack
 
 import pytest
 
@@ -30,6 +31,8 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message import Action
+from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 
 # the ones which ride inside an NLRI or an attribute, so a copy of one reaches them
@@ -215,6 +218,62 @@ def test_a_copy_keeps_its_class() -> None:
             assert made == value, f'{name} does not equal its copy'
 
 
+DISTINGUISHER = bytes([0, 1]) + bytes([10, 0, 0, 1]) + bytes([0, 7])
+
+
+def bgpls_vpn_prefix() -> bytes:
+    """A BGP-LS VPN prefix, which keeps its distinguisher under route_d rather than rd."""
+    body = bytes([3]) + bytes(8) + pack('!HH', 265, 4) + bytes([24, 192, 0, 2])
+    return pack('!HH', 3, len(body) + 8) + DISTINGUISHER + body
+
+
+# name, afi, safi, wire, whether this seed must produce a REAL distinguisher
+RD_SEEDS = [
+    ('ipv4 mpls-vpn', AFI.ipv4, SAFI.mpls_vpn, bytes([112, 0, 0, 0x11]) + DISTINGUISHER + bytes([10, 0, 0]), True),
+    (
+        'ipv6 mpls-vpn',
+        AFI.ipv6,
+        SAFI.mpls_vpn,
+        bytes([112, 0, 0, 0x11]) + DISTINGUISHER + bytes([0x20, 0x01, 0x0D]),
+        True,
+    ),
+    ('bgp-ls vpn', AFI.bgpls, SAFI.bgp_ls_vpn, bgpls_vpn_prefix(), True),
+    ('ipv4 flow-vpn', AFI.ipv4, SAFI.flow_vpn, bytes([11]) + DISTINGUISHER + bytes([0x03, 0x81, 0x06]), True),
+    ('l2vpn vpls', AFI.l2vpn, SAFI.vpls, bytes([0, 17]) + DISTINGUISHER + bytes(9), True),
+    ('ipv4 flow', AFI.ipv4, SAFI.flow_ip, bytes([3, 0x03, 0x81, 0x06]), False),
+]
+
+MIN_REAL_DISTINGUISHERS = 5
+
+
+def distinguisher_of(nlri: object) -> object | None:
+    """BGP-LS calls it route_d and everything else calls it rd."""
+    for name in ('rd', 'route_d'):
+        value = getattr(nlri, name, None)
+        if value is not None:
+            return value
+    return None
+
+
+def test_every_family_which_carries_a_distinguisher_is_seeded() -> None:
+    """The seed table is hand written, so what stops it drifting is this.
+
+    Session 5.0 wrote their version of this test FROM a sweep which iterated ten families,
+    and the test they committed exercised one: the family they had been looking at while
+    writing it.  Copying a measurement into an assertion loses whatever the measurement got
+    from iterating, and mine had the same shape, missing bgp-ls-vpn.
+
+    Deriving the list from Family.size rather than from memory is what found it.  Structural
+    inspection of the classes does NOT: BGP-LS sets route_d in __init__ as an instance
+    attribute, so nothing about the class says it carries one.
+    """
+    declared = {(afi, safi) for (afi, safi), (_, rd_size) in Family.size.items() if rd_size}
+    seeded = {(afi, safi) for _name, afi, safi, _wire, _real in RD_SEEDS}
+
+    missing = sorted(f'{afi}/{safi}' for afi, safi in declared - seeded)
+    assert not missing, f'these families declare a route distinguisher and have no seed: {missing}'
+
+
 def test_nothing_builds_a_route_distinguisher_which_impersonates_NORD() -> None:
     """The `is NORD` tests are only sound while no path builds an equal-but-separate one.
 
@@ -225,52 +284,36 @@ def test_nothing_builds_a_route_distinguisher_which_impersonates_NORD() -> None:
     Measured rather than read off the code, and the first version of this docstring is why
     that distinction matters.  It said the wire path "only builds one when the family says
     there are eight bytes to read", which is a claim about a mechanism I had read, offered
-    in a test docstring where the next reader would take it as measured.  Session 5.0 put
-    the same kind of unmeasured claim in the same kind of place and caught it in theirs.
+    where the next reader takes it as measured.
 
     What IS measured: every family and every generic fill, 7484 successful decodes, zero
-    RouteDistinguisher constructions.  That result cannot carry the assertion on its own,
-    because a sweep which builds none proves nothing about what it builds, so the seeds
-    below are shaped to reach the construction path and the test requires them to.
+    RouteDistinguisher constructions.  That cannot carry the assertion on its own, because a
+    sweep which builds none proves nothing about what it builds, so the seeds reach the
+    construction path and the test requires them to.
 
     5.0 solved the same hazard the other way, by having their copy hook canonicalise an
     equal RD TO the singleton.  Neither branch has a lookalike, so both choices are sound
-    and neither is load bearing; the difference should not be removed for tidiness without
+    and NEITHER is load bearing; the difference should not be removed for tidiness without
     measuring what it buys on that branch.
     """
-    from exabgp.bgp.message import Action
-    from exabgp.protocol.family import AFI, SAFI
-
-    distinguisher = bytes([0, 1]) + bytes([10, 0, 0, 1]) + bytes([0, 7])
-    seeds = [
-        ('ipv4 mpls-vpn', AFI.ipv4, SAFI.mpls_vpn, bytes([112, 0, 0, 0x11]) + distinguisher + bytes([10, 0, 0])),
-        (
-            'ipv6 mpls-vpn',
-            AFI.ipv6,
-            SAFI.mpls_vpn,
-            bytes([112, 0, 0, 0x11]) + distinguisher + bytes([0x20, 0x01, 0x0D]),
-        ),
-        ('ipv4 flow-vpn', AFI.ipv4, SAFI.flow_vpn, bytes([11]) + distinguisher + bytes([0x03, 0x81, 0x06])),
-        ('l2vpn vpls', AFI.l2vpn, SAFI.vpls, bytes([0, 17]) + distinguisher + bytes(9)),
-        ('ipv4 flow', AFI.ipv4, SAFI.flow_ip, bytes([3, 0x03, 0x81, 0x06])),
-    ]
-
     real = 0
     singleton = 0
-    for name, afi, safi, wire in seeds:
+    for name, afi, safi, wire, must_be_real in RD_SEEDS:
         nlri, _ = NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, None, None)
-        rd = getattr(nlri, 'rd', None)
-        assert rd is not None, f'{name} has no rd, so it pins nothing'
+        rd = distinguisher_of(nlri)
+        assert rd is not None, f'{name} carries no distinguisher, so it pins nothing'
 
         for candidate in (rd, deepcopy(rd), copy(rd)):
             assert (candidate == RouteDistinguisher.NORD) == (candidate is RouteDistinguisher.NORD), (
                 f'{name} carries a route distinguisher which equals NORD without being it'
             )
+
         if rd is RouteDistinguisher.NORD:
             singleton += 1
+            assert not must_be_real, f'{name} should carry a real distinguisher and was handed the singleton'
         else:
             real += 1
 
     # both halves, or the test passes by never reaching the construction path at all
-    assert real >= 4, f'only {real} seeds built a real route distinguisher'
+    assert real >= MIN_REAL_DISTINGUISHERS, f'only {real} seeds built a real route distinguisher'
     assert singleton >= 1, 'no seed took the no-distinguisher path, which is the one handed the singleton'
