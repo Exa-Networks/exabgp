@@ -321,10 +321,47 @@ def previous_release() -> str:
     sys.exit(2)
 
 
+def broken_lines(verdict: dict[str, str]) -> int:
+    """Fail on output no JSON parser accepts, without comparing against anything.
+
+    Everything else this gate does is a comparison, and a comparison cannot see a defect
+    both trees share.  Measured: a BGP-LS VPN link rendered a nameless object into the
+    middle of its own JSON, upstream did it too, and putting the bug back produced "0
+    regressions" because both sides agreed.  I had just added the seed which reaches that
+    renderer and claimed it would have caught the bug.  It would not have; only this does.
+
+    Needing no base ref is the point.  The comparison half of this gate can only run where
+    the previous release is fetched, which is why the whole thing was a CI-only gate; this
+    half is a property of one tree, so it runs in test_everything on every change.
+    """
+    broken = sorted(key for key, seen in verdict.items() if seen.startswith(('UNPARSEABLE', 'RENDER-ERROR')))
+    if not broken:
+        return 0
+    sys.stderr.write('%d input(s) render something no JSON parser accepts:\n' % len(broken))
+    for key in broken[:20]:
+        sys.stderr.write('  %-44s %s\n' % (key, verdict[key]))
+    if len(broken) > 20:
+        sys.stderr.write('  ... and %d more\n' % (len(broken) - 20))
+    return 1
+
+
 def main(argv: list[str]) -> int:
     if '--write-corpus' in argv:
         sys.stdout.write(corpus_program())
         return 0
+
+    if '--this-tree-only' in argv:
+        # the half which needs no previous release: run it from test_everything
+        with tempfile.TemporaryDirectory() as scratch:
+            try:
+                run = observe(ROOT, Path(scratch) / 'this.json')
+            except CannotObserve as exc:
+                sys.stderr.write(f'{exc}\n')
+                return 2
+        failed = broken_lines(run['verdict'])
+        if not failed:
+            sys.stderr.write('%d inputs render, all parse\n' % len(run['verdict']))
+        return failed
 
     against = argv[0] if argv else previous_release()
     sys.stderr.write('comparing this tree against %s\n' % against)
@@ -342,24 +379,9 @@ def main(argv: list[str]) -> int:
             sys.stderr.write(f'{exc}\n')
             return 2
 
-    # UNPARSEABLE and RENDER-ERROR are wrong ABSOLUTELY, not relative to the old tree.
-    #
-    # Everything else this gate does is a comparison, and a comparison cannot see a defect
-    # both trees share.  Measured: a BGP-LS VPN link rendered a nameless object into the
-    # middle of its own JSON, upstream did it too, and putting the bug back produced "0
-    # regressions" because both sides agreed.  I had just added the seed which reaches that
-    # renderer and claimed it would have caught the bug.  It would not have; only this does.
-    #
-    # A line no JSON parser accepts is a broken line whatever the previous release did with
-    # it, so it fails here rather than being compared.
-    broken = sorted(
-        key for key, verdict in after_run['verdict'].items() if verdict.startswith(('UNPARSEABLE', 'RENDER-ERROR'))
-    )
-    if broken:
-        sys.stderr.write('%d input(s) render something no JSON parser accepts:\n' % len(broken))
-        for key in broken[:20]:
-            sys.stderr.write('  %-44s %s\n' % (key, after_run['verdict'][key]))
-        return 1
+    failed = broken_lines(after_run['verdict'])
+    if failed:
+        return failed
 
     before, after = before_run['verdict'], after_run['verdict']
     given_before, given_after = before_run['input'], after_run['input']

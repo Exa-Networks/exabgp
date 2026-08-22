@@ -143,7 +143,9 @@ def run_command(cmd: str, env: dict | None = None, shell: bool = True) -> tuple[
     if env:
         full_env.update(env)
 
-    process = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=full_env, text=True)
+    process = subprocess.Popen(
+        cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=full_env, text=True
+    )
     stdout, stderr = process.communicate()
     return process.returncode, stdout, stderr
 
@@ -175,6 +177,7 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     'tiger-style': './qa/bin/check_tiger_style',
     'tests-run': './qa/bin/check_tests_run',
     'sweep-floors': './qa/bin/check_sweep_floors',
+    'renders-json': './qa/bin/compat_gate --this-tree-only',
     'documentation': './qa/bin/check_documentation',
 }
 
@@ -200,6 +203,7 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'tiger-style': 'Tiger style check',
     'tests-run': 'Every test file is collected',
     'sweep-floors': 'No sweep shrinks silently',
+    'renders-json': 'Every corpus input renders JSON a consumer can parse',
     'documentation': 'Documentation matches the code',
 }
 
@@ -226,8 +230,21 @@ TEST_ORDER = [
     'tiger-style',
     'tests-run',
     'sweep-floors',
+    'renders-json',
     'documentation',
 ]
+
+# A stage in TEST_COMMANDS and not in TEST_ORDER never runs, and the suite still prints
+# "All N tests passed" because N counts what ran.  That is how renders-json was added,
+# reported green, and had not executed once.  A gate which does not run is worse than a
+# missing gate: the missing one does not tell you it is fine.
+_unordered = sorted(set(TEST_COMMANDS) - set(TEST_ORDER))
+_unknown = sorted(set(TEST_ORDER) - set(TEST_COMMANDS))
+if _unordered or _unknown:
+    raise SystemExit(
+        'test_everything is inconsistent: %s defined but never run, %s ordered but undefined'
+        % (_unordered or 'none', _unknown or 'none')
+    )
 
 
 def run_test(name: str, verbose: bool = False) -> tuple[bool, str, str]:
@@ -376,7 +393,9 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
             exp_str = f'{Colors.DIM}(~{format_time(expected):>5}){Colors.RESET}'
             print(f'  {status} {name:14} {time_str} {exp_str}')
         print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
-        print(f'  {Colors.GREEN}{Colors.BOLD}Total: {format_time(total_elapsed)}{Colors.RESET} {Colors.DIM}(~{format_time(total_expected)}){Colors.RESET}')
+        print(
+            f'  {Colors.GREEN}{Colors.BOLD}Total: {format_time(total_elapsed)}{Colors.RESET} {Colors.DIM}(~{format_time(total_expected)}){Colors.RESET}'
+        )
         print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
         print()
 
