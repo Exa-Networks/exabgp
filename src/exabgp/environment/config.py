@@ -416,7 +416,7 @@ class Environment:
                 if conf is not None:
                     try:
                         section[option_name] = opt.parse(conf)
-                    except TypeError:
+                    except (TypeError, ValueError):
                         raise ValueError(f'invalid value for {section_name}.{option_name} : {conf}') from None
 
         # Backward compatibility for tcp.once -> tcp.attempts

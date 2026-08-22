@@ -6,6 +6,21 @@ import pytest
 from unittest.mock import MagicMock
 
 
+def tokeniser_returning(*tokens: str) -> object:
+    """Build a real Tokeniser primed with a fixed sequence of tokens.
+
+    Uses the production Tokeniser (rather than a mock) so behaviour the
+    parsers rely on - attribute assignment such as `tokeniser.afi = ...`,
+    `.consume()`, and returning '' instead of raising once tokens run out -
+    matches what happens for real, e.g. a bare `run;` with no argument.
+    """
+    from exabgp.configuration.core.parser import Tokeniser
+
+    tokeniser = Tokeniser()
+    tokeniser.replenish(list(tokens))
+    return tokeniser
+
+
 class TestNeighborParserExceptions:
     """Test neighbor/parser.py exception handling patterns."""
 
@@ -146,3 +161,128 @@ class TestExceptionTranslationPatterns:
         mock = MockTokeniser()
         with pytest.raises((ValueError, TypeError, AttributeError)):
             hostname(mock)
+
+
+class TestStaticPrefixParserExceptions:
+    """Test static/parser.py prefix() exception handling.
+
+    prefix() built an IPRange straight from IP.pton(ip), which calls
+    socket.inet_pton and raises a bare OSError on malformed input such as
+    999.999.999.999 - nothing caught it, so it reached the operator as a
+    raw traceback instead of a configuration ValueError.
+    """
+
+    def test_an_unparseable_prefix_address_is_a_configuration_error(self) -> None:
+        from exabgp.configuration.static.parser import prefix
+
+        with pytest.raises(ValueError, match='999.999.999.999'):
+            prefix(tokeniser_returning('999.999.999.999/24'))
+
+    def test_a_prefix_with_a_non_numeric_afi_marker_is_a_configuration_error(self) -> None:
+        """IP.toafi() also runs before pton() and can itself raise ValueError."""
+        from exabgp.configuration.static.parser import prefix
+
+        with pytest.raises(ValueError, match='not-an-ip'):
+            prefix(tokeniser_returning('not-an-ip'))
+
+
+class TestMplsRouteDistinguisherExceptions:
+    """Test static/mpls.py route_distinguisher() exception handling.
+
+    route_distinguisher() only assigned prefix/suffix when the token
+    contained a ':' at index > 0; 'rd 12345' (no colon) left both
+    unassigned, so the next line ('.' in prefix) raised UnboundLocalError
+    instead of a configuration ValueError.
+    """
+
+    def test_route_distinguisher_without_a_colon_is_a_configuration_error(self) -> None:
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        with pytest.raises(ValueError, match='12345'):
+            route_distinguisher(tokeniser_returning('12345'))
+
+    def test_route_distinguisher_with_a_leading_colon_is_a_configuration_error(self) -> None:
+        """separator == 0 also skipped the assignment ('find' returns 0, not > 0)."""
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        with pytest.raises(ValueError, match=r':100'):
+            route_distinguisher(tokeniser_returning(':100'))
+
+    def test_mvpn_sharedjoin_propagates_the_route_distinguisher_fix(self) -> None:
+        """mvpn_sharedjoin (and mvpn_sourcejoin/sourcead, srv6_mup_*) share
+        route_distinguisher() with no wrapping of their own - confirm the fix
+        in the shared function actually reaches this caller rather than assuming it.
+        """
+        from exabgp.configuration.static.mpls import mvpn_sharedjoin
+        from exabgp.protocol.family import AFI
+
+        tokeniser = tokeniser_returning('rp', '1.2.3.4', 'group', '5.6.7.8', 'rd', '12345', 'source-as', '100')
+        with pytest.raises(ValueError, match='12345'):
+            mvpn_sharedjoin(tokeniser, AFI.ipv4, None)
+
+    def test_srv6_mup_isd_propagates_the_route_distinguisher_fix(self) -> None:
+        from exabgp.configuration.static.mpls import srv6_mup_isd
+        from exabgp.protocol.family import AFI
+
+        tokeniser = tokeniser_returning('10.0.0.0/24', 'rd', '12345')
+        with pytest.raises(ValueError, match='12345'):
+            srv6_mup_isd(tokeniser, AFI.ipv4)
+
+
+class TestMplsPrefixSidExceptions:
+    """Test static/mpls.py prefix_sid() exception handling.
+
+    prefix_sid() only assigned label_sid inside the 'if value == "[":'
+    branch; 'bgp-prefix-sid 300' (no leading '[') left label_sid unassigned,
+    and int(label_sid) - outside the try/except - raised UnboundLocalError
+    instead of a configuration ValueError.
+    """
+
+    def test_prefix_sid_without_an_opening_bracket_is_a_configuration_error(self) -> None:
+        from exabgp.configuration.static.mpls import prefix_sid
+
+        with pytest.raises(ValueError, match='300'):
+            prefix_sid(tokeniser_returning('300'))
+
+
+class TestEnvironmentSetupExceptions:
+    """Test environment/config.py Environment.setup() exception handling.
+
+    The integer/real/umask readers in environment/parsing.py raise
+    ValueError (int()/float() on bad text), but Environment.setup() only
+    caught TypeError around opt.parse(conf), so exabgp_tcp_attempts=abc
+    reached the operator as a raw ValueError traceback with no mention of
+    which setting was wrong.
+    """
+
+    def test_setup_wraps_a_bad_integer_value_in_a_contextful_value_error(self, monkeypatch) -> None:
+        from exabgp.environment.config import Environment
+
+        monkeypatch.setenv('exabgp_tcp_attempts', 'abc')
+
+        saved_instance = Environment._instance
+        saved_setup_done = Environment._setup_done
+        Environment._instance = None
+        Environment._setup_done = False
+        try:
+            with pytest.raises(ValueError, match='tcp.attempts'):
+                Environment.setup()
+        finally:
+            Environment._instance = saved_instance
+            Environment._setup_done = saved_setup_done
+
+
+class TestProcessParserRunExceptions:
+    """Test process/parser.py run() exception handling.
+
+    run() indexed prg[0] to check for a leading '/' with no emptiness
+    check first; a bare 'run;' with no program argument left prg == '',
+    and prg[0] raised IndexError ('string index out of range') instead of
+    a configuration ValueError.
+    """
+
+    def test_run_without_a_program_argument_is_a_configuration_error(self) -> None:
+        from exabgp.configuration.process.parser import run
+
+        with pytest.raises(ValueError, match='program'):
+            run(tokeniser_returning())
