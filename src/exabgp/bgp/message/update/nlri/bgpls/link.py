@@ -276,6 +276,16 @@ class LINK(BGPLS):
         # # content is ending without a , here in purpose
 
         if self.route_d:
-            content += f', {{ {self.route_d.json()} }}'
+            # RouteDistinguisher.json() returns a MEMBER, '"rd": "10.0.0.1:7"', not an
+            # object.  Wrapping it in braces spliced a nameless object into the middle of
+            # the one being built here, so every BGP-LS VPN link NLRI rendered a line no
+            # JSON parser accepts: the whole line, not one field.  node.py, prefixv4.py and
+            # prefixv6.py never had the braces; this was the only site with them, and only
+            # a link NLRI reaches it.
+            #
+            # Found by session 5.0 after the seed for bgp-ls-vpn was added: neither of our
+            # corpora covered the one family which carries a distinguisher AND renders it
+            # through this method.
+            content += f', {self.route_d.json()}'
 
         return f'{{ {content} }}'
