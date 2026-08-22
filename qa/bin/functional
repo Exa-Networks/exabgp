@@ -16,6 +16,7 @@ import re
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from argparse import Namespace, _SubParsersAction
 from dataclasses import dataclass
@@ -530,6 +531,8 @@ class Exec:
         self.stderr: bytes = b''
         self.message: str = ''
         self._process: Optional[subprocess.Popen] = None
+        self._stdout_file: Optional[Any] = None
+        self._stderr_file: Optional[Any] = None
         self.command: str = ''
 
     def run(self, command: List[str], env: Optional[Dict[str, str]]) -> 'Exec':
@@ -540,11 +543,16 @@ class Exec:
             env['exabgp_log_enable'] = 'false'
             env['exabgp_api_version'] = '4'  # v6 is default, v4 for backward compatibility (text encoder)
 
-        # Use PIPE to capture all output for test verification
+        # Back stdout/stderr with real files, not pipes: a pipe's kernel buffer
+        # is bounded (8192-65536 bytes here) and nothing reads it until collect()
+        # runs, so a daemon that logs past that cap blocks in write() forever.
+        # Files never apply that backpressure, so the daemon can always proceed.
+        self._stdout_file = tempfile.TemporaryFile()
+        self._stderr_file = tempfile.TemporaryFile()
         self._process = subprocess.Popen(
             command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=self._stdout_file,
+            stderr=self._stderr_file,
             close_fds=True,
             stdin=subprocess.DEVNULL,
             env=env,
@@ -587,9 +595,15 @@ class Exec:
         _ = signal.signal(signal.SIGALRM, alarm_handler)
         try:
             _ = signal.alarm(15)
-            self.stdout, self.stderr = self._process.communicate()  # type: ignore
+            self._process.wait()  # type: ignore
             self.code = self._process.returncode  # type: ignore
             _ = signal.alarm(0)
+            self._stdout_file.seek(0)  # type: ignore
+            self.stdout = self._stdout_file.read()  # type: ignore
+            self._stdout_file.close()  # type: ignore
+            self._stderr_file.seek(0)  # type: ignore
+            self.stderr = self._stderr_file.read()  # type: ignore
+            self._stderr_file.close()  # type: ignore
         except ValueError as exc:  # I/O operation on closed file
             self.message = str(exc)
         except Alarm as exc:
@@ -1416,7 +1430,11 @@ class Tests:
         # Quiet mode: single line on success, verbose on failure
         if quiet and not all_failed:
             success_rate = (len(passed) / total_run) * 100 if total_run > 0 else 0
-            retried = f' {yellow()}({len(self._retried)} needed a retry: {", ".join(self._retried)}){reset()}' if self._retried else ''
+            retried = (
+                f' {yellow()}({len(self._retried)} needed a retry: {", ".join(self._retried)}){reset()}'
+                if self._retried
+                else ''
+            )
             flush(f'{green()}passed{reset()} {len(passed)}/{total_run} ({success_rate:.1f}%){retried}')
             return
 
