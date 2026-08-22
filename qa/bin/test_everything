@@ -281,23 +281,66 @@ if _test_root.is_dir():
             % (_unrun or 'none', _gone or 'none')
         )
 
-# CI has to reach the whole tree too, or the two disagree about what "the tests" means and
-# only one of them is right.  This is the check for the shape which caused it: a pytest
-# invocation naming children of tests/ rather than the root.  A glob like tests/unit/test_*.py
-# reads as thorough and silently skips every subdirectory.
-_workflows = Path(__file__).resolve().parent.parent.parent / '.github' / 'workflows'
-if _workflows.is_dir():
-    _narrow = []
-    for _flow in sorted(_workflows.glob('*.yml')):
-        for _number, _line in enumerate(_flow.read_text().splitlines(), 1):
-            if 'pytest' not in _line or _line.lstrip().startswith('#'):
-                continue
-            if 'tests/unit' in _line or 'tests/fuzz' in _line or 'test_*.py' in _line:
-                _narrow.append(f'{_flow.name}:{_number}')
-    if _narrow:
+
+# A pytest invocation must name the ROOT of tests/, never its children.  This applies to
+# the stages above and to the workflows alike, because the two have to agree about what
+# "the tests" means or only one of them is right.
+#
+# Checking the FORM rather than the coverage, which is the correction.  The per-directory
+# check below asks whether each directory is named somewhere, and
+#
+#     pytest ./tests/unit/test_*.py ./tests/fuzz/test_*.py ./tests/integration ./tests/performance
+#
+# satisfies every part of it: each directory appears, so nothing is reported unrun, and the
+# glob still skips every subdirectory of tests/unit.  That is the patch a careful person
+# writes after being told which directories were missing, and the coverage check blesses it.
+# Session 5.0 found their version of this gate had exactly that weakness, which is what
+# prompted looking here; mine had it too, and let the form above through in silence.
+#
+# So the rule is the shape, not the list: no child of tests/ on a pytest command line.
+def _narrow_pytest_paths() -> list[str]:
+    found = []
+    for command in TEST_COMMANDS.values():
+        for part in [command] if isinstance(command, str) else command:
+            if 'pytest' in part and ('tests/unit' in part or 'tests/fuzz' in part or 'test_*.py' in part):
+                found.append(f'a stage in this file: {part.strip()[:70]}')
+    workflows = Path(__file__).resolve().parent.parent.parent / '.github' / 'workflows'
+    if workflows.is_dir():
+        for flow in sorted(workflows.glob('*.yml')):
+            for number, line in enumerate(flow.read_text().splitlines(), 1):
+                if 'pytest' not in line or line.lstrip().startswith('#'):
+                    continue
+                if 'tests/unit' in line or 'tests/fuzz' in line or 'test_*.py' in line:
+                    found.append(f'{flow.name}:{number}')
+    return found
+
+
+_narrow = _narrow_pytest_paths()
+if _narrow:
+    raise SystemExit(
+        'pytest is run over children of tests/ rather than the root, which skips whatever is '
+        'added next: %s' % ', '.join(_narrow)
+    )
+
+# The form check above can only fail while there is a subtree for a non-recursive glob to
+# miss.  If tests/unit ever flattens, it passes forever and rots into decoration, so this
+# says out loud that the two collections differ, and names the file whose absence was the
+# reason: 22 tests on the JSON API response encoder, which is the subject of the advisory
+# this whole series comes from, and which CI had never run.
+_NAMED_SUBTREE_TEST = Path('tests/unit/reactor/api/response/test_json_update.py')
+if _test_root.is_dir():
+    _flat = {path.name for path in _test_root.glob('*/test_*.py')}
+    _deep = {path.name for path in _test_root.rglob('test_*.py')}
+    if len(_deep) <= len(_flat):
         raise SystemExit(
-            'a workflow runs pytest over children of tests/ rather than the root, which skips '
-            'whatever is added next: %s' % ', '.join(_narrow)
+            'tests/ has no subdirectory holding tests, so the check above cannot fail and is '
+            'no longer evidence of anything: delete it or give it something to catch'
+        )
+    if not (Path(__file__).resolve().parent.parent.parent / _NAMED_SUBTREE_TEST).is_file():
+        raise SystemExit(
+            f'{_NAMED_SUBTREE_TEST} has moved.  It is named here because a non-recursive glob '
+            'skipped it and CI ran none of its tests; point this at wherever it went, or at '
+            'another test living below tests/<directory>/'
         )
 
 # Everything in qa/bin is a gate unless it is named here as a tool, with the reason.
