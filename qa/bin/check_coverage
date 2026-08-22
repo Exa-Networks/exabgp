@@ -65,7 +65,7 @@ run_coverage() {
     esac
 
     # Run pytest with coverage
-    if uv run pytest tests/unit/ tests/fuzz/ \
+    if uv run pytest ./tests \
         --cov \
         $extra_args \
         --cov-fail-under=$MIN_COVERAGE \

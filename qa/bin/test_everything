@@ -298,21 +298,83 @@ if _test_root.is_dir():
 # prompted looking here; mine had it too, and let the form above through in silence.
 #
 # So the rule is the shape, not the list: no child of tests/ on a pytest command line.
-def _narrow_pytest_paths() -> list[str]:
-    found = []
+# Deliberately scoped runs, which are a different thing from a pipeline naming a subset.
+# check_perf exists to run the performance suite and mutation_test scopes mutmut's runner
+# so a mutation round finishes this century.  Both name one suite on purpose; neither
+# claims to be "the tests".
+SCOPED_ON_PURPOSE = {
+    'check_perf': 'runs tests/performance, which is its entire job',
+    'mutation_test': 'scopes the mutmut runner, which re-runs the suite once per mutant',
+}
+
+
+def _pytest_lines() -> list[tuple[str, str]]:
+    """Every pytest invocation in the pipeline: the stages, the workflows, the shell tools.
+
+    Reading shell sources as well as workflows because the gap between them is where things
+    live.  Session 5.0 found qa/bin/cover there: it named a child of tests/ AND globbed
+    *_test.py, which matches nothing in a tree whose files are test_*.py, so it had been
+    reporting coverage over zero tests for as long as it existed.  It cleared their form
+    check by not being a workflow and their directory walk by being correctly excluded as a
+    tool.  Two exclusions, each right alone, and a file nothing looked at in the middle.
+
+    Python tools in qa/bin are excluded on purpose, and the boundary is load-bearing rather
+    than incidental: check_sweep_floors and check_tests_run drive pytest per file as their
+    method, so scanning them flags the tool instead of the pipeline.
+    """
+    root = Path(__file__).resolve().parent.parent.parent
+    lines = []
     for command in TEST_COMMANDS.values():
         for part in [command] if isinstance(command, str) else command:
-            if 'pytest' in part and ('tests/unit' in part or 'tests/fuzz' in part or 'test_*.py' in part):
-                found.append(f'a stage in this file: {part.strip()[:70]}')
-    workflows = Path(__file__).resolve().parent.parent.parent / '.github' / 'workflows'
-    if workflows.is_dir():
-        for flow in sorted(workflows.glob('*.yml')):
-            for number, line in enumerate(flow.read_text().splitlines(), 1):
-                if 'pytest' not in line or line.lstrip().startswith('#'):
-                    continue
-                if 'tests/unit' in line or 'tests/fuzz' in line or 'test_*.py' in line:
-                    found.append(f'{flow.name}:{number}')
-    return found
+            if 'pytest' in part:
+                lines.append(('a stage in this file', part))
+    for flow in sorted((root / '.github' / 'workflows').glob('*.yml')):
+        for number, line in enumerate(flow.read_text().splitlines(), 1):
+            if 'pytest' in line and not line.lstrip().startswith('#'):
+                lines.append((f'{flow.name}:{number}', line))
+    for tool in sorted((root / 'qa' / 'bin').iterdir()):
+        if not tool.is_file() or not os.access(tool, os.X_OK) or tool.name in SCOPED_ON_PURPOSE:
+            continue
+        try:
+            text = tool.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if text.startswith('#!') and 'python' in text.splitlines()[0]:
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            if 'pytest' in line and not line.lstrip().startswith('#'):
+                lines.append((f'qa/bin/{tool.name}:{number}', line))
+    return lines
+
+
+def _narrow_pytest_paths() -> list[str]:
+    return [
+        f'{where}: {line.strip()[:70]}'
+        for where, line in _pytest_lines()
+        if 'tests/unit' in line or 'tests/fuzz' in line or 'test_*.py' in line
+    ]
+
+
+def _paths_selecting_nothing() -> list[str]:
+    """A pytest path which matches no file is worse than one which matches too few.
+
+    5.0's, and the reason is that every number downstream stays real and consistent and is
+    about nothing at all.  Being a child of tests/ and matching nothing are separate
+    defects; only the first is about recursion.
+    """
+    root = Path(__file__).resolve().parent.parent.parent
+    empty = []
+    for where, line in _pytest_lines():
+        for token in line.replace("'", ' ').replace('"', ' ').split():
+            if not token.startswith(('./tests', 'tests/')):
+                continue
+            cleaned = token.rstrip('\\').rstrip('/')
+            if any(char in cleaned for char in '*?['):
+                if not list(root.glob(cleaned.lstrip('./'))):
+                    empty.append(f'{where}: {token} matches no file')
+            elif not (root / cleaned.lstrip('./')).exists():
+                empty.append(f'{where}: {token} does not exist')
+    return empty
 
 
 _narrow = _narrow_pytest_paths()
@@ -320,6 +382,12 @@ if _narrow:
     raise SystemExit(
         'pytest is run over children of tests/ rather than the root, which skips whatever is '
         'added next: %s' % ', '.join(_narrow)
+    )
+
+_empty = _paths_selecting_nothing()
+if _empty:
+    raise SystemExit(
+        'a pytest path selects nothing, so everything measured through it is about nothing: %s' % ', '.join(_empty)
     )
 
 # The form check above can only fail while there is a subtree for a non-recursive glob to
