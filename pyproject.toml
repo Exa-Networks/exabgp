@@ -5,9 +5,8 @@ description = 'BGP swiss army knife'
 authors = [
 	{ name = "Thomas Mangin", email = "thomas.mangin@exa-networks.co.uk" },
 ]
-# the table form, not the PEP 639 SPDX string: this branch supports Python 3.8,
-# where pip can only install setuptools < 77, which rejects the string form
-license = { text = 'BSD-3-Clause' }
+license = 'BSD-3-Clause'
+license-files = ['LICENCE.txt']
 requires-python = ">=3.8.1"
 keywords = [
 	'bgp',
@@ -27,7 +26,6 @@ classifiers = [
 	'Environment :: Console',
 	'Intended Audience :: System Administrators',
 	'Intended Audience :: Telecommunications Industry',
-	'License :: OSI Approved :: BSD License',
 	'Operating System :: POSIX',
 	'Operating System :: MacOS :: MacOS X',
 	'Programming Language :: Python',
@@ -75,12 +73,21 @@ dev-dependencies = [
 
 
 [build-system]
-requires = ["setuptools", "wheel"]
+# the SPDX license above needs setuptools >= 77, which needs Python >= 3.9.
+# that constrains the machine building the wheel, not the one running exabgp:
+# the wheel is py3-none-any and installs on 3.8. what it rules out is building
+# from the sdist on 3.8, which now fails saying setuptools >= 77 is unavailable
+# rather than reporting a schema error against project.license.
+requires = ["setuptools>=77"]
 # include = ["*.txt", "*.rst"]
 
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+# bare `pytest` and CI must select the same tests. Without this they agreed only
+# because nothing outside tests/ happens to be named test_*.py, which is a fact
+# about today's layout rather than a setting.
+testpaths = ["tests"]
 markers = [
 	"fuzz: Fuzzing tests using Hypothesis (deselect with '-m \"not fuzz\"')",
 	"asyncio: Async tests using pytest-asyncio",

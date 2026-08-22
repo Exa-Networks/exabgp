@@ -36,7 +36,7 @@ jobs:
 
       - name: pytest
         run: |
-          env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py
+          env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests
 
       - name: tiger style
         run: |
@@ -52,7 +52,7 @@ jobs:
 
       - name: pytest under python -O
         run: |
-          env PYTHONPATH=src PYTHONOPTIMIZE=1 exabgp_log_enable=false pytest -q ./tests/unit/test_*.py ./tests/fuzz/test_*.py
+          env PYTHONPATH=src PYTHONOPTIMIZE=1 exabgp_log_enable=false pytest -q ./tests
 
       - name: compatibility against the last release
         run: |
