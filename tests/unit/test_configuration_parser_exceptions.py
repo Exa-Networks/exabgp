@@ -228,6 +228,57 @@ class TestMplsRouteDistinguisherExceptions:
         with pytest.raises(ValueError, match='12345'):
             srv6_mup_isd(tokeniser, AFI.ipv4)
 
+    def test_route_distinguisher_with_a_non_numeric_asn_prefix_is_a_configuration_error(self) -> None:
+        """int(prefix) on a non-numeric ASN raised a bare, unlabelled ValueError
+        naming only the fragment 'abc' rather than the full RD token.
+        """
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        with pytest.raises(ValueError, match='abc:100'):
+            route_distinguisher(tokeniser_returning('abc:100'))
+
+    def test_route_distinguisher_with_an_out_of_range_ipv4_octet_is_a_configuration_error(self) -> None:
+        """bytes([int(_)]) on an out-of-range octet (400) raised a bare
+        'bytes must be in range(0, 256)' with no token at all.
+        """
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        with pytest.raises(ValueError, match=r'1\.2\.3\.400:100'):
+            route_distinguisher(tokeniser_returning('1.2.3.400:100'))
+
+    def test_route_distinguisher_with_a_non_numeric_ipv4_octet_is_a_configuration_error(self) -> None:
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        with pytest.raises(ValueError, match=r'1\.2\.3\.abc:100'):
+            route_distinguisher(tokeniser_returning('1.2.3.abc:100'))
+
+    def test_route_distinguisher_accepts_a_legitimate_two_byte_asn_form(self) -> None:
+        """Negative-space check: a well-formed Type 0 ASN:nn RD must still parse."""
+        from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        rd = route_distinguisher(tokeniser_returning('65000:100'))
+        assert isinstance(rd, RouteDistinguisher)
+        assert len(rd.rd) == RouteDistinguisher.LENGTH
+
+    def test_route_distinguisher_accepts_a_legitimate_ipv4_form(self) -> None:
+        """Negative-space check: a well-formed Type 1 IP:nn RD must still parse."""
+        from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        rd = route_distinguisher(tokeniser_returning('192.0.2.1:100'))
+        assert isinstance(rd, RouteDistinguisher)
+        assert len(rd.rd) == RouteDistinguisher.LENGTH
+
+    def test_route_distinguisher_accepts_a_legitimate_four_byte_asn_form(self) -> None:
+        """Negative-space check: a well-formed Type 2 4-byte-ASN:nn RD must still parse."""
+        from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        rd = route_distinguisher(tokeniser_returning('4200000000:100'))
+        assert isinstance(rd, RouteDistinguisher)
+        assert len(rd.rd) == RouteDistinguisher.LENGTH
+
 
 class TestMplsPrefixSidExceptions:
     """Test static/mpls.py prefix_sid() exception handling.
@@ -284,5 +335,5 @@ class TestProcessParserRunExceptions:
     def test_run_without_a_program_argument_is_a_configuration_error(self) -> None:
         from exabgp.configuration.process.parser import run
 
-        with pytest.raises(ValueError, match='program'):
+        with pytest.raises(ValueError, match='requires a program path'):
             run(tokeniser_returning())
