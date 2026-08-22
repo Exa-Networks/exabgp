@@ -171,8 +171,8 @@ python3 -m exabgp healthcheck --help
 It is also possible to download releases from GitHub:
 
 ```sh
-curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.12.tar.gz | tar zx
-cd exabgp-5.0.12
+curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.13.tar.gz | tar zx
+cd exabgp-5.0.13
 ./sbin/exabgp version
 ./sbin/exabgp --help
 
@@ -196,10 +196,10 @@ env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 ./bin/healthcheck --help
 ```
 
-It is then possible to change git to use any release (here 5.0.12):
+It is then possible to change git to use any release (here 5.0.13):
 
 ```sh
-git checkout 5.0.12
+git checkout 5.0.13
 ./sbin/exabgp version
 ```
 
