@@ -176,6 +176,7 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     'type-ignore': './qa/bin/check_type_ignores',
     'tiger-style': './qa/bin/check_tiger_style',
     'tests-run': './qa/bin/check_tests_run',
+    'integration': 'env exabgp_log_enable=false uv run pytest ./tests/integration/ ./tests/async_debug/ -q',
     'sweep-floors': './qa/bin/check_sweep_floors',
     'renders-json': './qa/bin/compat_gate --this-tree-only',
     'documentation': './qa/bin/check_documentation',
@@ -202,6 +203,7 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'type-ignore': 'Prohibited # type: comments check',
     'tiger-style': 'Tiger style check',
     'tests-run': 'Every test file is collected',
+    'integration': 'Connection lifecycle and RIB behaviour under concurrency',
     'sweep-floors': 'No sweep shrinks silently',
     'renders-json': 'Every corpus input renders JSON a consumer can parse',
     'documentation': 'Documentation matches the code',
@@ -229,6 +231,7 @@ TEST_ORDER = [
     'type-ignore',
     'tiger-style',
     'tests-run',
+    'integration',
     'sweep-floors',
     'renders-json',
     'documentation',
@@ -238,6 +241,33 @@ TEST_ORDER = [
 # "All N tests passed" because N counts what ran.  That is how renders-json was added,
 # reported green, and had not executed once.  A gate which does not run is worse than a
 # missing gate: the missing one does not tell you it is fine.
+# Every directory under tests/ which defines tests is either run by a stage above or
+# named here with the reason it is not.
+#
+# check_tests_run asks whether pytest COLLECTS a file, which is a different question from
+# whether anything RUNS it, and the difference had a cost: tests/async_debug held two
+# tests broken against the packed-bytes-first refactor, calling INET(action=...) and
+# rib._refresh_changes, both gone.  They failed for months.  The suite was green because
+# no stage named that directory, and check_tests_run was green because collection is not
+# execution.  Same sentence as the qa/bin walk below: the number is what ran.
+NOT_A_SUITE = {
+    'performance': 'measures against tests/performance/baseline.json; a timing number on a loaded machine is not a pass or a fail',
+}
+
+_test_root = Path(__file__).resolve().parent.parent.parent / 'tests'
+if _test_root.is_dir():
+    _stage_text = ' '.join(
+        part for command in TEST_COMMANDS.values() for part in ([command] if isinstance(command, str) else command)
+    )
+    _with_tests = {entry.name for entry in _test_root.iterdir() if entry.is_dir() and any(entry.rglob('test_*.py'))}
+    _unrun = sorted(name for name in _with_tests if f'tests/{name}' not in _stage_text and name not in NOT_A_SUITE)
+    _gone = sorted(NOT_A_SUITE.keys() - _with_tests)
+    if _unrun or _gone:
+        raise SystemExit(
+            'tests/ is inconsistent: %s defines tests which no stage runs, %s named as not-a-suite but holds no tests'
+            % (_unrun or 'none', _gone or 'none')
+        )
+
 # Everything in qa/bin is a gate unless it is named here as a tool, with the reason.
 #
 # The guard below catches a stage added to one list and not the other, which is how

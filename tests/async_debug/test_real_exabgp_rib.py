@@ -17,7 +17,6 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
-from exabgp.bgp.message.action import Action
 from exabgp.rib.route import Route
 from exabgp.protocol.ip import IPv4
 
@@ -37,12 +36,11 @@ def test_real_rib_resend():
 
     print('\n[STEP 1] Check initial state')
     print(f'  pending() = {rib.pending()}')
-    print(f'  _refresh_changes = {len(rib._refresh_changes)}')
+    print(f'  _refresh_routes = {len(rib._refresh_routes)}')
 
     # Create a change (route)
     print('\n[STEP 2] Create and cache a route')
-    nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, action=Action.ANNOUNCE)
-    nlri.cidr = CIDR.create_cidr(IPv4.pton('192.168.0.1'), 32)
+    nlri = INET.from_cidr(CIDR.create_cidr(IPv4.pton('192.168.0.1'), 32), AFI.ipv4, SAFI.unicast)
     attrs = AttributeCollection()
     change = Route(nlri, attrs)
 
@@ -57,7 +55,7 @@ def test_real_rib_resend():
 
     print('  After resend():')
     print(f'    pending() = {rib.pending()}')
-    print(f'    _refresh_changes = {len(rib._refresh_changes)}')
+    print(f'    _refresh_routes = {len(rib._refresh_routes)}')
 
     # Consume via updates()
     print('\n[STEP 4] Consume via updates() generator')
@@ -70,14 +68,14 @@ def test_real_rib_resend():
 
     print('\n[STEP 5] Check state after consumption')
     print(f'  pending() = {rib.pending()}')
-    print(f'  _refresh_changes = {len(rib._refresh_changes)}')
+    print(f'  _refresh_routes = {len(rib._refresh_routes)}')
 
     # Try second resend
     print('\n[STEP 6] Second resend() - should work again')
     rib.resend(enhanced_refresh=False, family=None)
     print('  After second resend():')
     print(f'    pending() = {rib.pending()}')
-    print(f'    _refresh_changes = {len(rib._refresh_changes)}')
+    print(f'    _refresh_routes = {len(rib._refresh_routes)}')
 
     update_count2 = 0
     for update in rib.updates(grouped=False):
@@ -105,8 +103,7 @@ def test_real_rib_concurrent_operations():
     # Add multiple routes
     print('\n[SETUP] Adding 3 routes to cache')
     for i in range(3):
-        nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, action=Action.ANNOUNCE)
-        nlri.cidr = CIDR.create_cidr(IPv4.pton(f'192.168.0.{i}'), 32)
+        nlri = INET.from_cidr(CIDR.create_cidr(IPv4.pton(f'192.168.0.{i}'), 32), AFI.ipv4, SAFI.unicast)
         attrs = AttributeCollection()
         change = Route(nlri, attrs)
         rib.update_cache(change)
@@ -125,8 +122,7 @@ def test_real_rib_concurrent_operations():
 
     # Add new route while cache exists
     print('\n[STEP 3] Add new route + flush again')
-    nlri = INET(afi=AFI.ipv4, safi=SAFI.unicast, action=Action.ANNOUNCE)
-    nlri.cidr = CIDR.create_cidr(IPv4.pton('192.168.0.100'), 32)
+    nlri = INET.from_cidr(CIDR.create_cidr(IPv4.pton('192.168.0.100'), 32), AFI.ipv4, SAFI.unicast)
     attrs = AttributeCollection()
     change = Route(nlri, attrs)
     rib.update_cache(change)
