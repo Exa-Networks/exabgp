@@ -114,13 +114,78 @@ def wire_parameters(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str
     return {argument.arg for argument in declared if argument.arg in WIRE_PARAMETERS}
 
 
+TAINT_ROUNDS = 12  # a chain of assignments longer than this is its own problem
+
+
+def tainted_names(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    """The wire parameters, plus every name assigned from one, to a fixpoint.
+
+    Matching the parameter name alone let this through, in a function which really does
+    take `bgp`:
+
+        size = bgp[0]
+        assert size < 10
+
+    That validates peer bytes and -O deletes it exactly as completely as the version
+    naming the parameter.  Widening WIRE_PARAMETERS does not touch it, because the defect
+    is not a missing name, it is a rule reading names rather than values.  Session 5.0
+    found this by asking what their rule did with a COMPUTED value after we had both spent
+    a day adding entries to hand written lists.
+
+    What this does NOT track, said here rather than left to be discovered: accumulation.
+
+        labels = []
+        labels.append(bgp[0])
+
+    `labels` is never assigned FROM a tainted name, so it stays clean and an assertion
+    about it is not reported.  Derivation by assignment is covered; derivation by mutation
+    is not.  Better than a list of names, still not complete.
+    """
+    tainted = wire_parameters(function)
+    if not tainted:
+        return tainted
+
+    for _ in range(TAINT_ROUNDS):
+        grown = set(tainted)
+        for node in ast.walk(function):
+            targets: list[ast.expr] = []
+            if isinstance(node, ast.Assign):
+                targets = list(node.targets)
+            elif isinstance(node, (ast.AugAssign, ast.AnnAssign)) and node.value is not None:
+                targets = [node.target]
+            else:
+                continue
+            if node.value is None:
+                continue
+            sources = {used.id for used in ast.walk(node.value) if isinstance(used, ast.Name)}
+            if not sources & tainted:
+                continue
+            for target in targets:
+                # ONLY a plain name, and only the names inside a tuple unpack.  Walking the
+                # whole target taints the object when an ATTRIBUTE of it is assigned, so
+                # `instance.hostname = data[0]` made `instance` peer data and flagged
+                # `assert isinstance(instance, HostName)`, a type invariant, in three
+                # places on a clean tree.  Assigning to a field of a thing does not make
+                # the thing itself the peer's.
+                if isinstance(target, ast.Name):
+                    grown.add(target.id)
+                elif isinstance(target, (ast.Tuple, ast.List)):
+                    for element in target.elts:
+                        if isinstance(element, ast.Name):
+                            grown.add(element.id)
+        if grown == tainted:
+            break
+        tainted = grown
+    return tainted
+
+
 def input_asserts(function: ast.FunctionDef | ast.AsyncFunctionDef, relative: str) -> list[Violation]:
-    """Assertions which validate the bytes the function was handed.
+    """Assertions which validate the bytes the function was handed, or anything from them.
 
     An assertion about our own state is wanted, and is not reported. An assertion about
     the input is a check the peer can delete by having the daemon started with -O.
     """
-    wire = wire_parameters(function)
+    wire = tainted_names(function)
     if not wire:
         return []
 
@@ -128,7 +193,15 @@ def input_asserts(function: ast.FunctionDef | ast.AsyncFunctionDef, relative: st
     for node in ast.walk(function):
         if not isinstance(node, ast.Assert):
             continue
-        named = {used.id for used in ast.walk(node.test) if isinstance(used, ast.Name)}
+        # A BARE tainted name, not an attribute of one.  `assert update._parsed is not None`
+        # is our parser saying it ran, and _parsed is a field we set; the peer's bytes are
+        # `update`, and the assertion does not look at them.  Symmetric with the assignment
+        # rule above: a field of a thing is not the thing.
+        #
+        # The cost of that symmetry is `assert len(nlri.packed) > 4`, which IS peer data
+        # reached through an attribute and is not reported.  Stated rather than hidden.
+        attribute_values = {used.value for used in ast.walk(node.test) if isinstance(used, ast.Attribute)}
+        named = {used.id for used in ast.walk(node.test) if isinstance(used, ast.Name) and used not in attribute_values}
         tested = sorted(named & wire)
         if tested:
             found.append(Violation('input_assert', relative, node.lineno, f'{function.name} asserts about {tested[0]}'))
