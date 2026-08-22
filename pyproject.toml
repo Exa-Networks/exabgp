@@ -78,6 +78,19 @@ requires = ["setuptools", "wheel"]
 
 
 [tool.pytest.ini_options]
+# Bare `pytest` and `pytest ./tests` have to mean the same thing, or the pipeline and a
+# developer at a prompt are running different suites and only one of them is right.
+#
+# They did not.  Bare pytest collected 5198 with 8 errors against 5193 clean, because it
+# walked mutants/, mutmut's 33M working copy of the tree, which is gitignored and holds a
+# stale duplicate of every test.  Anyone typing pytest in this repository after a mutation
+# round got errors out of an artefact.
+#
+# Session 5.0 found the same setting missing on their branch, where the two agreed only
+# because nothing outside tests/ happened to be named test_*.py.  That is a fact about a
+# layout rather than a setting, which is the divergence we spent today's rounds on, waiting
+# rather than arrived.
+testpaths = ["tests"]
 asyncio_default_fixture_loop_scope = "function"
 markers = [
 	"fuzz: Fuzzing tests using Hypothesis (deselect with '-m \"not fuzz\"')",

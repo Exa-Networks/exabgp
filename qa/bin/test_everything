@@ -328,10 +328,15 @@ def _pytest_lines() -> list[tuple[str, str]]:
         for part in [command] if isinstance(command, str) else command:
             if 'pytest' in part:
                 lines.append(('a stage in this file', part))
-    for flow in sorted((root / '.github' / 'workflows').glob('*.yml')):
+    # EVERY workflow directory, not .github alone.  This read .github/workflows only, and
+    # .forgejo/workflows/unit-testing.yml sat outside it running the old glob, so the
+    # codeberg CI, which is the remote this repository actually pushes to, went on running
+    # 4341 of 5193 tests after the github one was fixed.  The gate confirmed the half it
+    # could see and said nothing about the half it could not.
+    for flow in sorted(root.glob('.*/workflows/*.yml')):
         for number, line in enumerate(flow.read_text().splitlines(), 1):
             if 'pytest' in line and not line.lstrip().startswith('#'):
-                lines.append((f'{flow.name}:{number}', line))
+                lines.append((f'{flow.parent.parent.name}/{flow.name}:{number}', line))
     for tool in sorted((root / 'qa' / 'bin').iterdir()):
         if not tool.is_file() or not os.access(tool, os.X_OK) or tool.name in SCOPED_ON_PURPOSE:
             continue
@@ -382,6 +387,18 @@ if _narrow:
     raise SystemExit(
         'pytest is run over children of tests/ rather than the root, which skips whatever is '
         'added next: %s' % ', '.join(_narrow)
+    )
+
+# A pytest invocation with NO path argument means whatever the layout means, unless
+# testpaths says otherwise.  The form check above reads path arguments and has nothing to
+# say about a bare one, which is 5.0's finding: theirs agreed with ./tests only because
+# nothing outside tests/ happened to be named test_*.py, a fact about a directory listing
+# rather than a setting.  Here they did not even agree: bare pytest walked mutants/, the
+# gitignored 33M mutmut working copy, and collected 5198 with 8 errors against 5193.
+if 'testpaths' not in (Path(__file__).resolve().parent.parent.parent / 'pyproject.toml').read_text():
+    raise SystemExit(
+        'pyproject.toml sets no testpaths, so a bare pytest collects whatever the tree '
+        'happens to contain rather than the suite'
     )
 
 _empty = _paths_selecting_nothing()
