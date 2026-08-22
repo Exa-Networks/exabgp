@@ -352,18 +352,37 @@ def test_notification_shutdown_trailing_data() -> None:
 
 
 def test_notification_shutdown_newline_carriage_return() -> None:
-    """Test that shutdown communication replaces newlines and carriage returns.
+    """A shutdown communication is flattened to one line, ON PURPOSE.
 
-    Newlines and carriage returns should be replaced with spaces.
+    notification.py replaces CR and LF with spaces before the value is encoded, and that
+    is a DISPLAY choice, not a safety measure.  Stating it because it now reads like the
+    defect we have spent this series removing: peer text being rewritten on its way out.
+
+    It is not that defect, and the difference is where it happens.  This rewrites the
+    VALUE before anything encodes it, not the finished line, so nothing about it depends
+    on escaping.  Escaping could regress entirely and this would still do exactly what it
+    does.  The encoder is what makes the text unforgeable, and it is tested for that
+    separately in test_api_stream_integrity.py.
+
+    So it must not be "fixed" into escaping.  RFC 8203 makes this field free text for an
+    operator to read, ExaBGP renders it on one line the way the text API does with
+    oneline(), and turning the flattening into an escape would silently change what every
+    operator sees at the moment a peer shuts a session down.
+
+    The assertion was `b'\n' not in data or b'Line1 Line2 Line3' in data`.  The or is
+    satisfied by its first half alone, so an encoder which DELETED the communication
+    passed it.  Other tests in this file catch deletion, so it was weak rather than
+    vacuous, but a pin for a deliberate behaviour should state the behaviour: the exact
+    flattened text, and nothing else.
     """
     message = 'Line1\nLine2\rLine3'
-    length = len(message)
-    data = bytes([length]) + message.encode('utf-8')
+    data = bytes([len(message)]) + message.encode('utf-8')
 
     notif = Notification.make_notification(6, 2, data)
 
-    # Original newlines/CRs should be replaced with spaces
-    assert b'\n' not in notif.data or b'Line1 Line2 Line3' in notif.data
+    assert b'Shutdown Communication: "Line1 Line2 Line3"' in notif.data
+    assert b'\n' not in notif.data
+    assert b'\r' not in notif.data
 
 
 def test_notification_admin_reset_communication() -> None:
