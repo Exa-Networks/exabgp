@@ -24,7 +24,6 @@ import json
 import os
 import re
 import subprocess
-import tempfile
 import sys
 import time
 from pathlib import Path
@@ -414,28 +413,13 @@ if not _WORKFLOW_DIRECTORIES <= _seen_forges:
         'CI it claims to read' % ', '.join(sorted(_WORKFLOW_DIRECTORIES - _seen_forges))
     )
 
-# A positive control for the spelling, on a planted tree.
+# The positive control for the spelling lives in tests/unit/test_gates_are_wired.py.
 #
-# The forge control above cannot cover it: .github and .forgejo both resolve through .yml
-# files, so narrowing the walk to *.yml leaves it green while a workflow named .yaml goes
-# unread.  There is no .yaml workflow in this repository to assert against, which is exactly
-# the case a control is for, so one is built in a temporary directory and the walk is
-# pointed at it.  That is why workflow_files takes a root.
-#
-# Not an assert.  python -O deletes those, and a control which vanishes under -O reads as
-# rigour in the file while being absent from the run: session 5.0 measured their own
-# positive control passing under -O with the detector deliberately broken.
-with tempfile.TemporaryDirectory() as _planted:
-    _tree = Path(_planted)
-    for _forge, _name in (('.github', 'a.yml'), ('.forgejo', 'b.yaml')):
-        (_tree / _forge / 'workflows').mkdir(parents=True)
-        (_tree / _forge / 'workflows' / _name).write_text('jobs: {}\n')
-    _found = {flow.name for flow in workflow_files(_tree)}
-    if _found != {'a.yml', 'b.yaml'}:
-        raise SystemExit(
-            'the workflow walk found %s on a planted tree holding a.yml and b.yaml, so it '
-            'reads one spelling and a workflow named the other way is invisible to it' % (sorted(_found) or 'nothing')
-        )
+# It plants a tree holding a.yml and b.yaml and points workflow_files at it, which is
+# filesystem work, and this module must stay importable without doing any: that test
+# imports this file to run these guards where CI can see them, and creating temporary
+# directories as a side effect of import broke six tests in the full suite.  A control
+# belongs in a test; a guard belongs here.
 
 _narrow = _narrow_pytest_paths()
 if _narrow:
