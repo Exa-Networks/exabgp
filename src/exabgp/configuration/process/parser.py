@@ -45,45 +45,40 @@ def _make_path(prg: str) -> list[str]:
     return options
 
 
-def run(tokeniser: 'Tokeniser') -> list[str]:
-    """Parse and validate the 'run' command for a process.
+def _resolve_relative_program(tokeniser: 'Tokeniser', prg: str) -> str:
+    """Resolve a program path given relative to /etc/exabgp, the config
+    file's own directory, or $PATH, to the first candidate found on disk.
 
-    Args:
-        tokeniser: Configuration tokeniser providing command tokens
-
-    Returns:
-        List containing program path and arguments
-
-    Raises:
-        ValueError: If program cannot be found or validated
-        OSError: If file access fails
+    Returns `prg` unchanged if no candidate exists, leaving the caller to
+    report the original operator-supplied path in that case.
     """
-    prg = tokeniser()
+    if prg.startswith('etc/exabgp'):
+        options = _make_path(prg)
+    else:
+        options = [
+            os.path.abspath(os.path.join('/etc/exabgp', prg)),
+            os.path.abspath(os.path.join(os.path.dirname(tokeniser.fname), prg)),
+        ]
+        options.extend(os.path.abspath(os.path.join(p, prg)) for p in os.getenv('PATH', '').split(':'))
+    for option in options:
+        if os.path.exists(option):
+            return option
+    return prg
 
-    if not prg:
-        raise ValueError('the "run" command requires a program path\n  Format: run <path-to-executable>;')
 
-    if prg[0] != '/':
-        if prg.startswith('etc/exabgp'):
-            options = _make_path(prg)
-        else:
-            options = [
-                os.path.abspath(os.path.join('/etc/exabgp', prg)),
-                os.path.abspath(os.path.join(os.path.dirname(tokeniser.fname), prg)),
-            ]
-            options.extend(os.path.abspath(os.path.join(p, prg)) for p in os.getenv('PATH', '').split(':'))
-        for option in options:
-            if os.path.exists(option):
-                prg = option
+def _validate_executable(prg: str) -> None:
+    """Validate that `prg` is safe to execute, raising ValueError naming it if not.
 
-    # Validate program using file descriptor to mitigate TOCTOU attacks
-    # Open file first to get a handle, then validate using fstat on the handle
-    #
-    # Security note: We allow following symlinks (no O_NOFOLLOW) because:
-    # 1. Symlinks are commonly used for executables (e.g., /usr/bin/python3)
-    # 2. TOCTOU protection comes from using fstat() on the file descriptor,
-    #    not from blocking symlinks
-    # 3. We validate the final target file that the descriptor points to
+    Opens the file by descriptor first to mitigate TOCTOU attacks, then
+    validates using fstat() on that descriptor rather than re-checking the
+    path (which could resolve to something else by then).
+
+    Security note: We allow following symlinks (no O_NOFOLLOW) because:
+    1. Symlinks are commonly used for executables (e.g., /usr/bin/python3)
+    2. TOCTOU protection comes from using fstat() on the file descriptor,
+       not from blocking symlinks
+    3. We validate the final target file that the descriptor points to
+    """
     fd = None
     try:
         try:
@@ -125,5 +120,29 @@ def run(tokeniser: 'Tokeniser') -> list[str]:
     finally:
         if fd is not None:
             os.close(fd)
+
+
+def run(tokeniser: 'Tokeniser') -> list[str]:
+    """Parse and validate the 'run' command for a process.
+
+    Args:
+        tokeniser: Configuration tokeniser providing command tokens
+
+    Returns:
+        List containing program path and arguments
+
+    Raises:
+        ValueError: If program cannot be found or validated
+        OSError: If file access fails
+    """
+    prg = tokeniser()
+
+    if not prg:
+        raise ValueError('the "run" command requires a program path\n  Format: run <path-to-executable>;')
+
+    if prg[0] != '/':
+        prg = _resolve_relative_program(tokeniser, prg)
+
+    _validate_executable(prg)
 
     return [prg] + [_ for _ in tokeniser.generator]

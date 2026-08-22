@@ -74,12 +74,18 @@ def route_distinguisher(tokeniser: Any) -> RouteDistinguisher:
         raise ValueError(f"'{data}' is not a valid route-distinguisher\n  Suffix must be a number") from None
 
     if '.' in prefix:
-        data_list: list[bytes] = [bytes([0, 1])]
-        data_list.extend([bytes([int(_)]) for _ in prefix.split('.')])
-        data_list.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
-        rtd = b''.join(data_list)
+        try:
+            data_list: list[bytes] = [bytes([0, 1])]
+            data_list.extend([bytes([int(_)]) for _ in prefix.split('.')])
+            data_list.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
+            rtd = b''.join(data_list)
+        except (ValueError, IndexError):
+            raise ValueError(f"'{data}' is not a valid route-distinguisher (invalid IPv4 address)") from None
     else:
-        number = int(prefix)
+        try:
+            number = int(prefix)
+        except ValueError:
+            raise ValueError(f"'{data}' is not a valid route-distinguisher (prefix must be ASN or IPv4)") from None
         if number < pow(2, 16) and suffix < pow(2, 32):
             rtd = bytes([0, 0]) + pack('!H', number) + pack('!L', suffix)
         elif number < pow(2, 32) and suffix < pow(2, 16):
