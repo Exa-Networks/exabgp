@@ -1,2 +1,4 @@
-#/bin/sh
-env exabgp_log_enable=false pytest --cov --cov-reset --cov-report=html ./tests/*_test.py
+#!/bin/sh
+# ./tests, not a glob under it: tests/*_test.py matched nothing at all, because
+# this tree names files test_*.py, so this reported coverage over zero tests.
+env exabgp_log_enable=false pytest --cov --cov-reset --cov-report=html ./tests
