@@ -117,3 +117,61 @@ def test_a_withdraw_says_no_more_than_an_announce(
         if found is None:
             continue
         assert found <= expected, f'{name} puts more in a withdraw than in an announce'
+
+
+# Every family which has a decoder but no entry above.  A CONTRACT of eight families says
+# nothing about the other fifteen, and nothing said so: a family added later renders into
+# the API stream and no test here notices, which is the same stale-hand-written-table
+# failure this repository has now found in workflow paths, gate lists and wire parameters.
+#
+# Named individually rather than counted, so adding a family means deciding which list it
+# belongs in.  This is a debt list and it must only shrink: move a family up into CONTRACT
+# with its seeds, do not add one here.
+#
+# Session 5.0 has the floor with no debt list, because their table covers every decodable
+# family.  Ours does not, and asserting the number honestly is better than asserting a
+# clean rule that would have to be skipped.
+UNPINNED = {
+    'ipv6/nlri-mpls',
+    'ipv6/mpls-vpn',
+    'ipv6/multicast',
+    'ipv6/flow',
+    'ipv6/flow-vpn',
+    'ipv4/flow-vpn',
+    'ipv4/mcast-vpn',
+    'ipv6/mcast-vpn',
+    'ipv4/mup',
+    'ipv6/mup',
+    'ipv4/sr-policy',
+    'ipv6/sr-policy',
+    'l2vpn/evpn',
+    'bgp-ls/bgp-ls',
+    'bgp-ls/bgp-ls-vpn',
+}
+
+
+def test_every_decodable_family_is_pinned_or_named_as_debt() -> None:
+    """A family added later must be given its members rather than silently skipped.
+
+    The failure this exists for: someone registers a family, it renders into the API
+    stream, and a contract test which parametrises over a hand written list stays green
+    because it never heard of it.
+    """
+    registered = {str(family) for family in NLRI.registered_nlri}
+    pinned = {f'{afi}/{safi}' for _name, afi, safi, _expected, _seeds in CONTRACT}
+    unaccounted = sorted(registered - pinned - UNPINNED)
+    assert not unaccounted, f'these families render JSON nobody has pinned or acknowledged: {unaccounted}'
+
+
+def test_the_debt_list_does_not_name_a_family_which_is_pinned() -> None:
+    """An entry which is also in CONTRACT is an excuse nothing needs, and hides the next one."""
+    pinned = {f'{afi}/{safi}' for _name, afi, safi, _expected, _seeds in CONTRACT}
+    both = sorted(UNPINNED & pinned)
+    assert not both, f'these are pinned AND listed as debt: {both}'
+
+
+def test_the_debt_list_does_not_name_a_family_which_does_not_exist() -> None:
+    """A family renamed or removed leaves an entry which excuses nothing and outlives it."""
+    registered = {str(family) for family in NLRI.registered_nlri}
+    gone = sorted(UNPINNED - registered)
+    assert not gone, f'these are named as debt but are not registered families: {gone}'
