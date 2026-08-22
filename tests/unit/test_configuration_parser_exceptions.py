@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from unittest.mock import MagicMock
 
@@ -337,3 +339,110 @@ class TestProcessParserRunExceptions:
 
         with pytest.raises(ValueError, match='requires a program path'):
             run(tokeniser_returning())
+
+
+class TestResolveRelativeProgramPrecedence:
+    """Test process/parser.py _resolve_relative_program() candidate ordering.
+
+    `options` is built most-specific-first: [/etc/exabgp/<prg>, the config
+    file's own directory/<prg>, then each $PATH entry in order]. The loop
+    returns on the FIRST existing candidate, so a more specific location
+    always wins over a less specific later one. Before the run()/mpls.py
+    extraction in the prior fix round, the equivalent inline loop had no
+    return/break and kept overwriting `prg` on every match, so the LAST
+    existing candidate won instead - inverting the list's intended
+    most-specific-first ordering. These tests pin the current (first-match)
+    behaviour explicitly so it cannot silently regress back to last-match.
+    """
+
+    def test_prefers_etc_exabgp_over_a_path_entry(self, monkeypatch, tmp_path) -> None:
+        from exabgp.configuration.core.parser import Tokeniser
+        from exabgp.configuration.process.parser import _resolve_relative_program
+
+        prg_name = 'myscript'
+        etc_candidate = os.path.abspath(os.path.join('/etc/exabgp', prg_name))
+
+        # A same-named "executable" also sits on $PATH - it must still lose
+        # to /etc/exabgp, the more specific candidate.
+        path_dir = tmp_path / 'pathdir'
+        path_dir.mkdir()
+        (path_dir / prg_name).write_text('#!/bin/sh\n')
+        monkeypatch.setenv('PATH', str(path_dir))
+
+        tokeniser = Tokeniser()
+        tokeniser.fname = str(tmp_path / 'unrelated.conf')  # its directory has no match
+
+        # Simulate /etc/exabgp/<prg> existing without writing to the real
+        # /etc/exabgp: this machine has none, and even where one exists a
+        # test must not depend on, or mutate, real system state.
+        real_exists = os.path.exists
+
+        def fake_exists(path: str) -> bool:
+            if path == etc_candidate:
+                return True
+            return real_exists(path)
+
+        monkeypatch.setattr('exabgp.configuration.process.parser.os.path.exists', fake_exists)
+
+        assert _resolve_relative_program(tokeniser, prg_name) == etc_candidate
+
+    def test_prefers_an_earlier_path_entry_over_a_later_one(self, monkeypatch, tmp_path) -> None:
+        from exabgp.configuration.core.parser import Tokeniser
+        from exabgp.configuration.process.parser import _resolve_relative_program
+
+        prg_name = 'myscript'
+        etc_candidate = os.path.abspath(os.path.join('/etc/exabgp', prg_name))
+        assert not os.path.exists(etc_candidate), 'test assumes no real /etc/exabgp on this machine'
+
+        first_dir = tmp_path / 'first'
+        second_dir = tmp_path / 'second'
+        first_dir.mkdir()
+        second_dir.mkdir()
+        (first_dir / prg_name).write_text('#!/bin/sh\n')
+        (second_dir / prg_name).write_text('#!/bin/sh\n')
+        monkeypatch.setenv('PATH', f'{first_dir}:{second_dir}')
+
+        tokeniser = Tokeniser()
+        tokeniser.fname = str(tmp_path / 'unrelated.conf')  # its directory has no match
+
+        result = _resolve_relative_program(tokeniser, prg_name)
+        assert result == str(first_dir / prg_name)
+
+    def test_single_candidate_resolves_the_same_regardless_of_match_order(self, monkeypatch, tmp_path) -> None:
+        """Control case: only one candidate exists, so first-match and
+        last-match agree - proves the two tests above are genuinely
+        exercising the multi-candidate ordering, not a coincidence.
+        """
+        from exabgp.configuration.core.parser import Tokeniser
+        from exabgp.configuration.process.parser import _resolve_relative_program
+
+        prg_name = 'myscript'
+        etc_candidate = os.path.abspath(os.path.join('/etc/exabgp', prg_name))
+        assert not os.path.exists(etc_candidate), 'test assumes no real /etc/exabgp on this machine'
+
+        config_dir = tmp_path / 'confdir'
+        config_dir.mkdir()
+        (config_dir / prg_name).write_text('#!/bin/sh\n')
+        monkeypatch.setenv('PATH', str(tmp_path / 'no-such-path-dir'))
+
+        tokeniser = Tokeniser()
+        tokeniser.fname = str(config_dir / 'my.conf')
+
+        result = _resolve_relative_program(tokeniser, prg_name)
+        assert result == str(config_dir / prg_name)
+
+    def test_returns_prg_unchanged_when_no_candidate_exists(self, monkeypatch, tmp_path) -> None:
+        from exabgp.configuration.core.parser import Tokeniser
+        from exabgp.configuration.process.parser import _resolve_relative_program
+
+        prg_name = 'no-such-program-anywhere'
+        etc_candidate = os.path.abspath(os.path.join('/etc/exabgp', prg_name))
+        assert not os.path.exists(etc_candidate), 'test assumes no real /etc/exabgp on this machine'
+
+        monkeypatch.setenv('PATH', str(tmp_path / 'no-such-path-dir'))
+
+        tokeniser = Tokeniser()
+        tokeniser.fname = str(tmp_path / 'unrelated.conf')
+
+        result = _resolve_relative_program(tokeniser, prg_name)
+        assert result == prg_name
