@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar
 
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -21,7 +20,7 @@ from exabgp.util.types import Buffer
 
 @Capability.register()
 class PathsLimit(Capability, dict[FamilyTuple, int]):
-    ID: ClassVar[int] = Capability.CODE.PATHS_LIMIT
+    ID = Capability.CODE.PATHS_LIMIT
 
     def __init__(self, families: dict[FamilyTuple, int] | None = None) -> None:
         if families:

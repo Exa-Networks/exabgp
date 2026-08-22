@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar
 
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -23,7 +22,7 @@ from exabgp.util.types import Buffer
 
 @Capability.register()
 class MultiProtocol(Capability, list[FamilyTuple]):
-    ID: ClassVar[int] = Capability.CODE.MULTIPROTOCOL
+    ID = Capability.CODE.MULTIPROTOCOL
 
     def __str__(self) -> str:
         families = ','.join([f'{afi!s} {safi!s}' for (afi, safi) in self])

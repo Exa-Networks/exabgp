@@ -25,7 +25,7 @@ from exabgp.util.types import Buffer
 @Capability.register()
 class Graceful(Capability, dict[FamilyTuple, int]):
     MAX: ClassVar[int] = 0xFFFF
-    ID: ClassVar[int] = Capability.CODE.GRACEFUL_RESTART
+    ID = Capability.CODE.GRACEFUL_RESTART
 
     TIME_MASK: ClassVar[int] = 0x0FFF
     FLAG_MASK: ClassVar[int] = 0xF000

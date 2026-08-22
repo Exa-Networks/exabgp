@@ -18,6 +18,7 @@ from exabgp.bgp.message.open import ASN
 from exabgp.bgp.message.open import RouterID
 from exabgp.bgp.message.open import HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import RouteRefresh
 
 
@@ -69,11 +70,17 @@ open_body = [
 
 class TestData(unittest.TestCase):
     def test_1_open(self) -> None:
+        # 2 is the RFC route-refresh code (0x02); a bare RouteRefresh() carries
+        # that ID as its class-level default. 128 is the Cisco code (0x80): it
+        # must be unpacked through Capability.unpack() to carry that ID on the
+        # instance, or it would compare unequal to the peer's actual Cisco
+        # capability (RouteRefresh equality is ID-sensitive; see refresh.py).
+        cisco_route_refresh = Capability.unpack(Capability.CODE.ROUTE_REFRESH_CISCO, Capabilities(), b'')
         check_capa = {
             1: [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)],
             2: RouteRefresh(),
             65: 65534,
-            128: RouteRefresh(),
+            128: cisco_route_refresh,
         }
 
         message_id = 1

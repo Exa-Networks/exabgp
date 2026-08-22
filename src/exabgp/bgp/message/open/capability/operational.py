@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar
 
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -21,7 +20,7 @@ from exabgp.util.types import Buffer
 
 @Capability.register()
 class Operational(Capability, list[bytes]):
-    ID: ClassVar[int] = Capability.CODE.OPERATIONAL
+    ID = Capability.CODE.OPERATIONAL
     _seen: bool = False
 
     def __str__(self) -> str:

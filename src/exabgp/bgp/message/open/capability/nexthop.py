@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -25,7 +24,7 @@ from exabgp.util.types import Buffer
 
 @Capability.register()
 class NextHop(Capability, list[tuple[AFI, SAFI, AFI]]):
-    ID: ClassVar[int] = Capability.CODE.NEXTHOP
+    ID = Capability.CODE.NEXTHOP
 
     def __init__(self, data: tuple[tuple[AFI, SAFI, AFI], ...] = ()) -> None:
         super().__init__()
