@@ -40,7 +40,20 @@ BASELINE_FILE = ROOT / 'qa' / 'tiger_style.json'
 MAX_FUNCTION_LINES = 70
 
 # a parameter with one of these names holds bytes which came from outside the process
-WIRE_PARAMETERS = frozenset(('data', 'bgp', 'payload', 'raw', 'packed', 'buffer'))
+# header and body are the raw wire bytes of a BGP message, passed as a pair to every
+# API encoder. They were missing, so an 'assert len(body) > 18' in the response writers
+# would not have been reported, in the files this series' advisory is about.
+WIRE_PARAMETERS = frozenset(('data', 'bgp', 'payload', 'raw', 'packed', 'buffer', 'header', 'body'))
+
+# a bound, so a pathological function cannot spin the taint fixpoint
+MAX_TAINT_ROUNDS = 16
+
+# A gate which walked nothing reports every rule at zero and prints ok for each, so
+# the worst outcome available here is not exit 1, it is exit 0 over an empty walk.
+# Measured on the other two gates in this series: a cannot-run path returning 1
+# impersonates a finding; this one impersonates a clean tree, which is quieter.
+SOURCE_FLOOR = 250
+CANNOT_RUN = 2
 
 RULES = ('bare_except', 'input_assert', 'long_function', 'silent_except')
 
@@ -110,6 +123,69 @@ def wire_parameters(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str
     return {argument.arg for argument in declared if argument.arg in WIRE_PARAMETERS}
 
 
+def assigned_names(target: ast.expr) -> set[str]:
+    """The names an assignment target BINDS, not every name mentioned in it.
+
+    Walking the whole target taints the wrong thing: `instance.hostname = data[0]`
+    contains Name('instance'), so the object gets marked as peer data and a type
+    invariant like `assert isinstance(instance, HostName)` is reported. Assigning to
+    a field of a thing does not make the thing the peer's.
+
+    Found by the session working main, and found the way their message describes:
+    not by a plant, but by running the widened rule over unmodified source and
+    having to justify every hit. Latent here rather than live, because this branch
+    has one assert in src and it sits in a function with no wire parameter.
+    """
+    if isinstance(target, ast.Name):
+        return {target.id}
+    if isinstance(target, (ast.Tuple, ast.List)):
+        found: set[str] = set()
+        for element in target.elts:
+            found |= assigned_names(element)
+        return found
+    if isinstance(target, ast.Starred):
+        return assigned_names(target.value)
+    # Attribute and Subscript bind into an existing object rather than rebinding a
+    # name, so they taint nothing
+    return set()
+
+
+def derived_from_wire(function: ast.FunctionDef | ast.AsyncFunctionDef, wire: set[str]) -> set[str]:
+    """The wire parameters, plus every name assigned from one of them.
+
+    Matching the parameter name alone catches `assert len(bgp) >= 4` and misses
+    `size = bgp[0]` followed by `assert size < 10`, which validates the same peer
+    bytes and is deleted by -O just as completely. Measured, not assumed: an assert
+    about a value built from bgp inside unpack_nlri reported input_assert: 0.
+
+    Iterated to a fixpoint so a value two assignments away is still reached.
+
+    What this does NOT track is accumulation: `labels = []` followed by
+    `labels.append(...)` inside the loop leaves labels untainted, because the
+    assignment never mentions the wire parameter. Stated rather than left as a
+    surprise, since the gate reporting zero is otherwise read as "none possible".
+    """
+    tainted = set(wire)
+    for _ in range(MAX_TAINT_ROUNDS):
+        grown = set(tainted)
+        for node in ast.walk(function):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                continue
+            value = node.value
+            if value is None:
+                continue
+            used = {name.id for name in ast.walk(value) if isinstance(name, ast.Name)}
+            if not used & tainted:
+                continue
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            for target in targets:
+                grown |= assigned_names(target)
+        if grown == tainted:
+            break
+        tainted = grown
+    return tainted
+
+
 def input_asserts(function: ast.FunctionDef | ast.AsyncFunctionDef, relative: str) -> list[Violation]:
     """Assertions which validate the bytes the function was handed.
 
@@ -119,6 +195,7 @@ def input_asserts(function: ast.FunctionDef | ast.AsyncFunctionDef, relative: st
     wire = wire_parameters(function)
     if not wire:
         return []
+    wire = derived_from_wire(function, wire)
 
     found: list[Violation] = []
     for node in ast.walk(function):
@@ -167,6 +244,11 @@ def main() -> int:
     parser.add_argument('--show', action='store_true', help='list every violation')
     parser.add_argument('--update-baseline', action='store_true', help='record the current counts')
     options = parser.parse_args()
+
+    walked = source_files()
+    if len(walked) < SOURCE_FLOOR:
+        print(f'check_tiger_style cannot run: walked {len(walked)} source files, expected at least {SOURCE_FLOOR}')
+        return CANNOT_RUN
 
     violations = collect()
     counted = count(violations)
