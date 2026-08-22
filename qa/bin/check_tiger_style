@@ -39,7 +39,13 @@ BASELINE_FILE = ROOT / 'qa' / 'tiger_style.json'
 MAX_FUNCTION_LINES = 70
 
 # a parameter with one of these names holds bytes which came from outside the process
-WIRE_PARAMETERS = frozenset(('data', 'bgp', 'payload', 'raw', 'packed', 'buffer'))
+# header and body are the raw wire bytes of a BGP message, passed as a pair to 60 functions
+# here and rendered with hexstring() by both API encoders.  They were missing from this
+# list, so an assert validating either would have been reported as ok, in the response
+# writers, which are the files GHSA-jcrv-p53f-v5w5 is about.  No such assert exists; this
+# closes a gap rather than a defect.  Found by session 5.0 chasing parameter names on their
+# branch after a plant of theirs named a variable the target function did not have.
+WIRE_PARAMETERS = frozenset(('data', 'bgp', 'payload', 'raw', 'packed', 'buffer', 'header', 'body'))
 
 RULES = ('bare_except', 'input_assert', 'long_function', 'silent_except')
 
