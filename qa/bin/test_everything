@@ -238,6 +238,48 @@ TEST_ORDER = [
 # "All N tests passed" because N counts what ran.  That is how renders-json was added,
 # reported green, and had not executed once.  A gate which does not run is worse than a
 # missing gate: the missing one does not tell you it is fine.
+# Everything in qa/bin is a gate unless it is named here as a tool, with the reason.
+#
+# The guard below catches a stage added to one list and not the other, which is how
+# renders-json came to exist and never run.  It does NOT catch a gate written and added to
+# no list at all: that one is invisible to a check which only compares the lists against
+# each other.  Session 5.0 hit the same hole from the other side, with no runner to fall
+# between, and their answer generalises past mine: nothing SAID a gate had to be wired.
+#
+# So the directory is the source of truth and the exclusions are explicit.  The reason
+# matters more than the name; an entry nobody can justify is a gate somebody demoted.
+NOT_A_GATE = {
+    'check_coverage': 'reports coverage, does not fail on it',
+    'check_perf': 'measures, and a timing number is not a pass or a fail',
+    'cover': 'wrapper around check_coverage',
+    'fuzz_hunt': 'the deep random profile, deliberately not a gate: tests/fuzz/conftest.py',
+    'mutation_test': 'runs mutmut, which takes hours',
+    'mutmut_run': 'runs mutmut, which takes hours',
+    'rmpyc': 'deletes .pyc files',
+    'sync_requirements.sh': 'regenerates qa/requirements.txt',
+    'test_everything': 'this file',
+}
+
+_qa_bin = Path(__file__).resolve().parent
+_executables = {entry.name for entry in _qa_bin.iterdir() if entry.is_file() and os.access(entry, os.X_OK)}
+# matched as a whole path, not as a substring: 'cover' occurs inside 'check_coverage',
+# so a loose match would call the wrapper wired because something else runs the checker
+_invocations = ' '.join(
+    part for command in TEST_COMMANDS.values() for part in ([command] if isinstance(command, str) else command)
+)
+_wired = {name for name in _executables if f'qa/bin/{name}' in _invocations}
+
+# the exclusion list is where this comes back, so it is checked too: a tool which was
+# renamed or deleted leaves an entry here which silently excuses nothing, and the next
+# gate to take that name inherits the excuse
+_stale = sorted(NOT_A_GATE.keys() - _executables)
+_unwired = sorted(_executables - _wired - NOT_A_GATE.keys())
+if _stale or _unwired:
+    raise SystemExit(
+        'qa/bin is inconsistent: %s runs nothing and is not listed as a tool, %s listed as a tool but does not exist'
+        % (_unwired or 'none', _stale or 'none')
+    )
+
 _unordered = sorted(set(TEST_COMMANDS) - set(TEST_ORDER))
 _unknown = sorted(set(TEST_ORDER) - set(TEST_COMMANDS))
 if _unordered or _unknown:
