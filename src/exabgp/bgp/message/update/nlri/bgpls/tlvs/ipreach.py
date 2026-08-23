@@ -34,6 +34,11 @@ from exabgp.util.types import Buffer
 # Protocol ID for IPv6
 PROTOCOL_ID_IPV6 = 4  # IPv6 protocol identifier
 
+IPV4_MAX_PREFIX_BITS = 32
+IPV6_MAX_PREFIX_BITS = 128
+IPV4_ADDRESS_SIZE_BYTES = 4
+IPV6_ADDRESS_SIZE_BYTES = 16
+
 
 class IpReach:
     def __init__(self, prefix: str, plength: int, packed: Buffer) -> None:
@@ -62,6 +67,29 @@ class IpReach:
         plength = unpack('!B', data[0:1])[0]
         # octet = int(math.ceil(plength / 8))
         octet = len(data[1:])
+
+        # Neither the prefix length nor the octet count was bounded by the address family.
+        # An IPv6 sub-tlv carrying more than sixteen octets built an address string of nine
+        # or more hextet groups, where the padding term goes negative and Python quietly
+        # yields an empty list, and ip_address() then raised ValueError out of the decoder.
+        # unpack_nlri does not catch that, so the session reset without the NOTIFICATION the
+        # peer is owed. The IPv4 branch did not raise at all: it put "1.1.1.1.1/32" into the
+        # API output, and a prefix length of 255 was reported verbatim as a /255.
+        maximum_plength = IPV6_MAX_PREFIX_BITS if code == PROTOCOL_ID_IPV6 else IPV4_MAX_PREFIX_BITS
+        if plength > maximum_plength:
+            raise Notify(3, 10, f'BGP-LS ip reachability prefix length {plength} is over {maximum_plength}')
+
+        # Bounded by the address family rather than by the prefix length: the FIXME above
+        # records that IOS XR sends one octet fewer than the prefix length calls for, so a
+        # check on that relationship would refuse prefixes from a router known to be out
+        # there. No address of either family can exceed its own size, whatever it claims.
+        maximum_octets = IPV6_ADDRESS_SIZE_BYTES if code == PROTOCOL_ID_IPV6 else IPV4_ADDRESS_SIZE_BYTES
+        if octet > maximum_octets:
+            raise Notify(
+                3,
+                10,
+                f'BGP-LS ip reachability sub-tlv carries {octet} prefix octets, at most {maximum_octets}',
+            )
 
         if code == PROTOCOL_ID_IPV6:
             # IPv6
