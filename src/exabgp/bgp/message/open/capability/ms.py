@@ -54,4 +54,24 @@ class MultiSession(Capability, list[CapabilityCode]):
         if instance._seen:
             log.debug(lazymsg('capability.multisession.duplicate'), 'parser')
         instance._seen = True
+        # The value is a set of 1-octet session-id capability codes (one per BGP
+        # session the peer splits this capability set onto, per
+        # draft-ietf-idr-bgp-multisession). Every remaining byte is a complete
+        # record, so the loop below is bounded by `data` shrinking by one byte
+        # each pass; there is no partial-record case to Notify() on, unlike the
+        # multi-byte records in graceful.py/addpath.py.
+        #
+        # extract_capability_bytes() always prepends a bytes([0]) placeholder
+        # ahead of the real session-id bytes, and pack_capabilities() turns every
+        # element it returns -- that placeholder included -- into its own
+        # capability TLV under this same code; Capability.unpack() folds every
+        # TLV for a given code into this one instance via capabilities.get(). A
+        # 0x00 byte is CapabilityCode.RESERVED, never a real session id .set()
+        # adds, so it is skipped here: that is what makes set(X) -> pack ->
+        # unpack recover exactly X instead of X | {RESERVED}.
+        while data:
+            code = data[0]
+            if code:
+                instance.append(CapabilityCode(code))
+            data = data[1:]
         return instance
