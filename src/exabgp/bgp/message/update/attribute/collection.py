@@ -439,6 +439,15 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             return self
 
         data = data[offset:]
+
+        # RFC 7606 section 4: an Attribute Length past the end of the section is an error
+        # in the message framing, not in one attribute, so the whole UPDATE is withdrawn.
+        # Slicing does not raise on an overrun, so without this the attribute was decoded
+        # from however many bytes happened to remain and accepted as though well formed.
+        if length > len(data):
+            self.add(TreatAsWithdraw())
+            return self
+
         left = data[length:]
         attribute = data[:length]
 
