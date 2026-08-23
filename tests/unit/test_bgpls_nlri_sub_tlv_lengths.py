@@ -56,7 +56,14 @@ READABLE: list[tuple[str, int, int, set[int], bytes]] = [
     ('link identifier', NLRI_LINK, TLV_LINK_ID, set(range(8, 20)), b''),
     ('multi topology', NLRI_LINK, TLV_MULTI_TOPO, set(range(2, 20)), b''),
     ('ospf route type', NLRI_PREFIX_V4, TLV_OSPF_ROUTE, {1}, IP_REACH_COMPANION),
-    ('ip reachability', NLRI_PREFIX_V4, TLV_IP_REACH, set(range(1, 20)), b''),
+    # This row read set(range(1, 20)) until the sub-tlv was bounded by its address family.
+    # It accepted any octet count because nothing checked one: an IPv4 payload of ten octets
+    # decoded to "1.1.1.1.1.1.1.1.1/0" and went into the API output as a prefix, and the
+    # IPv6 equivalent raised ValueError out of the decoder instead of Notify. The payloads
+    # here are all-zero bytes, so the prefix length is 0 and the octet count is one less
+    # than the payload: four octets of IPv4 address means five bytes is the longest which
+    # can be read. See tests/unit/test_bgpls_ipreach_bounds.py.
+    ('ip reachability', NLRI_PREFIX_V4, TLV_IP_REACH, set(range(1, 6)), b''),
 ]
 
 IDS = [row[0] for row in READABLE]
