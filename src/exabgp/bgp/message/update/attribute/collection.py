@@ -82,10 +82,13 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         Attribute.CODE.INTERNAL_WITHDRAW,
     )
 
-    # The previously parsed AttributeCollection
-    cached: ClassVar[AttributeCollection | None] = None
-    # previously parsed attribute, from which cached was made of
-    previous: ClassVar[Buffer] = b''
+    # The previously parsed AttributeCollection, and the bytes it was made from, are kept
+    # on the Negotiated of the session they belong to. They used to be ClassVars: one slot
+    # for the whole process, keyed on the wire bytes alone. Several attributes decode
+    # against what the session negotiated (AIGP returns a Discard when the session did not
+    # negotiate it, AS_PATH and AGGREGATOR read differently under ASN4), so two peers
+    # sending identical bytes had the second handed the first one's interpretation. See
+    # unpack() and tests/unit/test_attribute_cache_per_session.py.
 
     representation: ClassVar[dict[int, tuple[str, str, str | tuple[str, ...], str, str]]] = {
         # key:  (how, default, name, text_presentation, json_presentation),
@@ -355,8 +358,12 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
     @classmethod
     def unpack(cls, data: Buffer, negotiated: Negotiated) -> AttributeCollection:
-        if cls.cached and data == cls.previous:
-            return cls.cached
+        # The cache belongs to the session, not to the process: what these bytes decode to
+        # depends on what this session negotiated. Protocol builds one Negotiated per
+        # session, so holding it here scopes the cache to the peer it was parsed for and
+        # discards it when the session goes.
+        if negotiated.attribute_cache is not None and data == negotiated.attribute_cache_packed:
+            return negotiated.attribute_cache
 
         attributes = cls().parse(data, negotiated)
 
@@ -366,12 +373,19 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         if Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
             attributes.merge_attributes()
 
+        # The UNSET sentinel is one process-wide object, not a session: a cache written
+        # onto it would be shared by every caller, the exact bug this cache replaced.
+        if not negotiated.attribute_cache_enabled:
+            return attributes
+
+        # MP_REACH and MP_UNREACH are popped off the collection downstream, so a cached one
+        # would be served already emptied. Those are never cached, here as before.
         if Attribute.CODE.MP_REACH_NLRI not in attributes and Attribute.CODE.MP_UNREACH_NLRI not in attributes:
-            cls.previous = data
-            cls.cached = attributes
+            negotiated.attribute_cache_packed = bytes(data)
+            negotiated.attribute_cache = attributes
         else:
-            cls.previous = b''
-            cls.cached = None
+            negotiated.attribute_cache_packed = b''
+            negotiated.attribute_cache = None
 
         return attributes
 

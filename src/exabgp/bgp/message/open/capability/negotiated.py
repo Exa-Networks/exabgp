@@ -12,6 +12,7 @@ from typing import Any, ClassVar, TYPE_CHECKING
 if TYPE_CHECKING:
     from exabgp.bgp.message import Open
     from exabgp.bgp.message.direction import Direction
+    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.protocol.ip import IP
 
@@ -60,6 +61,14 @@ class Negotiated:
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
         self.aigp: bool = neighbor.capability.aigp.is_enabled()
+
+        # The last attribute section this session parsed, and what it parsed to. What a
+        # given set of bytes decodes to depends on this session's capabilities, so the
+        # cache lives with them rather than on AttributeCollection, where one slot was
+        # shared by every peer in the process. See AttributeCollection.unpack.
+        self.attribute_cache: AttributeCollection | None = None
+        self.attribute_cache_packed: bytes = b''
+        self.attribute_cache_enabled: bool = True
         self.linklocal_nexthop: bool = False
         self.paths_limit: dict[FamilyTuple, int] = {}
         self.advertised_paths_limit: dict[FamilyTuple, int] = {}
@@ -81,6 +90,11 @@ class Negotiated:
         instance.operational = False
         instance.refresh = REFRESH.ABSENT
         instance.aigp = False
+        # UNSET is one process-wide object, never a session: it must not hold a cache,
+        # or every caller handing it to AttributeCollection.unpack would share one slot.
+        instance.attribute_cache = None
+        instance.attribute_cache_packed = b''
+        instance.attribute_cache_enabled = False
         instance.linklocal_nexthop = False
         instance.paths_limit = {}
         instance.advertised_paths_limit = {}
