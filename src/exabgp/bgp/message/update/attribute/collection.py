@@ -415,156 +415,163 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         length = data[2]
         return flag, attr, data[3 : length + 3]
 
+    # Iterative, not recursive: every branch used to end `return self.parse(left, negotiated)`,
+    # costing one stack frame per attribute on peer-controlled input (see
+    # tests/unit/test_attribute_parse_iterative.py for the measured RecursionError crossover).
+    # The `while data:` loop is bounded: each iteration reads at least a 3 byte header and
+    # then reassigns `data` to strictly fewer bytes than it started with (`data[offset:]`
+    # then `data[length:]`), so the loop runs at most `len(data) // 3` times, and `data` is
+    # itself bounded by the negotiated message size checked upstream in Update.unpack_message.
     def parse(self, data: Buffer, negotiated: Negotiated) -> AttributeCollection:
-        if not data:
-            return self
-
-        try:
-            # We do not care if the attribute are transitive or not as we do not redistribute
-            flag = Attribute.Flag(data[0])
-            aid = data[1]
-        except IndexError:
-            self.add(TreatAsWithdraw())
-            return self
-
-        try:
-            offset = 3
-            length = data[2]
-
-            if flag & Attribute.Flag.EXTENDED_LENGTH:
-                offset = 4
-                length = (length << 8) + data[3]
-        except IndexError:
-            self.add(TreatAsWithdraw(aid))
-            return self
-
-        data = data[offset:]
-
-        # RFC 7606 section 4: an Attribute Length past the end of the section is an error
-        # in the message framing, not in one attribute, so the whole UPDATE is withdrawn.
-        # Slicing does not raise on an overrun, so without this the attribute was decoded
-        # from however many bytes happened to remain and accepted as though well formed.
-        if length > len(data):
-            self.add(TreatAsWithdraw())
-            return self
-
-        left = data[length:]
-        attribute = data[:length]
-
-        log.debug(lazyattribute(flag, aid, length, data[:length]), 'parser')
-
-        # remove the PARTIAL bit before comparaison if the attribute is optional
-        if aid in Attribute.attributes_optional:
-            flag = Attribute.Flag(flag & Attribute.Flag.MASK_PARTIAL & 0xFF)
-            # flag &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
-
-        # Get the attribute class to check its behavior flags
-        kls = Attribute.klass_by_id(aid)
-
-        if aid in self:
-            if kls and kls.NO_DUPLICATE:
-                raise Notify(3, 1, 'multiple attribute for {}'.format(Attribute.CODE.name(aid)))
-
-            log.debug(
-                lazymsg(
-                    'attribute.duplicate name={name} flag=0x{flag:02X} aid=0x{aid:02X} action=skip',
-                    name=Attribute.CODE.names.get(aid, 'unset'),
-                    flag=flag,
-                    aid=aid,
-                ),
-                'parser',
-            )
-            return self.parse(left, negotiated)
-
-        # handle the attribute if we know it
-        if Attribute.registered(aid, flag):
-            if length == 0 and kls and not kls.VALID_ZERO:
-                self.add(TreatAsWithdraw(aid))
-                return self.parse(left, negotiated)
-
+        while data:
             try:
-                decoded: Attribute = Attribute.unpack(aid, flag, attribute, negotiated)
-            except (IndexError, ValueError) as exc:
-                if kls and kls.TREAT_AS_WITHDRAW:
-                    self.add(TreatAsWithdraw(aid))
-                    return self.parse(left, negotiated)
-                # DISCARD was honoured for Notify below but not here, so an attribute
-                # RFC 7606 says to drop escaped as a raw ValueError instead: AGGREGATOR
-                # at any length but 0 or 6 came out of Update.unpack_message untyped,
-                # where the reactor's catch-all turned RFC 7606 7.7 attribute discard
-                # into a session reset
-                if kls and kls.DISCARD:
-                    self.add(Discard())
-                    return self.parse(left, negotiated)
-                raise exc
-            except Notify as exc:
-                if kls and kls.TREAT_AS_WITHDRAW:
-                    self.add(TreatAsWithdraw())
-                    return self.parse(left, negotiated)
-                if kls and kls.DISCARD:
-                    self.add(Discard())
-                    return self.parse(left, negotiated)
-                raise exc
-
-            self.add(decoded)
-            return self.parse(left, negotiated)
-
-        # Note: Unknown attributes are handled below via GenericAttribute for transitive
-        # attributes, or logged/discarded for others. This differs from capability's
-        # registered fallback pattern but achieves the same goal.
-
-        # if we know the attribute but the flag is not what the RFC says.
-        if aid in Attribute.attributes_known:
-            if kls and kls.TREAT_AS_WITHDRAW:
-                log.debug(
-                    lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) treat as withdraw'.format(
-                        Attribute.CODE.names.get(aid, 'unset'), flag, aid
-                    ),
-                    'parser',
-                )
-                self.add(TreatAsWithdraw())
-            if kls and kls.DISCARD:
-                log.debug(
-                    lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) discard'.format(
-                        Attribute.CODE.names.get(aid, 'unset'), flag, aid
-                    ),
-                    'parser',
-                )
-                return self.parse(left, negotiated)
-            # Attributes not in TREAT_AS_WITHDRAW or DISCARD fall through to this log
-            # This catches implementation gaps - if this fires, add aid to one of the lists
-            log.debug(
-                lambda: (
-                    'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) unspecified (should not happen)'.format(
-                        Attribute.CODE.names.get(aid, 'unset'), flag, aid
-                    )
-                ),
-                'parser',
-            )
-            return self.parse(left, negotiated)
-
-        # it is an unknown transitive attribute we need to pass on
-        if flag & Attribute.Flag.TRANSITIVE:
-            log.debug(
-                lazymsg('attribute.unknown type=transitive flag=0x{flag:02X} aid=0x{aid:02X}', flag=flag, aid=aid),
-                'parser',
-            )
-            try:
-                decoded_generic: Attribute = GenericAttribute.make_generic(
-                    aid, flag | Attribute.Flag.PARTIAL, attribute
-                )
+                # We do not care if the attribute are transitive or not as we do not redistribute
+                flag = Attribute.Flag(data[0])
+                aid = data[1]
             except IndexError:
-                self.add(TreatAsWithdraw(aid), attribute)
-                return self.parse(left, negotiated)
-            self.add(decoded_generic, attribute)
-            return self.parse(left, negotiated)
+                self.add(TreatAsWithdraw())
+                return self
 
-        # it is an unknown non-transitive attribute we can ignore.
-        log.debug(
-            lambda: 'ignoring unknown non-transitive attribute (flag 0x{:02X}, aid 0x{:02X})'.format(flag, aid),
-            'parser',
-        )
-        return self.parse(left, negotiated)
+            try:
+                offset = 3
+                length = data[2]
+
+                if flag & Attribute.Flag.EXTENDED_LENGTH:
+                    offset = 4
+                    length = (length << 8) + data[3]
+            except IndexError:
+                self.add(TreatAsWithdraw(aid))
+                return self
+
+            data = data[offset:]
+
+            # RFC 7606 section 4: an Attribute Length past the end of the section is an error
+            # in the message framing, not in one attribute, so the whole UPDATE is withdrawn.
+            # Slicing does not raise on an overrun, so without this the attribute was decoded
+            # from however many bytes happened to remain and accepted as though well formed.
+            if length > len(data):
+                self.add(TreatAsWithdraw())
+                return self
+
+            attribute = data[:length]
+            data = data[length:]
+
+            log.debug(lazyattribute(flag, aid, length, attribute), 'parser')
+
+            # remove the PARTIAL bit before comparaison if the attribute is optional
+            if aid in Attribute.attributes_optional:
+                flag = Attribute.Flag(flag & Attribute.Flag.MASK_PARTIAL & 0xFF)
+                # flag &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
+
+            # Get the attribute class to check its behavior flags
+            kls = Attribute.klass_by_id(aid)
+
+            if aid in self:
+                if kls and kls.NO_DUPLICATE:
+                    raise Notify(3, 1, 'multiple attribute for {}'.format(Attribute.CODE.name(aid)))
+
+                log.debug(
+                    lazymsg(
+                        'attribute.duplicate name={name} flag=0x{flag:02X} aid=0x{aid:02X} action=skip',
+                        name=Attribute.CODE.names.get(aid, 'unset'),
+                        flag=flag,
+                        aid=aid,
+                    ),
+                    'parser',
+                )
+                continue
+
+            # handle the attribute if we know it
+            if Attribute.registered(aid, flag):
+                if length == 0 and kls and not kls.VALID_ZERO:
+                    self.add(TreatAsWithdraw(aid))
+                    continue
+
+                try:
+                    decoded: Attribute = Attribute.unpack(aid, flag, attribute, negotiated)
+                except (IndexError, ValueError) as exc:
+                    if kls and kls.TREAT_AS_WITHDRAW:
+                        self.add(TreatAsWithdraw(aid))
+                        continue
+                    # DISCARD was honoured for Notify below but not here, so an attribute
+                    # RFC 7606 says to drop escaped as a raw ValueError instead: AGGREGATOR
+                    # at any length but 0 or 6 came out of Update.unpack_message untyped,
+                    # where the reactor's catch-all turned RFC 7606 7.7 attribute discard
+                    # into a session reset
+                    if kls and kls.DISCARD:
+                        self.add(Discard())
+                        continue
+                    raise exc
+                except Notify as exc:
+                    if kls and kls.TREAT_AS_WITHDRAW:
+                        self.add(TreatAsWithdraw())
+                        continue
+                    if kls and kls.DISCARD:
+                        self.add(Discard())
+                        continue
+                    raise exc
+
+                self.add(decoded)
+                continue
+
+            # Note: Unknown attributes are handled below via GenericAttribute for transitive
+            # attributes, or logged/discarded for others. This differs from capability's
+            # registered fallback pattern but achieves the same goal.
+
+            # if we know the attribute but the flag is not what the RFC says.
+            if aid in Attribute.attributes_known:
+                if kls and kls.TREAT_AS_WITHDRAW:
+                    log.debug(
+                        lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) treat as withdraw'.format(
+                            Attribute.CODE.names.get(aid, 'unset'), flag, aid
+                        ),
+                        'parser',
+                    )
+                    self.add(TreatAsWithdraw())
+                if kls and kls.DISCARD:
+                    log.debug(
+                        lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) discard'.format(
+                            Attribute.CODE.names.get(aid, 'unset'), flag, aid
+                        ),
+                        'parser',
+                    )
+                    continue
+                # Attributes not in TREAT_AS_WITHDRAW or DISCARD fall through to this log
+                # This catches implementation gaps - if this fires, add aid to one of the lists
+                log.debug(
+                    lambda: (
+                        'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) unspecified (should not happen)'.format(
+                            Attribute.CODE.names.get(aid, 'unset'), flag, aid
+                        )
+                    ),
+                    'parser',
+                )
+                continue
+
+            # it is an unknown transitive attribute we need to pass on
+            if flag & Attribute.Flag.TRANSITIVE:
+                log.debug(
+                    lazymsg('attribute.unknown type=transitive flag=0x{flag:02X} aid=0x{aid:02X}', flag=flag, aid=aid),
+                    'parser',
+                )
+                try:
+                    decoded_generic: Attribute = GenericAttribute.make_generic(
+                        aid, flag | Attribute.Flag.PARTIAL, attribute
+                    )
+                except IndexError:
+                    self.add(TreatAsWithdraw(aid), attribute)
+                    continue
+                self.add(decoded_generic, attribute)
+                continue
+
+            # it is an unknown non-transitive attribute we can ignore.
+            log.debug(
+                lambda: 'ignoring unknown non-transitive attribute (flag 0x{:02X}, aid 0x{:02X})'.format(flag, aid),
+                'parser',
+            )
+            continue
+
+        return self
 
     def merge_attributes(self) -> None:
         as2path_attr = self[Attribute.CODE.AS_PATH]
