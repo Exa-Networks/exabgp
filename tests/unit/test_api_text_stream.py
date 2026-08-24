@@ -95,10 +95,13 @@ def test_a_software_version_holding_a_control_character_cannot_forge_an_event(
 
 
 def test_a_hostname_without_control_characters_still_decodes() -> None:
-    name = b'router1.example.net'
-    value = bytes([len(name)]) + name + bytes([len(name)]) + name
+    host_name = b'router1'
+    domain_name = b'example.net'
+    value = bytes([len(host_name)]) + host_name + bytes([len(domain_name)]) + domain_name
     message = Open.unpack_message(_open_with_capability(CapabilityCode.HOSTNAME, value), Negotiated.UNSET)
-    assert 'router1.example.net' in str(message.capabilities)
+    hostname = message.capabilities[CapabilityCode.HOSTNAME]
+    assert hostname.host_name == 'router1'
+    assert hostname.domain_name == 'example.net'
 
 
 def test_oneline_escapes_every_line_ending() -> None:
