@@ -33,6 +33,12 @@ its exit code.
 compat_gate is deliberately not driven here. It needs a git tag and a subprocess
 per family, so exercising it costs minutes; its cannot-run paths were verified when
 they were written, and the three below are the ones a change to this tree can break.
+
+The success controls use a planted clean tree rather than this repository. Running
+check_tests_run on the real tree made this unit test collect the fuzz and integration
+suites in a nested pytest process. That made tests/unit require Hypothesis, even though
+no unit test imports it. The 5.0 branch was excluded from the unit workflow, and the
+workflow's full dependency set would have masked the leak even if it had run.
 """
 
 import shutil
@@ -50,13 +56,37 @@ CANNOT_RUN = 2
 # Gates whose cannot-run path is reachable by giving them nothing to look at.
 GATES = ('check_tiger_style', 'check_tests_run', 'check_sweep_floors')
 
+# Gates with a cheap success path which can be proved on a controlled tree.
+CLEAN_GATES = ('check_tiger_style', 'check_tests_run')
+
+
+def copy_gates(tree, gates):
+    (tree / 'qa' / 'bin').mkdir(parents=True)
+    for name in gates:
+        shutil.copy(QA_BIN / name, tree / 'qa' / 'bin' / name)
+
 
 @pytest.fixture
 def empty_tree(tmp_path):
     """A tree holding the gates and no source, so every gate is unable to run"""
-    (tmp_path / 'qa' / 'bin').mkdir(parents=True)
-    for name in GATES:
-        shutil.copy(QA_BIN / name, tmp_path / 'qa' / 'bin' / name)
+    copy_gates(tmp_path, GATES)
+    return tmp_path
+
+
+@pytest.fixture
+def clean_tree(tmp_path):
+    """The smallest tree which gives the cheap gates a meaningful clean run."""
+    copy_gates(tmp_path, CLEAN_GATES)
+
+    tests = tmp_path / 'tests'
+    tests.mkdir()
+    (tests / 'test_planted.py').write_text('def test_planted():\n    pass\n')
+
+    source = tmp_path / 'src' / 'exabgp'
+    source.mkdir(parents=True)
+    for number in range(250):
+        (source / f'module_{number}.py').touch()
+
     return tmp_path
 
 
@@ -108,15 +138,19 @@ class TestTheSetupIsRealRatherThanVacuous:
         assert not (empty_tree / 'src').exists()
         assert not (empty_tree / 'tests').exists()
 
-    def test_the_same_gates_exit_zero_on_the_real_tree(self) -> None:
-        """Otherwise exit 2 might be all these gates ever do
+    @pytest.mark.parametrize('gate', CLEAN_GATES)
+    def test_the_same_gates_exit_zero_on_a_clean_tree(self, gate, clean_tree) -> None:
+        """Otherwise exit 2 might be all these gates ever do.
 
         A gate hardcoded to return 2 passes every assertion above. This is the half
         that says the cannot-run path is a path rather than the destination.
 
+        The tree is planted rather than the repository itself. A unit test which asks
+        check_tests_run to collect the whole repository silently makes optional fuzz
+        dependencies mandatory for tests/unit.
+
         check_sweep_floors is excluded from this one only: it drives pytest once per
         sweeping file, so a clean run costs about a minute, and CI runs it directly.
         """
-        for gate in ('check_tiger_style', 'check_tests_run'):
-            result = run(gate, ROOT)
-            assert result.returncode == 0, f'{gate}: {result.stdout}{result.stderr}'
+        result = run(gate, clean_tree)
+        assert result.returncode == 0, f'{gate}: {result.stdout}{result.stderr}'
