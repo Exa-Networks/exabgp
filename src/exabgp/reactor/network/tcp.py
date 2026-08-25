@@ -182,7 +182,13 @@ def md5(io, ip, port, md5, md5_base64):
                 io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
             else:
                 key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
-                io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+                try:
+                    io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+                except OSError as exc:
+                    # no md5 is configured, so there is no key to clear on a
+                    # kernel which does not implement the option at all
+                    if exc.errno != errno.ENOPROTOOPT:
+                        raise
 
         except OSError as exc:
             if exc.errno != errno.ENOENT:
