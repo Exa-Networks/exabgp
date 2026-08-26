@@ -16,9 +16,8 @@ When an MPLS label is present, value is 6 bytes: flags(1) + reserved(1) + label_
 
 MPLS Label Stack Entry (4 bytes):
   bits [31:12]: Label (top 20 bits)
-  bits [11:9]:  TC (3 bits)
-  bit  [8]:     S (bottom-of-stack)
-  bits [7:0]:   TTL (8 bits)
+  bits [11:0]:  TC, S, TTL — RESERVED per RFC 9830 Section 2.4.2, MUST be
+                set to zero and MUST be ignored
 """
 
 from __future__ import annotations
@@ -29,7 +28,11 @@ from typing import ClassVar
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
 from exabgp.util.types import Buffer
 
-_BSID_FLAG_SPECIFIED = 0x10  # B flag: BSID is explicitly specified
+# RFC 9830 Section 2.4.2 / IANA "SR Policy Binding SID Flags": only
+# S-Flag (0x80, Specified-BSID-Only) and I-Flag (0x40, Drop-Upon-Invalid)
+# are assigned; unassigned bits MUST be zero on transmission.
+BSID_FLAG_S = 0x80
+BSID_FLAG_I = 0x40
 
 
 @SubTLV.register(13)
@@ -49,8 +52,8 @@ class BindingSIDSubTLV(SubTLV):
     def pack_value(self) -> bytes:
         if self.label is None:
             return pack('!BB', self.flags, 0)
-        label_entry = (self.label << 12) | 0x100  # S=1, TTL=0
-        return pack('!BBL', self.flags | _BSID_FLAG_SPECIFIED, 0, label_entry)
+        label_entry = self.label << 12  # TC/S/TTL reserved, zero on transmission (RFC 9830 2.4.2)
+        return pack('!BBL', self.flags, 0, label_entry)
 
     def json(self) -> str:
         if self.label is None:

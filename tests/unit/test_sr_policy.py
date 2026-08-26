@@ -12,6 +12,7 @@ from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import (
     BindingSIDSubTLV,
     CandidatePathNameSubTLV,
+    ENLPSubTLV,
     PolicyNameSubTLV,
     PreferenceSubTLV,
     PrioritySubTLV,
@@ -1104,9 +1105,50 @@ def test_pack_exact_bytes_priority():
 
 
 def test_pack_exact_bytes_binding_sid():
-    # type(1)=0x0d + length(1)=6 + flags(1)=0x10 + reserved(1)=0
-    # label_entry = (24000 << 12) | 0x100 = 0x05DC0100
-    assert BindingSIDSubTLV(label=24000).pack() == b'\x0d\x06\x10\x00\x05\xdc\x01\x00'
+    # type(1)=0x0d + length(1)=6 + flags(1)=0 (only S=0x80/I=0x40 assigned,
+    # unassigned bits zero per RFC 9830 2.4.2) + reserved(1)=0
+    # label_entry = 24000 << 12 = 0x05DC0000 (TC/S/TTL reserved, zero)
+    assert BindingSIDSubTLV(label=24000).pack() == b'\x0d\x06\x00\x00\x05\xdc\x00\x00'
+
+
+def test_pack_exact_bytes_enlp():
+    # type(1)=14 + length(1)=3 + flags(1)=0 + reserved(1)=0 + enlp(1)
+    assert ENLPSubTLV(enlp=4).pack() == b'\x0e\x03\x00\x00\x04'
+
+
+def test_enlp_roundtrip():
+    for value in (1, 2, 3, 4):
+        packed = ENLPSubTLV(enlp=value).pack()
+        decoded = ENLPSubTLV.unpack(packed[2:])
+        assert decoded.enlp == value
+        assert decoded.json() == f'"enlp": {value}'
+
+
+def test_enlp_unpack_short_data():
+    assert ENLPSubTLV.unpack(b'\x00').enlp == 0
+
+
+def test_pack_segment_verification_flag():
+    # V-Flag (0x80) transmitted when set; reflected in JSON for round-trip
+    seg = SegmentTypeA(label=16001, flags=0x80)
+    assert seg.pack()[2] & 0x80
+    assert '"verification": true' in seg.json()
+    assert '"verification"' not in SegmentTypeA(label=16001).json()
+
+
+def test_pack_segment_type_c_sid_specified_flag():
+    # RFC 9831: S-Flag (0x20) set when the SID field is present
+    with_sid = SegmentTypeC(ipv4_node='10.0.0.1', sid=16001).pack()
+    without_sid = SegmentTypeC(ipv4_node='10.0.0.1').pack()
+    assert with_sid[2] & 0x20
+    assert not without_sid[2] & 0x20
+
+
+def test_pack_segment_type_i_sid_specified_flag():
+    with_sid = SegmentTypeI(ipv6_node='2001:db8::1', sid='fc00::1').pack()
+    without_sid = SegmentTypeI(ipv6_node='2001:db8::1').pack()
+    assert with_sid[2] & 0x20
+    assert not without_sid[2] & 0x20
 
 
 def test_pack_exact_bytes_weight():
@@ -1114,15 +1156,47 @@ def test_pack_exact_bytes_weight():
     assert WeightSubSubTLV(weight=1).pack() == b'\x09\x06\x00\x00\x00\x00\x00\x01'
 
 
-def test_pack_exact_bytes_segment_type_a_with_s_bit():
-    # type(1)=1 + length(1)=6 + flags(1)=0 + reserved(1)=0
-    # label_entry = (16001 << 12) | 0x100 = 0x03E81100 → bytes: 03 e8 11 00
-    assert SegmentTypeA(label=16001).pack(is_last=True) == b'\x01\x06\x00\x00\x03\xe8\x11\x00'
-
-
-def test_pack_exact_bytes_segment_type_a_without_s_bit():
+def test_pack_exact_bytes_segment_type_a():
+    # RFC 9830 2.4.4.2.1: the S bit MUST be zero upon transmission
     # label_entry = (16001 << 12) = 0x03E81000 → bytes: 03 e8 10 00
-    assert SegmentTypeA(label=16001).pack(is_last=False) == b'\x01\x06\x00\x00\x03\xe8\x10\x00'
+    assert SegmentTypeA(label=16001).pack() == b'\x01\x06\x00\x00\x03\xe8\x10\x00'
+
+
+def test_pack_segment_type_a_s_bit_zero_even_if_set():
+    # RFC 9830 2.4.4.2.1: S MUST be zero on transmission even when the
+    # object was decoded from wire data carrying S=1
+    packed = SegmentTypeA(label=16001, s=True).pack()
+    label_entry = int.from_bytes(packed[4:8], 'big')
+    assert label_entry & 0x100 == 0
+
+
+def test_pack_segment_list_last_mpls_segment_s_bit_zero():
+    # No bottom-of-stack marking in the BGP-signaled segment list: every
+    # segment, including the last MPLS one, is transmitted with S=0
+    seglist = SegmentListSubTLV(
+        weight=WeightSubSubTLV(weight=1),
+        segments=[SegmentTypeA(label=16001), SegmentTypeA(label=16002)],
+    )
+    value = seglist.pack_value()
+    for off in range(0, len(value) - 3):
+        if value[off : off + 2] == b'\x01\x06':  # Type A sub-sub-TLV header
+            label_entry = int.from_bytes(value[off + 4 : off + 8], 'big')
+            assert label_entry & 0x100 == 0
+
+
+def test_pack_segment_type_c_s_bit_zero():
+    packed = SegmentTypeC(ipv4_node='10.0.0.1', sid=16001, s=True).pack()
+    label_entry = int.from_bytes(packed[-4:], 'big')
+    assert label_entry & 0x100 == 0
+
+
+def test_unpack_segment_type_a_ignores_s_bit_on_repack():
+    # RFC 9830 2.4.4.2.1: S MUST be ignored upon reception — a decoded
+    # segment carrying S=1 still repacks with S=0
+    wire = b'\x00\x00\x03\xe8\x11\x00'  # flags, reserved, label 16001 with S=1
+    seg = SegmentTypeA.unpack(wire)
+    assert seg.label == 16001
+    assert seg.pack() == b'\x01\x06\x00\x00\x03\xe8\x10\x00'
 
 
 # ============================================================= Decode: from hardcoded bytes
