@@ -50,10 +50,11 @@ class BindingSIDSubTLV(SubTLV):
         self.flags = flags
 
     def pack_value(self) -> bytes:
+        flags = self.flags & (BSID_FLAG_S | BSID_FLAG_I)
         if self.label is None:
-            return pack('!BB', self.flags, 0)
+            return pack('!BB', flags, 0)
         label_entry = self.label << 12  # TC/S/TTL reserved, zero on transmission (RFC 9830 2.4.2)
-        return pack('!BBL', self.flags, 0, label_entry)
+        return pack('!BBL', flags, 0, label_entry)
 
     def json(self) -> str:
         if self.label is None:

@@ -274,8 +274,8 @@ class SRv6EndpointBehavior:
         if len(data) < cls.SIZE:
             return cls(0)
         # RFC 9830: Endpoint Behavior (2) + Reserved (2) + LB/LN/Fun/Arg (1 each)
-        eb, reserved, lb, ln, fun, arg = unpack('!HHBBBB', data[: cls.SIZE])
-        # reserved is ignored per RFC
+        eb, _, lb, ln, fun, arg = unpack('!HHBBBB', data[: cls.SIZE])
+        # The reserved field is ignored per RFC.
         return cls(endpoint_behavior=eb, lb_length=lb, ln_length=ln, fun_length=fun, arg_length=arg)
 
 
@@ -305,7 +305,7 @@ class WeightSubSubTLV:
     def unpack(cls, data: Buffer) -> WeightSubSubTLV:
         if len(data) < cls.VALUE_SIZE:
             return cls(1)
-        flags, reserved, weight = unpack('!BBI', data[:6])
+        flags, _, weight = unpack('!BBI', data[:6])
         return cls(weight=weight, flags=flags)
 
 
@@ -477,7 +477,7 @@ class SegmentTypeC:
         RFC 9830 Section 2.4.4.2.1: the S bit MUST be zero upon transmission.
         """
         ipv4_bytes = socket.inet_pton(socket.AF_INET, self.ipv4_node)
-        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        effective_flags = (self.flags & ~_SEG_B_FLAG_S) | (_SEG_B_FLAG_S if self.sid is not None else 0)
         value = pack('!BB', effective_flags, self.algorithm) + ipv4_bytes
 
         if self.sid is not None:
@@ -594,7 +594,7 @@ class SegmentTypeD:
         """
         ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.ipv6_node)
 
-        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        effective_flags = (self.flags & ~_SEG_B_FLAG_S) | (_SEG_B_FLAG_S if self.sid is not None else 0)
         value = pack('!BB', effective_flags, self.algorithm)
         value += ipv6_bytes
 
@@ -707,7 +707,7 @@ class SegmentTypeE:
         """
         ipv4_bytes = socket.inet_pton(socket.AF_INET, self.ipv4_node)
 
-        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        effective_flags = (self.flags & ~_SEG_B_FLAG_S) | (_SEG_B_FLAG_S if self.sid is not None else 0)
         value = pack('!BB', effective_flags, 0)  # flags + reserved
         value += pack('!L', self.local_if_id)
         value += ipv4_bytes
@@ -823,7 +823,7 @@ class SegmentTypeF:
         local_ipv4_bytes = socket.inet_pton(socket.AF_INET, self.local_ipv4)
         remote_ipv4_bytes = socket.inet_pton(socket.AF_INET, self.remote_ipv4)
 
-        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        effective_flags = (self.flags & ~_SEG_B_FLAG_S) | (_SEG_B_FLAG_S if self.sid is not None else 0)
         value = pack('!BB', effective_flags, 0)  # flags + reserved
         value += local_ipv4_bytes
         value += remote_ipv4_bytes
@@ -949,7 +949,7 @@ class SegmentTypeG:
         local_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.local_ipv6)
         remote_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.remote_ipv6)
 
-        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        effective_flags = (self.flags & ~_SEG_B_FLAG_S) | (_SEG_B_FLAG_S if self.sid is not None else 0)
         value = pack('!BB', effective_flags, 0)  # flags + reserved
         value += pack('!L', self.local_if_id)
         value += local_ipv6_bytes
@@ -1074,7 +1074,7 @@ class SegmentTypeH:
         local_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.local_ipv6)
         remote_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.remote_ipv6)
 
-        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        effective_flags = (self.flags & ~_SEG_B_FLAG_S) | (_SEG_B_FLAG_S if self.sid is not None else 0)
         value = pack('!BB', effective_flags, 0)  # flags + reserved
         value += local_ipv6_bytes
         value += remote_ipv6_bytes
@@ -1182,7 +1182,7 @@ class SegmentTypeI:
         """Pack the segment."""
         ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.ipv6_node)
 
-        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        effective_flags = (self.flags & ~_SEG_B_FLAG_S) | (_SEG_B_FLAG_S if self.sid is not None else 0)
         if self.endpoint_behavior is not None:
             effective_flags |= _SEG_B_FLAG_B  # Set B-Flag
 
@@ -1304,7 +1304,7 @@ class SegmentTypeJ:
         local_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.local_ipv6)
         remote_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.remote_ipv6)
 
-        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        effective_flags = (self.flags & ~_SEG_B_FLAG_S) | (_SEG_B_FLAG_S if self.sid is not None else 0)
         if self.endpoint_behavior is not None:
             effective_flags |= _SEG_B_FLAG_B  # Set B-Flag
 
@@ -1429,7 +1429,7 @@ class SegmentTypeK:
         local_bytes = socket.inet_pton(socket.AF_INET6, self.local_ipv6)
         remote_bytes = socket.inet_pton(socket.AF_INET6, self.remote_ipv6)
 
-        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        effective_flags = (self.flags & ~_SEG_B_FLAG_S) | (_SEG_B_FLAG_S if self.sid is not None else 0)
         if self.endpoint_behavior is not None:
             effective_flags |= _SEG_B_FLAG_B  # Set B-Flag
 

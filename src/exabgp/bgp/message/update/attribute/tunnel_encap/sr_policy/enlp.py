@@ -48,7 +48,7 @@ class ENLPSubTLV(SubTLV):
         self.flags = flags
 
     def pack_value(self) -> bytes:
-        return pack('!BBB', self.flags, 0, self.enlp)
+        return pack('!BBB', 0, 0, self.enlp)
 
     def json(self) -> str:
         return f'"enlp": {self.enlp}'

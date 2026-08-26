@@ -31,9 +31,9 @@ from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import (
     PolicyNameSubTLV,
     PreferenceSubTLV,
     PrioritySubTLV,
+    SegmentListSubTLV,
     SRPolicyTunnel,
     SRv6BindingSIDSubTLV,
-    SegmentListSubTLV,
 )
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.segment_list import (
     SegmentTypeA,
@@ -354,6 +354,7 @@ def _parse_sr_policy_subtlvs(tokeniser: Any) -> list[Any]:
     Stops when no known keyword is next.
     """
     subtlvs: list[Any] = []
+    enlp_seen = False
     _SR_KEYS = {
         'preference',
         'priority',
@@ -372,6 +373,9 @@ def _parse_sr_policy_subtlvs(tokeniser: Any) -> list[Any]:
         elif key == 'priority':
             subtlvs.append(PrioritySubTLV(priority=int(tokeniser())))
         elif key == 'enlp':
+            if enlp_seen:
+                raise ValueError('ENLP sub-TLV may appear only once')
+            enlp_seen = True
             enlp_token = tokeniser()
             if enlp_token in _ENLP_VALUES:
                 enlp_value = _ENLP_VALUES[enlp_token]

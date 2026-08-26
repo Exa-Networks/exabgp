@@ -8,6 +8,8 @@ from __future__ import annotations
 import socket
 import struct
 
+import pytest
+
 from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import (
     BindingSIDSubTLV,
@@ -36,6 +38,8 @@ from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.segment_list imp
     WeightSubSubTLV,
 )
 from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
+from exabgp.configuration.core.parser import Tokeniser
+from exabgp.configuration.static.sr_policy import _parse_sr_policy_subtlvs
 from exabgp.protocol.family import AFI, SAFI
 
 # ============================================================= SAFI
@@ -1111,6 +1115,14 @@ def test_pack_exact_bytes_binding_sid():
     assert BindingSIDSubTLV(label=24000).pack() == b'\x0d\x06\x00\x00\x05\xdc\x00\x00'
 
 
+def test_binding_sid_repack_masks_unassigned_flags():
+    decoded = BindingSIDSubTLV.unpack(b'\x10\x00\x05\xdc\x01\x00')
+    assert decoded.pack() == b'\x0d\x06\x00\x00\x05\xdc\x00\x00'
+
+    assert BindingSIDSubTLV(label=24000, flags=0xFF).pack()[2] == 0xC0
+    assert BindingSIDSubTLV(label=None, flags=0x10).pack()[2] == 0
+
+
 def test_pack_exact_bytes_enlp():
     # type(1)=14 + length(1)=3 + flags(1)=0 + reserved(1)=0 + enlp(1)
     assert ENLPSubTLV(enlp=4).pack() == b'\x0e\x03\x00\x00\x04'
@@ -1126,6 +1138,17 @@ def test_enlp_roundtrip():
 
 def test_enlp_unpack_short_data():
     assert ENLPSubTLV.unpack(b'\x00').enlp == 0
+
+
+def test_enlp_repack_zeros_received_flags():
+    decoded = ENLPSubTLV.unpack(b'\xff\x00\x04')
+    assert decoded.pack() == b'\x0e\x03\x00\x00\x04'
+
+
+def test_parse_rejects_duplicate_enlp():
+    tokeniser = Tokeniser().replenish(['enlp', 'push-ipv4', 'enlp', 'no-push'])
+    with pytest.raises(ValueError, match='ENLP sub-TLV may appear only once'):
+        _parse_sr_policy_subtlvs(tokeniser)
 
 
 def test_pack_segment_verification_flag():
@@ -1149,6 +1172,35 @@ def test_pack_segment_type_i_sid_specified_flag():
     without_sid = SegmentTypeI(ipv6_node='2001:db8::1').pack()
     assert with_sid[2] & 0x20
     assert not without_sid[2] & 0x20
+
+
+def test_sid_specified_flag_cleared_without_sid():
+    segments = [
+        SegmentTypeC(ipv4_node='10.0.0.1', flags=0x20),
+        SegmentTypeD(ipv6_node='2001:db8::1', flags=0x20),
+        SegmentTypeE(local_if_id=1, ipv4_node='10.0.0.1', flags=0x20),
+        SegmentTypeF(local_ipv4='10.0.0.1', remote_ipv4='10.0.0.2', flags=0x20),
+        SegmentTypeG(
+            local_if_id=1,
+            local_ipv6='2001:db8::1',
+            remote_if_id=2,
+            remote_ipv6='2001:db8::2',
+            flags=0x20,
+        ),
+        SegmentTypeH(local_ipv6='2001:db8::1', remote_ipv6='2001:db8::2', flags=0x20),
+        SegmentTypeI(ipv6_node='2001:db8::1', flags=0x20),
+        SegmentTypeJ(
+            local_if_id=1,
+            local_ipv6='2001:db8::1',
+            remote_if_id=2,
+            remote_ipv6='2001:db8::2',
+            flags=0x20,
+        ),
+        SegmentTypeK(local_ipv6='2001:db8::1', remote_ipv6='2001:db8::2', flags=0x20),
+    ]
+
+    for segment in segments:
+        assert not segment.pack()[2] & 0x20
 
 
 def test_pack_exact_bytes_weight():
@@ -1178,7 +1230,7 @@ def test_pack_segment_list_last_mpls_segment_s_bit_zero():
         segments=[SegmentTypeA(label=16001), SegmentTypeA(label=16002)],
     )
     value = seglist.pack_value()
-    for off in range(0, len(value) - 3):
+    for off in range(len(value) - 3):
         if value[off : off + 2] == b'\x01\x06':  # Type A sub-sub-TLV header
             label_entry = int.from_bytes(value[off + 4 : off + 8], 'big')
             assert label_entry & 0x100 == 0
