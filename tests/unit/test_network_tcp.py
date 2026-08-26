@@ -13,6 +13,8 @@ from typing import Any
 import socket
 import select
 import binascii
+import errno
+from struct import unpack
 from unittest.mock import patch, MagicMock
 
 from exabgp.protocol.family import AFI
@@ -230,6 +232,52 @@ class TestMD5Authentication:
             tcp.md5(io, '127.0.0.1', 179, 'kernel', False)
 
         io.close()
+
+    @patch('platform.system', return_value='Linux')
+    def test_md5_linux_clears_the_key_without_password(self, mock_platform: Any) -> None:
+        """An empty password must issue a zero-length key to clear a stale one."""
+        io = MagicMock()
+
+        tcp.md5(io, '127.0.0.1', 179, '', False)
+
+        io.setsockopt.assert_called_once()
+        _, option, value = io.setsockopt.call_args[0]
+        assert option == 14  # TCP_MD5SIG
+        # sockaddr_storage (128) + 2 pad + keylen (2) + 4 pad + key (80)
+        assert len(value) == 128 + 88
+        assert unpack('H', value[130:132])[0] == 0  # a zero key length clears the entry
+
+    @patch('platform.system', return_value='Linux')
+    def test_md5_linux_tolerates_missing_kernel_option_when_clearing(self, mock_platform: Any) -> None:
+        """Clearing on a kernel without CONFIG_TCP_MD5SIG must not fail peering.
+
+        There is no key to clear and none was asked for, so ENOPROTOOPT is harmless.
+        Any other errno still has to surface.
+        """
+        io = MagicMock()
+        io.setsockopt.side_effect = OSError(errno.ENOPROTOOPT, 'Protocol not available')
+
+        tcp.md5(io, '127.0.0.1', 179, '', False)
+
+        io.setsockopt.assert_called_once()
+
+    @patch('platform.system', return_value='Linux')
+    def test_md5_linux_reports_an_unexpected_errno_when_clearing(self, mock_platform: Any) -> None:
+        """Only ENOPROTOOPT and ENOENT are tolerated while clearing a key."""
+        io = MagicMock()
+        io.setsockopt.side_effect = OSError(errno.EPERM, 'Operation not permitted')
+
+        with pytest.raises(MD5Error, match='does not support TCP_MD5SIG'):
+            tcp.md5(io, '127.0.0.1', 179, '', False)
+
+    @patch('platform.system', return_value='Linux')
+    def test_md5_linux_rejects_missing_kernel_option_with_password(self, mock_platform: Any) -> None:
+        """An MD5 configuration must fail when TCP_MD5SIG is unavailable."""
+        io = MagicMock()
+        io.setsockopt.side_effect = OSError(errno.ENOPROTOOPT, 'Protocol not available')
+
+        with pytest.raises(MD5Error, match='does not support TCP_MD5SIG'):
+            tcp.md5(io, '127.0.0.1', 179, 'password123', False)
 
     @patch('platform.system', return_value='Linux')
     def test_md5_linux_with_password(self, mock_platform: Any) -> None:
