@@ -27,6 +27,7 @@ from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import (
     BindingSIDSubTLV,
     CandidatePathNameSubTLV,
+    ENLPSubTLV,
     PolicyNameSubTLV,
     PreferenceSubTLV,
     PrioritySubTLV,
@@ -54,6 +55,16 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 
 _MPLS_LABEL_MAX = 1048575  # 2^20 - 1
+
+# ENLP values, RFC 9830 Section 2.4.5
+_ENLP_VALUES = {
+    'push-ipv4': 1,
+    'push-ipv6': 2,
+    'push-ipv4-ipv6': 3,
+    'no-push': 4,
+}
+
+_SEG_FLAG_V = 0x80  # V-Flag: SID verification (RFC 9830 Section 2.4.4.2.3)
 
 
 def _parse_segment_list(tokeniser: Any) -> SegmentListSubTLV:
@@ -327,20 +338,26 @@ def _parse_segment_list(tokeniser: Any) -> SegmentListSubTLV:
                 f"Unknown segment type '{seg_type}'. Expected: type-a, type-b, type-c, type-d, type-e, type-f, type-g, type-h, type-i, type-j, type-k"
             )
 
+        # Optional per-segment V-Flag (RFC 9830 Section 2.4.4.2.3, applies to all types)
+        if tokeniser.peek() == 'verification':
+            tokeniser()  # consume 'verification'
+            segments[-1].flags |= _SEG_FLAG_V
+
     return SegmentListSubTLV(weight=weight, segments=segments)
 
 
 def _parse_sr_policy_subtlvs(tokeniser: Any) -> list[Any]:
     """Parse SR Policy sub-TLVs from inline token stream.
 
-    Reads: preference, binding-sid, srv6-binding-sid, priority, policy-name,
-           candidate-path-name, segment-list (repeatable).
+    Reads: preference, binding-sid, srv6-binding-sid, priority, enlp,
+           policy-name, candidate-path-name, segment-list (repeatable).
     Stops when no known keyword is next.
     """
     subtlvs: list[Any] = []
     _SR_KEYS = {
         'preference',
         'priority',
+        'enlp',
         'binding-sid',
         'srv6-binding-sid',
         'policy-name',
@@ -354,6 +371,16 @@ def _parse_sr_policy_subtlvs(tokeniser: Any) -> list[Any]:
             subtlvs.append(PreferenceSubTLV(preference=int(tokeniser())))
         elif key == 'priority':
             subtlvs.append(PrioritySubTLV(priority=int(tokeniser())))
+        elif key == 'enlp':
+            enlp_token = tokeniser()
+            if enlp_token in _ENLP_VALUES:
+                enlp_value = _ENLP_VALUES[enlp_token]
+            elif enlp_token.isdigit() and 1 <= int(enlp_token) <= 4:
+                enlp_value = int(enlp_token)
+            else:
+                expected = ', '.join(_ENLP_VALUES)
+                raise ValueError(f"Unknown enlp value '{enlp_token}'. Expected: {expected} or 1-4")
+            subtlvs.append(ENLPSubTLV(enlp=enlp_value))
         elif key == 'binding-sid':
             bsid_type = tokeniser()
             if bsid_type == 'mpls':

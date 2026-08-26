@@ -213,7 +213,7 @@ from exabgp.util.types import Buffer
 # Bit layout: V|A|S|B|Rsv (bits 0-3 in RFC = bits 7-4 in byte order)
 _SEG_B_FLAG_V = 0x80  # V-Flag: SID verification
 _SEG_B_FLAG_A = 0x40  # A-Flag: SR Algorithm
-_SEG_B_FLAG_S = 0x20  # S-Flag: SID Structure present
+_SEG_B_FLAG_S = 0x20  # S-Flag: SID Specified — SID field present (RFC 9831)
 _SEG_B_FLAG_B = 0x10  # B-Flag: SRv6 Endpoint Behavior present
 
 # Legacy alias for backward compatibility (corrected from 0x80 to 0x10)
@@ -312,8 +312,8 @@ class WeightSubSubTLV:
 class SegmentTypeA:
     """Segment Type A: MPLS label only (sub-sub-TLV type 1).
 
-    RFC 3032: The S-bit (bottom-of-stack) is set to 1 for the last entry
-    in the label stack, and 0 for all other entries.
+    RFC 9830 Section 2.4.4.2.1: the S bit MUST be zero upon transmission
+    and MUST be ignored upon reception.
     """
 
     SUBTYPE: ClassVar[int] = 1
@@ -325,7 +325,7 @@ class SegmentTypeA:
             label: MPLS label value (20 bits)
             flags: Segment flags
             tc: Traffic class (3 bits)
-            s: Bottom-of-stack bit (default False, set by SegmentListSubTLV.pack_value())
+            s: S bit as decoded from the wire; never set on transmission (RFC 9830)
             ttl: Time-to-live (8 bits)
         """
         self.label = label
@@ -334,20 +334,20 @@ class SegmentTypeA:
         self.s = s
         self.ttl = ttl
 
-    def pack(self, is_last: bool = False) -> bytes:
+    def pack(self) -> bytes:
         """Pack the segment.
 
-        Args:
-            is_last: If True, sets the S-bit (bottom-of-stack). This is typically
-                     set by SegmentListSubTLV.pack_value() for the last Type A segment.
+        RFC 9830 Section 2.4.4.2.1: the S bit MUST be zero upon transmission.
         """
-        s_bit = is_last or self.s  # Use is_last parameter or explicit s value
-        label_entry = (self.label << 12) | (self.tc << 9) | (0x100 if s_bit else 0) | self.ttl
+        label_entry = (self.label << 12) | (self.tc << 9) | self.ttl
         value = pack('!BBL', self.flags, 0, label_entry)
         return pack('!BB', self.SUBTYPE, len(value)) + value
 
     def json(self) -> str:
-        return f'{{"type": "A", "label": {self.label}, "tc": {self.tc}, "s": {str(self.s).lower()}, "ttl": {self.ttl}}}'
+        v = ', "verification": true' if self.flags & _SEG_B_FLAG_V else ''
+        return (
+            f'{{"type": "A", "label": {self.label}, "tc": {self.tc}, "s": {str(self.s).lower()}, "ttl": {self.ttl}{v}}}'
+        )
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeA:
@@ -387,13 +387,8 @@ class SegmentTypeB:
         self.flags = flags
         self.endpoint_behavior = endpoint_behavior
 
-    def pack(self, is_last: bool = False) -> bytes:
-        """Pack the segment.
-
-        Args:
-            is_last: Unused for Type B (SRv6 has no bottom-of-stack bit).
-                     Included for API consistency with SegmentTypeA.
-        """
+    def pack(self) -> bytes:
+        """Pack the segment."""
         sid_bytes = socket.inet_pton(socket.AF_INET6, self.sid)
         effective_flags = self.flags
         if self.endpoint_behavior is not None:
@@ -408,6 +403,8 @@ class SegmentTypeB:
         parts = ['"type": "B"', f'"sid": "{self.sid}"']
         if self.endpoint_behavior is not None:
             parts.append(self.endpoint_behavior.json())
+        if self.flags & _SEG_B_FLAG_V:
+            parts.append('"verification": true')
         return '{' + ', '.join(parts) + '}'
 
     @classmethod
@@ -474,18 +471,17 @@ class SegmentTypeC:
         self.s = s
         self.ttl = ttl
 
-    def pack(self, is_last: bool = False) -> bytes:
+    def pack(self) -> bytes:
         """Pack the segment.
 
-        Args:
-            is_last: If True and sid is present, sets the S-bit (bottom-of-stack).
+        RFC 9830 Section 2.4.4.2.1: the S bit MUST be zero upon transmission.
         """
         ipv4_bytes = socket.inet_pton(socket.AF_INET, self.ipv4_node)
-        value = pack('!BB', self.flags, self.algorithm) + ipv4_bytes
+        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        value = pack('!BB', effective_flags, self.algorithm) + ipv4_bytes
 
         if self.sid is not None:
-            s_bit = is_last or self.s
-            label_entry = (self.sid << 12) | (self.tc << 9) | (0x100 if s_bit else 0) | self.ttl
+            label_entry = (self.sid << 12) | (self.tc << 9) | self.ttl
             value += pack('!L', label_entry)
 
         return pack('!BB', self.SUBTYPE, len(value)) + value
@@ -505,6 +501,8 @@ class SegmentTypeC:
                     f'"ttl": {self.ttl}',
                 ]
             )
+        if self.flags & _SEG_B_FLAG_V:
+            parts.append('"verification": true')
         return '{' + ', '.join(parts) + '}'
 
     @classmethod
@@ -589,21 +587,20 @@ class SegmentTypeD:
         self.s = s
         self.ttl = ttl
 
-    def pack(self, is_last: bool = False) -> bytes:
+    def pack(self) -> bytes:
         """Pack the segment.
 
-        Args:
-            is_last: If True and sid is present, sets the S-bit (bottom of stack).
+        RFC 9830 Section 2.4.4.2.1: the S bit MUST be zero upon transmission.
         """
         ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.ipv6_node)
 
-        value = pack('!BB', self.flags, self.algorithm)
+        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        value = pack('!BB', effective_flags, self.algorithm)
         value += ipv6_bytes
 
         if self.sid is not None:
-            # Pack MPLS label entry: label(20) + tc(3) + s(1) + ttl(8)
-            effective_s = is_last or self.s
-            label_entry = (self.sid << 12) | (self.tc << 9) | (effective_s << 8) | self.ttl
+            # MPLS label entry: label(20) + tc(3) + s(1, always zero on transmit) + ttl(8)
+            label_entry = (self.sid << 12) | (self.tc << 9) | self.ttl
             value += pack('!L', label_entry)
 
         return pack('!BB', self.SUBTYPE, len(value)) + value
@@ -616,6 +613,8 @@ class SegmentTypeD:
         ]
         if self.sid is not None:
             parts.append(f'"sid": {self.sid}')
+        if self.flags & _SEG_B_FLAG_V:
+            parts.append('"verification": true')
         return '{' + ', '.join(parts) + '}'
 
     @classmethod
@@ -701,22 +700,21 @@ class SegmentTypeE:
         self.s = s
         self.ttl = ttl
 
-    def pack(self, is_last: bool = False) -> bytes:
+    def pack(self) -> bytes:
         """Pack the segment.
 
-        Args:
-            is_last: If True and sid is present, sets the S-bit (bottom of stack).
+        RFC 9830 Section 2.4.4.2.1: the S bit MUST be zero upon transmission.
         """
         ipv4_bytes = socket.inet_pton(socket.AF_INET, self.ipv4_node)
 
-        value = pack('!BB', self.flags, 0)  # flags + reserved
+        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        value = pack('!BB', effective_flags, 0)  # flags + reserved
         value += pack('!L', self.local_if_id)
         value += ipv4_bytes
 
         if self.sid is not None:
-            # Pack MPLS label entry: label(20) + tc(3) + s(1) + ttl(8)
-            effective_s = is_last or self.s
-            label_entry = (self.sid << 12) | (self.tc << 9) | (effective_s << 8) | self.ttl
+            # MPLS label entry: label(20) + tc(3) + s(1, always zero on transmit) + ttl(8)
+            label_entry = (self.sid << 12) | (self.tc << 9) | self.ttl
             value += pack('!L', label_entry)
 
         return pack('!BB', self.SUBTYPE, len(value)) + value
@@ -729,6 +727,8 @@ class SegmentTypeE:
         ]
         if self.sid is not None:
             parts.append(f'"sid": {self.sid}')
+        if self.flags & _SEG_B_FLAG_V:
+            parts.append('"verification": true')
         return '{' + ', '.join(parts) + '}'
 
     @classmethod
@@ -815,23 +815,22 @@ class SegmentTypeF:
         self.s = s
         self.ttl = ttl
 
-    def pack(self, is_last: bool = False) -> bytes:
+    def pack(self) -> bytes:
         """Pack the segment.
 
-        Args:
-            is_last: If True and sid is present, sets the S-bit (bottom of stack).
+        RFC 9830 Section 2.4.4.2.1: the S bit MUST be zero upon transmission.
         """
         local_ipv4_bytes = socket.inet_pton(socket.AF_INET, self.local_ipv4)
         remote_ipv4_bytes = socket.inet_pton(socket.AF_INET, self.remote_ipv4)
 
-        value = pack('!BB', self.flags, 0)  # flags + reserved
+        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        value = pack('!BB', effective_flags, 0)  # flags + reserved
         value += local_ipv4_bytes
         value += remote_ipv4_bytes
 
         if self.sid is not None:
-            # Pack MPLS label entry: label(20) + tc(3) + s(1) + ttl(8)
-            effective_s = is_last or self.s
-            label_entry = (self.sid << 12) | (self.tc << 9) | (effective_s << 8) | self.ttl
+            # MPLS label entry: label(20) + tc(3) + s(1, always zero on transmit) + ttl(8)
+            label_entry = (self.sid << 12) | (self.tc << 9) | self.ttl
             value += pack('!L', label_entry)
 
         return pack('!BB', self.SUBTYPE, len(value)) + value
@@ -844,6 +843,8 @@ class SegmentTypeF:
         ]
         if self.sid is not None:
             parts.append(f'"sid": {self.sid}')
+        if self.flags & _SEG_B_FLAG_V:
+            parts.append('"verification": true')
         return '{' + ', '.join(parts) + '}'
 
     @classmethod
@@ -940,25 +941,24 @@ class SegmentTypeG:
         self.s = s
         self.ttl = ttl
 
-    def pack(self, is_last: bool = False) -> bytes:
+    def pack(self) -> bytes:
         """Pack the segment.
 
-        Args:
-            is_last: If True and sid is present, sets the S-bit (bottom of stack).
+        RFC 9830 Section 2.4.4.2.1: the S bit MUST be zero upon transmission.
         """
         local_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.local_ipv6)
         remote_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.remote_ipv6)
 
-        value = pack('!BB', self.flags, 0)  # flags + reserved
+        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        value = pack('!BB', effective_flags, 0)  # flags + reserved
         value += pack('!L', self.local_if_id)
         value += local_ipv6_bytes
         value += pack('!L', self.remote_if_id)
         value += remote_ipv6_bytes
 
         if self.sid is not None:
-            # Pack MPLS label entry: label(20) + tc(3) + s(1) + ttl(8)
-            effective_s = is_last or self.s
-            label_entry = (self.sid << 12) | (self.tc << 9) | (effective_s << 8) | self.ttl
+            # MPLS label entry: label(20) + tc(3) + s(1, always zero on transmit) + ttl(8)
+            label_entry = (self.sid << 12) | (self.tc << 9) | self.ttl
             value += pack('!L', label_entry)
 
         return pack('!BB', self.SUBTYPE, len(value)) + value
@@ -973,6 +973,8 @@ class SegmentTypeG:
         ]
         if self.sid is not None:
             parts.append(f'"sid": {self.sid}')
+        if self.flags & _SEG_B_FLAG_V:
+            parts.append('"verification": true')
         return '{' + ', '.join(parts) + '}'
 
     @classmethod
@@ -1064,23 +1066,22 @@ class SegmentTypeH:
         self.s = s
         self.ttl = ttl
 
-    def pack(self, is_last: bool = False) -> bytes:
+    def pack(self) -> bytes:
         """Pack the segment.
 
-        Args:
-            is_last: If True and sid is present, sets the S-bit (bottom of stack).
+        RFC 9830 Section 2.4.4.2.1: the S bit MUST be zero upon transmission.
         """
         local_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.local_ipv6)
         remote_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.remote_ipv6)
 
-        value = pack('!BB', self.flags, 0)  # flags + reserved
+        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
+        value = pack('!BB', effective_flags, 0)  # flags + reserved
         value += local_ipv6_bytes
         value += remote_ipv6_bytes
 
         if self.sid is not None:
-            # Pack MPLS label entry: label(20) + tc(3) + s(1) + ttl(8)
-            effective_s = is_last or self.s
-            label_entry = (self.sid << 12) | (self.tc << 9) | (effective_s << 8) | self.ttl
+            # MPLS label entry: label(20) + tc(3) + s(1, always zero on transmit) + ttl(8)
+            label_entry = (self.sid << 12) | (self.tc << 9) | self.ttl
             value += pack('!L', label_entry)
 
         return pack('!BB', self.SUBTYPE, len(value)) + value
@@ -1093,6 +1094,8 @@ class SegmentTypeH:
         ]
         if self.sid is not None:
             parts.append(f'"sid": {self.sid}')
+        if self.flags & _SEG_B_FLAG_V:
+            parts.append('"verification": true')
         return '{' + ', '.join(parts) + '}'
 
     @classmethod
@@ -1175,16 +1178,11 @@ class SegmentTypeI:
         self.sid = sid
         self.endpoint_behavior = endpoint_behavior
 
-    def pack(self, is_last: bool = False) -> bytes:
-        """Pack the segment.
-
-        Args:
-            is_last: Unused for Type I (SRv6 has no bottom-of-stack bit).
-                     Included for API consistency.
-        """
+    def pack(self) -> bytes:
+        """Pack the segment."""
         ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.ipv6_node)
 
-        effective_flags = self.flags
+        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
         if self.endpoint_behavior is not None:
             effective_flags |= _SEG_B_FLAG_B  # Set B-Flag
 
@@ -1210,6 +1208,8 @@ class SegmentTypeI:
             parts.append(f'"sid": "{self.sid}"')
         if self.endpoint_behavior is not None:
             parts.append(self.endpoint_behavior.json())
+        if self.flags & _SEG_B_FLAG_V:
+            parts.append('"verification": true')
         return '{' + ', '.join(parts) + '}'
 
     @classmethod
@@ -1299,17 +1299,12 @@ class SegmentTypeJ:
         self.sid = sid
         self.endpoint_behavior = endpoint_behavior
 
-    def pack(self, is_last: bool = False) -> bytes:
-        """Pack the segment.
-
-        Args:
-            is_last: Unused for Type J (SRv6 has no bottom-of-stack bit).
-                     Included for API consistency.
-        """
+    def pack(self) -> bytes:
+        """Pack the segment."""
         local_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.local_ipv6)
         remote_ipv6_bytes = socket.inet_pton(socket.AF_INET6, self.remote_ipv6)
 
-        effective_flags = self.flags
+        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
         if self.endpoint_behavior is not None:
             effective_flags |= _SEG_B_FLAG_B  # Set B-Flag
 
@@ -1342,6 +1337,8 @@ class SegmentTypeJ:
             parts.append(f'"sid": "{self.sid}"')
         if self.endpoint_behavior is not None:
             parts.append(self.endpoint_behavior.json())
+        if self.flags & _SEG_B_FLAG_V:
+            parts.append('"verification": true')
         return '{' + ', '.join(parts) + '}'
 
     @classmethod
@@ -1427,17 +1424,12 @@ class SegmentTypeK:
         self.sid = sid
         self.endpoint_behavior = endpoint_behavior
 
-    def pack(self, is_last: bool = False) -> bytes:
-        """Pack the segment.
-
-        Args:
-            is_last: Unused for Type K (SRv6 has no bottom-of-stack bit).
-                     Included for API consistency.
-        """
+    def pack(self) -> bytes:
+        """Pack the segment."""
         local_bytes = socket.inet_pton(socket.AF_INET6, self.local_ipv6)
         remote_bytes = socket.inet_pton(socket.AF_INET6, self.remote_ipv6)
 
-        effective_flags = self.flags
+        effective_flags = self.flags | (_SEG_B_FLAG_S if self.sid is not None else 0)
         if self.endpoint_behavior is not None:
             effective_flags |= _SEG_B_FLAG_B  # Set B-Flag
 
@@ -1464,6 +1456,8 @@ class SegmentTypeK:
             parts.append(f'"sid": "{self.sid}"')
         if self.endpoint_behavior is not None:
             parts.append(self.endpoint_behavior.json())
+        if self.flags & _SEG_B_FLAG_V:
+            parts.append('"verification": true')
         return '{' + ', '.join(parts) + '}'
 
     @classmethod
@@ -1601,32 +1595,12 @@ class SegmentListSubTLV(SubTLV):
         self.segments = segments
 
     def pack_value(self) -> bytes:
-        """Pack per RFC 9830: Reserved(1) + sub-sub-TLVs.
-
-        RFC 3032: The S-bit (bottom-of-stack) MUST be set to 1 only on the last
-        MPLS label in the stack. For Type A and Type C segments with SID, we set
-        is_last=True only for the last such segment in the list.
-        """
+        """Pack per RFC 9830: Reserved(1) + sub-sub-TLVs."""
         data = b'\x00'  # Reserved byte
         data += self.weight.pack()
 
-        # Find the index of the last segment with MPLS label (Type A or Type C with SID)
-        last_mpls_idx = -1
-        for i in range(len(self.segments) - 1, -1, -1):
-            seg_i = self.segments[i]
-            if isinstance(seg_i, SegmentTypeA):
-                last_mpls_idx = i
-                break
-            elif isinstance(seg_i, SegmentTypeC) and seg_i.sid is not None:
-                last_mpls_idx = i
-                break
-
-        # Pack each segment, setting S-bit only on the last MPLS segment
-        for i, seg in enumerate(self.segments):
-            is_last = False
-            if isinstance(seg, SegmentTypeA) or (isinstance(seg, SegmentTypeC) and seg.sid is not None):
-                is_last = i == last_mpls_idx
-            data += seg.pack(is_last=is_last)
+        for seg in self.segments:
+            data += seg.pack()
 
         return data
 

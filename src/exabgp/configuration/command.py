@@ -307,6 +307,8 @@ def _format_sr_policy_tunnel(sr: dict[str, Any]) -> list[str]:
         parts.append(f'preference {sr["preference"]}')
     if 'priority' in sr:
         parts.append(f'priority {sr["priority"]}')
+    if 'enlp' in sr:
+        parts.append(f'enlp {sr["enlp"]}')
     if 'binding-sid' in sr:
         bsid = sr['binding-sid']
         if bsid is None:
@@ -325,6 +327,8 @@ def _format_sr_policy_tunnel(sr: dict[str, Any]) -> list[str]:
         for seg in sl.get('segments', []):
             seg_cmd = _format_segment(seg)
             if seg_cmd:
+                if seg.get('verification'):
+                    seg_cmd += ' verification'
                 seg_parts.append(seg_cmd)
         parts.append(' '.join(seg_parts))
     if 'policy-name' in sr:
