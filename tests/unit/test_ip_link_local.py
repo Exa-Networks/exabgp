@@ -11,7 +11,8 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-from exabgp.protocol.ip import IPv4, IPv6
+import pytest
+from exabgp.protocol.ip import IP, IPv4, IPv6
 
 
 # ==============================================================================
@@ -117,12 +118,47 @@ def test_ipv6_not_link_local_boundary() -> None:
 
 
 # ==============================================================================
+# IPv6 Zone Identifier for Link Local
+# ==============================================================================
+
+
+@pytest.mark.parametrize(
+    'addr, is_link_local, expected_zone',
+    [
+        # Zoned link-local addresses (RFC 4007).
+        ('fe80::1%eth0', True, 'eth0'),
+        ('fe80::1%lo', True, 'lo'),
+        ('fe80::dead:beef%wlan0', True, 'wlan0'),
+        ('fe80::2050:7ff:fe82:ca44%eth2', True, 'eth2'),
+        ('fe80::fc54:ff:fe52:2002%eth2', True, 'eth2'),
+
+        # Bare link-local addresses (no zone attached).
+        ('fe80::1', True, ''),
+        ('fe80::dead:beef', True, ''),
+
+        # Non-link-local IPv6 addresses (must not be flagged link-local).
+        ('2001:db8::1', False, ''),
+        ('::1', False, ''),
+    ],
+)
+def test_ipv6_zoned_and_nonzoned(addr: str, is_link_local: bool, expected_zone: str) -> None:
+    """Test parametrized link local and non link local calls to top and strip work as expected. """
+    inst = IP.from_string(addr)
+    assert inst.is_link_local() is is_link_local
+    assert inst.top() == addr
+    assert inst._zone == expected_zone
+    assert IP.pton(addr) == inst._packed
+
+
+
+# ==============================================================================
 # Summary
 # ==============================================================================
-# Total tests: 11
+# Total tests: 12
 #
 # Coverage:
 # - IPv4 always returns False (1 test)
 # - IPv6 valid link-local detection (2 tests)
 # - IPv6 non-link-local addresses (7 tests)
+# - IPv6 zone-identifier (1 test)
 # ==============================================================================

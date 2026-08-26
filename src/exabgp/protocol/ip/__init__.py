@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
+
 class IPFactory(Protocol):
     """Protocol for IP subclass constructors that accept packed data.
 
@@ -71,6 +72,7 @@ class IP(IPBase):
     def init(self, packed: Buffer) -> IP:
         self._packed = packed
         self.afi = IP.toafi(IP.ntop(packed))
+        self._zone = ''
         return self
 
     def __iter__(self) -> Iterator[str]:
@@ -79,14 +81,23 @@ class IP(IPBase):
 
     @staticmethod
     def pton(ip: str) -> bytes:
-        return socket.inet_pton(IP.toaf(ip), ip)
+        return socket.inet_pton(IP.toaf(ip), IP.strip_zone(ip))
 
     @staticmethod
     def ntop(data: Buffer) -> str:
         return socket.inet_ntop(socket.AF_INET if len(data) == IPv4.BYTES else socket.AF_INET6, data)
 
+    @staticmethod
+    def strip_zone(ip: str) -> str:
+        """Return the address portion of a zone-qualified IP string(address%interface)."""
+        if '%' in ip:
+            return ip.split('%', 1)[0]
+        return ip
+
     def top(self, negotiated: Negotiated | None = None, afi: AFI = AFI.undefined) -> str:
-        return IP.ntop(self._packed)
+        base = IP.ntop(self._packed)
+        zone = getattr(self, '_zone', '')
+        return base + '%' + zone if zone else base
 
     # Mapping from socket address family to AFI
     _AF_TO_AFI: ClassVar[dict[int, AFI]] = {
@@ -204,13 +215,20 @@ class IP(IPBase):
 
     @classmethod
     def from_string(cls, string: str, klass: IPFactory | None = None) -> 'IP':
+        zone = ''
+        if '%' in string:
+            string, zone = string.split('%', 1)
         data = IP.pton(string)
         if klass:
-            return klass(data)
-        factory = cls.klass(string)
-        if factory is None:
-            raise ValueError(f'Unknown IP address format: {string}')
-        return factory(data)
+            inst = klass(data)
+        else:
+            factory = cls.klass(string)
+            if factory is None:
+                raise ValueError(f'Unknown IP address format: {string}')
+            inst = factory(data)
+        if zone:
+            inst._zone = zone
+        return inst
 
     @classmethod
     def register(cls) -> None:
@@ -452,7 +470,7 @@ class IPv6(IP):
 
     @staticmethod
     def pton(ip: str) -> builtins.bytes:
-        return socket.inet_pton(socket.AF_INET6, ip)
+        return socket.inet_pton(socket.AF_INET6, IP.strip_zone(ip))
 
     @staticmethod
     def ntop(data: Buffer) -> str:

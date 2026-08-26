@@ -57,12 +57,26 @@ def create(afi: AFI, interface: str | None = None) -> socket.socket:
     return io
 
 
+
+def split_zone(ip: str) -> tuple:
+    """Split an addr%zone string into a tuple of (string addr, int scope_id) if a zone is provided."""
+    if '%' in ip:
+        addr, zone = ip.split('%', 1)
+        try:
+            scope_id = socket.if_nametoindex(zone)
+        except OSError:
+            scope_id = 0
+        return addr, scope_id
+    return ip, 0
+
+
 def bind(io: socket.socket, ip: str, afi: AFI) -> None:
     try:
         if afi == AFI.ipv4:
             io.bind((ip, 0))
         if afi == AFI.ipv6:
-            io.bind((ip, 0, 0, 0))
+            addr, scope_id = split_zone(ip)
+            io.bind((addr, 0, 0, scope_id))
     except OSError as exc:
         raise BindingError(f'Could not bind to local ip {ip} - {exc!s}') from None
 
@@ -72,7 +86,8 @@ def connect(io: socket.socket, ip: str, port: int, afi: AFI, md5: str) -> None:
         if afi == AFI.ipv4:
             io.connect((ip, port))
         if afi == AFI.ipv6:
-            io.connect((ip, port, 0, 0))
+            addr, scope_id = split_zone(ip)
+            io.connect((addr, port, 0, scope_id))
     except OSError as exc:
         if exc.errno == errno.EINPROGRESS:
             return

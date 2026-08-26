@@ -17,6 +17,7 @@ from unittest.mock import patch, MagicMock
 
 from exabgp.protocol.family import AFI
 from exabgp.reactor.network import tcp
+from exabgp.reactor.network.tcp import split_zone
 from exabgp.reactor.network.error import (
     NotConnected,
     BindingError,
@@ -588,3 +589,30 @@ class TestIntegration:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+# ==============================================================================
+# split_zone helper (zone ID parsing)
+# ==============================================================================
+
+class TestSplitZone:
+    """Test the split_zone helper for RFC 4007 zone ID parsing."""
+
+    def test_returns_scope_id_for_loopback(self) -> None:
+        """``lo`` is always index 1 on Linux and present on every host we test on."""
+        addr, scope_id = split_zone('fe80::1%lo')
+        assert addr == 'fe80::1'
+        assert scope_id == socket.if_nametoindex('lo')
+        assert scope_id > 0
+
+    def test_no_zone(self) -> None:
+        """Addresses without a %zone must yield scope_id 0 and pass through."""
+        addr, scope_id = split_zone('2001:db8::1')
+        assert addr == '2001:db8::1'
+        assert scope_id == 0
+
+    def test_unknown_interface_returns_zero(self) -> None:
+        """Unknown interface name must not raise — scope_id falls back to 0."""
+        addr, scope_id = split_zone('fe80::1%doesnotexist999')
+        assert addr == 'fe80::1'
+        assert scope_id == 0
