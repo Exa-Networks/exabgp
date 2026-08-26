@@ -15,7 +15,7 @@ from .tcp import ttl
 from .tcp import ttlv6
 from .tcp import asynchronous
 from .tcp import ready
-# from .error import NetworkError
+from .error import MD5Error, TCPAOError
 
 from exabgp.logger import log, lazymsg
 
@@ -181,6 +181,22 @@ class Outgoing(Connection):
             # Setup socket if needed
             setup_issue = self._setup()
             if setup_issue:
+                if isinstance(setup_issue, (MD5Error, TCPAOError)):
+                    # the kernel refused the authentication key, so the remaining
+                    # max_attempts retries would fail the same way: say why at error
+                    # level and give up, rather than burying the reason in debug.
+                    # Peer.run() reconnects, so this repeats once per reconnection
+                    # cycle, which Delay backs off to one a minute.
+                    log.error(
+                        lazymsg(
+                            'connection.authentication.failed peer={p} port={pt} error={e}',
+                            p=self.peer,
+                            pt=self.port,
+                            e=str(setup_issue),
+                        ),
+                        self.session(),
+                    )
+                    return False
                 if notify:
                     log.debug(
                         lazymsg('connection.setup.failed peer={p} port={pt}', p=self.peer, pt=self.port), self.session()
