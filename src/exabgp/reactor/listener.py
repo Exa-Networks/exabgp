@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import os
 import uuid
 import copy
 import socket
@@ -93,6 +92,11 @@ class Listener:
                 ) from None
             elif exc.args[0] == errno.EADDRNOTAVAIL:
                 raise BindingError(f'could not listen on {local_ip}:{local_port}, this is an invalid address') from None
+            elif exc.args[0] == errno.EACCES:
+                raise BindingError(
+                    f'could not listen on {local_ip}:{local_port}, '
+                    f'binding below port {MAX_PRIVILEGED_PORT} requires root',
+                ) from None
             raise NetworkError(str(exc)) from None
         except NetworkError as exc:
             log.critical(lambda exc=exc: str(exc), 'network')
@@ -112,15 +116,10 @@ class Listener:
             )
             return True
         except NetworkError as exc:
-            if os.geteuid() != 0 and port <= MAX_PRIVILEGED_PORT:
-                log.critical(
-                    lambda local_addr=local_addr, port=port: (
-                        f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root'
-                    ),
-                    'network',
-                )
-            else:
-                log.critical(lambda exc=exc: f'can not bind to {local_addr}:{port} ({exc})', 'network')
+            # the reason is the only line which is never a guess, so always print it:
+            # a privileged port is one way to fail to listen, an MD5 key the kernel
+            # will not install is another, and they need different answers
+            log.critical(lambda exc=exc: f'can not bind to {local_addr}:{port} ({exc})', 'network')
             log.critical(lambda: 'unset exabgp.tcp.bind if you do not want listen for incoming connections', 'network')
             log.critical(lambda: f'and check that no other daemon is already binding to port {port}', 'network')
             return False
