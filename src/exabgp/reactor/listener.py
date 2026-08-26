@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import os
 import uuid
 import copy
 import socket
@@ -38,6 +37,18 @@ from exabgp.logger import log, lazymsg
 
 # Network port constants
 MAX_PRIVILEGED_PORT: int = 1024  # Highest privileged port number (requires root on Unix)
+
+
+def _bind_error(exc: OSError, local_ip: IP, local_port: int) -> NetworkError:
+    """Name why a listening socket could not bind, so the log does not have to guess."""
+    where = f'could not listen on {local_ip}:{local_port}'
+    if exc.args[0] == errno.EADDRINUSE:
+        return BindingError(f'{where}, the port may already be in use by another application')
+    if exc.args[0] == errno.EADDRNOTAVAIL:
+        return BindingError(f'{where}, this is an invalid address')
+    if exc.args[0] == errno.EACCES:
+        return BindingError(f'{where}, binding below port {MAX_PRIVILEGED_PORT} requires root')
+    return NetworkError(str(exc))
 
 
 class Listener:
@@ -132,13 +143,7 @@ class Listener:
             sock.listen(self._backlog)
             self._sockets[sock] = (local_ip.top(), local_port, peer_ip.top(), use_md5)
         except OSError as exc:
-            if exc.args[0] == errno.EADDRINUSE:
-                raise BindingError(
-                    f'could not listen on {local_ip}:{local_port}, the port may already be in use by another application',
-                ) from None
-            elif exc.args[0] == errno.EADDRNOTAVAIL:
-                raise BindingError(f'could not listen on {local_ip}:{local_port}, this is an invalid address') from None
-            raise NetworkError(str(exc)) from None
+            raise _bind_error(exc, local_ip, local_port) from None
         except NetworkError as exc:
             log.critical(lazymsg('{exc}', exc=str(exc)), 'network')
             raise exc
@@ -180,16 +185,13 @@ class Listener:
             )
             return True
         except NetworkError as exc:
-            if os.geteuid() != 0 and port <= MAX_PRIVILEGED_PORT:
-                log.critical(
-                    lazymsg('bind.failed ip={addr} port={port} hint=run_as_root', addr=local_addr, port=port),
-                    'network',
-                )
-            else:
-                log.critical(
-                    lazymsg('bind.failed ip={addr} port={port} reason={exc}', addr=local_addr, port=port, exc=exc),
-                    'network',
-                )
+            # the reason is the only line which is never a guess, so always print it:
+            # a privileged port is one way to fail to listen, an MD5 key the kernel
+            # will not install is another, and they need different answers
+            log.critical(
+                lazymsg('bind.failed ip={addr} port={port} reason={exc}', addr=local_addr, port=port, exc=exc),
+                'network',
+            )
             log.critical(lazymsg('listener.bind.hint action=unset_tcp_bind'), 'network')
             log.critical(lazymsg('listener.bind.hint action=check_port port={port}', port=port), 'network')
             return False
