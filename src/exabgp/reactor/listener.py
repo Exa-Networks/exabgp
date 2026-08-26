@@ -95,8 +95,8 @@ class Listener:
                 continue
             if local_port != port:
                 continue
-            if use_md5:
-                md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
+            # unconditional: an empty key clears a password removed by a reload (#1388)
+            md5(sock, peer_ip.top(), 0, use_md5 or '', md5_base64)
             # TCP-AO (mutually exclusive with MD5)
             if tcp_ao_password and tcp_ao_keyid is not None:
                 tcp_ao(sock, peer_ip.top(), 0, tcp_ao_password, tcp_ao_keyid, tcp_ao_algorithm, tcp_ao_base64)

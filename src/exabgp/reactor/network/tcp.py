@@ -179,9 +179,19 @@ def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: bool | None
                 md5_bytes = bytes(md5, 'ascii')
                 key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
                 io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
-            # else:
-            # 	key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
-            # 	io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+            else:
+                # No key configured: clear any key the kernel still holds for this peer.
+                # Listener._listen() reuses its listening sockets across reloads, so a
+                # password removed from the configuration would otherwise stay installed
+                # and break a passive session (#1388).
+                key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
+                try:
+                    io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+                except OSError as exc:
+                    # a kernel built without CONFIG_TCP_MD5SIG has no key to clear, and
+                    # no key was asked for, so this is not a reason to fail (#1416)
+                    if exc.errno != errno.ENOPROTOOPT:
+                        raise
 
         except OSError as exc:
             if exc.errno != errno.ENOENT:
