@@ -338,7 +338,24 @@ class Neighbor:
         return not self.__eq__(other)
 
     def ip_self(self, afi: AFI) -> IP:
-        return self.session.ip_self(afi)
+        chosen = self.session.ip_self(afi)
+        if not chosen.is_link_local():
+            return chosen
+
+        # An address with link scope reaches the peer sharing the link and nobody
+        # beyond it, and only when the link-local next-hop capability is in use.
+        # Refuse rather than announce a next-hop the peer can not resolve: routes
+        # injected through the API never went through configuration validation.
+        if not self.capability.link_local_nexthop.is_enabled():
+            raise TypeError(
+                'use of "next-hop self": the local-address is link-local but the link-local next-hop capability is not enabled',
+            )
+        ttl = self.session.outgoing_ttl
+        if ttl is not None and ttl > 1:
+            raise TypeError(
+                'use of "next-hop self": a link-local local-address can not be used on a multihop session',
+            )
+        return chosen
 
     def resolve_self(self, route: 'Route') -> 'Route':
         nexthop = route.nexthop  # Use route.nexthop, not nlri.nexthop
