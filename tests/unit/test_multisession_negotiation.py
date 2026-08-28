@@ -18,10 +18,12 @@ License: 3-clause BSD
 """
 
 from unittest.mock import Mock
+import pytest
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import ASN, HoldTime, RouterID, Version
 from exabgp.bgp.message.open import Open
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.capabilities import Parameter
@@ -66,12 +68,8 @@ def make_multiprotocol_capability() -> MultiProtocol:
 
 
 def test_multisession_unpack_capability_direct_call() -> None:
-    """A payload of concatenated 1-octet capability codes populates the instance
-    list in wire order -- the actual F7 bug: unpack_capability() ignored `data`
-    entirely, so this list stayed empty regardless of what a peer sent.
-    """
     instance = MultiSession()
-    data = bytes([Capability.CODE.MULTIPROTOCOL, Capability.CODE.ROUTE_REFRESH, Capability.CODE.FOUR_BYTES_ASN])
+    data = bytes([0, Capability.CODE.MULTIPROTOCOL, Capability.CODE.ROUTE_REFRESH, Capability.CODE.FOUR_BYTES_ASN])
 
     result = MultiSession.unpack_capability(instance, data, Capability.CODE.MULTISESSION)
 
@@ -88,7 +86,7 @@ def test_multisession_unpack_capability_via_capabilities_unpack() -> None:
     buffer carrying a single MULTISESSION capability TLV with a 3-byte session-id
     payload -- this is the shape a real peer's OPEN message takes on the wire.
     """
-    payload = bytes([Capability.CODE.MULTIPROTOCOL, Capability.CODE.ROUTE_REFRESH, Capability.CODE.FOUR_BYTES_ASN])
+    payload = bytes([0, Capability.CODE.MULTIPROTOCOL, Capability.CODE.ROUTE_REFRESH, Capability.CODE.FOUR_BYTES_ASN])
     wire = pack_open_parameters([(Capability.CODE.MULTISESSION, payload)])
 
     capabilities = Capabilities.unpack(wire)
@@ -103,19 +101,6 @@ def test_multisession_unpack_capability_via_capabilities_unpack() -> None:
 
 
 def test_multisession_pack_unpack_round_trip_recovers_original_set() -> None:
-    """set(X) -> pack_capabilities() -> Capabilities.unpack() must recover exactly X.
-
-    MultiSession.extract_capability_bytes() always prepends a bytes([0]) placeholder
-    ahead of the real session-id bytes, and Capabilities.pack_capabilities() turns
-    every list element it returns -- the placeholder included -- into its own
-    capability TLV under the same code; Capability.unpack() folds every TLV for a
-    given code into the *same* instance via capabilities.get(). A naive fix that
-    appends every byte, including that leading placeholder, would make ExaBGP's own
-    {MULTIPROTOCOL} session-id set come back as {RESERVED, MULTIPROTOCOL} -- and two
-    ExaBGP peers with multi-session enabled could never agree with each other. 0x00
-    is CapabilityCode.RESERVED, never a real session id .set() adds, so it must be
-    skipped on unpack for the round trip to be exact.
-    """
     caps = Capabilities()
     caps[Capability.CODE.MULTIPROTOCOL] = make_multiprotocol_capability()
     caps[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
@@ -123,7 +108,61 @@ def test_multisession_pack_unpack_round_trip_recovers_original_set() -> None:
     wire = caps.pack_capabilities()
     recovered = Capabilities.unpack(wire)
 
+    assert caps[Capability.CODE.MULTISESSION].extract_capability_bytes() == [bytes([0, Capability.CODE.MULTIPROTOCOL])]
+    assert bytes([2, 4, Capability.CODE.MULTISESSION, 2, 0, Capability.CODE.MULTIPROTOCOL]) in wire
     assert set(recovered[Capability.CODE.MULTISESSION]) == {Capability.CODE.MULTIPROTOCOL}
+
+
+def test_multisession_ignores_flags_and_its_own_codes() -> None:
+    instance = MultiSession()
+    data = bytes(
+        [
+            0x80,
+            Capability.CODE.MULTISESSION,
+            Capability.CODE.MULTISESSION_CISCO,
+            Capability.CODE.MULTIPROTOCOL,
+        ]
+    )
+
+    MultiSession.unpack_capability(instance, data, Capability.CODE.MULTISESSION)
+
+    assert list(instance) == [Capability.CODE.MULTIPROTOCOL]
+
+
+def test_zero_length_multisession_value_is_rejected() -> None:
+    with pytest.raises(Notify, match='flags byte'):
+        MultiSession.unpack_capability(MultiSession(), b'', Capability.CODE.MULTISESSION)
+
+
+def test_repeated_multisession_capability_keeps_the_first_session_id() -> None:
+    """RFC 5492 section 5 lets a receiver keep one instance of a repeated capability.
+
+    Both TLVs unpack onto the same instance, because Capabilities keys it by wire code,
+    so parsing the second one appended its Session ID codes to the first one's list. The
+    peer named MULTIPROTOCOL, then named ROUTE_REFRESH, and the receiver ended up with a
+    Session ID of both, which is neither of the two the peer sent.
+    """
+    instance = MultiSession()
+
+    MultiSession.unpack_capability(instance, bytes([0, Capability.CODE.MULTIPROTOCOL]), Capability.CODE.MULTISESSION)
+    MultiSession.unpack_capability(instance, bytes([0, Capability.CODE.ROUTE_REFRESH]), Capability.CODE.MULTISESSION)
+
+    assert list(instance) == [Capability.CODE.MULTIPROTOCOL]
+
+
+def test_repeated_multisession_capability_is_ignored_not_rejected() -> None:
+    """Every ExaBGP before 6.0 packed the flags byte and each Session ID code as its own
+    one byte capability, so its OPEN arrives as several MultiSession TLVs whose value is a
+    single byte. Reading past the first would take that byte as flags, and refusing the
+    repeat would refuse the session, so the extra TLVs are ignored.
+    """
+    instance = MultiSession()
+
+    MultiSession.unpack_capability(instance, bytes([0]), Capability.CODE.MULTISESSION)
+    MultiSession.unpack_capability(instance, bytes([Capability.CODE.MULTIPROTOCOL]), Capability.CODE.MULTISESSION)
+
+    # An empty Session ID, which Negotiated then reads as the MULTIPROTOCOL default.
+    assert list(instance) == []
 
 
 # ==============================================================================
@@ -196,6 +235,25 @@ def test_negotiated_multisession_accepted_when_session_ids_match() -> None:
     peer_caps[Capability.CODE.MULTIPROTOCOL] = make_multiprotocol_capability()
     peer_caps[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
     recv_caps = Capabilities.unpack(peer_caps.pack_capabilities())
+
+    sent_open = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), sent_caps)
+    recv_open = Open.make_open(Version(4), ASN(65501), HoldTime(180), RouterID('192.0.2.2'), recv_caps)
+
+    negotiated = create_negotiated()
+    negotiated.sent(sent_open)
+    negotiated.received(recv_open)
+
+    assert negotiated.multisession is True
+
+
+def test_negotiated_cisco_multisession_accepted_when_session_ids_match() -> None:
+    sent_caps = Capabilities()
+    sent_caps[Capability.CODE.MULTIPROTOCOL] = make_multiprotocol_capability()
+    sent_caps[Capability.CODE.MULTISESSION_CISCO] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
+
+    recv_caps = Capabilities()
+    recv_caps[Capability.CODE.MULTIPROTOCOL] = make_multiprotocol_capability()
+    recv_caps[Capability.CODE.MULTISESSION_CISCO] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
 
     sent_open = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), sent_caps)
     recv_open = Open.make_open(Version(4), ASN(65501), HoldTime(180), RouterID('192.0.2.2'), recv_caps)

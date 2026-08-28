@@ -199,42 +199,49 @@ class Negotiated:
                     if self.addpath.receive(afi, safi):
                         self.advertised_paths_limit[family] = limit
 
-        self.multisession = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(
+        rfc_multisession = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(
             Capability.CODE.MULTISESSION,
         )
-        self.multisession |= sent_capa.announced(Capability.CODE.MULTISESSION_CISCO) and recv_capa.announced(
+        cisco_multisession = sent_capa.announced(Capability.CODE.MULTISESSION_CISCO) and recv_capa.announced(
             Capability.CODE.MULTISESSION_CISCO,
         )
+        self.multisession = rfc_multisession or cisco_multisession
 
         if self.multisession:
-            sent_ms = sent_capa[Capability.CODE.MULTISESSION]
-            recv_ms = recv_capa[Capability.CODE.MULTISESSION]
+            multisession_code = Capability.CODE.MULTISESSION if rfc_multisession else Capability.CODE.MULTISESSION_CISCO
+            sent_ms = sent_capa[multisession_code]
+            recv_ms = recv_capa[multisession_code]
             sent_ms_capa: set[int] = set(sent_ms) if isinstance(sent_ms, MultiSession) else set()
             recv_ms_capa: set[int] = set(recv_ms) if isinstance(recv_ms, MultiSession) else set()
 
-            if sent_ms_capa == set():
-                sent_ms_capa = set([Capability.CODE.MULTIPROTOCOL])
-            if recv_ms_capa == set():
-                recv_ms_capa = set([Capability.CODE.MULTIPROTOCOL])
+            if not sent_ms_capa:
+                sent_ms_capa = {Capability.CODE.MULTIPROTOCOL}
+            if not recv_ms_capa:
+                recv_ms_capa = {Capability.CODE.MULTIPROTOCOL}
+
+            # ExaBGP generates MULTIPROTOCOL as its sole Session ID component.
+            # The draft defines an empty Session ID list, following the mandatory
+            # flags byte, as equivalent to that default.
 
             if sent_ms_capa != recv_ms_capa:
                 self.multisession = (2, 8, 'multisession, our peer did not reply with the same sessionid')
+            else:
+                # The sets name the capabilities whose values distinguish this
+                # session. Locally generated data normally contains only
+                # MULTIPROTOCOL, but received Session IDs remain peer input: a
+                # named capability must exist on both sides before comparison.
+                for capa in sent_ms_capa:
+                    if capa not in sent_capa or capa not in recv_capa or sent_capa[capa] != recv_capa[capa]:
+                        self.multisession = (
+                            2,
+                            8,
+                            'when checking session id, capability {} did not match'.format(str(capa)),
+                        )
+                        break
 
-            # The way we implement MS-BGP, we only send one MP per session
-            # therefore we can not collide due to the way we generate the configuration
-
-            for capa in sent_ms_capa:
-                # no need to check that the capability exists, we generated it
-                # checked it is what we sent and only send MULTIPROTOCOL
-                if sent_capa[capa] != recv_capa[capa]:
-                    self.multisession = (
-                        2,
-                        8,
-                        'when checking session id, capability {} did not match'.format(str(capa)),
-                    )
-                    break
-
-        elif sent_capa.announced(Capability.CODE.MULTISESSION):
+        elif sent_capa.announced(Capability.CODE.MULTISESSION) or sent_capa.announced(
+            Capability.CODE.MULTISESSION_CISCO
+        ):
             self.multisession = (2, 9, 'multisession is mandatory with this peer')
 
     def validate(self, neighbor: Any) -> tuple[int, int, str] | None:
