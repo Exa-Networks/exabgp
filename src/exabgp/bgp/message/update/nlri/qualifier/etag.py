@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from struct import pack, unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 
@@ -66,7 +67,9 @@ class EthernetTag:
 
     @classmethod
     def unpack_etag(cls, data: Buffer) -> 'EthernetTag':
-        return cls(data[: cls.LENGTH])
+        if len(data) != cls.LENGTH:
+            raise Notify(3, 10, f'EthernetTag requires exactly {cls.LENGTH} bytes, got {len(data)}')
+        return cls(data)
 
     def json(self, compact: bool = False) -> str:
         return '"ethernet-tag": {}'.format(self.tag)

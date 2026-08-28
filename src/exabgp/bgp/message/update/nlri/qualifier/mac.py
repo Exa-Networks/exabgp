@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Type
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
 # ========================================================================== MAC
@@ -17,6 +18,8 @@ from exabgp.util.types import Buffer
 
 
 class MAC:
+    LENGTH = 6
+
     def __init__(self, mac: str = '', packed: Buffer = b'') -> None:
         self.mac: str = mac
         if packed:
@@ -63,7 +66,9 @@ class MAC:
 
     @classmethod
     def unpack_mac(cls: Type[MAC], data: Buffer) -> MAC:
-        return cls(':'.join('{:02X}'.format(_) for _ in data[:6]), data[:6])
+        if len(data) != cls.LENGTH:
+            raise Notify(3, 10, f'MAC requires exactly {cls.LENGTH} bytes, got {len(data)}')
+        return cls(':'.join('{:02X}'.format(_) for _ in data), data)
 
     def json(self, compact: bool = False) -> str:
         return '"mac": "{}"'.format(str(self))

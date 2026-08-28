@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.util.types import Buffer
+from exabgp.bgp.message.notification import Notify
 
 # NOTE: RFC 7432 defines ESI Types (0-5) in the first byte.
 # Current implementation treats ESI as opaque 10-byte value.
@@ -77,7 +78,9 @@ class ESI:
 
     @classmethod
     def unpack_esi(cls, data: Buffer) -> 'ESI':
-        return cls(data[: cls.LENGTH])
+        if len(data) != cls.LENGTH:
+            raise Notify(3, 10, f'ESI requires exactly {cls.LENGTH} bytes, got {len(data)}')
+        return cls(data)
 
     def json(self, compact: bool = False) -> str:
         return '"esi": "{}"'.format(str(self))

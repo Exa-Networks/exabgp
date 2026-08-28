@@ -12,6 +12,7 @@ from copy import deepcopy
 from struct import pack, unpack
 from typing import Any, ClassVar
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.util import hexstring
 from exabgp.util.types import Buffer
 
@@ -89,7 +90,9 @@ class RouteDistinguisher:
 
     @classmethod
     def unpack_routedistinguisher(cls, data: Buffer) -> 'RouteDistinguisher':
-        return cls(data[: cls.LENGTH])
+        if len(data) != cls.LENGTH:
+            raise Notify(3, 10, f'Route Distinguisher requires exactly {cls.LENGTH} bytes, got {len(data)}')
+        return cls(data)
 
     @classmethod
     def make_from_elements(cls, prefix: str, suffix: int) -> 'RouteDistinguisher':
