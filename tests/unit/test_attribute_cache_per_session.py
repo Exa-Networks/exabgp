@@ -188,3 +188,40 @@ def test_the_sentinel_mirrors_every_session_field() -> None:
     missing = set(vars(real)) - set(vars(Negotiated.UNSET)) - {'neighbor', 'direction'}
 
     assert not missing, f'_create_unset() does not mirror __init__: {sorted(missing)}'
+
+
+# --- the copy made before a treat-as-withdraw marker is added ---------------------------
+#
+# UpdateCollection.unpack_message may be holding this session's cached collection when it
+# finds an announce missing a mandatory attribute.  The marker it adds describes that one
+# UPDATE, not what the attribute bytes mean, so it goes onto a copy.  The copy has to be a
+# real one: a new mapping over the same attributes, with the derived caches empty because
+# it is about to stop matching them.
+
+
+def test_copy_holds_the_same_attributes_in_a_separate_mapping() -> None:
+    from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
+
+    original = decoded(ORIGIN_IGP, session(aigp_enabled=False))
+    duplicate = original.copy()
+
+    assert list(duplicate) == list(original)
+    assert duplicate[ORIGIN] is original[ORIGIN], 'immutable attributes are shared, not rebuilt'
+
+    duplicate.add(TreatAsWithdraw())
+
+    assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in duplicate
+    assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW not in original, 'the copy shared the original mapping'
+
+
+def test_copy_starts_with_empty_derived_caches() -> None:
+    """str()/json()/index() are memoised on the collection they were rendered from."""
+    original = decoded(ORIGIN_IGP, session(aigp_enabled=False))
+    _ = str(original)
+    _ = original.index()
+
+    duplicate = original.copy()
+
+    assert duplicate._str == ''
+    assert duplicate._json == ''
+    assert duplicate._idx == b''

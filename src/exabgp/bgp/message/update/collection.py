@@ -21,6 +21,7 @@ from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
+from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
@@ -639,8 +640,34 @@ class UpdateCollection(Message):
             withdraws.extend(unreach)
 
         if reach is not None and isinstance(reach, MPRNLRI):
-            # MP_REACH_NLRI contains nexthop - use iter_routed() for RoutedNLRI
+            # MP_REACH_NLRI carries its own next hop; iter_routed() preserves it
+            # while converting each contained NLRI to the semantic routed form.
             announces.extend(reach.iter_routed())
+
+        # RFC 7606: an UPDATE carrying reachable NLRI must include the attributes
+        # needed to interpret those routes. NEXT_HOP applies to the legacy IPv4
+        # NLRI field; MP_REACH_NLRI carries its own next hop.
+        if announces:
+            missing_mandatory = (
+                Attribute.CODE.ORIGIN not in attributes
+                or Attribute.CODE.AS_PATH not in attributes
+                or (bool(announced_view) and Attribute.CODE.NEXT_HOP not in attributes)
+            )
+            if missing_mandatory:
+                # AttributeCollection.unpack() may have returned the session's
+                # cached collection. Missing-mandatory is UPDATE context, not an
+                # interpretation of the attribute bytes, so adding its marker to
+                # that shared object would poison later updates with the same
+                # bytes. Copy the mapping only on this malformed path.
+                attributes = attributes.copy()
+                attributes.add(TreatAsWithdraw())
+
+        # Treat-as-withdraw is an action on every announced route, not merely a
+        # diagnostic attribute. NLRI parsing has completed at this point, so all
+        # affected legacy and MP_REACH routes can be moved safely.
+        if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes:
+            withdraws.extend(routed.nlri for routed in announces)
+            announces.clear()
 
         return cls(announces, withdraws, attributes)
 

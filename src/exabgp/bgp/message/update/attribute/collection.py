@@ -269,6 +269,20 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         self._json = ''
         self[attribute.ID] = attribute
 
+    def copy(self) -> AttributeCollection:
+        """A shallow copy: a new mapping over the same attribute objects.
+
+        Callers copy in order to change the mapping without changing the original,
+        which is why the derived text, json and index caches start empty here rather
+        than being carried over: they describe the mapping this copy is about to stop
+        matching. The attributes themselves are immutable and so are shared.
+        """
+        duplicate = AttributeCollection()
+        duplicate._data = dict(self._data)
+        duplicate.cacheable = self.cacheable
+        assert len(duplicate) == len(self), 'a copy holds every attribute of its original'
+        return duplicate
+
     def remove(self, attrid: int) -> None:
         self.pop(attrid)
 

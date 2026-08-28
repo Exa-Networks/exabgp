@@ -123,9 +123,7 @@ Unquoted is correct here.
 
 ## Blockers
 
-`./qa/bin/functional encoding` does not run cleanly on this workstation
-(`.claude/memory/functional-tests-8kb-pipe-limit.md`). The pass condition is parity with the
-pre-change baseline of 31 passed / 9 failed, not green.
+None.
 
 ## Resume point
 

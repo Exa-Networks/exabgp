@@ -29,6 +29,7 @@ import pytest
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.protocol.family import AFI, SAFI
 
 COMMUNITY = int(Attribute.CODE.COMMUNITY)
 ORIGIN = int(Attribute.CODE.ORIGIN)
@@ -44,20 +45,39 @@ DECLARED_LENGTH_BYTES = 3 * COMMUNITY_SIZE_BYTES
 PRESENT_LENGTHS_BYTES = [0, 1, 4, 8, 11]
 
 ORIGIN_IGP = bytes([WELL_KNOWN_TRANSITIVE, ORIGIN, 1, 0])
+AS_PATH_EMPTY = bytes([WELL_KNOWN_TRANSITIVE, int(Attribute.CODE.AS_PATH), 0])
+NEXT_HOP = bytes([WELL_KNOWN_TRANSITIVE, int(Attribute.CODE.NEXT_HOP), 4, 192, 0, 2, 1])
+MANDATORY_ATTRIBUTES = ORIGIN_IGP + AS_PATH_EMPTY + NEXT_HOP
+ANNOUNCED_IPV4 = bytes([32, 10, 0, 0, 1])
+MP_REACH_VALUE = (
+    b'\x00\x02'
+    + b'\x01'
+    + b'\x10'
+    + bytes.fromhex('20010db8000000000000000000000001')
+    + b'\x00'
+    + bytes.fromhex('2020010db8')
+)
+MP_REACH = bytes([0x80, int(Attribute.CODE.MP_REACH_NLRI), len(MP_REACH_VALUE)]) + MP_REACH_VALUE
 
 
-def negotiated() -> Any:
+def negotiated(families: list[tuple[AFI, SAFI]] | None = None) -> Any:
     session = Mock()
     session.asn4 = False
     session.addpath = Mock()
     session.addpath.receive = Mock(return_value=False)
     session.addpath.send = Mock(return_value=False)
     session.required = Mock(return_value=False)
-    session.families = []
+    session.families = [] if families is None else families
     session.nexthop = []
     session.msg_size = 4096
     session.direction = Action.ANNOUNCE
-    session.neighbor = {'aigp': False}
+    neighbor = Mock()
+    neighbor.__getitem__ = Mock(return_value=False)
+    neighbor.session.local_address = None
+    session.neighbor = neighbor
+    session.attribute_cache = None
+    session.attribute_cache_packed = b''
+    session.attribute_cache_enabled = True
     return session
 
 
@@ -70,6 +90,16 @@ def parsed(attributes: bytes) -> Any:
     """The semantic attributes the reactor would see for that attribute section."""
     session = negotiated()
     return Update.unpack_message(update_carrying(attributes), session).parse(session).attributes
+
+
+def parsed_update(
+    attributes: bytes,
+    announced: bytes = ANNOUNCED_IPV4,
+    families: list[tuple[AFI, SAFI]] | None = None,
+) -> Any:
+    session = negotiated(families)
+    payload = pack('!H', 0) + pack('!H', len(attributes)) + attributes + announced
+    return Update.unpack_message(payload, session).parse(session)
 
 
 def truncated_community(present_length_bytes: int) -> bytes:
@@ -107,6 +137,66 @@ def test_an_extended_length_attribute_longer_than_the_section_is_treated_as_with
     overrunning = bytes([extended_length, COMMUNITY]) + pack('!H', 0xFF) + bytes(COMMUNITY_SIZE_BYTES)
 
     assert TREAT_AS_WITHDRAW in parsed(overrunning), 'an extended length overrun was accepted'
+
+
+def test_attribute_overrun_moves_announced_routes_to_withdraws() -> None:
+    update = parsed_update(MANDATORY_ATTRIBUTES + truncated_community(COMMUNITY_SIZE_BYTES))
+
+    assert update.announces == []
+    assert len(update.withdraws) == 1
+    assert str(update.withdraws[0]) == '10.0.0.1/32'
+
+
+@pytest.mark.parametrize(
+    'attributes',
+    [
+        AS_PATH_EMPTY + NEXT_HOP,
+        ORIGIN_IGP + NEXT_HOP,
+        ORIGIN_IGP + AS_PATH_EMPTY,
+    ],
+    ids=['origin', 'as-path', 'next-hop'],
+)
+def test_missing_mandatory_attribute_moves_announced_routes_to_withdraws(attributes: bytes) -> None:
+    update = parsed_update(attributes)
+
+    assert update.announces == []
+    assert len(update.withdraws) == 1
+    assert TREAT_AS_WITHDRAW in update.attributes
+
+
+def test_attribute_overrun_moves_mp_reach_routes_to_withdraws() -> None:
+    attributes = ORIGIN_IGP + AS_PATH_EMPTY + MP_REACH + truncated_community(COMMUNITY_SIZE_BYTES)
+    update = parsed_update(attributes, announced=b'', families=[(AFI.ipv6, SAFI.unicast)])
+
+    assert update.announces == []
+    assert len(update.withdraws) == 1
+    assert str(update.withdraws[0]) == '2001:db8::/32'
+
+
+def test_mp_reach_does_not_require_legacy_next_hop_attribute() -> None:
+    update = parsed_update(
+        ORIGIN_IGP + AS_PATH_EMPTY + MP_REACH,
+        announced=b'',
+        families=[(AFI.ipv6, SAFI.unicast)],
+    )
+
+    assert len(update.announces) == 1
+    assert update.withdraws == []
+    assert TREAT_AS_WITHDRAW not in update.attributes
+
+
+def test_missing_mandatory_marker_does_not_poison_the_session_attribute_cache() -> None:
+    session = negotiated()
+    attributes = AS_PATH_EMPTY + NEXT_HOP
+    announced_payload = pack('!H', 0) + pack('!H', len(attributes)) + attributes + ANNOUNCED_IPV4
+    no_nlri_payload = pack('!H', 0) + pack('!H', len(attributes)) + attributes
+
+    announced = Update.unpack_message(announced_payload, session).parse(session)
+    without_nlri = Update.unpack_message(no_nlri_payload, session).parse(session)
+
+    assert TREAT_AS_WITHDRAW in announced.attributes
+    assert TREAT_AS_WITHDRAW not in without_nlri.attributes
+    assert announced.attributes is not without_nlri.attributes
 
 
 def test_an_attribute_which_exactly_fills_the_section_still_parses() -> None:
