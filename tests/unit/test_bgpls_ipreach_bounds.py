@@ -116,21 +116,18 @@ def test_an_out_of_range_ipv4_prefix_length_notifies(plength: int) -> None:
         IpReach.unpack_ipreachability(reachability(plength, IPV4_ADDRESS_SIZE_BYTES), PROTOCOL_ID_IPV4)
 
 
-def test_more_octets_than_the_prefix_length_calls_for_is_deliberately_accepted() -> None:
-    """The bound is the address family size, not the prefix length, and that is a choice.
-
-    RFC 7752 section 3.2.3.2 says one octet per eight bits of prefix length, so a /8 with
-    four octets is more than the RFC calls for.  Refusing it would be the stricter reading,
-    but the FIXME in the decoder records an IOS XR bug in exactly that relationship, and a
-    check built on it would refuse prefixes from a router which is deployed.  The address
-    family size is the bound which does not depend on the field the router gets wrong.
-
-    This is pinned so the leniency reads as intended rather than as an oversight.
-    """
-    decoded = IpReach.unpack_ipreachability(reachability(8, IPV4_ADDRESS_SIZE_BYTES), PROTOCOL_ID_IPV4)
-
-    assert decoded.plength == 8
-    assert decoded.prefix == '1.1.1.1'
+@pytest.mark.parametrize(
+    'plength,present_length_bytes',
+    [
+        (0, 1),
+        (8, 2),
+        (9, 3),
+        (24, 4),
+    ],
+)
+def test_more_octets_than_the_prefix_length_notifies(plength: int, present_length_bytes: int) -> None:
+    with pytest.raises(Notify):
+        IpReach.unpack_ipreachability(reachability(plength, present_length_bytes), PROTOCOL_ID_IPV4)
 
 
 def test_an_empty_reachability_tlv_still_notifies() -> None:

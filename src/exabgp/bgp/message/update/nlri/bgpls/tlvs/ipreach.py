@@ -36,8 +36,6 @@ PROTOCOL_ID_IPV6 = 4  # IPv6 protocol identifier
 
 IPV4_MAX_PREFIX_BITS = 32
 IPV6_MAX_PREFIX_BITS = 128
-IPV4_ADDRESS_SIZE_BYTES = 4
-IPV6_ADDRESS_SIZE_BYTES = 16
 
 
 class IpReach:
@@ -79,11 +77,14 @@ class IpReach:
         if plength > maximum_plength:
             raise Notify(3, 10, f'BGP-LS ip reachability prefix length {plength} is over {maximum_plength}')
 
-        # Bounded by the address family rather than by the prefix length: the FIXME above
-        # records that IOS XR sends one octet fewer than the prefix length calls for, so a
-        # check on that relationship would refuse prefixes from a router known to be out
-        # there. No address of either family can exceed its own size, whatever it claims.
-        maximum_octets = IPV6_ADDRESS_SIZE_BYTES if code == PROTOCOL_ID_IPV6 else IPV4_ADDRESS_SIZE_BYTES
+        # RFC 7752 derives the IP Prefix field size from the prefix length:
+        # one octet for bits 1-8, two for 9-16, and so on. IOS XR is known
+        # to send one octet fewer than that relationship requires, so an
+        # equality check would reject deployed peers and shorter values remain
+        # accepted. Extra octets have no such interoperability justification:
+        # they describe bits outside the advertised prefix and previously let,
+        # for example, a /8 decode from four address octets.
+        maximum_octets = (plength + 7) // 8
         if octet > maximum_octets:
             raise Notify(
                 3,
