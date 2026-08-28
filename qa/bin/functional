@@ -526,6 +526,8 @@ def cleanup_stale_processes(dry_run: bool = False) -> int:
 
 
 class Exec:
+    MAX_OUTPUT_BYTES = 64 * 1024 * 1024
+
     def __init__(self) -> None:
         self.code: int = -1
         self.stdout: bytes = b''
@@ -534,35 +536,55 @@ class Exec:
         self._process: Optional[subprocess.Popen] = None
         self._stdout_file: Optional[IO[bytes]] = None
         self._stderr_file: Optional[IO[bytes]] = None
+        self._process_group: Optional[int] = None
+        self._output_limit_exceeded: bool = False
+        self._collected: bool = True
         self.command: str = ''
 
     def _close_temp_files(self) -> None:
-        """Release the temp files backing stdout/stderr. Safe to call more than once
-        (e.g. once from an exception path and again from terminate())."""
-        if self._stdout_file is not None and not self._stdout_file.closed:
-            self._stdout_file.close()
-        if self._stderr_file is not None and not self._stderr_file.closed:
-            self._stderr_file.close()
+        """Close each temp file and clear its ownership field."""
+        stdout_file = self._stdout_file
+        try:
+            if stdout_file is not None and not stdout_file.closed:
+                stdout_file.close()
+        finally:
+            self._stdout_file = None
+
+        stderr_file = self._stderr_file
+        try:
+            if stderr_file is not None and not stderr_file.closed:
+                stderr_file.close()
+        finally:
+            self._stderr_file = None
 
     def run(self, command: List[str], env: Optional[Dict[str, str]]) -> 'Exec':
+        # One Exec owns at most one process. Reuse is valid only after collect()
+        # has consumed the previous output and released that process.
+        if self._process is not None:
+            raise RuntimeError('an Exec must be collected or terminated before it can run again')
+
+        self.code = -1
+        self.stdout = b''
+        self.stderr = b''
+        self.message = ''
         self.command = ' '.join([_ if ' ' not in _ else f"'{_}'" for _ in command])
-        # Set up environment to disable ExaBGP logging
+        self._collected = False
+        self._output_limit_exceeded = False
+
+        # Set up the default child environment to disable ExaBGP logging. API v4
+        # remains explicit for backward compatibility with the text encoder.
         if env is None:
             env = os.environ.copy()
             env['exabgp_log_enable'] = 'false'
-            env['exabgp_api_version'] = '4'  # v6 is default, v4 for backward compatibility (text encoder)
+            env['exabgp_api_version'] = '4'
 
-        # Guard against reusing an Exec (e.g. a retry) without the previous
-        # run's files having been closed first.
-        self._close_temp_files()
-
-        # Back stdout/stderr with real files, not pipes: a pipe's kernel buffer
-        # is bounded (8192-65536 bytes here) and nothing reads it until collect()
-        # runs, so a daemon that logs past that cap blocks in write() forever.
-        # Files never apply that backpressure, so the daemon can always proceed.
-        self._stdout_file = tempfile.TemporaryFile()
-        self._stderr_file = tempfile.TemporaryFile()
+        # Back stdout/stderr with real files, not undrained pipes. Pipe buffers
+        # are bounded (8192-65536 bytes on observed systems), so a chatty daemon
+        # can otherwise block in write() before collect() runs and deadlock the
+        # test. Allocation and Popen share one exception-cleanup scope.
         try:
+            self._stdout_file = tempfile.TemporaryFile()
+            self._stderr_file = tempfile.TemporaryFile()
             self._process = subprocess.Popen(
                 command,
                 stdout=self._stdout_file,
@@ -570,28 +592,55 @@ class Exec:
                 close_fds=True,
                 stdin=subprocess.DEVNULL,
                 env=env,
-                start_new_session=True,  # Detach from controlling terminal
+                start_new_session=True,  # Detach from the controlling terminal
             )
+            self._process_group = self._process.pid
         except Exception:
-            # Popen takes no ownership of externally supplied file objects: on
-            # a fork/exec failure it never touches them, so we must close them.
-            self._close_temp_files()
+            # Popen does not own caller-supplied file objects. If process creation
+            # fails, this Exec must close both files itself and return to its
+            # terminal unowned state even when close reports another failure.
+            try:
+                self._close_temp_files()
+            finally:
+                self._process = None
+                self._process_group = None
+                self._collected = True
             raise
         return self
 
+    def _output_over_limit(self) -> bool:
+        for stream in (self._stdout_file, self._stderr_file):
+            if stream is not None and not stream.closed and os.fstat(stream.fileno()).st_size > self.MAX_OUTPUT_BYTES:
+                return True
+        return False
+
+    def _truncate_output_files(self) -> None:
+        for stream in (self._stdout_file, self._stderr_file):
+            if stream is not None and not stream.closed and os.fstat(stream.fileno()).st_size > self.MAX_OUTPUT_BYTES:
+                stream.truncate(self.MAX_OUTPUT_BYTES)
+
     def ready(self) -> bool:
-        _ = signal.signal(signal.SIGALRM, alarm_handler)
+        process = self._process
+        if process is None:
+            return self.code != -1
+        if self._output_over_limit():
+            self._output_limit_exceeded = True
+            self.message = f'process output exceeded {self.MAX_OUTPUT_BYTES} bytes'
+            self.terminate(collect=False)
+            self._truncate_output_files()
+            return True
+
+        previous_handler = signal.signal(signal.SIGALRM, alarm_handler)
         try:
             _ = signal.alarm(1)
-            polled = self._process.poll()  # type: ignore
-            _ = signal.alarm(0)
+            return process.poll() is not None
         except Alarm:
             return False
         except (OSError, ValueError):
             return True
-        if polled is None:
-            return False
-        return True
+        finally:
+            _ = signal.alarm(0)
+            _ = signal.signal(signal.SIGALRM, previous_handler)
 
     def report(self, _reason: str = 'issue with exabgp') -> None:
         # Suppress all diagnostic output to keep test results clean
@@ -604,37 +653,65 @@ class Exec:
         pass
 
     def collect(self) -> None:
-        if self.stdout:
-            return
-        if self.stderr:
-            return
-        if self.code != -1:
+        if self._collected:
             return
 
-        _ = signal.signal(signal.SIGALRM, alarm_handler)
+        process = self._process
+        if process is None:
+            try:
+                self._close_temp_files()
+            finally:
+                self._collected = True
+            return
+
+        previous_handler = signal.signal(signal.SIGALRM, alarm_handler)
         try:
             _ = signal.alarm(15)
-            self._process.wait()  # type: ignore
-            self.code = self._process.returncode  # type: ignore
+            process.wait()
+        except Alarm as exc:
+            # The process may still be writing through its inherited descriptors.
+            # Keep the parent handles open so termination can finish and a later
+            # collect() can still recover the output.
+            self.message = str(exc)
+            return
+        finally:
             _ = signal.alarm(0)
+            _ = signal.signal(signal.SIGALRM, previous_handler)
+
+        # The parent may exit while descendants remain in its new process group. The
+        # probe inside keeps the common case, where the group emptied with the parent,
+        # off the terminate-and-sleep path.
+        self._kill_process_group()
+        if self._output_over_limit():
+            self._output_limit_exceeded = True
+            self.message = f'process output exceeded {self.MAX_OUTPUT_BYTES} bytes'
+            self._truncate_output_files()
+        self.code = 1 if self._output_limit_exceeded and process.returncode == 0 else process.returncode
+
+        try:
             if self._stdout_file is not None:
                 self._stdout_file.seek(0)
                 self.stdout = self._stdout_file.read()
             if self._stderr_file is not None:
                 self._stderr_file.seek(0)
                 self.stderr = self._stderr_file.read()
-        except ValueError as exc:  # I/O operation on closed file
-            self.message = str(exc)
-        except Alarm as exc:
+        except ValueError as exc:
             self.message = str(exc)
         finally:
-            # Always release the temp files, including on the Alarm/ValueError
-            # paths above where a partial seek/read may have already happened.
-            self._close_temp_files()
+            # The process has completed. Release both files even if one seek/read
+            # discovered that an earlier exceptional path had already closed it.
+            # State ownership must still become terminal if close itself raises.
+            try:
+                self._close_temp_files()
+            finally:
+                self._process = None
+                self._process_group = None
+                self._collected = True
 
     def _get_process_tree(self) -> List[Any]:
         """Get all descendant processes recursively using psutil if available"""
-        if self._process is None:
+        process = self._process
+        if process is None or process.poll() is not None:
             return []
 
         if not HAVE_PSUTIL:
@@ -704,55 +781,88 @@ class Exec:
 
         return killed
 
+    def _process_group_alive(self) -> bool:
+        """Whether the owned process group still holds a member.
+
+        Signal zero performs the permission and existence checks without delivering
+        anything, so this answers the question without disturbing what it finds.
+        """
+        process_group = self._process_group
+        if process_group is None:
+            return False
+        try:
+            os.killpg(process_group, 0)
+        except OSError:
+            # ProcessLookupError (gone) and PermissionError (not ours to signal) both
+            # mean this Exec has nothing left to sweep.
+            return False
+        return True
+
+    def _kill_process_group(self) -> None:
+        if not self._process_group_alive():
+            self._process_group = None
+            return
+        process_group = self._process_group
+        assert process_group is not None, 'a live process group was just observed'
+        try:
+            os.killpg(process_group, signal.SIGTERM)
+        except OSError:
+            self._process_group = None
+            return
+        time.sleep(0.1)
+        try:
+            os.killpg(process_group, signal.SIGKILL)
+        except OSError:
+            pass
+        self._process_group = None
+
     def terminate(self, collect: bool = True) -> None:
-        """Enhanced termination with process tree cleanup and retry logic"""
-        if self._process is None:
+        """Terminate the owned process tree, then optionally collect its output.
+
+        psutil handles descendants first when available. Direct SIGTERM and the
+        process-group SIGKILL are fallbacks. Collection happens only after those
+        termination paths, so output files are not closed while children can write.
+        """
+        process = self._process
+        if process is None:
             return
 
-        # Try psutil-based tree kill first (most thorough)
-        killed = self._kill_process_tree(signal.SIGTERM, timeout=0.5)
-        if killed > 0:
-            # Force kill any remaining processes
-            self._kill_process_tree(signal.SIGKILL, timeout=1.0)
+        # Never resolve an already completed PID through psutil: the operating
+        # system may have reused it for an unrelated process.
+        if process.poll() is None:
+            killed = self._kill_process_tree(signal.SIGTERM, timeout=0.5)
+            if killed > 0 and process.poll() is None:
+                self._kill_process_tree(signal.SIGKILL, timeout=1.0)
 
-        # Fallback: Traditional SIGTERM then killpg approach
-        try:
-            self._process.send_signal(signal.SIGTERM)
-            self._process.wait(timeout=0.5)
-        except subprocess.TimeoutExpired:
-            pass  # Will use SIGKILL next
-        except (OSError, ProcessLookupError):
-            pass  # Already dead
+            if process.poll() is None:
+                try:
+                    process.send_signal(signal.SIGTERM)
+                    process.wait(timeout=0.5)
+                except subprocess.TimeoutExpired:
+                    pass
+                except (OSError, ProcessLookupError):
+                    pass
+
+        self._kill_process_group()
+        if process.poll() is None:
+            try:
+                process.wait(timeout=1.0)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
 
         if collect:
             self.collect()
 
-        # killpg with retry for process groups (fallback or supplement to psutil)
-        for attempt in range(3):
-            try:
-                pgid = os.getpgid(self._process.pid)
-                os.killpg(pgid, signal.SIGKILL)
-
-                # Verify kill succeeded
-                time.sleep(0.1)
-                try:
-                    # Check if process group still exists
-                    os.killpg(pgid, 0)  # Signal 0 = check existence
-                    # If we get here, processes still exist
-                    if attempt < 2:
-                        time.sleep(0.2 * (attempt + 1))  # Exponential backoff
-                        continue
-                except (OSError, ProcessLookupError):
-                    # Process group is gone, success!
-                    break
-
-            except (OSError, ProcessLookupError, AttributeError):
-                # Process or group already gone
-                break
-
     def __del__(self) -> None:
-        if self._process is not None:
-            self.terminate()
+        # Destructor cleanup is a last resort. It may terminate only a process
+        # this Exec still owns and which Popen confirms is running.
+        process = self._process
+        try:
+            if process is not None:
+                self.terminate(collect=False)
+        finally:
+            self._close_temp_files()
 
 
 State = Enum('State', 'NONE STARTING RUNNING FAIL SUCCESS SKIP TIMEOUT')
