@@ -168,9 +168,8 @@ they all deliver whole messages promptly.
 5. **Break it to prove it measures.** Before calling any of this green: revert the fix and
    require tests 1 and 2 to go red. TIGER_STYLE §5.
 
-`./qa/bin/functional encoding --stress N` afterwards, once the local pipe-capacity problem
-is worked around (see `.claude/memory/functional-tests-8kb-pipe-limit.md`) — this is exactly
-the class of intermittent failure stress mode exists to find.
+Run `./qa/bin/functional encoding --stress 10` afterwards to exercise the
+intermittent timing class repeatedly.
 
 ## Files
 
@@ -293,16 +292,11 @@ test makes a claim about, with a comment saying why `close()` is left alone.
 
 ## Blockers
 
-`./qa/bin/functional encoding` does not run cleanly on this workstation
-(`.claude/memory/functional-tests-8kb-pipe-limit.md`). It reports the same 31 passed / 9
-failed before and after this change, so it shows no regression, but the stress verification
-is still owed.
+None.
 
 ## Resume point
 
-Implemented and verified. Outstanding: `./qa/bin/functional encoding --stress N` once the
-local pipe-capacity problem is worked around — this is precisely the intermittent class that
-stress mode exists to catch, and it is the one check this fix has not had.
+Implemented and verified, including repeated functional encoding stress.
 
 ## Post-review fix: the same-tick seam (2026-08-22)
 

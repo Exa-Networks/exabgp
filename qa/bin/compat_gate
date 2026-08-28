@@ -51,9 +51,16 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 # entry in the corpus and blind the gate to a real regression in that family.
 _NO_BOTTOM_OF_STACK = 'a labelled NLRI whose stack has no bottom of stack bit; it decoded to 0.0.0.0/0'
 
+_MISSING_MULTISESSION_FLAGS = (
+    'a zero-length MultiSession value has no mandatory flags octet; '
+    'an empty Session ID is encoded as the one-byte value 0x00'
+)
+
 # deliberate changes, each with the reason it is worth the cost
 ALLOWED: dict[str, str] = {
     'flow': 'a flow which parsed no component matched everything; RFC 8955 4.3 withdraws it',
+    'cap/68/0/': _MISSING_MULTISESSION_FLAGS,
+    'cap/131/0/': _MISSING_MULTISESSION_FLAGS,
     'nlri/ipv4/nlri-mpls/24/30/b': _NO_BOTTOM_OF_STACK,
     'nlri/ipv4/nlri-mpls/25/30/b': _NO_BOTTOM_OF_STACK,
     'nlri/ipv4/nlri-mpls/26/30/b': _NO_BOTTOM_OF_STACK,
