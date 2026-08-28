@@ -143,18 +143,18 @@ def _bounded_netmask(netmask: str, max_netmask: int) -> int:
 
 
 def _bounded_offset(offset: str, netmask: int) -> int:
-    """Parse an IPv6 FlowSpec prefix offset, rejecting anything outside 0..netmask.
+    """Parse and bound an IPv6 FlowSpec prefix offset.
 
-    RFC 8956 encodes (netmask - offset) significant bits following the offset, so
-    an offset past the netmask leaves nothing for it to offset into. The bound is
-    inclusive of netmask itself (zero significant bits remaining is accepted, not
-    rejected) as the policy chosen for this fix -- make_prefix6() stores whatever
-    offset it is given without checking it, so nothing in this codebase already
-    settles which side of that boundary is correct.
+    RFC 8956 encodes (netmask - offset) significant bits after skipping
+    `offset` leading bits. The all-addresses case is exactly length=0 and
+    offset=0; every other component requires 0 <= offset < netmask < 129.
+    make_prefix6() stores the supplied offset without validating it, so this
+    configuration boundary prevents malformed values from reaching the wire.
     """
     value = int(offset)
-    if not 0 <= value <= netmask:
-        raise ValueError(f'offset {value} is not in the range 0-{netmask}')
+    valid = value == 0 if netmask == 0 else 0 <= value < netmask
+    if not valid:
+        raise ValueError(f'offset {value} must be zero for /0 or in the range 0-{netmask - 1}')
     return value
 
 

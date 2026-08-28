@@ -16,16 +16,12 @@ pack whatever netmask (and, for IPv6, offset) they are given into a wire byte wi
 checking it, so `source 10.0.0.0/99` or `source 2001:db8::/32/200` used to reach the
 wire as a malformed FlowSpec prefix length or offset instead of failing at
 configuration time. netmask is now bounded to 0-32 (IPv4) / 0-128 (IPv6). The IPv6
-offset is bounded to 0..netmask: RFC 8956 encodes (netmask - offset) significant bits
-following the offset, so an offset past the netmask leaves nothing for it to offset
-into. make_prefix6() itself imposes no bound (offset is opaque pass-through data,
-only later squeezed into a single wire byte by pack()), so this is a policy choice
-made for this task rather than a boundary read verbatim off the RFC text -- offset
-equal to the netmask (zero significant bits remaining) is accepted as the more
-permissive reading, consistent with the bound specified for this fix.
+offset must be zero when the netmask is zero; otherwise RFC 8956 requires it
+to be smaller than the netmask.
 """
 
 from __future__ import annotations
+from typing import Any
 
 import pytest
 
@@ -219,20 +215,14 @@ def test_destination_accepts_ipv6_offset_zero() -> None:
     assert result[0].offset == 0
 
 
-def test_source_accepts_ipv6_offset_equal_to_netmask() -> None:
-    """offset == netmask is the other boundary of the accepted range: zero
-    significant bits are left to encode. The 0 <= offset <= netmask bound this
-    fix enforces is a policy choice for this task (make_prefix6() itself imposes
-    no bound), and it deliberately includes this edge rather than excluding it,
-    so the boundary needs its own test rather than being inferred."""
-    result = list(source(tokeniser_for('2001:db8::/32/32')))
-    assert len(result) == 1
-    assert isinstance(result[0], Flow6Source)
-    assert result[0].offset == 32
+@pytest.mark.parametrize('parser', [source, destination])
+def test_ipv6_offset_equal_to_netmask_is_rejected(parser: Any) -> None:
+    with pytest.raises(ValueError, match='offset 32'):
+        list(parser(tokeniser_for('2001:db8::/32/32')))
 
 
-def test_destination_accepts_ipv6_offset_equal_to_netmask() -> None:
-    result = list(destination(tokeniser_for('2001:db8::/32/32')))
+@pytest.mark.parametrize('parser', [source, destination])
+def test_zero_length_and_zero_offset_is_accepted(parser: Any) -> None:
+    result = list(parser(tokeniser_for('::/0/0')))
+
     assert len(result) == 1
-    assert isinstance(result[0], Flow6Destination)
-    assert result[0].offset == 32
