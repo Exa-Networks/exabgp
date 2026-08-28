@@ -240,7 +240,11 @@ class Neighbor:
         local_addr = 'auto' if self.session.auto_discovery else self.session.local_address
         local_as = self.session.local_as if self.session.local_as else 'auto'
         peer_as = self.session.peer_as if self.session.peer_as else 'auto'
-        return f'neighbor {self.session.peer_address} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self.session.router_id} family-allowed {session}'
+        # Two neighbours may share a link-local address on different links, so the
+        # interface is part of who they are. It is only appended when set, leaving
+        # the name of every other neighbour as it was.
+        interface = f' source-interface {self.session.source_interface}' if self.session.source_interface else ''
+        return f'neighbor {self.session.peer_address} local-ip {local_addr} local-as {local_as} peer-as {peer_as} router-id {self.session.router_id} family-allowed {session}{interface}'
 
     def families(self) -> list[FamilyTuple]:
         # this list() is important .. as we use the function to modify self._families
@@ -322,6 +326,7 @@ class Neighbor:
             and self.domain_name == other.domain_name
             and self.session.md5_password == other.session.md5_password
             and self.session.md5_ip == other.session.md5_ip
+            and self.session.source_interface == other.session.source_interface
             and self.session.incoming_ttl == other.session.incoming_ttl
             and self.session.outgoing_ttl == other.session.outgoing_ttl
             and self.group_updates == other.group_updates

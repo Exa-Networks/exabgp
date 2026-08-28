@@ -31,6 +31,28 @@ from exabgp.reactor.network.error import TTLError
 from exabgp.reactor.network.error import AsyncError
 
 
+def bind_to_device(io: socket.socket, interface: str) -> None:
+    """Restrict a socket to one interface, naming why it could not be done.
+
+    This is what lets a link-local address be used at all: the kernel refuses to
+    bind or connect one until the socket names a link, and SO_BINDTODEVICE is one
+    of the two ways to say which.
+    """
+    if not hasattr(socket, 'SO_BINDTODEVICE'):
+        raise NotConnected(f'can not bind to device {interface}, SO_BINDTODEVICE only exists on Linux')
+
+    try:
+        _ = socket.if_nametoindex(interface)
+    except OSError:
+        raise NotConnected(f'can not bind to device {interface}, no interface of that name exists') from None
+
+    try:
+        io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, interface.encode('utf-8') + b'\0')
+    except OSError as exc:
+        # CAP_NET_RAW is required, so an unprivileged daemon lands here
+        raise NotConnected(f'can not bind to device {interface} - {exc!s}') from None
+
+
 def create(afi: AFI, interface: str | None = None) -> socket.socket:
     try:
         if afi == AFI.ipv4:
@@ -46,12 +68,8 @@ def create(afi: AFI, interface: str | None = None) -> socket.socket:
         except (OSError, AttributeError):
             pass
 
-        if interface is not None:
-            try:
-                SO_BINDTODEVICE = getattr(socket, 'SO_BINDTODEVICE', 25)
-                io.setsockopt(socket.SOL_SOCKET, SO_BINDTODEVICE, str(interface + '\0').encode('utf-8'))
-            except OSError:
-                raise NotConnected(f'Could not bind to device {interface}') from None
+        if interface:
+            bind_to_device(io, interface)
     except OSError:
         raise NotConnected('Could not create socket') from None
     return io
