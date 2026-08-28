@@ -533,14 +533,17 @@ def display_update(neighbor: Neighbor, raw: bytes, generic: bool = False, comman
         from exabgp.configuration.command import decode_to_api_command
 
         payload = raw[19:].hex()  # Skip BGP header
-        cmds = decode_to_api_command(payload, neighbor, generic=generic)
-        if cmds:
-            for cmd in cmds:
-                sys.stdout.write(cmd)
-                sys.stdout.write('\n')
-            return True
-        # Fall through to JSON output if command generation fails
-        sys.stdout.write('# could not generate API command, falling back to JSON\n')
+        try:
+            cmds = decode_to_api_command(payload, neighbor, generic=generic)
+        except Exception as exc:
+            sys.stdout.write(f'# API command generation failed ({exc}), falling back to JSON\n')
+        else:
+            if cmds:
+                for cmd in cmds:
+                    sys.stdout.write(cmd)
+                    sys.stdout.write('\n')
+                return True
+            sys.stdout.write('# no API command generated, falling back to JSON\n')
 
     encoder = _get_json_encoder(generic=generic)
     sys.stdout.write(encoder.update(neighbor, 'in', update, b'', b'', Negotiated.UNSET))

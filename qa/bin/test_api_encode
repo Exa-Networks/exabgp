@@ -1895,11 +1895,16 @@ def self_check_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int, 
             continue
 
         # Step 1: Decode raw to cmd(s) - use generic=True to include hex for generic attributes
-        cmds = decode_to_api_command(payload, neighbor, generic=True)
+        try:
+            cmds = decode_to_api_command(payload, neighbor, generic=True)
+        except Exception as exc:
+            failed += 1
+            print(f"    {RED}FAIL{RESET} line {line_num + 1}: decode raised {exc}")
+            continue
         if not cmds:
             skipped += 1
             if verbose:
-                print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: decode failed")
+                print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: no API command generated")
             continue
 
         # For round-trip, we use the first command (which may be 'attributes' for multi-NLRI)
@@ -2067,7 +2072,12 @@ def generate_ci_file(
                 print(f"    {GREEN}GEN{RESET} line {line_num + 1}: {eor_cmd}")
             continue
 
-        cmds = decode_to_api_command(payload, neighbor)
+        try:
+            cmds = decode_to_api_command(payload, neighbor)
+        except Exception as exc:
+            skipped += 1
+            print(f"    {RED}ERROR{RESET} line {line_num + 1}: decode raised {exc}")
+            continue
 
         if cmds:
             # Use first command (which may be 'attributes' for multi-NLRI)
@@ -2081,7 +2091,7 @@ def generate_ci_file(
         else:
             skipped += 1
             if verbose:
-                print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: decode failed")
+                print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: no API command generated")
 
     return processed, skipped, generated
 
