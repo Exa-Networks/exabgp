@@ -10,7 +10,7 @@ Created: 2025-11-08
 
 import os
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -527,6 +527,38 @@ class TestPeerConnectionAttempts:
 
         peer.connection_attempts = 3
         assert peer.can_reconnect() is False
+
+    @pytest.mark.asyncio
+    async def test_establishment_negotiates_each_open_once(self) -> None:
+        neighbor = Mock()
+        neighbor.uid = '1'
+        neighbor.api = {'neighbor-changes': False, 'fsm': False, 'negotiated': False}
+        neighbor.ephemeral = False
+        neighbor.session.local_as = 65000
+        reactor = Mock()
+
+        with patch('exabgp.reactor.peer.peer.getenv') as mock_env:
+            mock_env.return_value.tcp.attempts = 3
+            mock_env.return_value.tcp.bind = False
+            mock_env.return_value.bgp.passive = False
+            peer = Peer(neighbor, reactor)
+
+            peer.connection_attempts = 3
+            peer.proto = Mock()
+            peer.proto.connection = Mock()
+            peer.proto.connection.session = Mock()
+            peer.proto.negotiated = Mock(msg_size=4096, holdtime=180)
+            peer._send_open = AsyncMock(return_value=Mock())
+            peer._read_open = AsyncMock(return_value=Mock())
+            peer._send_ka = AsyncMock()
+            peer._read_ka = AsyncMock()
+
+            with patch('exabgp.reactor.peer.peer.ReceiveTimer', return_value=Mock()):
+                await peer._establish()
+
+        assert peer.connection_attempts == 3
+        peer.proto.negotiated.sent.assert_called_once()
+        peer.proto.negotiated.received.assert_called_once()
 
 
 class TestPeerEstablished:

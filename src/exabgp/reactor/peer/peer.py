@@ -520,12 +520,10 @@ class Peer:
             if self.neighbor.session.local_as:
                 sent_open = await self._send_open()
                 self.proto.negotiated.sent(sent_open)
-                self.proto.negotiated.sent(sent_open)
                 self.fsm.change(FSM.OPENSENT)
 
             # read the peer's open
             received_open = await self._read_open()
-            self.proto.negotiated.received(received_open)
             self.proto.negotiated.received(received_open)
 
             self.proto.connection.msg_size = self.proto.negotiated.msg_size
@@ -533,7 +531,6 @@ class Peer:
             # if we mirror the ASN, we need to read first and send second
             if not self.neighbor.session.local_as:
                 sent_open = await self._send_open()
-                self.proto.negotiated.sent(sent_open)
                 self.proto.negotiated.sent(sent_open)
                 self.fsm.change(FSM.OPENSENT)
 
