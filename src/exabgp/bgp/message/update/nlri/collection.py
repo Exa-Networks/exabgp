@@ -310,19 +310,29 @@ class MPNLRICollection:
         if family_key[0] != AFI.ipv6:
             return nh_rd + nh_packed
 
+        is_nh_link_local = nlri_nexthop.is_link_local()
+
         # Check if LLNH capability is negotiated
         if not negotiated.linklocal_nexthop:
+            # RFC 2545 requires a global next-hop without LLNH. Configuration
+            # validation and Neighbor.ip_self() both refuse a link-local one long
+            # before a route reaches here, so this only fires on our own bug. It
+            # raises rather than asserts because -O must not turn a protocol
+            # violation back on.
+            if is_nh_link_local:
+                raise RuntimeError('a link-local next-hop needs the link-local next-hop capability')
             # Without LLNH, just send the nexthop as-is
             return nh_rd + nh_packed
 
         # Check if session is multihop - link-local not usable beyond 1 hop
         # RFC draft-ietf-idr-linklocal-capability: exclude LLA for non-directly-connected peers
         if negotiated.is_multihop():
+            if is_nh_link_local:
+                raise RuntimeError('a link-local next-hop can not reach a multihop peer')
             return nh_rd + nh_packed
 
         # Get link-local address if available
         link_local = negotiated.link_local_address()
-        is_nh_link_local = nlri_nexthop.is_link_local()
 
         # Case 1: Nexthop is already link-local - send as 16-byte (with LLNH negotiated)
         if is_nh_link_local:

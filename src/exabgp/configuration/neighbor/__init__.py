@@ -515,6 +515,25 @@ class ParseNeighbor(Section):
                 )
                 neighbor.adj_rib_out = True
 
+    @staticmethod
+    def _link_local_issue(neighbor: Neighbor) -> str:
+        """Return why this neighbor can not use its link-local local-address, or an empty string.
+
+        A link-local local-address becomes the next-hop of every route announced
+        with "next-hop self", so it is only usable where such a next-hop is legal:
+        with the link-local next-hop capability, towards a peer on the same link.
+        """
+        if neighbor.session.auto_discovery:
+            return ''
+        if not neighbor.session.local_address.is_link_local():
+            return ''
+        if not neighbor.capability.link_local_nexthop.is_enabled():
+            return 'a link-local local-address requires capability link-local-nexthop enable'
+        ttl = neighbor.session.outgoing_ttl
+        if ttl is not None and ttl > 1:
+            return 'a link-local local-address can not be used on a multihop session'
+        return ''
+
     def _post_routes(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         # NOTE: this may modify change but does not matter as want to modified
 
@@ -572,6 +591,11 @@ class ParseNeighbor(Section):
         self._post_capa_addpath(neighbor, local, families)
         self._post_capa_nexthop(neighbor, local)
         self._post_capa_rr(neighbor)
+
+        link_local_issue = self._link_local_issue(neighbor)
+        if link_local_issue:
+            return self.error.set(link_local_issue)
+
         self._post_routes(neighbor, local)
 
         neighbor.api = ParseAPI.flatten(local.pop('api', {}))

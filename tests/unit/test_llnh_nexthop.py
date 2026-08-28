@@ -15,6 +15,8 @@ License: 3-clause BSD
 
 from unittest.mock import Mock
 
+import pytest
+
 from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv6, IP
@@ -102,10 +104,11 @@ def test_link_local_nexthop_with_llnh() -> None:
 
 
 def test_link_local_nexthop_without_llnh() -> None:
-    """Link-local nexthop without LLNH still returns 16 bytes.
+    """A link-local nexthop without LLNH is refused.
 
-    The sending side should not send link-local-only without LLNH,
-    but the encoding method itself doesn't block it.
+    RFC 2545 requires a global next-hop. Configuration validation and
+    Neighbor.ip_self() both stop the combination before a route gets here, so
+    reaching the encoder with one is a bug.
     """
     collection = create_collection()
     negotiated = create_mock_negotiated(linklocal_nexthop=False)
@@ -113,10 +116,8 @@ def test_link_local_nexthop_without_llnh() -> None:
     lla_ip = IPv6(IPv6.pton('fe80::1'))
     family_key = (AFI.ipv6, SAFI.unicast)
 
-    result = collection._encode_nexthop(lla_ip, family_key, negotiated)
-
-    # Without LLNH, we just pack as-is
-    assert len(result) == 16
+    with pytest.raises(RuntimeError, match='link-local next-hop capability'):
+        collection._encode_nexthop(lla_ip, family_key, negotiated)
 
 
 # ==============================================================================
