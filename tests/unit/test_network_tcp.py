@@ -58,11 +58,13 @@ class TestSocketCreation:
         io.close()
 
     def test_create_socket_with_interface(self) -> None:
-        """Test creating socket with interface binding (may require root)"""
-        # This test may fail without root privileges or on some platforms
-        # We'll just verify it doesn't crash with invalid interface
-        with pytest.raises(NotConnected, match='Could not bind to device'):
-            tcp.create(AFI.ipv4, interface='nonexistent_interface_12345')
+        """An interface which can not be bound is named in the error.
+
+        The reason differs by platform, an unknown device on Linux and a missing
+        SO_BINDTODEVICE anywhere else, but the device is always named.
+        """
+        with pytest.raises(NotConnected, match='bind to device nonexistent'):
+            tcp.create(AFI.ipv4, interface='nonexistent')
 
     @patch('socket.socket')
     def test_create_socket_failure(self, mock_socket: Any) -> None:

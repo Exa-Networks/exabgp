@@ -490,6 +490,7 @@ class Reactor:
                     neighbor.session.tcp_ao_algorithm,
                     neighbor.session.tcp_ao_password,
                     neighbor.session.tcp_ao_base64,
+                    neighbor.session.source_interface,
                 ):
                     log.critical(
                         lazymsg(

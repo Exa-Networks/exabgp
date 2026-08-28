@@ -22,6 +22,7 @@ from exabgp.protocol.family import AFI
 # from exabgp.util.coroutine import each
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.network.tcp import md5
+from exabgp.reactor.network.tcp import bind_to_device
 from exabgp.reactor.network.tcp import min_ttl
 from exabgp.reactor.network.tcp import min_ttlv6
 from exabgp.reactor.network.error import error
@@ -74,15 +75,22 @@ class Listener:
 
         self._reactor: 'Reactor' = reactor
         self._backlog: int = backlog
-        self._sockets: dict[socket.socket, tuple[str, int, str, str | None]] = {}
+        self._sockets: dict[socket.socket, tuple[str, int, str, str | None, str]] = {}
         self._accepted: dict[socket.socket, socket.socket] = {}
 
-    def _new_socket(self, ip: IP) -> socket.socket:
+    def _new_socket(self, ip: IP, source_interface: str = '') -> socket.socket:
         if ip.afi == AFI.ipv6:
-            return socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-        if ip.afi == AFI.ipv4:
-            return socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-        raise NetworkError(f'Can not create socket for listening, family of IP {ip} is unknown')
+            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+        elif ip.afi == AFI.ipv4:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+        else:
+            raise NetworkError(f'Can not create socket for listening, family of IP {ip} is unknown')
+
+        # A link-local address can not be bound until the socket names a link, and
+        # the kernel must be told before bind(), not after.
+        if source_interface:
+            bind_to_device(sock, source_interface)
+        return sock
 
     def _listen(
         self,
@@ -96,15 +104,18 @@ class Listener:
         tcp_ao_algorithm: str = '',
         tcp_ao_password: str = '',
         tcp_ao_base64: bool = False,
+        source_interface: str = '',
     ) -> None:
         from exabgp.reactor.network.tcp import tcp_ao
 
         self.serving = True
 
-        for sock, (local, port, peer, md) in self._sockets.items():
+        for sock, (local, port, peer, md, interface) in self._sockets.items():
             if local_ip.top() != local:
                 continue
             if local_port != port:
+                continue
+            if source_interface != interface:
                 continue
             # unconditional: an empty key clears a password removed by a reload (#1388)
             md5(sock, peer_ip.top(), 0, use_md5 or '', md5_base64)
@@ -119,7 +130,7 @@ class Listener:
             return
 
         try:
-            sock = self._new_socket(local_ip)
+            sock = self._new_socket(local_ip, source_interface)
             # MD5 must match the peer side of the TCP, not the local one
             if use_md5:
                 md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
@@ -141,7 +152,7 @@ class Listener:
             # s.settimeout(0.0)
             sock.bind((local_ip.top(), local_port))
             sock.listen(self._backlog)
-            self._sockets[sock] = (local_ip.top(), local_port, peer_ip.top(), use_md5)
+            self._sockets[sock] = (local_ip.top(), local_port, peer_ip.top(), use_md5, source_interface)
         except OSError as exc:
             raise _bind_error(exc, local_ip, local_port) from None
         except NetworkError as exc:
@@ -160,6 +171,7 @@ class Listener:
         tcp_ao_algorithm: str = '',
         tcp_ao_password: str = '',
         tcp_ao_base64: bool = False,
+        source_interface: str = '',
     ) -> bool:
         try:
             if not remote_addr:
@@ -175,6 +187,7 @@ class Listener:
                 tcp_ao_algorithm,
                 tcp_ao_password,
                 tcp_ao_base64,
+                source_interface,
             )
             auth_type = 'tcp-ao' if tcp_ao_password else ('md5' if md5_password else 'none')
             log.debug(
@@ -332,7 +345,7 @@ class Listener:
         if not self.serving:
             return
 
-        for sock, (ip, port, _, _) in self._sockets.items():
+        for sock, (ip, port, _, _, _) in self._sockets.items():
             sock.close()
             log.info(lazymsg('stopped listening on {ip}:{port}', ip=ip, port=port), 'network')
 

@@ -534,6 +534,26 @@ class ParseNeighbor(Section):
             return 'a link-local local-address can not be used on a multihop session'
         return ''
 
+    # Linux caps an interface name at IFNAMSIZ, which leaves fifteen characters
+    MAX_INTERFACE_NAME: int = 15
+
+    @classmethod
+    def _source_interface_issue(cls, neighbor: Neighbor) -> str:
+        """Return why source-interface can not be a device name, or an empty string.
+
+        Only the shape of the name is checked here. Whether a device of that name
+        exists is a property of the host, not of the configuration, and is
+        reported when the socket is bound.
+        """
+        interface = neighbor.session.source_interface
+        if not interface:
+            return ''
+        if len(interface) > cls.MAX_INTERFACE_NAME:
+            return f'source-interface {interface} is longer than {cls.MAX_INTERFACE_NAME} characters'
+        if any(character.isspace() for character in interface) or '/' in interface:
+            return f'source-interface {interface} is not a valid interface name'
+        return ''
+
     def _post_routes(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         # NOTE: this may modify change but does not matter as want to modified
 
@@ -591,6 +611,10 @@ class ParseNeighbor(Section):
         self._post_capa_addpath(neighbor, local, families)
         self._post_capa_nexthop(neighbor, local)
         self._post_capa_rr(neighbor)
+
+        interface_issue = self._source_interface_issue(neighbor)
+        if interface_issue:
+            return self.error.set(interface_issue)
 
         link_local_issue = self._link_local_issue(neighbor)
         if link_local_issue:
