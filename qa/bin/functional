@@ -708,6 +708,24 @@ class Exec:
                 self._process_group = None
                 self._collected = True
 
+    def release(self) -> None:
+        """Drop the owned process and its output so this Exec can run again.
+
+        collect() returns with the process still owned when its wait alarms out,
+        which keeps the output recoverable but leaves the Exec unusable. A caller
+        which wants another run rather than that pending output calls this: the
+        process tree is terminated and ownership is surrendered on every path.
+        """
+        try:
+            self.terminate(collect=False)
+        finally:
+            try:
+                self._close_temp_files()
+            finally:
+                self._process = None
+                self._process_group = None
+                self._collected = True
+
     def _get_process_tree(self) -> List[Any]:
         """Get all descendant processes recursively using psutil if available"""
         process = self._process
@@ -2517,6 +2535,10 @@ class ParsingTests(Tests):
             test.stdout = b''
             test.stderr = b''
             test.start_time = None
+
+            # A collect() whose wait alarmed out leaves the first attempt's process
+            # owned. This retry wants a fresh run, not that pending output.
+            test.release()
 
             # Re-run the validation command
             test.running()

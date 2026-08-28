@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import runpy
+import signal
 import sys
 from pathlib import Path
 import time
@@ -50,6 +51,35 @@ def test_run_refuses_to_replace_an_owned_process() -> None:
             execution.run([sys.executable, '-c', 'pass'], env=os.environ.copy())
     finally:
         execution.terminate()
+
+
+def test_release_recovers_an_exec_whose_collect_alarmed_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    # collect() keeps the process and its files when its wait alarms out, so the
+    # output stays recoverable. A retry wants the Exec back instead.
+    real_alarm = signal.alarm
+    monkeypatch.setattr(signal, 'alarm', lambda seconds: real_alarm(1 if seconds else 0))
+
+    execution = Exec().run([sys.executable, '-c', 'import time; time.sleep(5)'], env=os.environ.copy())
+    execution.collect()
+
+    assert execution._process is not None
+    assert execution.code == -1
+    with pytest.raises(RuntimeError, match='must be collected or terminated'):
+        execution.run([sys.executable, '-c', 'pass'], env=os.environ.copy())
+
+    monkeypatch.undo()
+    execution.release()
+
+    assert execution._process is None
+    assert execution._stdout_file is None
+    assert execution._stderr_file is None
+    assert execution._process_group is None
+
+    execution.run([sys.executable, '-c', "print('retry')"], env=os.environ.copy())
+    execution.collect()
+
+    assert execution.code == 0
+    assert execution.stdout == b'retry\n'
 
 
 def test_collect_releases_process_state_when_file_close_raises(monkeypatch: pytest.MonkeyPatch) -> None:
