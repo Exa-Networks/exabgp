@@ -292,7 +292,7 @@ class TestIndexStability:
         attrs = AttributeCollection()
 
         route1 = Route(nlri, attrs, nexthop=IP.NoNextHop)
-        route2 = Route(nlri, attrs, nexthop=IPv4(IPv4.pton('192.168.1.1')))
+        route2 = Route(nlri, attrs, nexthop=IPv4.from_string('192.168.1.1'))
 
         assert route1.index() == route2.index()
 

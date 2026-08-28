@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import builtins
 import socket
-from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Protocol, TypeVar, cast
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
@@ -17,6 +17,9 @@ from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+
+IPT = TypeVar('IPT', bound='IP')
 
 
 class IPFactory(Protocol):
@@ -92,6 +95,11 @@ class IP(IPBase):
     _AF_TO_AFI: ClassVar[dict[int, AFI]] = {
         socket.AF_INET: AFI.ipv4,
         socket.AF_INET6: AFI.ipv6,
+    }
+
+    _AFI_TO_AF: ClassVar[dict[AFI, int]] = {
+        AFI.ipv4: socket.AF_INET,
+        AFI.ipv6: socket.AF_INET6,
     }
 
     @staticmethod
@@ -203,14 +211,29 @@ class IP(IPBase):
         return cls._known.get(afi)
 
     @classmethod
-    def from_string(cls, string: str, klass: IPFactory | None = None) -> 'IP':
-        data = IP.pton(string)
-        if klass:
-            return klass(data)
-        factory = cls.klass(string)
+    def from_string(cls: type[IPT], string: str, klass: IPFactory | None = None) -> IPT:
+        """Build an address from its string form, deciding the family once.
+
+        Called on IPv4 or IPv6 the string must belong to that family. Naming a
+        family is what the caller expects of the string, not a hint the string
+        may override: IPv4.from_string('::1') is a mistake, not a request for an
+        IPv6 address.
+        """
+        afi = cls.toafi(string)
+        expected = getattr(cls, 'afi', None)
+        if isinstance(expected, AFI) and afi != expected:
+            raise ValueError(f'expected an {expected} address but got {string}')
+
+        data = socket.inet_pton(cls._AFI_TO_AF[afi], string)
+        if klass is not None:
+            return cast(IPT, klass(data))
+
+        factory = cls._known.get(afi)
         if factory is None:
             raise ValueError(f'Unknown IP address format: {string}')
-        return factory(data)
+        # the family check above makes the registered factory this class or a
+        # subclass of it, so the cast can not widen the type
+        return cast(IPT, factory(data))
 
     @classmethod
     def register(cls) -> None:
@@ -275,8 +298,13 @@ class IPRange(IP):
         self.mask = NetMask.make_netmask(mask, self.afi)
 
     @classmethod
-    def from_string(cls, string: str, klass: IPFactory | None = None) -> 'IP':
-        raise NotImplementedError(f'{cls.__name__}.from_string() not implemented')
+    def from_string(cls: type[IPT], string: str, klass: IPFactory | None = None) -> IPT:
+        raise NotImplementedError(f'{cls.__name__}.from_string() needs a mask, use make_range()')
+
+    @classmethod
+    def make_range(cls, string: str, mask: int) -> 'IPRange':
+        """Build a range from an address string and a prefix length."""
+        return cls(IP.pton(string), mask)
 
     def __repr__(self) -> str:
         if (self.ipv4() and self.mask == IPv4.HOST_MASK) or (self.ipv6() and self.mask == IPv6.HOST_MASK):

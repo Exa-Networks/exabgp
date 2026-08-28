@@ -25,14 +25,14 @@ def test_ipv4_is_link_local_always_false() -> None:
     The capability only applies to IPv6 addresses.
     """
     # Standard IPv4 addresses
-    assert IPv4(IPv4.pton('10.0.0.1')).is_link_local() is False
-    assert IPv4(IPv4.pton('192.168.1.1')).is_link_local() is False
-    assert IPv4(IPv4.pton('172.16.0.1')).is_link_local() is False
+    assert IPv4.from_string('10.0.0.1').is_link_local() is False
+    assert IPv4.from_string('192.168.1.1').is_link_local() is False
+    assert IPv4.from_string('172.16.0.1').is_link_local() is False
 
     # Even IPv4 link-local range (169.254.x.x) returns False
     # because capability doesn't apply to IPv4
-    assert IPv4(IPv4.pton('169.254.0.1')).is_link_local() is False
-    assert IPv4(IPv4.pton('169.254.255.255')).is_link_local() is False
+    assert IPv4.from_string('169.254.0.1').is_link_local() is False
+    assert IPv4.from_string('169.254.255.255').is_link_local() is False
 
 
 # ==============================================================================
@@ -42,10 +42,10 @@ def test_ipv4_is_link_local_always_false() -> None:
 
 def test_ipv6_link_local_fe80() -> None:
     """Test standard fe80:: link-local addresses."""
-    assert IPv6(IPv6.pton('fe80::1')).is_link_local() is True
-    assert IPv6(IPv6.pton('fe80::dead:beef')).is_link_local() is True
-    assert IPv6(IPv6.pton('fe80::1:2:3:4')).is_link_local() is True
-    assert IPv6(IPv6.pton('fe80:0:0:0:1:2:3:4')).is_link_local() is True
+    assert IPv6.from_string('fe80::1').is_link_local() is True
+    assert IPv6.from_string('fe80::dead:beef').is_link_local() is True
+    assert IPv6.from_string('fe80::1:2:3:4').is_link_local() is True
+    assert IPv6.from_string('fe80:0:0:0:1:2:3:4').is_link_local() is True
 
 
 def test_ipv6_link_local_fe80_to_febf() -> None:
@@ -57,63 +57,63 @@ def test_ipv6_link_local_fe80_to_febf() -> None:
     So valid range is fe80:: through febf::
     """
     # Lower bound
-    assert IPv6(IPv6.pton('fe80::')).is_link_local() is True
-    assert IPv6(IPv6.pton('fe80::ffff:ffff:ffff:ffff')).is_link_local() is True
+    assert IPv6.from_string('fe80::').is_link_local() is True
+    assert IPv6.from_string('fe80::ffff:ffff:ffff:ffff').is_link_local() is True
 
     # Upper bound (febf:ffff:...)
-    assert IPv6(IPv6.pton('febf::1')).is_link_local() is True
-    assert IPv6(IPv6.pton('febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff')).is_link_local() is True
+    assert IPv6.from_string('febf::1').is_link_local() is True
+    assert IPv6.from_string('febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff').is_link_local() is True
 
     # Middle of range
-    assert IPv6(IPv6.pton('fe90::1')).is_link_local() is True
-    assert IPv6(IPv6.pton('fea0::1')).is_link_local() is True
-    assert IPv6(IPv6.pton('feb0::1')).is_link_local() is True
+    assert IPv6.from_string('fe90::1').is_link_local() is True
+    assert IPv6.from_string('fea0::1').is_link_local() is True
+    assert IPv6.from_string('feb0::1').is_link_local() is True
 
 
 def test_ipv6_not_link_local_global() -> None:
     """Test global unicast addresses are not link-local."""
-    assert IPv6(IPv6.pton('2001:db8::1')).is_link_local() is False
-    assert IPv6(IPv6.pton('2001:db8:1234:5678::1')).is_link_local() is False
-    assert IPv6(IPv6.pton('2607:f8b0:4004:800::200e')).is_link_local() is False
+    assert IPv6.from_string('2001:db8::1').is_link_local() is False
+    assert IPv6.from_string('2001:db8:1234:5678::1').is_link_local() is False
+    assert IPv6.from_string('2607:f8b0:4004:800::200e').is_link_local() is False
 
 
 def test_ipv6_not_link_local_loopback() -> None:
     """Test loopback is not link-local."""
-    assert IPv6(IPv6.pton('::1')).is_link_local() is False
+    assert IPv6.from_string('::1').is_link_local() is False
 
 
 def test_ipv6_not_link_local_unspecified() -> None:
     """Test unspecified address is not link-local."""
-    assert IPv6(IPv6.pton('::')).is_link_local() is False
+    assert IPv6.from_string('::').is_link_local() is False
 
 
 def test_ipv6_not_link_local_multicast() -> None:
     """Test multicast addresses are not link-local."""
-    assert IPv6(IPv6.pton('ff02::1')).is_link_local() is False
-    assert IPv6(IPv6.pton('ff00::')).is_link_local() is False
+    assert IPv6.from_string('ff02::1').is_link_local() is False
+    assert IPv6.from_string('ff00::').is_link_local() is False
 
 
 def test_ipv6_not_link_local_fec0() -> None:
     """Test site-local (deprecated fec0::/10) is not link-local."""
-    assert IPv6(IPv6.pton('fec0::1')).is_link_local() is False
-    assert IPv6(IPv6.pton('fed0::1')).is_link_local() is False
-    assert IPv6(IPv6.pton('fee0::1')).is_link_local() is False
-    assert IPv6(IPv6.pton('fef0::1')).is_link_local() is False
+    assert IPv6.from_string('fec0::1').is_link_local() is False
+    assert IPv6.from_string('fed0::1').is_link_local() is False
+    assert IPv6.from_string('fee0::1').is_link_local() is False
+    assert IPv6.from_string('fef0::1').is_link_local() is False
 
 
 def test_ipv6_not_link_local_fc00() -> None:
     """Test unique local (fc00::/7) is not link-local."""
-    assert IPv6(IPv6.pton('fc00::1')).is_link_local() is False
-    assert IPv6(IPv6.pton('fd00::1')).is_link_local() is False
+    assert IPv6.from_string('fc00::1').is_link_local() is False
+    assert IPv6.from_string('fd00::1').is_link_local() is False
 
 
 def test_ipv6_not_link_local_boundary() -> None:
     """Test addresses just outside fe80::/10 range."""
     # Just below fe80::
-    assert IPv6(IPv6.pton('fe7f::1')).is_link_local() is False
+    assert IPv6.from_string('fe7f::1').is_link_local() is False
 
     # Just above febf::
-    assert IPv6(IPv6.pton('fec0::1')).is_link_local() is False
+    assert IPv6.from_string('fec0::1').is_link_local() is False
 
 
 # ==============================================================================

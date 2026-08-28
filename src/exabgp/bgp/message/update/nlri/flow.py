@@ -415,7 +415,7 @@ class IOperation(IComponent):
 
 # class IOperationIPv4 (IOperation):
 # 	def encode (self, value):
-# 		return 4, socket.pton(socket.AF_INET,value)
+#       return 4, socket.pton(socket.AF_INET,value)
 
 
 class IOperationByte(IOperation):

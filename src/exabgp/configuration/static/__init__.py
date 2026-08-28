@@ -161,7 +161,7 @@ def attributes(tokeniser: Any) -> list[Route]:
                 mask = 128 if ':' in ip_str else 32
             from exabgp.protocol.ip import IPRange
 
-            ipmask = IPRange(IP.pton(ip_str), mask)
+            ipmask = IPRange.make_range(ip_str, mask)
             has_prefix = True
         except (ValueError, KeyError):
             pass
