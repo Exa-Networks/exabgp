@@ -372,6 +372,53 @@ class TestProcessParserRunExceptions:
             run(tokeniser_returning())
 
 
+class TestExecutableDescriptorValidation:
+    def test_checks_the_opened_object_when_the_path_changes(self, monkeypatch, tmp_path) -> None:
+        from exabgp.configuration.process import parser
+
+        program = tmp_path / 'program'
+        program.write_text('#!/bin/sh\n')
+        program.chmod(0o700)
+        real_open = os.open
+        opened: list[int] = []
+
+        def open_then_replace(path: str, flags: int) -> int:
+            fd = real_open(path, flags)
+            opened.append(fd)
+            program.unlink()
+            program.mkdir()
+            return fd
+
+        monkeypatch.setattr(parser.os, 'open', open_then_replace)
+
+        parser._validate_executable(str(program))
+
+        with pytest.raises(OSError):
+            os.fstat(opened[0])
+
+    def test_closes_the_descriptor_when_validation_fails(self, monkeypatch, tmp_path) -> None:
+        from exabgp.configuration.process import parser
+
+        program = tmp_path / 'program'
+        program.write_text('#!/bin/sh\n')
+        program.chmod(0o600)
+        real_open = os.open
+        opened: list[int] = []
+
+        def record_open(path: str, flags: int) -> int:
+            fd = real_open(path, flags)
+            opened.append(fd)
+            return fd
+
+        monkeypatch.setattr(parser.os, 'open', record_open)
+
+        with pytest.raises(ValueError, match='will not be able to run'):
+            parser._validate_executable(str(program))
+
+        with pytest.raises(OSError):
+            os.fstat(opened[0])
+
+
 class TestResolveRelativeProgramPrecedence:
     """Test process/parser.py _resolve_relative_program() candidate ordering.
 
