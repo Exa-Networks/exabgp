@@ -57,6 +57,10 @@ def label(tokeniser: Any) -> Labels:
     return Labels.make_labels(labels)
 
 
+# A type 1 route-distinguisher carries a four octet IPv4 administrator field (RFC 4364).
+IPV4_RD_OCTETS = 4
+
+
 def route_distinguisher(tokeniser: Any) -> RouteDistinguisher:
     data = tokeniser()
 
@@ -74,9 +78,23 @@ def route_distinguisher(tokeniser: Any) -> RouteDistinguisher:
         raise ValueError(f"'{data}' is not a valid route-distinguisher\n  Suffix must be a number") from None
 
     if '.' in prefix:
+        if not 0 <= suffix < pow(2, 16):
+            raise ValueError(f"'{data}' is not a valid route-distinguisher (suffix must be 0-65535)")
+        # A type 1 route-distinguisher is two octets of type, four of IPv4 administrator
+        # and two of suffix. Nothing below counts the octets the operator wrote, so
+        # '1.2.3:100' built seven bytes and '1.2.3.4.5:100' nine. RouteDistinguisher
+        # refuses both, but it can only say "requires exactly 8 bytes, got 7": counting
+        # here is what lets the operator be told which token was wrong and why, as every
+        # other branch of this function now does.
+        octets = prefix.split('.')
+        if len(octets) != IPV4_RD_OCTETS:
+            raise ValueError(
+                f"'{data}' is not a valid route-distinguisher"
+                f'\n  An IPv4 administrator field is {IPV4_RD_OCTETS} octets, not {len(octets)}'
+            )
         try:
             data_list: list[bytes] = [bytes([0, 1])]
-            data_list.extend([bytes([int(_)]) for _ in prefix.split('.')])
+            data_list.extend([bytes([int(_)]) for _ in octets])
             data_list.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
             rtd = b''.join(data_list)
         # IndexError is not currently reachable from this block (int()/bytes() on a
@@ -90,9 +108,9 @@ def route_distinguisher(tokeniser: Any) -> RouteDistinguisher:
             number = int(prefix)
         except ValueError:
             raise ValueError(f"'{data}' is not a valid route-distinguisher (prefix must be ASN or IPv4)") from None
-        if number < pow(2, 16) and suffix < pow(2, 32):
+        if 0 <= number < pow(2, 16) and 0 <= suffix < pow(2, 32):
             rtd = bytes([0, 0]) + pack('!H', number) + pack('!L', suffix)
-        elif number < pow(2, 32) and suffix < pow(2, 16):
+        elif 0 <= number < pow(2, 32) and 0 <= suffix < pow(2, 16):
             rtd = bytes([0, 2]) + pack('!L', number) + pack('!H', suffix)
         else:
             raise ValueError(f'invalid route-distinguisher {data}')

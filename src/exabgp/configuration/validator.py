@@ -607,6 +607,10 @@ class ASNValidator(Validator['ASN | None']):
 # =============================================================================
 
 
+# A type 1 route-distinguisher carries a four octet IPv4 administrator field (RFC 4364).
+IPV4_RD_OCTETS = 4
+
+
 @dataclass
 class RouteDistinguisherValidator(Validator['RouteDistinguisher']):
     """Validates Route Distinguisher values (RFC 4364).
@@ -641,9 +645,19 @@ class RouteDistinguisherValidator(Validator['RouteDistinguisher']):
         if '.' in prefix:
             if suffix >= pow(2, 16):
                 raise ValueError(f'Suffix {suffix} too large for IPv4 RD (max 65535)')
+            # Two octets of type, four of IPv4 administrator and two of suffix make the
+            # eight a route-distinguisher has. RouteDistinguisher refuses any other size,
+            # so counting here changes no verdict: it changes "requires exactly 8 bytes,
+            # got 7" into a message naming the token the operator wrote.
+            octets = prefix.split('.')
+            if len(octets) != IPV4_RD_OCTETS:
+                raise ValueError(
+                    f"'{value}' is not a valid route-distinguisher"
+                    f'\n  An IPv4 administrator field is {IPV4_RD_OCTETS} octets, not {len(octets)}'
+                )
             try:
                 data_list: list[bytes] = [bytes([0, 1])]
-                data_list.extend([bytes([int(_)]) for _ in prefix.split('.')])
+                data_list.extend([bytes([int(_)]) for _ in octets])
                 data_list.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
                 rtd = b''.join(data_list)
                 return RouteDistinguisher(rtd)

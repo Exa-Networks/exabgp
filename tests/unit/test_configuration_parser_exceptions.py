@@ -254,6 +254,37 @@ class TestMplsRouteDistinguisherExceptions:
         with pytest.raises(ValueError, match=r'1\.2\.3\.abc:100'):
             route_distinguisher(tokeniser_returning('1.2.3.abc:100'))
 
+    @pytest.mark.parametrize('token', ['1.2.3:100', '1.2.3.4.5:100', '1.2:100'])
+    def test_route_distinguisher_rejects_a_wrong_ipv4_octet_count(self, token: str) -> None:
+        """A type 1 route-distinguisher is two octets of type, four of IPv4 administrator
+        and two of suffix. Nothing counted the octets, so a short address packed a seven
+        byte value and a long one nine bytes, and both reach the wire as a
+        route-distinguisher no receiver can read.
+        """
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        with pytest.raises(ValueError) as raised:
+            route_distinguisher(tokeniser_returning(token))
+
+        assert token in str(raised.value)
+
+    def test_route_distinguisher_ipv4_form_packs_exactly_eight_bytes(self) -> None:
+        """Negative-space check: the accepted form is the one which is eight bytes."""
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        parsed = route_distinguisher(tokeniser_returning('192.0.2.1:100'))
+
+        assert parsed.pack_rd() == bytes([0, 1, 192, 0, 2, 1, 0, 100])
+
+    @pytest.mark.parametrize('token', ['-1:1', '1:-1', '192.0.2.1:-1'])
+    def test_route_distinguisher_rejects_negative_fields(self, token: str) -> None:
+        from exabgp.configuration.static.mpls import route_distinguisher
+
+        with pytest.raises(ValueError) as raised:
+            route_distinguisher(tokeniser_returning(token))
+
+        assert token in str(raised.value)
+
     def test_route_distinguisher_accepts_a_legitimate_two_byte_asn_form(self) -> None:
         """Negative-space check: a well-formed Type 0 ASN:nn RD must still parse."""
         from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher

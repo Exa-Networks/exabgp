@@ -52,6 +52,17 @@ Version 6.0.0:
    before the fix: 33 of the 38 non-repeating TLVs collided this way. A TLV ExaBGP
    does not implement is neither refused nor merged away, since we cannot claim an
    extension we have not caught up with may not repeat.
+ * Compatibility: a relative program path in a "run" command resolves to the first
+   candidate which exists, not the last. The search order is /etc/exabgp, then the
+   directory holding the configuration file, then $PATH in order, and the scan used
+   to continue past a match and keep whichever candidate it found last. A helper
+   sitting next to the configuration was therefore shadowed by any same-named
+   executable further down $PATH. Anyone relying on that shadowing needs an absolute
+   path now.
+ * Fix: an IPv4 route-distinguisher written with the wrong number of octets says so.
+   '1.2.3:100' and '1.2.3.4.5:100' were already refused, but by RouteDistinguisher
+   counting the bytes it was handed, so the operator was told "requires exactly 8
+   bytes, got 7" and never which token caused it.
  * Compatibility: Drop support for Python 3.7
  * Feature: Add type annotations to the codebase for better type safety
  * Change: **BREAKING** - The engine now runs on asyncio
