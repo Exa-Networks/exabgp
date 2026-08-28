@@ -121,19 +121,14 @@ def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:on
 
 
-def send_command_socket(socket_path: str, command_str: str, return_output: bool = False) -> str | None:  # noqa: C901
-    """
-    Send command via Unix socket and receive response.
+def send_command_socket(socket_path: str, command_str: str, return_output: bool = False) -> str | bool:  # noqa: C901
+    """Send one command over a Unix socket.
 
-    Args:
-        socket_path: Path to Unix socket
-        command_str: Command to send
-        return_output: If True, return output as string instead of printing
-
-    Returns:
-        Output string if return_output=True, None otherwise
+    Returns captured output when `return_output` is true; otherwise returns
+    whether a completion marker confirmed success.
     """
     output_lines = []
+    successful = False
 
     try:
         client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
@@ -168,7 +163,8 @@ def send_command_socket(socket_path: str, command_str: str, return_output: bool 
             try:
                 chunk = client.recv(4096)
                 if not chunk:
-                    # Connection closed by server
+                    # Closing before a completion marker is a failed command,
+                    # including a partial unterminated response.
                     break
 
                 buf += chunk
@@ -178,6 +174,7 @@ def send_command_socket(socket_path: str, command_str: str, return_output: bool 
 
                     if string == Answer.text_done or string == Answer.json_done:
                         done = True
+                        successful = True
                         break
                     if string == Answer.text_shutdown or string == Answer.json_shutdown:
                         error_msg = 'ExaBGP is shutting down, command aborted\n'
@@ -213,6 +210,7 @@ def send_command_socket(socket_path: str, command_str: str, return_output: bool 
                 else:
                     sys.stderr.write(warning_msg)
                     sys.stderr.flush()
+                successful = not getenv().api.ack
                 break
             except sock.error as exc:
                 if exc.errno in errno_block:
@@ -232,8 +230,10 @@ def send_command_socket(socket_path: str, command_str: str, return_output: bool 
             pass
 
     if return_output:
+        if not successful:
+            raise RuntimeError('connection closed before ExaBGP completed the command')
         return '\n'.join(output_lines)
-    return None
+    return successful
 
 
 def main() -> None:
@@ -367,12 +367,14 @@ def cmdline_batch(
             # Execute command - apply shortcut expansion using shared module
             sending = CommandShortcuts.expand_shortcuts(command)
 
-            # Execute via transport (don't exit on error, continue with next command)
+            # Execute via transport and count a daemon-side refusal as an error.
             try:
                 if use_pipe_transport:
-                    cmdline_pipe(pipename, sending, exit_on_completion=False)
+                    successful = cmdline_pipe(pipename, sending, exit_on_completion=False)
                 else:
-                    cmdline_socket(socketname, sending, exit_on_completion=False)
+                    successful = cmdline_socket(socketname, sending, exit_on_completion=False)
+                if not successful:
+                    errors += 1
             except Exception as exc:
                 sys.stderr.write(f'Error executing command: {exc}\n')
                 errors += 1
@@ -389,7 +391,7 @@ def cmdline_batch(
         sys.exit(1)
 
 
-def cmdline_socket(socketname: str, sending: str, exit_on_completion: bool = True) -> None:
+def cmdline_socket(socketname: str, sending: str, exit_on_completion: bool = True) -> bool:
     """Execute command via Unix socket transport."""
     sockets = unix_socket(ROOT, socketname)
     if len(sockets) != 1:
@@ -399,26 +401,23 @@ def cmdline_socket(socketname: str, sending: str, exit_on_completion: bool = Tru
         sys.stdout.flush()
         if exit_on_completion:
             sys.exit(1)
-        else:
-            raise RuntimeError('Socket not found')
+        raise RuntimeError('Socket not found')
 
     socket_path = sockets[0] + socketname + '.sock'
-
-    # Check if socket exists and is actually a socket
     if not os.path.exists(socket_path):
         sys.stdout.write(f'could not find Unix socket to connect to ExaBGP: {socket_path}\n')
         sys.stdout.flush()
         if exit_on_completion:
             sys.exit(1)
-        else:
-            raise RuntimeError('Socket not found')
+        raise RuntimeError('Socket not found')
 
-    send_command_socket(socket_path, sending, return_output=False)
+    successful = bool(send_command_socket(socket_path, sending, return_output=False))
     if exit_on_completion:
-        sys.exit(0)
+        sys.exit(0 if successful else 1)
+    return successful
 
 
-def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -> None:
+def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -> bool:
     """Execute command via named pipe transport."""
     pipes = named_pipe(ROOT, pipename)
     if len(pipes) != 1:
@@ -428,21 +427,26 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
         sys.stdout.flush()
         if exit_on_completion:
             sys.exit(1)
-        else:
-            raise RuntimeError('Pipe not found')
+        raise RuntimeError('Pipe not found')
 
     send = pipes[0] + pipename + '.in'
     recv = pipes[0] + pipename + '.out'
 
     if not check_fifo(send):
-        sys.stdout.write('could not find write named pipe to connect to ExaBGP')
+        message = 'could not find write named pipe to connect to ExaBGP'
+        sys.stdout.write(message)
         sys.stdout.flush()
-        sys.exit(1)
+        if exit_on_completion:
+            sys.exit(1)
+        raise RuntimeError(message)
 
     if not check_fifo(recv):
-        sys.stdout.write('could not find read named pipe to connect to ExaBGP')
+        message = 'could not find read named pipe to connect to ExaBGP'
+        sys.stdout.write(message)
         sys.stdout.flush()
-        sys.exit(1)
+        if exit_on_completion:
+            sys.exit(1)
+        raise RuntimeError(message)
 
     reader = open_reader(recv)
 
@@ -456,16 +460,12 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write(f'could not clear named pipe from potential previous command data ({exc!s})')
+            message = f'could not clear named pipe from potential previous command data ({exc!s})'
+            sys.stdout.write(message)
             sys.stdout.flush()
-            sys.exit(1)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not clear named pipe from potential previous command data ({exc!s})')
-            sys.stdout.write(str(exc))
-            sys.stdout.flush()
-            sys.exit(1)
+            if exit_on_completion:
+                sys.exit(1)
+            raise RuntimeError(message) from exc
 
         # we are not ack'ing the command and probably have read all there is
         if time.time() > start + PIPE_CLEAR_TIMEOUT:
@@ -498,29 +498,30 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
         os.write(writer, sending.encode('utf-8') + b'\n')
         os.close(writer)
     except OSError as exc:
-        sys.stdout.write(f'could not send command to ExaBGP ({exc!s})')
+        message = f'could not send command to ExaBGP ({exc!s})'
+        sys.stdout.write(message)
         sys.stdout.flush()
-        sys.exit(1)
+        if exit_on_completion:
+            sys.exit(1)
+        raise RuntimeError(message) from exc
 
     waited = 0.0
     buf = b''
     done = False
     done_time_diff = DONE_TIME_DIFF
+    successful = False
     while not done:
         try:
             r, _, _ = select.select([reader], [], [], SELECT_TIMEOUT)
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write(f'could not get answer from ExaBGP ({exc!s})')
+            message = f'could not get answer from ExaBGP ({exc!s})'
+            sys.stdout.write(message)
             sys.stdout.flush()
-            sys.exit(1)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not get answer from ExaBGP ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
+            if exit_on_completion:
+                sys.exit(1)
+            raise RuntimeError(message) from exc
 
         if waited > COMMAND_RESPONSE_TIMEOUT:
             sys.stderr.write('\n')
@@ -529,7 +530,8 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
                 'warning: normal if exabgp.api.ack is set to false otherwise some data may get stuck on the pipe\n',
             )
             sys.stderr.write('warning: otherwise it may cause exabgp reactor to block\n')
-            sys.exit(0)
+            successful = not getenv().api.ack
+            break
         elif not r:
             waited += SELECT_WAIT_INCREMENT
             continue
@@ -541,15 +543,12 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
         except OSError as exc:
             if exc.errno in error.block:
                 continue
-            sys.stdout.write(f'could not read answer from ExaBGP ({exc!s})')
+            message = f'could not read answer from ExaBGP ({exc!s})'
+            sys.stdout.write(message)
             sys.stdout.flush()
-            sys.exit(1)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not read answer from ExaBGP ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
+            if exit_on_completion:
+                sys.exit(1)
+            raise RuntimeError(message) from exc
 
         buf += raw
         while b'\n' in buf:
@@ -557,6 +556,7 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
             string = line.decode()
             if string == Answer.text_done or string == Answer.json_done:
                 done = True
+                successful = True
                 break
             if string == Answer.text_shutdown or string == Answer.json_shutdown:
                 sys.stderr.write('ExaBGP is shutting down, command aborted\n')
@@ -577,6 +577,7 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
             recv_epoch_time = os.path.getmtime(recv)
             time_diff = this_moment - recv_epoch_time
             if time_diff >= done_time_diff:
+                successful = True
                 done = True
 
     try:
@@ -585,7 +586,8 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
         pass
 
     if exit_on_completion:
-        sys.exit(0)
+        sys.exit(0 if successful else 1)
+    return successful
 
 
 if __name__ == '__main__':
