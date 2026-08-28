@@ -344,20 +344,20 @@ class PersistentSocketConnection:
                 # Success - resume health monitoring
                 self.reconnecting = False
 
-                # Fix 3: Check if there's a command that needs retry
+                # A reconnect runs on the reader thread. It must only resend the
+                # bytes here and then return to _read_loop, because send_command()
+                # waits on a queue which this same reader thread fills.
                 with self.lock:
                     needs_retry = self._command_needs_retry
                     last_cmd = self._last_command
-                    # Clear retry flag to prevent duplicate retries
-                    self._command_needs_retry = False
 
                 if needs_retry and last_cmd:
                     sys.stderr.write(f'⟳ Retrying command: {last_cmd[:50]}...\n')
                     sys.stderr.flush()
-                    # Queue the retry response for the waiting send_command
-                    retry_response = self.send_command(last_cmd, is_retry=True)
-                    # The retry response will be handled by the main thread
-                    self.pending_responses.put(retry_response)
+                    with self.lock:
+                        if self.socket is None:
+                            raise ConnectionError('reconnected socket disappeared before command retry')
+                        self.socket.sendall((last_cmd + '\n').encode('utf-8'))
 
                 return True
 
@@ -641,6 +641,11 @@ class PersistentSocketConnection:
                     self._command_needs_retry = False
                 return response
             except Empty:
+                # Nothing is waiting on this command any more, so a later reconnect must
+                # not resend it: the daemon would run it a second time and the reply would
+                # be flushed as a stale response by whichever command comes next.
+                with self.lock:
+                    self._command_needs_retry = False
                 return 'Error: Timeout waiting for response'
         finally:
             # Always clear the flags when done (even on error/timeout)

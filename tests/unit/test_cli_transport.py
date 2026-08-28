@@ -7,6 +7,7 @@ Unit tests for CLI transport selection (pipe vs Unix socket)
 import argparse
 import os
 import stat
+from queue import Empty
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
@@ -592,3 +593,64 @@ class TestPersistentConnectionRetry:
                         assert conn._last_command is None
                         assert conn._command_needs_retry is False
                         assert conn._request_id_counter == 0
+
+    def test_reconnect_resends_without_waiting_on_reader_queue(self) -> None:
+        from exabgp.cli.persistent_connection import PersistentSocketConnection
+
+        with (
+            patch('socket.socket'),
+            patch.object(PersistentSocketConnection, '_connect'),
+            patch.object(PersistentSocketConnection, '_initial_ping'),
+            patch.object(PersistentSocketConnection, '_setup_signal_handler'),
+        ):
+            connection = PersistentSocketConnection('/fake/path')
+
+        old_socket = Mock()
+        new_socket = Mock()
+        connection.socket = old_socket
+        connection.reader_thread = Mock()
+        connection.health_thread = Mock()
+        connection.command_in_progress = True
+        connection.pending_user_command = True
+        connection._command_needs_retry = True
+        connection._last_command = 'show neighbor'
+        connection._connect = Mock(side_effect=lambda: setattr(connection, 'socket', new_socket))
+        connection._initial_ping = Mock()
+        connection.send_command = Mock(side_effect=AssertionError('reader thread must not wait on itself'))
+
+        with patch('readline.get_line_buffer', return_value=''):
+            assert connection._reconnect(max_attempts=1, retry_delay=0) is True
+
+        old_socket.close.assert_called_once()
+        new_socket.sendall.assert_called_once_with(b'show neighbor\n')
+        connection.send_command.assert_not_called()
+        assert connection._command_needs_retry is True
+
+    def test_send_command_timeout_clears_the_retry_flag(self) -> None:
+        """Nothing waits on a command which has already timed out.
+
+        The flag is cleared only when a response arrives, so a command that timed out
+        stayed marked for retry. The next reconnect then resent it: the daemon ran it a
+        second time, unasked, and its reply arrived with no caller to receive it, to be
+        flushed as a stale response by whichever command came next.
+        """
+        from exabgp.cli.persistent_connection import PersistentSocketConnection
+
+        with (
+            patch('socket.socket'),
+            patch.object(PersistentSocketConnection, '_connect'),
+            patch.object(PersistentSocketConnection, '_initial_ping'),
+            patch.object(PersistentSocketConnection, '_setup_signal_handler'),
+        ):
+            connection = PersistentSocketConnection('/fake/path')
+
+        connection.socket = Mock()
+        connection.reader_thread = Mock()
+        connection.health_thread = Mock()
+        # Time out at once rather than waiting out the real five second deadline.
+        connection.pending_responses = Mock(empty=Mock(return_value=True), get=Mock(side_effect=Empty))
+
+        response = connection.send_command('show neighbor')
+
+        assert 'Timeout' in response
+        assert connection._command_needs_retry is False
