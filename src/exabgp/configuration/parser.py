@@ -107,7 +107,7 @@ def peer_ip(tokeniser: Tokeniser) -> IPRange:
                 ) from None
 
     try:
-        return IPRange(IP.pton(value), mask)
+        return IPRange.make_range(value, mask)
     except (OSError, IndexError, ValueError):
         raise ValueError(
             f"'{value}' is not a valid IP address\n  Format: <ip> or <ip>/<prefix> (e.g., 192.0.2.1 or 2001:db8::1/64)"

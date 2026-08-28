@@ -135,7 +135,7 @@ def _negotiated(linklocal_nexthop: bool, is_multihop: bool) -> Mock:
 
 def test_encoding_a_link_local_next_hop_without_the_capability_is_a_bug() -> None:
     collection = MPNLRICollection([], {}, AFI.ipv6, SAFI.unicast)
-    nexthop = IPv6(IPv6.pton('fe80::2'))
+    nexthop = IPv6.from_string('fe80::2')
 
     with pytest.raises(RuntimeError, match='link-local next-hop capability'):
         collection._encode_nexthop(nexthop, (AFI.ipv6, SAFI.unicast), _negotiated(False, False))
@@ -143,7 +143,7 @@ def test_encoding_a_link_local_next_hop_without_the_capability_is_a_bug() -> Non
 
 def test_encoding_a_link_local_next_hop_for_a_multihop_peer_is_a_bug() -> None:
     collection = MPNLRICollection([], {}, AFI.ipv6, SAFI.unicast)
-    nexthop = IPv6(IPv6.pton('fe80::2'))
+    nexthop = IPv6.from_string('fe80::2')
 
     with pytest.raises(RuntimeError, match='multihop'):
         collection._encode_nexthop(nexthop, (AFI.ipv6, SAFI.unicast), _negotiated(True, True))
@@ -151,7 +151,7 @@ def test_encoding_a_link_local_next_hop_for_a_multihop_peer_is_a_bug() -> None:
 
 def test_a_global_next_hop_is_untouched_on_both_paths() -> None:
     collection = MPNLRICollection([], {}, AFI.ipv6, SAFI.unicast)
-    nexthop = IPv6(IPv6.pton('2001:db8::2'))
+    nexthop = IPv6.from_string('2001:db8::2')
     packed = nexthop.pack_ip()
 
     assert collection._encode_nexthop(nexthop, (AFI.ipv6, SAFI.unicast), _negotiated(False, False)) == packed

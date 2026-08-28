@@ -499,7 +499,7 @@ class IPPrefixValidator(Validator['IPRange']):
     name: str = 'ip-prefix'
 
     def _parse(self, value: str) -> 'IPRange':
-        from exabgp.protocol.ip import IP, IPRange
+        from exabgp.protocol.ip import IPRange
 
         try:
             if '/' in value:
@@ -509,7 +509,7 @@ class IPPrefixValidator(Validator['IPRange']):
                 ip_str = value
                 mask = 128 if ':' in value else 32
 
-            iprange = IPRange(IP.pton(ip_str), mask)
+            iprange = IPRange.make_range(ip_str, mask)
 
             # Validate host bits are zero
             if iprange.address() & iprange.mask.hostmask() != 0:
@@ -539,7 +539,7 @@ class IPRangeValidator(Validator['IPRange']):
     name: str = 'ip-range'
 
     def _parse(self, value: str) -> 'IPRange':
-        from exabgp.protocol.ip import IP, IPRange
+        from exabgp.protocol.ip import IPRange
 
         try:
             if '/' in value:
@@ -549,7 +549,7 @@ class IPRangeValidator(Validator['IPRange']):
                 ip_str = value
                 mask = 128 if ':' in value else 32
 
-            return IPRange(IP.pton(ip_str), mask)
+            return IPRange.make_range(ip_str, mask)
         except (OSError, IndexError, ValueError):
             raise ValueError(
                 f"'{value}' is not a valid IP address or range\n"

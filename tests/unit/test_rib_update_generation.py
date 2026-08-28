@@ -69,7 +69,7 @@ def create_route_with_nexthop(prefix: str, nexthop_str: str = '192.168.1.1') -> 
     nlri = create_nlri(prefix)
     attrs = AttributeCollection()
     attrs[Origin.ID] = Origin.from_int(Origin.IGP)
-    nexthop = IPv4(IPv4.pton(nexthop_str))
+    nexthop = IPv4.from_string(nexthop_str)
     return Route(nlri, attrs, nexthop=nexthop)
 
 

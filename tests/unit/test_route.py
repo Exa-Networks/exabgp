@@ -77,7 +77,7 @@ def create_route(
 
 def create_concrete_nexthop() -> IPv4:
     """Create a concrete (non-sentinel) IPv4 nexthop."""
-    return IPv4(IPv4.pton('192.168.1.1'))
+    return IPv4.from_string('192.168.1.1')
 
 
 # ==============================================================================

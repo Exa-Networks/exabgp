@@ -57,7 +57,7 @@ def test_global_nexthop_without_llnh() -> None:
     collection = create_collection()
     negotiated = create_mock_negotiated(linklocal_nexthop=False)
 
-    global_ip = IPv6(IPv6.pton('2001:db8::1'))
+    global_ip = IPv6.from_string('2001:db8::1')
     family_key = (AFI.ipv6, SAFI.unicast)
 
     result = collection._encode_nexthop(global_ip, family_key, negotiated)
@@ -74,7 +74,7 @@ def test_global_nexthop_with_llnh_no_lla() -> None:
         link_local_address=None,
     )
 
-    global_ip = IPv6(IPv6.pton('2001:db8::1'))
+    global_ip = IPv6.from_string('2001:db8::1')
     family_key = (AFI.ipv6, SAFI.unicast)
 
     result = collection._encode_nexthop(global_ip, family_key, negotiated)
@@ -93,7 +93,7 @@ def test_link_local_nexthop_with_llnh() -> None:
     collection = create_collection()
     negotiated = create_mock_negotiated(linklocal_nexthop=True)
 
-    lla_ip = IPv6(IPv6.pton('fe80::1'))
+    lla_ip = IPv6.from_string('fe80::1')
     family_key = (AFI.ipv6, SAFI.unicast)
 
     result = collection._encode_nexthop(lla_ip, family_key, negotiated)
@@ -113,7 +113,7 @@ def test_link_local_nexthop_without_llnh() -> None:
     collection = create_collection()
     negotiated = create_mock_negotiated(linklocal_nexthop=False)
 
-    lla_ip = IPv6(IPv6.pton('fe80::1'))
+    lla_ip = IPv6.from_string('fe80::1')
     family_key = (AFI.ipv6, SAFI.unicast)
 
     with pytest.raises(RuntimeError, match='link-local next-hop capability'):
@@ -128,8 +128,8 @@ def test_link_local_nexthop_without_llnh() -> None:
 def test_global_with_lla_default_order() -> None:
     """Global nexthop with LLA available returns 32 bytes (global first)."""
     collection = create_collection()
-    global_ip = IPv6(IPv6.pton('2001:db8::1'))
-    lla_ip = IPv6(IPv6.pton('fe80::1'))
+    global_ip = IPv6.from_string('2001:db8::1')
+    lla_ip = IPv6.from_string('fe80::1')
 
     negotiated = create_mock_negotiated(
         linklocal_nexthop=True,
@@ -154,8 +154,8 @@ def test_global_with_lla_prefer_link_local() -> None:
     The prefer config affects receiver's forwarding decision, not encoding.
     """
     collection = create_collection()
-    global_ip = IPv6(IPv6.pton('2001:db8::1'))
-    lla_ip = IPv6(IPv6.pton('fe80::1'))
+    global_ip = IPv6.from_string('2001:db8::1')
+    lla_ip = IPv6.from_string('fe80::1')
 
     negotiated = create_mock_negotiated(
         linklocal_nexthop=True,
@@ -185,7 +185,7 @@ def test_ipv4_nexthop_unaffected() -> None:
 
     from exabgp.protocol.ip import IPv4
 
-    ipv4_addr = IPv4(IPv4.pton('192.168.1.1'))
+    ipv4_addr = IPv4.from_string('192.168.1.1')
     family_key = (AFI.ipv4, SAFI.unicast)
 
     result = collection._encode_nexthop(ipv4_addr, family_key, negotiated)
@@ -222,8 +222,8 @@ def test_multihop_excludes_link_local() -> None:
     RFC: Link-local addresses only valid for directly connected peers.
     """
     collection = create_collection()
-    global_ip = IPv6(IPv6.pton('2001:db8::1'))
-    lla_ip = IPv6(IPv6.pton('fe80::1'))
+    global_ip = IPv6.from_string('2001:db8::1')
+    lla_ip = IPv6.from_string('fe80::1')
 
     negotiated = create_mock_negotiated(
         linklocal_nexthop=True,
@@ -244,8 +244,8 @@ def test_multihop_excludes_link_local() -> None:
 def test_directly_connected_includes_link_local() -> None:
     """Directly connected session includes link-local in 32-byte nexthop."""
     collection = create_collection()
-    global_ip = IPv6(IPv6.pton('2001:db8::1'))
-    lla_ip = IPv6(IPv6.pton('fe80::1'))
+    global_ip = IPv6.from_string('2001:db8::1')
+    lla_ip = IPv6.from_string('fe80::1')
 
     negotiated = create_mock_negotiated(
         linklocal_nexthop=True,
@@ -272,7 +272,7 @@ def test_vpnv6_nexthop_with_rd() -> None:
     collection = MPNLRICollection([], {}, AFI.ipv6, SAFI.mpls_vpn)
     negotiated = create_mock_negotiated(linklocal_nexthop=False)
 
-    global_ip = IPv6(IPv6.pton('2001:db8::1'))
+    global_ip = IPv6.from_string('2001:db8::1')
     family_key = (AFI.ipv6, SAFI.mpls_vpn)
 
     result = collection._encode_nexthop(global_ip, family_key, negotiated)
@@ -286,8 +286,8 @@ def test_vpnv6_nexthop_with_rd() -> None:
 def test_vpnv6_nexthop_with_lla() -> None:
     """VPNv6 with global+LLA includes RD and both addresses."""
     collection = MPNLRICollection([], {}, AFI.ipv6, SAFI.mpls_vpn)
-    global_ip = IPv6(IPv6.pton('2001:db8::1'))
-    lla_ip = IPv6(IPv6.pton('fe80::1'))
+    global_ip = IPv6.from_string('2001:db8::1')
+    lla_ip = IPv6.from_string('fe80::1')
 
     negotiated = create_mock_negotiated(
         linklocal_nexthop=True,

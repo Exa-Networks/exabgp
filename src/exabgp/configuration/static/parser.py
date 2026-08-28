@@ -82,7 +82,7 @@ def prefix(tokeniser: 'Tokeniser') -> IPRange:
 
     try:
         tokeniser.afi = IP.toafi(ip)
-        iprange = IPRange(IP.pton(ip), mask)
+        iprange = IPRange.make_range(ip, mask)
     except (OSError, ValueError):
         raise ValueError(f"'{ip}/{mask}' is not a valid prefix\n  Format: <ip>/<length> (e.g., 192.0.2.0/24)") from None
 
