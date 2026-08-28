@@ -74,12 +74,14 @@ class AttributeCollection(MutableMapping[int, Attribute]):
     Wire format header: [flags(1)][type_code(1)][length(1-2)][value...]
     """
 
-    # Internal pseudo-attributes (no dedicated classes exist for these)
+    # Internal pseudo-attributes are process decisions, never wire attributes.
     INTERNAL: ClassVar[tuple[int, ...]] = (
         Attribute.CODE.INTERNAL_SPLIT,
         Attribute.CODE.INTERNAL_WATCHDOG,
         Attribute.CODE.INTERNAL_NAME,
         Attribute.CODE.INTERNAL_WITHDRAW,
+        Attribute.CODE.INTERNAL_DISCARD,
+        Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW,
     )
 
     # The previously parsed AttributeCollection, and the bytes it was made from, are kept
