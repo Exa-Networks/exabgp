@@ -1,0 +1,16 @@
+name: "ExaBGP CodeQL config"
+
+# The configuration example generators walk the configuration schema and emit a
+# fully commented sample config. The schema contains keys named `md5-password`,
+# `md5-base64` and `md5-ip`, and their placeholder values ("example", 127.0.0.1)
+# are written to stdout. CodeQL taint-tracks the key name into the print/write
+# and reports py/clear-text-logging-sensitive-data, but nothing here reads a real
+# credential: the values are schema placeholders and the generator emits them
+# commented out (see COMMENTED_OPTIONS in src/exabgp/configuration/example.py).
+#
+# query-filters match query metadata only and cannot be scoped to a path, so
+# these two documentation generators are excluded from the database instead.
+# Keep the list minimal: no protocol, reactor or RIB code belongs here.
+paths-ignore:
+  - src/exabgp/configuration/example.py
+  - src/exabgp/application/example.py
