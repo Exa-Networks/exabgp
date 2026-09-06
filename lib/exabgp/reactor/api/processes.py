@@ -232,11 +232,16 @@ class Processes(object):
                     # Calling next() on Linux and OSX works perfectly well
                     # but not on OpenBSD where it always raise StopIteration
                     # and only read() works (not even readline)
+                    # os.read() on the raw fd is deliberate: proc.stdout is a
+                    # BufferedReader which can consume more from the pipe than it
+                    # returns, and the leftover bytes sit in a user-space buffer
+                    # that the poll() above (which watches the kernel fd) can not
+                    # see, stranding commands at the tail of a batch.
                     buf = str_ascii(os.read(proc.stdout.fileno(), 16384))
                     if buf == '' and poll is not None:
                         # if proc.poll() is None then
                         # process is fine, we received an empty line because
-                        # we're doing .read() on a non-blocking pipe and
+                        # we're reading a non-blocking pipe and
                         # the process maybe has nothing to send yet
                         self._handle_problem(process)
                         continue
