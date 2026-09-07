@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import socket
 
+from math import isfinite
 from struct import pack
 from struct import unpack
 
@@ -19,6 +20,26 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunityIPv6
+
+TRAFFIC_RATE_SIZE_BYTES = 8
+
+
+def checked_wire_rate(data):
+    """The asn and rate of a traffic-rate community, once the rate can be rendered.
+
+    RFC 8955 section 7.1 gives the rate as an IEEE-754 single, and the wire carries NaN and
+    the two infinities as readily as it carries 1000.0.  None of them is a rate, and every
+    rendering of the community puts the float through '%d', which raises ValueError for a
+    NaN and OverflowError for an infinity.  That used to happen in the API writer, well
+    outside the decode boundary, so the peer's bad float closed the session with no
+    NOTIFICATION at all.  Refuse it here, where the peer can still be told why.
+    """
+    if len(data) < TRAFFIC_RATE_SIZE_BYTES:
+        raise Notify(3, 9, 'not enough data to extract the traffic-rate extended community')
+    asn, rate = unpack('!Hf', data[2:TRAFFIC_RATE_SIZE_BYTES])
+    if not isfinite(rate):
+        raise Notify(3, 9, f'traffic-rate carries {rate}, which is not a usable rate')
+    return asn, rate
 
 
 # ================================================================== TrafficRate
@@ -31,6 +52,10 @@ class TrafficRate(ExtendedCommunity):
     COMMUNITY_SUBTYPE = 0x06
 
     def __init__(self, asn, rate, community=None):
+        # Configuration is not the wire, so this is a ValueError, but a community whose
+        # __repr__ raises must not exist however it was made.
+        if not isfinite(rate):
+            raise ValueError(f'traffic-rate must be a finite number: {rate}')
         self.asn = asn
         self.rate = rate
         ExtendedCommunity.__init__(
@@ -43,8 +68,8 @@ class TrafficRate(ExtendedCommunity):
 
     @staticmethod
     def unpack(data):
-        asn, rate = unpack('!Hf', data[2:8])
-        return TrafficRate(ASN(asn), rate, data[:8])
+        asn, rate = checked_wire_rate(data)
+        return TrafficRate(ASN(asn), rate, data[:TRAFFIC_RATE_SIZE_BYTES])
 
 
 # ================================================================ TrafficAction
