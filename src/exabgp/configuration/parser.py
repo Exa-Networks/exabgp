@@ -21,8 +21,7 @@ def string(tokeniser: Tokeniser) -> str:
     return tokeniser()
 
 
-def boolean(tokeniser: Tokeniser, default: bool) -> bool:
-    status = tokeniser().lower()
+def _as_boolean(status: str, default: bool) -> bool:
     if not status:
         return default
     if status in ('true', 'enable', 'enabled'):
@@ -34,17 +33,26 @@ def boolean(tokeniser: Tokeniser, default: bool) -> bool:
     )
 
 
-def auto_boolean(tokeniser: Tokeniser, default: bool) -> bool | None:
+def boolean(tokeniser: Tokeniser, default: bool) -> bool:
+    return _as_boolean(tokeniser().lower(), default)
+
+
+def md5_base64(tokeniser: Tokeniser, default: bool) -> bool:
+    """Parse md5-base64, saying what became of the 'auto' which used to guess.
+
+    Anyone who wrote 'auto' down knew about the guess, so refusing it with nothing
+    but "not a valid boolean" leaves them with a daemon which will not start and no
+    idea which value keeps their session up (#1423).
+    """
     status = tokeniser().lower()
-    if not status:
-        return default
-    if status in ('true', 'enable', 'enabled'):
-        return True
-    if status in ('false', 'disable', 'disabled'):
-        return False
-    if status in ('auto',):
-        return None
-    raise ValueError(f"'{status}' is not a valid boolean\n  Valid options: true, false, enable, disable, auto")
+    if status == 'auto':
+        raise ValueError(
+            "'auto' guessed whether md5-password was base64 by looking at the password, and a\n"
+            '  hexadecimal password was decoded into a different key, so it was removed in 6.0.\n'
+            '  Use "md5-base64 true;" if the password is base64, or "md5-base64 false;" to use it\n'
+            '  exactly as it is written'
+        )
+    return _as_boolean(status, default)
 
 
 def port(tokeniser: Tokeniser) -> int:

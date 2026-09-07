@@ -321,19 +321,31 @@ class TestMD5Authentication:
 
         io.close()
 
-    @patch('platform.system', return_value='Linux')
-    def test_md5_linux_auto_detect_hex(self, mock_platform: Any) -> None:
-        """Test Linux MD5 auto-detection of hex vs base64"""
-        io = tcp.create(AFI.ipv4)
+    @staticmethod
+    def _installed_key(md5: str, md5_base64: bool) -> bytes:
+        """Return the key tcp.md5() hands to the kernel for this password."""
+        io = MagicMock(spec=socket.socket)
 
-        # All-hex string should be tried as base64
-        try:
-            tcp.md5(io, '127.0.0.1', 179, 'abcdef1234', None)  # None = auto-detect
-        except MD5Error as e:
-            # Expected if kernel doesn't support TCP_MD5SIG
-            assert 'does not support TCP_MD5SIG' in str(e)
+        with patch('platform.system', return_value='Linux'):
+            tcp.md5(io, '127.0.0.1', 179, md5, md5_base64)
 
-        io.close()
+        io.setsockopt.assert_called_once()
+        _, _, value = io.setsockopt.call_args[0]
+        # the option is a 128 byte __kernel_sockaddr_storage followed by tcp_md5sig
+        length, key = unpack('2xH4x80s', value[128:])
+        return key[:length]
+
+    def test_md5_linux_hex_password_is_used_literally(self) -> None:
+        """A hex password is a password, not base64 with the padding left out (#1423)"""
+        # what `openssl rand -hex 16` gives: pure hex, and a multiple of four
+        # characters, so it also decodes as base64 into a completely different key
+        password = '3f9a1c2b7d4e8f0a1b2c3d4e5f607182'
+
+        assert self._installed_key(password, False) == password.encode('ascii')
+
+    def test_md5_linux_base64_password_is_decoded(self) -> None:
+        """Base64 stays available, but only when it is asked for"""
+        assert self._installed_key('cGFzc3dvcmQ=', True) == b'password'
 
     @patch('platform.system', return_value='Linux')
     def test_md5_ipv6_address(self, mock_platform: Any) -> None:

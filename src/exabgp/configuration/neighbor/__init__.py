@@ -26,7 +26,7 @@ from exabgp.configuration.neighbor.parser import (
 )
 
 # from exabgp.configuration.parser import asn
-from exabgp.configuration.parser import auto_asn, auto_boolean
+from exabgp.configuration.parser import auto_asn, md5_base64
 
 # Removed imports migrated to schema validators:
 # description, domainname, hostname, md5, rate_limit, source_interface
@@ -34,12 +34,13 @@ from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget
 from exabgp.configuration.tcpao import ParseTCPAO
 from exabgp.configuration.validator import IntValidators
 
-# Removed imports migrated to schema validators: boolean, ip, peer_ip, port
+# Removed imports migrated to schema validators: ip, peer_ip, port
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP, IPRange
 from exabgp.util.enumeration import TriState
+from exabgp.util.psk import guessed_as_base64
 
 
 class ParseNeighbor(Section):
@@ -282,7 +283,7 @@ class ParseNeighbor(Section):
         'peer-as': auto_asn,  # returns ASN|None
         'outgoing-ttl': ttl,  # returns int|None
         'incoming-ttl': ttl,  # returns int|None
-        'md5-base64': auto_boolean,  # returns bool|None
+        'md5-base64': md5_base64,
         # Migrated to schema validators:
         # description, host-name, domain-name, source-interface, md5-password,
         # passive, listen, connect, group-updates, auto-flush, adj-rib-out,
@@ -516,6 +517,31 @@ class ParseNeighbor(Section):
                 neighbor.adj_rib_out = True
 
     @staticmethod
+    def _post_md5_encoding(neighbor: Neighbor, local: dict[str, Any]) -> None:
+        """Report a password whose meaning changed when the base64 guess was removed.
+
+        Releases before 6.0 decoded an all hexadecimal password as base64, so a
+        session which was up is now signed with a different key (#1423).  Only an
+        unset md5-base64 can be a surprise: an operator who wrote it down said what
+        they meant.
+        """
+        if 'md5-base64' in local:
+            return
+        if not guessed_as_base64(neighbor.session.md5_password):
+            return
+
+        log.warning(
+            lazymsg(
+                'the md5-password for {peer} is hexadecimal, which releases before 6.0 decoded as base64. '
+                'It is now used exactly as it is written. Add "md5-base64 true;" if this session used '
+                'to establish and needs the decoded key, or "md5-base64 false;" if the password is '
+                'right as written, which also silences this message.',
+                peer=neighbor.session.peer_address,
+            ),
+            'configuration',
+        )
+
+    @staticmethod
     def _link_local_issue(neighbor: Neighbor) -> str:
         """Return why this neighbor can not use its link-local local-address, or an empty string.
 
@@ -655,6 +681,8 @@ class ParseNeighbor(Section):
         md5_error = neighbor.session.validate_md5()
         if md5_error:
             return self.error.set(md5_error)
+
+        self._post_md5_encoding(neighbor, local)
 
         tcp_ao_error = neighbor.session.validate_tcp_ao()
         if tcp_ao_error:

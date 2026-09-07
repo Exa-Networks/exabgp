@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import re
 import socket
 import select
 import platform
@@ -129,7 +128,7 @@ def connect(io: socket.socket, ip: str, port: int, afi: AFI, md5: str) -> None:
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
 
-def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: bool | None) -> None:
+def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: bool) -> None:
     platform_os = platform.system()
     if platform_os == 'FreeBSD':
         if md5:
@@ -154,19 +153,16 @@ def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: bool | None
         try:
             md5_bytes = None
             if md5:
-                if md5_base64 is True:
+                # The password is used as it was written unless base64 was asked for.
+                # Guessing the encoding from the password itself does not work: hex is a
+                # subset of the base64 alphabet, so a key from `openssl rand -hex 16`
+                # decodes cleanly into a different key and the session silently fails to
+                # authenticate against a peer using the password literally (#1423).
+                if md5_base64:
                     try:
                         md5_bytes = decode_base64(md5)
                     except PSKError as exc:
                         raise MD5Error(f'Failed to decode base 64 encoded PSK: {exc}') from None
-                elif md5_base64 is None and not re.match('.*[^a-f0-9].*', md5):  # auto
-                    # the key looks like hex, so it may be base64 with the padding left out
-                    for candidate in (md5 + '==', md5 + '=', md5):
-                        try:
-                            md5_bytes = decode_base64(candidate)
-                            break
-                        except PSKError:
-                            pass
 
             # __kernel_sockaddr_storage
             n_af = IP.toaf(ip)

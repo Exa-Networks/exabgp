@@ -569,13 +569,7 @@ Neighbor {peer-address}
 
             apis += _api
 
-        md5_base64_str = (
-            'true'
-            if neighbor.session.md5_base64 is True
-            else 'false'
-            if neighbor.session.md5_base64 is False
-            else 'auto'
-        )
+        md5_base64_str = 'true' if neighbor.session.md5_base64 else 'false'
         cap = neighbor.capability
         add_path_str = AddPath().named(cap.add_path) if cap.add_path else 'disable'
         graceful_str = str(cap.graceful_restart.time) if cap.graceful_restart.is_enabled() else 'disable'
