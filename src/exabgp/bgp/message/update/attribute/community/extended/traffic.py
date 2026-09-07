@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import socket
 
+from math import isfinite
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
@@ -34,11 +35,45 @@ from struct import unpack
 
 from exabgp.protocol.ip import IPv4
 from exabgp.protocol.ip import IPv6
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunityIPv6
 from exabgp.util.types import Buffer
+
+TRAFFIC_RATE_SIZE_BYTES = 8
+RATE_OFFSET_BYTES = 4
+
+
+def checked_rate_bytes(data: Buffer, name: str) -> Buffer:
+    """The eight bytes of a rate community, once they hold a rate which can be rendered.
+
+    RFC 8955 section 7.1 gives the rate as an IEEE-754 single, and the wire carries NaN and
+    the two infinities as readily as it carries 1000.0.  None of them is a rate, and every
+    rendering of these communities puts the float through '%d', which raises ValueError for
+    a NaN and OverflowError for an infinity.  That used to happen in the API writer, well
+    outside the decode boundary, so the peer's bad float closed the session with no
+    NOTIFICATION at all.  Refuse it here, where the peer can still be told why.
+    """
+    if len(data) < TRAFFIC_RATE_SIZE_BYTES:
+        raise Notify(3, 9, f'not enough data to extract the {name} extended community')
+    packed = data[:TRAFFIC_RATE_SIZE_BYTES]
+    rate: float = unpack('!f', packed[RATE_OFFSET_BYTES:TRAFFIC_RATE_SIZE_BYTES])[0]
+    if not isfinite(rate):
+        raise Notify(3, 9, f'{name} carries {rate}, which is not a usable rate')
+    return packed
+
+
+def checked_rate(rate: float, name: str) -> float:
+    """The same rule for a rate we are asked to build rather than one which arrived.
+
+    Configuration is not the wire, so this is a ValueError with the value in it, but a
+    community whose repr() raises must not exist however it was made.
+    """
+    if not isfinite(rate):
+        raise ValueError(f'{name} must be a finite number: {rate}')
+    return rate
 
 
 # ================================================================== TrafficRate
@@ -60,7 +95,7 @@ class TrafficRate(ExtendedCommunity):
     @classmethod
     def make_traffic_rate(cls, asn: ASN, rate: float) -> TrafficRate:
         """Create TrafficRate from semantic values."""
-        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, rate)
+        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, checked_rate(rate, 'traffic-rate'))
         return cls(packed)
 
     @property
@@ -77,7 +112,7 @@ class TrafficRate(ExtendedCommunity):
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRate:
-        return cls(data[:8])
+        return cls(checked_rate_bytes(data, 'traffic-rate'))
 
 
 # ============================================================ TrafficRatePackets
@@ -96,6 +131,7 @@ class TrafficRatePackets(ExtendedCommunity):
     @classmethod
     def make_traffic_rate_packets(cls, asn: ASN, rate: float) -> TrafficRatePackets:
         """Create TrafficRatePackets from semantic values."""
+        checked_rate(rate, 'traffic-rate-packets')
         if rate < 0:
             raise ValueError(f'traffic-rate-packets must not be negative: {rate}')
         packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, rate)
@@ -108,6 +144,8 @@ class TrafficRatePackets(ExtendedCommunity):
     @property
     def rate(self) -> float:
         value: float = unpack('!f', self._packed[4:8])[0]
+        # A NaN would survive this clamp: every comparison against it is false, so max()
+        # hands it straight back.  The decoder refuses one before it can get here.
         return max(value, 0.0)
 
     def __repr__(self) -> str:
@@ -115,7 +153,7 @@ class TrafficRatePackets(ExtendedCommunity):
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRatePackets:
-        return cls(data[:8])
+        return cls(checked_rate_bytes(data, 'traffic-rate-packets'))
 
 
 # ================================================================ TrafficAction

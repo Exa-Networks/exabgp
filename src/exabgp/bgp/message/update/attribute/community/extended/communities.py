@@ -99,10 +99,18 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
             ExtendedCommunities instance
 
         Raises:
-            Notify: If data length is not a multiple of 8
+            Notify: If the length is not a multiple of 8, or a community does not decode
         """
         if len(data) % EXTENDED_COMMUNITY_SIZE != 0:
             raise Notify(3, 1, 'could not decode extended community {}'.format(str([hex(_) for _ in data])))
+        # Decoding each community here and throwing the result away is deliberate.
+        # `communities` is a lazy property, so until this walk existed the only thing which
+        # ever decoded an individual community was json() or __repr__(), called from the
+        # API writer long after the UPDATE had left the decoder.  A Notify raised there
+        # cannot become a NOTIFICATION: it reaches the reactor's catch-all, which drops the
+        # session silently.  This is the boundary, so this is where the peer is judged.
+        for offset in range(0, len(data), EXTENDED_COMMUNITY_SIZE):
+            ExtendedCommunity.unpack_attribute(data[offset : offset + EXTENDED_COMMUNITY_SIZE], None)
         return cls(data)
 
     @classmethod
@@ -191,6 +199,9 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
         """Validate and create from wire-format bytes."""
         if len(data) % EXTENDED_COMMUNITY_IPV6_SIZE != 0:
             raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data])))
+        # The same eager walk as ExtendedCommunities.from_packet, for the same reason.
+        for offset in range(0, len(data), EXTENDED_COMMUNITY_IPV6_SIZE):
+            ExtendedCommunityIPv6.unpack_attribute(data[offset : offset + EXTENDED_COMMUNITY_IPV6_SIZE], None)
         return cls(data)
 
     @classmethod
