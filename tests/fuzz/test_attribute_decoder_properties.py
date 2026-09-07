@@ -75,6 +75,22 @@ EXTENDED_COMMUNITY_IPV6_VALUE_SIZE_BYTES = 18
 EXTENDED_COMMUNITY = int(Attribute.CODE.EXTENDED_COMMUNITY)
 IPV6_EXTENDED_COMMUNITY = int(Attribute.CODE.IPV6_EXTENDED_COMMUNITY)
 
+# Uniform bytes are a poor way to build the values which break a decoder.  An IEEE-754
+# single is a NaN or an infinity only when its exponent is all ones, which needs one of two
+# values in one byte and one of two in the next: measured at 0.39% of draws, so two hundred
+# examples find it 54% of the time.  Removing the traffic-rate fix and watching this file go
+# red was therefore a coin toss, which is the same as not watching.  Half the draws come
+# from the byte values which sit on the boundaries instead.
+INTERESTING_BYTES = [0x00, 0x01, 0x7F, 0x80, 0xFF]
+
+
+def payload(min_size_bytes: int, max_size_bytes: int) -> st.SearchStrategy[bytes]:
+    """Uniform bytes or boundary bytes, so the awkward values are actually reached."""
+    return st.one_of(
+        st.binary(min_size=min_size_bytes, max_size=max_size_bytes),
+        st.lists(st.sampled_from(INTERESTING_BYTES), min_size=min_size_bytes, max_size=max_size_bytes).map(bytes),
+    )
+
 
 def negotiated() -> Any:
     """A session just complete enough for the decoders which look at one."""
@@ -149,7 +165,7 @@ def renders(attributes: AttributeCollection, what: str) -> None:
 
 
 @pytest.mark.parametrize('registered', REGISTERED_ATTRIBUTES, ids=ATTRIBUTE_IDS)
-@given(value=st.binary(min_size=0, max_size=64))
+@given(value=payload(0, 64))
 def test_a_decoded_attribute_can_be_rendered(registered: tuple[int, int], value: bytes) -> None:
     """What an attribute decoder accepts, the API writer must be able to print."""
     aid, flag = registered
@@ -162,7 +178,7 @@ def test_a_decoded_attribute_can_be_rendered(registered: tuple[int, int], value:
 @pytest.mark.parametrize('registered', REGISTERED_COMMUNITIES, ids=COMMUNITY_IDS)
 @given(
     high_nibble=st.integers(min_value=0, max_value=0x0F),
-    value=st.binary(min_size=EXTENDED_COMMUNITY_VALUE_SIZE_BYTES, max_size=EXTENDED_COMMUNITY_VALUE_SIZE_BYTES),
+    value=payload(EXTENDED_COMMUNITY_VALUE_SIZE_BYTES, EXTENDED_COMMUNITY_VALUE_SIZE_BYTES),
 )
 def test_a_decoded_extended_community_can_be_rendered(
     registered: tuple[int, int], high_nibble: int, value: bytes
@@ -183,9 +199,7 @@ def test_a_decoded_extended_community_can_be_rendered(
 @pytest.mark.parametrize('registered', REGISTERED_COMMUNITIES_IPV6, ids=COMMUNITY_IPV6_IDS)
 @given(
     high_nibble=st.integers(min_value=0, max_value=0x0F),
-    value=st.binary(
-        min_size=EXTENDED_COMMUNITY_IPV6_VALUE_SIZE_BYTES, max_size=EXTENDED_COMMUNITY_IPV6_VALUE_SIZE_BYTES
-    ),
+    value=payload(EXTENDED_COMMUNITY_IPV6_VALUE_SIZE_BYTES, EXTENDED_COMMUNITY_IPV6_VALUE_SIZE_BYTES),
 )
 def test_a_decoded_ipv6_extended_community_can_be_rendered(
     registered: tuple[int, int], high_nibble: int, value: bytes
