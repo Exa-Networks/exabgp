@@ -19,6 +19,8 @@ import json as jsonlib
 import pytest
 from hypothesis import given, strategies as st
 
+from tests.fuzz.strategies import payload
+
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -75,7 +77,7 @@ def parses(fragment: str) -> None:
 
 @pytest.mark.fuzz
 @pytest.mark.parametrize('family', FAMILIES, ids=FAMILY_IDS)
-@given(data=st.binary(min_size=0, max_size=80))
+@given(data=payload(0, 80))
 def test_random_bytes_only_raise_notify(family: tuple[AFI, SAFI], data: bytes) -> None:
     """Arbitrary bytes decode or Notify, they never crash the parser."""
     afi, safi = family
@@ -86,7 +88,7 @@ def test_random_bytes_only_raise_notify(family: tuple[AFI, SAFI], data: bytes) -
 @pytest.mark.parametrize('family', FAMILIES, ids=FAMILY_IDS)
 @given(
     length=st.integers(min_value=0, max_value=255),
-    payload=st.binary(min_size=0, max_size=80),
+    payload=payload(0, 80),
 )
 def test_lying_length_prefix_only_raises_notify(family: tuple[AFI, SAFI], length: int, payload: bytes) -> None:
     """A length byte which does not match the payload must not be trusted.
@@ -103,7 +105,7 @@ def test_lying_length_prefix_only_raises_notify(family: tuple[AFI, SAFI], length
 @pytest.mark.parametrize('code', list(range(0, 12)))
 @given(
     length=st.integers(min_value=0, max_value=60),
-    payload=st.binary(min_size=0, max_size=60),
+    payload=payload(0, 60),
 )
 def test_evpn_route_types_only_raise_notify(code: int, length: int, payload: bytes) -> None:
     """EVPN routes are a type byte, a length byte, then the route itself."""
@@ -114,7 +116,7 @@ def test_evpn_route_types_only_raise_notify(code: int, length: int, payload: byt
 @pytest.mark.parametrize('code', list(range(0, 8)))
 @given(
     length=st.integers(min_value=0, max_value=0xFFFF),
-    payload=st.binary(min_size=0, max_size=60),
+    payload=payload(0, 60),
 )
 def test_bgpls_tlv_only_raises_notify(code: int, length: int, payload: bytes) -> None:
     """BGP-LS NLRI are a 16 bit type and a 16 bit length, followed by TLVs."""
@@ -128,7 +130,7 @@ def test_bgpls_tlv_only_raises_notify(code: int, length: int, payload: bytes) ->
 @pytest.mark.parametrize('code', [1, 2, 3, 4, 5])
 @given(
     length=st.integers(min_value=0, max_value=255),
-    payload=st.binary(min_size=0, max_size=60),
+    payload=payload(0, 60),
 )
 def test_mup_routes_only_raise_notify(architecture: int, code: int, length: int, payload: bytes) -> None:
     """MUP NLRI are an architecture byte, a 16 bit type, a length, then the route."""
@@ -139,7 +141,7 @@ def test_mup_routes_only_raise_notify(architecture: int, code: int, length: int,
 
 @pytest.mark.fuzz
 @pytest.mark.parametrize('family', FAMILIES, ids=FAMILY_IDS)
-@given(data=st.binary(min_size=0, max_size=80))
+@given(data=payload(0, 80))
 def test_decoding_is_idempotent(family: tuple[AFI, SAFI], data: bytes) -> None:
     """What a decoder accepts, it must re-encode into something it accepts again.
 

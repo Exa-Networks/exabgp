@@ -25,6 +25,8 @@ import struct
 import pytest
 from hypothesis import given, strategies as st
 
+from tests.fuzz.strategies import payload
+
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
@@ -86,7 +88,7 @@ def representations(decoded: object) -> None:
 
 @pytest.mark.fuzz
 @pytest.mark.parametrize('code', CAPABILITY_CODES, ids=CAPABILITY_IDS)
-@given(data=st.binary(min_size=0, max_size=60))
+@given(data=payload(0, 60))
 def test_capability_decoders_only_raise_notify(code: CapabilityCode, data: bytes) -> None:
     """Arbitrary capability bytes decode into something usable, or Notify."""
     klass = Capability.klass(code)
@@ -101,7 +103,7 @@ def test_capability_decoders_only_raise_notify(code: CapabilityCode, data: bytes
 @pytest.mark.parametrize('code', CAPABILITY_CODES, ids=CAPABILITY_IDS)
 @given(
     length=st.integers(min_value=0, max_value=255),
-    payload=st.binary(min_size=0, max_size=60),
+    payload=payload(0, 60),
 )
 def test_capability_lying_length_only_raises_notify(code: CapabilityCode, length: int, payload: bytes) -> None:
     """Several capabilities start with a length byte the peer chooses freely."""
@@ -115,7 +117,7 @@ def test_capability_lying_length_only_raises_notify(code: CapabilityCode, length
 
 @pytest.mark.fuzz
 @pytest.mark.parametrize('key', ATTRIBUTE_KEYS, ids=ATTRIBUTE_IDS)
-@given(data=st.binary(min_size=0, max_size=60))
+@given(data=payload(0, 60))
 def test_attribute_decoders_only_raise_notify(key: tuple[int, int], data: bytes) -> None:
     """Arbitrary attribute bytes decode into something usable, or Notify.
 
@@ -134,7 +136,7 @@ def test_attribute_decoders_only_raise_notify(key: tuple[int, int], data: bytes)
 
 @pytest.mark.fuzz
 @pytest.mark.parametrize('code', LSID_CODES, ids=LSID_IDS)
-@given(payload=st.binary(min_size=0, max_size=40))
+@given(payload=payload(0, 40))
 def test_bgpls_tlv_decoders_only_raise_notify(code: int, payload: bytes) -> None:
     """Every registered BGP-LS TLV, held to the same rule as every other decoder.
 

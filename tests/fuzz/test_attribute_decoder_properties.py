@@ -46,6 +46,8 @@ from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunityIPv6
 
+from tests.fuzz.strategies import payload  # noqa: E402
+
 pytestmark = pytest.mark.fuzz
 
 # The (attribute id, flag) pairs the parser will dispatch on, in a stable order.
@@ -74,22 +76,6 @@ EXTENDED_COMMUNITY_IPV6_VALUE_SIZE_BYTES = 18
 
 EXTENDED_COMMUNITY = int(Attribute.CODE.EXTENDED_COMMUNITY)
 IPV6_EXTENDED_COMMUNITY = int(Attribute.CODE.IPV6_EXTENDED_COMMUNITY)
-
-# Uniform bytes are a poor way to build the values which break a decoder.  An IEEE-754
-# single is a NaN or an infinity only when its exponent is all ones, which needs one of two
-# values in one byte and one of two in the next: measured at 0.39% of draws, so two hundred
-# examples find it 54% of the time.  Removing the traffic-rate fix and watching this file go
-# red was therefore a coin toss, which is the same as not watching.  Half the draws come
-# from the byte values which sit on the boundaries instead.
-INTERESTING_BYTES = [0x00, 0x01, 0x7F, 0x80, 0xFF]
-
-
-def payload(min_size_bytes: int, max_size_bytes: int) -> st.SearchStrategy[bytes]:
-    """Uniform bytes or boundary bytes, so the awkward values are actually reached."""
-    return st.one_of(
-        st.binary(min_size=min_size_bytes, max_size=max_size_bytes),
-        st.lists(st.sampled_from(INTERESTING_BYTES), min_size=min_size_bytes, max_size=max_size_bytes).map(bytes),
-    )
 
 
 def negotiated() -> Any:
