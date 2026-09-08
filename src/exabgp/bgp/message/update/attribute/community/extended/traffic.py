@@ -24,8 +24,8 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 TRAFFIC_RATE_SIZE_BYTES = 8
 
 
-def checked_wire_rate(data):
-    """The asn and rate of a traffic-rate community, once the rate can be rendered.
+def checked_wire_rate(data, name='traffic-rate'):
+    """The asn and rate of a rate community, once the rate can be rendered.
 
     RFC 8955 section 7.1 gives the rate as an IEEE-754 single, and the wire carries NaN and
     the two infinities as readily as it carries 1000.0.  None of them is a rate, and every
@@ -35,10 +35,10 @@ def checked_wire_rate(data):
     NOTIFICATION at all.  Refuse it here, where the peer can still be told why.
     """
     if len(data) < TRAFFIC_RATE_SIZE_BYTES:
-        raise Notify(3, 9, 'not enough data to extract the traffic-rate extended community')
+        raise Notify(3, 9, f'not enough data to extract the {name} extended community')
     asn, rate = unpack('!Hf', data[2:TRAFFIC_RATE_SIZE_BYTES])
     if not isfinite(rate):
-        raise Notify(3, 9, f'traffic-rate carries {rate}, which is not a usable rate')
+        raise Notify(3, 9, f'{name} carries {rate}, which is not a usable rate')
     return asn, rate
 
 
@@ -70,6 +70,43 @@ class TrafficRate(ExtendedCommunity):
     def unpack(data):
         asn, rate = checked_wire_rate(data)
         return TrafficRate(ASN(asn), rate, data[:TRAFFIC_RATE_SIZE_BYTES])
+
+
+# ============================================================ TrafficRatePackets
+# RFC 8955
+
+
+@ExtendedCommunity.register
+class TrafficRatePackets(ExtendedCommunity):
+    """Rate limit matching traffic in packets per second, rather than bytes."""
+
+    COMMUNITY_TYPE = 0x80
+    COMMUNITY_SUBTYPE = 0x0C
+
+    def __init__(self, asn, rate, community=None):
+        # Same two refusals as TrafficRate, and one more: RFC 8955 has no meaning for a
+        # negative packet rate, and zero is already the value which drops everything.
+        if not isfinite(rate):
+            raise ValueError(f'traffic-rate-packets must be a finite number: {rate}')
+        if rate < 0:
+            raise ValueError(f'traffic-rate-packets must not be negative: {rate}')
+        self.asn = asn
+        self.rate = rate
+        ExtendedCommunity.__init__(
+            self,
+            community if community is not None else pack('!2sHf', self._subtype(), asn, rate),
+        )
+
+    def __repr__(self):
+        return 'rate-limit:%d:packets' % self.rate
+
+    @staticmethod
+    def unpack(data):
+        asn, rate = checked_wire_rate(data, 'traffic-rate-packets')
+        # A rate the peer sent below zero is read as the drop-everything value rather than
+        # refused, which is what a router does with it. The constructor is stricter because
+        # nothing here should be building one.
+        return TrafficRatePackets(ASN(asn), max(rate, 0.0), data[:TRAFFIC_RATE_SIZE_BYTES])
 
 
 # ================================================================ TrafficAction
