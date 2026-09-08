@@ -128,6 +128,14 @@ class Reactor:
     def active_peers(self):
         peers = set()
         for key, peer in self._peers.items():
+            # a peer on its way out is given a turn whatever its state, because only a
+            # peer which runs can report it has finished and be dropped from _peers. A
+            # passive one with no connection was skipped here, so nothing ever acted on
+            # its teardown: it stayed in `show neighbor summary` for the life of the
+            # process, and shutdown, which waits for _peers to empty, could not finish.
+            if peer.stopping():
+                peers.add(key)
+                continue
             if peer.neighbor['passive'] and not peer.proto:
                 continue
             peers.add(key)
@@ -293,17 +301,10 @@ class Reactor:
         if not self.reload():
             return self.Exit.configuration
 
-        for neighbor in self.configuration.neighbors.values():
-            if neighbor['listen']:
-                if not self.listener.listen_on(
-                    neighbor['md5-ip'],
-                    neighbor['peer-address'],
-                    neighbor['listen'],
-                    neighbor['md5-password'],
-                    neighbor['md5-base64'],
-                    neighbor['incoming-ttl'],
-                ):
-                    return self.Exit.listening
+        # reload() has already done this; repeating it here is what turns a port we could
+        # not bind into a refusal to start, which a reload cannot do to a running daemon
+        if not self._listen_for_neighbors():
+            return self.Exit.listening
 
         if not self.early_drop:
             self.processes.start(self.configuration.processes)
@@ -498,6 +499,38 @@ class Reactor:
         self.daemon.removepid()
         self._stopping = True
 
+    def _listen_for_neighbors(self):
+        """Bind what the configuration asks for, and close what it no longer asks for.
+
+        This used to run once, in run(), so the set of listening sockets was whatever the
+        configuration said at startup. A neighbour with its own `listen` port added by a
+        reload had no socket until the daemon was restarted, and one removed by a reload
+        kept its port bound for the life of the process, still accepting connections which
+        nothing would serve. Running it on every reload keeps the sockets and the
+        configuration saying the same thing.
+
+        Returns whether every wanted socket is bound, so startup can refuse to continue.
+        """
+        listening = True
+        wanted = {(ip.top(), self._port) for ip in self._ips}
+
+        for neighbor in self.configuration.neighbors.values():
+            if not neighbor['listen']:
+                continue
+            wanted.add((neighbor['md5-ip'].top(), neighbor['listen']))
+            if not self.listener.listen_on(
+                neighbor['md5-ip'],
+                neighbor['peer-address'],
+                neighbor['listen'],
+                neighbor['md5-password'],
+                neighbor['md5-base64'],
+                neighbor['incoming-ttl'],
+            ):
+                listening = False
+
+        self.listener.close_unwanted(wanted)
+        return listening
+
     def reload(self):
         """Reload the configuration and send to the peer the route which changed"""
         log.info(lambda: f'performing reload of exabgp {version}', 'configuration')
@@ -541,6 +574,8 @@ class Reactor:
                         neighbor['md5-base64'],
                         None,
                     )
+
+        self._listen_for_neighbors()
         log.info(lambda: 'loaded new configuration successfully', 'reactor')
 
         return True

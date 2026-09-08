@@ -254,6 +254,28 @@ class Listener:
                 reactor.register_peer(new_neighbor.name(), new_peer)
                 return
 
+    def close_unwanted(self, wanted):
+        """Close every listening socket the configuration no longer asks for.
+
+        _listen shares one socket per (address, port), so several neighbours can be behind
+        the one entry here and the dict does not record how many. The caller therefore
+        says which (address, port) pairs it still wants and this closes the rest, which
+        cannot drift the way a count would.
+
+        Without it the port of a neighbour removed by a reload stayed bound for the life
+        of the process and kept accepting connections nothing would ever serve.
+        """
+        for sock in list(self._sockets):
+            ip, port, _, _ = self._sockets[sock]
+            if (ip, port) in wanted:
+                continue
+            sock.close()
+            del self._sockets[sock]
+            self._accepted.pop(sock, None)
+            log.info(lambda ip=ip, port=port: f'stopped listening on {ip}:{port}', 'network')
+
+        self.serving = bool(self._sockets)
+
     def stop(self):
         if not self.serving:
             return
