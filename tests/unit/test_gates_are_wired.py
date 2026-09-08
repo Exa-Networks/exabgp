@@ -30,6 +30,21 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent.parent
 GATE = ROOT / 'qa' / 'bin' / 'test_everything'
 
+# Everything here is about the real repository: which executables sit in qa/bin, which CI
+# directories exist, and what a gate does when run as a subprocess. mutmut works in a copy
+# under mutants/ which has none of that. also_copy brings src/, sbin/, etc/ and qa/ and not
+# .github or .forgejo, so the workflow walk finds no forge and its guard fires; and every
+# function in that copy is a trampoline reading MUTANT_UNDER_TEST, which a subprocess does
+# not inherit, so a gate invoked as one dies on a KeyError inside the instrumentation.
+#
+# Both failures are correct statements about the copy and say nothing about this tree. They
+# broke mutmut's baseline collection, which made ./qa/bin/mutmut_run unusable for every
+# configured module, not only for the one being mutated.
+pytestmark = pytest.mark.skipif(
+    'mutants' in ROOT.parts,
+    reason='these assert on the real repository layout, which a mutmut copy is not',
+)
+
 
 def load():
     """Import test_everything, running its module level guards.
