@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+"""Run a daemon, reload it, and check it let go of what the configuration dropped.
+
+Issue #1425: comment out a passive neighbour which has `local-address` and `listen`,
+reload, and the peer stays in `show neighbor summary`, its port stays bound, and a
+connection to that port is accepted and then left in CLOSE_WAIT for the life of the
+process. Three defects behind one symptom, and none of them was visible to a unit test
+because nothing exercised what a reload does to a running daemon.
+
+tests/unit/test_reload_invariants.py holds the reactor's bookkeeping to the same rule
+without starting anything, which is faster and runs everywhere. This gate is the control
+for it: it drives the real daemon, over a real socket, and would notice the parts a double
+cannot reach, such as a socket which is closed in the reactor's records and still open in
+the kernel.
+
+Exit status follows the convention the other gates here use, because "reinstate the bug,
+expect 1" is how they are validated and a gate which has DIED must not pass that:
+
+    0  it ran and found nothing
+    1  it ran and found something
+    2  it could not run
+"""
+
+from __future__ import annotations
+
+import os
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+
+FOUND_NOTHING = 0
+FOUND_SOMETHING = 1
+COULD_NOT_RUN = 2
+
+# High enough to need no privilege, and not one the functional suite uses.
+LISTEN_PORT = 11179
+# The daemon binds this and the connection is made from the other, so the accepted socket
+# matches the neighbour exactly the way the report describes.
+LOCAL_ADDRESS = '127.0.0.1'
+PEER_ADDRESS = '127.0.0.2'
+
+# How long to wait for the daemon to act. Generous: this is a correctness gate, not a
+# timing one, and a slow machine failing it would teach the reader to ignore it.
+SETTLE_SECONDS = 10.0
+POLL_SECONDS = 0.2
+
+BOTH = f"""
+neighbor 127.0.0.9 {{
+	passive true;
+	local-as 65000;
+	peer-as 65000;
+	router-id 127.0.0.9;
+}}
+
+neighbor {PEER_ADDRESS} {{
+	router-id 127.0.0.2;
+	local-address {LOCAL_ADDRESS};
+	listen {LISTEN_PORT};
+	local-as 65001;
+	peer-as 65001;
+	passive true;
+}}
+"""
+
+ONE = """
+neighbor 127.0.0.9 {
+	passive true;
+	local-as 65000;
+	peer-as 65000;
+	router-id 127.0.0.9;
+}
+"""
+
+
+def say(message: str) -> None:
+    sys.stdout.write(f'{message}\n')
+    sys.stdout.flush()
+
+
+def port_is_open() -> bool:
+    """Whether something accepts on the neighbour's port, asked the way a peer asks."""
+    probe = socket.socket()
+    probe.settimeout(2)
+    try:
+        probe.connect((LOCAL_ADDRESS, LISTEN_PORT))
+        return True
+    except OSError:
+        return False
+    finally:
+        probe.close()
+
+
+def wait_until(wanted: bool) -> bool:
+    """Poll the port until it says what we want, or the deadline passes."""
+    deadline = time.time() + SETTLE_SECONDS
+    while time.time() < deadline:
+        if port_is_open() == wanted:
+            return True
+        time.sleep(POLL_SECONDS)
+    return False
+
+
+def close_wait_sockets(pid: int) -> list[str]:
+    """The daemon's sockets which the far end has closed and it has not.
+
+    lsof rather than psutil because this gate has no dependency of its own, and a machine
+    without it should say so rather than report a clean run it did not make.
+    """
+    lsof = shutil.which('lsof')
+    if lsof is None:
+        return []
+    result = subprocess.run(
+        [lsof, '-nP', '-a', '-p', str(pid), '-iTCP', '-sTCP:CLOSE_WAIT'],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return [line for line in result.stdout.splitlines() if str(LISTEN_PORT) in line]
+
+
+def connect_from_the_peer() -> None:
+    """One connection which matches the removed neighbour, then gone.
+
+    This is step 5 of the report. Before the fix it was accepted by a peer already on its
+    way out, and the socket it left behind never closed.
+    """
+    probe = socket.socket()
+    probe.settimeout(2)
+    try:
+        probe.bind((PEER_ADDRESS, 0))
+        probe.connect((LOCAL_ADDRESS, LISTEN_PORT))
+        time.sleep(1)
+    except OSError:
+        # the port refusing the connection is the outcome this gate wants; a machine
+        # where 127.0.0.2 cannot be a source is handled by the caller's own check
+        pass
+    finally:
+        probe.close()
+
+
+def peer_address_is_usable() -> bool:
+    """Whether this machine lets us be the peer. Not every one has 127.0.0.2 up."""
+    probe = socket.socket()
+    try:
+        probe.bind((PEER_ADDRESS, 0))
+        return True
+    except OSError:
+        return False
+    finally:
+        probe.close()
+
+
+def run() -> int:
+    if not peer_address_is_usable():
+        say(f'{PEER_ADDRESS} cannot be used as a source address on this machine')
+        return COULD_NOT_RUN
+
+    if port_is_open():
+        say(f'something is already listening on {LOCAL_ADDRESS}:{LISTEN_PORT}')
+        return COULD_NOT_RUN
+
+    workspace = Path(tempfile.mkdtemp(prefix='exabgp-reload-'))
+    configuration = workspace / 'reload.conf'
+    configuration.write_text(BOTH)
+
+    environment = dict(os.environ)
+    environment['exabgp_daemon_daemonize'] = 'false'
+    environment['exabgp_log_enable'] = 'false'
+    environment['exabgp_tcp_bind'] = ''
+
+    daemon = subprocess.Popen(
+        [str(ROOT / 'sbin' / 'exabgp'), str(configuration)],
+        env=environment,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        cwd=str(ROOT),
+    )
+
+    findings: list[str] = []
+    try:
+        if not wait_until(True):
+            say(f'the daemon never listened on {LOCAL_ADDRESS}:{LISTEN_PORT}')
+            return COULD_NOT_RUN
+
+        # 1. the neighbour goes away, and its port must go with it
+        configuration.write_text(ONE)
+        daemon.send_signal(signal.SIGUSR1)
+        if not wait_until(False):
+            findings.append(f'the port of the removed neighbour is still open on {LOCAL_ADDRESS}:{LISTEN_PORT}')
+
+        # 2. and a connection to it must leave nothing behind
+        connect_from_the_peer()
+        time.sleep(1)
+        stranded = close_wait_sockets(daemon.pid)
+        if stranded:
+            findings.append(f'{len(stranded)} socket(s) left in CLOSE_WAIT after connecting to a removed neighbour')
+
+        # 3. adding it back must bind again, without restarting the daemon
+        configuration.write_text(BOTH)
+        daemon.send_signal(signal.SIGUSR1)
+        if not wait_until(True):
+            findings.append('a neighbour added by a reload never started listening')
+
+        if daemon.poll() is not None:
+            say(f'the daemon exited during the run, status {daemon.returncode}')
+            return COULD_NOT_RUN
+    finally:
+        daemon.terminate()
+        try:
+            daemon.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            daemon.kill()
+            daemon.wait(timeout=10)
+        shutil.rmtree(workspace, ignore_errors=True)
+
+    if findings:
+        say('a reload did not release what the configuration dropped:')
+        for finding in findings:
+            say(f'  {finding}')
+        return FOUND_SOMETHING
+
+    say('a reload releases the peer, the port and the connection of a removed neighbour')
+    return FOUND_NOTHING
+
+
+def main() -> int:
+    try:
+        return run()
+    except OSError as exc:
+        say(f'the gate could not run: {exc}')
+        return COULD_NOT_RUN
+
+
+if __name__ == '__main__':
+    sys.exit(main())

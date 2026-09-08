@@ -86,6 +86,7 @@ DEFAULT_TIMES: dict[str, int] = {
     'tiger-style': 2,
     'tests-run': 6,
     'sweep-floors': 20,
+    'reload-cleanup': 25,
 }
 
 CACHE_FILE = Path.home() / '.cache' / 'exabgp' / 'test_times.json'
@@ -177,6 +178,7 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     'tiger-style': './qa/bin/check_tiger_style',
     'tests-run': './qa/bin/check_tests_run',
     'sweep-floors': './qa/bin/check_sweep_floors',
+    'reload-cleanup': './qa/bin/check_reload_cleanup',
     'renders-json': './qa/bin/compat_gate --this-tree-only',
     'documentation': './qa/bin/check_documentation',
 }
@@ -203,6 +205,7 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'tiger-style': 'Tiger style check',
     'tests-run': 'Every test file is collected',
     'sweep-floors': 'No sweep shrinks silently',
+    'reload-cleanup': 'A reload releases what it drops',
     'renders-json': 'Every corpus input renders JSON a consumer can parse',
     'documentation': 'Documentation matches the code',
 }
@@ -230,6 +233,7 @@ TEST_ORDER = [
     'tiger-style',
     'tests-run',
     'sweep-floors',
+    'reload-cleanup',
     'renders-json',
     'documentation',
 ]
