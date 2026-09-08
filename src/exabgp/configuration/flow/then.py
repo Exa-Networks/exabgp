@@ -29,6 +29,7 @@ class ParseFlowThen(Section):
         'accept',
         'discard',
         'rate-limit 9600',
+        'rate-limit 1000 packets',
         'redirect 30740:12345',
         'redirect 1.2.3.4:5678',
         'redirect 1.2.3.4',

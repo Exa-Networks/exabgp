@@ -14,6 +14,7 @@ from exabgp.bgp.message.update.attribute.community.extended import (
     TrafficNextHopIPv6IETF,
     TrafficNextHopSimpson,
     TrafficRate,
+    TrafficRatePackets,
     TrafficRedirect,
     TrafficRedirectASN4,
     TrafficRedirectIPv6,
@@ -293,6 +294,19 @@ def discard(tokeniser):
 def rate_limit(tokeniser):
     # README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
     speed = int(tokeniser())
+
+    # The unit is optional and bytes when absent, so every configuration written before
+    # RFC 8955 traffic-rate-packets existed means exactly what it used to mean. The
+    # spelling matches main: a configuration which works here has to work there.
+    unit = tokeniser.peek()
+    if unit in ('bytes', 'packets'):
+        tokeniser()
+    else:
+        unit = 'bytes'
+
+    if unit == 'packets':
+        return ExtendedCommunities().add(TrafficRatePackets(ASN(0), speed))
+
     if speed < MIN_RATE_LIMIT_BPS and speed != 0:
         log.warning(
             lambda: f'rate-limiting flow under {MIN_RATE_LIMIT_BPS} bytes per seconds may not work', 'configuration'
