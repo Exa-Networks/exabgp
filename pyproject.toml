@@ -204,6 +204,13 @@ paths_to_mutate = [
 	"src/exabgp/bgp/message/update/nlri/flow.py",
 	"src/exabgp/bgp/message/update/attribute/aigp.py",
 	"src/exabgp/reactor/api/command/group.py",
+	# the reactor's bookkeeping: which peers are held and which sockets are bound. Issue
+	# #1425 lived here and nothing tested it, so tests/unit/test_reload_invariants.py and
+	# test_removed_neighbor_cleanup.py are the only things defending these two files and
+	# both were written the same day as the fix. Mutation testing is what says whether they
+	# defend them or merely run them.
+	"src/exabgp/reactor/listener.py",
+	"src/exabgp/reactor/loop.py",
 ]
 tests_dir = ["tests/unit/", "tests/fuzz/"]
 do_not_mutate = ["*/vendoring/*"]

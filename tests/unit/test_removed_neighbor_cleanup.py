@@ -121,6 +121,54 @@ def test_a_peer_waiting_to_reconnect_is_left_alone() -> None:
     assert 'back-soon' not in reactor.active_peers(), 'a peer which is coming back was made busy'
 
 
+# The three below were written because mutation testing said the tests above run
+# active_peers() without defending it: `and` became `or`, `continue` became `break`, and
+# the key added at the end became None, and every one of those edits kept the suite green.
+
+
+def test_a_peer_which_dials_out_is_active_even_with_no_connection() -> None:
+    """Only a *passive* peer with no connection idles. An active one has work to do.
+
+    Turning the `and` into an `or` parks every peer which has no connection yet, which is
+    every peer at startup, and no session would ever be opened.
+    """
+    reactor = Reactor.__new__(Reactor)
+    reactor._peers = {}
+    peer = passive_peer(reactor)
+    peer.neighbor.session.passive = False
+    reactor._peers['dials-out'] = peer
+
+    assert 'dials-out' in reactor.active_peers()
+
+
+def test_a_passive_peer_with_a_connection_is_active() -> None:
+    """The other half of the same condition."""
+    reactor = Reactor.__new__(Reactor)
+    reactor._peers = {}
+    peer = passive_peer(reactor)
+    peer.proto = Mock()
+    reactor._peers['connected'] = peer
+
+    assert 'connected' in reactor.active_peers()
+
+
+def test_an_idle_peer_does_not_hide_the_peers_after_it() -> None:
+    """The skip has to be a continue: a break drops every peer past the first idle one.
+
+    With one peer in the dictionary the two are indistinguishable, which is why this needs
+    a second peer sitting behind the one being skipped.
+    """
+    reactor = Reactor.__new__(Reactor)
+    reactor._peers = {}
+    idle = passive_peer(reactor, uid='1')
+    working = passive_peer(reactor, uid='2')
+    working.proto = Mock()
+    reactor._peers['idle'] = idle
+    reactor._peers['working'] = working
+
+    assert reactor.active_peers() == {'working'}, 'a peer behind an idle one was lost'
+
+
 def test_a_removed_peer_finishes_rather_than_idling() -> None:
     """The turn it is now given has to end the peer, not park it.
 
