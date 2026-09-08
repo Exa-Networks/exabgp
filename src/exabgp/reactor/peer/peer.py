@@ -292,6 +292,14 @@ class Peer:
             return True
         return self.connection_attempts < self.max_connection_attempts
 
+    def stopping(self) -> bool:
+        """The peer has been told to go away and is not coming back.
+
+        reestablish() sets a teardown too, and that peer is returning, so the teardown
+        alone does not say this. Only a peer which will not restart is on its way out.
+        """
+        return self._teardown is not None and not self._restart
+
     def stop(self) -> None:
         self._teardown = 3
         self._restart = False
@@ -369,6 +377,16 @@ class Peer:
 
     def handle_connection(self, connection: 'Incoming') -> Iterator[bool] | None:
         log.debug(lazymsg('peer.fsm.state state={s}', s=self.fsm.name()), self.id())
+
+        # a peer whose neighbour has been removed from the configuration cannot serve this
+        # connection: its next turn drops it from the reactor. Accepting one anyway left
+        # the socket owned by an object nobody held any more, stuck in CLOSE_WAIT.
+        if self.stopping():
+            log.debug(
+                lazymsg('peer.connection.rejected connection={c} reason=peer_removed', c=connection.name()),
+                self.id(),
+            )
+            return connection.notification(6, 3, b'no session configured for the peer')
 
         # if the other side fails, we go back to idle
         if self.fsm == FSM.ESTABLISHED:

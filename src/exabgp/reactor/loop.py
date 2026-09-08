@@ -318,6 +318,14 @@ class Reactor:
     def active_peers(self) -> set[str]:
         peers: set[str] = set()
         for key, peer in self._peers.items():
+            # a peer on its way out is given a turn whatever its state, because only a
+            # peer which runs can report it has finished and be dropped from _peers. A
+            # passive one with no connection was skipped here, so nothing ever acted on
+            # its teardown: it stayed in `show neighbor summary` for the life of the
+            # process, and shutdown, which waits for _peers to empty, could not finish.
+            if peer.stopping():
+                peers.add(key)
+                continue
             if peer.neighbor.session.passive and not peer.proto:
                 continue
             peers.add(key)
@@ -477,31 +485,10 @@ class Reactor:
         if not self.reload():
             return self.Exit.configuration
 
-        for neighbor in self.configuration.neighbors.values():
-            if neighbor.session.listen:
-                if not self.listener.listen_on(
-                    neighbor.session.md5_ip,
-                    neighbor.session.peer_address,
-                    neighbor.session.listen,
-                    neighbor.session.md5_password,
-                    neighbor.session.md5_base64,
-                    neighbor.session.incoming_ttl,
-                    neighbor.session.tcp_ao_keyid,
-                    neighbor.session.tcp_ao_algorithm,
-                    neighbor.session.tcp_ao_password,
-                    neighbor.session.tcp_ao_base64,
-                    neighbor.session.source_interface,
-                ):
-                    log.critical(
-                        lazymsg(
-                            'startup.failed.listener ip={ip} port={port} neighbor={n}',
-                            ip=neighbor.session.md5_ip,
-                            port=neighbor.session.listen,
-                            n=neighbor.name(),
-                        ),
-                        'reactor',
-                    )
-                    return self.Exit.listening
+        # reload() has already done this; repeating it here is what turns a port we could
+        # not bind into a refusal to start, which a reload cannot do to a running daemon
+        if not self._listen_for_neighbors():
+            return self.Exit.listening
 
         # Start processes
         if not self.early_drop:
@@ -558,6 +545,53 @@ class Reactor:
         self.daemon.removepid()
         self._stopping = True
 
+    def _listen_for_neighbors(self) -> bool:
+        """Bind what the configuration asks for, and close what it no longer asks for.
+
+        This used to run once, in run(), so the set of listening sockets was whatever the
+        configuration said at startup. A neighbour with its own `listen` port added by a
+        reload had no socket until the daemon was restarted, and one removed by a reload
+        kept its port bound for the life of the process, still accepting connections which
+        nothing would serve. Running it on every reload keeps the sockets and the
+        configuration saying the same thing.
+
+        Returns whether every wanted socket is bound, so startup can refuse to continue.
+        """
+        listening = True
+        wanted: set[tuple[str, int]] = {(ip.top(), self._port) for ip in self._ips}
+
+        for neighbor in self.configuration.neighbors.values():
+            if not neighbor.session.listen:
+                continue
+            wanted.add((neighbor.session.md5_ip.top(), neighbor.session.listen))
+            if self.listener.listen_on(
+                neighbor.session.md5_ip,
+                neighbor.session.peer_address,
+                neighbor.session.listen,
+                neighbor.session.md5_password,
+                neighbor.session.md5_base64,
+                neighbor.session.incoming_ttl,
+                neighbor.session.tcp_ao_keyid,
+                neighbor.session.tcp_ao_algorithm,
+                neighbor.session.tcp_ao_password,
+                neighbor.session.tcp_ao_base64,
+                neighbor.session.source_interface,
+            ):
+                continue
+            log.critical(
+                lazymsg(
+                    'startup.failed.listener ip={ip} port={port} neighbor={n}',
+                    ip=neighbor.session.md5_ip,
+                    port=neighbor.session.listen,
+                    n=neighbor.name(),
+                ),
+                'reactor',
+            )
+            listening = False
+
+        self.listener.close_unwanted(wanted)
+        return listening
+
     def reload(self) -> bool:
         """Reload the configuration and send to the peer the route which changed"""
         log.info(lazymsg('config.reload version={v}', v=version), 'configuration')
@@ -603,6 +637,8 @@ class Reactor:
                         neighbor.session.tcp_ao_password,
                         neighbor.session.tcp_ao_base64,
                     )
+
+        self._listen_for_neighbors()
         log.info(lazymsg('config.loaded'), 'reactor')
 
         return True
