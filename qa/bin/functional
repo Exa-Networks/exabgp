@@ -95,6 +95,87 @@ def flush(
         file.flush()
 
 
+# A run legitimately opens some files of its own, so the descriptor check needs slack.
+# It is looking for a leak which grows with the number of tests, not for an exact count.
+DESCRIPTOR_SLACK = 16
+
+# What a leftover looks like. The same patterns cleanup_test_processes() kills.
+TEST_PROCESS_PATTERNS = ['qa/sbin/bgp', 'sbin/exabgp', 'src/exabgp/application/main', 'run/api-']
+
+
+def open_descriptor_count() -> int:
+    """How many descriptors this process holds, or 0 when we cannot tell."""
+    if not HAVE_PSUTIL:
+        return 0
+    try:
+        return psutil.Process().num_fds()
+    except Exception:  # noqa: BLE001 - an unmeasurable count must not fail the run
+        return 0
+
+
+def surviving_test_processes() -> List[str]:
+    """Every test process still running, described well enough to chase."""
+    if not HAVE_PSUTIL:
+        return []
+    survivors = []
+    for proc in psutil.process_iter(['pid', 'cmdline']):
+        try:
+            cmdline = ' '.join(proc.info['cmdline'] or [])
+            if proc.pid == os.getpid():
+                continue
+            if any(pattern in cmdline for pattern in TEST_PROCESS_PATTERNS):
+                survivors.append(f'PID {proc.pid}: {cmdline[:100]}')
+        except Exception:  # noqa: BLE001 - a process which vanished mid-scan is not a leak
+            continue
+    return survivors
+
+
+def audit_after_run(descriptors_at_start: int) -> bool:
+    """Fail a run which leaves behind what it should have cleaned up.
+
+    cleanup_test_processes() already kills survivors, and does it silently. Killing them
+    is right; not saying so is not. A suite which passes while leaving a daemon holding a
+    port has not proved what its green line claims, and this tree has twice had a resource
+    leak reach a release with the functional suite green over it.
+
+    Two things are checked, and neither is the whole story: a daemon which outlived its
+    test, and descriptors this harness itself did not give back. A socket left in
+    CLOSE_WAIT inside a daemon is not visible from here, because by the time we look the
+    daemon is gone; that one is held by the unit tests instead.
+    """
+    clean = True
+
+    survivors = surviving_test_processes()
+    if survivors:
+        clean = False
+        flush('')
+        flush('=' * 60)
+        flush(f'LEFTOVER: {len(survivors)} test process(es) outlived the run')
+        flush('=' * 60)
+        for survivor in survivors:
+            flush(f'  {survivor}')
+        flush('')
+        flush('A test which does not stop what it started leaves the next run to inherit')
+        flush('its ports and its state. Terminating them now, and failing the run.')
+        flush('=' * 60)
+        cleanup_test_processes()
+
+    descriptors_at_end = open_descriptor_count()
+    leaked = descriptors_at_end - descriptors_at_start
+    if descriptors_at_start and leaked > DESCRIPTOR_SLACK:
+        clean = False
+        flush('')
+        flush('=' * 60)
+        flush(f'LEFTOVER: {leaked} file descriptors were not given back')
+        flush('=' * 60)
+        flush(f'started with {descriptors_at_start}, ended with {descriptors_at_end}')
+        flush('A descriptor which grows with the number of tests is a leak in the harness')
+        flush('or in what it talks to, and it ends in "too many open files" eventually.')
+        flush('=' * 60)
+
+    return clean
+
+
 def check_ulimit(minimum: int = 40000) -> None:
     """
     Check and set file descriptor limit (ulimit -n) to at least the minimum value.
@@ -3014,6 +3095,8 @@ def add_test(
                     sys.exit(f'could not find test {nick}')
             tests.enable_all()
 
+        descriptors_at_start = open_descriptor_count()
+
         # Pass verbose/debug/quiet to all test types that support it
         if isinstance(tests, EncodingTests):
             success_exit = tests.run_selected(
@@ -3023,6 +3106,11 @@ def add_test(
             success_exit = tests.run_selected(parsed.timeout, verbose=verbose, debug_tests=debug_tests, quiet=quiet)
         else:
             success_exit = tests.run_selected(parsed.timeout)
+
+        # What the run left behind is part of whether it passed
+        if not audit_after_run(descriptors_at_start):
+            success_exit = False
+
         if not quiet:
             flush()
         sys.exit(0 if success_exit else 1)
