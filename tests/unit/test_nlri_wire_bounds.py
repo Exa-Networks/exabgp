@@ -10,6 +10,7 @@ import pytest
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
 
@@ -115,6 +116,44 @@ def test_bgpls_vpn_length_below_a_route_distinguisher_raises_notify(length: int)
     for code in (1, 2, 3, 4):
         with pytest.raises(Notify):
             decode(AFI.bgpls, SAFI.bgp_ls_vpn, code.to_bytes(2, 'big') + length.to_bytes(2, 'big') + bytes(16))
+
+
+@pytest.mark.parametrize('size_bytes', [4, 5, 8, 11])
+def test_bgpls_vpn_generic_shorter_than_a_route_distinguisher_survives_a_round_trip(size_bytes: int) -> None:
+    """A generic BGP-LS VPN NLRI must decode back into what it just packed.
+
+    The buffer was required to hold twelve bytes before the header was even read, because
+    a registered code slices its route distinguisher out of bytes four to twelve.  An
+    unregistered code never reaches that slice: it keeps the whole announced wire and is
+    stored as a generic, which for an announced length under eight is shorter than twelve
+    bytes.  So the decoder produced an NLRI it then refused to read back, and refused a
+    short generic sitting at the end of an NLRI stream, which the peer had framed
+    correctly as far as its own length field said.
+
+    Found by tests/fuzz/test_nlri_decoder_properties.py::test_decoding_is_idempotent with
+    twelve zero bytes, where code and length both decode to zero.
+    """
+    payload_size_bytes = size_bytes - 4
+    wire = (0).to_bytes(2, 'big') + payload_size_bytes.to_bytes(2, 'big') + bytes(payload_size_bytes)
+
+    nlri = decode(AFI.bgpls, SAFI.bgp_ls_vpn, wire)
+    packed = bytes(nlri.pack_nlri(Negotiated.UNSET))
+
+    assert packed == wire, 'a generic must pack back the bytes it was given'
+
+    again = decode(AFI.bgpls, SAFI.bgp_ls_vpn, packed)
+
+    assert again.index() == nlri.index(), 'the decoder refuses what it just packed'
+
+
+def test_bgpls_vpn_generic_consumes_only_what_it_announces() -> None:
+    """The bytes past the announced length belong to the next NLRI, not to this one."""
+    wire = bytes(4) + b'\xde\xad\xbe\xef'
+
+    nlri, left = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls_vpn, wire, Action.ANNOUNCE, None, None)
+
+    assert bytes(left) == b'\xde\xad\xbe\xef', 'a zero length NLRI consumed more than its header'
+    assert bytes(nlri.pack_nlri(Negotiated.UNSET)) == bytes(4)
 
 
 # ============================================================================

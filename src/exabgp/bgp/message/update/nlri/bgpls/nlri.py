@@ -230,23 +230,25 @@ class BGPLS(NLRI):
             raise Notify(3, 10, f'BGP-LS NLRI too short: need at least 4 bytes, got {len(data)}')
         code, length = unpack('!HH', bytes(data[:4]))
 
-        # For VPN, need 8 more bytes for RD
-        if safi == SAFI.bgp_ls_vpn:
-            if len(data) < 12:
-                raise Notify(3, 10, f'BGP-LS VPN NLRI too short: need at least 12 bytes, got {len(data)}')
-            # the announced length covers the route distinguisher, so anything below its
-            # size leaves a negative payload length. Only a registered code does that
-            # subtraction: an unregistered one keeps the whole wire format, and refusing it
-            # here reset the session over an NLRI which used to be stored as a generic and
-            # rendered perfectly well.
-            if length < 8 and code in cls.registered_bgpls:
-                raise Notify(3, 10, f'BGP-LS VPN NLRI announces {length} bytes, less than its route distinguisher')
+        # the announced length covers the route distinguisher, so anything below its
+        # size leaves a negative payload length. Only a registered code does that
+        # subtraction: an unregistered one keeps the whole wire format, and refusing it
+        # here reset the session over an NLRI which used to be stored as a generic and
+        # rendered perfectly well.
+        if safi == SAFI.bgp_ls_vpn and code in cls.registered_bgpls and length < 8:
+            raise Notify(3, 10, f'BGP-LS VPN NLRI announces {length} bytes, less than its route distinguisher')
 
         if len(data) < length + 4:
             raise Notify(3, 10, f'BGP-LS NLRI truncated: need {length + 4} bytes, got {len(data)}')
 
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:
+                # Only this branch reads a route distinguisher, so only this branch needs
+                # the twelve bytes holding one. Asking for them before the header was read
+                # refused a short generic which the peer had framed correctly, and made the
+                # decoder refuse the four bytes such a generic packs back out.
+                if len(data) < 12:
+                    raise Notify(3, 10, f'BGP-LS VPN NLRI too short: need at least 12 bytes, got {len(data)}')
                 # Extract Route Distinguisher (between header and payload)
                 rd: RouteDistinguisher = RouteDistinguisher.unpack_routedistinguisher(bytes(data[4:12]))
                 # Reconstruct wire format without RD: [type(2)][length(2)][payload]
