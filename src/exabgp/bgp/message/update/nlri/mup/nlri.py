@@ -89,6 +89,9 @@ class MUP(NLRI):
         }
 
     def pack_nlri(self, negotiated=None):
+        # RFC 7911 ADD-PATH is possible for MUP but not yet implemented, so MUP is kept out
+        # of Capabilities._ADD_PATH: a peer must never be told to expect a path identifier
+        # this returns without. Add it back to that list in the same change as the encoder.
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 
     @classmethod
