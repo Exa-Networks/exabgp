@@ -917,6 +917,41 @@ def test_paths_limit_unpack_duplicate_first_wins() -> None:
     assert result[(AFI.ipv4, SAFI.unicast)] == 10
 
 
+def test_paths_limit_first_zero_blocks_later_limit() -> None:
+    """An ignored zero tuple still takes precedence over later tuples for its family."""
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
+
+    data = memoryview(
+        b'\x00\x01\x01\x00\x00'  # IPv4 unicast, ignored first tuple.
+        b'\x00\x01\x01\x00\x0a'  # The duplicate must not impose a limit.
+        b'\x00\x02\x01\x00\x14'
+    )
+    result = PathsLimit.unpack_capability(PathsLimit(), data, Capability.CODE.PATHS_LIMIT)
+
+    assert isinstance(result, PathsLimit)
+    assert dict(result) == {(AFI.ipv6, SAFI.unicast): 20}
+
+
+def test_paths_limit_first_tuple_wins_across_capability_instances() -> None:
+    """Repeated capability instances cannot override an earlier zero or positive tuple."""
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
+
+    parameters = (
+        b'\x02\x0c\x4c\x0a'
+        b'\x00\x01\x01\x00\x00'
+        b'\x00\x02\x01\x00\x14'
+        b'\x02\x02\x4c\x00'  # An empty instance does not reset tuple precedence.
+        b'\x02\x0c\x4c\x0a'
+        b'\x00\x01\x01\x00\x0a'
+        b'\x00\x02\x01\x00\x1e'
+    )
+    capabilities = Capabilities.unpack(bytes([len(parameters)]) + parameters)
+    result = capabilities[Capability.CODE.PATHS_LIMIT]
+
+    assert isinstance(result, PathsLimit)
+    assert dict(result) == {(AFI.ipv6, SAFI.unicast): 20}
+
+
 def test_paths_limit_unpack_truncated() -> None:
     """Test that truncated data raises Notify."""
     from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
@@ -928,6 +963,49 @@ def test_paths_limit_unpack_truncated() -> None:
 
     with pytest.raises(Notify):
         PathsLimit.unpack_capability(cap, data, Capability.CODE.PATHS_LIMIT)
+
+
+def test_paths_limit_capacity_stops_recording_without_killing_the_session() -> None:
+    """A capability longer than a conforming speaker can mean is truncated, not fatal.
+
+    RFC 5492 has a speaker ignore capability content it cannot use. A well formed but
+    over-long list is not malformed, so the families past our capacity are dropped and the
+    session lives. A truncated entry is malformed and still raises, see below.
+    """
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
+
+    entries = PathsLimit.MAX_FAMILIES + 10
+    data = b''.join(afi.to_bytes(2, 'big') + b'\x01\x00\x0a' for afi in range(1, entries + 1))
+    result = PathsLimit.unpack_capability(PathsLimit(), data, Capability.CODE.PATHS_LIMIT)
+
+    assert isinstance(result, PathsLimit)
+    assert len(result) == PathsLimit.MAX_FAMILIES
+
+
+def test_paths_limit_capacity_reached_is_accepted() -> None:
+    """The bound is on excess, so a capability filling it exactly still parses whole."""
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
+
+    entries = PathsLimit.MAX_FAMILIES
+    data = b''.join(afi.to_bytes(2, 'big') + b'\x01\x00\x0a' for afi in range(1, entries + 1))
+    result = PathsLimit.unpack_capability(PathsLimit(), data, Capability.CODE.PATHS_LIMIT)
+
+    assert isinstance(result, PathsLimit)
+    assert len(result) == entries
+    assert len(data) == 0xFF, 'which is what one capability instance can carry'
+
+
+def test_paths_limit_capacity_counts_ignored_families() -> None:
+    """Zero tuples are remembered to hold their place, so they consume capacity too."""
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
+
+    entries = PathsLimit.MAX_FAMILIES + 10
+    zeroes = b''.join(afi.to_bytes(2, 'big') + b'\x01\x00\x00' for afi in range(1, entries + 1))
+    result = PathsLimit.unpack_capability(PathsLimit(), zeroes, Capability.CODE.PATHS_LIMIT)
+
+    assert isinstance(result, PathsLimit)
+    assert dict(result) == {}
+    assert len(result._ignored_families) == PathsLimit.MAX_FAMILIES
 
 
 def test_paths_limit_round_trip() -> None:

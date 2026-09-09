@@ -12,6 +12,12 @@ from exabgp.rib.cache import Cache
 
 
 class IncomingRIB(Cache):
+    # The audit asks one question of each prefix: did the peer send more paths than the
+    # limit we advertised. One path beyond the limit answers it, so that is as far as the
+    # set has to grow. Without this a peer which ignores the limit, the only peer the audit
+    # exists to catch, is also the one which decides how much memory the audit costs.
+    AUDIT_PATHS_HEADROOM = 1
+
     _path_sets: dict[FamilyTuple, dict[bytes, set[bytes]]]
     _path_warned: set[tuple[FamilyTuple, bytes]]
 
@@ -29,10 +35,24 @@ class IncomingRIB(Cache):
     def reset(self) -> None:
         pass
 
-    def track_path(self, family: FamilyTuple, prefix_index: bytes, path_index: bytes) -> int:
+    def track_path(self, family: FamilyTuple, prefix_index: bytes, path_index: bytes, limit: int) -> int:
+        """Record one received path and return how many this prefix now holds.
+
+        The count saturates at one past `limit`. Past that point the audit has already
+        warned about the prefix and the exact number would only cost memory, so a peer
+        which keeps sending paths stops being able to grow this set. The trade is that
+        once a prefix has saturated, withdrawals can take the count below what the peer
+        actually holds, and a later violation on that prefix may go unreported.
+        """
+        assert limit > 0, 'a prefix is only audited against a limit we advertised'
+
         per_family = self._path_sets.setdefault(family, {})
         paths = per_family.setdefault(prefix_index, set())
+        capacity = limit + self.AUDIT_PATHS_HEADROOM
+        if len(paths) >= capacity and path_index not in paths:
+            return len(paths)
         paths.add(path_index)
+        assert len(paths) <= capacity, 'the audit set is bounded by the limit'
         return len(paths)
 
     def untrack_path(self, family: FamilyTuple, prefix_index: bytes, path_index: bytes) -> None:

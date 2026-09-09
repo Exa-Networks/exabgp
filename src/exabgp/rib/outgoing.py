@@ -27,6 +27,23 @@ if TYPE_CHECKING:
 RIBdict = dict
 
 
+class _PathSelection:
+    """What one prefix has sent to a peer which limits its paths, and what it is holding.
+
+    `advertised` is an index and not a route: enforcement only counts, and the routes
+    themselves live in the adj-rib-out cache when the operator asked for one. `candidates`
+    holds the withheld paths, and only those, because a withheld path is the one thing this
+    class knows which is written down nowhere else: it is what a later withdraw promotes.
+    """
+
+    def __init__(self) -> None:
+        self.candidates: dict[bytes, Route] = {}
+        self.advertised: set[bytes] = set()
+
+    def empty(self) -> bool:
+        return not self.candidates and not self.advertised
+
+
 class OutgoingRIB(Cache):
     _watchdog: dict[str, dict[str, dict[bytes, Route]]]
     _new_nlri: dict[bytes, Route]
@@ -67,6 +84,8 @@ class OutgoingRIB(Cache):
 
         self._refresh_families = set()
         self._refresh_routes = []
+        self._path_selection: dict[FamilyTuple, dict[bytes, _PathSelection]] = {}
+        self._session_epoch = 0
 
         # Flush callbacks for sync mode - fire when updates() exhausts
         self._flush_callbacks: list[asyncio.Event] = []
@@ -76,19 +95,30 @@ class OutgoingRIB(Cache):
     # will resend all the routes once we reconnect
     def reset(self) -> None:
         # WARNING : this function can run while we are in the updates() loop too !
+        #
+        # It used to drain that loop to clear the queues, which it can no longer do: a
+        # drained batch admits paths against the peer's limit, and the peer this batch was
+        # for has gone. Clearing the queues here does the same job, and the epoch is how
+        # the loop still running finds out it is generating for a session which has ended.
+        self._session_epoch += 1
         self._refresh_families = set()
         self._refresh_routes = []
-        for _ in self.updates(True):
-            pass
-
-    # back to square one, all the routes are removed
-    def clear(self) -> None:
-        self.clear_cache()
         self._new_nlri = {}
         self._new_attr_af_nlri = {}
         self._new_attribute = {}
         self._pending_withdraws = {}
+        self._path_selection = {}
+
+    # back to square one, all the routes are removed
+    def clear(self) -> None:
+        self.clear_cache()
         self.reset()
+
+    def delete_cached_family(self, families: set[FamilyTuple]) -> None:
+        super().delete_cached_family(families)
+        for family in list(self._path_selection):
+            if family not in families:
+                del self._path_selection[family]
 
     def pending(self) -> bool:
         if not self.enabled:
@@ -130,6 +160,10 @@ class OutgoingRIB(Cache):
             for family in requested_families:
                 self._refresh_families.add(family)
 
+        # What a refresh replays is the adj-rib-out, and nothing else. A limited family used
+        # to replay its held paths from _path_selection when there was no cache, which made
+        # "adj-rib-out false" mean one thing for a family with a limit and another for a
+        # family without one, in the same neighbour.
         for route in self.cached_routes(list(requested_families)):
             self._refresh_routes.append(route)
 
@@ -140,8 +174,8 @@ class OutgoingRIB(Cache):
             families = self.families
         requested_families = set(families).intersection(self.families)
 
-        routes = list(self.cached_routes(list(requested_families)))
-        for route in routes:
+        # Same reasoning as resend(): what can be withdrawn is what the adj-rib-out holds.
+        for route in self.cached_routes(list(requested_families)):
             self.del_from_rib(route)
 
     def queued_routes(self) -> Iterator[Route]:
@@ -350,98 +384,183 @@ class OutgoingRIB(Cache):
     ) -> Iterator[UpdateCollection | RouteRefresh]:
         if not self.enabled:
             return
+        epoch = self._session_epoch
+        for update in self._generate_updates(grouped, paths_limit or {}):
+            yield update
+            # A disconnect can reset the RIB while the consumer is sending.
+            if epoch != self._session_epoch:
+                return
+
+    def _admit_path(self, route: Route, limit: int, refresh: bool = False) -> bool:
+        if not limit:
+            return True
+        family = route.nlri.family().afi_safi()
+        prefixes = self._path_selection.get(family)
+        if prefixes is None:
+            prefixes = self._path_selection[family] = {}
+        prefix = route.nlri.prefix_index()
+        selection = prefixes.get(prefix)
+        if selection is None:
+            selection = prefixes[prefix] = _PathSelection()
+        index = route.index()
+        if index in selection.advertised:
+            return True
+        if len(selection.advertised) >= limit:
+            # A refresh replays what the peer already has, so it must not overwrite a path
+            # held since before it with the same one arriving again.
+            if refresh:
+                selection.candidates.setdefault(index, route)
+            else:
+                selection.candidates[index] = route
+            # A route the operator configured is not reaching the peer. It is held, not
+            # dropped, and show adj-rib out still lists it, so without this line there is
+            # nothing anywhere to tell them the peer never received it.
+            log.debug(
+                lazymsg(
+                    'rib.paths_limit.withheld family={family} prefix={prefix} limit={limit}',
+                    family=family,
+                    prefix=route.nlri,
+                    limit=limit,
+                ),
+                'rib',
+            )
+            return False
+        # It is going out, so it is no longer something to promote later.
+        selection.candidates.pop(index, None)
+        selection.advertised.add(index)
+        assert len(selection.advertised) <= limit
+        assert not (selection.advertised & selection.candidates.keys()), 'a path is sent or held, never both'
+        return True
+
+    def _withdraw_path(self, nlri: NLRI) -> bool:
+        family = nlri.family().afi_safi()
+        prefixes = self._path_selection.get(family)
+        if prefixes is None:
+            return True
+        prefix = nlri.prefix_index()
+        selection = prefixes.get(prefix)
+        if selection is None:
+            return False
+        index = self._make_index(nlri)
+        selection.candidates.pop(index, None)
+        advertised = index in selection.advertised
+        selection.advertised.discard(index)
+        if selection.empty():
+            del prefixes[prefix]
+        return advertised
+
+    def _promote_paths(
+        self, changed: dict[tuple[FamilyTuple, bytes], None], paths_limit: dict[FamilyTuple, int], grouped: bool
+    ) -> Iterator[UpdateCollection]:
+        # A promoted path is an announce like any other, so it batches like one.
+        promoted: dict[tuple[bytes, FamilyTuple], list[Route]] = {}
+        for family, prefix in changed:
+            selection = self._path_selection.get(family, {}).get(prefix)
+            if selection is None:
+                continue
+            limit = paths_limit.get(family, 0)
+            # Held paths only, in the order they were offered, since ExaBGP has no view of
+            # which path is better. list() because a promoted one leaves the collection.
+            for index, route in list(selection.candidates.items()):
+                if limit and len(selection.advertised) >= limit:
+                    break
+                del selection.candidates[index]
+                selection.advertised.add(index)
+                # The counterpart of rib.paths_limit.withheld: the slot freed by a withdraw
+                # is what lets this one through, and both halves belong in the log.
+                log.debug(
+                    lazymsg(
+                        'rib.paths_limit.promoted family={family} prefix={prefix} limit={limit}',
+                        family=family,
+                        prefix=route.nlri,
+                        limit=limit,
+                    ),
+                    'rib',
+                )
+                promoted.setdefault((route.attributes.index(), family), []).append(route)
+
+        for (_, family), routes in promoted.items():
+            yield from self._announce_updates(routes, routes[0].attributes, family, grouped)
+
+    def _generate_updates(
+        self, grouped: bool, paths_limit: dict[FamilyTuple, int]
+    ) -> Iterator[UpdateCollection | RouteRefresh]:
+        # Everything this batch will send is taken and replaced in one go, because the RIB
+        # keeps accepting while we generate: add_to_rib, del_from_rib and resend() all run
+        # from the reactor between two of our yields, and would otherwise change the
+        # collections we are walking.
         attr_af_nlri = self._new_attr_af_nlri
         new_attr = self._new_attribute
-
-        # Get ready to accept more data
+        latest_routes = self._new_nlri
         self._new_nlri = {}
         self._new_attr_af_nlri = {}
         self._new_attribute = {}
-
-        # Snapshot and clear pending withdraws
         pending_withdraws = self._pending_withdraws
         self._pending_withdraws = {}
-
-        # Snapshot and clear refresh state to prevent race conditions
-        # (resend() can be called during iteration and would modify these)
         refresh_families = self._refresh_families
         refresh_routes = self._refresh_routes
         self._refresh_families = set()
         self._refresh_routes = []
 
-        # Route Refresh first - must be sent before new updates because
-        # the flush command semantically precedes any new announces that
-        # arrived in the same reactor cycle
-
+        # Route refresh goes first: the flush which asked for it comes, to the operator,
+        # before anything they announced afterwards in the same reactor cycle.
         for afi, safi in refresh_families:
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.start)
-
         for route in refresh_routes:
-            yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes)
-
+            limit = paths_limit.get(route.nlri.family().afi_safi(), 0)
+            if self._admit_path(route, limit, refresh=True):
+                yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes)
         for afi, safi in refresh_families:
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.end)
 
-        # Generate Updates for pending withdraws before announces
-        # (preserves semantic ordering)
-        for family, nlri_attr_dict in pending_withdraws.items():
-            if not nlri_attr_dict:
-                continue
-            for nlri, attrs in nlri_attr_dict.values():
-                # Use new 3-arg signature: (announces, withdraws, attributes)
-                # Withdraws include attributes for proper BGP encoding (e.g., FlowSpec rate-limit)
-                yield UpdateCollection([], [nlri], attrs)
+        # Withdraws go before announces, which preserves the order the operator asked for
+        # and is what lets a withdrawal free a slot an announce in this same batch can use.
+        # A dict rather than a set: which prefixes get backfilled is decided here, and the
+        # order they are offered in should be the order they were withdrawn, not the order
+        # their hashes happen to fall in.
+        changed: dict[tuple[FamilyTuple, bytes], None] = {}
+        for family, withdrawals in pending_withdraws.items():
+            for nlri, attributes in withdrawals.values():
+                if family in self._path_selection:
+                    changed[(family, nlri.prefix_index())] = None
+                if self._withdraw_path(nlri):
+                    yield UpdateCollection([], [nlri], attributes)
 
-        prefix_counts: dict[FamilyTuple, dict[bytes, int]] = {}
-
-        # Generate Updates for announces from _new_attr_af_nlri
-        # All routes here are announces (add_to_rib only handles announces)
         for attr_index, per_family in attr_af_nlri.items():
             for family, routes in per_family.items():
-                if not routes:
-                    continue
+                limit = paths_limit.get(family, 0)
+                # The same NLRI queued twice leaves an entry under each attribute set, and
+                # del_from_rib only unhooks the one filed under the attributes _new_nlri
+                # points at. The other entry outlived the withdraw and was announced after
+                # it, leaving the peer holding a route we had just withdrawn.
+                #
+                # An NLRI still in _new_nlri has not been withdrawn, whichever attributes
+                # it now carries, so announcing every queued attribute set for it stands:
+                # that is a redefinition, and both go out as they always have.
+                # The gate reads one structure to decide the fate of another, so say what
+                # has to hold between them: an announce leaves _new_nlri only by being
+                # withdrawn, never by being dropped.
+                assert all(
+                    index in latest_routes or route.nlri.index() in pending_withdraws.get(family, {})
+                    for index, route in routes.items()
+                ), 'a queued announce left _new_nlri without a withdraw'
+                selected = [
+                    route
+                    for index, route in routes.items()
+                    if index in latest_routes and self._admit_path(route, limit)
+                ]
+                if selected:
+                    yield from self._announce_updates(selected, new_attr[attr_index], family, grouped)
+        # Only prefixes touched by withdrawals need candidate promotion.
+        yield from self._promote_paths(changed, paths_limit, grouped)
 
-                attributes = new_attr[attr_index]
-
-                limit = paths_limit.get(family, 0) if paths_limit else 0
-
-                if limit > 0:
-                    family_counts = prefix_counts.setdefault(family, {})
-                    filtered: dict[bytes, 'Route'] = {}
-                    for route_index, route in routes.items():
-                        pkey = route.nlri.prefix_index()
-                        count = family_counts.get(pkey, 0)
-                        if count < limit:
-                            filtered[route_index] = route
-                            family_counts[pkey] = count + 1
-                        else:
-                            log.debug(
-                                lazymsg(
-                                    'rib.paths_limit.exceeded family={f} prefix={p} limit={l}',
-                                    f=family,
-                                    p=route.nlri,
-                                    l=limit,
-                                ),
-                                'rib',
-                            )
-                    routes = filtered
-                    if not routes:
-                        continue
-
-                # All routes are announces - create RoutedNLRI (nlri + nexthop)
-                announces = [RoutedNLRI(route.nlri, route.nexthop) for route in routes.values()]
-
-                if family == (AFI.ipv4, SAFI.unicast) and grouped:
-                    yield UpdateCollection(announces, [], attributes)
-                    continue
-
-                if family == (AFI.ipv4, SAFI.mcast_vpn) and grouped:
-                    yield UpdateCollection(announces, [], attributes)
-                    continue
-                if family == (AFI.ipv6, SAFI.mcast_vpn) and grouped:
-                    yield UpdateCollection(announces, [], attributes)
-                    continue
-
-                # Non-grouped: one Update per NLRI
-                for route in routes.values():
-                    yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], attributes)
+    @staticmethod
+    def _announce_updates(
+        routes: list[Route], attributes: AttributeCollection, family: FamilyTuple, grouped: bool
+    ) -> Iterator[UpdateCollection]:
+        if grouped and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv4, SAFI.mcast_vpn), (AFI.ipv6, SAFI.mcast_vpn)):
+            announces = [RoutedNLRI(route.nlri, route.nexthop) for route in routes]
+            yield UpdateCollection(announces, [], attributes)
+            return
+        for route in routes:
+            yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], attributes)

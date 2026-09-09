@@ -350,6 +350,9 @@ class ParseAddPath(ParseFamily):
                 raise ValueError(f'paths-limit must be a number, got: {limit_str}')
             if not (1 <= limit <= 65535):
                 raise ValueError(f'paths-limit must be 1-65535, got {limit}')
+            trailing_token = tokeniser()
+            if trailing_token:
+                raise ValueError(f'unexpected token after paths-limit value: {trailing_token}')
         elif next_token:
             raise ValueError(
                 f'unexpected token after {afi_name} {safi_name}: {next_token}\n  Did you mean: {afi_name} {safi_name} limit {next_token}'

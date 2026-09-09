@@ -21,8 +21,15 @@ from exabgp.util.types import Buffer
 @Capability.register()
 class PathsLimit(Capability, dict[FamilyTuple, int]):
     ID = Capability.CODE.PATHS_LIMIT
+    ENTRY_SIZE = 5
+    # A capability's length is a single byte, and the draft tells a speaker to describe all
+    # of its families in one instance of the capability. So the most a conforming peer can
+    # ask for is what one instance holds. ExaBGP still merges a repeated capability, being
+    # lenient about how the tuples arrive, but not about how many there can be.
+    MAX_FAMILIES = 0xFF // ENTRY_SIZE
 
     def __init__(self, families: dict[FamilyTuple, int] | None = None) -> None:
+        self._ignored_families: set[FamilyTuple] = set()
         if families:
             for (afi, safi), limit in families.items():
                 self.set_limit(afi, safi, limit)
@@ -52,21 +59,34 @@ class PathsLimit(Capability, dict[FamilyTuple, int]):
         assert isinstance(instance, PathsLimit)
         if len(instance) > 0:
             log.debug(lazymsg('capability.paths-limit.duplicate action=merge'), 'parser')
-        while data:
-            if len(data) < 5:
-                raise Notify(2, 0, f'PATHS-LIMIT capability truncated: need 5 bytes per entry, got {len(data)}')
-            afi = AFI.unpack_afi(data[:2])
-            safi = SAFI.unpack_safi(data[2:3])
-            limit = (data[3] << 8) | data[4]
-            data = data[5:]
-            if limit == 0:
-                continue
-            if (afi, safi) in instance:
+        view = memoryview(data)
+        while view:
+            if len(view) < cls.ENTRY_SIZE:
+                raise Notify(
+                    2, 0, f'PATHS-LIMIT capability truncated: need {cls.ENTRY_SIZE} bytes per entry, got {len(view)}'
+                )
+            afi = AFI.unpack_afi(view[:2])
+            safi = SAFI.unpack_safi(view[2:3])
+            limit = (view[3] << 8) | view[4]
+            view = view[cls.ENTRY_SIZE :]
+            family = (afi, safi)
+            if family in instance or family in instance._ignored_families:
 
                 def _log_dup(afi: AFI = afi, safi: SAFI = safi) -> str:
                     return f'duplicate AFI/SAFI in PathsLimit capability: {afi}/{safi}'
 
                 log.debug(_log_dup, 'parser')
+                continue
+            if len(instance) + len(instance._ignored_families) >= cls.MAX_FAMILIES:
+                # Well formed, only longer than a conforming speaker can have meant. RFC 5492
+                # has us ignore capability content we cannot use rather than answer with a
+                # NOTIFICATION, and a session is worth more than the families past this point.
+                # A truncated entry is a different matter and still ends the session, above.
+                log.debug(lazymsg('capability.paths-limit.capacity families={n}', n=cls.MAX_FAMILIES), 'parser')
+                break
+            if limit == 0:
+                # Even an ignored zero tuple wins over later tuples in this OPEN.
+                instance._ignored_families.add(family)
                 continue
             instance.set_limit(afi, safi, limit)
         return instance

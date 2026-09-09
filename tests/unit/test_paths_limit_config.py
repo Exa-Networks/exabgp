@@ -128,6 +128,10 @@ class TestAddPathLimitValidation:
         ok, _ = _parse(_neighbor('ipv4 unicast 10;'))
         assert not ok
 
+    def test_trailing_token_after_limit_rejected(self) -> None:
+        ok, _ = _parse(_neighbor('ipv4 unicast limit 10 garbage;'))
+        assert not ok
+
 
 class TestAddPathLimitFamilyNegotiation:
     def test_unnegotiated_family_skipped(self) -> None:

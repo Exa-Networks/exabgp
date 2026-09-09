@@ -267,7 +267,7 @@ async def test_reset_during_updates():
     _ = next(updates_gen)
 
     # Simulate connection drop -> reset() is called
-    rib.reset()  # Calls updates() internally
+    rib.reset()
 
     # Original generator should handle this gracefully
     # Either: continue yielding, stop cleanly, or raise appropriate exception

@@ -48,11 +48,11 @@ class UpdateHandler(MessageHandler):
             return
         prefix_index = nlri.prefix_index()
         path_index = nlri.index()
-        count = ctx.neighbor.rib.incoming.track_path(family, prefix_index, path_index)
+        count = ctx.neighbor.rib.incoming.track_path(family, prefix_index, path_index, limit)
         if count > limit and ctx.neighbor.rib.incoming.mark_warned(family, prefix_index):
             log.warning(
                 lazymsg(
-                    'rib.paths_limit.peer_violation peer={peer} family={family} prefix={prefix} limit={limit} received={count}',
+                    'rib.paths_limit.peer_violation peer={peer} family={family} prefix={prefix} limit={limit} received={count} tracking=capped',
                     peer=ctx.neighbor.session.peer_address,
                     family=family,
                     prefix=nlri,

@@ -220,6 +220,9 @@ class TestSameNLRISequences:
 
         Note: This differs from adding same NLRI with SAME attributes twice,
         which would be deduplicated.
+
+        qa/encoding/conf-l2vpn.ci and conf-flow-redirect.ci hold this same
+        behaviour on the wire.
         """
         rib = create_rib()
 
@@ -236,6 +239,49 @@ class TestSameNLRISequences:
         # Peer will keep the last one received
         assert announces == 2, 'Both announces sent (different attribute sets)'
         assert withdraws == 0, 'No withdraws'
+
+    def test_announce_replaced_then_withdrawn_sends_no_stale_announce(self):
+        """Announce, re-announce with other attributes, then withdraw: only the withdraw
+
+        del_from_rib only unhooks the announce filed under the attribute set of the
+        route currently in _new_nlri. An earlier entry for the same NLRI under a
+        different attribute set stayed queued and was announced after the withdraw,
+        leaving the peer holding a route ExaBGP had just withdrawn.
+        """
+        rib = create_rib()
+
+        change1 = create_change_with_origin('10.0.0.0/24', Origin.IGP)
+        change2 = create_change_with_origin('10.0.0.0/24', Origin.EGP)
+
+        rib.add_to_rib(change1)
+        rib.add_to_rib(change2)
+        rib.del_from_rib(change2)
+
+        updates = consume_updates(rib)
+        announces, withdraws = count_announces_withdraws(updates)
+
+        assert announces == 0, 'The replaced announce must not survive the withdraw'
+        assert withdraws == 1, 'Only the withdraw is sent'
+
+    def test_withdraw_carries_the_attributes_it_was_given(self):
+        """A withdraw is emitted with its attributes, not with an empty set.
+
+        Most families do not need them, which is why dropping them goes unnoticed, but
+        FlowSpec encodes part of the action in the attributes and a withdraw without them
+        does not describe the rule being removed.
+        """
+        rib = create_rib()
+        change = create_change_with_origin('10.0.0.0/24', Origin.EGP)
+        rib.add_to_rib(change)
+        consume_updates(rib)
+
+        rib.del_from_rib(change)
+        updates = consume_updates(rib)
+
+        withdrawing = [update for update in updates if update.withdraws]
+        assert len(withdrawing) == 1
+        assert withdrawing[0].attributes is not None, 'the withdraw lost its attributes'
+        assert withdrawing[0].attributes.index() == change.attributes.index()
 
     def test_withdraw_then_withdraw_same_nlri(self):
         """Withdraw same NLRI twice: only one withdraw sent"""

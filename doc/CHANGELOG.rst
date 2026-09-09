@@ -9,6 +9,23 @@ Version 6.0.0:
    expect four octets ahead of every MUP NLRI which ExaBGP never sent, and mis-framed
    the rest of the NLRI field. RFC 7911 section 3. MUP returns to the ADD-PATH families
    when its encoder writes a path identifier.
+ * Fix: An NLRI queued twice under different attributes and then withdrawn no longer sends
+   the replaced announce after the withdraw, which left the peer holding a route ExaBGP had
+   just withdrawn. Announcing the same NLRI twice without withdrawing it still sends both,
+   as before.
+ * Fix: Complete PATHS-LIMIT enforcement for existing ADD-PATH families.
+   - Keep peer limits across update batches, replacements, and route refreshes.
+   - Retain suppressed candidates and promote them when an advertised path is withdrawn.
+   - Group promoted paths the way announced ones are grouped.
+   - Log a path the peer's limit keeps off the wire, and log it again when it is promoted.
+   - Ignore later duplicate capability tuples even when the first limit is zero.
+   - Reject trailing tokens after an ADD-PATH family limit.
+   - Ignore, without closing the session, PATHS-LIMIT families past what one capability can carry.
+   - Bound the incoming audit at one path per prefix beyond the advertised limit.
+   - Keep only the withheld paths for enforcement, so a limit no longer makes
+     "adj-rib-out false" replay and withdraw routes for that family alone.
+   - Backfill the prefixes a batch of withdrawals touched in the order they were
+     withdrawn, rather than in the order their hashes fell.
  * Compatibility: BGP-LS ip-reachability-tlv JSON key changed from "ip" to "prefix"
    - Now includes prefix length in CIDR notation (e.g., "10.134.2.88/30")
  * Compatibility: BGP-LS Adjacency SID JSON key changed from "sr-adj" to "sr-adjs"

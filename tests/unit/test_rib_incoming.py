@@ -577,45 +577,66 @@ class TestCacheEdgeCases:
 class TestIncomingRIBPathAuditTrack:
     """Tests for IncomingRIB.track_path()."""
 
+    def test_track_path_saturates_one_past_the_limit(self):
+        """A peer cannot grow the audit set past the point which settles the question."""
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+
+        for index in range(20):
+            count = rib.track_path(family, b'pfx1', b'path%d' % index, 2)
+
+        assert count == 3, 'the count saturates one past the limit'
+        assert len(rib._path_sets[family][b'pfx1']) == 3, 'and so does the memory behind it'
+
+    def test_track_path_saturated_still_counts_a_known_path(self):
+        """A repeat of a path we already hold is not a new path, saturated or not."""
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+
+        for index in range(10):
+            rib.track_path(family, b'pfx1', b'path%d' % index, 1)
+
+        assert rib.track_path(family, b'pfx1', b'path0', 1) == 2
+
     def test_track_path_first_call_returns_one(self):
         rib = create_incoming_rib()
         family = (AFI.ipv4, SAFI.unicast)
-        assert rib.track_path(family, b'pfx1', b'path1') == 1
+        assert rib.track_path(family, b'pfx1', b'path1', 10) == 1
 
     def test_track_path_distinct_paths_increment(self):
         rib = create_incoming_rib()
         family = (AFI.ipv4, SAFI.unicast)
-        assert rib.track_path(family, b'pfx1', b'path1') == 1
-        assert rib.track_path(family, b'pfx1', b'path2') == 2
-        assert rib.track_path(family, b'pfx1', b'path3') == 3
+        assert rib.track_path(family, b'pfx1', b'path1', 10) == 1
+        assert rib.track_path(family, b'pfx1', b'path2', 10) == 2
+        assert rib.track_path(family, b'pfx1', b'path3', 10) == 3
 
     def test_track_path_same_path_id_no_inflate(self):
         rib = create_incoming_rib()
         family = (AFI.ipv4, SAFI.unicast)
-        assert rib.track_path(family, b'pfx1', b'path1') == 1
-        assert rib.track_path(family, b'pfx1', b'path1') == 1
+        assert rib.track_path(family, b'pfx1', b'path1', 10) == 1
+        assert rib.track_path(family, b'pfx1', b'path1', 10) == 1
 
     def test_track_path_different_prefixes_independent(self):
         rib = create_incoming_rib()
         family = (AFI.ipv4, SAFI.unicast)
-        rib.track_path(family, b'pfx1', b'path1')
-        rib.track_path(family, b'pfx1', b'path2')
-        assert rib.track_path(family, b'pfx2', b'path1') == 1
+        rib.track_path(family, b'pfx1', b'path1', 10)
+        rib.track_path(family, b'pfx1', b'path2', 10)
+        assert rib.track_path(family, b'pfx2', b'path1', 10) == 1
 
     def test_track_path_different_families_independent(self):
         families = {(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)}
         rib = IncomingRIB(cache=True, families=families)
         f4 = (AFI.ipv4, SAFI.unicast)
         f6 = (AFI.ipv6, SAFI.unicast)
-        rib.track_path(f4, b'pfx1', b'path1')
-        rib.track_path(f4, b'pfx1', b'path2')
-        assert rib.track_path(f6, b'pfx1', b'path1') == 1
+        rib.track_path(f4, b'pfx1', b'path1', 10)
+        rib.track_path(f4, b'pfx1', b'path2', 10)
+        assert rib.track_path(f6, b'pfx1', b'path1', 10) == 1
 
     def test_track_path_works_when_cache_disabled(self):
         rib = IncomingRIB(cache=False, families={(AFI.ipv4, SAFI.unicast)})
         family = (AFI.ipv4, SAFI.unicast)
-        assert rib.track_path(family, b'pfx1', b'path1') == 1
-        assert rib.track_path(family, b'pfx1', b'path2') == 2
+        assert rib.track_path(family, b'pfx1', b'path1', 10) == 1
+        assert rib.track_path(family, b'pfx1', b'path2', 10) == 2
 
 
 class TestIncomingRIBPathAuditUntrack:
@@ -624,17 +645,38 @@ class TestIncomingRIBPathAuditUntrack:
     def test_untrack_path_decrements(self):
         rib = create_incoming_rib()
         family = (AFI.ipv4, SAFI.unicast)
-        rib.track_path(family, b'pfx1', b'path1')
-        rib.track_path(family, b'pfx1', b'path2')
+        rib.track_path(family, b'pfx1', b'path1', 10)
+        rib.track_path(family, b'pfx1', b'path2', 10)
         rib.untrack_path(family, b'pfx1', b'path2')
         assert rib.path_count(family, b'pfx1') == 1
 
     def test_untrack_path_removes_when_last(self):
         rib = create_incoming_rib()
         family = (AFI.ipv4, SAFI.unicast)
-        rib.track_path(family, b'pfx1', b'path1')
+        rib.track_path(family, b'pfx1', b'path1', 10)
         rib.untrack_path(family, b'pfx1', b'path1')
         assert rib.path_count(family, b'pfx1') == 0
+
+    def test_untrack_path_releases_the_prefix_entry(self):
+        """An emptied prefix has to leave _path_sets, not sit there holding an empty set.
+
+        path_count() reads len() of that set, so it says 0 either way. The audit is bounded
+        per prefix, which is worth nothing if the number of prefixes is not: a peer which
+        announces and withdraws prefixes in turn would grow this dict for the session.
+        """
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        rib.track_path(family, b'pfx1', b'path1', 10)
+        rib.track_path(family, b'pfx2', b'path1', 10)
+        rib.untrack_path(family, b'pfx1', b'path1')
+
+        assert b'pfx1' not in rib._path_sets[family], 'the emptied prefix still holds a slot'
+        assert b'pfx2' in rib._path_sets[family], 'and the one still in use is untouched'
+
+    def test_path_count_of_an_unknown_family_is_zero(self):
+        rib = create_incoming_rib()
+        rib.track_path((AFI.ipv4, SAFI.unicast), b'pfx1', b'path1', 10)
+        assert rib.path_count((AFI.ipv6, SAFI.unicast), b'pfx1') == 0
 
     def test_untrack_path_missing_family_safe(self):
         rib = create_incoming_rib()
@@ -643,13 +685,13 @@ class TestIncomingRIBPathAuditUntrack:
     def test_untrack_path_missing_prefix_safe(self):
         rib = create_incoming_rib()
         family = (AFI.ipv4, SAFI.unicast)
-        rib.track_path(family, b'pfx1', b'path1')
+        rib.track_path(family, b'pfx1', b'path1', 10)
         rib.untrack_path(family, b'pfx_unknown', b'path1')
 
     def test_untrack_path_clears_warned_flag_at_zero(self):
         rib = create_incoming_rib()
         family = (AFI.ipv4, SAFI.unicast)
-        rib.track_path(family, b'pfx1', b'path1')
+        rib.track_path(family, b'pfx1', b'path1', 10)
         rib.mark_warned(family, b'pfx1')
         rib.untrack_path(family, b'pfx1', b'path1')
         assert rib.mark_warned(family, b'pfx1') is True
@@ -657,8 +699,8 @@ class TestIncomingRIBPathAuditUntrack:
     def test_untrack_path_keeps_warned_flag_above_zero(self):
         rib = create_incoming_rib()
         family = (AFI.ipv4, SAFI.unicast)
-        rib.track_path(family, b'pfx1', b'path1')
-        rib.track_path(family, b'pfx1', b'path2')
+        rib.track_path(family, b'pfx1', b'path1', 10)
+        rib.track_path(family, b'pfx1', b'path2', 10)
         rib.mark_warned(family, b'pfx1')
         rib.untrack_path(family, b'pfx1', b'path1')
         assert rib.mark_warned(family, b'pfx1') is False
@@ -695,10 +737,10 @@ class TestIncomingRIBPathAuditClear:
     def test_clear_resets_path_counts(self):
         rib = create_incoming_rib()
         family = (AFI.ipv4, SAFI.unicast)
-        rib.track_path(family, b'pfx1', b'path1')
-        rib.track_path(family, b'pfx1', b'path2')
+        rib.track_path(family, b'pfx1', b'path1', 10)
+        rib.track_path(family, b'pfx1', b'path2', 10)
         rib.clear()
-        assert rib.track_path(family, b'pfx1', b'path1') == 1
+        assert rib.track_path(family, b'pfx1', b'path1', 10) == 1
 
     def test_clear_resets_warned(self):
         rib = create_incoming_rib()

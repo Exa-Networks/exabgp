@@ -126,6 +126,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-paths-limit.md` | 2026-09-09 | PATHS-LIMIT capability (#1218): enforcement across batches, bounded audit, wire test |
 | `done-attribute-cache-per-session.md` | 2026-08-22 | Attribute cache was process-wide and ignored negotiated state; scoped to the session |
 | `done-read-cancellation-desync.md` | 2026-08-22 | A read cancelled by the 100ms deadline lost its bytes and desynced the session |
 | `done-code-docstrings.md` | 2025-12-16 | Module/class docstrings for 15 core files |

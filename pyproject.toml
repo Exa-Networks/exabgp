@@ -211,6 +211,12 @@ paths_to_mutate = [
 	# defend them or merely run them.
 	"src/exabgp/reactor/listener.py",
 	"src/exabgp/reactor/loop.py",
+	# what the peer is actually sent. PATHS-LIMIT decides how many paths per prefix leave
+	# this box and how many the peer may send us, so these two hold an operator's promise
+	# to a peer rather than a decoder's reading of one, and the same question applies:
+	# do the tests defend the selection, or only walk it.
+	"src/exabgp/rib/outgoing.py",
+	"src/exabgp/rib/incoming.py",
 ]
 tests_dir = ["tests/unit/", "tests/fuzz/"]
 do_not_mutate = ["*/vendoring/*"]
