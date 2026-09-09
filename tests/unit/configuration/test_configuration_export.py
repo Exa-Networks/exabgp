@@ -28,6 +28,24 @@ def _normalize_repo_paths(text: str) -> str:
     return _REPO_PATH_RE.sub('<REPO>', text)
 
 
+@pytest.fixture(autouse=True)
+def without_a_cli_transport(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Export the configuration the way the fixtures were recorded: with no CLI transport.
+
+    ParseProcess.add_api reads exabgp_cli_pipe and exabgp_cli_socket straight from the
+    environment and, when either is set, adds a process whose name carries a fresh uuid.
+    No recorded fixture can match that name, so the comparison below turns on whether
+    something earlier in the session exported one of those variables. Several do, as a side
+    effect of production code rather than of the tests: server.py and unixsocket.py set
+    exabgp_cli_socket on the process while working out where to listen.
+
+    This is the same portability concern the path normalisation above answers, and it is
+    what stops `./qa/bin/mutmut_run` collecting a baseline.
+    """
+    monkeypatch.delenv('exabgp_cli_pipe', raising=False)
+    monkeypatch.delenv('exabgp_cli_socket', raising=False)
+
+
 def get_config_fixtures() -> list[tuple[Path, Path]]:
     """Find all config files with matching expected JSON."""
     fixtures = []
