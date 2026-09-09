@@ -84,8 +84,9 @@ class MUP(NLRI):
         return 'mup:{}:'.format(self.SHORT_NAME.lower())
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
-        # RFC 7911 ADD-PATH is possible for MUP but not yet implemented
-        # TODO: implement addpath support when negotiated.addpath.send(self.afi, SAFI.mup)
+        # RFC 7911 ADD-PATH is possible for MUP but not yet implemented, so MUP is kept out
+        # of Capabilities._ADD_PATH: a peer must never be told to expect a path identifier
+        # this returns without. Add it back to that list in the same change as the encoder.
         # Wire format: [arch_type(1)][route_type(2)][length(1)][payload] - _packed includes header
         return self._packed
 

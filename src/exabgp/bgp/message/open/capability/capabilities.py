@@ -80,8 +80,11 @@ class Capabilities(dict[int, Capability]):
         (AFI.ipv6, SAFI.nlri_mpls),
         (AFI.ipv4, SAFI.mpls_vpn),
         (AFI.ipv6, SAFI.mpls_vpn),
-        (AFI.ipv4, SAFI.mup),
-        (AFI.ipv6, SAFI.mup),
+        # MUP is not here, though it was: MUP.pack_nlri writes no path identifier, so
+        # offering ADD-PATH for it told a peer to expect four octets ahead of every MUP
+        # NLRI which were never sent, and the peer mis-framed the rest of the field.
+        # tests/unit/test_addpath_families_encode_path_id.py holds this list to what the
+        # encoders can actually do; put MUP back the day it packs a path identifier.
     ]
 
     _NEXTHOP: ClassVar[list[tuple[AFI, SAFI, AFI]]] = [

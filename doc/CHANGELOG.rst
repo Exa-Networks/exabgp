@@ -4,6 +4,11 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: ADD-PATH is no longer offered for "ipv4 mup" and "ipv6 mup". MUP NLRI carry no
+   path identifier on the wire, so a peer which accepted ADD-PATH for MUP was told to
+   expect four octets ahead of every MUP NLRI which ExaBGP never sent, and mis-framed
+   the rest of the NLRI field. RFC 7911 section 3. MUP returns to the ADD-PATH families
+   when its encoder writes a path identifier.
  * Compatibility: BGP-LS ip-reachability-tlv JSON key changed from "ip" to "prefix"
    - Now includes prefix length in CIDR notation (e.g., "10.134.2.88/30")
  * Compatibility: BGP-LS Adjacency SID JSON key changed from "sr-adj" to "sr-adjs"
