@@ -30,6 +30,12 @@ Version 5.0.13:
    longer than its address family allows, a labelled route with no
    bottom of stack bit, an MCAST-VPN route announcing more than it
    carries, and a VPN next hop whose route distinguisher is not zero.
+ * Fix: ADD-PATH is no longer offered for "ipv4 mup" and "ipv6 mup".
+   MUP NLRI carry no path identifier on the wire, so a peer which
+   accepted ADD-PATH for MUP was told to expect four octets ahead of
+   every MUP NLRI which ExaBGP never sent, and mis-framed the rest of
+   the NLRI field (RFC 7911 section 3). MUP returns to the ADD-PATH
+   families when its encoder writes a path identifier.
  * Fix: comparing two attributes ignored their content, so any two
    BGP-LS attributes, prefix SIDs, or large or extended community sets
    compared as equal. ExaBGP does not use that comparison itself, so
