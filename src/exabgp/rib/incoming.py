@@ -35,6 +35,17 @@ class IncomingRIB(Cache):
     def reset(self) -> None:
         pass
 
+    def auditing(self) -> bool:
+        """True when a path has been tracked, so a withdrawal has something to release.
+
+        Announces are tracked only while the audit is enabled, withdrawals release what
+        was tracked whether it still is or not: turning the audit off has to drain the
+        state rather than strand it. Asking what is held answers both, and costs a dict
+        truthiness test instead of packing a prefix and a path index for every withdrawn
+        NLRI on a neighbour which never audited anything.
+        """
+        return bool(self._path_sets)
+
     def track_path(self, family: FamilyTuple, prefix_index: bytes, path_index: bytes, limit: int) -> int:
         """Record one received path and return how many this prefix now holds.
 

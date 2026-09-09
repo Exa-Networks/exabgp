@@ -65,8 +65,11 @@ class UpdateHandler(MessageHandler):
     def _audit_withdraw(self, ctx: PeerContext, nlri: NLRI) -> None:
         if not ctx.negotiated.advertised_paths_limit:
             return
+        incoming = ctx.neighbor.rib.incoming
+        if not incoming.auditing():
+            return
         family = nlri.family().afi_safi()
-        ctx.neighbor.rib.incoming.untrack_path(family, nlri.prefix_index(), nlri.index())
+        incoming.untrack_path(family, nlri.prefix_index(), nlri.index())
 
     def handle(self, ctx: PeerContext, message: Message) -> Generator[Message, None, None]:
         """Process the UPDATE message synchronously.

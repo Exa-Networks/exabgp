@@ -657,6 +657,27 @@ class TestIncomingRIBPathAuditUntrack:
         rib.untrack_path(family, b'pfx1', b'path1')
         assert rib.path_count(family, b'pfx1') == 0
 
+    def test_auditing_reports_whether_anything_is_held(self):
+        """The withdraw path asks this before packing a prefix and a path index.
+
+        Nothing tracked means the audit never ran, so there is nothing to release and the
+        work can be skipped. Something tracked has to be released whether the audit is
+        still enabled or not, or turning it off mid-session would strand the state instead
+        of draining it.
+        """
+        rib = create_incoming_rib()
+        family = (AFI.ipv4, SAFI.unicast)
+        assert rib.auditing() is False, 'nothing has been tracked yet'
+
+        rib.track_path(family, b'pfx1', b'path1', 10)
+        assert rib.auditing() is True
+
+        rib.untrack_path(family, b'pfx1', b'path1')
+        assert rib.auditing() is True, 'the family stays known, so a later withdraw still drains'
+
+        rib.clear()
+        assert rib.auditing() is False, 'a new session starts with nothing held'
+
     def test_untrack_path_releases_the_prefix_entry(self):
         """An emptied prefix has to leave _path_sets, not sit there holding an empty set.
 
