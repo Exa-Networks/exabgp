@@ -7,9 +7,6 @@
 **Created:** 2026-09-02
 **Last Updated:** 2026-09-13
 
-The requirements above the **Superseded draft** section are authoritative. The original draft is
-retained verbatim there for decision history, not as additional implementation instructions.
-
 ## Overview and conformance boundary
 
 RFC 9234 defines:
@@ -136,10 +133,65 @@ our provider. Keep the block form rather than a bare `role provider;` because `s
 - With a role configured, require explicit `local-as` and `peer-as` and reject equal ASNs.
   Reject `auto` for either ASN in this configuration. Automatic ASNs remain supported when no role
   is configured; their unresolved values must not masquerade as evidence that a session is eBGP.
-- Changing the local role or strict mode on reload must reestablish the session so that the new
-  OPEN and validation policy take effect. Changing `otc` alone changes no negotiated state, so it
-  must take effect on reload without dropping the session, and the routes it affects must be
-  reevaluated and resent or withdrawn accordingly.
+- Two of the four settings restart a session and two do not, and `Neighbor.__eq__()` is what
+  decides: `Reactor.reload()` (`src/exabgp/reactor/loop.py:618`) calls `reestablish()` on any
+  neighbour that compares unequal. Compare `local` and `strict` there and deliberately not `otc`
+  or `add-meta`, which would otherwise bounce BGP to change a JSON key.
+
+  | Setting | In `Neighbor.__eq__()` | Reload behaviour |
+  |---------|------------------------|------------------|
+  | `local` | yes | changes the Role capability in the OPEN, so the session must restart |
+  | `strict` | yes | changes whether a missing remote Role rejects the session, decided at OPEN |
+  | `otc` | no | live, applied through `reconfigure()` |
+  | `add-meta` | no | live, affects only what the API prints for the next received UPDATE |
+
+  Reachable is not the same as effective. `reconfigure()` replaces `Peer.neighbor` with the new
+  object (`src/exabgp/reactor/peer/peer.py:356`), but the live `Negotiated` still holds the
+  neighbour it was built with (`negotiated.py:46`), so a serializer reading
+  `negotiated.neighbor.session.role_otc` would read the pre-reload value for the life of the
+  session. Give `Negotiated` an explicit `role_otc` field and update it where the peer loop
+  consumes `_neighbor` (`peer.py:728`). Do not repoint `Negotiated.neighbor` instead: that would
+  also make `outgoing_ttl` and `link_local_prefer` follow a reload, a separate behaviour change
+  owed its own test and changelog line. `local` and `strict` need none of this, since a restart
+  rebuilds `Negotiated`.
+- How far a live `otc` change reaches depends on where a route came from, and the answer is a
+  constraint rather than new retained state. Keeping full routes so that any of them could be
+  re-marked would rebuild the adj-rib-out an operator running `adj-rib-out false` explicitly
+  turned off, at the same memory cost, which is not a trade this feature makes on their behalf.
+
+  | Route source | adj-rib-out cache on | cache off |
+  |--------------|----------------------|-----------|
+  | configured | the explicit replay covers it; `in_cache()` would otherwise swallow the requeue, since a changed `otc` does not change the route's own attributes | requeued by every reload, so it goes out again and picks up the new marking with nothing added |
+  | API | the explicit replay covers it | nothing retains it, so it keeps the marking it was sent with |
+
+  Configured routes are requeued because the configuration parse rebuilds the neighbour before
+  the reactor compares any peer: `ParseNeighbor.post()` calls `make_rib()` and then
+  `_init_neighbor()` (`src/exabgp/configuration/neighbor/__init__.py:710`), which walks
+  `neighbor.routes` and calls `add_to_rib_watchdog()` on each (`:605` to `:610`), reaching
+  `add_to_rib()` (`rib/outgoing.py:233`). `add_to_rib()` drops a route only when `in_cache()`
+  says it is already known (`:332`), and `in_cache()` returns False immediately when caching is
+  off (`rib/cache.py:67`).
+
+  The explicit replay is the caching-enabled path: when `otc` changes on reload the peer marks a
+  replay pending and, in the block that consumes `_neighbor`, replays its adj-rib-out through
+  `OutgoingRIB.resend()` (`outgoing.py:167`), which walks `cached_routes()`. With caching off
+  `Cache.update_cache()` has stored nothing, so API routes cannot be replayed at all. Log that
+  once at warning level, naming what is excluded rather than claiming nothing is sent, so the
+  operator is not left comparing their configuration against a packet capture:
+
+  ```
+  role.otc.reload.partial reason=no-adj-rib-out-cache neighbor=192.0.2.1 otc=send
+                          applies-to=configured-routes,new-announcements
+                          excludes=routes-announced-through-the-api
+  ```
+
+  This is a property of the RIB rather than of OTC: `announce route-refresh` on a neighbour with
+  `adj-rib-out false` has the same reach today. Document it that way.
+- A live `otc` change moves bytes, never eligibility, which bounds what it can break. Automatic
+  marking applies when advertising to a customer, a peer or an RS-client; egress procedure 2
+  refuses a route that already carries OTC towards a provider, a peer or an RS. Routes we
+  originate carry no OTC before marking, and marking happens at serialization, after eligibility
+  has been decided on the route's own attribute. Turning the knob on cannot create a new refusal.
 - No `export` token: the core has no source-neighbour provenance for API-originated announcements.
   This does not imply that all helper-originated announcements were locally originated in the
   routing-policy sense.
@@ -257,26 +309,73 @@ announce route 10.0.0.0/24 next-hop 192.0.2.254 otc 65001  # marked with a liter
 
 Two mechanisms implement axis 3, both of them already present in the codebase:
 
-- `self` and `<role-name>` follow the `next-hop self` precedent. The parser produces an unresolved
-  sentinel carrying what was asserted; `Neighbor.resolve_self()` resolves it against
-  `session.local_as` and validates the role name where one was given. That hook already runs on every
-  static and API path that puts a route into the RIB, it runs after template inheritance, which is
-  where this plan already places neighbour validation, and `OutgoingRIB` already refuses an
-  unresolved `next-hop self` sentinel, so extend that guard to cover an unresolved OTC. Once resolved
-  the attribute is an ordinary numeric OTC: JSON, text, `index()` and attribute caching are
-  unchanged, and the ze parity vectors hold.
+- `self` and `<role-name>` borrow the `next-hop self` parser precedent and then diverge from it on
+  where the value is settled. The parser produces an unresolved sentinel carrying what was
+  asserted. `Neighbor.resolve_self()` validates the role name against `role { local ... }` and
+  rejects a disagreement; that check needs no ASN, and it belongs early, where the operator sees
+  it. The **value** is resolved by the serializer against `Negotiated.local_as`, not at parse
+  time.
+
+  Resolving it early would be wrong. `local-as auto` is supported on a neighbour with no role
+  block, `otc self` is documented to work on one too, and `Session.local_as` stays at `ASN(0)`
+  until OPEN settles the real number (`src/exabgp/bgp/neighbor/session.py:51`). An early
+  resolution would stamp `AS0` on exactly that combination. `next-hop self` does not have the
+  problem because a local address is known at configuration time, and an ASN under `auto` is not.
+  Automatic marking already resolves at the serializer, so this adds no mechanism.
+
+  Two consequences. The `OutgoingRIB` unresolved-sentinel guard stays as it is, covering
+  `next-hop self` only: an unresolved OTC sentinel is expected in the RIB and must not be refused
+  there. And `index()` sees the sentinel, because it is a rendered attribute, so a route with
+  `otc self` groups separately from the same route with an explicit ASN even when the two resolve
+  to the same number. That is right rather than merely tolerable, since they carry different
+  instructions, and it needs none of the identity machinery the `none` case needs below.
+  `exabgp encode` with no session cannot resolve `self` or a role name and says so; the numeric
+  form is what inline encoding and byte-exact tests use, and the ze parity vectors hold.
 - `none` is an internal pseudo-attribute alongside `INTERNAL_NAME`, `INTERNAL_SPLIT` and
   `INTERNAL_WATCHDOG`: in `AttributeCollection.INTERNAL`, `NO_GENERATION = True`, never packed. It
   travels with the route from the API command to the serializer, which is where the insertion
   decision is taken. Both collection renderers skip everything in `INTERNAL`, so a suppressed route
   reads like an ordinary unmarked one in `show adj-rib out` and in JSON, which is consistent with the
   other four and is why suppression logs at debug level with neighbour, family and prefix. Do not add
-  a rendering path for it without deciding to make the other four visible too. Invisible in
-  rendering is not the same as invisible in identity: `index()` is derived from the same
-  renderer and must still separate a suppressed route from an unsuppressed one. See
-  **Third review** below for the change that requires.
+  a rendering path for it without deciding to make the other four visible too.
 - Every form reaches static configuration for free, since static routes and `announce route` share
   `ParseStaticRoute.known`. Accept them there rather than special-casing the API.
+
+Invisible in rendering is not the same as invisible in identity, and `none` has to be part of
+route identity even though it never renders. `AttributeCollection.index()` builds its key from
+`_generate_text()`, which skips every code in `INTERNAL`, so a suppression marker would be
+invisible to the key while deciding what goes on the wire. That is the one combination the
+internal set was never asked to hold: `name`, `split`, `watchdog`, `withdraw`, `discard` and
+`treat-as-withdraw` are process decisions about a route, and suppression is a decision about its
+bytes. Two call sites turn that blindness into wrong output:
+
+- `Cache.in_cache()` (`src/exabgp/rib/cache.py:73`) accepts a route as a duplicate when
+  `cached.attributes.index()` equals the new one. Announcing a prefix, then announcing the same
+  prefix with `otc none`, is a suppression-only replacement: the two indexes match, the
+  announcement is swallowed, and the peer is never told. Zero updates, no log, no error.
+- `OutgoingRIB._update_rib()` (`src/exabgp/rib/outgoing.py:364`) keys `_new_attr_af_nlri` by
+  `route.attributes.index()` and keeps one collection per key in `_new_attribute`, which
+  `_announce_updates()` packs once for every route in the bucket. Two prefixes whose attributes
+  differ only in suppression land in the same bucket, and the collection that survives is
+  whichever was written last, so both get marked or neither does according to insertion order.
+  Path-limit promotion (`outgoing.py:480`) groups on the same key and has the same exposure.
+
+The answer is a policy-aware identity, not a visible attribute:
+
+- Add `AttributeCollection.INTERNAL_IDENTITY`, the internal codes that change what is packed.
+  `INTERNAL_OTC_NONE` is its only member.
+- `index()` appends a marker for each member present, after the existing text and next-hop part.
+  Nothing is appended when no member is present, so every attribute set in the tree keeps the
+  index bytes it has today and existing vectors stay byte-identical. Assert that in a test rather
+  than assuming it.
+- `_generate_text()`, `_generate_json()`, `json()`, `__repr__` and `representation` are untouched,
+  so a suppressed route still reads like an unmarked one, as decided above.
+- `sameValuesAs()` already compares internal codes, so `AttributeCollection.__eq__` and
+  `Route.__eq__` were never affected. Only the derived key is.
+
+`INTERNAL_SPLIT` changes what is emitted as well and is equally invisible to `index()`. It
+predates this work and adding it to the identity set would move existing index bytes, so it is
+recorded here and left alone.
 
 Normal decoded attribute JSON contains a numeric ASN:
 
@@ -408,15 +507,51 @@ Specify it as its own change rather than a line in the file table:
   family, prefix and ADD-PATH identifier with an OTC that the previous announcement did not carry,
   on a session facing a provider, an RS or a peer. That is the only transition to implement.
 - **Where the state lives.** A per-neighbour set of advertised route indexes inside `OutgoingRIB`,
-  written where the route is handed to the update generator and cleared by the same reset that
-  clears the rest of the outgoing state on disconnect. Reuse `Route.index()` so that the ADD-PATH
-  identifier is part of the key, and reuse `_path_selection` bookkeeping where a path limit already
-  populates it rather than tracking the same fact twice. Indexes are all it holds: it answers
-  "was this prefix advertised?" and is explicitly not a replay source, which **Third review**
-  below settles.
+  written where the route is handed to the update generator. Reuse `Route.index()` so that the
+  ADD-PATH identifier is part of the key, and reuse `_path_selection` bookkeeping where a path
+  limit already populates it rather than tracking the same fact twice. Indexes are all it holds:
+  it answers "was this prefix advertised?", and it is not a replay source. It does not need to
+  be one, because the only transition above arrives as a replacement announcement which carries
+  the NLRI a withdrawal needs.
+- **When it is emptied.** When the session it describes ends, and at no other time. That is not
+  what `reset()` means today. Teardown reaches `reset()` as intended, through `Peer._reset()`
+  (`src/exabgp/reactor/peer/peer.py:270`), `neighbor.reset_rib()` and `RIB.reset()`
+  (`src/exabgp/rib/__init__.py:97`). A configuration reload reaches it as well: reload calls
+  `make_rib()`, which calls `RIB.enable()`, which reuses the cached `OutgoingRIB` to preserve
+  state and then calls `outgoing.clear()` when `adj_rib_out` is false (`rib/__init__.py:80`, and
+  the same branch in `__init__` at line 52), and `clear()` is `clear_cache()` plus `reset()`.
+  A neighbour running `adj-rib-out false` therefore keeps its `OutgoingRIB` across a reload and
+  has its tracking wiped: announce a route, reload, then replace it with an announcement carrying
+  OTC on a provider-facing session, and the replacement is refused while nothing remembers the
+  prefix was advertised, so no withdrawal goes out and the peer keeps a route we have decided we
+  must not give it.
+
+  Add `OutgoingRIB.session_reset()`, which clears the advertised set and then does everything
+  `reset()` does. `RIB.reset()` calls it instead of `outgoing.reset()`, and `Peer._reset()` is
+  the only caller of `RIB.reset()`, so that path stays disconnect-only. `clear()` keeps calling
+  plain `reset()`, so a reload drops queues and cache while the record of what the peer already
+  holds survives.
+
+  `self._path_selection = {}` moves out of `reset()` into `session_reset()` with it
+  (`outgoing.py:110`). It is the same kind of record: where a family has a negotiated path limit
+  it is what says which paths were advertised, and protecting only the new set would leave
+  limited families losing theirs on every reload. That also fixes a bug which predates this work.
+  With `limit 1`, advertising path A, reloading, then announcing path B admits B because
+  `selection.advertised` is empty again and the limit counts from zero, and the peer ends up
+  holding two paths for a prefix it was promised one of. Two things make preservation safe:
+  `RIB.enable()` calls `delete_cached_family()` before `clear()`, which already prunes
+  `_path_selection` for families no longer configured (`outgoing.py:119`), and a path-limit
+  change is a capability change, so `Neighbor.__eq__` compares it through `self.capability ==
+  other.capability` and the session restarts, reaching `session_reset()` anyway. A limit never
+  changes under a surviving `_path_selection`.
+
+  `reset()` also advances `_session_epoch`, which aborts an `updates()` generator mid-batch, so a
+  reload with `adj-rib-out false` abandons an in-flight batch as though the session had gone.
+  That predates this work and is left alone, but a test written for the reload case should not
+  be surprised by it.
 - **What bounds it.** One entry per advertised route, so it is bounded by the adj-rib-out the
   operator already asked for. Say so in the code with a named constant or an assertion tying its
-  size to the route count, per Tiger Style, and clear it on disconnect with everything else.
+  size to the route count, per Tiger Style.
 - **What stays separate.** Desired-route state and advertised state must remain distinguishable:
   a blocked route is still desired, still listed by `show adj-rib out`, and becomes advertisable
   again the moment a replacement carries no OTC.
@@ -470,13 +605,43 @@ Make the family/announcement context explicit at the serializer boundary. Partit
 collections before selecting output attributes; do not reuse one automatically stamped attribute
 blob for both in-scope and out-of-scope families.
 
-Choosing attributes per family is not sufficient on its own. `UpdateCollection.messages()` packs
-`attr` exactly once and reuses that one blob for the IPv4 block and every MP family in the message,
-and its IPv4 block holds unicast **and** multicast NLRI in a single list. Stamping OTC for unicast
-would therefore stamp the IPv4 multicast NLRI travelling with it. The fix is to split the IPv4
-announcement block by SAFI before packing, which changes where message boundaries fall: expect
-byte-exact functional encoding expectations to move for any test that mixes IPv4 unicast and
-multicast in one UPDATE, and update those expectations as part of the change rather than after it. Preserve sorted attribute encoding, correct
+Choosing attributes per family is not sufficient on its own, because the families cannot be told
+apart on the wire as things stand. `UpdateCollection.messages()` puts IPv4 unicast and IPv4
+multicast in one list (`src/exabgp/bgp/message/update/collection.py:327` and `:355`) and packs
+both into the legacy NLRI field, which carries no AFI or SAFI at all. Probed directly:
+
+```
+unicast   bytes 180a0000 family (ipv4, unicast)
+multicast bytes 180a0000 family (ipv4, multicast)
+identical on the wire: True
+```
+
+A receiver reads that field as IPv4 unicast, because RFC 4271 gives it no other meaning, so an
+IPv4 multicast route announced through it arrives as unicast and for the same prefix can
+overwrite a correctly marked unicast route. Splitting the block by SAFI before packing would
+produce two messages with identical bytes and fix nothing: the distinction was never on the wire.
+
+Put the families where the wire says which is which, which is MP_REACH_NLRI and MP_UNREACH_NLRI
+(RFC 4760). Narrow the `is_v4` test at `collection.py:327` and `:355` to `SAFI.unicast`, and IPv4
+multicast falls through to the MP branches, which already key on `nlri.family().afi_safi()`.
+Announces qualify at line 334 because an IPv4 multicast route carries a defined next-hop AFI, and
+withdraws reach `mp_withdraws` at line 362 with no further change. The legacy block becomes
+unicast-only by construction, so no per-SAFI split is needed there at all. Expect byte-exact
+functional encoding expectations to move for any test announcing IPv4 multicast, and update them
+as part of the change rather than after it.
+
+This is a pre-existing defect rather than one this feature introduces: ExaBGP advertises IPv4
+multicast as IPv4 unicast today whenever the family is negotiated. It deserves its own commit,
+its own tests and its own issue, and it has to land before the egress work, which cannot enforce
+a family scope the wire does not carry. Tests must assert the decoded family, not only whether
+OTC is present.
+
+`messages()` does also pack `attr` once and reuse it across the legacy block and every MP family,
+but the RIB never hands it a multi-family collection: `_generate_updates()` keys on
+`(attr_index, family)` and `_announce_updates()` builds one `UpdateCollection` per family
+(`src/exabgp/rib/outgoing.py:530` and `:558`). The shared blob therefore only matters for
+collections built outside the RIB, such as an API request supplying attributes and NLRI directly.
+Preserve sorted attribute encoding, correct
 message-size accounting and fragmentation after insertion. Keep ORIGIN/AS_PATH/LOCAL_PREF default
 callables unchanged unless their actual contract needs changing.
 
@@ -654,7 +819,9 @@ reading the API stream and neither has to translate between two vocabularies:
 ```
 update.otc.leak reason=invalid-otc neighbor=192.0.2.1 peer-role=customer peer-as=AS65002
                 expected-otc=none received-otc=AS65003 family="ipv4 unicast" prefix=10.0.0.0/24
-``` An operator reading the log should not need the JSON to know what was compared. No drop-mode knob.
+```
+
+An operator reading the log should not need the JSON to know what was compared. No drop-mode knob.
 Wire packet reports remain unchanged, while semantic API output continues to reflect existing
 RFC 7606 transformations.
 
@@ -715,7 +882,7 @@ parity. It is not an ExaBGP implementation prerequisite or permission to expand 
 | `src/exabgp/bgp/message/notification.py` | `(2, 11): 'Role Mismatch'` in `_str_subcode` |
 | `src/exabgp/bgp/neighbor/session.py` | `role`, `role_strict`, `role_otc` and `role_add_meta` fields beside the existing tcp-ao fields |
 | `src/exabgp/bgp/neighbor/settings.py` | the same four fields for settings conversion |
-| `src/exabgp/bgp/neighbor/neighbor.py` | ~~compare all four in outer `Neighbor.__eq__()`~~ SUPERSEDED by **Third review**: compare `local` and `strict` only, config dump |
+| `src/exabgp/bgp/neighbor/neighbor.py` | compare `local` and `strict` in outer `Neighbor.__eq__()` and deliberately not `otc` or `add-meta`, config dump |
 | `src/exabgp/configuration/role.py` (new) | neighbour subsection parser using existing Section patterns |
 | `src/exabgp/configuration/configuration.py` | parser registration and clear lifecycle |
 | `src/exabgp/configuration/neighbor/__init__.py` | schema, inherited settings mapping, explicit-AS and eBGP validation |
@@ -755,8 +922,9 @@ framing. Do not introduce a new diagnostic JSON feature under the assumption tha
 | File | Change |
 |------|--------|
 | `src/exabgp/rib/outgoing.py` | route eligibility, replacement withdrawals, advertised-state lifecycle, refresh/promotion integration before path-limit admission |
+| `src/exabgp/rib/__init__.py` | `RIB.reset()` calls the new session-scoped clear; `RIB.enable()` and `RIB.__init__()` keep calling `clear()`, which must preserve advertised state |
 | `src/exabgp/reactor/protocol.py` | pass session policy through both outbound update paths; classify ingress before API dispatch; respect roles in parsing fast-path decisions |
-| `src/exabgp/bgp/message/update/collection.py` | family-aware output partitioning/insertion context; bounded per-update leak metadata |
+| `src/exabgp/bgp/message/update/collection.py` | IPv4 multicast to MP_REACH/MP_UNREACH as its own landing; family-aware output partitioning/insertion context; bounded per-update leak metadata |
 | `src/exabgp/bgp/message/update/attribute/collection.py` | explicit non-mutating OTC insertion context, never route refusal in `skip` |
 | `src/exabgp/reactor/api/response/json.py` | annotation argument on `_nlri_to_json()`, leak reason on affected announced NLRI only |
 | `qa/encoding/*.conf`, `*.ci` | explicit OTC, automatic OTC under `role { local provider; }`, no automatic OTC under `role { local customer; }` |
@@ -778,6 +946,16 @@ Use existing unit and functional suites for observable boundary and state-transi
 No test should merely assert registry wiring or the presence of a source-code string.
 
 ### Session and configuration
+
+- A reload changing only `otc`, or only `add-meta`, leaves the session established and logs no
+  reestablishment. A reload changing `local` or `strict` restarts it.
+- A reload changing `otc` on an established session changes what the serializer marks, proving
+  the value is not snapshotted into `Negotiated` at OPEN time.
+- Reload changing `otc` with adj-rib-out caching enabled: previously advertised routes are sent
+  again with the new marking, whatever their source.
+- Reload changing `otc` with caching disabled, configured route: announced again with the new
+  marking. Same reload, API-announced route: not announced again, and the partial-reload warning
+  names the API as what it excludes.
 
 - All five capability values round-trip, including provider `0`; invalid lengths and unassigned
   values reject without Python exceptions.
@@ -837,6 +1015,17 @@ No test should merely assert registry wiring or the presence of a source-code st
   of whether automatic procedures apply to the NLRI family.
 - CLI round-trip:
   `./sbin/exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4 otc 65000" | ./sbin/exabgp decode`.
+- Announce a prefix, then announce the same prefix and next hop with `otc none`: the second
+  announcement reaches the peer as a real update instead of being swallowed as a duplicate, with
+  adj-rib-out caching both on and off.
+- Announce two prefixes with otherwise identical attributes, one `otc none` and one not, in both
+  insertion orders: exactly one carries OTC on the wire in both runs.
+- An attribute set holding no identity-bearing internal code produces the same `index()` bytes as
+  before the change.
+- `otc self` on a neighbour with `local-as auto`: the OPEN settles the ASN and the announcement
+  carries that ASN, never `AS0`. Same for `otc <role-name>`, and a name disagreeing with the
+  configured role is still refused at configuration time, before any session exists.
+- `exabgp encode` with `otc self` and no session: a clear error rather than `AS0`.
 
 ### Egress and family boundaries
 
@@ -884,6 +1073,18 @@ No test should merely assert registry wiring or the presence of a source-code st
   family's output attributes.
 - Functional encoding includes explicit OTC, automatic OTC with `role { local provider; }`,
   and no automatic OTC with `role { local customer; }`.
+- Announce IPv4 multicast: the UPDATE carries MP_REACH_NLRI and decodes as `(ipv4, multicast)`,
+  not as unicast. Withdraw it: the UPDATE carries MP_UNREACH_NLRI and decodes the same way.
+- Announce the same prefix as IPv4 unicast and IPv4 multicast on a marking session: the unicast
+  route carries OTC, the multicast route does not, and neither decodes as the other.
+- A session teardown empties the advertised set and `_path_selection`; a reload does not.
+- With a negotiated path limit and `adj-rib-out false`: advertise a path, reload, then announce a
+  replacement carrying OTC on a provider-facing session, and check the original is withdrawn.
+- With `limit 1` and `adj-rib-out false`: advertise path A, reload, announce path B, and check
+  that A stays advertised and B is held as a candidate, with nothing announced and nothing
+  withdrawn by the reload. Today the reload empties `selection.advertised`, so B is admitted as
+  though the slot were free and the peer ends up holding both.
+- A reload that drops a family still clears that family's `_path_selection`.
 
 ### Ingress reporting and observation boundary
 
@@ -927,140 +1128,72 @@ No test should merely assert registry wiring or the presence of a source-code st
 Run `./qa/bin/test_everything` before declaring the implementation complete. This document revision
 is not an implementation test result.
 
-## Decisions, review record and resume point
+## Decisions and resume point
 
-**2026-09-11 specification review:** corrected attribute skipping versus route refusal, mixed-family
-scope, static/announce parser registration, integer JSON rendering, suppressed malformed diagnostics,
-local-role fixture direction, and notification/reload/automatic-AS lifecycle requirements.
+The configuration is organised around three questions which do not have to agree with each other:
+whether OTC is negotiated with the peer, whether it is added to what we send that peer, and what a
+given route does regardless. The route-level token takes exactly one of `none`, `self`,
+`<role-name>` or `<asn>`, so an explicit value and `none` cannot combine.
 
-The review exercised actual decoder/serializer/JSON behavior in temporary in-memory probes:
-mixed native IPv4 announcements and IPv6 multicast withdrawals coexist; parsed collections no
-longer contain MP attributes; attribute skipping leaves announcements intact; internal
-TreatAsWithdraw JSON is empty. These observations invalidate the corresponding original draft
-assumptions. No production implementation was changed by that review.
+`otc` in a route takes a role name as well as an ASN, and the role name is the documented form. All
+five names resolve to the neighbour's local ASN, because a static route is only ever egress-marked
+and egress procedure 1 always stamps the local ASN, so the name asserts the relationship rather than
+selecting a value, and it is rejected when it disagrees with the configured role. The numeric form
+stays for inline `exabgp encode`, which builds a neighbour with no role, and for tests asserting
+exact bytes.
 
-**2026-09-11 implementation-readiness review:** a second pass read the spec against the code it
-names. The RFC content held up. The egress table matches RFC 9234 rules 4 and 5 on all five pairs,
-the ingress table matches rules 1 to 3, and both shared vectors decode correctly. Capability code 9
-and attribute code 35 are free, every file reference resolves, and the claims about `skip` leaving
-NLRI intact, about `_negotiated()` riding on OPEN and UPDATE, and about the
-`Negotiated.validate()` to `Protocol.validate_open()` notification path are all true of the code
-today. What changed:
-
-| Change | Why |
-|--------|-----|
-| Configuration token `import` becomes `local` | needing a sentence of documentation to explain a keyword is the argument against the keyword; there is no configuration compatibility with ze to protect |
-| `peer-role` becomes `peer_role` | the negotiated envelope is snake_case throughout; per-NLRI keys stay hyphenated |
-| `notification.py` added to Phase 1 | `_str_subcode` stops at `(2, 10)`, so role notifications would have logged `unknow reason` |
-| Unassigned role values 5-255 rejected with `(2, 11)` | previously left without a subcode |
-| Advertised-route state given its own design section | `_admit_path()` returns before touching `_path_selection` with no path limit and the cache is optional, so the eligible-to-blocked withdrawal needed state that does not exist; the only live trigger is a replacement announcement adding OTC |
-| IPv4 unicast/multicast serializer split called out | `messages()` packs one `attr` blob and holds both SAFIs in one IPv4 list, so per-family attribute choice alone would stamp multicast NLRI; splitting moves message boundaries and test expectations |
-| Compact JSON annotation resolved | `_nlri_to_json()` renders a compact INET NLRI as a bare string, so the promised per-NLRI key had nowhere to live; leaked prefixes now promote to the object form, matching what `INET.json()` already does for NLRI carrying extra content |
-| ASNs named as `Negotiated.local_as` and `Negotiated.peer_as` | "the local ASN represented on that session" left room to stamp AS_TRANS; `local_as` is `sent_open.asn`, the real ASN |
-| Receive fast-path cost stated as accepted | a configured role defeats the no-parse path, which is a real throughput cost on full-table sessions and should be a decision rather than a side effect |
-| Role fields moved from a new `bgp/neighbor/role.py` to `session.py` and `settings.py` | tcp-ao is the precedent for the parser and for field placement; two fields do not earn a module |
-| Confederation sentence replaced | it named a requirement no implementer could act on, and ExaBGP models no confederation membership |
-| Test artifacts, `validator.py`, `doc/` and `CHANGELOG` added to the tables | acceptance demanded functional encoding tests that no phase owned |
-| Precedents named inline | `MEDValidator`, `Capability.unpack()`'s `instance` argument, `known` versus `schema`, `ASN.from_string()` bounds |
-
-Acceptance scenarios were extended to cover each of these. No production code was changed.
-
-**2026-09-12 configuration review:** two syntax decisions from Thomas.
-
-`otc` in a route now takes a role name as well as an ASN, and the role name is the documented form.
-All five names resolve to the neighbour's `local-as`, because a static route is only ever
-egress-marked and rule 4 always stamps the local ASN, so the name asserts the relationship rather
-than selecting a value and is rejected when it disagrees with the configured role. Resolution reuses
-the `next-hop self` machinery: an unresolved sentinel from the parser, resolved in
-`Neighbor.resolve_self()`, guarded at the RIB boundary by the check that already exists there. The
-numeric form stays for inline `exabgp encode`, which builds a neighbour with no role, and for tests
-asserting exact bytes.
-
-The `role {}` block gained `otc send|disable`, default `send`, gating automatic outbound insertion
-only. It took four attempts to name, and the working version is the one that stopped inventing and
-copied what the language already does: `add-path` expresses a two-direction capability as
-`disable|receive|send|send/receive` on one token, and OTC is a two-direction capability. The
-discarded attempts are worth recording because each failed for a different reason. `add-otc
-enable|disable` did not say which direction it governed, and RFC 9234 marks in both. `otc-egress
-add|none` imported `egress`, a word this configuration language does not use anywhere, and dressed a
-two-state choice as an enum. `outgoing-otc enable|disable` used the language's own
+The session knob is `otc send|disable`, copying what the language already does: `add-path` expresses
+a two-direction capability as `disable|receive|send|send/receive` on one token, and OTC is a
+two-direction capability. Three earlier names were discarded and each failed differently, which is
+worth keeping. `add-otc enable|disable` did not say which direction it governed, and RFC 9234 marks
+in both. `otc-egress add|none` imported `egress`, a word this configuration language uses nowhere,
+and dressed a two-state choice as an enum. `outgoing-otc enable|disable` used the language's own
 `outgoing-ttl`/`incoming-ttl` vocabulary but still hardcoded one direction into a name, so ingress
 marking would have arrived as a second knob.
 
-Checking the RFC rather than the code settled what the value may be: an OTC must be *"preserved
-unchanged"* once set and the attribute is four octets, so replacing and appending are not behaviours
-an operator may choose. What is left is which directions to mark in, which is exactly what
-`add-path` encodes. Rule 5 refusals, ingress leak reporting and explicitly configured OTC are all unaffected by it,
-so turning off marking cannot quietly turn off leak prevention. Disabling it diverges from a MUST and
-is logged once per session. Unlike `local` and `strict` it negotiates nothing, so it reloads without
-dropping the session.
+The RFC settles what the value may be. An OTC must be *"preserved unchanged"* once set and the
+attribute is four octets, so replacing and appending are not behaviours an operator may choose. What
+is left is which directions to mark in, which is what `add-path` encodes.
 
-Thomas then corrected the shape of the whole thing. There are three independent questions, not one
-setting with exceptions: whether OTC is negotiated with the peer, whether we add it to what we send
-that peer, and what a given route does regardless. The OTC section is now organised around those
-three axes, and the route-level token takes exactly one of `none`, `self`, `<role-name>` or `<asn>`,
-so the "an explicit value together with `none` is a parse error" rule written earlier was wrong and
-is gone: they are values of one token and cannot combine.
+`add-meta enable|disable`, default enable, covers the reporting side in the same shape. It gates the
+`meta` group and nothing else, so a deployment whose helpers ignore the group can drop it without
+losing the warning log, the refusals or the detection. It has no per-route override, because the
+group is ExaBGP's reporting rather than something a route asks for, and it covers the whole group so
+anything later added there needs no second knob.
 
-`self` came back as a result. It and `<role-name>` both resolve to the neighbour's `local-as` and
-differ in what they assert rather than what they encode: `self` says only that the value comes from
-the session and works on a neighbour with no role block, `<role-name>` asserts the relationship and
-is checked against the configured role. All three value forms force the attribute on even when the
-session knob is disabled, and `none` forces it off even when the knob is enabled.
+The leak annotation lives under `meta` because the entry's other keys are what the peer put on the
+wire and a leak report is ExaBGP's conclusion about them. `meta.route-leak` is self-sufficient by
+design: it describes the issue without the entry around it, the attribute block, the envelope or the
+RFC, which is what justifies repeating the peer ASN and the received OTC inside it. The attribute
+block is untouched and keeps reporting the OTC whether or not the route was flagged.
 
-Forcing it on does not disarm rule 5: a route carrying OTC by any spelling is still refused towards
-a provider, an RS or a peer, and `otc none` is how such a route is sent.
+It carries one fact per field. `reason` is the fault, `invalid-otc`; `peer-role` and `peer-as` are
+who sent it; `expected-otc` and `received-otc` are the check, each key naming the field it concerns.
+Two earlier shapes failed the test that an engineer who has never read RFC 9234 must understand the
+report on its own. `otc-from-customer` classified what arrived without saying what was wrong.
+`invalid-otc-from-customer` fixed that but welded two concepts into one string, so a consumer
+grouping by fault had to parse it apart and the reason set grew with every role. An AS is written
+`AS65003` rather than a bare `65003` that could as easily have been a timestamp, and nothing in the
+object changes type between events. The warning log emits the identical sentence from the same
+formatter, so the two cannot drift. This replaces ze's three strings, a deliberate divergence:
+parity covers the wire, the role names and the concept, not a diagnostic vocabulary that packed
+three facts into one field.
 
-The leak annotation went through three shapes before landing. A bare reason string, then an object
-of codes and ASNs, and finally the object below, after Thomas pointed out that both earlier shapes
-only make sense to someone who already knows RFC 9234. The test is now explicit in the plan: an
-engineer who has never heard of OTC sees `route-leak` in a log and the annotation must answer, on
-its own, what arrived, what our relationship with the peer is and why the combination is wrong.
+Several decisions are about ExaBGP rather than the RFC, and they are the larger part of the work.
+`(2, 11)` is missing from `Notification._str_subcode`. There is no advertised-route state to
+withdraw from when no path limit is configured. `AttributeCollection.index()` is derived from a
+renderer that skips `INTERNAL`, so a suppression marker needs an identity of its own. `Neighbor.__eq__`
+decides what a reload restarts, so only the two settings carried in the OPEN belong in it.
+`OutgoingRIB.reset()` is reached by a reload as well as a teardown, so what the peer has been told
+needs a lifetime of its own. IPv4 unicast and multicast are indistinguishable on the wire today.
+And `local-as auto` means an OTC value cannot be resolved before OPEN. Each is settled above, in the
+section it belongs to.
 
-`role { add-meta enable|disable; }`, default enable, covers the reporting side in the same shape:
-it gates the `meta` group in the API output and nothing else, so a deployment whose helpers ignore
-the group can drop it without losing the warning log, the refusals or the detection itself. It has
-no per-route override, because the group is ExaBGP's reporting rather than something a route asks
-for, and it covers the whole group so anything later added there needs no second knob.
+Note for review: `AttributeCollection` skips everything in `INTERNAL` in both renderers, so a route
+suppressed with `none` is indistinguishable from an unmarked one in `show adj-rib out` and in JSON,
+and a debug log is the only trace. Making it visible means deciding to make `name`, `split`,
+`watchdog` and `withdraw` visible too, which is out of scope here.
 
-It also moved under a `meta` object on the announcement entry, because the entry's other keys are
-what the peer put on the wire and a leak report is ExaBGP's conclusion about them, not another wire
-field. `meta.route-leak` is self-sufficient by design: it describes the issue without the entry
-around it, the attribute block, the envelope or the RFC, which is what justifies repeating the peer
-ASN and the received OTC inside it. The attribute block itself is untouched and keeps reporting the
-OTC whether or not the route was flagged. It settled on one fact per field: `reason` is the fault, `invalid-otc`; `peer-role` and
-`peer-as` are who sent it; `expected-otc` and `received-otc` are the check, each key naming the field it
-concerns so nothing is left to inference. `otc-from-customer` classified what arrived without saying
-what was wrong, and `invalid-otc-from-customer` fixed that but welded two concepts into one string,
-so a consumer grouping by fault had to parse it apart and the reason set grew with every role.
-`expected-otc` and `received-otc` carry the comparison the classifier made, and both
-say what they are: `expected-otc` is a rule, `none` or `peer-as`, and `received-otc` is an AS written
-`AS65003` rather than a bare `65003` that could as easily have been a timestamp. Expected-otc none,
-received-otc AS65003 is legible without the RFC, and nothing in the object changes type between
-events. The warning log emits the identical sentence from
-the same formatter, so the two cannot drift. `peer-as` was dropped: the envelope already carries the
-peer ASN into `peer-as`, which is always present so that an entry read on its own still identifies
-its peer. This replaces ze's three strings, which is a
-deliberate divergence: parity covers the wire, the role names and the concept, not a diagnostic
-vocabulary that packed three facts into one field. Note for review:
-`AttributeCollection` skips everything in `INTERNAL` in both renderers, so a route suppressed with
-`none` is indistinguishable from an unmarked one in `show adj-rib out` and in JSON, and a debug log
-is the only trace. Making it visible means deciding to make `name`, `split`, `watchdog` and
-`withdraw` visible too, which is out of scope here.
-
-**2026-09-13 third review:** an independent pass ran in-memory probes against the resolved
-specification and found three design gaps, all reproduced in the code. `index()` is derived from the
-renderer that skips `INTERNAL`, so `otc none` was invisible to deduplication and to attribute
-grouping: a suppression-only replacement produced no update at all, and two prefixes with opposite
-suppression shared one packed attribute set whose winner depended on insertion order. Comparing all
-four role settings in `Neighbor.__eq__()` would have made every `otc` or `add-meta` change restart
-the session, because `Reactor.reload()` reestablishes on any inequality, contradicting the
-acceptance criteria. And the advertised-index set cannot resend anything, which matters once `otc`
-reloads live, because with adj-rib-out caching off nothing retains the routes to replay. The
-resolutions are a policy-aware `index()` that leaves rendering and existing index bytes untouched, a
-two-way split of the role settings into restart and live, and an explicit constraint on how far a
-live `otc` change reaches, with a warning log where it stops. See **Third review** below. No
-production code was changed.
 
 **Settled scope:** retain ze's role names and leak reasons, but not its configuration token; no
 export filter; strict disabled by default; explicit ASNs for role-enabled sessions; no
@@ -1068,162 +1201,25 @@ shared-attribute mutation; route-level refusal with withdrawal transitions; per-
 annotation; no new malformed diagnostic; no ingress marking. The last decision is an explicit
 partial-conformance boundary with helper responsibilities.
 
-**Progress:** specification corrections incorporated, including the third review's identity,
-reload-scope and retained-state resolutions; implementation and implementation tests remain
-unstarted. **Failures:** no implementation test failures recorded; the review's first hand-built
-probe omitted the attribute payload and was corrected before the reported observations.
+**Progress:** the specification is settled; implementation and implementation tests remain
+unstarted. **Failures:** no implementation test failures recorded.
 **Blockers:** none for ExaBGP implementation; ze parity validation remains separate repository work.
 
-**Specification verification:** both active JSON examples parse with numeric OTC and per-NLRI leak
-scope; all 26 full file references resolve or name explicitly planned files; the five-row egress
-table agrees with RFC 9234; Markdown fences and the history enclosure balance. The archived draft's
-SHA-256 matches the pre-edit file. No implementation suite was run for this documentation-only edit.
+**Specification verification:** every active JSON example parses; all full file references resolve
+or name explicitly planned files; the five-row egress table agrees with RFC 9234. The document is
+checked by parsing it as CommonMark and confirming the Implementation and Acceptance sections are
+headings outside any code block, not by counting fence delimiters: a closing fence carrying prose
+on the same line leaves the count even while swallowing half the document. No implementation suite
+was run for this documentation-only edit.
 
 **Resume point:** implement Phase 1 with its session/configuration acceptance scenarios, including
-the restart/live split of the four role settings, then Phase 2 with the `index()` identity change
-landed and tested before any OTC suppression is parsed,
-then the route-state transitions and semantic reporting in Phase 3. Phase 3 is not one change: the
-advertised-route state and the IPv4 serializer split are each large enough to land, test and review
-on their own before the leak reporting goes on top. Do not promote this plan to completed status on
+the restart/live split of the four role settings. Then Phase 2, with the `index()` identity change
+landed and tested before any OTC suppression is parsed. Then the IPv4 multicast move to
+MP_REACH/MP_UNREACH, which is a pre-existing defect owed its own commit, tests and issue, and has
+to land before the egress work. Then the route-state transitions and semantic reporting in Phase 3,
+which is not one change either: the advertised-route state is large enough to land, test and review
+on its own before the leak reporting goes on top. Do not promote this plan to completed status on
 the strength of documentation checks.
-
-## Third review - route identity, reload scope and retained state
-
-A third pass read the resolved specification against the code that has to carry it, with in-memory
-probes rather than assertions. Its three findings are design gaps rather than wording. All three
-reproduce in the tree today, and each changes what Phase 2 and Phase 3 have to build. The protocol
-tables were rechecked against RFC 9234 and hold. No production code was changed.
-
-### `otc none` has to be part of route identity
-
-`AttributeCollection.index()` builds its key from `_generate_text()`, and `_generate_text()` skips
-every code in `AttributeCollection.INTERNAL`. An `INTERNAL_OTC_NONE` that suppresses marking is
-therefore invisible to the key while it decides what goes on the wire. That is the one combination
-the internal set was never asked to hold: `name`, `split`, `watchdog`, `withdraw`, `discard` and
-`treat-as-withdraw` are process decisions about a route, and suppression is a decision about its
-bytes.
-
-Two call sites turn that blindness into wrong output:
-
-- `Cache.in_cache()` (`src/exabgp/rib/cache.py:73`) accepts a route as a duplicate when
-  `cached.attributes.index()` equals the new one. Announcing a prefix, then announcing the same
-  prefix with `otc none`, is a suppression-only replacement: the two indexes match, the
-  announcement is swallowed, and the peer is never told. Zero updates, no log, no error.
-- `OutgoingRIB._update_rib()` (`src/exabgp/rib/outgoing.py:364`) keys `_new_attr_af_nlri` by
-  `route.attributes.index()` and keeps one collection per key in `_new_attribute`, which
-  `_announce_updates()` packs once for every route in the bucket. Two prefixes whose attributes
-  differ only in suppression land in the same bucket, and the collection that survives is whichever
-  was written last. Both get marked or neither does, according to insertion order. Path-limit
-  promotion (`outgoing.py:480`) groups on the same key and has the same exposure.
-
-The answer is a policy-aware identity, not a visible attribute. Public rendering stays exactly as
-it is:
-
-- Add `AttributeCollection.INTERNAL_IDENTITY`, the internal codes that change what is packed.
-  `INTERNAL_OTC_NONE` is its only member.
-- `index()` appends a marker for each member present, after the existing text and next-hop part.
-  Nothing is appended when no member is present, so every attribute set in the tree keeps the
-  index bytes it has today and the existing vectors stay byte-identical. Assert that in a test
-  rather than assuming it.
-- `_generate_text()`, `_generate_json()`, `json()`, `__repr__` and `representation` are untouched.
-  A suppressed route still reads like an unmarked one in `show adj-rib out` and in JSON, which is
-  the decision already taken above.
-- `sameValuesAs()` already compares internal codes, so `AttributeCollection.__eq__` and
-  `Route.__eq__` were never wrong. Only the derived key was.
-
-Observation, not part of this change: `INTERNAL_SPLIT` changes what is emitted as well and is
-equally invisible to `index()`. It predates this feature and adding it to the identity set would
-move existing index bytes. Record it, do not fix it in passing.
-
-### Which role settings restart a session, and which do not
-
-Phase 1 said to compare all four role settings in `Neighbor.__eq__()`. `Reactor.reload()`
-(`src/exabgp/reactor/loop.py:618`) calls `reestablish()` on any neighbour that compares unequal, so
-that instruction makes `otc send` or `add-meta disable` tear down an established session. The
-acceptance criteria say the opposite, and for `add-meta` it would mean bouncing BGP to change a
-JSON key.
-
-| Setting | In `Neighbor.__eq__()` | Reload behaviour |
-|---------|------------------------|------------------|
-| `local` | yes | changes the Role capability in the OPEN, so the session must restart |
-| `strict` | yes | changes whether a missing remote Role rejects the session, decided at OPEN |
-| `otc` | no | live, applied through `reconfigure()`; its reach is the next sub-section |
-| `add-meta` | no | live, affects only what the API prints for the next received UPDATE |
-
-`reconfigure()` already replaces `Peer.neighbor` with the new object
-(`src/exabgp/reactor/peer/peer.py:356`), so the new values are reachable. They are not thereby
-effective: the live `Negotiated` holds the neighbour it was built with
-(`negotiated.py:46`), which is still the pre-reload object, so a serializer reading
-`negotiated.neighbor.session.role_otc` would read the old value for the life of the session. Give
-`Negotiated` an explicit `role_otc` field and update it where the peer loop consumes `_neighbor`
-(`peer.py:728`). Do not repoint `Negotiated.neighbor` instead: that would also make `outgoing_ttl`
-and `link_local_prefer` follow a reload, a separate behaviour change owed its own test and its own
-changelog line. `local` and `strict` need none of this, since a restart rebuilds `Negotiated`.
-
-### What a live `otc send` change can and cannot reach
-
-Making `otc` live raises what happens to routes already advertised under the old value. Nothing
-today resends them:
-
-- On an established session, reload reaches the RIB only through `replace_reload()`
-  (`peer.py:731`), which diffs configured routes by `Route.index()` and re-announces those whose
-  index is new. A configured route whose prefix did not change is neither re-announced nor
-  withdrawn, whatever changed around it.
-- API-announced routes are not in `neighbor.routes`, so `replace_reload()` never sees them.
-- The one replay mechanism, `OutgoingRIB.resend()` (`outgoing.py:167`), replays `cached_routes()`,
-  and `Cache.update_cache()` stores nothing when adj-rib-out caching is off. With caching disabled
-  there is no retained route to replay, for configured and API routes alike.
-
-Retaining full routes to close that gap rebuilds the adj-rib-out the operator explicitly turned
-off, at the same memory cost. That is not a trade this feature makes on their behalf. Constrain the
-behaviour and state it:
-
-- When `otc` changes on reload, the peer marks a replay pending and, in the block that consumes
-  `_neighbor`, replays its adj-rib-out through the existing `resend()` path. Routes go out again
-  with the new marking. That is the caching-enabled case and it is the documented one.
-- With adj-rib-out caching disabled there is nothing to replay. Already advertised routes keep the
-  marking they were sent with until they are re-announced or the session restarts. Log it once, at
-  warning level, at the reload that changed the value, naming the neighbour and the reason, so the
-  operator is not left comparing their configuration against a packet capture:
-
-```
-role.otc.reload.partial reason=no-adj-rib-out-cache neighbor=192.0.2.1 otc=send
-                        effect=applies-to-new-announcements-only
-```
-
-- This is a property of the RIB, not of OTC: `announce route-refresh` on a neighbour with
-  `adj-rib-out false` has the same reach today. Document it that way rather than as an OTC defect.
-
-This settles the advertised-route state in the Phase 3 sub-section above. It stays a set of indexes
-and is not a replay source: it answers "was this prefix advertised?" for the eligible-to-blocked
-withdrawal, and that transition arrives as a replacement announcement carrying the NLRI the
-withdrawal needs. An index alone reconstructs neither attributes nor a next hop, and nothing here
-asks it to.
-
-An `otc` change cannot create a new rule 5 refusal, which bounds the interaction. Automatic marking
-applies when advertising to a customer, a peer or an RS-client; rule 5 refuses a route that already
-carries OTC towards a provider, a peer or an RS. Routes we originate carry no OTC before marking,
-and marking happens at serialization, after eligibility has been decided on the route's own
-attribute. Turning the knob on changes bytes, not eligibility.
-
-### Acceptance scenarios added by this review
-
-- Announce a prefix, then announce the same prefix and next hop with `otc none`: the second
-  announcement reaches the peer as a real update instead of being swallowed as a duplicate, with
-  adj-rib-out caching both on and off.
-- Announce two prefixes with otherwise identical attributes, one `otc none` and one not, in both
-  insertion orders: exactly one carries OTC on the wire in both runs.
-- An attribute set holding no identity-bearing internal code produces the same `index()` bytes as
-  before the change.
-- Reload changing only `otc`, or only `add-meta`: the session stays established and no
-  reestablishment is logged.
-- Reload changing `local` or `strict`: the session restarts.
-- Reload changing `otc` with adj-rib-out caching enabled: previously advertised routes are sent
-  again with the new marking.
-- Reload changing `otc` with caching disabled: nothing is sent again, the partial-reload warning is
-  logged once, and routes announced after the reload carry the new marking.
-- A reload that changes `otc` on an established session changes what the serializer marks, proving
-  the value is not snapshotted into `Negotiated` at OPEN time.
 
 ## References
 
@@ -1231,391 +1227,11 @@ attribute. Turning the knob on changes bytes, not eligibility.
   OTC attribute, the ingress and egress procedures, and the preservation requirement
 - [RFC 7606 Section 3](https://www.rfc-editor.org/rfc/rfc7606.html#section-3) - treat-as-withdraw,
   and 3(g) for an attribute appearing more than once
+- [RFC 4760](https://www.rfc-editor.org/rfc/rfc4760.html) - MP_REACH_NLRI and MP_UNREACH_NLRI
+  carry the AFI/SAFI the legacy NLRI field does not
 - [Cloudflare BGP Role explanation](https://blog.cloudflare.com/rfc9234-bgp-role-model/)
 - ze `internal/component/bgp/plugins/role/` and `yang/ze-role.yang`
 - `src/exabgp/configuration/tcpao.py` - neighbour subsection pattern
 - `.claude/exabgp/REGISTRY_AND_EXTENSION_PATTERNS.md` - registries
 - `.claude/exabgp/WIRE_SEMANTIC_SEPARATION.md` - wire/semantic ownership
 - `.claude/exabgp/PACKED_BYTES_FIRST_PATTERN.md` - immutable OTC storage
-
-## Superseded draft
-
-The original 2026-09-02 draft below is historical. Its UPDATE-wide leak key, attribute-skip refusal,
-single-family inference, "free" parser/JSON integration and full-compatibility assumptions are
-superseded by the requirements above. Retaining it does not retain those requirements.
-
-<details>
-<summary>Original draft, retained verbatim for decision history</summary>
-
-# RFC 9234 - BGP Roles and Only-To-Customer (OTC)
-
-📋 **Status:** Planning
-**Issue:** [#1346](https://github.com/Exa-Networks/exabgp/issues/1346)
-**RFC:** [RFC 9234](https://www.rfc-editor.org/rfc/rfc9234) (Route Leak Prevention and Detection Using Roles in UPDATE and OPEN Messages)
-**Reference implementation:** ze, `internal/component/bgp/plugins/role/`
-**Created:** 2026-09-02
-
----
-
-## Overview
-
-RFC 9234 adds two wire objects and one set of procedures:
-
-| Piece | Wire | Purpose |
-|-------|------|---------|
-| BGP Role capability | OPEN capability code **9**, value 1 octet | declares the eBGP business relationship |
-| OTC attribute | path attribute code **35** (0x23), optional transitive, 4 octets (an ASN) | marks a route as "only to customer" |
-| Procedures | ingress set, egress set, leak detection | automatic leak prevention |
-
-Roles: `0 provider`, `1 rs`, `2 rs-client`, `3 customer`, `4 peer`.
-Valid pairs: provider/customer, customer/provider, rs/rs-client, rs-client/rs, peer/peer.
-Mismatch, multiple Role capabilities with differing values, or strict mode with no Role capability
-received, is `NOTIFICATION (2, 11)` Role Mismatch.
-
-The procedures are **eBGP only**, NOT RECOMMENDED inside a confederation, and Section 5 restricts
-them to **AFI 1 and 2 with SAFI 1 only**: "MUST NOT be applied to other address families by
-default".
-
----
-
-## Configuration
-
-Same shape and same keywords as ze, so an operator moving between the two types the same thing:
-
-```
-neighbor 192.0.2.1 {
-    local-as 65001;
-    peer-as 65002;
-
-    role {
-        import customer;   # provider | rs | rs-client | customer | peer
-        strict enable;     # refuse the session if the peer sends no Role capability
-    }
-}
-```
-
-`role {}` is a neighbour subsection, a sibling of `capability {}` and `tcp-ao {}`, not a leaf inside
-`capability {}`. That is where ze puts it (augmented onto the peer, the peer-in-group and the group)
-and it is the better place regardless: `import` is not a capability toggle, it changes how received
-and announced routes are treated.
-
-Deliberate differences from ze:
-
-- **No `export`.** ze's `export` names which destination peer roles may receive routes from this
-  peer. ExaBGP never re-advertises a route from one peer to another: every route it announces is
-  locally originated from configuration or from the API, so there is no `(source, destination)` pair
-  for the token to filter on. The same absence removes ze's Gao-Rexford `src-role` egress check.
-  Nothing about RFC 9234 conformance is lost, `export` is policy layered on top of the RFC.
-- **`strict enable|disable`,** not ze's YANG `true|false`. ExaBGP spells booleans
-  `enable`/`disable` everywhere else and the configuration must stay self-consistent.
-- `import` keeps its name even without `export` to pair with. It is the RFC's own framing (the role
-  governs what we accept) and keeping the keyword is the point of matching ze.
-
-Absent `role {}`, nothing changes: no capability is sent and no gate runs, so every existing
-configuration keeps working byte for byte.
-
----
-
-## Parity with ze
-
-ze and ExaBGP must not disagree about what a given run of bytes means. They are different products
-and their envelopes differ, so parity is on the **names and the value types**, not on the JSON shape
-around them.
-
-### The contract
-
-| thing | value | ExaBGP | ze |
-|-------|-------|--------|-----|
-| role names | `provider`, `rs`, `rs-client`, `customer`, `peer` | config token, capability JSON | `ze-role.yang` enum, `--capa` output |
-| decoded role | the name, never the number | `{ "name": "role", "value": "customer" }` | same, from `RunCLIDecode` |
-| decoded OTC | integer ASN, not `"AS65000"`, not a string | `"otc": 65000` inside `attribute` | `{ "name": "otc", "value": 65000 }` |
-| attribute display name | `otc` / `OTC` | lowercase, hyphenated, like every ExaBGP attribute | uppercase, underscored, like every ze attribute |
-| leak reasons | `otc-from-customer`, `otc-from-rs-client`, `otc-asn-mismatch` | the `route-leak` JSON value | the per-route debug log |
-
-The two attribute-name spellings stay different on purpose: each is the house convention of its own
-side (`as-path` against `AS_PATH`), and the mapping is mechanical, lowercase with `_` becoming `-`.
-Breaking either convention for one attribute would be worse than the difference.
-
-The capability decode is the one place the envelopes can be identical, and should be. ze already
-emits `{"name": "role", "value": "customer"}`, and ExaBGP's per-capability `json()` has no single
-house style to violate (compare `software.py` with `ms.py`), so `Role.json()` copies ze's shape
-exactly.
-
-Leak reason strings are shared even though the granularity is not. ze counts leaks under one coarse
-metric label, `leak`, which is right for a counter; ExaBGP reports one route at a time, where the
-three cases are worth telling apart. Using the same three strings in ze's per-route debug log costs
-ze nothing and means an operator reading both is reading one vocabulary.
-
-### What ze needs for this
-
-ze cannot hold up its half today, and the missing piece is in the plugin framework rather than in
-the role plugin:
-
-- `registry.Registration` grows `SupportsAttr` beside `SupportsNLRI` and `SupportsCapa`
-  (`registry.go:202`), and `cli.RunPlugin` grows the matching `--attr` branch (`cli.go:133`).
-- the role plugin sets it and decodes attribute 35, reusing the `findOTC` walk it already has, so
-  `ze plugin role --attr c02304 0000fde8` answers `{"name":"otc","value":65000}`.
-
-That is ze-side work in the ze repository, recorded here so the two do not drift. It is worth doing
-beyond RFC 9234: no ze plugin can currently decode the attribute it owns, and every attribute-owning
-plugin gets the surface at once.
-
-### Keeping it true
-
-One shared test vector, checked into both suites: the hex `c02304 0000fde8` decodes to the ASN
-`65000`, and the capability hex `03` decodes to the role name `customer`. Cheap, and it fails loudly
-on either side the day one of them drifts.
-
----
-
-## What the feature looks like for ExaBGP
-
-ExaBGP is not a router: it has no best-path selection and no FIB. It originates routes from
-configuration and from the API, and hands received routes to a helper process as JSON. It does keep
-an adj-rib-in (`IncomingRIB`, on by default), but that is a record of what each peer sent, feeding
-deduplication and `show adj-rib in`. Nothing re-advertises from it. The RFC therefore splits into
-three layers with very different amounts of ExaBGP in them.
-
-### Layer 1 - session (applies unchanged)
-
-Capability 9 sent when `import` is set, peer role checked at negotiation, `Notify(2, 11)` on a bad
-pair, on multiple Role capabilities disagreeing, and on `strict` with none received. The received
-role appears in the API `open` message JSON next to the other capabilities.
-
-### Layer 2 - attribute (applies unchanged)
-
-```
-neighbor 192.0.2.1 {
-    static {
-        route 10.0.0.0/24 next-hop 192.0.2.254 otc 65001;
-    }
-}
-```
-
-```
-announce route 10.0.0.0/24 next-hop 192.0.2.254 otc 65001
-```
-
-Received routes carry it into the JSON:
-
-```json
-{ "attribute": { "origin": "igp", "as-path": [65002], "otc": 65002 } }
-```
-
-`./sbin/exabgp encode` and `./sbin/exabgp decode` get it free through the attribute registry.
-
-### Layer 3 - procedures
-
-**Family gate, first and unconditional.** Section 5 applies to IPv4 and IPv6 unicast only. Read the
-family from MP_REACH_NLRI, fall back to MP_UNREACH_NLRI when the UPDATE only withdraws, and treat an
-UPDATE carrying neither as native RFC 4271 encoding, which is IPv4 unicast by definition. ze
-documents this as a bug it had to fix: checking only MP_REACH classified every MP_UNREACH-only
-withdrawal (VPNv4, EVPN, flowspec, multicast) as IPv4 unicast and ran the procedures on families the
-RFC forbids them for. Every gate below sits behind this one.
-
-**Egress, automatic OTC.** With a role negotiated and the peer a customer, peer, or RS-client, add
-OTC with our local AS if the route does not already carry one. `AttributeCollection.pack_attribute()`
-already does exactly this for ORIGIN, AS_PATH and LOCAL_PREF through its `default` dict, and it
-receives `Negotiated`, so the role is in hand. Doing it at pack time and not in the RIB matters: one
-`Attributes` object is shared by every neighbour, so the OTC must never be written into it.
-
-**Egress, refusal to leak.** A route already carrying OTC MUST NOT go to a provider, peer, or RS.
-Same function, the `skip` dict. For ExaBGP this only fires when the operator announces an
-OTC-carrying route to the wrong neighbour, so it must log loudly rather than drop in silence.
-
-**Ingress, leak detection: report the leak, never drop.** OTC present from a customer or
-RS-client, or OTC != peer AS from a peer, is a leak. The RFC says such a route "MUST be considered
-ineligible", which in a router means losing best-path. ExaBGP has no best-path, and **a received
-route must always reach the helper process**: hiding something that arrived on the wire is not a
-thing ExaBGP does anywhere else, and the operator cannot act on what they are not told.
-
-So ExaBGP does the one thing it is good at, and says what it worked out. One key, a string, present
-only when a route is a leak:
-
-```json
-{ "update": {
-    "attribute": { "otc": 65003 },
-    "route-leak": "otc-from-customer",
-    "announce": { "ipv4 unicast": { "192.0.2.1": [ { "nlri": "10.0.0.0/24" } ] } } } }
-```
-
-| value | meaning |
-|-------|---------|
-| `otc-from-customer` | OTC present on a route received from a customer |
-| `otc-from-rs-client` | OTC present on a route received from an RS-client |
-| `otc-asn-mismatch` | OTC received from a peer, value is not the peer's AS |
-
-Nothing else is reported, because nothing else needs to be:
-
-- No `valid`. A key on every UPDATE forever, saying nothing happened, is noise the helper process
-  has to skip.
-- No "would have stamped" report. It would only say "the OTC here would be the peer's AS", and a
-  process holding `peer-role` and the peer's ASN derives that itself.
-- No malformed-OTC value. `TREAT_AS_WITHDRAW = True` on the class puts a malformed OTC through the
-  existing RFC 7606 path (`collection.py:509`), which already renders as `"error"` in the JSON
-  (`collection.py:118`). Phase 2 gets it for free.
-- No `validation` wrapper around the key. Every remaining value is a route leak, so the container
-  would hold exactly one member, named for a namespace ExaBGP does not otherwise have. If an RPKI
-  check ever lands it can introduce its own key then, knowing what it actually needs.
-
-The key is absent when the route is not a leak, when no `role {}` is configured on the neighbour,
-and when the family gate said this is not IPv4 or IPv6 unicast. Existing output stays byte for byte
-identical.
-
-The negotiated roles belong once per session, not once per UPDATE: add `role` and `peer-role` to
-what `_negotiated()` already emits. That is also what lets the process derive the rest.
-
-A leak is also a `warning` log line naming the neighbour, the prefix and the OTC value, and the
-route is cached in the adj-rib-in as usual. No configuration knob: there is no drop mode to
-select.
-
-**Ingress, automatic OTC: deliberately not implemented.** The RFC adds OTC with the remote AS to a
-route received from a provider, peer, or RS that carries none. ze does this, rewriting the UPDATE
-payload on its way into its adj-rib-in, because ze re-advertises from that store and the stamp is
-what lets the next hop catch a leak.
-
-ExaBGP's adj-rib-in feeds deduplication, `show adj-rib in` and the API. Nothing re-advertises from
-it, so a stamp would protect nobody, and both readers are reports of what the peer sent: an
-attribute ExaBGP invented would make the record and the JSON disagree with the wire. Record it as a
-divergence, not an omission, and document it.
-
-**Peer role when the peer sent no capability.** RFC 9234 Section 4.2: "The locally configured BGP
-Role is used for the procedures described in Section 5." So a peer that announced nothing is not
-unknown, it is the complement of our own `import` (customer↔provider, rs-client↔rs, peer↔peer). ze
-calls out treating it as empty as a live bug: empty took the permissive branch of every gate. Get
-this right from the start.
-
-### Suggested split
-
-Phases 1 and 2 are wire support and are uncontroversial. Phase 3 carries every judgement call and
-can ship separately.
-
----
-
-## Implementation
-
-### Phase 1 - Role capability
-
-| File | Change |
-|------|--------|
-| `src/exabgp/bgp/message/open/capability/capability.py` | `ROLE = 0x09`, entry in `names`, entry in `Capability.CODE` |
-| `src/exabgp/bgp/message/open/capability/role.py` | new `Role(Capability)`, `extract_capability_bytes()`, `unpack_capability()`, `json()`, `__str__()` |
-| `src/exabgp/bgp/message/open/capability/__init__.py` | import and `__all__` |
-| `src/exabgp/bgp/message/open/capability/capabilities.py` | `_role(neighbor)` and its call in `new()` |
-| `src/exabgp/bgp/message/open/capability/negotiated.py` | `self.role`, `self.peer_role`, pair check in `_negotiate()`, strict check, complement fallback |
-| `src/exabgp/bgp/neighbor/role.py` (or a field group on the neighbour) | `role: int \| None`, `role_strict: bool`, `from_settings`/`__eq__` |
-| `src/exabgp/bgp/neighbor/neighbor.py` | config dump for the `role {}` block |
-| `src/exabgp/configuration/role.py` | new `ParseRole(Section)`, modelled on `configuration/tcpao.py`: `import` enumeration, `strict` boolean |
-| `src/exabgp/configuration/configuration.py` | instantiate, register in the parser list, `clear()` |
-| `src/exabgp/configuration/neighbor/__init__.py` | `'role': Container(...)` in the neighbour schema, and the mapping onto the neighbour |
-| `src/exabgp/configuration/encoder.py` | JSON config encoder |
-
-`role {}` on an iBGP session is refused at configuration time, in `ParseRole.post()` or in the
-neighbour's own validation where `local-as` and `peer-as` are both known. The message must say
-RFC 9234 is eBGP only, not just "invalid".
-
-`import` is a Python keyword. It is only ever a configuration token and a dictionary key, never a
-Python identifier, but check the schema and tokeniser handle it, and name the attribute holding it
-something else (`role`, not `import_`).
-
-Wire value is one octet, so `unpack_capability()` must check `len(data) == 1` and `Notify(2, 0)`
-otherwise, and reject values 5-255 as unassigned. Peer input, so no assert.
-
-The pair check belongs in `_negotiate()` next to the multisession check, which already stores a
-`(code, subcode, reason)` tuple rather than raising. Follow that shape so the notification goes out
-by the same path.
-
-### Phase 2 - OTC attribute
-
-| File | Change |
-|------|--------|
-| `src/exabgp/bgp/message/update/attribute/attribute.py` | `OTC = 0x23` and `names` entry |
-| `src/exabgp/bgp/message/update/attribute/otc.py` | new `OTC(Attribute)`, packed-bytes-first, `FLAG = OPTIONAL \| TRANSITIVE`, `unpack_attribute()` length check |
-| `src/exabgp/bgp/message/update/attribute/__init__.py` | import |
-| `src/exabgp/configuration/static/parser.py` | `def otc(tokeniser)` returning `OTC`, ASN range checked |
-| `src/exabgp/configuration/announce/ip.py`, `vpn.py`, `label.py` | `'otc'` leaf, `ValueType.INTEGER`, `ActionTarget.ATTRIBUTE` |
-
-RFC 9234 Section 5 says a malformed OTC (length != 4) is treat-as-withdraw, which is what ze
-implements. Set `TREAT_AS_WITHDRAW = True` on the class and check it behaves the way `origin.py` and
-`originatorid.py` do, not the attribute-discard path.
-
-### Phase 3 - procedures
-
-| File | Change |
-|------|--------|
-| `src/exabgp/bgp/message/update/attribute/collection.py` | family gate, `default` entry adding OTC when the role says so, `skip` entry refusing to send OTC to provider/peer/rs |
-| `src/exabgp/reactor/protocol.py` | ingress family gate and leak check where the UPDATE is parsed and `negotiated` is available |
-| `src/exabgp/reactor/api/response/json.py` | `route-leak` key in `_update()`, `role`/`peer-role` in `_negotiated()` |
-
-The `default` dict is keyed by attribute code and its callables take `(local_asn, peer_asn)`. OTC
-needs the role and the family too, so either widen those callables or handle OTC just before the
-loop. Widening touches three existing entries, so handling OTC separately is likely smaller and
-clearer.
-
----
-
-## Testing
-
-- `tests/unit/` - Role capability pack/unpack, every role value, bad length, unassigned value.
-- `tests/unit/` - the full 5x5 role pairing matrix, strict mode with and without the peer
-  capability, two Role capabilities agreeing and disagreeing.
-- `tests/unit/` - peer role resolution: no capability received falls back to the complement of our
-  `import`, and each gate then takes the same branch it would with the capability present.
-- `tests/unit/` - OTC pack/unpack, wrong length treat-as-withdraw, JSON, config parsing.
-- `tests/unit/` - family gate: MP_REACH VPNv4, MP_UNREACH-only VPNv4, and native IPv4 all classify
-  correctly and only the last one gets an OTC.
-- `tests/unit/` - egress injection: the same `AttributeCollection` packed for a customer neighbour
-  and for a provider neighbour gives OTC in one and not the other, and the collection is unchanged
-  afterwards.
-- `tests/unit/` - a leaked route still reaches the API, carries the right `route-leak` reason, and
-  is present in the adj-rib-in.
-- `tests/unit/` - each reason is produced by the case that should produce it, and the `route-leak`
-  key is absent on a clean route, with no `role {}` configured, and for a non-unicast family.
-- `tests/unit/` - a malformed OTC becomes a withdraw through the existing RFC 7606 path and needs
-  no `route-leak` key.
-- `tests/unit/` - `role {}` inside a template reaches the neighbours that inherit it.
-- `tests/unit/` - `role {}` with `local-as == peer-as` fails to parse, with an eBGP-only message.
-- `qa/encoding/` - one test announcing an explicit `otc`, one with `role { import customer; }` on
-  the neighbour checking the automatic OTC appears in the UPDATE.
-- `./sbin/exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4 otc 65000" | ./sbin/exabgp decode`
-  round-trip.
-- `tests/unit/` - the shared ze parity vectors: attribute hex `c02304 0000fde8` decodes to `65000`,
-  capability hex `03` decodes to `customer`, and `Role.json()` is
-  `{ "name": "role", "value": "customer" }`.
-- `./qa/bin/test_everything` before declaring anything done.
-
----
-
-## Settled decisions
-
-1. `role {}` is a neighbour subsection carrying ze's keywords, `import` and `strict`.
-2. `export` is out. ExaBGP never re-advertises from one peer to another, so the token has no
-   `(source, destination)` pair to filter on.
-3. Ingress OTC stamping is out. Nothing re-advertises from the adj-rib-in, so the stamp protects
-   nobody, and it would put an attribute the peer never sent into a store and a JSON report that
-   both describe the wire.
-4. A leaked route is reported, never dropped. It always reaches the helper process, carrying one
-   `route-leak` reason string. Leaks only: no `valid`, nothing the process can derive from
-   `peer-role` and the peer ASN, and no malformed case (RFC 7606 already reports it). No knob.
-5. `role {}` on an iBGP session is a configuration error. RFC 9234 is eBGP only, so refuse it when
-   `local-as == peer-as` rather than accept it and quietly do nothing.
-6. `role {}` works in templates, like every other neighbour subsection. Tested, not assumed.
-7. Names and value types are shared with ze, envelopes are not. Role names, the decoded-role
-   envelope, the integer OTC value and the three leak reason strings match; the attribute display
-   name keeps each side's house convention. A shared test vector holds both to it, and ze needs a
-   `--attr` decode surface to hold up its half.
-
----
-
-## References
-
-- RFC 9234, and the Cloudflare write-up linked in the issue:
-  https://blog.cloudflare.com/rfc9234-bgp-role-model/
-- ze `internal/component/bgp/plugins/role/` - `validate.go` (pair table, strict, notification),
-  `otc.go` (family gate, ingress and egress rules, stamping), `yang/ze-role.yang` (config shape)
-- `src/exabgp/configuration/tcpao.py` - the model for a new neighbour subsection
-- `.claude/exabgp/REGISTRY_AND_EXTENSION_PATTERNS.md` - adding a capability and an attribute
-- `.claude/exabgp/WIRE_SEMANTIC_SEPARATION.md` - why egress injection happens at pack time
-- `.claude/exabgp/PACKED_BYTES_FIRST_PATTERN.md` - shape of the new OTC class
-
-</details>
