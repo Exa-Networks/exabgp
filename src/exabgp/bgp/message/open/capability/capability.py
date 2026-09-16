@@ -47,6 +47,7 @@ class CapabilityCode(int):
     MULTIPLE_ROUTES: ClassVar[int] = 0x04  # [RFC3107]
     NEXTHOP: ClassVar[int] = 0x05  # [RFC5549]
     EXTENDED_MESSAGE: ClassVar[int] = 0x06  # https://tools.ietf.org/html/draft-ietf-idr-bgp-extended-messages-24
+    ROLE: ClassVar[int] = 0x09  # [RFC9234]
 
     # 6-63      Unassigned
     GRACEFUL_RESTART: ClassVar[int] = 0x40  # [RFC4724]
@@ -82,6 +83,7 @@ class CapabilityCode(int):
         MULTIPLE_ROUTES: 'multiple-routes',
         NEXTHOP: 'nexthop',
         EXTENDED_MESSAGE: 'extended-message',
+        ROLE: 'role',
         GRACEFUL_RESTART: 'graceful-restart',
         FOUR_BYTES_ASN: 'asn4',
         DYNAMIC_CAPABILITY: 'dynamic-capability',
@@ -132,6 +134,7 @@ class Capability:
         MULTIPLE_ROUTES: ClassVar[CapabilityCode] =          CapabilityCode(CapabilityCode.MULTIPLE_ROUTES)
         NEXTHOP: ClassVar[CapabilityCode] =                  CapabilityCode(CapabilityCode.NEXTHOP)
         EXTENDED_MESSAGE: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.EXTENDED_MESSAGE)
+        ROLE: ClassVar[CapabilityCode] =                     CapabilityCode(CapabilityCode.ROLE)
         GRACEFUL_RESTART: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.GRACEFUL_RESTART)
         FOUR_BYTES_ASN: ClassVar[CapabilityCode] =           CapabilityCode(CapabilityCode.FOUR_BYTES_ASN)
         DYNAMIC_CAPABILITY: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.DYNAMIC_CAPABILITY)

@@ -18,6 +18,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from exabgp.bgp.message.open.capability.role import RoleValue
+
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.bgp.message.open.routerid import RouterID
@@ -71,6 +73,12 @@ class SessionSettings:
     source_interface: str = ''
     outgoing_ttl: int | None = None
     incoming_ttl: int | None = None
+    # RFC 9234 roles use NO_ROLE when no role block was configured; never test
+    # truthiness, because RoleValue.PROVIDER is 0.
+    role: RoleValue = RoleValue.NO_ROLE
+    role_strict: bool = False
+    role_otc: bool = True
+    role_add_meta: bool = True
 
     def validate(self) -> str:
         """Validate all settings are present and consistent.
@@ -87,6 +95,13 @@ class SessionSettings:
         # listen requires local_address (can't auto-discover when listening)
         if self.listen > 0 and self.local_address is None:
             return 'session local-address required when listen is set'
+        if self.role != RoleValue.NO_ROLE:
+            if not self.local_as or not self.peer_as:
+                return 'role requires nonzero explicit local-as and peer-as'
+            if self.local_as == self.peer_as:
+                return 'role requires unequal local-as and peer-as (eBGP only)'
+        elif self.role_strict:
+            return 'strict role negotiation requires a local role'
         return ''
 
 

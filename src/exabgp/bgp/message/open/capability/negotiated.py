@@ -12,6 +12,7 @@ from typing import Any, ClassVar, TYPE_CHECKING
 if TYPE_CHECKING:
     from exabgp.bgp.message import Open
     from exabgp.bgp.message.direction import Direction
+    from exabgp.bgp.message.open.capability.capabilities import Capabilities
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.protocol.ip import IP
@@ -23,6 +24,7 @@ from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.refresh import REFRESH
+from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
@@ -61,6 +63,10 @@ class Negotiated:
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
         self.aigp: bool = neighbor.capability.aigp.is_enabled()
+        self.role: RoleValue = RoleValue.NO_ROLE
+        self.peer_role: RoleValue = RoleValue.NO_ROLE
+        self.role_otc: bool = neighbor.session.role_otc
+        self.role_error: tuple[int, int, str] | None = None
 
         # The last attribute section this session parsed, and what it parsed to. What a
         # given set of bytes decodes to depends on this session's capabilities, so the
@@ -90,6 +96,10 @@ class Negotiated:
         instance.operational = False
         instance.refresh = REFRESH.ABSENT
         instance.aigp = False
+        instance.role = RoleValue.NO_ROLE
+        instance.peer_role = RoleValue.NO_ROLE
+        instance.role_otc = False
+        instance.role_error = None
         # UNSET is one process-wide object, never a session: it must not hold a cache,
         # or every caller handing it to AttributeCollection.unpack would share one slot.
         instance.attribute_cache = None
@@ -139,6 +149,7 @@ class Negotiated:
         self.peer_as = self.received_open.asn
         if self.peer_as == AS_TRANS and self.asn4:
             self.peer_as = ASN(recv_capa[Capability.CODE.FOUR_BYTES_ASN])
+        self._negotiate_role(sent_capa, recv_capa)
 
         self.families = []
         if recv_capa.announced(Capability.CODE.MULTIPROTOCOL) and sent_capa.announced(Capability.CODE.MULTIPROTOCOL):
@@ -245,6 +256,22 @@ class Negotiated:
         ):
             self.multisession = (2, 9, 'multisession is mandatory with this peer')
 
+    def _negotiate_role(self, sent_capa: Capabilities, recv_capa: Capabilities) -> None:
+        self.role = sent_capa.role()
+        self.peer_role = RoleValue.NO_ROLE
+        self.role_error = None
+        if self.role == RoleValue.NO_ROLE:
+            return
+        self.peer_role = recv_capa.role()
+        if self.peer_role == RoleValue.NO_ROLE:
+            if self.neighbor.session.role_strict:
+                self.role_error = (2, 11, 'strict role negotiation requires the remote Role capability')
+            else:
+                self.peer_role = RoleValue.complement(self.role)
+            return
+        if not RoleValue.pair_allowed(self.role, self.peer_role):
+            self.role_error = (2, 11, f'local role {self.role} does not match remote role {self.peer_role}')
+
     def validate(self, neighbor: Any) -> tuple[int, int, str] | None:
         # Both opens must be set before validate is called
         assert self.sent_open is not None
@@ -274,6 +301,9 @@ class Negotiated:
 
         if self.received_open.hold_time and self.received_open.hold_time < HoldTime.MIN:
             return (2, 6, 'Hold Time is invalid (%d)' % self.received_open.hold_time)
+
+        if self.role_error is not None:
+            return self.role_error
 
         if isinstance(self.multisession, tuple):
             # multisession is an error tuple (code, subcode, message)

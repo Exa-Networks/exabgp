@@ -37,6 +37,7 @@ from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import next_hop
 from exabgp.configuration.static.parser import origin
 from exabgp.configuration.static.parser import med
+from exabgp.configuration.static.parser import otc
 from exabgp.configuration.static.parser import as_path
 from exabgp.configuration.static.parser import local_preference
 from exabgp.configuration.static.parser import atomic_aggregate
@@ -128,6 +129,13 @@ class ParseStaticRoute(Section):
                 type=ValueType.ORIGIN,
                 description='BGP origin attribute',
                 choices=['igp', 'egp', 'incomplete'],
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
+            ),
+            'otc': Leaf(
+                type=ValueType.STRING,
+                description='Only-to-customer ASN, self, role assertion, or none',
                 target=ActionTarget.ATTRIBUTE,
                 operation=ActionOperation.ADD,
                 key=ActionKey.NAME,
@@ -248,6 +256,7 @@ class ParseStaticRoute(Section):
         'origin IGP|EGP|INCOMPLETE',
         'as-path [ <asn>.. ]',
         'med <16 bits number>',
+        'otc <asn>|self|none|provider|customer|peer|rs|rs-client',
         'local-preference <16 bits number>',
         'atomic-aggregate',
         'community <16 bits number>',
@@ -278,6 +287,7 @@ class ParseStaticRoute(Section):
         'next-hop': next_hop,
         'origin': origin,
         'med': med,
+        'otc': otc,
         'as-path': as_path,
         'local-preference': local_preference,
         'atomic-aggregate': atomic_aggregate,

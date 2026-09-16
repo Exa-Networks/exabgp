@@ -54,6 +54,7 @@ def _get_root_schema() -> Container:
     from exabgp.configuration.flow import ParseFlow
     from exabgp.configuration.l2vpn import ParseL2VPN
     from exabgp.configuration.operational import ParseOperational
+    from exabgp.configuration.role import ParseRole
 
     # Build root schema from section schemas
     children: dict[str, SchemaElement] = {}
@@ -94,6 +95,8 @@ def _get_root_schema() -> Container:
     schema = getattr(ParseOperational, 'schema', None)
     if schema:
         children['operational'] = schema
+
+    children['role'] = ParseRole.schema
 
     return Container(
         description='ExaBGP configuration schema',
@@ -175,6 +178,13 @@ def _get_section_schema(section: str) -> Container | None:
     except ImportError:
         pass
 
+    try:
+        from exabgp.configuration.role import ParseRole
+
+        section_map['role'] = ParseRole
+    except ImportError:
+        pass
+
     parser_class = section_map.get(section)
     if parser_class is None:
         return None
@@ -208,7 +218,7 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
         if schema is None:
             sys.stderr.write(f'Unknown section: {section}\n')
             sys.stderr.write(
-                'Available sections: neighbor, process, template, capability, family, static, flow, l2vpn, operational\n'
+                'Available sections: neighbor, process, template, capability, family, static, flow, l2vpn, operational, role\n'
             )
             return 1
     else:

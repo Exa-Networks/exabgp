@@ -65,6 +65,8 @@ class Notification(Message, Exception):
         (2, 8): 'Grouping Conflict',
         (2, 9): 'Grouping Required',
         (2, 10): 'Capability Value Mismatch',
+        # RFC 9234 - https://www.rfc-editor.org/rfc/rfc9234.html
+        (2, 11): 'Role Mismatch',
         (3, 0): 'Unspecific',
         (3, 1): 'Malformed Attribute List',
         (3, 2): 'Unrecognized Well-known Attribute',

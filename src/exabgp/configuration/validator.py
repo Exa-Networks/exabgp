@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.bgp.message.update.attribute import MED, LocalPreference, NextHop, NextHopSelf, Origin
     from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+    from exabgp.bgp.message.update.attribute.otc import OTC, OTCNone, OTCSelf
     from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
     from exabgp.configuration.core.parser import Tokeniser
     from exabgp.configuration.schema import ValueType
@@ -800,6 +801,39 @@ class OriginValidator(Validator['Origin']):
 
     def describe(self) -> str:
         return 'origin (igp, egp, incomplete)'
+
+
+@dataclass
+class OTCValidator(Validator['OTC | OTCSelf | OTCNone']):
+    """Parse an explicit OTC value or per-session generation instruction."""
+
+    name: str = 'otc'
+
+    def _parse(self, value: str) -> 'OTC | OTCSelf | OTCNone':
+        from exabgp.bgp.message.open.asn import ASN
+        from exabgp.bgp.message.open.capability.role import RoleValue
+        from exabgp.bgp.message.update.attribute.otc import OTC, OTCNone, OTCSelf
+
+        if value == 'none':
+            return OTCNone()
+        if value == 'self':
+            return OTCSelf()
+        try:
+            role = RoleValue.from_string(value)
+        except ValueError:
+            try:
+                return OTC.make_otc(ASN.from_string(value))
+            except ValueError as exc:
+                raise ValueError(
+                    f"'{value}' is not a valid OTC: expected an ASN, self, none, or a BGP role name"
+                ) from exc
+        return OTCSelf(role)
+
+    def to_schema(self) -> dict[str, Any]:
+        return {'type': 'string', 'format': 'otc'}
+
+    def describe(self) -> str:
+        return 'OTC (ASN, self, none, provider, customer, peer, rs, rs-client)'
 
 
 @dataclass

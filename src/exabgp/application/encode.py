@@ -14,7 +14,7 @@ import sys
 import argparse
 
 from exabgp.configuration.configuration import Configuration
-from exabgp.configuration.setup import create_configuration_with_routes
+from exabgp.configuration.setup import create_minimal_configuration
 
 from exabgp.debug.intercept import trace_interceptor
 
@@ -25,6 +25,7 @@ from exabgp.environment import getconf
 from exabgp.configuration.check import _negotiated
 from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.bgp.message.update.attribute.otc import OTCSelf
 
 from exabgp.logger import log
 
@@ -92,13 +93,29 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
     else:
         # Use programmatic configuration setup with routes
         try:
-            configuration = create_configuration_with_routes(
-                route_text=cmdarg.route,
+            configuration = create_minimal_configuration(
                 local_as=cmdarg.local_as,
                 peer_as=cmdarg.peer_as,
                 families=cmdarg.family,
                 add_path=cmdarg.path_information,
             )
+            routes = configuration.parse_route_text(cmdarg.route)
+            if not routes:
+                raise ValueError(f'Failed to parse route: {cmdarg.route}')
+            for route in routes:
+                if type(route.attributes.get(OTCSelf.ID)) is OTCSelf:
+                    raise ValueError(
+                        'OTC self and role names require a real neighbor: use encode -c or a literal OTC ASN'
+                    )
+
+            added = False
+            for neighbor in configuration.neighbors.values():
+                for route in routes:
+                    if route.nlri.family().afi_safi() in neighbor.families():
+                        neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route))
+                        added = True
+            if not added:
+                raise ValueError(f'Failed to parse route: {cmdarg.route}')
         except ValueError as e:
             sys.stdout.write(f'configuration error: {e}\n')
             sys.stdout.flush()

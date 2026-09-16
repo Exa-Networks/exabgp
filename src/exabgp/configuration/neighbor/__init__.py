@@ -32,6 +32,7 @@ from exabgp.configuration.parser import auto_asn, md5_base64
 # description, domainname, hostname, md5, rate_limit, source_interface
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 from exabgp.configuration.tcpao import ParseTCPAO
+from exabgp.configuration.role import ParseRole
 from exabgp.configuration.validator import IntValidators
 
 # Removed imports migrated to schema validators: ip, peer_ip, port
@@ -260,6 +261,7 @@ class ParseNeighbor(Section):
             'family': Container(description='Address families to negotiate'),
             'capability': Container(description='BGP capabilities'),
             'tcp-ao': Container(description='TCP-AO (RFC 5925) authentication'),
+            'role': ParseRole.schema,
             'add-path': Container(description='ADD-PATH configuration'),
             'nexthop': Container(description='Next-hop encoding options'),
             'api': Container(description='External process API'),
@@ -632,6 +634,9 @@ class ParseNeighbor(Section):
 
         families = self._post_families(local)
         neighbor = self._post_neighbor(local, families)
+        role_issue = ParseRole.apply(neighbor, local)
+        if role_issue:
+            return self.error.set(role_issue)
 
         self._post_capa_default(neighbor, local)
         self._post_capa_addpath(neighbor, local, families)
@@ -646,7 +651,10 @@ class ParseNeighbor(Section):
         if link_local_issue:
             return self.error.set(link_local_issue)
 
-        self._post_routes(neighbor, local)
+        try:
+            self._post_routes(neighbor, local)
+        except ValueError as exc:
+            return self.error.set(str(exc))
 
         neighbor.api = ParseAPI.flatten(local.pop('api', {}))
 
@@ -655,6 +663,9 @@ class ParseNeighbor(Section):
         if missing:
             return self.error.set('incomplete neighbor, missing {}'.format(missing))
 
+        return self._post_finalize(neighbor, local, families)
+
+    def _post_finalize(self, neighbor: Neighbor, local: dict[str, Any], families: list[FamilyTuple]) -> bool:
         if not neighbor.session.auto_discovery:
             if neighbor.session.local_address.afi != neighbor.session.peer_address.afi:
                 return self.error.set('local-address and peer-address must be of the same family')

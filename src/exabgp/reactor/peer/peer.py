@@ -38,6 +38,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message import _NOP, Message, Notification, Notify, Open
 from exabgp.bgp.message.open.capability import REFRESH, Capability
+from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.debug.report import format_exception
 from exabgp.environment import getenv
@@ -359,6 +360,8 @@ class Peer:
             # isn't running to process the _neighbor variable later.
             # GitHub issue #1126: stale adj-rib when neighbor offline during reload
             if self.fsm != FSM.ESTABLISHED and self.neighbor.rib:
+                if self.proto is not None:
+                    self.proto.negotiated.role_otc = restart_neighbor.session.role_otc
                 previous = restart_neighbor.previous.routes if restart_neighbor.previous else []
                 current = restart_neighbor.routes
                 self.neighbor.rib.outgoing.replace_reload(previous, current)
@@ -653,6 +656,24 @@ class Peer:
             or self.neighbor.eor
         )
 
+    _otc_disabled_warned: bool = False
+
+    def _warn_otc_disabled(self) -> None:
+        if (
+            self.neighbor.session.role == RoleValue.NO_ROLE
+            or self.neighbor.session.role_otc
+            or self._otc_disabled_warned
+        ):
+            return
+        self._otc_disabled_warned = True
+        log.warning(
+            lazymsg(
+                'role.otc.disabled neighbor={peer} reason=automatic-outbound-marking-disabled rfc9234=nonconformant',
+                peer=self.neighbor.session.peer_address,
+            ),
+            self.id(),
+        )
+
     async def _main(self) -> int:
         """Main BGP message processing loop using async I/O.
 
@@ -668,6 +689,8 @@ class Peer:
 
         # Initialize session state
         self.neighbor.rib.incoming.clear()
+        self._otc_disabled_warned = False
+        self._warn_otc_disabled()
         include_withdraw = False
         send_eor = not self.neighbor.manual_eor
         new_routes = None
@@ -727,11 +750,30 @@ class Peer:
 
                 # Handle configuration reload
                 if self._neighbor:
-                    previous = self._neighbor.previous.routes if self._neighbor.previous else []
-                    current = self._neighbor.routes
-                    self.neighbor.rib.outgoing.replace_reload(previous, current)
-                    self._neighbor.previous = None
+                    pending = self._neighbor
+                    negotiated = self.proto.negotiated
+                    changed = negotiated.role_otc != pending.session.role_otc
+                    negotiated.role_otc = pending.session.role_otc
+                    previous = pending.previous.routes if pending.previous else []
+                    current = pending.routes
+                    outgoing = self.neighbor.rib.outgoing
+                    outgoing.replace_reload(previous, current)
+                    pending.previous = None
                     self._neighbor = None
+                    if changed and negotiated.role != RoleValue.NO_ROLE:
+                        self._warn_otc_disabled()
+                        if outgoing.cache:
+                            outgoing.resend(False)
+                        else:
+                            log.warning(
+                                lazymsg(
+                                    'role.otc.reload.partial reason=no-adj-rib-out-cache neighbor={peer} otc={otc} '
+                                    'applies-to=configured-routes,new-announcements excludes=routes-announced-through-the-api',
+                                    peer=pending.session.peer_address,
+                                    otc='send' if negotiated.role_otc else 'disable',
+                                ),
+                                self.id(),
+                            )
                 ctx.neighbor = self.neighbor
 
                 # Read message with timeout

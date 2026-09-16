@@ -100,9 +100,12 @@ class Attribute:
         BGP_LS: ClassVar[int] = 0x1D  # 29
         # draft-ietf-idr-large-community
         LARGE_COMMUNITY: ClassVar[int] = 0x20  # 32
+        # RFC 9234
+        OTC: ClassVar[int] = 0x23  # 35
         # draft-ietf-idr-bgp-prefix-sid
         BGP_PREFIX_SID: ClassVar[int] = 0x28  # 40
 
+        INTERNAL_OTC_NONE: ClassVar[int] = 0xFFF9
         INTERNAL_NAME: ClassVar[int] = 0xFFFA
         INTERNAL_WITHDRAW: ClassVar[int] = 0xFFFB
         INTERNAL_WATCHDOG: ClassVar[int] = 0xFFFC
@@ -133,7 +136,9 @@ class Attribute:
             TUNNEL_ENCAP: 'tunnel-encaps',
             AIGP: 'aigp',
             BGP_LS: 'bgp-ls',
+            OTC: 'otc',
             BGP_PREFIX_SID: 'bgp-prefix-sid',
+            INTERNAL_OTC_NONE: 'internal-otc-none',
             0xFFFA: 'internal-name',
             0xFFFB: 'internal-withdraw',
             0xFFFC: 'internal-watchdog',

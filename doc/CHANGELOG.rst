@@ -4,6 +4,14 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Feature: Parse and generate Only to Customer attributes (RFC 9234) on static,
+   API, IP, labelled and VPN routes. Support numeric/dotted ASNs, per-session
+   "otc self", role assertions, and internal "otc none" suppression.
+   Add role configuration and OPEN negotiation, unicast outbound marking/refusal,
+   withdrawal of refused replacements, and ingress leak annotations and warnings.
+   Configuration checks account for automatic marking and export refusal.
+   This is partial RFC 9234 support: helpers still own ingress OTC insertion
+   and ineligible-route exclusion.
  * Fix: Compare every message in route validation roundtrips.
  * Fix: Report configured encoding errors without a traceback.
  * Fix: Reject failed and empty route serialization during validation.

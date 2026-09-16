@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.util.psk import PSKError, decode_base64
@@ -65,6 +66,12 @@ class Session:
     source_interface: str = ''
     outgoing_ttl: int | None = None
     incoming_ttl: int | None = None
+    # RFC 9234 roles use NO_ROLE when no role block was configured; never test
+    # truthiness, because RoleValue.PROVIDER is 0.
+    role: RoleValue = RoleValue.NO_ROLE
+    role_strict: bool = False
+    role_otc: bool = True
+    role_add_meta: bool = True
 
     @property
     def auto_discovery(self) -> bool:
@@ -256,6 +263,10 @@ class Session:
             source_interface=settings.source_interface,
             outgoing_ttl=settings.outgoing_ttl,
             incoming_ttl=settings.incoming_ttl,
+            role=settings.role,
+            role_strict=settings.role_strict,
+            role_otc=settings.role_otc,
+            role_add_meta=settings.role_add_meta,
         )
         session.infer()
         return session

@@ -32,6 +32,7 @@ from exabgp.configuration.schema import (
 )
 
 from exabgp.configuration.static.parser import prefix
+from exabgp.configuration.validator import OTCValidator
 
 # Import and re-export _build_route for backward compatibility
 from exabgp.configuration.announce.route_builder import _build_route  # noqa: F401
@@ -60,6 +61,14 @@ class AnnounceIP(ParseAnnounce):
                 target=ActionTarget.ATTRIBUTE,
                 operation=ActionOperation.ADD,
                 key=ActionKey.NAME,
+            ),
+            'otc': Leaf(
+                type=ValueType.STRING,
+                description='Only-to-customer ASN, self, role assertion, or none',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
+                validator=OTCValidator(),
             ),
             'med': Leaf(
                 type=ValueType.MED,

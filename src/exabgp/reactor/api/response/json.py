@@ -21,6 +21,7 @@ from exabgp.bgp.message import Message
 from exabgp.environment import getenv
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.open.capability.role import RoleValue
 
 from exabgp.reactor.interrupt import Signal
 from exabgp.protocol.ip import IP
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.open import Open
     from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.collection import RouteLeak
     from exabgp.bgp.message.refresh import RouteRefresh
     from exabgp.bgp.message.operational import OperationalFamily
     from exabgp.bgp.fsm import FSM
@@ -202,8 +204,14 @@ class JSON:
             for family in negotiated.families
             if negotiated.addpath.receive(*family)
         ]
+        roles = (
+            {}
+            if negotiated.role == RoleValue.NO_ROLE
+            else {'role': str(negotiated.role), 'peer_role': str(negotiated.peer_role)}
+        )
         kv_content = self._kv(
             {
+                **roles,
                 'message_size': negotiated.msg_size,
                 'hold_time': negotiated.holdtime,
                 'asn4': negotiated.asn4,
@@ -355,18 +363,23 @@ class JSON:
             message_type='open',
         )
 
-    def _nlri_to_json(self, nlri: Any, nexthop: IP | None = None) -> str:
+    def _nlri_to_json(self, nlri: Any, nexthop: IP | None = None, leak: RouteLeak | None = None) -> str:
         """Convert NLRI to JSON string. Uses v4_json() for backward compat if enabled.
 
         Args:
             nlri: The NLRI object
             nexthop: Optional nexthop IP (passed to v4_json for backward compatibility)
         """
+        if leak is not None:
+            rendered = nlri.v4_json(compact=False, nexthop=nexthop) if self.use_v4_json else nlri.json(compact=False)
+            content = json.loads(rendered)
+            content['meta'] = {'route-leak': leak.as_dict()}
+            return json.dumps(content)
         if self.use_v4_json:
             return str(nlri.v4_json(compact=self.compact, nexthop=nexthop))
         return str(nlri.json(compact=self.compact))
 
-    def _update(self, update_msg: 'UpdateCollection') -> dict[str, str]:
+    def _update(self, update_msg: UpdateCollection, include_meta: bool = True) -> dict[str, str]:
         # plus stores: family -> nexthop_string -> list of (nlri, nexthop_ip) tuples
         plus: dict[tuple[Any, Any], dict[str, list[tuple[Any, IP]]]] = {}
         minus: dict[tuple[Any, Any], list[Any]] = {}
@@ -389,16 +402,18 @@ class JSON:
             # Process withdraws - no nexthop needed
             for nlri in update_msg.withdraws:
                 minus.setdefault(nlri.family().afi_safi(), []).append(nlri)
+        leaks = update_msg.route_leaks if include_meta and not update_msg.IS_EOR else None
 
         add = []
         for family in plus:
+            leak = leaks.get(family) if leaks else None
             safi_name = self._safi_display_name(family[0], family[1])
             s = f'"{family[0]} {safi_name}": {{ '
             m = ''
             for nexthop_str in plus[family]:
                 nlri_tuples = plus[family][nexthop_str]
                 m += f'"{nexthop_str}": [ '
-                m += ', '.join(self._nlri_to_json(nlri, nexthop_ip) for nlri, nexthop_ip in nlri_tuples)
+                m += ', '.join(self._nlri_to_json(nlri, nexthop_ip, leak) for nlri, nexthop_ip in nlri_tuples)
                 m += ' ], '
             s += m[:-2]
             s += ' }'
@@ -449,7 +464,7 @@ class JSON:
         body: bytes,
         negotiated: 'Negotiated',
     ) -> str:
-        message = self._update(update)
+        message = self._update(update, include_meta=direction == 'receive' and neighbor.session.role_add_meta)
         if negotiated is not Negotiated.UNSET:
             message.update(self._negotiated(negotiated))
         return self._header(

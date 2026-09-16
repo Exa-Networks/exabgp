@@ -61,6 +61,13 @@ neighbor <ip-address> {
         extended-message <enable | disable>;
     }
 
+    role {
+        local <provider | customer | peer | rs | rs-client>;
+        strict <enable | disable>; // default disable
+        otc <send | disable>;       // default send
+        add-meta <enable | disable>; // default enable
+    }
+
     family {
         all; // default, or a list of the below
         minimal; // use AFI/SAFI required to announce routes in config
@@ -111,6 +118,7 @@ neighbor <ip-address> {
           med <med>;
           aigp <aigp>;
           local-preference <preference>;
+          otc <asn | self | provider | customer | peer | rs | rs-client | none>;
           atomic-aggregate;
           aggregator <asn>:<ip-address>;
           path-information <ip-address>;
@@ -232,6 +240,53 @@ process <process-name> {
 Please note that multi-line sections really do need to be written as
 multiple lines: the first one ending in "{", and ending with a line
 with a "}" by itself.
+.Sh ONLY TO CUSTOMER
+The optional role block names our local eBGP relationship, not the remote role.
+It requires explicit, unequal local-as and peer-as values.
+Strict mode rejects a peer that omits the Role capability; otherwise its
+complementary role is inferred. Incompatible advertised roles reject the OPEN.
+.Pp
+Static routes and API announcements accept an OTC ASN in decimal or dotted form.
+The attribute always carries four octets, even with a two-octet-ASN peer.
+For example, "otc 1.1" is emitted and reported as ASN 65537.
+The "otc self" form resolves the announcing session's effective local ASN,
+including local-as auto, without modifying the stored route.
+A role name resolves the same ASN and additionally asserts that the neighbor's
+configured local role matches it; a missing or different role is an error.
+.Pp
+Without a route-level OTC instruction, role-based marking adds the local ASN
+when sending IPv4 or IPv6 unicast to a customer, peer, or route-server client.
+"otc none" suppresses this automatic insertion for one route; it is internal,
+not a wire attribute or a visible JSON attribute. Existing explicit OTC values
+are preserved, including when automatic marking is disabled.
+.Pp
+A route already carrying OTC is refused toward a provider, peer, or route
+server. This applies to explicit "otc self" and role-named forms as well.
+Replacing an advertised route with a refused route withdraws the old advertisement.
+Withdrawals are never refused. Non-unicast families bypass these policy rules,
+while preserving explicit OTC.
+.Pp
+Inline "exabgp encode" accepts numeric OTC and "otc none". Resolving "self"
+or a role name requires "exabgp encode -c" with a real configuration.
+For "otc self", offline encoding with "local-as auto" requires a concrete
+"peer-as"; if both are automatic, encoding reports a configuration error.
+Named OTC appears as a numeric "otc" member in decoded attribute JSON.
+.Pp
+Role and strict-mode changes restart the session. Changing automatic marking
+or add-meta does not. A marking change replays retained adj-rib-out routes;
+with adj-rib-out disabled, only configured routes and new API announcements
+can pick up the change, because old API routes were not retained.
+.Pp
+Received unicast leaks are logged and annotated on affected announcement entries
+under "meta.route-leak". Disabling add-meta hides the annotation, not the warning
+or outbound refusal. Malformed OTC uses RFC 7606 treat-as-withdraw.
+Leak and export-refusal warnings use the normally enabled reactor logging category;
+parser and RIB debug logging need not be enabled. Global logging and level filters
+still apply.
+This is partial RFC 9234 support: ExaBGP does not insert missing ingress OTC.
+Helpers redistributing received routes must perform ingress marking and exclude
+ineligible routes. The receive and send/receive marking settings are rejected.
+
 .Sh SEE ALSO
 .Xr exabgp 1 .
 .Sh CAVEATS

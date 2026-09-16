@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.role import RoleValue
+from exabgp.bgp.message.update.attribute.otc import OTC
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
@@ -77,6 +79,23 @@ class RoutedNLRI:
 
     nlri: NLRI
     nexthop: IP
+
+
+@dataclass(frozen=True, slots=True)
+class RouteLeak:
+    peer_role: str
+    peer_as: str
+    expected_otc: str
+    received_otc: str
+
+    def as_dict(self) -> dict[str, str]:
+        return {
+            'reason': 'invalid-otc',
+            'peer-role': self.peer_role,
+            'peer-as': self.peer_as,
+            'expected-otc': self.expected_otc,
+            'received-otc': self.received_otc,
+        }
 
 
 # Update message header offsets and constants
@@ -149,6 +168,44 @@ class UpdateCollection(Message):
         self._announces: list[RoutedNLRI] = announces
         self._withdraws: list[NLRI] = withdraws
         self._attributes: AttributeCollection = attributes
+        self.route_leaks: dict[FamilyTuple, RouteLeak] | None = None
+
+    def classify_otc(self, negotiated: Negotiated) -> None:
+        """Annotate wire observations without modifying cached attributes or NLRI."""
+        self.route_leaks = None
+        otc = self.attributes.get(Attribute.CODE.OTC)
+        role = negotiated.peer_role
+        if negotiated.role == RoleValue.NO_ROLE or not isinstance(otc, OTC):
+            return
+        if role not in (RoleValue.CUSTOMER, RoleValue.RS_CLIENT, RoleValue.PEER):
+            return
+        if role == RoleValue.PEER and otc.asn == negotiated.peer_as:
+            return
+        record = RouteLeak(
+            str(role), f'AS{negotiated.peer_as}', 'peer-as' if role == RoleValue.PEER else 'none', f'AS{otc.asn}'
+        )
+        for routed in self.announces:
+            family = routed.nlri.family().afi_safi()
+            if family not in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)):
+                continue
+            if self.route_leaks is None:
+                self.route_leaks = {}
+            self.route_leaks[family] = record
+            assert len(self.route_leaks) <= 2, 'OTC procedures cover only IPv4 and IPv6 unicast'
+            log.warning(
+                lazymsg(
+                    'update.otc.leak reason=invalid-otc neighbor={neighbor} peer-role={role} peer-as={asn} '
+                    'expected-otc={expected} received-otc={received} family="{family}" prefix={prefix}',
+                    neighbor=negotiated.neighbor.session.peer_address,
+                    role=record.peer_role,
+                    asn=record.peer_as,
+                    expected=record.expected_otc,
+                    received=record.received_otc,
+                    family=routed.nlri.family(),
+                    prefix=routed.nlri,
+                ),
+                'reactor',
+            )
 
     @classmethod
     def _get_eor(cls, afi: AFI, safi: SAFI) -> 'UpdateCollection':
@@ -316,6 +373,8 @@ class UpdateCollection(Message):
 
             if nlri.family().afi_safi() not in negotiated.families:
                 continue
+            if not self.attributes.otc_allowed(negotiated, nlri.family().afi_safi()):
+                continue
 
             # Wire format validation for announces (not needed for withdraws)
             # Uses shared validation logic - also called at API level for early feedback
@@ -392,7 +451,17 @@ class UpdateCollection(Message):
             else:
                 include_defaults = False
 
-        attr = self.attributes.pack_attribute(negotiated, include_defaults)
+        base_attr = self.attributes.pack_attribute(negotiated, include_defaults)
+        otc = b''
+        if (
+            not only_withdraws
+            and negotiated.role_otc
+            and negotiated.role in (RoleValue.PROVIDER, RoleValue.RS, RoleValue.PEER)
+            and Attribute.CODE.OTC not in self.attributes
+            and Attribute.CODE.INTERNAL_OTC_NONE not in self.attributes
+        ):
+            otc = OTC.make_otc(negotiated.local_as).pack_attribute(negotiated)
+        attr = base_attr + otc if v4_announces else base_attr
 
         # Withdraws/NLRIS (IPv4 unicast)
         msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
@@ -476,26 +545,38 @@ class UpdateCollection(Message):
             # mp_announces contains RoutedNLRI, mp_withdraws contains bare NLRI
             announce_routed = mp_announces.get(family, [])
             withdraw_nlris = mp_withdraws.get(family, [])
+            attr = (
+                base_attr + otc
+                if announce_routed and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
+                else base_attr
+            )
+            msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)
+            if msg_size <= 0:
+                log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
+                return
 
             mp_announce = MPNLRICollection.from_routed(announce_routed, {}, afi, safi)
             mp_withdraw = MPNLRICollection(withdraw_nlris, {}, afi, safi)
 
             if include_withdraw:
-                for mpurnlri in mp_withdraw.packed_unreach_attributes(negotiated, msg_size):
+                withdraw_size = negotiated.msg_size - 19 - 2 - 2 - len(base_attr)
+                for mpurnlri in mp_withdraw.packed_unreach_attributes(negotiated, withdraw_size):
                     if mp_unreach:
-                        yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + attr))
+                        yield self._message(
+                            UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + base_attr)
+                        )
                     mp_unreach = mpurnlri
 
             # Withdraw before reannouncing a prefix, including across packet boundaries.
             for mprnlri in mp_announce.packed_reach_attributes(negotiated, msg_size):
                 if mp_unreach and len(mp_unreach) + len(mprnlri) > msg_size:
-                    yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + attr))
+                    yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + base_attr))
                     mp_unreach = b''
                 yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + attr + mprnlri))
                 mp_unreach = b''
 
             if mp_unreach:
-                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + attr))
+                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + base_attr))
             withdraws = b''
             announced = b''
 

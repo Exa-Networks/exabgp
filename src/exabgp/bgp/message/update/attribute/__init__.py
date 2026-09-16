@@ -36,6 +36,7 @@ Attribute Types:
 | 26   | AIGP               | Optional Non-Tr.  | AIGP             |
 | 29   | BGP-LS             | Optional Non-Tr.  | LinkState        |
 | 32   | LARGE_COMMUNITY    | Optional Trans.   | LargeCommunities |
+| 35   | OTC                | Optional Trans.   | OTC              |
 | 40   | PREFIX_SID         | Optional Trans.   | PrefixSid        |
 
 Wire Format Reference: doc/RFC_WIRE_FORMAT_REFERENCE.md#path-attributes-rfc-4271
@@ -67,6 +68,7 @@ from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.attribute.nexthop import NextHopSelf
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+from exabgp.bgp.message.update.attribute.otc import OTC, OTCSelf, OTCNone
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator4
@@ -105,6 +107,9 @@ __all__ = [
     'NextHopSelf',
     'MED',
     'LocalPreference',
+    'OTC',
+    'OTCSelf',
+    'OTCNone',
     'AtomicAggregate',
     'Aggregator',
     'Aggregator4',

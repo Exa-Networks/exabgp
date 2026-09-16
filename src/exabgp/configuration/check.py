@@ -19,7 +19,9 @@ from exabgp.util.types import Buffer
 
 from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.bgp.message.update.attribute import Attribute, OTC, OTCSelf
 from exabgp.protocol.ip import IP
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
 from exabgp.bgp.message.open import ASN
@@ -31,6 +33,7 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
+from exabgp.bgp.message.open.capability.role import Role, RoleValue
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.neighbor import Neighbor
@@ -97,6 +100,8 @@ def _negotiated(neighbor: Neighbor) -> tuple[Negotiated, Negotiated]:
     peer_capa = Capabilities(capa)
     if Capability.CODE.FOUR_BYTES_ASN in peer_capa:
         peer_capa[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.session.peer_as)
+    if neighbor.session.role != RoleValue.NO_ROLE:
+        peer_capa[Capability.CODE.ROLE] = Role(RoleValue.complement(neighbor.session.role))
     o2 = Open.make_open(Version(4), ASN(neighbor.session.peer_as), HoldTime(180), RouterID(routerid_2), peer_capa)
     negotiated_in = Negotiated.make_negotiated(neighbor, Direction.IN)
     negotiated_out = Negotiated.make_negotiated(neighbor, Direction.OUT)
@@ -121,6 +126,10 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
         neighbor.session.local_as = neighbor.session.peer_as or neighbor.session.local_as
         neighbor.session.peer_as = neighbor.session.local_as
         negotiated_in, negotiated_out = _negotiated(neighbor)
+        # A decoded advertisement is wire data, not a new desired export.
+        recode_negotiated = copy.copy(negotiated_out)
+        recode_negotiated.role = RoleValue.NO_ROLE
+        recode_negotiated.role_otc = False
 
         if not neighbor.rib.enabled:
             continue
@@ -128,7 +137,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
             pass
 
         for route1 in neighbor.rib.outgoing.cached_routes():
-            str1 = route1.extensive()
+            family = route1.nlri.family().afi_safi()
             try:
                 packed = list(
                     UpdateCollection([RoutedNLRI(route1.nlri, route1.nexthop)], [], route1.attributes).messages(
@@ -138,9 +147,35 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
             except ValueError as exc:
                 log.error(lazymsg('encoding.failed error={err}', err=str(exc)), 'configuration')
                 return False
+            allowed = route1.attributes.otc_allowed(negotiated_out, family)
+            if not allowed:
+                if packed:
+                    return False
+                continue
             if not packed:
                 return False
+
+            expected_attributes = route1.attributes.copy()
+            otc = expected_attributes.get(Attribute.CODE.OTC)
+            automatic_otc = (
+                otc is None
+                and Attribute.CODE.INTERNAL_OTC_NONE not in expected_attributes
+                and negotiated_out.role_otc
+                and negotiated_out.role in (RoleValue.PROVIDER, RoleValue.RS, RoleValue.PEER)
+                and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
+            )
+            if type(otc) is OTCSelf or automatic_otc:
+                expected_attributes[Attribute.CODE.OTC] = OTC.make_otc(negotiated_out.local_as)
+            str1 = Route(route1.nlri, expected_attributes, nexthop=route1.nexthop).extensive()
             pack1 = packed[0]
+            expected_packed = packed
+            if automatic_otc:
+                # Automatic OTC is appended on first export; explicit attributes sort by code.
+                expected_packed = list(
+                    UpdateCollection([RoutedNLRI(route1.nlri, route1.nexthop)], [], expected_attributes).messages(
+                        recode_negotiated
+                    )
+                )
 
             _packed: list[bytes] = packed
             _pack1: bytes = pack1
@@ -170,7 +205,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                     routed = RoutedNLRI(nlri, nexthop)
                 route2 = Route(nlri, update.attributes, nexthop=nexthop)
                 str2 = route2.extensive()
-                recoded = list(UpdateCollection([routed], [], update.attributes).messages(negotiated_out))
+                recoded = list(UpdateCollection([routed], [], update.attributes).messages(recode_negotiated))
                 if not recoded:
                     return False
                 pack2 = recoded[0]
@@ -225,9 +260,9 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
 
                 if skip:
                     log.debug(lazymsg('check.encoding.skip reason=non_transitive_attributes'), 'parser')
-                elif packed != recoded:
+                elif expected_packed != recoded:
                     log.debug(lazymsg('check.encoding.different'), 'parser')
-                    _pack1_cmp: bytes = pack1
+                    _pack1_cmp: bytes = expected_packed[0]
                     _pack2_cmp: bytes = pack2
                     log.debug(lazymsg('[{hex}]', hex=od(_pack1_cmp)), 'parser')
                     log.debug(lazymsg('[{hex}]', hex=od(_pack2_cmp)), 'parser')

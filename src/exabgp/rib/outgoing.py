@@ -13,12 +13,16 @@ from typing import TYPE_CHECKING, Iterator
 from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.bgp.message.open.capability.role import RoleValue
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.otc import OTCSelf
 from exabgp.protocol.ip import IP
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.rib.cache import Cache
 
 if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.update.nlri.nlri import NLRI
     from exabgp.rib.route import Route
@@ -85,6 +89,8 @@ class OutgoingRIB(Cache):
         self._refresh_families = set()
         self._refresh_routes = []
         self._path_selection: dict[FamilyTuple, dict[bytes, _PathSelection]] = {}
+        # Only indexes, not replay copies: one entry per unrestricted advertised route.
+        self._otc_advertised: dict[FamilyTuple, set[bytes]] = {}
         self._session_epoch = 0
 
         # Flush callbacks for sync mode - fire when updates() exhausts
@@ -110,6 +116,7 @@ class OutgoingRIB(Cache):
 
     def session_reset(self) -> None:
         self._path_selection.clear()
+        self._otc_advertised.clear()
         self.reset()
 
     # back to square one, all the routes are removed
@@ -122,6 +129,9 @@ class OutgoingRIB(Cache):
         for family in list(self._path_selection):
             if family not in families:
                 del self._path_selection[family]
+        for family in list(self._otc_advertised):
+            if family not in families:
+                del self._otc_advertised[family]
 
     def pending(self) -> bool:
         if not self.enabled:
@@ -384,11 +394,12 @@ class OutgoingRIB(Cache):
         self,
         grouped: bool,
         paths_limit: dict[FamilyTuple, int] | None = None,
+        negotiated: Negotiated | None = None,
     ) -> Iterator[UpdateCollection | RouteRefresh]:
         if not self.enabled:
             return
         epoch = self._session_epoch
-        for update in self._generate_updates(grouped, paths_limit or {}):
+        for update in self._generate_updates(grouped, paths_limit or {}, negotiated):
             yield update
             # A disconnect can reset the RIB while the consumer is sending.
             if epoch != self._session_epoch:
@@ -435,11 +446,17 @@ class OutgoingRIB(Cache):
         assert not (selection.advertised & selection.candidates.keys()), 'a path is sent or held, never both'
         return True
 
-    def _withdraw_path(self, nlri: NLRI) -> bool:
+    def _withdraw_path(self, nlri: NLRI, advertised_only: bool = False) -> bool:
         family = nlri.family().afi_safi()
         prefixes = self._path_selection.get(family)
         if prefixes is None:
-            return True
+            advertised_indices = self._otc_advertised.get(family)
+            if advertised_indices is None:
+                return not advertised_only
+            index = self._make_index(nlri)
+            present = index in advertised_indices
+            advertised_indices.discard(index)
+            return present if advertised_only else True
         prefix = nlri.prefix_index()
         selection = prefixes.get(prefix)
         if selection is None:
@@ -453,7 +470,11 @@ class OutgoingRIB(Cache):
         return advertised
 
     def _promote_paths(
-        self, changed: dict[tuple[FamilyTuple, bytes], None], paths_limit: dict[FamilyTuple, int], grouped: bool
+        self,
+        changed: dict[tuple[FamilyTuple, bytes], None],
+        paths_limit: dict[FamilyTuple, int],
+        grouped: bool,
+        negotiated: Negotiated | None,
     ) -> Iterator[UpdateCollection]:
         # A promoted path is an announce like any other, so it batches like one.
         promoted: dict[tuple[bytes, FamilyTuple], list[Route]] = {}
@@ -464,10 +485,13 @@ class OutgoingRIB(Cache):
             limit = paths_limit.get(family, 0)
             admitted = len(selection.advertised)
             # Held paths only, in the order they were offered, since ExaBGP has no view of
-            # which path is better. Admission is committed only when its update is yielded.
-            for route in selection.candidates.values():
+            # which path is better. list() because a promoted one leaves the collection.
+            for index, route in list(selection.candidates.items()):
                 if limit and admitted >= limit:
                     break
+                if not self._otc_allowed(route, negotiated):
+                    del selection.candidates[index]
+                    continue
                 admitted += 1
                 # The counterpart of rib.paths_limit.withheld: the slot freed by a withdraw
                 # is what lets this one through, and both halves belong in the log.
@@ -492,7 +516,7 @@ class OutgoingRIB(Cache):
                 yield update
 
     def _generate_updates(
-        self, grouped: bool, paths_limit: dict[FamilyTuple, int]
+        self, grouped: bool, paths_limit: dict[FamilyTuple, int], negotiated: Negotiated | None
     ) -> Iterator[UpdateCollection | RouteRefresh]:
         # Everything this batch will send is taken and replaced in one go, because the RIB
         # keeps accepting while we generate: add_to_rib, del_from_rib and resend() all run
@@ -511,6 +535,7 @@ class OutgoingRIB(Cache):
         self._refresh_families = set()
         self._refresh_routes = []
 
+        changed: dict[tuple[FamilyTuple, bytes], None] = {}
         # Route refresh goes first: the flush which asked for it comes, to the operator,
         # before anything they announced afterwards in the same reactor cycle.
         for afi, safi in refresh_families:
@@ -522,9 +547,16 @@ class OutgoingRIB(Cache):
             replacement = latest_routes.pop(route.index(), None)
             if replacement is not None:
                 route = replacement
-            limit = paths_limit.get(family, 0)
-            if self._admit_path(route, limit, refresh=replacement is None):
-                yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes)
+            yield from self._select_updates(
+                [route],
+                route.attributes,
+                family,
+                paths_limit.get(family, 0),
+                grouped,
+                negotiated,
+                changed,
+                replacement is None,
+            )
         for afi, safi in refresh_families:
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.end)
 
@@ -533,7 +565,6 @@ class OutgoingRIB(Cache):
         # A dict rather than a set: which prefixes get backfilled is decided here, and the
         # order they are offered in should be the order they were withdrawn, not the order
         # their hashes happen to fall in.
-        changed: dict[tuple[FamilyTuple, bytes], None] = {}
         for family, withdrawals in pending_withdraws.items():
             for nlri, attributes in withdrawals.values():
                 if family in self._path_selection:
@@ -544,28 +575,55 @@ class OutgoingRIB(Cache):
         for attr_index, per_family in attr_af_nlri.items():
             for family, routes in per_family.items():
                 limit = paths_limit.get(family, 0)
-                # The same NLRI queued twice leaves an entry under each attribute set, and
-                # del_from_rib only unhooks the one filed under the attributes _new_nlri
-                # points at. The other entry outlived the withdraw and was announced after
-                # it, leaving the peer holding a route we had just withdrawn.
-                #
-                # An NLRI still in _new_nlri has not been withdrawn, whichever attributes
-                # it now carries, so announcing every queued attribute set for it stands:
-                # that is a redefinition, and both go out as they always have.
-                # The gate reads one structure to decide the fate of another, so say what
-                # has to hold between them: an announce leaves _new_nlri only by being
-                # withdrawn or folded into a refresh, never by being dropped.
-                assert all(
-                    index in latest_routes
-                    or index in refresh_routes
-                    or route.nlri.index() in pending_withdraws.get(family, {})
+                # Role eligibility is a transition of the latest desired route, not
+                # the order in which its attribute buckets were first created.
+                selected = [
+                    route
                     for index, route in routes.items()
-                ), 'a queued announce left _new_nlri without a withdraw or refresh'
-                selected = [route for index, route in routes.items() if index in latest_routes]
+                    if index in latest_routes
+                    and (negotiated is None or negotiated.role == RoleValue.NO_ROLE or latest_routes[index] is route)
+                ]
                 if selected:
-                    yield from self._select_updates(selected, new_attr[attr_index], family, limit, grouped)
+                    yield from self._select_updates(
+                        selected, new_attr[attr_index], family, limit, grouped, negotiated, changed
+                    )
         # Only prefixes touched by withdrawals need candidate promotion.
-        yield from self._promote_paths(changed, paths_limit, grouped)
+        yield from self._promote_paths(changed, paths_limit, grouped, negotiated)
+
+    @staticmethod
+    def _otc_allowed(route: Route, negotiated: Negotiated | None) -> bool:
+        if negotiated is None or route.attributes.otc_allowed(negotiated, route.nlri.family().afi_safi()):
+            return True
+        otc = route.attributes[Attribute.CODE.OTC]
+        if isinstance(otc, OTCSelf) and otc.role != RoleValue.NO_ROLE and otc.role != negotiated.role:
+            log.warning(
+                lazymsg(
+                    'rib.otc.refused reason=role-mismatch neighbor={neighbor} local-role={role} '
+                    'expected-local-role={expected} family="{family}" prefix={prefix}',
+                    neighbor=negotiated.neighbor.session.peer_address,
+                    role=negotiated.role,
+                    expected=otc.role,
+                    family=route.nlri.family(),
+                    prefix=route.nlri,
+                ),
+                'reactor',
+            )
+            return False
+        value = negotiated.local_as if isinstance(otc, OTCSelf) else str(otc)
+        log.warning(
+            lazymsg(
+                'rib.otc.refused reason=otc-restricted neighbor={neighbor} peer-role={role} peer-as=AS{asn} '
+                'expected-peer-role=customer,rs-client family="{family}" prefix={prefix} route-otc=AS{otc}',
+                neighbor=negotiated.neighbor.session.peer_address,
+                role=negotiated.peer_role,
+                asn=negotiated.peer_as,
+                family=route.nlri.family(),
+                prefix=route.nlri,
+                otc=value,
+            ),
+            'reactor',
+        )
+        return False
 
     def _select_updates(
         self,
@@ -574,16 +632,50 @@ class OutgoingRIB(Cache):
         family: FamilyTuple,
         limit: int,
         grouped: bool,
+        negotiated: Negotiated | None,
+        changed: dict[tuple[FamilyTuple, bytes], None],
+        refresh: bool = False,
     ) -> Iterator[UpdateCollection]:
+        eligible = []
+        for route in routes:
+            if not self._otc_allowed(route, negotiated):
+                # Invalidate held candidates as well as advertisements. Otherwise a
+                # later withdrawal could promote a superseded, OTC-free candidate.
+                if self._withdraw_path(route.nlri, advertised_only=True):
+                    changed[(family, route.nlri.prefix_index())] = None
+                    yield UpdateCollection([], [route.nlri], attributes)
+                continue
+            eligible.append(route)
         selected = []
         grouped = grouped and family in (
             (AFI.ipv4, SAFI.unicast),
             (AFI.ipv4, SAFI.mcast_vpn),
             (AFI.ipv6, SAFI.mcast_vpn),
         )
-        for route in routes:
-            if not self._admit_path(route, limit):
+        for route in eligible:
+            if not self._admit_path(route, limit, refresh):
                 continue
+            if (
+                not limit
+                and negotiated is not None
+                and negotiated.role in (RoleValue.CUSTOMER, RoleValue.RS_CLIENT, RoleValue.PEER)
+                and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
+            ):
+                self._otc_advertised.setdefault(family, set()).add(route.index())
+            if (
+                negotiated is not None
+                and negotiated.role != RoleValue.NO_ROLE
+                and Attribute.CODE.INTERNAL_OTC_NONE in attributes
+            ):
+                log.debug(
+                    lazymsg(
+                        'rib.otc.suppressed neighbor={neighbor} family="{family}" prefix={prefix}',
+                        neighbor=negotiated.neighbor.session.peer_address,
+                        family=route.nlri.family(),
+                        prefix=route.nlri,
+                    ),
+                    'rib',
+                )
             if grouped:
                 selected.append(route)
             else:

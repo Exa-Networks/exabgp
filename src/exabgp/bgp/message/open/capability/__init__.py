@@ -28,6 +28,8 @@ from exabgp.bgp.message.open.capability.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
+from exabgp.bgp.message.open.capability.role import Role
+from exabgp.bgp.message.open.capability.role import RoleValue
 
 # Do not remove this include or unknown capability will not be handled
 from exabgp.bgp.message.open.capability.unknown import UnknownCapability
@@ -48,5 +50,7 @@ __all__ = [
     'EnhancedRouteRefresh',
     'REFRESH',
     'LinkLocalNextHop',
+    'Role',
+    'RoleValue',
     'UnknownCapability',
 ]

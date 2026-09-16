@@ -14,11 +14,13 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
+from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.operational import Operational
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
+from exabgp.bgp.message.update.attribute.otc import OTCSelf
 from exabgp.bgp.neighbor.session import Session
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
@@ -329,6 +331,12 @@ class Neighbor:
             and self.session.source_interface == other.session.source_interface
             and self.session.incoming_ttl == other.session.incoming_ttl
             and self.session.outgoing_ttl == other.session.outgoing_ttl
+            # Only the two role settings carried in the OPEN belong here. Reactor.reload()
+            # reestablishes any neighbour comparing unequal, so adding `role_otc` or
+            # `role_add_meta` would drop a session to change what the serializer marks or
+            # which keys the API prints. Both are applied live through reconfigure().
+            and self.session.role == other.session.role
+            and self.session.role_strict == other.session.role_strict
             and self.group_updates == other.group_updates
             and self.auto_flush == other.auto_flush
             and self.adj_rib_in == other.adj_rib_in
@@ -363,6 +371,13 @@ class Neighbor:
         return chosen
 
     def resolve_self(self, route: 'Route') -> 'Route':
+        otc = route.attributes.get(Attribute.CODE.OTC)
+        if isinstance(otc, OTCSelf) and otc.role != RoleValue.NO_ROLE:
+            if self.session.role == RoleValue.NO_ROLE:
+                raise ValueError(f'otc {otc.role} requires a configured local role')
+            if otc.role != self.session.role:
+                raise ValueError(f'otc {otc.role} does not match configured local role {self.session.role}')
+
         nexthop = route.nexthop  # Use route.nexthop, not nlri.nexthop
 
         # Skip if not a SELF type
@@ -599,6 +614,7 @@ Neighbor {peer-address}
             + (f'\tmd5-ip "{neighbor.session.md5_ip}";\n' if not neighbor.session.auto_discovery else '')
             + (f'\toutgoing-ttl {neighbor.session.outgoing_ttl};\n' if neighbor.session.outgoing_ttl else '')
             + (f'\tincoming-ttl {neighbor.session.incoming_ttl};\n' if neighbor.session.incoming_ttl else '')
+            + cls._configuration_role(neighbor)
             + f'\tcapability {{\n'
             f'\t\tasn4 {"enable" if cap.asn4.is_enabled() else "disable"};\n'
             f'\t\troute-refresh {"enable" if cap.route_refresh else "disable"};\n'
@@ -622,6 +638,20 @@ Neighbor {peer-address}
         # '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
         # '\t\tsend {\n%s\t\t}\n' % send if send else '',
         return returned.replace('\t', '  ')
+
+    @staticmethod
+    def _configuration_role(neighbor: Neighbor) -> str:
+        session = neighbor.session
+        if session.role == RoleValue.NO_ROLE:
+            return ''
+        return (
+            '\trole {\n'
+            f'\t\tlocal {session.role};\n'
+            f'\t\tstrict {"enable" if session.role_strict else "disable"};\n'
+            f'\t\totc {"send" if session.role_otc else "disable"};\n'
+            f'\t\tadd-meta {"enable" if session.role_add_meta else "disable"};\n'
+            '\t}\n'
+        )
 
     @classmethod
     def as_dict(cls, answer: dict[str, Any]) -> dict[str, Any]:

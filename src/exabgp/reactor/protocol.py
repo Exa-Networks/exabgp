@@ -25,6 +25,7 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import ASN, RouterID, Version
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotiated
+from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update import UpdateCollection
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
@@ -260,7 +261,11 @@ class Protocol:
             )
 
         if msg_id == Message.CODE.UPDATE:
-            if not self.neighbor.adj_rib_in and not (for_api or self.log_routes) and not (parsed or consolidate):
+            if (
+                self.negotiated.role == RoleValue.NO_ROLE
+                and not self.neighbor.adj_rib_in
+                and not (for_api or self.log_routes or parsed or consolidate)
+            ):
                 return _UPDATE
 
         try:
@@ -276,15 +281,8 @@ class Protocol:
             raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id) from None
             # raise Notify(5,0,'unknown message received')
 
-        if message.TYPE == Update.TYPE:
-            # Both Update and EOR have TYPE == Update.TYPE
-            # Update: use .data to get parsed collection
-            # EOR: has .attributes and .nlris directly
-            if isinstance(message, Update):
-                # Note: TREAT_AS_WITHDRAW handling is done at the Update level
-                # The UpdateCollection (message.data) already tracks which NLRIs
-                # are withdraws via the announces vs withdraws lists
-                pass
+        if isinstance(message, Update):
+            message.data.classify_otc(self.negotiated)
 
         if for_api:
             if consolidate:
@@ -426,6 +424,7 @@ class Protocol:
         updates = self.neighbor.rib.outgoing.updates(
             self.neighbor.group_updates,
             paths_limit=self.negotiated.paths_limit or None,
+            negotiated=self.negotiated,
         )
         number: int = 0
         for update in updates:
@@ -450,6 +449,7 @@ class Protocol:
         updates = self.neighbor.rib.outgoing.updates(
             self.neighbor.group_updates,
             paths_limit=self.negotiated.paths_limit or None,
+            negotiated=self.negotiated,
         )
         number: int = 0
         for update in updates:

@@ -27,12 +27,14 @@ from collections.abc import Callable, Iterator, MutableMapping
 from typing import TYPE_CHECKING, Any, ClassVar, Generator, cast
 
 from exabgp.util.types import Buffer
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, SET, AS2Path
 from exabgp.bgp.message.update.attribute.attribute import (
     Attribute,
@@ -47,6 +49,7 @@ from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.attribute.origin import Origin
+from exabgp.bgp.message.update.attribute.otc import OTCSelf
 from exabgp.bgp.message.update.attribute.watchdog import NoWatchdog, Watchdog
 from exabgp.logger import lazyattribute, lazymsg, log
 
@@ -82,7 +85,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         Attribute.CODE.INTERNAL_WITHDRAW,
         Attribute.CODE.INTERNAL_DISCARD,
         Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW,
+        Attribute.CODE.INTERNAL_OTC_NONE,
     )
+    INTERNAL_IDENTITY: ClassVar[tuple[int, ...]] = (Attribute.CODE.INTERNAL_OTC_NONE,)
 
     # The previously parsed AttributeCollection, and the bytes it was made from, are kept
     # on the Negotiated of the session they belong to. They used to be ClassVars: one slot
@@ -110,6 +115,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         Attribute.CODE.IPV6_EXTENDED_COMMUNITY: ('list', '', 'extended-community-ipv6', '%s', '%s'),
         Attribute.CODE.PMSI_TUNNEL: ('string', '', 'pmsi', '%s', '%s'),
         Attribute.CODE.AIGP: ('integer', '', 'aigp', '%s', '%s'),
+        Attribute.CODE.OTC: ('integer', '', 'otc', '%s', '%s'),
         Attribute.CODE.BGP_LS: ('list', '', 'bgp-ls', '%s', '%s'),
         Attribute.CODE.BGP_PREFIX_SID: ('list', '', 'bgp-prefix-sid', '%s', '%s'),
         Attribute.CODE.TUNNEL_ENCAP: ('list', '', 'tunnel-encap', '%s', '%s'),
@@ -297,6 +303,16 @@ class AttributeCollection(MutableMapping[int, Attribute]):
     def withdraw(self) -> bool:
         return self.pop(Attribute.CODE.INTERNAL_WITHDRAW, None) is not None
 
+    def otc_allowed(self, negotiated: Negotiated, family: FamilyTuple) -> bool:
+        otc = self.get(Attribute.CODE.OTC)
+        if isinstance(otc, OTCSelf) and otc.role != RoleValue.NO_ROLE and otc.role != negotiated.role:
+            return False
+        return not (
+            Attribute.CODE.OTC in self
+            and negotiated.role in (RoleValue.CUSTOMER, RoleValue.RS_CLIENT, RoleValue.PEER)
+            and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
+        )
+
     def pack_attribute(self, negotiated: Negotiated, with_default: bool = True) -> bytes:
         local_asn = negotiated.local_as
         peer_asn = negotiated.peer_as
@@ -370,6 +386,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             idx = ''.join(self._generate_text())
             nexthop = str(self.get(Attribute.CODE.NEXT_HOP, 'missing'))
             text = '{} next-hop {}'.format(idx, nexthop) if nexthop else idx
+            for code in self.INTERNAL_IDENTITY:
+                if code in self:
+                    text += ' internal-{:04x}'.format(code)
             self._idx = text.encode()
         return self._idx
 

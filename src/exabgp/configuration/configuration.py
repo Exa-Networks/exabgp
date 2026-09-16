@@ -34,6 +34,7 @@ from exabgp.configuration.announce.vpn import AnnounceVPN  # noqa: F401,E261,E50
 from exabgp.configuration.capability import ParseCapability
 from exabgp.configuration.core import Error, Parser, Scope, Section, Tokeniser
 from exabgp.configuration.tcpao import ParseTCPAO
+from exabgp.configuration.role import ParseRole
 from exabgp.configuration.flow import ParseFlow, ParseFlowMatch, ParseFlowRoute, ParseFlowScope, ParseFlowThen
 from exabgp.configuration.l2vpn import ParseL2VPN, ParseVPLS
 from exabgp.configuration.neighbor import ParseNeighbor
@@ -297,6 +298,7 @@ class Configuration(_Configuration):
         self.nexthop = ParseNextHop(*params)
         self.capability = ParseCapability(*params)
         self.tcpao = ParseTCPAO(*params)
+        self.role = ParseRole(*params)
         self.api = ParseAPI(*params)
         self.api_send = ParseSend(*params)
         self.api_receive = ParseReceive(*params)
@@ -314,7 +316,6 @@ class Configuration(_Configuration):
         self.l2vpn = ParseL2VPN(*params)
         self.vpls = ParseVPLS(*params)
         self.operational = ParseOperational(*params)
-
         # Build parser registry: section_name -> parser instance
         self._parsers: dict[str, Section] = {
             p.name: p
@@ -328,6 +329,7 @@ class Configuration(_Configuration):
                 self.nexthop,
                 self.capability,
                 self.tcpao,
+                self.role,
                 self.api,
                 self.api_send,
                 self.api_receive,

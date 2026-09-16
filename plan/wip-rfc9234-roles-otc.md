@@ -1,11 +1,14 @@
 # RFC 9234 - BGP Roles and Only-To-Customer (OTC)
 
-**Status:** Planning; specification reviewed against the code, implementation not started
+**Current status:** Reviewed Role/OTC implementation, tests and documentation.
+Non-OTC review corrections are retained as 17 independent preceding commits.
+Existing code structure is retained; structural/Tiger Style cleanup remains a separate
+patch set. This is partial RFC 9234 support without ingress insertion.
+**Last updated:** 2026-09-17.
 **Issue:** [#1346](https://github.com/Exa-Networks/exabgp/issues/1346)
 **RFC:** [RFC 9234](https://www.rfc-editor.org/rfc/rfc9234.html)
 **Reference implementation:** ze, `internal/component/bgp/plugins/role/`
 **Created:** 2026-09-02
-**Last Updated:** 2026-09-13
 
 ## Overview and conformance boundary
 
@@ -103,10 +106,10 @@ our provider. Keep the block form rather than a bare `role provider;` because `s
   why this is a boolean: whether to mark at all is the only choice left. Egress procedure 1 adds only where the attribute is absent,
   and egress procedure 2 decides what happens to a route that already has one, so an existing value
   is never a candidate for replacement, it is a candidate for refusal.
-  A route carrying `otc self`, `otc <role-name>` or `otc <asn>` already has its attribute resolved
-  before serialization, so `otc send` sees a route that carries one and leaves it
-  alone. That is the
-  same rule, not a special case, and the preservation requirement above is why.
+  A numeric OTC or an unresolved OTC sentinel both count as an existing attribute for admission
+  and automatic-insertion decisions. For an admitted route, serialization resolves a sentinel's
+  value exactly once in the output, without replacing the desired-route sentinel or adding a
+  second attribute.
   It gates **only** that automatic outbound insertion, which is RFC 9234 egress procedure 1.
   It does not gate egress procedure 2: a route that already carries OTC is still refused towards a
   provider, an RS or a peer under `otc disable`, because that half is the leak prevention and
@@ -482,6 +485,14 @@ bookkeeping. Pass the session context from both protocol update send paths. Appl
 selection to queued announcements, refresh/resend and candidate promotion; rejected routes must
 not consume an advertised path slot or be reported as successfully advertised.
 
+Before eligibility is evaluated, select the latest desired announcement for each neighbour,
+family, prefix and ADD-PATH identifier in the detached batch. An attribute bucket is a grouping
+index, not a chronology: `_new_attr_af_nlri` can contain A and B after commands A, B, A, while
+`latest_routes` correctly names the final A. Discard superseded bucket entries before applying
+eligibility, withdrawal-on-refusal, or path-limit admission. Do not derive transitions from the
+order in which attribute buckets were first created. Explicit withdrawals retain their existing
+withdraw-before-announce ordering; selecting the latest announcement must not cancel them.
+
 Define replacement behavior per neighbour, family, prefix and ADD-PATH identifier:
 
 - An ineligible route with no prior advertisement emits no announcement.
@@ -490,6 +501,13 @@ Define replacement behavior per neighbour, family, prefix and ADD-PATH identifie
 - Explicit withdrawals always proceed through the normal withdrawal path. A blocked replacement
   must not cancel a queued withdrawal.
 - Replacing a blocked route with an eligible route permits a new announcement.
+- A blocked replacement invalidates any older held candidate with the same identity, even when
+  that identity was never advertised. Remove it from `selection.candidates` before returning the
+  refusal; use the advertised-membership result to decide whether a withdrawal is necessary.
+  Do not erase the blocked desired route from the optional cache. Checking eligibility only
+  during promotion is insufficient: the retained candidate might be an older OTC-free object.
+  Removing an advertised identity also schedules candidate promotion for that prefix, through
+  the same changed-prefix bookkeeping as an explicit withdrawal.
 - Refresh must not resurrect blocked routes. Session teardown clears session-specific admission
   state, and reconnect reevaluates retained desired routes under the new session policy.
 
@@ -592,13 +610,18 @@ rib.otc.refused reason=otc-restricted neighbor=192.0.2.1 peer-role=provider peer
 Insert OTC only while producing the outgoing attributes for an eligible, in-scope announcement,
 using `Negotiated.local_as`. Whether to insert is the axis 2 and axis 3 question already settled
 above: the route's own `otc` token decides when it has one, the session knob decides otherwise.
-A route carrying `otc self` or `otc <role-name>` arrives here already resolved, so the serializer
-inserts a value it was given rather than one it derives.
+The serializer resolves `otc self` and `otc <role-name>` from the effective local ASN only after
+admission, without replacing the stored sentinel or changing its desired-route identity. A sentinel
+already counts as OTC present for eligibility; resolution must not let it bypass the refusal gate.
 
-`Negotiated.local_as` is `sent_open.asn`, the real local ASN: `ASN.trans()` is applied at pack time
-for AS_PATH and AGGREGATOR only, and OTC carries four octets whether or not ASN4 was
-negotiated. A four-octet local ASN talking to a peer without ASN4 support must still stamp the real
-number, never AS_TRANS, and a test must cover exactly that pairing. Never mutate the shared `AttributeCollection`,
+`Open.make_open()` applies `ASN.trans()` to its two-octet ASN field, so `sent_open.asn` may be
+AS_TRANS. `Negotiated.local_as` must retain the effective local ASN separately: recover it from
+the locally sent ASN4 capability regardless of mutual ASN4 negotiation, or from explicit local
+configuration when ASN4 advertisement is disabled. A two-octet OPEN without either source keeps
+its own ASN, including the value settled by automatic-AS operation.
+A four-octet local ASN talking to a peer without ASN4 support must still stamp the real
+number, never AS_TRANS. Its default AS_PATH must retain that ASN until serialization chooses
+four-octet AS_PATH or two-octet AS_PATH plus AS4_PATH. Never mutate the shared `AttributeCollection`,
 its cached text/JSON/index, or stored desired-route attributes.
 
 Make the family/announcement context explicit at the serializer boundary. Partition mixed-family
@@ -909,8 +932,8 @@ equality. Exercise `Protocol.validate_open()` to prove that stored errors actual
 | `src/exabgp/configuration/static/route.py` | static schema and known-parser registration |
 | `src/exabgp/configuration/announce/ip.py`, `vpn.py`, `label.py` | OTC leaves with explicit OTC-producing validators |
 | `src/exabgp/configuration/validator.py` | `OTCValidator`, modelled on `MEDValidator`, accepting a role name or an ASN |
-| `src/exabgp/bgp/neighbor/neighbor.py` | resolve the OTC role sentinel in `resolve_self()`, validate it against the configured role |
-| `src/exabgp/rib/outgoing.py` | extend the existing unresolved-sentinel guard to OTC |
+| `src/exabgp/bgp/neighbor/neighbor.py` | validate only the role assertion in `resolve_self()`; retain the unresolved value until serialization |
+| `src/exabgp/rib/outgoing.py` | keep the guard scoped to next-hop sentinels; OTC sentinels are valid desired-route state |
 | `tests/unit/` | attribute round-trip, bounds, malformed length, shared ze vectors |
 
 Reuse the existing treat-as-withdraw conversion, not attribute discard or session reset for a
@@ -981,8 +1004,9 @@ No test should merely assert registry wiring or the presence of a source-code st
   difference between the two spellings.
 - One route announced to two neighbours with different `local-as` is marked with each neighbour's
   own ASN, which is what "resolved at the peer" has to mean.
-- An unresolved OTC sentinel never reaches the RIB, proven by the existing guard rather than by
-  inspecting the parser.
+- An unresolved OTC sentinel survives RIB insertion and replay; its value
+  is resolved for each session only during serialization. The next-hop sentinel guard still rejects
+  unresolved next hops.
 - `otc <role>` and `otc self` are rejected by inline `exabgp encode`, which builds a neighbour with
   no role and no session, and accepted by `exabgp encode -c` with a real configuration.
 - Changing the role block's `otc` or `add-meta` on reload keeps the session up; changing `local` or
@@ -1005,8 +1029,9 @@ No test should merely assert registry wiring or the presence of a source-code st
 - Static block, inline API route, family-qualified IP/VPN/label announcement, default encode and
   family-qualified encode accept OTC through their real parser paths, in both spellings where the
   path has a neighbour to resolve against.
-- A resolved role-named OTC is indistinguishable downstream from a numeric one: same bytes, same
-  JSON, same text, same `index()`, and it shares the attribute cache with the numeric form.
+- A role-named or self OTC resolving to a numeric OTC's ASN produces identical wire attributes,
+  and decoded wire attributes have identical JSON/text. Stored desired routes retain their distinct
+  sentinel identity and must not share a desired-route index/cache entry with numeric OTC.
 - Normal JSON emits integer `otc`, text renders a reusable decimal ASN, and generic output follows
   existing conventions. Check the shared ze vectors and complete capability TLV.
 - Wrong OTC lengths convert supported legacy and MP announcements into withdrawals without
@@ -1023,8 +1048,9 @@ No test should merely assert registry wiring or the presence of a source-code st
 - An attribute set holding no identity-bearing internal code produces the same `index()` bytes as
   before the change.
 - `otc self` on a neighbour with `local-as auto`: the OPEN settles the ASN and the announcement
-  carries that ASN, never `AS0`. Same for `otc <role-name>`, and a name disagreeing with the
-  configured role is still refused at configuration time, before any session exists.
+  carries that ASN, never `AS0`.
+  Role-named OTC requires an explicit-AS role configuration; reject it under automatic ASNs.
+  A name disagreeing with the configured role is refused before any session exists.
 - `exabgp encode` with `otc self` and no session: a clear error rather than `AS0`.
 
 ### Egress and family boundaries
@@ -1033,6 +1059,14 @@ No test should merely assert registry wiring or the presence of a source-code st
   stamped routes but not routes that already carried OTC.
 - An outgoing route that already carries an OTC equal to our own local ASN is left exactly as it is:
   the value is not rewritten, no second attribute appears, and the wire bytes match what was stored.
+- Queue eligible A, blocked B, eligible A for the same prefix/path before one flush. The final
+  announcement is A and no withdrawal caused by superseded B follows it. Exercise the reverse
+  final state, both grouping modes, caching on/off, and path limits enabled/disabled. A separate
+  explicit withdrawal still precedes the final eligible announcement.
+- With ADD-PATH limit 1, advertise A and hold OTC-free B. Replace B with an OTC-bearing blocked
+  version, then withdraw A. No version of B is promoted; a different eligible held candidate can
+  fill the slot. Exercise caching on/off, and then replace blocked B with an eligible version to
+  prove it can be admitted again.
 - A received UPDATE carrying two OTC attributes keeps the first, discards the second and continues
   to be processed with the session up, per RFC 7606 Section 3(g).
 - Repeat the three marking rows with `role { otc disable; }`: no attribute is added, and the refusal rows
@@ -1106,8 +1140,9 @@ No test should merely assert registry wiring or the presence of a source-code st
   confirmed role when it did.
 - `expected-otc` is `none` for a customer and an RS client, and `peer-as` for a lateral peer.
 - `received-otc` renders as `AS<n>`, never a bare number, including for a four-octet ASN.
-- `peer-as` carries the negotiated peer ASN, proven by a session where the negotiated peer ASN and
-  the configured one differ, and by a four-octet peer reached behind AS_TRANS.
+- Configure peer AS 4200000001 and receive OPEN ASN AS_TRANS with ASN4 capability 4200000001.
+  Classification and `peer-as` metadata use 4200000001, never 23456. A separately configured/
+  negotiated ASN mismatch still fails OPEN validation with (2, 2), before any UPDATE is accepted.
 - The leak warning and the refusal warning use the field names of their JSON counterpart, so a
   reader moving between the log and the API stream never has to translate.
 - The refusal log names `reason`, `peer-role`, `peer-as`, `expected-peer-role` and `route-otc`, and
@@ -1235,3 +1270,537 @@ the strength of documentation checks.
 - `.claude/exabgp/REGISTRY_AND_EXTENSION_PATTERNS.md` - registries
 - `.claude/exabgp/WIRE_SEMANTIC_SEPARATION.md` - wire/semantic ownership
 - `.claude/exabgp/PACKED_BYTES_FIRST_PATTERN.md` - immutable OTC storage
+
+## Review corrections — 2026-09-15
+
+The struck-through requirements above are superseded history, not alternative implementations.
+Five review findings are addressed: the effective local ASN source, deferred OTC resolution and
+identity, invalidation of stale held candidates, latest-announcement selection before eligibility,
+and the reachable ASN4 ingress acceptance scenario.
+
+### Regression evidence before the ASN correction
+
+`.venv/bin/python -B -m pytest -q -p no:cacheprovider tests/unit/test_negotiated_local_as.py`
+reported **4 failed, 1 passed**. Three four-octet eBGP cases observed `23456 != 65537`;
+the four-octet iBGP case was incorrectly classified as eBGP. The two-octet control passed.
+The regression also exercises default AS_PATH serialization, so correcting only the negotiated
+field cannot hide premature truncation in attribute construction.
+
+**Resume point:** finish the ASN source correction and verification, then resume the existing
+Phase 1 implementation. The OTC RIB and serializer requirements above remain planned work,
+not runtime protection supplied by this review correction.
+
+### Dependent AS4 reconstruction failure
+
+After preserving the effective local ASN, the focused suite reported **2 failed, 184 passed**.
+The two legacy-peer round trips reached `AttributeCollection.merge_attributes()` with a real
+four-octet ASN and raised `struct.error` because the merged path was rebuilt as two-octet storage.
+The fix must preserve four-octet values in merged semantic paths as well as generated defaults;
+wire-format selection remains the serializer's responsibility.
+
+### Focused verification after correction
+
+The ASN regression, Role codec/reload comparisons, OPEN capabilities, multisession,
+PATHS-LIMIT RIB, attribute and AS_PATH suites report **232 passed**.
+The runtime probe now reports configured ASN 65537, OPEN ASN 23456, and
+`Negotiated.local_as = 65537` with ASN4 negotiation disabled.
+The changed negotiation functions are 56, 17, 26 and 45 lines; attribute packing and merging
+are 52 and 51 lines. No throwaway scripts were written into the repository.
+Full-suite verification is pending. The suite's blanket `killall -9 python` setup will be
+omitted without omitting its encoding tests or any other validation stage.
+
+### Automatic-AS boundary
+
+Before completing full validation, a regression using `Capabilities.new()` with automatic local
+AS reproduced **1 failed**: reading its unset ASN4 capability replaced the valid two-octet OPEN
+identity 65002 with AS0. Local ASN reconstruction must only replace an AS_TRANS OPEN field;
+otherwise the already-selected OPEN identity is authoritative. The full suite was stopped
+before source changes and will be restarted from the beginning.
+
+### Full-suite environment blocker
+
+The restarted full runner passed formatting, lint, mypy, the complete normal and optimized
+Python suites, configuration, no-neighbor, encode/decode, parsing, JSON, API encoding,
+command round-trip, migration and functional decoding. Functional encoding entered repeated
+timeouts; the runner was stopped rather than waiting through every individual retry.
+
+`./qa/bin/functional encoding F -v --timeout 10` reported **0 passed, 1 timed out** with
+both the default Python 3.14 and explicit project Python 3.12 interpreter. The test server
+listened on `[::1]:1805`, but the client never reached BGP connection establishment.
+A temporary in-memory `faulthandler.dump_traceback_later(5)` startup probe located the block:
+`socket.getfqdn()` -> `exabgp.util.dns.domain()` -> `dns.warn()` -> `application.server.run()`.
+No host resolver settings or unrelated DNS startup code were changed. The diagnostic processes
+were stopped. Full end-to-end validation remains blocked on working local hostname resolution.
+
+### Final review-correction verification
+
+- The final focused regression run reports **233 passed**, including the new automatic-AS
+  boundary test. Before the original ASN correction, the new regression reported **4 failed,
+  1 passed**.
+- The final wire smoke reports effective local ASN 65537, serialized attributes
+  `4001010040020402015ba0c01106020100010001`, and reconstructed path `( 65537 )`.
+- **20 of the full runner's 24 stages passed:** formatting, lint, mypy, normal Python tests,
+  optimized Python tests, config, no-neighbor, encode-decode, parsing, JSON, API encoding,
+  command round-trip, migration, decoding, type-ignore, Tiger Style, test discovery, sweep
+  floors, JSON rendering, and documentation.
+- Network/daemon verification remains incomplete: isolated encoding timed out, CLI reported
+  **0 passed, 1 timed out**, reload-cleanup reported that the daemon never listened on
+  `127.0.0.1:11179`, and the API retry run was stopped. Encoding startup was traced to blocking
+  hostname resolution before BGP. No blanket process kill, host DNS change, or DNS workaround
+  was used to turn these checks green.
+
+**Current resume point (supersedes the earlier review-correction resume point):** source changes,
+regression coverage, changelog and the five specification corrections are applied. Restore working
+local hostname resolution, then rerun the complete suite before declaring the implementation
+validated. Resume the existing Phase 1 work afterwards; the OTC sentinel, held-candidate and
+latest-version rules are corrected specifications, not implemented OTC routing procedures.
+
+### Verification retry — 2026-09-16
+
+The operator reported an unanswered Python networking permission dialog during the previous
+run and requested another attempt. No DNS configuration or application source change was
+needed for the retry.
+
+`./qa/bin/functional encoding F -v --timeout 20` completed with **1 passed, 0 failed,
+0 timed out**. Both expected BGP messages matched.
+
+The complete `qa/bin/test_everything` runner then executed all 24 stages and reported:
+
+```
+All 24 tests passed in 5m59s
+Exit code: 0
+```
+
+This includes the previously blocked encoding, CLI, API and reload-cleanup stages. As before,
+the runner was invoked in memory with only its blanket `killall -9 python` setup command
+omitted; no validation stage was skipped.
+
+**Current resume point (supersedes the blocked resume points above):** the review corrections
+are validated and the environment blocker is cleared. Continue the existing Phase 1 work.
+Passing these checks does not imply that the remaining planned OTC procedures are implemented.
+
+### Numeric ASN capability compatibility — 2026-09-16
+
+The local and remote ASN4 capability values must accept plain integers as well as `ASN`/`ASN4`
+instances, normalizing accepted values to `ASN`. The local zero-value fallback remains unchanged.
+Before correction, the added regressions reported **2 failed, 6 passed**: a numeric local ASN
+produced AS_TRANS in the default path, and a numeric peer ASN incorrectly failed OPEN validation
+with (2, 2). Verification after correction is pending.
+
+The requested implementation performs no `isinstance` checks in ASN negotiation: present values
+are converted directly with `ASN(...)`. Only the local missing/zero fallback and the remote
+missing-value guard remain.
+
+### ASN generation invariant correction — 2026-09-16
+
+This supersedes the fallback statements above. An explicit four-octet local ASN with ASN4
+advertisement disabled is an invalid generation setup, not a negotiation recovery case.
+`Capabilities._asn4()` now rejects that combination with `ValueError`. ASN negotiation reads
+required capability values directly and converts them with `ASN(...)`, without type checks,
+missing-value guards or a configuration fallback.
+
+The regression accepting that invalid setup was replaced by a generation rejection test.
+Before correction: **1 failed, 7 passed**. After correction, the ASN, OPEN capability and
+multisession regressions report **108 passed**. Full validation is restarting after stopping
+the previous run before its completion; that interrupted run is not verification of this change.
+
+Final verification supersedes the pending notes above: the full `qa/bin/test_everything` runner
+reported **All 24 tests passed in 5m56s**, exit **0**. Every validation stage ran; only the
+encoding setup's blanket `killall -9 python` command was omitted by the in-memory runner.
+The changelog records the generation-boundary rejection and direct numeric ASN conversion.
+No commits were made. The remaining RFC 9234 implementation work is unchanged.
+
+### Static-route OTC implementation and integration
+
+The missing route feature is now being implemented, not merely specified. Independent slices added
+the attribute codec/markers, shared parsers and Role configuration/negotiation. Integration adds
+non-mutating family-aware serialization, outgoing eligibility and replacement withdrawals, and
+actual ingress reporting for the exposed `add-meta` setting.
+
+Initial focused verification: **172 passed, 8 failed**. Four failures are incomplete mocked
+negotiation fixtures (missing `attribute_cache_enabled`); four use a nonexistent JSON constructor
+keyword. Source mypy reports five integration errors: an advertised-set/boolean variable name
+collision, a missing peer flag annotation, and two type-narrowing errors in extracted peer code.
+These are being corrected before the complete suite is run.
+
+The CLI smoke path now decodes `route 10.0.0.0/24 next-hop 192.0.2.2 otc 1.1` as
+`"otc": 65537` on the announced prefix. Source mypy passes all 392 files.
+Expanded verification reports **282 passed, 3 failed**: the three existing PATHS-LIMIT lifecycle
+cases still use queue/cache reset as session teardown. They must use the new `session_reset()`
+boundary; a live reload must preserve what the peer has already received.
+
+The affected OTC, PATHS-LIMIT, RIB update, JSON and wire integration tests now report
+**286 passed**. The cache-clear tests distinguish live reload from actual session reset.
+IPv4 multicast now uses MP attributes, and attribute selection is per family.
+The configuration manual and changelog describe syntax, refusal, suppression, live reload
+limitations, and helper responsibility for ingress insertion.
+
+Independent review found missing Role schema export, missing programmatic role-ASN validation,
+an unresolved AS_TRANS generation case, enhanced-refresh replacement ordering, and cached
+role assertions surviving a role-changing reconnect. Added regressions reproduce all five
+boundaries: **8 failed** before correction. The AS_TRANS fix belongs at generation, not in
+negotiation fallback logic.
+
+The first complete runner reached **5885 passed, 2 skipped, 1 failed** in the unit stage:
+unconfigured role defaults leaked into configuration JSON, changing the no-role export.
+The no-role export will remain unchanged rather than updating its expected fixture.
+
+### Deferred structural cleanup — separate patch set
+
+**User direction:** Keep the code structure. Do not extract/reorganize existing code merely
+to satisfy Tiger Style as part of the OTC feature. Preserve the established
+`pack_attribute(self, negotiated, with_default=True)` API. Cleanup must be proposed and
+reviewed separately; no commit has been authorized.
+
+The following refactors were implemented during OTC work and are now being removed from
+this feature patch. This inventory records them so they can be reconsidered later, not
+applied automatically:
+
+| File | Refactor attempted | Future patch scope |
+|------|--------------------|--------------------|
+| `src/exabgp/application/encode.py` | Extracted `_inline_configuration()` and `_encode_routes()` from `cmdline()` | Behavior-preserving CLI decomposition only; retain configured versus inline OTC validation independently |
+| `src/exabgp/configuration/configuration.py` | Extracted `_register_parsers()` from `Configuration.__init__()` | Constructor cleanup only; preserve parser registration before structure construction |
+| `src/exabgp/bgp/message/open/capability/negotiated.py` | Extracted `_negotiate_asns()`, `_negotiate_paths_limit()` and `_negotiate_multisession()` | Negotiation decomposition only; retain the independently required effective-ASN fixes and new Role negotiation |
+| `src/exabgp/application/schema.py` | Replaced `_get_section_schema()`'s imports/registry with lookup in `_get_root_schema()` | Schema-registry deduplication; do not mix removal of ImportError handling with Role registration |
+| `src/exabgp/configuration/encoder.py` | Split `_serialize_value()` into `_serialize_session()` and `_serialize_structure()` | Serialization decomposition with byte-identical no-role JSON exports |
+| `src/exabgp/bgp/neighbor/neighbor.py` | Extracted `_configuration_body()` and `_configuration_api()` from `configuration()` and condensed API maps | Configuration-renderer cleanup; preserve API flags, ordering, whitespace and role round-trips |
+| `src/exabgp/reactor/protocol.py` | Extracted `_received_notification()` and `_decode_message()` from `read_message()` | Protocol exception/notification decomposition; preserve error conversion and process notifications |
+| `src/exabgp/reactor/peer/peer.py` | Split `_main()` into `_session_context()`, `_main_loop()`, and `_apply_configuration_reload()` | Peer-loop decomposition; preserve setup order, keepalive/timer lifetime, exception scope, handler context and reload behavior |
+| `src/exabgp/reactor/api/response/json.py` | Extracted `_update_groups()` from `_update()` | Rendering cleanup only; preserve compact/v4 JSON and metadata gating |
+| `src/exabgp/bgp/message/update/collection.py` | Replaced the existing `messages()` implementation with `_classify_announces()`, `_classify_withdraws()`, `_ipv4_messages()` and `_mp_messages()` | UPDATE serializer refactor; maintain family grouping, withdrawal attributes, fragmentation budgets and emission order |
+| `src/exabgp/bgp/message/update/attribute/collection.py` | Moved the established packing implementation into `_pack_attributes()` behind wrappers | Do not change the established signature or move its body for style compliance in the OTC patch |
+| `src/exabgp/rib/outgoing.py` | Reworked generation/admission loops and shortened comments to meet the function-length ceiling | Separate any cleanup from required OTC refusal, withdrawal and replay bookkeeping |
+| `qa/tiger_style.json` | Lowered `long_function` from 91 to 78 and `silent_except` from 100 to 90 | Ratchet only after independently accepted cleanup; these numbers describe the broad intermediate refactor |
+
+#### Adjacent behavior changes are not cleanup
+
+Do not silently reintroduce these as mechanical refactors:
+
+- IPv4 multicast moved from legacy IPv4 NLRI fields into MP_REACH/MP_UNREACH.
+  This is a wire-format change and needs its own justification and regression coverage.
+- The rewritten MP serializer initially removed common/default attributes from non-unicast
+  withdrawals. API encode validation caught **15 failures out of 364 vectors**. Restoring
+  the existing withdrawal representation made all **364 pass**; do not regenerate golden
+  vectors to conceal this regression.
+- Packing MP_REACH and MP_UNREACH with the remaining reach budget raised
+  `RuntimeError: NLRI too large for attribute size limit` for an otherwise encodable mixed
+  IPv6 update (96-byte budget). A regression was added; the intermediate fix emitted
+  withdrawals and announcements separately, each with a full budget. Treat that change
+  in packet grouping as a separate correctness decision, not a stylistic extraction.
+  The separate-packet rewrite and its newly added regression have been removed from the
+  OTC patch together; this unresolved adjacent bug is deferred, not claimed fixed.
+  To reproduce later in `tests/unit/test_otc_routes.py`, use `configured('provider')`,
+  set `negotiated.msg_size = 96`, parse `announce route 2001:db8::1/128 next-hop
+  2001:db8::ffff` and `withdraw route 2001:db8::2/128 next-hop 2001:db8::ffff`, build one
+  `UpdateCollection` with that announcement and withdrawal, and consume
+  `list(collection.messages(negotiated))`. A correct fix must preserve both routes,
+  stay within the size limit, avoid automatically marking withdrawal-only messages,
+  and specify the ordering of any split packets.
+- Enhanced-refresh replacements must be advertised before EoRR. Cached OTC role assertions
+  must be revalidated after a role-changing reconnect. Preserve these OTC interactions
+  without using them as justification to rewrite the surrounding refresh machinery.
+
+#### Evidence and resumption
+
+Before structure restoration, the focused OTC/PATHS/RIB/JSON/wire selection reported
+**297 passed**, API encode validation **364 passed, 0 failed**, ruff passed, and mypy
+reported **no issues in 392 source files**. These results apply only to that intermediate
+implementation. A complete 24-stage validation run has **not** passed for the feature.
+
+For a future cleanup patch set:
+
+1. Start from the accepted, structurally preserved OTC implementation.
+2. Select one of the independent refactors above; establish its behavioral baseline first.
+3. Make no API, wire-format, packet-ordering or policy changes in the cleanup commit.
+4. Re-run the affected regressions and complete suite, then update the Tiger Style ratchet.
+5. Obtain explicit approval before committing.
+
+**Resume point:** Review the structurally preserved OTC patch. Revisit the deferred refactors
+only as separately scoped patch sets; none is part of this feature's acceptance.
+
+Structure restoration now returns the existing `pack_attribute()` body to its original
+method, with its original signature: no wrapper, `otc` keyword, or `pack_announcement()`
+entry point remains. Automatic OTC bytes are added in the existing UPDATE serializer
+where family context is available. Existing serializer loops remain in place.
+The small IPv4 multicast classification correction remains necessary for the feature:
+multicast must not share the native unicast OTC context. Already emitted native NLRI
+is cleared before entering the next family's context. These are explicit wire-correctness
+changes, not Tiger Style cleanup.
+
+Removed the CLI, schema, configuration-export, neighbor-rendering, protocol-decoding,
+peer-loop and JSON-grouping extractions listed above. The reload regression now enters
+the existing peer loop rather than calling a newly extracted implementation helper.
+Restored the existing Tiger Style ceilings (91 long functions, 100 silent excepts).
+No cleanup commit or baseline-ratcheting change is part of this patch.
+
+After structure restoration: **296 focused tests passed**, **364 API encode vectors passed**,
+ruff passed, and mypy passed all 392 source files. The configured CLI smoke test also
+encoded and decoded automatic OTC as ASN 65537 on `10.0.0.0/24`.
+
+Final verification after all restoration, including parser registration and negotiation:
+**all 24 stages passed in 6m0s**, process exit 0. This ran `qa/bin/test_everything` through
+the same in-memory safety wrapper used earlier: all stages enabled, only the encoding
+stage's blanket `killall -9 python` pre-step omitted. No test stage was skipped.
+Tiger Style passed with the original ceilings unchanged (89 long functions against 91;
+100 silent excepts against 100). No commits were made.
+
+### Critical review and correction pass
+
+The user requested an end-to-end critical review, correction of identified issues, and
+explicit presentation of every non-OTC correction. Existing structure and public packing
+APIs must remain; no cleanup commit or unrelated refactoring is authorized.
+
+New packetization regressions reproduce **5 failures, 2 passes** before correction:
+
+- A full MP_REACH packet leaves only 6 bytes (without Role) or 16 bytes (with automatic
+  OTC) for MP_UNREACH and raises `RuntimeError` at the normal 4096-byte message limit.
+- Fragmented withdrawal-only packets inherit automatic OTC from an announcement.
+- Fragmented announce/withdraw updates can leave a reannounced prefix withdrawn.
+- Suppressing MP withdrawals can emit an unintended empty UPDATE instead of no packet.
+- Existing multicast SAFI preservation and native-prefix deduplication already pass.
+
+Independent reviewers additionally identified stale duplicate refresh replay, speculative
+PATHS-LIMIT admissions surviving a live reset, default-disabled OTC warning categories,
+and configuration validation assumptions incompatible with OTC insertion/refusal. These
+are being reproduced before source changes; findings are not yet marked corrected.
+
+Non-OTC corrections will be presented separately, including multicast encoding, native
+NLRI duplication, general packetization, four-octet ASN/AS_PATH handling, synthetic peer
+ASNs, the existing announce-family factory API correction, and live RIB bookkeeping.
+
+Further red/green evidence:
+
+- Replay and configuration-validation regressions: **27 failed, 9 passed** before fixes,
+  including stale reannouncement after two refresh requests and phantom PATHS-LIMIT slots.
+- Real logging, rather than a mocked `log.warning`, reproduced silent ingress warnings:
+  **1 failed, 1 passed** (the outgoing warning category had already been corrected).
+- After packetization, RIB, validation and warning corrections: **93 targeted tests passed**.
+- Configured CLI encoding with both ASNs automatic still leaked a raw `ValueError`:
+  **1 failed, 1 passed** in the CLI-specific reproduction. Error handling is being added
+  at the existing encoding boundary, without changing the attribute packing API.
+
+The packetization correction now retains the existing per-family loops and combines
+MP_UNREACH/MP_REACH when they fit. Withdrawals are processed first, each side receives its
+full legal budget, and automatic OTC is used only with announcements. This is a general
+wire-packetization fix plus the OTC-specific withdrawal-marking correction, not cleanup.
+
+- Broader combined regression run: **340 passed, 2 failed**. The two new warning
+  regressions passed alone but CLI tests had disabled the shared logger earlier in
+  the combined run. Correct the test fixture to restore the real logging dispatcher
+  temporarily; this is test isolation, not a production logging change.
+
+Corrections and focused verification:
+
+- Duplicate refresh snapshots are deduplicated, so a refused replacement cannot be
+  followed by a stale unrestricted announcement.
+- PATHS-LIMIT admissions are committed at the yielded-update boundary, including
+  promoted candidates. An interrupted generator no longer consumes unsent slots.
+- Configuration validation compares the intended OTC transformation, accepts genuine
+  export refusal without indexing an empty list, and re-encodes received wire data
+  without applying desired-export policy a second time.
+- Automatic local-AS resolution is shared by synthetic OPEN and ASN4 capability data.
+  The CLI reports unresolved self instructions through its configuration-error boundary.
+- Ingress and refusal warnings use the reactor logging category. Tests exercise real
+  filtering with parser/RIB logging disabled and isolate the shared dispatcher.
+- The requested CLI sentinel check is `type(... ) is OTCSelf`, not `isinstance`.
+
+The combined focused selection now reports **342 passed**. Ruff passes for source and
+all added/modified review regressions; mypy passes **392 source files**. Tiger Style
+passes with the existing ceilings unchanged. The configured CLI smoke check emits and
+decodes OTC **65538** for `local-as auto; peer-as 65538;`, and returns **exit 1** with
+`configuration error: OTC self requires a resolved local ASN` when both ASNs are auto.
+Its temporary configurations were removed. Changelog and manual are aligned.
+
+Separate non-OTC review scope (already applied, not committed):
+
+1. `bgp/message/update/collection.py`: IPv4 multicast MP encoding, native-NLRI
+   duplication prevention, MP fragmentation budgets/order and empty-update prevention.
+2. OPEN/capability negotiation and AS_PATH code: effective four-octet local ASN,
+   ASN4 advertisement guards, and legacy AS_PATH/AS4_PATH serialization/reconstruction.
+3. `configuration/check.py`: synthetic effective local/peer ASN correctness and
+   whole-message-list round-trip comparison affect validation beyond OTC.
+4. `configuration/announce/ip.py`: use the existing settings-based INet construction API.
+5. `rib/outgoing.py`: live reset preservation and per-yield PATHS-LIMIT accounting;
+   refresh snapshot deduplication also changes general replay behavior.
+6. `reactor/peer/peer.py`: refresh `ctx.neighbor` after neighbor replacement, so handlers
+   do not retain stale configuration.
+
+The complete 24-stage suite is running after these corrections, with every stage enabled
+and only the unsafe blanket Python-process kill omitted. No Tiger Style cleanup,
+baseline ratcheting, commit or push is part of this review.
+
+Additional validation findings:
+
+- The actual `configuration validate -r` command produced an internal-error traceback
+  for `otc self` with `peer-as auto`, both when the local ASN was known and when both
+  ASNs were automatic. The existing synthetic iBGP setup discarded the known local ASN;
+  its pack boundary also let expected resolution errors escape.
+- The first full review run reached functional encoding: all **42/42** cases passed,
+  but the runner's leftover-process guard detected and terminated the concurrent CLI
+  smoke child (PID 84379), making the stage fail. This was my verification interference,
+  not a passing full run. Rerun the entire suite alone, after CLI smoke checks finish.
+
+The two additional validation regressions failed before correction and now pass.
+Synthetic iBGP validation preserves a known local ASN when peer-as is automatic;
+expected unresolved-AS packing errors return validation failure, not an internal crash.
+Actual CLI checks now report **exit 0** for local ASN 65538 / automatic peer ASN, and
+**exit 1 without traceback** for both automatic ASNs. The combined selection reports
+**344 passed**; ruff and mypy pass. Temporary smoke configurations were removed.
+
+All further full-suite verification runs exclusively, after smoke checks finish.
+The safety wrapper will use a temporary script so its command line does not itself
+look like a second functional-test process. It still executes the actual suite and
+omits only the same blanket process-kill pre-step.
+
+Exclusive full-suite attempt: stages 1–16 passed, including both complete unit modes,
+all encoding cases and CLI tests. Stage 17 (functional API) reported **39 passed,
+1 failed [v], 0 timed out**. The earlier process-isolation problem did not recur.
+Investigate API case `v` with retained diagnostic logs before claiming full verification.
+
+API case `v` reproduced the failure: its golden file required an attribute-only UPDATE
+with no announcement or withdrawal (`0025 ... ORIGIN/AS_PATH/LOCAL_PREF`). The corrected
+MP serializer no longer emits that meaningless packet for a suppressed withdrawal.
+The retained scenario driver and real route expectations are unchanged; remove only
+the obsolete three-line command/raw/JSON expectation. This is a non-OTC fixture change
+associated with the separately listed packetization correction, not a source workaround.
+
+Final verification after every review correction and fixture update:
+
+- **344 focused regressions passed**.
+- The corrected FlowSpec functional case passed; the full API selection passed
+  **40/40** (cases `n` and `t` needed the runner's built-in retry in that targeted run).
+- API encoding: **363 passed, 0 failed**. The count decreased by one because the
+  meaningless empty-UPDATE expectation was removed, not because a route case was skipped.
+- API command round-trips: **369 passed, 0 failed, 0 skipped**. An attempted nonexistent
+  `test_api_command_roundtrip` command was corrected to the suite's canonical
+  `./qa/bin/test_api_encode --self-check`; the figures above come from that real command.
+- Exclusive complete run: **All 24 tests passed in 6m2s**, process **exit 0**.
+  Every stage ran, including ordinary/optimized units, functional API/CLI/encoding,
+  reload cleanup, Tiger Style and documentation. The only safety change remained
+  omission of the blanket Python-process kill before encoding.
+
+**Current resume point (supersedes all historical resume points):** review the six
+non-OTC correction groups listed above, including the related `qa/api/api-flow.ci`
+expectation deletion, and decide how to separate them from the OTC feature for commits.
+No remaining test blocker. No commit or push was made. Structural cleanup and Tiger
+Style ratcheting remain explicitly deferred. The temporary suite wrapper and smoke
+configurations are removed; diagnostic run logs remain under `/tmp/otc-review-api-v/`.
+
+### Separating non-OTC commits — 2026-09-16
+
+User requested each independent fix/change as its own commit, retaining only OTC work
+uncommitted. The original working files and staged plan rename are preserved. A safety
+snapshot is retained locally in `.claude/backups/otc-commit-split-dd99tb13/`.
+
+Non-OTC extraction is built in an isolated checkout without Role/OTC modules. It reports
+**70 focused regressions passed**. The intended series separates effective OPEN ASN,
+negotiated ASN identity, AS_PATH width, synthetic ASN contexts, IP settings construction,
+multicast encoding, native-NLRI clearing, empty MP suppression, MP fragmentation,
+live RIB reset, yielded path admissions, refresh folding, live handler context,
+validation errors, CLI encoding errors, established-loop invariants and complete
+round-trip message comparison. Each patch includes the relevant regression coverage
+or, for the invariant-only change, the established-loop smoke regression.
+
+Each fix was checked against its failing regression before committing, and the complete
+suite passed on the non-OTC tip before advancing `main`. The original working source
+logic and staged plan rename are preserved. No push is authorized or performed.
+
+Separation verification: all 16 bug-fix commits have a failing-before/passing-after
+regression run; the invariant-only change passes the established-loop regression.
+The first full isolated run passed ruff but mypy checked unchanged vendored
+`objgraph.py` and reported 85 errors under the shared editable environment and
+explicit PYTHONPATH. A checkout-local virtualenv with explicit environment selection
+resolved this: mypy passed all 389 non-OTC source files without source/configuration
+changes. The original checkout's editable installation is restored to its own source.
+
+The standalone non-OTC tip `22977453f` then passed **all 24 validation stages in 5m49s**.
+The safety wrapper retains every stage and omits only the encoding pre-step's blanket
+`killall -9 python`; no tests are skipped.
+
+Committed series, oldest first:
+
+- `ae05b4d56` — effective local ASN in OPEN capabilities.
+- `78c9d2d74` — negotiated ASN identities from numeric ASN4 capabilities.
+- `e1ebaddcf` — four-octet AS_PATH construction and reconstruction.
+- `6ac6d8129` — ASN identities in offline negotiation.
+- `d089cdba5` — schema IP announcements through NLRI settings.
+- `4d7e59bd1` — IPv4 multicast SAFI preservation.
+- `9e302380d` — clear native NLRI after emitting its UPDATE.
+- `ddfcb9efe` — suppress empty UPDATEs for disabled MP withdrawals.
+- `ebabc34cc` — independent MP fragment budgets and withdrawal ordering.
+- `fb08dac58` — retain admitted paths across live RIB resets.
+- `0e0cedd0c` — admit/promote paths only at yielded UPDATE boundaries.
+- `d99316431` — fold replacements into deduplicated refresh snapshots.
+- `09b30d40e` — refresh established handler context after neighbor reload.
+- `e100b11cf` — reject failed or empty route serialization during validation.
+- `ee1d1e762` — configured encoding errors without tracebacks.
+- `b2ee72a8f` — established peer-loop invariant assertions.
+- `22977453f` — compare every emitted message in validation round trips.
+
+The remaining packetization diff adds only OTC coverage. General ASN, path-admission,
+schema, reload and validation tests are tracked with their fixes. Duplicate general
+tests were removed from the OTC files. That removal left one unused ASN import;
+ruff reported it and removed it, with formatting unchanged.
+
+The original production logic is unchanged by separation: only a comment and import
+order were aligned with the committed baseline. The first combined-tree run passed
+23 stages, then documentation checking discovered the loose safety snapshot's inactive
+plan and rejected its incomplete example neighbor. All 47 original snapshot files were
+archived and byte-verified in `original-files.tar.gz` before removing the loose copies;
+`./qa/bin/check_documentation` then reported **0 issue(s)**. No validation rules or source
+were changed to accommodate the backup. The fresh combined-tree run then passed
+**all 24 validation stages in 5m25s**.
+
+Both owned temporary worktrees have been removed. The safety snapshot, commit manifest
+and per-fix/full-suite evidence remain locally ignored under the backup directory.
+The throwaway suite runner was removed, and extraction source snapshots were archived.
+
+#### Resume point after commit separation
+
+- Last worked: **2026-09-16**.
+- Last commit: **`22977453f`**, the seventeenth separate non-OTC commit.
+- Session ended: **clean break; commit separation and validation complete**.
+- Continue with the uncommitted Role/OTC implementation, tests, documentation and plan.
+- The original staged plan rename is preserved. No commits were pushed.
+- Standalone non-OTC and combined OTC trees both passed all 24 validation stages.
+- Ingress insertion remains outside this partial implementation; structural/Tiger Style
+  cleanup remains the separately deferred patch set. No new blockers were found.
+
+### Explicit Role absence — 2026-09-16
+
+`RoleValue.NO_ROLE = -1` is the internal absence marker for Role capabilities,
+session/settings state, negotiated local/peer roles and plain `OTCSelf` assertions.
+`Capabilities.role()` returns a `RoleValue` and centralizes the stored-capability type
+invariant. Negotiation compares the returned values with `NO_ROLE`; it no longer uses
+casts or optional Role values.
+
+The sentinel is excluded from `assigned()`, configuration names, wire encoding and
+allowed role pairs. Asking for its complement raises `ValueError`. Provider zero stays
+a real configured role. Unconfigured sessions still omit Role configuration/JSON fields
+and the Role capability; plain `otc self` retains its presentation and behavior.
+
+Verification: **342 focused tests passed**. A real OPEN capability generation,
+encode/decode and negotiation smoke check covered absence plus all five assigned roles:
+absence advertised no Role capability, and every assigned role negotiated its complement.
+Regression coverage checks sentinel wire omission, forbidden pairing/configuration and
+provider-zero round trips. No release-note change is needed for this internal representation.
+The complete suite passed **all 24 validation stages in 5m36s**, retaining every test
+and omitting only the blanket process-kill pre-step. No new blockers were found.
+
+This change remains in the uncommitted OTC patch; the commit-separation resume point above
+still applies.
+
+### OTC commit snapshot — 2026-09-17
+
+The user requested the reviewed OTC work as one feature commit, following the 17 separate
+non-OTC commits. This snapshot includes Role negotiation, OTC parsing/serialization and
+outbound policy, ingress leak reporting, `NO_ROLE`, regression coverage, documentation
+and the plan rename.
+
+Fresh pre-commit verification passed **all 24 validation stages in 5m35s**. Every test
+remained enabled; only the blanket process-kill pre-step was omitted. No new failures
+or blockers were found. No push was requested.
+
+Resume after this snapshot: preserve the partial RFC 9234 boundary. Helpers still own
+ingress OTC insertion and ingress ineligible-route exclusion. Structural/Tiger Style
+cleanup remains a separate patch set rather than part of this feature commit.

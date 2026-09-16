@@ -16,6 +16,7 @@ from typing import Any
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
+from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.neighbor.session import Session
 from exabgp.protocol.family import AFI, SAFI
@@ -51,6 +52,9 @@ def _serialize_value(obj: Any) -> Any:
     # TriState - check before generic int (IntEnum subclass)
     if isinstance(obj, TriState):
         return {'_type': 'TriState', 'value': obj.name}
+
+    if isinstance(obj, RoleValue):
+        return str(obj)
 
     # HoldTime - check before generic int
     if isinstance(obj, HoldTime):
@@ -93,7 +97,7 @@ def _serialize_value(obj: Any) -> Any:
 
     # Session
     if isinstance(obj, Session):
-        return {
+        result = {
             '_type': 'Session',
             'peer_address': _serialize_value(obj.peer_address),
             'local_address': _serialize_value(obj.local_address),
@@ -110,6 +114,11 @@ def _serialize_value(obj: Any) -> Any:
             'outgoing_ttl': obj.outgoing_ttl,
             'incoming_ttl': obj.incoming_ttl,
         }
+        if obj.role != RoleValue.NO_ROLE:
+            result.update(
+                role=str(obj.role), role_strict=obj.role_strict, role_otc=obj.role_otc, role_add_meta=obj.role_add_meta
+            )
+        return result
 
     # Route (route with attributes)
     if isinstance(obj, Route):

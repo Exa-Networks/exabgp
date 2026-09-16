@@ -28,6 +28,7 @@ from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 from exabgp.bgp.message.open.capability.hostname import HostName
 from exabgp.bgp.message.open.capability.software import Software
+from exabgp.bgp.message.open.capability.role import Role, RoleValue
 
 from exabgp.bgp.message.notification import Notify
 
@@ -97,6 +98,13 @@ class Capabilities(dict[int, Capability]):
 
     def announced(self, capability: int) -> bool:
         return capability in self
+
+    def role(self) -> RoleValue:
+        capability = self.get(Capability.CODE.ROLE)
+        if capability is None:
+            return RoleValue.NO_ROLE
+        assert isinstance(capability, Role), 'Role capability must be decoded as Role'
+        return capability.value
 
     def __str__(self) -> str:
         r: list[str] = []
@@ -213,6 +221,8 @@ class Capabilities(dict[int, Capability]):
         self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
 
     def new(self, neighbor: Neighbor, restarted: bool, *, local_as: ASN | None = None) -> Capabilities:
+        if neighbor.session.role != RoleValue.NO_ROLE:
+            self[Capability.CODE.ROLE] = Role(neighbor.session.role)
         self._protocol(neighbor)
         self._asn4(neighbor, neighbor.session.local_as if local_as is None else local_as)
         self._nexthop(neighbor)
