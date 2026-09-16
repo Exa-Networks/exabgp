@@ -22,8 +22,9 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message import _NOP, EOR, KeepAlive, Message, Notification, Notify, Open, Operational, Update
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open import RouterID, Version
-from exabgp.bgp.message.open.capability import Capabilities, Negotiated
+from exabgp.bgp.message.open import ASN, RouterID, Version
+from exabgp.bgp.message.open.asn import AS_TRANS
+from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotiated
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update import UpdateCollection
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
@@ -367,6 +368,8 @@ class Protocol:
             local_as = self.neighbor.session.local_as
         elif self.negotiated.received_open:
             local_as = self.negotiated.received_open.asn
+            if local_as == AS_TRANS and Capability.CODE.FOUR_BYTES_ASN in self.negotiated.received_open.capabilities:
+                local_as = ASN(self.negotiated.received_open.capabilities[Capability.CODE.FOUR_BYTES_ASN])
         else:
             raise RuntimeError('no ASN available for the OPEN message')
 
@@ -375,7 +378,7 @@ class Protocol:
             local_as,
             self.neighbor.hold_time,
             self.neighbor.session.router_id,
-            Capabilities().new(self.neighbor, self.peer._restarted),
+            Capabilities().new(self.neighbor, self.peer._restarted, local_as=local_as),
         )
 
         # we do not buffer open message in purpose

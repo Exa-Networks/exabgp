@@ -12,6 +12,7 @@ from typing import ClassVar, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 
+from exabgp.bgp.message.open.asn import ASN, AS_TRANS
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.open.capability.nexthop import NextHop
@@ -109,11 +110,15 @@ class Capabilities(dict[int, Capability]):
         mp.extend(families)
         self[Capability.CODE.MULTIPROTOCOL] = mp
 
-    def _asn4(self, neighbor: Neighbor) -> None:
+    def _asn4(self, neighbor: Neighbor, local_as: ASN) -> None:
+        if local_as == AS_TRANS:
+            raise ValueError('AS_TRANS is a wire placeholder, not a resolved local ASN')
         if not neighbor.capability.asn4.is_enabled():
+            if local_as.asn4():
+                raise ValueError('A four-octet local ASN requires ASN4 advertisement')
             return
 
-        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.session.local_as)
+        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(local_as)
 
     def _nexthop(self, neighbor: Neighbor) -> None:
         if not neighbor.capability.nexthop.is_enabled():
@@ -207,9 +212,9 @@ class Capabilities(dict[int, Capability]):
         # Uses IETF draft code (0x44) - draft-ietf-idr-bgp-multisession expired 2013, never became RFC
         self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
 
-    def new(self, neighbor: Neighbor, restarted: bool) -> Capabilities:
+    def new(self, neighbor: Neighbor, restarted: bool, *, local_as: ASN | None = None) -> Capabilities:
         self._protocol(neighbor)
-        self._asn4(neighbor)
+        self._asn4(neighbor, neighbor.session.local_as if local_as is None else local_as)
         self._nexthop(neighbor)
         self._addpath(neighbor)
         self._pathslimit(neighbor)
