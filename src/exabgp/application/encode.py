@@ -112,32 +112,37 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
     # Process each neighbor and encode their routes
     for name in configuration.neighbors.keys():
         neighbor = configuration.neighbors[name]
-        _, negotiated_out = _negotiated(neighbor)
+        try:
+            _, negotiated_out = _negotiated(neighbor)
 
-        if not neighbor.rib.enabled:
-            continue
+            if not neighbor.rib.enabled:
+                continue
 
-        # Trigger route processing
-        for _ in neighbor.rib.outgoing.updates(False):
-            pass
+            # Trigger route processing
+            for _ in neighbor.rib.outgoing.updates(False):
+                pass
 
-        # Get routes and encode them
-        for route in neighbor.rib.outgoing.cached_routes():
-            if cmdarg.nlri_only:
-                # Output only NLRI bytes
-                packed = route.nlri.pack_nlri(negotiated_out)
-                sys.stdout.write(packed.hex().upper())
-                sys.stdout.write('\n')
-            else:
-                # Output full UPDATE message(s)
-                for packed in UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes).messages(
-                    negotiated_out
-                ):
-                    if cmdarg.no_header:
-                        # Skip 19-byte BGP header (16 marker + 2 length + 1 type)
-                        packed = packed[19:]
+            # Get routes and encode them
+            for route in neighbor.rib.outgoing.cached_routes():
+                if cmdarg.nlri_only:
+                    # Output only NLRI bytes
+                    packed = route.nlri.pack_nlri(negotiated_out)
                     sys.stdout.write(packed.hex().upper())
                     sys.stdout.write('\n')
+                else:
+                    # Output full UPDATE message(s)
+                    for packed in UpdateCollection(
+                        [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
+                    ).messages(negotiated_out):
+                        if cmdarg.no_header:
+                            # Skip 19-byte BGP header (16 marker + 2 length + 1 type)
+                            packed = packed[19:]
+                        sys.stdout.write(packed.hex().upper())
+                        sys.stdout.write('\n')
+        except ValueError as e:
+            sys.stdout.write(f'configuration error: {e}\n')
+            sys.stdout.flush()
+            sys.exit(1)
 
     sys.stdout.flush()
     return 0
