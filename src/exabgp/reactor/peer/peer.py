@@ -731,6 +731,7 @@ class Peer:
                     self.neighbor.rib.outgoing.replace_reload(previous, current)
                     self._neighbor.previous = None
                     self._neighbor = None
+                ctx.neighbor = self.neighbor
 
                 # Read message with timeout
                 try:
