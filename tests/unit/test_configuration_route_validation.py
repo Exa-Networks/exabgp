@@ -38,3 +38,20 @@ def test_validation_reports_serialization_value_error_as_failure(monkeypatch):
 
     monkeypatch.setattr(UpdateCollection, 'messages', invalid)
     assert not check_generation(config.neighbors)
+
+
+def test_validation_compares_every_emitted_message(monkeypatch):
+    config = configured('65001', '65002')
+    original = UpdateCollection.messages
+    calls = 0
+
+    def duplicate_initial(self, negotiated, *args, **kwargs):
+        nonlocal calls
+        calls += 1
+        for wire in original(self, negotiated, *args, **kwargs):
+            yield wire
+            if calls == 1:
+                yield wire
+
+    monkeypatch.setattr(UpdateCollection, 'messages', duplicate_initial)
+    assert not check_generation(config.neighbors)

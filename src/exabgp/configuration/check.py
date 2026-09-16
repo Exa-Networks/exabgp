@@ -225,7 +225,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
 
                 if skip:
                     log.debug(lazymsg('check.encoding.skip reason=non_transitive_attributes'), 'parser')
-                elif pack1 != pack2:
+                elif packed != recoded:
                     log.debug(lazymsg('check.encoding.different'), 'parser')
                     _pack1_cmp: bytes = pack1
                     _pack2_cmp: bytes = pack2
