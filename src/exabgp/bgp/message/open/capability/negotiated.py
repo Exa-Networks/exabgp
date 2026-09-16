@@ -132,12 +132,13 @@ class Negotiated:
         )
 
         self.local_as = self.sent_open.asn
+        if self.local_as == AS_TRANS:
+            # Our identity does not depend on whether the peer supports four-octet paths.
+            self.local_as = ASN(sent_capa[Capability.CODE.FOUR_BYTES_ASN])
+
         self.peer_as = self.received_open.asn
-        if self.received_open.asn == AS_TRANS and self.asn4:
-            asn4_capa = recv_capa.get(Capability.CODE.FOUR_BYTES_ASN, None)
-            # ASN4 extends both Capability and ASN
-            if isinstance(asn4_capa, ASN):
-                self.peer_as = asn4_capa
+        if self.peer_as == AS_TRANS and self.asn4:
+            self.peer_as = ASN(recv_capa[Capability.CODE.FOUR_BYTES_ASN])
 
         self.families = []
         if recv_capa.announced(Capability.CODE.MULTIPROTOCOL) and sent_capa.announced(Capability.CODE.MULTIPROTOCOL):
