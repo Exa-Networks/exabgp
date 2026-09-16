@@ -39,6 +39,43 @@ def decode_messages(collection: UpdateCollection, negotiated: Negotiated) -> lis
     return [Update.unpack_message(message[19:], negotiated).parse(negotiated) for message in messages]
 
 
+def test_full_mp_reach_does_not_starve_pending_withdrawal():
+    negotiated = negotiated_session()
+    announces = [routed_prefix(f'2001:db8::{index:x}/128') for index in range(237)]
+    withdrawal = routed_prefix('2001:db8:1::1/128').nlri
+    decoded = decode_messages(UpdateCollection(announces, [withdrawal], AttributeCollection()), negotiated)
+    assert Counter(str(item.nlri.cidr) for update in decoded for item in update.announces) == Counter(
+        str(item.nlri.cidr) for item in announces
+    )
+    assert [str(item.cidr) for update in decoded for item in update.withdraws] == ['2001:db8:1::1/128']
+
+
+def test_fragmented_withdrawals_keep_reannounced_prefix_after_its_withdrawal():
+    negotiated = negotiated_session()
+    announced = routed_prefix('2001:db8::12b/128')
+    withdrawals = [routed_prefix(f'2001:db8::{index:x}/128').nlri for index in range(300)]
+    decoded = decode_messages(UpdateCollection([announced], withdrawals, AttributeCollection()), negotiated)
+    assert Counter(str(item.cidr) for update in decoded for item in update.withdraws) == Counter(
+        str(item.cidr) for item in withdrawals
+    )
+    advertised = set()
+    for update in decoded:
+        advertised.difference_update(str(item.cidr) for item in update.withdraws)
+        advertised.update(str(item.nlri.cidr) for item in update.announces)
+    assert advertised == {str(announced.nlri.cidr)}
+
+
+def test_fragmentation_keeps_reannounced_prefix_after_its_withdrawal():
+    negotiated = negotiated_session()
+    announces = [routed_prefix(f'2001:db8::{index:x}/128') for index in range(300)]
+    decoded = decode_messages(UpdateCollection(announces, [announces[0].nlri], AttributeCollection()), negotiated)
+    advertised = set()
+    for update in decoded:
+        advertised.difference_update(str(item.cidr) for item in update.withdraws)
+        advertised.update(str(item.nlri.cidr) for item in update.announces)
+    assert advertised == {str(item.nlri.cidr) for item in announces}
+
+
 def test_suppressed_mp_withdrawal_does_not_emit_an_empty_update():
     negotiated = negotiated_session()
     withdrawal = routed_prefix('2001:db8::1/128').nlri

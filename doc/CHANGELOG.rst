@@ -4,6 +4,7 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: Budget MP UPDATE fragments independently and withdraw first.
  * Fix: Suppress empty UPDATEs when MP withdrawals are disabled.
  * Fix: Clear native NLRI after emitting its UPDATE.
  * Fix: Preserve IPv4 multicast SAFI in UPDATE messages.

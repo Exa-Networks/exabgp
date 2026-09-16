@@ -470,7 +470,6 @@ class UpdateCollection(Message):
 
         for family in all_mp_families:
             afi, safi = family
-            mp_reach = b''
             mp_unreach = b''
 
             # Use MPNLRICollection for reach/unreach attribute generation
@@ -481,37 +480,22 @@ class UpdateCollection(Message):
             mp_announce = MPNLRICollection.from_routed(announce_routed, {}, afi, safi)
             mp_withdraw = MPNLRICollection(withdraw_nlris, {}, afi, safi)
 
-            for mprnlri in mp_announce.packed_reach_attributes(negotiated, msg_size - len(withdraws + announced)):
-                if mp_reach:
-                    yield self._message(
-                        UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(attr + mp_reach) + announced
-                    )
-                    announced = b''
-                    withdraws = b''
-                mp_reach = mprnlri
-
             if include_withdraw:
-                for mpurnlri in mp_withdraw.packed_unreach_attributes(
-                    negotiated,
-                    msg_size - len(withdraws + announced + mp_reach),
-                ):
+                for mpurnlri in mp_withdraw.packed_unreach_attributes(negotiated, msg_size):
                     if mp_unreach:
-                        yield self._message(
-                            UpdateCollection.prefix(withdraws)
-                            + UpdateCollection.prefix(mp_unreach + attr + mp_reach)
-                            + announced,
-                        )
-                        mp_reach = b''
-                        announced = b''
-                        withdraws = b''
+                        yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + attr))
                     mp_unreach = mpurnlri
 
-            if mp_unreach or mp_reach:
-                yield self._message(
-                    UpdateCollection.prefix(withdraws)
-                    + UpdateCollection.prefix(mp_unreach + attr + mp_reach)
-                    + announced,
-                )  # yield mpr/mpur per family
+            # Withdraw before reannouncing a prefix, including across packet boundaries.
+            for mprnlri in mp_announce.packed_reach_attributes(negotiated, msg_size):
+                if mp_unreach and len(mp_unreach) + len(mprnlri) > msg_size:
+                    yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + attr))
+                    mp_unreach = b''
+                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + attr + mprnlri))
+                mp_unreach = b''
+
+            if mp_unreach:
+                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + attr))
             withdraws = b''
             announced = b''
 
