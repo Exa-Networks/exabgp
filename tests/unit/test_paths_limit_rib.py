@@ -230,7 +230,7 @@ def test_reset_rebuilds_selection_from_cached_candidates() -> None:
     rib.add_to_rib(first)
     rib.add_to_rib(second)
     assert announced(list(rib.updates(True, {IPV4: 2}))) == [first.nlri.index(), second.nlri.index()]
-    rib.reset()
+    rib.session_reset()
     rib.resend(False)
     assert announced(list(rib.updates(True, {IPV4: 1}))) == [first.nlri.index()]
     rib.del_from_rib(first)
@@ -238,17 +238,32 @@ def test_reset_rebuilds_selection_from_cached_candidates() -> None:
 
 
 @pytest.mark.parametrize('cache', [True, False])
-def test_clear_discards_admissions_and_candidates(cache: bool) -> None:
+def test_session_reset_discards_admissions_and_candidates(cache: bool) -> None:
     rib = OutgoingRIB(cache=cache, families={IPV4})
     rib.add_to_rib(route(1))
     rib.add_to_rib(route(2))
     list(rib.updates(True, {IPV4: 1}))
     rib.clear()
+    rib.session_reset()
     third = route(3)
     rib.add_to_rib(third)
     assert announced(list(rib.updates(True, {IPV4: 1}))) == [third.nlri.index()]
     rib.del_from_rib(third)
     assert announced(list(rib.updates(True, {IPV4: 1}))) == []
+
+
+def test_live_cache_clear_preserves_advertised_path_limit() -> None:
+    rib = OutgoingRIB(cache=False, families={IPV4})
+    first, second = route(1), route(2)
+    rib.add_to_rib(first)
+    assert announced(list(rib.updates(True, {IPV4: 1}))) == [first.nlri.index()]
+    rib.clear()
+    rib.add_to_rib(second)
+    assert announced(list(rib.updates(True, {IPV4: 1}))) == []
+    rib.del_from_rib(first)
+    updates = list(rib.updates(True, {IPV4: 1}))
+    assert withdrawn(updates) == [first.nlri.index()]
+    assert announced(updates) == [second.nlri.index()]
 
 
 def test_pending_replacement_consumes_one_slot_not_two() -> None:
@@ -300,7 +315,7 @@ def test_reset_stops_inflight_batch_and_discards_cache_disabled_state() -> None:
     rib.add_to_rib(second)
     updates = rib.updates(False, {IPV4: 2})
     assert announced([next(updates)]) == [first.nlri.index()]
-    rib.reset()
+    rib.session_reset()
     assert list(updates) == []
     rib.resend(False)
     assert list(rib.updates(True, {IPV4: 1})) == []

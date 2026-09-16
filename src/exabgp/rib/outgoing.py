@@ -107,7 +107,10 @@ class OutgoingRIB(Cache):
         self._new_attr_af_nlri = {}
         self._new_attribute = {}
         self._pending_withdraws = {}
-        self._path_selection = {}
+
+    def session_reset(self) -> None:
+        self._path_selection.clear()
+        self.reset()
 
     # back to square one, all the routes are removed
     def clear(self) -> None:

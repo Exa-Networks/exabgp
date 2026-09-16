@@ -94,7 +94,7 @@ class RIB:
 
     def reset(self) -> None:
         self.incoming.reset()
-        self.outgoing.reset()
+        self.outgoing.session_reset()
 
     def uncache(self) -> None:
         if self.name in self._cache:
