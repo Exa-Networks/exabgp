@@ -29,6 +29,7 @@ from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.open.capability.addpath import AddPath
+from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
@@ -78,7 +79,8 @@ def _hexa(data: str) -> bytes:
 
 
 def _negotiated(neighbor: Neighbor) -> tuple[Negotiated, Negotiated]:
-    capa = Capabilities().new(neighbor, False)
+    local_as = neighbor.session.local_as or neighbor.session.peer_as
+    capa = Capabilities().new(neighbor, False, local_as=local_as)
     # Override ADD_PATH with neighbor's configured addpath families
     if neighbor.capability.add_path:
         capa[Capability.CODE.ADD_PATH] = AddPath(neighbor.addpaths(), neighbor.capability.add_path)
@@ -91,8 +93,11 @@ def _negotiated(neighbor: Neighbor) -> tuple[Negotiated, Negotiated]:
     routerid_1 = str(neighbor.session.router_id)
     routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.session.router_id).split('.', -1))
 
-    o1 = Open.make_open(Version(4), ASN(neighbor.session.local_as), HoldTime(180), RouterID(routerid_1), capa)
-    o2 = Open.make_open(Version(4), ASN(neighbor.session.peer_as), HoldTime(180), RouterID(routerid_2), capa)
+    o1 = Open.make_open(Version(4), ASN(local_as), HoldTime(180), RouterID(routerid_1), capa)
+    peer_capa = Capabilities(capa)
+    if Capability.CODE.FOUR_BYTES_ASN in peer_capa:
+        peer_capa[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.session.peer_as)
+    o2 = Open.make_open(Version(4), ASN(neighbor.session.peer_as), HoldTime(180), RouterID(routerid_2), peer_capa)
     negotiated_in = Negotiated.make_negotiated(neighbor, Direction.IN)
     negotiated_out = Negotiated.make_negotiated(neighbor, Direction.OUT)
     negotiated_in.sent(o1)
@@ -112,7 +117,9 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
 
     for name in neighbors.keys():
         neighbor = copy.deepcopy(neighbors[name])
-        neighbor.session.local_as = neighbor.session.peer_as
+        # Validate through a synthetic iBGP session without discarding a known ASN.
+        neighbor.session.local_as = neighbor.session.peer_as or neighbor.session.local_as
+        neighbor.session.peer_as = neighbor.session.local_as
         negotiated_in, negotiated_out = _negotiated(neighbor)
 
         if not neighbor.rib.enabled:
