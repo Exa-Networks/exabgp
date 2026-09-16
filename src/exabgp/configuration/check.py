@@ -129,11 +129,17 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
 
         for route1 in neighbor.rib.outgoing.cached_routes():
             str1 = route1.extensive()
-            packed = list(
-                UpdateCollection([RoutedNLRI(route1.nlri, route1.nexthop)], [], route1.attributes).messages(
-                    negotiated_out
+            try:
+                packed = list(
+                    UpdateCollection([RoutedNLRI(route1.nlri, route1.nexthop)], [], route1.attributes).messages(
+                        negotiated_out
+                    )
                 )
-            )
+            except ValueError as exc:
+                log.error(lazymsg('encoding.failed error={err}', err=str(exc)), 'configuration')
+                return False
+            if not packed:
+                return False
             pack1 = packed[0]
 
             _packed: list[bytes] = packed
@@ -164,7 +170,10 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                     routed = RoutedNLRI(nlri, nexthop)
                 route2 = Route(nlri, update.attributes, nexthop=nexthop)
                 str2 = route2.extensive()
-                pack2 = list(UpdateCollection([routed], [], update.attributes).messages(negotiated_out))[0]
+                recoded = list(UpdateCollection([routed], [], update.attributes).messages(negotiated_out))
+                if not recoded:
+                    return False
+                pack2 = recoded[0]
 
                 _str2: str = str2
                 _pack2: bytes = pack2

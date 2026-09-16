@@ -4,6 +4,7 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: Reject failed and empty route serialization during validation.
  * Fix: Refresh established handler context after neighbor reload.
  * Fix: Fold route replacements into deduplicated refresh snapshots.
  * Fix: Admit outgoing paths only at yielded update boundaries.
