@@ -462,13 +462,13 @@ class OutgoingRIB(Cache):
             if selection is None:
                 continue
             limit = paths_limit.get(family, 0)
+            admitted = len(selection.advertised)
             # Held paths only, in the order they were offered, since ExaBGP has no view of
-            # which path is better. list() because a promoted one leaves the collection.
-            for index, route in list(selection.candidates.items()):
-                if limit and len(selection.advertised) >= limit:
+            # which path is better. Admission is committed only when its update is yielded.
+            for route in selection.candidates.values():
+                if limit and admitted >= limit:
                     break
-                del selection.candidates[index]
-                selection.advertised.add(index)
+                admitted += 1
                 # The counterpart of rib.paths_limit.withheld: the slot freed by a withdraw
                 # is what lets this one through, and both halves belong in the log.
                 log.debug(
@@ -483,7 +483,13 @@ class OutgoingRIB(Cache):
                 promoted.setdefault((route.attributes.index(), family), []).append(route)
 
         for (_, family), routes in promoted.items():
-            yield from self._announce_updates(routes, routes[0].attributes, family, grouped)
+            for update in self._announce_updates(routes, routes[0].attributes, family, grouped):
+                for entry in update.announces:
+                    selection = self._path_selection[family][entry.nlri.prefix_index()]
+                    index = self._make_index(entry.nlri)
+                    selection.candidates.pop(index, None)
+                    selection.advertised.add(index)
+                yield update
 
     def _generate_updates(
         self, grouped: bool, paths_limit: dict[FamilyTuple, int]
@@ -547,15 +553,35 @@ class OutgoingRIB(Cache):
                     index in latest_routes or route.nlri.index() in pending_withdraws.get(family, {})
                     for index, route in routes.items()
                 ), 'a queued announce left _new_nlri without a withdraw'
-                selected = [
-                    route
-                    for index, route in routes.items()
-                    if index in latest_routes and self._admit_path(route, limit)
-                ]
+                selected = [route for index, route in routes.items() if index in latest_routes]
                 if selected:
-                    yield from self._announce_updates(selected, new_attr[attr_index], family, grouped)
+                    yield from self._select_updates(selected, new_attr[attr_index], family, limit, grouped)
         # Only prefixes touched by withdrawals need candidate promotion.
         yield from self._promote_paths(changed, paths_limit, grouped)
+
+    def _select_updates(
+        self,
+        routes: list[Route],
+        attributes: AttributeCollection,
+        family: FamilyTuple,
+        limit: int,
+        grouped: bool,
+    ) -> Iterator[UpdateCollection]:
+        selected = []
+        grouped = grouped and family in (
+            (AFI.ipv4, SAFI.unicast),
+            (AFI.ipv4, SAFI.mcast_vpn),
+            (AFI.ipv6, SAFI.mcast_vpn),
+        )
+        for route in routes:
+            if not self._admit_path(route, limit):
+                continue
+            if grouped:
+                selected.append(route)
+            else:
+                yield from self._announce_updates([route], attributes, family, False)
+        if selected:
+            yield from self._announce_updates(selected, attributes, family, grouped)
 
     @staticmethod
     def _announce_updates(

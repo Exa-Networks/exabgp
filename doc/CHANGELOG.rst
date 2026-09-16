@@ -4,6 +4,7 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: Admit outgoing paths only at yielded update boundaries.
  * Fix: Preserve path admissions across live RIB resets.
  * Fix: Budget MP UPDATE fragments independently and withdraw first.
  * Fix: Suppress empty UPDATEs when MP withdrawals are disabled.

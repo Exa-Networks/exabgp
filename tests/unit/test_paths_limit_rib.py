@@ -308,19 +308,26 @@ def test_unlimited_family_does_not_suppress_successive_paths() -> None:
         assert announced(list(rib.updates(True, {IPV4: 0}))) == [candidate.nlri.index()]
 
 
-def test_reset_stops_inflight_batch_and_discards_cache_disabled_state() -> None:
+def test_live_reset_stops_inflight_batch_and_retains_sent_admission() -> None:
     rib = OutgoingRIB(cache=False, families={IPV4})
     first, second = route(1), route(2)
     rib.add_to_rib(first)
     rib.add_to_rib(second)
     updates = rib.updates(False, {IPV4: 2})
     assert announced([next(updates)]) == [first.nlri.index()]
-    rib.session_reset()
+    rib.reset()
     assert list(updates) == []
     rib.resend(False)
     assert list(rib.updates(True, {IPV4: 1})) == []
     rib.add_to_rib(second)
-    assert announced(list(rib.updates(True, {IPV4: 1}))) == [second.nlri.index()]
+    assert announced(list(rib.updates(True, {IPV4: 2}))) == [second.nlri.index()]
+    third = route(3)
+    rib.add_to_rib(third)
+    assert list(rib.updates(True, {IPV4: 2})) == []
+    rib.del_from_rib(first)
+    resumed = list(rib.updates(True, {IPV4: 2}))
+    assert withdrawn(resumed) == [first.nlri.index()]
+    assert announced(resumed) == [third.nlri.index()]
 
 
 def test_withdraw_all_removes_suppressed_candidates() -> None:
@@ -391,3 +398,46 @@ def test_refresh_then_withdraw_promotes_only_after_withdrawal(cache: bool) -> No
         assert len(active) <= 1
     assert active == {second.nlri.index()}
     assert withdrawn(updates) == [first.nlri.index()]
+
+
+@pytest.mark.parametrize('reset', ['clear', 'reset'])
+def test_live_reset_retains_only_yielded_path_admissions(reset: str) -> None:
+    rib = OutgoingRIB(cache=False, families={IPV4})
+    first, unsent, third, fourth = (route(path_id) for path_id in (1, 2, 3, 4))
+    rib.add_to_rib(first)
+    rib.add_to_rib(unsent)
+    updates = rib.updates(False, {IPV4: 2})
+    assert announced([next(updates)]) == [first.nlri.index()]
+
+    getattr(rib, reset)()
+    assert list(updates) == []
+    rib.add_to_rib(third)
+    rib.add_to_rib(fourth)
+    emitted = list(rib.updates(False, {IPV4: 2}))
+    assert announced(emitted) == [third.nlri.index()]
+
+    rib.del_from_rib(first)
+    emitted = list(rib.updates(False, {IPV4: 2}))
+    assert withdrawn(emitted) == [first.nlri.index()]
+    assert announced(emitted) == [fourth.nlri.index()]
+
+
+def test_cancelled_promotion_retains_unsent_candidate() -> None:
+    rib = OutgoingRIB(cache=False, families={IPV4})
+    first, second, third, fourth, fifth = (route(path_id) for path_id in (1, 2, 3, 4, 5))
+    for candidate in (first, second, third, fourth):
+        rib.add_to_rib(candidate)
+    assert announced(list(rib.updates(False, {IPV4: 2}))) == [first.nlri.index(), second.nlri.index()]
+    rib.del_from_rib(first)
+    rib.del_from_rib(second)
+    updates = rib.updates(False, {IPV4: 2})
+    assert withdrawn([next(updates), next(updates)]) == [first.nlri.index(), second.nlri.index()]
+    assert announced([next(updates)]) == [third.nlri.index()]
+    updates.close()
+
+    rib.add_to_rib(fifth)
+    assert announced(list(rib.updates(False, {IPV4: 2}))) == [fifth.nlri.index()]
+    rib.del_from_rib(third)
+    emitted = list(rib.updates(False, {IPV4: 2}))
+    assert withdrawn(emitted) == [third.nlri.index()]
+    assert announced(emitted) == [fourth.nlri.index()]
