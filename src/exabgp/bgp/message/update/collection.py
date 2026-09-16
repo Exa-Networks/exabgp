@@ -324,7 +324,7 @@ class UpdateCollection(Message):
                 raise ValueError(error)
 
             is_v4 = nlri.afi == AFI.ipv4
-            is_v4 = is_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
+            is_v4 = is_v4 and nlri.safi == SAFI.unicast
             is_v4 = is_v4 and nexthop.afi == AFI.ipv4
 
             if is_v4:
@@ -352,7 +352,7 @@ class UpdateCollection(Message):
                 continue
 
             is_v4 = nlri.afi == AFI.ipv4
-            is_v4 = is_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
+            is_v4 = is_v4 and nlri.safi == SAFI.unicast
 
             if is_v4:
                 v4_withdraws.append(nlri)
@@ -394,7 +394,7 @@ class UpdateCollection(Message):
 
         attr = self.attributes.pack_attribute(negotiated, include_defaults)
 
-        # Withdraws/NLRIS (IPv4 unicast and multicast)
+        # Withdraws/NLRIS (IPv4 unicast)
         msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
 
         if msg_size < 0:
