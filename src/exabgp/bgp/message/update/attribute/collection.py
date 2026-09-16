@@ -316,6 +316,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                             ],
                         ),
                     ],
+                    asn4=local_asn.asn4(),
                 )
             ),
             Attribute.CODE.LOCAL_PREF: lambda left, right: LocalPreference.from_int(100) if left == right else NOTHING,
@@ -637,7 +638,8 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             segments.append(SEQUENCE(as_seq))
         if as_set:
             segments.append(SET(as_set))
-        aspath = AS2Path.make_aspath(segments)
+        # Reconstruction recovers four-octet ASNs even on a two-octet wire session.
+        aspath = AS2Path.make_aspath(segments, asn4=True)
         self.add(aspath, key)
 
     def __hash__(self) -> int:

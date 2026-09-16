@@ -151,3 +151,28 @@ def test_numeric_local_asn4_recovers_identity_without_requiring_peer_support(rec
     assert negotiated.local_as.pack_asn(True) == b'\x00\x01\x00\x01'
     assert negotiated.asn4 is receive_asn4
     assert not negotiated.is_ibgp
+
+
+@pytest.mark.parametrize('receive_asn4', [True, False])
+def test_four_octet_local_as_survives_default_path_serialization(receive_asn4: bool) -> None:
+    negotiated = negotiate(65537, 65002, True, receive_asn4)
+    assert negotiated.local_as == 65537
+    packed = AttributeCollection().pack_attribute(negotiated)
+    decoded = AttributeCollection.unpack(packed, negotiated)
+    path = decoded[ASPath.ID]
+    assert isinstance(path, ASPath)
+    assert path.aspath == (SEQUENCE([ASN(65537)]),)
+
+
+def test_numeric_local_asn4_preserves_default_path_without_peer_support() -> None:
+    neighbor = Neighbor()
+    neighbor.session.peer_as = ASN(65002)
+    sent = Capabilities()
+    sent[Capability.CODE.FOUR_BYTES_ASN] = 65537
+    negotiated = Negotiated(neighbor, Direction.OUT)
+    negotiated.sent(Open.make_open(Version(4), ASN(65537), HoldTime(90), RouterID('192.0.2.1'), sent))
+    negotiated.received(Open.make_open(Version(4), ASN(65002), HoldTime(90), RouterID('192.0.2.2'), Capabilities()))
+    decoded = AttributeCollection.unpack(AttributeCollection().pack_attribute(negotiated), negotiated)
+    path = decoded[ASPath.ID]
+    assert isinstance(path, ASPath)
+    assert path.aspath == (SEQUENCE([ASN(65537)]),)
