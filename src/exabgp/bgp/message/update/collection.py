@@ -461,6 +461,9 @@ class UpdateCollection(Message):
                 yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(attr) + announced)
             else:
                 yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b'') + announced)
+            # Native NLRI has been emitted; it must not be repeated in an MP family's packet.
+            announced = b''
+            withdraws = b''
 
         # Get all families that have MP announces or withdraws
         all_mp_families = set(mp_announces.keys()) | set(mp_withdraws.keys())

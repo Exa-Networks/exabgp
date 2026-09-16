@@ -4,6 +4,7 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: Clear native NLRI after emitting its UPDATE.
  * Fix: Preserve IPv4 multicast SAFI in UPDATE messages.
  * Fix: Construct schema IP announcements through NLRI settings.
  * Fix: Preserve ASN identities in offline negotiation.

@@ -1,10 +1,12 @@
 """Wire-level packetization contracts, independently of OTC policy."""
 
+from collections import Counter
+
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update, UpdateCollection
-from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.bgp.message.update.attribute import AttributeCollection, NextHop
 from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
@@ -48,3 +50,15 @@ def test_ipv4_multicast_keeps_its_safi_without_role_policy():
     assert [(item.family().afi_safi(), str(item.cidr)) for update in withdrawn for item in update.withdraws] == [
         ((AFI.ipv4, SAFI.multicast), '239.1.0.0/16')
     ]
+
+
+def test_native_prefix_is_not_repeated_in_the_following_mp_packet():
+    negotiated = negotiated_session()
+    native = routed_prefix('10.0.0.0/24')
+    multiprotocol = routed_prefix('2001:db8::/32')
+    attributes = AttributeCollection()
+    attributes.add(NextHop.from_string('192.0.2.1'))
+    decoded = decode_messages(UpdateCollection([native, multiprotocol], [], attributes), negotiated)
+    assert Counter(str(item.nlri.cidr) for update in decoded for item in update.announces) == Counter(
+        ['10.0.0.0/24', '2001:db8::/32']
+    )
