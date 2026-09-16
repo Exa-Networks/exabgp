@@ -39,6 +39,13 @@ def decode_messages(collection: UpdateCollection, negotiated: Negotiated) -> lis
     return [Update.unpack_message(message[19:], negotiated).parse(negotiated) for message in messages]
 
 
+def test_suppressed_mp_withdrawal_does_not_emit_an_empty_update():
+    negotiated = negotiated_session()
+    withdrawal = routed_prefix('2001:db8::1/128').nlri
+    collection = UpdateCollection([], [withdrawal], AttributeCollection())
+    assert list(collection.messages(negotiated, include_withdraw=False)) == []
+
+
 def test_ipv4_multicast_keeps_its_safi_without_role_policy():
     negotiated = negotiated_session()
     route = routed_prefix('239.1.0.0/16', SAFI.multicast)

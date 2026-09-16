@@ -506,9 +506,12 @@ class UpdateCollection(Message):
                         withdraws = b''
                     mp_unreach = mpurnlri
 
-            yield self._message(
-                UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(mp_unreach + attr + mp_reach) + announced,
-            )  # yield mpr/mpur per family
+            if mp_unreach or mp_reach:
+                yield self._message(
+                    UpdateCollection.prefix(withdraws)
+                    + UpdateCollection.prefix(mp_unreach + attr + mp_reach)
+                    + announced,
+                )  # yield mpr/mpur per family
             withdraws = b''
             announced = b''
 
