@@ -14,6 +14,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.settings import INETSettings
 
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.core import Parser
@@ -41,7 +42,8 @@ class AnnounceIP(ParseAnnounce):
     # RouteBuilder handles the token loop that was previously in ip() function
     schema = RouteBuilder(
         description='IP route announcement',
-        nlri_factory=INET,
+        nlri_class=INET,
+        settings_class=INETSettings,
         prefix_parser=prefix,
         children={
             'next-hop': Leaf(

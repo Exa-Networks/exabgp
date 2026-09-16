@@ -4,6 +4,7 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: Construct schema IP announcements through NLRI settings.
  * Fix: Preserve ASN identities in offline negotiation.
  * Fix: Preserve four-octet ASNs when building and merging paths.
  * Fix: Recover negotiated ASNs from numeric ASN4 capabilities.
