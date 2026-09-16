@@ -661,6 +661,7 @@ class Peer:
         assert self.proto is not None
         assert self.proto.connection is not None
         assert self.recv_timer is not None
+        assert self.proto.negotiated.sent_open is not None
 
         if self._teardown:
             raise Notify(6, 3)
@@ -794,6 +795,7 @@ class Peer:
             self._close('graceful restarted negotiated, closing without sending any notification')
             raise NetworkError('closing')
 
+        assert self._teardown is not None
         raise Notify(6, self._teardown)
 
     async def _run(self) -> None:
