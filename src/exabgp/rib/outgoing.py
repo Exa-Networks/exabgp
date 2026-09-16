@@ -507,7 +507,7 @@ class OutgoingRIB(Cache):
         pending_withdraws = self._pending_withdraws
         self._pending_withdraws = {}
         refresh_families = self._refresh_families
-        refresh_routes = self._refresh_routes
+        refresh_routes = {route.index(): route for route in self._refresh_routes}
         self._refresh_families = set()
         self._refresh_routes = []
 
@@ -515,9 +515,15 @@ class OutgoingRIB(Cache):
         # before anything they announced afterwards in the same reactor cycle.
         for afi, safi in refresh_families:
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.start)
-        for route in refresh_routes:
-            limit = paths_limit.get(route.nlri.family().afi_safi(), 0)
-            if self._admit_path(route, limit, refresh=True):
+        for route in refresh_routes.values():
+            family = route.nlri.family().afi_safi()
+            if route.nlri.index() in pending_withdraws.get(family, {}):
+                continue
+            replacement = latest_routes.pop(route.index(), None)
+            if replacement is not None:
+                route = replacement
+            limit = paths_limit.get(family, 0)
+            if self._admit_path(route, limit, refresh=replacement is None):
                 yield UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes)
         for afi, safi in refresh_families:
             yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.end)
@@ -548,11 +554,13 @@ class OutgoingRIB(Cache):
                 # that is a redefinition, and both go out as they always have.
                 # The gate reads one structure to decide the fate of another, so say what
                 # has to hold between them: an announce leaves _new_nlri only by being
-                # withdrawn, never by being dropped.
+                # withdrawn or folded into a refresh, never by being dropped.
                 assert all(
-                    index in latest_routes or route.nlri.index() in pending_withdraws.get(family, {})
+                    index in latest_routes
+                    or index in refresh_routes
+                    or route.nlri.index() in pending_withdraws.get(family, {})
                     for index, route in routes.items()
-                ), 'a queued announce left _new_nlri without a withdraw'
+                ), 'a queued announce left _new_nlri without a withdraw or refresh'
                 selected = [route for index, route in routes.items() if index in latest_routes]
                 if selected:
                     yield from self._select_updates(selected, new_attr[attr_index], family, limit, grouped)

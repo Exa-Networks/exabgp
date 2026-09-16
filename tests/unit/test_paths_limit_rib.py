@@ -89,7 +89,7 @@ def test_refresh_retains_admitted_paths_and_honors_limit() -> None:
     rib.resend(True)
     rib.resend(True)
     updates = list(rib.updates(True, {IPV4: 1}))
-    assert set(announced(updates)) == {first.nlri.index()}
+    assert announced(updates) == [first.nlri.index()]
     assert isinstance(updates[0], RouteRefresh) and updates[0].reserved == RouteRefresh.start
     assert isinstance(updates[-1], RouteRefresh) and updates[-1].reserved == RouteRefresh.end
     rib.del_from_rib(first)
@@ -441,3 +441,40 @@ def test_cancelled_promotion_retains_unsent_candidate() -> None:
     emitted = list(rib.updates(False, {IPV4: 2}))
     assert withdrawn(emitted) == [third.nlri.index()]
     assert announced(emitted) == [fourth.nlri.index()]
+
+
+@pytest.mark.parametrize('limit', [0, 1])
+def test_duplicate_refresh_folds_latest_replacement(limit: int) -> None:
+    rib = OutgoingRIB(cache=True, families={IPV4})
+    original = route(1)
+    rib.add_to_rib(original)
+    assert announced(list(rib.updates(True, {IPV4: limit}))) == [original.nlri.index()]
+    rib.resend(False)
+    rib.resend(False)
+    rib.add_to_rib(route(1, origin=Origin.EGP))
+    replacement = route(1, origin=Origin.INCOMPLETE)
+    rib.add_to_rib(replacement)
+
+    updates = list(rib.updates(True, {IPV4: limit}))
+    assert announced(updates) == [replacement.nlri.index()]
+    assert withdrawn(updates) == []
+    assert isinstance(updates[0], UpdateCollection)
+    assert updates[0].attributes.index() == replacement.attributes.index()
+    rib.resend(False)
+    updates = list(rib.updates(True, {IPV4: limit}))
+    assert announced(updates) == [replacement.nlri.index()]
+    assert isinstance(updates[0], UpdateCollection)
+    assert updates[0].attributes.index() == replacement.attributes.index()
+
+
+@pytest.mark.parametrize('limit', [0, 1])
+def test_refresh_omits_pending_withdrawals(limit: int) -> None:
+    rib = OutgoingRIB(cache=True, families={IPV4})
+    original = route(1)
+    rib.add_to_rib(original)
+    assert announced(list(rib.updates(True, {IPV4: limit}))) == [original.nlri.index()]
+    rib.resend(False)
+    rib.del_from_rib(original)
+    updates = list(rib.updates(True, {IPV4: limit}))
+    assert announced(updates) == []
+    assert withdrawn(updates) == [original.nlri.index()]
