@@ -18,6 +18,9 @@ Version 5.0.13:
  * Fix: MP announcement and withdrawal fragments have independent size
    budgets. Withdrawals precede announcements across packets, so a
    reannounced prefix is not left withdrawn after fragmentation.
+ * Fix: repeated route refreshes replay each route once, with its latest
+   queued replacement. Pending withdrawals exclude stale refresh
+   announcements.
  * SECURITY: a peer could write data of its own into the API streams:
    fields into the JSON stream through a BGP-LS attribute, and whole
    events into the text stream through its hostname, its software

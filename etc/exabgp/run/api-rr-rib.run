@@ -6,69 +6,59 @@ import time
 import select
 import json
 
+MAX_API_BUFFER_BYTES = 65536
+_api_buffer = b''
+_sent_updates = {f'192.168.0.{last}/32': 0 for last in (1, 2, 3, 4)}
 
-def wait_for_ack(expected_count=1, timeout=2):
-    """
-    Wait for ACK responses from ExaBGP.
 
-    Polls STDIN until all expected ACK messages are received.
-    ExaBGP may not respond immediately, so we loop with sleep.
+def record_announcements(reply):
+    neighbor = reply.get('neighbor', {})
+    if reply.get('type') != 'update' or neighbor.get('direction') != 'send':
+        return
+    announced = neighbor.get('message', {}).get('update', {}).get('announce', {})
+    for routes in announced.get('ipv4 unicast', {}).values():
+        for route in routes:
+            prefix = route if isinstance(route, str) else route['nlri']
+            if prefix in _sent_updates:
+                _sent_updates[prefix] += 1
 
-    Handles both text and JSON encoder formats:
-    - Text: "done", "error", "shutdown"
-    - JSON: {"answer": "done|error|shutdown", "message": "..."}
 
-    Args:
-        expected_count: Number of ACK messages expected (default: 1)
-        timeout: Total timeout in seconds (default: 2)
-
-    Returns:
-        True if all ACKs received successfully
-        False if any command failed or timeout occurred
-
-    Raises:
-        SystemExit: If ExaBGP sends shutdown message
-    """
-    import json
+def wait_for_ack(expected_count=1, timeout=2, sent=()):
+    """Wait for ACKs and required announcements, not merely queued API work."""
+    global _api_buffer
     received = 0
-    start_time = time.time()
-
-    while received < expected_count:
-        # Check if we've exceeded timeout
-        elapsed = time.time() - start_time
-        if elapsed >= timeout:
-            return False
-
-        # Poll for data (non-blocking with short timeout)
-        ready, _, _ = select.select([sys.stdin], [], [], 0.1)
-
-        if ready:
-            line = sys.stdin.readline().strip()
-
-            # Parse response (could be text or JSON)
-            answer = None
-            if line.startswith('{'):
-                # JSON format: {"answer": "done|error|shutdown", ...}
-                try:
-                    data = json.loads(line)
-                    answer = data.get('answer')
-                except:
-                    pass
-            else:
-                # Text format: done|error|shutdown
-                answer = line
-
-            if answer == "done":
-                received += 1
-            elif answer == "error":
+    deadline = time.monotonic() + timeout
+    while received < expected_count or any(_sent_updates[prefix] < count for prefix, count in sent):
+        if b'\n' not in _api_buffer:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or len(_api_buffer) >= MAX_API_BUFFER_BYTES:
                 return False
-            elif answer == "shutdown":
-                raise SystemExit(0)
-            # Ignore other messages (could be BGP updates if receiving)
-        else:
-            # No data yet, sleep briefly before next poll
-            time.sleep(0.1)
+            ready, _, _ = select.select([sys.stdin], [], [], remaining)
+            if not ready:
+                return False
+            # Read the pipe directly: TextIO can hide complete lines from select().
+            chunk = os.read(sys.stdin.fileno(), MAX_API_BUFFER_BYTES - len(_api_buffer))
+            if not chunk:
+                return False
+            _api_buffer += chunk
+            continue
 
+        raw, _api_buffer = _api_buffer.split(b'\n', 1)
+        line = raw.decode('utf-8').strip()
+        answer = line
+        if line.startswith('{'):
+            try:
+                reply = json.loads(line)
+            except ValueError:
+                continue
+            record_announcements(reply)
+            answer = reply.get('answer')
+        if answer == 'done':
+            received += 1
+        elif answer == 'error':
+            return False
+        elif answer == 'shutdown':
+            raise SystemExit(0)
     return True
 
 
@@ -84,9 +74,8 @@ try:
 
     sys.stdout.write('announce route 192.168.0.1/32 next-hop 10.0.0.1\n')
     sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
+    if not wait_for_ack(sent=(('192.168.0.1/32', 1),)):
+        raise SystemExit('route announcement did not complete')
     sys.stdout.write('clear adj-rib out\n')
     sys.stdout.flush()
     if not wait_for_ack():
@@ -96,25 +85,21 @@ try:
     sys.stdout.write('announce route 192.168.0.2/32 next-hop 10.0.0.2\n')
     sys.stdout.write('announce route 192.168.0.3/32 next-hop 10.0.0.3\n')
     sys.stdout.flush()
-    if not wait_for_ack(expected_count=2):
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
+    if not wait_for_ack(expected_count=2, sent=(('192.168.0.2/32', 1), ('192.168.0.3/32', 1))):
+        raise SystemExit('route announcements did not complete')
     sys.stdout.write('flush adj-rib out\n')
     sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
+    if not wait_for_ack(sent=(('192.168.0.2/32', 2), ('192.168.0.3/32', 2))):
+        raise SystemExit('route refresh did not complete')
 
     sys.stdout.write('announce route 192.168.0.4/32 next-hop 10.0.0.4\n')
     sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
+    if not wait_for_ack(sent=(('192.168.0.4/32', 1),)):
+        raise SystemExit('route announcement did not complete')
     sys.stdout.write('flush adj-rib out\n')
     sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
+    if not wait_for_ack(sent=(('192.168.0.2/32', 3), ('192.168.0.3/32', 3), ('192.168.0.4/32', 2))):
+        raise SystemExit('route refresh did not complete')
 
     sys.stdout.write('clear adj-rib out\n')
     sys.stdout.flush()
