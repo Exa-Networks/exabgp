@@ -103,17 +103,17 @@ class Capabilities(dict):
         mp.extend(families)
         self[Capability.CODE.MULTIPROTOCOL] = mp
 
-    def _asn4(self, neighbor, local_as):
-        if local_as is None:
+    def _asn4(self, advertise_asn4, effective_local_as):
+        if effective_local_as is None:
             raise ValueError('No resolved local ASN available for ASN4 advertisement')
-        if local_as == AS_TRANS:
+        if effective_local_as == AS_TRANS:
             raise ValueError('AS_TRANS is a wire placeholder, not a resolved local ASN')
-        if not neighbor['capability']['asn4']:
-            if local_as > ASN4.MAX:
+        if not advertise_asn4:
+            if effective_local_as > ASN4.MAX:
                 raise ValueError('A four-octet local ASN requires ASN4 advertisement')
             return
 
-        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(local_as)
+        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(effective_local_as)
 
     def _nexthop(self, neighbor):
         if not neighbor['capability']['nexthop']:
@@ -182,7 +182,7 @@ class Capabilities(dict):
 
     def new(self, neighbor, restarted, local_as=None):
         self._protocol(neighbor)
-        self._asn4(neighbor, neighbor['local-as'] if local_as is None else local_as)
+        self._asn4(neighbor['capability']['asn4'], neighbor['local-as'] if local_as is None else local_as)
         self._nexthop(neighbor)
         self._addpath(neighbor)
         self._graceful(neighbor, restarted)
