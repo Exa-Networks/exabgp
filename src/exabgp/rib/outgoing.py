@@ -203,9 +203,46 @@ class OutgoingRIB(Cache):
         new_attr[change_attr_index] = change.attributes
         self.update_cache(change)
 
+    @staticmethod
+    def _prepare_refresh(refresh_changes, latest_changes, attr_af_nlri):
+        if not refresh_changes:
+            return
+
+        # Stable queues mix actions in attribute buckets. Retain every withdrawal,
+        # including one preceding a reannouncement with different attributes.
+        pending_withdraws = {
+            index
+            for per_family in attr_af_nlri.values()
+            for changes in per_family.values()
+            for index, change in changes.items()
+            if index in refresh_changes and change.nlri.action == Action.WITHDRAW
+        }
+        consumed = set(refresh_changes)
+        for index in pending_withdraws:
+            del refresh_changes[index]
+            if latest_changes[index].nlri.action == Action.ANNOUNCE:
+                # Do not move an announcement ahead of its queued withdrawal.
+                consumed.remove(index)
+
+        for index, change in refresh_changes.items():
+            refresh_changes[index] = latest_changes.get(index, change)
+
+        # Removing only the latest attribute bucket leaves older redefinitions
+        # behind. Consume all announcements for a folded or withdrawn identity.
+        for per_family in attr_af_nlri.values():
+            for changes in per_family.values():
+                removed = [
+                    index
+                    for index, change in changes.items()
+                    if index in consumed and change.nlri.action == Action.ANNOUNCE
+                ]
+                for index in removed:
+                    del changes[index]
+
     def updates(self, grouped):
         attr_af_nlri = self._new_attr_af_nlri
         new_attr = self._new_attribute
+        latest_changes = self._new_nlri
 
         # Get ready to accept more data
         self._new_nlri = {}
@@ -215,18 +252,19 @@ class OutgoingRIB(Cache):
         # Snapshot and clear refresh state to prevent race conditions
         # (resend() can be called during iteration and would modify these)
         refresh_families = self._refresh_families
-        refresh_changes = self._refresh_changes
+        refresh_changes = {change.index(): change for change in self._refresh_changes}
         self._refresh_families = set()
         self._refresh_changes = []
 
-        # Route Refresh first - must be sent before new updates because
-        # the flush command semantically precedes any new announces that
-        # arrived in the same reactor cycle
+        self._prepare_refresh(refresh_changes, latest_changes, attr_af_nlri)
+
+        # Refresh uses the latest queued replacement, not the obsolete attributes
+        # captured by resend(). Unrelated updates retain their original ordering.
 
         for afi, safi in refresh_families:
             yield RouteRefresh(afi, safi, RouteRefresh.start)
 
-        for change in refresh_changes:
+        for change in refresh_changes.values():
             yield Update([change.nlri], change.attributes)
 
         for afi, safi in refresh_families:
