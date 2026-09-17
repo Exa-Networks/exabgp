@@ -25,7 +25,9 @@ from exabgp.bgp.message import NOP
 from exabgp.bgp.message import _NOP
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
+from exabgp.bgp.message.open.asn import ASN, AS_TRANS
 from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import EOR
@@ -375,15 +377,23 @@ class Protocol:
             local_as = self.neighbor['local-as']
         elif self.negotiated.received_open:
             local_as = self.negotiated.received_open.asn
+            if local_as == AS_TRANS and Capability.CODE.FOUR_BYTES_ASN in self.negotiated.received_open.capabilities:
+                local_as = ASN(self.negotiated.received_open.capabilities[Capability.CODE.FOUR_BYTES_ASN])
         else:
-            raise RuntimeError('no ASN available for the OPEN message')
+            raise Notify(6, 0, 'no ASN available for the OPEN message')
+
+        try:
+            capabilities = Capabilities().new(self.neighbor, self.peer._restarted, local_as=local_as)
+        except ValueError as exc:
+            # Use the peer's notification path rather than its unhandled-error reset.
+            raise Notify(6, 0, str(exc)) from exc
 
         sent_open = Open(
             Version(4),
             local_as,
             self.neighbor['hold-time'],
             self.neighbor['router-id'],
-            Capabilities().new(self.neighbor, self.peer._restarted),
+            capabilities,
         )
 
         # we do not buffer open message in purpose

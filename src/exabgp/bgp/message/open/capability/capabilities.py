@@ -10,6 +10,7 @@ from __future__ import annotations
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.addpath import AddPath
@@ -102,11 +103,17 @@ class Capabilities(dict):
         mp.extend(families)
         self[Capability.CODE.MULTIPROTOCOL] = mp
 
-    def _asn4(self, neighbor):
+    def _asn4(self, neighbor, local_as):
+        if local_as is None:
+            raise ValueError('No resolved local ASN available for ASN4 advertisement')
+        if local_as == AS_TRANS:
+            raise ValueError('AS_TRANS is a wire placeholder, not a resolved local ASN')
         if not neighbor['capability']['asn4']:
+            if local_as > ASN4.MAX:
+                raise ValueError('A four-octet local ASN requires ASN4 advertisement')
             return
 
-        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor['local-as'])
+        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(local_as)
 
     def _nexthop(self, neighbor):
         if not neighbor['capability']['nexthop']:
@@ -173,9 +180,9 @@ class Capabilities(dict):
         # XXX: FIXME: should it not be the RFC version ?
         self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
 
-    def new(self, neighbor, restarted):
+    def new(self, neighbor, restarted, local_as=None):
         self._protocol(neighbor)
-        self._asn4(neighbor)
+        self._asn4(neighbor, neighbor['local-as'] if local_as is None else local_as)
         self._nexthop(neighbor)
         self._addpath(neighbor)
         self._graceful(neighbor, restarted)

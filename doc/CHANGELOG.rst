@@ -4,6 +4,10 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 5.0.13:
+ * Fix: automatic local-AS sessions advertise the resolved peer identity,
+   including the correct ASN4 capability. An unresolved ASN,
+   AS_TRANS as a local identity, or a four-octet identity with ASN4
+   disabled is refused rather than advertised incorrectly.
  * SECURITY: a peer could write data of its own into the API streams:
    fields into the JSON stream through a BGP-LS attribute, and whole
    events into the text stream through its hostname, its software
