@@ -68,7 +68,8 @@ def _negotiated(neighbor):
         if neighbor['capability']['add-path']:
             path[f] = neighbor['capability']['add-path']
 
-    capa = Capabilities().new(neighbor, False)
+    local_as = neighbor['local-as'] or neighbor['peer-as']
+    capa = Capabilities().new(neighbor, False, local_as=local_as)
     capa[Capability.CODE.ADD_PATH] = path
     capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
     # capa[Capability.CODE.FOUR_BYTES_ASN] = True
@@ -76,7 +77,7 @@ def _negotiated(neighbor):
     routerid_1 = str(neighbor['router-id'])
     routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor['router-id']).split('.', -1))
 
-    o1 = Open(Version(4), ASN(neighbor['local-as']), HoldTime(180), RouterID(routerid_1), capa)
+    o1 = Open(Version(4), ASN(local_as), HoldTime(180), RouterID(routerid_1), capa)
     o2 = Open(Version(4), ASN(neighbor['peer-as']), HoldTime(180), RouterID(routerid_2), capa)
     negotiated = Negotiated(neighbor)
     negotiated.sent(o1)
@@ -89,104 +90,97 @@ def _negotiated(neighbor):
 # ...
 
 
+def _normalise_route_strings(neighbor, original, recoded):
+    original = original.replace('attribute [ 0x04 0x80 0x00000064 ]', 'med 100')
+    original = original.lower().replace(' med 100', '').replace(' local-preference 100', '').replace(' origin igp', '')
+    recoded = recoded.lower().replace(' med 100', '').replace(' local-preference 100', '').replace(' origin igp', '')
+    recoded = recoded.replace(
+        'large-community [ 1:2:3 10:11:12 ]',
+        'attribute [ 0x20 0xc0 0x0000000100000002000000030000000a0000000b0000000c ]',
+    )
+    if 'next-hop self' in original:
+        if ':' in original:
+            original = original.replace('next-hop self', 'next-hop ::1')
+        else:
+            original = original.replace('next-hop self', 'next-hop {}'.format(neighbor['local-address']))
+    if ' name ' in original:
+        parts = original.split(' ')
+        position = parts.index('name')
+        original = ' '.join(parts[:position] + parts[position + 2 :])
+    return original, recoded
+
+
+def _compare_route_encoding(neighbor, original, decoded, packed, recoded):
+    original, decoded = _normalise_route_strings(neighbor, original, decoded)
+    if original != decoded:
+        if 'attribute [' in original and ' 0x00 ' in original:
+            # Unknown non-transitive attributes are deliberately not decoded.
+            log.debug(lambda: 'skipping string and encoding checks on non-transitive attribute(s)', 'parser')
+            return True
+        if '=http' in original or '=ndl-aas' in original:
+            log.debug(lambda: 'skipping string and encoding checks on named flow attribute(s)', 'parser')
+            return True
+        log.debug(lambda: 'strings are different:', 'parser')
+        log.debug(lambda: f'[{original}]', 'parser')
+        log.debug(lambda: f'[{decoded}]', 'parser')
+        return False
+    log.debug(lambda: 'strings are fine', 'parser')
+    if packed != recoded:
+        log.debug(lambda: 'encoding are different', 'parser')
+        log.debug(lambda: str([od(message) for message in packed]), 'parser')
+        log.debug(lambda: str([od(message) for message in recoded]), 'parser')
+        return False
+    log.debug(lambda: 'encoding is fine', 'parser')
+    log.debug(lambda: '----------------------------------------', 'parser')
+    return True
+
+
+def _check_route_generation(neighbor, change, negotiated):
+    try:
+        original = change.extensive()
+        packed = list(Update([change.nlri], change.attributes).messages(negotiated))
+        if not packed:
+            return False
+        first = packed[0]
+        log.debug(lambda: 'parsed route requires %d updates' % len(packed), 'parser')
+        log.debug(lambda: 'update size is %d' % len(first), 'parser')
+        log.debug(lambda: 'parsed route {}'.format(original), 'parser')
+        log.debug(lambda: 'parsed hex   {}'.format(od(first)), 'parser')
+
+        payload = first[19:] if first.startswith(b'\xff' * 16) else first
+        update = Update.unpack_message(payload, Direction.IN, negotiated)
+        decoded = Change(update.nlris[0], update.attributes).extensive()
+        recoded = list(Update([update.nlris[0]], update.attributes).messages(negotiated))
+        if not recoded:
+            return False
+        log.debug(lambda: 'recoded route {}'.format(decoded), 'parser')
+        log.debug(lambda: 'recoded hex   {}'.format(od(recoded[0])), 'parser')
+        if not _compare_route_encoding(neighbor, original, decoded, packed, recoded):
+            return False
+        log.debug(lambda: 'JSON nlri {}'.format(change.nlri.json()), 'parser')
+        log.debug(lambda: 'JSON attr {}'.format(change.attributes.json()), 'parser')
+        return True
+    except (Notify, ValueError) as exc:
+        log.debug(lambda: '----------------------------------------', 'parser')
+        log.debug(lambda exc=exc: str(exc), 'parser')
+        log.debug(lambda: '----------------------------------------', 'parser')
+        return False
+
+
 def check_generation(neighbors):
     option.enabled['parser'] = True
-
     for name in neighbors.keys():
         neighbor = copy.deepcopy(neighbors[name])
-        neighbor['local-as'] = neighbor['peer-as']
+        # Validate through synthetic iBGP without discarding the only known ASN.
+        neighbor['local-as'] = neighbor['peer-as'] or neighbor['local-as']
+        neighbor['peer-as'] = neighbor['local-as']
         negotiated = _negotiated(neighbor)
-
         for _ in neighbor.rib.outgoing.updates(False):
             pass
-
-        for change1 in neighbor.rib.outgoing.cached_changes():
-            str1 = change1.extensive()
-            packed = list(Update([change1.nlri], change1.attributes).messages(negotiated))
-            pack1 = packed[0]
-
-            log.debug(lambda packed=packed: 'parsed route requires %d updates' % len(packed), 'parser')
-            log.debug(lambda pack1=pack1: 'update size is %d' % len(pack1), 'parser')
-
-            log.debug(lambda str1=str1: 'parsed route {}'.format(str1), 'parser')
-            log.debug(lambda pack1=pack1: 'parsed hex   {}'.format(od(pack1)), 'parser')
-
-            # This does not take the BGP header - let's assume we will not break that :)
-            try:
-                log.debug(lambda: '')  # new line
-
-                pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
-                update = Update.unpack_message(pack1s, Direction.IN, negotiated)
-
-                change2 = Change(update.nlris[0], update.attributes)
-                str2 = change2.extensive()
-                pack2 = list(Update([update.nlris[0]], update.attributes).messages(negotiated))[0]
-
-                log.debug(lambda str2=str2: 'recoded route {}'.format(str2), 'parser')
-                log.debug(lambda pack2=pack2: 'recoded hex   {}'.format(od(pack2)), 'parser')
-
-                str1 = str1.replace('attribute [ 0x04 0x80 0x00000064 ]', 'med 100')
-                str1r = (
-                    str1.lower().replace(' med 100', '').replace(' local-preference 100', '').replace(' origin igp', '')
-                )
-                str2r = (
-                    str2.lower().replace(' med 100', '').replace(' local-preference 100', '').replace(' origin igp', '')
-                )
-                str2r = str2r.replace(
-                    'large-community [ 1:2:3 10:11:12 ]',
-                    'attribute [ 0x20 0xc0 0x0000000100000002000000030000000a0000000b0000000c ]',
-                )
-
-                if 'next-hop self' in str1r:
-                    if ':' in str1r:
-                        str1r = str1r.replace('next-hop self', 'next-hop ::1')
-                    else:
-                        str1r = str1r.replace('next-hop self', 'next-hop {}'.format(neighbor['local-address']))
-
-                if ' name ' in str1r:
-                    parts = str1r.split(' ')
-                    pos = parts.index('name')
-                    str1r = ' '.join(parts[:pos] + parts[pos + 2 :])
-
-                skip = False
-
-                if str1r != str2r:
-                    if 'attribute [' in str1r and ' 0x00 ' in str1r:
-                        # we do not decode non-transitive attributes
-                        log.debug(lambda: 'skipping string check on update with non-transitive attribute(s)', 'parser')
-                        skip = True
-                    elif '=http' in str1r or '=ndl-aas' in str1r:
-                        log.debug(lambda: 'skipping string check on update with named flow attribute(s)', 'parser')
-                        skip = True
-                    else:
-                        log.debug(lambda: 'strings are different:', 'parser')
-                        log.debug(lambda str1r=str1r: f'[{str1r}]', 'parser')
-                        log.debug(lambda str2r=str2r: f'[{str2r}]', 'parser')
-                        return False
-                else:
-                    log.debug(lambda: 'strings are fine', 'parser')
-
-                if skip:
-                    log.debug(lambda: 'skipping encoding for update with non-transitive attribute(s)', 'parser')
-                elif pack1 != pack2:
-                    log.debug(lambda: 'encoding are different', 'parser')
-                    log.debug(lambda pack1=pack1: f'[{od(pack1)}]', 'parser')
-                    log.debug(lambda pack2=pack2: f'[{od(pack2)}]', 'parser')
-                    return False
-                else:
-                    log.debug(lambda: 'encoding is fine', 'parser')
-                    log.debug(lambda: '----------------------------------------', 'parser')
-
-                log.debug(lambda change1=change1: 'JSON nlri {}'.format(change1.nlri.json()), 'parser')
-                log.debug(lambda change1=change1: 'JSON attr {}'.format(change1.attributes.json()), 'parser')
-
-            except Notify as exc:
-                log.debug(lambda: '----------------------------------------', 'parser')
-                log.debug(lambda exc=exc: str(exc), 'parser')
-                log.debug(lambda: '----------------------------------------', 'parser')
+        for change in neighbor.rib.outgoing.cached_changes():
+            if not _check_route_generation(neighbor, change, negotiated):
                 return False
         neighbor.rib.clear()
-
     return True
 
 
