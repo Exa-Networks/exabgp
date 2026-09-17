@@ -8,6 +8,9 @@ Version 5.0.13:
    including the correct ASN4 capability. An unresolved ASN,
    AS_TRANS as a local identity, or a four-octet identity with ASN4
    disabled is refused rather than advertised incorrectly.
+ * Fix: offline negotiation resolves automatic local-AS from a known
+   peer-AS, and route validation preserves a known local-AS when
+   peer-AS is automatic.
  * Fix: IPv4 multicast announcements and withdrawals use MP attributes
    instead of being sent as IPv4 unicast. MP withdrawals do not require
    a next hop.
@@ -21,6 +24,8 @@ Version 5.0.13:
  * Fix: repeated route refreshes replay each route once, with its latest
    queued replacement. Pending withdrawals exclude stale refresh
    announcements.
+ * Fix: route validation rejects failed or empty serialization and
+   compares every emitted message, not only the first.
  * SECURITY: a peer could write data of its own into the API streams:
    fields into the JSON stream through a BGP-LS attribute, and whole
    events into the text stream through its hostname, its software
