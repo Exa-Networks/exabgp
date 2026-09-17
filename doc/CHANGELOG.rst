@@ -8,6 +8,16 @@ Version 5.0.13:
    including the correct ASN4 capability. An unresolved ASN,
    AS_TRANS as a local identity, or a four-octet identity with ASN4
    disabled is refused rather than advertised incorrectly.
+ * Fix: IPv4 multicast announcements and withdrawals use MP attributes
+   instead of being sent as IPv4 unicast. MP withdrawals do not require
+   a next hop.
+ * Fix: an UPDATE containing native and MP routes no longer repeats its
+   native prefixes in subsequent MP packets.
+ * Fix: suppressing MP withdrawals during initial session output no
+   longer emits an empty UPDATE mistaken for IPv4 end-of-RIB.
+ * Fix: MP announcement and withdrawal fragments have independent size
+   budgets. Withdrawals precede announcements across packets, so a
+   reannounced prefix is not left withdrawn after fragmentation.
  * SECURITY: a peer could write data of its own into the API streams:
    fields into the JSON stream through a BGP-LS attribute, and whole
    events into the text stream through its hostname, its software
