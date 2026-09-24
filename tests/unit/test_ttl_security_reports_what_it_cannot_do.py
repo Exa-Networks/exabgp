@@ -97,9 +97,7 @@ def test_a_platform_without_ip_minttl_says_so(monkeypatch: pytest.MonkeyPatch, w
     assert 'ttl-security' in said or 'ip_minttl' in said, f'the warning does not name what is missing: {warnings}'
 
 
-def test_the_outbound_ttl_is_still_set_when_ip_minttl_is_missing(
-    monkeypatch: pytest.MonkeyPatch, warnings: list[str]
-) -> None:
+def test_a_missing_ip_minttl_warns_rather_than_raises(monkeypatch: pytest.MonkeyPatch, warnings: list[str]) -> None:
     """Warning, not raising.  A platform without IP_MINTTL worked before and still does.
 
     Turning this into a TTLError would refuse to bring up sessions which are running today
@@ -110,7 +108,7 @@ def test_the_outbound_ttl_is_still_set_when_ip_minttl_is_missing(
 
     tcp.min_ttl(io, '192.0.2.1', TTL)
 
-    assert (socket.IPPROTO_IP, socket.IP_TTL, TTL) in io.options, 'the outbound TTL was not set'
+    assert not io.options, f'nothing could be installed, and yet options were set: {io.options}'
 
 
 def test_ip_minttl_is_used_when_the_platform_has_it(monkeypatch: pytest.MonkeyPatch, warnings: list[str]) -> None:

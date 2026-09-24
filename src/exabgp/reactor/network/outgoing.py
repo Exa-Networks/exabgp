@@ -11,8 +11,9 @@ from .tcp import connect
 from .tcp import md5
 
 # from .tcp import nagle
-from .tcp import ttl
-from .tcp import ttlv6
+from .tcp import sending_ttl
+from .tcp import set_minimum_ttl
+from .tcp import set_sending_ttl
 from .tcp import asynchronous
 from .tcp import ready
 from .error import MD5Error, TCPAOError
@@ -37,10 +38,15 @@ class Outgoing(Connection):
         tcp_ao_algorithm: str = '',
         tcp_ao_password: str = '',
         tcp_ao_base64: bool = False,
+        incoming_ttl: int | None = None,
     ) -> None:
         Connection.__init__(self, afi, peer, local)
 
         self.ttl: int | None = ttl
+        # GTSM (RFC 5082) is two settings on the one socket: the minimum TTL accepted from
+        # the peer, and the TTL we send with.  A connection we open used to get only the
+        # second, so incoming-ttl was ignored for every session this side initiated.
+        self.incoming_ttl: int | None = incoming_ttl
         self.afi: AFI = afi
         self.md5: str = md5
         self.md5_base64: bool = md5_base64
@@ -69,10 +75,9 @@ class Outgoing(Connection):
                     self.tcp_ao_algorithm,
                     self.tcp_ao_base64,
                 )
-            if self.afi == AFI.ipv4:
-                ttl(self.io, self.peer, self.ttl)
-            elif self.afi == AFI.ipv6:
-                ttlv6(self.io, self.peer, self.ttl)
+            if self.afi in (AFI.ipv4, AFI.ipv6):
+                set_sending_ttl(self.io, self.afi, self.peer, sending_ttl(self.ttl, self.incoming_ttl))
+                set_minimum_ttl(self.io, self.afi, self.peer, self.incoming_ttl)
             if self.local:
                 bind(self.io, self.local, self.afi)
             asynchronous(self.io, self.peer)

@@ -395,6 +395,41 @@ def nagle(io: socket.socket, ip: str) -> None:
         raise NagleError("Could not disable nagle's algorithm for {}".format(ip)) from None
 
 
+# RFC 5082 section 3: a GTSM speaker sends with the maximum TTL, so that the receiver can
+# tell from what arrives how many hops the packet crossed.
+GTSM_SENDING_TTL = 255
+
+
+def sending_ttl(outgoing: int | None, incoming: int | None) -> int | None:
+    """The TTL to put on what we send to a neighbour, or None to leave the kernel default.
+
+    outgoing-ttl says so explicitly.  Without it, an incoming-ttl means the neighbour runs
+    GTSM, and GTSM wants 255 on the wire: the default of 64 is below any minimum the far
+    end is likely to check against, so the session would never come up.
+    """
+    if outgoing:
+        return outgoing
+    if incoming:
+        return GTSM_SENDING_TTL
+    return None
+
+
+def set_sending_ttl(io: socket.socket, afi: AFI, ip: str, value: int | None) -> None:
+    """Set the TTL (IPv4) or hop limit (IPv6) this socket sends with."""
+    if afi == AFI.ipv6:
+        ttlv6(io, ip, value)
+        return
+    ttl(io, ip, value)
+
+
+def set_minimum_ttl(io: socket.socket, afi: AFI, ip: str, minimum: int | None) -> None:
+    """Have the kernel drop what arrives on this socket with a TTL below the minimum."""
+    if afi == AFI.ipv6:
+        min_ttlv6(io, ip, minimum)
+        return
+    min_ttl(io, ip, minimum)
+
+
 def ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:
@@ -440,8 +475,11 @@ def min_ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
         #
         # This used to look the option up in socket only, where CPython never puts it, and
         # swallow the miss.  So the inbound check was not installed on any platform, Linux
-        # included, and the operator was not told.  IP_TTL, set below, is the TTL we put on
-        # what we send, which is the other half of GTSM and no substitute for it.
+        # included, and the operator was not told.
+        #
+        # This sets the minimum and nothing else.  It also used to set IP_TTL to the same
+        # value, which is the TTL we send with: that is outgoing-ttl's job, and RFC 5082
+        # has a GTSM sender use 255 rather than the minimum it accepts.  See sending_ttl.
         #
         # Warn rather than raise where the platform has no option.  Those hosts are running
         # sessions today, and refusing to bring them up is a larger change than the defect.
@@ -466,13 +504,6 @@ def min_ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
                     'This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))
                 ) from None
 
-        try:
-            io.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
-        except OSError as exc:
-            raise TTLError(
-                'This OS does not support IP_MINTTL or IP_TTL (ttl-security) for {} ({})'.format(ip, errstr(exc)),
-            ) from None
-
 
 def min_ttlv6(io: socket.socket, ip: str, ttl: int | None) -> None:
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
@@ -485,13 +516,7 @@ def min_ttlv6(io: socket.socket, ip: str, ttl: int | None) -> None:
             raise TTLError(
                 'This OS does not support IPV6_MINHOPCOUNT (ttl-security) for {} ({})'.format(ip, errstr(exc))
             ) from None
-
-        try:
-            io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
-        except OSError as exc:
-            raise TTLError(
-                'This OS does not support IPV6_UNICAST_HOPS (ttl-security) for {} ({})'.format(ip, errstr(exc)),
-            ) from None
+        # the hop limit we send with is set by set_sending_ttl, for the reason in min_ttl
 
 
 def asynchronous(io: socket.socket, ip: str) -> None:

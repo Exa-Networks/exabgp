@@ -25,6 +25,8 @@ from exabgp.reactor.network.tcp import md5
 from exabgp.reactor.network.tcp import bind_to_device
 from exabgp.reactor.network.tcp import min_ttl
 from exabgp.reactor.network.tcp import min_ttlv6
+from exabgp.reactor.network.tcp import sending_ttl
+from exabgp.reactor.network.tcp import set_sending_ttl
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno
 from exabgp.reactor.network.error import NetworkError
@@ -82,6 +84,34 @@ def set_listener_options(sock: Any, ipv6: bool) -> None:
             lazymsg(
                 'listener.v6only.unavailable reason={reason}',
                 reason='this socket may accept IPv4-mapped connections which match no configured neighbor',
+            ),
+            'network',
+        )
+
+
+def set_accepted_ttl(connection: Incoming, neighbor: Neighbor) -> None:
+    """Give an accepted connection the TTL its neighbour's configuration asks us to send with.
+
+    The listening socket is shared by every neighbour on an address and port, so it can
+    carry the minimum TTL checked on arrival but not a per-neighbour sending TTL.  Until the
+    neighbour is known that has to wait, and before this nothing set it at all: outgoing-ttl
+    was ignored for every session the peer opened.  What happened instead was that the
+    listener set IP_TTL to the incoming-ttl minimum, which accepted sockets inherited.
+    """
+    value = sending_ttl(neighbor.session.outgoing_ttl, neighbor.session.incoming_ttl)
+    if value is None or connection.io is None:
+        return
+    try:
+        set_sending_ttl(connection.io, connection.afi, connection.peer, value)
+    except NetworkError as exc:
+        # the session can still come up, and a peer running GTSM will then drop it, which
+        # this line is what explains
+        log.error(
+            lazymsg(
+                'connection.ttl.unset name={name} ttl={ttl} error={error}',
+                name=connection.name(),
+                ttl=value,
+                error=str(exc),
             ),
             'network',
         )
@@ -315,6 +345,7 @@ class Listener:
                     ranged_neighbor.append(neighbor)
                     continue
 
+                set_accepted_ttl(connection, neighbor)
                 denied = reactor.handle_connection(key, connection)
                 if denied:
                     log.debug(
@@ -360,6 +391,7 @@ class Listener:
                     new_neighbor.session.router_id = RouterID(connection.local)
 
                 new_peer = Peer(new_neighbor, reactor)
+                set_accepted_ttl(connection, new_neighbor)
                 denied = new_peer.handle_connection(connection)
                 if denied:
                     log.debug(

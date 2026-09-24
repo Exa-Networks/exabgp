@@ -135,6 +135,7 @@ class Protocol:
             tcp_ao_algorithm,
             tcp_ao_password,
             tcp_ao_base64,
+            incoming_ttl=self.neighbor.session.incoming_ttl,
         )
 
         # Use async establish instead of generator
