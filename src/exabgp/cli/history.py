@@ -15,9 +15,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -116,22 +118,21 @@ class HistoryTracker:
         # Legacy path
         legacy_path = Path.home() / '.exabgp_cli_history.json'
 
+        # This whole function is a search for the first usable location, so a candidate
+        # we cannot even stat, because a parent directory refuses us, is simply not the
+        # one: the next candidate is tried, and the last of them always works.
         # Check if state path already exists (handle permission errors)
-        try:
+        with contextlib.suppress(OSError, PermissionError):
             if state_path.exists():
                 return state_path
-        except (OSError, PermissionError):
-            pass  # Can't access state path, try config path
 
         # Check if config path exists
-        try:
+        with contextlib.suppress(OSError, PermissionError):
             if config_path.exists():
                 return config_path
-        except (OSError, PermissionError):
-            pass  # Can't access config path, try legacy
 
         # Check if legacy path exists and migrate
-        try:
+        with contextlib.suppress(OSError, PermissionError):
             if legacy_path.exists():
                 # Migrate to state path
                 try:
@@ -147,8 +148,6 @@ class HistoryTracker:
                     except (OSError, PermissionError):
                         # Can't migrate, use legacy path
                         return legacy_path
-        except (OSError, PermissionError):
-            pass  # Can't access legacy path
 
         # No existing file, create in state path (or fall back to config/legacy)
         # Try state path first
@@ -198,10 +197,11 @@ class HistoryTracker:
 
         except (json.JSONDecodeError, OSError, KeyError):
             # Corrupted history file - delete and start fresh
-            try:
+            # The delete is housekeeping, not the recovery: starting from no statistics
+            # is what makes the session work again, and the first command recorded
+            # overwrites the file whether or not this removal succeeded.
+            with contextlib.suppress(OSError):
                 self._history_path.unlink()
-            except OSError:
-                pass
             self._stats = {}
 
     def _save_history(self) -> None:
@@ -209,7 +209,10 @@ class HistoryTracker:
         if not self.enabled or not self._history_path:
             return
 
-        try:
+        # Completion ranking is an aid, not a feature the user asked for: a CLI which
+        # cannot write the file still completes commands, and this runs after every
+        # command typed, so a read-only home directory would print on every line.
+        with contextlib.suppress(OSError, PermissionError):
             # Ensure parent directory exists
             self._history_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -234,10 +237,6 @@ class HistoryTracker:
 
             # Atomic rename
             temp_path.replace(self._history_path)
-
-        except (OSError, PermissionError):
-            # Can't write history - silently continue
-            pass
 
     def _anonymize_command(self, command: str) -> str:
         """Anonymize a command by replacing IP addresses with '*'.
@@ -416,5 +415,10 @@ class HistoryTracker:
         if self._history_path and self._history_path.exists():
             try:
                 self._history_path.unlink()
-            except OSError:
-                pass
+            except OSError as exc:
+                # The commands are anonymised but they are still a record of what this
+                # user did, and the file they asked to be rid of is still on disk and
+                # will be read back by the next session. Saying nothing would let them
+                # believe it was gone.
+                sys.stderr.write(f'could not remove the CLI history file {self._history_path}: {exc}\n')
+                sys.stderr.flush()

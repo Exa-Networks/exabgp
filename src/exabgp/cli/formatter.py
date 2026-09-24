@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
@@ -343,7 +344,11 @@ class OutputFormatter:
 
         # Try to parse and pretty-print as JSON (single object/array)
         if output_stripped.startswith('{') or output_stripped.startswith('['):
-            try:
+            # Output which is not one JSON document is not an error to report: the
+            # daemon also answers with one JSON object per line, and with plain text,
+            # and the two passes below read those. Whatever none of them can read is
+            # handed back to the user unchanged, which is the only honest thing to show.
+            with contextlib.suppress(json.JSONDecodeError, ValueError):
                 # Parse JSON
                 parsed = json.loads(output_stripped)
 
@@ -364,9 +369,6 @@ class OutputFormatter:
                     return '\n'.join(colored_lines)
                 else:
                     return pretty_json
-            except (json.JSONDecodeError, ValueError):
-                # Not valid JSON, try line-by-line parsing for multiple JSON objects
-                pass
 
         # Try line-by-line JSON parsing (for multiple JSON objects on separate lines)
         lines = output_stripped.split('\n')

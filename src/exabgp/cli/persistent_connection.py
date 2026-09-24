@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import signal
@@ -162,15 +163,16 @@ class PersistentSocketConnection:
 
                 # Try JSON format first
                 if line.startswith('{'):
-                    try:
+                    # The daemon answers a ping in JSON or in text, and the reply may carry
+                    # other lines. A line which opens with a brace and does not parse is
+                    # neither form of pong, so the search simply moves on to the next line.
+                    with contextlib.suppress(json.JSONDecodeError, ValueError):
                         parsed = json.loads(line)
                         if isinstance(parsed, dict) and 'pong' in parsed:
                             self.daemon_uuid = parsed['pong']
                             is_active = parsed.get('active', True)
                             uuid_found = True
                             break
-                    except (json.JSONDecodeError, ValueError):
-                        pass
 
                 # Try text format
                 if line.startswith('pong '):
@@ -249,8 +251,15 @@ class PersistentSocketConnection:
         try:
             # Send SIGUSR1 to main thread to interrupt input()
             os.kill(os.getpid(), signal.SIGUSR1)
-        except OSError:
-            pass
+        except OSError as exc:
+            # This is the only way a background thread can end the session, and the
+            # caller has already told the user it is ending. Losing the signal leaves
+            # the main thread blocked in input() believing it is still connected, so
+            # stop the background threads here and say the session must be ended by hand.
+            self.running = False
+            sys.stderr.write(f'\nERROR: could not stop this CLI session ({exc})\n')
+            sys.stderr.write('Press Ctrl+C to exit.\n')
+            sys.stderr.flush()
 
     def _reconnect(self, max_attempts: int = 3, retry_delay: int = 2) -> bool:
         """
@@ -272,10 +281,10 @@ class PersistentSocketConnection:
 
         # Close old socket
         if self.socket:
-            try:
+            # This socket is being replaced. A close which fails because the daemon
+            # has already dropped the connection has reached the state we wanted.
+            with contextlib.suppress(OSError):
                 self.socket.close()
-            except OSError:
-                pass
             self.socket = None
 
         # Try to reconnect
@@ -451,12 +460,13 @@ class PersistentSocketConnection:
                         is_ping_response = True
                     elif response.startswith('{') and '"pong"' in response and '"active"' in response:
                         # JSON format ping response (check for both pong and active keys)
-                        try:
+                        # Only a reply we can parse is claimed as a health check. Anything
+                        # else goes to the user as the answer to the command they typed,
+                        # which is where an unreadable reply belongs.
+                        with contextlib.suppress(json.JSONDecodeError, ValueError):
                             parsed = json.loads(response)
                             if isinstance(parsed, dict) and 'pong' in parsed and 'active' in parsed:
                                 is_ping_response = True
-                        except (json.JSONDecodeError, ValueError):
-                            pass
 
                     # Route response based on whether we're waiting for user command
                     with self.lock:
@@ -506,15 +516,14 @@ class PersistentSocketConnection:
             if self.command_in_progress or self.pending_user_command:
                 return
 
-            try:
+            # A ping which cannot be written means the socket is gone. _read_loop is the
+            # single place which tells the user that and reconnects, and it is about to
+            # see the same broken socket, so reporting it here would only say it twice.
+            with contextlib.suppress(OSError):
                 # Include client UUID and start time to track active connection (v6 API format)
                 ping_cmd = f'session ping {self.client_uuid} {self.client_start_time}\n'
                 self.socket.sendall(ping_cmd.encode('utf-8'))
                 self.last_ping_time = time.time()
-            except OSError:
-                # Socket error - read loop will handle reconnection
-                # Don't print error or exit here
-                pass
 
     def _handle_ping_response(self, response: str) -> None:
         """Handle pong response from health check
@@ -525,6 +534,7 @@ class PersistentSocketConnection:
         """
         new_uuid = None
         is_active = True  # Default for backward compatibility
+        unreadable_json = False
 
         # Try JSON format first
         if response.startswith('{'):
@@ -534,10 +544,14 @@ class PersistentSocketConnection:
                     new_uuid = parsed['pong']
                     is_active = parsed.get('active', True)
             except (json.JSONDecodeError, ValueError):
-                pass
+                # A reply which opens with a brace and does not parse is a truncated or
+                # corrupt frame, not a text pong. Handing it to the text parser below
+                # would return its second word as the daemon UUID, which reads as a
+                # daemon restart and then makes every later pong look like one too.
+                unreadable_json = True
 
         # Fallback to text format
-        if new_uuid is None:
+        if new_uuid is None and not unreadable_json:
             parts = response.split()
             if len(parts) >= 2:
                 new_uuid = parts[1]
@@ -655,29 +669,22 @@ class PersistentSocketConnection:
 
     def close(self) -> None:
         """Close connection and stop threads"""
-        try:
+        # Ctrl+C here is the user asking to leave now, and leaving now is what close()
+        # is for: the socket and the threads are released by the process exiting anyway.
+        with contextlib.suppress(KeyboardInterrupt):
             self.running = False
 
             # Close socket (triggers read thread to exit)
             if self.socket:
-                try:
+                # The socket is being abandoned, so a shutdown or a close which fails
+                # because the daemon has already gone has reached the state we wanted.
+                with contextlib.suppress(OSError):
                     # Shutdown socket first (stops I/O operations)
                     self.socket.shutdown(sock.SHUT_RDWR)
-                except OSError:
-                    pass
 
-                try:
+                with contextlib.suppress(OSError):
                     # Then close the socket
                     self.socket.close()
-                except OSError:
-                    pass
 
             # Give threads a moment to exit
-            try:
-                time.sleep(0.2)
-            except KeyboardInterrupt:
-                # User is impatient, exit immediately
-                pass
-        except KeyboardInterrupt:
-            # Ctrl+C during cleanup - exit immediately without error
-            pass
+            time.sleep(0.2)
