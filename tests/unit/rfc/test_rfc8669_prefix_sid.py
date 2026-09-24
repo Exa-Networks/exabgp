@@ -8,9 +8,11 @@ attribute, keep the route, do not advertise the attribute onwards.  RFC 7606 cal
 
 The interesting part is that a class flag is a single switch and section 6 names three
 doors.  Two of them go through `Attribute.unpack` and hit the flag.  The third, the
-zero-length attribute, is caught by a generic rule in `AttributeCollection.parse` before
-the flag is ever consulted, and comes out as treat-as-withdraw instead.  The test for it
-is marked xfail so the day that changes the suite says so.
+zero-length attribute, used to be caught by the generic `length == 0 and not VALID_ZERO`
+rule in `AttributeCollection.parse` before the flag was ever consulted, and came out as
+treat-as-withdraw instead.  `PrefixSid` now sets `VALID_ZERO` to keep that generic rule
+from answering for it and refuses the empty value in its own decoder, so all three doors
+reach `DISCARD`.
 """
 
 from __future__ import annotations
@@ -231,7 +233,6 @@ def test_an_srgb_which_is_not_two_plus_a_multiple_of_six_is_discarded() -> None:
 
 
 @pytest.mark.rfc('rfc8669#6-malformed-attribute-discard')
-@pytest.mark.xfail(strict=True, reason='a zero length Prefix-SID is treat-as-withdraw, the route goes with it')
 def test_an_attribute_below_the_minimum_length_is_discarded_and_the_route_kept() -> None:
     collection = parse(attribute(b''))
     assert DISCARD in collection
@@ -266,7 +267,37 @@ def test_an_attribute_after_the_duplicate_is_still_decoded() -> None:
 
 
 @pytest.mark.rfc('rfc8669#6-duplicate-tlv-first-wins')
-@pytest.mark.xfail(strict=True, reason='both Label-Index TLVs are kept and both appear in the json')
 def test_a_repeated_label_index_tlv_keeps_only_the_first() -> None:
     attr = decoded(attribute(label_index(100) + label_index(999)))
     assert [each.TLV for each in attr.sr_attrs] == [LABEL_INDEX_TLV]
+    # one key per object: two would leave the consumer's parser to pick a winner
+    assert attr.json() == '{ "sr-label-index": 100 }'
+
+
+@pytest.mark.rfc('rfc8669#6-duplicate-tlv-first-wins')
+def test_a_discarded_repeat_is_not_advertised_onwards_but_its_neighbours_are() -> None:
+    # section 6 grants propagation to unknown TLVs, not to a discarded repeat, so the
+    # second Label-Index goes and the unknown TLV between them keeps its bytes
+    unknown = tlv(UNKNOWN_TLV, b'\xde\xad\xbe\xef')
+    wire = attribute(label_index(100) + unknown + label_index(999))
+    attr = decoded(wire)
+    assert bytes(attr.pack_attribute(Negotiated.UNSET)) == attribute(label_index(100) + unknown)
+
+
+@pytest.mark.rfc('rfc8669#6-duplicate-tlv-first-wins')
+def test_a_repeated_originator_srgb_keeps_only_the_first() -> None:
+    attr = decoded(attribute(label_index(100) + srgb([(4096, 100)]) + srgb([(20000, 50)])))
+    assert [each.TLV for each in attr.sr_attrs] == [LABEL_INDEX_TLV, ORIGINATOR_SRGB_TLV]
+    first = attr.sr_attrs[1]
+    assert isinstance(first, SrGb)
+    assert first.srgbs == [(4096, 100)]
+
+
+@pytest.mark.rfc('rfc8669#6-duplicate-tlv-first-wins')
+def test_a_repeated_unknown_tlv_is_left_alone() -> None:
+    # "unknown TLVs MUST be ignored and propagated unmodified" has no first-wins clause:
+    # this implementation cannot know whether that type is allowed to repeat
+    value = label_index(100) + tlv(UNKNOWN_TLV, b'\x01') + tlv(UNKNOWN_TLV, b'\x02')
+    attr = decoded(attribute(value))
+    assert [each.TLV for each in attr.sr_attrs] == [LABEL_INDEX_TLV, UNKNOWN_TLV, UNKNOWN_TLV]
+    assert bytes(attr.pack_attribute(Negotiated.UNSET)) == attribute(value)

@@ -187,14 +187,15 @@ extend beyond the end of the attribute (as defined by the attribute
 length).
 """
 note = """
-`PrefixSid.DISCARD = True` covers two of the three malformed shapes this sentence names:
-a TLV length which does not conform to the TLV's constraints, and a TLV length which
-runs past the end of the attribute, both reach `AttributeCollection.parse` as a `Notify`
-and become an `INTERNAL_DISCARD`.  The third does not.  A Prefix-SID attribute of length
-zero, which is precisely "not meeting the minimum attribute length requirement", is
-caught earlier by the generic `length == 0 and not kls.VALID_ZERO` rule and becomes
-`INTERNAL_TREAT_AS_WITHDRAW`, withdrawing the route the RFC says to keep.  The test for
-that one shape carries xfail; the other three pass.
+`PrefixSid.DISCARD = True` covers all three malformed shapes this sentence names.  A TLV
+length which does not conform to the TLV's constraints and a TLV length which runs past
+the end of the attribute reach `AttributeCollection.parse` as a `Notify` and become an
+`INTERNAL_DISCARD`.  The third, a Prefix-SID attribute of length zero, which is precisely
+"not meeting the minimum attribute length requirement", used to be caught earlier by the
+generic `length == 0 and not kls.VALID_ZERO` rule and became `INTERNAL_TREAT_AS_WITHDRAW`,
+withdrawing the route the RFC says to keep.  `PrefixSid` now sets `VALID_ZERO` so that
+generic rule does not answer for it, and refuses an empty value in `unpack_attribute`
+instead, which `DISCARD` turns into the discard section 6 asks for.
 """
 
 [[requirement]]
@@ -230,11 +231,14 @@ TLV other than the first one SHALL be discarded and the Prefix-SID
 attribute will continue to be processed.
 """
 note = """
-Not implemented.  `PrefixSid.unpack_attribute` appends every TLV it walks to `sr_attrs`
-with no check for a repeat, so two Label-Index TLVs both survive and both appear in the
-JSON, which then carries two `sr-label-index` keys in one object.  The attribute does
-continue to be processed, so only the discard half is missing, and an xfail test shows it.
-Recorded positive-only:
+`PrefixSid.unpack_attribute` keeps the first Label-Index and the first Originator SRGB and
+discards any later occurrence of either, which are the only two TLVs this document defines
+and neither may repeat.  Discarded means gone: the repeat is dropped from `sr_attrs`, so
+the JSON carries one `sr-label-index` key, and it is dropped from the bytes re-advertised
+too, since this section promises propagation to unknown TLVs alone.  That is deliberately
+not what RFC 9012 13 asks for a repeated sub-TLV, which stays on the wire.  The TLVs which
+are kept keep the peer's own framing: the attribute is rebuilt from the original slices
+rather than from the decoded objects.  Recorded positive-only:
 the negative side would be "a TLV type which may legitimately repeat is not collapsed",
 and this document defines no such TLV, so there is nothing to test against.
 """

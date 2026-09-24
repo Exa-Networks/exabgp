@@ -573,6 +573,23 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
             # if we know the attribute but the flag is not what the RFC says.
             if aid in Attribute.attributes_known:
+                # RFC 7606 5.3 lists "the attribute flags of the attribute are inconsistent
+                # with those specified in [RFC4760]" as one of the ways an MP_REACH_NLRI or
+                # MP_UNREACH_NLRI is incorrect, and 3 (j) says that when the MP attributes
+                # cannot be successfully parsed the session reset approach MUST be followed.
+                # Treat-as-withdraw is not available here: the NLRI are inside the attribute
+                # the flags stopped us recognising, so there is nothing left to withdraw and
+                # dropping the attribute makes the routes it carried vanish in silence.
+                # 3/9 because that is the subcode MPRNLRI and MPURNLRI already raise for an
+                # MP attribute they cannot read.
+                if aid in (Attribute.CODE.MP_REACH_NLRI, Attribute.CODE.MP_UNREACH_NLRI):
+                    raise Notify(
+                        3,
+                        9,
+                        'invalid flag 0x{:02X} for {}, RFC 4760 makes it optional non-transitive'.format(
+                            flag, Attribute.CODE.name(aid)
+                        ),
+                    )
                 if kls and kls.TREAT_AS_WITHDRAW:
                     log.debug(
                         lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) treat as withdraw'.format(

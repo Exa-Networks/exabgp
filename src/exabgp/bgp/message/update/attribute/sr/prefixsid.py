@@ -24,7 +24,16 @@ from exabgp.util.types import Buffer
 # Label-Index TLV ( type = 1 ) is mandatory for this attribute.
 
 # SR TLV type codes
+SR_TLV_LABEL_INDEX: int = 1  # Label-Index TLV type
 SR_TLV_SRGB: int = 3  # Segment Routing Global Block TLV type
+
+# RFC 8669 section 6: "if a recognized TLV appears more than once in a BGP Prefix-SID
+# attribute while the specification only allows for a single occurrence, then all the
+# occurrences of the TLV other than the first one SHALL be discarded".  Sections 3.1 and
+# 3.2 give the attribute one Label-Index and one Originator SRGB, and this document
+# defines no TLV which may repeat.  An unknown type is deliberately absent: the same
+# section promises unknown TLVs are "propagated unmodified", so a repeat of one is kept.
+SR_SINGLE_OCCURRENCE_TLVS: frozenset[int] = frozenset((SR_TLV_LABEL_INDEX, SR_TLV_SRGB))
 
 T = TypeVar('T', bound='PrefixSid')
 
@@ -42,6 +51,15 @@ class PrefixSid(Attribute):
     # AttributeCollection.parse honours this flag for both a Notify and a ValueError out of
     # the TLV walk below; without it every malformed TLV reset the session instead.
     DISCARD: ClassVar[bool] = True
+    # Not a claim that an empty Prefix-SID is legal: it is the opposite, and the check at
+    # the top of unpack_attribute below says so.  This takes the decision away from the
+    # generic `length == 0 and not VALID_ZERO` rule in AttributeCollection.parse, which
+    # answers treat-as-withdraw for every attribute.  "Not meeting the minimum attribute
+    # length requirement" is the first of the three malformed shapes RFC 8669 section 6
+    # names, and all three end in attribute discard, so the route must survive its
+    # Prefix-SID.  Letting the decoder refuse the attribute routes it through DISCARD
+    # above instead.
+    VALID_ZERO: ClassVar[bool] = True
 
     # Registered subclasses we know how to decode
     registered_srids: ClassVar[dict[int, Type[Any]]] = dict()
@@ -63,10 +81,19 @@ class PrefixSid(Attribute):
 
     @classmethod
     def unpack_attribute(cls: Type[T], data: Buffer, negotiated: Negotiated) -> T:
+        # RFC 8669 section 6: an attribute "not meeting the minimum attribute length
+        # requirement" is malformed, and the attribute must be ignored.  The smallest
+        # thing this attribute can carry is one three byte TLV header, and it must carry
+        # at least one, so an empty value cannot be parsed.
+        if not data:
+            raise Notify(3, 1, 'SR Prefix-SID attribute is empty, it must carry at least one TLV')
         sr_attrs: list[Any] = []
         # keep what the peer sent: rebuilding it from the parsed TLVs would announce
         # something else, and a TLV we do not know cannot be rebuilt at all
         original: Buffer = data
+        kept: list[Buffer] = []
+        single_seen: set[int] = set()
+        repeat_discarded: bool = False
         while data:
             # TLV header: Type(1) + Length(2) = 3 bytes minimum
             if len(data) < 3:
@@ -77,13 +104,28 @@ class PrefixSid(Attribute):
             length: int = unpack('!H', data[1:3])[0]
             if len(data) < length + 3:
                 raise Notify(3, 1, f'SR Prefix-SID TLV truncated: need {length + 3} bytes, got {len(data)}')
+            if scode in SR_SINGLE_OCCURRENCE_TLVS:
+                if scode in single_seen:
+                    # Discarded, and not carried onwards either.  RFC 9012 section 13 asks
+                    # for the opposite of that second half for a repeated sub-TLV, which is
+                    # why the two are not one helper: there the repeat is only stopped from
+                    # being read, here section 6 offers propagation to unknown TLVs alone.
+                    repeat_discarded = True
+                    data = data[length + 3 :]
+                    continue
+                single_seen.add(scode)
             if scode in cls.registered_srids:
                 klass: Any = cls.registered_srids[scode].unpack_attribute(data[3 : length + 3], length)
             else:
                 klass = GenericSRId(scode, data[3 : length + 3])
             sr_attrs.append(klass)
+            kept.append(data[: length + 3])
             data = data[length + 3 :]
-        return cls(sr_attrs=sr_attrs, packed=original)
+        if not repeat_discarded:
+            return cls(sr_attrs=sr_attrs, packed=original)
+        # Rebuilt from the peer's own framing rather than from the decoded TLVs, so the
+        # only difference between what arrived and what leaves is the discarded repeat.
+        return cls(sr_attrs=sr_attrs, packed=b''.join(bytes(_) for _ in kept))
 
     def json(self, compact: bool | None = None) -> str:
         content: str = ', '.join(d.json() for d in self.sr_attrs)

@@ -249,12 +249,6 @@ def test_an_mp_attribute_whose_nlri_lengths_are_consistent_is_accepted() -> None
 
 
 @pytest.mark.rfc('rfc7606#5.3-mp-attribute-flags-must-match-rfc4760')
-@pytest.mark.xfail(
-    strict=True,
-    reason='MPRNLRI carries neither TREAT_AS_WITHDRAW nor DISCARD, so an MP_REACH with the '
-    'transitive bit set falls through AttributeCollection.parse to a debug line and a continue: '
-    'the attribute is dropped in silence and the routes it carried vanish',
-)
 def test_an_mp_reach_with_the_wrong_attribute_flags_is_not_silently_dropped() -> None:
     """RFC 4760 makes both MP attributes optional non-transitive; the peer sets transitive."""
     wrong_flags = attribute(

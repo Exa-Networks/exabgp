@@ -419,14 +419,15 @@ note = """
 The third bullet of the list quoted in rfc7606#5.3-mp-attribute-nlri-lengths, whose
 lead-in carries the SHALL.
 
-We neither reset nor withdraw.  MP_REACH_NLRI and MP_UNREACH_NLRI are optional
-non-transitive in RFC 4760; a peer which sets the transitive bit sends an attribute
-AttributeCollection.parse cannot match in the registry, and since MPRNLRI carries neither
-TREAT_AS_WITHDRAW nor DISCARD it falls through the known-attribute branch to a debug line
-and a `continue`.  The attribute is dropped in silence, so the UPDATE parses to no
-announcement and no withdrawal and the routes it carried simply disappear.  Section 3 (j)
-says the session reset approach MUST be followed when the NLRI cannot be recovered, which
-is exactly this case.  The test carries xfail.
+MP_REACH_NLRI and MP_UNREACH_NLRI are optional non-transitive in RFC 4760, so a peer
+which sets the transitive bit sends an attribute AttributeCollection.parse cannot match
+in the registry.  It used to fall through the known-attribute branch to a debug line and
+a `continue`, because MPRNLRI carries neither TREAT_AS_WITHDRAW nor DISCARD: the
+attribute was dropped in silence and the routes it carried simply disappeared.  We now
+reset the session, which is what section 3 (j) requires when the MP attributes cannot be
+parsed, since the NLRI are inside the attribute the flags stopped us reading and there is
+nothing left to withdraw.  3/9, the subcode MPRNLRI and MPURNLRI already raise for an MP
+attribute they cannot read.
 """
 
 [[requirement]]
