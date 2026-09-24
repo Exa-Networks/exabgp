@@ -35,6 +35,13 @@ class PrefixSid(Attribute):
     FLAG: int = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
     TLV: ClassVar[int] = -1
+    # RFC 8669 section 6: a BGP Prefix-SID attribute which cannot be processed MUST be
+    # ignored and not advertised onwards, which the RFC itself calls equivalent to the
+    # attribute discard of RFC 7606.  Discard rather than treat-as-withdraw: the label
+    # information is lost, the reachability the route carries is not.
+    # AttributeCollection.parse honours this flag for both a Notify and a ValueError out of
+    # the TLV walk below; without it every malformed TLV reset the session instead.
+    DISCARD: ClassVar[bool] = True
 
     # Registered subclasses we know how to decode
     registered_srids: ClassVar[dict[int, Type[Any]]] = dict()

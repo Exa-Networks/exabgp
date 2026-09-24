@@ -11,8 +11,14 @@ from struct import pack
 from struct import unpack
 from typing import ClassVar
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.util.types import Buffer
+
+# RFC 8669 3.2: the Originator SRGB TLV value is two bytes of flags followed by one or more
+# SRGB entries, each a three byte base and a three byte range.
+FLAGS_SIZE = 2
+SRGB_ENTRY_SIZE = 6
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -45,9 +51,13 @@ class SrGb:
 
     def __init__(self, packed: Buffer) -> None:
         # Payload format: Flags(2) + N * (Base(3) + Range(3))
-        # Minimum: 2 bytes (flags only), remainder must be divisible by 6
-        if len(packed) < 2 or (len(packed) - 2) % 6 != 0:
-            raise ValueError(f'Invalid SRGB payload size: {len(packed)} bytes (must be 2 + N*6)')
+        # This guards our own construction, through make_srgb and direct callers, where a
+        # bad payload is a programming error.  Peer bytes are checked in unpack_attribute,
+        # which raises Notify instead, for the reason written there.
+        if len(packed) < FLAGS_SIZE or (len(packed) - FLAGS_SIZE) % SRGB_ENTRY_SIZE != 0:
+            raise ValueError(
+                f'Invalid SRGB payload size: {len(packed)} bytes (must be {FLAGS_SIZE} + N*{SRGB_ENTRY_SIZE})'
+            )
         self._packed: Buffer = packed
 
     @classmethod
@@ -82,7 +92,26 @@ class SrGb:
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, length: int) -> SrGb:
-        # Validation happens in __init__
+        """Decode an Originator SRGB TLV value (RFC 8669 3.2).
+
+        The value is Flags(2) followed by whole six byte (base, range) entries, so anything
+        else is the peer sending us something this TLV cannot be.
+
+        This check is here rather than left to __init__ because the two callers need
+        different answers.  __init__ also serves make_srgb, where a bad payload is our own
+        programming error and ValueError is right.  Here the bytes came off the wire, and
+        TIGER_STYLE 1.1 requires a Notify: the ValueError this used to raise escaped
+        Update.unpack_message untyped and the catch-all in reactor/protocol.py turned it
+        into Notify(1, 0) "can not decode update message", telling the peer its message
+        framing was wrong when the fault was in one attribute.
+        """
+        if len(data) < FLAGS_SIZE or (len(data) - FLAGS_SIZE) % SRGB_ENTRY_SIZE != 0:
+            raise Notify(
+                3,
+                1,
+                f'could not decode originator SRGB TLV of {len(data)} bytes, '
+                f'the value is {FLAGS_SIZE} bytes of flags and whole {SRGB_ENTRY_SIZE} byte entries',
+            )
         return cls(data)
 
     def json(self, compact: bool | None = None) -> str:
