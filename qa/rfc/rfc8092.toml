@@ -1,0 +1,198 @@
+# RFC 8092 - BGP Large Communities Attribute
+# https://www.rfc-editor.org/rfc/rfc8092
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc8092.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# RFC 8092 carries the RFC 2119 boilerplate, so only its capitalised keywords are
+# normative.  Section 4's lowercase "should have a BGP Large Communities attribute that
+# contains all of the ... aggregated routes" is therefore not recorded: in a document
+# which spells the keyword in capitals everywhere else, the lowercase one is prose.
+# (RFC 1997 is the opposite case and its ledger says so.)
+#
+# Unlike RFC 1997 and RFC 4360, this document states its own length rule normatively, in
+# section 6, so the multiple-of-12 requirement below is RFC 8092's own and not borrowed
+# from RFC 7606.
+
+rfc = "rfc8092"
+title = "BGP Large Communities Attribute"
+url = "https://www.rfc-editor.org/rfc/rfc8092"
+
+[[requirement]]
+id = "rfc8092#3-no-duplicate-transmitted"
+section = "3"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+Duplicate BGP Large Community values MUST NOT be transmitted.
+"""
+note = """
+This binds the encoder, which is the half exabgp really has: `make_large_communities`
+sorts through a set, `LargeCommunities.add` refuses a value it already holds, and the
+configuration parser skips a repeat before it ever reaches either.  The negative side is
+the one which matters on the wire: a duplicate which arrived from a peer must not come
+back out of `pack_attribute` still duplicated.
+"""
+
+[[requirement]]
+id = "rfc8092#3-receiver-removes-redundant"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A
+receiving speaker MUST silently remove redundant BGP Large Community
+values from a BGP Large Community attribute.
+"""
+note = """
+`LargeCommunities.from_packet` walks the value in 12 byte steps and keeps the first
+occurrence of each, preserving order.  The negative side guards the other failure: a
+deduplicator which collapsed values that only look alike would pass every positive test,
+so distinct communities must survive intact and in order.
+"""
+
+[[requirement]]
+id = "rfc8092#3-global-administrator-should-be-asn"
+section = "3"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+This field SHOULD be
+an ASN, in which case the Local Data Parts are to be interpreted as
+defined by the owner of the ASN.
+"""
+note = """
+The obligation is on whoever chooses the community value, and in exabgp that is always
+the operator: large communities arrive as literal `a:b:c` triples in the configuration or
+over the API and exabgp assigns none of its own.  Refusing a non-ASN Global Administrator
+would break the operator's ability to carry the values their upstream told them to carry,
+which section 6 of this same document explicitly forbids treating as malformed.
+"""
+
+[[requirement]]
+id = "rfc8092#3-reserved-asn-not-recommended"
+section = "3"
+level = "NOT RECOMMENDED"
+status = "not-applicable"
+polarity = "both"
+text = """
+The use of Reserved ASNs (0
+[RFC7607], 65535 and 4294967295 [RFC7300]) is NOT RECOMMENDED.
+"""
+note = """
+Same reason as the SHOULD above: the choice of Global Administrator is the operator's,
+not exabgp's.  Note that declining to enforce this is not merely allowed but required, by
+rfc8092#6-unallocated-global-administrator-not-malformed, which says in as many words
+that a reserved ASN in that field does not make the attribute malformed.
+"""
+
+[[requirement]]
+id = "rfc8092#5-canonical-no-leading-zeros"
+section = "5"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+Numbers
+MUST NOT contain leading zeros; a zero value MUST be represented with
+a single zero.
+"""
+note = """
+`LargeCommunity._get_string` formats with '%d:%d:%d', which satisfies both halves of the
+sentence.  It is worth a test anyway: this is the rendering the text API and every log
+line use, a zero-padded or width-aligned format string would look tidier to whoever next
+edits it, and nothing else in the tree would notice.
+"""
+
+[[requirement]]
+id = "rfc8092#5-canonical-representation"
+section = "5"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+BGP Large Communities SHOULD be represented in the canonical
+representation.
+"""
+note = """
+Held for the text rendering, which is what `repr()` and the text API produce.  The JSON
+API renders a large community as a three element array rather than as the canonical
+string; that is a structured encoding of the same three integers in the same order rather
+than a competing textual representation, so it is not read as a breach of this SHOULD.
+"""
+
+[[requirement]]
+id = "rfc8092#6-malformed-if-not-nonzero-multiple-of-12"
+section = "6"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+A BGP Large Communities attribute SHALL be considered malformed if
+the length of the BGP Large Communities Attribute value, expressed
+in octets, is not a non-zero multiple of 12.
+"""
+note = """
+Two decoders share this.  `LargeCommunities.from_packet` rejects a length which is not a
+multiple of 12, and `AttributeCollection.parse` rejects the zero length case separately,
+through `VALID_ZERO` being false, before `from_packet` is ever called.  Split like that,
+the "non-zero" half is easy to lose, so the negative test feeds both a 13 byte value and
+an empty one.
+"""
+
+[[requirement]]
+id = "rfc8092#6-duplicates-not-malformed"
+section = "6"
+level = "SHALL NOT"
+status = "required"
+polarity = "both"
+text = """
+A BGP Large Communities attribute SHALL NOT be considered
+malformed due to presence of duplicate Large Community values.
+"""
+note = """
+The interesting pairing with rfc8092#3-receiver-removes-redundant: the duplicate is
+removed, and removing it is not an error.  The negative side checks the tolerance is not
+blanket - an attribute which is both duplicated and of a bad length is still malformed.
+"""
+
+[[requirement]]
+id = "rfc8092#6-treat-as-withdraw"
+section = "6"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+A BGP UPDATE message with a malformed BGP Large Communities
+attribute SHALL be handled using the approach of "treat-as-
+withdraw" as described in Section 2 of [RFC7606].
+"""
+note = """
+`LargeCommunities.TREAT_AS_WITHDRAW` is what expresses this, and `AttributeCollection`
+turns the Notify from the decoder into an INTERNAL_TREAT_AS_WITHDRAW marker rather than
+letting it reach the reactor.  The distinction the negative test has to make is between
+treat-as-withdraw and a session reset: a NOTIFICATION over one badly encoded optional
+transitive attribute is exactly the failure RFC 7606 exists to remove.
+"""
+
+[[requirement]]
+id = "rfc8092#6-unallocated-global-administrator-not-malformed"
+section = "6"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+The BGP Large Communities Global Administrator field may contain any
+value, and a BGP Large Communities attribute MUST NOT be considered
+malformed if the Global Administrator field contains an unallocated,
+unassigned, or reserved ASN.
+"""
+note = """
+exabgp does not look at the field, which is the compliant behaviour here, so the positive
+test is that AS 0, AS 65535, AS 4294967295 and a private ASN all decode.  The negative
+side is that this tolerance is a rule about one field and not about the attribute: a
+reserved ASN in a value of the wrong length is still malformed.
+"""

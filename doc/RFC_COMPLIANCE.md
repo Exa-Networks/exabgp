@@ -8,7 +8,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 
 | RFC | proven | shown | untested | binding | excused | advisory | coverage |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| rfc1997 | 0 | 1 | 0 | 1 | 4 | 3 | 0% |
+| rfc1997 | 1 | 0 | 0 | 1 | 4 | 3 | 100% |
 | rfc4271 | 25 | 5 | 0 | 30 | 7 | 4 | 83% |
 | rfc4360 | 0 | 0 | 0 | 0 | 2 | 3 | - |
 | rfc4724 | 5 | 1 | 0 | 6 | 7 | 0 | 83% |
@@ -18,7 +18,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc6793 | 15 | 9 | 0 | 24 | 0 | 0 | 62% |
 | rfc7606 | 41 | 6 | 0 | 47 | 7 | 2 | 87% |
 | rfc7911 | 1 | 0 | 4 | 5 | 1 | 3 | 20% |
-| rfc8092 | 0 | 0 | 7 | 7 | 0 | 3 | 0% |
+| rfc8092 | 7 | 0 | 0 | 7 | 0 | 3 | 100% |
 | rfc9234 | 11 | 1 | 0 | 12 | 4 | 1 | 92% |
 
 ## rfc1997
@@ -28,7 +28,7 @@ run, so a requirement that is not in the document cannot appear in this table.
   exabgp does not aggregate routes.  It has no RIB-level route synthesis: every route it
 announces is one the operator or an API client wrote out in full, so no aggregate is ever
 formed for this rule to describe the communities of.
-- **COMMUNITIES attribute** (SHALL) `rfc1997#values-encoded-with-asn` - known gap, demonstrated by a failing test
+- **COMMUNITIES attribute** (SHALL) `rfc1997#values-encoded-with-asn` - proven
   > The rest of the community attribute values shall be encoded using an autonomous system number in the first two octets.
   Lowercase "shall", as above.  "The rest" is what is left after the two reserved ranges
 named in the sentence before it, and that exclusion is what gives this requirement a
@@ -1314,62 +1314,80 @@ the operator: large communities arrive as literal `a:b:c` triples in the configu
 over the API and exabgp assigns none of its own.  Refusing a non-ASN Global Administrator
 would break the operator's ability to carry the values their upstream told them to carry,
 which section 6 of this same document explicitly forbids treating as malformed.
-- **3** (MUST NOT) `rfc8092#3-no-duplicate-transmitted` - untested (missing: positive, negative)
+- **3** (MUST NOT) `rfc8092#3-no-duplicate-transmitted` - proven
   > Duplicate BGP Large Community values MUST NOT be transmitted.
   This binds the encoder, which is the half exabgp really has: `make_large_communities`
 sorts through a set, `LargeCommunities.add` refuses a value it already holds, and the
 configuration parser skips a repeat before it ever reaches either.  The negative side is
 the one which matters on the wire: a duplicate which arrived from a peer must not come
 back out of `pack_attribute` still duplicated.
-- **3** (MUST) `rfc8092#3-receiver-removes-redundant` - untested (missing: positive, negative)
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_building_an_attribute_from_duplicates_transmits_one_of_each`
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_adding_a_community_twice_transmits_it_once`
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_a_duplicate_which_arrived_from_a_peer_does_not_go_back_out`
+- **3** (MUST) `rfc8092#3-receiver-removes-redundant` - proven
   > A receiving speaker MUST silently remove redundant BGP Large Community values from a BGP Large Community attribute.
   `LargeCommunities.from_packet` walks the value in 12 byte steps and keeps the first
 occurrence of each, preserving order.  The negative side guards the other failure: a
 deduplicator which collapsed values that only look alike would pass every positive test,
 so distinct communities must survive intact and in order.
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_a_received_duplicate_is_removed`
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_distinct_communities_all_survive_in_the_order_they_arrived`
 - **3** (NOT RECOMMENDED) `rfc8092#3-reserved-asn-not-recommended` - not-applicable
   > The use of Reserved ASNs (0 [RFC7607], 65535 and 4294967295 [RFC7300]) is NOT RECOMMENDED.
   Same reason as the SHOULD above: the choice of Global Administrator is the operator's,
 not exabgp's.  Note that declining to enforce this is not merely allowed but required, by
 rfc8092#6-unallocated-global-administrator-not-malformed, which says in as many words
 that a reserved ASN in that field does not make the attribute malformed.
-- **5** (MUST NOT) `rfc8092#5-canonical-no-leading-zeros` - untested (missing: positive, negative)
+- **5** (MUST NOT) `rfc8092#5-canonical-no-leading-zeros` - proven
   > Numbers MUST NOT contain leading zeros; a zero value MUST be represented with a single zero.
   `LargeCommunity._get_string` formats with '%d:%d:%d', which satisfies both halves of the
 sentence.  It is worth a test anyway: this is the rendering the text API and every log
 line use, a zero-padded or width-aligned format string would look tidier to whoever next
 edits it, and nothing else in the tree would notice.
-- **5** (SHOULD) `rfc8092#5-canonical-representation` - untested (missing: positive, negative)
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_no_number_is_rendered_with_a_leading_zero`
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_a_zero_field_is_one_zero_and_not_a_run_of_them`
+- **5** (SHOULD) `rfc8092#5-canonical-representation` - proven
   > BGP Large Communities SHOULD be represented in the canonical representation.
   Held for the text rendering, which is what `repr()` and the text API produce.  The JSON
 API renders a large community as a three element array rather than as the canonical
 string; that is a structured encoding of the same three integers in the same order rather
 than a competing textual representation, so it is not read as a breach of this SHOULD.
-- **6** (SHALL NOT) `rfc8092#6-duplicates-not-malformed` - untested (missing: positive, negative)
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_the_rfcs_own_examples_render_exactly_as_the_rfc_writes_them`
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_what_we_print_parses_back_to_the_bytes_we_printed_it_from`
+- **6** (SHALL NOT) `rfc8092#6-duplicates-not-malformed` - proven
   > A BGP Large Communities attribute SHALL NOT be considered malformed due to presence of duplicate Large Community values.
   The interesting pairing with rfc8092#3-receiver-removes-redundant: the duplicate is
 removed, and removing it is not an error.  The negative side checks the tolerance is not
 blanket - an attribute which is both duplicated and of a bad length is still malformed.
-- **6** (SHALL) `rfc8092#6-malformed-if-not-nonzero-multiple-of-12` - untested (missing: positive, negative)
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_an_attribute_full_of_duplicates_is_not_malformed`
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_duplicates_do_not_excuse_a_bad_length`
+- **6** (SHALL) `rfc8092#6-malformed-if-not-nonzero-multiple-of-12` - proven
   > A BGP Large Communities attribute SHALL be considered malformed if the length of the BGP Large Communities Attribute value, expressed in octets, is not a non-zero multiple of 12.
   Two decoders share this.  `LargeCommunities.from_packet` rejects a length which is not a
 multiple of 12, and `AttributeCollection.parse` rejects the zero length case separately,
 through `VALID_ZERO` being false, before `from_packet` is ever called.  Split like that,
 the "non-zero" half is easy to lose, so the negative test feeds both a 13 byte value and
 an empty one.
-- **6** (SHALL) `rfc8092#6-treat-as-withdraw` - untested (missing: positive, negative)
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_a_non_zero_multiple_of_twelve_is_well_formed`
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_a_length_which_is_not_a_non_zero_multiple_of_twelve_is_malformed`
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_the_decoder_itself_refuses_a_bad_length`
+- **6** (SHALL) `rfc8092#6-treat-as-withdraw` - proven
   > A BGP UPDATE message with a malformed BGP Large Communities attribute SHALL be handled using the approach of "treat-as- withdraw" as described in Section 2 of [RFC7606].
   `LargeCommunities.TREAT_AS_WITHDRAW` is what expresses this, and `AttributeCollection`
 turns the Notify from the decoder into an INTERNAL_TREAT_AS_WITHDRAW marker rather than
 letting it reach the reactor.  The distinction the negative test has to make is between
 treat-as-withdraw and a session reset: a NOTIFICATION over one badly encoded optional
 transitive attribute is exactly the failure RFC 7606 exists to remove.
-- **6** (MUST NOT) `rfc8092#6-unallocated-global-administrator-not-malformed` - untested (missing: positive, negative)
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_a_malformed_attribute_withdraws_the_route_instead_of_dropping_the_session`
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_a_well_formed_attribute_does_not_withdraw_the_route`
+- **6** (MUST NOT) `rfc8092#6-unallocated-global-administrator-not-malformed` - proven
   > The BGP Large Communities Global Administrator field may contain any value, and a BGP Large Communities attribute MUST NOT be considered malformed if the Global Administrator field contains an unallocated, unassigned, or reserved ASN.
   exabgp does not look at the field, which is the compliant behaviour here, so the positive
 test is that AS 0, AS 65535, AS 4294967295 and a private ASN all decode.  The negative
 side is that this tolerance is a rule about one field and not about the attribute: a
 reserved ASN in a value of the wrong length is still malformed.
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_a_reserved_or_unallocated_global_administrator_is_accepted`
+  - `tests/unit/rfc/test_rfc8092_large_communities.py::test_a_reserved_global_administrator_does_not_excuse_a_bad_length`
 
 ## rfc9234
 

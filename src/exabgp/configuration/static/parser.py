@@ -355,6 +355,12 @@ def cluster_list(tokeniser: 'Tokeniser') -> ClusterList:
         ) from None
 
 
+# RFC 1997: an AS number in the first two octets, the value in the last two
+COMMUNITY_HALF_MAX = 0xFFFF
+# RFC 8092: a large community is three four-octet fields
+LARGE_COMMUNITY_FIELD_MAX = 0xFFFFFFFF
+
+
 def _community(value: str) -> Community:
     separator = value.find(':')
     if separator > 0:
@@ -366,11 +372,19 @@ def _community(value: str) -> Community:
 
         prefix_int, suffix_int = int(prefix), int(suffix)
 
-        if prefix_int > Community.MAX:
-            raise ValueError('invalid community {} (prefix too large)'.format(value))
+        # RFC 1997 puts an AS number in the first two octets and the value in the last
+        # two, so each half of <asn>:<value> is sixteen bits.  Both were checked against
+        # Community.MAX, which is the 32 bit ceiling of the 0x... form below.  `1:65536`
+        # therefore passed, and `(1 << 16) + 65536` carried into the AS field: exabgp
+        # announced 2:0, a community belonging to an AS the operator never wrote, and
+        # reported it back through the API as 2:0 as well.  `65536:1` reached pack('!L')
+        # and left as struct.error, which section.py does not catch, so a typo in a
+        # configuration file became a traceback instead of the offending line.
+        if prefix_int > COMMUNITY_HALF_MAX:
+            raise ValueError('invalid community {} (AS number must be 0-{})'.format(value, COMMUNITY_HALF_MAX))
 
-        if suffix_int > Community.MAX:
-            raise ValueError('invalid community {} (suffix too large)'.format(value))
+        if suffix_int > COMMUNITY_HALF_MAX:
+            raise ValueError('invalid community {} (value must be 0-{})'.format(value, COMMUNITY_HALF_MAX))
 
         return Community(pack('!L', (prefix_int << 16) + suffix_int))
 
@@ -426,9 +440,15 @@ def _large_community(value: str) -> LargeCommunity:
 
         prefix_int, affix_int, suffix_int = map(int, [prefix, affix, suffix])
 
+        # RFC 8092 makes a large community three four-octet fields, so each one is
+        # bounded at 32 bits.  LargeCommunity.MAX is the 96 bit ceiling of the whole
+        # value, used by the two forms below, and checking a single field against it let
+        # 1:2:4294967296 through to pack('!LLL') and out as struct.error.
         for i in [prefix_int, affix_int, suffix_int]:
-            if i > LargeCommunity.MAX:
-                raise ValueError('invalid community %i in %s too large' % (i, value))
+            if i > LARGE_COMMUNITY_FIELD_MAX:
+                raise ValueError(
+                    'invalid large community {}: every field must be 0-{}'.format(value, LARGE_COMMUNITY_FIELD_MAX)
+                )
 
         return LargeCommunity(pack('!LLL', prefix_int, affix_int, suffix_int))
 

@@ -1,0 +1,118 @@
+# RFC 4360 - BGP Extended Communities Attribute
+# https://www.rfc-editor.org/rfc/rfc4360
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc4360.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# RFC 4360 is a short document with very little normative language in it, and none of it
+# is about decoding.  Its whole keyword vocabulary is five sentences: one MUST NOT about
+# best path selection, two MUST NOTs addressed to IANA, two MAYs and a SHOULD/SHOULD NOT
+# pair about re-advertisement.  Every one of them is recorded below, and not one of them
+# binds an exabgp decoder.
+#
+# In particular, the rule this document is usually cited for - that the attribute length
+# must be a multiple of eight - is not in it.  Section 2 states the encoding flatly,
+# "Each Extended Community is encoded as an 8-octet quantity", with no keyword, exactly as
+# RFC 1997 states the four octet one.  The normative form is RFC 7606 section 7.14, in
+# qa/rfc/rfc7606.toml.  tests/unit/rfc/test_rfc4360_extended_communities.py tests the
+# behaviour regardless; it simply has no RFC 4360 requirement to name.
+
+rfc = "rfc4360"
+title = "BGP Extended Communities Attribute"
+url = "https://www.rfc-editor.org/rfc/rfc4360"
+
+[[requirement]]
+id = "rfc4360#6-not-used-to-modify-best-path"
+section = "6"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+The Extended Community attribute MUST NOT be used to modify the BGP
+best path selection algorithm in a way that leads to forwarding
+loops.
+"""
+note = """
+exabgp runs no best path selection algorithm.  It has no decision process, holds no
+comparison between two paths for one prefix, and manipulates no FIB, so there is no
+algorithm here for an extended community to modify and no forwarding for a loop to form
+in.  This is one of the few obligations which is genuinely closed rather than deferred:
+adding path selection to exabgp would make it a different program, not a later version.
+"""
+
+[[requirement]]
+id = "rfc4360#7-regular-and-extended-type-values-not-reused"
+section = "7"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+The value allocated for a regular Type MUST NOT be reused as the
+value of the high-order octet when allocating an extended Type.  The
+value of the high-order octet allocated for an extended Type MUST NOT
+be reused when allocating a regular Type.
+"""
+note = """
+Addressed to IANA, in the IANA Considerations section, and about how codepoints are
+allocated rather than how they are encoded or read.  No implementation can comply with or
+violate it; exabgp consumes the registry, it does not maintain it.
+"""
+
+[[requirement]]
+id = "rfc4360#6-non-transitive-removed-across-as-boundary"
+section = "6"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+If a route has a non-transitivity extended community, then before
+advertising the route across the Autonomous System boundary the
+community SHOULD be removed from the route.  However, the community
+SHOULD NOT be removed when advertising the route across the BGP
+Confederation boundary.
+"""
+note = """
+exabgp sends exactly the extended communities its configuration or its API asked for, on
+an eBGP session as on an iBGP one, and strips nothing.  `ExtendedCommunityBase.transitive`
+reads the T bit correctly but the only caller in the tree is the FlowSpec redirect
+community's JSON rendering: nothing in the sending path consults it.  Recorded as a gap
+rather than not-applicable because unlike re-advertisement this one does reach exabgp,
+since an operator can configure a non-transitive extended community on an eBGP neighbour
+today and exabgp will put it on the wire.  The counter-argument, that an operator who
+writes a community into a neighbour's configuration has asked for it on that session by
+definition, is why this is a SHOULD we decline rather than a defect.
+"""
+
+[[requirement]]
+id = "rfc4360#6-append-attribute"
+section = "6"
+level = "MAY"
+status = "not-applicable"
+polarity = "both"
+text = """
+A BGP speaker receiving a route that doesn't have the Extended
+Communities attribute MAY append this attribute to the route when
+propagating it to its peers.
+"""
+note = """
+A permission given to a speaker propagating a received route.  exabgp does not propagate
+received routes: what it received goes to its API, which reports it rather than forwards
+it, and what it announces comes from configuration or from an API client.  There is no
+propagation step at which the permission could be taken up.
+"""
+
+[[requirement]]
+id = "rfc4360#6-modify-attribute"
+section = "6"
+level = "MAY"
+status = "not-applicable"
+polarity = "both"
+text = """
+A BGP speaker receiving a route with the Extended Communities
+attribute MAY modify this attribute according to the local policy.
+"""
+note = """
+As above, and with a second reason: exabgp has no local policy engine.  An operator
+changes what is announced by changing what they announce, which is not a received route
+having its attribute rewritten in flight.
+"""
