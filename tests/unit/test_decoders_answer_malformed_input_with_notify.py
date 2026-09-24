@@ -27,13 +27,14 @@ subcode; the ledgers under qa/rfc/ are where that is checked, requirement by req
 
 from __future__ import annotations
 
+import random
 from struct import pack
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import Action
+from exabgp.bgp.message import Action, Message
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -146,4 +147,62 @@ def test_an_attribute_decoder_raises_notify_and_not_something_else(code: int) ->
 
     assert not wrong, f'attribute {code} ({name}) answered malformed input with something other than Notify:\n  ' + (
         '\n  '.join(wrong)
+    )
+
+
+def random_bodies(count: int) -> list[bytes]:
+    """Whole message bodies, seeded so a failure can be reproduced from the report.
+
+    The message layer is where the outer length fields live: an UPDATE body says how many
+    bytes of withdrawn routes and how many of path attributes it holds, and both are read
+    before anything checks them against what actually arrived. Random bytes are the right
+    shape here, unlike at the decoder level, because a random pair of sixteen bit lengths
+    in front of a short buffer is exactly the malformed UPDATE this needs to survive.
+    """
+    generator = random.Random(20260924)
+    return [bytes(generator.randrange(256) for _ in range(generator.randrange(0, 80))) for _ in range(count)]
+
+
+MESSAGE_BODIES: tuple[bytes, ...] = (
+    b'',
+    b'\x00',
+    b'\xff\xff',
+    b'\x00' * 4,
+    b'\xff' * 10,
+    b'\x00\x04\x01\x02\x03\x04',
+    b'\xff\xff' + b'\x00' * 8,
+    b'\x00\x00\x00\x0c' + b'\xff' * 12,
+    *random_bodies(400),
+)
+
+# 1 to 5 are OPEN, UPDATE, NOTIFICATION, KEEPALIVE and ROUTE-REFRESH; 6, 7 and 255 are
+# unassigned, and an unassigned type has to be refused rather than dispatched
+MESSAGE_TYPES: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7, 255)
+
+# a decode which has not finished in this long is not slow, it is not going to finish
+DECODE_SECONDS = 5
+
+
+@pytest.mark.timeout(DECODE_SECONDS * len(MESSAGE_TYPES))
+@pytest.mark.parametrize('message_type', MESSAGE_TYPES)
+def test_a_message_decoder_raises_notify_and_not_something_else(message_type: int) -> None:
+    """The outer length fields are read before anything has checked them.
+
+    This is the layer the reactor hands bytes straight to, so it is the one where the
+    difference between Notify and any other exception is the difference between a
+    NOTIFICATION and a dead daemon.
+    """
+    negotiated = Negotiated.make_negotiated(Neighbor.EMPTY, Direction.IN)
+
+    wrong: list[str] = []
+    for body in MESSAGE_BODIES:
+        try:
+            Message.unpack(message_type, body, negotiated)
+        except Notify:
+            continue
+        except Exception as exc:
+            wrong.append(f'{body.hex() or "<empty>"} raised {type(exc).__name__}: {exc}')
+
+    assert not wrong, f'message type {message_type} answered malformed input with something else:\n  ' + '\n  '.join(
+        wrong[:10]
     )
