@@ -39,7 +39,7 @@ Ratchets at the start of the session:
 | ~~6~~ DONE | `4c2542d34` | `exabgp cli reset` exited 0 on every failure path, including no socket, no fifo, connection refused, and a failed write. Each now names the fault on stderr and exits 1. The write path also leaked its descriptor. |
 | ~~7~~ DONE | `47156d510` | `_get_section_schema` was ten copies of import/assign/`except ImportError: pass`; `_get_root_schema` three more. Both are a table plus a loop now. |
 | 8 | `a57f0ea98` | Three swallowed errors which changed behaviour: `_notify_error` hung the client silently, `SO_REUSEADDR` and `IPV6_V6ONLY` shared one `try` so one failure skipped the other, and `Cache.in_cache` returned "already advertised" for a route it could not compare, which drops it. |
-| ~~9~~ DONE | `68f2ce53b` | **ADD-PATH path identifier never consumed in EVPN, BGP-LS, MVPN, MUP and SR-Policy.** Found by typing item 16. Each read its first field out of the identifier, so the NLRI after it in the same UPDATE was parsed from the wrong offset. Reachable with `add-path { l2vpn evpn; }`. `tests/unit/test_evpn.py::test_evpn_with_addpath` had asserted the broken behaviour. |
+| ~~9~~ DONE | `2142b4cc1` | **ADD-PATH path identifier never consumed in EVPN, BGP-LS, MVPN, MUP and SR-Policy.** Found by typing item 16. Each read its first field out of the identifier, so the NLRI after it in the same UPDATE was parsed from the wrong offset. ~~Reachable with `add-path { l2vpn evpn; }`.~~ Not from a live session, see Corrections. `tests/unit/test_evpn.py::test_evpn_with_addpath` had asserted the broken behaviour. |
 
 ## In progress
 
@@ -148,12 +148,12 @@ did not:
   whatever the socket accepted. The `Cache.in_cache` `AttributeError` is unreachable:
   every `IP`, `NoNextHop` included, has `index()`. The async notifier change adds a log
   line and does not stop the hang. The code is kept as hygiene; the comments now say so.
-- **Item 9, `68f2ce53b`.** Not reachable from a live session. `Capabilities._ADD_PATH`
+- **Item 9, `2142b4cc1`.** Not reachable from a live session. `Capabilities._ADD_PATH`
   only offers ADD-PATH for unicast, labelled unicast and VPN, and `Negotiated` needs our
   own OPEN to carry the family, so `add-path { l2vpn evpn; }` never negotiates it. Only
   `configuration/check.py`, which builds the capability unfiltered, reached the decoders.
   FlowSpec, VPLS and RTC ignore the identifier the same way and were left alone. The
-  commit message of `68f2ce53b` still carries the wrong claim.
+  commit message of `2142b4cc1` carried the wrong claim; it has been reworded.
 - **Item 33.** Follows from item 9: exabgp cannot negotiate ADD-PATH for these families,
   so no peer misparses what we send. It is a feature gap, and adding one of them to
   `_ADD_PATH` must wait for the encoder.
