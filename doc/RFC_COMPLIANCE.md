@@ -12,23 +12,26 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc4271 | 29 | 1 | 0 | 30 | 7 | 4 | 97% |
 | rfc4360 | 0 | 0 | 0 | 0 | 2 | 3 | - |
 | rfc4364 | 0 | 0 | 0 | 0 | 7 | 0 | - |
+| rfc4456 | 0 | 0 | 0 | 0 | 2 | 6 | - |
 | rfc4659 | 3 | 0 | 0 | 3 | 2 | 0 | 100% |
-| rfc4724 | 5 | 1 | 0 | 6 | 7 | 0 | 83% |
+| rfc4724 | 6 | 0 | 0 | 6 | 7 | 0 | 100% |
 | rfc4760 | 5 | 0 | 0 | 5 | 0 | 8 | 100% |
 | rfc5082 | 2 | 0 | 0 | 2 | 2 | 2 | 100% |
 | rfc5492 | 5 | 0 | 0 | 5 | 3 | 5 | 100% |
+| rfc6514 | 1 | 0 | 0 | 1 | 5 | 2 | 100% |
 | rfc6793 | 18 | 6 | 0 | 24 | 0 | 0 | 75% |
 | rfc7432 | 4 | 0 | 0 | 4 | 13 | 0 | 100% |
-| rfc7606 | 43 | 4 | 0 | 47 | 7 | 2 | 91% |
+| rfc7606 | 44 | 3 | 0 | 47 | 7 | 2 | 94% |
 | rfc7911 | 4 | 0 | 1 | 5 | 1 | 3 | 80% |
 | rfc8092 | 7 | 0 | 0 | 7 | 0 | 3 | 100% |
-| rfc8277 | 4 | 0 | 0 | 4 | 13 | 0 | 100% |
-| rfc8669 | 8 | 3 | 0 | 11 | 0 | 0 | 73% |
-| rfc8955 | 8 | 10 | 0 | 18 | 4 | 9 | 44% |
-| rfc8956 | 2 | 3 | 0 | 5 | 0 | 4 | 40% |
-| rfc9012 | 5 | 1 | 0 | 6 | 1 | 0 | 83% |
+| rfc8277 | 7 | 0 | 0 | 7 | 10 | 0 | 100% |
+| rfc8669 | 9 | 2 | 0 | 11 | 0 | 0 | 82% |
+| rfc8955 | 16 | 2 | 0 | 18 | 4 | 9 | 89% |
+| rfc8956 | 4 | 1 | 0 | 5 | 0 | 4 | 80% |
+| rfc9012 | 6 | 0 | 0 | 6 | 1 | 0 | 100% |
 | rfc9234 | 11 | 1 | 0 | 12 | 4 | 1 | 92% |
-| rfc9830 | 2 | 1 | 0 | 3 | 0 | 0 | 67% |
+| rfc9552 | 10 | 2 | 0 | 12 | 2 | 0 | 83% |
+| rfc9830 | 3 | 0 | 0 | 3 | 0 | 0 | 100% |
 
 ## rfc1997
 
@@ -455,6 +458,67 @@ packets and manipulates no FIB, which is stated as an architectural property of 
 project rather than as a missing feature; the only packets it accepts are the BGP
 messages on its own TCP sessions.
 
+## rfc4456
+
+- **10** (SHOULD NOT) `rfc4456#10-do-not-modify-attributes-when-reflecting` - not-applicable
+  > In addition, when a RR reflects a route, it SHOULD NOT modify the following path attributes: NEXT_HOP, AS_PATH, LOCAL_PREF, and MED.
+  Conditional on reflecting, which exabgp does not do.  The nearest thing exabgp has is the
+next hop rewriting it applies to routes the operator configured it to originate, and
+those are its own routes rather than somebody else's route being passed on, so this
+sentence does not reach them.
+- **8** (MUST) `rfc4456#8-create-cluster-list` - not-applicable
+  > If the CLUSTER_LIST is empty, it MUST create a new one.
+  The second half of the same reflection step, and not applicable for the same reason:
+exabgp does not reflect, so it never reaches the point of finding the CLUSTER_LIST empty.
+Note that "empty" here cannot mean a zero length CLUSTER_LIST on the wire, which RFC 7606
+makes malformed and which exabgp treats as a withdraw; it means the route arrived without
+the attribute at all.
+- **8** (SHOULD) `rfc4456#8-ignore-looped-cluster-list` - not-applicable
+  > If the local CLUSTER_ID is found in the CLUSTER_LIST, the advertisement received SHOULD be ignored.
+  exabgp has no local CLUSTER_ID, so the test this sentence describes has no left-hand
+side.  As with the ORIGINATOR_ID loop check above, the route is reported to the JSON API
+with its CLUSTER_LIST intact rather than dropped, and nothing downstream of exabgp can
+loop because exabgp re-advertises to nobody.
+- **8** (SHOULD) `rfc4456#8-ignore-own-originator-id` - not-applicable
+  > A router that recognizes the ORIGINATOR_ID attribute SHOULD ignore a route received with its BGP Identifier as the ORIGINATOR_ID.
+  This is the receive-side loop break, and it only means anything to a speaker which would
+otherwise install or re-advertise the route.  exabgp does neither: it has no FIB and it
+does not pass a route from one peer to another, so a route carrying exabgp's own BGP
+Identifier cannot loop anywhere.  Dropping it would instead hide from the JSON API a
+route the peer really did send, which is the opposite of what a monitoring and injection
+tool is for.  The value is decoded and reported; the consumer of the API can compare it
+with its own identifier if it wants to.
+- **8** (SHOULD NOT) `rfc4456#8-no-second-originator-id` - proven
+  > A BGP speaker SHOULD NOT create an ORIGINATOR_ID attribute if one already exists.
+  exabgp never creates an ORIGINATOR_ID of its own on a route it received: the attribute
+that arrives is the attribute that `AttributeCollection.parse` stores, and
+`OriginatorID.pack_attribute` hands back the same four octets it was given.  The half
+worth testing is that the decoder is not quietly substituting a value of its own, so the
+positive test is that a received ORIGINATOR_ID survives a parse and re-pack byte for
+byte, and the negative test is the other direction: an UPDATE which carries no
+ORIGINATOR_ID must come out of the parser with none, not with one exabgp invented from
+the peer's BGP Identifier.
+  - `tests/unit/rfc/test_rfc4456_route_reflection.py::test_a_received_originator_id_is_carried_back_out_unchanged`
+  - `tests/unit/rfc/test_rfc4456_route_reflection.py::test_an_update_without_an_originator_id_does_not_gain_one`
+  - `tests/unit/rfc/test_rfc4456_route_reflection.py::test_two_originator_ids_in_one_update_are_not_merged_into_one`
+- **8** (MUST) `rfc4456#8-prepend-cluster-id` - not-applicable
+  > When an RR reflects a route, it MUST prepend the local CLUSTER_ID to the CLUSTER_LIST.
+  exabgp never reflects a route.  There is no code path which takes an UPDATE from one
+peer and sends it to another, so there is no moment at which a CLUSTER_ID could be
+prepended, and exabgp has no local CLUSTER_ID to prepend: the configuration has no
+cluster-id keyword and no route reflector client concept.  A CLUSTER_LIST exabgp sends is
+one the operator wrote out in full.
+- **9** (SHOULD) `rfc4456#9-originator-id-as-bgp-identifier` - not-applicable
+  > If a route carries the ORIGINATOR_ID attribute, then in Step f) the ORIGINATOR_ID SHOULD be treated as the BGP Identifier of the BGP speaker that has advertised the route.
+  Step f) is a tie-break in the RFC 4271 section 9.1.2.2 decision process.  exabgp runs no
+decision process: it holds one adj-rib-in per peer and hands every route to the API, so
+there is no comparison between two paths for this rule to modify.
+- **9** (SHOULD) `rfc4456#9-prefer-shorter-cluster-list` - not-applicable
+  > a BGP Speaker SHOULD prefer a route with the shorter CLUSTER_LIST length.
+  Same reason as the step f) rule above: this is a new tie-break inserted into the RFC 4271
+decision process, and exabgp has no decision process to insert it into.  Nothing in
+exabgp compares two paths to the same prefix and picks one.
+
 ## rfc4659
 
 - **3.2** (MUST) `rfc4659#3.2-afi-and-safi-values` - proven
@@ -546,6 +610,8 @@ route differently from a fresh one.
   The sentence ends "of the OPEN message" on the next page, and the page footer sits in
 between, so the quote stops at the page break as qa/rfc/README.md requires.
   - `tests/unit/rfc/test_rfc4724_graceful_restart.py::test_a_restarting_speaker_sets_the_restart_state_bit`
+  - `tests/unit/rfc/test_rfc4724_graceful_restart.py::test_the_first_open_of_a_process_claims_a_restart`
+  - `tests/unit/rfc/test_rfc4724_graceful_restart.py::test_an_operator_asking_for_a_restart_gets_the_bit_back`
   - `tests/unit/rfc/test_rfc4724_graceful_restart.py::test_the_restart_state_bit_is_not_set_when_nothing_restarted`
 - **4.1** (MUST) `rfc4724#4.1-retain-forwarding-state` - not-applicable
   > When the Restarting Speaker restarts, it MUST retain, if possible, the forwarding state for the BGP routes in the Loc-RIB and MUST mark them as stale.
@@ -571,19 +637,23 @@ this would hold a dead peer's routes forever.
   The third part of the same missing machinery. exabgp parses a received End-of-RIB and
 reports it to the API, so the event is available; what is absent is the stale marking for
 it to clear. See rfc4724#4.2-retain-and-mark-stale.
-- **4.2** (MUST NOT) `rfc4724#4.2-restart-state-not-set-unless-restarted` - known gap, demonstrated by a failing test
+- **4.2** (MUST NOT) `rfc4724#4.2-restart-state-not-set-unless-restarted` - proven
   > In re-establishing the session, the "Restart State" bit in the Graceful Restart Capability of the OPEN message sent by the Receiving Speaker MUST NOT be set unless the Receiving Speaker has restarted.
   Positive only: the bit is ours to set or not, and no peer input decides it, so the only
 meaningful test is the one where we have not restarted and must not claim we have. The
 entry above covers the case where we have.
 
-exabgp does not meet this. Peer._restarted is initialised to the module constant
-FORCE_GRACEFUL, which is True, and nothing clears it for the life of the process except
-Peer.stop(). Every OPEN exabgp sends therefore carries the Restart State bit, including
-the second and every later session of a process which has been up for months and is
-simply reconnecting after a TCP reset. A peer reading that bit will not wait for our
-End-of-RIB before advertising to us. The test beside this entry is xfailed and says so.
-  - `tests/unit/rfc/test_rfc4724_graceful_restart.py::test_a_speaker_which_has_not_restarted_does_not_claim_it_has`
+The sentence binds re-establishment, and that is the case exabgp can answer. Peer._restarted
+starts True and is cleared in Peer._establish() once a session with the neighbor has been
+held, so every reconnection after the first session of the process, a TCP reset, a hold
+timer, a peer which itself restarted, leaves the bit clear. Only reestablish(), the
+`restart` command and a reload which changed the neighbor, sets it again.
+
+The first OPEN of a process still claims a restart, and that is deliberate rather than an
+omission: this run may be a restart of an earlier one, in which case 4.1 requires the bit
+and a peer is holding our routes, and nothing on the box distinguishes that from a first
+start. See the comment on FORCE_GRACEFUL in src/exabgp/reactor/peer/peer.py.
+  - `tests/unit/rfc/test_rfc4724_graceful_restart.py::test_a_reconnecting_speaker_does_not_claim_it_has_restarted`
 - **4.2** (MUST) `rfc4724#4.2-retain-and-mark-stale` - gap
   > When the Receiving Speaker detects termination of the TCP session for a BGP session with a peer that has advertised the Graceful Restart Capability, it MUST retain the routes received from the peer for all the address families that were previously received in the Graceful Restart Capability and MUST mark them as stale routing information.
   Not implemented. exabgp offers the Graceful Restart capability and will accept it from a
@@ -848,6 +918,91 @@ is the code path a peer's bytes actually take and it is where a capability could
 turn into a NOTIFICATION after the capability parser has finished with it.
   - `tests/unit/rfc/test_rfc5492_capabilities.py::test_an_open_carrying_an_unknown_capability_is_accepted_whole`
   - `tests/unit/rfc/test_rfc5492_capabilities.py::test_an_open_we_genuinely_cannot_parse_is_still_refused`
+
+## rfc6514
+
+- **4.5** (MUST NOT) `rfc6514#4.5-ssm-range-not-advertised-and-discarded` - gap
+  > Source Active A-D routes with a Multicast group belonging to the Source Specific Multicast (SSM) range (as defined in [RFC4607], and potentially extended locally on a router) MUST NOT be advertised by a router and MUST be discarded if received.
+  The one normative sentence in the whole of section 4, and exabgp honours neither half.
+`SourceAD.unpack_mvpn` checks the route length and the two address length octets and
+nothing else: a Source Active A-D route whose Multicast Group is in 232/8 or ff3x::/32 is
+decoded, reported to the JSON API and kept in the adj-rib-in like any other.  The send
+side is the same - the configuration parser will encode whatever group the operator
+writes.  Nothing in the tree knows what the SSM range is; grep finds no 232 and no RFC
+4607 anywhere near the MVPN code.  This is a gap and not not-applicable because the
+sentence binds any router which advertises or receives these routes, and exabgp does
+both.  Closing it needs an SSM range check in `SourceAD.unpack_mvpn` and in
+`make_sourcead`, plus a way to configure the local extension the sentence allows for.
+- **5** (MUST) `rfc6514#5-log-malformed-pmsi` - gap
+  > An implementation MUST provide debugging facilities to permit issues caused by a malformed PMSI Tunnel attribute to be diagnosed. At a minimum, such facilities MUST include logging an error when such an attribute is detected.
+  exabgp detects the malformed attribute and acts on it, but says nothing.  In
+`AttributeCollection.parse` the `except (IndexError, ValueError)` arm adds a
+`TreatAsWithdraw` and continues with no log call at all - and the ValueError branch is
+the one a short PMSI takes, because `PMSI.from_packet` raises ValueError rather than
+Notify.  The neighbouring arms are better behaved: the bad-flag path a few lines below
+calls `log.debug` before doing the same thing.  So the routes vanish from the API with no
+record of why, which is precisely the diagnosis problem this paragraph exists to prevent.
+A one line `log.debug` in that arm naming the attribute code would close it, and would
+close it for every other TREAT_AS_WITHDRAW attribute at the same time.
+- **5** (SHOULD) `rfc6514#5-malformed-pmsi-treat-as-withdraw` - proven
+  > When a router that receives a BGP Update that contains the PMSI Tunnel attribute with its Partial bit set determines that the attribute is malformed, the router SHOULD treat this Update as though all the routes contained in this Update had been withdrawn.
+  `PMSI.TREAT_AS_WITHDRAW` is what expresses this, and `AttributeCollection.parse` turns
+the ValueError out of `PMSI.from_packet` into an INTERNAL_TREAT_AS_WITHDRAW marker rather
+than letting it reach the reactor as a session reset.  exabgp is stricter than the
+sentence in one direction, deliberately: it does not condition on the Partial bit, so a
+malformed PMSI is treat-as-withdraw whether or not the previous hop marked it partial,
+which is what RFC 7606 asks of an optional transitive attribute anyway.  The positive
+test feeds a PMSI too short to hold its own fixed header and shows the UPDATE is
+withdrawn; the negative test is the boundary in the other direction, that a well-formed
+PMSI is not withdrawn - a decoder which withdrew everything would pass the positive test
+and destroy every MVPN route on the session.
+  - `tests/unit/rfc/test_rfc6514_mvpn.py::test_a_pmsi_too_short_for_its_own_header_withdraws_the_update`
+  - `tests/unit/rfc/test_rfc6514_mvpn.py::test_a_well_formed_pmsi_is_not_withdrawn`
+- **5** (MUST NOT) `rfc6514#5-p-multicast-group-not-expected-common` - proven
+  > The P-Multicast Group in the Tunnel Identifier of the Tunnel attribute MUST NOT be expected to be the same group for all Intra-AS A-D routes for the same MVPN.
+  A negative obligation on the receiver, and the one section 5 rule which does bind a
+speaker with no forwarding plane: it forbids assuming two routes of the same MVPN agree
+on the P-multicast group, which is exactly the assumption an implementation makes by
+accident when it caches or de-duplicates on something narrower than the whole attribute.
+exabgp complies by not looking: tunnel type 3 has no registered subclass, so the
+identifier is never parsed into a root and a group, and `PMSI.__eq__` compares the full
+packed value.  The positive test decodes two PIM-SSM PMSI attributes which differ only in
+the P-multicast group and shows both identifiers survive intact; the negative test is the
+failure mode, that the two do not compare equal and do not collide in an attribute
+collection, which is what a group-blind cache key would cause.
+  - `tests/unit/rfc/test_rfc6514_mvpn.py::test_two_pim_ssm_tunnels_differing_only_in_the_group_both_survive`
+  - `tests/unit/rfc/test_rfc6514_mvpn.py::test_two_pim_ssm_tunnels_differing_only_in_the_group_are_not_equal`
+- **5** (MUST) `rfc6514#5-pim-sm-sender-address-as-source` - not-applicable
+  > The node that originated the attribute MUST use the address carried in the Sender Address as the source IP address for the IP/GRE (Generic Routing Encapsulation) encapsulation of the MVPN data.
+  This binds the node's data plane, not its BGP speaker: it says which source address to
+put on the GRE packets carrying the customer's multicast traffic.  exabgp sends no MVPN
+data and builds no GRE encapsulation - it has no forwarding path at all - so there is no
+IP header for the Sender Address to end up in.  exabgp's side of a PIM-SM PMSI Tunnel
+attribute ends at carrying the Tunnel Identifier bytes intact, which it does: tunnel type
+4 has no registered subclass, so the identifier stays in the generic PMSI unexamined.
+- **5** (MUST) `rfc6514#5-pim-ssm-root-address-as-source` - not-applicable
+  > The node that originates the attribute MUST use the address carried in the P-Root Node Address as the source IP address for the IP/GRE encapsulation of the MVPN data.
+  Same as the PIM-SM sentence above, for tunnel type 3 rather than type 4: an obligation on
+the encapsulation of MVPN data packets.  exabgp forwards no packets and originates no
+P-tunnel, so nothing it does can satisfy or breach it.
+- **5** (SHOULD) `rfc6514#5-same-group-for-intra-as-routes` - not-applicable
+  > When the Tunnel Type is set to PIM-SM or BIDIR-PIM tree, then the P-Multicast Group in the Tunnel Identifier of the Tunnel attribute SHOULD contain the same multicast group address for all Intra-AS I-PMSI A-D routes for the same MVPN originated by PEs within a given AS.
+  An obligation on whoever allocates the P-multicast group for an MVPN, and the RFC says in
+the next sentence that how it is chosen is out of scope.  exabgp allocates nothing: the
+Tunnel Identifier is bytes the operator wrote in the configuration or sent over the API,
+and exabgp originates no Intra-AS I-PMSI A-D routes of its own to be consistent across.
+Enforcing this would mean refusing a value the operator asked for on the strength of a
+grouping exabgp cannot see, since it has no MVPN membership table.
+- **9.1.1** (MUST) `rfc6514#9.1.1-leaf-information-required-ignored` - not-applicable
+  > + The Leaf Information Required flag of the PMSI Tunnel attribute MUST be set to zero and MUST be ignored on receipt.
+  Scoped by its bullet list to the Intra-AS I-PMSI A-D route a PE originates, which exabgp
+neither originates nor consumes as a PE.  Both halves are empty for it: the flags octet
+exabgp sends is the one the operator supplied, since exabgp is the tool used to send
+deliberately chosen bytes including wrong ones, and on receipt the flag is ignored in the
+only sense available to a speaker with no multicast state - it triggers nothing, because
+the action it asks for is originating a Leaf A-D route and exabgp implements no route
+type 4.  The bit is reported to the JSON API unchanged, which is reporting rather than
+acting.
 
 ## rfc6793
 
@@ -1276,19 +1431,20 @@ test carries xfail.  The negative half - that an attribute-discard-only error on
 UPDATE does NOT reset the session - we do get right.
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_a_treat_as_withdraw_error_with_no_reachable_nlri_resets_the_session`
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_an_attribute_discard_error_with_no_reachable_nlri_does_not_reset_the_session`
-- **5.3** (SHALL) `rfc7606#5.3-mp-attribute-flags-must-match-rfc4760` - known gap, demonstrated by a failing test
+- **5.3** (SHALL) `rfc7606#5.3-mp-attribute-flags-must-match-rfc4760` - proven
   > The attribute flags of the attribute are inconsistent with those specified in [RFC4760].
   The third bullet of the list quoted in rfc7606#5.3-mp-attribute-nlri-lengths, whose
 lead-in carries the SHALL.
 
-We neither reset nor withdraw.  MP_REACH_NLRI and MP_UNREACH_NLRI are optional
-non-transitive in RFC 4760; a peer which sets the transitive bit sends an attribute
-AttributeCollection.parse cannot match in the registry, and since MPRNLRI carries neither
-TREAT_AS_WITHDRAW nor DISCARD it falls through the known-attribute branch to a debug line
-and a `continue`.  The attribute is dropped in silence, so the UPDATE parses to no
-announcement and no withdrawal and the routes it carried simply disappear.  Section 3 (j)
-says the session reset approach MUST be followed when the NLRI cannot be recovered, which
-is exactly this case.  The test carries xfail.
+MP_REACH_NLRI and MP_UNREACH_NLRI are optional non-transitive in RFC 4760, so a peer
+which sets the transitive bit sends an attribute AttributeCollection.parse cannot match
+in the registry.  It used to fall through the known-attribute branch to a debug line and
+a `continue`, because MPRNLRI carries neither TREAT_AS_WITHDRAW nor DISCARD: the
+attribute was dropped in silence and the routes it carried simply disappeared.  We now
+reset the session, which is what section 3 (j) requires when the MP attributes cannot be
+parsed, since the NLRI are inside the attribute the flags stopped us reading and there is
+nothing left to withdraw.  3/9, the subcode MPRNLRI and MPURNLRI already raise for an MP
+attribute they cannot read.
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_an_mp_reach_with_the_wrong_attribute_flags_is_not_silently_dropped`
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_an_mp_reach_with_the_flags_rfc4760_specifies_is_accepted`
 - **5.3** (SHALL) `rfc7606#5.3-mp-attribute-nlri-lengths` - proven
@@ -1684,50 +1840,72 @@ peer which does not, which is what a decoder that masked the wrong way would bre
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_label_with_a_zero_rsrv_field_decodes_to_its_label_and_prefix`
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_label_whose_rsrv_bits_are_set_decodes_identically`
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_we_do_not_set_the_rsrv_bits_when_we_build_a_label`
-- **2.2** (MUST) `rfc8277#2.2-s-bit-ignored-on-reception` - gap
+- **2.2** (MUST) `rfc8277#2.2-s-bit-ignored-on-reception` - proven
   > This 1-bit field MUST be set to one on transmission and MUST be ignored on reception.
-  The transmission half holds: `Labels.make_labels` sets the bottom of stack bit on the
-last label.  The reception half does not.  Without the Multiple Labels Capability every
-session is a section 2.2 session, where exactly one label is present and the S bit
-carries no information, so a single label NLRI whose S bit is zero should decode to the
-prefix behind it.  INETBase.unpack_nlri instead keeps reading labels while the remaining
-mask allows one and raises `Notify(3, 10, 'the label stack of the NLRI never ends')` when
-the stack does not terminate, which resets the session.  That Notify is deliberate and is
-the right answer for section 2.3, where the S bit is the only delimiter; it is the wrong
-answer for section 2.2, and exabgp cannot tell the two apart because it never negotiates
-the capability which separates them.
+  The transmission half has always held: `Labels.make_labels` sets the bottom of stack bit
+on the last label.  The reception half was a gap until the label loop learnt to bound
+itself by the length.  It used to keep reading labels while the remaining mask allowed
+one, and raise `Notify(3, 10, 'the label stack of the NLRI never ends')` when the stack
+did not terminate, so a single label NLRI whose S bit was zero reset the session.  Both
+decoders now end a one field stack when the bits the length leaves behind that field are
+a prefix the family can hold, which is the section 2.2 reading and the only one available
+on a session with no Multiple Labels Capability.  Beyond one field nothing changed: there
+section 2.3 applies, the S bit is the only delimiter, and a stack without one is still
+refused.
+  - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_we_set_the_s_bit_on_the_label_we_transmit`
+  - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_single_label_nlri_with_the_s_bit_clear_still_decodes`
 - **2.3** (MUST) `rfc8277#2.3-s-bit-zero-except-in-last-label` - proven
   > In all labels except the last (i.e., in all labels except the one immediately preceding the prefix), the S bit MUST be 0. In the last label, the S bit MUST be 1.
   `Labels.make_labels` ors the bit into the last label only, and both decoders stop at the
 first label whose bottom of stack bit is set and treat everything after it as the route
 distinguisher and the prefix.  The negative side is the one which found a bug once
-already: a stack with the bit nowhere is refused rather than being allowed to eat the
-prefix and report a default route, and a stack whose FIRST label sets it stops there even
-if the mask would have allowed another label.
+already: a stack of more than one label with the bit nowhere is refused rather than being
+allowed to eat the prefix and report a default route, and a stack whose FIRST label sets
+it stops there even if the mask would have allowed another label.
+
+A stack of exactly one label with the bit nowhere is a section 2.2 NLRI rather than a
+malformed section 2.3 one, and is accepted: see rfc8277#2.2-s-bit-ignored-on-reception.
+The one case the length cannot decide is a length which leaves no prefix bits behind that
+single field, where a labelled 0.0.0.0/0 and a stack which ate the prefix are the same
+bytes; that stays refused, and tests/unit/test_label_stack_end.py says so.
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_two_label_stack_ends_at_the_label_whose_s_bit_is_set`
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_we_set_the_s_bit_only_on_the_last_label_we_transmit`
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_label_stack_with_no_bottom_of_stack_bit_is_refused`
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_vpn_label_stack_with_no_bottom_of_stack_bit_is_refused`
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_stack_stops_at_the_first_bottom_of_stack_bit_even_when_the_mask_allows_more`
-- **2.4** (MUST) `rfc8277#2.4-compatibility-ignored-on-reception` - gap
+- **2.4** (MUST) `rfc8277#2.4-compatibility-ignored-on-reception` - proven
   > Upon transmission, the Compatibility field SHOULD be set to 0x800000. Upon reception, the value of the Compatibility field MUST be ignored.
-  Neither half holds.  On transmission exabgp withdraws by packing the NLRI it announced,
-so the three octets carry the label it advertised rather than 0x800000; that is the
-SHOULD and it is a decision, not a defect.  The MUST is the one that matters: both
-decoders read those three octets as a label and only accept three values there, the
-bottom of stack bit set, 0x800000, and 0x000000.  Any other Compatibility field, and the
-RFC says any value is legal because it is of no significance, falls out of the loop
-unterminated and raises `Notify(3, 10, ...)`.  A peer which withdraws with a Compatibility
-field of, say, 0x000010 gets its session reset.
-- **2.4** (REQUIRED) `rfc8277#2.4-compatibility-required-ignored` - gap
+  The MUST holds, the SHOULD does not, and only the MUST is gated.
+
+The MUST used to be the worst gap on this ledger.  Both decoders read the three octets as
+a label and accepted three values there and no others: the bottom of stack bit set,
+0x800000, and 0x000000.  Any other Compatibility field, and the RFC says any value is
+legal because it is of no significance, fell out of the loop unterminated and raised
+`Notify(3, 10, 'the label stack of the NLRI never ends')`, so a peer withdrawing with a
+field of 0x000010 had its session reset.  Both loops now end a one field stack on the
+length instead: whatever the three octets hold, the bits behind them are the route
+distinguisher and the prefix whenever they can be, and the value is never looked at.
+
+The SHOULD is unchanged and is a decision rather than a defect: exabgp withdraws by
+packing the NLRI it announced, so the three octets carry the label it advertised rather
+than 0x800000.  Every value is legal to send, and a receiver which cares is the bug this
+entry just stopped being.
+  - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_withdraw_with_a_known_compatibility_value_decodes_to_its_prefix`
+  - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_the_prefix_length_of_a_withdraw_is_the_nlri_length_less_the_compatibility_field`
+  - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_withdraw_with_an_arbitrary_compatibility_value_decodes_to_its_prefix`
+  - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_vpn_withdraw_with_an_arbitrary_compatibility_value_decodes_to_its_prefix`
+- **2.4** (REQUIRED) `rfc8277#2.4-compatibility-required-ignored` - proven
   > In order to ensure backwards compatibility, it is RECOMMENDED by this document that the Compatibility field be set to 0x800000, but it is REQUIRED that it be ignored upon reception.
   The same obligation as rfc8277#2.4-compatibility-ignored-on-reception, restated at the
 end of section 2.4 with the stronger keyword and with the reason: RFC 3107 let this field
 hold a label and some implementations put 0x000000 there instead of 0x800000, so a
-receiver which is fussy about it breaks against real peers.  Recorded separately because
-it is a separate normative sentence.  Only the positive side is meaningful: the
-requirement is that no value is rejected, so there is no input which can violate it by
-being accepted, and a negative test would only be the positive one with different bytes.
+receiver which is fussy about it breaks against real peers.  exabgp was that receiver
+until the label loop learnt to end a one field stack on the length; it accepts any value
+there now.  Recorded separately because it is a separate normative sentence.  Only the
+positive side is meaningful: the requirement is that no value is rejected, so there is no
+input which can violate it by being accepted, and a negative test would only be the
+positive one with different bytes.
+  - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_withdraw_with_an_arbitrary_compatibility_value_decodes_to_its_prefix`
 - **2.5** (MUST NOT) `rfc8277#2.5-different-path-id-does-not-withdraw` - proven
   > * If I1 is not the same as I2, U2 MUST be interpreted as meaning that L2 is now bound to P at N1, but U2 MUST NOT be interpreted as meaning that L1 is no longer bound to P at N1.
   The path identifier IS in `index()`, by way of `path_info.pack_path()`, so two labelled
@@ -1855,26 +2033,33 @@ second half of the sentence asks for: the rest of the UPDATE must survive, so an
 attribute which follows the duplicate still has to be decoded.
   - `tests/unit/rfc/test_rfc8669_prefix_sid.py::test_the_second_prefix_sid_attribute_is_dropped_and_the_first_kept`
   - `tests/unit/rfc/test_rfc8669_prefix_sid.py::test_an_attribute_after_the_duplicate_is_still_decoded`
-- **6** (SHALL) `rfc8669#6-duplicate-tlv-first-wins` - known gap, demonstrated by a failing test
+- **6** (SHALL) `rfc8669#6-duplicate-tlv-first-wins` - proven
   > Similarly, if a recognized TLV appears more than once in a BGP Prefix-SID attribute while the specification only allows for a single occurrence, then all the occurrences of the TLV other than the first one SHALL be discarded and the Prefix-SID attribute will continue to be processed.
-  Not implemented.  `PrefixSid.unpack_attribute` appends every TLV it walks to `sr_attrs`
-with no check for a repeat, so two Label-Index TLVs both survive and both appear in the
-JSON, which then carries two `sr-label-index` keys in one object.  The attribute does
-continue to be processed, so only the discard half is missing, and an xfail test shows it.
-Recorded positive-only:
+  `PrefixSid.unpack_attribute` keeps the first Label-Index and the first Originator SRGB and
+discards any later occurrence of either, which are the only two TLVs this document defines
+and neither may repeat.  Discarded means gone: the repeat is dropped from `sr_attrs`, so
+the JSON carries one `sr-label-index` key, and it is dropped from the bytes re-advertised
+too, since this section promises propagation to unknown TLVs alone.  That is deliberately
+not what RFC 9012 13 asks for a repeated sub-TLV, which stays on the wire.  The TLVs which
+are kept keep the peer's own framing: the attribute is rebuilt from the original slices
+rather than from the decoded objects.  Recorded positive-only:
 the negative side would be "a TLV type which may legitimately repeat is not collapsed",
 and this document defines no such TLV, so there is nothing to test against.
   - `tests/unit/rfc/test_rfc8669_prefix_sid.py::test_a_repeated_label_index_tlv_keeps_only_the_first`
+  - `tests/unit/rfc/test_rfc8669_prefix_sid.py::test_a_discarded_repeat_is_not_advertised_onwards_but_its_neighbours_are`
+  - `tests/unit/rfc/test_rfc8669_prefix_sid.py::test_a_repeated_originator_srgb_keeps_only_the_first`
+  - `tests/unit/rfc/test_rfc8669_prefix_sid.py::test_a_repeated_unknown_tlv_is_left_alone`
 - **6** (MUST) `rfc8669#6-malformed-attribute-discard` - proven
   > When a BGP speaker receives a BGP UPDATE message containing a malformed or invalid BGP Prefix-SID attribute attached to an IPv4/ IPv6 Labeled Unicast prefix ([RFC8277]), it MUST ignore the received BGP Prefix-SID attribute and not advertise it to other BGP peers. In this context, a malformed BGP Prefix-SID attribute is one that cannot be parsed due to not meeting the minimum attribute length requirement, containing a TLV length that doesn't conform to the length constraints for the TLV, or containing a TLV length that would extend beyond the end of the attribute (as defined by the attribute length).
-  `PrefixSid.DISCARD = True` covers two of the three malformed shapes this sentence names:
-a TLV length which does not conform to the TLV's constraints, and a TLV length which
-runs past the end of the attribute, both reach `AttributeCollection.parse` as a `Notify`
-and become an `INTERNAL_DISCARD`.  The third does not.  A Prefix-SID attribute of length
-zero, which is precisely "not meeting the minimum attribute length requirement", is
-caught earlier by the generic `length == 0 and not kls.VALID_ZERO` rule and becomes
-`INTERNAL_TREAT_AS_WITHDRAW`, withdrawing the route the RFC says to keep.  The test for
-that one shape carries xfail; the other three pass.
+  `PrefixSid.DISCARD = True` covers all three malformed shapes this sentence names.  A TLV
+length which does not conform to the TLV's constraints and a TLV length which runs past
+the end of the attribute reach `AttributeCollection.parse` as a `Notify` and become an
+`INTERNAL_DISCARD`.  The third, a Prefix-SID attribute of length zero, which is precisely
+"not meeting the minimum attribute length requirement", used to be caught earlier by the
+generic `length == 0 and not kls.VALID_ZERO` rule and became `INTERNAL_TREAT_AS_WITHDRAW`,
+withdrawing the route the RFC says to keep.  `PrefixSid` now sets `VALID_ZERO` so that
+generic rule does not answer for it, and refuses an empty value in `unpack_attribute`
+instead, which `DISCARD` turns into the discard section 6 asks for.
   - `tests/unit/rfc/test_rfc8669_prefix_sid.py::test_a_tlv_length_outside_the_tlv_constraint_is_discarded_not_withdrawn`
   - `tests/unit/rfc/test_rfc8669_prefix_sid.py::test_a_tlv_running_past_the_end_of_the_attribute_is_discarded`
   - `tests/unit/rfc/test_rfc8669_prefix_sid.py::test_an_srgb_which_is_not_two_plus_a_multiple_of_six_is_discarded`
@@ -1911,33 +2096,48 @@ drafts) and a flow route which carries one packs a four octet next-hop into MP_R
 against this sentence.  Shown by a failing test rather than described.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_flow_specification_is_advertised_with_a_next_hop_length_of_zero`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_next_hop_on_a_flow_route_is_not_put_on_the_wire`
-- **4.2** (MAY) `rfc8955#4.2-component-once` - known gap, demonstrated by a failing test
+- **4.2** (MAY) `rfc8955#4.2-component-once` - proven
   > A given component type MAY (exactly once) be present in the Flow Specification.
-  "Exactly once" is the half exabgp loses, and losing it inverts the filter rather than
-widening it.  Two type 3 components must be ANDed, because section 4.2 says a packet
+  "Exactly once" used to be the half exabgp lost, and losing it inverted the filter rather
+than widening it.  Two type 3 components must be ANDed, because section 4.2 says a packet
 matches the intersection of all the components present, so "protocol == tcp" followed by
-"protocol == udp" matches nothing.  `Flow._parse_rules` appends the second component's
-operations to the first component's list, where the second operator's AND bit is unset,
-so the two become "protocol tcp OR udp" and the rule now matches both.
+"protocol == udp" matches nothing.  `Flow._parse_rules` appended the second component's
+operations to the first component's list, where the second operator's AND bit is unset, so
+the two became "protocol tcp OR udp" and the rule matched both.
+`Flow._check_component_order` now refuses a repeated component type as a treat-as-withdraw.
+
+The exception is a repeated type 1 or type 2 prefix, which exabgp both sends and accepts:
+`Flow.add` has allowed several source or destination prefixes in one flow for years
+because some vendors send them.  That is a knowing deviation from "exactly once", kept
+because a decoder must be able to read back what this encoder writes.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_component_type_present_once_decodes`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_component_type_present_twice_is_refused`
-- **4.2** (MUST) `rfc8955#4.2-precede-higher-type` - known gap, demonstrated by a failing test
+- **4.2** (MUST) `rfc8955#4.2-precede-higher-type` - proven
   > If present, it MUST precede any component of higher numeric type value.
-  The same absent check as rfc8955#4.2-strict-type-ordering, stated from the other end, and
-kept separate because a decoder could be written to enforce one and not the other: a
-sender could emit types 1, 4, 3 and satisfy "each type appears once" while still putting a
-type 4 in front of a type 3.
+  The same check as rfc8955#4.2-strict-type-ordering, stated from the other end, and kept
+separate because a decoder could be written to enforce one and not the other: a sender
+could emit types 1, 4, 3 and satisfy "each type appears once" while still putting a type 4
+in front of a type 3.  `Flow._check_component_order` compares each component type against
+the one before it, so that sequence is refused on the 3.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_lower_type_before_a_higher_one_decodes`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_higher_type_before_a_lower_one_is_refused`
-- **4.2** (MUST) `rfc8955#4.2-strict-type-ordering` - known gap, demonstrated by a failing test
+- **4.2** (MUST) `rfc8955#4.2-strict-type-ordering` - proven
   > Components MUST follow strict type ordering by increasing numerical order.
   exabgp's encoder honours this: `Flow._pack_from_rules` walks `sorted(self.rules.keys())`.
-Its decoder does not check it at all.  `Flow._parse_rules` drops each component into a
-dict keyed by type, which throws the wire order away, and the `seen` list
-`Flow.unpack_nlri` builds afterwards is assembled from `sorted(rules.keys())` and then
-never looked at, so it is sorted by construction and proves nothing.  A flow specification
-whose components arrive in decreasing order is accepted and re-rendered in the right
-order, which means exabgp's API reports a filter the peer did not send.
+Its decoder checks it as the components are read, in `Flow._check_component_order`, which
+is the only place that can: the rules land in a dict keyed by type and a dict cannot show
+what order they arrived in.  A component whose type is lower than the one before it is a
+treat-as-withdraw, per section 10 and RFC 7606.  Before the check, a flow specification
+arriving in decreasing order was accepted and re-rendered in the right order, so exabgp's
+API reported a filter the peer had not sent.  The dead `seen` list which used to sit in
+`Flow.unpack_nlri`, built from `sorted(rules.keys())` and never compared to anything, is
+gone with it.
+
+One deviation is deliberate: a repeated type 1 or type 2 prefix is allowed through, so
+equal consecutive types are refused for every component except those two.  `Flow.add` has
+accepted several source or destination prefixes from the configuration for years because
+some vendors send them, and a decoder which refused what this encoder emits could not read
+exabgp's own output back.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_components_in_increasing_type_order_decode`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_components_in_decreasing_type_order_are_refused`
 - **4.2** (SHOULD NOT) `rfc8955#4.2-unmatchable-not-propagated` - gap
@@ -1948,30 +2148,30 @@ configured, announced and never questioned.  Recorded as a gap rather than as
 not-applicable: exabgp originates rather than propagates, but a filter it originates which
 can never match is the same useless entry in the receiver's hardware, and the check is
 three lines of table lookup we simply do not do.
-- **4.2.1.1** (MUST) `rfc8955#4.2.1.1-and-bit-first-unset` - known gap, demonstrated by a failing test
+- **4.2.1.1** (MUST) `rfc8955#4.2.1.1-and-bit-first-unset` - proven
   > In the first operator octet of a sequence, it MUST be encoded as unset and MUST be treated as always unset on decoding.
   The encoding half holds: the configuration grammar only sets the AND bit on an operation
-which follows another inside one component.  The decoding half does not.
-`CommonOperator.OPERATOR` is 0x4F, so `Flow._parse_operations` keeps bit 0x40 of whatever
-octet arrives and stores it on the first operation of the component as readily as on the
-fifth.  A first operator octet of 0xC1 renders as `&=tcp`, an AND against a predecessor
-which does not exist.
+which follows another inside one component.  The decoding half holds too:
+`Flow._parse_operations` clears bit 0x40 on the first operation of every component, so a
+first operator octet of 0xC1 renders as `=tcp` rather than as `&=tcp`, an AND against a
+predecessor which does not exist.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_the_first_operator_octet_we_encode_has_the_and_bit_clear`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_an_and_bit_in_the_first_operator_octet_is_treated_as_unset`
-- **4.2.1.1** (MUST) `rfc8955#4.2.1.1-reserved-bit-zero` - known gap, demonstrated by a failing test
+- **4.2.1.1** (MUST) `rfc8955#4.2.1.1-reserved-bit-zero` - proven
   > 0: MUST be set to 0 on NLRI encoding and MUST be ignored during decoding
   Bit 0x08 of the numeric operator octet.  exabgp never sets it when encoding, because
-`NumericOperator` builds the low nibble out of LT, GT and EQ only.  On decoding it is not
-ignored: `CommonOperator.OPERATOR` is 0x4F, which keeps it, and `NumericString.short()`
-then fails to find 0x09 in its table and falls back to printing the operator in hex, so a
-protocol match for TCP is reported to the API as `protocol 09tcp`.
+`NumericOperator` builds the low nibble out of LT, GT and EQ only.  On decoding it is
+masked off: `NumericOperator.OPERATOR` is the AND bit and the three comparison bits, so an
+octet of 0x89 decodes as the plain equality 0x81 and a protocol match for TCP is reported
+to the API as `protocol =tcp` whether the reserved bit arrived set or clear.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_no_numeric_operator_we_encode_sets_the_reserved_bit`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_the_reserved_bit_of_a_numeric_operator_is_ignored_on_decoding`
-- **4.2.1.2** (MUST) `rfc8955#4.2.1.2-bitmask-reserved-bits-zero` - known gap, demonstrated by a failing test
+- **4.2.1.2** (MUST) `rfc8955#4.2.1.2-bitmask-reserved-bits-zero` - proven
   > 0 (all 0 bits): MUST be set to 0 on NLRI encoding and MUST be ignored during decoding
-  Bits 0x0C of the bitmask operator octet, and the same fault as the numeric one: encoding
-never sets them, decoding never clears them, and `BinaryString.short()` prints `0D` in
-front of the fragment names when they arrive set.
+  Bits 0x0C of the bitmask operator octet, one more than the numeric operator reserves.
+Encoding never sets them and `BinaryOperator.OPERATOR`, which is the AND bit and the NOT
+and Match bits, drops them on decoding, so a fragment match arrives at the API as
+`=dont-fragment+first-fragment` with the reserved bits set or clear.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_no_bitmask_operator_we_encode_sets_the_reserved_bits`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_the_reserved_bits_of_a_bitmask_operator_are_ignored_on_decoding`
 - **4.2.2.11** (SHOULD) `rfc8955#4.2.2.11-dscp-other-bits-zero` - gap
@@ -2076,23 +2276,20 @@ AS 0 or AS 65535, does not make the community harder to decode or change the rat
 carries.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_the_two_octet_id_does_not_appear_in_what_we_report`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_an_id_we_would_never_have_chosen_changes_nothing`
-- **7.1** (MUST) `rfc8955#7.1-negative-rate-treated-as-zero` - known gap, demonstrated by a failing test
+- **7.1** (MUST) `rfc8955#7.1-negative-rate-treated-as-zero` - proven
   > On decoding, negative values MUST be treated as zero (discard all traffic).
-  Not done, and this one is the dangerous direction.  `TrafficRate.rate` returns the float
-straight out of the four octets, so a community carrying -100.0 is reported to the API as
-`rate-limit:-100`.  The RFC's reading of a negative rate is "discard all traffic"; a
-consumer which reads the number literally will do something else entirely, most likely
-reject the line or program a nonsense limit.  `TrafficRatePackets.rate` clamps with
-`max(value, 0.0)` and `TrafficRate.rate` does not.
+  `TrafficRate.rate` clamps with `max(value, 0.0)`, as `TrafficRatePackets.rate` does, so a
+community carrying -100.0 is reported to the API as `rate-limit:0`, the discard this
+sentence defines it to be, rather than as a negative number no consumer can program.  The
+negative side is that the clamp is a floor and not a filter: a positive rate comes back
+unchanged.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_non_negative_traffic_rate_decodes_unchanged`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_negative_traffic_rate_decodes_as_zero`
-- **7.1** (MUST NOT) `rfc8955#7.1-traffic-rate-not-negative-on-encoding` - known gap, demonstrated by a failing test
+- **7.1** (MUST NOT) `rfc8955#7.1-traffic-rate-not-negative-on-encoding` - proven
   > On encoding, the traffic-rate MUST NOT be negative.
-  Not enforced.  `TrafficRate.make_traffic_rate` puts whatever float it is given through
-`checked_rate`, which refuses a NaN and an infinity and says nothing about the sign, then
-packs it.  Its sibling `TrafficRatePackets.make_traffic_rate_packets` has the `rate < 0`
-check three lines lower in the same file, so this is one missing line rather than a design
-decision.  Shown by a failing test.
+  `TrafficRate.make_traffic_rate` raises ValueError on a negative rate, the same check its
+sibling `TrafficRatePackets.make_traffic_rate_packets` makes thirty lines lower.  Zero is
+legal and means discard everything, so the check is `< 0` and not `<= 0`.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_non_negative_traffic_rate_is_encoded`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_negative_traffic_rate_is_not_encoded`
 - **7.2** (MUST) `rfc8955#7.2-negative-rate-packets-treated-as-zero` - proven
@@ -2119,7 +2316,7 @@ built from the two defined bits, and `sample` and `terminal` read bit 0x02 and b
 the last octet and look at nothing else, so an unused bit set by a peer changes neither.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_the_traffic_action_we_encode_has_every_unused_bit_at_zero`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_unused_traffic_action_bits_set_by_a_peer_are_ignored`
-- **7.5** (MUST) `rfc8955#7.5-traffic-marking-reserved-zero` - known gap, demonstrated by a failing test
+- **7.5** (MUST) `rfc8955#7.5-traffic-marking-reserved-zero` - proven
   > reserved (r): MUST be set to 0 on encoding and MUST be ignored during decoding
   The encoding half holds because `dscp_value` refuses anything above 63 at configuration
 time, so the two reserved bits of the last octet are always zero in what exabgp sends.
@@ -2152,24 +2349,29 @@ from a peer which advertised only 1/133 is refused by `MPRNLRI.unpack_attribute`
 IPv4 flow session cannot be used to smuggle IPv6 flow specifications in.
   - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_the_ipv6_flow_specification_families_negotiate`
   - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_an_ipv4_flow_session_does_not_carry_ipv6_flow_specifications`
-- **3.1** (MUST) `rfc8956#3.1-length-range` - known gap, demonstrated by a failing test
+- **3.1** (MUST) `rfc8956#3.1-length-range` - proven
   > If length = 0 and offset = 0, this component matches every address; otherwise, length MUST be in the range offset < length < 129 or the component is malformed.
-  Half enforced.  `CIDR.decode` refuses a length above 128, which is the `< 129` end, and
-length 0 with offset 0 decodes to ::/0 as the sentence says it should.  The `offset <
-length` end is not checked anywhere: `IPrefix6.make` reads the offset octet and stores it
-without ever comparing it to the mask, so a component announcing length 32 and offset 64
-is accepted and rendered as 2001:db8::/32/64, a match on bits 64 to 32 which do not exist.
+  Enforced in `IPrefix6.make`, which reads the length and the offset together and refuses
+any pair outside `offset < length < 129` unless both are zero.  Length 0 with offset 0
+still decodes to ::/0 as the sentence says it should.  Before the check, a component
+announcing length 32 and offset 64 was accepted and rendered as 2001:db8::/32/64, a match
+on bits 64 to 32 which do not exist.
   - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_a_length_of_zero_with_an_offset_of_zero_matches_every_address`
   - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_a_length_outside_the_range_the_offset_allows_is_refused`
-- **3.1** (MUST) `rfc8956#3.1-padding-bits-zero` - known gap, demonstrated by a failing test
+- **3.1** (MUST) `rfc8956#3.1-padding-bits-zero` - proven
   > Padding bits MUST be 0 on encoding and MUST be ignored on decoding.
-  The encoding half holds: `IPrefix6.make_prefix6` truncates a full address to
-`CIDR.size(netmask)` octets and the bits below the mask in the operator's own address are
-already zero for any prefix the configuration accepts.  The decoding half does not.
-`CIDR.decode` keeps the trailing octet exactly as it arrived, so a /33 whose fourth
-pattern octet is 0xFF is reported as 2001:db8:ff00::/33 rather than as 2001:db8:8000::/33.
-The padding is not ignored, it is published, and two flow specifications which describe
-the same match compare unequal and hash differently because of it.
+  Both halves are held by the same pair of helpers, and both halves now hold in general
+rather than by luck.  `_pattern_from_address` takes the bits between the offset and the
+length and left aligns them, so whatever was written below the length is padded with
+zeros rather than sent: `fe80::1/1` goes out as pattern 0x80 where it used to go out as
+0xfe, because `IPrefix6.pack` handed `cidr.pack_ip()` straight to the wire and that keeps
+the octet exactly as it was stored.  0x80 is the correct reading of "MUST be set to 0 on
+encoding": a configuration which sets bits below its own mask has described a prefix that
+does not exist, and the bits it set are padding whatever it meant by them.  The old
+behaviour only looked compliant because the address in the positive test, 2001:db8::, has
+zeros there already.  `_address_from_pattern` does the same in reverse, dropping
+everything below the length, so a /33 whose fifth pattern octet is 0xFF decodes to
+2001:db8:8000::/33, the same NLRI and the same RIB index as the one padded with zeros.
   - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_the_padding_of_a_prefix_we_encode_is_zero`
   - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_padding_set_by_a_peer_is_ignored_on_decoding`
 - **3.3** (SHOULD) `rfc8956#3.3-upper-layer-protocol-single-octet` - proven
@@ -2230,27 +2432,40 @@ attribute is decoded and handed to the API for every session.  Recorded as a gap
 than not-applicable: exabgp does understand the attribute, which is the condition the
 sentence attaches to, and the configuration language is the natural place for the
 filter.
-- **13** (MUST) `rfc9012#13-duplicate-subtlv-first-wins` - known gap, demonstrated by a failing test
+- **13** (MUST) `rfc9012#13-duplicate-subtlv-first-wins` - proven
   > If a Tunnel TLV has more than one of any of these sub-TLVs, all but the first occurrence of each such sub-TLV type MUST be disregarded. However, the Tunnel TLV containing them MUST NOT be considered to be malformed, and all the sub-TLVs MUST be propagated if the route carrying the Tunnel Encapsulation attribute is propagated.
-  The two halves are on opposite sides of the line.  "MUST NOT be considered malformed" and
-"all the sub-TLVs MUST be propagated" both hold: `SubTLV.unpack_subtlvs` appends every
-sub-TLV it walks and never rejects a repeat.  "All but the first occurrence MUST be
-disregarded" does not hold, for exactly the same reason: nothing collapses the repeats,
-so a Tunnel TLV carrying two Preference sub-TLVs reaches the API with both, and a
-consumer reading the JSON sees two values for a field which has one.
+  The two halves pull in opposite directions and are implemented in different places.
+`SubTLV.unpack_subtlvs` still appends every sub-TLV it walks and `pack_value` still emits
+every one of them, which is "MUST NOT be considered malformed" and "all the sub-TLVs MUST
+be propagated".  "Disregarded" is applied in `SRPolicyTunnel.json`, which emits the first
+occurrence only of each sub-TLV type RFC 9830 2.4 says must not repeat: Preference,
+Binding SID, ENLP, Priority, and the two name sub-TLVs.  exabgp installs nothing, so the
+only thing it can be said to interpret is what it hands the API, and the JSON is that.
+Segment List and SRv6 Binding SID are not collapsed, RFC 9830 lets both repeat.
   - `tests/unit/rfc/test_rfc9012_tunnel_encap.py::test_a_repeated_preference_subtlv_keeps_only_the_first`
+  - `tests/unit/rfc/test_rfc9012_tunnel_encap.py::test_the_disregarded_preference_is_still_on_the_wire_we_re_advertise`
   - `tests/unit/rfc/test_rfc9012_tunnel_encap.py::test_a_repeated_preference_subtlv_does_not_make_the_tlv_malformed`
 - **13** (MUST) `rfc9012#13-malformed-subtlv-as-unrecognized` - proven
   > In general, if a TLV contains a sub-TLV that is malformed, the sub- TLV MUST be treated as if it were an unrecognized sub-TLV.
-  Not implemented, and the failure mode is a session reset.  Every malformed sub-TLV shape
-`SubTLV.unpack_subtlvs` can detect - a one byte tail, a length field which runs past the
-end of the enclosing Tunnel TLV, a type above 127 with fewer than three bytes left -
-raises `Notify(3, 1)`.  `TunnelEncap` sets no RFC 7606 behaviour flag, so that `Notify`
-leaves `AttributeCollection.parse` untouched and becomes a NOTIFICATION.  The RFC says
-to skip the sub-TLV and carry on.  This is the same missing flag as the first entry, and
-one fix closes both.
+  Two kinds of malformation, answered in two places.  A sub-TLV whose *framing* is wrong - a
+one byte tail, a length which runs past the end of the enclosing Tunnel TLV, a type above
+127 with fewer than three bytes left - still raises `Notify(3, 1)` out of
+`SubTLV.unpack_subtlvs`, which `TunnelEncap.TREAT_AS_WITHDRAW` turns into treat-as-withdraw
+rather than the NOTIFICATION it used to be.  That is stricter than this sentence asks, and
+it is what the walk can honestly do: with the framing broken there is no way to know where
+the sub-TLV ends and so no way to skip just it.  A sub-TLV whose framing is sound and whose
+*value* the decoder refuses is the case this sentence really covers, and it is now handled
+as written: the decoder raises `MalformedSubTLV` and `unpack_subtlvs` keeps the bytes as a
+`GenericSubTLV`, out of the interpretation and into what we propagate.
+`PreferenceSubTLV.unpack` is the first to do it; it used to answer `cls(0)` and tell the
+API the peer had asked for preference zero.  The exception this section makes for a
+malformed Tunnel Egress Endpoint sub-TLV does not arise: exabgp registers no decoder for
+that sub-TLV, so it can never find one malformed.
   - `tests/unit/rfc/test_rfc9012_tunnel_encap.py::test_a_one_byte_subtlv_tail_does_not_reset_the_session`
   - `tests/unit/rfc/test_rfc9012_tunnel_encap.py::test_a_subtlv_above_127_with_a_truncated_length_field_does_not_reset_the_session`
+  - `tests/unit/rfc/test_rfc9012_tunnel_encap.py::test_a_short_preference_subtlv_is_read_as_unrecognised_not_as_zero`
+  - `tests/unit/rfc/test_rfc9012_tunnel_encap.py::test_a_malformed_preference_does_not_take_the_sub_tlvs_beside_it`
+  - `tests/unit/rfc/test_rfc9012_tunnel_encap.py::test_a_well_formed_preference_subtlv_is_still_read_as_a_preference`
   - `tests/unit/rfc/test_rfc9012_tunnel_encap.py::test_a_malformed_subtlv_no_longer_ends_the_session`
 - **13** (MUST) `rfc9012#13-no-valid-tlv-or-not-transitive` - proven
   > If a Tunnel Encapsulation attribute does not have any valid TLVs, or it does not have the transitive bit set, the "Treat-as-withdraw" procedure of [RFC7606] is applied.
@@ -2409,6 +2624,222 @@ prefixes and Peer-to-Peer for others looks exactly like a normal one to both spe
 exabgp cannot detect the condition, so it cannot refuse the configuration, and a check
 that guessed would refuse correct configurations. This one binds the operator.
 
+## rfc9552
+
+- **5.1** (MUST) `rfc9552#5.1-nlri-tlvs-ascending-order` - gap
+  > To compare NLRIs with unknown TLVs, all TLVs within the NLRI MUST be ordered in ascending order by TLV Type.
+  Not checked anywhere.  `BGPLS.iter_tlvs` walks the sequence and validates every boundary
+but never compares one type to the next, and neither `NODE.unpack_bgpls_nlri` nor the link
+and prefix decoders sort or reject.
+
+Recorded positive-only because the requirement as written binds the encoder, and exabgp
+has no BGP-LS encoder to bind: an NLRI it emits is the peer's own bytes, kept verbatim in
+`_packed` and returned unchanged by `pack_nlri`, so exabgp neither creates nor repairs an
+ordering.  The receiver's half of it is the seventh bullet of section 8.2.2, recorded
+separately as rfc9552#8.2.2-nlri-syntactic-validation, and the demonstration of the gap
+lives on that entry.
+- **5.1** (MUST NOT) `rfc9552#5.1-unknown-tlv-not-malformed` - proven
+  > The presence of unknown or unexpected TLVs MUST NOT result in the NLRI or the BGP-LS Attribute being considered malformed.
+  The companion to the sentence above, and it was the same split until the NLRI side was
+given a generic descriptor.  An unknown TLV in the BGP-LS Attribute decodes to a generic
+and the attribute stands; an unknown Node Descriptor sub-TLV in the NLRI does the same and
+the NLRI stands.  It used to be a Notify out of `NodeDescriptor.unpack_node`, which was
+not merely "considered malformed" but escalated past the 'NLRI discard' this document asks
+for all the way to a session reset.
+
+The same paragraph's definition of an unexpected TLV ("a TLV is received along with an
+update for a link-state object other than the one that the TLV is specified as associated
+with") is honoured: `LinkState._parse_tlvs` dispatches on the TLV code alone and never
+asks which NLRI type the attribute arrived with.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_an_unknown_attribute_tlv_does_not_make_the_attribute_malformed`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_an_unknown_node_descriptor_sub_tlv_does_not_make_the_nlri_malformed`
+- **5.1** (MUST) `rfc9552#5.1-unknown-tlv-preserved` - proven
+  > Unknown and unsupported types MUST be preserved and propagated within both the NLRI and the BGP-LS Attribute.
+  Held on both sides now, and by the same pattern on each.
+
+The BGP-LS Attribute half was always done: `LinkState.get_ls_class` synthesises a
+`GenericLSID` for a code nothing has registered, which keeps the bytes and renders them
+as hex under a name carrying the code.
+
+The NLRI half is done the same way.  `NodeDescriptor.unpack_node` used to end with
+`raise Notify(3, 10, 'unknown node descriptor sub-tlv ...')`, so a Node or Link NLRI
+carrying a sub-TLV outside the four codes of 2016 (512, 513, 514, 515) took the session
+down; 516, BGP Router Identifier, was assigned by RFC 9086 and is exactly that case.  It
+now returns a `GenericNodeDescriptor`, the sibling of `GenericLSID`, which keeps the whole
+sub-TLV in `_packed` so `pack_tlv` propagates it byte for byte and renders it under
+`generic-node-descriptor-<code>`.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_an_unknown_attribute_tlv_is_kept_with_its_bytes`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_an_unknown_node_descriptor_sub_tlv_is_kept`
+- **5.1** (MUST NOT) `rfc9552#5.1-unordered-attribute-not-malformed` - proven
+  > The BGP-LS Attribute with unordered TLVs MUST NOT be considered malformed.
+  Held by omission, which is the compliant behaviour here: `LinkState._parse_tlvs` walks the
+attribute in wire order and never looks at whether the codes ascend.  The trap this guards
+is a future optimisation which sorted or binary-searched the TLVs and started rejecting
+what it found out of order, so the positive test hands the decoder a descending attribute
+and expects every TLV back.
+
+The negative side matters just as much: the tolerance is about order and nothing else, so
+a descending attribute whose last TLV overruns the value is still refused.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_attribute_tlvs_in_descending_order_all_decode`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_descending_order_does_not_excuse_a_tlv_which_runs_past_the_value`
+- **5.2** (SHALL) `rfc9552#5.2-afi-safi-assignment` - proven
+  > All non-VPN link, node, and prefix information SHALL be encoded using AFI 16388 / SAFI 71. VPN link, node, and prefix information SHALL be encoded using AFI 16388 / SAFI 72.
+  `AFI.BGPLS` is 16388 and `SAFI.BGPLS` / `SAFI.BGPLS_VPN` are 71 and 72, and
+`@NLRI.register(AFI.bgpls, SAFI.bgp_ls)` plus the VPN registration on the same class are
+what route an MP_REACH of that family into this decoder.  The difference between the two
+is real and not cosmetic: `BGPLS.unpack_nlri` reads an eight octet Route Distinguisher
+after the header for SAFI 72 and does not for SAFI 71, so the negative test is that the
+same bytes under the two SAFIs do not decode to the same object.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_bgp_ls_is_afi_16388_with_safi_71_and_72`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_safi_72_reads_a_route_distinguisher_where_safi_71_reads_descriptors`
+- **5.2** (MUST) `rfc9552#5.2-unknown-nlri-type-opaque` - proven
+  > An implementation MUST handle unknown Link-State NLRI types as opaque objects and MUST preserve and propagate them.
+  `BGPLS.unpack_nlri` falls through to `GenericBGPLS(code, wire_format)` for any type
+outside the registry, keeps the complete wire format header included, and `pack_nlri`
+returns it byte for byte.  This is the deviation from RFC 7606 section 5.4 the paragraph
+above it announces, and exabgp takes it.
+
+The negative side is that opaque is not the same as unexamined: a generic whose Total NLRI
+Length runs past the buffer is still refused, because accepting it would mean the next
+NLRI in the same MP_REACH was read from the wrong offset.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_an_unknown_nlri_type_is_opaque_and_survives_byte_for_byte`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_an_opaque_nlri_whose_length_runs_past_the_buffer_is_still_refused`
+- **5.2.1** (MUST) `rfc9552#5.2.1-one-instance-per-sub-tlv` - known gap, demonstrated by a failing test
+  > At most, there MUST be one instance of each sub-TLV type present in any Node Descriptor.
+  Not checked, and the xfail on this entry is the demonstration.
+`NODE.unpack_bgpls_nlri` loops `NodeDescriptor.unpack_node` over the
+descriptor value until it is exhausted and appends whatever comes back, with no set of
+seen types; the same loop in `NODE.node_ids` does the same on the render path.  A Node
+NLRI carrying two Autonomous System sub-TLVs is accepted, and its JSON then contains the
+key "autonomous-system" twice, which every JSON parser resolves by keeping one of the two,
+silently, with the peer choosing which.
+
+Negative-only: exabgp originates no Node Descriptor, so there is no positive side where
+exabgp is the one obeying the limit.  The whole content of this requirement for a receiver
+is noticing a peer breaking it, and that is what the xfail test demonstrates.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_two_instances_of_one_node_descriptor_sub_tlv_are_refused`
+- **8.2.2** (MUST) `rfc9552#8.2.2-attribute-discard` - proven
+  > When the error that is determined allows for the router to skip the malformed BGP-LS Attribute and continue the processing of the rest of the BGP UPDATE message (e.g., when the BGP-LS Attribute length and the total Path Attribute Length are correct but some TLV/sub-TLV length within the BGP-LS Attribute is invalid), then it MUST handle such malformed BGP-LS Attribute as 'Attribute Discard'.
+  `LinkState.DISCARD` is True and `AttributeCollection.parse` reads it: a `Notify` out of
+`unpack_attribute` for an attribute carrying DISCARD becomes an `INTERNAL_DISCARD` marker
+in the collection rather than an exception which reaches the reactor.  The example the RFC
+gives is exactly the case tested, an honest attribute length around a TLV length which is
+not.
+
+The negative side is the distinction which matters: 'Attribute Discard' for a bad TLV
+length, and not a NOTIFICATION.  A decoder which raised would pass any test that only
+checked the attribute was absent from the result.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_bad_tlv_length_inside_an_honest_attribute_is_an_attribute_discard`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_an_attribute_discard_is_not_a_notification_and_spares_the_other_attributes`
+- **8.2.2** (MUST NOT) `rfc9552#8.2.2-attribute-not-malformed-on-semantics` - proven
+  > A BGP-LS Attribute MUST NOT be considered malformed or invalid based on the inclusion/exclusion of TLVs or contents of the TLV fields (i.e., semantic errors), as described in Sections 5.1 and 5.3.
+  Was the most arguable entry in the ledger, and it is settled.  `LinkState._check_not_repeated`
+raised `Notify(3, 5, 'BGP-LS: TLV N appears more than once and may not repeat')` for a
+registered TLV without MERGE which arrived twice.  A repeated TLV is a question of which
+TLVs are included, not of the attribute's framing, and the three syntactic checks this
+section lists are all about lengths, so by this sentence a duplicate must not make the
+attribute malformed.
+
+The counter-argument was real and is in the file history: a duplicate rendered its JSON
+key twice and the consumer silently kept one of the two.  But the citation behind the
+refusal, RFC 9552 5.3.2, is a table of Link Attribute TLVs and states no such rule, and
+5.3.2.1 says the opposite for the Router-ID TLVs ("If there is more than one auxiliary
+Router-ID of a given type, then multiple TLVs are used to encode them").  This section's
+own note says 'Attribute Discard' "results in the loss of all TLVs in the BGP-LS
+Attribute", so the refusal traded every TLV the peer sent against one ambiguous key.
+
+The check is gone and the ambiguity is answered where it belonged, in `LinkState.json`: a
+key more than one TLV wants is rendered once, as an array.  A TLV which arrives alone
+still renders exactly as it did, so no existing output moved.
+
+The unknown-TLV half of the same sentence is held, and is the positive test: an
+unregistered code decodes to a `GenericLSID` and the attribute survives.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_an_attribute_of_only_unregistered_tlvs_is_not_malformed`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_repeated_attribute_tlv_is_not_malformed`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_tlv_which_appears_once_is_rendered_by_its_own_class`
+- **8.2.2** (MUST) `rfc9552#8.2.2-attribute-syntactic-validation` - proven
+  > A BGP-LS Speaker MUST perform the following syntactic validation of the BGP-LS Attribute to determine if it is malformed.
+  All three bullets are performed by `LinkState._parse_tlvs`: a TLV header with fewer than
+four octets left, a TLV whose length runs past the end of the attribute value, and, for a
+recognised TLV, a value of the wrong size for its class through `BaseLS.check_length` and
+the per-class `check` methods.  The sum of the TLV lengths against the attribute length
+falls out of the same walk, since a sequence which does not end exactly on the boundary
+leaves a stub which fails the first check.
+
+The negative tests are the three malformations themselves.  The positive one has to prove
+the walk terminates as well as that it accepts: a zero-length TLV advances the cursor by
+the four header octets and does not spin, which is why that test carries a timeout.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_well_formed_attribute_decodes_and_the_walk_terminates`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_truncated_tlv_header_is_refused`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_tlv_length_disagreeing_with_what_follows_is_refused`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_recognised_tlv_with_a_value_of_the_wrong_size_is_refused`
+- **8.2.2** (MUST) `rfc9552#8.2.2-nlri-discard` - gap
+  > When the error that is determined allows for the router to skip the malformed NLRI(s) and continue the processing of the rest of the BGP UPDATE message (e.g., when the TLV ordering rule is violated), then it MUST handle such malformed NLRIs as 'NLRI discard' (i.e., processing similar to what is described in Section 5.4 of [RFC7606]).
+  exabgp has no 'NLRI discard' for this family.  Every error `BGPLS.unpack_nlri` and the
+decoders under it find is a `Notify`, and a Notify from the NLRI decode path is a
+NOTIFICATION and a session reset; there is no path which drops one NLRI out of an
+MP_REACH and keeps the others.  The example the RFC gives, a TLV ordering violation, is
+not even detected, so the question of how to react to it has not arisen yet.
+
+Negative-only: 'NLRI discard' is a reaction to a malformed NLRI, so there is no well
+formed input which exercises it.  The test feeds two NLRIs of which the second breaks the
+ordering rule and asserts that both survive, which is what 'NLRI discard' plus the
+undetected ordering rule would together produce; it passes today for the wrong reason,
+so it is left off this entry and the honest demonstration is on
+rfc9552#8.2.2-nlri-syntactic-validation instead.
+- **8.2.2** (MUST NOT) `rfc9552#8.2.2-nlri-not-malformed-on-semantics` - proven
+  > A Link-State NLRI MUST NOT be considered malformed or invalid based on the inclusion/exclusion of TLVs or contents of the TLV fields (i.e., semantic errors), as described in Sections 5.1 and 5.2.
+  Was breached twice, both in the contents-of-a-field direction, and both are closed.
+
+`NODE.unpack_bgpls_nlri` and its four siblings (`link.py`, `prefixv4.py`, `prefixv6.py`,
+`srv6sid.py`) checked the Protocol-ID against `PROTO_CODES`, which held the six codes of
+RFC 7752 plus a vendor 227, and raised `Notify(3, 10, 'Protocol-ID N is not valid')` for
+anything else.  The value of the Protocol-ID field is the contents of a field, and IANA
+has since assigned 7 (BGP, RFC 9086), 8 (RSVP-TE) and 9 (Segment Routing), so a present
+day producer advertising a BGP protocol node took the session down.  The five checks are
+gone.  `PROTO_CODES` gained the three codes and now names protocols rather than gating
+them: widening a whitelist only moves the cliff to the next assignment.
+
+`NodeDescriptor.unpack_node` did the same for an unrecognised sub-TLV code, which is the
+inclusion-of-TLVs direction and is also rfc9552#5.1-unknown-tlv-not-malformed.  It returns
+a `GenericNodeDescriptor` now.
+
+The other side of the sentence, which the positive test covers, was already held:
+exclusion.  A Node NLRI whose Local Node Descriptor carries only an Autonomous System
+sub-TLV, with no Router-ID at all, decodes without complaint.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_node_descriptor_missing_a_router_id_is_not_malformed`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_an_unrecognised_protocol_id_is_not_malformed`
+- **8.2.2** (MUST) `rfc9552#8.2.2-nlri-syntactic-validation` - known gap, demonstrated by a failing test
+  > A BGP-LS Speaker MUST perform the following syntactic validation of the Link-State NLRI to determine if it is malformed.
+  Five of the seven bullets are performed, two are not.  The positive tests prove the five;
+the xfail is the ordering bullet.
+
+Performed: the sum of the TLV lengths against the MP_REACH and MP_UNREACH length, through
+`BGPLS.unpack_nlri` returning the unconsumed remainder to the caller's loop; the sum
+against the Total NLRI Length field, through `BGPLS.iter_tlvs` refusing a TLV which runs
+past the descriptor area and refusing a trailing stub under four octets; the length of a
+recognised sub-TLV, through the per-code length tables in `NodeDescriptor.unpack_node`.
+
+Not performed: "The rule regarding the ordering of TLVs has been followed as described in
+Section 5.1", and "For NLRIs carrying either a Local or Remote Node Descriptor TLV, there
+is not more than one instance of a sub-TLV present".  Both have an xfail test on this
+entry; the second is also rfc9552#5.2.1-one-instance-per-sub-tlv.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_descriptor_tlv_running_past_the_total_nlri_length_is_refused`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_sub_tlv_of_the_wrong_size_for_its_type_is_refused`
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_node_descriptor_sub_tlvs_out_of_ascending_order_are_refused`
+- **8.2.2** (MUST) `rfc9552#8.2.2-session-reset-when-unable-to-process` - proven
+  > Alternately, the router MUST perform a 'session reset' when the session is only being used for BGP-LS or if 'AFI/SAFI disable' action is not possible.
+  This is the branch exabgp takes, and legitimately: it implements no 'AFI/SAFI disable', so
+the alternative the sentence offers is the only one available.  A length error in a
+Link-State NLRI raises `Notify(3, 10, ...)` out of `BGPLS.unpack_nlri`, `check_length` or
+`iter_tlvs`, and the reactor sends a NOTIFICATION and drops the session.
+
+Positive-only: the negative would be a router which failed to reset, and every path out of
+this decoder for a length error is a Notify, so there is no input which reaches the other
+side of the branch.  Whether a skippable error ought to have been an 'NLRI discard'
+instead is a different sentence, recorded as rfc9552#8.2.2-nlri-discard.
+  - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_length_error_the_decoder_cannot_step_over_resets_the_session`
+
 ## rfc9830
 
 - **2.1** (MUST) `rfc9830#2.1-afi-must-be-ipv4-or-ipv6` - proven
@@ -2435,12 +2866,15 @@ four octet address read as an IPv6 one, is refused.
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_an_ipv6_length_byte_under_afi_one_is_refused`
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_length_byte_of_zero_is_refused_and_does_not_yield_an_empty_nlri`
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_the_right_length_byte_with_the_bytes_missing_is_refused`
-- **2.4** (MUST NOT) `rfc9830#2.4-single-sr-policy-tlv` - known gap, demonstrated by a failing test
+- **2.4** (MUST NOT) `rfc9830#2.4-single-sr-policy-tlv` - proven
   > A Tunnel Encapsulation Attribute MUST NOT contain more than one TLV of type "SR Policy"; such updates MUST be considered malformed and handled by the "treat-as-withdraw" strategy [RFC7606].
-  Not implemented.  `TunnelEncap.unpack_attribute` walks the tunnel TLVs and appends each
-one without looking at whether it has seen that tunnel type before, so two SR Policy TLVs
-both decode and both appear in the JSON.  `TunnelEncap` sets no `TREAT_AS_WITHDRAW`
-either, so even if the duplicate were detected there is currently no path from this
-decoder to the action the RFC names.  Same missing class flag as the RFC 9012 entries.
+  `TunnelEncap.unpack_attribute` counts the TLVs of tunnel type 15 as it walks them and
+raises `Notify(3, 1)` on the second, which `TunnelEncap.TREAT_AS_WITHDRAW` turns into
+`INTERNAL_TREAT_AS_WITHDRAW` in `AttributeCollection.parse`, so the route goes and the
+session stays.  The check names the SR Policy tunnel type rather than tunnel TLVs in
+general, which is the negative test: a route may carry a second tunnel TLV of another
+type, and that one is not a duplicate.  Note how much louder this is than RFC 9012 13 for
+a repeated sub-TLV, where the repeat is disregarded and the route kept.
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_two_sr_policy_tlvs_in_one_attribute_are_treated_as_withdraw`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_second_tunnel_tlv_of_another_type_is_not_a_duplicate`
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_one_sr_policy_tlv_in_an_attribute_is_accepted`
