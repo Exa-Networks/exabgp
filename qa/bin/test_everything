@@ -259,6 +259,26 @@ TEST_ORDER = [
 #
 # Hence the check below is not "is this directory listed" but "does a stage reach it".  A
 # stage naming ./tests reaches all of them and a list of children reaches only what it names.
+# What a stage did.  A stage which could not run is not a stage which passed, and it is not
+# a stage which failed either; collapsing the three into a bool is what stopped this suite
+# on a laptop without 127.0.0.2 configured.
+PASSED = 'passed'
+FAILED = 'failed'
+SKIPPED = 'skipped'
+
+# check_reload_cleanup separates "I looked and found nothing" (0) from "I found a leak" (1)
+# from "this machine will not let me look" (2), and the runner threw that distinction away:
+# any non-zero was a failure, so a missing 127.0.0.2 alias reported the same red as a real
+# leak AND stopped the run, leaving renders-json and documentation unexecuted behind it.
+# Both halves of that are bad.  A precondition the developer's machine does not meet is not
+# evidence about the code, and it must not mask the stages queued after it.
+#
+# This is deliberately a list of names rather than a blanket rule.  Exit 2 from a stage which
+# has not opted in stays a failure, because for every other check here a non-zero is a verdict
+# and an unexplained one is the kind of thing that should stop the suite.
+COULD_NOT_RUN = 2
+SKIPPABLE = frozenset(('reload-cleanup',))
+
 NOT_A_SUITE: dict[str, str] = {
     # empty on purpose.  tests/performance looked like a timing suite and is not: all 52 of
     # its assertions are counts and equalities, the wall clock it samples is reported and
@@ -522,8 +542,11 @@ if _unordered or _unknown:
     )
 
 
-def run_test(name: str, verbose: bool = False) -> tuple[bool, str, str]:
-    """Run a test by name, return (success, stdout, stderr)"""
+def run_test(name: str, verbose: bool = False) -> tuple[str, str, str]:
+    """Run a test by name, return (outcome, stdout, stderr).
+
+    Outcome is PASSED, FAILED or SKIPPED.  See SKIPPABLE for what may skip and why.
+    """
     cmd = TEST_COMMANDS[name]
 
     if isinstance(cmd, list):
@@ -538,7 +561,7 @@ def run_test(name: str, verbose: bool = False) -> tuple[bool, str, str]:
             all_stderr.append(stderr)
             # Don't fail on setup commands (like killall)
             if returncode != 0 and c == cmd[-1]:
-                return False, '\n'.join(all_stdout), '\n'.join(all_stderr)
+                return FAILED, '\n'.join(all_stdout), '\n'.join(all_stderr)
         stdout = '\n'.join(all_stdout)
         stderr = '\n'.join(all_stderr)
         returncode = 0
@@ -547,13 +570,16 @@ def run_test(name: str, verbose: bool = False) -> tuple[bool, str, str]:
             print(f'{Colors.DIM}  $ {cmd}{Colors.RESET}')
         returncode, stdout, stderr = run_command(cmd)
 
+    if returncode == COULD_NOT_RUN and name in SKIPPABLE:
+        return SKIPPED, stdout, stderr
+
     # Special case: functional tests need 100% pass rate check
     if name in ('encoding', 'api', 'cli') and returncode == 0:
         pass_rate_match = re.search(r'100(?:\.\d+)?%', stdout)
         if not pass_rate_match:
-            return False, stdout, stderr
+            return FAILED, stdout, stderr
 
-    return returncode == 0, stdout, stderr
+    return PASSED if returncode == 0 else FAILED, stdout, stderr
 
 
 def list_tests(cache: dict[str, list[float]], verbose: bool = False) -> None:
@@ -601,7 +627,7 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
     """Run selected tests with progress output. Returns exit code."""
     start_time = time.time()
     total = len(test_indices)
-    results: list[tuple[str, bool, float, float]] = []  # (name, success, elapsed, expected)
+    results: list[tuple[str, str, float, float]] = []  # (name, outcome, elapsed, expected)
     cumulative_time = 0.0  # Track time spent on previous tests
 
     for run_num, test_idx in enumerate(test_indices, 1):
@@ -623,25 +649,37 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
             print(f'{progress} {test_name} {eta_str} ... ', end='', flush=True)
 
         test_start = time.time()
-        success, stdout, stderr = run_test(name, verbose=verbose)
+        outcome, stdout, stderr = run_test(name, verbose=verbose)
         elapsed = time.time() - test_start
 
         # Update cumulative time with actual elapsed
         cumulative_time += elapsed
 
-        # Record timing and result
-        record_time(cache, name, elapsed)
-        results.append((name, success, elapsed, expected))
+        # Record timing and result.  A skipped stage tells us nothing about how long it
+        # takes, so it must not poison the ETA the next run prints.
+        if outcome != SKIPPED:
+            record_time(cache, name, elapsed)
+        results.append((name, outcome, elapsed, expected))
 
         # Show result with colored time (actual vs expected)
         elapsed_str = f'{Colors.BLUE}{format_time(elapsed)}{Colors.RESET}'
         expected_str = f'{Colors.DIM}(~{format_time(expected)}){Colors.RESET}'
-        if success:
+        if outcome == PASSED:
             print(f'{Colors.GREEN}✓{Colors.RESET} {elapsed_str} {expected_str}')
+        elif outcome == SKIPPED:
+            print(f'{Colors.YELLOW}⊘{Colors.RESET} {elapsed_str} {expected_str}')
         else:
             print(f'{Colors.RED}✗{Colors.RESET} {elapsed_str} {expected_str}')
 
-        if not success:
+        if outcome == SKIPPED:
+            # Say why here rather than only in the summary: a stage which did not run is
+            # the one thing in this output a reader must not scroll past unnoticed.
+            print(f'{Colors.YELLOW}  SKIPPED: {desc}{Colors.RESET}')
+            reason = (stdout or stderr).strip()
+            if reason:
+                print(f'{Colors.DIM}  {reason}{Colors.RESET}')
+
+        if outcome == FAILED:
             # Show failure details
             print(f'\n{Colors.RED}{Colors.BOLD}FAILED: {desc}{Colors.RESET}')
             if stdout:
@@ -662,8 +700,13 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
         print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
         print(f'{Colors.BOLD}{Colors.WHITE}  Test Summary{Colors.RESET}')
         print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
-        for name, success, elapsed, expected in results:
-            status = f'{Colors.GREEN}✓{Colors.RESET}' if success else f'{Colors.RED}✗{Colors.RESET}'
+        for name, outcome, elapsed, expected in results:
+            if outcome == PASSED:
+                status = f'{Colors.GREEN}✓{Colors.RESET}'
+            elif outcome == SKIPPED:
+                status = f'{Colors.YELLOW}⊘{Colors.RESET}'
+            else:
+                status = f'{Colors.RED}✗{Colors.RESET}'
             time_str = f'{Colors.BLUE}{format_time(elapsed):>6}{Colors.RESET}'
             exp_str = f'{Colors.DIM}(~{format_time(expected):>5}){Colors.RESET}'
             print(f'  {status} {name:14} {time_str} {exp_str}')
@@ -674,7 +717,17 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
         print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
         print()
 
-    print(f'{Colors.GREEN}{Colors.BOLD}✓ All {total} tests passed in {format_time(total_elapsed)}{Colors.RESET}')
+    # "All N passed" while one of them never ran is the same lie renders-json told for months,
+    # so the skipped ones are named here rather than counted into the green.
+    skipped = [name for name, outcome, _, _ in results if outcome == SKIPPED]
+    passed = total - len(skipped)
+    if skipped:
+        print(
+            f'{Colors.GREEN}{Colors.BOLD}✓ {passed}/{total} tests passed in {format_time(total_elapsed)}{Colors.RESET}'
+            f'{Colors.YELLOW}, skipped: {", ".join(skipped)}{Colors.RESET}'
+        )
+    else:
+        print(f'{Colors.GREEN}{Colors.BOLD}✓ All {total} tests passed in {format_time(total_elapsed)}{Colors.RESET}')
     return 0
 
 
