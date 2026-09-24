@@ -188,7 +188,7 @@ It is not capped, and that is deliberate. Nothing here is peer driven: the size 
 configuration and the API, and it is now bounded by the paths actually held back rather than
 by every path in the family. Capping it would mean dropping a path the operator asked for and
 being unable to promote it later, which is the "a wrong route is worse than no route" trade
-Tiger Style tells us not to make.
+Exa Style tells us not to make.
 
 Revisit if a limit is ever driven by something the peer controls.
 

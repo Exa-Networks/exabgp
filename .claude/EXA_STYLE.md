@@ -1,13 +1,22 @@
-# TIGER STYLE (Python, ExaBGP)
+# EXA STYLE (Python, ExaBGP)
 
 **Status:** MANDATORY. Applies to every line you write or touch in this repository.
 **When to read:** Before writing code. Again before opening a commit.
-**Enforced by:** `./qa/bin/check_tiger_style`, run as the `tiger-style` step of `./qa/bin/test_everything`.
+**Enforced by:** `./qa/bin/check_exa_style`, run as the `exa-style` step of `./qa/bin/test_everything`.
 
 Adapted from [TigerBeetle's TIGER_STYLE](https://github.com/tigerbeetle/tigerbeetle/blob/main/docs/TIGER_STYLE.md),
 which in turn adapts NASA's *Power of Ten: Rules for Developing Safety Critical Code*. The rules below
 are the Python and ExaBGP translation, not a copy: Python has no compiler to lean on, no static
 allocation, and `assert` disappears under `-O`, so several rules land differently.
+
+This file was called TIGER_STYLE.md until it had diverged far enough that the name was
+claiming more than it should. TigerBeetle is written in Zig, where a good part of the
+original standard is enforced by the compiler and by static allocation. Here none of it is,
+and what replaces it is different in kind rather than in detail: `Notify` at the decode
+boundary, `assert` for our invariants only because `-O` deletes it, a ratcheting checker
+instead of a type system. Keeping the borrowed name invited a reader to go and check the
+original for the answer, where the answer had stopped being the same. The credit above
+stays because the debt is real; the name is ours because the rules now are.
 
 ---
 
@@ -234,7 +243,7 @@ why, not left as a silent gap.
 
 ## 5. Enforcement
 
-Mechanical, in `./qa/bin/check_tiger_style` (part of `./qa/bin/test_everything`):
+Mechanical, in `./qa/bin/check_exa_style` (part of `./qa/bin/test_everything`):
 
 | Check | Rule | How it fails |
 |---|---|---|
@@ -246,8 +255,8 @@ Mechanical, in `./qa/bin/check_tiger_style` (part of `./qa/bin/test_everything`)
 Assertions about our own state are not counted: they are the point of rule 1.2, not a violation of
 it. Only the ones which validate the bytes a function was handed are.
 
-The baseline lives in `qa/tiger_style.json` and only ever goes **down**. Lower it with
-`./qa/bin/check_tiger_style --update-baseline` after removing violations, and say so in the commit.
+The baseline lives in `qa/exa_style.json` and only ever goes **down**. Lower it with
+`./qa/bin/check_exa_style --update-baseline` after removing violations, and say so in the commit.
 
 Everything else is a review responsibility.
 
@@ -272,7 +281,7 @@ require it to fail.** Revert the fix, neuter the comparison, delete the check, a
 If it stays green, it is measuring nothing and the number is worse than useless, because it
 reads as coverage.
 
-This applies to a test as much as to a sweep. `./qa/bin/check_tiger_style` cannot tell you
+This applies to a test as much as to a sweep. `./qa/bin/check_exa_style` cannot tell you
 whether a test asserts anything: three tests guarding the API command size cap read the
 source file as *text* and asserted the constant's name appeared in it, and disabling all
 three comparisons left the whole suite green.
@@ -309,7 +318,7 @@ test are listed in `[tool.mutmut]` in `pyproject.toml`: add the module you are h
 - [ ] Names carry their units, booleans are positive, no new abbreviations
 - [ ] Comments explain why, not what
 - [ ] The fix has a test that fails without it
-- [ ] `./qa/bin/test_everything` passes, including `tiger-style`
+- [ ] `./qa/bin/test_everything` passes, including `exa-style`
 
 ---
 

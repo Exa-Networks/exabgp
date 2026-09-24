@@ -23,7 +23,7 @@ zero times, and every factory in src records the size.  So it was a landmine rat
 fallback, waiting for a factory which forgot, and the failure it was covering for is a bug
 in construction rather than anything a peer sends.  It raises now.
 
-TIGER_STYLE.md 4 cites this function as its example of an invariant written where the code
+EXA_STYLE.md 4 cites this function as its example of an invariant written where the code
 checks it.  The invariant is now the whole of it.
 """
 

@@ -166,7 +166,7 @@ they all deliver whole messages promptly.
    within the deadline and goes on to service keepalives. Otherwise a fix which simply
    blocks forever passes tests 1 and 2.
 5. **Break it to prove it measures.** Before calling any of this green: revert the fix and
-   require tests 1 and 2 to go red. TIGER_STYLE §5.
+   require tests 1 and 2 to go red. EXA_STYLE §5.
 
 Run `./qa/bin/functional encoding --stress 10` afterwards to exercise the
 intermittent timing class repeatedly.
@@ -243,7 +243,7 @@ path always has one.
 `_reader_async` asserts that a resumed read asks for the size it was interrupted at, which
 holds only if one read is in flight per `Connection`. ExaBGP does not run with `-O`, so a
 wrong assumption here is an `AssertionError` in the read path — the escape class
-TIGER_STYLE 1.1 exists to prevent. So it was enumerated rather than assumed:
+EXA_STYLE 1.1 exists to prevent. So it was enumerated rather than assumed:
 
 - `reader_async` has exactly one caller, `Protocol.read_message` (`protocol.py:218`).
 - `read_message` has three: `read_open` (`protocol.py:332`), `read_keepalive`
@@ -275,7 +275,7 @@ confirmed to go red with the call removed.
 | Implement | ✅ |
 | Break-it check | ✅ all three parts neutered separately — buffer resume, header retention, and the clear on close — each turned its own tests red |
 | Verify the single-reader invariant | ✅ enumerated, see above |
-| Full gate | ✅ ruff, 5165 unit+fuzz, tiger-style, 22/22 decoding, compat_gate 0 regressions |
+| Full gate | ✅ ruff, 5165 unit+fuzz, exa-style, 22/22 decoding, compat_gate 0 regressions |
 | Stress run | ✅ 120/120 — tests 5, D, S, 0, F, R at 20 runs each, stddev ≤ 0.06s. The earlier "blocked" claim was too broad: only the 9 pipe-blocked tests cannot stress; the other 31 exercise the same read path (every session reads through it). The 9 become accessible once the runner's pipe handling is fixed (plan-review-findings-remainder.md Task 1). |
 
 ## Failures

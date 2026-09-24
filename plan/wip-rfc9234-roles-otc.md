@@ -2,7 +2,7 @@
 
 **Current status:** Reviewed Role/OTC implementation, tests and documentation.
 Non-OTC review corrections are retained as 17 independent preceding commits.
-Existing code structure is retained; structural/Tiger Style cleanup remains a separate
+Existing code structure is retained; structural/Exa Style cleanup remains a separate
 patch set. This is partial RFC 9234 support without ingress insertion.
 **Last updated:** 2026-09-17.
 **Issue:** [#1346](https://github.com/Exa-Networks/exabgp/issues/1346)
@@ -569,7 +569,7 @@ Specify it as its own change rather than a line in the file table:
   be surprised by it.
 - **What bounds it.** One entry per advertised route, so it is bounded by the adj-rib-out the
   operator already asked for. Say so in the code with a named constant or an assertion tying its
-  size to the route count, per Tiger Style.
+  size to the route count, per Exa Style.
 - **What stays separate.** Desired-route state and advertised state must remain distinguishable:
   a blocked route is still desired, still listed by `show adj-rib out`, and becomes advertisable
   again the moment a replacement carries no OTC.
@@ -1341,7 +1341,7 @@ were stopped. Full end-to-end validation remains blocked on working local hostna
   `4001010040020402015ba0c01106020100010001`, and reconstructed path `( 65537 )`.
 - **20 of the full runner's 24 stages passed:** formatting, lint, mypy, normal Python tests,
   optimized Python tests, config, no-neighbor, encode-decode, parsing, JSON, API encoding,
-  command round-trip, migration, decoding, type-ignore, Tiger Style, test discovery, sweep
+  command round-trip, migration, decoding, type-ignore, Exa Style, test discovery, sweep
   floors, JSON rendering, and documentation.
 - Network/daemon verification remains incomplete: isolated encoding timed out, CLI reported
   **0 passed, 1 timed out**, reload-cleanup reported that the daemon never listened on
@@ -1448,7 +1448,7 @@ The no-role export will remain unchanged rather than updating its expected fixtu
 ### Deferred structural cleanup — separate patch set
 
 **User direction:** Keep the code structure. Do not extract/reorganize existing code merely
-to satisfy Tiger Style as part of the OTC feature. Preserve the established
+to satisfy Exa Style as part of the OTC feature. Preserve the established
 `pack_attribute(self, negotiated, with_default=True)` API. Cleanup must be proposed and
 reviewed separately; no commit has been authorized.
 
@@ -1470,7 +1470,7 @@ applied automatically:
 | `src/exabgp/bgp/message/update/collection.py` | Replaced the existing `messages()` implementation with `_classify_announces()`, `_classify_withdraws()`, `_ipv4_messages()` and `_mp_messages()` | UPDATE serializer refactor; maintain family grouping, withdrawal attributes, fragmentation budgets and emission order |
 | `src/exabgp/bgp/message/update/attribute/collection.py` | Moved the established packing implementation into `_pack_attributes()` behind wrappers | Do not change the established signature or move its body for style compliance in the OTC patch |
 | `src/exabgp/rib/outgoing.py` | Reworked generation/admission loops and shortened comments to meet the function-length ceiling | Separate any cleanup from required OTC refusal, withdrawal and replay bookkeeping |
-| `qa/tiger_style.json` | Lowered `long_function` from 91 to 78 and `silent_except` from 100 to 90 | Ratchet only after independently accepted cleanup; these numbers describe the broad intermediate refactor |
+| `qa/exa_style.json` | Lowered `long_function` from 91 to 78 and `silent_except` from 100 to 90 | Ratchet only after independently accepted cleanup; these numbers describe the broad intermediate refactor |
 
 #### Adjacent behavior changes are not cleanup
 
@@ -1512,7 +1512,7 @@ For a future cleanup patch set:
 1. Start from the accepted, structurally preserved OTC implementation.
 2. Select one of the independent refactors above; establish its behavioral baseline first.
 3. Make no API, wire-format, packet-ordering or policy changes in the cleanup commit.
-4. Re-run the affected regressions and complete suite, then update the Tiger Style ratchet.
+4. Re-run the affected regressions and complete suite, then update the Exa Style ratchet.
 5. Obtain explicit approval before committing.
 
 **Resume point:** Review the structurally preserved OTC patch. Revisit the deferred refactors
@@ -1525,12 +1525,12 @@ where family context is available. Existing serializer loops remain in place.
 The small IPv4 multicast classification correction remains necessary for the feature:
 multicast must not share the native unicast OTC context. Already emitted native NLRI
 is cleared before entering the next family's context. These are explicit wire-correctness
-changes, not Tiger Style cleanup.
+changes, not Exa Style cleanup.
 
 Removed the CLI, schema, configuration-export, neighbor-rendering, protocol-decoding,
 peer-loop and JSON-grouping extractions listed above. The reload regression now enters
 the existing peer loop rather than calling a newly extracted implementation helper.
-Restored the existing Tiger Style ceilings (91 long functions, 100 silent excepts).
+Restored the existing Exa Style ceilings (91 long functions, 100 silent excepts).
 No cleanup commit or baseline-ratcheting change is part of this patch.
 
 After structure restoration: **296 focused tests passed**, **364 API encode vectors passed**,
@@ -1541,7 +1541,7 @@ Final verification after all restoration, including parser registration and nego
 **all 24 stages passed in 6m0s**, process exit 0. This ran `qa/bin/test_everything` through
 the same in-memory safety wrapper used earlier: all stages enabled, only the encoding
 stage's blanket `killall -9 python` pre-step omitted. No test stage was skipped.
-Tiger Style passed with the original ceilings unchanged (89 long functions against 91;
+Exa Style passed with the original ceilings unchanged (89 long functions against 91;
 100 silent excepts against 100). No commits were made.
 
 ### Critical review and correction pass
@@ -1605,7 +1605,7 @@ Corrections and focused verification:
 - The requested CLI sentinel check is `type(... ) is OTCSelf`, not `isinstance`.
 
 The combined focused selection now reports **342 passed**. Ruff passes for source and
-all added/modified review regressions; mypy passes **392 source files**. Tiger Style
+all added/modified review regressions; mypy passes **392 source files**. Exa Style
 passes with the existing ceilings unchanged. The configured CLI smoke check emits and
 decodes OTC **65538** for `local-as auto; peer-as 65538;`, and returns **exit 1** with
 `configuration error: OTC self requires a resolved local ASN` when both ASNs are auto.
@@ -1626,7 +1626,7 @@ Separate non-OTC review scope (already applied, not committed):
    do not retain stale configuration.
 
 The complete 24-stage suite is running after these corrections, with every stage enabled
-and only the unsafe blanket Python-process kill omitted. No Tiger Style cleanup,
+and only the unsafe blanket Python-process kill omitted. No Exa Style cleanup,
 baseline ratcheting, commit or push is part of this review.
 
 Additional validation findings:
@@ -1676,13 +1676,13 @@ Final verification after every review correction and fixture update:
   `./qa/bin/test_api_encode --self-check`; the figures above come from that real command.
 - Exclusive complete run: **All 24 tests passed in 6m2s**, process **exit 0**.
   Every stage ran, including ordinary/optimized units, functional API/CLI/encoding,
-  reload cleanup, Tiger Style and documentation. The only safety change remained
+  reload cleanup, Exa Style and documentation. The only safety change remained
   omission of the blanket Python-process kill before encoding.
 
 **Current resume point (supersedes all historical resume points):** review the six
 non-OTC correction groups listed above, including the related `qa/api/api-flow.ci`
 expectation deletion, and decide how to separate them from the OTC feature for commits.
-No remaining test blocker. No commit or push was made. Structural cleanup and Tiger
+No remaining test blocker. No commit or push was made. Structural cleanup and Exa
 Style ratcheting remain explicitly deferred. The temporary suite wrapper and smoke
 configurations are removed; diagnostic run logs remain under `/tmp/otc-review-api-v/`.
 
@@ -1763,7 +1763,7 @@ The throwaway suite runner was removed, and extraction source snapshots were arc
 - Continue with the uncommitted Role/OTC implementation, tests, documentation and plan.
 - The original staged plan rename is preserved. No commits were pushed.
 - Standalone non-OTC and combined OTC trees both passed all 24 validation stages.
-- Ingress insertion remains outside this partial implementation; structural/Tiger Style
+- Ingress insertion remains outside this partial implementation; structural/Exa Style
   cleanup remains the separately deferred patch set. No new blockers were found.
 
 ### Explicit Role absence — 2026-09-16
@@ -1802,5 +1802,5 @@ remained enabled; only the blanket process-kill pre-step was omitted. No new fai
 or blockers were found. No push was requested.
 
 Resume after this snapshot: preserve the partial RFC 9234 boundary. Helpers still own
-ingress OTC insertion and ingress ineligible-route exclusion. Structural/Tiger Style
+ingress OTC insertion and ingress ineligible-route exclusion. Structural/Exa Style
 cleanup remains a separate patch set rather than part of this feature commit.

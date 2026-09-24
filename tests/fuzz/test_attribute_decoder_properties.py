@@ -21,7 +21,7 @@ the object is a test of the test; asking the collection is the path `Processes.m
 takes, which is where #1426 died.
 
 Note what a sweep over `st.binary()` alone would have done here, because it is the trap
-TIGER_STYLE section 5 warns about.  An extended community is looked up by its first two
+EXA_STYLE section 5 warns about.  An extended community is looked up by its first two
 bytes, so random bytes land on a registered subtype roughly once in sixty five thousand
 draws: two hundred examples per code would have swept the traffic-rate decoder zero times
 and reported a clean run.  The community strategies below therefore *build* a header for

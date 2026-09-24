@@ -224,7 +224,7 @@ class LinkState(Attribute):
         """Decode the TLVs, so malformed ones are refused here rather than in json()."""
         instance = cls(data)
         # a statement, never an assertion: -O deletes an assert, and with it the whole
-        # boundary this commit exists to create (TIGER_STYLE.md 1.2, nothing may depend on
+        # boundary this commit exists to create (EXA_STYLE.md 1.2, nothing may depend on
         # an assertion running). Reading the property is what parses.
         instance.ls_attrs
         return instance

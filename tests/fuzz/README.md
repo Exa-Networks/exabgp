@@ -158,7 +158,7 @@ question, whether the tests survive strange code:
 ```
 
 It edits the module under test and reports the edits no test noticed. See
-`.claude/TIGER_STYLE.md` for what to do with a survivor.
+`.claude/EXA_STYLE.md` for what to do with a survivor.
 
 ## Adding New Fuzz Tests
 

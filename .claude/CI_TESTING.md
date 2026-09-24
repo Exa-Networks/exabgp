@@ -20,8 +20,8 @@ env exabgp_log_enable=false uv run pytest ./tests/unit/
 ./qa/bin/test_api_encode              # cmd→raw verification
 ./qa/bin/test_api_encode --self-check # raw→cmd→raw round-trip
 ./qa/bin/test_json                    # JSON decode regression tests
-./qa/bin/check_tiger_style            # tiger style checks (.claude/TIGER_STYLE.md)
-./qa/bin/check_tiger_style --show     # list every violation it counts
+./qa/bin/check_exa_style            # exa style checks (.claude/EXA_STYLE.md)
+./qa/bin/check_exa_style --show     # list every violation it counts
 ./qa/bin/mutmut_run <module>          # mutation testing, slow, not part of test_everything
 ./qa/bin/fuzz_hunt                    # deeper property tests with a fresh seed, slow
 ```
@@ -30,7 +30,7 @@ env exabgp_log_enable=false uv run pytest ./tests/unit/
 
 ## Pre-Commit Checklist
 
-- [ ] `./qa/bin/test_everything` passes all 19 tests (including `tiger-style`)
+- [ ] `./qa/bin/test_everything` passes all 19 tests (including `exa-style`)
 - [ ] `git status` reviewed
 - [ ] User approval
 

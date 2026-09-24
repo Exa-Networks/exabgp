@@ -48,7 +48,7 @@ For each significant change, verify:
 - Is it documented?
 - Does it handle errors gracefully?
 
-### Step 3.5: Tiger style (MANDATORY, see `.claude/TIGER_STYLE.md`)
+### Step 3.5: Exa style (MANDATORY, see `.claude/EXA_STYLE.md`)
 
 Every change is reviewed against the safety rules:
 
@@ -96,6 +96,6 @@ This is about understanding the code and catching semantic issues.
 ## Reference
 
 For coding standards details, see:
-- `.claude/TIGER_STYLE.md`
+- `.claude/EXA_STYLE.md`
 - `.claude/CODING_STANDARDS.md`
 - `.claude/ESSENTIAL_PROTOCOLS.md`

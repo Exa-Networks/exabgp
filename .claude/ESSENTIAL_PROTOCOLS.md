@@ -305,7 +305,7 @@ uv run ruff format src && uv run ruff check src  # Must pass
 
 ---
 
-### 4.5. Tiger Style (MANDATORY) 🐯
+### 4.5. Exa Style (MANDATORY) 🐯
 
 **Core principle:** Safety first, then performance, then developer experience.
 
@@ -319,9 +319,9 @@ uv run ruff format src && uv run ruff check src  # Must pass
 - Units in names (`size_bytes`, `timeout_ms`, `_at`), positive booleans, no abbreviations
 - A bug fix arrives with the test that fails without it
 
-**Enforced by:** `./qa/bin/check_tiger_style` (the `tiger-style` step of `test_everything`)
+**Enforced by:** `./qa/bin/check_exa_style` (the `exa-style` step of `test_everything`)
 
-**See:** TIGER_STYLE.md for the full standard and the review checklist
+**See:** EXA_STYLE.md for the full standard and the review checklist
 
 ---
 
@@ -369,16 +369,16 @@ When fixing bugs or refactoring code:
 
 ### 1. Read this file (you just did) ✅
 
-### 2. Read CODING_STANDARDS.md and TIGER_STYLE.md (MANDATORY every session)
+### 2. Read CODING_STANDARDS.md and EXA_STYLE.md (MANDATORY every session)
 
 ```bash
 # Read .claude/CODING_STANDARDS.md
-# Read .claude/TIGER_STYLE.md
+# Read .claude/EXA_STYLE.md
 ```
 
 CODING_STANDARDS.md contains Python style requirements, type annotation rules, and project-specific conventions that MUST be followed.
 
-TIGER_STYLE.md contains the safety rules: bounds, assertions, error handling, function size, naming and commit hygiene. Both are mandatory.
+EXA_STYLE.md contains the safety rules: bounds, assertions, error handling, function size, naming and commit hygiene. Both are mandatory.
 
 ### 3. Check git state
 

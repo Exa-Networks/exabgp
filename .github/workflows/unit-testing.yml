@@ -71,9 +71,9 @@ jobs:
 
       # The ratchets: no bare except, no assert on wire data, and the long function and
       # silent except counts only ever go down.
-      - name: tiger style
+      - name: exa style
         run: |
-          uv run ./qa/bin/check_tiger_style
+          uv run ./qa/bin/check_exa_style
 
       # A test file pytest does not collect reports nothing and looks like coverage.
       # tests/unit/nlri_tests.py held eighteen of them, twelve rotted, for a long time.

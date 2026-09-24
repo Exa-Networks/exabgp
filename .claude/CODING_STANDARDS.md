@@ -1,7 +1,7 @@
 # ExaBGP Coding Standards
 
-**Read `.claude/TIGER_STYLE.md` alongside this file.** It is mandatory and it comes first when the
-two seem to disagree: this file says how to write Python here, TIGER_STYLE.md says what the code has
+**Read `.claude/EXA_STYLE.md` alongside this file.** It is mandatory and it comes first when the
+two seem to disagree: this file says how to write Python here, EXA_STYLE.md says what the code has
 to guarantee.
 
 ---

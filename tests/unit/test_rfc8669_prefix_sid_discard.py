@@ -16,7 +16,7 @@ signals malformed input escaped AttributeCollection.parse:
     untyped, reached the catch-all in reactor/protocol.py, and came back as
     Notify(1, 0) "can not decode update message" -- a Message Header Error reported for an
     attribute problem, which tells the peer something that is not true about its own
-    framing.  TIGER_STYLE 1.1 is the general rule this breaks: peer bytes produce Notify,
+    framing.  EXA_STYLE 1.1 is the general rule this breaks: peer bytes produce Notify,
     never a Python exception.
 
 Both are fixed the same way as LinkState, which had the identical shape and cites RFC 7752
@@ -126,7 +126,7 @@ def test_a_malformed_prefix_sid_is_discarded_and_the_route_survives(tlv_type: in
 
 @pytest.mark.parametrize('tlv_type,length,value', MALFORMED_TLVS, ids=MALFORMED_IDS)
 def test_nothing_untyped_escapes_the_prefix_sid_decoder(tlv_type: int, length: int, value: bytes) -> None:
-    """TIGER_STYLE 1.1: what the peer sends produces Notify, never a Python exception.
+    """EXA_STYLE 1.1: what the peer sends produces Notify, never a Python exception.
 
     Asserted against the attribute decoder directly rather than through the UPDATE, because
     DISCARD makes the parser swallow both a Notify and a ValueError, so the UPDATE level

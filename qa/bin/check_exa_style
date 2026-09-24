@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Check the mechanical part of TIGER STYLE (.claude/TIGER_STYLE.md).
+Check the mechanical part of EXA STYLE (.claude/EXA_STYLE.md).
 
 Four rules can be checked without reading the code:
 
@@ -13,14 +13,14 @@ bare_except and input_assert must be zero: the first is never right, and the sec
 validation of peer data written with a statement `-O` deletes. Assertions about our own
 invariants are wanted, so only the ones which test a wire data parameter are counted.
 
-long_function and silent_except are ratcheted: the counts in qa/tiger_style.json are a
+long_function and silent_except are ratcheted: the counts in qa/exa_style.json are a
 ceiling which only ever goes down, so the tree can carry the violations it already has
 while no new one gets in.
 
 Usage:
-    ./qa/bin/check_tiger_style                    # check, fail if a count went up
-    ./qa/bin/check_tiger_style --show             # list every violation
-    ./qa/bin/check_tiger_style --update-baseline  # record the current counts
+    ./qa/bin/check_exa_style                    # check, fail if a count went up
+    ./qa/bin/check_exa_style --show             # list every violation
+    ./qa/bin/check_exa_style --update-baseline  # record the current counts
 """
 
 from __future__ import annotations
@@ -33,9 +33,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent
 SRC_DIR = ROOT / 'src' / 'exabgp'
-BASELINE_FILE = ROOT / 'qa' / 'tiger_style.json'
+BASELINE_FILE = ROOT / 'qa' / 'exa_style.json'
 
-# a function longer than this does more than one thing (TIGER_STYLE 1.5)
+# a function longer than this does more than one thing (EXA_STYLE 1.5)
 MAX_FUNCTION_LINES = 70
 
 # a parameter with one of these names holds bytes which came from outside the process
@@ -240,7 +240,7 @@ def report(violations: list[Violation], rule: str) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description='check the mechanical part of TIGER STYLE')
+    parser = argparse.ArgumentParser(description='check the mechanical part of EXA STYLE')
     parser.add_argument('--show', action='store_true', help='list every violation')
     parser.add_argument('--update-baseline', action='store_true', help='record the current counts')
     options = parser.parse_args()
@@ -275,7 +275,7 @@ def main() -> int:
                 report(violations, rule)
 
     if failed:
-        print('\nsee .claude/TIGER_STYLE.md for what each rule asks for')
+        print('\nsee .claude/EXA_STYLE.md for what each rule asks for')
         return 1
 
     if improved:

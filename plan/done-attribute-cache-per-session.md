@@ -104,7 +104,7 @@ and the same four tests went red. Then removed.
 | ruff format / check | clean |
 | mypy --strict | 388 files, no issues |
 | unit + fuzz | 5174 passed, 6 skipped |
-| tiger-style | bare_except 0, input_assert 0, long_function 91, silent_except 100 |
+| exa-style | bare_except 0, input_assert 0, long_function 91, silent_except 100 |
 | compat_gate | 10226 inputs, 0 regressions |
 | functional decoding | 22/22 |
 | configuration validate | exit 0 |
@@ -130,7 +130,7 @@ None.
 Implemented and verified. Nothing outstanding for this finding.
 
 One thing deliberately not done: the cache has no measured benefit recorded anywhere.
-TIGER_STYLE says a performance claim without a number is an opinion, and the number for this
+EXA_STYLE says a performance claim without a number is an opinion, and the number for this
 cache has never been taken. Scoping it per session preserves whatever it is worth without
 needing that number; deciding whether it earns its place at all needs a benchmark and is a
 separate question.

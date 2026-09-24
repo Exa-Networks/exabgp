@@ -7,7 +7,7 @@ line no JSON parser accepts, or makes the encoder raise on its way there.
 
 Both matter to the same consumer: a DDoS mitigation or FlowSpec controller reading the
 stream is equally broken by an injected member, by a line it cannot parse, and by a
-session that died mid-write.  TIGER_STYLE.md 1.1: validate once, at the boundary, and
+session that died mid-write.  EXA_STYLE.md 1.1: validate once, at the boundary, and
 what decoded must survive json(), str() and index().
 """
 
@@ -73,7 +73,7 @@ def test_flow_truncated_before_its_end_of_list_is_refused(family: tuple[AFI, SAF
 
     _parse_rules ended in `except (IndexError, KeyError): pass`, so a truncated flow was
     accepted as a shorter route than the peer announced.  A route nobody sent is worse
-    than no route at all: TIGER_STYLE.md 1.1.
+    than no route at all: EXA_STYLE.md 1.1.
     """
     afi, safi = family
     # source port (component 5): the operator asks for two bytes and does not end the list,

@@ -6,7 +6,7 @@ found that nothing exercised pack_nlri with add-path negotiated: replacing
 did turning the NOPATH concatenation into a subtraction, which cannot even run.
 
 pack_nlri decides on two independent things, what the session negotiated and what the
-stored bytes already carry, so there are four cases and all four are here. TIGER_STYLE 1.1:
+stored bytes already carry, so there are four cases and all four are here. EXA_STYLE 1.1:
 what a decoder accepts, it must be able to re-encode.
 """
 

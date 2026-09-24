@@ -281,7 +281,7 @@ class BGPLS(NLRI):
 
         A class with no lazy descriptors has nothing to do.  A class with them overrides
         this and touches its own parse, so the Notify comes out of unpack_nlri and reaches
-        the peer as a NOTIFICATION: TIGER_STYLE.md 1.1, validate once, at the boundary.
+        the peer as a NOTIFICATION: EXA_STYLE.md 1.1, validate once, at the boundary.
         """
 
     def _raw(self) -> str:

@@ -100,7 +100,7 @@ class SrGb:
         This check is here rather than left to __init__ because the two callers need
         different answers.  __init__ also serves make_srgb, where a bad payload is our own
         programming error and ValueError is right.  Here the bytes came off the wire, and
-        TIGER_STYLE 1.1 requires a Notify: the ValueError this used to raise escaped
+        EXA_STYLE 1.1 requires a Notify: the ValueError this used to raise escaped
         Update.unpack_message untyped and the catch-all in reactor/protocol.py turned it
         into Notify(1, 0) "can not decode update message", telling the peer its message
         framing was wrong when the fault was in one attribute.

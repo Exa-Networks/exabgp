@@ -218,7 +218,7 @@ def test_a_whole_message_delivered_promptly_still_reads(pair: object) -> None:
 # --- the forgetting half of the fix ----------------------------------------------------
 #
 # Resuming is only safe because closing forgets. Without these the clearing path is in the
-# "it was never run" category that TIGER_STYLE section 5 warns about, and a fix which
+# "it was never run" category that EXA_STYLE section 5 warns about, and a fix which
 # resumed onto a previous session's bytes would pass every test above.
 
 

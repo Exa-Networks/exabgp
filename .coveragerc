@@ -10,7 +10,7 @@
 #     in exclude_lines    coverage structurally could not tell you whether one ran
 #
 # The percentage went down when these were fixed.  That is the point: it now counts the
-# code TIGER_STYLE.md 1.1 and 1.4 are about.
+# code EXA_STYLE.md 1.1 and 1.4 are about.
 
 [run]
 branch = True

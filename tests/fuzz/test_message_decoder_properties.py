@@ -1,7 +1,7 @@
 """Property based tests covering every registered capability and attribute decoder.
 
 The NLRI registry is covered by test_nlri_decoder_properties.py.  These tests hold the
-other two registries a peer can reach to the same two rules from TIGER_STYLE.md 1.1:
+other two registries a peer can reach to the same two rules from EXA_STYLE.md 1.1:
 
 1. Arbitrary bytes decode or raise Notify.  A raw Python exception out of a decoder
    closes the session with a traceback instead of a NOTIFICATION, and often takes the
@@ -70,7 +70,7 @@ def representations(decoded: object) -> None:
 
     A decoder which validates in json() rather than at the boundary raises from the API
     writer, long after the message was accepted, where nothing treats it as a protocol
-    error.  Validate once, at the boundary: TIGER_STYLE.md 1.1.
+    error.  Validate once, at the boundary: EXA_STYLE.md 1.1.
     """
     json_method = getattr(decoded, 'json', None)
     if callable(json_method):

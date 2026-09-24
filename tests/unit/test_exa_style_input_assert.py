@@ -1,4 +1,4 @@
-"""What qa/bin/check_tiger_style's input_assert rule does, and the two holes it has.
+"""What qa/bin/check_exa_style's input_assert rule does, and the two holes it has.
 
 The rule refuses an `assert` which validates peer bytes, because -O deletes it and the
 check goes with it.  It was rewritten twice in one session and neither rewrite was pinned
@@ -17,13 +17,13 @@ from pathlib import Path
 
 import pytest
 
-GATE = Path(__file__).resolve().parent.parent.parent / 'qa' / 'bin' / 'check_tiger_style'
+GATE = Path(__file__).resolve().parent.parent.parent / 'qa' / 'bin' / 'check_exa_style'
 
 
 def _gate():
     """Import the gate, which has no .py extension because it is run as a command."""
     spec = importlib.util.spec_from_loader(
-        'check_tiger_style', importlib.machinery.SourceFileLoader('check_tiger_style', str(GATE))
+        'check_exa_style', importlib.machinery.SourceFileLoader('check_exa_style', str(GATE))
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

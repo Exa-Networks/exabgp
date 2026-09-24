@@ -178,7 +178,7 @@ class TestMatchNeighbors:
 
 
 def test_group_buffer_refuses_to_grow_past_its_byte_limit(monkeypatch) -> None:
-    """The byte cap is the one TIGER_STYLE 1.3 asks for, and it had no test.
+    """The byte cap is the one EXA_STYLE 1.3 asks for, and it had no test.
 
     Only the command count was tested, so disabling the byte comparison left the whole
     suite green: a peer sending few but enormous commands was bounded by nothing.
