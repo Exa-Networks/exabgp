@@ -155,6 +155,15 @@ class Capabilities(dict[int, Capability]):
         if not neighbor.capability.graceful_restart:
             return
 
+        # The Forwarding State bit below is set for every family, deliberately, although
+        # RFC 4724 4.1 allows it only where forwarding state was preserved and exabgp
+        # forwards nothing. Naming a family here is already the claim that we can preserve
+        # it (section 3: a speaker which cannot names none), and that claim is what makes
+        # the peer hold our routes while we are away, which is the only reason an operator
+        # writes `graceful-restart` in a neighbor. Clearing F while still naming the
+        # families would keep the misleading half and buy only a purge of our routes at
+        # re-establishment, moments before the announcements we send anyway arrive. RFC
+        # 4724 4.1 defers to configuration here, and enabling the capability is it.
         self[Capability.CODE.GRACEFUL_RESTART] = Graceful().set(
             Graceful.RESTART_STATE if restarted else 0x0,
             neighbor.capability.graceful_restart.time,

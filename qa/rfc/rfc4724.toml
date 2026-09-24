@@ -114,12 +114,16 @@ Positive only: the bit is ours to set or not, and no peer input decides it, so t
 meaningful test is the one where we have not restarted and must not claim we have. The
 entry above covers the case where we have.
 
-exabgp does not meet this. Peer._restarted is initialised to the module constant
-FORCE_GRACEFUL, which is True, and nothing clears it for the life of the process except
-Peer.stop(). Every OPEN exabgp sends therefore carries the Restart State bit, including
-the second and every later session of a process which has been up for months and is
-simply reconnecting after a TCP reset. A peer reading that bit will not wait for our
-End-of-RIB before advertising to us. The test beside this entry is xfailed and says so.
+The sentence binds re-establishment, and that is the case exabgp can answer. Peer._restarted
+starts True and is cleared in Peer._establish() once a session with the neighbor has been
+held, so every reconnection after the first session of the process, a TCP reset, a hold
+timer, a peer which itself restarted, leaves the bit clear. Only reestablish(), the
+`restart` command and a reload which changed the neighbor, sets it again.
+
+The first OPEN of a process still claims a restart, and that is deliberate rather than an
+omission: this run may be a restart of an earlier one, in which case 4.1 requires the bit
+and a peer is holding our routes, and nothing on the box distinguishes that from a first
+start. See the comment on FORCE_GRACEFUL in src/exabgp/reactor/peer/peer.py.
 """
 
 [[requirement]]

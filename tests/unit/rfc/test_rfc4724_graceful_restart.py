@@ -11,10 +11,11 @@ The ledger entries these prove are in qa/rfc/rfc4724.toml.
 from __future__ import annotations
 
 from struct import pack
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.asn import ASN
@@ -122,6 +123,24 @@ def eor_payload(afi: AFI, safi: SAFI) -> bytes:
     return EOR(afi, safi).pack_message(Mock())[HEADER_LENGTH:]
 
 
+async def establish(peer: Peer) -> None:
+    """Take a Peer to ESTABLISHED over a protocol which answers but sends nothing.
+
+    The Restart State bit is decided by how many sessions this process has held with the
+    neighbor, so a test about it has to go through the establishment path rather than
+    poke the flag the path sets.
+    """
+    protocol = AsyncMock()
+    protocol.connection = Mock(session=Mock(return_value='test'))
+    protocol.negotiated = Mock(holdtime=HoldTime(180), msg_size=4096)
+    protocol.validate_open = Mock()
+    peer.proto = protocol
+
+    await peer._establish()
+
+    assert peer.fsm == FSM.ESTABLISHED, 'the mocked protocol did not reach ESTABLISHED'
+
+
 # ============================================================ 3 the capability bytes
 
 
@@ -214,27 +233,61 @@ def test_the_restart_state_bit_is_not_set_when_nothing_restarted() -> None:
     assert not graceful.restart_flag & Graceful.RESTART_STATE
 
 
-@pytest.mark.rfc('rfc4724#4.2-restart-state-not-set-unless-restarted')
-@pytest.mark.xfail(
-    strict=True,
-    reason='Peer._restarted is initialised to the module constant FORCE_GRACEFUL, which is True, '
-    'and only Peer.stop() ever clears it. Every OPEN exabgp sends therefore claims a restart, '
-    'including the first of a process which has just started and every reconnection after it.',
-)
-def test_a_speaker_which_has_not_restarted_does_not_claim_it_has() -> None:
-    """The bit tells the peer not to wait for our End-of-RIB before advertising to us.
+@pytest.mark.rfc('rfc4724#4.1-restarting-speaker-sets-restart-state')
+def test_the_first_open_of_a_process_claims_a_restart() -> None:
+    """Deliberate, and the reason FORCE_GRACEFUL exists.
 
-    Claiming it on a session which is merely reconnecting is a claim about this speaker's
-    state that is not true, and it is the peer which acts on it.
+    This run may be a restart of an earlier one, in which case 4.1 requires the bit and a
+    peer is holding our routes; or it may be a first start, in which case 4.2 forbids it.
+    Nothing here can tell which, because exabgp keeps no state between runs. Setting it
+    only asks the peer not to wait for our End-of-RIB, so it is the cheap way to be wrong.
     """
     peer = Peer(neighbour(), Mock())
 
     graceful = our_capabilities(peer.neighbor, peer._restarted)[Capability.CODE.GRACEFUL_RESTART]
 
     assert isinstance(graceful, Graceful)
+    assert graceful.restart_flag & Graceful.RESTART_STATE
+
+
+@pytest.mark.rfc('rfc4724#4.2-restart-state-not-set-unless-restarted')
+@pytest.mark.asyncio
+async def test_a_reconnecting_speaker_does_not_claim_it_has_restarted() -> None:
+    """ "In re-establishing the session" is what 4.2 binds, and that case is knowable.
+
+    Once this process has held a session with a neighbor, everything after it is a
+    reconnection: a TCP reset, a hold timer, a peer which itself restarted. This speaker
+    did not restart, and the bit tells the peer not to wait for our End-of-RIB, so
+    claiming it on every reconnection for the life of the process is a claim about our
+    state which is false and which the peer acts on.
+    """
+    peer = Peer(neighbour(), Mock())
+
+    await establish(peer)
+
+    graceful = our_capabilities(peer.neighbor, peer._restarted)[Capability.CODE.GRACEFUL_RESTART]
+    assert isinstance(graceful, Graceful)
     assert not graceful.restart_flag & Graceful.RESTART_STATE, (
-        'a peer which has never restarted advertised the Restart State bit'
+        'a peer reconnecting within one process advertised the Restart State bit'
     )
+
+
+@pytest.mark.rfc('rfc4724#4.1-restarting-speaker-sets-restart-state')
+@pytest.mark.asyncio
+async def test_an_operator_asking_for_a_restart_gets_the_bit_back() -> None:
+    """reestablish() is the `restart` command and a reload which changed the neighbor.
+
+    The session is torn down and the RIB rebuilt, so the peer is told rather than left to
+    wait on an End-of-RIB for routes it is about to be sent again.
+    """
+    peer = Peer(neighbour(), Mock())
+    await establish(peer)
+
+    peer.reestablish()
+
+    graceful = our_capabilities(peer.neighbor, peer._restarted)[Capability.CODE.GRACEFUL_RESTART]
+    assert isinstance(graceful, Graceful)
+    assert graceful.restart_flag & Graceful.RESTART_STATE
 
 
 # ============================================================ 2 and 4 the End-of-RIB marker
