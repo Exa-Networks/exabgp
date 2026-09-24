@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator, Sequence
+from typing import TYPE_CHECKING, ClassVar, Iterator, Sequence
 
 from exabgp.util.types import Buffer
 
@@ -35,6 +35,13 @@ class Communities(Attribute):
 
     ID = Attribute.CODE.COMMUNITY
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    # RFC 7606 section 7.8: a malformed Community attribute is treat-as-withdraw, not a
+    # session reset.  AttributeCollection.parse honours this flag; without it the Notify
+    # from_packet raises for a length which is not a multiple of four escapes the parser
+    # and drops the adjacency over one badly encoded optional attribute, which is the
+    # failure RFC 7606 exists to remove.  LargeCommunities has carried the flag since it
+    # was added, so this was drift rather than a decision.
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer = b'') -> None:
         """Initialize from packed wire-format bytes.

@@ -17,7 +17,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Iterator, Sequence
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Sequence
 
 from exabgp.util.types import Buffer
 
@@ -48,6 +48,15 @@ class ExtendedCommunitiesBase(Attribute, ABC):
     Defines the common interface for ExtendedCommunities (code 16) and
     ExtendedCommunitiesIPv6 (code 25).
     """
+
+    # RFC 7606 section 7.14 (Extended Community) and 7.15 (IPv6 Address Specific Extended
+    # Community) both say treat-as-withdraw for a malformed attribute, not a session reset.
+    # The flag lives on the base rather than on each subclass because the RFC gives both the
+    # same answer, and a third extended community family added later should inherit it
+    # rather than have to remember it.  Without it the Notify from_packet raises for a
+    # length which is not a whole number of communities escapes AttributeCollection.parse
+    # and drops the adjacency.
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
 
     _packed: Buffer
 

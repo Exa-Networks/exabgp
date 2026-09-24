@@ -16,8 +16,13 @@ on whether debug logging was on.
 Two things were wrong and both are pinned here:
 
 1.  The decoder accepted a rate it could not render.  A non-finite rate is now a
-    `Notify(3, 9)` raised where the UPDATE is decoded, which is what puts a NOTIFICATION
-    on the wire.
+    `Notify(3, 9)` raised where the UPDATE is decoded, rather than a `ValueError` raised
+    from a renderer somewhere downstream.  Raising it at the boundary is the fix; what is
+    then done with it is a separate decision, and RFC 7606 7.14 makes that decision for
+    the extended community attribute.  Since `ExtendedCommunitiesBase` gained
+    TREAT_AS_WITHDRAW the answer is a withdrawn route rather than a NOTIFICATION, so the
+    session survives the peer's bad rate.  The three decoder tests below still assert the
+    Notify directly, because that is the part which must not regress.
 
 2.  `ExtendedCommunities` only checked that the attribute was a multiple of eight bytes.
     The individual communities were decoded by the lazy `communities` property, so a
@@ -39,6 +44,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRatePackets
@@ -138,15 +144,29 @@ def test_a_good_community_beside_a_bad_one_does_not_hide_it() -> None:
         ExtendedCommunities.from_packet(good + bad)
 
 
-def test_the_reported_update_raises_notify_not_value_error() -> None:
+def test_the_reported_update_is_treated_as_a_withdraw_not_a_value_error() -> None:
     """The exact UPDATE from the report, decoded the way the reactor decodes it.
 
-    `Update.unpack_message` raising `Notify` is what lets the peer send a NOTIFICATION.
-    A `ValueError` escaping instead is the reported bug: it reached the reactor's
-    catch-all, which closes the connection silently.
+    The reported bug was a `ValueError` escaping to the reactor's catch-all, which closed
+    the connection silently and with no NOTIFICATION, and did or did not do so depending
+    on whether debug logging had already rendered the UPDATE.  That is what this pins:
+    nothing untyped leaves the decoder, and the outcome does not depend on the log level.
+
+    It was originally pinned as a `Notify`, because at the time a Notify out of the
+    extended community decoder propagated.  ExtendedCommunitiesBase now carries
+    TREAT_AS_WITHDRAW, so RFC 7606 7.14 applies and the same malformed attribute withdraws
+    the route instead of resetting the session.  The boundary has not moved: the bytes are
+    still judged in the decoder, which is what the three tests above assert directly.  Only
+    what the peer is told has changed, from a NOTIFICATION to a withdraw, which is the
+    outcome the RFC names.
     """
-    with pytest.raises(Notify):
-        Update.unpack_message(REPORTED_UPDATE, negotiated()).parse(negotiated())
+    parsed = Update.unpack_message(REPORTED_UPDATE, negotiated()).parse(negotiated())
+
+    assert not parsed.announces, 'a route carrying a rate we cannot render was announced'
+    assert parsed.withdraws, 'RFC 7606 7.14 says treat-as-withdraw, but nothing was withdrawn'
+    assert Attribute.CODE.EXTENDED_COMMUNITY not in parsed.attributes, (
+        'the malformed extended community survived the parse'
+    )
 
 
 @pytest.mark.parametrize(
