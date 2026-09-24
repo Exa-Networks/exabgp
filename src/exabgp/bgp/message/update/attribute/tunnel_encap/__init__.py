@@ -45,6 +45,15 @@ class TunnelEncap(Attribute):
     FLAG: int = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
     CACHING: ClassVar[bool] = True
 
+    # RFC 9012 13 names treat-as-withdraw twice: for a TLV whose final octet is not the
+    # final octet of its final sub-TLV, and for an attribute with no valid TLV or without
+    # the transitive bit.  Declaring neither this nor DISCARD meant the first case let a
+    # Notify(3,1) out of the sub-TLV decoder walk through AttributeCollection.parse and
+    # become a NOTIFICATION, so five bytes from a peer ended the session; and the second
+    # fell to the "should not happen" branch, which drops the attribute and keeps the
+    # route, where the RFC says the route must go.
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
+
     def __init__(self, tunnel_tlvs: list[Any]) -> None:
         self.tunnel_tlvs = tunnel_tlvs
 

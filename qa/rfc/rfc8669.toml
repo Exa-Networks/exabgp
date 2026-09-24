@@ -1,0 +1,240 @@
+# RFC 8669 - Segment Routing Prefix Segment Identifier Extensions for BGP
+# https://www.rfc-editor.org/rfc/rfc8669
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc8669.txt.
+#
+# Two rules in this document are stated without an RFC 2119 keyword and are therefore
+# not recorded as requirements here, only noted:
+#   - section 3.1 "Length: 7, the total length in octets of the value portion of the
+#     TLV" is a field description, not a keyword sentence.  Section 6 is what makes a
+#     non-conforming TLV length malformed, and that is the entry below.
+#   - section 3.2 "Length: The total length in octets of the value portion of the TLV:
+#     2 + (non-zero multiple of 6)" is the same shape.  exabgp enforces both, but under
+#     section 6's authority rather than their own.
+#
+# Most of this document is addressed to a router which allocates MPLS labels and
+# programs a data plane.  exabgp does neither, so the label-allocation half of sections
+# 4 and 5 does not bind it.  The half which does bind it is the decoder: what it accepts,
+# what it refuses, and what it puts back on the wire when it propagates.
+
+rfc = "rfc8669"
+title = "Segment Routing Prefix Segment Identifier Extensions for BGP"
+url = "https://www.rfc-editor.org/rfc/rfc8669"
+
+[[requirement]]
+id = "rfc8669#3-unknown-tlv-ignored-and-propagated"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+For future extensibility, unknown TLVs MUST be ignored and propagated
+unmodified.
+"""
+note = """
+`PrefixSid.unpack_attribute` wraps a TLV type it does not know in `GenericSRId`, which
+keeps the raw value, and the attribute keeps the peer's bytes in `_packed` so
+`pack_attribute` re-emits the whole attribute exactly as it arrived.  The negative side
+is the one which matters: an unknown TLV must not make the attribute malformed, and the
+bytes which come back out must be byte-for-byte what came in, not a re-encoding.
+"""
+
+[[requirement]]
+id = "rfc8669#3.1-reserved-ignored-on-reception"
+section = "3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+RESERVED:  8-bit field.  It MUST be clear on transmission and MUST
+be ignored on reception.
+"""
+note = """
+`SrLabelIndex.make_labelindex` packs the RESERVED octet as zero, and the `labelindex`
+property reads only bytes 3 to 7, so a non-zero RESERVED changes nothing on the way in.
+The negative test is the useful one: a decoder which refused a non-zero RESERVED, or
+which let it bleed into the label index, would fail it.
+"""
+
+[[requirement]]
+id = "rfc8669#3.1-flags-ignored-on-reception"
+section = "3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Flags:  16 bits of flags.  None are defined by this document.  The
+Flags field MUST be clear on transmission and MUST be ignored
+on reception.
+"""
+note = """
+Same shape as RESERVED and enforced by the same code: `make_labelindex` writes zero
+flags, and the decoder never reads bytes 1 to 3 of the value.
+"""
+
+[[requirement]]
+id = "rfc8669#3.1-label-index-must-be-present"
+section = "3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Label-Index TLV MUST be present in the BGP Prefix-SID attribute
+attached to IPv4/IPv6 Labeled Unicast prefixes ([RFC8277]).  It MUST
+be ignored when received for other BGP AFI/SAFI combinations.
+"""
+note = """
+exabgp does not check this, and cannot check it where the attribute is decoded.
+`AttributeCollection.parse` runs over the path attributes of the UPDATE before
+MP_REACH_NLRI has been taken apart, so at the point `PrefixSid.unpack_attribute` runs
+there is no prefix and no AFI/SAFI to compare against.  An attribute carrying only an
+Originator SRGB TLV is accepted and passed to the API for every family.  See the
+matching section 4.1 entry, which is the same shortfall said from the receiver's side.
+Kept at "required" with an xfail test rather than as a gap, so the day the decoder learns
+the family the suite says so.
+"""
+
+[[requirement]]
+id = "rfc8669#3.2-srgb-flags-ignored-on-reception"
+section = "3.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Flags:  16 bits of flags.  None are defined in this document.  The
+Flags field MUST be clear on transmission and MUST be ignored
+on reception.
+"""
+note = """
+`SrGb.srgbs` skips the two flag bytes and walks whole six byte entries, so a non-zero
+Flags field is invisible to everything downstream.  `make_srgb` packs zero.
+"""
+
+[[requirement]]
+id = "rfc8669#3.2-srgb-not-changed-in-propagation"
+section = "3.2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+The Originator SRGB
+TLV MUST NOT be changed during the propagation of the BGP update.
+"""
+note = """
+`PrefixSid.unpack_attribute` keeps the peer's bytes as `original` and `pack_attribute`
+returns them, so nothing exabgp propagates is a re-encoding.  The negative side is a
+concatenated multi-range SRGB, which a decoder that rebuilt the TLV from its parsed
+ranges could reorder or merge without anyone noticing.
+"""
+
+[[requirement]]
+id = "rfc8669#4-ebgp-outside-sr-domain-discard"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A BGP speaker receiving a BGP Prefix-SID attribute from an External
+BGP (EBGP) neighbor residing outside the boundaries of the SR domain
+MUST discard the attribute unless it is configured to accept the
+attribute from the EBGP neighbor.
+"""
+note = """
+"Residing outside the boundaries of the SR domain" is knowledge exabgp does not have and
+has no way to acquire: it has no notion of an SR domain, no domain membership
+configuration, and no data plane whose integrity the boundary is protecting.  Every
+session is therefore one the operator configured to accept the attribute, which is the
+escape clause this sentence itself provides.  What exabgp owes is that the attribute
+reaches the API as it arrived, so the operator can act on it, and that is what is tested.
+"""
+
+[[requirement]]
+id = "rfc8669#4.1-no-label-index-is-invalid"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A BGP Prefix-SID
+attribute received without a Label-Index TLV MUST be considered to be
+"invalid" by the receiving speaker.
+"""
+note = """
+Not implemented.  A Prefix-SID attribute carrying only an Originator SRGB TLV, or no TLV
+exabgp recognises at all, decodes cleanly and reaches the API.  "Invalid" feeds straight
+into section 6, so the consequence is that such an attribute is advertised onwards when
+the RFC says it must not be.  Shown by an xfail test rather than left as a ledger note.  Fixing it needs the attribute decoder to know the family
+of the NLRI the attribute is attached to, which the parse order does not currently
+provide.
+"""
+
+[[requirement]]
+id = "rfc8669#6-malformed-attribute-discard"
+section = "6"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When a BGP speaker receives a BGP UPDATE message containing a
+malformed or invalid BGP Prefix-SID attribute attached to an IPv4/
+IPv6 Labeled Unicast prefix ([RFC8277]), it MUST ignore the received
+BGP Prefix-SID attribute and not advertise it to other BGP peers.  In
+this context, a malformed BGP Prefix-SID attribute is one that cannot
+be parsed due to not meeting the minimum attribute length
+requirement, containing a TLV length that doesn't conform to the
+length constraints for the TLV, or containing a TLV length that would
+extend beyond the end of the attribute (as defined by the attribute
+length).
+"""
+note = """
+`PrefixSid.DISCARD = True` covers two of the three malformed shapes this sentence names:
+a TLV length which does not conform to the TLV's constraints, and a TLV length which
+runs past the end of the attribute, both reach `AttributeCollection.parse` as a `Notify`
+and become an `INTERNAL_DISCARD`.  The third does not.  A Prefix-SID attribute of length
+zero, which is precisely "not meeting the minimum attribute length requirement", is
+caught earlier by the generic `length == 0 and not kls.VALID_ZERO` rule and becomes
+`INTERNAL_TREAT_AS_WITHDRAW`, withdrawing the route the RFC says to keep.  The test for
+that one shape carries xfail; the other three pass.
+"""
+
+[[requirement]]
+id = "rfc8669#6-duplicate-attribute-first-wins"
+section = "6"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+As per [RFC7606], if the BGP Prefix-SID attribute appears more than
+once in an UPDATE message, all the occurrences of the attribute other
+than the first one SHALL be discarded and the UPDATE message will
+continue to be processed.
+"""
+note = """
+`AttributeCollection.parse` skips an attribute code it already holds when the class does
+not set `NO_DUPLICATE`, and `PrefixSid` does not set it.  The negative side is what the
+second half of the sentence asks for: the rest of the UPDATE must survive, so an
+attribute which follows the duplicate still has to be decoded.
+"""
+
+[[requirement]]
+id = "rfc8669#6-duplicate-tlv-first-wins"
+section = "6"
+level = "SHALL"
+status = "required"
+polarity = "positive-only"
+text = """
+Similarly, if a recognized TLV appears
+more than once in a BGP Prefix-SID attribute while the specification
+only allows for a single occurrence, then all the occurrences of the
+TLV other than the first one SHALL be discarded and the Prefix-SID
+attribute will continue to be processed.
+"""
+note = """
+Not implemented.  `PrefixSid.unpack_attribute` appends every TLV it walks to `sr_attrs`
+with no check for a repeat, so two Label-Index TLVs both survive and both appear in the
+JSON, which then carries two `sr-label-index` keys in one object.  The attribute does
+continue to be processed, so only the discard half is missing, and an xfail test shows it.
+Recorded positive-only:
+the negative side would be "a TLV type which may legitimately repeat is not collapsed",
+and this document defines no such TLV, so there is nothing to test against.
+"""

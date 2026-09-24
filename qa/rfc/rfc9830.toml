@@ -1,0 +1,71 @@
+# RFC 9830 - Advertising Segment Routing Policies in BGP
+# https://www.rfc-editor.org/rfc/rfc9830
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc9830.txt.
+#
+# This ledger is deliberately narrow.  Almost all of RFC 9830 is addressed to an SR
+# Policy headend: it computes candidate paths, runs the SRPM, validates SIDs and
+# instantiates policies.  exabgp does none of that.  What it does is decode the SR Policy
+# NLRI and the tunnel TLV that goes with it, so the entries below are the ones which bind
+# a decoder.
+
+rfc = "rfc9830"
+title = "Advertising Segment Routing Policies in BGP"
+url = "https://www.rfc-editor.org/rfc/rfc9830"
+
+[[requirement]]
+id = "rfc9830#2.1-afi-must-be-ipv4-or-ipv6"
+section = "2.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The AFI used MUST be IPv4(1) or IPv6(2).
+"""
+note = """
+`SRPolicyNLRI` is registered under `(AFI.ipv4, SAFI.sr_policy)` and `(AFI.ipv6,
+SAFI.sr_policy)` and under nothing else, so an MP_REACH naming any other AFI with SAFI 73
+finds no decoder.  The negative side is that registration table: a third AFI must not
+resolve to this class.
+"""
+
+[[requirement]]
+id = "rfc9830#2.1-nlri-length-96-or-192"
+section = "2.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+NLRI Length:  1 octet indicating the length expressed in bits as
+defined in [RFC4760].  When AFI = 1, the value MUST be 96; when
+AFI = 2, the value MUST be 192.
+"""
+note = """
+`SRPolicyNLRI.unpack_nlri` computes the expected bit count from the AFI it was called
+with and raises `Notify(3, 10)` on anything else, before it slices.  This entry also
+answers a standing suspicion that a malformed Endpoint could silently pick the wrong
+address family: it cannot.  The `endpoint` property reads four or sixteen octets
+according to `self.afi`, and `self.afi` comes from the MP_REACH, not from the NLRI body,
+so the only way to reach the sixteen octet read is to have passed the 192 bit check.  A
+length byte of 96 arriving under AFI 2, which is the shape that would have produced a
+four octet address read as an IPv6 one, is refused.
+"""
+
+[[requirement]]
+id = "rfc9830#2.4-single-sr-policy-tlv"
+section = "2.4"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+A Tunnel Encapsulation Attribute MUST NOT contain more than one TLV
+of type "SR Policy"; such updates MUST be considered malformed and
+handled by the "treat-as-withdraw" strategy [RFC7606].
+"""
+note = """
+Not implemented.  `TunnelEncap.unpack_attribute` walks the tunnel TLVs and appends each
+one without looking at whether it has seen that tunnel type before, so two SR Policy TLVs
+both decode and both appear in the JSON.  `TunnelEncap` sets no `TREAT_AS_WITHDRAW`
+either, so even if the duplicate were detected there is currently no path from this
+decoder to the action the RFC names.  Same missing class flag as the RFC 9012 entries.
+"""

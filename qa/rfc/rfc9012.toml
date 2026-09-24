@@ -1,0 +1,183 @@
+# RFC 9012 - The BGP Tunnel Encapsulation Attribute
+# https://www.rfc-editor.org/rfc/rfc9012
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc9012.txt.
+#
+# Scope note.  Most of this document tells a router how to build an encapsulation header
+# and which tunnel to send a packet down.  exabgp forwards no packets, so sections 7 to
+# 10 do not bind it.  What binds it is section 13: the attribute is a nested TLV
+# structure arriving from a peer, and section 13 says exactly what to do with each way
+# it can be wrong.  This ledger is section 13 plus the two encoding rules which decide
+# where a sub-TLV ends.
+#
+# Not recorded, for want of a keyword: section 3's "Length: 1 or 2 octets" table and the
+# sentence that sub-TLV types 0-127 use a one octet length while 128-255 use two are
+# written as field descriptions.  exabgp implements the split in `SubTLV.unpack_subtlvs`
+# and `SubTLV.pack`; it is simply not a 2119 requirement of this document.
+
+rfc = "rfc9012"
+title = "The BGP Tunnel Encapsulation Attribute"
+url = "https://www.rfc-editor.org/rfc/rfc9012"
+
+[[requirement]]
+id = "rfc9012#13-tlv-ends-with-final-subtlv"
+section = "13"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The final octet of a TLV MUST
+also be the final octet of its final sub-TLV.  If this is not the
+case, the TLV MUST be considered to be malformed, and the "Treat-as-
+withdraw" procedure of [RFC7606] is applied.
+"""
+note = """
+exabgp notices the mismatch and then does the wrong thing with it.  `SubTLV.unpack_subtlvs`
+raises `Notify(3, 1)` when a sub-TLV length overruns the end of its Tunnel TLV, and
+`TunnelEncap` sets neither `TREAT_AS_WITHDRAW` nor `DISCARD`, so
+`AttributeCollection.parse` re-raises the `Notify` and the session is reset with a
+NOTIFICATION.  The RFC asks for treat-as-withdraw, which keeps the session.  One byte
+from a peer takes the BGP session down.
+
+The other half is worse: for every tunnel type except 15, no sub-TLV is decoded at all.
+`TunnelTypeTLV.unpack_tunnel` hands an unregistered tunnel type to `GenericTunnelTLV`,
+which keeps the value as opaque bytes, so a TLV whose final sub-TLV ends early or late
+is accepted without complaint.  The rule is only enforced where the sub-TLVs happen to
+be parsed.
+"""
+
+[[requirement]]
+id = "rfc9012#13-no-valid-tlv-or-not-transitive"
+section = "13"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a Tunnel Encapsulation attribute does not have any valid TLVs, or
+it does not have the transitive bit set, the "Treat-as-withdraw"
+procedure of [RFC7606] is applied.
+"""
+note = """
+Half right.  The empty-attribute half works by accident of the generic rule: `TunnelEncap`
+does not set `VALID_ZERO`, so a zero length attribute becomes `INTERNAL_TREAT_AS_WITHDRAW`
+in `AttributeCollection.parse`.  The transitive half does not.  An attribute sent
+optional but not transitive fails the `Attribute.registered(aid, flag)` lookup, falls
+into the `aid in Attribute.attributes_known` branch, and because `TunnelEncap` sets
+neither behaviour flag it lands in the "should not happen" log and is silently dropped.
+That is attribute-discard, not treat-as-withdraw: the route stays, stripped of the
+attribute, where the RFC says the route must go.
+
+This entry carries a "MUST" level because the "Treat-as-withdraw" procedure it invokes is
+normative in RFC 7606; the sentence itself states the consequence rather than a keyword.
+"""
+
+[[requirement]]
+id = "rfc9012#13-unknown-tunnel-type-not-malformed"
+section = "13"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+If a Tunnel Encapsulation attribute can be parsed correctly but
+contains a TLV whose tunnel type is not recognized by a particular
+BGP speaker, that BGP speaker MUST NOT consider the attribute to be
+malformed.  Rather, it MUST interpret the attribute as if that TLV
+had not been present.  If the route carrying the Tunnel Encapsulation
+attribute is propagated with the attribute, the unrecognized TLV MUST
+remain in the attribute.
+"""
+note = """
+`TunnelTypeTLV.unpack_tunnel` falls back to `GenericTunnelTLV`, which keeps the tunnel
+type number and the raw value and re-emits both from `pack()`.  Tested from both sides:
+an attribute made only of unrecognised tunnel types decodes without error, and the bytes
+it packs back are the bytes the peer sent.  The negative test is the one which would
+catch a decoder that dropped the unknown TLV on re-encode, which is the mistake this
+sentence exists to forbid.
+"""
+
+[[requirement]]
+id = "rfc9012#13-duplicate-subtlv-first-wins"
+section = "13"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a Tunnel TLV has more
+than one of any of these sub-TLVs, all but the first occurrence of
+each such sub-TLV type MUST be disregarded.  However, the Tunnel TLV
+containing them MUST NOT be considered to be malformed, and all the
+sub-TLVs MUST be propagated if the route carrying the Tunnel
+Encapsulation attribute is propagated.
+"""
+note = """
+The two halves are on opposite sides of the line.  "MUST NOT be considered malformed" and
+"all the sub-TLVs MUST be propagated" both hold: `SubTLV.unpack_subtlvs` appends every
+sub-TLV it walks and never rejects a repeat.  "All but the first occurrence MUST be
+disregarded" does not hold, for exactly the same reason: nothing collapses the repeats,
+so a Tunnel TLV carrying two Preference sub-TLVs reaches the API with both, and a
+consumer reading the JSON sees two values for a field which has one.
+"""
+
+[[requirement]]
+id = "rfc9012#13-unrecognized-subtlv-ignored-and-kept"
+section = "13"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a TLV of a Tunnel Encapsulation attribute contains a sub-TLV that
+is not recognized by a particular BGP speaker, the BGP speaker MUST
+process that TLV as if the unrecognized sub-TLV had not been present.
+If the route carrying the Tunnel Encapsulation attribute is
+propagated with the attribute, the unrecognized sub-TLV MUST remain
+in the attribute.
+"""
+note = """
+`SubTLV.unpack_subtlvs` wraps an unregistered sub-TLV type in `GenericSubTLV`, which
+keeps the raw value and re-emits it with the right one or two octet length field for its
+type number.  The negative side is the re-encode: a `GenericSubTLV` with a type above
+127 must come back with a two octet length, and one below 128 with one octet, or the
+sub-TLV that "remains in the attribute" is not the one that arrived.
+"""
+
+[[requirement]]
+id = "rfc9012#13-malformed-subtlv-as-unrecognized"
+section = "13"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+In general, if a TLV contains a sub-TLV that is malformed, the sub-
+TLV MUST be treated as if it were an unrecognized sub-TLV.
+"""
+note = """
+Not implemented, and the failure mode is a session reset.  Every malformed sub-TLV shape
+`SubTLV.unpack_subtlvs` can detect - a one byte tail, a length field which runs past the
+end of the enclosing Tunnel TLV, a type above 127 with fewer than three bytes left -
+raises `Notify(3, 1)`.  `TunnelEncap` sets no RFC 7606 behaviour flag, so that `Notify`
+leaves `AttributeCollection.parse` untouched and becomes a NOTIFICATION.  The RFC says
+to skip the sub-TLV and carry on.  This is the same missing flag as the first entry, and
+one fix closes both.
+"""
+
+[[requirement]]
+id = "rfc9012#11-must-be-able-to-filter-incoming"
+section = "11"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+To prevent the Tunnel Encapsulation attribute from being distributed
+beyond its intended scope, any BGP speaker that understands the
+attribute MUST be able to filter the attribute from incoming BGP
+UPDATE messages.  When the attribute is filtered from an incoming
+UPDATE, the attribute is neither processed nor distributed.
+"""
+note = """
+exabgp has no per-neighbour filter for this attribute in either direction, and no
+default-on filtering for EBGP sessions as the rest of section 11 requires.  The
+attribute is decoded and handed to the API for every session.  Recorded as a gap rather
+than not-applicable: exabgp does understand the attribute, which is the condition the
+sentence attaches to, and the configuration language is the natural place for the
+filter.
+"""
