@@ -508,6 +508,23 @@ class IPVPNBase(Label):
                 if len(labels_bytes_list) > 1:
                     continue
 
+                # RFC 8277 2.2, of the S bit: "This 1-bit field MUST be set to one on
+                # transmission and MUST be ignored on reception", and 2.4 says the same of
+                # the Compatibility field a withdraw carries where a label would be: "Upon
+                # reception, the value of the Compatibility field MUST be ignored".  Both
+                # bind every session exabgp forms, because the section 2.3 reading only
+                # applies once the Multiple Labels Capability has been exchanged and exabgp
+                # has no capability code 8 to exchange.
+                #
+                # So for a one field stack the LENGTH says where the stack ends, not the S
+                # bit: the route distinguisher and the prefix are what the length leaves
+                # behind this field, and if that is a prefix this family can hold then that
+                # is what it is.  Zero bits left is excluded, because there a /0 and a stack
+                # which ate the prefix are the same bytes.
+                if 0 < mask - rd_bits <= IP.length(afi) * 8:
+                    ended = True
+                    break
+
                 if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
                     ended = True
                     break
@@ -515,10 +532,11 @@ class IPVPNBase(Label):
                     ended = True
                     break
 
-            # RFC 3107 3: the bottom of stack bit is the only thing on the wire which says
-            # where the stack ends, because the mask covers labels, RD and prefix together.
-            # Running out of mask instead means the remaining bytes were eaten as labels and
-            # the route was reported as 0.0.0.0/0, which is a default route a peer chose.
+            # RFC 3107 3 and RFC 8277 2.3: beyond the first field the bottom of stack bit is
+            # the only thing on the wire which says where the stack ends, because the mask
+            # covers labels, RD and prefix together.  Running out of mask instead means the
+            # remaining bytes were eaten as labels and the route was reported as 0.0.0.0/0,
+            # which is a default route a peer chose.
             #
             # This decoder is a second copy of the one in inet.py and had the same defect.
             # Fixing that one left this one, which is the pair rule: two decoders, one fix.

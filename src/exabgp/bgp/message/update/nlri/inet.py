@@ -434,6 +434,26 @@ class INETBase(NLRI):
                 if len(labels_list) > 1:
                     continue
 
+                # RFC 8277 2.2, of the S bit: "This 1-bit field MUST be set to one on
+                # transmission and MUST be ignored on reception", and 2.4 says the same of
+                # the three octet Compatibility field a withdraw carries where a label
+                # would be: "Upon reception, the value of the Compatibility field MUST be
+                # ignored".  Both bind every session exabgp forms, because the section 2.3
+                # reading only applies once the Multiple Labels Capability has been
+                # exchanged and exabgp has no capability code 8 to exchange.
+                #
+                # So for a one field stack the LENGTH says where the stack ends, not the S
+                # bit: if the bits the length leaves behind this field are a prefix this
+                # family can hold, they are the prefix.  Refusing them instead is what used
+                # to reset a session over a legal MP_UNREACH withdraw.
+                #
+                # Zero bits left is excluded on purpose.  A /0 and a stack which ate the
+                # prefix are the same bytes, and the default route below is what that costs,
+                # so there the two sentinels stay the only way out of the loop.
+                if 0 < mask - rd_mask <= IP.length(afi) * 8:
+                    ended = True
+                    break
+
                 # This is a route withdrawal
                 if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
                     ended = True
@@ -442,13 +462,14 @@ class INETBase(NLRI):
                 if label == LABEL_NEXTHOP_VALUE:
                     ended = True
                     break
-            # RFC 3107 3: the bottom of stack bit is set on the last label, and it is the
-            # only thing on the wire which says where the stack ends.  Running out of mask
-            # instead means every remaining byte was eaten as a label, INCLUDING the prefix,
-            # and the route was then reported with whatever was left, which is nothing:
+            # RFC 3107 3 and RFC 8277 2.3: beyond the first field the bottom of stack bit is
+            # the only thing on the wire which says where the stack ends.  Running out of
+            # mask instead means every remaining byte was eaten as a label, INCLUDING the
+            # prefix, and the route was then reported with whatever was left, which is
+            # nothing:
             #
-            #   announce, label 0x800000, prefix 10.0.0.0/24  ->  0.0.0.0/0
-            #   withdraw, a stack with no BOS at all          ->  0.0.0.0/0
+            #   announce, two labels and no bottom of stack anywhere  ->  0.0.0.0/0
+            #   withdraw, a stack whose length leaves no prefix bits  ->  0.0.0.0/0
             #
             # A peer could hand us a default route by sending a label stack which does not
             # terminate.  0x800000 is the RFC 3107 withdraw value and only ends a stack on a

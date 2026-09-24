@@ -9,9 +9,14 @@
 # of stack bit"; RFC 8277 answers "one label, unless the Multiple Labels Capability was
 # exchanged, and then the bottom of stack bit".  exabgp does not implement the Multiple
 # Labels Capability (code 8 appears nowhere in src/exabgp/bgp/message/open/capability/),
-# so on the wire it is permanently in the section 2.2 case while its decoder
-# (INETBase.unpack_nlri and IPVPNBase.unpack_nlri) parses the section 2.3 way.  That
-# mismatch is where three of the four gaps below come from.
+# so on the wire it is permanently in the section 2.2 case.
+#
+# Both decoders (INETBase.unpack_nlri and IPVPNBase.unpack_nlri) used to parse the section
+# 2.3 way on every session, and three of the entries below recorded that as a gap.  They
+# now end a one field stack on the LENGTH rather than on the S bit, which is what section
+# 2.2 and section 2.4 ask for, and those three are `required`.  What is left is the
+# sending side: exabgp will still originate a two label NLRI on a session where no
+# capability was exchanged, and that is what the remaining gaps are about.
 #
 # Things this document states WITHOUT an RFC 2119 keyword, and which are therefore not
 # recorded as requirements:
@@ -167,23 +172,23 @@ peer which does not, which is what a decoder that masked the wrong way would bre
 id = "rfc8277#2.2-s-bit-ignored-on-reception"
 section = "2.2"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
       This 1-bit field MUST be set to one on transmission and MUST be
       ignored on reception.
 """
 note = """
-The transmission half holds: `Labels.make_labels` sets the bottom of stack bit on the
-last label.  The reception half does not.  Without the Multiple Labels Capability every
-session is a section 2.2 session, where exactly one label is present and the S bit
-carries no information, so a single label NLRI whose S bit is zero should decode to the
-prefix behind it.  INETBase.unpack_nlri instead keeps reading labels while the remaining
-mask allows one and raises `Notify(3, 10, 'the label stack of the NLRI never ends')` when
-the stack does not terminate, which resets the session.  That Notify is deliberate and is
-the right answer for section 2.3, where the S bit is the only delimiter; it is the wrong
-answer for section 2.2, and exabgp cannot tell the two apart because it never negotiates
-the capability which separates them.
+The transmission half has always held: `Labels.make_labels` sets the bottom of stack bit
+on the last label.  The reception half was a gap until the label loop learnt to bound
+itself by the length.  It used to keep reading labels while the remaining mask allowed
+one, and raise `Notify(3, 10, 'the label stack of the NLRI never ends')` when the stack
+did not terminate, so a single label NLRI whose S bit was zero reset the session.  Both
+decoders now end a one field stack when the bits the length leaves behind that field are
+a prefix the family can hold, which is the section 2.2 reading and the only one available
+on a session with no Multiple Labels Capability.  Beyond one field nothing changed: there
+section 2.3 applies, the S bit is the only delimiter, and a stack without one is still
+refused.
 """
 
 [[requirement]]
@@ -201,37 +206,50 @@ note = """
 `Labels.make_labels` ors the bit into the last label only, and both decoders stop at the
 first label whose bottom of stack bit is set and treat everything after it as the route
 distinguisher and the prefix.  The negative side is the one which found a bug once
-already: a stack with the bit nowhere is refused rather than being allowed to eat the
-prefix and report a default route, and a stack whose FIRST label sets it stops there even
-if the mask would have allowed another label.
+already: a stack of more than one label with the bit nowhere is refused rather than being
+allowed to eat the prefix and report a default route, and a stack whose FIRST label sets
+it stops there even if the mask would have allowed another label.
+
+A stack of exactly one label with the bit nowhere is a section 2.2 NLRI rather than a
+malformed section 2.3 one, and is accepted: see rfc8277#2.2-s-bit-ignored-on-reception.
+The one case the length cannot decide is a length which leaves no prefix bits behind that
+single field, where a labelled 0.0.0.0/0 and a stack which ate the prefix are the same
+bytes; that stays refused, and tests/unit/test_label_stack_end.py says so.
 """
 
 [[requirement]]
 id = "rfc8277#2.4-compatibility-ignored-on-reception"
 section = "2.4"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
    Upon transmission, the Compatibility field SHOULD be set to 0x800000.
    Upon reception, the value of the Compatibility field MUST be ignored.
 """
 note = """
-Neither half holds.  On transmission exabgp withdraws by packing the NLRI it announced,
-so the three octets carry the label it advertised rather than 0x800000; that is the
-SHOULD and it is a decision, not a defect.  The MUST is the one that matters: both
-decoders read those three octets as a label and only accept three values there, the
-bottom of stack bit set, 0x800000, and 0x000000.  Any other Compatibility field, and the
-RFC says any value is legal because it is of no significance, falls out of the loop
-unterminated and raises `Notify(3, 10, ...)`.  A peer which withdraws with a Compatibility
-field of, say, 0x000010 gets its session reset.
+The MUST holds, the SHOULD does not, and only the MUST is gated.
+
+The MUST used to be the worst gap on this ledger.  Both decoders read the three octets as
+a label and accepted three values there and no others: the bottom of stack bit set,
+0x800000, and 0x000000.  Any other Compatibility field, and the RFC says any value is
+legal because it is of no significance, fell out of the loop unterminated and raised
+`Notify(3, 10, 'the label stack of the NLRI never ends')`, so a peer withdrawing with a
+field of 0x000010 had its session reset.  Both loops now end a one field stack on the
+length instead: whatever the three octets hold, the bits behind them are the route
+distinguisher and the prefix whenever they can be, and the value is never looked at.
+
+The SHOULD is unchanged and is a decision rather than a defect: exabgp withdraws by
+packing the NLRI it announced, so the three octets carry the label it advertised rather
+than 0x800000.  Every value is legal to send, and a receiver which cares is the bug this
+entry just stopped being.
 """
 
 [[requirement]]
 id = "rfc8277#2.4-compatibility-required-ignored"
 section = "2.4"
 level = "REQUIRED"
-status = "gap"
+status = "required"
 polarity = "positive-only"
 text = """
    In
@@ -243,10 +261,12 @@ note = """
 The same obligation as rfc8277#2.4-compatibility-ignored-on-reception, restated at the
 end of section 2.4 with the stronger keyword and with the reason: RFC 3107 let this field
 hold a label and some implementations put 0x000000 there instead of 0x800000, so a
-receiver which is fussy about it breaks against real peers.  Recorded separately because
-it is a separate normative sentence.  Only the positive side is meaningful: the
-requirement is that no value is rejected, so there is no input which can violate it by
-being accepted, and a negative test would only be the positive one with different bytes.
+receiver which is fussy about it breaks against real peers.  exabgp was that receiver
+until the label loop learnt to end a one field stack on the length; it accepts any value
+there now.  Recorded separately because it is a separate normative sentence.  Only the
+positive side is meaningful: the requirement is that no value is rejected, so there is no
+input which can violate it by being accepted, and a negative test would only be the
+positive one with different bytes.
 """
 
 [[requirement]]

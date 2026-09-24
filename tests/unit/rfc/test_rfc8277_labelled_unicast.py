@@ -1,17 +1,17 @@
 """RFC 8277: how many labels does an NLRI carry, and what ends the stack.
 
-RFC 3107 left that ambiguous and RFC 8277 exists to close it.  Its answer has two halves
-and exabgp implements one of them: without the Multiple Labels Capability an NLRI carries
-exactly one label and the S bit means nothing (section 2.2); with it, the S bit delimits
-the stack (section 2.3).  exabgp has no capability code 8, so every session it forms is a
-section 2.2 session, while both of its decoders parse the section 2.3 way and refuse an
-NLRI whose stack does not terminate.
+RFC 3107 left that ambiguous and RFC 8277 exists to close it.  Its answer has two halves:
+without the Multiple Labels Capability an NLRI carries exactly one label and the S bit
+means nothing (section 2.2); with it, the S bit delimits the stack (section 2.3).  exabgp
+has no capability code 8, so every session it forms is a section 2.2 session.
 
-That single decision produces three of the four gaps demonstrated below, including the
-one which costs a session: a withdraw whose Compatibility field is neither 0x800000 nor
-0x000000 nor S-bit-set is read as an unterminated label stack and answered with a
-NOTIFICATION, where RFC 8277 says in two separate sentences that the field's value is of
-no significance and must be ignored.
+Both decoders used to parse the section 2.3 way on every session, and refused any NLRI
+whose first field did not terminate the stack.  That cost a session over legal input: a
+withdraw whose Compatibility field was neither 0x800000 nor 0x000000 nor S-bit-set was
+read as an unterminated label stack and answered with a NOTIFICATION, where RFC 8277 says
+in two separate sentences that the field's value is of no significance and must be
+ignored.  The length now says where a one field stack ends, so those three sentences are
+proven below rather than demonstrated as gaps.
 
 Everything here drives the real registered decoders through `NLRI.unpack_nlri`, which is
 the same call the UPDATE parser makes, so a test that passes says something about what a
@@ -127,23 +127,21 @@ def test_we_do_not_set_the_rsrv_bits_when_we_build_a_label() -> None:
 # ------------------------------------------------------------------ section 2.2, S bit
 
 
-# Demonstrates rfc8277#2.2-s-bit-ignored-on-reception, which the ledger records as a
-# gap.  No rfc() marker: check_rfc_compliance refuses a marker on a non-required entry.
-@pytest.mark.xfail(
-    strict=True,
-    reason='the decoder keeps reading labels while the mask allows one and raises '
-    'Notify(3,10) when the stack does not terminate, so a section 2.2 NLRI whose '
-    'S bit is zero resets the session instead of decoding',
-)
+@pytest.mark.rfc('rfc8277#2.2-s-bit-ignored-on-reception', polarity='negative')
 def test_a_single_label_nlri_with_the_s_bit_clear_still_decodes() -> None:
-    """Section 2.2 carries exactly one label, so its S bit carries no information."""
+    """Section 2.2 carries exactly one label, so its S bit carries no information.
+
+    The peer is the one breaking the sentence here, by not setting a bit it MUST set, and
+    the requirement on us is to carry on regardless.  This used to raise Notify(3,10).
+    """
     nlri, rest = decode(labelled(label(100, bottom=False)))
     assert rest == b''
     assert str(nlri.cidr) == '10.0.0.0/24'
+    assert nlri.labels is not None
+    assert nlri.labels.labels == [100]
 
 
-# The transmission half of rfc8277#2.2-s-bit-ignored-on-reception, unmarked for the
-# same reason: the entry as a whole is a gap.
+@pytest.mark.rfc('rfc8277#2.2-s-bit-ignored-on-reception')
 def test_we_set_the_s_bit_on_the_label_we_transmit() -> None:
     """The transmission half of the same sentence, which exabgp does meet."""
     packed = bytes(Labels.make_labels([100]).pack_labels())
@@ -211,37 +209,32 @@ def test_a_stack_stops_at_the_first_bottom_of_stack_bit_even_when_the_mask_allow
 # --------------------------------------------------------- section 2.4, Compatibility
 
 
-# rfc8277#2.4-compatibility-ignored-on-reception is a gap, so these carry no marker.
+@pytest.mark.rfc('rfc8277#2.4-compatibility-ignored-on-reception')
 @pytest.mark.parametrize('compatibility', [COMPATIBILITY_RECOMMENDED, COMPATIBILITY_LEGACY])
 def test_a_withdraw_with_a_known_compatibility_value_decodes_to_its_prefix(compatibility: int) -> None:
-    """The two values exabgp's decoders happen to recognise, which do work."""
+    """The recommended value, and the one RFC 8277 records some implementations send."""
     nlri, rest = decode(labelled(raw(compatibility)), action=Action.WITHDRAW)
     assert rest == b''
     assert str(nlri.cidr) == '10.0.0.0/24'
 
 
-# rfc8277#2.4-compatibility-ignored-on-reception is a gap, so these carry no marker.
-@pytest.mark.xfail(
-    strict=True,
-    reason='the three octets are read as a label, and only 0x800000, 0x000000 and a set '
-    'bottom of stack bit end the stack, so any other Compatibility field raises '
-    'Notify(3,10) and resets the session',
-)
+@pytest.mark.rfc('rfc8277#2.4-compatibility-ignored-on-reception', polarity='negative')
+@pytest.mark.rfc('rfc8277#2.4-compatibility-required-ignored')
 def test_a_withdraw_with_an_arbitrary_compatibility_value_decodes_to_its_prefix() -> None:
-    """RFC 8277 says the field is of no significance, so every value has to work."""
+    """RFC 8277 says the field is of no significance, so every value has to work.
+
+    This is the one which cost a session: the three octets were read as a label, only
+    0x800000, 0x000000 and a set bottom of stack bit ended the stack, and anything else
+    was answered with Notify(3,10).  The length ends a one field stack now.
+    """
     nlri, rest = decode(labelled(raw(COMPATIBILITY_ARBITRARY)), action=Action.WITHDRAW)
     assert rest == b''
     assert str(nlri.cidr) == '10.0.0.0/24'
 
 
-# rfc8277#2.4-compatibility-required-ignored is a gap, so this carries no marker.
-@pytest.mark.xfail(
-    strict=True,
-    reason='a VPN withdraw whose Compatibility field is not one of the three values the '
-    'label loop terminates on raises Notify(3,10), so the RD and the prefix behind '
-    'it are never reached',
-)
+@pytest.mark.rfc('rfc8277#2.4-compatibility-ignored-on-reception', polarity='negative')
 def test_a_vpn_withdraw_with_an_arbitrary_compatibility_value_decodes_to_its_prefix() -> None:
+    """The VPN decoder is a second copy of the loop, so it has to have learnt the same."""
     nlri, rest = decode(vpn(raw(COMPATIBILITY_ARBITRARY)), safi=SAFI.mpls_vpn, action=Action.WITHDRAW)
     assert rest == b''
     assert str(nlri.cidr) == '10.0.0.0/24'
@@ -249,7 +242,7 @@ def test_a_vpn_withdraw_with_an_arbitrary_compatibility_value_decodes_to_its_pre
     assert str(nlri.rd) == ' rd 1:2'
 
 
-# rfc8277#2.4-compatibility-ignored-on-reception is a gap, so these carry no marker.
+@pytest.mark.rfc('rfc8277#2.4-compatibility-ignored-on-reception')
 def test_the_prefix_length_of_a_withdraw_is_the_nlri_length_less_the_compatibility_field() -> None:
     """Section 2.4: the prefix length is not the NLRI length.
 
@@ -316,7 +309,10 @@ def test_two_labelled_routes_with_the_same_path_identifier_share_a_rib_key() -> 
 # crash on the receive path.
 MALFORMED: list[tuple[str, bytes, SAFI]] = [
     (
-        'a length which does not account for the whole label stack',
+        # The length leaves no prefix bits behind the first field, so the section 2.2
+        # reading of it is a /0.  That is the default route the old bug manufactured and
+        # the one shape the length cannot tell from a stack which ate the prefix.
+        'a length which leaves no prefix bits behind an unterminated field',
         bytes([PREFIX_BITS]) + label(100, bottom=False) + label(200) + PREFIX,
         SAFI.nlri_mpls,
     ),
