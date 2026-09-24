@@ -90,6 +90,7 @@ def negotiated() -> Any:
 
 
 @pytest.mark.parametrize('name,klass,afi,safi,nlri_bytes', FAMILIES, ids=IDS)
+@pytest.mark.rfc('rfc7911#3-prepend-path-identifier')
 def test_the_path_identifier_is_consumed(name: str, klass: Any, afi: AFI, safi: SAFI, nlri_bytes: bytes) -> None:
     """With ADD-PATH on, the four identifier bytes must be gone from what is left.
 
@@ -107,6 +108,7 @@ def test_the_path_identifier_is_consumed(name: str, klass: Any, afi: AFI, safi: 
 
 
 @pytest.mark.parametrize('name,klass,afi,safi,nlri_bytes', FAMILIES, ids=IDS)
+@pytest.mark.rfc('rfc7911#3-prepend-path-identifier')
 def test_the_nlri_parses_the_same_with_and_without_a_path_identifier(
     name: str, klass: Any, afi: AFI, safi: SAFI, nlri_bytes: bytes
 ) -> None:
@@ -125,6 +127,7 @@ def test_the_nlri_parses_the_same_with_and_without_a_path_identifier(
 
 
 @pytest.mark.parametrize('name,klass,afi,safi,nlri_bytes', FAMILIES, ids=IDS)
+@pytest.mark.rfc('rfc7911#3-prepend-path-identifier')
 def test_the_identifier_is_kept_as_path_information(
     name: str, klass: Any, afi: AFI, safi: SAFI, nlri_bytes: bytes
 ) -> None:
@@ -140,6 +143,7 @@ def test_the_identifier_is_kept_as_path_information(
 
 
 @pytest.mark.parametrize('name,klass,afi,safi,nlri_bytes', FAMILIES, ids=IDS)
+@pytest.mark.rfc('rfc7911#3-prepend-path-identifier', polarity='negative')
 def test_without_addpath_nothing_is_consumed(name: str, klass: Any, afi: AFI, safi: SAFI, nlri_bytes: bytes) -> None:
     """The far commoner case must not have gained a four byte skip."""
     nlri, left = klass.unpack_nlri(afi, safi, nlri_bytes, Action.ANNOUNCE, False, negotiated())
@@ -149,6 +153,7 @@ def test_without_addpath_nothing_is_consumed(name: str, klass: Any, afi: AFI, sa
 
 
 @pytest.mark.parametrize('name,klass,afi,safi,nlri_bytes', FAMILIES, ids=IDS)
+@pytest.mark.rfc('rfc7911#3-prepend-path-identifier', polarity='negative')
 def test_a_truncated_path_identifier_is_refused(name: str, klass: Any, afi: AFI, safi: SAFI, nlri_bytes: bytes) -> None:
     """Three bytes where four are required is the peer's error, so it gets a Notify.
 

@@ -1,0 +1,519 @@
+#!/usr/bin/env python3
+"""Join the RFC requirements we claim to meet to the tests which prove we meet them.
+
+Saying "exabgp implements RFC 4271" is a claim about a few hundred separate sentences,
+and a test suite says nothing about which of them are covered. A test called
+test_open_rejects_bad_version proves something about section 6.2, but only to a reader
+who already knows what section 6.2 says.
+
+This ties the two together so the claim can be checked rather than believed:
+
+  qa/rfc/<rfc>.toml    one entry per normative sentence: its section, its RFC 2119
+                       level, the sentence quoted verbatim, and what we do about it
+  qa/rfc/text/         the RFC itself, as published
+  @pytest.mark.rfc()   a test naming the requirements it proves, and from which side
+
+Five disagreements are always fatal, because each makes the ledger say something untrue:
+
+  - a quoted requirement does not appear in the RFC.  This is the one that matters most.
+    Requirement lists written from memory are wrong in both directions: they invent MUSTs
+    the RFC does not contain, and they invert the ones it does.  Every quote is checked
+    against qa/rfc/text/, so an invented requirement cannot be committed.
+  - a test names a requirement id no ledger defines.  Usually a typo, and a typo here
+    quietly stops proving anything while still looking like proof.
+  - a requirement recorded as out of scope is named by a test.  One of the two is wrong.
+  - a requirement excused from testing carries no reason.  "not applicable" with no why
+    is indistinguishable from "not done yet", which is the thing this file exists to
+    stop.
+  - a requirement says it has no meaningful negative, and a negative test exists anyway.
+
+The gap itself, a MUST-level requirement with no test, is ratcheted per RFC in
+qa/rfc_compliance.json, the way qa/exa_style.json ratchets the style rules: a count may
+fall and may not rise. An RFC with no entry in the baseline is not enrolled, so adding a
+ledger is a deliberate act rather than something that happens to you.
+
+Only MUST-level requirements are gated. SHOULD and MAY are recorded, and reported, but a
+SHOULD we do not do is a decision rather than a defect.
+
+Usage:
+    ./qa/bin/check_rfc_compliance                    # check, fail if a count went up
+    ./qa/bin/check_rfc_compliance --show             # name every untested requirement
+    ./qa/bin/check_rfc_compliance --report           # coverage table per RFC
+    ./qa/bin/check_rfc_compliance --markdown FILE    # write the full ledger as markdown
+    ./qa/bin/check_rfc_compliance --update-baseline  # record the current counts
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import json
+import re
+import sys
+import tomllib
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.parent
+LEDGER_DIR = ROOT / 'qa' / 'rfc'
+TEXT_DIR = LEDGER_DIR / 'text'
+TESTS_DIR = ROOT / 'tests'
+BASELINE_FILE = ROOT / 'qa' / 'rfc_compliance.json'
+
+# what the ledger may say we do about a requirement
+REQUIRED = 'required'  # we implement it, and a test has to prove it
+GAP = 'gap'  # we owe it and do not do it.  an admission, with a reason, not a hole
+NOT_APPLICABLE = 'not-applicable'  # the obligation never bound exabgp at all
+STATUSES = (REQUIRED, GAP, NOT_APPLICABLE)
+
+# a status which excuses a requirement from carrying a test has to say why
+NEEDS_REASON = (GAP, NOT_APPLICABLE)
+
+# RFC 2119 levels.  only the first group is gated: a SHOULD we decline is a decision
+BINDING = ('MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL NOT')
+ADVISORY = ('SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED', 'MAY', 'OPTIONAL')
+LEVELS = BINDING + ADVISORY
+
+POSITIVE = 'positive'  # we do the thing the RFC requires
+NEGATIVE = 'negative'  # we reject, or survive, the case the RFC forbids
+POLARITIES = (POSITIVE, NEGATIVE)
+
+# some requirements have no meaningful other side, and saying so needs a reason
+BOTH = 'both'
+POSITIVE_ONLY = 'positive-only'
+NEGATIVE_ONLY = 'negative-only'
+NEEDED_POLARITIES = {BOTH: POLARITIES, POSITIVE_ONLY: (POSITIVE,), NEGATIVE_ONLY: (NEGATIVE,)}
+
+
+def normalise(text: str) -> str:
+    """Collapse whitespace so a quote survives the RFC's line wrapping and indentation."""
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+class Requirement:
+    """One normative sentence of one RFC, and what this implementation does about it."""
+
+    def __init__(self, rfc: str, entry: dict[str, object], source: Path) -> None:
+        self.rfc = rfc
+        self.source = source
+        self.id = str(entry.get('id', ''))
+        self.section = str(entry.get('section', ''))
+        self.level = str(entry.get('level', ''))
+        self.status = str(entry.get('status', ''))
+        self.polarity = str(entry.get('polarity', BOTH))
+        self.text = str(entry.get('text', '')).strip()
+        self.note = str(entry.get('note', '')).strip()
+        self.tests: dict[str, list[str]] = {POSITIVE: [], NEGATIVE: []}
+        self.gaps: dict[str, list[str]] = {POSITIVE: [], NEGATIVE: []}
+
+    @property
+    def binding(self) -> bool:
+        return self.level in BINDING
+
+    @property
+    def wanted(self) -> tuple[str, ...]:
+        return NEEDED_POLARITIES.get(self.polarity, POLARITIES)
+
+    @property
+    def missing(self) -> list[str]:
+        """The sides of this requirement nothing proves."""
+        return [side for side in self.wanted if not self.tests[side]]
+
+    @property
+    def covered(self) -> bool:
+        return self.status == REQUIRED and not self.missing
+
+    @property
+    def demonstrated(self) -> bool:
+        """Not proven, but a failing test says exactly what is missing."""
+        return not self.covered and any(self.gaps[side] for side in self.wanted)
+
+    @property
+    def all_tests(self) -> list[str]:
+        return [name for side in POLARITIES for name in self.tests[side] + self.gaps[side]]
+
+    def __str__(self) -> str:
+        return f'{self.id} ({self.level}, {self.rfc} section {self.section})'
+
+
+class Problem:
+    """A disagreement between the ledger, the RFC and the tests which is never ok."""
+
+    def __init__(self, where: str, detail: str) -> None:
+        self.where = where
+        self.detail = detail
+
+    def __str__(self) -> str:
+        return f'{self.where}: {self.detail}'
+
+
+def rfc_text(rfc: str) -> str | None:
+    """The published RFC, whitespace collapsed, or None if we do not hold a copy."""
+    path = TEXT_DIR / f'{rfc}.txt'
+    if not path.exists():
+        return None
+    return normalise(path.read_text(encoding='utf-8', errors='replace'))
+
+
+def load_ledgers() -> tuple[dict[str, Requirement], list[Problem]]:
+    """Read every qa/rfc/*.toml, refusing an entry which cannot mean what it says."""
+    requirements: dict[str, Requirement] = {}
+    problems: list[Problem] = []
+    published: dict[str, str | None] = {}
+
+    for path in sorted(LEDGER_DIR.glob('*.toml')):
+        relative = str(path.relative_to(ROOT))
+        try:
+            document = tomllib.loads(path.read_text(encoding='utf-8'))
+        except tomllib.TOMLDecodeError as exc:
+            problems.append(Problem(relative, f'does not parse: {exc}'))
+            continue
+
+        rfc = str(document.get('rfc', path.stem))
+        entries = document.get('requirement', [])
+        if not isinstance(entries, list):
+            problems.append(Problem(relative, 'requirement must be a list of tables'))
+            continue
+
+        if rfc not in published:
+            published[rfc] = rfc_text(rfc)
+            if published[rfc] is None:
+                problems.append(
+                    Problem(
+                        relative,
+                        f'no copy of the RFC at qa/rfc/text/{rfc}.txt, so no quote in this file can be checked; '
+                        f'fetch it with curl -o qa/rfc/text/{rfc}.txt https://www.rfc-editor.org/rfc/{rfc}.txt',
+                    )
+                )
+
+        for entry in entries:
+            if not isinstance(entry, dict):
+                problems.append(Problem(relative, f'requirement entry is not a table: {entry!r}'))
+                continue
+            requirement = Requirement(rfc, entry, path)
+            problems.extend(validate(requirement, relative, requirements, published[rfc]))
+            if requirement.id and requirement.id not in requirements:
+                requirements[requirement.id] = requirement
+
+    return requirements, problems
+
+
+def validate(
+    requirement: Requirement, relative: str, seen: dict[str, Requirement], published: str | None
+) -> list[Problem]:
+    """Everything an entry has to get right before it can be joined to a test."""
+    problems: list[Problem] = []
+    where = f'{relative} [{requirement.id or "<no id>"}]'
+
+    if not requirement.id:
+        return [Problem(relative, 'requirement has no id')]
+    if requirement.id in seen:
+        problems.append(Problem(where, f'id already defined in {seen[requirement.id].source.name}'))
+    if not requirement.section:
+        problems.append(Problem(where, 'requirement has no section'))
+    if requirement.level not in LEVELS:
+        problems.append(Problem(where, f'level {requirement.level!r} is not one of {", ".join(LEVELS)}'))
+    if requirement.status not in STATUSES:
+        problems.append(Problem(where, f'status {requirement.status!r} is not one of {", ".join(STATUSES)}'))
+    elif requirement.status in NEEDS_REASON and not requirement.note:
+        problems.append(Problem(where, f'status {requirement.status} needs a note saying why'))
+    if requirement.polarity not in NEEDED_POLARITIES:
+        problems.append(
+            Problem(where, f'polarity {requirement.polarity!r} is not one of {", ".join(NEEDED_POLARITIES)}')
+        )
+    elif requirement.polarity != BOTH and not requirement.note:
+        problems.append(Problem(where, f'polarity {requirement.polarity} needs a note saying why'))
+
+    problems.extend(check_quote(requirement, where, published))
+    return problems
+
+
+def check_quote(requirement: Requirement, where: str, published: str | None) -> list[Problem]:
+    """The quoted sentence has to be in the RFC, character for character.
+
+    This is the gate that stops a ledger being fiction. A requirement list written from
+    a model's recollection of a document gets things wrong in both directions: it adds
+    MUSTs the RFC never stated, and it flips the ones it did. Neither survives being
+    looked for in the published text.
+    """
+    if not requirement.text:
+        return [Problem(where, 'requirement has no text; quote the sentence from the RFC verbatim')]
+    if published is None:
+        return []
+    if normalise(requirement.text) in published:
+        return []
+    return [
+        Problem(
+            where,
+            f'the quoted text is not in qa/rfc/text/{requirement.rfc}.txt. Quote the RFC verbatim, '
+            f'without paraphrasing or joining sentences that are not adjacent. Got: '
+            f'{normalise(requirement.text)[:120]!r}',
+        )
+    ]
+
+
+def is_rfc_marker(func: ast.expr) -> bool:
+    """Match pytest.mark.rfc and the bare mark.rfc some files use."""
+    if not isinstance(func, ast.Attribute) or func.attr != 'rfc':
+        return False
+    mark = func.value
+    if isinstance(mark, ast.Name):
+        return mark.id == 'mark'
+    return isinstance(mark, ast.Attribute) and mark.attr == 'mark'
+
+
+def is_named_marker(decorator: ast.expr, name: str) -> bool:
+    """Match @pytest.mark.<name> whether or not it was called with arguments."""
+    node = decorator.func if isinstance(decorator, ast.Call) else decorator
+    return isinstance(node, ast.Attribute) and node.attr == name
+
+
+def marker_polarity(decorator: ast.Call) -> str:
+    for keyword in decorator.keywords:
+        if keyword.arg == 'polarity' and isinstance(keyword.value, ast.Constant):
+            return str(keyword.value.value)
+    return POSITIVE
+
+
+def marked_requirements(tree: ast.AST) -> list[tuple[int, str, str, str, bool]]:
+    """Every (line, test, requirement id, polarity, is a known gap) in a test file.
+
+    A test carrying both rfc() and xfail is the shape for a requirement we do not meet
+    yet. It is worth more than a line in a plan file because it runs: the day the
+    behaviour arrives, the xfail becomes an unexpected pass and the suite says so.
+    """
+    found: list[tuple[int, str, str, str, bool]] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        gap = any(is_named_marker(decorator, 'xfail') for decorator in node.decorator_list)
+        for decorator in node.decorator_list:
+            if not isinstance(decorator, ast.Call) or not is_rfc_marker(decorator.func):
+                continue
+            polarity = marker_polarity(decorator)
+            for argument in decorator.args:
+                if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+                    found.append((decorator.lineno, node.name, argument.value, polarity, gap))
+
+    return found
+
+
+def collect_tests(requirements: dict[str, Requirement]) -> list[Problem]:
+    """Point every marker at its requirement, complaining about the ones which miss."""
+    problems: list[Problem] = []
+
+    for path in sorted(TESTS_DIR.rglob('test_*.py')):
+        relative = str(path.relative_to(ROOT))
+        try:
+            tree = ast.parse(path.read_text(encoding='utf-8'))
+        except SyntaxError as exc:
+            problems.append(Problem(relative, f'does not parse: {exc.msg}'))
+            continue
+
+        for line, test, identifier, polarity, gap in marked_requirements(tree):
+            where = f'{relative}:{line}'
+            requirement = requirements.get(identifier)
+            if requirement is None:
+                problems.append(Problem(where, f'{test} names unknown requirement {identifier!r}'))
+                continue
+            if polarity not in POLARITIES:
+                problems.append(
+                    Problem(where, f'{test} uses polarity {polarity!r}, not one of {", ".join(POLARITIES)}')
+                )
+                continue
+            if requirement.status != REQUIRED:
+                problems.append(
+                    Problem(where, f'{test} proves {identifier}, which the ledger records as {requirement.status}')
+                )
+                continue
+            if polarity not in requirement.wanted:
+                problems.append(
+                    Problem(
+                        where,
+                        f'{test} is a {polarity} test for {identifier}, which the ledger calls '
+                        f'{requirement.polarity}. One of the two is wrong.',
+                    )
+                )
+                continue
+            target = requirement.gaps if gap else requirement.tests
+            target[polarity].append(f'{relative}::{test}')
+
+    return problems
+
+
+def by_rfc(requirements: dict[str, Requirement]) -> dict[str, list[Requirement]]:
+    grouped: dict[str, list[Requirement]] = {}
+    for requirement in requirements.values():
+        grouped.setdefault(requirement.rfc, []).append(requirement)
+    return grouped
+
+
+def untested_counts(requirements: dict[str, Requirement]) -> dict[str, int]:
+    """Per RFC, how many binding requirements we said we meet but nothing proves."""
+    counts: dict[str, int] = {}
+    for rfc, entries in by_rfc(requirements).items():
+        counts[rfc] = sum(1 for entry in entries if entry.binding and entry.status == REQUIRED and not entry.covered)
+    return counts
+
+
+def read_baseline() -> dict[str, int]:
+    if not BASELINE_FILE.exists():
+        return {}
+    loaded = json.loads(BASELINE_FILE.read_text(encoding='utf-8'))
+    return {str(key): int(value) for key, value in loaded.items()}
+
+
+def report(requirements: dict[str, Requirement]) -> None:
+    """One line per RFC: of the MUSTs we said we would prove, how many we prove."""
+    grouped = by_rfc(requirements)
+    print(
+        f'{"RFC":<10} {"proven":>7} {"shown":>6} {"untested":>9} {"binding":>8} {"excused":>8} {"advisory":>9}  cover'
+    )
+    total_proven = 0
+    total_binding = 0
+
+    for rfc in sorted(grouped):
+        binding = [entry for entry in grouped[rfc] if entry.binding]
+        claimed = [entry for entry in binding if entry.status == REQUIRED]
+        proven = [entry for entry in claimed if entry.covered]
+        shown = [entry for entry in claimed if entry.demonstrated]
+        untested = len(claimed) - len(proven) - len(shown)
+        excused = len(binding) - len(claimed)
+        advisory = len(grouped[rfc]) - len(binding)
+        total_proven += len(proven)
+        total_binding += len(claimed)
+        share = f'{100 * len(proven) / len(claimed):.0f}%' if claimed else '-'
+        print(
+            f'{rfc:<10} {len(proven):>7} {len(shown):>6} {untested:>9} '
+            f'{len(claimed):>8} {excused:>8} {advisory:>9}  {share}'
+        )
+
+    share = f'{100 * total_proven / total_binding:.0f}%' if total_binding else '-'
+    print(f'{"total":<10} {total_proven:>7} {"":>6} {"":>9} {total_binding:>8} {"":>8} {"":>9}  {share}')
+
+
+def describe(entry: Requirement) -> str:
+    if entry.covered:
+        return 'proven'
+    if entry.demonstrated:
+        return 'known gap, demonstrated by a failing test'
+    if entry.status != REQUIRED:
+        return entry.status
+    return 'untested (missing: ' + ', '.join(entry.missing) + ')'
+
+
+def markdown(requirements: dict[str, Requirement], destination: Path) -> None:
+    """The same table, plus every requirement, for someone deciding whether to trust us."""
+    grouped = by_rfc(requirements)
+    lines = [
+        '# RFC compliance',
+        '',
+        'Generated by `./qa/bin/check_rfc_compliance --markdown`. Do not edit by hand:',
+        'edit the ledgers under `qa/rfc/` and the tests carrying `@pytest.mark.rfc`.',
+        '',
+        'Every quote below is checked against the published RFC in `qa/rfc/text/` on every',
+        'run, so a requirement that is not in the document cannot appear in this table.',
+        '',
+        '| RFC | proven | shown | untested | binding | excused | advisory | coverage |',
+        '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    ]
+
+    for rfc in sorted(grouped):
+        binding = [entry for entry in grouped[rfc] if entry.binding]
+        claimed = [entry for entry in binding if entry.status == REQUIRED]
+        proven = [entry for entry in claimed if entry.covered]
+        shown = [entry for entry in claimed if entry.demonstrated]
+        share = f'{100 * len(proven) / len(claimed):.0f}%' if claimed else '-'
+        lines.append(
+            f'| {rfc} | {len(proven)} | {len(shown)} | {len(claimed) - len(proven) - len(shown)} | '
+            f'{len(claimed)} | {len(binding) - len(claimed)} | {len(grouped[rfc]) - len(binding)} | {share} |'
+        )
+
+    for rfc in sorted(grouped):
+        lines += ['', f'## {rfc}', '']
+        for entry in sorted(grouped[rfc], key=lambda item: (item.section, item.id)):
+            lines.append(f'- **{entry.section}** ({entry.level}) `{entry.id}` - {describe(entry)}')
+            lines.append(f'  > {normalise(entry.text)}')
+            if entry.note:
+                lines.append(f'  {entry.note}')
+            for name in entry.all_tests:
+                lines.append(f'  - `{name}`')
+
+    destination.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    print(f'written to {destination}')
+
+
+def check_against_baseline(counts: dict[str, int]) -> int:
+    baseline = read_baseline()
+    failed = False
+    lowered = False
+
+    for rfc in sorted(set(counts) | set(baseline)):
+        count = counts.get(rfc, 0)
+        ceiling = baseline.get(rfc)
+        if ceiling is None:
+            print(f'FAIL {rfc}: {count} untested, and no ceiling recorded, so it is not enrolled')
+            failed = True
+        elif count > ceiling:
+            print(f'FAIL {rfc}: {count} untested, up from {ceiling}')
+            failed = True
+        elif count < ceiling:
+            print(f'ok   {rfc}: {count} untested, down from {ceiling}')
+            lowered = True
+        else:
+            print(f'ok   {rfc}: {count} untested')
+
+    if failed:
+        print('\na requirement we said we would prove is no longer proven')
+        return 1
+    if lowered:
+        print('\nrequirements were covered, lower the ceiling with --update-baseline')
+        return 1
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--show', action='store_true', help='name every untested requirement')
+    parser.add_argument('--report', action='store_true', help='print the coverage table')
+    parser.add_argument('--markdown', metavar='FILE', help='write the full ledger as markdown')
+    parser.add_argument('--update-baseline', action='store_true', help='record the current counts')
+    options = parser.parse_args()
+
+    requirements, problems = load_ledgers()
+    problems += collect_tests(requirements)
+
+    if problems:
+        print('the ledger, the RFCs and the tests disagree:')
+        for problem in problems:
+            print(f'  {problem}')
+        return 1
+
+    counts = untested_counts(requirements)
+
+    if options.markdown:
+        markdown(requirements, Path(options.markdown))
+        return 0
+
+    if options.report:
+        report(requirements)
+        return 0
+
+    if options.update_baseline:
+        BASELINE_FILE.write_text(json.dumps(counts, indent=4, sort_keys=True) + '\n', encoding='utf-8')
+        print(f'baseline written to {BASELINE_FILE.relative_to(ROOT)}')
+        for rfc in sorted(counts):
+            print(f'  {rfc}: {counts[rfc]} untested')
+        return 0
+
+    if options.show:
+        for requirement in sorted(requirements.values(), key=lambda item: item.id):
+            if requirement.binding and requirement.status == REQUIRED and not requirement.covered:
+                print(f'  {requirement} missing {", ".join(requirement.missing)}')
+                print(f'    {normalise(requirement.text)}')
+
+    return check_against_baseline(counts)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

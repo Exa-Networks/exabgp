@@ -97,6 +97,7 @@ markers = [
 	"asyncio: Async tests using pytest-asyncio",
 	"timeout: Test timeout in seconds (requires pytest-timeout plugin)",
 	"registry_floor: asserts the registry this file sweeps or parametrises from is whole",
+	"rfc: names the RFC requirements a test proves, joined to qa/rfc/ by ./qa/bin/check_rfc_compliance",
 ]
 
 [tool.ruff]
