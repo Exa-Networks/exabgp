@@ -16,6 +16,12 @@ are read, all-zeros (a zero length field, which is where a decode loop fails to 
 all-ones (a length field claiming far more than is present), and a prefix length of 0x80,
 which is 128 and larger than any address family here.
 
+Those buffers all fall at the first length check, which is the whole of the decoder for a
+family with a flat NLRI and only the front door for a family framed as type + length +
+payload.  So a second set is built: outer frames whose own length octet is honest, sized
+so the frame is accepted, carrying an inner length field which is not.  That is the half
+of MVPN and EVPN the buffers above never reach.
+
 The attribute sweep covers type codes 0 to 44, which is every one IANA has assigned that
 this tree could meet, against ten flag bytes. Those include the RFC 4271 4.3 unused low
 bits and the combinations which conflict with what each attribute registers, because the
@@ -61,6 +67,51 @@ MALFORMED: tuple[bytes, ...] = (
     b'\x01\xff',
     b'\x00\xff' * 4,
 )
+
+# length octets which are not a legal address length but which divide by eight into one,
+# followed by the two which are legal, so a frame that should decode is in the set too
+INNER_LENGTHS: tuple[int, ...] = (0x21, 0x27, 0x81, 0x87, 0xFF, 0x20, 0x80)
+
+# the type codes of a family framed as type + length + payload: MVPN route types run 1 to
+# 7 and EVPN route types 1 to 5, and the unassigned ones above them must fall through
+INNER_TYPE_CODES: tuple[int, ...] = tuple(range(1, 13))
+
+# payload sizes a fixed-shape route type accepts, so the outer frame gets past the first
+# length check instead of being refused before any inner field is read
+INNER_PAYLOAD_SIZES: tuple[int, ...] = (18, 22, 34, 42, 46)
+
+# where an inner length octet sits: after a route distinguisher, and after a route
+# distinguisher and a four octet AS number
+INNER_LENGTH_OFFSETS: tuple[int, ...] = (8, 12)
+
+
+def well_framed_frames() -> tuple[bytes, ...]:
+    """Outer frames whose own length is honest and whose inner length field is not.
+
+    Every payload in MALFORMED is refused by the first length check of any decoder which
+    has one, so none of them ever reaches the second.  A family framed as type + length +
+    payload reads its inner length fields only once that outer frame has been accepted,
+    which means the whole of that decoder is unreachable from the set above: not one of
+    those buffers enters an MVPN route type at all.
+
+    This is the shape which made the difference.  RFC 6514's Multicast Source Length is
+    32 for IPv4 and 128 for IPv6, and a decoder which divided the octet by eight before
+    comparing it read 0x81 as sixteen octets, walked the cursor sixteen octets into an
+    eighteen octet payload and raised IndexError out of a buffer whose size was never in
+    doubt.  The frame is honest; the field inside it is the lie.
+    """
+    frames: list[bytes] = []
+    for code in INNER_TYPE_CODES:
+        for size in INNER_PAYLOAD_SIZES:
+            for offset in INNER_LENGTH_OFFSETS:
+                for length in INNER_LENGTHS:
+                    payload = bytearray(size)
+                    payload[offset] = length
+                    frames.append(bytes([code, size]) + bytes(payload))
+    return tuple(frames)
+
+
+MALFORMED += well_framed_frames()
 
 # OPTIONAL 0x80, TRANSITIVE 0x40, PARTIAL 0x20, EXTENDED_LENGTH 0x10, and the four
 # RFC 4271 4.3 unused bits.  0x41 and 0xFF are here because a flag which conflicts with

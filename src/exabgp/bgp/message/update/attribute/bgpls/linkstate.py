@@ -87,7 +87,6 @@ class LinkState(Attribute):
     def _parse_tlvs(cls, data: Buffer) -> list[BaseLS]:
         """Parse TLVs from raw bytes."""
         ls_attrs: list[BaseLS] = []
-        seen: set[int] = set()
 
         while data:
             if len(data) < 4:
@@ -102,35 +101,9 @@ class LinkState(Attribute):
 
             data = data[length + 4 :]
             klass = cls.get_ls_class(scode)
-            cls._check_not_repeated(klass, scode, seen)
             ls_attrs.append(cls._decode_tlv(klass, scode, payload))
 
         return ls_attrs
-
-    @classmethod
-    def _check_not_repeated(cls, klass: type[LSClass], scode: int, seen: set[int]) -> None:
-        """RFC 9552 5.3.2: a TLV which may not repeat, repeated, makes the attribute malformed.
-
-        The RFC calls for the attribute discard approach, and DISCARD is set on this class,
-        so AttributeCollection.parse drops the BGP-LS attribute and keeps the route.
-
-        MERGE is already this implementation's marker for "may appear more than once", so
-        it is the marker used here rather than a second list which could disagree with it.
-        A repeated TLV without it rendered its JSON key twice, and every parser resolves
-        that by keeping one of them, so the other was lost silently: the peer chose which
-        of its own values the API consumer saw.
-
-        A code nothing has registered is not held to this.  get_ls_class synthesises a
-        GenericLSID for it, and we cannot claim a TLV we do not implement may not repeat:
-        refusing it would drop the attribute of a deployment using an extension we simply
-        have not caught up with.  It renders under a code specific name, so two of them do
-        not collide either.
-        """
-        if getattr(klass, 'MERGE', False) or getattr(klass, 'GENERIC', False):
-            return
-        if scode in seen:
-            raise Notify(3, 5, f'BGP-LS: TLV {scode} appears more than once and may not repeat')
-        seen.add(scode)
 
     @staticmethod
     def _decode_tlv(klass: type[LSClass], scode: int, payload: Buffer) -> BaseLS:
@@ -229,30 +202,51 @@ class LinkState(Attribute):
         instance.ls_attrs
         return instance
 
+    @staticmethod
+    def _json_array(key: str, attrs: list[BaseLS]) -> str:
+        """One key holding what every TLV of that name carried."""
+        return f'"{key}": {json.dumps([jsonable(attr.content) for attr in attrs])}'
+
     def json(self, compact: bool = False) -> str:
-        """Output JSON for all TLVs. MERGE classes are grouped into arrays by JSON key."""
+        """Output JSON for all TLVs, never writing the same key twice.
+
+        MERGE classes are grouped into arrays by JSON key, which is what the alias TLVs
+        (1028 and 1029) exist for.  A class which did not ask to merge is rendered by its
+        own json(), unless the peer sent more than one of it, in which case it is grouped
+        too.
+
+        That last case used to be a Notify and an Attribute Discard.  RFC 9552 8.2.2 says
+        a BGP-LS Attribute "MUST NOT be considered malformed or invalid based on the
+        inclusion/exclusion of TLVs", and its three syntactic checks are all about
+        lengths, so refusing a repeat was refusing something the RFC protects, at the cost
+        of every other TLV in the attribute.  The reason it was refused - that two of one
+        key leaves a JSON consumer to pick one silently - was a real problem with a
+        rendering answer rather than a protocol answer, and this is that answer.
+        """
         from collections import defaultdict
 
-        # Separate MERGE and non-MERGE attributes
-        # MERGE: group by JSON key (so alias TLVs like 1028/1029 merge together)
-        # Non-MERGE: preserve order, output individually
         merge_groups: dict[str, list[BaseLS]] = defaultdict(list)
         non_merge: list[BaseLS] = []
+        by_key: dict[str, list[BaseLS]] = defaultdict(list)
 
         for attr in self.ls_attrs:
             if getattr(attr, 'MERGE', False):
                 merge_groups[attr.JSON].append(attr)
             else:
                 non_merge.append(attr)
+                by_key[attr.JSON].append(attr)
 
-        parts = []
-        # Output MERGE groups as arrays
-        for key, attrs in merge_groups.items():
-            contents = [jsonable(a.content) for a in attrs]
-            parts.append(f'"{key}": {json.dumps(contents)}')
-        # Output non-MERGE individually
+        parts = [self._json_array(key, attrs) for key, attrs in merge_groups.items()]
+        written: set[str] = set()
         for attr in non_merge:
-            parts.append(attr.json(compact))
+            same = by_key[attr.JSON]
+            if len(same) == 1:
+                parts.append(attr.json(compact))
+                continue
+            if attr.JSON in written:
+                continue
+            written.add(attr.JSON)
+            parts.append(self._json_array(attr.JSON, same))
 
         return '{ ' + ', '.join(parts) + ' }'
 

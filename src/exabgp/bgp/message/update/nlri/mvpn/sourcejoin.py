@@ -4,10 +4,10 @@ from struct import pack
 from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
+from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN, check_source_and_group
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
-from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
 # +-----------------------------------+
@@ -80,15 +80,15 @@ class SourceJoin(MVPN):
     @property
     def source(self) -> IP:
         cursor = 14  # 2 (header) + 8 (RD) + 4 (source_as)
-        sourceiplen = int(self._packed[cursor] / 8)
+        sourceiplen = self._packed[cursor] // 8
         return IP.create_ip(self._packed[cursor + 1 : cursor + 1 + sourceiplen])
 
     @property
     def group(self) -> IP:
         cursor = 14  # 2 (header) + 8 (RD) + 4 (source_as)
-        sourceiplen = int(self._packed[cursor] / 8)
+        sourceiplen = self._packed[cursor] // 8
         cursor += 1 + sourceiplen
-        groupiplen = int(self._packed[cursor] / 8)
+        groupiplen = self._packed[cursor] // 8
         return IP.create_ip(self._packed[cursor + 1 : cursor + 1 + groupiplen])
 
     def __eq__(self, other: object) -> bool:
@@ -123,26 +123,9 @@ class SourceJoin(MVPN):
         if datalen not in (MVPN_SOURCEJOIN_IPV4_LENGTH, MVPN_SOURCEJOIN_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Invalid C-Multicast Route length ({datalen} bytes).')
 
-        # Validate source IP length (offset +2 for header)
-        cursor = 14  # 2 (header) + 8 (RD) + 4 (Source AS)
-        sourceiplen = int(packed[cursor] / 8)
-        cursor += 1
-        if sourceiplen != IPv4.BYTES and sourceiplen != IPv6.BYTES:
-            raise Notify(
-                3,
-                5,
-                f'Invalid C-Multicast Route length ({sourceiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
-            )
-        cursor += sourceiplen
-
-        # Validate group IP length
-        groupiplen = int(packed[cursor] / 8)
-        if groupiplen != IPv4.BYTES and groupiplen != IPv6.BYTES:
-            raise Notify(
-                3,
-                5,
-                f'Invalid C-Multicast Route length ({groupiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
-            )
+        # The Multicast Source Length octet sits after the header, the RD and the Source
+        # AS, and the two address length octets are what the accessors below trust.
+        check_source_and_group(packed, 14, 'C-Multicast Source Tree Join route')
 
         return cls(packed, afi)
 

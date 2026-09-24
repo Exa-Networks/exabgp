@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
+from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN, check_source_and_group
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
-from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
 
 # +-----------------------------------+
@@ -70,14 +70,14 @@ class SourceAD(MVPN):
 
     @property
     def source(self) -> IP:
-        sourceiplen = int(self._packed[10] / 8)
+        sourceiplen = self._packed[10] // 8
         return IP.create_ip(self._packed[11 : 11 + sourceiplen])
 
     @property
     def group(self) -> IP:
-        sourceiplen = int(self._packed[10] / 8)
+        sourceiplen = self._packed[10] // 8
         cursor = 11 + sourceiplen
-        groupiplen = int(self._packed[cursor] / 8)
+        groupiplen = self._packed[cursor] // 8
         return IP.create_ip(self._packed[cursor + 1 : cursor + 1 + groupiplen])
 
     def __eq__(self, other: object) -> bool:
@@ -112,26 +112,9 @@ class SourceAD(MVPN):
         if datalen not in (MVPN_SOURCEAD_IPV4_LENGTH, MVPN_SOURCEAD_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Unsupported Source Active A-D route length ({datalen} bytes).')
 
-        # Validate source IP length (offset +2 for header)
-        cursor = 10  # 2 (header) + 8 (RD)
-        sourceiplen = int(packed[cursor] / 8)
-        cursor += 1
-        if sourceiplen != IPv4.BYTES and sourceiplen != IPv6.BYTES:
-            raise Notify(
-                3,
-                5,
-                f'Unsupported Source Active A-D Route Multicast Source IP length ({sourceiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
-            )
-        cursor += sourceiplen
-
-        # Validate group IP length
-        groupiplen = int(packed[cursor] / 8)
-        if groupiplen != IPv4.BYTES and groupiplen != IPv6.BYTES:
-            raise Notify(
-                3,
-                5,
-                f'Unsupported Source Active A-D Route Multicast Group IP length ({groupiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
-            )
+        # The Multicast Source Length octet sits after the header and the RD, and the two
+        # address length octets are what the accessors below trust to slice the addresses.
+        check_source_and_group(packed, 10, 'Source Active A-D Route')
 
         # Missing implementation of this check from RFC 6514:
         # Source Active A-D routes with a Multicast group belonging to the

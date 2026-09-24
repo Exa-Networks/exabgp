@@ -11,6 +11,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.ip import IPv4, IPv6
 
 # https://datatracker.ietf.org/doc/html/rfc6514
 
@@ -21,6 +22,39 @@ from exabgp.protocol.family import AFI, SAFI, Family
 # +-----------------------------------+
 # | Route Type specific (variable)    |
 # +-----------------------------------+
+
+# RFC 6514 sections 4.3, 4.5, 4.6 and 4.7 all end the same way: a Multicast Source
+# Length or Multicast Group Length octet is 32 when the address which follows is IPv4
+# and 128 when it is IPv6, and "usage of other values [...] is outside the scope of this
+# document".
+MVPN_ADDRESS_LENGTH_BITS: tuple[int, int] = (IPv4.BITS, IPv6.BITS)
+
+
+def check_source_and_group(packed: Buffer, cursor: int, name: str) -> None:
+    """Check the Multicast Source and Multicast Group of a route which carries both.
+
+    The octet is compared against 32 and 128 rather than its quotient by eight, because a
+    quotient accepts far more than the RFC defines: 33 to 39 divide to four octets and are
+    read back as an IPv4 address the peer never sent, and 129 to 135 divide to sixteen and
+    move the cursor past the end of an eighteen octet payload, where the read of the group
+    length octet raises IndexError instead of closing the session with a NOTIFICATION.
+
+    `cursor` is the offset of the Multicast Source Length octet within `packed`.
+    """
+    for field in ('Multicast Source', 'Multicast Group'):
+        if cursor >= len(packed):
+            raise Notify(3, 5, f'{name} is too short to hold its {field} Length octet.')
+        bits = packed[cursor]
+        if bits not in MVPN_ADDRESS_LENGTH_BITS:
+            raise Notify(
+                3,
+                5,
+                f'Unsupported {name} {field} IP length ({bits} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
+            )
+        cursor += 1 + bits // 8
+    if cursor != len(packed):
+        raise Notify(3, 5, f'{name} length does not match its Multicast Source and Multicast Group addresses.')
+
 
 # ========================================================================= MVPN
 

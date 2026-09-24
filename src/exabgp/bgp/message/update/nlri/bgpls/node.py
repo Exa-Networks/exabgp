@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     pass
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES
+from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
@@ -162,9 +162,10 @@ class NODE(BGPLS):
         """
         # Data includes 4-byte header, payload starts at offset 4
         cls.check_length(data, cls.DESCRIPTOR_OFFSET)
+        # RFC 9552 8.2.2: the NLRI may not be called malformed over the contents of a
+        # field, so an unrecognised Protocol-ID is carried rather than refused.  It is
+        # still read, because the IGP Router-ID sub-TLV is typed by it.
         proto_id = unpack('!B', bytes(data[4:5]))[0]
-        if proto_id not in PROTO_CODES.keys():
-            raise Notify(3, 10, f'Protocol-ID {proto_id} is not valid')
 
         # Validate node descriptor TLV type (offset by 4-byte header)
         tlvs = list(cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]))

@@ -1,0 +1,221 @@
+# RFC 6514 - BGP Encodings and Procedures for Multicast in MPLS/BGP IP VPNs
+# https://www.rfc-editor.org/rfc/rfc6514
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc6514.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Read this first, because the ledger is much shorter than the document and the reason
+# matters.
+#
+# Section 4, the whole of the MCAST-VPN NLRI, contains exactly one RFC 2119 keyword: the
+# SSM rule in section 4.5, recorded below.  The Route Type and Length octets, the seven
+# route type encodings, the rule that the Length field counts only the route type
+# specific part, and the rule that a Multicast Source Length of 32 means IPv4 and 128
+# means IPv6, are all stated in flat declarative prose.  "The Length field indicates the
+# length in octets of the Route Type specific field of the MCAST-VPN NLRI."  No MUST, no
+# SHALL.  This document is the fifth in today's set to do that, after RFC 1997, RFC 4360,
+# RFC 7432 and RFC 8955 section 4.1, so none of it is recorded here as a requirement.
+# tests/unit/rfc/test_rfc6514_mvpn.py tests the wire format anyway, unmarked, because a
+# decoder which reads the Length octet wrongly is a bug whatever the RFC's grammar was.
+#
+# Section 5, the PMSI Tunnel attribute, is the same story for its own format: the Flags
+# octet, the eight tunnel types and the three octet MPLS label carry no keyword, and
+# neither does the sentence which defines malformed ("A router that supports the PMSI
+# Tunnel attribute considers this attribute to be malformed if either (a) it contains an
+# undefined tunnel type ...").  That last one is worth knowing about because exabgp does
+# NOT treat an undefined tunnel type as malformed - it keeps the bytes in a generic PMSI
+# and prints the identifier as hex - and since the sentence is not normative, that is a
+# design choice rather than a breach.  The keywords in section 5 are about what the
+# originating node does with the identifier once it starts encapsulating data, which is
+# where exabgp stops.
+#
+# exabgp's shape, for the not-applicable notes below: it speaks BGP and reports to a JSON
+# API.  It builds no P-tunnel, sends no multicast data, holds no multicast forwarding
+# state, is neither a PE nor an ASBR, and does not re-advertise a route from one peer to
+# another.  Only three MVPN route types are decoded into fields at all - 5 Source Active
+# A-D, 6 Shared Tree Join, 7 Source Tree Join - and types 1 to 4 fall through to
+# GenericMVPN, which keeps the wire bytes and reports them as hex.
+
+rfc = "rfc6514"
+title = "BGP Encodings and Procedures for Multicast in MPLS/BGP IP VPNs"
+url = "https://www.rfc-editor.org/rfc/rfc6514"
+
+[[requirement]]
+id = "rfc6514#4.5-ssm-range-not-advertised-and-discarded"
+section = "4.5"
+level = "MUST NOT"
+status = "gap"
+polarity = "both"
+text = """
+Source Active A-D routes with a Multicast group belonging to the
+Source Specific Multicast (SSM) range (as defined in [RFC4607], and
+potentially extended locally on a router) MUST NOT be advertised by a
+router and MUST be discarded if received.
+"""
+note = """
+The one normative sentence in the whole of section 4, and exabgp honours neither half.
+`SourceAD.unpack_mvpn` checks the route length and the two address length octets and
+nothing else: a Source Active A-D route whose Multicast Group is in 232/8 or ff3x::/32 is
+decoded, reported to the JSON API and kept in the adj-rib-in like any other.  The send
+side is the same - the configuration parser will encode whatever group the operator
+writes.  Nothing in the tree knows what the SSM range is; grep finds no 232 and no RFC
+4607 anywhere near the MVPN code.  This is a gap and not not-applicable because the
+sentence binds any router which advertises or receives these routes, and exabgp does
+both.  Closing it needs an SSM range check in `SourceAD.unpack_mvpn` and in
+`make_sourcead`, plus a way to configure the local extension the sentence allows for.
+"""
+
+[[requirement]]
+id = "rfc6514#5-pim-sm-sender-address-as-source"
+section = "5"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The node that originated the attribute MUST use
+the address carried in the Sender Address as the source IP address
+for the IP/GRE (Generic Routing Encapsulation) encapsulation of the
+MVPN data.
+"""
+note = """
+This binds the node's data plane, not its BGP speaker: it says which source address to
+put on the GRE packets carrying the customer's multicast traffic.  exabgp sends no MVPN
+data and builds no GRE encapsulation - it has no forwarding path at all - so there is no
+IP header for the Sender Address to end up in.  exabgp's side of a PIM-SM PMSI Tunnel
+attribute ends at carrying the Tunnel Identifier bytes intact, which it does: tunnel type
+4 has no registered subclass, so the identifier stays in the generic PMSI unexamined.
+"""
+
+[[requirement]]
+id = "rfc6514#5-pim-ssm-root-address-as-source"
+section = "5"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The node that originates
+the attribute MUST use the address carried in the P-Root Node Address
+as the source IP address for the IP/GRE encapsulation of the MVPN
+data.
+"""
+note = """
+Same as the PIM-SM sentence above, for tunnel type 3 rather than type 4: an obligation on
+the encapsulation of MVPN data packets.  exabgp forwards no packets and originates no
+P-tunnel, so nothing it does can satisfy or breach it.
+"""
+
+[[requirement]]
+id = "rfc6514#5-p-multicast-group-not-expected-common"
+section = "5"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+The P-Multicast Group in the Tunnel Identifier of the Tunnel
+attribute MUST NOT be expected to be the same group for all Intra-AS
+A-D routes for the same MVPN.
+"""
+note = """
+A negative obligation on the receiver, and the one section 5 rule which does bind a
+speaker with no forwarding plane: it forbids assuming two routes of the same MVPN agree
+on the P-multicast group, which is exactly the assumption an implementation makes by
+accident when it caches or de-duplicates on something narrower than the whole attribute.
+exabgp complies by not looking: tunnel type 3 has no registered subclass, so the
+identifier is never parsed into a root and a group, and `PMSI.__eq__` compares the full
+packed value.  The positive test decodes two PIM-SSM PMSI attributes which differ only in
+the P-multicast group and shows both identifiers survive intact; the negative test is the
+failure mode, that the two do not compare equal and do not collide in an attribute
+collection, which is what a group-blind cache key would cause.
+"""
+
+[[requirement]]
+id = "rfc6514#5-same-group-for-intra-as-routes"
+section = "5"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+When the Tunnel Type is set to PIM-SM or BIDIR-PIM tree, then the
+P-Multicast Group in the Tunnel Identifier of the Tunnel attribute
+SHOULD contain the same multicast group address for all Intra-AS
+I-PMSI A-D routes for the same MVPN originated by PEs within a given
+AS.
+"""
+note = """
+An obligation on whoever allocates the P-multicast group for an MVPN, and the RFC says in
+the next sentence that how it is chosen is out of scope.  exabgp allocates nothing: the
+Tunnel Identifier is bytes the operator wrote in the configuration or sent over the API,
+and exabgp originates no Intra-AS I-PMSI A-D routes of its own to be consistent across.
+Enforcing this would mean refusing a value the operator asked for on the strength of a
+grouping exabgp cannot see, since it has no MVPN membership table.
+"""
+
+[[requirement]]
+id = "rfc6514#5-malformed-pmsi-treat-as-withdraw"
+section = "5"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+When a router that receives a BGP Update that contains the PMSI
+Tunnel attribute with its Partial bit set determines that the
+attribute is malformed, the router SHOULD treat this Update as though
+all the routes contained in this Update had been withdrawn.
+"""
+note = """
+`PMSI.TREAT_AS_WITHDRAW` is what expresses this, and `AttributeCollection.parse` turns
+the ValueError out of `PMSI.from_packet` into an INTERNAL_TREAT_AS_WITHDRAW marker rather
+than letting it reach the reactor as a session reset.  exabgp is stricter than the
+sentence in one direction, deliberately: it does not condition on the Partial bit, so a
+malformed PMSI is treat-as-withdraw whether or not the previous hop marked it partial,
+which is what RFC 7606 asks of an optional transitive attribute anyway.  The positive
+test feeds a PMSI too short to hold its own fixed header and shows the UPDATE is
+withdrawn; the negative test is the boundary in the other direction, that a well-formed
+PMSI is not withdrawn - a decoder which withdrew everything would pass the positive test
+and destroy every MVPN route on the session.
+"""
+
+[[requirement]]
+id = "rfc6514#5-log-malformed-pmsi"
+section = "5"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+An implementation MUST provide debugging facilities to permit issues
+caused by a malformed PMSI Tunnel attribute to be diagnosed.  At a
+minimum, such facilities MUST include logging an error when such an
+attribute is detected.
+"""
+note = """
+exabgp detects the malformed attribute and acts on it, but says nothing.  In
+`AttributeCollection.parse` the `except (IndexError, ValueError)` arm adds a
+`TreatAsWithdraw` and continues with no log call at all - and the ValueError branch is
+the one a short PMSI takes, because `PMSI.from_packet` raises ValueError rather than
+Notify.  The neighbouring arms are better behaved: the bad-flag path a few lines below
+calls `log.debug` before doing the same thing.  So the routes vanish from the API with no
+record of why, which is precisely the diagnosis problem this paragraph exists to prevent.
+A one line `log.debug` in that arm naming the attribute code would close it, and would
+close it for every other TREAT_AS_WITHDRAW attribute at the same time.
+"""
+
+[[requirement]]
+id = "rfc6514#9.1.1-leaf-information-required-ignored"
+section = "9.1.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
++ The Leaf Information Required flag of the PMSI Tunnel attribute
+MUST be set to zero and MUST be ignored on receipt.
+"""
+note = """
+Scoped by its bullet list to the Intra-AS I-PMSI A-D route a PE originates, which exabgp
+neither originates nor consumes as a PE.  Both halves are empty for it: the flags octet
+exabgp sends is the one the operator supplied, since exabgp is the tool used to send
+deliberately chosen bytes including wrong ones, and on receipt the flag is ignored in the
+only sense available to a speaker with no multicast state - it triggers nothing, because
+the action it asks for is originating a Leaf A-D route and exabgp implements no route
+type 4.  The bit is reported to the JSON API unchanged, which is reporting rather than
+acting.
+"""

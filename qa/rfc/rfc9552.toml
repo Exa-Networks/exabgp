@@ -1,0 +1,397 @@
+# RFC 9552 - Distribution of Link-State and Traffic Engineering Information Using BGP
+# https://www.rfc-editor.org/rfc/rfc9552
+#
+# Obsoletes RFC 7752 and RFC 9029.  The codebase still cites RFC 7752 throughout
+# src/exabgp/bgp/message/update/nlri/bgpls/ and .../attribute/bgpls/; the wire format is
+# unchanged, but the receiver obligations in section 8.2.2 are new text and are where
+# every finding below lives.
+#
+# Every `text` is quoted verbatim from qa/rfc/text/rfc9552.txt.
+#
+# Scope note.  This ledger records only what binds a RECEIVER.  RFC 9552 splits its
+# actors into a BGP-LS Producer (originates from an IGP), a BGP-LS Propagator (a route
+# reflector re-advertising) and a BGP-LS Consumer.  exabgp is none of the three by
+# itself: it decodes Link-State NLRIs and the BGP-LS Attribute off the wire and hands
+# them to a JSON API, with no IGP, no TE database, no re-advertisement and no best path
+# selection.  So every "a BGP-LS Producer MUST ..." sentence (sections 4, 5.2.1 origination
+# rules, 5.3 message size, 5.6 to 5.12) is left out entirely rather than recorded as
+# not-applicable: none of them describe a decode path.  What is recorded is the set of
+# sentences addressed to "a BGP-LS Speaker" or written about what a receiver may consider
+# malformed, because those are the ones exabgp's decoder either honours or breaks.
+#
+# On status.  Two entries below are recorded as `required` and carry an xfail test which
+# fails today: that is this directory's shape for an unmet obligation which is
+# demonstrated rather than described, and check_rfc_compliance counts them as gaps
+# because the test carries xfail, not because the ledger says so.  The two entries that
+# say `gap` outright are the ones with no test at all.  Four of the original six xfails
+# were closed together: the Protocol-ID whitelist, the Node Descriptor sub-TLV whitelist
+# and the repeated BGP-LS Attribute TLV were all this decoder refusing input the RFC
+# protects, and the last two xfails are the opposite failure, validation this decoder
+# does not do.
+#
+# Not recorded, and deliberately: the wire layout itself.  Section 5.1's "The Length field
+# defines the length of the value portion in octets" and section 5.2's "The Total NLRI
+# Length field contains the cumulative length, in octets, of the rest of the NLRI, not
+# including the NLRI Type field or itself" are both stated in plain declarative prose with
+# no RFC 2119 keyword, exactly like RFC 1997 and RFC 4360.  The normative force behind
+# them arrives second hand, through section 8.2.2's "MUST perform the following syntactic
+# validation", which is what this ledger records instead.
+
+rfc = "rfc9552"
+title = "Distribution of Link-State and Traffic Engineering Information Using BGP"
+url = "https://www.rfc-editor.org/rfc/rfc9552"
+
+[[requirement]]
+id = "rfc9552#5.1-unknown-tlv-preserved"
+section = "5.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Unknown and unsupported
+types MUST be preserved and propagated within both the NLRI and the
+BGP-LS Attribute.
+"""
+note = """
+Held on both sides now, and by the same pattern on each.
+
+The BGP-LS Attribute half was always done: `LinkState.get_ls_class` synthesises a
+`GenericLSID` for a code nothing has registered, which keeps the bytes and renders them
+as hex under a name carrying the code.
+
+The NLRI half is done the same way.  `NodeDescriptor.unpack_node` used to end with
+`raise Notify(3, 10, 'unknown node descriptor sub-tlv ...')`, so a Node or Link NLRI
+carrying a sub-TLV outside the four codes of 2016 (512, 513, 514, 515) took the session
+down; 516, BGP Router Identifier, was assigned by RFC 9086 and is exactly that case.  It
+now returns a `GenericNodeDescriptor`, the sibling of `GenericLSID`, which keeps the whole
+sub-TLV in `_packed` so `pack_tlv` propagates it byte for byte and renders it under
+`generic-node-descriptor-<code>`.
+"""
+
+[[requirement]]
+id = "rfc9552#5.1-unknown-tlv-not-malformed"
+section = "5.1"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+The presence of unknown or unexpected TLVs MUST
+NOT result in the NLRI or the BGP-LS Attribute being considered
+malformed.
+"""
+note = """
+The companion to the sentence above, and it was the same split until the NLRI side was
+given a generic descriptor.  An unknown TLV in the BGP-LS Attribute decodes to a generic
+and the attribute stands; an unknown Node Descriptor sub-TLV in the NLRI does the same and
+the NLRI stands.  It used to be a Notify out of `NodeDescriptor.unpack_node`, which was
+not merely "considered malformed" but escalated past the 'NLRI discard' this document asks
+for all the way to a session reset.
+
+The same paragraph's definition of an unexpected TLV ("a TLV is received along with an
+update for a link-state object other than the one that the TLV is specified as associated
+with") is honoured: `LinkState._parse_tlvs` dispatches on the TLV code alone and never
+asks which NLRI type the attribute arrived with.
+"""
+
+[[requirement]]
+id = "rfc9552#5.1-nlri-tlvs-ascending-order"
+section = "5.1"
+level = "MUST"
+status = "gap"
+polarity = "positive-only"
+text = """
+To compare NLRIs with unknown TLVs, all TLVs within the NLRI MUST be
+ordered in ascending order by TLV Type.
+"""
+note = """
+Not checked anywhere.  `BGPLS.iter_tlvs` walks the sequence and validates every boundary
+but never compares one type to the next, and neither `NODE.unpack_bgpls_nlri` nor the link
+and prefix decoders sort or reject.
+
+Recorded positive-only because the requirement as written binds the encoder, and exabgp
+has no BGP-LS encoder to bind: an NLRI it emits is the peer's own bytes, kept verbatim in
+`_packed` and returned unchanged by `pack_nlri`, so exabgp neither creates nor repairs an
+ordering.  The receiver's half of it is the seventh bullet of section 8.2.2, recorded
+separately as rfc9552#8.2.2-nlri-syntactic-validation, and the demonstration of the gap
+lives on that entry.
+"""
+
+[[requirement]]
+id = "rfc9552#5.1-unordered-attribute-not-malformed"
+section = "5.1"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+The BGP-LS Attribute with unordered TLVs MUST NOT
+be considered malformed.
+"""
+note = """
+Held by omission, which is the compliant behaviour here: `LinkState._parse_tlvs` walks the
+attribute in wire order and never looks at whether the codes ascend.  The trap this guards
+is a future optimisation which sorted or binary-searched the TLVs and started rejecting
+what it found out of order, so the positive test hands the decoder a descending attribute
+and expects every TLV back.
+
+The negative side matters just as much: the tolerance is about order and nothing else, so
+a descending attribute whose last TLV overruns the value is still refused.
+"""
+
+[[requirement]]
+id = "rfc9552#5.2-afi-safi-assignment"
+section = "5.2"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+All non-VPN link, node, and prefix information SHALL be encoded using
+AFI 16388 / SAFI 71.  VPN link, node, and prefix information SHALL be
+encoded using AFI 16388 / SAFI 72.
+"""
+note = """
+`AFI.BGPLS` is 16388 and `SAFI.BGPLS` / `SAFI.BGPLS_VPN` are 71 and 72, and
+`@NLRI.register(AFI.bgpls, SAFI.bgp_ls)` plus the VPN registration on the same class are
+what route an MP_REACH of that family into this decoder.  The difference between the two
+is real and not cosmetic: `BGPLS.unpack_nlri` reads an eight octet Route Distinguisher
+after the header for SAFI 72 and does not for SAFI 71, so the negative test is that the
+same bytes under the two SAFIs do not decode to the same object.
+"""
+
+[[requirement]]
+id = "rfc9552#5.2-unknown-nlri-type-opaque"
+section = "5.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+An implementation MUST
+handle unknown Link-State NLRI types as opaque objects and MUST
+preserve and propagate them.
+"""
+note = """
+`BGPLS.unpack_nlri` falls through to `GenericBGPLS(code, wire_format)` for any type
+outside the registry, keeps the complete wire format header included, and `pack_nlri`
+returns it byte for byte.  This is the deviation from RFC 7606 section 5.4 the paragraph
+above it announces, and exabgp takes it.
+
+The negative side is that opaque is not the same as unexamined: a generic whose Total NLRI
+Length runs past the buffer is still refused, because accepting it would mean the next
+NLRI in the same MP_REACH was read from the wrong offset.
+"""
+
+[[requirement]]
+id = "rfc9552#5.2.1-one-instance-per-sub-tlv"
+section = "5.2.1"
+level = "MUST"
+status = "required"
+polarity = "negative-only"
+text = """
+At most, there MUST be one instance of each sub-TLV type present in
+any Node Descriptor.
+"""
+note = """
+Not checked, and the xfail on this entry is the demonstration.
+`NODE.unpack_bgpls_nlri` loops `NodeDescriptor.unpack_node` over the
+descriptor value until it is exhausted and appends whatever comes back, with no set of
+seen types; the same loop in `NODE.node_ids` does the same on the render path.  A Node
+NLRI carrying two Autonomous System sub-TLVs is accepted, and its JSON then contains the
+key "autonomous-system" twice, which every JSON parser resolves by keeping one of the two,
+silently, with the peer choosing which.
+
+Negative-only: exabgp originates no Node Descriptor, so there is no positive side where
+exabgp is the one obeying the limit.  The whole content of this requirement for a receiver
+is noticing a peer breaking it, and that is what the xfail test demonstrates.
+"""
+
+[[requirement]]
+id = "rfc9552#8.2.2-nlri-not-malformed-on-semantics"
+section = "8.2.2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+A Link-State NLRI MUST NOT be considered malformed or invalid based
+on the inclusion/exclusion of TLVs or contents of the TLV fields
+(i.e., semantic errors), as described in Sections 5.1 and 5.2.
+"""
+note = """
+Was breached twice, both in the contents-of-a-field direction, and both are closed.
+
+`NODE.unpack_bgpls_nlri` and its four siblings (`link.py`, `prefixv4.py`, `prefixv6.py`,
+`srv6sid.py`) checked the Protocol-ID against `PROTO_CODES`, which held the six codes of
+RFC 7752 plus a vendor 227, and raised `Notify(3, 10, 'Protocol-ID N is not valid')` for
+anything else.  The value of the Protocol-ID field is the contents of a field, and IANA
+has since assigned 7 (BGP, RFC 9086), 8 (RSVP-TE) and 9 (Segment Routing), so a present
+day producer advertising a BGP protocol node took the session down.  The five checks are
+gone.  `PROTO_CODES` gained the three codes and now names protocols rather than gating
+them: widening a whitelist only moves the cliff to the next assignment.
+
+`NodeDescriptor.unpack_node` did the same for an unrecognised sub-TLV code, which is the
+inclusion-of-TLVs direction and is also rfc9552#5.1-unknown-tlv-not-malformed.  It returns
+a `GenericNodeDescriptor` now.
+
+The other side of the sentence, which the positive test covers, was already held:
+exclusion.  A Node NLRI whose Local Node Descriptor carries only an Autonomous System
+sub-TLV, with no Router-ID at all, decodes without complaint.
+"""
+
+[[requirement]]
+id = "rfc9552#8.2.2-nlri-syntactic-validation"
+section = "8.2.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A BGP-LS Speaker MUST perform the following syntactic validation of
+the Link-State NLRI to determine if it is malformed.
+"""
+note = """
+Five of the seven bullets are performed, two are not.  The positive tests prove the five;
+the xfail is the ordering bullet.
+
+Performed: the sum of the TLV lengths against the MP_REACH and MP_UNREACH length, through
+`BGPLS.unpack_nlri` returning the unconsumed remainder to the caller's loop; the sum
+against the Total NLRI Length field, through `BGPLS.iter_tlvs` refusing a TLV which runs
+past the descriptor area and refusing a trailing stub under four octets; the length of a
+recognised sub-TLV, through the per-code length tables in `NodeDescriptor.unpack_node`.
+
+Not performed: "The rule regarding the ordering of TLVs has been followed as described in
+Section 5.1", and "For NLRIs carrying either a Local or Remote Node Descriptor TLV, there
+is not more than one instance of a sub-TLV present".  Both have an xfail test on this
+entry; the second is also rfc9552#5.2.1-one-instance-per-sub-tlv.
+"""
+
+[[requirement]]
+id = "rfc9552#8.2.2-nlri-discard"
+section = "8.2.2"
+level = "MUST"
+status = "gap"
+polarity = "negative-only"
+text = """
+When the error that is determined allows for the router to skip the
+malformed NLRI(s) and continue the processing of the rest of the BGP
+UPDATE message (e.g., when the TLV ordering rule is violated), then
+it MUST handle such malformed NLRIs as 'NLRI discard' (i.e.,
+processing similar to what is described in Section 5.4 of [RFC7606]).
+"""
+note = """
+exabgp has no 'NLRI discard' for this family.  Every error `BGPLS.unpack_nlri` and the
+decoders under it find is a `Notify`, and a Notify from the NLRI decode path is a
+NOTIFICATION and a session reset; there is no path which drops one NLRI out of an
+MP_REACH and keeps the others.  The example the RFC gives, a TLV ordering violation, is
+not even detected, so the question of how to react to it has not arisen yet.
+
+Negative-only: 'NLRI discard' is a reaction to a malformed NLRI, so there is no well
+formed input which exercises it.  The test feeds two NLRIs of which the second breaks the
+ordering rule and asserts that both survive, which is what 'NLRI discard' plus the
+undetected ordering rule would together produce; it passes today for the wrong reason,
+so it is left off this entry and the honest demonstration is on
+rfc9552#8.2.2-nlri-syntactic-validation instead.
+"""
+
+[[requirement]]
+id = "rfc9552#8.2.2-session-reset-when-unable-to-process"
+section = "8.2.2"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+Alternately, the router MUST
+perform a 'session reset' when the session is only being used for
+BGP-LS or if 'AFI/SAFI disable' action is not possible.
+"""
+note = """
+This is the branch exabgp takes, and legitimately: it implements no 'AFI/SAFI disable', so
+the alternative the sentence offers is the only one available.  A length error in a
+Link-State NLRI raises `Notify(3, 10, ...)` out of `BGPLS.unpack_nlri`, `check_length` or
+`iter_tlvs`, and the reactor sends a NOTIFICATION and drops the session.
+
+Positive-only: the negative would be a router which failed to reset, and every path out of
+this decoder for a length error is a Notify, so there is no input which reaches the other
+side of the branch.  Whether a skippable error ought to have been an 'NLRI discard'
+instead is a different sentence, recorded as rfc9552#8.2.2-nlri-discard.
+"""
+
+[[requirement]]
+id = "rfc9552#8.2.2-attribute-not-malformed-on-semantics"
+section = "8.2.2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+A BGP-LS Attribute MUST NOT be considered malformed or invalid based
+on the inclusion/exclusion of TLVs or contents of the TLV fields
+(i.e., semantic errors), as described in Sections 5.1 and 5.3.
+"""
+note = """
+Was the most arguable entry in the ledger, and it is settled.  `LinkState._check_not_repeated`
+raised `Notify(3, 5, 'BGP-LS: TLV N appears more than once and may not repeat')` for a
+registered TLV without MERGE which arrived twice.  A repeated TLV is a question of which
+TLVs are included, not of the attribute's framing, and the three syntactic checks this
+section lists are all about lengths, so by this sentence a duplicate must not make the
+attribute malformed.
+
+The counter-argument was real and is in the file history: a duplicate rendered its JSON
+key twice and the consumer silently kept one of the two.  But the citation behind the
+refusal, RFC 9552 5.3.2, is a table of Link Attribute TLVs and states no such rule, and
+5.3.2.1 says the opposite for the Router-ID TLVs ("If there is more than one auxiliary
+Router-ID of a given type, then multiple TLVs are used to encode them").  This section's
+own note says 'Attribute Discard' "results in the loss of all TLVs in the BGP-LS
+Attribute", so the refusal traded every TLV the peer sent against one ambiguous key.
+
+The check is gone and the ambiguity is answered where it belonged, in `LinkState.json`: a
+key more than one TLV wants is rendered once, as an array.  A TLV which arrives alone
+still renders exactly as it did, so no existing output moved.
+
+The unknown-TLV half of the same sentence is held, and is the positive test: an
+unregistered code decodes to a `GenericLSID` and the attribute survives.
+"""
+
+[[requirement]]
+id = "rfc9552#8.2.2-attribute-syntactic-validation"
+section = "8.2.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A BGP-LS Speaker MUST perform the following syntactic validation of
+the BGP-LS Attribute to determine if it is malformed.
+"""
+note = """
+All three bullets are performed by `LinkState._parse_tlvs`: a TLV header with fewer than
+four octets left, a TLV whose length runs past the end of the attribute value, and, for a
+recognised TLV, a value of the wrong size for its class through `BaseLS.check_length` and
+the per-class `check` methods.  The sum of the TLV lengths against the attribute length
+falls out of the same walk, since a sequence which does not end exactly on the boundary
+leaves a stub which fails the first check.
+
+The negative tests are the three malformations themselves.  The positive one has to prove
+the walk terminates as well as that it accepts: a zero-length TLV advances the cursor by
+the four header octets and does not spin, which is why that test carries a timeout.
+"""
+
+[[requirement]]
+id = "rfc9552#8.2.2-attribute-discard"
+section = "8.2.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When the error that is determined allows for the router to skip the
+malformed BGP-LS Attribute and continue the processing of the rest of
+the BGP UPDATE message (e.g., when the BGP-LS Attribute length and
+the total Path Attribute Length are correct but some TLV/sub-TLV
+length within the BGP-LS Attribute is invalid), then it MUST handle
+such malformed BGP-LS Attribute as 'Attribute Discard'.
+"""
+note = """
+`LinkState.DISCARD` is True and `AttributeCollection.parse` reads it: a `Notify` out of
+`unpack_attribute` for an attribute carrying DISCARD becomes an `INTERNAL_DISCARD` marker
+in the collection rather than an exception which reaches the reactor.  The example the RFC
+gives is exactly the case tested, an honest attribute length around a TLV length which is
+not.
+
+The negative side is the distinction which matters: 'Attribute Discard' for a bad TLV
+length, and not a NOTIFICATION.  A decoder which raised would pass any test that only
+checked the attribute was absent from the result.
+"""

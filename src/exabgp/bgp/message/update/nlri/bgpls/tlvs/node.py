@@ -14,6 +14,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPv6
 from exabgp.protocol.iso import ISO
+from exabgp.util import hexstring
 from exabgp.util.types import Buffer
 
 #           +--------------------+-------------------+----------+
@@ -144,7 +145,18 @@ class NodeDescriptor:
                     dr_id = IP.create_ip(payload[4:8])
                 return cls(node_id, node_type, psn, dr_id, packed), remaining
 
-        raise Notify(3, 10, f'unknown node descriptor sub-tlv (node-type: {node_type}, igp: {igp})')
+        # RFC 9552 5.1: "Unknown and unsupported types MUST be preserved and propagated
+        # within both the NLRI and the BGP-LS Attribute.  The presence of unknown or
+        # unexpected TLVs MUST NOT result in the NLRI or the BGP-LS Attribute being
+        # considered malformed."  516, BGP Router Identifier, was assigned by RFC 9086
+        # after the four codes above were written, so refusing it took the session down
+        # against a conforming producer.  This is the answer the BGP-LS Attribute side
+        # has always given an unregistered TLV code, in GenericLSID: keep the bytes.
+        #
+        # An IGP Router-ID under a Protocol-ID this decoder does not know lands here too,
+        # and for the same reason: its shape is defined by the protocol, so without the
+        # protocol there is nothing to read it as but bytes.
+        return GenericNodeDescriptor(node_type, payload, packed), remaining
 
     def json(self, compact: bool = False) -> str:
         node = None
@@ -196,3 +208,18 @@ class NodeDescriptor:
 
     def pack_tlv(self) -> Buffer:
         return self._packed
+
+
+class GenericNodeDescriptor(NodeDescriptor):
+    """A Node Descriptor sub-TLV whose code this build does not implement.
+
+    The sibling of `GenericLSID` on the NLRI side of RFC 9552 5.1.  `_packed` is the whole
+    sub-TLV, header included, so `pack_tlv` propagates it byte for byte, and the render
+    carries the code so two unknown codes in one descriptor do not collide.
+    """
+
+    def __init__(self, node_type: int, payload: Buffer, packed: Buffer) -> None:
+        NodeDescriptor.__init__(self, bytes(payload), node_type, None, None, packed)
+
+    def json(self, compact: bool = False) -> str:
+        return f'{{ "generic-node-descriptor-{self.node_type}": "{hexstring(self.node_id)}" }}'

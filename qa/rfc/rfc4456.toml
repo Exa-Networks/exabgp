@@ -1,0 +1,176 @@
+# RFC 4456 - BGP Route Reflection: An Alternative to Full Mesh Internal BGP (IBGP)
+# https://www.rfc-editor.org/rfc/rfc4456
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc4456.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Two things to know before reading this ledger.
+#
+# First, RFC 4456 describes the wire format of its two attributes with no RFC 2119
+# keyword anywhere near it.  Section 8 says ORIGINATOR_ID "is a new optional,
+# non-transitive BGP attribute of Type code 9.  This attribute is 4 bytes long", and says
+# CLUSTER_LIST "is a sequence of CLUSTER_ID values".  Declarative prose, no MUST, in a
+# document which does carry the 2119 boilerplate and does capitalise its keywords
+# elsewhere.  So the four-octet rule and the multiple-of-four rule are NOT recorded here
+# as requirements, the same way RFC 1997 and RFC 4360 are not.  What enforces them in
+# exabgp is RFC 7606 section 7, and the tests which prove it live in
+# tests/unit/rfc/test_rfc4456_route_reflection.py without an rfc() marker, because a test
+# may not claim a requirement this document does not state.
+#
+# Second, exabgp is not a route reflector and never re-advertises a route it received to
+# another peer: a received UPDATE goes to the JSON API, and what it sends is what the
+# configuration or the API told it to send.  Every obligation below which begins "When an
+# RR reflects a route" therefore has no code path in exabgp to bind, and is recorded as
+# not-applicable rather than as a gap.  The encoding half is different: exabgp decodes
+# both attributes, reports them, and carries them back out unchanged, so what it does
+# with the octets is bound by this document even though the reflection procedures are
+# not.
+
+rfc = "rfc4456"
+title = "BGP Route Reflection: An Alternative to Full Mesh Internal BGP (IBGP)"
+url = "https://www.rfc-editor.org/rfc/rfc4456"
+
+[[requirement]]
+id = "rfc4456#8-no-second-originator-id"
+section = "8"
+level = "SHOULD NOT"
+status = "required"
+polarity = "both"
+text = """
+A BGP
+speaker SHOULD NOT create an ORIGINATOR_ID attribute if one already
+exists.
+"""
+note = """
+exabgp never creates an ORIGINATOR_ID of its own on a route it received: the attribute
+that arrives is the attribute that `AttributeCollection.parse` stores, and
+`OriginatorID.pack_attribute` hands back the same four octets it was given.  The half
+worth testing is that the decoder is not quietly substituting a value of its own, so the
+positive test is that a received ORIGINATOR_ID survives a parse and re-pack byte for
+byte, and the negative test is the other direction: an UPDATE which carries no
+ORIGINATOR_ID must come out of the parser with none, not with one exabgp invented from
+the peer's BGP Identifier.
+"""
+
+[[requirement]]
+id = "rfc4456#8-ignore-own-originator-id"
+section = "8"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+A router that recognizes the ORIGINATOR_ID attribute SHOULD
+ignore a route received with its BGP Identifier as the ORIGINATOR_ID.
+"""
+note = """
+This is the receive-side loop break, and it only means anything to a speaker which would
+otherwise install or re-advertise the route.  exabgp does neither: it has no FIB and it
+does not pass a route from one peer to another, so a route carrying exabgp's own BGP
+Identifier cannot loop anywhere.  Dropping it would instead hide from the JSON API a
+route the peer really did send, which is the opposite of what a monitoring and injection
+tool is for.  The value is decoded and reported; the consumer of the API can compare it
+with its own identifier if it wants to.
+"""
+
+[[requirement]]
+id = "rfc4456#8-prepend-cluster-id"
+section = "8"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+When an RR reflects a route, it MUST prepend the local CLUSTER_ID to
+the CLUSTER_LIST.
+"""
+note = """
+exabgp never reflects a route.  There is no code path which takes an UPDATE from one
+peer and sends it to another, so there is no moment at which a CLUSTER_ID could be
+prepended, and exabgp has no local CLUSTER_ID to prepend: the configuration has no
+cluster-id keyword and no route reflector client concept.  A CLUSTER_LIST exabgp sends is
+one the operator wrote out in full.
+"""
+
+[[requirement]]
+id = "rfc4456#8-create-cluster-list"
+section = "8"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If the CLUSTER_LIST is empty, it MUST create a new
+one.
+"""
+note = """
+The second half of the same reflection step, and not applicable for the same reason:
+exabgp does not reflect, so it never reaches the point of finding the CLUSTER_LIST empty.
+Note that "empty" here cannot mean a zero length CLUSTER_LIST on the wire, which RFC 7606
+makes malformed and which exabgp treats as a withdraw; it means the route arrived without
+the attribute at all.
+"""
+
+[[requirement]]
+id = "rfc4456#8-ignore-looped-cluster-list"
+section = "8"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+If the local CLUSTER_ID is found in the
+CLUSTER_LIST, the advertisement received SHOULD be ignored.
+"""
+note = """
+exabgp has no local CLUSTER_ID, so the test this sentence describes has no left-hand
+side.  As with the ORIGINATOR_ID loop check above, the route is reported to the JSON API
+with its CLUSTER_LIST intact rather than dropped, and nothing downstream of exabgp can
+loop because exabgp re-advertises to nobody.
+"""
+
+[[requirement]]
+id = "rfc4456#9-originator-id-as-bgp-identifier"
+section = "9"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+If a route carries the ORIGINATOR_ID attribute, then in Step f)
+the ORIGINATOR_ID SHOULD be treated as the BGP Identifier of the
+BGP speaker that has advertised the route.
+"""
+note = """
+Step f) is a tie-break in the RFC 4271 section 9.1.2.2 decision process.  exabgp runs no
+decision process: it holds one adj-rib-in per peer and hands every route to the API, so
+there is no comparison between two paths for this rule to modify.
+"""
+
+[[requirement]]
+id = "rfc4456#9-prefer-shorter-cluster-list"
+section = "9"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+a BGP Speaker SHOULD prefer a route with the shorter
+CLUSTER_LIST length.
+"""
+note = """
+Same reason as the step f) rule above: this is a new tie-break inserted into the RFC 4271
+decision process, and exabgp has no decision process to insert it into.  Nothing in
+exabgp compares two paths to the same prefix and picks one.
+"""
+
+[[requirement]]
+id = "rfc4456#10-do-not-modify-attributes-when-reflecting"
+section = "10"
+level = "SHOULD NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+In addition, when a RR reflects a route, it SHOULD NOT modify the
+following path attributes: NEXT_HOP, AS_PATH, LOCAL_PREF, and MED.
+"""
+note = """
+Conditional on reflecting, which exabgp does not do.  The nearest thing exabgp has is the
+next hop rewriting it applies to routes the operator configured it to originate, and
+those are its own routes rather than somebody else's route being passed on, so this
+sentence does not reach them.
+"""

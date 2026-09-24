@@ -8,13 +8,20 @@ non-MERGE TLVs collided this way.
 That is the advisory's shape once more.  Not injection this time, but the peer deciding
 what reaches the process which consumes its routes.
 
-Two rules, and which one applies is the RFC's answer to "may this TLV repeat":
+One rule, and it is a rendering rule rather than a protocol one: whatever the peer sent
+twice comes back as a list under one key, so nothing is dropped and no consumer has to
+pick.  A class which declares MERGE is a list whether it repeated or not, because that is
+the shape its consumers were promised; the rest are rendered by their own json() until a
+second one arrives.
 
-  it may       render it as a list under a plural key, and keep every value.  MERGE is
-               this implementation's marker for that, so it is the marker used.
-  it may not   RFC 9552 5.3.2: the attribute is malformed and the attribute discard
-               approach is used.  LinkState already sets DISCARD, so the route survives
-               without its BGP-LS attribute rather than the session being reset.
+A repeat used to be refused instead, citing RFC 9552 5.3.2.  Section 5.3.2 is a table of
+Link Attribute TLVs and states no such rule, and 5.3.2.1 says the opposite for the
+Router-ID TLVs: "If there is more than one auxiliary Router-ID of a given type, then
+multiple TLVs are used to encode them."  What 8.2.2 does say is that a BGP-LS Attribute
+"MUST NOT be considered malformed or invalid based on the inclusion/exclusion of TLVs",
+and that 'Attribute Discard' "results in the loss of all TLVs in the BGP-LS Attribute".
+So the old answer threw away every other TLV the peer sent to avoid rendering one key
+twice, which is a worse loss than the one it was preventing.
 
 The three which the RFCs allow to repeat and which were not marked:
 
@@ -132,18 +139,25 @@ def test_a_tlv_which_may_repeat_is_a_list_even_when_it_does_not(name: str, code:
     assert key.endswith('s'), f'{key} holds a list and does not read as a plural'
 
 
-def test_a_tlv_which_may_not_repeat_makes_the_attribute_malformed() -> None:
-    """RFC 9552 5.3.2, and DISCARD means the route survives without the attribute."""
+def test_a_tlv_which_did_not_ask_to_repeat_is_still_kept_when_it_does() -> None:
+    """RFC 9552 8.2.2 forbids calling the attribute malformed over a repeated TLV.
+
+    Both values reach the API under one key.  The attribute is not discarded, which is
+    what the refusal cost: every other TLV the peer sent went with it.
+    """
     for code in (1026, 1088, 1092, 1098):
         width = widths(code)
         assert width is not None, f'TLV {code} decodes none of the probe widths'
 
-        with pytest.raises(Notify):
-            render(tlv(code, bytes(width)) + tlv(code, bytes(width)))
+        key = LinkState.registered_lsids[code].JSON
+        document = render(tlv(code, bytes(width)) + tlv(code, bytes(width - 1) + bytes([1])))
+
+        assert isinstance(document[key], list), f'{key} is a {type(document[key]).__name__} for two TLVs'
+        assert len(document[key]) == 2, f'TLV {code} kept {document[key]}, so one of the two was dropped'
 
 
-def test_a_tlv_which_may_not_repeat_is_still_accepted_once() -> None:
-    """The refusal must not have closed the path it guards."""
+def test_a_tlv_which_did_not_ask_to_repeat_keeps_its_own_shape_when_it_does_not() -> None:
+    """The grouping is for the repeat only: one TLV renders the way it always did."""
     for code in (1026, 1088, 1092, 1098):
         width = widths(code)
         assert width is not None
