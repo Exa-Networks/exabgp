@@ -161,7 +161,22 @@ class TestIPrefix6:
         assert prefix.offset == 8
 
     def test_pack(self):
-        """Flow6Destination.pack produces correct wire format with offset."""
+        """Flow6Destination.pack produces correct wire format with offset.
+
+        RFC 8956 section 3.1: "The encoded pattern contains enough octets for the bits
+        used in matching (length minus offset bits)."  Length 32 with offset 4 is 28
+        matched bits, so the pattern is four octets holding bits 4 to 31 of the address,
+        left aligned and padded to the octet boundary:
+
+            bits 4..31 of 2001:0db8   0000000000010000110110111000
+            left aligned in 4 octets  00000000000100001101101110000000  = 00 10 db 80
+
+        This test asked for `20 01 0d b8`, which is the whole unshifted prefix: 32 bits
+        presented where the component declares 28.  The same fault made RFC 8956's own
+        Example 1 undecodable, because the reader sized the pattern from the length alone
+        and ran off the end of the NLRI.  The document's Table 1 is the check that settles
+        it, and tests/unit/rfc/test_rfc8956_flowspec_ipv6.py runs it in both directions.
+        """
         # Use concrete subclass Flow6Destination which has ID
         prefix = Flow6Destination.make_prefix6(
             bytes([0x20, 0x01, 0x0D, 0xB8] + [0] * 12),
@@ -169,11 +184,11 @@ class TestIPrefix6:
             4,  # offset=4
         )
         packed = prefix.pack()
-        # Wire format: [ID][mask][offset][ip...]
+        # Wire format: [ID][length][offset][pattern...]
         assert packed[0] == Flow6Destination.ID  # Type ID (0x01)
-        assert packed[1] == 32  # mask
+        assert packed[1] == 32  # length
         assert packed[2] == 4  # offset
-        assert packed[3:7] == bytes([0x20, 0x01, 0x0D, 0xB8])
+        assert packed[3:7] == bytes([0x00, 0x10, 0xDB, 0x80])
 
     def test_short_includes_offset(self):
         """IPrefix6.short includes offset in output."""

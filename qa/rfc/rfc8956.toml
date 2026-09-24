@@ -16,16 +16,17 @@
 #   the pattern is defined by the number of bits needed for pattern matching (length
 #   minus offset)."
 #
-# Declarative prose, no keyword.  exabgp reads and writes ceil(length / 8) pattern octets
-# instead of ceil((length - offset) / 8): `IPrefix6.make` hands `bgp[0:1] + bgp[2:]` to
-# `CIDR.from_ipv6`, which sizes the prefix from the mask alone and knows nothing about the
-# offset byte sitting between them, and `IPrefix6.pack` writes the whole unshifted address
-# back out the same way.  The consequence is that RFC 8956's own Example 1 does not decode:
-# the source component `02 68 40 12 34 56 78 9a` wants five pattern octets and exabgp reads
-# thirteen, runs off the end of the NLRI and returns NLRI.INVALID.  Any IPv6 flow
-# specification with a non-zero offset is unreadable in one direction and unsendable in the
-# other.  Demonstrated by xfail tests in tests/unit/rfc/test_rfc8956_flowspec_ipv6.py which
-# carry no rfc() marker, precisely because there is no keyword to hang them on.
+# Declarative prose, no keyword.  exabgp used to read and write ceil(length / 8) pattern
+# octets instead of ceil((length - offset) / 8): `IPrefix6.make` handed `bgp[0:1] + bgp[2:]`
+# to `CIDR.from_ipv6`, which sizes the prefix from the mask alone and knows nothing about
+# the offset byte sitting between them, and `IPrefix6.pack` wrote the whole unshifted
+# address back out the same way.  RFC 8956's own Example 1 did not decode: the source
+# component `02 68 40 12 34 56 78 9a` carries five pattern octets and exabgp read thirteen,
+# ran off the end of the NLRI and returned NLRI.INVALID.  `_pattern_size_bytes`,
+# `_address_from_pattern` and `_pattern_from_address` in flow.py now size the pattern from
+# length minus offset in both directions.  Held by tests in
+# tests/unit/rfc/test_rfc8956_flowspec_ipv6.py which carry no rfc() marker, precisely
+# because there is no keyword to hang them on.
 
 rfc = "rfc8956"
 title = "Dissemination of Flow Specification Rules for IPv6"
@@ -69,13 +70,18 @@ Padding bits MUST be
 0 on encoding and MUST be ignored on decoding.
 """
 note = """
-The encoding half holds: `IPrefix6.make_prefix6` truncates a full address to
-`CIDR.size(netmask)` octets and the bits below the mask in the operator's own address are
-already zero for any prefix the configuration accepts.  The decoding half does not.
-`CIDR.decode` keeps the trailing octet exactly as it arrived, so a /33 whose fourth
-pattern octet is 0xFF is reported as 2001:db8:ff00::/33 rather than as 2001:db8:8000::/33.
-The padding is not ignored, it is published, and two flow specifications which describe
-the same match compare unequal and hash differently because of it.
+Both halves are held by the same pair of helpers, and both halves now hold in general
+rather than by luck.  `_pattern_from_address` takes the bits between the offset and the
+length and left aligns them, so whatever was written below the length is padded with
+zeros rather than sent: `fe80::1/1` goes out as pattern 0x80 where it used to go out as
+0xfe, because `IPrefix6.pack` handed `cidr.pack_ip()` straight to the wire and that keeps
+the octet exactly as it was stored.  0x80 is the correct reading of "MUST be set to 0 on
+encoding": a configuration which sets bits below its own mask has described a prefix that
+does not exist, and the bits it set are padding whatever it meant by them.  The old
+behaviour only looked compliant because the address in the positive test, 2001:db8::, has
+zeros there already.  `_address_from_pattern` does the same in reverse, dropping
+everything below the length, so a /33 whose fifth pattern octet is 0xFF decodes to
+2001:db8:8000::/33, the same NLRI and the same RIB index as the one padded with zeros.
 """
 
 [[requirement]]
@@ -90,11 +96,11 @@ otherwise, length MUST be in the range offset < length < 129 or the
 component is malformed.
 """
 note = """
-Half enforced.  `CIDR.decode` refuses a length above 128, which is the `< 129` end, and
-length 0 with offset 0 decodes to ::/0 as the sentence says it should.  The `offset <
-length` end is not checked anywhere: `IPrefix6.make` reads the offset octet and stores it
-without ever comparing it to the mask, so a component announcing length 32 and offset 64
-is accepted and rendered as 2001:db8::/32/64, a match on bits 64 to 32 which do not exist.
+Enforced in `IPrefix6.make`, which reads the length and the offset together and refuses
+any pair outside `offset < length < 129` unless both are zero.  Length 0 with offset 0
+still decodes to ::/0 as the sentence says it should.  Before the check, a component
+announcing length 32 and offset 64 was accepted and rendered as 2001:db8::/32/64, a match
+on bits 64 to 32 which do not exist.
 """
 
 # ============================================================ section 3.3 to 3.7, components

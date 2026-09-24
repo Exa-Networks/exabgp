@@ -171,11 +171,21 @@ def test_the_reported_update_is_treated_as_a_withdraw_not_a_value_error() -> Non
 
 @pytest.mark.parametrize(
     'rate_bits, expected',
-    [(0x00000000, 'rate-limit:0'), (0x49742400, 'rate-limit:1000000'), (0xC97423F0, 'rate-limit:-999999')],
+    [(0x00000000, 'rate-limit:0'), (0x49742400, 'rate-limit:1000000'), (0xC97423F0, 'rate-limit:0')],
     ids=['zero', 'one-megabyte', 'negative'],
 )
 def test_a_finite_rate_still_decodes_and_renders(rate_bits: int, expected: str) -> None:
-    """The check rejects the non-finite values and nothing else, including zero and a negative."""
+    """The check rejects the non-finite values and nothing else, including zero and a negative.
+
+    The negative case asked for `rate-limit:-999999` until RFC 8955 section 7.1 was read
+    back: "On decoding, negative values MUST be treated as zero (discard all traffic)."
+    A negative rate is not a rate, it is the document's spelling of discard, and reporting
+    the number literally hands an API consumer something it cannot program hardware from.
+    `TrafficRate.rate` clamps with `max(value, 0.0)`, as `TrafficRatePackets.rate` always
+    has.  The expectation below is therefore `rate-limit:0` and the four octets on the
+    line under it are unchanged: the clamp is on the rendering, not on the wire bytes, so
+    what the peer sent is still what we would send back.
+    """
     decoded = TrafficRate.unpack_attribute(community(TRAFFIC_RATE_SUBTYPE, rate_bits), None)
 
     assert repr(decoded) == expected

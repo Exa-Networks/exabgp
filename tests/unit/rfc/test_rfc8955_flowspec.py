@@ -277,17 +277,12 @@ def test_components_in_increasing_type_order_decode() -> None:
 
 
 @pytest.mark.rfc('rfc8955#4.2-strict-type-ordering', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='Flow._parse_rules keys components by type in a dict, so the wire order is '
-    'thrown away; the `seen` list in unpack_nlri is built from sorted(rules) and never '
-    'compared to anything, so decreasing order is accepted and silently reordered',
-)
 def test_components_in_decreasing_type_order_are_refused() -> None:
     """A filter which arrives out of order is not the filter which is reported.
 
-    exabgp decodes type 4 followed by type 1 and prints `destination-ipv4 ... port =25`,
-    the order the RFC wanted, so the API consumer cannot tell the peer broke the rule.
+    exabgp used to decode type 4 followed by type 1 and print `destination-ipv4 ...
+    port =25`, the order the RFC wanted, so the API consumer could not tell the peer had
+    broken the rule.
     """
     assert decoded(AFI.ipv4, PORT_25 + DESTINATION) is None
 
@@ -301,10 +296,6 @@ def test_a_lower_type_before_a_higher_one_decodes() -> None:
 
 
 @pytest.mark.rfc('rfc8955#4.2-precede-higher-type', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='no ordering check exists, so a type 4 in front of a type 3 is accepted',
-)
 def test_a_higher_type_before_a_lower_one_is_refused() -> None:
     """Distinct from the ordering test above: here each type still appears once.
 
@@ -323,19 +314,13 @@ def test_a_component_type_present_once_decodes() -> None:
 
 
 @pytest.mark.rfc('rfc8955#4.2-component-once', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='Flow._parse_rules appends a repeated component type to the list the first '
-    'one built, so two type 3 components become one OR list: "protocol =tcp AND '
-    '=udp", which matches nothing, is reported as "protocol [ =tcp =udp ]"',
-)
 def test_a_component_type_present_twice_is_refused() -> None:
     """The failure here inverts the filter rather than widening it.
 
     Section 4.2 says a packet matches the intersection of all components present, so two
-    protocol components must be ANDed and can never both hold.  exabgp merges them into
-    one component whose second operator has the AND bit clear, which is an OR, so a rule
-    that matched nothing now matches both protocols.
+    protocol components must be ANDed and can never both hold.  exabgp used to merge them
+    into one component whose second operator has the AND bit clear, which is an OR, so a
+    rule matching nothing became a rule matching both protocols.
     """
     assert decoded(AFI.ipv4, PROTOCOL_TCP + bytes([0x03, 0x81, 0x11])) is None
 
@@ -356,12 +341,6 @@ def test_the_first_operator_octet_we_encode_has_the_and_bit_clear() -> None:
 
 
 @pytest.mark.rfc('rfc8955#4.2.1.1-and-bit-first-unset', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='CommonOperator.OPERATOR is 0x4F, which keeps bit 0x40, and nothing clears it '
-    'on the first operation of a component: 0xC1 is decoded as "&=tcp", an AND against a '
-    'pair which does not exist',
-)
 def test_an_and_bit_in_the_first_operator_octet_is_treated_as_unset() -> None:
     flow = decoded(AFI.ipv4, bytes([0x03, EOL | AND | NumericOperator.EQ, 0x06]))
 
@@ -384,12 +363,6 @@ def test_no_numeric_operator_we_encode_sets_the_reserved_bit(operator: int) -> N
 
 
 @pytest.mark.rfc('rfc8955#4.2.1.1-reserved-bit-zero', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='the reserved bit is kept by CommonOperator.OPERATOR and NumericString.short '
-    'then cannot find 0x09 in its table, so it prints the operator in hex: a match on '
-    'TCP is reported to the API as "protocol 09tcp"',
-)
 def test_the_reserved_bit_of_a_numeric_operator_is_ignored_on_decoding() -> None:
     clean = decoded(AFI.ipv4, bytes([0x03, EOL | NumericOperator.EQ, 0x06]))
     dirty = decoded(AFI.ipv4, bytes([0x03, EOL | NUMERIC_RESERVED | NumericOperator.EQ, 0x06]))
@@ -413,12 +386,6 @@ def test_no_bitmask_operator_we_encode_sets_the_reserved_bits(operator: int) -> 
 
 
 @pytest.mark.rfc('rfc8955#4.2.1.2-bitmask-reserved-bits-zero', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='the same 0x4F mask keeps bits 0x0C, and BinaryString.short prints the '
-    'operator in hex when it cannot find it: the fragment match is reported as '
-    '"0Ddont-fragment+first-fragment"',
-)
 def test_the_reserved_bits_of_a_bitmask_operator_are_ignored_on_decoding() -> None:
     clean = decoded(AFI.ipv4, bytes([0x0C, EOL | BinaryOperator.MATCH, 0x05]))
     dirty = decoded(AFI.ipv4, bytes([0x0C, EOL | BITMASK_RESERVED | BinaryOperator.MATCH, 0x05]))
@@ -543,11 +510,6 @@ def test_a_non_negative_traffic_rate_is_encoded(rate: float) -> None:
 
 
 @pytest.mark.rfc('rfc8955#7.1-traffic-rate-not-negative-on-encoding', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='TrafficRate.make_traffic_rate only checks the rate is finite; the rate < 0 '
-    'check which TrafficRatePackets.make_traffic_rate_packets has is missing here',
-)
 @pytest.mark.parametrize('rate', [-1.0, -1000.0])
 def test_a_negative_traffic_rate_is_not_encoded(rate: float) -> None:
     with pytest.raises(ValueError):
@@ -563,11 +525,6 @@ def test_a_non_negative_traffic_rate_decodes_unchanged(rate: float) -> None:
 
 
 @pytest.mark.rfc('rfc8955#7.1-negative-rate-treated-as-zero', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='TrafficRate.rate returns the float as it arrived, so -100.0 is reported to '
-    'the API as "rate-limit:-100" instead of as the discard the RFC defines it to be',
-)
 @pytest.mark.parametrize('rate', [-1.0, -100.0])
 def test_a_negative_traffic_rate_decodes_as_zero(rate: float) -> None:
     community = TrafficRate.unpack_attribute(pack('!BBHf', 0x80, 0x06, 64496, rate))
@@ -648,11 +605,6 @@ def test_the_traffic_marking_we_encode_has_its_reserved_bits_at_zero(value: int)
 
 
 @pytest.mark.rfc('rfc8955#7.5-traffic-marking-reserved-zero', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='TrafficMark.dscp returns the whole last octet, so a community carrying 0xC1 '
-    'is reported as "mark 193", which is not a DSCP',
-)
 @pytest.mark.parametrize('octet, expected', [(0xC1, 1), (0x80 | 46, 46), (0xFF, 63)])
 def test_the_reserved_bits_of_a_traffic_marking_are_ignored_on_decoding(octet: int, expected: int) -> None:
     community = TrafficMark.unpack_attribute(pack('!BBLBB', 0x80, 0x09, 0, 0, octet))

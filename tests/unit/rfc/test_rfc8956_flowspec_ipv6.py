@@ -5,11 +5,11 @@ handling and the component types RFC 8956 does not redefine belong to RFC 8955 a
 tested in tests/unit/rfc/test_rfc8955_flowspec.py.
 
 What is new here is the offset octet in the type 1 and type 2 prefix components, and it
-is where exabgp is furthest from the document.  The two tests at the top carry `xfail`
-with no `rfc()` marker because the sentence they break, that the pattern holds
+is where exabgp was furthest from the document.  The two tests at the top carry no
+`rfc()` marker because the sentence they hold to, that the pattern holds
 length-minus-offset bits, is stated without an RFC 2119 keyword and so may not be
-recorded as a requirement.  They are first anyway: they are the reason an IPv6 flow
-specification from a conforming router does not decode.
+recorded as a requirement.  They are first anyway: until they passed, an IPv6 flow
+specification from a conforming router did not decode.
 """
 
 from __future__ import annotations
@@ -97,20 +97,14 @@ def prefix_component(component_id: int, length: int, offset: int, pattern: bytes
 # ==================================================== the offset, section 3.1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason='IPrefix6.make hands bgp[0:1] + bgp[2:] to CIDR.from_ipv6, which sizes the '
-    'pattern from the mask alone: it reads ceil(length / 8) octets where RFC 8956 writes '
-    'ceil((length - offset) / 8), runs off the end of the NLRI and returns NLRI.INVALID',
-)
 def test_the_rfcs_own_first_example_decodes() -> None:
     """Section 3.8.1, copied byte for byte out of Table 1 of the document.
 
     The source component says length 104, offset 64, so the pattern is the 40 bits
-    between them: five octets, `12 34 56 78 9a`.  exabgp reads thirteen, which is
-    ceil(104 / 8), eats the type 3 component behind it and then runs out of NLRI.  Any
-    IPv6 flow specification with a non-zero offset is unreadable, and since
-    `IPrefix6.pack` writes the pattern back the same way, the ones exabgp sends are
+    between them: five octets, `12 34 56 78 9a`.  exabgp used to read thirteen, which is
+    ceil(104 / 8), eat the type 3 component behind it and then run out of NLRI.  Every
+    IPv6 flow specification with a non-zero offset was unreadable, and since
+    `IPrefix6.pack` wrote the pattern back the same way, the ones exabgp sent were
     unreadable to everyone else.
     """
     flow = decoded(EXAMPLE_ONE_DESTINATION + EXAMPLE_ONE_SOURCE + EXAMPLE_ONE_PROTOCOL)
@@ -118,12 +112,6 @@ def test_the_rfcs_own_first_example_decodes() -> None:
     assert flow is not None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason='IPrefix6.pack writes cidr.pack_ip(), which is ceil(length / 8) octets of the '
-    'unshifted address, so a /64-104 goes out as thirteen pattern octets where RFC 8956 '
-    'section 3.8.1 writes five',
-)
 def test_a_prefix_with_an_offset_is_encoded_with_length_minus_offset_bits() -> None:
     """The encoder half of the same fault, checked against the RFC's own Table 1."""
     raw = inet_pton(AF_INET6, '::1234:5678:9a00:0')
@@ -134,7 +122,7 @@ def test_a_prefix_with_an_offset_is_encoded_with_length_minus_offset_bits() -> N
 
 
 def test_a_prefix_with_no_offset_decodes() -> None:
-    """The case which does work, so the two xfails above are about the offset and
+    """The case which always worked, so the two tests above are about the offset and
     nothing else."""
     flow = decoded(EXAMPLE_ONE_DESTINATION)
 
@@ -183,17 +171,12 @@ def test_the_padding_of_a_prefix_we_encode_is_zero(length: int) -> None:
 
 
 @pytest.mark.rfc('rfc8956#3.1-padding-bits-zero', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='CIDR.decode keeps the last octet exactly as it arrived, so the padding is '
-    'published rather than ignored: a /33 padded with 0xFF is reported as '
-    '2001:db8:ff00::/33 instead of 2001:db8:8000::/33',
-)
 def test_padding_set_by_a_peer_is_ignored_on_decoding() -> None:
     """Two components describing the same match must decode to the same thing.
 
-    They do not: the padding reaches the CIDR, so the NLRI exabgp reports, and the index
-    it hashes into the RIB, both depend on bits the sender was told to leave alone.
+    They did not: the padding reached the CIDR, so the NLRI exabgp reported, and the
+    index it hashed into the RIB, both depended on bits the sender was told to leave
+    alone.  `_address_from_pattern` drops them.
     """
     clean = decoded(prefix_component(1, 33, 0, bytes([0x20, 0x01, 0x0D, 0xB8, 0x80])))
     padded = decoded(prefix_component(1, 33, 0, bytes([0x20, 0x01, 0x0D, 0xB8, 0xFF])))
@@ -211,18 +194,12 @@ def test_a_length_of_zero_with_an_offset_of_zero_matches_every_address() -> None
 
 
 @pytest.mark.rfc('rfc8956#3.1-length-range', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='the length < 129 end is enforced by CIDR.decode, but nothing compares the '
-    'offset to the length: IPrefix6.make reads the offset octet and stores it, so '
-    'length 32 with offset 64 is accepted and rendered as 2001:db8::/32/64',
-)
 def test_a_length_outside_the_range_the_offset_allows_is_refused() -> None:
-    """Both ends of "offset < length < 129" in one test, because only one end holds.
+    """Both ends of "offset < length < 129" in one test, because only one end held.
 
-    Splitting them would let the half exabgp does enforce report the requirement as
+    Splitting them would let the half exabgp already enforced report the requirement as
     proven while a component describing a match on bits 64 through 32, which do not
-    exist, is still accepted from any peer.
+    exist, was still accepted from any peer.
     """
     assert decoded(prefix_component(1, 129, 0, bytes(17))) is None
     assert decoded(prefix_component(1, 32, 64, bytes([0x20, 0x01, 0x0D, 0xB8]))) is None

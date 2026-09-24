@@ -114,12 +114,20 @@ order.
 """
 note = """
 exabgp's encoder honours this: `Flow._pack_from_rules` walks `sorted(self.rules.keys())`.
-Its decoder does not check it at all.  `Flow._parse_rules` drops each component into a
-dict keyed by type, which throws the wire order away, and the `seen` list
-`Flow.unpack_nlri` builds afterwards is assembled from `sorted(rules.keys())` and then
-never looked at, so it is sorted by construction and proves nothing.  A flow specification
-whose components arrive in decreasing order is accepted and re-rendered in the right
-order, which means exabgp's API reports a filter the peer did not send.
+Its decoder checks it as the components are read, in `Flow._check_component_order`, which
+is the only place that can: the rules land in a dict keyed by type and a dict cannot show
+what order they arrived in.  A component whose type is lower than the one before it is a
+treat-as-withdraw, per section 10 and RFC 7606.  Before the check, a flow specification
+arriving in decreasing order was accepted and re-rendered in the right order, so exabgp's
+API reported a filter the peer had not sent.  The dead `seen` list which used to sit in
+`Flow.unpack_nlri`, built from `sorted(rules.keys())` and never compared to anything, is
+gone with it.
+
+One deviation is deliberate: a repeated type 1 or type 2 prefix is allowed through, so
+equal consecutive types are refused for every component except those two.  `Flow.add` has
+accepted several source or destination prefixes from the configuration for years because
+some vendors send them, and a decoder which refused what this encoder emits could not read
+exabgp's own output back.
 """
 
 [[requirement]]
@@ -133,12 +141,18 @@ A given component type MAY (exactly once) be present in the
 Flow Specification.
 """
 note = """
-"Exactly once" is the half exabgp loses, and losing it inverts the filter rather than
-widening it.  Two type 3 components must be ANDed, because section 4.2 says a packet
+"Exactly once" used to be the half exabgp lost, and losing it inverted the filter rather
+than widening it.  Two type 3 components must be ANDed, because section 4.2 says a packet
 matches the intersection of all the components present, so "protocol == tcp" followed by
-"protocol == udp" matches nothing.  `Flow._parse_rules` appends the second component's
-operations to the first component's list, where the second operator's AND bit is unset,
-so the two become "protocol tcp OR udp" and the rule now matches both.
+"protocol == udp" matches nothing.  `Flow._parse_rules` appended the second component's
+operations to the first component's list, where the second operator's AND bit is unset, so
+the two became "protocol tcp OR udp" and the rule matched both.
+`Flow._check_component_order` now refuses a repeated component type as a treat-as-withdraw.
+
+The exception is a repeated type 1 or type 2 prefix, which exabgp both sends and accepts:
+`Flow.add` has allowed several source or destination prefixes in one flow for years
+because some vendors send them.  That is a knowing deviation from "exactly once", kept
+because a decoder must be able to read back what this encoder writes.
 """
 
 [[requirement]]
@@ -152,10 +166,11 @@ If present, it MUST precede any component of
 higher numeric type value.
 """
 note = """
-The same absent check as rfc8955#4.2-strict-type-ordering, stated from the other end, and
-kept separate because a decoder could be written to enforce one and not the other: a
-sender could emit types 1, 4, 3 and satisfy "each type appears once" while still putting a
-type 4 in front of a type 3.
+The same check as rfc8955#4.2-strict-type-ordering, stated from the other end, and kept
+separate because a decoder could be written to enforce one and not the other: a sender
+could emit types 1, 4, 3 and satisfy "each type appears once" while still putting a type 4
+in front of a type 3.  `Flow._check_component_order` compares each component type against
+the one before it, so that sequence is refused on the 3.
 """
 
 [[requirement]]
@@ -193,11 +208,10 @@ on decoding.
 """
 note = """
 The encoding half holds: the configuration grammar only sets the AND bit on an operation
-which follows another inside one component.  The decoding half does not.
-`CommonOperator.OPERATOR` is 0x4F, so `Flow._parse_operations` keeps bit 0x40 of whatever
-octet arrives and stores it on the first operation of the component as readily as on the
-fifth.  A first operator octet of 0xC1 renders as `&=tcp`, an AND against a predecessor
-which does not exist.
+which follows another inside one component.  The decoding half holds too:
+`Flow._parse_operations` clears bit 0x40 on the first operation of every component, so a
+first operator octet of 0xC1 renders as `=tcp` rather than as `&=tcp`, an AND against a
+predecessor which does not exist.
 """
 
 [[requirement]]
@@ -212,10 +226,10 @@ decoding
 """
 note = """
 Bit 0x08 of the numeric operator octet.  exabgp never sets it when encoding, because
-`NumericOperator` builds the low nibble out of LT, GT and EQ only.  On decoding it is not
-ignored: `CommonOperator.OPERATOR` is 0x4F, which keeps it, and `NumericString.short()`
-then fails to find 0x09 in its table and falls back to printing the operator in hex, so a
-protocol match for TCP is reported to the API as `protocol 09tcp`.
+`NumericOperator` builds the low nibble out of LT, GT and EQ only.  On decoding it is
+masked off: `NumericOperator.OPERATOR` is the AND bit and the three comparison bits, so an
+octet of 0x89 decodes as the plain equality 0x81 and a protocol match for TCP is reported
+to the API as `protocol =tcp` whether the reserved bit arrived set or clear.
 """
 
 [[requirement]]
@@ -229,9 +243,10 @@ text = """
 ignored during decoding
 """
 note = """
-Bits 0x0C of the bitmask operator octet, and the same fault as the numeric one: encoding
-never sets them, decoding never clears them, and `BinaryString.short()` prints `0D` in
-front of the fragment names when they arrive set.
+Bits 0x0C of the bitmask operator octet, one more than the numeric operator reserves.
+Encoding never sets them and `BinaryOperator.OPERATOR`, which is the AND bit and the NOT
+and Match bits, drops them on decoding, so a fragment match arrives at the API as
+`=dont-fragment+first-fragment` with the reserved bits set or clear.
 """
 
 # ============================================================ section 4.2.2, components
@@ -494,11 +509,9 @@ On encoding, the traffic-rate MUST NOT be
 negative.
 """
 note = """
-Not enforced.  `TrafficRate.make_traffic_rate` puts whatever float it is given through
-`checked_rate`, which refuses a NaN and an infinity and says nothing about the sign, then
-packs it.  Its sibling `TrafficRatePackets.make_traffic_rate_packets` has the `rate < 0`
-check three lines lower in the same file, so this is one missing line rather than a design
-decision.  Shown by a failing test.
+`TrafficRate.make_traffic_rate` raises ValueError on a negative rate, the same check its
+sibling `TrafficRatePackets.make_traffic_rate_packets` makes thirty lines lower.  Zero is
+legal and means discard everything, so the check is `< 0` and not `<= 0`.
 """
 
 [[requirement]]
@@ -512,12 +525,11 @@ On decoding, negative values MUST be treated as zero
 (discard all traffic).
 """
 note = """
-Not done, and this one is the dangerous direction.  `TrafficRate.rate` returns the float
-straight out of the four octets, so a community carrying -100.0 is reported to the API as
-`rate-limit:-100`.  The RFC's reading of a negative rate is "discard all traffic"; a
-consumer which reads the number literally will do something else entirely, most likely
-reject the line or program a nonsense limit.  `TrafficRatePackets.rate` clamps with
-`max(value, 0.0)` and `TrafficRate.rate` does not.
+`TrafficRate.rate` clamps with `max(value, 0.0)`, as `TrafficRatePackets.rate` does, so a
+community carrying -100.0 is reported to the API as `rate-limit:0`, the discard this
+sentence defines it to be, rather than as a negative number no consumer can program.  The
+negative side is that the clamp is a floor and not a filter: a positive rate comes back
+unchanged.
 """
 
 [[requirement]]

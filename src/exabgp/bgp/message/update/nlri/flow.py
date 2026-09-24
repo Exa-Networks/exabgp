@@ -156,15 +156,17 @@ class CommonOperator:
     LEN: ClassVar[int] = 0x30  # 0b00110000
     NOP: ClassVar[int] = 0x00
 
+    # The AND bit and the comparison bits, with the reserved bits left out. Each flavour of
+    # operator reserves a different part of the low nibble, so the subclasses narrow this.
     OPERATOR: ClassVar[int] = 0xFF ^ (EOL | LEN)
 
     @staticmethod
     def eol(data: int) -> int:
         return data & CommonOperator.EOL
 
-    @staticmethod
-    def operator(data: int) -> int:
-        return data & CommonOperator.OPERATOR
+    @classmethod
+    def operator(cls, data: int) -> int:
+        return data & cls.OPERATOR
 
     @staticmethod
     def length(data: int) -> int:
@@ -184,6 +186,11 @@ class NumericOperator(CommonOperator):
     NEQ: ClassVar[int] = LT | GT
     TRUE: ClassVar[int] = LT | GT | EQ
     FALSE: ClassVar[int] = 0x00
+    # RFC 8955 section 4.2.1.1 lays the octet out as | e | a | len | 0 | lt | gt | eq |, so
+    # bit 0x08 is reserved and MUST be ignored on decoding. Keeping it left NumericString
+    # unable to find 0x09 in its table, and a match on TCP reached the API as `protocol
+    # 09tcp`.
+    OPERATOR: ClassVar[int] = CommonOperator.AND | TRUE
 
 
 class BinaryOperator(CommonOperator):
@@ -197,6 +204,10 @@ class BinaryOperator(CommonOperator):
     NOT: ClassVar[int] = 0x02  # 0b00000010
     MATCH: ClassVar[int] = 0x01  # 0b00000001
     DIFF: ClassVar[int] = NOT | MATCH
+    # RFC 8955 section 4.2.1.2 lays the octet out as | e | a | len | 0 | 0 | not | m |, so
+    # the two bits 0x0C are reserved and MUST be ignored on decoding, one more than the
+    # numeric operator reserves.
+    OPERATOR: ClassVar[int] = CommonOperator.AND | DIFF
 
 
 def _len_to_bit(value: int) -> int:
@@ -300,6 +311,43 @@ class IPrefix4(IPrefix, IComponent, FlowIPv4):
         return cls(packed), bgp[len(cidr) :]
 
 
+IPV6_ADDRESS_BITS: int = 128
+IPV6_ADDRESS_BYTES: int = IPV6_ADDRESS_BITS // 8
+
+
+def _pattern_size_bytes(length: int, offset: int) -> int:
+    """How many octets the pattern of an IPv6 FlowSpec prefix takes.
+
+    RFC 8956 section 3.1: "The encoded pattern contains enough octets for the bits used in
+    matching (length minus offset bits)", not the ceil(length / 8) octets a plain prefix
+    carries.  The two only agree when the offset is zero.
+    """
+    return (length - offset + 7) // 8
+
+
+def _address_from_pattern(pattern: bytes, length: int, offset: int) -> bytes:
+    """The sixteen octet address a pattern stands for: the pattern shifted right by offset.
+
+    The padding is dropped rather than carried into the address.  RFC 8956 section 3.1
+    says it "MUST be ignored on decoding", and two components describing the same match
+    have to render alike and hash to the same RIB index.
+    """
+    bits = length - offset
+    matched = int.from_bytes(pattern, 'big') >> (len(pattern) * 8 - bits) if bits > 0 else 0
+    return (matched << (IPV6_ADDRESS_BITS - length)).to_bytes(IPV6_ADDRESS_BYTES, 'big')
+
+
+def _pattern_from_address(address: bytes, length: int, offset: int) -> bytes:
+    """The bits of an address between offset and length, left aligned and zero padded."""
+    bits = length - offset
+    if bits <= 0:
+        return b''
+    size = _pattern_size_bytes(length, offset)
+    value = int.from_bytes(address.ljust(IPV6_ADDRESS_BYTES, b'\x00'), 'big')
+    matched = (value >> (IPV6_ADDRESS_BITS - length)) & ((1 << bits) - 1)
+    return (matched << (size * 8 - bits)).to_bytes(size, 'big')
+
+
 class IPrefix6(IPrefix, IComponent, FlowIPv6):
     """IPv6 FlowSpec prefix using packed-bytes-first pattern.
 
@@ -348,8 +396,15 @@ class IPrefix6(IPrefix, IComponent, FlowIPv6):
         return cls(packed, offset)
 
     def pack(self) -> bytes:
-        """Pack to wire format: [ID][mask][offset][ip...]"""
-        return bytes([self.ID, self.cidr.mask, self._offset]) + self.cidr.pack_ip()
+        """Pack to wire format: [ID][length][offset][pattern...]
+
+        The pattern is the length-minus-offset bits of the address, left aligned, and not
+        the whole prefix: a /64-104 goes out as the five octets RFC 8956 section 3.8.1
+        writes rather than as thirteen no other implementation could read.
+        """
+        length = self.cidr.mask
+        pattern = _pattern_from_address(bytes(self.cidr.pack_ip()), length, self._offset)
+        return bytes([self.ID, length, self._offset]) + pattern
 
     def pack_prefix(self) -> bytes:
         """Alias for pack() - backwards compatibility."""
@@ -363,13 +418,37 @@ class IPrefix6(IPrefix, IComponent, FlowIPv6):
 
     @classmethod
     def make(cls, bgp: Buffer) -> tuple[IComponent, Buffer]:
-        """Unpack from wire format, storing raw bytes and offset."""
-        offset = bgp[1]
-        # IPv6 FlowSpec has offset byte between mask and prefix
-        # Wire format: [mask][offset][ip...], we store [mask][ip...] in _packed
-        cidr = CIDR.from_ipv6(bytes(bgp[0:1]) + bgp[2:])
-        packed = bytes(bgp[0:1]) + bgp[2 : 2 + CIDR.size(cidr.mask)]
-        return cls(packed, offset), bgp[CIDR.size(cidr.mask) + 2 :]
+        """Unpack from wire format [length][offset][pattern...], storing [length][ip...].
+
+        Sizing the pattern from the length alone, as a plain prefix is sized, read
+        ceil(length / 8) octets where RFC 8956 section 3.1 writes
+        ceil((length - offset) / 8).  The RFC's own first example then ran off the end of
+        its NLRI and came back as NLRI.INVALID: no IPv6 flow specification carrying an
+        offset could be read at all, and none exabgp sent could be read by anybody else.
+        """
+        if len(bgp) < 2:
+            raise Notify(3, 10, 'not enough data to extract the length and offset of a flow ipv6 prefix')
+        length, offset = bgp[0], bgp[1]
+        # RFC 8956 section 3.1: "If length = 0 and offset = 0, this component matches every
+        # address; otherwise, length MUST be in the range offset < length < 129 or the
+        # component is malformed."  The offset half was never compared to anything, so a
+        # match on bits 64 through 32, which do not exist, was accepted from any peer.
+        if (length, offset) != (0, 0) and not offset < length <= IPV6_ADDRESS_BITS:
+            raise Notify(
+                3,
+                10,
+                'flow ipv6 prefix of length %d and offset %d is outside the range RFC 8956 allows' % (length, offset),
+            )
+        size = _pattern_size_bytes(length, offset)
+        pattern = bytes(bgp[2 : 2 + size])
+        if len(pattern) != size:
+            raise Notify(
+                3,
+                10,
+                'flow ipv6 prefix needs %d octets of pattern but only %d are left' % (size, len(pattern)),
+            )
+        address = _address_from_pattern(pattern, length, offset)
+        return cls(bytes([length]) + address[: CIDR.size(length)], offset), bgp[2 + size :]
 
 
 class IOperation(IComponent):
@@ -927,6 +1006,7 @@ class Flow(NLRI):
             bgp = bgp[8:]
 
         try:
+            previous = 0  # no component type is zero, so the first one always passes
             while bgp:
                 what, bgp = bgp[0], bgp[1:]
 
@@ -937,6 +1017,9 @@ class Flow(NLRI):
                     # all traffic. RFC 8955 section 4.3 treats a malformed FlowSpec NLRI
                     # as a withdraw, which is what returning INVALID does here.
                     raise Notify(3, 10, 'flow component %d is not one this family defines' % what)
+
+                self._check_component_order(what, previous)
+                previous = what
 
                 decoded = decode[self.afi][what]
                 # decode and factory are filled in the same loop, so a component in one and
@@ -957,6 +1040,37 @@ class Flow(NLRI):
         return rules
 
     @staticmethod
+    def _check_component_order(what: int, previous: int) -> None:
+        """RFC 8955 section 4.2, the two rules the wire order has to obey.
+
+        "Components MUST follow strict type ordering by increasing numerical order", and
+        "a given component type MAY (exactly once) be present".  Neither was checked: the
+        rules are kept in a dict keyed by type, so a filter which arrived as port then
+        destination was re-rendered in the RFC's order and the API reported something the
+        peer never sent.  The duplicate is worse than the reorder.  A packet matches the
+        intersection of every component, so two type 3 components can never both hold, yet
+        the second one's operations were appended to the first one's list with its AND bit
+        clear: "protocol tcp AND protocol udp", which matches nothing, was reported as
+        "protocol [ =tcp =udp ]", which matches both.
+
+        Section 10 defers to RFC 7606, so this is a treat-as-withdraw: the Notify raised
+        here is caught in `unpack_nlri` and turned into `NLRI.INVALID`.
+
+        The one relaxation is a repeated destination or source prefix, which `Flow.add`
+        has accepted from the configuration for years because some vendors send it.  What
+        exabgp is willing to encode it has to be able to read back.
+        """
+        if what < previous:
+            raise Notify(
+                3,
+                10,
+                'flow component %d follows component %d, which is not the increasing type order required'
+                % (what, previous),
+            )
+        if what == previous and what not in (FlowDestination.ID, FlowSource.ID):
+            raise Notify(3, 10, 'flow component %d is present more than once' % what)
+
+    @staticmethod
     def _parse_operations(
         what: int,
         klass: Any,
@@ -967,13 +1081,23 @@ class Flow(NLRI):
 
         Returns what is left of the payload.
         """
+        # RFC 8955 sections 4.2.1.1 and 4.2.1.2 reserve a different part of the operator
+        # octet for each flavour, so the mask has to come from the component's own class.
+        operator_class = BinaryOperator if issubclass(klass, BinaryString) else NumericOperator
         end: int = 0
+        first = True
         while not end:
             if not bgp:
                 raise Notify(3, 10, 'flow component %d ends without its end of list operator' % what)
             byte, bgp = bgp[0], bgp[1:]
             end = CommonOperator.eol(byte)
-            operator = CommonOperator.operator(byte)
+            operator = operator_class.operator(byte)
+            if first:
+                # RFC 8955 section 4.2.1.1: in the first operator octet of a sequence the
+                # AND bit MUST be treated as always unset. Kept, it rendered as `&=tcp`,
+                # an AND against a pair which does not exist.
+                operator &= CommonOperator.AND ^ 0xFF
+                first = False
             length = CommonOperator.length(byte)
             # RFC 8955 section 4.2.1.1: the operator's length field says how many bytes the
             # value takes, and a sender may use any of the four. VALUE_SIZES says what this
@@ -1226,17 +1350,9 @@ class Flow(NLRI):
 
         # Validate by parsing (this populates _rules_cache)
         try:
-            seen: list[int] = []
+            # the wire order and the "exactly once" rule are checked as the components are
+            # read, in _check_component_order: a dict keyed by type cannot show either.
             rules = nlri.rules  # Trigger lazy parsing
-
-            # Validate rule order
-            for rule_id in sorted(rules.keys()):
-                for rule in rules[rule_id]:
-                    if rule_id in (FlowDestination.ID, FlowSource.ID):
-                        seen.append(rule.ID)
-                    else:
-                        seen.append(rule_id)
-                        break  # Only add ID once per rule type for non-prefix
 
             # Check AFI compatibility for source/destination
             src_rules = rules.get(FlowSource.ID, [])

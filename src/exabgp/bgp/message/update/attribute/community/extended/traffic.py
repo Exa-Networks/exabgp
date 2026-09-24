@@ -95,7 +95,10 @@ class TrafficRate(ExtendedCommunity):
     @classmethod
     def make_traffic_rate(cls, asn: ASN, rate: float) -> TrafficRate:
         """Create TrafficRate from semantic values."""
-        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, checked_rate(rate, 'traffic-rate'))
+        checked_rate(rate, 'traffic-rate')
+        if rate < 0:
+            raise ValueError(f'traffic-rate must not be negative: {rate}')
+        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, rate)
         return cls(packed)
 
     @property
@@ -105,7 +108,10 @@ class TrafficRate(ExtendedCommunity):
     @property
     def rate(self) -> float:
         value: float = unpack('!f', self._packed[4:8])[0]
-        return value
+        # RFC 8955 section 7.1: a negative rate means discard all traffic, so it is read as
+        # zero rather than passed on as a negative number an API consumer cannot program.
+        # A NaN would survive this clamp; the decoder refuses one before it can get here.
+        return max(value, 0.0)
 
     def __repr__(self) -> str:
         return 'rate-limit:%d' % self.rate
@@ -288,6 +294,7 @@ class TrafficMark(ExtendedCommunity):
 
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x09
+    DSCP_MASK: ClassVar[int] = 0x3F
 
     def __init__(self, packed: Buffer) -> None:
         ExtendedCommunity.__init__(self, packed)
@@ -300,7 +307,10 @@ class TrafficMark(ExtendedCommunity):
 
     @property
     def dscp(self) -> int:
-        return self._packed[7]
+        # RFC 8955 section 7.5: the two high bits of the octet are reserved and MUST be
+        # ignored on decoding. Returned whole, 0xC1 was reported as `mark 193`, which is
+        # not a DSCP: a DSCP is the six low bits and the rest is ECN in the same header.
+        return self._packed[7] & self.DSCP_MASK
 
     def __repr__(self) -> str:
         return 'mark %d' % self.dscp
