@@ -14,6 +14,7 @@ specification from a conforming router did not decode.
 
 from __future__ import annotations
 
+import json
 from socket import AF_INET6, inet_pton
 from struct import pack
 
@@ -40,9 +41,12 @@ from exabgp.bgp.message.update.nlri.flow import (
 )
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.neighbor import Neighbor
+from exabgp.configuration.check import _negotiated
+from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip.fragment import Fragment
 from exabgp.protocol.resource import NumericValue
+from exabgp.rib import RIB
 
 IPV4_FLOW: FamilyTuple = (AFI.ipv4, SAFI.flow_ip)
 IPV6_FLOW: FamilyTuple = (AFI.ipv6, SAFI.flow_ip)
@@ -306,3 +310,116 @@ def test_the_reserved_bits_of_an_ipv6_fragment_bitmask_are_ignored_on_decoding()
 
     assert nothing is not None and reserved is not None
     assert str(reserved) == str(nothing)
+
+
+# ============================== section 3.1 and 3.8, the whole path an operator drives
+
+# A route an operator writes, carrying a non-zero offset and both component types RFC 8956
+# adds: type 11 traffic class and type 13 flow label.  qa/encoding/conf-flow.ci records the
+# same route, and the bytes it recorded were the ones exabgp wrote before the offset sizing
+# was corrected, which nothing in this suite noticed.
+CONFIGURED_IPV6_FLOW = """
+neighbor 192.0.2.1 {
+    router-id 192.0.2.2;
+    local-address 192.0.2.2;
+    local-as 65001;
+    peer-as 65001;
+    family { ipv6 flow; }
+    flow {
+        route an-offset-and-the-ipv6-only-components {
+            match {
+                destination 2a02:b80:15::7aca:39ff:feae:a87a/128/0;
+                source ::1/128/120;
+                next-header udp;
+                traffic-class 101;
+                flow-label 2013;
+            }
+            then { discard; }
+        }
+    }
+}
+"""
+
+# The NLRI that configuration must put on the wire, component by component so that the two
+# pattern sizes are visible side by side.  The destination matches 128 bits from offset 0
+# and carries sixteen octets; the source matches 128 bits from offset 120, which is eight
+# bits, and carries one.  Section 3.1: "The encoded pattern contains enough octets for the
+# bits used in matching (length minus offset bits)."
+CONFIGURED_NLRI = bytes.fromhex(
+    '21'  # the components below occupy 0x21 octets
+    '018000'
+    '2a020b80001500007aca39fffeaea87a'  # type 1, length 128, offset 0
+    '028078'
+    '01'  # type 2, length 128, offset 120
+    '03'
+    '81'
+    '11'  # type 3, =udp
+    '0b'
+    '81'
+    '65'  # type 11, =101
+    '0d'
+    '91'
+    '07dd'  # type 13, =2013, two octets: see the 3.7 gap in the ledger
+)
+
+CONFIGURED_STRING = (
+    'flow destination-ipv6 2a02:b80:15:0:7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 '
+    'next-header =udp traffic-class =101 flow-label =2013'
+)
+
+
+@pytest.fixture
+def isolated_rib(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`RIB` keys a process wide cache by neighbour name, and every test here uses one name."""
+    monkeypatch.setattr(RIB, '_cache', {})
+
+
+def configured_flow() -> tuple[NLRI, Negotiated]:
+    """The one flow route `CONFIGURED_IPV6_FLOW` declares, and the session it exports on."""
+    configuration = Configuration([CONFIGURED_IPV6_FLOW], text=True)
+    assert configuration.reload(), str(configuration.error)
+    neighbor = next(iter(configuration.neighbors.values()))
+    _, negotiated = _negotiated(neighbor)
+    for _ in neighbor.rib.outgoing.updates(False):
+        pass
+    routes = list(neighbor.rib.outgoing.cached_routes())
+    assert len(routes) == 1, 'the configuration declares exactly one flow route'
+    return routes[0].nlri, negotiated
+
+
+def test_a_configured_ipv6_flow_route_packs_the_way_section_3_1_sizes_it(isolated_rib: None) -> None:
+    """The configuration parser and the encoder, pinned to the octets rather than to each other.
+
+    Nothing in this suite held the encoder to a byte count, so when the offset sizing was
+    corrected the suite stayed green while every recorded wire capture of an IPv6 flow
+    specification with an offset went stale, and the only thing that said so was the JSON
+    round trip in qa/.  A round trip test cannot catch this on its own: pack and unpack
+    changed together, so they agree with each other both before and after.
+    """
+    nlri, negotiated = configured_flow()
+
+    assert bytes(nlri.pack_nlri(negotiated)) == CONFIGURED_NLRI
+
+
+def test_a_configured_ipv6_flow_route_comes_back_off_the_wire_and_renders(isolated_rib: None) -> None:
+    """Decode what the encoder above wrote, and render it the way the API publishes it.
+
+    This is the half the regression showed: the source component was read at the wrong
+    size, the parser landed mid-address on a component type of 0, the NLRI became
+    `NLRI.INVALID`, and the announce disappeared out of the JSON leaving only the
+    attributes behind.  A missing key is a silent failure, so the whole object is compared.
+    """
+    nlri, _ = configured_flow()
+
+    flow = decoded(CONFIGURED_NLRI[1:])
+
+    assert flow is not None
+    assert str(flow) == str(nlri)
+    assert json.loads(flow.json()) == {
+        'destination-ipv6': ['2a02:b80:15:0:7aca:39ff:feae:a87a/128/0'],
+        'source-ipv6': ['::1/128/120'],
+        'next-header': ['=udp'],
+        'traffic-class': ['=101'],
+        'flow-label': ['=2013'],
+        'string': CONFIGURED_STRING,
+    }

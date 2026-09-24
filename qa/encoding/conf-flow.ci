@@ -34,7 +34,14 @@ option:file:conf-flow.conf
 
 # flow destination-ipv6 2a02:b80:15::7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 next-header =UDP traffic-class =101 flow-label =2013 extended-community discard
 1:cmd:announce ipv6 flow destination-ipv6 2a02:b80:15:0:7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 next-header =udp traffic-class =101 flow-label =2013 extended-community [rate-limit:0]
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0069:02:000000524001010040020040050400000064C010088006000000000000800E360002850000300180002A020B80001500007ACA39FFFEAEA87A028078000000000000000000000000000000010381110B81650D9107DD
+# The source-ipv6 component was re-recorded: this raw line held the pattern exabgp
+# used to write before the RFC 8956 section 3.1 sizing was fixed.  The RFC says "The
+# encoded pattern contains enough octets for the bits used in matching (length minus
+# offset bits)".  ::1/128/120 matches eight bits, so the pattern is the single octet
+# 01, not the sixteen octets 00000000000000000000000000000001 recorded here before.
+# The NLRI therefore drops from 0x30 to 0x21 octets.  The expected JSON is unchanged:
+# both encodings describe the same prefix, the old one just could not be read back.
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:005A:02:000000434001010040020040050400000064C010088006000000000000800E270002850000210180002A020B80001500007ACA39FFFEAEA87A028078010381110B81650D9107DD
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060886715039744,"string":"rate-limit:0"}]},"announce":{"ipv6 flow":{"no-nexthop":[{"destination-ipv6":["2a02:b80:15:0:7aca:39ff:feae:a87a/128/0"],"source-ipv6":["::1/128/120"],"next-header":["=udp"],"traffic-class":["=101"],"flow-label":["=2013"],"string":"flow destination-ipv6 2a02:b80:15:0:7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 next-header =udp traffic-class =101 flow-label =2013"}]}}}}}}
 
 # flow packet-length >200&<300 >400&<500 extended-community mark 10
