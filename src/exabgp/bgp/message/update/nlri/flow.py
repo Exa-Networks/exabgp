@@ -1192,6 +1192,10 @@ class Flow(NLRI):
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
         """Unpack Flow NLRI from wire format, storing raw bytes."""
+        # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, data = NLRI.consume_path_information(data, addpath)
         if len(data) < 1:
             raise Notify(3, 10, 'Flow NLRI too short: need at least 1 byte for length')
         length, data = data[0], data[1:]
@@ -1210,6 +1214,7 @@ class Flow(NLRI):
 
         # Create Flow with packed bytes - rules will be parsed lazily
         nlri = cls(packed, afi, safi)
+        nlri.addpath = path_info
 
         # Validate by parsing (this populates _rules_cache)
         try:

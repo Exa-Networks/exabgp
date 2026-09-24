@@ -171,6 +171,10 @@ class RTCBase(NLRI):
     def unpack_nlri(
         cls: Type[T], afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[T, Buffer]:
+        # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
         data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # Note: afi/safi parameters are ignored - RTC is always ipv4/rtc
         if not data:
@@ -180,6 +184,7 @@ class RTCBase(NLRI):
 
         if length == 0:
             nlri = cls(bytes(data[0:1]))
+            nlri.addpath = path_info
             return nlri, data[1:]
 
         # RFC 4684 section 4: the prefix is 32 to 96 bits, the origin AS and then as much of
@@ -208,6 +213,7 @@ class RTCBase(NLRI):
         )
 
         nlri = cls(packed)
+        nlri.addpath = path_info
         return nlri, data[13:]
 
 

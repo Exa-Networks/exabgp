@@ -157,3 +157,9 @@ did not:
 - **Item 33.** Follows from item 9: exabgp cannot negotiate ADD-PATH for these families,
   so no peer misparses what we send. It is a feature gap, and adding one of them to
   `_ADD_PATH` must wait for the encoder.
+- **Follow-up to the corrections.** FlowSpec, VPLS and RTC now consume the path
+  identifier too. GTSM is fixed in both directions: `min_ttl` sets only the minimum,
+  sessions we open install `incoming-ttl`, sessions the peer opens get `outgoing-ttl`, and
+  with `incoming-ttl` alone we send 255 as RFC 5082 asks. Still open: the listening
+  socket is shared per address and port, so two neighbours on it with different
+  `incoming-ttl` values get whichever was set last.

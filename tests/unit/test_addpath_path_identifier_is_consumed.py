@@ -1,4 +1,4 @@
-"""Five NLRI families never took the ADD-PATH path identifier off the wire.
+"""Eight NLRI families never took the ADD-PATH path identifier off the wire.
 
 RFC 7911 section 3: when ADD-PATH has been negotiated for a family, every NLRI of that
 family is preceded by a four byte Path Identifier. The decoder has to consume it before
@@ -12,6 +12,9 @@ at the wrong place in the buffer and every NLRI after it in the same UPDATE is g
 
 For EVPN the effect was visible in one line: a type 1 route preceded by a path identifier
 decoded as a GenericEVPN of an unknown type, consuming 2 bytes of 31.
+
+FlowSpec, VPLS and RTC had the same gap and were fixed after the first five. They never
+assigned the boolean into `nlri.addpath`, so typing the parameter did not surface them.
 
 What let it survive was a name collision the type system could not see. The `unpack_nlri`
 parameter named `addpath` is a bool, "has ADD-PATH been negotiated". The NLRI attribute
@@ -38,11 +41,14 @@ import pytest
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
+from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
+from exabgp.bgp.message.update.nlri.rtc import RTC
 from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
+from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.protocol.family import AFI, SAFI
 
 PATH_ID = bytes([0, 0, 0, 7])
@@ -58,6 +64,9 @@ MVPN_NLRI = bytes([1, 12]) + bytes(12)  # intra-AS I-PMSI, 12 bytes of payload
 MUP_NLRI = bytes([99, 0, 99, 12]) + bytes(12)  # unregistered arch/type, 12 byte payload
 BGPLS_NLRI = pack('!HH', 999, 12) + bytes(12)  # unregistered NLRI type, 12 byte payload
 SR_POLICY_NLRI = bytes([96]) + bytes(12)  # RFC 9830: 96 bits for IPv4
+FLOW_NLRI = bytes([3, 1, 8, 10])  # RFC 8955: one component, destination 10.0.0.0/8
+VPLS_NLRI = bytes([0, 17]) + bytes(17)  # RFC 4761: two byte length, 17 byte payload
+RTC_NLRI = bytes([96]) + bytes(12)  # RFC 4684: origin AS and a full route target
 
 FAMILIES = [
     ('evpn', EVPN, AFI.l2vpn, SAFI.evpn, EVPN_NLRI),
@@ -65,6 +74,9 @@ FAMILIES = [
     ('mup', MUP, AFI.ipv4, SAFI.mup, MUP_NLRI),
     ('bgpls', BGPLS, AFI.bgpls, SAFI.bgp_ls, BGPLS_NLRI),
     ('sr-policy', SRPolicyNLRI, AFI.ipv4, SAFI.sr_policy, SR_POLICY_NLRI),
+    ('flow', Flow, AFI.ipv4, SAFI.flow_ip, FLOW_NLRI),
+    ('vpls', VPLS, AFI.l2vpn, SAFI.vpls, VPLS_NLRI),
+    ('rtc', RTC, AFI.ipv4, SAFI.rtc, RTC_NLRI),
 ]
 IDS = [name for name, _, _, _, _ in FAMILIES]
 

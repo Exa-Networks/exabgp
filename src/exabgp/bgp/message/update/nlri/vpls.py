@@ -217,6 +217,10 @@ class VPLSBase(NLRI):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[Self, Buffer]:
+        # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, data = NLRI.consume_path_information(data, addpath)
         # Wire format: length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3) = 19 bytes
         if len(data) < 2:
             raise Notify(3, 10, f'VPLS NLRI too short: need at least 2 bytes, got {len(data)}')
@@ -238,6 +242,7 @@ class VPLSBase(NLRI):
         # only what the accessors read is kept, so what is packed back is what was understood
         packed = bytes(data[0:2]) + bytes(data[2 : 2 + VPLS_PAYLOAD_SIZE])
         nlri = cls(packed)
+        nlri.addpath = path_info
         return nlri, data[2 + length :]
 
 
