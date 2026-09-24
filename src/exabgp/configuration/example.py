@@ -18,6 +18,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import importlib
+
 from exabgp.configuration.schema import (
     Container,
     Leaf,
@@ -282,6 +284,14 @@ def generate_container(
     return lines
 
 
+# The sections which appear at the top level of a configuration, as (module, class name).
+TOP_LEVEL_PARSERS: dict[str, tuple[str, str]] = {
+    'neighbor': ('exabgp.configuration.neighbor', 'ParseNeighbor'),
+    'process': ('exabgp.configuration.process', 'ParseProcess'),
+    'template': ('exabgp.configuration.template', 'ParseTemplate'),
+}
+
+
 def _get_root_schema() -> Container:
     """Build the root configuration schema from all section schemas.
 
@@ -292,33 +302,20 @@ def _get_root_schema() -> Container:
 
     children: dict[str, SchemaElement] = {}
 
-    # Import and add each section schema
-    try:
-        from exabgp.configuration.neighbor import ParseNeighbor
-
-        schema = getattr(ParseNeighbor, 'schema', None)
+    # Same shape, and the same reasoning, as SECTION_PARSERS in application/schema.py: the
+    # module and the class are the only things which differ between these, so a table plus
+    # one loop replaces three copies of import/getattr/except ImportError: pass.
+    for name, (module_name, class_name) in TOP_LEVEL_PARSERS.items():
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError:
+            # Every one of these ships with exabgp, so this only fires on a partial or
+            # vendored install, where the effect is that the section is left out of the
+            # generated example rather than the example failing to generate.
+            continue
+        schema = getattr(getattr(module, class_name, None), 'schema', None)
         if schema:
-            children['neighbor'] = schema
-    except ImportError:
-        pass
-
-    try:
-        from exabgp.configuration.process import ParseProcess
-
-        schema = getattr(ParseProcess, 'schema', None)
-        if schema:
-            children['process'] = schema
-    except ImportError:
-        pass
-
-    try:
-        from exabgp.configuration.template import ParseTemplate
-
-        schema = getattr(ParseTemplate, 'schema', None)
-        if schema:
-            children['template'] = schema
-    except ImportError:
-        pass
+            children[name] = schema
 
     return Container(
         description='ExaBGP Configuration',

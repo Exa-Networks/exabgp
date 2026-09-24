@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import sys
 
@@ -104,6 +105,25 @@ def _get_root_schema() -> Container:
     )
 
 
+# Where each configuration section's parser lives, as (module, class name).
+#
+# This was ten copies of the same try/import/assign/except ImportError: pass block, which
+# is 91 lines saying one thing ten times and ten swallowed errors for check_exa_style to
+# count. The data is the part which differs, so it is the only part written out.
+SECTION_PARSERS: dict[str, tuple[str, str]] = {
+    'neighbor': ('exabgp.configuration.neighbor', 'ParseNeighbor'),
+    'process': ('exabgp.configuration.process', 'ParseProcess'),
+    'template': ('exabgp.configuration.template', 'ParseTemplate'),
+    'capability': ('exabgp.configuration.capability', 'ParseCapability'),
+    'family': ('exabgp.configuration.neighbor.family', 'ParseFamily'),
+    'static': ('exabgp.configuration.static', 'ParseStatic'),
+    'flow': ('exabgp.configuration.flow', 'ParseFlow'),
+    'l2vpn': ('exabgp.configuration.l2vpn', 'ParseL2VPN'),
+    'operational': ('exabgp.configuration.operational', 'ParseOperational'),
+    'role': ('exabgp.configuration.role', 'ParseRole'),
+}
+
+
 def _get_section_schema(section: str) -> Container | None:
     """Get schema for a specific section.
 
@@ -113,86 +133,26 @@ def _get_section_schema(section: str) -> Container | None:
     Returns:
         Container schema for the section, or None if not found.
     """
-    section_map: dict[str, type] = {}
+    located = SECTION_PARSERS.get(section)
+    if located is None:
+        return None
 
+    module_name, class_name = located
     try:
-        from exabgp.configuration.neighbor import ParseNeighbor
-
-        section_map['neighbor'] = ParseNeighbor
+        module = importlib.import_module(module_name)
     except ImportError:
-        pass
+        # Every section parser ships with exabgp, so an ImportError here means a partial or
+        # vendored install rather than an optional dependency. The effect is that this one
+        # section is not offered for introspection, which is what the caller's None means.
+        return None
 
-    try:
-        from exabgp.configuration.process import ParseProcess
-
-        section_map['process'] = ParseProcess
-    except ImportError:
-        pass
-
-    try:
-        from exabgp.configuration.template import ParseTemplate
-
-        section_map['template'] = ParseTemplate
-    except ImportError:
-        pass
-
-    try:
-        from exabgp.configuration.capability import ParseCapability
-
-        section_map['capability'] = ParseCapability
-    except ImportError:
-        pass
-
-    try:
-        from exabgp.configuration.neighbor.family import ParseFamily
-
-        section_map['family'] = ParseFamily
-    except ImportError:
-        pass
-
-    try:
-        from exabgp.configuration.static import ParseStatic
-
-        section_map['static'] = ParseStatic
-    except ImportError:
-        pass
-
-    try:
-        from exabgp.configuration.flow import ParseFlow
-
-        section_map['flow'] = ParseFlow
-    except ImportError:
-        pass
-
-    try:
-        from exabgp.configuration.l2vpn import ParseL2VPN
-
-        section_map['l2vpn'] = ParseL2VPN
-    except ImportError:
-        pass
-
-    try:
-        from exabgp.configuration.operational import ParseOperational
-
-        section_map['operational'] = ParseOperational
-    except ImportError:
-        pass
-
-    try:
-        from exabgp.configuration.role import ParseRole
-
-        section_map['role'] = ParseRole
-    except ImportError:
-        pass
-
-    parser_class = section_map.get(section)
+    parser_class = getattr(module, class_name, None)
     if parser_class is None:
         return None
 
     schema = getattr(parser_class, 'schema', None)
-    if schema:
-        if isinstance(schema, Container):
-            return schema
+    if isinstance(schema, Container):
+        return schema
 
     return None
 
