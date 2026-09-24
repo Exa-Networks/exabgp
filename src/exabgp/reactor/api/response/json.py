@@ -24,9 +24,11 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.capability.role import RoleValue
 
 from exabgp.reactor.interrupt import Signal
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
 
 if TYPE_CHECKING:
+    from exabgp.bgp.message.update.nlri import NLRI
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.open import Open
@@ -64,7 +66,7 @@ class JSON:
         self._count[neighbor.uid] = increased
         return increased
 
-    def _safi_display_name(self, afi: Any, safi: Any) -> str:
+    def _safi_display_name(self, afi: AFI, safi: SAFI) -> str:
         """Get SAFI display name - always uses canonical name for backward compat."""
         return str(safi)  # safi.name() via __str__ - always nlri-mpls for SAFI 4
 
@@ -363,7 +365,7 @@ class JSON:
             message_type='open',
         )
 
-    def _nlri_to_json(self, nlri: Any, nexthop: IP | None = None, leak: RouteLeak | None = None) -> str:
+    def _nlri_to_json(self, nlri: NLRI, nexthop: IP | None = None, leak: RouteLeak | None = None) -> str:
         """Convert NLRI to JSON string. Uses v4_json() for backward compat if enabled.
 
         Args:
@@ -381,8 +383,8 @@ class JSON:
 
     def _update(self, update_msg: UpdateCollection, include_meta: bool = True) -> dict[str, str]:
         # plus stores: family -> nexthop_string -> list of (nlri, nexthop_ip) tuples
-        plus: dict[tuple[Any, Any], dict[str, list[tuple[Any, IP]]]] = {}
-        minus: dict[tuple[Any, Any], list[Any]] = {}
+        plus: dict[FamilyTuple, dict[str, list[tuple[NLRI, IP]]]] = {}
+        minus: dict[FamilyTuple, list[NLRI]] = {}
 
         # EOR messages have .nlris directly but no .announces/.withdraws
         if getattr(update_msg, 'IS_EOR', False):

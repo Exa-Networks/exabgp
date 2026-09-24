@@ -1,0 +1,124 @@
+# RFC 4659 - BGP-MPLS IP VPN Extension for IPv6 VPN
+# https://www.rfc-editor.org/rfc/rfc4659
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc4659.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Unlike RFC 4364, which states its wire format with no RFC 2119 keyword anywhere (see
+# the header of qa/rfc/rfc4364.toml), RFC 4659 does put keywords on the two things a
+# non-PE BGP speaker can get wrong: the AFI/SAFI pair, and the shape of the next hop.
+# Both are recorded below and both are implemented.
+#
+# Not recorded, because they are stated without a keyword:
+#   - section 2's "a VPN-IPv6 address is a 24-octet quantity, ... 8-octet Route
+#     Distinguisher ... 16-octet IPv6 address"
+#   - section 3.2's "The NLRI field itself is encoded as specified in [MPLS-BGP]", which
+#     hands the label stack rules to RFC 3107 and so to qa/rfc/rfc8277.toml.  The two
+#     gaps found there, the Compatibility field and the section 2.2 S bit, are gaps for
+#     AFI 2 / SAFI 128 exactly as they are for AFI 1.
+#
+# Not reached in the time available, and therefore absent rather than excused: section
+# 3.4's capability negotiation MUST, the remaining section 4 encapsulation MUSTs beyond
+# the one below, and section 6's inter-AS SHALLs.
+
+rfc = "rfc4659"
+title = "BGP-MPLS IP VPN Extension for IPv6 VPN"
+url = "https://www.rfc-editor.org/rfc/rfc4659"
+
+[[requirement]]
+id = "rfc4659#3.2-afi-and-safi-values"
+section = "3.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+   Information (NLRI).  The Address Family Identifier (AFI) and
+   Subsequent Address Family Identifier (SAFI) fields MUST be set as
+   follows:
+
+      - AFI: 2; for IPv6
+
+      - SAFI: 128; for MPLS labeled VPN-IPv6
+"""
+note = """
+`NLRI.register(AFI.ipv6, SAFI.mpls_vpn)` in ipvpn.py puts IPVPN on that pair, and
+`Family.size` in protocol/family.py records an 8 octet route distinguisher for it, which
+is what makes the decoder read an RD there and not at AFI 2 / SAFI 4.  The negative side
+is the pair next door: the same bytes under SAFI 4 must decode as a labelled prefix with
+no RD, or the RD would be silently read as 8 octets of IPv6 address.
+"""
+
+[[requirement]]
+id = "rfc4659#3.2-pe-assigns-and-distributes-labels"
+section = "3.2"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   When distributing IPv6 VPN routes, the advertising PE router MUST
+   assign and distribute MPLS labels with the IPv6 VPN routes.
+"""
+note = """
+"Assign" is the half that does not bind exabgp: it runs no label manager and owns no
+label space, so it has nothing to assign from.  The labels it puts on the wire are
+integers the operator wrote in the configuration or sent over the JSON API, which exabgp
+range checks against 2^20-1 in `label` (configuration/static/mpls.py) and then carries.
+Distributing a label the operator chose is not the same obligation as assigning one, and
+the sentence asks for both.
+"""
+
+[[requirement]]
+id = "rfc4659#3.2.1.1-ipv6-transport-next-hop-rd-zero"
+section = "3.2.1.1"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+   tunnels), the BGP speaker SHALL advertise a Next Hop Network Address
+   field containing a VPN-IPv6 address
+
+      - whose 8-octet RD is set to zero, and
+"""
+note = """
+`MPRNLRI.unpack_attribute` refuses a next hop whose leading 8 octets are not zero, with
+Notify(3, 0), and `Family.size[(AFI.ipv6, SAFI.mpls_vpn)]` gives the 24 and 40 octet
+lengths which carry that RD in front of one or two IPv6 addresses.  Both sides are worth
+testing: a zero RD has to be accepted and the address behind it read at the right offset,
+and a non-zero one has to be refused rather than shifting the address by eight octets.
+"""
+
+[[requirement]]
+id = "rfc4659#3.2.1.2-ipv4-transport-next-hop-rd-zero"
+section = "3.2.1.2"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+   tunnels), the BGP speaker SHALL advertise to its peer a Next Hop
+   Network Address field containing a VPN-IPv6 address:
+
+      - whose 8-octet RD is set to zero, and
+"""
+note = """
+The same zero RD rule for the IPv4 transport case, where the 16 octets behind it hold an
+IPv4-mapped IPv6 address rather than a native one.  exabgp applies one check to both
+cases, which is correct here because the RD requirement is identical; the difference is
+only in what the address means, and exabgp does not tunnel so it never has to decide.
+"""
+
+[[requirement]]
+id = "rfc4659#4-ingress-pe-tunnels-over-the-backbone"
+section = "4"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   The ingress PE Router MUST tunnel IPv6 VPN data over the backbone
+   towards the Egress PE router identified as the BGP Next Hop for the
+"""
+note = """
+exabgp forwards no data packets and has no encapsulation code of any kind: it is a BGP
+speaker with a JSON API and does not touch the FIB, so there is no ingress PE behaviour
+for this to constrain.  The next hop it carries is a value it decodes, publishes and
+re-encodes, never one it resolves into a tunnel.
+"""

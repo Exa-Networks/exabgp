@@ -36,6 +36,13 @@ class NextHop(Attribute):
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
     NO_GENERATION: ClassVar[bool] = True
 
+    # RFC 4271 fixes the NEXT_HOP path attribute at four octets and RFC 7606 7.3 makes any
+    # other length malformed. The rule binds attribute 3 only, so AttributeCollection.parse
+    # applies it there: the next hop carried inside MP_REACH_NLRI is decoded by this class
+    # as well (MPRNLRI.iter_routed), and RFC 4760 lets its address family choose a length,
+    # sixteen octets for an IPv6 next hop.
+    ATTRIBUTE_SIZE_BYTES: ClassVar[int] = 4
+
     # Singleton for "no nexthop" (initialized after class definition)
     UNSET: ClassVar[NextHop]
 
@@ -53,6 +60,11 @@ class NextHop(Attribute):
     @classmethod
     def from_packet(cls, data: Buffer) -> 'NextHop':
         """Validate and create from wire-format bytes.
+
+        Four or sixteen octets, because MP_REACH_NLRI decodes its own next hop through
+        here and RFC 4760 lets the address family choose. The narrower rule of RFC 7606
+        7.3, four octets for the NEXT_HOP path attribute, is applied by
+        AttributeCollection.parse where attribute 3 is known to be what is being read.
 
         Args:
             data: Raw attribute value bytes from wire

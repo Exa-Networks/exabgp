@@ -226,6 +226,13 @@ class ASPath(Attribute):
                 if stype not in cls._DISPATCH:
                     raise Notify(3, 11, 'invalid AS Path type sent %d' % stype)
 
+                # RFC 7606 7.2 and RFC 6793 6 both make a Path Segment Length of zero
+                # malformed. It used to be read as an empty segment, so `02 00` announced
+                # the route. An attribute of zero LENGTH, carrying no segment at all, is a
+                # different thing and stays legal: this loop is never entered for it.
+                if slen == 0:
+                    raise Notify(3, 11, 'zero length AS path segment sent')
+
                 end = 2 + (slen * length)
                 sdata = data[2:end]
                 data = data[end:]
@@ -328,6 +335,13 @@ class AS4Path(ASPath):
 
     ID = Attribute.CODE.AS4_PATH
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+
+    # RFC 6793 section 6 chose attribute discard for a malformed AS4_PATH and said why:
+    # the path which matters during the transition is the one in AS_PATH, and that one is
+    # still there. RFC 7606 section 7 leaves attribute 17 to that rule. Inherited from
+    # ASPath, TREAT_AS_WITHDRAW withdrew every prefix in the UPDATE instead.
+    TREAT_AS_WITHDRAW: ClassVar[bool] = False
+    DISCARD: ClassVar[bool] = True
 
     Empty: ClassVar[AS4Path | None] = None
 

@@ -225,10 +225,17 @@ def test_aspath_truncated_segment(seg_count: int) -> None:
 
 
 @pytest.mark.fuzz
-@given(asn_count=st.integers(min_value=0, max_value=20))
+@given(asn_count=st.integers(min_value=1, max_value=20))
 @settings(deadline=None, max_examples=50)
 def test_aspath_valid_sequence(asn_count: int) -> None:
-    """Test AS_PATH with valid sequence of ASNs."""
+    """Test AS_PATH with valid sequence of ASNs.
+
+    From one rather than zero: a segment declaring no AS numbers is not a short valid
+    segment, it is the malformed shape RFC 7606 7.2 and RFC 6793 6 both list, and
+    tests/unit/rfc/test_rfc6793_four_octet_as.py asserts it is refused. An AS_PATH
+    carrying no ASNs at all is an attribute of zero length with no segment in it, which
+    is a different encoding and still legal.
+    """
     from exabgp.bgp.message.update.attribute.aspath import ASPath
 
     # Valid SEQUENCE segment
@@ -239,9 +246,8 @@ def test_aspath_valid_sequence(asn_count: int) -> None:
     aspath = ASPath.from_packet(data, asn4=False)
     segments = aspath.aspath
 
-    if asn_count > 0:
-        assert len(segments) == 1
-        assert len(segments[0]) == asn_count
+    assert len(segments) == 1
+    assert len(segments[0]) == asn_count
 
 
 @pytest.mark.fuzz

@@ -109,12 +109,6 @@ def test_a_well_formed_as_path_is_accepted() -> None:
 
 
 @pytest.mark.rfc('rfc7606#7.2-zero-path-segment-length-is-malformed')
-@pytest.mark.xfail(
-    strict=True,
-    reason='ASPath._unpack_segments_static reads a Path Segment Length of zero, builds an empty '
-    'segment, advances past the two byte header and carries on, so the AS_PATH is accepted and '
-    'the route is advertised',
-)
 def test_a_path_segment_of_zero_length_withdraws_the_route() -> None:
     as_path = attribute(WELL_KNOWN_TRANSITIVE, CODE.AS_PATH, bytes([2, 0]))
     assert withdrawn_by(ORIGIN_IGP + as_path + NEXT_HOP), 'an AS_SEQUENCE of zero ASNs was accepted'
@@ -144,12 +138,6 @@ def test_a_four_byte_next_hop_is_accepted() -> None:
 
 
 @pytest.mark.rfc('rfc7606#7.3-next-hop-malformed-if-not-four')
-@pytest.mark.xfail(
-    strict=True,
-    reason='NextHop.from_packet accepts 4 or 16 bytes because the same helper decodes the next '
-    'hop inside MP_REACH_NLRI, where 16 is correct; attribute 3 shares it, so a sixteen byte '
-    'NEXT_HOP path attribute is parsed and the route advertised',
-)
 def test_a_sixteen_byte_next_hop_path_attribute_is_malformed() -> None:
     sixteen = attribute(WELL_KNOWN_TRANSITIVE, CODE.NEXT_HOP, bytes(16))
     assert withdrawn_by(ORIGIN_IGP + EMPTY_AS_PATH + sixteen), 'a sixteen byte NEXT_HOP was accepted'

@@ -731,7 +731,15 @@ class FlowFlowLabel(IOperationByteShortLong, NumericString, FlowIPv6):
 FLOW_LENGTH_EXTENDED_MASK: int = 0xF0  # Mask for extended length (upper 4 bits)
 FLOW_LENGTH_EXTENDED_VALUE: int = 0xF0  # Value indicating extended length (240)
 FLOW_LENGTH_LOWER_MASK: int = 0x0F  # Mask for lower 4 bits in extended length
-FLOW_LENGTH_EXTENDED_SHIFT: int = 16  # Shift for extended length calculation
+# RFC 8955 4.1: an extended length is "encoded using 3 hex digits (0xfnnn)", so the low
+# nibble of the first octet holds bits 8 to 11 of the length and the second octet holds
+# bits 0 to 7.  This was 16, which read 0xf12c as 65580 rather than 300, so every Flow
+# NLRI of 256 octets or more was refused with Notify(3, 10) - and that raise happens
+# before the try/except in unpack_nlri, so a legal UPDATE from a conforming peer closed
+# the session rather than invalidating one NLRI.  pack_nlri has always written the
+# correct 12 bit form, so exabgp could not read back what it had just written.
+# Lengths 240 to 255 worked, because the nibble is zero there, which is why this lasted.
+FLOW_LENGTH_EXTENDED_SHIFT: int = 8  # Shift for extended length calculation
 FLOW_LENGTH_COMPACT_MAX: int = 0xF0  # Maximum length for compact encoding (240)
 FLOW_LENGTH_EXTENDED_MAX: int = 0x0FFF  # Maximum length for extended encoding (4095)
 

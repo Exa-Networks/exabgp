@@ -140,17 +140,23 @@ def create_as_path_attribute(as_sequence: Any) -> bytes:
         Segment Length (1 byte): Number of ASes
         AS Numbers (2 or 4 bytes each depending on AS size)
     """
-    # AS_SEQUENCE segment type
-    segment_type = 2
-    segment_length = len(as_sequence)
-
-    # For simplicity, assume 2-byte AS numbers
-    # (4-byte AS would need AS4_PATH attribute)
-    value = bytes([segment_type, segment_length])
-    for asn in as_sequence:
-        if asn > 65535:
-            raise ValueError(f'AS number {asn} requires 4-byte AS support')
-        value += struct.pack('!H', asn)
+    # An empty AS_PATH is an attribute with no segments at all, not a segment holding no
+    # AS numbers.  RFC 7606 7.2 lists "It has a Path Segment Length field of zero" among
+    # the conditions which make an AS_PATH malformed, so `02 00` is the one encoding an
+    # empty path must not use.  This helper used to emit exactly that, which is why the
+    # test asserting an empty AS_PATH is legal started failing the day the decoder learned
+    # to refuse a zero-length segment: the helper was wrong, not the decoder.
+    value = b''
+    if as_sequence:
+        # AS_SEQUENCE segment type
+        segment_type = 2
+        # For simplicity, assume 2-byte AS numbers
+        # (4-byte AS would need AS4_PATH attribute)
+        value = bytes([segment_type, len(as_sequence)])
+        for asn in as_sequence:
+            if asn > 65535:
+                raise ValueError(f'AS number {asn} requires 4-byte AS support')
+            value += struct.pack('!H', asn)
 
     return create_path_attribute(
         type_code=2,

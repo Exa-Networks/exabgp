@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.message.update.attribute.otc import OTCSelf
 from exabgp.bgp.neighbor.session import Session
-from exabgp.protocol.family import AFI, SAFI, FamilyTuple
+from exabgp.protocol.family import AFI, SAFI, Family, FamilyTuple
 from exabgp.protocol.ip import IP
 from exabgp.rib import RIB
 
@@ -64,7 +64,7 @@ class Neighbor:
     rib: RIB
     routes: list['Route']
     previous: 'Neighbor' | None
-    eor: deque[FamilyTuple]
+    eor: deque[Family]
     asm: dict[FamilyTuple, Operational]
     messages: deque[Operational]
     refresh: deque[RouteRefresh]

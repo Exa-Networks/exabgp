@@ -27,7 +27,8 @@ from __future__ import annotations
 import asyncio
 import time
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Generator, Iterator, cast
+from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING, Any, Generator, Iterator
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -43,7 +44,7 @@ from exabgp.bgp.timer import ReceiveTimer
 from exabgp.debug.report import format_exception
 from exabgp.environment import getenv
 from exabgp.logger import lazyexc, lazymsg, log
-from exabgp.protocol.family import Family, FamilyTuple
+from exabgp.protocol.family import FamilyTuple
 from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.delay import Delay
 from exabgp.reactor.keepalive import KA
@@ -592,10 +593,10 @@ class Peer:
 
     async def _send_route_updates(
         self,
-        new_routes: Any,  # AsyncGenerator
+        new_routes: AsyncGenerator[None, None] | None,
         include_withdraw: bool,
         routes_per_iteration: int,
-    ) -> tuple[Any, bool]:
+    ) -> tuple[AsyncGenerator[None, None] | None, bool]:
         """Send route updates from the outgoing RIB.
 
         Returns:
@@ -623,7 +624,7 @@ class Peer:
     async def _send_eor_messages(
         self,
         send_eor: bool,
-        new_routes: Any,
+        new_routes: AsyncGenerator[None, None] | None,
     ) -> bool:
         """Send End-of-RIB markers.
 
@@ -638,14 +639,14 @@ class Peer:
 
         # Manual EOR from API commands
         elif self.neighbor.eor:
-            new_eor = cast(Family, self.neighbor.eor.popleft())
+            new_eor = self.neighbor.eor.popleft()
             await self.proto.new_eors(new_eor.afi, new_eor.safi)
 
         return send_eor
 
     def _has_pending_work(
         self,
-        new_routes: Any,
+        new_routes: AsyncGenerator[None, None] | None,
         message: Message,
     ) -> bool:
         """Check if there's pending work that requires immediate attention."""
@@ -693,7 +694,7 @@ class Peer:
         self._warn_otc_disabled()
         include_withdraw = False
         send_eor = not self.neighbor.manual_eor
-        new_routes = None
+        new_routes: AsyncGenerator[None, None] | None = None
         routes_per_iteration = 1 if self.neighbor.rate_limit > 0 else 25
         refresh_enhanced = self.proto.negotiated.refresh == REFRESH.ENHANCED
 

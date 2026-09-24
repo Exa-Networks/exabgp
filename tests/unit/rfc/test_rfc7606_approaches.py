@@ -55,6 +55,7 @@ WELL_FORMED_ATOMIC = attribute(WELL_KNOWN_TRANSITIVE, Attribute.CODE.ATOMIC_AGGR
 DISCARD_IS_PRESCRIBED_BY = {
     Attribute.CODE.ATOMIC_AGGREGATE: 'RFC 7606 7.6',
     Attribute.CODE.AGGREGATOR: 'RFC 7606 7.7',
+    Attribute.CODE.AS4_PATH: 'RFC 6793 6, which discards it because the AS_PATH beside it still stands',
     Attribute.CODE.AS4_AGGREGATOR: 'RFC 6793 6, as the four octet twin of AGGREGATOR',
     Attribute.CODE.BGP_LS: 'RFC 9552 5, which names attribute discard for the BGP-LS attribute',
     Attribute.CODE.BGP_PREFIX_SID: 'RFC 8669 5, see tests/unit/test_rfc8669_prefix_sid_discard.py',

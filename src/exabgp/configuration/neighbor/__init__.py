@@ -11,6 +11,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from exabgp.bgp.message.operational import OperationalFamily
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig
@@ -611,12 +612,18 @@ class ParseNeighbor(Section):
                 # This add the family to neighbor.families()
                 neighbor.rib.outgoing.add_to_rib_watchdog(route)
 
-        for message in local.get('operational', {}).get('routes', []):
-            if message.family().afi_safi() in families:
-                if message.name == 'ASM':
-                    neighbor.asm[message.family().afi_safi()] = message
-                else:
-                    neighbor.messages.append(message)
+        # OperationalFamily.family() already returns a (AFI, SAFI) tuple, which is what
+        # families() holds. Asking it for afi_safi() raised AttributeError and made every
+        # configuration with an operational section unloadable.
+        operational_messages: list[OperationalFamily] = local.get('operational', {}).get('routes', [])
+        for message in operational_messages:
+            family = message.family()
+            if family not in families:
+                continue
+            if message.name == 'ASM':
+                neighbor.asm[family] = message
+            else:
+                neighbor.messages.append(message)
         self.neighbors[neighbor.name()] = neighbor
 
     def post(self) -> bool:

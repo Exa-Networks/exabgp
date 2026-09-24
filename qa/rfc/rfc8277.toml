@@ -1,0 +1,367 @@
+# RFC 8277 - Using BGP to Bind MPLS Labels to Address Prefixes
+# https://www.rfc-editor.org/rfc/rfc8277
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc8277.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# RFC 8277 obsoletes RFC 3107 and exists almost entirely to remove one ambiguity: how a
+# receiver knows how many labels an NLRI carries.  RFC 3107 answered "look at the bottom
+# of stack bit"; RFC 8277 answers "one label, unless the Multiple Labels Capability was
+# exchanged, and then the bottom of stack bit".  exabgp does not implement the Multiple
+# Labels Capability (code 8 appears nowhere in src/exabgp/bgp/message/open/capability/),
+# so on the wire it is permanently in the section 2.2 case while its decoder
+# (INETBase.unpack_nlri and IPVPNBase.unpack_nlri) parses the section 2.3 way.  That
+# mismatch is where three of the four gaps below come from.
+#
+# Things this document states WITHOUT an RFC 2119 keyword, and which are therefore not
+# recorded as requirements:
+#
+#   - section 2.2's "Note that the length will always be the sum of 20 ... plus 3 ...
+#     plus 1 ... plus the length in bits of the prefix".  It is a note, and the
+#     arithmetic it describes is the one exabgp's decoder performs, but the document
+#     never says MUST about it.
+#   - section 2.4's "the lengths and values of the respective prefixes must match" uses a
+#     lowercase must in a document which capitalises everywhere else.
+#   - the Label field being "a 20-bit field containing an MPLS label value" is plain
+#     declarative prose in both 2.2 and 2.3.
+#
+# The RD, its types and its 8 octet width belong to RFC 4364 and are recorded there.
+
+rfc = "rfc8277"
+title = "Using BGP to Bind MPLS Labels to Address Prefixes"
+url = "https://www.rfc-editor.org/rfc/rfc8277"
+
+[[requirement]]
+id = "rfc8277#2-single-label-without-capability"
+section = "2"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+   o  Unless this Capability is sent on a given BGP session by both of
+      that session's BGP speakers, a SAFI-4 or SAFI-128 UPDATE message
+      sent on that session from either speaker MUST bind a prefix to
+      only a single label and MUST use the encoding of Section 2.2.
+"""
+note = """
+exabgp never sends the Multiple Labels Capability, so this sentence binds every session
+it ever forms, and it does not hold it.  `label` in
+src/exabgp/configuration/static/mpls.py accepts `label [ 100 200 ]` and hands the list
+straight to `Labels.make_labels`, which packs both; nothing between the parser and
+`pack_nlri` consults a capability.  A configuration with two labels therefore puts a two
+label NLRI on a session where the peer has every right to read the second label as the
+first three octets of the prefix.
+"""
+
+[[requirement]]
+id = "rfc8277#2.1-must-not-send-multiple-labels-uncapable"
+section = "2.1"
+level = "MUST NOT"
+status = "gap"
+polarity = "both"
+text = """
+   If a BGP speaker has not sent the Multiple Labels Capability in its
+   BGP OPEN message on a particular BGP session, or if it has not
+   received the Multiple Labels Capability in the BGP OPEN message from
+   its peer on that BGP session, that BGP speaker MUST NOT send on that
+   session any UPDATE message that binds more than one MPLS label to any
+   given prefix.
+"""
+note = """
+The same gap as rfc8277#2-single-label-without-capability seen from the capability's
+side, and recorded separately because it is a separate sentence with a separate keyword.
+There is no gate at all: the capability code 8 is not in `CapabilityCode`, so there is no
+state for a check to read even if someone wrote one.
+"""
+
+[[requirement]]
+id = "rfc8277#2.1-capability-supports-two-labels"
+section = "2.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   Any implementation that sends a Multiple Labels Capability MUST be
+   able to support at least two labels in the NLRI.
+"""
+note = """
+Conditioned on sending the capability, and exabgp never sends it: capability code 8 does
+not exist in src/exabgp/bgp/message/open/capability/capability.py, so no OPEN exabgp
+builds can carry it.  The obligation has no session to attach to.  (Had it, exabgp would
+meet it: the decoder loop in INETBase.unpack_nlri has no depth limit at all.)
+"""
+
+[[requirement]]
+id = "rfc8277#2.1-duplicate-triple-ignored"
+section = "2.1"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+   If the Capability contains more than one triple with a given AFI/
+   SAFI, all but the first MUST be ignored.
+"""
+note = """
+This one binds a receiver, and exabgp is a receiver.  A Multiple Labels Capability which
+arrives is parsed by `UnknownCapability` (capabilities.py falls back to it for any code
+not in the registry), which keeps the bytes and interprets none of them, so exabgp
+neither honours the first triple nor the duplicates.  Ignoring everything is not the same
+as ignoring all but the first; the behaviour is indistinguishable here only because
+exabgp acts on no triple.
+"""
+
+[[requirement]]
+id = "rfc8277#2.1-count-zero-or-one-not-sent"
+section = "2.1"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+   A triple of the form <AFI=x, SAFI=y, Count=0> or
+   <AFI=x, SAFI=y, Count=1> MUST NOT be sent.  If such a triple is
+   received, it MUST be ignored.
+"""
+note = """
+The MUST NOT half is conditioned on sending a capability exabgp cannot build, and the
+reception half asks for a triple to be ignored inside a capability of which exabgp
+already ignores every byte.  Neither has anything in exabgp to bind.
+"""
+
+[[requirement]]
+id = "rfc8277#2.1-capability-length-multiple-of-four"
+section = "2.1"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+   A Multiple Labels Capability whose length is not a multiple of four
+   MUST be considered to be malformed.
+"""
+note = """
+A length check on peer input, so it binds the receiver.  `Capabilities.unpack_capability`
+hands code 8 to `UnknownCapability`, which stores the value and checks nothing, so a
+Multiple Labels Capability of length 5 is accepted as well formed.  Nothing downstream
+reads it, so the consequence today is cosmetic rather than a decoding error, but the
+sentence is not met.
+"""
+
+[[requirement]]
+id = "rfc8277#2.2-rsrv-ignored-on-reception"
+section = "2.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+      This 3-bit field SHOULD be set to zero on transmission and MUST be
+      ignored on reception.
+"""
+note = """
+The decoders shift the 24 bit field right by four before reporting a label value, so the
+three Rsrv bits cannot reach the label, and `Labels.make_labels` shifts left by four when
+building one, so they are zero going out.  The negative side is the one worth having: a
+peer which sets Rsrv must still give us the same prefix and the same label value as a
+peer which does not, which is what a decoder that masked the wrong way would break.
+"""
+
+[[requirement]]
+id = "rfc8277#2.2-s-bit-ignored-on-reception"
+section = "2.2"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+      This 1-bit field MUST be set to one on transmission and MUST be
+      ignored on reception.
+"""
+note = """
+The transmission half holds: `Labels.make_labels` sets the bottom of stack bit on the
+last label.  The reception half does not.  Without the Multiple Labels Capability every
+session is a section 2.2 session, where exactly one label is present and the S bit
+carries no information, so a single label NLRI whose S bit is zero should decode to the
+prefix behind it.  INETBase.unpack_nlri instead keeps reading labels while the remaining
+mask allows one and raises `Notify(3, 10, 'the label stack of the NLRI never ends')` when
+the stack does not terminate, which resets the session.  That Notify is deliberate and is
+the right answer for section 2.3, where the S bit is the only delimiter; it is the wrong
+answer for section 2.2, and exabgp cannot tell the two apart because it never negotiates
+the capability which separates them.
+"""
+
+[[requirement]]
+id = "rfc8277#2.3-s-bit-zero-except-in-last-label"
+section = "2.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+      In all labels except the last (i.e., in all labels except the one
+      immediately preceding the prefix), the S bit MUST be 0.  In the
+      last label, the S bit MUST be 1.
+"""
+note = """
+`Labels.make_labels` ors the bit into the last label only, and both decoders stop at the
+first label whose bottom of stack bit is set and treat everything after it as the route
+distinguisher and the prefix.  The negative side is the one which found a bug once
+already: a stack with the bit nowhere is refused rather than being allowed to eat the
+prefix and report a default route, and a stack whose FIRST label sets it stops there even
+if the mask would have allowed another label.
+"""
+
+[[requirement]]
+id = "rfc8277#2.4-compatibility-ignored-on-reception"
+section = "2.4"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+   Upon transmission, the Compatibility field SHOULD be set to 0x800000.
+   Upon reception, the value of the Compatibility field MUST be ignored.
+"""
+note = """
+Neither half holds.  On transmission exabgp withdraws by packing the NLRI it announced,
+so the three octets carry the label it advertised rather than 0x800000; that is the
+SHOULD and it is a decision, not a defect.  The MUST is the one that matters: both
+decoders read those three octets as a label and only accept three values there, the
+bottom of stack bit set, 0x800000, and 0x000000.  Any other Compatibility field, and the
+RFC says any value is legal because it is of no significance, falls out of the loop
+unterminated and raises `Notify(3, 10, ...)`.  A peer which withdraws with a Compatibility
+field of, say, 0x000010 gets its session reset.
+"""
+
+[[requirement]]
+id = "rfc8277#2.4-compatibility-required-ignored"
+section = "2.4"
+level = "REQUIRED"
+status = "gap"
+polarity = "positive-only"
+text = """
+   In
+   order to ensure backwards compatibility, it is RECOMMENDED by this
+   document that the Compatibility field be set to 0x800000, but it is
+   REQUIRED that it be ignored upon reception.
+"""
+note = """
+The same obligation as rfc8277#2.4-compatibility-ignored-on-reception, restated at the
+end of section 2.4 with the stronger keyword and with the reason: RFC 3107 let this field
+hold a label and some implementations put 0x000000 there instead of 0x800000, so a
+receiver which is fussy about it breaks against real peers.  Recorded separately because
+it is a separate normative sentence.  Only the positive side is meaningful: the
+requirement is that no value is rejected, so there is no input which can violate it by
+being accepted, and a negative test would only be the positive one with different bytes.
+"""
+
+[[requirement]]
+id = "rfc8277#2.5-implicit-withdraw-replaces-label"
+section = "2.5"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+   o  If [RFC7911] is not being used, UPDATE U2 MUST be interpreted as
+      meaning that L2 is now bound to P at N1 and that L1 is no longer
+      bound to P at N1.  That is, the UPDATE U1 is implicitly withdrawn
+      and is replaced by UPDATE U2.
+"""
+note = """
+exabgp keys its RIB on `NLRI.index()`, and `LabelBase.index` and `IPVPNBase.index` both
+build that key from the family, the path identifier, the prefix mask and the prefix, and
+from the route distinguisher for a VPN route.  The label is deliberately not in it, which
+is precisely what makes a second UPDATE for the same prefix with a different label
+replace the first rather than sit beside it.  The negative side is the half that proves
+the key is not simply constant: a different prefix, or a different RD under the same
+prefix, must index differently or every VPN route would implicitly withdraw every other.
+"""
+
+[[requirement]]
+id = "rfc8277#2.5-different-path-id-does-not-withdraw"
+section = "2.5"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+      *  If I1 is not the same as I2, U2 MUST be interpreted as meaning
+         that L2 is now bound to P at N1, but U2 MUST NOT be interpreted
+         as meaning that L1 is no longer bound to P at N1.
+"""
+note = """
+The path identifier IS in `index()`, by way of `path_info.pack_path()`, so two labelled
+routes for one prefix with different path identifiers occupy two RIB entries and neither
+withdraws the other.  Positive and negative here are the two halves of the same key:
+different identifiers must index apart, the same identifier must index together.
+"""
+
+[[requirement]]
+id = "rfc8277#3.1-routes-comparable-despite-labels"
+section = "3.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   These two routes MUST be considered to be comparable, even if they
+   specify different labels.  Thus, the BGP best-path selection
+   procedures (see Section 9.1 of [RFC4271]) are applied to select one
+   of them as the better path.
+"""
+note = """
+exabgp runs no best-path selection: there is no implementation of RFC 4271 section 9.1
+anywhere in src/exabgp, and routes received from different peers are handed to the JSON
+API as they arrive rather than compared.  "Comparable" is a property of a decision
+process exabgp does not have, so there is nothing here to comply with or to violate.
+"""
+
+[[requirement]]
+id = "rfc8277#3.2.1-labels-unchanged-when-nexthop-unchanged"
+section = "3.2.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   When a SAFI-4 or SAFI-128 route is propagated, if the Network Address
+   of Next Hop field is left unchanged, the Label field(s) MUST also be
+   left unchanged.
+"""
+note = """
+exabgp does not propagate.  A route received from one peer is decoded, published on the
+JSON API and dropped; it is never placed in another peer's adj-rib-out, and the only
+routes exabgp sends are the ones its configuration or its API told it to originate.  The
+sentence constrains a re-advertisement step exabgp has no code for.
+"""
+
+[[requirement]]
+id = "rfc8277#3.2.1-no-multilabel-propagation-without-capability"
+section = "3.2.1"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+   Note that a given route MUST NOT be propagated to a given peer if the
+   route's NLRI has multiple labels, but the Multiple Labels Capability
+   was not negotiated with the peer.
+"""
+note = """
+Propagation again, and for the same reason: exabgp has no adj-rib-out fed from an
+adj-rib-in.  The closely related obligation which DOES bind exabgp, that it must not
+originate a multi label NLRI towards a peer which never sent the capability, is recorded
+as rfc8277#2.1-must-not-send-multiple-labels-uncapable and is a gap rather than
+not-applicable.
+"""
+
+[[requirement]]
+id = "rfc8277#3.2.3-must-not-send-more-labels-than-peer-handles"
+section = "3.2.3"
+level = "MUST NOT"
+status = "gap"
+polarity = "both"
+text = """
+   A BGP speaker MUST NOT send multiple
+   labels to a peer with which it has not exchanged the Multiple Labels
+   Capability and MUST NOT send more labels to a given peer than the
+   peer has announced (via the Multiple Labels Capability) than it can
+   handle.
+"""
+note = """
+Recorded as a gap rather than not-applicable even though it sits in the propagation
+section, because its first half does not depend on propagation: it forbids SENDING
+multiple labels on an uncapable session, and exabgp originates such NLRIs from
+configuration.  The second half, the per peer count, is unreachable for us since no peer
+count is ever recorded, but a sentence is not met in half.
+"""

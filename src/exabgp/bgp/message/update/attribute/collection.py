@@ -406,7 +406,15 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes:
             return attributes
 
-        if Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
+        # RFC 6793 4.1: AS4_PATH and AS4_AGGREGATOR must not be carried between two NEW
+        # speakers, and one which arrives anyway is discarded, the rest of the UPDATE
+        # processed as it stands. Discard of the attribute, not treat-as-withdraw and not
+        # a session reset. Merging it instead let a peer on a four octet session rewrite
+        # the AS path we hold with bytes we are required to ignore.
+        if negotiated.asn4:
+            attributes.pop(Attribute.CODE.AS4_PATH, None)
+            attributes.pop(Attribute.CODE.AS4_AGGREGATOR, None)
+        elif Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
             attributes.merge_attributes()
 
         # The UNSET sentinel is one process-wide object, not a session: a cache written
@@ -520,6 +528,15 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             # handle the attribute if we know it
             if Attribute.registered(aid, flag):
                 if length == 0 and kls and not kls.VALID_ZERO:
+                    self.add(TreatAsWithdraw(aid))
+                    continue
+
+                # RFC 7606 7.3: a NEXT_HOP path attribute whose length is not four is
+                # malformed. The rule is applied here, where attribute 3 is known to be
+                # what is being read, because NextHop also decodes the next hop inside
+                # MP_REACH_NLRI, which RFC 4760 lets the family size: sixteen octets for
+                # IPv6. Sharing one length rule accepted a sixteen octet attribute 3.
+                if aid == Attribute.CODE.NEXT_HOP and length != NextHop.ATTRIBUTE_SIZE_BYTES:
                     self.add(TreatAsWithdraw(aid))
                     continue
 

@@ -271,10 +271,6 @@ def test_we_send_no_as4_attributes_to_a_four_octet_peer() -> None:
 
 
 @pytest.mark.rfc('rfc6793#4.1-discard-as4-from-a-new-speaker')
-@pytest.mark.xfail(
-    strict=True,
-    reason='AttributeCollection.unpack merges AS_PATH with AS4_PATH without reading negotiated.asn4, so a peer on a four-octet session can rewrite the AS path',
-)
 def test_as4_attributes_from_a_four_octet_peer_are_discarded() -> None:
     wire = (
         as_path([MAPPABLE, ASN(65002)], 4)
@@ -700,10 +696,6 @@ def malformed_as4_paths() -> list[tuple[str, bytes]]:
 
 
 @pytest.mark.rfc('rfc6793#6-as4-path-malformed-conditions')
-@pytest.mark.xfail(
-    strict=True,
-    reason='_unpack_segments_static reads a segment length of zero as an empty segment and accepts the attribute, and a short attribute only fails when the read falls off the end',
-)
 def test_each_condition_the_section_lists_makes_the_as4_path_malformed() -> None:
     accepted: list[str] = []
 
@@ -728,10 +720,6 @@ def test_a_well_formed_as4_path_is_not_called_malformed() -> None:
 
 
 @pytest.mark.rfc('rfc6793#6-discard-a-malformed-as4-path')
-@pytest.mark.xfail(
-    strict=True,
-    reason='AS4Path inherits TREAT_AS_WITHDRAW from ASPath, so a malformed AS4_PATH withdraws every prefix in the UPDATE instead of being dropped on its own',
-)
 def test_a_malformed_as4_path_is_dropped_and_the_update_goes_on() -> None:
     """Section 6 picked attribute discard on purpose: the AS_PATH is still good."""
     wire = (

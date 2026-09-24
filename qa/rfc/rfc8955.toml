@@ -1,0 +1,626 @@
+# RFC 8955 - Dissemination of Flow Specification Rules
+# https://www.rfc-editor.org/rfc/rfc8955
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc8955.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Three rules of this document are stated WITHOUT an RFC 2119 keyword and are therefore
+# not recorded here, however much we would like to lean on them.  They are written down
+# as comments instead, because each of them is where exabgp is worst:
+#
+#   - section 4.1, the length encoding.  "If the NLRI length is smaller than 240 (0xf0
+#     hex) octets, the length field can be encoded as a single octet.  Otherwise, it is
+#     encoded as an extended-length 2-octet value in which the most significant nibble
+#     has the hex value 0xf."  "can be" and "is encoded as", no keyword, so no entry.
+#     exabgp reads that nibble with FLOW_LENGTH_EXTENDED_SHIFT = 16 where the format
+#     needs 8, so every NLRI of 256 octets or more decodes to a length roughly 256 times
+#     too large and raises Notify(3,10) out of Flow.unpack_nlri.  It cannot decode what
+#     it encodes itself.  Demonstrated by an xfail test in
+#     tests/unit/rfc/test_rfc8955_flowspec.py which carries no rfc() marker precisely
+#     because there is no keyword to hang it on.
+#
+#   - section 4.2, "An NLRI value not encoded as specified here, including an NLRI that
+#     contains an unknown component type, is considered malformed and error handling
+#     according to Section 10 is performed."  No keyword.  exabgp does refuse an unknown
+#     component type, and does not refuse a zero length NLRI: `01 00` decodes to a flow
+#     with no component at all, which matches every packet on the internet.
+#
+#   - section 4.2.2, the component encodings themselves, <type, length, prefix> and
+#     <type, [op, value]+>.  Declarative prose throughout.
+#
+# Section 6's validation procedure is quoted in full below because it is the security
+# property of the whole document and exabgp implements none of it.  Those entries are
+# recorded as gaps rather than as not-applicable: exabgp has an incoming RIB and knows
+# which peer sent what, so "we do not forward packets" excuses the forwarding half of
+# section 6 and not the acceptance half.
+
+rfc = "rfc8955"
+title = "Dissemination of Flow Specification Rules"
+url = "https://www.rfc-editor.org/rfc/rfc8955"
+
+# ============================================================ section 4, the NLRI
+
+[[requirement]]
+id = "rfc8955#4-next-hop-length-zero"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When
+advertising Flow Specifications, the Length of the Next-Hop Network
+Address MUST be set to 0.
+"""
+note = """
+`MPNLRICollection._encode_nexthop` returns no bytes for `IP.NoNextHop`, so the ordinary
+flow route, which carries none, packs a next-hop length of 0.  The negative side does not
+hold: the flow configuration grammar has a `next-hop` keyword (used by the redirect-to-IP
+drafts) and a flow route which carries one packs a four octet next-hop into MP_REACH_NLRI,
+against this sentence.  Shown by a failing test rather than described.
+"""
+
+[[requirement]]
+id = "rfc8955#4-next-hop-ignored"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Network Address of the Next-Hop field
+MUST be ignored.
+"""
+note = """
+exabgp runs no next-hop resolution and no feasibility test, so nothing it does with a
+flow specification depends on this field.  `Family.size` lists 0 alongside 4 for
+(ipv4, flow_ip) and 0 alongside 16 and 32 for (ipv6, flow_ip), which is what lets a
+next-hop sent by a peer which does not follow the sentence above be accepted and then
+disregarded.  The negative side is that the value in the field cannot change the NLRI
+which comes out.
+"""
+
+[[requirement]]
+id = "rfc8955#4-capability-multiprotocol"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Implementations wishing to exchange Flow Specification MUST use BGP's
+Capability Advertisement facility to exchange the Multiprotocol
+Extension Capability Code (Code 1), as defined in [RFC4760].  The
+(AFI, SAFI) pair carried in the Multiprotocol Extension Capability
+MUST be (AFI=1, SAFI=133) for IPv4 Flow Specification and (AFI=1,
+SAFI=134) for VPNv4 Flow Specification.
+"""
+note = """
+`SAFI.FLOW_IP` is 133 and `SAFI.FLOW_VPN` is 134, and the flow families go into the
+MULTIPROTOCOL capability like every other.  The negative side is the one which matters on
+the wire: an MP_REACH_NLRI for 1/133 from a peer which never advertised the capability is
+refused by `MPRNLRI.unpack_attribute`, so the capability is a precondition and not a
+decoration.
+"""
+
+# ============================================================ section 4.2, component order
+
+[[requirement]]
+id = "rfc8955#4.2-strict-type-ordering"
+section = "4.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Components MUST follow strict type ordering by increasing numerical
+order.
+"""
+note = """
+exabgp's encoder honours this: `Flow._pack_from_rules` walks `sorted(self.rules.keys())`.
+Its decoder does not check it at all.  `Flow._parse_rules` drops each component into a
+dict keyed by type, which throws the wire order away, and the `seen` list
+`Flow.unpack_nlri` builds afterwards is assembled from `sorted(rules.keys())` and then
+never looked at, so it is sorted by construction and proves nothing.  A flow specification
+whose components arrive in decreasing order is accepted and re-rendered in the right
+order, which means exabgp's API reports a filter the peer did not send.
+"""
+
+[[requirement]]
+id = "rfc8955#4.2-component-once"
+section = "4.2"
+level = "MAY"
+status = "required"
+polarity = "both"
+text = """
+A given component type MAY (exactly once) be present in the
+Flow Specification.
+"""
+note = """
+"Exactly once" is the half exabgp loses, and losing it inverts the filter rather than
+widening it.  Two type 3 components must be ANDed, because section 4.2 says a packet
+matches the intersection of all the components present, so "protocol == tcp" followed by
+"protocol == udp" matches nothing.  `Flow._parse_rules` appends the second component's
+operations to the first component's list, where the second operator's AND bit is unset,
+so the two become "protocol tcp OR udp" and the rule now matches both.
+"""
+
+[[requirement]]
+id = "rfc8955#4.2-precede-higher-type"
+section = "4.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If present, it MUST precede any component of
+higher numeric type value.
+"""
+note = """
+The same absent check as rfc8955#4.2-strict-type-ordering, stated from the other end, and
+kept separate because a decoder could be written to enforce one and not the other: a
+sender could emit types 1, 4, 3 and satisfy "each type appears once" while still putting a
+type 4 in front of a type 3.
+"""
+
+[[requirement]]
+id = "rfc8955#4.2-unmatchable-not-propagated"
+section = "4.2"
+level = "SHOULD NOT"
+status = "gap"
+polarity = "both"
+text = """
+However, some combinations cannot match any packets (e.g.,
+"ICMP Type AND Port" will never match any packets) and thus SHOULD
+NOT be propagated by BGP.
+"""
+note = """
+Nothing in `src/exabgp/configuration/flow/` or in `Flow.add` looks at which components a
+flow specification combines, so `flow route { match { icmp-type 8; port =80; } }` is
+configured, announced and never questioned.  Recorded as a gap rather than as
+not-applicable: exabgp originates rather than propagates, but a filter it originates which
+can never match is the same useless entry in the receiver's hardware, and the check is
+three lines of table lookup we simply do not do.
+"""
+
+# ============================================================ section 4.2.1, operators
+
+[[requirement]]
+id = "rfc8955#4.2.1.1-and-bit-first-unset"
+section = "4.2.1.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+In the first operator octet of a sequence,
+it MUST be encoded as unset and MUST be treated as always unset
+on decoding.
+"""
+note = """
+The encoding half holds: the configuration grammar only sets the AND bit on an operation
+which follows another inside one component.  The decoding half does not.
+`CommonOperator.OPERATOR` is 0x4F, so `Flow._parse_operations` keeps bit 0x40 of whatever
+octet arrives and stores it on the first operation of the component as readily as on the
+fifth.  A first operator octet of 0xC1 renders as `&=tcp`, an AND against a predecessor
+which does not exist.
+"""
+
+[[requirement]]
+id = "rfc8955#4.2.1.1-reserved-bit-zero"
+section = "4.2.1.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+0:    MUST be set to 0 on NLRI encoding and MUST be ignored during
+decoding
+"""
+note = """
+Bit 0x08 of the numeric operator octet.  exabgp never sets it when encoding, because
+`NumericOperator` builds the low nibble out of LT, GT and EQ only.  On decoding it is not
+ignored: `CommonOperator.OPERATOR` is 0x4F, which keeps it, and `NumericString.short()`
+then fails to find 0x09 in its table and falls back to printing the operator in hex, so a
+protocol match for TCP is reported to the API as `protocol 09tcp`.
+"""
+
+[[requirement]]
+id = "rfc8955#4.2.1.2-bitmask-reserved-bits-zero"
+section = "4.2.1.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+0 (all 0 bits):  MUST be set to 0 on NLRI encoding and MUST be
+ignored during decoding
+"""
+note = """
+Bits 0x0C of the bitmask operator octet, and the same fault as the numeric one: encoding
+never sets them, decoding never clears them, and `BinaryString.short()` prints `0D` in
+front of the fragment names when they arrive set.
+"""
+
+# ============================================================ section 4.2.2, components
+
+[[requirement]]
+id = "rfc8955#4.2.2.9-tcp-flags-width"
+section = "4.2.2.9"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Type 9 component bitmasks MUST be encoded as 1- or
+2-octet bitmask (bitmask_op len=00 or len=01).
+"""
+note = """
+`FlowTCPFlag` derives from `IOperationByteShort`, whose `encode` returns one octet below
+256 and two above, so the class cannot emit a four or eight octet bitmask.  The negative
+side is the configuration boundary: no TCP flag name maps to a value which would need a
+second octet, so every flag the grammar accepts packs with len=00.
+"""
+
+[[requirement]]
+id = "rfc8955#4.2.2.11-dscp-single-octet"
+section = "4.2.2.11"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Type 11 component values MUST be encoded as single
+octet (numeric_op len=00).
+"""
+note = """
+`FlowDSCP` derives from `IOperationByte`, whose `encode` always returns one octet.  The
+negative side is `dscp_value` in the same file, which refuses anything above 63 at
+configuration time, so no value which could not fit a single octet ever reaches the
+encoder.
+"""
+
+[[requirement]]
+id = "rfc8955#4.2.2.11-dscp-other-bits-zero"
+section = "4.2.2.11"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+The six least significant bits contain the DSCP value.  All other
+bits SHOULD be treated as 0.
+"""
+note = """
+`FlowDSCP.decoder` is `_number`, which returns the octet whole, so a type 11 component
+carrying 0xFF is reported to the API as `dscp =255`.  A DSCP value of 255 does not exist:
+the two high bits are ECN in the same octet of the IP header and a sender which left them
+set has described a match exabgp then passes on as if it were a DSCP.  Masking with 0x3F
+on decode is the whole fix; it is not done.
+"""
+
+[[requirement]]
+id = "rfc8955#4.2.2.12-fragment-single-octet"
+section = "4.2.2.12"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Type 12 component bitmask MUST be encoded as
+single octet bitmask (bitmask_op len=00).
+"""
+note = """
+Held, but by accident rather than by construction: `FlowFragment` derives from
+`IOperationByteShort`, which would emit two octets for a value of 256 or more, and what
+keeps it to one is that every name `Fragment` defines is 0x0F or below.  The negative test
+is therefore the one worth having, because it pins the property the class does not state.
+"""
+
+[[requirement]]
+id = "rfc8955#4.2.2.12-fragment-reserved-bits-zero"
+section = "4.2.2.12"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+0:    MUST be set to 0 on NLRI encoding and MUST be ignored during
+decoding
+"""
+note = """
+The four high bits of the fragment bitmask value, not of the operator octet.  exabgp
+encodes them as zero, since `Fragment` defines nothing above 0x0F.  It does not ignore
+them on decoding: `Fragment.named` reports an unknown bit rather than dropping it, so a
+value of 0xF5 is rendered as `dont-fragment+first-fragment+unknown fragment type 245`.
+"""
+
+# ============================================================ section 6, validation
+
+[[requirement]]
+id = "rfc8955#6-validation-feasible-if-and-only-if"
+section = "6"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+In the absence of explicit configuration, a Flow Specification NLRI
+MUST be validated such that it is considered feasible if and only if
+all of the conditions below are true:
+"""
+note = """
+Not implemented, in any part.  There is no code in the tree which matches a received flow
+specification against the unicast routes of the same AFI: no "best-match", no originator
+comparison, no ORIGINATOR_ID lookup for this purpose.  A flow specification from any peer
+for any destination prefix is accepted and handed to the API.
+
+This is the security property of the whole document, so it is worth saying exactly what is
+lost and what is not.  exabgp installs nothing, so a peer cannot use this to make exabgp
+drop its own traffic.  What it can do is tell exabgp's API consumer to filter a prefix
+which belongs to somebody else, and the consumer, which usually is the thing programming
+hardware, has no way to know the check was never made.  Recorded as a gap and not as
+not-applicable for that reason: exabgp holds an incoming RIB and knows which peer sent
+what, so rule b is implementable here, and declining to implement it moves a
+denial-of-service vector one hop downstream rather than removing it.
+"""
+
+[[requirement]]
+id = "rfc8955#6-rule-a-may-be-relaxed"
+section = "6"
+level = "MAY"
+status = "not-applicable"
+polarity = "both"
+text = """
+However, rule a MAY be relaxed by explicit configuration, permitting
+Flow Specifications that include no destination prefix component.
+"""
+note = """
+A permission to switch off a check, granted to an implementation which performs the check.
+exabgp performs no part of the validation procedure, so there is no rule a in force for a
+configuration knob to relax.  The day rfc8955#6-validation-feasible-if-and-only-if is
+closed this becomes a real choice; until then it is not one.
+"""
+
+[[requirement]]
+id = "rfc8955#6-rules-b-and-c-disregarded"
+section = "6"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+If
+such is the case, rules b and c are moot and MUST be disregarded.
+"""
+note = """
+exabgp disregards rules b and c, which looks like compliance and is not: it disregards
+them unconditionally rather than because rule a was relaxed by explicit configuration.
+The sentence describes a state machine with two settings and exabgp has one.  Kept as a
+gap and joined to rfc8955#6-validation-feasible-if-and-only-if, because an implementation
+which satisfies this sentence by never doing the work has satisfied nothing.
+"""
+
+[[requirement]]
+id = "rfc8955#6-enforce-leftmost-as"
+section = "6"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+BGP implementations MUST also enforce that the AS_PATH attribute of a
+route received via the External Border Gateway Protocol (eBGP)
+contains the neighboring AS in the left-most position of the AS_PATH
+attribute.
+"""
+note = """
+Not enforced.  Nothing in the tree compares the leftmost AS of a received AS_PATH against
+the peer's ASN; there is no configuration option for it and no check in
+`AttributeCollection.parse` or in the peer code.  RFC 4271 leaves this optional and exabgp
+takes the option, which the sentence above says in as many words is not good enough for a
+speaker exchanging flow specifications.  It is the cheapest half of section 6 to implement
+and the one with no RIB lookup in it at all.
+"""
+
+[[requirement]]
+id = "rfc8955#6-revalidate-on-unicast-change"
+section = "6"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+Therefore, a revalidation of the
+Flow Specification NLRI MUST be performed whenever unicast routes
+change.
+"""
+note = """
+Follows rfc8955#6-validation-feasible-if-and-only-if: there is no validation, so there is
+nothing to redo when the unicast RIB moves.  exabgp's incoming RIB does not notify across
+address families and nothing subscribes to it for this purpose.
+"""
+
+# ============================================================ section 7, actions
+
+[[requirement]]
+id = "rfc8955#7-multiple-actions-applied"
+section = "7"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+Multiple Traffic Filtering Actions defined in this document may be
+present for a single Flow Specification and SHOULD be applied to the
+traffic flow (for example, traffic-rate-bytes and rt-redirect can be
+applied to packets at the same time).
+"""
+note = """
+"Applied to the traffic flow" is an instruction to a forwarding plane.  exabgp has none:
+it does not manipulate the FIB and no packet ever passes through it, so there is nothing
+for an action to be applied to.  What exabgp owes here is to carry every action community
+it received to the API without dropping any, and that obligation lives in RFC 4360 and
+RFC 7606 rather than in this sentence.
+"""
+
+[[requirement]]
+id = "rfc8955#7-additional-actions-specify-interference"
+section = "7"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+Any
+additional definition of Traffic Filtering Actions SHOULD specify the
+action to take if those Traffic Filtering Actions interfere (also
+with existing Traffic Filtering Actions).
+"""
+note = """
+Binds whoever writes the next document defining a traffic filtering action, not whoever
+implements this one.  exabgp defines no traffic filtering action of its own; the ones it
+knows beyond this document, such as redirect-to-IP, come from other drafts which owe this
+sentence themselves.
+"""
+
+[[requirement]]
+id = "rfc8955#7.1-id-not-interpreted"
+section = "7.1"
+level = "SHOULD NOT"
+status = "required"
+polarity = "both"
+text = """
+This value is purely informational and SHOULD NOT be interpreted by
+the implementation.
+"""
+note = """
+The two octet id at the front of a traffic-rate community.  `TrafficRate` exposes it as
+`asn` and puts it nowhere else: `__repr__` is `rate-limit:%d` of the rate alone, and no
+code branches on it.  The negative side is that an id exabgp would never have chosen,
+AS 0 or AS 65535, does not make the community harder to decode or change the rate it
+carries.
+"""
+
+[[requirement]]
+id = "rfc8955#7.1-traffic-rate-not-negative-on-encoding"
+section = "7.1"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+On encoding, the traffic-rate MUST NOT be
+negative.
+"""
+note = """
+Not enforced.  `TrafficRate.make_traffic_rate` puts whatever float it is given through
+`checked_rate`, which refuses a NaN and an infinity and says nothing about the sign, then
+packs it.  Its sibling `TrafficRatePackets.make_traffic_rate_packets` has the `rate < 0`
+check three lines lower in the same file, so this is one missing line rather than a design
+decision.  Shown by a failing test.
+"""
+
+[[requirement]]
+id = "rfc8955#7.1-negative-rate-treated-as-zero"
+section = "7.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+On decoding, negative values MUST be treated as zero
+(discard all traffic).
+"""
+note = """
+Not done, and this one is the dangerous direction.  `TrafficRate.rate` returns the float
+straight out of the four octets, so a community carrying -100.0 is reported to the API as
+`rate-limit:-100`.  The RFC's reading of a negative rate is "discard all traffic"; a
+consumer which reads the number literally will do something else entirely, most likely
+reject the line or program a nonsense limit.  `TrafficRatePackets.rate` clamps with
+`max(value, 0.0)` and `TrafficRate.rate` does not.
+"""
+
+[[requirement]]
+id = "rfc8955#7.2-traffic-rate-packets-not-negative-on-encoding"
+section = "7.2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+On encoding, the traffic-rate-packets MUST NOT
+be negative.
+"""
+note = """
+`make_traffic_rate_packets` raises ValueError on a negative rate.  The negative test feeds
+it the smallest negative float that exists and the largest positive one, because a check
+written as `rate < 0` and a check written as `rate <= 0` differ only at zero, and zero is
+a legal traffic-rate-packets meaning discard everything.
+"""
+
+[[requirement]]
+id = "rfc8955#7.2-negative-rate-packets-treated-as-zero"
+section = "7.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+On decoding, negative values MUST be treated as zero
+(discard all traffic).
+"""
+note = """
+`TrafficRatePackets.rate` returns `max(value, 0.0)`.  The negative side is that the clamp
+is a floor and not a filter: a positive rate must come back unchanged, and -0.0, which is
+a negative float that compares equal to zero, must come out as a rate of zero rather than
+as anything a consumer would print with a minus sign.
+"""
+
+[[requirement]]
+id = "rfc8955#7.3-traffic-action-unused-bits-zero"
+section = "7.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+These bits MUST be set to 0
+on encoding and MUST be ignored during decoding.
+"""
+note = """
+The only one of this document's four "reserved bits" sentences exabgp gets right in both
+directions.  `TrafficAction.make_traffic_action` packs five zero octets and a bitmask
+built from the two defined bits, and `sample` and `terminal` read bit 0x02 and bit 0x01 of
+the last octet and look at nothing else, so an unused bit set by a peer changes neither.
+"""
+
+[[requirement]]
+id = "rfc8955#7.5-traffic-marking-reserved-zero"
+section = "7.5"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+reserved (r):  MUST be set to 0 on encoding and MUST be ignored
+during decoding
+"""
+note = """
+The encoding half holds because `dscp_value` refuses anything above 63 at configuration
+time, so the two reserved bits of the last octet are always zero in what exabgp sends.
+The decoding half does not: `TrafficMark.dscp` returns `self._packed[7]`, the whole octet,
+so a marking community carrying 0xC1 is reported as `mark 193`.  A DSCP is six bits and
+193 is not one; the fix is `& 0x3F` in one place.
+"""
+
+[[requirement]]
+id = "rfc8955#7.7-document-interference-behaviour"
+section = "7.7"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+Implementors of this specification SHOULD document the
+behavior of their implementation in such cases.
+"""
+note = """
+The sentence asks an implementation to document which of two interfering actions it
+selects for packet forwarding.  exabgp selects neither: it forwards no packets and applies
+no action, and hands every action community it received to the API for the consumer to
+resolve.  There is no selection behaviour to write down.
+"""
+
+# ============================================================ section 9, monitoring
+
+[[requirement]]
+id = "rfc8955#9-traffic-monitoring-facilities"
+section = "9"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+While this is an implementation specific
+choice, implementations SHOULD provide:
+"""
+note = """
+The two bullets which follow are a mechanism to log the packet header of filtered traffic
+and a mechanism to count matches for a flow specification rule.  Both count packets
+against a rule exabgp installed, and exabgp installs no rule and sees no packet.  The
+counting belongs to whatever the API consumer programmed.
+"""

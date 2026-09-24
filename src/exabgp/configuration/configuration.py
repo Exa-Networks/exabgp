@@ -12,7 +12,7 @@ import re
 from typing import TYPE_CHECKING, Any, cast
 
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.protocol.family import FamilyTuple
+from exabgp.protocol.family import Family, FamilyTuple
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.operational import OperationalFamily
@@ -224,7 +224,7 @@ class _Configuration:
 
         return result
 
-    def inject_eor(self, peers: list[str], family: object) -> bool:
+    def inject_eor(self, peers: list[str], family: Family) -> bool:
         result = False
         for neighbor in self.neighbors:
             if neighbor in peers:

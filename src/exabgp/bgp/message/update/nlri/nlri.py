@@ -133,25 +133,41 @@ class NLRI(Family):
 
         return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri(Negotiated.UNSET).hex()))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
+        # An NLRI compared to anything else answers NotImplemented so Python can fall
+        # back. Reaching for other.index() on an Any raised AttributeError instead, so
+        # `nlri == None` and `nlri in [1, 2, 3]` crashed rather than saying False.
+        if not isinstance(other, NLRI):
+            return NotImplemented
         return bool(self.index() == other.index())
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: object) -> bool:
+        if not isinstance(other, NLRI):
+            return NotImplemented
         return bool(self.index() != other.index())
 
-    # does not really make sense but allows to get the NLRI in a
-    # deterministic order when generating update (Good for testing)
+    # Ordering does not really make sense between two NLRI, it exists so that the
+    # NLRI of a generated update come out in a deterministic order (good for testing).
+    # index() starts with the family, so two families never interleave.
 
-    def __lt__(self, other: Any) -> bool:
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, NLRI):
+            return NotImplemented
         return bool(self.index() < other.index())
 
-    def __le__(self, other: Any) -> bool:
+    def __le__(self, other: object) -> bool:
+        if not isinstance(other, NLRI):
+            return NotImplemented
         return bool(self == other or self.index() < other.index())
 
-    def __gt__(self, other: Any) -> bool:
+    def __gt__(self, other: object) -> bool:
+        if not isinstance(other, NLRI):
+            return NotImplemented
         return bool(self.index() > other.index())
 
-    def __ge__(self, other: Any) -> bool:
+    def __ge__(self, other: object) -> bool:
+        if not isinstance(other, NLRI):
+            return NotImplemented
         return bool(self == other or self.index() > other.index())
 
     def feedback(self, action: Action) -> str:

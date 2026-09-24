@@ -1,0 +1,203 @@
+# RFC 8956 - Dissemination of Flow Specification Rules for IPv6
+# https://www.rfc-editor.org/rfc/rfc8956
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc8956.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# RFC 8956 is short because it only says what differs from RFC 8955: the operators, the
+# error handling and the component types it does not redefine are RFC 8955's and are
+# recorded in qa/rfc/rfc8955.toml.
+#
+# The single biggest thing wrong with exabgp's IPv6 flow specification support is stated
+# in section 3.1 WITHOUT an RFC 2119 keyword, so it cannot be an entry here:
+#
+#   "The encoded pattern contains enough octets for the bits used in matching (length
+#   minus offset bits)." and "pattern: This contains the matching pattern.  The length of
+#   the pattern is defined by the number of bits needed for pattern matching (length
+#   minus offset)."
+#
+# Declarative prose, no keyword.  exabgp reads and writes ceil(length / 8) pattern octets
+# instead of ceil((length - offset) / 8): `IPrefix6.make` hands `bgp[0:1] + bgp[2:]` to
+# `CIDR.from_ipv6`, which sizes the prefix from the mask alone and knows nothing about the
+# offset byte sitting between them, and `IPrefix6.pack` writes the whole unshifted address
+# back out the same way.  The consequence is that RFC 8956's own Example 1 does not decode:
+# the source component `02 68 40 12 34 56 78 9a` wants five pattern octets and exabgp reads
+# thirteen, runs off the end of the NLRI and returns NLRI.INVALID.  Any IPv6 flow
+# specification with a non-zero offset is unreadable in one direction and unsendable in the
+# other.  Demonstrated by xfail tests in tests/unit/rfc/test_rfc8956_flowspec_ipv6.py which
+# carry no rfc() marker, precisely because there is no keyword to hang them on.
+
+rfc = "rfc8956"
+title = "Dissemination of Flow Specification Rules for IPv6"
+url = "https://www.rfc-editor.org/rfc/rfc8956"
+
+# ============================================================ section 2, families
+
+[[requirement]]
+id = "rfc8956#2-capability-multiprotocol"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Implementations wishing to exchange IPv6 Flow Specifications MUST use
+BGP's Capability Advertisement facility to exchange the Multiprotocol
+Extension Capability Code (Code 1), as defined in [RFC4760].  The
+(AFI, SAFI) pair carried in the Multiprotocol Extension Capability
+MUST be (AFI=2, SAFI=133) for IPv6 Flow Specification rules and
+(AFI=2, SAFI=134) for L3VPN Dissemination of Flow Specification
+rules.
+"""
+note = """
+The IPv6 flow families reuse SAFI 133 and 134, which `Flow` registers under AFI.ipv6 as
+well as AFI.ipv4, and they go into the MULTIPROTOCOL capability like any other family.
+The negative side is that the capability is a precondition: an MP_REACH_NLRI for 2/133
+from a peer which advertised only 1/133 is refused by `MPRNLRI.unpack_attribute`, so an
+IPv4 flow session cannot be used to smuggle IPv6 flow specifications in.
+"""
+
+# ============================================================ section 3.1, prefixes
+
+[[requirement]]
+id = "rfc8956#3.1-padding-bits-zero"
+section = "3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Padding bits MUST be
+0 on encoding and MUST be ignored on decoding.
+"""
+note = """
+The encoding half holds: `IPrefix6.make_prefix6` truncates a full address to
+`CIDR.size(netmask)` octets and the bits below the mask in the operator's own address are
+already zero for any prefix the configuration accepts.  The decoding half does not.
+`CIDR.decode` keeps the trailing octet exactly as it arrived, so a /33 whose fourth
+pattern octet is 0xFF is reported as 2001:db8:ff00::/33 rather than as 2001:db8:8000::/33.
+The padding is not ignored, it is published, and two flow specifications which describe
+the same match compare unequal and hash differently because of it.
+"""
+
+[[requirement]]
+id = "rfc8956#3.1-length-range"
+section = "3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If length = 0 and offset = 0, this component matches every address;
+otherwise, length MUST be in the range offset < length < 129 or the
+component is malformed.
+"""
+note = """
+Half enforced.  `CIDR.decode` refuses a length above 128, which is the `< 129` end, and
+length 0 with offset 0 decodes to ::/0 as the sentence says it should.  The `offset <
+length` end is not checked anywhere: `IPrefix6.make` reads the offset octet and stores it
+without ever comparing it to the mask, so a component announcing length 32 and offset 64
+is accepted and rendered as 2001:db8::/32/64, a match on bits 64 to 32 which do not exist.
+"""
+
+# ============================================================ section 3.3 to 3.7, components
+
+[[requirement]]
+id = "rfc8956#3.3-upper-layer-protocol-single-octet"
+section = "3.3"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+Type 3 component values SHOULD be
+encoded as a single octet (numeric_op len=00).
+"""
+note = """
+`FlowNextHeader` derives from `IOperationByte`, whose `encode` always returns one octet,
+so the class cannot emit anything wider.  The negative side is the decoder's tolerance,
+which is deliberate and not a breach: a peer which sends a next header in two octets is
+read rather than refused, because refusing a legal-but-unadvised width dropped real routes
+before.
+"""
+
+[[requirement]]
+id = "rfc8956#3.4-icmpv6-type-single-octet"
+section = "3.4"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+Type 7 component values SHOULD be
+encoded as a single octet (numeric_op len=00).
+"""
+note = """
+`FlowICMPType` derives from `IOperationByte`.  Same shape as type 3 and type 8, and the
+three are kept as separate entries because they are three sentences in three sections and
+a future change which widened one would be invisible in the other two.
+"""
+
+[[requirement]]
+id = "rfc8956#3.5-icmpv6-code-single-octet"
+section = "3.5"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+Type 8 component values SHOULD be
+encoded as a single octet (numeric_op len=00).
+"""
+note = """
+`FlowICMPCode` derives from `IOperationByte`.
+"""
+
+[[requirement]]
+id = "rfc8956#3.6-fragment-single-octet"
+section = "3.6"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Type 12 component bitmask MUST be
+encoded as a single octet bitmask (bitmask_op len=00).
+"""
+note = """
+The same `FlowFragment` class as IPv4 uses, so the same accidental compliance: it derives
+from `IOperationByteShort`, which would emit two octets above 255, and what keeps it to
+one is that no name `Fragment` defines is above 0x0F.
+"""
+
+[[requirement]]
+id = "rfc8956#3.6-fragment-reserved-bits-zero"
+section = "3.6"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+0:    MUST be set to 0 on NLRI encoding and MUST be ignored during
+decoding
+"""
+note = """
+IPv6 has no Don't Fragment bit, so RFC 8956's fragment bitmask reserves bit 7, the bit
+RFC 8955 gives to DF, along with the four high bits.  exabgp shares one `Fragment` class
+between the two families and it defines `dont-fragment` at 0x01 unconditionally, so an
+IPv6 fragment component carrying 0x01 is reported as `fragment =dont-fragment`: a reserved
+bit which should have been ignored is instead published as a match on a header field IPv6
+does not have.
+"""
+
+[[requirement]]
+id = "rfc8956#3.7-flow-label-four-octets"
+section = "3.7"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+Type 13 component values SHOULD be
+encoded as 4-octet quantities (numeric_op len=10).
+"""
+note = """
+Declined, and not deliberately.  `FlowFlowLabel` derives from `IOperationByteShortLong`,
+whose `encode` picks the narrowest width that fits, so a flow label of 5 goes on the wire
+as `0105`, one octet with len=00, and only a label above 65535 gets the four octets this
+sentence asks for.  A flow label is a 20 bit field, so the width exabgp chooses varies with
+the value an operator happened to pick, which is exactly the inconsistency a fixed width
+avoids.  The decoder reads all four widths, so this costs interoperability only with a
+receiver strict about the SHOULD.
+"""

@@ -1,0 +1,173 @@
+# RFC 4364 - BGP/MPLS IP Virtual Private Networks (VPNs)
+# https://www.rfc-editor.org/rfc/rfc4364
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc4364.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# The headline result of reading this document with a grep for RFC 2119 keywords is that
+# there are seven of them in 2635 lines, and not one of them is about the wire.  All
+# seven are below, and all seven are not-applicable, because RFC 4364 is a description of
+# what a PE router does with its VRFs, its LDP sessions and its tunnels, and exabgp is
+# none of those things.
+#
+# The sections the task pointed at, 4.1, 4.2 and 4.3.4, which are the ones that DO bind a
+# BGP speaker, contain no capitalised keyword at all.  They state the encoding in plain
+# declarative prose, and where they do reach for an obligation they write it in lowercase:
+#
+#   4.1  "A VPN-IPv4 address is a 12-byte quantity, beginning with an 8-byte Route
+#        Distinguisher (RD) and ending with a 4-byte IPv4 address."
+#   4.2  "- Type Field: 2 bytes / - Value Field: 6 bytes"
+#   4.2  "The Administrator subfield must contain an Autonomous System number." (type 0)
+#   4.2  "The Administrator subfield must contain an IP address." (type 1)
+#   4.2  "The Administrator subfield must contain a 4-byte Autonomous System number." (2)
+#   4.3.4 "The labeled VPN-IPv4 NLRI itself is encoded as specified in [MPLS-BGP], where
+#        the prefix consists of an 8-byte RD followed by an IPv4 prefix."
+#
+# None of those may be recorded as requirements, and this is the same shape RFC 1997 and
+# RFC 4360 turned out to have: the length rule that everyone quotes as a MUST is not one.
+# The behaviour they describe is nevertheless exercised, unmarked and deliberately so, in
+# tests/unit/rfc/test_rfc4364_vpn.py, whose docstring says why it carries no marker.
+#
+# Two further consequences worth writing down rather than leaving implicit:
+#
+#   - 4.3.4 delegates the NLRI encoding to [MPLS-BGP], which is RFC 3107, now obsoleted by
+#     RFC 8277.  The label stack rules that actually govern a VPNv4 NLRI on exabgp's wire
+#     are therefore recorded in qa/rfc/rfc8277.toml, not here, and the gaps found there
+#     (the Compatibility field, the S bit) apply to SAFI 128 as much as to SAFI 4.
+#   - 4.1's "Since VPN-IPv4 addresses and IPv4 addresses are different address families,
+#     BGP never treats them as comparable addresses" is a statement about a best-path
+#     comparison exabgp does not perform, and is not phrased as an obligation anyway.
+
+rfc = "rfc4364"
+title = "BGP/MPLS IP Virtual Private Networks (VPNs)"
+url = "https://www.rfc-editor.org/rfc/rfc4364"
+
+[[requirement]]
+id = "rfc4364#4.3.1-pe-filters-route-targets-from-ce"
+section = "4.3.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   If the CE is allowed to
+   attach RTs to its routes, the PE MUST filter out all routes that
+   contain RTs that the customer is not allowed to use.
+"""
+note = """
+This is a PE filtering what a customer edge router sent it, against a per customer list
+of permitted Route Targets.  exabgp has no notion of a customer, no VRF to attach one to,
+and no per neighbour route target policy: extended communities arrive, are decoded by
+`ExtendedCommunities.from_packet` and are handed to the JSON API exactly as they were
+sent.  There is no point in the code where a route crosses from a customer into a VPN,
+which is the boundary this sentence polices.
+"""
+
+[[requirement]]
+id = "rfc4364#4.3.1-pe-removes-unauthorised-route-target"
+section = "4.3.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   If the CE is
+   not allowed to attach RTs to its routes, but does so anyway, the PE
+   MUST remove the RT before converting the customer's route to a VPN-
+   IPv4 route.
+"""
+note = """
+The same boundary as the entry above, read from the other side.  "Converting the
+customer's route to a VPN-IPv4 route" is the act of a PE moving a route out of a VRF and
+giving it an RD; exabgp never converts one family into another, it announces what its
+configuration or its API told it to announce, with the RD the operator wrote.
+"""
+
+[[requirement]]
+id = "rfc4364#4.3.2-ldp-support-required"
+section = "4.3.2"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   all such
+   systems MUST support Label Distribution Protocol (LDP) [MPLS-LDP].
+"""
+note = """
+LDP is a separate protocol with its own sessions and its own packets, and exabgp
+implements exactly one protocol, BGP.  There is no LDP code, no label allocation and no
+label switched path in this tree; the labels exabgp puts on the wire are numbers the
+operator supplied, which it never assigns and never resolves.
+"""
+
+[[requirement]]
+id = "rfc4364#4.3.2-downstream-modes-required"
+section = "4.3.2"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   In particular, Downstream Unsolicited mode MUST be supported on
+   interfaces that are neither Label Controlled ATM (LC-ATM) [MPLS-ATM]
+   nor Label Controlled Frame Relay (LC-FR) [MPLS-FR] interfaces, and
+   Downstream on Demand mode MUST be supported on LC-ATM interfaces and
+   LC-FR interfaces.
+"""
+note = """
+Two LDP label distribution modes, on interface types exabgp has no concept of.  exabgp
+does not enumerate interfaces at all beyond binding a listening socket, and it has no LDP
+implementation for either mode to be a mode of.
+"""
+
+[[requirement]]
+id = "rfc4364#8.1-backbone-refuses-outside-labelled-packet"
+section = "8"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+   router in the backbone MUST NOT accept a labeled packet from any
+   adjacent non-backbone device unless the following two conditions
+   hold:
+"""
+note = """
+A data plane admission check on MPLS packets arriving at a router.  exabgp forwards no
+packets and manipulates no FIB, which is stated as an architectural property of the
+project rather than as a missing feature; the only packets it accepts are the BGP
+messages on its own TCP sessions.
+"""
+
+[[requirement]]
+id = "rfc4364#8-ipsec-implementation-required"
+section = "8"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   Any implementation of
+   BGP/MPLS IP VPNs that allows VPN packets to be tunneled as described
+   in that document MUST contain an implementation of IPsec that can be
+   used as therein described.
+"""
+note = """
+Conditioned on allowing VPN packets to be tunnelled, and exabgp tunnels nothing: it has
+no MPLS-in-IP or MPLS-in-GRE encapsulation, because it carries no VPN packets.  The
+condition is never satisfied, so the obligation never attaches.
+"""
+
+[[requirement]]
+id = "rfc4364#8-egress-pe-validates-tunnel-source"
+section = "8"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   Any
+   implementation that allows MPLS-in-IP and/or MPLS-in-GRE tunneling to
+   be used without IPsec MUST allow the egress PE to validate in this
+   manner the IP source address of any tunneled packet that it receives.
+"""
+note = """
+Same condition, same answer: exabgp is not an egress PE, receives no tunnelled packets
+and has no source address validation to offer, because the only thing it receives is BGP
+over an established TCP session whose peer address it already checked when it accepted
+the connection.
+"""
