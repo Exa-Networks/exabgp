@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import contextlib
 import errno
 import fcntl
 import os
@@ -173,28 +174,66 @@ class Processes:
         if self.respawn_number and self._restart[process]:
             log.debug(lazymsg('process.ended.restarting process={p}', p=process), 'processes')
             self._terminate(process)
-            try:
+            # _start raises ProcessError only once it has logged the respawn limit as
+            # critical and terminated the process, so there is nothing left to say. It is
+            # caught because this runs as an asyncio callback, where an escaping exception
+            # takes down more than the one process it is about.
+            with contextlib.suppress(ProcessError):
                 self._start(process)
-            except ProcessError:
-                # Respawn limit exceeded - process is already terminated and logged
-                # Don't propagate exception into asyncio event loop
-                pass
         else:
             log.debug(lazymsg('process.ended process={p}', p=process), 'processes')
             self._terminate(process)
+
+    def _remove_reader(self, fd: int, process_name: str, reason: str) -> None:
+        """Take an API process' stdout back off the event loop.
+
+        Being asked to remove a reader which is already gone is normal here: the exit
+        path, the error path and _terminate all reach for it and any of them can get
+        there first. asyncio refusing for some other reason is not normal, so name the
+        descriptor rather than letting the error go by unmentioned.
+        """
+        if not (self._async_mode and self._loop):
+            return
+        try:
+            self._loop.remove_reader(fd)
+            log.debug(
+                lazymsg('async.reader.removed process={p} fd={fd} reason={r}', p=process_name, fd=fd, r=reason),
+                'processes',
+            )
+        except (ValueError, OSError) as exc:
+            log.debug(
+                lazymsg(
+                    'async.reader.remove.failed process={p} fd={fd} error={e}',
+                    p=process_name,
+                    fd=fd,
+                    e=errstr(exc),
+                ),
+                'processes',
+            )
+
+    def _drop_reader(self, process_name: str, reason: str) -> None:
+        """Remove the reader for a process we only have the name of.
+
+        The callers are recovery paths, so the process may already have been taken out
+        of _process or have had its stdout closed. Both are expected and neither is
+        worth more than a line; anything else is reported by _remove_reader.
+        """
+        process = self._process.get(process_name)
+        if process is None or process.stdout is None:
+            return
+        try:
+            fd = process.stdout.fileno()
+        except ValueError as exc:
+            log.debug(lazymsg('async.reader.no.fd process={p} error={e}', p=process_name, e=errstr(exc)), 'processes')
+            return
+        self._remove_reader(fd, process_name, reason)
 
     def _terminate(self, process_name: str) -> Thread:
         log.debug(lazymsg('process.terminating process={p}', p=process_name), 'processes')
         process = self._process[process_name]
 
         # Remove async reader if in async mode
-        if self._async_mode and self._loop and process.stdout:
-            try:
-                fd = process.stdout.fileno()
-                self._loop.remove_reader(fd)
-                log.debug(lazymsg('async.reader.removed process={p} fd={fd}', p=process_name, fd=fd), 'processes')
-            except (ValueError, OSError):
-                pass  # Reader might not be registered or FD already closed
+        self._drop_reader(process_name, 'terminating')
 
         del self._process[process_name]
         # nothing will ever complete the partial line, and the group buffer is dead too
@@ -216,17 +255,27 @@ class Processes:
                 log.debug(lazymsg('process.kill.forced process={p}', p=process_name), 'processes')
                 process.kill()
                 process.wait(timeout=1)
-        except (OSError, KeyError, subprocess.TimeoutExpired):
-            # the process is most likely already dead
-            pass
+        except (OSError, KeyError, subprocess.TimeoutExpired) as exc:
+            # almost always the child is already dead, which is the outcome we wanted,
+            # but a TimeoutExpired here means kill() did not take either and the process
+            # is still around after the terminate, so say which one and why
+            log.debug(
+                lazymsg('process.terminate.failed process={p} error={e}', p=process_name, e=errstr(exc)), 'processes'
+            )
 
     def terminate(self) -> None:
         for process in list(self._process):
             if not self.silence:
+                # the pipe to a process which has already gone is not writable, and we are
+                # shutting down, so the only use for the failure is knowing the process
+                # never saw the shutdown message
                 try:
                     self.write(process, self._encoder[process].shutdown())
-                except ProcessError:
-                    pass
+                except ProcessError as exc:
+                    log.debug(
+                        lazymsg('process.shutdown.unsent process={p} error={e}', p=process, e=errstr(exc)),
+                        'processes',
+                    )
         self.silence = True
         # waiting a little to make sure IO is flushed to the pipes
         # we are using unbuffered IO but still ..
@@ -248,10 +297,16 @@ class Processes:
         """
         for process in list(self._process):
             if not self.silence:
+                # the pipe to a process which has already gone is not writable, and we are
+                # shutting down, so the only use for the failure is knowing the process
+                # never saw the shutdown message
                 try:
                     self.write(process, self._encoder[process].shutdown())
-                except ProcessError:
-                    pass
+                except ProcessError as exc:
+                    log.debug(
+                        lazymsg('process.shutdown.unsent process={p} error={e}', p=process, e=errstr(exc)),
+                        'processes',
+                    )
         # Flush all queued shutdown messages
         await self.flush_write_queue()
         self.silence = True
@@ -533,7 +588,9 @@ class Processes:
                     return
 
             except KeyError:
-                pass
+                # the process was removed from _process while we were reading it, which
+                # _handle_problem does; there is nothing left to poll and nothing to fix
+                log.debug(lazymsg('process.vanished process={p}', p=process), 'processes')
             except (subprocess.CalledProcessError, OSError, ValueError):
                 self._handle_problem(process)
 
@@ -570,14 +627,9 @@ class Processes:
             process_name: Name of the process with available data
         """
         if process_name not in self._process:
-            # Process already removed - shouldn't happen but be defensive
-            # Try to remove reader anyway in case of race condition
-            try:
-                if self._async_mode and self._loop:
-                    # We don't have the FD anymore, but asyncio will handle cleanup
-                    pass
-            except (ValueError, OSError):
-                pass
+            # _handle_problem removed the process between the event loop deciding there
+            # was data and this callback running. The reader went with it in _terminate,
+            # so there is nothing left to undo here.
             return
 
         try:
@@ -595,14 +647,7 @@ class Processes:
             if buf == '' and poll is not None:
                 # Process exited - EOF received
                 # CRITICAL: Remove reader BEFORE calling _handle_problem to avoid race
-                if self._async_mode and self._loop:
-                    try:
-                        self._loop.remove_reader(fd)
-                        log.debug(
-                            lazymsg('async.reader.removed.exit process={p} fd={fd}', p=process_name, fd=fd), 'processes'
-                        )
-                    except (ValueError, OSError):
-                        pass  # Already removed or FD closed
+                self._remove_reader(fd, process_name, 'exited')
                 self._handle_problem(process_name)
                 return
 
@@ -640,47 +685,21 @@ class Processes:
             # Check if process exited
             if poll is not None:
                 # CRITICAL: Remove reader BEFORE calling _handle_problem to avoid race
-                if self._async_mode and self._loop:
-                    try:
-                        self._loop.remove_reader(fd)
-                        log.debug(
-                            lazymsg('async.reader.removed.exit process={p} fd={fd}', p=process_name, fd=fd), 'processes'
-                        )
-                    except (ValueError, OSError):
-                        pass  # Already removed or FD closed
+                self._remove_reader(fd, process_name, 'exited')
                 self._handle_problem(process_name)
 
         except OSError as exc:
-            # On error, try to remove reader to prevent callback loop
-            try:
-                if self._async_mode and self._loop and process_name in self._process:
-                    proc_stdout = self._process[process_name].stdout
-                    if proc_stdout is not None:
-                        self._loop.remove_reader(proc_stdout.fileno())
-                        log.debug(
-                            lazymsg('async.reader.removed.error process={p} reason=oserror', p=process_name),
-                            'processes',
-                        )
-            except (ValueError, OSError, AttributeError):
-                pass
+            # take the reader off first: a descriptor which raises on every read would
+            # otherwise have the event loop call us back forever
+            self._drop_reader(process_name, 'oserror')
 
             if not exc.errno or exc.errno in error.fatal:
                 self._handle_problem(process_name)
             elif exc.errno not in error.block:
                 log.debug(lazymsg('process.error.unexpected errno={errstr}', errstr=errstr(exc)), 'processes')
         except (KeyError, AttributeError, UnicodeDecodeError) as exc:
-            # On any exception, try to remove reader to prevent callback loop
-            try:
-                if self._async_mode and self._loop and process_name in self._process:
-                    proc_stdout = self._process[process_name].stdout
-                    if proc_stdout is not None:
-                        self._loop.remove_reader(proc_stdout.fileno())
-                        log.debug(
-                            lazymsg('async.reader.removed.error process={p} reason=exception', p=process_name),
-                            'processes',
-                        )
-            except (ValueError, OSError, AttributeError):
-                pass
+            # as above: stop the event loop calling us back into the same exception
+            self._drop_reader(process_name, 'exception')
 
             log.debug(lazymsg('async.reader.exception process={p} error={e}', p=process_name, e=exc), 'processes')
             self._handle_problem(process_name)

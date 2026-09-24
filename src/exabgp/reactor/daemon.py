@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 import pwd
@@ -206,10 +207,12 @@ class Daemon:
         maxfd = 3
 
         for fd in range(maxfd):
-            try:
+            # stdin, stdout and stderr are being detached from the terminal. One of them
+            # already being closed is the normal case when exabgp was started from
+            # something which had closed it, and there is nothing to do about a descriptor
+            # which is already gone.
+            with contextlib.suppress(OSError):
                 os.close(fd)
-            except OSError:
-                pass
         os.open('/dev/null', os.O_RDWR)
         os.dup2(0, 1)
         os.dup2(0, 2)

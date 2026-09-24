@@ -54,20 +54,41 @@ def bind_to_device(io: socket.socket, interface: str) -> None:
         raise NotConnected(f'can not bind to device {interface} - {exc!s}') from None
 
 
+def set_reuse_options(io: socket.socket) -> None:
+    """Let the local port of a closed session be used again straight away.
+
+    Neither option has to succeed for the connection to work, and SO_REUSEPORT does not
+    exist on every platform, so a failure is not fatal. It is worth saying out loud
+    though: without SO_REUSEADDR a session which drops cannot rebind its local port
+    until the old socket leaves TIME_WAIT, and what the operator sees is a peer which
+    will not come back, with nothing pointing at a socket option.
+    """
+    for name in ('SO_REUSEADDR', 'SO_REUSEPORT'):
+        option = getattr(socket, name, None)
+        if option is None:
+            log.debug(
+                lazymsg(
+                    'socket.option.absent option={option} platform={platform}', option=name, platform=platform.system()
+                ),
+                'network',
+            )
+            continue
+        try:
+            io.setsockopt(socket.SOL_SOCKET, option, 1)
+        except OSError as exc:
+            log.warning(
+                lazymsg('socket.option.refused option={option} reason={reason}', option=name, reason=errstr(exc)),
+                'network',
+            )
+
+
 def create(afi: AFI, interface: str | None = None) -> socket.socket:
     try:
         if afi == AFI.ipv4:
             io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         if afi == AFI.ipv6:
             io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-        try:
-            io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        except (OSError, AttributeError):
-            pass
-        try:
-            io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # pylint: disable=E1101
-        except (OSError, AttributeError):
-            pass
+        set_reuse_options(io)
 
         if interface:
             bind_to_device(io, interface)
@@ -393,28 +414,46 @@ def ttlv6(io: socket.socket, ip: str, ttl: int | None) -> None:
             ) from None
 
 
+# CPython does not export IP_MINTTL from socket on any platform, so looking it up by name
+# alone never finds it, Linux included.  These are the values from the kernel headers of
+# the platforms which have the option; min_ttlv6 does the same for IPV6_MINHOPCOUNT.
+IP_MINTTL_BY_PLATFORM: dict[str, int] = {
+    'Linux': 21,  # linux/in.h
+    'FreeBSD': 66,  # netinet/in.h
+}
+
+
+def ip_minttl() -> int | None:
+    """The IP_MINTTL option number on this platform, or None where it does not exist."""
+    exported: int | None = getattr(socket, 'IP_MINTTL', None)
+    if exported is not None:
+        return exported
+    return IP_MINTTL_BY_PLATFORM.get(platform.system())
+
+
 def min_ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:
         # IP_MINTTL is what enforces GTSM (RFC 5082) on the receive side: it is the option
-        # which makes the kernel drop a packet arriving with too low a TTL.  It does not
-        # exist on every platform, macOS among them, and there it is simply not in socket.
+        # which makes the kernel drop a packet arriving with too low a TTL.  macOS has no
+        # such option at all.
         #
-        # An absent option used to be swallowed, and IP_TTL was set instead.  IP_TTL is the
-        # TTL we put on what we send, which is the other half of GTSM and no substitute for
-        # it: the inbound check was never installed and the operator was not told, so a
-        # neighbour configured with ttl-security had no protection and looked like it did.
+        # This used to look the option up in socket only, where CPython never puts it, and
+        # swallow the miss.  So the inbound check was not installed on any platform, Linux
+        # included, and the operator was not told.  IP_TTL, set below, is the TTL we put on
+        # what we send, which is the other half of GTSM and no substitute for it.
         #
-        # Warn rather than raise.  The platforms without the option are running sessions
-        # today, and refusing to bring them up is a larger change than the defect. An
-        # option which is present but refused stays a TTLError below, because that is the
-        # kernel rejecting a request it understood.
-        minttl = getattr(socket, 'IP_MINTTL', None)
+        # Warn rather than raise where the platform has no option.  Those hosts are running
+        # sessions today, and refusing to bring them up is a larger change than the defect.
+        # An option which is present but refused stays a TTLError below, because that is
+        # the kernel rejecting a request it understood.
+        minttl = ip_minttl()
         if minttl is None:
             log.warning(
                 lazymsg(
-                    'ttl-security.inbound.unavailable peer={peer} reason={reason}',
+                    'ttl-security.inbound.unavailable peer={peer} platform={platform} reason={reason}',
                     peer=ip,
+                    platform=platform.system(),
                     reason='this platform has no IP_MINTTL, so arriving packets are not checked against the TTL',
                 ),
                 'network',

@@ -246,7 +246,12 @@ def ping(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comman
         try:
             client_start_time = float(parts[1])
         except ValueError:
-            pass
+            # a client which sends a start time we cannot read is treated as one which
+            # sent none at all, which is what client_start_time staying None means below
+            log.debug(
+                lazymsg('api.client.bad.start.time client={uuid} value={value}', uuid=client_uuid, value=parts[1]),
+                'api',
+            )
 
     # Multi-client support: all clients are active
     is_active = True

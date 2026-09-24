@@ -46,5 +46,12 @@ class Incoming(Connection):
             for boolean in self.writer(notification):
                 yield False
             self.close()
-        except NetworkError:
-            pass  # This is only be used when closing session due to unconfigured peers - so issues do not matter
+        except NetworkError as exc:
+            # the only caller is the refusal of a connection from an unconfigured peer, so
+            # the session is going away whether or not the NOTIFICATION reaches it. Say
+            # that it did not: an operator looking at why a peer never saw a reason for
+            # being dropped has nowhere else to find out.
+            log.debug(
+                lazymsg('notification.unsent peer={peer} reason={reason}', peer=self.peer, reason=errstr(exc)),
+                'network',
+            )
