@@ -11,6 +11,7 @@ Examples:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import sys
@@ -467,14 +468,13 @@ def migrate_api_line(line: str, from_version: str, to_version: str, verbose: boo
     if not line:
         return line, []
 
-    # Try to parse as JSON
+    # A line which opens with a brace but does not parse is a text command which happens to
+    # start that way, and the command migration below is what it needs.
     if line.startswith('{'):
-        try:
+        with contextlib.suppress(json.JSONDecodeError):
             data = json.loads(line)
             new_data, changes = migrate_api_json(data, from_version, to_version)
             return json.dumps(new_data, separators=(',', ':')), changes
-        except json.JSONDecodeError:
-            pass  # Not valid JSON, treat as command
 
     # Treat as text command
     return migrate_api_command(line, from_version, to_version)
@@ -497,14 +497,13 @@ def reverse_migrate_api_line(
     if not line:
         return line, []
 
-    # Try to parse as JSON
+    # Only JSON is reversed, so a line which opens with a brace but does not parse goes
+    # through untouched like every other non-JSON line.
     if line.startswith('{'):
-        try:
+        with contextlib.suppress(json.JSONDecodeError):
             data = json.loads(line)
             new_data, changes = reverse_migrate_api_json(data, from_version, to_version)
             return json.dumps(new_data, separators=(',', ':')), changes
-        except json.JSONDecodeError:
-            pass  # Not valid JSON, pass through
 
     # Pass through non-JSON (commands from ExaBGP to script are rare)
     return line, []
@@ -670,13 +669,15 @@ def cmdline_api(cmdarg: argparse.Namespace) -> int:
                     if not new_line.endswith('\n'):
                         proc.stdin.write('\n')
                     proc.stdin.flush()
-            except (BrokenPipeError, OSError):
-                pass  # Process exited
+            except OSError as exc:
+                # The line being forwarded and everything exabgp sends after it are dropped,
+                # and this thread is the only place which knows the bridge stopped relaying.
+                sys.stderr.write(f'stopped forwarding to {cmdarg.exec_cmd[0]}: {exc}\n')
+                sys.stderr.flush()
             finally:
-                try:
+                # The child is gone, which is why we are closing its stdin.
+                with contextlib.suppress(OSError):
                     proc.stdin.close()
-                except (BrokenPipeError, OSError):
-                    pass
 
         stdin_thread = threading.Thread(target=stdin_handler, daemon=True)
         stdin_thread.start()

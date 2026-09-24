@@ -15,6 +15,7 @@ import time
 import signal
 import select
 import traceback
+import contextlib
 from exabgp.util.backlog import Backlog
 
 from exabgp.reactor.network.error import error
@@ -128,10 +129,10 @@ class Control:
     def cleanup(self) -> None:
         def _close(pipe: int | None) -> None:
             if pipe:
-                try:
+                # We are tearing the process down, so a descriptor which refuses to close is
+                # already as closed as we need it to be.
+                with contextlib.suppress(OSError, TypeError):
                     os.close(pipe)
-                except (OSError, TypeError):
-                    pass
 
         _close(self.r_pipe)
 
@@ -189,9 +190,11 @@ class Control:
                     if not chunk:
                         break
                     response += chunk
-        except OSError:
-            # If we can't send the command or read the response, continue anyway
-            pass
+        except OSError as exc:
+            # Without the acknowledgement the reactor stops sending 'done', and the CLI on the
+            # other end of the pipe waits out its timeout on every command it sends.
+            sys.stderr.write(f'cannot enable API acknowledgements: {exc}\n')
+            sys.stderr.flush()
 
         from typing import Any, Callable, TypeVar, cast
 
@@ -245,12 +248,15 @@ class Control:
             if pipe is not None:
                 try:
                     nb = os.write(pipe, line)
-                except OSError:
-                    pass
-                try:
+                except OSError as exc:
+                    # The pipe had a reader when we opened it and lost it before the write.
+                    # Returning 0 makes the caller retry the same line, so silence here is a
+                    # command which never arrives and a loop which never says why.
+                    sys.stderr.write(f'cannot write {len(line)} bytes to {self.send}: {exc}\n')
+                    sys.stderr.flush()
+                # The bytes are written or lost by now, and the descriptor goes either way.
+                with contextlib.suppress(OSError):
                     os.close(pipe)
-                except OSError:
-                    pass
             return nb
 
         read = {

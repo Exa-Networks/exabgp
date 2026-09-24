@@ -15,6 +15,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 import errno
 import os
 import stat
@@ -158,10 +159,11 @@ def safe_backup(filepath: str | Path) -> str | None:
         raise ConfigurationStorageError(f'Failed to create backup: {e}')
     finally:
         if tmp_path:
-            try:
+            # We reach here holding the ConfigurationStorageError which says the backup
+            # failed, and that is what the caller needs; a failed unlink of our own temporary
+            # file must not replace it.
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
 
 
 def safe_write(filepath: str | Path, content: str | bytes) -> None:
@@ -222,10 +224,11 @@ def safe_write(filepath: str | Path, content: str | bytes) -> None:
     finally:
         # Clean up temp file if it still exists (error case)
         if tmp_path:
-            try:
+            # We reach here holding the ConfigurationStorageError which says the write failed,
+            # and that is what the caller needs; a failed unlink of our own temporary file
+            # must not replace it.
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
 
 
 def safe_update(filepath: str | Path, content: str | bytes) -> str | None:

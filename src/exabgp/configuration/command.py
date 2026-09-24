@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -84,12 +85,12 @@ def parse_generic_attribute_name(attr_name: str) -> tuple[int, int] | None:
     type_hex = rest[:sep_pos]
     flags_hex = rest[sep_pos + 1 :]
 
-    try:
-        type_code = int(type_hex, 16)
-        flags = int(flags_hex, 16)
-        return (type_code, flags)
-    except ValueError:
-        return None
+    # A name which does not carry two hex numbers is not the attribute-0xNN-0xNN form, and
+    # None is how the two checks above already say 'not one of ours'.
+    with contextlib.suppress(ValueError):
+        return (int(type_hex, 16), int(flags_hex, 16))
+
+    return None
 
 
 def format_generic_attributes(attributes: dict[str, Any]) -> list[str]:

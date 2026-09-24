@@ -12,10 +12,12 @@ from __future__ import annotations
 import os
 import sys
 import stat
+import json
 import signal
 import select
 import socket
 import traceback
+import contextlib
 import re
 import time
 import threading
@@ -111,16 +113,13 @@ class ResponseRouter:
             if match:
                 return match.group(1)
 
-        # Check JSON format
+        # A line which opens with a brace but does not parse is a plain text response which
+        # happens to start that way. It carries no request_id, and that is what we return.
         if line.startswith('{'):
-            try:
-                import json
-
+            with contextlib.suppress(json.JSONDecodeError, ValueError):
                 parsed = json.loads(line)
                 if isinstance(parsed, dict) and 'request_id' in parsed:
                     return str(parsed['request_id'])
-            except (json.JSONDecodeError, ValueError):
-                pass
 
         return None
 
@@ -220,8 +219,12 @@ def unix_socket(root: str, socketname: str = 'exabgp') -> list[str]:
                 if stat.S_ISSOCK(os.stat(explicit_path).st_mode):
                     os.environ['exabgp_cli_socket'] = os.path.dirname(explicit_path) + '/'
                     return [os.path.dirname(explicit_path) + '/']
-            except OSError:
-                pass
+            except OSError as exc:
+                # The operator named this socket, and what follows ignores it and searches the
+                # standard locations, where it can find another daemon's socket and connect to
+                # it as if nothing had happened.
+                sys.stderr.write(f'warning: cannot use exabgp_api_socketpath {explicit_path}: {exc}\n')
+                sys.stderr.flush()
 
     for location in locations:
         socket_path = location + socketname + '.sock'
@@ -350,14 +353,16 @@ class Control:
         if standard_out is not None and client.uuid:
             try:
                 os.write(standard_out, f'bye {client.uuid}\n'.encode())
-            except OSError:
-                pass
+            except OSError as exc:
+                # The reactor holds this uuid as a live client until it is told otherwise, and
+                # keeps queueing responses for a client which is no longer there.
+                sys.stderr.write(f'cannot tell exabgp that client {client.uuid} is gone: {exc}\n')
+                sys.stderr.flush()
 
-        # Close socket
-        try:
+        # A close which fails is a socket the client has already torn down, which is the state
+        # closing it was meant to reach.
+        with contextlib.suppress(OSError):
             client.socket.close()
-        except OSError:
-            pass
 
         # Remove from tracking
         del self.clients[fd]
@@ -378,10 +383,10 @@ class Control:
         The main loop will detect this state and clean up data structures.
         """
         if self.client_socket:
-            try:
+            # A close which fails is a socket the client has already torn down, which is the
+            # state closing it was meant to reach.
+            with contextlib.suppress(OSError):
                 self.client_socket.close()
-            except OSError:
-                pass
             self.client_socket = None
             # Do NOT clear client_fd here - main loop needs it to clean up dicts
 
@@ -396,18 +401,21 @@ class Control:
         self.client_fd = None  # Full cleanup includes clearing fd
 
         if self.server_socket:
-            try:
+            # We are shutting down, so a listening socket which refuses to close is already in
+            # the state we want it in.
+            with contextlib.suppress(OSError):
                 self.server_socket.close()
-            except OSError:
-                pass
             self.server_socket = None
 
         # Remove socket file
         try:
             if os.path.exists(self.socket_path):
                 os.unlink(self.socket_path)
-        except OSError:
-            pass
+        except OSError as exc:
+            # The socket file outlives us, and the next start has to connect to it to prove it
+            # is stale before it can bind its own.
+            sys.stderr.write(f'cannot remove the socket file {os.path.abspath(self.socket_path)}: {exc}\n')
+            sys.stderr.flush()
 
     def terminate(self, signum: int | None = None, frame: object = None) -> None:
         """Signal handler for clean shutdown."""
@@ -459,8 +467,11 @@ class Control:
                     if not chunk:
                         break
                     response += chunk
-        except OSError:
-            pass
+        except OSError as exc:
+            # Without the acknowledgement the reactor stops sending 'done', and every CLI
+            # client on this socket waits out its timeout on every command it sends.
+            sys.stderr.write(f'cannot enable API acknowledgements: {exc}\n')
+            sys.stderr.flush()
 
         def std_reader(number: int) -> bytes:
             try:
@@ -575,16 +586,16 @@ class Control:
                             try:
                                 new_socket.setblocking(True)
                                 new_socket.sendall(b'error: maximum concurrent clients reached\ndone\n')
-                                try:
+                                # A client which has already hung up cannot be half closed, and
+                                # the close below is all we wanted from it.
+                                with contextlib.suppress(OSError):
                                     new_socket.shutdown(socket.SHUT_WR)
-                                except OSError:
-                                    pass
                                 new_socket.close()
                             except OSError:
-                                try:
+                                # The rejection could not be delivered, so dropping the
+                                # connection has to say it instead.
+                                with contextlib.suppress(OSError):
                                     new_socket.close()
-                                except OSError:
-                                    pass
                         else:
                             # Accept new client
                             new_socket.setblocking(False)
@@ -638,16 +649,16 @@ class Control:
                             try:
                                 new_socket.setblocking(True)
                                 new_socket.sendall(b'error: another CLI client is already connected\ndone\n')
-                                try:
+                                # A client which has already hung up cannot be half closed, and
+                                # the close below is all we wanted from it.
+                                with contextlib.suppress(OSError):
                                     new_socket.shutdown(socket.SHUT_WR)
-                                except OSError:
-                                    pass  # Ignore shutdown errors
                                 new_socket.close()
                             except OSError:
-                                try:
+                                # The rejection could not be delivered, so dropping the
+                                # connection has to say it instead.
+                                with contextlib.suppress(OSError):
                                     new_socket.close()
-                                except OSError:
-                                    pass
                         else:
                             # No client - accept this connection
                             self.client_socket = new_socket
@@ -693,8 +704,12 @@ class Control:
                         # Notify reactor that client disconnected (clears active_client_uuid)
                         try:
                             os.write(standard_out, b'bye\n')
-                        except OSError:
-                            pass
+                        except OSError as exc:
+                            # The reactor keeps the disconnected client as the active one until
+                            # it is told otherwise, and answers the next client's commands to a
+                            # socket which is gone.
+                            sys.stderr.write(f'cannot tell exabgp that the client is gone: {exc}\n')
+                            sys.stderr.flush()
 
                         # Remove client from data structures
                         if self.client_fd in read:

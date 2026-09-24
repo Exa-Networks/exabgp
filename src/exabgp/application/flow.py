@@ -48,12 +48,15 @@ class ACL:
             return
         # removing key first so the call to clear never loops forever
         uid, acl = cls._known.pop(key)
+        filename = cls._file(uid)
         try:
-            filename = cls._file(uid)
             if os.path.isfile(filename):
                 os.unlink(filename)
-        except OSError:
-            pass
+        except OSError as exc:
+            # The rule file is still in the policy directory and cl-acltool will install it
+            # again, so this flow keeps dropping traffic while exabgp believes it is gone.
+            sys.stderr.write(f'flow: {key} is withdrawn but its rule file remains, {filename}: {exc}\n')
+            sys.stderr.flush()
 
     @classmethod
     def _commit(cls) -> bytes:
@@ -140,8 +143,11 @@ class ACL:
         key: str = flow['string']
         if key not in cls._known:
             return
-        uid, _ = cls._known[key]
         cls._delete(key)
+        # Deleting the rule file does not unprogram the switch: insert() and clear() both
+        # reload the policy directory after changing it, and a withdraw which does not keeps
+        # dropping traffic for a flow exabgp has already forgotten.
+        cls._commit()
 
     @classmethod
     def clear(cls) -> None:

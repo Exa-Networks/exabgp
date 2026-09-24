@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import errno
 import os
 import select
@@ -225,10 +226,10 @@ def send_command_socket(socket_path: str, command_str: str, return_output: bool 
                     sys.exit(1)
 
     finally:
-        try:
+        # The answer is already read or already lost, and the caller is told which by the
+        # return value below; a socket which will not close cleanly adds nothing to that.
+        with contextlib.suppress(OSError):
             client.close()
-        except OSError:
-            pass
 
     if return_output:
         if not successful:
@@ -621,10 +622,9 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
                 successful = True
                 done = True
 
-    try:
+    # Everything we came for has been read, and the process exits a few lines below.
+    with contextlib.suppress(OSError):
         os.close(reader)
-    except OSError:
-        pass
 
     if exit_on_completion:
         sys.exit(0 if successful else 1)
@@ -632,7 +632,7 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
 
 
 if __name__ == '__main__':
-    try:
+    # Ctrl+C at the command line is the user asking for this to stop, so stopping without a
+    # traceback is the answer rather than a swallowed error.
+    with contextlib.suppress(KeyboardInterrupt):
         main()
-    except KeyboardInterrupt:
-        pass

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import argparse
+import contextlib
 import os
 import sys
 import readline
@@ -100,8 +101,11 @@ class InteractiveCLI:
         if os.path.exists(self.history_file):
             try:
                 readline.read_history_file(self.history_file)
-            except OSError:
-                pass
+            except OSError as exc:
+                # The file is there but unreadable, so this session starts with an empty
+                # history and saving at exit will overwrite whatever it held.
+                sys.stderr.write(f'could not read the command history from {self.history_file}: {exc}\n')
+                sys.stderr.flush()
 
         # Set history size
         readline.set_history_length(1000)
@@ -113,8 +117,11 @@ class InteractiveCLI:
         """Save command history to file"""
         try:
             readline.write_history_file(self.history_file)
-        except OSError:
-            pass
+        except OSError as exc:
+            # This runs from atexit, where nothing else will report it: without a word the
+            # commands typed in this session are simply not there next time.
+            sys.stderr.write(f'could not save the command history to {self.history_file}: {exc}\n')
+            sys.stderr.flush()
 
     def run(self) -> None:
         """Run the interactive REPL"""
@@ -438,11 +445,10 @@ Display Format (optional prefix):
         """Exit the REPL"""
         self.running = False
         # Send bye command to server and wait for acknowledgment
-        try:
+        # We are leaving either way, and the daemon reads the closing socket as the same
+        # goodbye. An impatient Ctrl+C during that wait is the user asking for exactly this.
+        with contextlib.suppress(Exception, KeyboardInterrupt):
             self.send_command('bye')
-        except (Exception, KeyboardInterrupt):
-            # Ignore errors during disconnect (including impatient Ctrl+C)
-            pass
         sys.stdout.write(f'{self.formatter.format_info("Goodbye!")}\n')
 
     def _show_history(self) -> None:
@@ -576,8 +582,7 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
     finally:
         # Clean up persistent connection if it exists
         if connection is not None:
-            try:
+            # The process is about to exit and the return code is already decided, so a
+            # socket which refuses to close cleanly has nothing left to tell anyone.
+            with contextlib.suppress(Exception, KeyboardInterrupt):
                 connection.close()
-            except (Exception, KeyboardInterrupt):
-                # Ignore all errors during cleanup (including Ctrl+C)
-                pass

@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 from typing import Callable
 
 from exabgp.protocol.ip import IPv4
@@ -283,7 +284,9 @@ class CommandShortcuts:
         # Transform to: show adj-rib <in|out> <ip> [options...]
         # Check this FIRST before general "neighbor <ip> show" pattern
         if len(tokens) >= 5 and tokens[0] == 'neighbor' and tokens[2] == 'adj-rib' and tokens[3] in ('in', 'out'):
-            try:
+            # A command with no 'show' in it is not this pattern, and the next pattern, or the
+            # untouched command at the end, is what answers it.
+            with contextlib.suppress(ValueError):
                 show_idx = tokens.index('show')
                 if show_idx == 4:  # Must be 'neighbor <ip> adj-rib <in|out> show'
                     # Extract parts: ['neighbor', <ip>, 'adj-rib', 'in'/'out', 'show', [options...]]
@@ -294,14 +297,13 @@ class CommandShortcuts:
                     # Rebuild: 'show adj-rib <in|out> <ip> [options...]'
                     result = ['show', 'adj-rib', direction, neighbor_ip] + options
                     return ' '.join(result)
-            except ValueError:
-                # 'show' not in tokens, return unchanged
-                pass
 
         # Pattern 2: neighbor <ip> [filters...] show [options...]
         # Transform to: show neighbor <ip> [filters...] [options...]
         if len(tokens) >= 3 and tokens[0] == 'neighbor':
-            try:
+            # A command with no 'show' in it is not this pattern, and the next pattern, or the
+            # untouched command at the end, is what answers it.
+            with contextlib.suppress(ValueError):
                 show_idx = tokens.index('show')
                 if show_idx >= 2:  # Must have at least 'neighbor <ip> show'
                     # Extract parts: ['neighbor', <ip>, [filters...], 'show', [options...]]
@@ -311,14 +313,13 @@ class CommandShortcuts:
                     # Rebuild: 'show neighbor <ip> [filters...] [options...]'
                     result = ['show', 'neighbor'] + neighbor_and_filters + options
                     return ' '.join(result)
-            except ValueError:
-                # 'show' not in tokens, return unchanged
-                pass
 
         # Pattern 3: adj-rib <in|out> show [options...]
         # Transform to: show adj-rib <in|out> [options...]
         if len(tokens) >= 3 and tokens[0] == 'adj-rib' and tokens[1] in ('in', 'out'):
-            try:
+            # A command with no 'show' in it is not this pattern, and the untouched command
+            # returned at the end is what answers it.
+            with contextlib.suppress(ValueError):
                 show_idx = tokens.index('show')
                 if show_idx == 2:  # Must be 'adj-rib <in|out> show'
                     # Extract parts: ['adj-rib', 'in'/'out', 'show', [options...]]
@@ -328,9 +329,6 @@ class CommandShortcuts:
                     # Rebuild: 'show adj-rib <in|out> [options...]'
                     result = ['show', 'adj-rib', direction] + options
                     return ' '.join(result)
-            except ValueError:
-                # 'show' not in tokens, return unchanged
-                pass
 
         return command
 

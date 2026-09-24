@@ -140,10 +140,11 @@ def _get_section_schema(section: str) -> Container | None:
     module_name, class_name = located
     try:
         module = importlib.import_module(module_name)
-    except ImportError:
+    except ImportError as exc:
         # Every section parser ships with exabgp, so an ImportError here means a partial or
-        # vendored install rather than an optional dependency. The effect is that this one
-        # section is not offered for introspection, which is what the caller's None means.
+        # vendored install rather than an optional dependency. The caller's None reads as
+        # 'no such section', which would send the operator looking for a typo instead.
+        sys.stderr.write(f'cannot load the schema of section {section}: {exc}\n')
         return None
 
     parser_class = getattr(module, class_name, None)

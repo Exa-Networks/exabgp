@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 from exabgp.bgp.message import Action
@@ -150,7 +151,9 @@ def attributes(tokeniser: Any) -> list[Route]:
     has_prefix = False
     ipmask = None
     if has_nlri_keyword:
-        try:
+        # This only peeks to pick the family. A last token which is not a prefix is an
+        # attributes-only command, which has_prefix staying False is what selects below.
+        with contextlib.suppress(ValueError, KeyError):
             # Parse the last token as a prefix (peek without consuming)
             last_token = tokeniser.tokens[-1]
             if '/' in last_token:
@@ -163,8 +166,6 @@ def attributes(tokeniser: Any) -> list[Route]:
 
             ipmask = IPRange.make_range(ip_str, mask)
             has_prefix = True
-        except (ValueError, KeyError):
-            pass
 
     if has_prefix and ipmask is not None:
         tokeniser.afi = ipmask.afi
@@ -279,12 +280,12 @@ def static_sr_policy(tokeniser: Any) -> list[Route]:
     """
     # Determine AFI by peeking at the endpoint token
     afi = AFI.ipv4  # default
-    try:
+    # This only peeks to pick the family. A missing or unparsable endpoint is a syntax error,
+    # and sr_policy_route() below is where it is raised with the parser context attached.
+    with contextlib.suppress(ValueError, IndexError):
         ep_idx = tokeniser.tokens.index('endpoint')
         endpoint_str = tokeniser.tokens[ep_idx + 1]
         afi = IP.toafi(endpoint_str)
-    except (ValueError, IndexError):
-        pass
 
     nlri, nexthop, tunnel_encap = sr_policy_route(tokeniser, afi)
     attributes = AttributeCollection()
