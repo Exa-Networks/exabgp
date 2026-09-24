@@ -295,12 +295,14 @@ field MUST contain the erroneous Length field.
 """
 note = """
 Positive only: an obligation about what we put in the Data field has no peer input which
-violates it.  It is recorded because we do not meet it on the path a peer actually
-reaches.  Connection.reader_async builds NotifyError(1, 2, "<type> has an invalid message
-length of <n>") and reactor/protocol.py turns that string into the Data field, so the
-peer receives ASCII where the RFC asks for the two octets of the Length field.  The three
-in-parser paths (Open, KeepAlive, UpdateCollection.split) do send pack('!H', length); the
-header path, which is the one that fires for a Length the peer got wrong, does not.
+violates it.  Until 2026-09-24 the header path sent ASCII: Connection.reader_async builds
+NotifyError(1, 2, "<type> has an invalid message length of <n>") and reactor/protocol.py
+turned that string into the Data field.  protocol.py now packs the length for a (1, 2)
+NotifyError and leaves every other one carrying its sentence.  The three in-parser paths
+(Open, KeepAlive, UpdateCollection.split) always did send pack('!H', length).
+
+The tidier home for this is connection.py, where the "# MUST send the faulty length back"
+comment sits, but NotifyError.__init__ takes a str.  Giving it bytes is the follow-up.
 """
 
 [[requirement]]
@@ -424,13 +426,15 @@ recognized, then the Error Subcode MUST be set to Unsupported
 Optional Parameters.
 """
 note = """
-exabgp answers 2/0 Unspecific, not 2/4: Capabilities.unpack ends with
-raise Notify(2, 0, 'Unknow OPEN parameter {}') for any parameter type other than 1 and 2.
-2/0 is what the *next* sentence of 6.2 reserves for a parameter which is recognised but
-malformed, so as it stands the two cases are indistinguishable to the peer.  The positive
-test demonstrates it.  This is about the Optional Parameter type, not about capability
-codes inside parameter type 2: RFC 5492 requires an unknown capability to be ignored, and
-exabgp does ignore those.
+Until 2026-09-24 Capabilities.unpack answered 2/0 Unspecific for any parameter type other
+than 1 and 2.  2/0 is what the *next* sentence of 6.2 reserves for a parameter which is
+recognised but malformed, so the two cases were indistinguishable to the peer.  It now
+answers 2/4, and test_a_recognised_but_malformed_parameter_is_unspecific still gets 2/0,
+which is what makes the pair meaningful.
+
+This is about the Optional Parameter type, not about capability codes inside parameter
+type 2: RFC 5492 requires an unknown capability to be ignored, and exabgp does ignore
+those.
 """
 
 [[requirement]]

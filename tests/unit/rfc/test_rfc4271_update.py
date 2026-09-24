@@ -6,10 +6,13 @@ not-applicable with the clause which replaced it.  What is left here is the hand
 UPDATE errors RFC 7606 deliberately left alone: the two length fields, the NLRI field,
 and an MP_REACH_NLRI which cannot be parsed far enough to find the NLRI at all.
 
-The finding is `test_the_four_unused_flag_bits_are_ignored`: RFC 4271 4.3 says the low
-four bits of the Attribute Flags octet MUST be ignored on receipt, and the attribute
-registry is keyed on the whole flags octet with only the Extended Length bit normalised
-away, so a peer which sets any of them loses the attribute.
+`test_the_four_unused_flag_bits_are_ignored` was a finding and is now a regression test.
+RFC 4271 4.3 says the low four bits of the Attribute Flags octet MUST be ignored on
+receipt, and the attribute registry used to be keyed on the whole flags octet with only
+the Extended Length bit normalised away, so a peer which set any of them lost the
+attribute.  `Attribute._registry_key` now normalises the four bits away as well.
+
+The finding left is `test_an_unrecognised_well_known_attribute_is_refused`.
 """
 
 from __future__ import annotations
@@ -199,12 +202,6 @@ def test_the_four_unused_flag_bits_are_zero_on_everything_we_send() -> None:
 
 @pytest.mark.parametrize('bits', [0x01, 0x02, 0x04, 0x08, 0x0F], ids=lambda value: f'bits {value:#04x}')
 @pytest.mark.rfc('rfc4271#4.3-unused-flag-bits', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='the attribute registry is keyed on (type code, flags) with only the Extended '
-    'Length bit normalised away, so Attribute.registered() misses when any of the four unused '
-    'bits is set and the attribute is dropped instead of being read with the bits ignored',
-)
 def test_the_four_unused_flag_bits_are_ignored(bits: int) -> None:
     parsed = parse(body(attributes=bytes([TRANSITIVE | bits, Attribute.CODE.ORIGIN, 1, 0]) + EMPTY_AS_PATH + NEXT_HOP))
 

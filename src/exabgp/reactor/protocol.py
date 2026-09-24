@@ -39,6 +39,12 @@ from exabgp.reactor.network.outgoing import Outgoing
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
 
+# RFC 4271 6.1 Message Header Error, and the two subcodes the reactor answers itself
+# because the header is read before any decoder sees the message.
+MESSAGE_HEADER_ERROR = 1
+BAD_MESSAGE_LENGTH = 2
+BAD_MESSAGE_TYPE = 3
+
 _UPDATE = UpdateCollection([], [], AttributeCollection())
 _OPERATIONAL = Operational(0x00)
 
@@ -223,8 +229,16 @@ class Protocol:
         # internal issue
         if notify:
             code = 'receive-{}'.format(Message.CODE.NOTIFICATION.SHORT)
-            # Convert NotifyError to Notify for API and exception
-            notify_msg = Notify(notify.code, notify.subcode, str(notify))
+            # Convert NotifyError to Notify for API and exception.  RFC 4271 6.1 requires
+            # the Data field of a Bad Message Length to contain the erroneous Length field,
+            # so the two octets go back to the peer rather than the English sentence
+            # Connection.reader_async wrote for the log.  `length` is that Length field: it
+            # is what reader_async read out of the header and refused.  The three in-parser
+            # length checks (Open, KeepAlive, UpdateCollection.split) already send it.
+            if (notify.code, notify.subcode) == (MESSAGE_HEADER_ERROR, BAD_MESSAGE_LENGTH):
+                notify_msg = Notify(notify.code, notify.subcode, length.to_bytes(2, 'big'))
+            else:
+                notify_msg = Notify(notify.code, notify.subcode, str(notify))
             if self._api.get(code, False):
                 if consolidate:
                     self.peer.reactor.processes.notification(
@@ -240,8 +254,13 @@ class Protocol:
                     )
             raise notify_msg
 
+        # RFC 4271 6.1: if the Type field is not recognised the Error Subcode MUST be Bad
+        # Message Type.  Message.unpack answers the same 1/3 but is never reached for these
+        # codes, as the statistics counter and the API fan-out below both index the type,
+        # so the answer has to be given here.  It used to be 1/0, which names neither the
+        # right error nor the right message.
         if msg_id not in Message.CODE.MESSAGES:
-            raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
+            raise Notify(MESSAGE_HEADER_ERROR, BAD_MESSAGE_TYPE, 'unknown message type {}'.format(msg_id))
 
         if not length:
             return _NOP

@@ -6,10 +6,11 @@ message class: the marker, the Length field and the per-type minimum lengths are
 checked in `reactor/network/connection.py`, and the type is checked in
 `reactor/protocol.py`.  A test calling a message decoder would skip every one of those.
 
-Two of the requirements below carry an xfail.  They are the findings this file exists
-for: a Bad Message Length is reported with an English sentence where the RFC asks for the
-two octets of the Length field, and an unrecognised Type field is answered Unspecific
-rather than Bad Message Type.
+Two of the requirements below were findings and are now regression tests: a Bad Message
+Length used to be reported with an English sentence where the RFC asks for the two octets
+of the Length field, and an unrecognised Type field used to be answered Unspecific rather
+than Bad Message Type.  Both are answered in `reactor/protocol.py`, which is why they are
+tested through a real connection here rather than against a decoder.
 """
 
 from __future__ import annotations
@@ -251,12 +252,6 @@ def test_the_smallest_legal_length_is_not_a_bad_message_length(length: int, mess
 
 
 @pytest.mark.rfc('rfc4271#6.1-bad-message-length-data-field')
-@pytest.mark.xfail(
-    strict=True,
-    reason='Connection.reader_async reports a bad length as NotifyError(1, 2, "<type> has an '
-    'invalid message length of <n>") and reactor/protocol.py puts that sentence in the Data '
-    'field, so the peer receives ASCII where RFC 4271 6.1 asks for the two octets of the Length',
-)
 def test_a_bad_message_length_carries_the_erroneous_length() -> None:
     notification = refused(header(18, KEEPALIVE))
 
@@ -264,12 +259,12 @@ def test_a_bad_message_length_carries_the_erroneous_length() -> None:
 
 
 def test_the_in_parser_length_checks_do_carry_the_erroneous_length() -> None:
-    """Unmarked: the half which is right, so the xfail above is read as the half which is not.
+    """Unmarked: the other path to the same answer, which must keep giving it.
 
     Open, KeepAlive and UpdateCollection.split each raise Notify(1, 2, pack('!H', length))
     when the body they are handed is too short.  They are reached for a body which arrived
     shorter than its header claimed; the header check above is reached when the Length
-    field itself is wrong, and that is the commoner case and the one with the bug.
+    field itself is wrong, and that is the commoner case and the one which had the bug.
     """
     for message_type, body in ((OPEN, bytes(5)), (KEEPALIVE, bytes(1)), (UPDATE, bytes(2))):
         with pytest.raises(Notify) as caught:
@@ -283,12 +278,6 @@ def test_the_in_parser_length_checks_do_carry_the_erroneous_length() -> None:
 
 @pytest.mark.parametrize('message_type', [0, 7, 8, 100, 255], ids=lambda value: f'type {value}')
 @pytest.mark.rfc('rfc4271#6.1-bad-message-type')
-@pytest.mark.xfail(
-    strict=True,
-    reason='reactor/protocol.py read_message tests the type against Message.CODE.MESSAGES '
-    "before the decoder is reached and raises Notify(1, 0, 'can not decode update message of "
-    'type "N"\'), so an unrecognised Type field is answered Unspecific and called an update',
-)
 def test_an_unrecognised_message_type_is_a_bad_message_type(message_type: int) -> None:
     notification = refused(header(19, message_type))
 
@@ -314,10 +303,10 @@ def test_a_recognised_message_type_is_never_called_a_bad_type(length: int, messa
 
 
 def test_the_decoder_itself_answers_bad_message_type() -> None:
-    """Unmarked: Message.unpack is right, and is what the reactor gate above shadows.
+    """Unmarked: the decoder's own answer, which the reactor gate above shadows.
 
-    Keeping it here says where the correct answer lives, so the xfail is read as "the
-    reactor never reaches it" rather than "nothing implements it".
+    The gate in read_message refuses an unrecognised type before any decoder is reached,
+    so this is the half a peer never sees.  It is kept because the two have to agree.
     """
     unused: Any = Negotiated.UNSET
     with pytest.raises(Notify) as caught:

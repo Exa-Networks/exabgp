@@ -160,10 +160,14 @@ class Attribute:
         TRANSITIVE: ClassVar[int] = 0x40  # .  64 - 0100 0000
         OPTIONAL: ClassVar[int] = 0x80  # . 128 - 1000 0000
 
+        # RFC 4271 4.3: the lower-order four bits of the Attribute Flags octet are unused.
+        UNUSED: ClassVar[int] = 0x0F  # .  15 - 0000 1111
+
         MASK_EXTENDED: ClassVar[int] = 0xEF  # . 239 - 1110 1111
         MASK_PARTIAL: ClassVar[int] = 0xDF  # . 223 - 1101 1111
         MASK_TRANSITIVE: ClassVar[int] = 0xBF  # . 191 - 1011 1111
         MASK_OPTIONAL: ClassVar[int] = 0x7F  # . 127 - 0111 1111
+        MASK_UNUSED: ClassVar[int] = 0xF0  # . 240 - 1111 0000
 
         def __str__(self) -> str:
             r: list[str] = []
@@ -273,17 +277,30 @@ class Attribute:
         return bool(self.ID >= other.ID)
 
     @classmethod
+    def _registry_key(cls, attribute_id: int, flag: int) -> tuple[int, int]:
+        """The key `register()` stores under, and the only key a lookup may build.
+
+        Two parts of the flags octet say nothing about which class decodes the attribute.
+        Extended Length describes how the length field was encoded, and the lower four
+        bits are unused: RFC 4271 4.3 requires them to be ignored on receipt, so a peer
+        which sets one must still be understood.  Both are normalised away here.
+
+        Optional, Transitive and Partial are not normalised away, because they do identify
+        the attribute: the flag conflict handling in `AttributeCollection.parse` relies on
+        this key missing when a peer sets one of the three wrongly.
+        """
+        return (attribute_id, (flag | Attribute.Flag.EXTENDED_LENGTH) & Attribute.Flag.MASK_UNUSED)
+
+    @classmethod
     def register(
         cls, attribute_id: int | None = None, flag: int | None = None
     ) -> Callable[[Type[Attribute]], Type[Attribute]]:
         def register_attribute(klass: Type[Attribute]) -> Type[Attribute]:
             aid: int = klass.ID if attribute_id is None else attribute_id
-            flg: int = (
-                klass.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
-            )
-            if (aid, flg) in cls.registered_attributes:
+            key: tuple[int, int] = cls._registry_key(aid, klass.FLAG if flag is None else flag)
+            if key in cls.registered_attributes:
                 raise RuntimeError('only one class can be registered per attribute')
-            cls.registered_attributes[(aid, flg)] = klass
+            cls.registered_attributes[key] = klass
             cls.attributes_known.append(aid)
             if klass.FLAG & Attribute.Flag.OPTIONAL:
                 cls.attributes_optional.append(aid)
@@ -295,11 +312,11 @@ class Attribute:
 
     @classmethod
     def registered(cls, attribute_id: int, flag: int) -> bool:
-        return (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH) in cls.registered_attributes
+        return cls._registry_key(attribute_id, flag) in cls.registered_attributes
 
     @classmethod
     def klass(cls, attribute_id: int, flag: int) -> Type[Attribute]:
-        key: tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
+        key: tuple[int, int] = cls._registry_key(attribute_id, flag)
         if key in cls.registered_attributes:
             kls: Type[Attribute] = cls.registered_attributes[key]
             kls.ID = attribute_id
@@ -324,7 +341,7 @@ class Attribute:
         if cache and cache_key in cls.cache.get(cls.ID, {}):
             return cls.cache[cls.ID].retrieve(cache_key)
 
-        key: tuple[int, int] = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
+        key: tuple[int, int] = cls._registry_key(attribute_id, flag)
         if key in Attribute.registered_attributes.keys():
             instance: Attribute = cls.klass(attribute_id, flag).unpack_attribute(data, negotiated)
 

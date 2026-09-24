@@ -355,5 +355,12 @@ class Capabilities(dict[int, Capability]):
                     capability, capv, value = _key_values('capability', value)
                     capabilities[capability] = Capability.unpack(CapabilityCode(capability), capabilities, capv)
             else:
-                raise Notify(2, 0, 'Unknow OPEN parameter {}'.format(hex(key)))
+                # RFC 4271 6.2: an Optional Parameter type we do not recognise is
+                # Unsupported Optional Parameters.  This answered 2/0 Unspecific, which the
+                # next sentence of 6.2 reserves for a parameter we do recognise and which
+                # is malformed, so the peer could not tell "I do not know this parameter"
+                # from "you sent this one wrongly".  This is about the Parameter type only:
+                # an unknown capability code inside parameter type 2 is ignored, as RFC
+                # 5492 requires.
+                raise Notify(2, 4, 'unknown OPEN parameter {}'.format(hex(key)))
         return capabilities

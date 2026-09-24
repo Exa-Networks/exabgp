@@ -7,9 +7,11 @@ raises; those tests build two real OPEN messages and call it.  The Optional Para
 are parsed by `Capabilities.unpack`, which takes the block including its leading length
 octet.
 
-The finding here is `test_an_unrecognised_optional_parameter_is_unsupported`: we answer
-2/0 Unspecific, which RFC 4271 6.2 reserves for the *next* case down, a parameter we do
-recognise and which is malformed.  A peer cannot tell the two apart.
+`test_an_unrecognised_optional_parameter_is_unsupported` was a finding and is now a
+regression test.  We used to answer 2/0 Unspecific, which RFC 4271 6.2 reserves for the
+*next* case down, a parameter we do recognise and which is malformed, so a peer could not
+tell the two apart.  The test below it pins that second case, and the two must not drift
+back into agreeing.
 """
 
 from __future__ import annotations
@@ -241,12 +243,6 @@ def test_a_non_zero_identifier_is_accepted(identifier: str) -> None:
 
 @pytest.mark.parametrize('kind', [0, 3, 99, 255], ids=lambda value: f'parameter type {value}')
 @pytest.mark.rfc('rfc4271#6.2-unsupported-optional-parameters')
-@pytest.mark.xfail(
-    strict=True,
-    reason='Capabilities.unpack ends with raise Notify(2, 0, "Unknow OPEN parameter ...") for '
-    'any parameter type other than 1 and 2, so an unrecognised Optional Parameter is answered '
-    'Unspecific, which RFC 4271 6.2 reserves for a recognised parameter which is malformed',
-)
 def test_an_unrecognised_optional_parameter_is_unsupported(kind: int) -> None:
     with pytest.raises(Notify) as caught:
         Capabilities.unpack(optional_parameters(parameter(kind, b'')))
