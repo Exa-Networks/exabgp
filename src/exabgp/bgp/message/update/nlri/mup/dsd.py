@@ -95,7 +95,7 @@ class DirectSegmentDiscoveryRoute(MUP):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
         # Parent provides complete wire format including 4-byte header
         data_len = len(data)

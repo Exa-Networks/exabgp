@@ -449,7 +449,7 @@ class IPVPNBase(Label):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
         """Unpack IPVPN NLRI from wire format.
 

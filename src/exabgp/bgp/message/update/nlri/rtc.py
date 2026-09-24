@@ -169,7 +169,7 @@ class RTCBase(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls: Type[T], afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+        cls: Type[T], afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[T, Buffer]:
         data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # Note: afi/safi parameters are ignored - RTC is always ipv4/rtc

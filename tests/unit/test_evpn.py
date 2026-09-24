@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.evpn.prefix import Prefix
 from exabgp.bgp.message.update.nlri.evpn.segment import EthernetSegment
 from exabgp.bgp.message.update.nlri.nlri import Action
-from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, PathInfo, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
@@ -751,8 +751,8 @@ class TestEVPNIntegration:
             route = Prefix.make_prefix(rd, esi, etag, label, ip, iplen, gwip)
             assert route.iplen == iplen
 
-    def test_evpn_with_addpath(self) -> None:
-        """Test EVPN routes with ADD-PATH support via unpack_nlri"""
+    def test_evpn_without_addpath(self) -> None:
+        """No ADD-PATH negotiated: the NLRI is the whole of the wire format."""
         rd = RouteDistinguisher.make_from_elements('42.42.42.42', 420)
         etag = EthernetTag.make_etag(4200)
         ip = IP.from_string('192.168.1.1')
@@ -760,12 +760,40 @@ class TestEVPNIntegration:
         route = Multicast.make_multicast(rd, etag, ip)
         packed = route.pack_nlri(create_negotiated())
 
-        # addpath is set during unpacking
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, 12345, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
-        # addpath is stored during unpack_nlri
-        assert hasattr(unpacked, 'addpath')
+        assert unpacked.addpath is PathInfo.DISABLED, 'path information was invented for a peer which sent none'
+
+    def test_evpn_with_addpath(self) -> None:
+        """ADD-PATH negotiated: the four byte Path Identifier comes off first.
+
+        This test used to pass 12345 as `addpath`, put no path identifier on the wire at
+        all, and assert only `hasattr(unpacked, 'addpath')`, which is true of every EVPN
+        NLRI because addpath is a slot with a default. Its one real assertion, that nothing
+        was left over, held precisely because the decoder ignored ADD-PATH altogether. So
+        it passed against a decoder which read the route type out of the path identifier's
+        first byte and left four bytes in the buffer for the next NLRI to trip over.
+
+        RFC 7911 3 is what it should have been checking: the identifier precedes the NLRI,
+        is consumed before the NLRI is read, and is kept as the PathInfo which distinguishes
+        one path to a prefix from another.
+        """
+        rd = RouteDistinguisher.make_from_elements('42.42.42.42', 420)
+        etag = EthernetTag.make_etag(4200)
+        ip = IP.from_string('192.168.1.1')
+        path_identifier = bytes([0, 0, 0, 7])
+
+        route = Multicast.make_multicast(rd, etag, ip)
+        # the encoder does not emit a path identifier yet (see pack_nlri), so the wire
+        # format a peer would send is built here rather than round-tripped
+        packed = path_identifier + bytes(route.pack_nlri(create_negotiated()))
+
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, True, create_negotiated())
+
+        assert len(leftover) == 0, 'the path identifier was not consumed'
+        assert isinstance(unpacked, Multicast), f'decoded as {type(unpacked).__name__}, not the route which was sent'
+        assert bytes(unpacked.addpath.pack_path()) == path_identifier
 
     def test_evpn_with_nexthop(self) -> None:
         """Test EVPN routes with next hop.

@@ -223,8 +223,12 @@ class BGPLS(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
+        # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, data = NLRI.consume_path_information(data, addpath)
         # BGP-LS NLRI header: type(2) + length(2) = 4 bytes minimum
         if len(data) < 4:
             raise Notify(3, 10, f'BGP-LS NLRI too short: need at least 4 bytes, got {len(data)}')
@@ -266,7 +270,7 @@ class BGPLS(NLRI):
             wire_format = bytes(data[0 : length + 4])
             klass = GenericBGPLS(code, wire_format)
 
-        klass.addpath = addpath
+        klass.addpath = path_info
 
         # the descriptors parse lazily, so a sub-tlv this decoder cannot read used to be
         # accepted here and fail later in the API writer calling json(): a raw exception

@@ -149,8 +149,12 @@ class MUP(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
+        # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, data = NLRI.consume_path_information(data, addpath)
         # MUP NLRI: arch_type(1) + route_type(2) + length(1) + route_data(length)
         if len(data) < 4:
             raise Notify(3, 10, f'MUP NLRI too short: need at least 4 bytes, got {len(data)}')
@@ -167,12 +171,14 @@ class MUP(NLRI):
         if key in cls.registered_mup:
             registered_cls = cls.registered_mup[key]
             # Pass complete wire format (including 4-byte header) to subclass
-            mup_instance, _ = registered_cls.unpack_nlri(afi, safi, data[0:end], action, addpath, negotiated)
+            # the path identifier is already off, so the subclass must not look for one
+            mup_instance, _ = registered_cls.unpack_nlri(afi, safi, data[0:end], action, False, negotiated)
+            mup_instance.addpath = path_info
             return mup_instance, data[end:]
 
         # Generic MUP for unrecognized route types - pass complete wire format
         mup = GenericMUP(afi, data[0:end])
-        mup.addpath = addpath
+        mup.addpath = path_info
         return mup, data[end:]
 
     def _raw(self) -> str:

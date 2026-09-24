@@ -366,7 +366,7 @@ class INETBase(NLRI):
         return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
 
     @classmethod
-    def _pathinfo(cls, data: Buffer, addpath: Any) -> tuple[PathInfo, Buffer]:
+    def _pathinfo(cls, data: Buffer, addpath: bool) -> tuple[PathInfo, Buffer]:
         if addpath:
             return PathInfo(data[:4]), data[4:]
         return PathInfo.DISABLED, data
@@ -380,7 +380,7 @@ class INETBase(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
         data = memoryview(bgp) if not isinstance(bgp, memoryview) else bgp
         # Parse path_info if AddPath is enabled

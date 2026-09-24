@@ -123,8 +123,12 @@ class MVPN(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
+        # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, data = NLRI.consume_path_information(data, addpath)
         # MVPN NLRI: route_type(1) + length(1) + route_data(length)
         if len(data) < 2:
             raise Notify(3, 10, f'MVPN NLRI too short: need at least 2 bytes, got {len(data)}')
@@ -143,7 +147,7 @@ class MVPN(NLRI):
         else:
             klass = GenericMVPN(packed, afi)
 
-        klass.addpath = addpath
+        klass.addpath = path_info
 
         return klass, data[total_length:]
 

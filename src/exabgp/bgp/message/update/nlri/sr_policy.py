@@ -141,9 +141,13 @@ class SRPolicyNLRI(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: 'Negotiated'
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: 'Negotiated'
     ) -> tuple[NLRI, Buffer]:
         """Unpack SR-Policy NLRI with 1-byte length prefix per RFC 9830 Section 3."""
+        # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, data = NLRI.consume_path_information(data, addpath)
         if len(data) < 1:
             raise Notify(3, 10, 'SR Policy NLRI missing length byte')
 
@@ -167,5 +171,5 @@ class SRPolicyNLRI(NLRI):
 
         # Skip length byte, extract NLRI data
         nlri = cls(afi, data[1 : 1 + nlri_bytes])
-        nlri.addpath = addpath
+        nlri.addpath = path_info
         return nlri, data[1 + nlri_bytes :]

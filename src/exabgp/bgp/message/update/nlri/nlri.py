@@ -227,9 +227,28 @@ class NLRI(Family):
         # it can not be a generator
         return list(NLRI.registered_families)
 
+    @staticmethod
+    def consume_path_information(data: Buffer, addpath: bool) -> tuple[PathInfo, Buffer]:
+        """Take the ADD-PATH Path Identifier off the front of an NLRI (RFC 7911 3).
+
+        `addpath` is the question "has ADD-PATH been negotiated for this family", not the
+        identifier itself. When the answer is yes the peer has put four bytes in front of
+        every NLRI of that family and they have to come off before the NLRI is read.
+
+        This exists because five families used to skip that step and assign the boolean
+        straight into `nlri.addpath`, which holds a PathInfo. They read their first field
+        from the identifier's first byte and left four bytes in the buffer, so every NLRI
+        after the first in the same UPDATE was parsed from the wrong offset.
+        """
+        if not addpath:
+            return PathInfo.DISABLED, data
+        if len(data) < PathInfo.LENGTH:
+            raise Notify(3, 10, 'not enough data to extract the path-information of the NLRI')
+        return PathInfo(bytes(data[: PathInfo.LENGTH])), data[PathInfo.LENGTH :]
+
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: Any, negotiated: Negotiated
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
         a: AFI
         s: SAFI
