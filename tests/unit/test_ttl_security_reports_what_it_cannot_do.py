@@ -19,6 +19,12 @@ The sibling asymmetry is why this was easy to miss.  `min_ttlv6` hardcodes
 `IPV6_MINHOPCOUNT` as 73 rather than looking it up, so it always calls `setsockopt` and
 raises `TTLError` when the platform refuses.  On the same macOS box, IPv6 `ttl-security`
 fails loudly and IPv4 fails silently, for the same configuration.
+
+The first fix for this read the absence of `socket.IP_MINTTL` as "this platform has no
+IP_MINTTL".  It is not that: CPython does not export the constant on any platform, so the
+inbound check was missing on Linux too, and the new warning fired there with a reason which
+was false.  The option number now comes from the kernel headers where CPython is silent,
+as `min_ttlv6` already does for IPv6.
 """
 
 from __future__ import annotations
@@ -59,9 +65,29 @@ def warnings(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return captured
 
 
+def without_exported_ip_minttl(monkeypatch: pytest.MonkeyPatch, system: str) -> None:
+    """What every CPython build looks like: no socket.IP_MINTTL, whatever the kernel has."""
+    monkeypatch.delattr(socket, 'IP_MINTTL', raising=False)
+    monkeypatch.setattr(tcp.platform, 'system', lambda: system)
+
+
+@pytest.mark.parametrize('system, option', [('Linux', 21), ('FreeBSD', 66)])
+def test_the_kernel_option_is_used_when_python_does_not_export_it(
+    monkeypatch: pytest.MonkeyPatch, warnings: list[str], system: str, option: int
+) -> None:
+    """The inbound check is installed where the kernel has it, whatever socket exports."""
+    without_exported_ip_minttl(monkeypatch, system)
+    io = FakeSocket()
+
+    tcp.min_ttl(io, '192.0.2.1', TTL)
+
+    assert (socket.IPPROTO_IP, option, TTL) in io.options, f'{system} has IP_MINTTL and it was not set'
+    assert not warnings, f'{system} was said to lack an option it has: {warnings}'
+
+
 def test_a_platform_without_ip_minttl_says_so(monkeypatch: pytest.MonkeyPatch, warnings: list[str]) -> None:
     """The operator asked for GTSM and is not getting the inbound half of it."""
-    monkeypatch.delattr(socket, 'IP_MINTTL', raising=False)
+    without_exported_ip_minttl(monkeypatch, 'Darwin')
     io = FakeSocket()
 
     tcp.min_ttl(io, '192.0.2.1', TTL)
@@ -79,7 +105,7 @@ def test_the_outbound_ttl_is_still_set_when_ip_minttl_is_missing(
     Turning this into a TTLError would refuse to bring up sessions which are running today
     on every host where the option is absent, which is a bigger change than the bug.
     """
-    monkeypatch.delattr(socket, 'IP_MINTTL', raising=False)
+    without_exported_ip_minttl(monkeypatch, 'Darwin')
     io = FakeSocket()
 
     tcp.min_ttl(io, '192.0.2.1', TTL)
