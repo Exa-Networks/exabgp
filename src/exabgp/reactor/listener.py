@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 import copy
 import socket
-from typing import ClassVar, Generator, TYPE_CHECKING
+from typing import Any, ClassVar, Generator, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -50,6 +50,40 @@ def _bind_error(exc: OSError, local_ip: IP, local_port: int) -> NetworkError:
     if exc.args[0] == errno.EACCES:
         return BindingError(f'{where}, binding below port {MAX_PRIVILEGED_PORT} requires root')
     return NetworkError(str(exc))
+
+
+def set_listener_options(sock: Any, ipv6: bool) -> None:
+    """Set the two listening socket options, each on its own terms.
+
+    SO_REUSEADDR and IPV6_V6ONLY used to share one try, so a platform refusing the first
+    silently skipped the second and the listener accepted IPv4-mapped connections which
+    match no configured neighbour. They are independent requests and are now made
+    independently.
+
+    Neither is required to bind. SO_REUSEADDR only smooths a restart, and a kernel without
+    it still binds; a bind which genuinely cannot happen fails loudly at bind() below. A
+    refused IPV6_V6ONLY is worth a line in the log, because it changes which connections
+    this socket will accept.
+    """
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    except (OSError, AttributeError):
+        # only affects how quickly a restart can rebind, and bind() reports the real problem
+        log.debug(lazymsg('listener.reuseaddr.unavailable'), 'network')
+
+    if not ipv6:
+        return
+
+    try:
+        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+    except (OSError, AttributeError):
+        log.warning(
+            lazymsg(
+                'listener.v6only.unavailable reason={reason}',
+                reason='this socket may accept IPv4-mapped connections which match no configured neighbor',
+            ),
+            'network',
+        )
 
 
 class Listener:
@@ -142,12 +176,7 @@ class Listener:
                     min_ttlv6(sock, peer_ip.top(), ttl_in)
                 else:
                     min_ttl(sock, peer_ip.top(), ttl_in)
-            try:
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                if local_ip.ipv6():
-                    sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
-            except (OSError, AttributeError):
-                pass
+            set_listener_options(sock, ipv6=local_ip.ipv6())
             sock.setblocking(False)
             # s.settimeout(0.0)
             sock.bind((local_ip.top(), local_port))

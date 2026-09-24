@@ -35,8 +35,16 @@ class ASYNC:
         if self._error_handler:
             try:
                 self._error_handler(uid)
-            except Exception:
-                pass
+            except Exception as exc:
+                # This handler exists so a failed callback still sends done/error and the
+                # client does not hang. If the notification itself fails the client hangs
+                # anyway and there is nothing further to try, so the only thing left is to
+                # say which service it was. Swallowed rather than raised because this runs
+                # inside the asyncio loop, where an exception takes more than this client.
+                log.error(
+                    lazymsg('async.error.notification.failed uid={uid} error={error}', uid=uid, error=str(exc)),
+                    'reactor',
+                )
 
     def ready(self) -> bool:
         return not self._async

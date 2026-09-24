@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterator
 
+from exabgp.logger import log, lazymsg
 from exabgp.protocol.family import FamilyTuple
 
 if TYPE_CHECKING:
@@ -74,14 +75,26 @@ class Cache:
             return False
 
         # Use route.nexthop (nexthop is stored in Route, not NLRI)
-        # Use getattr for safety since some NLRIs may not have nexthop
+        #
+        # An error comparing the two next hops used to fall through to `return True`, and
+        # True is read by outgoing.py as permission to skip the announce. So a next hop
+        # this code could not compare silently dropped the route.
+        #
+        # False is the safe direction for a deduplication check which cannot answer: it
+        # re-announces something the peer may already have, where True loses a route the
+        # peer never gets. Saying so in the log too, because reaching here at all means
+        # a next hop shaped differently from what this function expects.
         try:
-            cached_nh = cached.nexthop
-            route_nh = route.nexthop
-            if cached_nh.index() != route_nh.index():
+            cached_nexthop = cached.nexthop
+            route_nexthop = route.nexthop
+            if cached_nexthop.index() != route_nexthop.index():
                 return False
-        except AttributeError:
-            pass  # NLRI type without nexthop
+        except AttributeError as exc:
+            log.debug(
+                lazymsg('cache.nexthop.incomparable error={error}', error=str(exc)),
+                'rib',
+            )
+            return False
 
         return True
 
