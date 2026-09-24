@@ -113,6 +113,23 @@ class GenericTunnelTLV(TunnelTypeTLV):
         return f'"tunnel-type-{self._tunnel_type}": "{hexstring(self._packed)}"'
 
 
+class MalformedSubTLV(Exception):
+    """A sub-TLV decoder refusing the value it was handed.
+
+    RFC 9012 section 13: "In general, if a TLV contains a sub-TLV that is malformed, the
+    sub-TLV MUST be treated as if it were an unrecognized sub-TLV", and an unrecognized
+    sub-TLV is left out of the interpretation and kept in what we propagate.  A decoder
+    raises this rather than inventing a value out of the peer's bytes, and
+    `SubTLV.unpack_subtlvs` wraps the value in a `GenericSubTLV`, which is what
+    "unrecognized" already means in this file.
+
+    Not a `Notify`: the session survives, and the enclosing Tunnel TLV is not malformed.
+    The one exception the section makes, a malformed Tunnel Egress Endpoint sub-TLV which
+    removes its whole TLV from the attribute, cannot arise here because exabgp registers
+    no decoder for that sub-TLV and so never finds it malformed.
+    """
+
+
 class SubTLV:
     """Base class for Sub-TLVs within a Tunnel Type value.
 
@@ -164,7 +181,10 @@ class SubTLV:
                 raise Notify(3, 1, f'Sub-TLV truncated: need {header_size + length}, got {len(data)}')
             value = data[header_size : header_size + length]
             if subtype in cls.registered_subtypes:
-                subtlv = cls.registered_subtypes[subtype].unpack(value)
+                try:
+                    subtlv = cls.registered_subtypes[subtype].unpack(value)
+                except MalformedSubTLV:
+                    subtlv = GenericSubTLV(subtype, value)
             else:
                 subtlv = GenericSubTLV(subtype, value)
             result.append(subtlv)

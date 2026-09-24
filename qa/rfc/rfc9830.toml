@@ -63,9 +63,11 @@ of type "SR Policy"; such updates MUST be considered malformed and
 handled by the "treat-as-withdraw" strategy [RFC7606].
 """
 note = """
-Not implemented.  `TunnelEncap.unpack_attribute` walks the tunnel TLVs and appends each
-one without looking at whether it has seen that tunnel type before, so two SR Policy TLVs
-both decode and both appear in the JSON.  `TunnelEncap` sets no `TREAT_AS_WITHDRAW`
-either, so even if the duplicate were detected there is currently no path from this
-decoder to the action the RFC names.  Same missing class flag as the RFC 9012 entries.
+`TunnelEncap.unpack_attribute` counts the TLVs of tunnel type 15 as it walks them and
+raises `Notify(3, 1)` on the second, which `TunnelEncap.TREAT_AS_WITHDRAW` turns into
+`INTERNAL_TREAT_AS_WITHDRAW` in `AttributeCollection.parse`, so the route goes and the
+session stays.  The check names the SR Policy tunnel type rather than tunnel TLVs in
+general, which is the negative test: a route may carry a second tunnel TLV of another
+type, and that one is not a duplicate.  Note how much louder this is than RFC 9012 13 for
+a repeated sub-TLV, where the repeat is disregarded and the route kept.
 """

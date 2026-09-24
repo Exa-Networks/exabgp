@@ -100,12 +100,29 @@ def test_the_right_length_byte_with_the_bytes_missing_is_refused() -> None:
 
 
 @pytest.mark.rfc('rfc9830#2.4-single-sr-policy-tlv')
-@pytest.mark.xfail(strict=True, reason='two SR Policy TLVs both decode and the route is not withdrawn')
 def test_two_sr_policy_tlvs_in_one_attribute_are_treated_as_withdraw() -> None:
     tlv = pack('!HH', SR_POLICY_TUNNEL, 8) + pack('!BB', 12, 6) + pack('!BBI', 0, 0, 100)
     value = tlv + tlv
     wire = bytes([0xC0, TUNNEL_ENCAP, len(value)]) + value
-    assert TREAT_AS_WITHDRAW in AttributeCollection().parse(wire, Negotiated.UNSET)
+    collection = AttributeCollection().parse(wire, Negotiated.UNSET)
+    assert TREAT_AS_WITHDRAW in collection
+    # the route goes: neither TLV may be kept and handed on as if one had been sent
+    assert TUNNEL_ENCAP not in collection
+
+
+@pytest.mark.rfc('rfc9830#2.4-single-sr-policy-tlv', polarity='negative')
+def test_a_second_tunnel_tlv_of_another_type_is_not_a_duplicate() -> None:
+    # the rule names the SR Policy tunnel type, not tunnel TLVs in general: a route may
+    # carry more than one tunnel, and 1 is a type exabgp does not decode
+    sr_policy = pack('!HH', SR_POLICY_TUNNEL, 8) + pack('!BB', 12, 6) + pack('!BBI', 0, 0, 100)
+    other = pack('!HH', 1, 4) + b'\x01\x02\x03\x04'
+    value = sr_policy + other
+    wire = bytes([0xC0, TUNNEL_ENCAP, len(value)]) + value
+    collection = AttributeCollection().parse(wire, Negotiated.UNSET)
+    assert TREAT_AS_WITHDRAW not in collection
+    attr = collection[TUNNEL_ENCAP]
+    assert isinstance(attr, TunnelEncap)
+    assert len(attr.tunnel_tlvs) == 2
 
 
 @pytest.mark.rfc('rfc9830#2.4-single-sr-policy-tlv', polarity='negative')

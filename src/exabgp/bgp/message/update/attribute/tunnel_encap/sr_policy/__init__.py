@@ -33,6 +33,26 @@ from exabgp.util.types import Buffer
 
 _SR_POLICY_TUNNEL_TYPE = 15
 
+# RFC 9830 sections 2.4.1, 2.4.2, 2.4.5, 2.4.6, 2.4.9 and 2.4.10 each say of one of these
+# sub-TLVs that it "MUST NOT appear more than once in the SR Policy encoding", and RFC 9012
+# section 13 says what a receiver does about a repeat: "all but the first occurrence of
+# each such sub-TLV type MUST be disregarded.  However, the Tunnel TLV containing them
+# MUST NOT be considered to be malformed, and all the sub-TLVs MUST be propagated if the
+# route carrying the Tunnel Encapsulation attribute is propagated."  So the repeat is
+# disregarded here, in json(), and nowhere else: pack_value() still emits every sub-TLV.
+# Segment List (128) and SRv6 Binding SID (20) are absent on purpose, RFC 9830 lets both
+# repeat, and the SRv6 Binding SID sentence says so in as many words.
+_SINGLE_OCCURRENCE_SUBTLVS: frozenset[int] = frozenset(
+    (
+        PreferenceSubTLV.SUBTYPE,
+        BindingSIDSubTLV.SUBTYPE,
+        ENLPSubTLV.SUBTYPE,
+        PrioritySubTLV.SUBTYPE,
+        CandidatePathNameSubTLV.SUBTYPE,
+        PolicyNameSubTLV.SUBTYPE,
+    )
+)
+
 __all__ = [
     'SRPolicyTunnel',
     'ENLPSubTLV',
@@ -66,7 +86,15 @@ class SRPolicyTunnel(TunnelTypeTLV):
         parts: list[str] = []
         # Collect segment lists separately to emit as array
         segment_lists: list[str] = []
+        emitted: set[int] = set()
         for tlv in self.subtlvs:
+            if tlv.SUBTYPE in _SINGLE_OCCURRENCE_SUBTLVS:
+                # RFC 9012 13: all but the first occurrence is disregarded.  Emitting both
+                # put the same key in one object twice and left the consumer's parser to
+                # decide which one won, which is not a decision a parser should be making.
+                if tlv.SUBTYPE in emitted:
+                    continue
+                emitted.add(tlv.SUBTYPE)
             if isinstance(tlv, SegmentListSubTLV):
                 segment_lists.append(tlv.json())
             else:

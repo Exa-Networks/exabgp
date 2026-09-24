@@ -110,12 +110,14 @@ sub-TLVs MUST be propagated if the route carrying the Tunnel
 Encapsulation attribute is propagated.
 """
 note = """
-The two halves are on opposite sides of the line.  "MUST NOT be considered malformed" and
-"all the sub-TLVs MUST be propagated" both hold: `SubTLV.unpack_subtlvs` appends every
-sub-TLV it walks and never rejects a repeat.  "All but the first occurrence MUST be
-disregarded" does not hold, for exactly the same reason: nothing collapses the repeats,
-so a Tunnel TLV carrying two Preference sub-TLVs reaches the API with both, and a
-consumer reading the JSON sees two values for a field which has one.
+The two halves pull in opposite directions and are implemented in different places.
+`SubTLV.unpack_subtlvs` still appends every sub-TLV it walks and `pack_value` still emits
+every one of them, which is "MUST NOT be considered malformed" and "all the sub-TLVs MUST
+be propagated".  "Disregarded" is applied in `SRPolicyTunnel.json`, which emits the first
+occurrence only of each sub-TLV type RFC 9830 2.4 says must not repeat: Preference,
+Binding SID, ENLP, Priority, and the two name sub-TLVs.  exabgp installs nothing, so the
+only thing it can be said to interpret is what it hands the API, and the JSON is that.
+Segment List and SRv6 Binding SID are not collapsed, RFC 9830 lets both repeat.
 """
 
 [[requirement]]
@@ -151,13 +153,20 @@ In general, if a TLV contains a sub-TLV that is malformed, the sub-
 TLV MUST be treated as if it were an unrecognized sub-TLV.
 """
 note = """
-Not implemented, and the failure mode is a session reset.  Every malformed sub-TLV shape
-`SubTLV.unpack_subtlvs` can detect - a one byte tail, a length field which runs past the
-end of the enclosing Tunnel TLV, a type above 127 with fewer than three bytes left -
-raises `Notify(3, 1)`.  `TunnelEncap` sets no RFC 7606 behaviour flag, so that `Notify`
-leaves `AttributeCollection.parse` untouched and becomes a NOTIFICATION.  The RFC says
-to skip the sub-TLV and carry on.  This is the same missing flag as the first entry, and
-one fix closes both.
+Two kinds of malformation, answered in two places.  A sub-TLV whose *framing* is wrong - a
+one byte tail, a length which runs past the end of the enclosing Tunnel TLV, a type above
+127 with fewer than three bytes left - still raises `Notify(3, 1)` out of
+`SubTLV.unpack_subtlvs`, which `TunnelEncap.TREAT_AS_WITHDRAW` turns into treat-as-withdraw
+rather than the NOTIFICATION it used to be.  That is stricter than this sentence asks, and
+it is what the walk can honestly do: with the framing broken there is no way to know where
+the sub-TLV ends and so no way to skip just it.  A sub-TLV whose framing is sound and whose
+*value* the decoder refuses is the case this sentence really covers, and it is now handled
+as written: the decoder raises `MalformedSubTLV` and `unpack_subtlvs` keeps the bytes as a
+`GenericSubTLV`, out of the interpretation and into what we propagate.
+`PreferenceSubTLV.unpack` is the first to do it; it used to answer `cls(0)` and tell the
+API the peer had asked for preference zero.  The exception this section makes for a
+malformed Tunnel Egress Endpoint sub-TLV does not arise: exabgp registers no decoder for
+that sub-TLV, so it can never find one malformed.
 """
 
 [[requirement]]

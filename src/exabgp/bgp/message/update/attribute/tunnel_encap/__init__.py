@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-import exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy  # noqa: F401,E402 (triggers tunnel type 15 registration)
+from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import SRPolicyTunnel  # noqa: E402 (the import also triggers tunnel type 15 registration)
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import TunnelTypeTLV
@@ -88,6 +88,7 @@ class TunnelEncap(Attribute):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> TunnelEncap:
         tunnel_tlvs: list[Any] = []
+        sr_policy_seen: bool = False
         while data:
             if len(data) < _TUNNEL_TLV_HEADER:
                 raise Notify(3, 1, f'Tunnel Encap TLV header truncated: need {_TUNNEL_TLV_HEADER}, got {len(data)}')
@@ -95,6 +96,16 @@ class TunnelEncap(Attribute):
             length: int = unpack('!H', data[2:4])[0]
             if len(data) < _TUNNEL_TLV_HEADER + length:
                 raise Notify(3, 1, f'Tunnel Encap TLV truncated: need {_TUNNEL_TLV_HEADER + length}')
+            if tunnel_type == SRPolicyTunnel.TUNNEL_TYPE:
+                # RFC 9830 2.4: "A Tunnel Encapsulation Attribute MUST NOT contain more than
+                # one TLV of type "SR Policy"; such updates MUST be considered malformed and
+                # handled by the "treat-as-withdraw" strategy".  A harder answer than the one
+                # RFC 9012 13 gives a repeated sub-TLV, which stays on the wire and is merely
+                # not read: here the route itself goes.  TREAT_AS_WITHDRAW above is what turns
+                # this Notify into that, in AttributeCollection.parse.
+                if sr_policy_seen:
+                    raise Notify(3, 1, 'a Tunnel Encapsulation attribute carries more than one SR Policy TLV')
+                sr_policy_seen = True
             value = data[_TUNNEL_TLV_HEADER : _TUNNEL_TLV_HEADER + length]
             tlv = TunnelTypeTLV.unpack_tunnel(tunnel_type, value)
             tunnel_tlvs.append(tlv)

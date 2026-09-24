@@ -7,9 +7,14 @@ treat-as-withdraw rather than a session reset - a TLV which does not end where i
 sub-TLV ends, and an attribute with no valid TLV or without the transitive bit.
 
 So every test here is about a decoder being too strict rather than too lax, which is the
-opposite of the usual shape.  `TunnelEncap` sets neither `TREAT_AS_WITHDRAW` nor
-`DISCARD`, so every `Notify` its sub-TLV walk raises leaves `AttributeCollection.parse`
-and ends the session.  The tests which show that carry xfail.
+opposite of the usual shape.  `TunnelEncap` sets `TREAT_AS_WITHDRAW`, which is what stops a
+`Notify` out of its sub-TLV walk reaching the peer as a NOTIFICATION, and a decoder which
+refuses a sub-TLV's value raises `MalformedSubTLV` instead, which keeps the bytes as an
+unrecognised sub-TLV.  What is still owed carries xfail.
+
+A repeated sub-TLV is the one place two of these tolerances pull apart: the repeat is
+disregarded in the json and still present in the bytes we would re-advertise.  RFC 8669 6
+and RFC 9830 2.4 answer the same shape differently, and their tests say so next door.
 """
 
 from __future__ import annotations
@@ -38,6 +43,7 @@ SR_POLICY_TUNNEL = 15
 UNRECOGNISED_TUNNEL = 1
 
 PREFERENCE_SUBTLV = 12
+PRIORITY_SUBTLV = 15
 # sub-TLV type numbers below 128 carry a one octet length, 128 and above carry two
 LOW_UNRECOGNISED_SUBTLV = 60
 HIGH_UNRECOGNISED_SUBTLV = 200
@@ -142,10 +148,19 @@ def test_an_unrecognised_tunnel_type_is_not_dropped_when_the_attribute_is_re_pac
 
 
 @pytest.mark.rfc('rfc9012#13-duplicate-subtlv-first-wins')
-@pytest.mark.xfail(strict=True, reason='both Preference sub-TLVs are kept and both reach the json')
 def test_a_repeated_preference_subtlv_keeps_only_the_first() -> None:
     attr = decoded(attribute(tunnel(SR_POLICY_TUNNEL, preference(100) + preference(200))))
     assert attr.json() == '{"sr-policy": {"preference": 100}}'
+
+
+@pytest.mark.rfc('rfc9012#13-duplicate-subtlv-first-wins')
+def test_the_disregarded_preference_is_still_on_the_wire_we_re_advertise() -> None:
+    # the two halves of the sentence pull apart here: the second Preference is not read,
+    # and it is still sent on, so this is not the RFC 8669 6 shape where the repeat goes
+    value = tunnel(SR_POLICY_TUNNEL, preference(100) + preference(200))
+    attr = decoded(attribute(value))
+    assert attr.json() == '{"sr-policy": {"preference": 100}}'
+    assert bytes(attr.pack_attribute(Negotiated.UNSET)) == attribute(value)
 
 
 @pytest.mark.rfc('rfc9012#13-duplicate-subtlv-first-wins', polarity='negative')
@@ -193,6 +208,34 @@ def test_a_one_byte_subtlv_tail_does_not_reset_the_session() -> None:
 def test_a_subtlv_above_127_with_a_truncated_length_field_does_not_reset_the_session() -> None:
     value = tunnel(SR_POLICY_TUNNEL, preference(100) + bytes([HIGH_UNRECOGNISED_SUBTLV, 0x00]))
     assert TUNNEL_ENCAP in parse(attribute(value)) or TREAT_AS_WITHDRAW in parse(attribute(value))
+
+
+@pytest.mark.rfc('rfc9012#13-malformed-subtlv-as-unrecognized')
+def test_a_short_preference_subtlv_is_read_as_unrecognised_not_as_zero() -> None:
+    # four octets where RFC 9830 2.4.1 says six.  The decoder used to answer cls(0) and
+    # the API was told the peer had asked for preference 0, which it had not
+    value = tunnel(SR_POLICY_TUNNEL, subtlv(PREFERENCE_SUBTLV, b'\x00\x00\x00\x01'))
+    attr = decoded(attribute(value))
+    assert '"preference"' not in attr.json()
+    assert '"unknown-subtlv-12": "0x00000001"' in attr.json()
+    # treated as unrecognised, so the bytes stay in the attribute we propagate
+    assert bytes(attr.pack_attribute(Negotiated.UNSET)) == attribute(value)
+
+
+@pytest.mark.rfc('rfc9012#13-malformed-subtlv-as-unrecognized')
+def test_a_malformed_preference_does_not_take_the_sub_tlvs_beside_it() -> None:
+    value = tunnel(SR_POLICY_TUNNEL, subtlv(PREFERENCE_SUBTLV, b'\x00') + subtlv(PRIORITY_SUBTLV, b'\x0a\x00'))
+    collection = parse(attribute(value))
+    assert TREAT_AS_WITHDRAW not in collection
+    attr = collection[TUNNEL_ENCAP]
+    assert isinstance(attr, TunnelEncap)
+    assert '"priority": 10' in attr.json()
+
+
+@pytest.mark.rfc('rfc9012#13-malformed-subtlv-as-unrecognized', polarity='negative')
+def test_a_well_formed_preference_subtlv_is_still_read_as_a_preference() -> None:
+    attr = decoded(attribute(tunnel(SR_POLICY_TUNNEL, preference(100))))
+    assert '"preference": 100' in attr.json()
 
 
 @pytest.mark.rfc('rfc9012#13-malformed-subtlv-as-unrecognized', polarity='negative')
