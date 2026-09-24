@@ -321,6 +321,111 @@ class Processes:
                 log.debug(lazymsg('child process {p} was already dead', p=process), 'processes')
         self.clean()
 
+    def _select_encoder(self, process: str, configuration: dict[str, Any]) -> None:
+        """Record which dialect this helper will be spoken to in.
+
+        The choice is made once, at spawn, and not revisited: everything written to the
+        helper afterwards goes through the encoder stored here, so a helper cannot find
+        the format changing under it while it is running.
+        """
+        # Select encoder based on API version
+        api_version = getenv().api.version
+        use_json = configuration.get('encoder', 'text') == 'json'
+
+        if api_version == 4:
+            # v4 (legacy): support both JSON and Text, log deprecation warning
+            log.warning(
+                lazymsg('API v4 is deprecated. Set exabgp_api_version=6 to use v6 (JSON only).'),
+                'processes',
+            )
+            # Use per-process encoder setting (already computed above from process config)
+            if use_json:
+                self._encoder[process] = Response.V4.JSON(json_v4_version)
+            else:
+                self._encoder[process] = Response.V4.Text(text_v4_version)
+        else:
+            # v6 (default): JSON only
+            if not use_json:
+                log.warning(
+                    lazymsg('Text encoder requested but API v6 is JSON-only. Using JSON encoder.'),
+                    'processes',
+                )
+            self._encoder[process] = Response.JSON(json_version)
+
+    def _child_environment(self, process: str, configuration: dict[str, Any]) -> dict[str, str]:
+        """Build the environment one helper is handed, starting from our own.
+
+        Separate because of the one thing it removes: the CLI pipe is an authenticated
+        path into the daemon, and only the helper ExaBGP spawns for its own CLI may see
+        where it is. An operator's helper inherits everything else.
+        """
+        # Prepare environment variables for child process
+        child_env = os.environ.copy()
+        if not process.startswith(API_PREFIX):
+            child_env.pop('exabgp_cli_pipe', None)
+        if 'env' in configuration:
+            child_env.update(configuration['env'])
+        return child_env
+
+    def _record_respawn(self, process: str) -> None:
+        """Count this spawn against the limit, and give up on a helper which keeps dying.
+
+        Counting happens per time bucket rather than in total, so a helper restarted once
+        a day forever is fine and one restarted six times in a minute is not. Raises
+        ProcessError once the helper has been terminated, which is all the caller needs.
+        """
+        around_now = int(time.time()) & self.respawn_timemask
+        if process in self._respawning:
+            if around_now in self._respawning[process]:
+                self._respawning[process][around_now] += 1
+                # we are respawning too fast
+                if self._respawning[process][around_now] > self.respawn_number:
+                    log.critical(
+                        lazymsg(
+                            'process.respawn.exceeded process={p} limit={limit}',
+                            p=process,
+                            limit=self.respawn_number,
+                        ),
+                        'processes',
+                    )
+                    # Clean up the process we just started before raising
+                    self._terminate(process)
+                    raise ProcessError
+            else:
+                # reset long time since last respawn
+                self._respawning[process] = {around_now: 1}
+        else:
+            # record respawing
+            self._respawning[process] = {around_now: 1}
+
+    def _spawn(self, process: str, run: Any, child_env: dict[str, str]) -> None:
+        """Fork the helper and wire its two pipes into the reactor.
+
+        Both descriptors are made non-blocking before anything else may touch them: a
+        blocking read or write on a helper's pipe stops the event loop, and the event
+        loop is what would otherwise drain it.
+        """
+        self._process[process] = subprocess.Popen(
+            run,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            env=child_env,
+            preexec_fn=preexec_helper,
+            # This flags exists for python 2.7.3 in the documentation but on on my MAC
+            # creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+        )
+        self._update_fds()
+        # Make stdout non-blocking for reading
+        fcntl.fcntl(self._get_stdout(process).fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+        # Make stdin non-blocking for writing (prevents blocking asyncio event loop)
+        fcntl.fcntl(self._get_stdin(process).fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+
+        # Register async reader if in async mode
+        if self._async_mode and self._loop:
+            fd = self._get_stdout(process).fileno()
+            self._loop.add_reader(fd, self._async_reader_callback, process)
+            log.debug(lazymsg('async.reader.registered process={p} fd={fd}', p=process, fd=fd), 'processes')
+
     def _start(self, process: str) -> None:
         if not self._restart.get(process, True):
             return
@@ -341,29 +446,7 @@ class Processes:
 
             run = configuration.get('run', '')
             if run:
-                # Select encoder based on API version
-                api_version = getenv().api.version
-                use_json = configuration.get('encoder', 'text') == 'json'
-
-                if api_version == 4:
-                    # v4 (legacy): support both JSON and Text, log deprecation warning
-                    log.warning(
-                        lazymsg('API v4 is deprecated. Set exabgp_api_version=6 to use v6 (JSON only).'),
-                        'processes',
-                    )
-                    # Use per-process encoder setting (already computed above from process config)
-                    if use_json:
-                        self._encoder[process] = Response.V4.JSON(json_v4_version)
-                    else:
-                        self._encoder[process] = Response.V4.Text(text_v4_version)
-                else:
-                    # v6 (default): JSON only
-                    if not use_json:
-                        log.warning(
-                            lazymsg('Text encoder requested but API v6 is JSON-only. Using JSON encoder.'),
-                            'processes',
-                        )
-                    self._encoder[process] = Response.JSON(json_version)
+                self._select_encoder(process, configuration)
 
                 # TODO: Future enhancement - add 'ack-format' config option for JSON ACKs
                 # Would allow: ack-format json; to send {"status": "ok"} instead of "done"
@@ -371,60 +454,12 @@ class Processes:
                 # Initialize per-process ACK state (process config overrides global default)
                 self._ack[process] = configuration.get('ack', self._default_ack)
 
-                # Prepare environment variables for child process
-                child_env = os.environ.copy()
-                if not process.startswith(API_PREFIX):
-                    child_env.pop('exabgp_cli_pipe', None)
-                if 'env' in configuration:
-                    child_env.update(configuration['env'])
-
-                self._process[process] = subprocess.Popen(
-                    run,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    env=child_env,
-                    preexec_fn=preexec_helper,
-                    # This flags exists for python 2.7.3 in the documentation but on on my MAC
-                    # creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
-                )
-                self._update_fds()
-                # Make stdout non-blocking for reading
-                fcntl.fcntl(self._get_stdout(process).fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
-                # Make stdin non-blocking for writing (prevents blocking asyncio event loop)
-                fcntl.fcntl(self._get_stdin(process).fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
-
-                # Register async reader if in async mode
-                if self._async_mode and self._loop:
-                    fd = self._get_stdout(process).fileno()
-                    self._loop.add_reader(fd, self._async_reader_callback, process)
-                    log.debug(lazymsg('async.reader.registered process={p} fd={fd}', p=process, fd=fd), 'processes')
+                self._spawn(process, run, self._child_environment(process, configuration))
 
                 log.debug(lazymsg('process.forked process={p}', p=process), 'processes')
 
                 self._restart[process] = self._configuration[process]['respawn']
-                around_now = int(time.time()) & self.respawn_timemask
-                if process in self._respawning:
-                    if around_now in self._respawning[process]:
-                        self._respawning[process][around_now] += 1
-                        # we are respawning too fast
-                        if self._respawning[process][around_now] > self.respawn_number:
-                            log.critical(
-                                lazymsg(
-                                    'process.respawn.exceeded process={p} limit={limit}',
-                                    p=process,
-                                    limit=self.respawn_number,
-                                ),
-                                'processes',
-                            )
-                            # Clean up the process we just started before raising
-                            self._terminate(process)
-                            raise ProcessError
-                    else:
-                        # reset long time since last respawn
-                        self._respawning[process] = {around_now: 1}
-                else:
-                    # record respawing
-                    self._respawning[process] = {around_now: 1}
+                self._record_respawn(process)
 
         except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             self._broken.append(process)
@@ -488,6 +523,74 @@ class Processes:
     def _update_fds(self) -> None:
         self.fds = [self._get_stdout(process).fileno() for process in self._process]
 
+    def _stdout_ready(self, process: str, stdout: IO[bytes]) -> bool:
+        """Ask the kernel whether this helper's pipe has anything to say.
+
+        The file descriptor is polled, never the BufferedReader over it, for the reason
+        tests/unit/test_process_read_stranding.py exists. An error or an invalid
+        descriptor carries no data, so it is reported as a problem rather than read from.
+        """
+        poller = select.poll()
+        poller.register(
+            stdout,
+            select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
+        )
+
+        ready = False
+        for _, event in poller.poll(0):
+            if event & select.POLLIN or event & select.POLLPRI:
+                ready = True
+            elif event & select.POLLHUP or event & select.POLLERR or event & select.POLLNVAL:
+                self._handle_problem(process)
+        return ready
+
+    def _command_too_long(self, process: str, raw: str) -> bool:
+        """Give up on a helper which fills the buffer without ever ending a command.
+
+        The cap is on a run of bytes with no newline in it, so a legitimately large
+        command still goes through while a helper which never sends one cannot grow
+        _buffer until the daemon runs out of memory.
+        """
+        if '\n' in raw or len(raw) <= self.MAX_COMMAND_SIZE:
+            return False
+        log.error(
+            lazymsg(
+                'api.command.oversized process={pr} size={size}',
+                pr=process,
+                size=len(raw),
+            ),
+            'processes',
+        )
+        self._buffer.pop(process, None)
+        self._handle_problem(process)
+        return True
+
+    def _complete_lines(self, process: str, raw: str) -> Generator[str, None, None]:
+        """Yield each whole line a helper has sent, and keep the partial tail for later.
+
+        The tail is the point of doing this here: a command can arrive in two reads, and
+        what is left over is what the next read gets prepended to.
+        """
+        while '\n' in raw:
+            line, raw = raw.split('\n', 1)
+            yield line.rstrip()
+        self._buffer[process] = raw
+
+    def _handle_read_error(self, process: str, exc: OSError) -> None:
+        """Decide whether a failed read means the helper has gone or was merely interrupted."""
+        if not exc.errno or exc.errno in error.fatal:
+            # if the program exits we can get an IOError with errno code zero !
+            self._handle_problem(process)
+        elif exc.errno in error.block:
+            # we often see errno.EINTR: call interrupted and
+            # we most likely have data, we will try to read them a the next loop iteration
+            pass
+        else:
+            log.debug(
+                lazymsg('process.error.unexpected errno={errstr}', errstr=errstr(exc)),
+                'processes',
+            )
+
     def received(self) -> Generator[tuple[str, str], None, None]:
         consumed_data = False
 
@@ -496,21 +599,8 @@ class Processes:
                 proc = self._process[process]
                 poll = proc.poll()
 
-                poller = select.poll()
                 stdout = self._get_stdout(process)
-                poller.register(
-                    stdout,
-                    select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR,
-                )
-
-                ready = False
-                for _, event in poller.poll(0):
-                    if event & select.POLLIN or event & select.POLLPRI:
-                        ready = True
-                    elif event & select.POLLHUP or event & select.POLLERR or event & select.POLLNVAL:
-                        self._handle_problem(process)
-
-                if not ready:
+                if not self._stdout_ready(process, stdout):
                     continue
 
                 try:
@@ -532,22 +622,10 @@ class Processes:
                         continue
 
                     raw = self._buffer.get(process, '') + buf
-                    if '\n' not in raw and len(raw) > self.MAX_COMMAND_SIZE:
-                        log.error(
-                            lazymsg(
-                                'api.command.oversized process={pr} size={size}',
-                                pr=process,
-                                size=len(raw),
-                            ),
-                            'processes',
-                        )
-                        self._buffer.pop(process, None)
-                        self._handle_problem(process)
+                    if self._command_too_long(process, raw):
                         continue
 
-                    while '\n' in raw:
-                        line, raw = raw.split('\n', 1)
-                        line = line.rstrip()
+                    for line in self._complete_lines(process, raw):
                         consumed_data = True
                         if line.startswith('debug '):
                             log.warning(
@@ -560,21 +638,8 @@ class Processes:
                             )
                             yield (process, formated(line))
 
-                    self._buffer[process] = raw
-
                 except OSError as exc:
-                    if not exc.errno or exc.errno in error.fatal:
-                        # if the program exits we can get an IOError with errno code zero !
-                        self._handle_problem(process)
-                    elif exc.errno in error.block:
-                        # we often see errno.EINTR: call interrupted and
-                        # we most likely have data, we will try to read them a the next loop iteration
-                        pass
-                    else:
-                        log.debug(
-                            lazymsg('process.error.unexpected errno={errstr}', errstr=errstr(exc)),
-                            'processes',
-                        )
+                    self._handle_read_error(process, exc)
                     continue
                 except StopIteration:
                     if not consumed_data:
@@ -722,13 +787,12 @@ class Processes:
         if self._command_queue:
             yield self._command_queue.popleft()
 
-    def write(self, process: str, string: str | None, peer_or_neighbor: 'Neighbor' | 'Peer' | None = None) -> bool:
-        if string is None:
-            return True
+    def _log_response(self, process: str, string: str) -> None:
+        """Log one line on its way to a helper, at the level which suits what it is.
 
-        if process not in self._process:
-            return False
-
+        A bare ACK is noise once the API is known to work, while a content response is
+        the thing an operator turned logging up to see, so the two do not share a level.
+        """
         # Log API command response
         # Use warning level (like 'debug' commands from processes) to make it visible
         # when debug logging is enabled, especially for JSON/content responses
@@ -752,16 +816,30 @@ class Processes:
             # the visibility of 'debug' commands from external processes
             log.warning(lazymsg('api.response.content process={p} response={r}', p=process, r=string), 'api')
 
-        data = bytes(f'{string}\n', 'ascii')
+    def _wait_until_writable(self, process: str, stdin_fd: int, poll_timeout_ms: int, elapsed_ms: int) -> int:
+        """Wait one poll interval for a full pipe to take more data, and report the time spent.
 
-        # In async mode, queue the write instead of blocking
-        if self._async_mode:
-            if process not in self._write_queue:
-                self._write_queue[process] = collections.deque()
-            self._write_queue[process].append(data)
-            log.debug(lazymsg('async.write.queued process={p} bytes={b}', p=process, b=len(data)), 'processes')
-            return True
+        The deadline stays with the caller: this waits exactly once, so the write loop
+        keeps the single place which decides a helper has had long enough.
+        """
+        poller = select.poll()
+        poller.register(stdin_fd, select.POLLOUT)
+        ready = poller.poll(poll_timeout_ms)
+        elapsed_ms += poll_timeout_ms
 
+        if not ready:
+            log.debug(
+                lazymsg('process.write.waiting process={p} elapsed={e}ms', p=process, e=elapsed_ms),
+                'processes',
+            )
+        return elapsed_ms
+
+    def _write_blocking(self, process: str, data: bytes) -> bool:
+        """Push every byte of one line into a helper's stdin, waiting while the pipe is full.
+
+        Sync mode only. In async mode the same bytes are queued for flush_write_queue(),
+        because blocking here would stop the event loop which drains the helper's stdout.
+        """
         # Sync mode - non-blocking write with poll() for writability
         # Uses os.write() directly to handle partial writes correctly.
         # When buffer is full (EAGAIN), polls for writability with timeout.
@@ -809,16 +887,7 @@ class Processes:
                         # The reactor can retry later or handle the failure
                         return False
 
-                    poller = select.poll()
-                    poller.register(stdin_fd, select.POLLOUT)
-                    ready = poller.poll(poll_timeout_ms)
-                    elapsed_ms += poll_timeout_ms
-
-                    if not ready:
-                        log.debug(
-                            lazymsg('process.write.waiting process={p} elapsed={e}ms', p=process, e=elapsed_ms),
-                            'processes',
-                        )
+                    elapsed_ms = self._wait_until_writable(process, stdin_fd, poll_timeout_ms, elapsed_ms)
                     continue
                 elif exc.errno == errno.EINTR:
                     # Interrupted by signal, retry immediately
@@ -833,6 +902,27 @@ class Processes:
                     raise ProcessError from None
 
         return True
+
+    def write(self, process: str, string: str | None, peer_or_neighbor: 'Neighbor' | 'Peer' | None = None) -> bool:
+        if string is None:
+            return True
+
+        if process not in self._process:
+            return False
+
+        self._log_response(process, string)
+
+        data = bytes(f'{string}\n', 'ascii')
+
+        # In async mode, queue the write instead of blocking
+        if self._async_mode:
+            if process not in self._write_queue:
+                self._write_queue[process] = collections.deque()
+            self._write_queue[process].append(data)
+            log.debug(lazymsg('async.write.queued process={p} bytes={b}', p=process, b=len(data)), 'processes')
+            return True
+
+        return self._write_blocking(process, data)
 
     async def write_async(self, process: str, string: str | None, neighbor: 'Neighbor' | None = None) -> bool:
         """Async version of write() - non-blocking write to API process stdin
@@ -991,6 +1081,80 @@ class Processes:
         # Queue the write (regular write() handles queueing in async mode)
         return self.write(process, string)
 
+    def _defer_or_drop_queue(
+        self, process_name: str, queue: collections.deque[bytes], data: bytes, exc: OSError
+    ) -> None:
+        """Decide what a failed queued write means for the line and for the queue.
+
+        A full pipe is temporary, so the line goes back at the front for the next flush.
+        Anything else says the helper is gone: it is marked broken and its queue is
+        dropped, because per client state which outlives its client is a slow leak.
+        """
+        if exc.errno == errno.EAGAIN or exc.errno == errno.EWOULDBLOCK:
+            # Buffer full, put data back and try next iteration
+            queue.appendleft(data)
+            log.debug(lazymsg('async.write.deferred process={p} reason=buffer_full', p=process_name), 'processes')
+            return
+        if exc.errno == errno.EPIPE:
+            # Broken pipe - process died
+            self._broken.append(process_name)
+            log.debug(lazymsg('async.write.failed process={p} reason=broken_pipe', p=process_name), 'processes')
+            del self._write_queue[process_name]
+            return
+        # Other error
+        self._broken.append(process_name)
+        log.debug(
+            lazymsg('async.queue.flush.error process={pn} error={e}', pn=process_name, e=errstr(exc)),
+            'processes',
+        )
+        del self._write_queue[process_name]
+
+    def _drain_queue(self, process_name: str, queue: collections.deque[bytes], stdin_fd: int, budget: int) -> int:
+        """Write at most `budget` queued lines to one helper, and report how many it took.
+
+        Every line popped counts against the budget, whether it reached the descriptor or
+        went back on the queue: the budget bounds how long the reactor spends in here, it
+        does not count successes.
+        """
+        taken = 0
+        while queue and taken < budget:
+            data = queue.popleft()
+            taken += 1
+
+            try:
+                if not data:
+                    continue
+                # Use os.write for non-blocking write
+                log.debug(
+                    lazymsg(
+                        'async.write.attempt process={p} fd={fd} bytes={b}',
+                        p=process_name,
+                        fd=stdin_fd,
+                        b=len(data),
+                    ),
+                    'processes',
+                )
+                written = os.write(stdin_fd, data)
+                log.debug(lazymsg('async.write.result process={p} written={w}', p=process_name, w=written), 'processes')
+                if written < len(data):
+                    # Partial write - put remaining data back
+                    queue.appendleft(data[written:])
+                    log.debug(
+                        lazymsg(
+                            'async.write.partial process={p} written={w} total={t}',
+                            p=process_name,
+                            w=written,
+                            t=len(data),
+                        ),
+                        'processes',
+                    )
+                    break
+                log.debug(lazymsg('async.write.flushed process={p} bytes={b}', p=process_name, b=written), 'processes')
+            except OSError as exc:
+                self._defer_or_drop_queue(process_name, queue, data, exc)
+                break
+        return taken
+
     async def flush_write_queue(self) -> None:
         """Flush all queued writes to API processes (async mode only)
 
@@ -1036,68 +1200,7 @@ class Processes:
                 continue
 
             # Write up to remaining batch quota
-            while queue and items_processed < BATCH_SIZE:
-                data = queue.popleft()
-                items_processed += 1
-
-                try:
-                    if not data:
-                        continue
-                    # Use os.write for non-blocking write
-                    log.debug(
-                        lazymsg(
-                            'async.write.attempt process={p} fd={fd} bytes={b}',
-                            p=process_name,
-                            fd=stdin_fd,
-                            b=len(data),
-                        ),
-                        'processes',
-                    )
-                    written = os.write(stdin_fd, data)
-                    log.debug(
-                        lazymsg('async.write.result process={p} written={w}', p=process_name, w=written), 'processes'
-                    )
-                    if written < len(data):
-                        # Partial write - put remaining data back
-                        queue.appendleft(data[written:])
-                        log.debug(
-                            lazymsg(
-                                'async.write.partial process={p} written={w} total={t}',
-                                p=process_name,
-                                w=written,
-                                t=len(data),
-                            ),
-                            'processes',
-                        )
-                        break
-                    log.debug(
-                        lazymsg('async.write.flushed process={p} bytes={b}', p=process_name, b=written), 'processes'
-                    )
-                except OSError as exc:
-                    if exc.errno == errno.EAGAIN or exc.errno == errno.EWOULDBLOCK:
-                        # Buffer full, put data back and try next iteration
-                        queue.appendleft(data)
-                        log.debug(
-                            lazymsg('async.write.deferred process={p} reason=buffer_full', p=process_name), 'processes'
-                        )
-                        break
-                    elif exc.errno == errno.EPIPE:
-                        # Broken pipe - process died
-                        self._broken.append(process_name)
-                        log.debug(
-                            lazymsg('async.write.failed process={p} reason=broken_pipe', p=process_name), 'processes'
-                        )
-                        del self._write_queue[process_name]
-                        break
-                    else:
-                        # Other error
-                        self._broken.append(process_name)
-                        log.debug(
-                            lazymsg('async.queue.flush.error process={pn} error={e}', pn=process_name, e=errstr(exc)),
-                            'processes',
-                        )
-                        del self._write_queue[process_name]
-                        break
+            items_processed += self._drain_queue(process_name, queue, stdin_fd, BATCH_SIZE - items_processed)
 
         # Always yield control after processing
         await asyncio.sleep(0)
