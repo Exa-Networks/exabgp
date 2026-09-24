@@ -433,6 +433,18 @@ Generator-based API callbacks still work, they run inside the asyncio loop.
 
 ## Key Requirements
 
+**RFC compliance ledger:**
+- `qa/rfc/<rfc>.toml` records one entry per normative sentence of an RFC we implement,
+  quoted verbatim, and `qa/rfc/text/` holds the RFC itself so the quote can be checked
+- a test proves a requirement by carrying `@pytest.mark.rfc('<id>')`, with
+  `polarity='negative'` for the test which shows we reject what the RFC forbids
+- a MUST wants both sides: a decoder which accepts everything passes every positive test
+- "we do not do this" is a state with a mandatory reason, and it is two states:
+  `not-applicable` (never bound exabgp) closes, `gap` (we owe it) stays on the table
+- a gap can be demonstrated rather than described, with `rfc()` plus `xfail(strict=True)`
+- read `qa/rfc/README.md` before adding either a requirement or a marker
+- enforced by `./qa/bin/check_rfc_compliance`, part of `./qa/bin/test_everything`
+
 **Exa Style (MANDATORY):**
 - `.claude/EXA_STYLE.md` applies to every line of code in this repository
 - Check the length before reading wire data, raise `Notify` on malformed peer input

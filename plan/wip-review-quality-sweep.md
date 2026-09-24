@@ -163,3 +163,36 @@ did not:
   with `incoming-ttl` alone we send 255 as RFC 5082 asks. Still open: the listening
   socket is shared per address and port, so two neighbours on it with different
   `incoming-ttl` values get whichever was set last.
+
+## Item 31 done: the RFC requirement ledger
+
+`a98fd39a7`. The undecided item is decided and built. `qa/rfc/<rfc>.toml` holds one
+entry per normative sentence, `qa/rfc/text/` holds the RFC, `@pytest.mark.rfc()` marks
+the test which proves it, and `./qa/bin/check_rfc_compliance` fails when the three
+disagree. It is a stage of `test_everything` and `qa/rfc_compliance.json` ratchets the
+untested count per RFC.
+
+The design came from looking at how `ze` does it. Three things worth having were taken
+and the rest left:
+
+- the link lives in the test, not in the ledger, so the ledger cannot drift from what
+  runs
+- a MUST wants a positive and a negative test, because a decoder which accepts
+  everything passes every positive test ever written
+- "we do not do this" is a first-class state with a mandatory reason, split into
+  `not-applicable` (never bound us, closes) and `gap` (we owe it, stays published)
+
+One thing was added that ze does differently, and it is the part that matters most:
+every quote is checked against the published RFC on every run. ze learned by measurement
+that extracted requirement lists are wrong in both directions, inventing MUSTs a
+document does not contain and inverting the ones it does, and answered with a separate
+sign-off artefact. Checking the quote against the text is cheaper and catches the same
+class outright.
+
+Not adopted: the extraction sign-off JSON, the discrimination records which re-prove
+each test goes red under an injected break, six of ze's eight ratchets, and the
+generated-but-uncommitted file scheme. `doc/RFC_COMPLIANCE.md` is generated and
+committed so it can be diffed in review.
+
+Seeded with RFC 7911. Ledgers for 4271, 4760, 5492, 6793, 7606, 9234, 5082, 4724, 1997,
+4360, 8092 are being written.
