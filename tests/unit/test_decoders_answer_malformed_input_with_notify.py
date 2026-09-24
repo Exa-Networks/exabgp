@@ -138,6 +138,12 @@ ATTRIBUTE_BODIES: tuple[bytes, ...] = (
 LAST_ATTRIBUTE_CODE = 44
 
 FAMILIES: list[tuple[AFI, SAFI]] = sorted(NLRI.registered_families, key=str)
+
+# The sweep below parametrises from the NLRI registry, so it is only as wide as whatever
+# has been imported by the time it is collected. A half filled registry does not fail, it
+# quietly tests less, which is the one way a floor like this can stop being a floor. The
+# registry_floor test at the bottom is what stops that happening silently.
+MIN_FAMILIES = 24
 FAMILY_IDS: list[str] = ['{}/{}'.format(afi, safi) for afi, safi in FAMILIES]
 
 
@@ -256,4 +262,43 @@ def test_a_message_decoder_raises_notify_and_not_something_else(message_type: in
 
     assert not wrong, f'message type {message_type} answered malformed input with something else:\n  ' + '\n  '.join(
         wrong[:10]
+    )
+
+
+@pytest.mark.registry_floor
+def test_the_sweep_reaches_every_family_it_claims_to() -> None:
+    """A sweep over a half filled registry passes by testing nothing.
+
+    Both parametrised sweeps above take their cases from `NLRI.registered_families`,
+    which is populated by import side effect. If a future refactor stops importing one of
+    the family packages, this file keeps passing and silently covers less: no assertion
+    fails, the count just drops. That is the failure mode `qa/bin/check_sweep_floors`
+    exists to catch, and this is the assertion it asks for.
+
+    The number is a floor rather than an equality so that adding a family does not fail
+    it. Lower it only with a reason, because every step down is coverage leaving.
+    """
+    assert len(FAMILIES) >= MIN_FAMILIES, (
+        f'the NLRI registry offered {len(FAMILIES)} families, down from {MIN_FAMILIES}, '
+        f'so this file is sweeping less than it did: {FAMILY_IDS}'
+    )
+
+
+@pytest.mark.registry_floor
+def test_the_attribute_sweep_covers_the_codes_it_claims_to() -> None:
+    """The attribute sweep is bounded by a constant rather than a registry.
+
+    It walks 0 to LAST_ATTRIBUTE_CODE whether or not a decoder is registered for each,
+    which is deliberate: an unassigned code must be refused as surely as an assigned one.
+    So the thing that can rot here is the constant falling behind IANA, not a registry
+    emptying, and what this pins is that every code a decoder exists for is inside the
+    range being swept.
+    """
+    registered = sorted({code for code, _ in Attribute.registered_attributes})
+
+    missed = [code for code in registered if code > LAST_ATTRIBUTE_CODE]
+
+    assert not missed, (
+        f'attributes {missed} have decoders but sit above LAST_ATTRIBUTE_CODE '
+        f'({LAST_ATTRIBUTE_CODE}), so the sweep never feeds them anything malformed'
     )
