@@ -617,10 +617,6 @@ def reconstruction_cases() -> list[tuple[str, bytes, bytes, int]]:
 
 
 @pytest.mark.rfc('rfc6793#4.2.3-construct-by-prepending')
-@pytest.mark.xfail(
-    strict=True,
-    reason='merge_attributes slices as2path.as_seq[:-len4] per segment kind, and [:-0] is [:0], so an AS4_PATH with no segment of that kind deletes the whole leading part of the AS_PATH',
-)
 def test_the_reconstructed_path_has_as_many_as_numbers_as_the_as_path() -> None:
     """One test over every shape, because the rule names one number and it is this one."""
     wrong: list[str] = []
@@ -802,3 +798,31 @@ def test_a_well_formed_as4_aggregator_is_not_discarded() -> None:
 
     assert Attribute.CODE.AS4_AGGREGATOR in read, 'a good AS4_AGGREGATOR was discarded'
     assert Attribute.CODE.INTERNAL_DISCARD not in read
+
+
+@pytest.mark.rfc('rfc6793#4.2.3-construct-by-prepending')
+@pytest.mark.xfail(
+    strict=True,
+    reason='merge_attributes works one segment kind at a time where the RFC counts over the whole path, so an AS4_PATH holding only a set leaves the AS_TRANS it was sent to replace',
+)
+def test_an_as4_path_holding_only_a_set_still_replaces_the_as_trans() -> None:
+    """Right length is not the point of the rule, it is the test for having followed it.
+
+    AS_TRANS is the placeholder a two octet speaker writes where a four octet ASN was,
+    and the AS4_PATH is how the real number travels beside it. A reconstruction which
+    ends up the right length but leaves AS_TRANS in place has published 23456 as a
+    transit AS, which is the one outcome the whole mechanism exists to avoid.
+
+    Fixing the length bug did not fix this: the merge takes sequences from sequences and
+    sets from sets, so an AS4_PATH whose only segment is a set is matched against an
+    AS_PATH which has no set, and contributes nothing. RFC 6793 4.2.3 counts AS numbers
+    over the whole path and prepends across segment kinds, which this shape cannot do.
+    """
+    read = parse(
+        attribute(Attribute.CODE.AS_PATH, TRANSITIVE, segment(SEQUENCE.ID, [MAPPABLE, AS_TRANS], 2))
+        + as4_path(segment(SET.ID, [NON_MAPPABLE], 4))
+    )
+
+    assert AS_TRANS not in path_of(read).as_seq, (
+        f'the AS_TRANS placeholder survived the reconstruction: {path_of(read).string()}'
+    )

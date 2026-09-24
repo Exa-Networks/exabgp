@@ -632,23 +632,44 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             self.add(cached, key)
             return
 
+        # RFC 6793 4.2.3, which obsoletes the RFC 4893 this used to cite.  Two rules:
+        # when the AS_PATH holds fewer AS numbers than the AS4_PATH the AS4_PATH is
+        # ignored and the AS_PATH is the answer; otherwise the leading part of the
+        # AS_PATH is prepended to the AS4_PATH so the result holds as many AS numbers
+        # as the AS_PATH did.
+        #
+        # Both used to be wrong, in ways a peer could reach.
+        #
+        # `as2path.as_seq[:-len4]` says "all but the last len4", which is the right
+        # thought and the wrong expression: when the AS4_PATH carries no segment of this
+        # kind, len4 is 0 and `[:-0]` is `[:0]`, the empty list.  An AS4_PATH holding
+        # only an AS_SET therefore deleted the whole AS_SEQUENCE of the AS_PATH.  Written
+        # as `[: len2 - len4]` the count is explicit and 0 removes nothing.
+        #
+        # The ignore branch for the set took as4path.as_set, which is the opposite of
+        # what the RFC says to do with an AS4_PATH that is too long, and the opposite of
+        # what the sequence branch two lines above already did.
+        #
+        # This still works one segment kind at a time where the RFC counts over the whole
+        # path, so it can end up the right length with an AS_TRANS still in it where a
+        # four octet ASN belonged.  That is rfc6793#4.2.3-construct-by-prepending's second
+        # test, and it is still a gap.
         len2 = len(as2path.as_seq)
         len4 = len(as4path.as_seq)
 
-        # RFC 4893 section 4.2.3
         if len2 < len4:
-            as_seq = as2path.as_seq
+            as_seq = list(as2path.as_seq)
         else:
-            as_seq = as2path.as_seq[:-len4]
+            as_seq = as2path.as_seq[: len2 - len4]
             as_seq.extend(as4path.as_seq)
 
         len2 = len(as2path.as_set)
         len4 = len(as4path.as_set)
 
         if len2 < len4:
-            as_set = as4path.as_set
+            as_set = list(as2path.as_set)
         else:
-            as_set = as2path.as_set[:-len4]
+            as_set = as2path.as_set[: len2 - len4]
             as_set.extend(as4path.as_set)
 
         # Build segments from merged ASN lists

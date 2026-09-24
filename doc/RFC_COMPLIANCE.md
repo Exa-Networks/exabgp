@@ -8,15 +8,17 @@ run, so a requirement that is not in the document cannot appear in this table.
 
 | RFC | proven | shown | untested | binding | excused | advisory | coverage |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| rfc1997 | 0 | 0 | 1 | 1 | 4 | 3 | 0% |
+| rfc1997 | 0 | 1 | 0 | 1 | 4 | 3 | 0% |
 | rfc4271 | 25 | 5 | 0 | 30 | 7 | 4 | 83% |
+| rfc4360 | 0 | 0 | 0 | 0 | 2 | 3 | - |
 | rfc4724 | 5 | 1 | 0 | 6 | 7 | 0 | 83% |
 | rfc4760 | 5 | 0 | 0 | 5 | 0 | 8 | 100% |
 | rfc5082 | 2 | 0 | 0 | 2 | 2 | 2 | 100% |
 | rfc5492 | 5 | 0 | 0 | 5 | 3 | 5 | 100% |
-| rfc6793 | 14 | 10 | 0 | 24 | 0 | 0 | 58% |
+| rfc6793 | 15 | 9 | 0 | 24 | 0 | 0 | 62% |
 | rfc7606 | 41 | 6 | 0 | 47 | 7 | 2 | 87% |
 | rfc7911 | 1 | 0 | 4 | 5 | 1 | 3 | 20% |
+| rfc8092 | 0 | 0 | 7 | 7 | 0 | 3 | 0% |
 | rfc9234 | 11 | 1 | 0 | 12 | 4 | 1 | 92% |
 
 ## rfc1997
@@ -26,7 +28,7 @@ run, so a requirement that is not in the document cannot appear in this table.
   exabgp does not aggregate routes.  It has no RIB-level route synthesis: every route it
 announces is one the operator or an API client wrote out in full, so no aggregate is ever
 formed for this rule to describe the communities of.
-- **COMMUNITIES attribute** (SHALL) `rfc1997#values-encoded-with-asn` - untested (missing: positive, negative)
+- **COMMUNITIES attribute** (SHALL) `rfc1997#values-encoded-with-asn` - known gap, demonstrated by a failing test
   > The rest of the community attribute values shall be encoded using an autonomous system number in the first two octets.
   Lowercase "shall", as above.  "The rest" is what is left after the two reserved ranges
 named in the sentence before it, and that exclusion is what gives this requirement a
@@ -34,6 +36,11 @@ negative side: a value in a reserved range is not encoded as ASN:value and must 
 rendered as though it were.  This is the one sentence in RFC 1997 which binds the wire
 format exabgp produces, and `configuration/static/parser.py` implements it as the
 `<asn>:<value>` syntax.
+  - `tests/unit/rfc/test_rfc1997_communities.py::test_a_configured_community_carries_the_asn_in_the_first_two_octets`
+  - `tests/unit/rfc/test_rfc1997_communities.py::test_a_community_off_the_wire_is_read_back_as_the_same_asn`
+  - `tests/unit/rfc/test_rfc1997_communities.py::test_a_reserved_value_is_not_given_the_asn_reading`
+  - `tests/unit/rfc/test_rfc1997_communities.py::test_a_value_too_large_for_its_half_does_not_overflow_into_the_asn`
+  - `tests/unit/rfc/test_rfc1997_communities.py::test_an_asn_too_large_for_two_octets_is_refused_by_the_parser`
 - **Operation** (MAY) `rfc1997#operation-append-attribute` - not-applicable
   > A BGP speaker receiving a route that does not have the COMMUNITIES path attribute may append this attribute to the route when propagating it to its peers.
   A permission granted to a speaker propagating a received route.  exabgp does not
@@ -352,6 +359,43 @@ kept as a GenericAttribute if the Transitive bit is set and dropped silently if 
 not, the handling RFC 4271 section 5 gives to an *optional* attribute.  The positive test
 demonstrates it.
   - `tests/unit/rfc/test_rfc4271_update.py::test_an_unrecognised_well_known_attribute_is_refused`
+
+## rfc4360
+
+- **6** (MAY) `rfc4360#6-append-attribute` - not-applicable
+  > A BGP speaker receiving a route that doesn't have the Extended Communities attribute MAY append this attribute to the route when propagating it to its peers.
+  A permission given to a speaker propagating a received route.  exabgp does not propagate
+received routes: what it received goes to its API, which reports it rather than forwards
+it, and what it announces comes from configuration or from an API client.  There is no
+propagation step at which the permission could be taken up.
+- **6** (MAY) `rfc4360#6-modify-attribute` - not-applicable
+  > A BGP speaker receiving a route with the Extended Communities attribute MAY modify this attribute according to the local policy.
+  As above, and with a second reason: exabgp has no local policy engine.  An operator
+changes what is announced by changing what they announce, which is not a received route
+having its attribute rewritten in flight.
+- **6** (SHOULD) `rfc4360#6-non-transitive-removed-across-as-boundary` - gap
+  > If a route has a non-transitivity extended community, then before advertising the route across the Autonomous System boundary the community SHOULD be removed from the route. However, the community SHOULD NOT be removed when advertising the route across the BGP Confederation boundary.
+  exabgp sends exactly the extended communities its configuration or its API asked for, on
+an eBGP session as on an iBGP one, and strips nothing.  `ExtendedCommunityBase.transitive`
+reads the T bit correctly but the only caller in the tree is the FlowSpec redirect
+community's JSON rendering: nothing in the sending path consults it.  Recorded as a gap
+rather than not-applicable because unlike re-advertisement this one does reach exabgp,
+since an operator can configure a non-transitive extended community on an eBGP neighbour
+today and exabgp will put it on the wire.  The counter-argument, that an operator who
+writes a community into a neighbour's configuration has asked for it on that session by
+definition, is why this is a SHOULD we decline rather than a defect.
+- **6** (MUST NOT) `rfc4360#6-not-used-to-modify-best-path` - not-applicable
+  > The Extended Community attribute MUST NOT be used to modify the BGP best path selection algorithm in a way that leads to forwarding loops.
+  exabgp runs no best path selection algorithm.  It has no decision process, holds no
+comparison between two paths for one prefix, and manipulates no FIB, so there is no
+algorithm here for an extended community to modify and no forwarding for a loop to form
+in.  This is one of the few obligations which is genuinely closed rather than deferred:
+adding path selection to exabgp would make it a different program, not a later version.
+- **7** (MUST NOT) `rfc4360#7-regular-and-extended-type-values-not-reused` - not-applicable
+  > The value allocated for a regular Type MUST NOT be reused as the value of the high-order octet when allocating an extended Type. The value of the high-order octet allocated for an extended Type MUST NOT be reused when allocating a regular Type.
+  Addressed to IANA, in the IANA Considerations section, and about how codepoints are
+allocated rather than how they are encoded or read.  No implementation can comply with or
+violate it; exabgp consumes the registry, it does not maintain it.
 
 ## rfc4724
 
@@ -801,7 +845,7 @@ the JSON API side by side. The positive test is xfail.
   > When a NEW BGP speaker receives an update from an OLD BGP speaker, it MUST be prepared to receive the AS4_PATH attribute along with the existing AS_PATH attribute.
   - `tests/unit/rfc/test_rfc6793_four_octet_as.py::test_an_as4_path_beside_an_as_path_is_accepted_and_used`
   - `tests/unit/rfc/test_rfc6793_four_octet_as.py::test_an_as_path_arriving_alone_is_left_exactly_as_it_came`
-- **4.2.3** (SHALL) `rfc6793#4.2.3-construct-by-prepending` - known gap, demonstrated by a failing test
+- **4.2.3** (SHALL) `rfc6793#4.2.3-construct-by-prepending` - proven
   > If the number of AS numbers in the AS_PATH attribute is larger than or equal to the number of AS numbers in the AS4_PATH attribute, then the AS path information SHALL be constructed by taking as many AS numbers and path segments as necessary from the leading part of the AS_PATH attribute, and then prepending them to the AS4_PATH attribute so that the AS path information has a number of AS numbers identical to that of the AS_PATH attribute.
   The rule names one number, the count of the reconstructed path, and that is what the
 positive test asserts across a set of inputs. It fails: merge_attributes counts the
@@ -811,6 +855,7 @@ zero, `[:-0]` is `[:0]`, and the whole leading part of the AS_PATH is thrown awa
 than all of it being kept. An AS4_PATH holding only an AS_SET therefore deletes every
 AS number in the AS_PATH's sequence.
   - `tests/unit/rfc/test_rfc6793_four_octet_as.py::test_the_reconstructed_path_has_as_many_as_numbers_as_the_as_path`
+  - `tests/unit/rfc/test_rfc6793_four_octet_as.py::test_an_as4_path_holding_only_a_set_still_replaces_the_as_trans`
   - `tests/unit/rfc/test_rfc6793_four_octet_as.py::test_the_reconstruction_never_makes_the_path_longer_than_the_as_path`
 - **4.2.3** (SHALL) `rfc6793#4.2.3-ignore-as4-path-when-as-path-is-shorter` - proven
   > If the number of AS numbers in the AS_PATH attribute is less than the number of AS numbers in the AS4_PATH attribute, then the AS4_PATH attribute SHALL be ignored, and the AS_PATH attribute SHALL be taken as the AS path information.
@@ -1259,6 +1304,72 @@ has nothing to bind to.
   > If a BGP speaker receives a message to withdraw a prefix with a Path Identifier not seen before, it SHOULD silently ignore it.
   Positive only: the requirement is that nothing happens, so the test is that the session
 survives and the RIB is unchanged. There is no second side to it.
+
+## rfc8092
+
+- **3** (SHOULD) `rfc8092#3-global-administrator-should-be-asn` - not-applicable
+  > This field SHOULD be an ASN, in which case the Local Data Parts are to be interpreted as defined by the owner of the ASN.
+  The obligation is on whoever chooses the community value, and in exabgp that is always
+the operator: large communities arrive as literal `a:b:c` triples in the configuration or
+over the API and exabgp assigns none of its own.  Refusing a non-ASN Global Administrator
+would break the operator's ability to carry the values their upstream told them to carry,
+which section 6 of this same document explicitly forbids treating as malformed.
+- **3** (MUST NOT) `rfc8092#3-no-duplicate-transmitted` - untested (missing: positive, negative)
+  > Duplicate BGP Large Community values MUST NOT be transmitted.
+  This binds the encoder, which is the half exabgp really has: `make_large_communities`
+sorts through a set, `LargeCommunities.add` refuses a value it already holds, and the
+configuration parser skips a repeat before it ever reaches either.  The negative side is
+the one which matters on the wire: a duplicate which arrived from a peer must not come
+back out of `pack_attribute` still duplicated.
+- **3** (MUST) `rfc8092#3-receiver-removes-redundant` - untested (missing: positive, negative)
+  > A receiving speaker MUST silently remove redundant BGP Large Community values from a BGP Large Community attribute.
+  `LargeCommunities.from_packet` walks the value in 12 byte steps and keeps the first
+occurrence of each, preserving order.  The negative side guards the other failure: a
+deduplicator which collapsed values that only look alike would pass every positive test,
+so distinct communities must survive intact and in order.
+- **3** (NOT RECOMMENDED) `rfc8092#3-reserved-asn-not-recommended` - not-applicable
+  > The use of Reserved ASNs (0 [RFC7607], 65535 and 4294967295 [RFC7300]) is NOT RECOMMENDED.
+  Same reason as the SHOULD above: the choice of Global Administrator is the operator's,
+not exabgp's.  Note that declining to enforce this is not merely allowed but required, by
+rfc8092#6-unallocated-global-administrator-not-malformed, which says in as many words
+that a reserved ASN in that field does not make the attribute malformed.
+- **5** (MUST NOT) `rfc8092#5-canonical-no-leading-zeros` - untested (missing: positive, negative)
+  > Numbers MUST NOT contain leading zeros; a zero value MUST be represented with a single zero.
+  `LargeCommunity._get_string` formats with '%d:%d:%d', which satisfies both halves of the
+sentence.  It is worth a test anyway: this is the rendering the text API and every log
+line use, a zero-padded or width-aligned format string would look tidier to whoever next
+edits it, and nothing else in the tree would notice.
+- **5** (SHOULD) `rfc8092#5-canonical-representation` - untested (missing: positive, negative)
+  > BGP Large Communities SHOULD be represented in the canonical representation.
+  Held for the text rendering, which is what `repr()` and the text API produce.  The JSON
+API renders a large community as a three element array rather than as the canonical
+string; that is a structured encoding of the same three integers in the same order rather
+than a competing textual representation, so it is not read as a breach of this SHOULD.
+- **6** (SHALL NOT) `rfc8092#6-duplicates-not-malformed` - untested (missing: positive, negative)
+  > A BGP Large Communities attribute SHALL NOT be considered malformed due to presence of duplicate Large Community values.
+  The interesting pairing with rfc8092#3-receiver-removes-redundant: the duplicate is
+removed, and removing it is not an error.  The negative side checks the tolerance is not
+blanket - an attribute which is both duplicated and of a bad length is still malformed.
+- **6** (SHALL) `rfc8092#6-malformed-if-not-nonzero-multiple-of-12` - untested (missing: positive, negative)
+  > A BGP Large Communities attribute SHALL be considered malformed if the length of the BGP Large Communities Attribute value, expressed in octets, is not a non-zero multiple of 12.
+  Two decoders share this.  `LargeCommunities.from_packet` rejects a length which is not a
+multiple of 12, and `AttributeCollection.parse` rejects the zero length case separately,
+through `VALID_ZERO` being false, before `from_packet` is ever called.  Split like that,
+the "non-zero" half is easy to lose, so the negative test feeds both a 13 byte value and
+an empty one.
+- **6** (SHALL) `rfc8092#6-treat-as-withdraw` - untested (missing: positive, negative)
+  > A BGP UPDATE message with a malformed BGP Large Communities attribute SHALL be handled using the approach of "treat-as- withdraw" as described in Section 2 of [RFC7606].
+  `LargeCommunities.TREAT_AS_WITHDRAW` is what expresses this, and `AttributeCollection`
+turns the Notify from the decoder into an INTERNAL_TREAT_AS_WITHDRAW marker rather than
+letting it reach the reactor.  The distinction the negative test has to make is between
+treat-as-withdraw and a session reset: a NOTIFICATION over one badly encoded optional
+transitive attribute is exactly the failure RFC 7606 exists to remove.
+- **6** (MUST NOT) `rfc8092#6-unallocated-global-administrator-not-malformed` - untested (missing: positive, negative)
+  > The BGP Large Communities Global Administrator field may contain any value, and a BGP Large Communities attribute MUST NOT be considered malformed if the Global Administrator field contains an unallocated, unassigned, or reserved ASN.
+  exabgp does not look at the field, which is the compliant behaviour here, so the positive
+test is that AS 0, AS 65535, AS 4294967295 and a private ASN all decode.  The negative
+side is that this tolerance is a rule about one field and not about the attribute: a
+reserved ASN in a value of the wrong length is still malformed.
 
 ## rfc9234
 
