@@ -16,12 +16,21 @@ it through, and in each case the outcome is the wrong one.
     IPv4-mapped connections which match no configured neighbour. Two independent options
     sharing one handler is how one failure silently becomes two.
 
+    This is hygiene rather than an observed fault. No supported platform refuses
+    `SO_REUSEADDR`, `IPV6_V6ONLY` only changes what a wildcard `::` bind accepts, and a
+    connection matching no neighbour is closed with NOTIFICATION 6/3 whatever the socket
+    let in.
+
 3.  `Cache.in_cache` compared next hops inside a `try`, swallowed `AttributeError`, and
     then fell through to `return True`. True means "already advertised", and
     `outgoing.py` reads it as permission to skip the announce, so an unexpected error
     there dropped a route with no log. The safe direction for an error in a
     deduplication check is to say "not seen", which re-announces, rather than to say
     "seen", which loses the route.
+
+    The error cannot happen today: `Route.nexthop` always exists and every `IP`, the
+    `NoNextHop` singleton included, has `index()`. The test pins the direction the
+    handler fails in, for the day a next hop without `index()` appears.
 """
 
 from __future__ import annotations

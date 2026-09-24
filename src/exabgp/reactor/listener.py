@@ -56,9 +56,10 @@ def set_listener_options(sock: Any, ipv6: bool) -> None:
     """Set the two listening socket options, each on its own terms.
 
     SO_REUSEADDR and IPV6_V6ONLY used to share one try, so a platform refusing the first
-    silently skipped the second and the listener accepted IPv4-mapped connections which
-    match no configured neighbour. They are independent requests and are now made
-    independently.
+    would have silently skipped the second. They are independent requests and are now
+    made independently. No supported platform is known to refuse SO_REUSEADDR, and a
+    connection which matches no neighbour is closed with NOTIFICATION 6/3 whatever the
+    socket accepted, so this is about saying what happened rather than a fault seen.
 
     Neither is required to bind. SO_REUSEADDR only smooths a restart, and a kernel without
     it still binds; a bind which genuinely cannot happen fails loudly at bind() below. A

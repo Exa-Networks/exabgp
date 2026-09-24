@@ -77,8 +77,9 @@ class Cache:
         # Use route.nexthop (nexthop is stored in Route, not NLRI)
         #
         # An error comparing the two next hops used to fall through to `return True`, and
-        # True is read by outgoing.py as permission to skip the announce. So a next hop
-        # this code could not compare silently dropped the route.
+        # True is read by outgoing.py as permission to skip the announce. Nothing reaches
+        # that today, as Route.nexthop always exists and every IP, NoNextHop included, has
+        # index(); if a next hop without it ever appears, it must not drop the route.
         #
         # False is the safe direction for a deduplication check which cannot answer: it
         # re-announces something the peer may already have, where True loses a route the

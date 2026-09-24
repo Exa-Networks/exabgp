@@ -19,8 +19,13 @@ named `addpath` is a `PathInfo`, the identifier itself. All five assigned the fi
 second, and the parameter was annotated `Any`, so `nlri.addpath = addpath` type-checked.
 Typing the parameter `bool` is what surfaced it.
 
-`add-path` in the configuration accepts any AFI/SAFI, so this is reachable: it needs only
-`add-path { l2vpn evpn; }` and a peer which agrees.
+A live session does not reach this.  `add-path` in the configuration accepts any AFI/SAFI,
+but `Capabilities._addpath` only offers the capability for the families in `_ADD_PATH`
+(unicast, labelled unicast and VPN), and `Negotiated` only turns ADD-PATH on for a family
+our own OPEN carried.  What does reach it is `configuration/check.py`, which builds the
+capability from the configured families unfiltered and backs the offline tools (`exabgp
+encode`, `exabgp configuration validate`), so those misparsed with `add-path { l2vpn evpn; }`.  The decoders are right now for the day one of these
+families joins `_ADD_PATH`, which needs the encoder half first.
 """
 
 from __future__ import annotations

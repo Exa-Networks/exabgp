@@ -129,3 +129,31 @@ Ordered by value over risk. Each is its own commit with a full suite run.
   suite, some doc edits and every commit have to run unsandboxed. A sandboxed run reports
   20 spurious socket failures.
 - `UV_CACHE_DIR` must be set to a writable path for any sandboxed `uv` call.
+
+## Corrections after review (2026-09-24)
+
+A second pass checked every fix against the code before it and the RFCs. Items 1 to 3
+(RFC 7606 communities, RFC 8669 Prefix-SID discard, CLI reset) stand as written. These
+did not:
+
+- **Item 5, `51049611c`.** The diagnosis was wrong. CPython exports `socket.IP_MINTTL` on
+  no platform at all, so the IPv4 inbound GTSM check was never installed anywhere, Linux
+  included, since `a004cc260`. The warning that commit added fired on Linux with the false
+  reason "this platform has no IP_MINTTL". Fixed by taking the option number from the
+  kernel headers (Linux 21, FreeBSD 66) when `socket` does not export it, as `min_ttlv6`
+  already does. Still open: `min_ttl` also sets `IP_TTL` to the configured minimum, where
+  RFC 5082 has the sender use 255.
+- **Item 8, `a57f0ea98`.** Not the behaviour changes it claimed. `SO_REUSEADDR` is not
+  refused on any supported platform, and an unknown peer is closed with NOTIFICATION 6/3
+  whatever the socket accepted. The `Cache.in_cache` `AttributeError` is unreachable:
+  every `IP`, `NoNextHop` included, has `index()`. The async notifier change adds a log
+  line and does not stop the hang. The code is kept as hygiene; the comments now say so.
+- **Item 9, `68f2ce53b`.** Not reachable from a live session. `Capabilities._ADD_PATH`
+  only offers ADD-PATH for unicast, labelled unicast and VPN, and `Negotiated` needs our
+  own OPEN to carry the family, so `add-path { l2vpn evpn; }` never negotiates it. Only
+  `configuration/check.py`, which builds the capability unfiltered, reached the decoders.
+  FlowSpec, VPLS and RTC ignore the identifier the same way and were left alone. The
+  commit message of `68f2ce53b` still carries the wrong claim.
+- **Item 33.** Follows from item 9: exabgp cannot negotiate ADD-PATH for these families,
+  so no peer misparses what we send. It is a feature gap, and adding one of them to
+  `_ADD_PATH` must wait for the encoder.
