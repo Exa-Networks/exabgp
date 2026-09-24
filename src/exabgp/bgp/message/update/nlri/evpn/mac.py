@@ -200,8 +200,20 @@ class MAC(EVPN):
         cls.check_length(packed, 32)
         maclength = packed[24]
 
-        if maclength > MAC_ADDRESS_LEN_BITS or maclength < 0:
-            raise Notify(3, 5, 'invalid MAC Address length in {}'.format(cls.NAME))
+        # RFC 7432 9.2.1: "The encoding of a MAC address MUST be the 6-octet MAC address
+        # specified by [802.1Q] and [802.1D-REV]".  Only a length above 48 used to be
+        # refused, and the six octets are read from a fixed offset whatever the field
+        # says, so a peer sending 24 was accepted and then rendered as
+        # 00:11:22:33:44:55/24 by __str__ and json(): a MAC prefix length nobody sent,
+        # published to every API client.  The `< 0` arm it replaces could not fire, since
+        # the value comes from indexing bytes.
+        if maclength != MAC_ADDRESS_LEN_BITS:
+            raise Notify(
+                3,
+                5,
+                'MAC Address length is given as %d bits in %s, and RFC 7432 9.2.1 allows only %d'
+                % (maclength, cls.NAME, MAC_ADDRESS_LEN_BITS),
+            )
 
         iplen_byte = 31  # After MAC address (2+8+10+4+1+6 = 31)
         iplen_bits = packed[iplen_byte]

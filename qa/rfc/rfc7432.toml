@@ -1,0 +1,341 @@
+# RFC 7432 - BGP MPLS-Based Ethernet VPN (EVPN)
+# https://www.rfc-editor.org/rfc/rfc7432
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc7432.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Two things about this document shape the ledger.
+#
+# First, the wire format itself is stated without a single RFC 2119 keyword.  Section 7
+# says "The Route Type field defines the encoding of the rest of the EVPN NLRI" and "The
+# Length field indicates the length in octets of the Route Type specific field of the
+# EVPN NLRI", both in plain declarative prose, and section 5 says "An ESI is encoded as a
+# 10-octet integer in line format with the most significant octet sent first" the same
+# way.  The four route type diagrams in sections 7.1 to 7.4 carry no keyword either.  So
+# the single most important thing exabgp does with this RFC - decode the Route Type and
+# Length octets and the four payload layouts - is not a recordable requirement, and is
+# not recorded below.  It is covered by tests all the same; they are simply marked
+# against the keyword-bearing sentences in sections 8, 9 and 10 that constrain the same
+# fields.  RFC 1997 and RFC 4360 have the same shape and their ledgers say so.
+#
+# Second, RFC 7432 is written to a PE that bridges Ethernet, learns MAC addresses in the
+# data plane, elects a designated forwarder and programs an MPLS forwarding table.
+# exabgp is none of those.  It encodes and decodes the EVPN NLRI and hands it to a JSON
+# API.  So a large part of the document genuinely cannot bind it, and the `note` on each
+# `not-applicable` entry says which missing piece of exabgp it is addressed to rather
+# than leaving it at "we are not a PE".
+
+rfc = "rfc7432"
+title = "BGP MPLS-Based Ethernet VPN (EVPN)"
+url = "https://www.rfc-editor.org/rfc/rfc7432"
+
+# ----------------------------------------------------------------- route type 2
+
+[[requirement]]
+id = "rfc7432#9.2.1-mac-encoding-six-octets"
+section = "9.2.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The encoding of a MAC address MUST be the 6-octet MAC
+   address specified by [802.1Q] and [802.1D-REV].
+"""
+note = """
+Recorded as required and reported as a known gap: the negative test is xfail, so the
+requirement shows as demonstrated rather than proven until the check is fixed.
+The positive half holds: a MAC Address Length of 48 with six octets of MAC behind it
+decodes, and `MAC.unpack_evpn` sizes the whole route from it.  The negative half does
+not.  The only check is `maclength > MAC_ADDRESS_LEN_BITS or maclength < 0`, so a route
+announcing a MAC Address Length of 0, 24 or 47 is accepted, the six octets are read
+anyway because the total length works out, and the JSON goes out claiming a MAC prefix
+length nobody sent.  The `< 0` arm cannot fire at all: the value came from indexing
+bytes.  See the xfail test in tests/unit/rfc/test_rfc7432_evpn.py.
+"""
+
+[[requirement]]
+id = "rfc7432#9.2.1-ip-encoding-four-or-sixteen"
+section = "9.2.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The
+   encoding of an IP address MUST be either 4 octets for IPv4 or
+   16 octets for IPv6.
+"""
+note = """
+`MAC.unpack_evpn` maps an IP Address Length of 0, 32 or 128 bits to the set of total NLRI
+sizes each allows, and raises `Notify` both when the length is something else and when it
+is one of the three but disagrees with the size of the route.  That second check is the
+one worth a negative test: a decoder which only validated the length octet would read
+four octets of label as an address.
+"""
+
+# ------------------------------------------------------- route types 1 and 4, ESI
+
+[[requirement]]
+id = "rfc7432#8.1.1-esi-ten-octet"
+section = "8.1.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Ethernet Segment Identifier (ESI) MUST be set to the 10-octet
+   value described in Section 5.
+"""
+note = """
+The Ethernet Segment route fixes the ESI at bytes 10 to 20 of the wire form and `ESI`
+itself refuses any buffer that is not exactly ten bytes.  The negative side is a type 4
+route whose payload stops inside the ESI: `check_length` has to turn that into a `Notify`
+before any field is read, because the accessors index into the packed bytes and would
+otherwise hand back a short or empty slice.
+"""
+
+[[requirement]]
+id = "rfc7432#8.4.1-esi-ten-octet-ad"
+section = "8.4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Ethernet Segment Identifier MUST be a 10-octet entity as
+   described in Section 5 ("Ethernet Segment").
+"""
+note = """
+Same obligation on the Ethernet A-D route, where it matters more: the label stack is
+variable length, so there is no total size to cross-check the ESI against.  All that
+stands between a truncated A-D route and an IndexError out of the `esi` accessor is the
+24 byte floor in `EthernetAD.unpack_evpn`.
+"""
+
+[[requirement]]
+id = "rfc7432#8.2.1-esi-label-extended-community-included"
+section = "8.2.1"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+The ESI Label extended community MUST be included in the route.
+"""
+note = """
+exabgp has no ESI Label extended community at all.  Type 0x06 sub-type 0x01 is not in
+`ExtendedCommunity.registered_extended`, so one arriving from a peer decodes to a generic
+`ExtendedCommunity` and is reported as a hex blob with neither the Single-Active flag nor
+the label parsed out, and there is no configuration syntax to originate one.  The table
+at the top of extended/__init__.py compounds it by listing ESI Label as sub-type 0x04,
+which section 7.5 of this document says is 0x01.
+"""
+
+[[requirement]]
+id = "rfc7432#8.1.1-es-import-route-target-carried"
+section = "8.1.1"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+The BGP advertisement that advertises the Ethernet Segment route MUST
+   also carry an ES-Import Route Target, as defined in Section 7.6.
+"""
+note = """
+exabgp will happily originate a type 4 route with no ES-Import Route Target, and has no
+class for one: section 7.6 extends the Route Target extended community to a high-order
+octet of 0x06 with sub-type 0x02 and a 6-octet MAC value, and exabgp's `RouteTarget`
+subclasses cover only the 0x00, 0x01 and 0x02 types of RFC 4360.  A received 0x06/0x02
+falls through to a generic `ExtendedCommunity` and is neither recognised as a route
+target nor rendered as a MAC.
+"""
+
+[[requirement]]
+id = "rfc7432#8.1.1-rd-type-1"
+section = "8.1.1"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+The Route Distinguisher (RD) MUST be a Type 1 RD [RFC4364].
+"""
+note = """
+exabgp encodes whatever route distinguisher the operator writes into an EVPN route and
+the configuration parser accepts the type 0 and type 2 forms for a type 4 route as
+readily as the type 1 form.  Nothing in `EthernetSegment` looks at the RD type octets.
+This is a deliberate-looking omission rather than an oversight - exabgp exists to send
+what it is told - but it is still a MUST we do not meet, so it is recorded as a gap
+rather than excused.
+"""
+
+# ------------------------------------------------ obligations on a PE, not on us
+
+[[requirement]]
+id = "rfc7432#7.9-rd-set-to-mac-vrf"
+section = "7.9"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The Route Distinguisher (RD) MUST be set to the RD of the MAC-VRF
+   that is advertising the NLRI.
+"""
+note = """
+exabgp has no MAC-VRF.  There is no bridge table, no local Ethernet segment and no
+per-instance forwarding context in the process for an RD to be the RD *of*: the RD is a
+literal in the configuration or in an API line, and the requirement constrains a value
+exabgp has no way to derive.
+"""
+
+[[requirement]]
+id = "rfc7432#7.9-rd-unique-per-pe"
+section = "7.9"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+This RD MUST be unique across all MAC-VRFs on a PE.
+"""
+note = """
+Same reason: uniqueness is across MAC-VRFs, and exabgp instantiates none.  Two EVPN
+routes configured with the same RD are two routes exabgp was asked to send, and it has no
+second MAC-VRF to compare the first against.
+"""
+
+[[requirement]]
+id = "rfc7432#7.6-rt-constraint-applies-to-es-import"
+section = "7.6"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+A BGP speaker that implements RT Constraint
+   [RFC4684] MUST apply the RT Constraint procedures to the ES-Import RT
+   as well.
+"""
+note = """
+The antecedent does not hold.  exabgp encodes and decodes the RFC 4684 RTC NLRI as a
+family it can carry, but implements none of the constraint procedures: it does no import
+filtering of received routes by route target, keeps no per-peer RT membership, and never
+originates an RTC route of its own from what it has imported.  A speaker with no import
+filter cannot extend one to the ES-Import RT.
+"""
+
+[[requirement]]
+id = "rfc7432#6.1-ethernet-tag-zero-vlan-based"
+section = "6.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The Ethernet Tag
+   ID in all EVPN routes MUST be set to 0.
+"""
+note = """
+This binds a PE offering the VLAN-based service interface of section 6.1, and the
+obligation follows from which service interface the PE's attachment circuits are
+configured for.  exabgp has no attachment circuits and no service interface setting, so
+nothing in the process can tell which of sections 6.1, 6.2 and 6.3 it is in, and the
+Ethernet Tag ID is whatever the operator put in the route.
+"""
+
+[[requirement]]
+id = "rfc7432#8.2.1-ad-per-es-etag-max-et"
+section = "8.2.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The Ethernet Tag ID MUST be set to MAX-ET.
+"""
+note = """
+MAX-ET marks an Ethernet A-D route as being per Ethernet Segment rather than per EVPN
+instance, and the two are the same route type on the wire.  exabgp has a single
+`EthernetAD` class and no notion of an Ethernet Segment, so it cannot know which of the
+two an operator meant and cannot impose a tag value on either.  Both forms decode; the
+distinction lives entirely in the mind of the PE that sent them.
+"""
+
+[[requirement]]
+id = "rfc7432#11.1-originating-router-ip"
+section = "11.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The Originating Router's IP Address field value MUST be set to an IP
+   address of the PE that should be common for all the EVIs on the PE
+   (e.g., this address may be the PE's loopback address).
+"""
+note = """
+exabgp does not know which of its addresses is "the PE's", nor what its EVIs are - it has
+none.  The field is taken verbatim from the configured route, and the only part of this
+sentence exabgp can enforce is the IP Address Length that follows it, which
+`Multicast.unpack_evpn` does check against the size of the route.
+"""
+
+[[requirement]]
+id = "rfc7432#11.1-next-hop-advertising-pe"
+section = "11.1"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+The Next Hop field of the MP_REACH_NLRI attribute of the route MUST
+   be set to the IPv4 or IPv6 address of the advertising PE.
+"""
+note = """
+exabgp puts the configured next-hop into MP_REACH_NLRI and does not check that it is an
+address of the local speaker: `next-hop` may name any address, including one belonging to
+another router, and `self` is resolved to the session's local address rather than
+enforced.  Route injection into someone else's next-hop is the whole point of several
+exabgp deployments, so this is a gap we are unlikely to close, but it is a gap.
+"""
+
+[[requirement]]
+id = "rfc7432#10-ip-address-length-arp-nd"
+section = "10"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+For ARP and ND purposes, the IP Address Length field MUST
+   be set to 32 for an IPv4 address or 128 for an IPv6 address.
+"""
+note = """
+"For ARP and ND purposes" is the whole of it.  exabgp answers no ARP request, snoops no
+neighbour discovery, and holds no IP-to-MAC binding, so it never originates a MAC/IP
+route from an ARP entry.  The 32-or-128 constraint on the field itself is enforced on
+receipt and is recorded at rfc7432#9.2.1-ip-encoding-four-or-sixteen, where it is a
+statement about the encoding rather than about ARP.
+"""
+
+[[requirement]]
+id = "rfc7432#15-mac-mobility-sequence-wraparound"
+section = "15"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+In order to process mobility events correctly, an implementation MUST
+   handle scenarios in which sequence number wraparound occurs.
+"""
+note = """
+exabgp processes no mobility events.  It has no MAC table, so it never compares a
+received sequence number against a stored one and has no state a wraparound could corrupt;
+`MacMobility` decodes the 4-octet number and the sticky bit and passes both to the API,
+where an external process holds whatever mobility state the deployment needs.
+"""
+
+[[requirement]]
+id = "rfc7432#5-operator-must-configure-unique-esi"
+section = "5"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+however, if the CE(s) is (are) not managed, then the operator MUST
+   configure a network-wide unique ESI for that Ethernet segment.
+"""
+note = """
+The subject of this MUST is the operator, not the implementation.  exabgp cannot see the
+network, has no view of ESIs configured on anyone else's PE, and treats the ESI as ten
+opaque octets - `esi.py` says so in as many words and does not even parse the ESI Type.
+There is no input exabgp could reject to make this true.
+"""
