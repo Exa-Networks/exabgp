@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 from datetime import datetime
@@ -48,16 +49,20 @@ def _get_base_version() -> str:
     2. pyproject.toml (dev checkout)
     3. 'unknown' fallback
     """
-    # Try importlib.metadata first (installed package)
-    try:
+    # A development checkout has no installed distribution metadata at all, so being
+    # unable to answer here is the ordinary case rather than a fault, and pyproject.toml
+    # below is where that checkout keeps the version.
+    with contextlib.suppress(Exception):
         from importlib.metadata import version as pkg_version
 
         return pkg_version('exabgp')
-    except Exception:
-        pass
 
     # Fall back to parsing pyproject.toml (dev checkout)
-    try:
+    # A zipapp or an installed wheel ships no pyproject.toml beside the module, and this
+    # runs while exabgp.version is still being imported, before there is a logger or a
+    # stderr convention to use. The failure is not silent either way: the version becomes
+    # the literal 'unknown' below, which is what every --version and JSON header reports.
+    with contextlib.suppress(Exception):
         import tomllib
 
         pyproject = os.path.join(os.path.dirname(__file__), '..', '..', 'pyproject.toml')
@@ -65,8 +70,6 @@ def _get_base_version() -> str:
             with open(pyproject, 'rb') as f:
                 version: str = tomllib.load(f)['project']['version']
                 return version
-    except Exception:
-        pass
 
     return 'unknown'
 

@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 import ctypes
 import json
 import re
@@ -24,7 +25,7 @@ from exabgp.cli.command_schema import get_command_spec
 from exabgp.cli.formatter import OutputFormatter
 from exabgp.cli.fuzzy import FuzzyMatcher
 from exabgp.cli.history import HistoryTracker
-from exabgp.cli.schema_bridge import ValueTypeCompletionEngine, ValidationState
+from exabgp.cli.schema_bridge import ValueTypeCompletionEngine
 from exabgp.reactor.api.command.registry import CommandRegistry
 
 
@@ -91,6 +92,10 @@ class CommandCompleter:
         self.last_line = ''
         self.last_matches: list[str] = []
 
+        # An internal completion failure is reported once and then kept quiet, as the
+        # completer is called for every TAB and every '?' the user types.
+        self._completion_failure_reported = False
+
         # Try to get access to readline's rl_replace_line for line editing
         self._rl_replace_line = self._get_rl_replace_line()
         self._rl_forced_update_display = self._get_rl_forced_update_display()
@@ -117,39 +122,31 @@ class CommandCompleter:
 
     def _get_rl_replace_line(self) -> Callable[..., None] | None:
         """Try to get rl_replace_line function from readline library via ctypes"""
-        try:
-            # Try to load the readline library
-            if sys.platform == 'darwin':
-                # macOS uses libedit by default
-                lib = ctypes.CDLL('/usr/lib/libedit.dylib')
-                # libedit calls it rl_replace_line
-                rl_replace_line = lib.rl_replace_line
-            else:
-                # Linux typically uses GNU readline
-                lib = ctypes.CDLL('libreadline.so')
-                rl_replace_line = lib.rl_replace_line
-
+        # Reaching into the C library is an optimisation: with it the completer rewrites
+        # the line in place, without it the user gets plain completion of the word under
+        # the cursor. Every way of not finding the symbol, a libedit built without it, a
+        # distribution which ships only libreadline.so.8, a platform with neither, means
+        # the same thing to the caller, which tests the result for None.
+        library = '/usr/lib/libedit.dylib' if sys.platform == 'darwin' else 'libreadline.so'
+        with contextlib.suppress(OSError, AttributeError):
+            rl_replace_line = ctypes.CDLL(library).rl_replace_line
             # Set argument and return types
             rl_replace_line.argtypes = [ctypes.c_char_p, ctypes.c_int]
             rl_replace_line.restype = None
             return rl_replace_line
-        except (OSError, AttributeError):
-            return None
+        return None
 
     def _get_rl_forced_update_display(self) -> Callable[..., None] | None:
         """Try to get rl_forced_update_display function from readline library via ctypes"""
-        try:
-            if sys.platform == 'darwin':
-                lib = ctypes.CDLL('/usr/lib/libedit.dylib')
-            else:
-                lib = ctypes.CDLL('libreadline.so')
-
-            rl_forced_update_display = lib.rl_forced_update_display
+        # As above: this only redraws the prompt after the line has been rewritten, and
+        # the caller checks for None before using it.
+        library = '/usr/lib/libedit.dylib' if sys.platform == 'darwin' else 'libreadline.so'
+        with contextlib.suppress(OSError, AttributeError):
+            rl_forced_update_display = ctypes.CDLL(library).rl_forced_update_display
             rl_forced_update_display.argtypes = []
             rl_forced_update_display.restype = ctypes.c_int
             return rl_forced_update_display
-        except (OSError, AttributeError):
-            return None
+        return None
 
     def _is_help_mode(self, line: str, text: str) -> bool:
         """Detect if user is requesting help (line ends with '?').
@@ -190,81 +187,99 @@ class CommandCompleter:
             if text == '?':
                 text = ''
 
-            # Parse the line into tokens
-            # Note: "?" key is bound to rl_complete (same as TAB) so it triggers
-            # completion without appearing in the line buffer
-            tokens = line[:begin].split()
-
             # Generate matches based on context
-            if state == 0:
-                # First call - try to auto-expand any unambiguous tokens
-                expanded_prefix, expansions_made = self._try_auto_expand_tokens(tokens)
-
-                if expansions_made and self._rl_replace_line:
-                    # We have expansions and can modify the line directly
-                    suffix = line[end:]  # Everything after the current word
-
-                    # Get completions for current word in expanded context
-                    current_matches = self._get_completions(expanded_prefix, text)
-
-                    # Build the full replacement
-                    prefix_str = ' '.join(expanded_prefix) + (' ' if expanded_prefix else '')
-
-                    if len(current_matches) == 1:
-                        # Single match - replace entire line with expanded version
-                        new_line = prefix_str + current_matches[0] + ' ' + suffix
-                        self._rl_replace_line(new_line.encode('utf-8'), 0)
-                        if self._rl_forced_update_display:
-                            self._rl_forced_update_display()
-                        # Return empty list to signal completion is done
-                        self.matches = []
-                        return None
-                    elif len(current_matches) > 1:
-                        # Multiple matches - replace prefix but let user complete current word
-                        new_line = prefix_str + text + suffix
-                        self._rl_replace_line(new_line.encode('utf-8'), 0)
-                        if self._rl_forced_update_display:
-                            self._rl_forced_update_display()
-                        # Now return completions for the current word
-                        self.matches = current_matches
-                    else:
-                        # No matches after expansion - just expand the prefix
-                        new_line = prefix_str + text + suffix
-                        self._rl_replace_line(new_line.encode('utf-8'), 0)
-                        if self._rl_forced_update_display:
-                            self._rl_forced_update_display()
-                        self.matches = []
-                        return None
-
-                # No expansion or can't modify line - generate matches for current token
-                if not expansions_made or not self._rl_replace_line:
-                    self.matches = self._get_completions(tokens, text)
-
-                # macOS libedit: Display all matches on first TAB/? press
-                # (GNU readline has built-in display via show-all-if-ambiguous)
-                if self.is_libedit and len(self.matches) > 1:
-                    # Check if this is a new completion (avoid repeating on subsequent TABs)
-                    current_line = readline.get_line_buffer()
-                    if current_line != self.last_line or self.matches != self.last_matches:
-                        # Display matches with descriptions (and help if requested)
-                        self._display_matches_and_redraw(self.matches, line, show_help=show_help)
-                        self.last_line = current_line
-                        self.last_matches = self.matches.copy()
-
-            # Return the next match
-            try:
-                match = self.matches[state]
-                # Add space suffix for unambiguous completion (single match only)
-                if len(self.matches) == 1 and state == 0 and not match.startswith('\b'):
-                    return match + ' '
-                return match
-            except IndexError:
+            if state == 0 and not self._refresh_matches(text, line, begin, end, show_help):
                 return None
-        except Exception:
-            # If any exception occurs during completion (e.g., socket errors, JSON parsing),
-            # silently fail and return no completions. This prevents readline from breaking.
-            # Completion is a nice-to-have feature - don't let it crash the CLI.
+
+            # readline walks state upwards and stops the first time it is told there is
+            # nothing more, so an index past the end of the list is how the walk ends.
+            if state >= len(self.matches):
+                return None
+
+            match = self.matches[state]
+            # Add space suffix for unambiguous completion (single match only)
+            if len(self.matches) == 1 and state == 0 and not match.startswith('\b'):
+                return match + ' '
+            return match
+        except Exception as exc:
+            # readline throws away anything a completion function raises, so a broken
+            # completion path would spend the whole session offering nothing and never
+            # say why. Report it once: this is called for every TAB and every '?', and
+            # repeating the message would make the prompt unusable.
+            if not self._completion_failure_reported:
+                self._completion_failure_reported = True
+                sys.stderr.write(f'\ncommand completion failed and offered nothing: {exc!r}\n')
+                sys.stderr.write('further completion failures in this session will not be reported\n')
+                sys.stderr.flush()
             return None
+
+    def _refresh_matches(self, text: str, line: str, begin: int, end: int, show_help: bool) -> bool:
+        """Rebuild the match list for a newly started completion.
+
+        Args:
+            text: Current word being completed
+            line: Full line buffer
+            begin: Index in line where the current word starts
+            end: Index in line where the current word ends
+            show_help: Whether the user asked for help with '?'
+
+        Returns:
+            True when self.matches holds candidates to offer, False when the line was
+            rewritten in place and there is nothing left for readline to insert.
+        """
+        # Parse the line into tokens
+        # Note: "?" key is bound to rl_complete (same as TAB) so it triggers
+        # completion without appearing in the line buffer
+        tokens = line[:begin].split()
+
+        # First call - try to auto-expand any unambiguous tokens
+        expanded_prefix, expansions_made = self._try_auto_expand_tokens(tokens)
+
+        if expansions_made and self._rl_replace_line:
+            # We have expansions and can modify the line directly
+            suffix = line[end:]  # Everything after the current word
+
+            # Get completions for current word in expanded context
+            current_matches = self._get_completions(expanded_prefix, text)
+
+            # Build the full replacement
+            prefix_str = ' '.join(expanded_prefix) + (' ' if expanded_prefix else '')
+
+            if len(current_matches) == 1:
+                # Single match - replace entire line with expanded version
+                self._replace_line(prefix_str + current_matches[0] + ' ' + suffix)
+                self.matches = []
+                return False
+
+            # Replace the prefix and let the user complete the current word
+            self._replace_line(prefix_str + text + suffix)
+            self.matches = current_matches
+            if not current_matches:
+                return False
+        else:
+            # No expansion or can't modify line - generate matches for current token
+            self.matches = self._get_completions(tokens, text)
+
+        # macOS libedit: Display all matches on first TAB/? press
+        # (GNU readline has built-in display via show-all-if-ambiguous)
+        if self.is_libedit and len(self.matches) > 1:
+            # Check if this is a new completion (avoid repeating on subsequent TABs)
+            current_line = readline.get_line_buffer()
+            if current_line != self.last_line or self.matches != self.last_matches:
+                # Display matches with descriptions (and help if requested)
+                self._display_matches_and_redraw(self.matches, line, show_help=show_help)
+                self.last_line = current_line
+                self.last_matches = self.matches.copy()
+
+        return True
+
+    def _replace_line(self, new_line: str) -> None:
+        """Rewrite readline's line buffer in place and redraw the prompt."""
+        if not self._rl_replace_line:
+            return
+        self._rl_replace_line(new_line.encode('utf-8'), 0)
+        if self._rl_forced_update_display:
+            self._rl_forced_update_display()
 
     def _try_auto_expand_tokens(self, tokens: list[str]) -> tuple[list[str], bool]:
         """
@@ -815,16 +830,15 @@ class CommandCompleter:
         # In this case, suggest route attributes (next-hop, as-path, etc.)
         # This must come BEFORE _is_peer_command check (which would return base commands)
         if len(expanded_tokens) >= 3 and 'route' in expanded_tokens:
-            try:
-                route_idx = expanded_tokens.index('route')
-                # Check if token after 'route' looks like IP/prefix
-                if route_idx < len(expanded_tokens) - 1:
-                    potential_prefix = expanded_tokens[route_idx + 1]
-                    if self._is_ip_or_prefix(potential_prefix):
-                        # We have "route <ip-prefix>", suggest route attributes
-                        return self._complete_route_spec(expanded_tokens, text)
-            except ValueError:
-                pass
+            # The membership test above is what makes index() safe, so nothing here can
+            # raise: the guarded call it used to sit inside hid that rather than said it.
+            route_idx = expanded_tokens.index('route')
+            # Check if token after 'route' looks like IP/prefix
+            if route_idx < len(expanded_tokens) - 1:
+                potential_prefix = expanded_tokens[route_idx + 1]
+                if self._is_ip_or_prefix(potential_prefix):
+                    # We have "route <ip-prefix>", suggest route attributes
+                    return self._complete_route_spec(expanded_tokens, text)
 
         # Special case: "announce route" - suggest "refresh" keyword only
         # This must come BEFORE _is_peer_command check
@@ -1221,23 +1235,12 @@ class CommandCompleter:
         if command_name:
             cmd_spec = get_command_spec(command_name)
             if cmd_spec:
-                # Find the route prefix (token after 'route')
-                try:
-                    route_idx = tokens.index('route')
-                    if route_idx < len(tokens) - 1:
-                        prefix = tokens[route_idx + 1]
-
-                        # Validate the prefix using schema engine
-                        from exabgp.configuration.schema import ValueType
-
-                        result = self.schema_engine.validate_value(ValueType.IP_PREFIX, prefix, allow_partial=False)
-
-                        # If prefix is invalid, show error (but continue with completion)
-                        if result.state == ValidationState.INVALID:
-                            # Still provide completions, but user will see error if they try to execute
-                            pass
-                except (ValueError, IndexError):
-                    pass
+                # The prefix which follows 'route' used to be validated here and the
+                # verdict dropped on the floor, wrapped in a handler for an index() the
+                # caller had already proved safe. The same attribute keywords are offered
+                # whether or not the prefix parses, and a prefix the daemon will refuse is
+                # refused when the command is run, with the daemon's own message. Do not
+                # put a check back here without deciding what the user is to be told.
 
                 # Use fuzzy filtering for keywords
                 matches = self._filter_candidates(keywords, text)
@@ -1309,53 +1312,13 @@ class CommandCompleter:
         self._cache_in_progress = True
 
         try:
-            # Try to fetch neighbor IPs from ExaBGP
-            neighbor_ips = []
-
-            # Use provided get_neighbors callback if available
-            if self.get_neighbors:
-                try:
-                    neighbor_ips = self.get_neighbors()
-                except Exception:
-                    pass
-            else:
-                # Try to query ExaBGP via 'show neighbor json'
-                try:
-                    response = self.send_command('show neighbor json')
-                    if response and response != 'Command sent' and not response.startswith('Error:'):
-                        # Parse JSON response
-                        # Clean up response - remove 'done' marker if present
-                        json_text = response
-                        if 'done' in json_text:
-                            # Split by 'done' and take first part
-                            json_text = json_text.split('done')[0].strip()
-
-                        neighbors = json.loads(json_text)
-                        if isinstance(neighbors, list):
-                            for neighbor in neighbors:
-                                if isinstance(neighbor, dict):
-                                    # Try different possible locations for peer address
-                                    peer_addr = None
-
-                                    # Format 1: peer-address at top level
-                                    if 'peer-address' in neighbor:
-                                        peer_addr = neighbor['peer-address']
-                                    # Format 2: remote-addr at top level
-                                    elif 'remote-addr' in neighbor:
-                                        peer_addr = neighbor['remote-addr']
-                                    # Format 3: nested in 'peer' object (ExaBGP 5.x format)
-                                    elif 'peer' in neighbor and isinstance(neighbor['peer'], dict):
-                                        peer_obj = neighbor['peer']
-                                        if 'address' in peer_obj:
-                                            peer_addr = peer_obj['address']
-                                        elif 'ip' in peer_obj:
-                                            peer_addr = peer_obj['ip']
-
-                                    if peer_addr:
-                                        neighbor_ips.append(str(peer_addr))
-                except (json.JSONDecodeError, ValueError, OSError):
-                    # Silently fail - neighbor completion is optional
-                    pass
+            neighbor_ips = self._query_neighbor_ips()
+            if neighbor_ips is None:
+                # The daemon could not be asked. Storing that as the answer would hold the
+                # completer empty for the whole cache timeout, minutes after the daemon
+                # came back and while every typed command works, so the previous answer
+                # stands and the next TAB asks again.
+                return self._neighbor_cache if self._neighbor_cache is not None else []
 
             # Update cache
             self._neighbor_cache = neighbor_ips
@@ -1364,6 +1327,73 @@ class CommandCompleter:
             return neighbor_ips
         finally:
             self._cache_in_progress = False
+
+    def _query_neighbor_ips(self) -> list[str] | None:
+        """Ask for the configured neighbour addresses.
+
+        Returns:
+            The addresses, or None when the question could not be answered, which is not
+            the same as an answer of no neighbours.
+        """
+        get_neighbors = self.get_neighbors
+        if get_neighbors is not None:
+            # The callback talks to the daemon over a socket, so a connection which has
+            # just gone away or a daemon in the middle of a restart lands here. What is
+            # lost is a list of addresses the user can still type out in full, and this
+            # runs on TAB, so the quiet answer is right; what matters is that the caller
+            # can tell it apart from an empty list.
+            with contextlib.suppress(Exception):
+                return get_neighbors()
+            return None
+
+        # Same for asking the daemon directly: a truncated, empty or non-JSON reply means
+        # it answered something we cannot read, not that it has no neighbours.
+        with contextlib.suppress(json.JSONDecodeError, ValueError, OSError):
+            response = self.send_command('show neighbor json')
+            if not response or response == 'Command sent' or response.startswith('Error:'):
+                return None
+            return self._parse_neighbor_addresses(response)
+        return None
+
+    @staticmethod
+    def _strip_done_marker(response: str) -> str:
+        """Drop the 'done' end of message marker the API appends to a reply."""
+        if 'done' in response:
+            # Split by 'done' and take first part
+            return response.split('done')[0].strip()
+        return response
+
+    @staticmethod
+    def _peer_address(neighbor: dict[str, Any]) -> str | None:
+        """Read the peer address out of one neighbour entry, whichever shape it has."""
+        # Format 1: peer-address at top level
+        if 'peer-address' in neighbor:
+            return str(neighbor['peer-address'])
+        # Format 2: remote-addr at top level
+        if 'remote-addr' in neighbor:
+            return str(neighbor['remote-addr'])
+        # Format 3: nested in 'peer' object (ExaBGP 5.x format)
+        peer_obj = neighbor.get('peer')
+        if isinstance(peer_obj, dict):
+            address = peer_obj.get('address') or peer_obj.get('ip')
+            if address:
+                return str(address)
+        return None
+
+    def _parse_neighbor_addresses(self, response: str) -> list[str]:
+        """Extract the peer addresses from a 'show neighbor json' reply."""
+        neighbors = json.loads(self._strip_done_marker(response))
+        if not isinstance(neighbors, list):
+            return []
+
+        addresses = []
+        for neighbor in neighbors:
+            if not isinstance(neighbor, dict):
+                continue
+            peer_addr = self._peer_address(neighbor)
+            if peer_addr:
+                addresses.append(peer_addr)
+        return addresses
 
     def _get_neighbor_data(self) -> dict[str, str]:
         """
@@ -1376,42 +1406,29 @@ class CommandCompleter:
 
         # Try to fetch detailed neighbor information (v6 API format)
         # This returns ALL configured neighbors, not just connected ones
-        try:
+        #
+        # 'peer list' only adds the AS number and the session state which decorate the
+        # completion menu. A reply we cannot read costs that decoration and nothing else:
+        # the fallback below still offers every address the completer knows about.
+        with contextlib.suppress(json.JSONDecodeError, ValueError, OSError):
             response = self.send_command('peer list')
             if response and response != 'Command sent' and not response.startswith('Error:'):
-                # Parse JSON response
-                json_text = response
-                if 'done' in json_text:
-                    json_text = json_text.split('done')[0].strip()
-
-                neighbors = json.loads(json_text)
+                neighbors = json.loads(self._strip_done_marker(response))
                 if isinstance(neighbors, list):
                     for neighbor in neighbors:
-                        if isinstance(neighbor, dict):
-                            # Extract peer address
-                            peer_addr = None
-                            if 'peer-address' in neighbor:
-                                peer_addr = neighbor['peer-address']
-                            elif 'remote-addr' in neighbor:
-                                peer_addr = neighbor['remote-addr']
-                            elif 'peer' in neighbor and isinstance(neighbor['peer'], dict):
-                                peer_obj = neighbor['peer']
-                                peer_addr = peer_obj.get('address') or peer_obj.get('ip')
+                        if not isinstance(neighbor, dict):
+                            continue
+                        peer_addr = self._peer_address(neighbor)
+                        if peer_addr:
+                            # Build description from neighbor info
+                            peer_as = neighbor.get('peer-as', 'unknown')
+                            state = neighbor.get('state', '')
 
-                            if peer_addr:
-                                # Build description from neighbor info
-                                peer_as = neighbor.get('peer-as', 'unknown')
-                                state = neighbor.get('state', '')
-
-                                # Format: (AS65000, ESTABLISHED) or (AS65000, not connected)
-                                if state:
-                                    desc = f'(AS{peer_as}, {state})'
-                                else:
-                                    desc = f'(AS{peer_as}, not connected)'
-                                neighbor_data[str(peer_addr)] = desc
-        except (json.JSONDecodeError, ValueError, OSError):
-            # Silently fail - just return IPs without descriptions
-            pass
+                            # Format: (AS65000, ESTABLISHED) or (AS65000, not connected)
+                            if state:
+                                neighbor_data[peer_addr] = f'(AS{peer_as}, {state})'
+                            else:
+                                neighbor_data[peer_addr] = f'(AS{peer_as}, not connected)'
 
         # If no data from JSON, fall back to IPs only
         if not neighbor_data:
