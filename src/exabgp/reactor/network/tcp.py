@@ -14,6 +14,8 @@ import platform
 from struct import pack, calcsize
 from typing import Iterator
 
+from exabgp.logger import log
+from exabgp.logger import lazymsg
 from exabgp.util.errstr import errstr
 from exabgp.util.psk import PSKError, decode_base64
 
@@ -394,18 +396,36 @@ def ttlv6(io: socket.socket, ip: str, ttl: int | None) -> None:
 def min_ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:
-        try:
-            IP_MINTTL = getattr(socket, 'IP_MINTTL', None)
-            if IP_MINTTL is not None:
-                io.setsockopt(socket.IPPROTO_IP, IP_MINTTL, ttl)
-            else:
-                raise AttributeError('IP_MINTTL not available')
-        except OSError as exc:
-            raise TTLError(
-                'This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))
-            ) from None
-        except AttributeError:
-            pass
+        # IP_MINTTL is what enforces GTSM (RFC 5082) on the receive side: it is the option
+        # which makes the kernel drop a packet arriving with too low a TTL.  It does not
+        # exist on every platform, macOS among them, and there it is simply not in socket.
+        #
+        # An absent option used to be swallowed, and IP_TTL was set instead.  IP_TTL is the
+        # TTL we put on what we send, which is the other half of GTSM and no substitute for
+        # it: the inbound check was never installed and the operator was not told, so a
+        # neighbour configured with ttl-security had no protection and looked like it did.
+        #
+        # Warn rather than raise.  The platforms without the option are running sessions
+        # today, and refusing to bring them up is a larger change than the defect. An
+        # option which is present but refused stays a TTLError below, because that is the
+        # kernel rejecting a request it understood.
+        minttl = getattr(socket, 'IP_MINTTL', None)
+        if minttl is None:
+            log.warning(
+                lazymsg(
+                    'ttl-security.inbound.unavailable peer={peer} reason={reason}',
+                    peer=ip,
+                    reason='this platform has no IP_MINTTL, so arriving packets are not checked against the TTL',
+                ),
+                'network',
+            )
+        else:
+            try:
+                io.setsockopt(socket.IPPROTO_IP, minttl, ttl)
+            except OSError as exc:
+                raise TTLError(
+                    'This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))
+                ) from None
 
         try:
             io.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
