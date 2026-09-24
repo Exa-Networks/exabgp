@@ -2,7 +2,7 @@
 
 **Status:** 🔄 Active
 **Started:** 2026-09-24
-**Last Updated:** 2026-09-24
+**Last Updated:** 2026-09-24 (10 commits landed)
 
 ## Goal
 
@@ -34,11 +34,16 @@ Ratchets at the start of the session:
 | 2 | `8ab0c1b2f` | RFC 7606 7.8/7.14/7.15. `Communities`, `ExtendedCommunities` and `ExtendedCommunitiesIPv6` carried no `TREAT_AS_WITHDRAW`, so one malformed optional transitive attribute reset the session instead of withdrawing the route. New `tests/unit/test_rfc7606_prescribed_action.py` pins the action the RFC names per attribute, not merely that nothing raw escapes. |
 | 3 | `0946b78c0` | RFC 8669 6. `PrefixSid` gains `DISCARD`; `SrGb` raises `Notify` from `unpack_attribute` instead of letting a `ValueError` escape and be laundered into `Notify(1, 0)`, a Message Header Error reported for an attribute fault. |
 
+| 4 | `792337cd7` | Tiger Style renamed to Exa Style. 5 artefacts renamed, 24 files substituted by script, the TigerBeetle credit line excluded by pattern. `long_function` ceiling lowered 91 → 89, which it had been asking for. |
+| ~~5~~ DONE | `51049611c` | `ttl-security` on IPv4 installed no inbound GTSM check on a platform without `IP_MINTTL` (macOS) and said nothing, because the `AttributeError` it raised against itself was swallowed. Warns now. The asymmetry which hid it: `min_ttlv6` hardcodes its constant and so fails loudly for the same configuration. |
+| ~~6~~ DONE | `4c2542d34` | `exabgp cli reset` exited 0 on every failure path, including no socket, no fifo, connection refused, and a failed write. Each now names the fault on stderr and exits 1. The write path also leaked its descriptor. |
+| ~~7~~ DONE | `47156d510` | `_get_section_schema` was ten copies of import/assign/`except ImportError: pass`; `_get_root_schema` three more. Both are a table plus a loop now. |
+| 8 | `a57f0ea98` | Three swallowed errors which changed behaviour: `_notify_error` hung the client silently, `SO_REUSEADDR` and `IPV6_V6ONLY` shared one `try` so one failure skipped the other, and `Cache.in_cache` returned "already advertised" for a route it could not compare, which drops it. |
+| ~~9~~ DONE | `68f2ce53b` | **ADD-PATH path identifier never consumed in EVPN, BGP-LS, MVPN, MUP and SR-Policy.** Found by typing item 16. Each read its first field out of the identifier, so the NLRI after it in the same UPDATE was parsed from the wrong offset. Reachable with `add-path { l2vpn evpn; }`. `tests/unit/test_evpn.py::test_evpn_with_addpath` had asserted the broken behaviour. |
+
 ## In progress
 
-| # | Item | State |
-|---|---|---|
-| 4 | Rename Tiger Style to Exa Style | Files renamed, 24 files substituted, TigerBeetle credit preserved, `long_function` ceiling lowered 91 → 89. Full suite running. |
+Nothing. The next item is the `contextlib.suppress` sweep.
 
 ## Queued
 
@@ -53,7 +58,7 @@ Ordered by value over risk. Each is its own commit with a full suite run.
 | 7 | `reactor/asynchronous.py:38` `_notify_error` swallows every exception, so a client waiting for `done`/`error` hangs forever with nothing logged. | silent-except audit | no |
 | 8 | `configuration/static/__init__.py:286` a malformed `endpoint` silently builds the SR-Policy NLRI for the wrong address family. | silent-except audit | no |
 | 9 | `reactor/listener.py:149` `SO_REUSEADDR` and `IPV6_V6ONLY` share one `try`, so a failure on the first skips the second. | silent-except audit | no |
-| 10 | `rib/cache.py:83` an `AttributeError` in the next-hop comparison falls through to `return True`, meaning "already advertised", so the announce is dropped. Latent today. | silent-except audit | no |
+| ~~10~~ DONE | `rib/cache.py:83` an `AttributeError` in the next-hop comparison falls through to `return True`, meaning "already advertised", so the announce is dropped. Latent today. | silent-except audit | no |
 | 11 | `Attributes.__iter__` reads wire bytes with no length checks. Unreachable from a peer today; a loaded gun for the first caller who wires it up. | decoder fuzz | no |
 
 ### Mechanical reduction of the two ratchets
@@ -62,8 +67,8 @@ Ordered by value over risk. Each is its own commit with a full suite run.
 
 | # | Item | Effect |
 |---|---|---|
-| 12 | `application/schema.py:_get_section_schema` → table plus `importlib` loop | 91 → ~25 lines, −10 silent, −1 long |
-| 13 | `configuration/example.py:302-320`, same shape | −3 silent |
+| ~~12~~ DONE | `application/schema.py:_get_section_schema` → table plus `importlib` loop | 91 → ~25 lines, −10 silent, −1 long |
+| ~~13~~ DONE | `configuration/example.py:302-320`, same shape | −3 silent |
 | 14 | 92 clean `contextlib.suppress` conversions with hand written why-comments. A comment alone does NOT clear the ratchet: `check_exa_style` is pure AST, so `pass  # why` still counts. | −~86 silent |
 | 15 | Lower both ceilings once 12 to 14 land | ratchet |
 
@@ -71,7 +76,7 @@ Ordered by value over risk. Each is its own commit with a full suite run.
 
 | # | Item | Verified |
 |---|---|---|
-| 16 | `addpath: Any` → `bool` in 16 `unpack_nlri` signatures. `negotiated.required()` and `addpath.send()` both return `bool`, and `MPRNLRI.__init__` already says `bool`. A non-bool passed here parses a path identifier that is not on the wire. | yes |
+| ~~16~~ DONE | `addpath: Any` → `bool` in 16 `unpack_nlri` signatures. `negotiated.required()` and `addpath.send()` both return `bool`, and `MPRNLRI.__init__` already says `bool`. A non-bool passed here parses a path identifier that is not on the wire. | yes |
 | 17 | `Neighbor.eor` declared `deque[FamilyTuple]`, actually holds `Family`; `inject_eor` takes `family: object` and the reader does `cast(Family, ...)`. Writing the obvious `for afi, safi in neighbor.eor` type-checks and crashes. | yes |
 | 18 | `__eq__` and the four ordering dunders on `NLRI` and `Attribute` take `Any` where the rest of the tree uses `object`. NLRIs are sorted in the RIB. | no |
 | 19 | `reactor/api/response/json.py:384` family-keyed dicts typed `tuple[Any, Any]`, so a transposed `(safi, afi)` type-checks. | no |
@@ -102,6 +107,7 @@ Ordered by value over risk. Each is its own commit with a full suite run.
 | # | Item |
 |---|---|
 | 31 | RFC requirement ledger under `qa/rfc/`, `@pytest.mark.rfc(requirement, polarity)` on tests, `qa/bin/check_rfc_requirements` as an enrolment floor that only goes up. Pilot on RFC 7606. The design agent's own recommendation was to ship the table-driven test first and decide on the ledger afterwards; item 2 is that test, so the decision point is now. |
+| 33 | **ADD-PATH is not implemented on the encode side** for EVPN, BGP-LS, MVPN, MUP and SR-Policy: `pack_nlri` returns the NLRI with no path identifier, under a TODO. Since commit 9 exabgp reads identifiers it does not write, so with add-path negotiated for one of these families the peer will misparse what we send. This is a feature rather than a defect (it was never claimed to work) but it is now the larger half of the gap. |
 | 32 | Decomposing the genuinely large functions: `cli/completer.py:509 _get_completions` (567 lines), `application/unixsocket.py:444 loop` (358), `configuration/command.py:555 decode_to_api_command` (285). Not mechanical. Needs a plan and sign-off per MANDATORY_REFACTORING_PROTOCOL. |
 
 ## Decisions taken
