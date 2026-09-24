@@ -1,0 +1,255 @@
+# RFC 4724 - Graceful Restart Mechanism for BGP
+# https://www.rfc-editor.org/rfc/rfc4724
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc4724.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Most of this RFC is about what a router does with its forwarding state while its BGP
+# is away. exabgp has no forwarding state: it does not touch the FIB, runs no decision
+# process and re-advertises nothing. What does bind it is the capability encoding and
+# the End-of-RIB marker, and those are where the `required` entries are.
+#
+# Capability: src/exabgp/bgp/message/open/capability/graceful.py
+# End-of-RIB: src/exabgp/bgp/message/update/eor.py
+
+rfc = "rfc4724"
+title = "Graceful Restart Mechanism for BGP"
+url = "https://www.rfc-editor.org/rfc/rfc4724"
+
+[[requirement]]
+id = "rfc4724#3-reserved-bits-are-zero"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The remaining bits are reserved and MUST be set to zero by the
+sender and ignored by the receiver.
+"""
+note = """
+The document says this twice in the same words, once for the four Restart Flags and once
+for the eight Flags for Address Family, and one entry covers both fields because one
+sentence is what the ledger can quote. The tests cover both.
+"""
+
+[[requirement]]
+id = "rfc4724#3-single-capability-instance"
+section = "3"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+A BGP speaker MUST NOT include more than one instance of the Graceful
+Restart Capability in the capability advertisement [BGP-CAP].
+"""
+note = """
+Positive only: Capabilities is a dict keyed by capability code, so a second Graceful
+Restart capability would replace the first rather than join it, and no configuration or
+peer input reaches that container. The meaningful test is on what the packed OPEN carries.
+The receiver's half of this rule is the next entry, which does have both sides.
+"""
+
+[[requirement]]
+id = "rfc4724#3-receiver-keeps-the-last-instance"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If
+more than one instance of the Graceful Restart Capability is carried
+in the capability advertisement, the receiver of the advertisement
+MUST ignore all but the last instance of the Graceful Restart
+Capability.
+"""
+
+[[requirement]]
+id = "rfc4724#4-end-of-rib-must-be-sent"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The End-of-RIB marker MUST be sent by a BGP speaker to its peer once
+it completes the initial routing update (including the case when
+there is no update to send) for an address family after the BGP
+session is established.
+"""
+note = """
+Section 2 gives the marker two encodings and they are not interchangeable: for IPv4
+unicast it is an UPDATE of the minimum length, and for every other family it is an UPDATE
+carrying only MP_UNREACH_NLRI with no withdrawn routes. Sending the IPv4 form for an IPv6
+family says "I have finished" about the wrong RIB, so both encodings are tested, in both
+directions.
+"""
+
+[[requirement]]
+id = "rfc4724#4.1-restarting-speaker-sets-restart-state"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+To re-establish the session with its peer, the Restarting Speaker
+MUST set the "Restart State" bit in the Graceful Restart Capability
+"""
+note = """
+The sentence ends "of the OPEN message" on the next page, and the page footer sits in
+between, so the quote stops at the page break as qa/rfc/README.md requires.
+"""
+
+[[requirement]]
+id = "rfc4724#4.2-restart-state-not-set-unless-restarted"
+section = "4.2"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+In re-establishing the session, the "Restart State" bit in the
+Graceful Restart Capability of the OPEN message sent by the Receiving
+Speaker MUST NOT be set unless the Receiving Speaker has restarted.
+"""
+note = """
+Positive only: the bit is ours to set or not, and no peer input decides it, so the only
+meaningful test is the one where we have not restarted and must not claim we have. The
+entry above covers the case where we have.
+
+exabgp does not meet this. Peer._restarted is initialised to the module constant
+FORCE_GRACEFUL, which is True, and nothing clears it for the life of the process except
+Peer.stop(). Every OPEN exabgp sends therefore carries the Restart State bit, including
+the second and every later session of a process which has been up for months and is
+simply reconnecting after a TCP reset. A peer reading that bit will not wait for our
+End-of-RIB before advertising to us. The test beside this entry is xfailed and says so.
+"""
+
+[[requirement]]
+id = "rfc4724#4.1-retain-forwarding-state"
+section = "4.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+When the Restarting Speaker restarts, it MUST retain, if possible,
+the forwarding state for the BGP routes in the Loc-RIB and MUST mark
+them as stale.
+"""
+note = """
+"If possible" is not possible here. exabgp does not manipulate the FIB and has no Loc-RIB:
+there is no forwarding state on this box which a BGP restart could lose, and nothing for
+another process to keep forwarding through while we are away. A router peering with
+exabgp keeps forwarding by its own means.
+"""
+
+[[requirement]]
+id = "rfc4724#4.1-no-difference-while-forwarding"
+section = "4.1"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+It MUST NOT differentiate between stale and other
+information during forwarding.
+"""
+note = """
+exabgp forwards no packets. It is a BGP speaker with a JSON API and never installs a route
+anywhere, so there is no forwarding decision in this process which could treat a stale
+route differently from a fresh one.
+"""
+
+[[requirement]]
+id = "rfc4724#4.1-defer-route-selection"
+section = "4.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+However, it MUST defer route
+selection for an address family until it either (a) receives the
+End-of-RIB marker from all its peers (excluding the ones with the
+"Restart State" bit set in the received capability and excluding the
+ones that do not advertise the graceful restart capability) or (b)
+the Selection_Deferral_Timer referred to below has expired.
+"""
+note = """
+exabgp runs no best path selection. What it announces is what its configuration and its
+API told it to announce, decided before any peer was heard from and unaffected by what
+arrives, so there is no selection whose timing this could constrain.
+"""
+
+[[requirement]]
+id = "rfc4724#4.1-selection-deferral-timer"
+section = "4.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+To put an upper bound on the amount of time a router defers its route
+selection, an implementation MUST support a (configurable) timer that
+imposes this upper bound.
+"""
+note = """
+A bound on a deferral which never happens. This timer exists to stop a restarting speaker
+waiting forever for End-of-RIB before it selects routes, and exabgp selects none: see the
+entry above. A configuration knob for it would be a setting which could not change any
+behaviour.
+"""
+
+[[requirement]]
+id = "rfc4724#4.2-retain-and-mark-stale"
+section = "4.2"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+When the Receiving Speaker detects termination of the TCP session for
+a BGP session with a peer that has advertised the Graceful Restart
+Capability, it MUST retain the routes received from the peer for all
+the address families that were previously received in the Graceful
+Restart Capability and MUST mark them as stale routing information.
+"""
+note = """
+Not implemented. exabgp offers the Graceful Restart capability and will accept it from a
+peer, but has no notion of a stale route: there is no "stale" anywhere in the adj-RIB-in
+(src/exabgp/rib/incoming.py), and when a session goes down the API is told the routes are
+gone rather than that they are being held. A gap rather than not-applicable because
+exabgp does keep an adj-RIB-in when `adj-rib-in` is configured, so there is a table which
+could hold and mark them, and an API client watching a restarting peer sees a withdrawal
+storm followed by a re-announcement of the same prefixes.
+"""
+
+[[requirement]]
+id = "rfc4724#4.2-delete-stale-after-restart-time"
+section = "4.2"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+If the session does not get re-established within the "Restart Time"
+that the peer advertised previously, the Receiving Speaker MUST
+delete all the stale routes from the peer that it is retaining.
+"""
+note = """
+A consequence of the gap above: nothing is retained as stale, so nothing expires. The
+Restart Time a peer advertises is decoded into Graceful.restart_time and is not used to
+start any timer. Recorded as a gap and not as not-applicable because it becomes owed the
+moment the retention above is implemented, and an implementation which retained without
+this would hold a dead peer's routes forever.
+"""
+
+[[requirement]]
+id = "rfc4724#4.2-remove-stale-on-end-of-rib"
+section = "4.2"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+Once the End-of-RIB marker for an
+address family is received from the peer, it MUST immediately remove
+any routes from the peer that are still marked as stale for that
+address family.
+"""
+note = """
+The third part of the same missing machinery. exabgp parses a received End-of-RIB and
+reports it to the API, so the event is available; what is absent is the stale marking for
+it to clear. See rfc4724#4.2-retain-and-mark-stale.
+"""

@@ -1,0 +1,241 @@
+# RFC 5492 - Capabilities Advertisement with BGP-4
+# https://www.rfc-editor.org/rfc/rfc5492
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc5492.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+
+rfc = "rfc5492"
+title = "Capabilities Advertisement with BGP-4"
+url = "https://www.rfc-editor.org/rfc/rfc5492"
+
+[[requirement]]
+id = "rfc5492#3-open-may-carry-capabilities"
+section = "3"
+level = "MAY"
+status = "required"
+polarity = "positive-only"
+text = """
+When a BGP speaker [RFC4271] that supports capabilities advertisement
+sends an OPEN message to its BGP peer, the message MAY include an
+Optional Parameter, called Capabilities.
+"""
+note = """
+Positive only: a permission has no side a peer can catch us out on, and what is worth
+recording is which way we took it. exabgp always carries the parameter: Capabilities.new
+puts the multiprotocol capability in unconditionally, so even a neighbour with every
+optional capability turned off sends one.
+"""
+
+[[requirement]]
+id = "rfc5492#3-notification-must-name-the-capabilities"
+section = "3"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The
+message MUST contain the capability or capabilities that cause the
+speaker to send the message.
+"""
+note = """
+Conditional on the MAY in the sentence before it, which exabgp declines. Nothing in the
+tree raises Notify(2, 7): subcode 7 appears only as a name in the table in
+notification.py, so exabgp never sends an Unsupported Capability NOTIFICATION and never
+has a set of capabilities to put in one. A family the peer did not advertise is recorded
+in Negotiated.mismatch, logged, and the session runs without that family.
+"""
+
+[[requirement]]
+id = "rfc5492#3-terminated-peering-not-re-established"
+section = "3"
+level = "SHOULD NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+If terminated, such
+peering SHOULD NOT be re-established automatically.
+"""
+note = """
+"Such peering" is one terminated by the Unsupported Capability NOTIFICATION of the
+previous sentences, which exabgp never sends. Sessions exabgp does tear down are torn
+down for other reasons and are retried by the reactor's delay loop, which is what an
+operator asks for; this sentence is not about those.
+"""
+
+[[requirement]]
+id = "rfc5492#3-reconnect-without-the-capabilities-parameter"
+section = "3"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+In this case, the speaker SHOULD attempt to
+re-establish a BGP connection with the peer without sending to the
+peer the Capabilities Optional Parameter.
+"""
+note = """
+Nothing in the reactor reads the subcode of a received NOTIFICATION to decide what the
+next OPEN carries. Peer.new_open builds the same Capabilities object from the neighbour
+configuration on every attempt, so a peer which answers our OPEN with Unsupported
+Optional Parameter is retried identically for ever and the session never comes up. The
+peer this protects against is a pre-RFC-2842 speaker, which is why it has not bitten,
+but the fallback is not there.
+"""
+
+[[requirement]]
+id = "rfc5492#3-unknown-capability-must-be-ignored"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a BGP speaker receives from its peer a capability that it does not
+itself support or recognize, it MUST ignore that capability.
+"""
+note = """
+exabgp implements this with a registered fallback: Capability.klass returns
+UnknownCapability for any code with no decoder, so the TLV is kept for display and
+influences nothing. The negative side is the one that matters, because a parser which
+answered UnknownCapability to everything would pass the positive test: a registered code
+must still decode to its own class.
+"""
+
+[[requirement]]
+id = "rfc5492#3-no-notification-for-an-unknown-capability"
+section = "3"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+In
+particular, the Unsupported Capability NOTIFICATION message MUST NOT
+be generated and the BGP session MUST NOT be terminated in response
+to reception of a capability that is not supported by the local
+speaker.
+"""
+note = """
+The positive side is compliance: an OPEN carrying a code we have no decoder for parses
+without raising. The negative side is that the parser has not simply stopped raising: a
+capability whose length field runs past the end of its parameter still ends the session,
+because that is a framing error rather than an unknown capability.
+"""
+
+[[requirement]]
+id = "rfc5492#4-accept-repeated-identical-instances"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Note, however, that processing of multiple
+instances of such capability does not require special handling, as
+additional instances do not change the meaning of the announced
+capability; thus, a BGP speaker MUST be prepared to accept such
+multiple instances.
+"""
+
+[[requirement]]
+id = "rfc5492#4-should-not-repeat-an-identical-capability"
+section = "4"
+level = "SHOULD NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+BGP speakers SHOULD NOT include more than one instance of a
+capability with the same Capability Code, Capability Length, and
+Capability Value.
+"""
+note = """
+Positive only: this constrains what we send, and a peer cannot provoke a duplicate in
+our own OPEN. What we do with a peer's duplicates is the MUST in the next sentence,
+recorded separately.
+"""
+
+[[requirement]]
+id = "rfc5492#4-processing-described-in-the-defining-document"
+section = "4"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+Processing of these capability
+instances is specific to the Capability Code and MUST be described in
+the document introducing the new capability.
+"""
+note = """
+This binds whoever writes a capability specification, not whoever implements one: it
+asks that the document introducing a code say what repeated instances of it mean. exabgp
+introduces one code of its own, OPERATIONAL (0xB9, in the private use range), and it
+carries no value at all, so it falls outside this sentence, which is about instances
+with a non-zero Capability Length.
+"""
+
+[[requirement]]
+id = "rfc5492#4-one-capabilities-parameter-per-open"
+section = "4"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+The Capabilities Optional Parameter (OPEN Optional Parameter Type 2)
+SHOULD only be included in the OPEN message once.
+"""
+note = """
+exabgp does the opposite. Capabilities.pack_capabilities wraps every single capability
+TLV in its own type 2 parameter, so an OPEN offering four families and graceful restart
+carries eight or nine Capabilities Optional Parameters where the RFC asks for one. It is
+legal to receive and every implementation copes, which is why it has survived, but it is
+the behaviour the next sentence of the RFC exists to forgive rather than the one it asks
+for. The test beside this entry is xfail and counts the parameters.
+
+Positive only: this is about the OPEN we generate. A peer has no input into it.
+"""
+
+[[requirement]]
+id = "rfc5492#4-accept-multiple-capabilities-parameters"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+However,
+for backward compatibility, a BGP speaker MUST be prepared to receive
+an OPEN message that contains multiple Capabilities Optional
+Parameters, each of which contains one or more capabilities TLVs.
+"""
+
+[[requirement]]
+id = "rfc5492#5-data-field-lists-the-capabilities"
+section = "5"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The Data field in the NOTIFICATION
+message MUST list the set of capabilities that causes the speaker to
+send the message.
+"""
+note = """
+The encoding rule for a message exabgp cannot produce. Notify carries a code, a subcode
+and a text reason, and no caller anywhere raises subcode 7, so there is no Data field of
+an Unsupported Capability NOTIFICATION for this to describe. This is the encoding half
+of the decision recorded at rfc5492#3-notification-must-name-the-capabilities.
+"""
+
+[[requirement]]
+id = "rfc5492#5-unsupported-capability-not-for-unknown-codes"
+section = "5"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+It MUST NOT be used when a BGP speaker
+receives a capability that it does not understand; such capabilities
+MUST be ignored.
+"""
+note = """
+The same rule as section 3 states, restated where the subcode is defined. It is tested
+one level up, through Open.unpack_message rather than Capabilities.unpack, because that
+is the code path a peer's bytes actually take and it is where a capability could still
+turn into a NOTIFICATION after the capability parser has finished with it.
+"""

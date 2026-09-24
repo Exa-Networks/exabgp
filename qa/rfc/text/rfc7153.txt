@@ -1,0 +1,899 @@
+
+
+
+
+
+
+Internet Engineering Task Force (IETF)                          E. Rosen
+Request for Comments: 7153                           Cisco Systems, Inc.
+Updates: 4360, 5701                                           Y. Rekhter
+Category: Standards Track                         Juniper Networks, Inc.
+ISSN: 2070-1721                                               March 2014
+
+
+              IANA Registries for BGP Extended Communities
+
+Abstract
+
+   This document reorganizes the IANA registries for the type values and
+   sub-type values of the BGP Extended Communities attribute and the BGP
+   IPv6-Address-Specific Extended Communities attribute.  This is done
+   in order to remove interdependencies among the registries, thus
+   making it easier for IANA to determine which codepoints are available
+   for assignment in which registries.  This document also clarifies the
+   information that must be provided to IANA when requesting an
+   allocation from one or more of these registries.  These changes are
+   compatible with the existing allocations and thus do not affect
+   protocol implementations.  The changes will, however, impact the
+   "IANA Considerations" sections of future protocol specifications.
+   This document updates RFC 4360 and RFC 5701.
+
+Status of This Memo
+
+   This is an Internet Standards Track document.
+
+   This document is a product of the Internet Engineering Task Force
+   (IETF).  It represents the consensus of the IETF community.  It has
+   received public review and has been approved for publication by the
+   Internet Engineering Steering Group (IESG).  Further information on
+   Internet Standards is available in Section 2 of RFC 5741.
+
+   Information about the current status of this document, any errata,
+   and how to provide feedback on it may be obtained at
+   http://www.rfc-editor.org/info/rfc7153.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Rosen & Rekhter              Standards Track                    [Page 1]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+Copyright Notice
+
+   Copyright (c) 2014 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Rosen & Rekhter              Standards Track                    [Page 2]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+Table of Contents
+
+   1. Introduction ....................................................3
+   2. Types, Sub-Types, and Registries ................................4
+   3. Applicability to IPv6-Address-Specific EC Attribute .............4
+   4. How to Request EC Type and/or Sub-Type Codepoints ...............5
+   5. IANA Considerations .............................................6
+      5.1. Registries for the "Type" Field ............................7
+           5.1.1. Transitive Types ....................................7
+           5.1.2. Non-Transitive Types ................................8
+      5.2. Registries for the "Sub-Type" Field ........................9
+           5.2.1. EVPN Extended Community Sub-Types ...................9
+           5.2.2. Transitive Two-Octet AS-Specific Extended Community
+                  Sub-Types ..........................................10
+           5.2.3. Non-Transitive Two-Octet AS-Specific Extended
+                  Community Sub-Types ................................10
+           5.2.4. Transitive Four-Octet AS-Specific Extended
+                  Community Sub-Types ................................11
+           5.2.5. Non-Transitive Four-Octet AS-Specific Extended
+                  Community Sub-Types ................................11
+           5.2.6. Transitive IPv4-Address-Specific Extended Community
+                  Sub-Types ..........................................12
+           5.2.7. Non-Transitive IPv4-Address-Specific Extended
+                  Community Sub-Types ................................12
+           5.2.8. Transitive Opaque Extended Community Sub-Types .....13
+           5.2.9. Non-Transitive Opaque Extended Community
+                  Sub-Types ..........................................13
+           5.2.10. Generic Transitive Experimental Use Extended
+                   Community Sub-Types ...............................14
+           5.2.11. Registries for the "Value" Field ..................14
+                  5.2.11.1. Traffic Action Fields ....................14
+      5.3. Registries for IPv6-Address-Specific ECs ..................15
+           5.3.1. Transitive Types ...................................15
+           5.3.2. Non-Transitive Types ...............................15
+   6. Security Considerations ........................................15
+   7. Acknowledgments ................................................16
+   8. Normative References ...........................................16
+
+1.  Introduction
+
+   RFC 4360 [RFC4360] defines the BGP "Extended Communities" (EC)
+   attribute.  This attribute consists of a sequence of eight-octet
+   "extended communities".  The high-order octet is defined to be the
+   "Type" field.  Each Type has a range of values for "Transitive
+   Extended Community Types" and a range of values for "Non-transitive
+   Extended Community Types".  Some of these ranges are further
+   subdivided into a sub-range of values to be assigned by IANA under
+   the "Standards Action" policy, a sub-range of values to be assigned
+
+
+
+Rosen & Rekhter              Standards Track                    [Page 3]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+   by IANA under the "First Come First Served" policy, and a sub-range
+   for "experimental use".  (See [RFC5226], [RFC7120], and [RFC3692] for
+   an explanation of these policies.)
+
+   For some Extended Community Types, the second octet of the Extended
+   Community is a "Sub-Type" field, and the remaining six octets are the
+   "Value" field.  These are referred to as "Extended Types".  For other
+   types, there is no "Sub-Type" field, and the "Value" field contains
+   seven octets.  These are referred to as "Regular Types".
+
+   RFC 4360 is not very specific about how the IANA registries for
+   Extended Community Types and/or Sub-Types are to be organized, and
+   this has led to some confusion.  The purpose of this document is to
+   reorganize the registries to make the IANA codepoint allocation task
+   more straightforward.
+
+2.  Types, Sub-Types, and Registries
+
+   The high-order octet of an Extended Community will be known as the
+   "Type" field.
+
+   There will be one IANA registry for "Transitive Extended Community
+   Types" (see Section 5.1.1) and one for "Non-transitive Extended
+   Community Types" (Section 5.1.2).  Each registry specifies three
+   ranges, and each range is associated with a particular IANA
+   allocation policy.
+
+   There will be a set of IANA registries for Extended Community
+   Sub-Types (see Section 5.2).  Each such registry will have a range of
+   0x00-0xFF.  Values in the range 0x00-0xBF are assignable by IANA
+   according to the "First Come First Served" allocation policy of
+   [RFC5226].  Values in the range 0xC0-0xFF are assignable by IANA
+   according to the "IETF Review" allocation policy of [RFC5226].
+
+   If a particular Type has Sub-Types, that Type's entry in its Type
+   registry identifies its Sub-Type registry.  Note that some Types do
+   not have Sub-Types.  When the request is made to establish a new Type
+   registry, the request must specify whether or not there is to be a
+   Sub-Type registry associated with that Type.
+
+   Whether a given Type has Sub-Types is determined when the Type is
+   initially defined; this cannot be changed later.
+
+3.  Applicability to IPv6-Address-Specific EC Attribute
+
+   RFC 5701 [RFC5701] defines the IPv6-Address-Specific Extended
+   Community to be a 20-octet quantity whose high-order two octets may
+   be considered to be the "Type" field.  The high-order octet is either
+
+
+
+Rosen & Rekhter              Standards Track                    [Page 4]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+   0x00, indicating a transitive Extended Community; or 0x40, indicating
+   a Non-transitive Extended Community.  The second octet is said to be
+   a "Sub-Type", and it is suggested that the Sub-Types are the same as
+   the Sub-Types for the IPv4-Address-Specific Extended Community.
+   However, the existing IANA codepoint allocations for this octet do
+   not always match the corresponding allocations for the
+   IPv4-Address-Specific Extended Community Sub-Types.
+
+   This document modifies RFC 5701 by removing any requirement for the
+   values of the second octet of the IPv6-Address-Specific Extended
+   Community Type codepoints to match the codepoints in either of the
+   IPv4-Address-Specific Sub-Types registries.
+
+   This document requests IANA to create two IPv6-Address-Specific
+   Extended Community registries -- one for transitive communities and
+   one for non-transitive communities.  See Section 5.3.
+
+4.  How to Request EC Type and/or Sub-Type Codepoints
+
+   When a codepoint is needed for a new Extended Community, the
+   requester should first determine whether an existing Type can be
+   used.  If so, IANA should be asked to allocate a codepoint from the
+   corresponding Sub-Type registry, if there is one.
+
+   If a new Extended Community Type is needed, the requester should ask
+   IANA to allocate a new type from the "BGP Transitive Extended
+   Community Types" registry, the "BGP Non-Transitive Extended Community
+   Types" registry, or both.  It is up to the requester to state whether
+   an allocation is needed from one or both of these registries.  When
+   an allocation from both registries is requested, the requester may
+   find it desirable for both allocations to share the same low-order
+   six bits.  If so, it is the responsibility of the requester to
+   explicitly request this of IANA.
+
+   Of course, any request for a codepoint from a particular registry
+   must follow the defined registration procedures for that registry.
+
+   If a new Extended Community Type is needed and the new Type is to
+   have Sub-Types, the requester should specify whether an existing
+   Sub-Type registry can be used for the new Type or a new Sub-Type
+   registry is needed.  (At the current time, every Type that has
+   Sub-Types is associated with a unique Sub-Type registry.  It is
+   possible that in the future a new Type registry may be created that
+   is associated with a pre-existing Sub-Type registry.)  In either
+   case, if a new Sub-Type value needs to be allocated from a particular
+   Sub-Type registry, the request should explicitly identify the
+   registry.
+
+
+
+
+Rosen & Rekhter              Standards Track                    [Page 5]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+   If the creation of a new Sub-Type registry is requested, the range of
+   values is always 0x00-0xFF.  It is recommended that the allocation
+   policy described in Section 2 be used, i.e., 0x00-0xBF to be
+   allocated by IANA under the "First Come First Served" policy and
+   0xC0-0xFF to be allocated by IANA under the "IETF Review" policy.
+
+   Commonly, a new Extended Community is defined such that it can be of
+   several Types.  For example, one may want to define a new Extended
+   Community so that it can be either transitive or non-transitive,
+   either the two-octet AS Number Type or the four-octet AS Number Type,
+   etc.  The requester is responsible for explicitly asking IANA to
+   allocate codepoints in all the necessary Type and/or Sub-Type
+   registries.
+
+   When a new Extended Community is defined, it may be necessary to ask
+   IANA to allocate codepoints in several Sub-Type registries.  In this
+   case, it is a common practice to ask IANA to allocate the same
+   codepoint value in each registry.  If this is desired, it is the
+   responsibility of the requester to explicitly ask IANA to allocate
+   the same value in each registry.
+
+   When a new Extended Community Sub-Type codepoint is allocated, it may
+   also be desirable to allocate a corresponding value in one or both of
+   the IPv6-Address-Specific Extended Community registries.  The
+   requester is responsible for requesting this allocation explicitly.
+   If the requester would like the same numerical value to be allocated
+   in an IPv6-Address-Specific Extended Community registry that is
+   allocated in some other registry, it is the responsibility of the
+   requester to explicitly ask this of IANA.
+
+5.  IANA Considerations
+
+   IANA has replaced the pre-existing BGP Extended Communities
+   registries with the registries described in this section.
+
+   The registries reproduced below do not include the "references" or
+   "date" fields for the individual codepoints in the registries,
+   because it is difficult to incorporate those within the 72-character
+   line limitation of RFCs.  The references and associated dates have
+   been copied from the existing registries when creating the new
+   registries; the authors have worked with IANA to ensure that this
+   information has been carried over correctly to the reorganized
+   registry.  As this document does not change the usage or semantics of
+   any of the codepoints, the references associated with the individual
+   codepoints do not change.
+
+   On the other hand, the references for each of the registries defined
+   in this section have been changed to refer to this document.
+
+
+
+Rosen & Rekhter              Standards Track                    [Page 6]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+5.1.  Registries for the "Type" Field
+
+5.1.1.  Transitive Types
+
+   The following note has been added to the "BGP Transitive Extended
+   Community Types" registry.
+
+      This registry contains values of the high-order octet (the "Type"
+      field) of a Transitive Extended Community.
+
+   Registry Name: BGP Transitive Extended Community Types
+
+      RANGE            REGISTRATION PROCEDURES
+
+      0x00-0x3F        First Come First Served
+      0x80-0x8F        Experimental Use (see RFC 3692)
+      0x90-0xBF        Standards Action
+
+      TYPE VALUE       NAME
+
+      0x00             Transitive Two-Octet AS-Specific Extended
+                       Community (Sub-Types are defined in the
+                       "Transitive Two-Octet AS-Specific Extended
+                       Community Sub-Types" registry)
+
+      0x01             Transitive IPv4-Address-Specific Extended
+                       Community (Sub-Types are defined in the
+                       "Transitive IPv4-Address-Specific Extended
+                       Community Sub-Types" registry)
+
+      0x02             Transitive Four-Octet AS-Specific Extended
+                       Community (Sub-Types are defined in the
+                       "Transitive Four-Octet AS-Specific Extended
+                       Community Sub-Types" registry)
+
+      0x03             Transitive Opaque Extended Community
+                       (Sub-Types are defined in the "Transitive
+                       Opaque Extended Community Sub-Types"
+                       registry)
+
+      0x04             QoS Marking
+
+      0x05             CoS Capability
+
+      0x06             EVPN (Sub-Types are defined in the "EVPN
+                       Extended Community Sub-Types" registry)
+
+      0x08             Flow spec redirect/mirror to IP next-hop
+
+
+
+Rosen & Rekhter              Standards Track                    [Page 7]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+      0x80             Generic Transitive Experimental Use Extended
+                       Community (Sub-Types are defined in the
+                       "Generic Transitive Experimental Use Extended
+                       Community Sub-Types" registry)
+
+5.1.2.  Non-Transitive Types
+
+   The following note has been added to the "BGP Non-Transitive Extended
+   Community Types" registry.
+
+      This registry contains values of the high-order octet (the "Type"
+      field) of a Non-transitive Extended Community.
+
+   Registry Name: BGP Non-Transitive Extended Community Types
+
+      RANGE            REGISTRATION PROCEDURES
+
+      0x40-0x7F        First Come First Served
+      0xC0-0xCF        Experimental Use (see RFC 3692)
+      0xD0-0xFF        Standards Action
+
+      TYPE VALUE       NAME
+
+      0x40             Non-Transitive Two-Octet AS-Specific Extended
+                       Community (Sub-Types are defined in the
+                       "Non-Transitive Two-Octet AS-Specific Extended
+                       Community Sub-Types" registry)
+
+      0x41             Non-Transitive IPv4-Address-Specific Extended
+                       Community (Sub-Types are defined in the
+                       "Non-Transitive IPv4-Address-Specific Extended
+                       Community Sub-Types" registry)
+
+      0x42             Non-Transitive Four-Octet AS-Specific Extended
+                       Community (Sub-Types are defined in the
+                       "Non-Transitive Four-Octet AS-Specific Extended
+                       Community Sub-Types" registry)
+
+      0x43             Non-Transitive Opaque Extended Community
+                       (Sub-Types are defined in the "Non-Transitive
+                       Opaque Extended Community Sub-Types" registry)
+
+      0x44             QoS Marking
+
+
+
+
+
+
+
+
+Rosen & Rekhter              Standards Track                    [Page 8]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+5.2.  Registries for the "Sub-Type" Field
+
+5.2.1.  EVPN Extended Community Sub-Types
+
+   The following note has been added to the "EVPN Extended Community
+   Sub-Types" registry:
+
+      This registry contains values of the second octet (the "Sub-Type"
+      field) of an extended community when the value of the first octet
+      (the "Type" field) is 0x06.
+
+   Registry Name: EVPN Extended Community Sub-Types
+
+      RANGE              REGISTRATION PROCEDURE
+
+      0x00-0xBF          First Come First Served
+      0xC0-0xFF          IETF Review
+
+      SUB-TYPE VALUE     NAME
+
+      0x00               MAC Mobility
+      0x01               ESI MPLS Label
+      0x02               ES Import
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Rosen & Rekhter              Standards Track                    [Page 9]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+5.2.2.  Transitive Two-Octet AS-Specific Extended Community Sub-Types
+
+   The following note has been added to the "Transitive Two-Octet
+   AS-Specific Extended Community Sub-Types" registry:
+
+      This registry contains values of the second octet (the "Sub-Type"
+      field) of an extended community when the value of the first octet
+      (the "Type" field) is 0x00.
+
+   Registry Name: Transitive Two-Octet AS-Specific Extended
+                  Community Sub-Types
+
+      RANGE              REGISTRATION PROCEDURE
+
+      0x00-0xBF          First Come First Served
+      0xC0-0xFF          IETF Review
+
+      SUB-TYPE VALUE     NAME
+
+      0x02               Route Target
+      0x03               Route Origin
+      0x05               OSPF Domain Identifier
+      0x08               BGP Data Collection
+      0x09               Source AS
+      0x0A               L2VPN Identifier
+      0x10               Cisco VPN-Distinguisher
+
+5.2.3.  Non-Transitive Two-Octet AS-Specific Extended Community
+        Sub-Types
+
+   The following note has been added to the "Non-Transitive Two-Octet
+   AS-Specific Extended Community Sub-Types" registry:
+
+      This registry contains values of the second octet (the "Sub-Type"
+      field) of an extended community when the value of the first octet
+      (the "Type" field) is 0x40.
+
+   Registry Name: Non-Transitive Two-Octet AS-Specific Extended
+                  Community Sub-Types
+
+      RANGE              REGISTRATION PROCEDURE
+
+      0x00-0xBF          First Come First Served
+      0xC0-0xFF          IETF Review
+
+      SUB-TYPE VALUE     NAME
+
+      0x04               Link Bandwidth Extended Community
+
+
+
+Rosen & Rekhter              Standards Track                   [Page 10]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+5.2.4.  Transitive Four-Octet AS-Specific Extended Community Sub-Types
+
+   The following note has been added to the "Transitive Four-Octet
+   AS-Specific Extended Community Sub-Types" registry:
+
+      This registry contains values of the second octet (the "Sub-Type"
+      field) of an extended community when the value of the first octet
+      (the "Type" field) is 0x02.
+
+   Registry Name: Transitive Four-Octet AS-Specific Extended
+                  Community Sub-Types
+
+      RANGE              REGISTRATION PROCEDURE
+
+      0x00-0xBF          First Come First Served
+      0xC0-0xFF          IETF Review
+
+      SUB-TYPE VALUE     NAME
+
+      0x02               Route Target
+      0x03               Route Origin
+      0x04               Generic
+      0x05               OSPF Domain Identifier
+      0x08               BGP Data Collection
+      0x09               Source AS
+      0x10               Cisco VPN Identifier
+
+5.2.5.  Non-Transitive Four-Octet AS-Specific Extended Community
+        Sub-Types
+
+   The following note has been added to the "Non-Transitive Four-Octet
+   AS-Specific Extended Community Sub-Types" registry:
+
+      This registry contains values of the second octet (the "Sub-Type"
+      field) of an extended community when the value of the first octet
+      (the "Type" field) is 0x42.
+
+   Registry Name: Non-Transitive Four-Octet AS-Specific
+                  Extended Community Sub-Types
+
+      RANGE              REGISTRATION PROCEDURE
+
+      0x00-0xBF          First Come First Served
+      0xC0-0xFF          IETF Review
+
+      SUB-TYPE VALUE     NAME
+
+      0x04               Generic
+
+
+
+Rosen & Rekhter              Standards Track                   [Page 11]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+5.2.6.  Transitive IPv4-Address-Specific Extended Community Sub-Types
+
+   The following note has been added to the "Transitive
+   IPv4-Address-Specific Extended Community Sub-Types" registry:
+
+      This registry contains values of the second octet (the "Sub-Type"
+      field) of an extended community when the value of the first octet
+      (the "Type" field) is 0x01.
+
+   Registry Name: Transitive IPv4-Address-Specific Extended
+                  Community Sub-Types
+
+      RANGE              REGISTRATION PROCEDURE
+
+      0x00-0xBF          First Come First Served
+      0xC0-0xFF          IETF Review
+
+      SUB-TYPE VALUE     NAME
+
+      0x02               Route Target
+      0x03               Route Origin
+      0x05               OSPF Domain Identifier
+      0x07               OSPF Route ID
+      0x0A               L2VPN Identifier
+      0x0B               VRF Route Import
+      0x10               Cisco VPN-Distinguisher
+
+5.2.7.  Non-Transitive IPv4-Address-Specific Extended Community
+        Sub-Types
+
+   The following note has been added to the "Non-Transitive
+   IPv4-Address-Specific Extended Community Sub-Types" registry:
+
+      This registry contains values of the second octet (the "Sub-Type"
+      field) of an extended community when the value of the first octet
+      (the "Type" field) is 0x41.
+
+   Registry Name: Non-Transitive IPv4-Address-Specific Extended
+                  Community Sub-Types
+
+      RANGE            REGISTRATION PROCEDURE
+
+      0x00-0xBF        First Come First Served
+      0xC0-0xFF        IETF Review
+
+      None Assigned
+
+
+
+
+
+Rosen & Rekhter              Standards Track                   [Page 12]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+5.2.8.  Transitive Opaque Extended Community Sub-Types
+
+   The following note has been added to the "Transitive Opaque Extended
+   Community Sub-Types" registry:
+
+      This registry contains values of the second octet (the "Sub-Type"
+      field) of an extended community when the value of the first octet
+      (the "Type" field) is 0x03.
+
+   Registry Name: Transitive Opaque Extended Community
+                  Sub-Types
+
+       RANGE             REGISTRATION PROCEDURE
+
+       0x00-0xBF         First Come First Served
+       0xC0-0xFF         IETF Review
+
+       SUB-TYPE VALUE    NAME
+
+       0x06              OSPF Route Type
+       0x0B              Color Extended Community
+       0x0C              Encapsulation Extended Community
+       0x0D              Default Gateway
+
+5.2.9.  Non-Transitive Opaque Extended Community Sub-Types
+
+   The following note has been added to the "Non-Transitive Opaque
+   Extended Community Sub-Types" registry:
+
+      This registry contains values of the second octet (the "Sub-Type"
+      field) of an extended community when the value of the first octet
+      (the "Type" field) is 0x43.
+
+   Registry Name: Non-Transitive Opaque Extended Community
+                  Sub-Types
+
+      RANGE              REGISTRATION PROCEDURE
+
+      0x00-0xBF          First Come First Served
+      0xC0-0xFF          IETF Review
+
+      SUB-TYPE VALUE     NAME
+
+      0x00               BGP Origin Validation State
+
+
+
+
+
+
+
+Rosen & Rekhter              Standards Track                   [Page 13]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+5.2.10.  Generic Transitive Experimental Use Extended Community
+         Sub-Types
+
+   The following note has been added to the "Generic Transitive
+   Experimental Use Extended Community Sub-Types" registry:
+
+      This registry contains values of the second octet (the "Sub-Type"
+      field) of an extended community when the value of the first octet
+      (the "Type" field) is 0x80.
+
+   Registry Name: Generic Transitive Experimental Use Extended Community
+   Sub-Types
+
+      RANGE              REGISTRATION PROCEDURE
+
+      0x00-0xBF          First Come First Served
+      0xC0-0xFF          IETF Review
+
+      SUB-TYPE VALUE     NAME
+
+      0x06               Flow spec traffic-rate
+      0x07               Flow spec traffic-action (Use of the
+                         "Value" field is defined in the
+                         "Traffic Action Fields" registry)
+      0x08               Flow spec redirect
+      0x09               Flow spec traffic-remarking
+      0x0A               Layer2 Info Extended Community
+
+   Note: RFC 5575 contains narrative text that declares the "Flow spec
+   traffic-rate" to be non-transitive but then assigns it a codepoint
+   that indicates that it is transitive.  Addressing this error in
+   RFC 5575 is not within the scope of this document.
+
+5.2.11.  Registries for the "Value" Field
+
+   At the time of the writing of this document, there is only one
+   registry containing codepoints for the "Value" field of an Extended
+   Community.
+
+5.2.11.1.  Traffic Action Fields
+
+   This registry has not been modified.
+
+
+
+
+
+
+
+
+
+Rosen & Rekhter              Standards Track                   [Page 14]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+5.3.  Registries for IPv6-Address-Specific ECs
+
+5.3.1.  Transitive Types
+
+   The following note has been added to the "Transitive
+   IPv6-Address-Specific Extended Community Types" registry:
+
+      This registry contains values of the two high-order octets of an
+      IPv6-Address-Specific Extended Community.
+
+   Registry Name: Transitive IPv6-Address-Specific Extended
+                  Community Types
+
+      RANGE              REGISTRATION PROCEDURE
+
+      0x0000-0x00FF      First Come First Served
+
+      TYPE VALUE         NAME
+
+      0x0002             Route Target
+      0x0003             Route Origin
+      0x0004             OSPFv3 Route Attributes (deprecated)
+      0x000B             VRF Route Import
+      0x0010             Cisco VPN-Distinguisher
+      0x0011             UUID-based Route Target
+
+5.3.2.  Non-Transitive Types
+
+   The following note has been added to the "Non-Transitive
+   IPv6-Address-Specific Extended Community Types" registry:
+
+      This registry contains values of the two high-order octets of an
+      IPv6-Address-Specific Extended Community.
+
+   Registry Name: Non-Transitive IPv6-Address-Specific Extended
+                  Community Types
+
+      RANGE              REGISTRATION PROCEDURE
+
+      0x4000-0x40FF      First Come First Served
+
+      None assigned
+
+6.  Security Considerations
+
+   No security considerations are raised by this document.
+
+
+
+
+
+Rosen & Rekhter              Standards Track                   [Page 15]
+
+RFC 7153               IANA Registries for BGP ECs            March 2014
+
+
+7.  Acknowledgments
+
+   The authors wish to thank Jon Mitchell, Hyojeong Kim, and Pearl Liang
+   for their review and comments.
+
+   The authors wish to thank Amanda Baber of IANA for educating us on
+   some of the problems faced by IANA staff when responding to requests
+   for BGP Extended Community Type and Sub-Type codepoint allocations.
+
+8.  Normative References
+
+   [RFC3692]  Narten, T., "Assigning Experimental and Testing Numbers
+              Considered Useful", BCP 82, RFC 3692, January 2004.
+
+   [RFC4360]  Sangli, S., Tappan, D., and Y. Rekhter, "BGP Extended
+              Communities Attribute", RFC 4360, February 2006.
+
+   [RFC5226]  Narten, T. and H. Alvestrand, "Guidelines for Writing an
+              IANA Considerations Section in RFCs", BCP 26, RFC 5226,
+              May 2008.
+
+   [RFC5701]  Rekhter, Y., "IPv6 Address Specific BGP Extended Community
+              Attribute", RFC 5701, November 2009.
+
+   [RFC7120]  Cotton, M., "Early IANA Allocation of Standards Track Code
+              Points", BCP 100, RFC 7120, January 2014.
+
+Authors' Addresses
+
+   Yakov Rekhter
+   Juniper Networks
+   1194 North Mathilda Ave.
+   Sunnyvale, CA  94089
+
+   EMail: yakov@juniper.net
+
+
+   Eric C. Rosen
+   Cisco Systems, Inc.
+   1414 Massachusetts Avenue
+   Boxborough, MA  01719
+
+   EMail: erosen@cisco.com
+
+
+
+
+
+
+
+
+Rosen & Rekhter              Standards Track                   [Page 16]
+

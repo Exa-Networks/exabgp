@@ -71,6 +71,7 @@ def without_exported_ip_minttl(monkeypatch: pytest.MonkeyPatch, system: str) -> 
     monkeypatch.setattr(tcp.platform, 'system', lambda: system)
 
 
+@pytest.mark.rfc('rfc5082#3-must-not-drop-trusted-or-unknown')
 @pytest.mark.parametrize('system, option', [('Linux', 21), ('FreeBSD', 66)])
 def test_the_kernel_option_is_used_when_python_does_not_export_it(
     monkeypatch: pytest.MonkeyPatch, warnings: list[str], system: str, option: int
@@ -111,6 +112,7 @@ def test_a_missing_ip_minttl_warns_rather_than_raises(monkeypatch: pytest.Monkey
     assert not io.options, f'nothing could be installed, and yet options were set: {io.options}'
 
 
+@pytest.mark.rfc('rfc5082#3-must-not-drop-trusted-or-unknown')
 def test_ip_minttl_is_used_when_the_platform_has_it(monkeypatch: pytest.MonkeyPatch, warnings: list[str]) -> None:
     """The working path must not have been lost, and must not warn."""
     monkeypatch.setattr(socket, 'IP_MINTTL', 21, raising=False)
@@ -135,6 +137,8 @@ def test_a_platform_which_rejects_ip_minttl_still_raises(monkeypatch: pytest.Mon
         tcp.min_ttl(io, '192.0.2.1', TTL)
 
 
+@pytest.mark.rfc('rfc5082#3-must-not-drop-trusted-or-unknown', polarity='negative')
+@pytest.mark.rfc('rfc5082#3-should-not-be-enabled-by-default')
 def test_no_ttl_configured_touches_nothing(warnings: list[str]) -> None:
     """None (unset) and zero (maximum) both mean ttl-security is off."""
     for ttl in (None, 0):

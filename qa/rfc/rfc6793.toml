@@ -1,0 +1,421 @@
+# RFC 6793 - BGP Support for Four-Octet Autonomous System (AS) Number Space
+# https://www.rfc-editor.org/rfc/rfc6793
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc6793.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+
+rfc = "rfc6793"
+title = "BGP Support for Four-Octet Autonomous System (AS) Number Space"
+url = "https://www.rfc-editor.org/rfc/rfc6793"
+
+[[requirement]]
+id = "rfc6793#4.1-advertise-the-capability"
+section = "4.1"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+A BGP speaker that supports four-octet AS numbers SHALL advertise
+this to its peers using BGP Capabilities Advertisements.
+"""
+
+[[requirement]]
+id = "rfc6793#4.1-capability-value-carries-the-as-number"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The AS
+number of the BGP speaker MUST be carried in the Capability Value
+field of the "support for four-octet AS number capability".
+"""
+note = """
+The negative side is that a Capability Value which cannot be an AS number is refused
+rather than read from whatever bytes happen to be there. exabgp accepts two octets as
+well as four, which the RFC does not allow for: asn4.py says so in a comment and keeps
+it because peers in the field send it. Anything else raises Notify.
+"""
+
+[[requirement]]
+id = "rfc6793#4.1-capability-value-in-lieu-of-my-as"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When a NEW BGP speaker processes an OPEN message from another NEW BGP
+speaker, it MUST use the AS number encoded in the Capability Value
+field of the "support for four-octet AS number capability" in lieu of
+the "My Autonomous System" field of the OPEN message.
+"""
+note = """
+exabgp only substitutes the capability value when the My Autonomous System field holds
+AS_TRANS: negotiated.py reads `if self.peer_as == AS_TRANS and self.asn4`. The sentence
+has no such condition, and a peer whose two fields disagree is exactly the case it
+exists to settle. The negative test says which one we take today and is xfail.
+"""
+
+[[requirement]]
+id = "rfc6793#4.1-four-octet-encoding-in-both-directions"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A BGP speaker that advertises such a capability to a particular peer,
+and receives from that peer the advertisement of such a capability,
+MUST encode AS numbers as four-octet entities in both the AS_PATH
+attribute and the AGGREGATOR attribute in the updates it sends to the
+peer and MUST assume that these attributes in the updates received
+from the peer encode AS numbers as four-octet entities.
+"""
+
+[[requirement]]
+id = "rfc6793#4.1-no-as4-attributes-between-new-speakers"
+section = "4.1"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+The new attributes, AS4_PATH and AS4_AGGREGATOR, MUST NOT be carried
+in an UPDATE message between NEW BGP speakers.
+"""
+note = """
+Positive only: this constrains the UPDATE we generate, and exabgp obeys it. What we do
+about one which arrives anyway is the next sentence, recorded separately at
+rfc6793#4.1-discard-as4-from-a-new-speaker, where exabgp does not obey it.
+"""
+
+[[requirement]]
+id = "rfc6793#4.1-discard-as4-from-a-new-speaker"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A NEW BGP speaker
+that receives the AS4_PATH attribute or the AS4_AGGREGATOR attribute
+in an UPDATE message from another NEW BGP speaker MUST discard the
+path attribute and continue processing the UPDATE message.
+"""
+note = """
+exabgp does not discard it. AttributeCollection.unpack merges AS_PATH with AS4_PATH
+whenever both are present, without ever looking at negotiated.asn4, so on a session
+where four-octet AS numbers were negotiated a peer can hand us an AS4_PATH and rewrite
+what we believe the AS path to be. The positive test is xfail and shows the rewrite.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.1-as-trans-without-a-two-octet-as"
+section = "4.2.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+AS_TRANS MUST be used when the NEW BGP speaker does not have a
+two-octet AS number (even if multiple Autonomous Systems would
+use it).
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.2-as-path-two-octet-to-an-old-speaker"
+section = "4.2.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When communicating with an OLD BGP speaker, a NEW BGP speaker MUST
+send the AS path information in the AS_PATH attribute encoded with
+two-octet AS numbers.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.2-as4-path-unless-all-mappable"
+section = "4.2.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The NEW BGP speaker MUST also send the AS path
+information in the AS4_PATH attribute (encoded with four-octet AS
+numbers), except for the case where all of the AS path information is
+composed of mappable four-octet AS numbers only.  In this case, the
+NEW BGP speaker MUST NOT send the AS4_PATH attribute.
+"""
+note = """
+Both halves are in one sentence pair, so the polarities fall out of it: the positive
+test is that a path with a non-mappable AS number gains an AS4_PATH, the negative that
+a path of mappable ones does not. The negative is the half which finds bugs, because
+sending AS4_PATH always would pass the positive one.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.2-exclude-confed-segments-from-as4-path"
+section = "4.2.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Whenever the AS path information contains the
+AS_CONFED_SEQUENCE or AS_CONFED_SET path segment, the NEW BGP speaker
+MUST exclude such path segments from the AS4_PATH attribute being
+constructed.
+"""
+note = """
+exabgp includes them. ASPath.pack_attribute builds the AS4_PATH from self.aspath with no
+filter at all: an AS_PATH holding a confederation segment and a non-mappable AS number
+produces an AS4_PATH whose first segment is type 3, which is what the RFC calls invalid
+in that attribute and what leaks confederation membership outside the confederation.
+Section 6 states the same prohibition a second time; both are this one defect.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.2-as4-aggregator-for-a-non-mappable-as"
+section = "4.2.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Similarly, if the NEW BGP speaker has to send the AGGREGATOR
+attribute, and if the aggregating Autonomous System's AS number is a
+non-mappable four-octet AS number, then the speaker MUST use the
+AS4_AGGREGATOR attribute and set the AS number field in the existing
+AGGREGATOR attribute to the reserved AS number, AS_TRANS.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.2-no-as4-aggregator-for-a-mappable-as"
+section = "4.2.2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+Note that
+if the AS number is mappable, then the AS4_AGGREGATOR attribute MUST
+NOT be sent.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.3-be-ready-for-as4-path"
+section = "4.2.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When a NEW BGP speaker receives an update from an OLD BGP speaker, it
+MUST be prepared to receive the AS4_PATH attribute along with the
+existing AS_PATH attribute.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.3-be-ready-for-as4-aggregator"
+section = "4.2.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A NEW BGP speaker MUST also be prepared to receive the AS4_AGGREGATOR
+attribute along with the AGGREGATOR attribute from an OLD BGP
+speaker.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.3-aggregator-not-as-trans"
+section = "4.2.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+When both of the attributes are received, if the AS number
+in the AGGREGATOR attribute is not AS_TRANS, then:
+
+   -  the AS4_AGGREGATOR attribute and the AS4_PATH attribute SHALL
+      be ignored,
+
+   -  the AGGREGATOR attribute SHALL be taken as the information
+      about the aggregating node, and
+
+   -  the AS_PATH attribute SHALL be taken as the AS path
+      information.
+"""
+note = """
+exabgp ignores neither. merge_attributes is reached on AS_PATH and AS4_PATH alone and
+never reads the AGGREGATOR, so an AGGREGATOR naming a plain two-octet AS does not stop
+the AS4_PATH being merged into the path, and both aggregator attributes are handed to
+the JSON API side by side. The positive test is xfail.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.3-aggregator-is-as-trans"
+section = "4.2.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+Otherwise,
+
+   -  the AGGREGATOR attribute SHALL be ignored,
+
+   -  the AS4_AGGREGATOR attribute SHALL be taken as the information
+      about the aggregating node, and
+
+   -  the AS path information would need to be constructed, as in all
+      other cases.
+"""
+note = """
+The AGGREGATOR is not ignored: an UPDATE carrying AGGREGATOR AS_TRANS and AS4_AGGREGATOR
+200000 leaves both attributes in the collection, so a consumer of the JSON reading
+"aggregator" is told the aggregating node is AS 23456, which is a placeholder and not an
+Autonomous System. The third bullet, constructing the AS path, is the one exabgp does do
+and is recorded at rfc6793#4.2.3-construct-by-prepending. The positive test is xfail.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.3-ignore-as4-path-when-as-path-is-shorter"
+section = "4.2.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+If the number of AS numbers in the AS_PATH attribute is less than the
+number of AS numbers in the AS4_PATH attribute, then the AS4_PATH
+attribute SHALL be ignored, and the AS_PATH attribute SHALL be taken
+as the AS path information.
+"""
+
+[[requirement]]
+id = "rfc6793#4.2.3-construct-by-prepending"
+section = "4.2.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+If the number of AS numbers in the AS_PATH attribute is larger than
+or equal to the number of AS numbers in the AS4_PATH attribute, then
+the AS path information SHALL be constructed by taking as many AS
+numbers and path segments as necessary from the leading part of the
+AS_PATH attribute, and then prepending them to the AS4_PATH attribute
+so that the AS path information has a number of AS numbers identical
+to that of the AS_PATH attribute.
+"""
+note = """
+The rule names one number, the count of the reconstructed path, and that is what the
+positive test asserts across a set of inputs. It fails: merge_attributes counts the
+AS_SEQUENCE members and the AS_SET members in two separate passes, and each pass slices
+`as2path.as_seq[:-len4]`. When the AS4_PATH carries no segment of that kind len4 is
+zero, `[:-0]` is `[:0]`, and the whole leading part of the AS_PATH is thrown away rather
+than all of it being kept. An AS4_PATH holding only an AS_SET therefore deletes every
+AS number in the AS_PATH's sequence.
+"""
+
+[[requirement]]
+id = "rfc6793#6-no-confed-segments-in-as4-path"
+section = "6"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+In addition, the path segment types AS_CONFED_SEQUENCE and
+AS_CONFED_SET [RFC5065] MUST NOT be carried in the AS4_PATH attribute
+of an UPDATE message.
+"""
+note = """
+Positive only: this constrains what we put on the wire, and it is the same defect as
+rfc6793#4.2.2-exclude-confed-segments-from-as4-path seen from the error handling
+section. The receiving half is the next sentence. One xfail test covers the sending
+rule, quoted here because section 6 is where an implementer looks for it.
+"""
+
+[[requirement]]
+id = "rfc6793#6-discard-confed-segments-from-as4-path"
+section = "6"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A NEW BGP speaker that receives these path
+segment types in the AS4_PATH attribute of an UPDATE message from an
+OLD BGP speaker MUST discard these path segments, adjust the relevant
+attribute fields accordingly, and continue processing the UPDATE
+message.
+"""
+note = """
+They are kept. ASPath._unpack_segments_static accepts all four segment types for
+AS4_PATH as readily as for AS_PATH, and merge_attributes folds AS_CONFED_SEQUENCE
+members into as_seq along with the rest, so a confederation AS number sent by a peer
+outside our confederation ends up in the path we publish. The positive test is xfail.
+"""
+
+[[requirement]]
+id = "rfc6793#6-as4-path-malformed-conditions"
+section = "6"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The AS4_PATH attribute in an UPDATE message SHALL be considered
+malformed under the following conditions:
+
+   -  the attribute length is not a multiple of two or is too small
+      (i.e., less than 6) for the attribute to carry at least one AS
+      number, or
+
+   -  the path segment length in the attribute is either zero or is
+      inconsistent with the attribute length, or
+
+   -  the path segment type in the attribute is not one of the types
+      defined: AS_SEQUENCE, AS_SET, AS_CONFED_SEQUENCE, and
+      AS_CONFED_SET.
+"""
+note = """
+Only the third condition is enforced. A segment length of zero is read as an empty
+segment and the attribute is accepted, which is worse than accepting nothing, because an
+empty AS4_PATH then goes through the reconstruction above and deletes the AS_PATH. The
+first condition, a length below six or not a multiple of two, is caught only when the
+short read happens to fall off the end. The positive test is xfail and names each
+condition.
+"""
+
+[[requirement]]
+id = "rfc6793#6-discard-a-malformed-as4-path"
+section = "6"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A NEW BGP speaker that receives a malformed AS4_PATH attribute in an
+UPDATE message from an OLD BGP speaker MUST discard the attribute and
+continue processing the UPDATE message.
+"""
+note = """
+Section 6 chose attribute discard for this attribute on purpose, and says why: the AS
+path that matters during the transition is the one in AS_PATH, which is still there.
+exabgp does not discard, it withdraws: AS4Path inherits TREAT_AS_WITHDRAW from ASPath,
+so a malformed AS4_PATH from one peer takes down every prefix in that UPDATE. The
+positive test is xfail. RFC 7606 section 7 lists attribute 17 among those whose existing
+error handling it leaves alone, so this rule is still the one in force.
+"""
+
+[[requirement]]
+id = "rfc6793#6-as4-aggregator-malformed-length"
+section = "6"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The AS4_AGGREGATOR attribute in an UPDATE message SHALL be considered
+malformed if the attribute length is not 8.
+"""
+
+[[requirement]]
+id = "rfc6793#6-discard-a-malformed-as4-aggregator"
+section = "6"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A NEW BGP speaker that receives a malformed AS4_AGGREGATOR attribute
+in an UPDATE message from an OLD BGP speaker MUST discard the
+attribute and continue processing the UPDATE message.
+"""

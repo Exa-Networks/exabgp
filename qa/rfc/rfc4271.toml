@@ -1,0 +1,743 @@
+# RFC 4271 - A Border Gateway Protocol 4 (BGP-4)
+# https://www.rfc-editor.org/rfc/rfc4271
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc4271.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Scope of this file: sections 4.1 to 4.4 (message formats and the hold time), 6.1
+# (message header errors), 6.2 (OPEN errors), 6.3 (UPDATE errors) and the parts of 6 and
+# 10 which bind the hold timer.  Sections 5, 8 (the finite state machine) and 9 (the
+# Decision Process and the Update-Send process) are not recorded here at all.  Their
+# absence is not a claim about them.
+#
+# RFC 7606 "Revised Error Handling for BGP UPDATE Messages" updates section 6.3.  Where
+# it does, the RFC 4271 sentence is recorded as not-applicable with the RFC 7606 clause
+# which replaced it, and the replacement is the requirement exabgp is held to.  See
+# qa/rfc/text/rfc7606.txt and tests/unit/test_rfc7606_prescribed_action.py.
+
+rfc = "rfc4271"
+title = "A Border Gateway Protocol 4 (BGP-4)"
+url = "https://www.rfc-editor.org/rfc/rfc4271"
+
+
+# ============================================================ 4.1 Message Header Format
+
+[[requirement]]
+id = "rfc4271#4.1-marker-all-ones"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+This 16-octet field is included for compatibility; it MUST be
+set to all ones.
+"""
+note = """
+Positive only: this constrains the sixteen octets we put on the wire, and every message
+goes out through Message._message, which prepends Message.MARKER.  The receive side of
+the same field is a separate obligation with its own subcode, recorded as
+rfc4271#6.1-marker-connection-not-synchronized, so a negative test here would only be
+that entry's test written twice.
+"""
+
+[[requirement]]
+id = "rfc4271#4.1-length-between-19-and-4096"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The value of the Length field MUST always be at least
+19 and no greater than 4096, and MAY be further constrained,
+depending on the message type.
+"""
+note = """
+The bound we apply on receipt is Connection.msg_size, which starts at 4096 and only rises
+to 65535 once RFC 8654 Extended Message has been negotiated by both sides.
+"""
+
+
+# =============================================================== 4.2 OPEN Message Format
+
+[[requirement]]
+id = "rfc4271#4.2-holdtimer-is-the-smaller-of-the-two"
+section = "4.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Upon
+receipt of an OPEN message, a BGP speaker MUST calculate the
+value of the Hold Timer by using the smaller of its configured
+Hold Time and the Hold Time received in the OPEN message.
+"""
+
+[[requirement]]
+id = "rfc4271#4.2-holdtime-zero-or-at-least-three"
+section = "4.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The
+Hold Time MUST be either zero or at least three seconds.
+"""
+note = """
+This binds the Hold Time we propose, so the check is in the configuration parser
+(configuration/neighbor/parser.py hold_time), not on the receive path.  The negative side
+is that one and two seconds are refused rather than silently accepted and sent.
+"""
+
+
+# ============================================================= 4.3 UPDATE Message Format
+
+[[requirement]]
+id = "rfc4271#4.3-well-known-attributes-are-transitive"
+section = "4.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+For well-known attributes, the Transitive bit MUST be set to 1.
+"""
+
+[[requirement]]
+id = "rfc4271#4.3-partial-bit-is-zero"
+section = "4.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+For well-known attributes
+and for optional non-transitive attributes, the Partial bit
+MUST be set to 0.
+"""
+
+[[requirement]]
+id = "rfc4271#4.3-unused-flag-bits"
+section = "4.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The lower-order four bits of the Attribute Flags octet are
+unused.  They MUST be zero when sent and MUST be ignored when
+received.
+"""
+note = """
+One sentence, two obligations, and exabgp meets the first and not the second.  The
+attribute registry is keyed on (type code, flags) with only the Extended Length bit
+normalised away, so a peer which sets any of the four unused bits makes the lookup miss
+and the attribute is not recognised.  The negative test demonstrates it.
+"""
+
+[[requirement]]
+id = "rfc4271#4.3-process-a-prefix-in-both-fields"
+section = "4.3"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+However, a BGP speaker MUST be able to process UPDATE messages
+in this form.
+"""
+note = """
+"This form" is an UPDATE carrying the same address prefix in both the WITHDRAWN ROUTES
+and the NLRI field, which the sentence before this one says a speaker SHOULD NOT send.
+Positive only: the obligation is that we cope, so the test is that such an UPDATE parses
+and yields both entries.  There is nothing to reject, which is the whole point of it.
+"""
+
+[[requirement]]
+id = "rfc4271#4.3-ignore-a-prefix-in-both-fields"
+section = "4.3"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+A BGP speaker SHOULD treat an UPDATE message of this form
+as though the WITHDRAWN ROUTES do not contain the address prefix.
+"""
+note = """
+exabgp hands both the withdrawal and the announcement to the API and to the adj-RIB-in,
+in the order they appeared on the wire, and does not drop the withdrawal.  A consumer
+which applies them in order ends up with the announcement, which is the same answer, but
+one which sorts or batches them does not, and that is what the SHOULD exists to prevent.
+"""
+
+
+# ========================================================== 4.4 KEEPALIVE Message Format
+
+[[requirement]]
+id = "rfc4271#4.4-keepalive-at-most-one-per-second"
+section = "4.4"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+KEEPALIVE messages MUST NOT be sent more
+frequently than one per second.
+"""
+note = """
+Positive only: this bounds what we send.  SendTimer keeps the send interval as a whole
+number of seconds, HoldTime.keepalive() being an integer division by three, and the
+smallest hold time RFC 4271 4.2 allows is three, so the fastest we can be asked to run is
+one per second.  There is no peer input which violates this and nothing asks us to police
+a peer which sends too fast.
+"""
+
+[[requirement]]
+id = "rfc4271#4.4-no-keepalive-when-holdtime-is-zero"
+section = "4.4"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+If the negotiated Hold Time interval is zero, then periodic KEEPALIVE
+messages MUST NOT be sent.
+"""
+note = """
+Positive only: the requirement is that nothing is sent, so the test is that the send
+timer never asks for a keepalive.  There is no second side to it; the same file holds an
+unmarked test showing the timer does fire for a non-zero hold time, so the silence above
+is the rule rather than a dead timer.
+"""
+
+
+# ================================================================== 6 BGP Error Handling
+
+[[requirement]]
+id = "rfc4271#6-zero-subcode-when-none-is-specified"
+section = "6"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If no Error Subcode is
+specified, then a zero MUST be used.
+"""
+note = """
+This is the only RFC 2119 sentence which binds section 6.5: "Hold Timer Expired Error
+Handling" states the notification is sent but uses no keyword, and the Hold Timer Expired
+error code has no subcodes, so what 6.5 owes is a subcode of zero.  The positive test
+drives the receive timer past the hold time and reads the 4/0 it raises; the negative
+test shows an error which does have a subcode does not get zeroed on the way out.
+"""
+
+
+# ======================================================= 6.1 Message Header Error Handling
+
+[[requirement]]
+id = "rfc4271#6.1-errors-use-the-message-header-error-code"
+section = "6.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+All errors detected while processing the Message Header MUST be
+indicated by sending the NOTIFICATION message with the Error Code
+Message Header Error.
+"""
+
+[[requirement]]
+id = "rfc4271#6.1-marker-connection-not-synchronized"
+section = "6.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The expected value of the Marker field of the message header is all
+ones.  If the Marker field of the message header is not as expected,
+then a synchronization error has occurred and the Error Subcode MUST
+be set to Connection Not Synchronized.
+"""
+
+[[requirement]]
+id = "rfc4271#6.1-bad-message-length"
+section = "6.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If at least one of the following is true:
+
+   - if the Length field of the message header is less than 19 or
+     greater than 4096, or
+
+   - if the Length field of an OPEN message is less than the minimum
+     length of the OPEN message, or
+
+   - if the Length field of an UPDATE message is less than the
+     minimum length of the UPDATE message, or
+
+   - if the Length field of a KEEPALIVE message is not equal to 19,
+     or
+
+   - if the Length field of a NOTIFICATION message is less than the
+     minimum length of the NOTIFICATION message,
+
+then the Error Subcode MUST be set to Bad Message Length.
+"""
+note = """
+The five cases are one requirement because the RFC makes them one sentence, and the test
+is parametrised over all five plus the length bounds either side of each.
+"""
+
+[[requirement]]
+id = "rfc4271#6.1-bad-message-length-data-field"
+section = "6.1"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+The Data
+field MUST contain the erroneous Length field.
+"""
+note = """
+Positive only: an obligation about what we put in the Data field has no peer input which
+violates it.  It is recorded because we do not meet it on the path a peer actually
+reaches.  Connection.reader_async builds NotifyError(1, 2, "<type> has an invalid message
+length of <n>") and reactor/protocol.py turns that string into the Data field, so the
+peer receives ASCII where the RFC asks for the two octets of the Length field.  The three
+in-parser paths (Open, KeepAlive, UpdateCollection.split) do send pack('!H', length); the
+header path, which is the one that fires for a Length the peer got wrong, does not.
+"""
+
+[[requirement]]
+id = "rfc4271#6.1-bad-message-type"
+section = "6.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the Type field of the message header is not recognized, then the
+Error Subcode MUST be set to Bad Message Type.
+"""
+note = """
+Message.unpack does answer 1/3, and an unmarked test in the same file pins that.  It is
+not what a peer gets: reactor/protocol.py read_message tests msg_id against
+Message.CODE.MESSAGES before the decoder is reached and raises Notify(1, 0, 'can not
+decode update message of type "N"') for anything outside it, so an unrecognised Type
+field is answered Unspecific, and called an update.  The positive test drives a real
+Connection and a real Protocol and demonstrates it.
+"""
+
+
+# ============================================================ 6.2 OPEN Message Error Handling
+
+[[requirement]]
+id = "rfc4271#6.2-unsupported-version-number"
+section = "6.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the version number in the Version field of the received OPEN
+message is not supported, then the Error Subcode MUST be set to
+Unsupported Version Number.
+"""
+
+[[requirement]]
+id = "rfc4271#6.2-bad-peer-as"
+section = "6.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the Autonomous System field of the OPEN message is unacceptable,
+then the Error Subcode MUST be set to Bad Peer AS.
+"""
+note = """
+What exabgp finds unacceptable is an ASN other than the configured peer-as, which the RFC
+leaves to the implementation.  The comparison is made against the resolved ASN, so a peer
+which sends AS_TRANS and its real ASN in the four-octet capability is matched on the real
+one.
+"""
+
+[[requirement]]
+id = "rfc4271#6.2-reject-hold-time-of-one-or-two"
+section = "6.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+An
+implementation MUST reject Hold Time values of one or two seconds.
+"""
+
+[[requirement]]
+id = "rfc4271#6.2-unacceptable-hold-time"
+section = "6.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the Hold Time field of the OPEN message is unacceptable, then the
+Error Subcode MUST be set to Unacceptable Hold Time.
+"""
+
+[[requirement]]
+id = "rfc4271#6.2-use-the-negotiated-hold-time"
+section = "6.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+An
+implementation that accepts a Hold Time MUST use the negotiated value
+for the Hold Time.
+"""
+note = """
+The negotiated value is what the receive timer expires on, not our configured value and
+not the peer's: the positive test negotiates a smaller value than we configured and shows
+the session dies at the smaller one, the negative that it survives right up to it.
+"""
+
+[[requirement]]
+id = "rfc4271#6.2-bad-bgp-identifier"
+section = "6.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the BGP Identifier field of the OPEN message is syntactically
+incorrect, then the Error Subcode MUST be set to Bad BGP Identifier.
+"""
+note = """
+The next sentence of 6.2 defines syntactic correctness as "a valid unicast IP host
+address", and RFC 6286 section 2.2 replaced that with "the BGP Identifier ... MUST be
+non-zero".  exabgp follows RFC 6286: it refuses 0.0.0.0, and refuses a peer whose
+identifier equals ours on an IBGP session, and accepts everything else.  A multicast or
+broadcast identifier is therefore accepted, which is RFC 6286 behaviour rather than a
+gap.
+"""
+
+[[requirement]]
+id = "rfc4271#6.2-unsupported-optional-parameters"
+section = "6.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If one of the Optional Parameters in the OPEN message is not
+recognized, then the Error Subcode MUST be set to Unsupported
+Optional Parameters.
+"""
+note = """
+exabgp answers 2/0 Unspecific, not 2/4: Capabilities.unpack ends with
+raise Notify(2, 0, 'Unknow OPEN parameter {}') for any parameter type other than 1 and 2.
+2/0 is what the *next* sentence of 6.2 reserves for a parameter which is recognised but
+malformed, so as it stands the two cases are indistinguishable to the peer.  The positive
+test demonstrates it.  This is about the Optional Parameter type, not about capability
+codes inside parameter type 2: RFC 5492 requires an unknown capability to be ignored, and
+exabgp does ignore those.
+"""
+
+[[requirement]]
+id = "rfc4271#6.2-malformed-parameter-is-unspecific"
+section = "6.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If one of the Optional Parameters in the OPEN message is recognized,
+but is malformed, then the Error Subcode MUST be set to 0
+(Unspecific).
+"""
+
+
+# ========================================================== 6.3 UPDATE Message Error Handling
+
+[[requirement]]
+id = "rfc4271#6.3-malformed-attribute-list"
+section = "6.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Error checking of an UPDATE message begins by examining the path
+attributes.  If the Withdrawn Routes Length or Total Attribute Length
+is too large (i.e., if Withdrawn Routes Length + Total Attribute
+Length + 23 exceeds the message Length), then the Error Subcode MUST
+be set to Malformed Attribute List.
+"""
+note = """
+RFC 7606 section 3.b keeps this one as it stands, so it is still a session reset and
+still 3/1.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-attribute-flags-error"
+section = "6.3"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If any recognized attribute has Attribute Flags that conflict with
+the Attribute Type Code, then the Error Subcode MUST be set to
+Attribute Flags Error.
+"""
+note = """
+RFC 7606 section 3.c replaces this paragraph outright, quoting it as "Old Text" and
+requiring treat-as-withdraw instead of a session reset for a conflict in the Optional or
+Transitive bits.  exabgp implements the replacement: the attribute registry is keyed on
+(type code, flags), so a mismatch means the attribute is not recognised and the route is
+withdrawn.  It never sends 3/4.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-attribute-length-error"
+section = "6.3"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If any recognized attribute has an Attribute Length that conflicts
+with the expected length (based on the attribute type code), then the
+Error Subcode MUST be set to Attribute Length Error.
+"""
+note = """
+RFC 7606 section 4 covers the two ways the Total Attribute Length can disagree with the
+enclosed attributes and requires treat-as-withdraw for both, and section 7 gives the
+per-attribute length rule for every attribute RFC 4271 defines, each of them ending in
+treat-as-withdraw or attribute discard.  exabgp implements those actions
+(tests/unit/test_rfc7606_prescribed_action.py) and does not reset the session for a
+length error on a core attribute.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-missing-well-known-attribute"
+section = "6.3"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If any of the well-known mandatory attributes are not present, then
+the Error Subcode MUST be set to Missing Well-known Attribute.
+"""
+note = """
+RFC 7606 section 3.d replaces this: "If any of the well-known mandatory attributes are
+not present in an UPDATE message, then treat-as-withdraw MUST be used."  exabgp checks
+for ORIGIN and AS_PATH on any UPDATE which announces, and for NEXT_HOP when the legacy
+IPv4 NLRI field is used, and adds the treat-as-withdraw sentinel rather than raising 3/3.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-unrecognized-well-known-attribute"
+section = "6.3"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+If any of the well-known mandatory attributes are not recognized,
+then the Error Subcode MUST be set to Unrecognized Well-known
+Attribute.
+"""
+note = """
+Positive only: the obligation is to refuse, and the case is defined by an attribute code
+we do not know, so there is no complementary input.  RFC 7606 does not revise this
+paragraph; it revises the missing case, not the unrecognised one.  exabgp does not meet
+it: an attribute whose Optional bit is clear and whose type code is not registered is
+kept as a GenericAttribute if the Transitive bit is set and dropped silently if it is
+not, the handling RFC 4271 section 5 gives to an *optional* attribute.  The positive test
+demonstrates it.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-invalid-origin-attribute"
+section = "6.3"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If the ORIGIN attribute has an undefined value, then the Error Sub-
+code MUST be set to Invalid Origin Attribute.
+"""
+note = """
+RFC 7606 section 7.1 replaces this: an ORIGIN whose length is not 1 or whose value is
+undefined is malformed and "SHALL be handled using the approach of treat-as-withdraw".
+exabgp rejects a value above 2 in Origin.from_packet and the attribute's
+TREAT_AS_WITHDRAW flag turns that into the RFC 7606 action.  It never sends 3/6.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-invalid-next-hop-attribute"
+section = "6.3"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If the NEXT_HOP attribute field is syntactically incorrect, then the
+Error Subcode MUST be set to Invalid NEXT_HOP Attribute.
+"""
+note = """
+RFC 7606 section 7.3 replaces this and narrows what "malformed" means to a length which
+is not 4, handled with treat-as-withdraw.  exabgp checks the length (4 or 16, the second
+for the RFC 5549 case) and treats a bad one as withdraw.  It never sends 3/8.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-next-hop-semantically-incorrect"
+section = "6.3"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+If the NEXT_HOP attribute is semantically incorrect, the error SHOULD
+be logged, and the route SHOULD be ignored.
+"""
+note = """
+exabgp does half of it.  A NEXT_HOP equal to our own address is logged as a warning in
+update/collection.py and the route is then kept and handed to the API, rather than
+ignored.  The other semantic case the RFC names, the EBGP one-hop subnet check, is not
+tested at all, and 0.0.0.0 and multicast next hops are accepted.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-malformed-as-path"
+section = "6.3"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The AS_PATH attribute is checked for syntactic correctness.  If the
+path is syntactically incorrect, then the Error Subcode MUST be set
+to Malformed AS_PATH.
+"""
+note = """
+RFC 7606 section 7.2 replaces this: it defines what makes an AS_PATH malformed and says
+such an UPDATE "SHALL be handled using the approach of treat-as-withdraw".  exabgp does
+detect the malformation, raising 3/11 out of ASPath._unpack_segments_static, but ASPath
+carries TREAT_AS_WITHDRAW so the attribute layer converts that into the RFC 7606 action
+before it can reach the peer.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-leftmost-as-check"
+section = "6.3"
+level = "MAY"
+status = "not-applicable"
+polarity = "both"
+text = """
+If the UPDATE message is received from an external peer, the local
+system MAY check whether the leftmost (with respect to the position
+of octets in the protocol message) AS in the AS_PATH attribute is
+equal to the autonomous system number of the peer that sent the
+message.
+"""
+note = """
+exabgp does not make this check, which the sentence permits rather than requires, so the
+conditional obligation that follows it never arises.  Recording it as not-applicable
+rather than a gap because declining an explicit MAY is a decision, and because exabgp is
+a speaker with a JSON API rather than a router: what to do with a route whose first AS is
+not the peer's belongs to the consumer of the API, which has the AS path in front of it.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-optional-attribute-error"
+section = "6.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If an optional attribute is recognized, then the value of this
+attribute MUST be checked.  If an error is detected, the attribute
+MUST be discarded, and the Error Subcode MUST be set to Optional
+Attribute Error.
+"""
+note = """
+RFC 7606 section 7 replaces this for the optional attributes it names, but not for
+MP_REACH_NLRI framing: section 5.3 keeps a session reset for an MP_REACH_NLRI which
+cannot be parsed far enough to locate the NLRI, and that is the case exabgp answers with
+3/9.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-duplicate-attribute"
+section = "6.3"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If any attribute appears more than once in the UPDATE message, then
+the Error Subcode MUST be set to Malformed Attribute List.
+"""
+note = """
+RFC 7606 section 3.g replaces this: a repeated MP_REACH_NLRI or MP_UNREACH_NLRI is still
+3/1, but for any other attribute "all the occurrences of the attribute other than the
+first one SHALL be discarded and the UPDATE message will continue to be processed".
+exabgp does exactly that split: MPRNLRI and MPURNLRI carry NO_DUPLICATE and raise 3/1,
+every other repeat is logged and skipped.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-invalid-network-field"
+section = "6.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The NLRI field in the UPDATE message is checked for syntactic
+validity.  If the field is syntactically incorrect, then the Error
+Subcode MUST be set to Invalid Network Field.
+"""
+note = """
+RFC 7606 section 5.3 leaves this a session reset, because a prefix which cannot be parsed
+leaves the reader at an unknown offset and treat-as-withdraw needs the NLRI field to have
+been read.  exabgp raises 3/10 from CIDR.decode and from INETBase.unpack_nlri, outside
+the attribute layer's try/except, so it does reach the peer.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-nlri-semantically-incorrect"
+section = "6.3"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+If a prefix in the NLRI field is semantically incorrect (e.g., an
+unexpected multicast IP address), an error SHOULD be logged locally,
+and the prefix SHOULD be ignored.
+"""
+note = """
+exabgp applies no semantic filter to a received prefix: 224.0.0.0/4, 127.0.0.0/8 and
+0.0.0.0/0 are all parsed and handed on.  Deliberate to the extent that exabgp exists to
+show an operator what a peer sent, and installs nothing, but it is still the SHOULD
+undone rather than a case which does not arise, so it is a gap and not not-applicable.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-no-nlri-is-still-valid"
+section = "6.3"
+level = "SHALL"
+status = "required"
+polarity = "positive-only"
+text = """
+An UPDATE message that contains correct path attributes, but no NLRI,
+SHALL be treated as a valid UPDATE message.
+"""
+note = """
+Positive only: the obligation is to accept, so the test is that such an UPDATE parses and
+the session lives.  An UPDATE whose attributes are not correct is a different sentence's
+business, and every other 6.3 entry here covers one of those.
+"""
+
+
+# ====================================================================== 10 BGP Timers
+
+[[requirement]]
+id = "rfc4271#10-holdtimer-configurable-per-peer"
+section = "10"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+An implementation of BGP MUST allow the HoldTimer to be configurable
+on a per-peer basis, and MAY allow the other timers to be
+configurable.
+"""
+note = """
+Positive only: this is an obligation about the configuration surface we offer, so the
+test is that two neighbours in one configuration can carry different hold times and that
+each keeps its own.  There is no peer input which violates it.
+"""

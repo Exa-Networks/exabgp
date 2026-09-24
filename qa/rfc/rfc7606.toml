@@ -1,0 +1,942 @@
+# RFC 7606 - Revised Error Handling for BGP UPDATE Messages
+# https://www.rfc-editor.org/rfc/rfc7606
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc7606.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# This RFC is a single argument: a malformed attribute must not cost the adjacency.  It
+# names three outcomes, ordered from strongest to weakest - session reset, treat-as-
+# withdraw, attribute discard - and section 7 assigns one of them per attribute type.
+# Conflating any two of them is the bug class the document exists to prevent, so each
+# section 7 row is a separate entry here rather than a line in a table.
+#
+# In this tree the section 7 prescription is expressed by two class variables on
+# Attribute: TREAT_AS_WITHDRAW and DISCARD.  AttributeCollection.parse reads them when a
+# decoder raises, and UpdateCollection._parse_payload acts on the marker they leave.
+
+rfc = "rfc7606"
+title = "Revised Error Handling for BGP UPDATE Messages"
+url = "https://www.rfc-editor.org/rfc/rfc7606"
+
+# ============================================================== 2. Error-Handling Approaches
+
+[[requirement]]
+id = "rfc7606#2-treat-as-withdraw-removes-contained-routes"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Treat-as-withdraw: In this approach, the UPDATE message containing
+the path attribute in question MUST be treated as though all
+contained routes had been withdrawn just as if they had been
+listed in the WITHDRAWN ROUTES field (or in the MP_UNREACH_NLRI
+attribute if appropriate) of the UPDATE message, thus causing them
+to be removed from the Adj-RIB-In according to the procedures of
+[RFC4271].
+"""
+note = """
+"All contained routes" includes the ones carried in MP_REACH_NLRI, not only the legacy
+IPv4 NLRI field, which is why one test feeds an MP_REACH and asserts the route comes back
+out of `withdraws`.  Asserting on `nlris` cannot see this: that property is the union of
+announces and withdraws, so it holds the route either way.
+"""
+
+[[requirement]]
+id = "rfc7606#2-attribute-discard-continues-processing"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Attribute discard: In this approach, the malformed attribute MUST
+be discarded and the UPDATE message continues to be processed.
+"""
+
+[[requirement]]
+id = "rfc7606#2-attribute-discard-only-without-route-effect"
+section = "2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+This approach MUST NOT be used except in the case of an attribute
+that has no effect on route selection or installation.
+"""
+note = """
+This binds the choice of flag rather than one decode.  The test reads the real attribute
+registry and asserts that every class carrying DISCARD is one whose own specification
+prescribes attribute discard, and that no attribute which feeds route selection carries
+it.  A per-message test cannot see this: it only ever exercises the attributes it names.
+"""
+
+# ================================ 3. Revision to BGP UPDATE Message Error Handling
+
+[[requirement]]
+id = "rfc7606#3a-session-reset-uses-update-message-error"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+An error detected while processing the UPDATE message for
+which a session reset is specified MUST be indicated by
+sending the NOTIFICATION message with the Error Code UPDATE
+Message Error.
+"""
+
+[[requirement]]
+id = "rfc7606#3b-length-too-large-is-malformed-attribute-list"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the Withdrawn Routes Length or Total Attribute Length is
+too large (i.e., if Withdrawn Routes Length + Total
+Attribute Length + 23 exceeds the message Length), then the
+Error Subcode MUST be set to Malformed Attribute List.
+"""
+
+[[requirement]]
+id = "rfc7606#3c-flag-conflict-treat-as-withdraw"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the value of either the Optional or Transitive bits in
+the Attribute Flags is in conflict with their specified
+values, then the attribute MUST be treated as malformed and
+the "treat-as-withdraw" approach used, unless the
+specification for the attribute mandates different handling
+for incorrect Attribute Flags.
+"""
+
+[[requirement]]
+id = "rfc7606#3d-missing-well-known-mandatory-treat-as-withdraw"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If any of the well-known mandatory attributes are not present in
+an UPDATE message, then "treat-as-withdraw" MUST be used.
+"""
+
+[[requirement]]
+id = "rfc7606#3e-treat-as-withdraw-replaces-session-reset"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+"Treat-as-withdraw" MUST be used for the cases that specify a
+session reset and involve any of the attributes ORIGIN, AS_PATH,
+NEXT_HOP, MULTI_EXIT_DISC, or LOCAL_PREF.
+"""
+
+[[requirement]]
+id = "rfc7606#3f-attribute-discard-for-atomic-aggregate-and-aggregator"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+"Attribute discard" MUST be used for any of the cases that
+specify a session reset and involve ATOMIC_AGGREGATE or
+AGGREGATOR.
+"""
+
+[[requirement]]
+id = "rfc7606#3g-duplicate-mp-nlri-notification"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the MP_REACH_NLRI attribute or the MP_UNREACH_NLRI [RFC4760]
+attribute appears more than once in the UPDATE message, then a
+NOTIFICATION message MUST be sent with the Error Subcode
+"Malformed Attribute List".
+"""
+
+[[requirement]]
+id = "rfc7606#3g-duplicate-attribute-keeps-the-first"
+section = "3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+If any other attribute (whether recognized or unrecognized)
+appears more than once in an UPDATE message, then all the
+occurrences of the attribute other than the first one SHALL be
+discarded and the UPDATE message will continue to be processed.
+"""
+note = """
+"Other than the first one" is the half a survival test cannot see: an implementation which
+kept the last occurrence would also parse the message and announce the route.  The test
+sends two ORIGIN attributes with different values and asserts the first one is what came
+out.
+"""
+
+[[requirement]]
+id = "rfc7606#3h-strongest-action-wins"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When multiple attribute errors exist in an UPDATE message, if the
+same approach (as described in Section 2) is specified for the
+handling of these malformed attributes, then the specified
+approach MUST be used.  Otherwise, the approach with the
+strongest action MUST be used.
+"""
+
+[[requirement]]
+id = "rfc7606#3i-withdrawn-routes-checked-like-nlri"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Withdrawn Routes field MUST be checked for syntactic
+correctness in the same manner as the NLRI field.
+"""
+
+[[requirement]]
+id = "rfc7606#3j-session-reset-when-nlri-cannot-be-parsed"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If this
+is not possible, the procedures of [RFC4271] and/or [RFC4760]
+continue to apply, meaning that the "session reset" approach (or
+the "AFI/SAFI disable" approach) MUST be followed.
+"""
+
+# ==================================================== 4. Attribute Length Fields
+
+[[requirement]]
+id = "rfc7606#4-attribute-length-conflict-treat-as-withdraw"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+In either of these cases, an error condition exists and the "treat-
+as-withdraw" approach MUST be used (unless some other, more severe
+error is encountered dictating a stronger approach)
+"""
+note = """
+The sentence continues past a page break, so it is quoted to the end of the clause; the
+rest of it is the separate entry rfc7606#4-total-attribute-length-locates-nlri.  The two
+error cases are an attribute whose length runs past the Total Attribute Length, and a
+tail too short to hold a minimum-sized attribute header.  Both are tested.
+"""
+
+[[requirement]]
+id = "rfc7606#4-total-attribute-length-locates-nlri"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+Attribute Length MUST be relied upon to enable the beginning of the
+NLRI field to be located.
+"""
+note = """
+Quoted from the second half of a sentence which crosses a page break in the published
+text; the first half is rfc7606#4-attribute-length-conflict-treat-as-withdraw.
+
+Positive only: this says where to look for the NLRI when the attribute lengths have
+already been found to disagree with it.  The test sends an attribute whose length runs
+past the Total Attribute Length and requires the NLRI after it to still be located and
+withdrawn.  There is no peer input which violates the requirement, because it is an
+instruction to us, not a condition on the wire.
+"""
+
+[[requirement]]
+id = "rfc7606#4-zero-length-is-a-syntax-error"
+section = "4"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+For all path attributes other than those specified as having an
+attribute length that may be zero, it SHALL be considered a syntax
+error for the attribute to have a length of zero.  Of the path
+attributes considered in this specification, only AS_PATH and
+ATOMIC_AGGREGATE may validly have an attribute length of zero.
+"""
+note = """
+The second sentence is what the negative test needs: a zero length AS_PATH and a zero
+length ATOMIC_AGGREGATE are both valid, so an implementation which refused every empty
+attribute would be wrong in the other direction.  `VALID_ZERO` on the class is how this
+tree says which ones those are.
+"""
+
+# ============================================= 5. Parsing of NLRI Fields
+
+[[requirement]]
+id = "rfc7606#5.1-mp-nlri-encoded-first"
+section = "5.1"
+level = "SHALL"
+status = "required"
+polarity = "positive-only"
+text = """
+The MP_REACH_NLRI or MP_UNREACH_NLRI attribute (if present) SHALL
+be encoded as the very first path attribute in an UPDATE message.
+"""
+note = """
+Positive only: this binds what we send.  The receive side has its own, opposite,
+requirement (rfc7606#5.1-accept-any-position-or-combination) which forbids treating a
+peer that orders its attributes differently as being in error, so there is no negative
+test to write here.
+
+We do not do this.  UpdateCollection.messages appends MP_REACH_NLRI after ORIGIN and
+AS_PATH, so the attribute the RFC wants first comes last.  The test carries xfail.
+"""
+
+[[requirement]]
+id = "rfc7606#5.1-one-nlri-field-per-update"
+section = "5.1"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+An UPDATE message MUST NOT contain more than one of the following:
+non-empty Withdrawn Routes field, non-empty Network Layer
+Reachability Information field, MP_REACH_NLRI attribute, and
+MP_UNREACH_NLRI attribute.
+"""
+note = """
+Positive only, for the same reason as rfc7606#5.1-mp-nlri-encoded-first: the next
+sentence of the RFC requires us to accept a peer which breaks this, so "we notice when
+the other end does not" is not a thing we are allowed to do.
+
+We do not do this either.  UpdateCollection.messages packs a withdrawal and an
+announcement of the same family into one UPDATE.  The test carries xfail.
+"""
+
+[[requirement]]
+id = "rfc7606#5.1-accept-any-position-or-combination"
+section = "5.1"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+Since older BGP speakers may not implement these restrictions, an
+implementation MUST still be prepared to receive these fields in any
+position or combination.
+"""
+note = """
+Positive only: the requirement is that nothing goes wrong, so the test is that the
+non-conforming UPDATE parses and the routes come out.  A negative test would have to show
+us rejecting such an UPDATE, which is the behaviour this sentence forbids.
+"""
+
+[[requirement]]
+id = "rfc7606#5.2-session-reset-when-no-reachable-nlri"
+section = "5.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+For this reason, if
+any path attribute errors are encountered in such an UPDATE message
+and if any encountered error specifies an error-handling approach
+other than "attribute discard", then the "session reset" approach
+MUST be used.
+"""
+note = """
+"Such an UPDATE message" is one which carries path attributes other than MP_UNREACH_NLRI
+and encodes no reachable NLRI: there is then nothing to treat as withdrawn, and no way to
+know the NLRI field was read correctly, so the RFC escalates to a reset.
+
+We do not do this: the marker is added and the UPDATE parses to nothing.  The positive
+test carries xfail.  The negative half - that an attribute-discard-only error on such an
+UPDATE does NOT reset the session - we do get right.
+"""
+
+[[requirement]]
+id = "rfc7606#5.3-nlri-field-syntactic-correctness"
+section = "5.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The NLRI field or Withdrawn Routes field SHALL be considered
+"syntactically incorrect" if either of the following are true:
+
+o  The length of any of the included NLRI is greater than 32.
+
+o  When parsing NLRI contained in the field, the length of the last
+   NLRI found exceeds the amount of unconsumed data remaining in the
+   field.
+"""
+
+[[requirement]]
+id = "rfc7606#5.3-mp-attribute-nlri-lengths"
+section = "5.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+Similarly, the MP_REACH_NLRI or MP_UNREACH_NLRI attribute of an
+update SHALL be considered to be incorrect if any of the following
+are true:
+
+o  The length of any of the included NLRI is inconsistent with the
+   given AFI/SAFI (for example, if an IPv4 NLRI has a length greater
+   than 32 or an IPv6 NLRI has a length greater than 128).
+
+o  When parsing NLRI contained in the attribute, the length of the
+   last NLRI found exceeds the amount of unconsumed data remaining in
+   the attribute.
+"""
+note = """
+The four bullets of this list are three separate entries here, because we get two of them
+right and one wrong, and a single entry could only say one of those things.  This one is
+the first two bullets; the others are rfc7606#5.3-mp-attribute-flags-must-match-rfc4760
+and rfc7606#5.3-mp-minimum-attribute-length.
+"""
+
+[[requirement]]
+id = "rfc7606#5.3-mp-attribute-flags-must-match-rfc4760"
+section = "5.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The attribute flags of the attribute are inconsistent with those
+specified in [RFC4760].
+"""
+note = """
+The third bullet of the list quoted in rfc7606#5.3-mp-attribute-nlri-lengths, whose
+lead-in carries the SHALL.
+
+We neither reset nor withdraw.  MP_REACH_NLRI and MP_UNREACH_NLRI are optional
+non-transitive in RFC 4760; a peer which sets the transitive bit sends an attribute
+AttributeCollection.parse cannot match in the registry, and since MPRNLRI carries neither
+TREAT_AS_WITHDRAW nor DISCARD it falls through the known-attribute branch to a debug line
+and a `continue`.  The attribute is dropped in silence, so the UPDATE parses to no
+announcement and no withdrawal and the routes it carried simply disappear.  Section 3 (j)
+says the session reset approach MUST be followed when the NLRI cannot be recovered, which
+is exactly this case.  The test carries xfail.
+"""
+
+[[requirement]]
+id = "rfc7606#5.3-mp-minimum-attribute-length"
+section = "5.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The length of the MP_UNREACH_NLRI attribute is less than 3, or the
+length of the MP_REACH_NLRI attribute is less than 5.
+"""
+note = """
+The fourth bullet of the list quoted in rfc7606#5.3-mp-attribute-nlri-lengths, whose
+lead-in carries the SHALL.  Three and five are the smallest encodings that can hold an
+AFI, a SAFI and, for MP_REACH, a next hop length and the reserved octet.
+"""
+
+[[requirement]]
+id = "rfc7606#5.4-unrecognised-typed-nlri-discarded"
+section = "5.4"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+A BGP speaker advertising support for such a typed address family
+MUST handle routes with unrecognized NLRI types within that address
+family by discarding them, unless the relevant specification for that
+address family specifies otherwise.
+"""
+note = """
+An EVPN or MVPN route of an unregistered type decodes to GenericEVPN or GenericMVPN,
+which is kept and reported to the API rather than discarded.  That is deliberate for a
+tool whose job is to show an operator what a peer sent, and it is safe here because
+exabgp installs nothing and re-advertises nothing, so a route it cannot interpret reaches
+no forwarding plane.  It is recorded as a gap rather than not-applicable because we do
+advertise support for those families, so the obligation does bind us: the day exabgp
+grows a route-server mode, keeping the route becomes wrong rather than merely verbose.
+"""
+
+# ================================ 7. Error-Handling Procedures for Existing Attributes
+
+[[requirement]]
+id = "rfc7606#7.1-origin-treat-as-withdraw"
+section = "7.1"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The attribute is considered malformed if its length is not 1 or if it
+has an undefined value [RFC4271].
+
+An UPDATE message with a malformed ORIGIN attribute SHALL be handled
+using the approach of "treat-as-withdraw".
+"""
+
+[[requirement]]
+id = "rfc7606#7.2-as-path-treat-as-withdraw"
+section = "7.2"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+An UPDATE message with a malformed AS_PATH attribute SHALL be handled
+using the approach of "treat-as-withdraw".
+"""
+
+[[requirement]]
+id = "rfc7606#7.2-zero-path-segment-length-is-malformed"
+section = "7.2"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+It has a Path Segment Length field of zero.
+"""
+note = """
+One of the three bullets under "A segment is considered malformed if any of the following
+are true", quoted alone because the other two are on the previous page and a quote may not
+cross the page break.  The level is the SHALL of the paragraph which follows it: a
+malformed segment makes the AS_PATH malformed, and a malformed AS_PATH is treat-as-
+withdraw.
+
+We accept it.  ASPath._unpack_segments_static reads a segment length of zero, builds an
+empty segment, advances two bytes and carries on, so the route is announced.  The test
+carries xfail.  This is distinct from a zero LENGTH AS_PATH attribute, which is legal and
+is covered by rfc7606#4-zero-length-is-a-syntax-error.
+"""
+
+[[requirement]]
+id = "rfc7606#7.2-leftmost-as-check-treat-as-withdraw"
+section = "7.2"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+A BGP
+implementation SHOULD also handle routes that violate this check
+using "treat-as-withdraw" but MAY follow the "session reset" behavior
+if configured to do so.
+"""
+note = """
+"This check" is the optional RFC 4271 check that the leftmost AS in the AS_PATH is the
+peer's own AS number.  exabgp does not perform it - there is no configuration knob for it
+and no code path which compares the first AS_SEQUENCE entry to negotiated.peer_as - so
+the obligation, which is about what to do when that check fails, never fires.
+"""
+
+[[requirement]]
+id = "rfc7606#7.3-next-hop-treat-as-withdraw"
+section = "7.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+An UPDATE message with a malformed NEXT_HOP attribute SHALL be
+handled using the approach of "treat-as-withdraw".
+"""
+
+[[requirement]]
+id = "rfc7606#7.3-next-hop-malformed-if-not-four"
+section = "7.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The attribute is considered malformed if its length is not 4
+[RFC4271].
+"""
+note = """
+Section 7.4 states the same sentence about MULTI_EXIT_DISC; this entry is 7.3's, and the
+NEXT_HOP length is what its tests feed.  The level is the SHALL of the next paragraph,
+which is what acts on the malformation this sentence defines.
+
+We accept a NEXT_HOP path attribute of 16 bytes.  NextHop.from_packet takes 4 or 16
+because the same helper decodes the next hop inside MP_REACH_NLRI, where 16 is correct,
+and attribute 3 shares it.  The test carries xfail.
+"""
+
+[[requirement]]
+id = "rfc7606#7.4-med-treat-as-withdraw"
+section = "7.4"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+An UPDATE message with a malformed MULTI_EXIT_DISC attribute SHALL be
+handled using the approach of "treat-as-withdraw".
+"""
+
+[[requirement]]
+id = "rfc7606#7.5-local-pref-external-discard"
+section = "7.5"
+level = "SHALL"
+status = "gap"
+polarity = "both"
+text = """
+if the LOCAL_PREF attribute is received from an external neighbor,
+it SHALL be discarded using the approach of "attribute discard";
+or
+"""
+note = """
+We keep it.  Negotiated.is_ibgp exists and tells eBGP from iBGP, but the only caller is
+AIGP; nothing in the LOCAL_PREF decode path looks at it, so a LOCAL_PREF from an external
+peer is parsed, stored and reported like any other attribute.  For a router that is
+unsafe, because LOCAL_PREF from outside the AS would steer the decision process.  exabgp
+runs no decision process, and dropping the attribute would hide from an operator using it
+as a BGP monitor that the peer sent it at all.  Recorded as a gap rather than
+not-applicable because the RFC's answer is unambiguous and ours is a deliberate departure
+from it, which is exactly the thing that should stay on the ledger.
+"""
+
+[[requirement]]
+id = "rfc7606#7.5-local-pref-internal-treat-as-withdraw"
+section = "7.5"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+o  if the LOCAL_PREF attribute is received from an external neighbor,
+   it SHALL be discarded using the approach of "attribute discard";
+   or
+
+o  if received from an internal neighbor, it SHALL be considered
+   malformed if its length is not equal to 4.  If malformed, the
+   UPDATE message SHALL be handled using the approach of "treat-as-
+   withdraw".
+"""
+note = """
+The quote is both bullets because the second one on its own is word for word identical to
+the second bullet of section 7.9, and a ledger entry has to be readable without the
+section number.  This entry is about the internal half, which we do get right: LOCAL_PREF
+at any length but 4 is treat-as-withdraw.  The external half is the separate entry
+rfc7606#7.5-local-pref-external-discard, recorded as a gap.
+"""
+
+[[requirement]]
+id = "rfc7606#7.6-atomic-aggregate-malformed-if-not-zero-length"
+section = "7.6"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The attribute SHALL be considered malformed if its length is not 0
+[RFC4271].
+"""
+
+[[requirement]]
+id = "rfc7606#7.6-atomic-aggregate-attribute-discard"
+section = "7.6"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+An UPDATE message with a malformed ATOMIC_AGGREGATE attribute SHALL
+be handled using the approach of "attribute discard".
+"""
+
+[[requirement]]
+id = "rfc7606#7.7-aggregator-length-six-or-eight"
+section = "7.7"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The AGGREGATOR attribute SHALL be considered malformed if any of the
+following applies:
+
+o  Its length is not 6 (when the 4-octet AS number capability is not
+   advertised to or not received from the peer [RFC6793]).
+
+o  Its length is not 8 (when the 4-octet AS number capability is both
+   advertised to and received from the peer).
+"""
+note = """
+The length that is correct depends on what was negotiated, so the test runs both ways
+round: 8 is malformed without ASN4 and 6 is malformed with it, which is the half an
+implementation that accepted either length would fail.
+"""
+
+[[requirement]]
+id = "rfc7606#7.7-aggregator-attribute-discard"
+section = "7.7"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+An UPDATE message with a malformed AGGREGATOR attribute SHALL be
+handled using the approach of "attribute discard".
+"""
+
+[[requirement]]
+id = "rfc7606#7.8-community-non-zero-multiple-of-four"
+section = "7.8"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The Community attribute SHALL be considered malformed if its
+length is not a non-zero multiple of 4.
+"""
+
+[[requirement]]
+id = "rfc7606#7.8-community-treat-as-withdraw"
+section = "7.8"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+An UPDATE message with a malformed Community attribute SHALL be
+handled using the approach of "treat-as-withdraw".
+"""
+
+[[requirement]]
+id = "rfc7606#7.9-originator-id-external-discard"
+section = "7.9"
+level = "SHALL"
+status = "gap"
+polarity = "both"
+text = """
+if the ORIGINATOR_ID attribute is received from an external
+neighbor, it SHALL be discarded using the approach of "attribute
+discard"; or
+"""
+note = """
+Same shape as rfc7606#7.5-local-pref-external-discard and the same cause: nothing in the
+ORIGINATOR_ID decode path consults Negotiated.is_ibgp, so the attribute is kept whichever
+side of the AS boundary it arrived from.  ORIGINATOR_ID from an external peer is a
+reflector leak and worth reporting to an operator, which is what we do with it, but the
+RFC says discard and we do not.
+"""
+
+[[requirement]]
+id = "rfc7606#7.9-originator-id-internal-treat-as-withdraw"
+section = "7.9"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+o  if the ORIGINATOR_ID attribute is received from an external
+   neighbor, it SHALL be discarded using the approach of "attribute
+   discard"; or
+
+o  if received from an internal neighbor, it SHALL be considered
+   malformed if its length is not equal to 4.  If malformed, the
+   UPDATE message SHALL be handled using the approach of "treat-as-
+   withdraw".
+"""
+note = """
+Quoted as both bullets because the second one alone is identical to section 7.5's.  This
+entry is the internal half, which we do get right; the external half is
+rfc7606#7.9-originator-id-external-discard, recorded as a gap.
+"""
+
+[[requirement]]
+id = "rfc7606#7.10-cluster-list-external-discard"
+section = "7.10"
+level = "SHALL"
+status = "gap"
+polarity = "both"
+text = """
+if the CLUSTER_LIST attribute is received from an external
+neighbor, it SHALL be discarded using the approach of "attribute
+discard"; or
+"""
+note = """
+The third of the three external-neighbour discard rows we do not implement, for the one
+reason they share: the decode path does not know which side of the AS boundary the UPDATE
+came from.  CLUSTER_LIST is the route reflector loop check, so one arriving over an eBGP
+session is a misconfiguration an operator wants to see rather than have silently removed,
+but the RFC's instruction is to discard it.
+"""
+
+[[requirement]]
+id = "rfc7606#7.10-cluster-list-internal-treat-as-withdraw"
+section = "7.10"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+if received from an internal neighbor, it SHALL be considered
+malformed if its length is not a non-zero multiple of 4.  If
+malformed, the UPDATE message SHALL be handled using the approach
+of "treat-as-withdraw".
+"""
+
+[[requirement]]
+id = "rfc7606#7.11-mp-reach-next-hop-session-reset"
+section = "7.11"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the Length of Next Hop Network Address field of the MP_REACH
+attribute is inconsistent with that which was expected, the attribute
+is considered malformed.  Since the next hop precedes the NLRI field
+in the attribute, in this case it will not be possible to reliably
+locate the NLRI; thus, the "session reset" or "AFI/SAFI disable"
+approach MUST be used.
+"""
+note = """
+This is the one row in section 7 where a reset is still the right answer, and therefore
+the one row where a test that accepts "a Notify was raised" as success is measuring the
+requirement rather than dodging it.  The negative side is that a well formed MP_REACH of
+the same family does not reset the session.
+"""
+
+[[requirement]]
+id = "rfc7606#7.13-traffic-engineering-treat-as-withdraw"
+section = "7.13"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+In the interim, an implementation that determines (for whatever reason) that
+an UPDATE message contains a malformed Traffic Engineering path
+attribute MUST handle it using the approach of "treat-as-withdraw".
+"""
+note = """
+The obligation is conditional on an implementation determining that the attribute is
+malformed.  exabgp does not implement RFC 5543: attribute 24 is not in Attribute.CODE and
+has no registered decoder, so it is carried through as an unknown optional transitive
+GenericAttribute and never judged.  There is no determination for the MUST to attach to.
+"""
+
+[[requirement]]
+id = "rfc7606#7.14-extended-community-non-zero-multiple-of-eight"
+section = "7.14"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The Extended Community attribute SHALL be considered malformed if
+its length is not a non-zero multiple of 8.
+"""
+
+[[requirement]]
+id = "rfc7606#7.14-extended-community-treat-as-withdraw"
+section = "7.14"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+An UPDATE message with a malformed Extended Community attribute
+SHALL be handled using the approach of "treat-as-withdraw".
+"""
+
+[[requirement]]
+id = "rfc7606#7.14-unrecognised-extended-community-type-not-an-error"
+section = "7.14"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+Note that a BGP speaker MUST NOT treat an unrecognized Extended
+Community Type or Sub-Type as an error.
+"""
+note = """
+The negative half is the one with teeth: the length rule still applies, so an
+implementation which stopped checking anything at all in order to satisfy this sentence
+would be wrong.  The test pairs an unrecognised type at a legal length, which must be
+kept, with a malformed length, which must still be treat-as-withdraw.
+"""
+
+[[requirement]]
+id = "rfc7606#7.15-ipv6-extended-community-non-zero-multiple-of-twenty"
+section = "7.15"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The IPv6 Address Specific Extended Community attribute SHALL be
+considered malformed if its length is not a non-zero multiple of
+20.
+"""
+
+[[requirement]]
+id = "rfc7606#7.15-ipv6-extended-community-treat-as-withdraw"
+section = "7.15"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+An UPDATE message with a malformed IPv6 Address Specific Extended
+Community attribute SHALL be handled using the approach of "treat-
+as-withdraw".
+"""
+
+[[requirement]]
+id = "rfc7606#7.15-unrecognised-ipv6-extended-community-type-not-an-error"
+section = "7.15"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+Note that a BGP speaker MUST NOT treat an unrecognized IPv6 Address
+Specific Extended Community Type or Sub-Type as an error.
+"""
+
+[[requirement]]
+id = "rfc7606#7.16-attr-set-treat-as-withdraw"
+section = "7.16"
+level = "SHALL"
+status = "not-applicable"
+polarity = "both"
+text = """
+An UPDATE message with a malformed ATTR_SET attribute SHALL be
+handled using the approach of "treat as withdraw".
+"""
+note = """
+exabgp does not implement RFC 6368: ATTR_SET, attribute 128, has no entry in
+Attribute.CODE and no registered decoder, so it arrives as an unknown optional transitive
+attribute, is wrapped in a GenericAttribute and is never inspected.  Nothing in the tree
+can find an ATTR_SET malformed, so the sentence has no case to govern.  If ATTR_SET is
+ever implemented this becomes required and the test owed is the one in this row.
+"""
+
+# ================================== 8. Guidance for Authors of BGP Specifications
+
+[[requirement]]
+id = "rfc7606#8-new-attribute-specifies-error-handling"
+section = "8"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+A document that specifies a new BGP attribute MUST provide specifics
+regarding what constitutes an error for that attribute and how that
+error is to be handled.
+"""
+note = """
+This binds the author of a standards-track document, not an implementation.  exabgp
+publishes no BGP attribute specification, so there is no document of ours for it to
+constrain.  What section 8 asks of us instead is the section 2 restriction on attribute
+discard, which is recorded separately as
+rfc7606#2-attribute-discard-only-without-route-effect and is tested.
+"""
+
+[[requirement]]
+id = "rfc7606#8-document-should-consider-debugging"
+section = "8"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+The document SHOULD also provide
+consideration of what debugging facilities may be required to permit
+issues caused by a malformed attribute to be diagnosed.
+"""
+note = """
+Addressed to the same reader as rfc7606#8-new-attribute-specifies-error-handling: the
+author of a document defining a new attribute.  exabgp writes no such document.
+"""

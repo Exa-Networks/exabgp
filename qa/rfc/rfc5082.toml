@@ -1,0 +1,129 @@
+# RFC 5082 - The Generalized TTL Security Mechanism (GTSM)
+# https://www.rfc-editor.org/rfc/rfc5082
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc5082.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# exabgp calls this ttl-security. The two halves are `outgoing-ttl` and `incoming-ttl`
+# on a neighbour, and both land in src/exabgp/reactor/network/tcp.py: sending_ttl and
+# set_sending_ttl for what we transmit, min_ttl and min_ttlv6 for what the kernel accepts.
+# The call sites are reactor/network/outgoing.py for a session we open and
+# reactor/listener.py for one the peer opens.
+
+rfc = "rfc5082"
+title = "The Generalized TTL Security Mechanism (GTSM)"
+url = "https://www.rfc-editor.org/rfc/rfc5082"
+
+[[requirement]]
+id = "rfc5082#2.1-negotiation-must-be-authenticated"
+section = "2.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If, however, dynamic negotiation of GTSM support
+is necessary, protocol messages used for such negotiation MUST be
+authenticated using other security mechanisms to prevent DoS attacks.
+"""
+note = """
+This binds a protocol which negotiates GTSM in band, and the same section says BGP is not
+one: GTSM is manually configured at both ends. exabgp has no GTSM capability, sends no
+GTSM negotiation message and accepts none, so there is no negotiation traffic for this to
+protect. An attacker cannot turn our ttl-security off from the wire because the wire is
+not where it is set.
+"""
+
+[[requirement]]
+id = "rfc5082#3-should-not-be-enabled-by-default"
+section = "3"
+level = "SHOULD NOT"
+status = "required"
+polarity = "both"
+text = """
+If GTSM is not built into the protocol and is used as an additional
+feature (e.g., for BGP, LDP, or MSDP), it SHOULD NOT be enabled by
+default in order to remain backward-compatible with the unmodified
+protocol.
+"""
+
+[[requirement]]
+id = "rfc5082#3-sending-ttl-is-255"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The TTL field in all IP packets used for transmission of
+messages associated with GTSM-enabled protocol sessions MUST be
+set to 255.
+"""
+note = """
+An `incoming-ttl` on a neighbour is what marks the session GTSM-enabled, and sending_ttl
+then returns 255 for it rather than leaving the kernel default of 64, which is below any
+minimum the far end would be checking against.
+
+One documented divergence: `outgoing-ttl` takes precedence, so an operator who configures
+both `incoming-ttl 254` and `outgoing-ttl 64` transmits with 64 and not 255. outgoing-ttl
+is exabgp's multihop TTL setting and predates ttl-security, and we obey the value the
+operator wrote rather than overriding it. The tests cover the GTSM-enabled case, which is
+the one the sentence describes.
+"""
+
+[[requirement]]
+id = "rfc5082#3-ttl-must-not-be-decremented"
+section = "3"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+The TTL of GTSM-enabled sessions MUST NOT be
+decremented.
+"""
+note = """
+The sentence before it says what it is about: an architecture where control plane
+originated traffic is decremented in the forwarding plane. exabgp is a userspace process
+which hands a TCP socket to the host kernel and has no forwarding plane, no linecard and
+no path by which a packet it sends is decremented before it leaves. The obligation binds
+the platform the daemon runs on, and exabgp can neither cause nor prevent it.
+"""
+
+[[requirement]]
+id = "rfc5082#3-must-not-drop-trusted-or-unknown"
+section = "3"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
++  MUST NOT drop (as part of GTSM processing) packets
+   classified as Trusted or Unknown.
+"""
+note = """
+The drop is the kernel's, through IP_MINTTL or IPV6_MINHOPCOUNT on the one socket, so
+what exabgp has to get right is the number it installs and the sockets it installs it on.
+Installing a minimum higher than the configured one would drop Trusted packets;
+installing one on a session with no ttl-security configured would drop Unknown ones.
+"""
+
+[[requirement]]
+id = "rfc5082#3-dangerous-must-not-compete"
+section = "3"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
++  SHOULD ensure that packets classified as Dangerous do not
+   compete for resources with packets classified as Trusted or
+   Unknown.
+"""
+note = """
+The classification and the drop both happen in the kernel's IP input path, before the
+segment is queued to the socket exabgp reads, so a Dangerous packet never reaches any
+resource exabgp owns and cannot compete for one. There is nothing to prioritise on this
+side of the socket.
+
+The exception proves the rule: on a platform with no IP_MINTTL the kernel classifies
+nothing, and a Dangerous packet arrives looking exactly like a Trusted one. That is not
+this requirement failing, it is GTSM not being installed at all, and
+tests/unit/test_ttl_security_reports_what_it_cannot_do.py is about the warning we owe the
+operator when it happens.
+"""

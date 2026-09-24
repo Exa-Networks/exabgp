@@ -44,6 +44,7 @@ TREAT_AS_WITHDRAW = 'treat-as-withdraw'
 ATTRIBUTE_DISCARD = 'attribute discard'
 
 OPTIONAL_TRANSITIVE = 0xC0
+OPTIONAL = 0x80
 WELL_KNOWN_TRANSITIVE = 0x40
 
 # one real prefix, so the UPDATE announces a route rather than being an End-of-RIB.  The
@@ -57,7 +58,11 @@ IPV4_PREFIX = bytes([24, 10, 0, 0])
 # cannot, IPV6_EXTENDED_COMMUNITY is 20 byte values so 21 cannot.
 PRESCRIBED: list[tuple[str, int, int, int, str]] = [
     ('7.1', Attribute.CODE.ORIGIN, WELL_KNOWN_TRANSITIVE, 2, TREAT_AS_WITHDRAW),
-    ('7.4', Attribute.CODE.MED, OPTIONAL_TRANSITIVE, 3, TREAT_AS_WITHDRAW),
+    # OPTIONAL alone, not OPTIONAL_TRANSITIVE: MULTI_EXIT_DISC is optional NON-transitive
+    # (RFC 4271 5.1.4), so setting the transitive bit makes the attribute malformed under
+    # RFC 7606 3 (c) for its FLAGS, and the row then passes without its length ever being
+    # read.  Every other row here already uses the flag its own specification gives it.
+    ('7.4', Attribute.CODE.MED, OPTIONAL, 3, TREAT_AS_WITHDRAW),
     ('7.6', Attribute.CODE.ATOMIC_AGGREGATE, WELL_KNOWN_TRANSITIVE, 4, ATTRIBUTE_DISCARD),
     ('7.7', Attribute.CODE.AGGREGATOR, OPTIONAL_TRANSITIVE, 7, ATTRIBUTE_DISCARD),
     ('7.8', Attribute.CODE.COMMUNITY, OPTIONAL_TRANSITIVE, 5, TREAT_AS_WITHDRAW),
@@ -107,6 +112,15 @@ def update_announcing_one_route(flag: int, code: int, length: int) -> bytes:
     return pack('!H', 0) + pack('!H', len(attributes)) + attributes + IPV4_PREFIX
 
 
+@pytest.mark.rfc(
+    'rfc7606#7.1-origin-treat-as-withdraw',
+    'rfc7606#7.4-med-treat-as-withdraw',
+    'rfc7606#7.6-atomic-aggregate-attribute-discard',
+    'rfc7606#7.7-aggregator-attribute-discard',
+    'rfc7606#7.8-community-treat-as-withdraw',
+    'rfc7606#7.14-extended-community-treat-as-withdraw',
+    'rfc7606#7.15-ipv6-extended-community-treat-as-withdraw',
+)
 @pytest.mark.parametrize('section,code,flag,length,action', PRESCRIBED, ids=IDS)
 def test_a_malformed_attribute_gets_the_action_the_rfc_names(
     section: str, code: int, flag: int, length: int, action: str
@@ -116,7 +130,9 @@ def test_a_malformed_attribute_gets_the_action_the_rfc_names(
     payload = update_announcing_one_route(flag, code, length)
 
     try:
-        parsed = Update.unpack_message(payload, session).parse(session)
+        message = Update.unpack_message(payload, session)
+        assert isinstance(message, Update), f'expected an UPDATE, got {type(message).__name__}'
+        parsed = message.parse(session)
     except Notify as exc:
         pytest.fail(
             f'a {length} byte {Attribute.CODE.name(code)} resets the session '
@@ -157,7 +173,9 @@ def test_a_well_formed_update_is_not_caught_by_the_same_net() -> None:
     attributes += bytes([WELL_KNOWN_TRANSITIVE, Attribute.CODE.AS_PATH, 0])
     payload = pack('!H', 0) + pack('!H', len(attributes)) + attributes + IPV4_PREFIX
 
-    parsed = Update.unpack_message(payload, session).parse(session)
+    message = Update.unpack_message(payload, session)
+    assert isinstance(message, Update), f'expected an UPDATE, got {type(message).__name__}'
+    parsed = message.parse(session)
 
     assert list(parsed.announces), 'a well formed UPDATE announced nothing, so the assertions above pin nothing'
     assert not list(parsed.withdraws), 'a well formed UPDATE withdrew a route'

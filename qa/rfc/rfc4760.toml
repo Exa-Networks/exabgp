@@ -1,0 +1,245 @@
+# RFC 4760 - Multiprotocol Extensions for BGP-4
+# https://www.rfc-editor.org/rfc/rfc4760
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc4760.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+
+rfc = "rfc4760"
+title = "Multiprotocol Extensions for BGP-4"
+url = "https://www.rfc-editor.org/rfc/rfc4760"
+
+[[requirement]]
+id = "rfc4760#3-nexthop-protocol-determinable"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the Next Hop is allowed to be from more than
+one Network Layer protocol, the encoding of the Next Hop MUST
+provide a way to determine its Network Layer protocol.
+"""
+note = """
+The document repeats this sentence four times: under AFI and under SAFI in section 3,
+and again under AFI and SAFI in section 4. Only the section 3 pair binds anything here.
+MP_UNREACH_NLRI has no Next Hop field at all, so section 4's copies, which are the same
+boilerplate paragraphs, describe a field that attribute does not carry.
+
+What it binds on the receiving side is that a decoder must be able to say which protocol
+the bytes in the Next Hop field are. exabgp does that from the length together with the
+<AFI, SAFI>, in Family.size, widened by the extended next-hop capability of RFC 5549: a
+length which names no protocol for that family is refused rather than guessed at.
+"""
+
+[[requirement]]
+id = "rfc4760#3-reserved-must-be-zero"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+A 1 octet field that MUST be set to 0, and SHOULD be ignored
+upon receipt.
+"""
+note = """
+Positive only: the MUST binds the sender, and what a receiver does with a non-zero byte
+is the SHOULD in the second half of the same sentence, which is a separate entry
+(rfc4760#3-reserved-ignored-on-receipt) because exabgp does the opposite of it. Testing
+"we notice a peer who broke the MUST" here would be testing the SHOULD violation and
+calling it compliance.
+"""
+
+[[requirement]]
+id = "rfc4760#3-reserved-ignored-on-receipt"
+section = "3"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+A 1 octet field that MUST be set to 0, and SHOULD be ignored
+upon receipt.
+"""
+note = """
+The receive half of the same sentence, and exabgp does not follow it: mprnlri.py raises
+Notify(3, 0, 'the reserved bit of MP_REACH_NLRI is not zero'), which ends the session
+over a byte the RFC says to ignore. The test beside this entry is xfail and says so.
+
+Positive only: the requirement is that nothing happens, so there is no second side. A
+peer cannot make us ignore the field harder.
+"""
+
+[[requirement]]
+id = "rfc4760#3-mp-reach-requires-origin-and-aspath"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+An UPDATE message that carries the MP_REACH_NLRI MUST also carry the
+ORIGIN and the AS_PATH attributes (both in EBGP and in IBGP
+exchanges).  Moreover, in IBGP exchanges such a message MUST also
+carry the LOCAL_PREF attribute.
+"""
+note = """
+Positive only: this constrains the UPDATE a speaker generates. What a receiver does
+about an UPDATE which breaks it is a missing well-known mandatory attribute, which
+RFC 4271 and RFC 7606 govern rather than this document, so there is no RFC 4760
+negative to write. exabgp does accept an MP_REACH-only UPDATE with neither ORIGIN nor
+AS_PATH, which is worth knowing and belongs on the RFC 7606 ledger.
+"""
+
+[[requirement]]
+id = "rfc4760#3-no-next-hop-attribute"
+section = "3"
+level = "SHOULD NOT"
+status = "required"
+polarity = "both"
+text = """
+An UPDATE message that carries no NLRI, other than the one encoded in
+the MP_REACH_NLRI attribute, SHOULD NOT carry the NEXT_HOP attribute.
+If such a message contains the NEXT_HOP attribute, the BGP speaker
+that receives the message SHOULD ignore this attribute.
+"""
+
+[[requirement]]
+id = "rfc4760#3-no-duplicate-prefix-across-fields"
+section = "3"
+level = "SHOULD NOT"
+status = "gap"
+polarity = "both"
+text = """
+An UPDATE message SHOULD NOT include the same address prefix (of the
+same <AFI, SAFI>) in more than one of the following fields: WITHDRAWN
+ROUTES field, Network Reachability Information fields, MP_REACH_NLRI
+field, and MP_UNREACH_NLRI field.
+"""
+note = """
+exabgp announces and withdraws what its configuration and its API tell it to, and
+UpdateCollection.messages packs the announces and the withdrawals it was handed into as
+few messages as will hold them. Nothing compares a prefix against the other three fields
+of the message being built, so an API client which announces and withdraws the same
+prefix before a flush gets both in one UPDATE.
+"""
+
+[[requirement]]
+id = "rfc4760#6-safi-support-is-optional"
+section = "6"
+level = "MAY"
+status = "required"
+polarity = "positive-only"
+text = """
+An implementation MAY support all, some, or none of the Subsequent
+Address Family Identifier values defined in this document.
+"""
+note = """
+Positive only: a permission has no side on which a peer can catch us out. What is worth
+recording is which of the two we took, and exabgp takes both: SAFI 1 and SAFI 2 are
+registered and decode.
+"""
+
+[[requirement]]
+id = "rfc4760#7-delete-routes-of-that-family"
+section = "7"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a BGP speaker receives from a neighbor an UPDATE message that
+contains the MP_REACH_NLRI or MP_UNREACH_NLRI attribute, and if the
+speaker determines that the attribute is incorrect, the speaker MUST
+delete all the BGP routes received from that neighbor whose AFI/SAFI
+is the same as the one carried in the incorrect MP_REACH_NLRI or
+MP_UNREACH_NLRI attribute.
+"""
+note = """
+exabgp satisfies this by the blunter of the two routes the section offers: an incorrect
+MP attribute raises Notify, the session goes down, and Peer._main calls
+neighbor.rib.incoming.clear() on the way back up, so nothing the peer sent survives,
+of that AFI/SAFI or any other. The two halves are tested separately because no unit
+test drives a full session: that the attribute is found incorrect, and that the clear
+empties the family.
+"""
+
+[[requirement]]
+id = "rfc4760#7-ignore-subsequent-routes-of-that-family"
+section = "7"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+For the duration of the BGP session over
+which the UPDATE message was received, the speaker then SHOULD ignore
+all the subsequent routes with that AFI/SAFI received over that
+session.
+"""
+note = """
+This describes a speaker which keeps the session up after an incorrect MP attribute.
+exabgp always takes the MAY in the next paragraph instead: every incorrect MP_REACH or
+MP_UNREACH raises Notify out of unpack_attribute and the session is torn down, so there
+is no remaining duration of that session in which subsequent routes could arrive to be
+ignored.
+"""
+
+[[requirement]]
+id = "rfc4760#7-terminate-with-optional-attribute-error"
+section = "7"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+The session SHOULD be terminated with
+the Notification message code/subcode indicating "UPDATE Message
+Error"/"Optional Attribute Error".
+"""
+note = """
+Positive only: this says which subcode we pick when we terminate, and a peer cannot make
+us pick a different one. exabgp picks the wrong one for most of the cases: mprnlri.py
+and mpurnlri.py raise Notify(3, 9) for a truncated attribute but Notify(3, 0),
+Unspecific, for a non-negotiated family, an unsupported family, a bad next-hop length, a
+non-zero next-hop route distinguisher, a non-zero reserved byte and an empty NLRI field.
+The test beside this entry is one xfail covering all of them.
+"""
+
+[[requirement]]
+id = "rfc4760#8-should-use-capability-advertisement"
+section = "8"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+A BGP speaker that uses Multiprotocol Extensions SHOULD use the
+Capability Advertisement procedures [BGP-CAP] to determine whether
+the speaker could use Multiprotocol Extensions with a particular
+peer.
+"""
+
+[[requirement]]
+id = "rfc4760#8-reserved-field-zero-and-ignored"
+section = "8"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+SHOULD be set to 0 by the sender
+and ignored by the receiver.
+"""
+note = """
+The Res. field of the multiprotocol capability, which is not the reserved octet of
+MP_REACH_NLRI recorded above. exabgp follows this one on both sides: the capability is
+packed as AFI, 0, SAFI, and MultiProtocol.unpack_capability reads data[:2] and
+data[3:4], so whatever the sender put in the third byte never reaches a decision.
+"""
+
+[[requirement]]
+id = "rfc4760#8-bidirectional-needs-both-to-advertise"
+section = "8"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+To have a bi-directional exchange of routing information for a
+particular <AFI, SAFI> between a pair of BGP speakers, each such
+speaker MUST advertise to the other (via the Capability Advertisement
+mechanism) the capability to support that particular <AFI, SAFI>
+route.
+"""

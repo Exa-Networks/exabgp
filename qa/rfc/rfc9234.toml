@@ -1,0 +1,275 @@
+# RFC 9234 - Route Leak Prevention and Detection Using Roles in UPDATE and OPEN Messages
+# https://www.rfc-editor.org/rfc/rfc9234
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc9234.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# exabgp implements this RFC: the Role capability lives in
+# src/exabgp/bgp/message/open/capability/role.py, the pair check in
+# negotiated.py::_negotiate_role, the OTC attribute in
+# src/exabgp/bgp/message/update/attribute/otc.py, the ingress leak check in
+# src/exabgp/bgp/message/update/collection.py::classify_otc and the egress
+# procedures in the same file and in attribute/collection.py::otc_allowed.
+
+rfc = "rfc9234"
+title = "Route Leak Prevention and Detection Using Roles in UPDATE and OPEN Messages"
+url = "https://www.rfc-editor.org/rfc/rfc9234"
+
+[[requirement]]
+id = "rfc9234#3-customer-must-not-leak-upstream"
+section = "3.1"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+Customer:  MAY propagate any route learned from a Customer, or that
+   is locally originated, to a Provider.  All other routes MUST NOT
+   be propagated.
+"""
+note = """
+This sentence, and the identically worded ones for RS-Client and for Peer, bind a speaker
+which forwards one session's routes onto another. exabgp never does: it runs no decision
+process and has no path from one peer's adj-RIB-in to another peer's adj-RIB-out, so every
+route it announces comes from its configuration or its API rather than from a neighbour.
+The obligation has no propagation to restrain. What does bind us is the egress marking and
+the ingress detection below, and those are recorded as required.
+"""
+
+[[requirement]]
+id = "rfc9234#4.1-advertise-role-capability"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the BGP Role is locally configured, the eBGP speaker MUST
+advertise the BGP Role Capability in the BGP OPEN message.
+"""
+
+[[requirement]]
+id = "rfc9234#4.1-single-role-capability"
+section = "4.1"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+An eBGP
+speaker MUST NOT advertise multiple versions of the BGP Role
+Capability.
+"""
+note = """
+Positive only: Capabilities is a dict keyed by capability code, so a second Role would
+replace the first rather than join it, and no peer input or configuration reaches that
+container. The meaningful test is that a packed OPEN carries the code once.
+"""
+
+[[requirement]]
+id = "rfc9234#4.2-roles-must-correspond"
+section = "4.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the BGP
+Role Capability is advertised, and one is also received from the
+peer, the Roles MUST correspond to the relationships in Table 2.  If
+the Roles do not correspond, the BGP speaker MUST reject the
+connection using the Role Mismatch Notification (code 2, subcode 11).
+"""
+
+[[requirement]]
+id = "rfc9234#4.2-conflicting-role-capabilities"
+section = "4.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If
+multiple BGP Role Capabilities are received and not all of them have
+the same value, then the BGP speaker MUST reject the connection using
+the Role Mismatch Notification (code 2, subcode 11).
+"""
+
+[[requirement]]
+id = "rfc9234#4.2-absent-capability-ignored"
+section = "4.2"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+For backward compatibility, if the BGP Role Capability is sent but
+one is not received, the BGP Speaker SHOULD ignore the absence of the
+BGP Role Capability and proceed with session establishment.
+"""
+
+[[requirement]]
+id = "rfc9234#5-ingress-otc-from-customer-is-a-leak"
+section = "5"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+1.  If a route with the OTC Attribute is received from a Customer or
+    an RS-Client, then it is a route leak and MUST be considered
+    ineligible (see Section 3).
+"""
+note = """
+exabgp detects the leak and records it: classify_otc attaches a RouteLeak to the UPDATE,
+logs update.otc.leak at WARNING and the JSON API carries the annotation on the prefix.
+What "ineligible" cannot mean here is "withheld from the decision process", because there
+is no decision process and no re-advertisement: the only consumer of a received route is
+the API client, and it is told. The debatable half is that the route is still delivered
+as an announcement rather than suppressed, and that a neighbour configured with
+`role { add-meta disable; }` loses the annotation and keeps only the log line.
+"""
+
+[[requirement]]
+id = "rfc9234#5-ingress-otc-from-peer-must-match"
+section = "5"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+2.  If a route with the OTC Attribute is received from a Peer (i.e.,
+    remote AS with a Peer Role) and the Attribute has a value that is
+    not equal to the remote (i.e., Peer's) AS number, then it is a
+    route leak and MUST be considered ineligible.
+"""
+
+[[requirement]]
+id = "rfc9234#5-ingress-add-otc-when-absent"
+section = "5"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+3.  If a route is received from a Provider, a Peer, or an RS and the
+    OTC Attribute is not present, then it MUST be added with a value
+    equal to the AS number of the remote AS.
+"""
+note = """
+Not implemented, and the configuration says so out loud: `role { otc receive; }` is
+refused by configuration/role.py with "OTC ingress marking is not implemented; use send
+or disable". A route arriving from a Provider, a Peer or an RS without an OTC attribute is
+passed to the API exactly as it came off the wire. A gap rather than not-applicable: the
+attribute is what a downstream API client would need to apply the rest of Section 5, and
+the day exabgp marks on ingress the same value would be the one it sends back out.
+"""
+
+[[requirement]]
+id = "rfc9234#5-egress-add-otc"
+section = "5"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+1.  If a route is to be advertised to a Customer, a Peer, or an RS-
+    Client (when the sender is an RS), and the OTC Attribute is not
+    present, then when advertising the route, an OTC Attribute MUST
+    be added with a value equal to the AS number of the local AS.
+"""
+
+[[requirement]]
+id = "rfc9234#5-egress-otc-not-to-provider"
+section = "5"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+2.  If a route already contains the OTC Attribute, it MUST NOT be
+    propagated to Providers, Peers, or RSes.
+"""
+
+[[requirement]]
+id = "rfc9234#5-malformed-otc-treat-as-withdraw"
+section = "5"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+An UPDATE message with a malformed OTC Attribute SHALL be handled
+using the approach of "treat-as-withdraw" [RFC7606].
+"""
+
+[[requirement]]
+id = "rfc9234#5-otc-preserved-unchanged"
+section = "5"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Once the OTC Attribute has been set, it MUST be preserved unchanged
+(this also applies to an AS Confederation).
+"""
+
+[[requirement]]
+id = "rfc9234#5-only-ipv4-ipv6-unicast"
+section = "5"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+The described ingress and egress procedures are applicable only for
+the address families AFI 1 (IPv4) and AFI 2 (IPv6) with SAFI 1
+(unicast) in both cases and MUST NOT be applied to other address
+families by default.
+"""
+
+[[requirement]]
+id = "rfc9234#5-operator-cannot-modify"
+section = "5"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+The operator MUST NOT have the ability to
+modify the procedures defined in this section.
+"""
+note = """
+Positive only: the requirement is a property of the configuration surface, so the test is
+that a configured operator cannot turn the egress marking off. There is no peer input
+which violates it.
+
+exabgp does not meet this and knows it. `role { otc disable; }` suppresses the automatic
+OTC insertion for the whole neighbour, and `otc none` on a single route suppresses it for
+that route. The daemon logs role.otc.disabled with rfc9234=nonconformant when it happens,
+which is honest but is not the same as refusing. The test beside this entry is xfailed and
+says what the code does instead.
+"""
+
+[[requirement]]
+id = "rfc9234#5-confederation-otc-equals-confed-id"
+section = "5"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If an OTC Attribute is
+added on egress from the AS Confederation, its value MUST equal the
+AS Confederation Identifier.
+"""
+note = """
+exabgp has no AS Confederation support: there is no confederation identifier, no member-AS
+configuration and nothing in the tree which reads either. The only mention of a
+confederation anywhere in src/ is the AS_CONFED_SEQUENCE and AS_CONFED_SET segment types
+in aspath.py, which are decoded as path segments and never generated. There is therefore
+no egress from a confederation for this to describe.
+"""
+
+[[requirement]]
+id = "rfc9234#6-no-roles-on-complex-peering"
+section = "6"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+Roles MUST NOT be configured on an eBGP session with a Complex
+peering relationship.
+"""
+note = """
+Whether a peering is Complex is a fact about a commercial relationship, known to the
+operator and to nothing on the wire: a session which is Provider-to-Customer for some
+prefixes and Peer-to-Peer for others looks exactly like a normal one to both speakers.
+exabgp cannot detect the condition, so it cannot refuse the configuration, and a check
+that guessed would refuse correct configurations. This one binds the operator.
+"""

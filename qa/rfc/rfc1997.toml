@@ -1,0 +1,172 @@
+# RFC 1997 - BGP Communities Attribute
+# https://www.rfc-editor.org/rfc/rfc1997
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc1997.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# RFC 1997 is August 1996 and predates RFC 2119 (March 1997).  It carries no
+# "key words ... are to be interpreted as described in RFC 2119" section, and its
+# obligations arrive in three shapes: three capitalised MUST NOTs, a handful of
+# lowercase "shall"/"should"/"may" sentences, and a good deal of plain declarative
+# prose.  Only the first two shapes are recorded here.
+#
+# What is deliberately NOT recorded is the rule everyone quotes RFC 1997 for: that the
+# COMMUNITIES attribute length must be a multiple of four.  The document states the
+# encoding flatly - "The attribute consists of a set of four octet values" - with no
+# keyword at all, so there is no requirement here to record.  The normative version of
+# that rule is RFC 7606 section 7.8, and it lives in qa/rfc/rfc7606.toml.
+# tests/unit/rfc/test_rfc1997_communities.py still tests the behaviour; it simply has no
+# RFC 1997 requirement to name.
+
+rfc = "rfc1997"
+title = "BGP Communities Attribute"
+url = "https://www.rfc-editor.org/rfc/rfc1997"
+
+[[requirement]]
+id = "rfc1997#wellknown-no-export"
+section = "Well-known Communities"
+level = "MUST NOT"
+status = "gap"
+polarity = "both"
+text = """
+All routes received carrying a communities attribute
+containing this value MUST NOT be advertised outside a BGP
+confederation boundary (a stand-alone autonomous system that
+is not part of a confederation should be considered a
+confederation itself).
+"""
+note = """
+The obligation is on a speaker which re-advertises a route it received.  exabgp never
+does: it announces what its configuration and its API tell it to announce, it runs no
+decision process, and no route it sends to one peer was learned from another.  Recorded
+as a gap rather than not-applicable because the day exabgp grows a route-server mode it
+owes this, and because nothing in the code reads the value: `Community.NO_EXPORT` is a
+name the configuration parser accepts and the renderer prints, and that is all.  Grep for
+NO_EXPORT outside community/initial/community.py and configuration/static/parser.py
+returns nothing.
+"""
+
+[[requirement]]
+id = "rfc1997#wellknown-no-advertise"
+section = "Well-known Communities"
+level = "MUST NOT"
+status = "gap"
+polarity = "both"
+text = """
+All routes received carrying a communities attribute
+containing this value MUST NOT be advertised to other BGP
+peers.
+"""
+note = """
+Same shape as NO_EXPORT and the same answer, but this is the weakest of the three as a
+not-applicable, which is why it is a gap: NO_ADVERTISE forbids passing the route to any
+other BGP peer, and exabgp does hold several sessions at once.  It happens not to
+propagate between them, so the rule is satisfied by accident of architecture rather than
+by code, and an accident is not a compliance claim.
+"""
+
+[[requirement]]
+id = "rfc1997#wellknown-no-export-subconfed"
+section = "Well-known Communities"
+level = "MUST NOT"
+status = "gap"
+polarity = "both"
+text = """
+All routes received carrying a communities attribute
+containing this value MUST NOT be advertised to external BGP
+peers (this includes peers in other members autonomous
+systems inside a BGP confederation).
+"""
+note = """
+As NO_EXPORT: it binds re-advertisement, which exabgp does not do.  exabgp additionally
+has no confederation support at all, so the boundary this names does not exist in the
+code either.
+"""
+
+[[requirement]]
+id = "rfc1997#wellknown-operations-implemented"
+section = "Well-known Communities"
+level = "SHALL"
+status = "gap"
+polarity = "both"
+text = """
+The following communities have global significance and their
+operations shall be implemented in any community-attribute-aware BGP
+speaker.
+"""
+note = """
+Lowercase "shall" in the source, which is the 1996 spelling of the keyword; RFC 1997
+predates the RFC 2119 boilerplate.  The "operations" are the three MUST NOTs above, so
+this entry stands or falls with them, and they are gaps: exabgp parses, stores, renders
+and re-encodes all five well-known values it knows, but acts on none of them.
+"""
+
+[[requirement]]
+id = "rfc1997#values-encoded-with-asn"
+section = "COMMUNITIES attribute"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The rest of the community attribute values shall be encoded using an
+autonomous system number in the first two octets.
+"""
+note = """
+Lowercase "shall", as above.  "The rest" is what is left after the two reserved ranges
+named in the sentence before it, and that exclusion is what gives this requirement a
+negative side: a value in a reserved range is not encoded as ASN:value and must not be
+rendered as though it were.  This is the one sentence in RFC 1997 which binds the wire
+format exabgp produces, and `configuration/static/parser.py` implements it as the
+`<asn>:<value>` syntax.
+"""
+
+[[requirement]]
+id = "rfc1997#operation-append-attribute"
+section = "Operation"
+level = "MAY"
+status = "not-applicable"
+polarity = "both"
+text = """
+A BGP speaker receiving a route that does not have the COMMUNITIES
+path attribute may append this attribute to the route when
+propagating it to its peers.
+"""
+note = """
+A permission granted to a speaker propagating a received route.  exabgp does not
+propagate received routes to anywhere but its API, which reports what arrived rather than
+a route it is forwarding, so there is no propagation for the permission to apply to.
+"""
+
+[[requirement]]
+id = "rfc1997#operation-modify-attribute"
+section = "Operation"
+level = "MAY"
+status = "not-applicable"
+polarity = "both"
+text = """
+A BGP speaker receiving a route with the COMMUNITIES path attribute
+may modify this attribute according to the local policy.
+"""
+note = """
+As above: exabgp has no route policy engine and no propagation path on which to apply
+one.  An operator changes communities by changing what they announce, which is not a
+received route being modified.
+"""
+
+[[requirement]]
+id = "rfc1997#aggregation-union-of-communities"
+section = "Aggregation"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+If a range of routes is to be aggregated and the resultant aggregates
+attribute section does not carry the ATOMIC_AGGREGATE attribute, then
+the resulting aggregate should have a COMMUNITIES path attribute
+which contains all communities from all of the aggregated routes.
+"""
+note = """
+exabgp does not aggregate routes.  It has no RIB-level route synthesis: every route it
+announces is one the operator or an API client wrote out in full, so no aggregate is ever
+formed for this rule to describe the communities of.
+"""
