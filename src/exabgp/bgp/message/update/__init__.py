@@ -155,8 +155,18 @@ class Update(Message):
         return nlris, mp_nlris
 
     @staticmethod
-    def _include_defaults(nlris, mp_nlris):
-        # RFC 4760 permits MP_UNREACH-only UPDATEs without other path attributes.
+    def _carries_attributes(nlris, mp_nlris):
+        # RFC 4760 permits MP_UNREACH-only UPDATEs without other path attributes, and one
+        # built here carries none at all.
+        #
+        # This used to be called _include_defaults and its answer was handed to
+        # Attributes.pack as with_default.  False got no attributes only because of a
+        # precedence bug in pack(): `set(keys + list(default) if with_default else [])` made
+        # the whole concatenation the true branch, so with_default=False encoded nothing
+        # whatever the collection held.  With the brackets corrected it would encode the
+        # withdrawn route's own attributes and size the withdrawal against them, which is how
+        # a withdrawal came to be dropped for the weight of an announcement it was not
+        # carrying.  So what this pass wants is said outright: no attribute field.
         if not mp_nlris or nlris:
             return True
         for family, actions in mp_nlris.items():
@@ -173,7 +183,7 @@ class Update(Message):
         if not nlris and not mp_nlris:
             return
 
-        attr = self.attributes.pack(negotiated, self._include_defaults(nlris, mp_nlris))
+        attr = self.attributes.pack(negotiated) if self._carries_attributes(nlris, mp_nlris) else b''
 
         # What is left of an UPDATE once the path attributes of an ANNOUNCEMENT are in it,
         # and what is left of one which carries none.
@@ -250,8 +260,8 @@ class Update(Message):
 
             if msg_size <= 0:
                 # Only this family is impossible.  Returning would also drop every family
-                # after it, and packed_attributes raises rather than yield nothing, so it is
-                # never called with a budget which cannot hold anything.
+                # after it.  A budget which is positive but still too narrow for one NLRI is
+                # not caught here: packed_attributes logs and leaves that NLRI out.
                 log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
                 continue
 

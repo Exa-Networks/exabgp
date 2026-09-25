@@ -343,7 +343,11 @@ class Attributes(dict):
         }
 
         keys = list(self)
-        alls = set(keys + list(default) if with_default else [])
+        # `with_default` chooses whether the three defaults above are synthesised when they are
+        # absent, not whether anything is encoded at all.  The brackets matter: a conditional
+        # expression binds looser than `+`, so `keys + list(default) if with_default else []`
+        # made the whole concatenation the true branch and `with_default=False` return b''.
+        alls = set(keys + (list(default) if with_default else []))
 
         for code in sorted(alls):
             if code in Attributes.INTERNAL:
@@ -418,16 +422,39 @@ class Attributes(dict):
         return flag, attr, data[3 : length + 3]
 
     def parse(self, data, direction, negotiated):
-        if not data:
-            return self
+        # RFC 4271 4.3 bounds the attribute section by the message length alone, so a peer may
+        # legitimately put hundreds of small attributes in one UPDATE.  This used to tail-call
+        # itself once per attribute, and CPython does not eliminate a tail call: 996 three byte
+        # attributes, a 3015 byte UPDATE well inside the 4096 limit and every attribute in it
+        # individually well formed, raised RecursionError.  reactor/protocol.py catches it as
+        # an unspecified Exception and answers Notify(1, 0), so the peer was told its UPDATE
+        # had a malformed header, which is not what was wrong, and the session was reset.
+        # In the reactor the ceiling is lower still, because the protocol and loop frames are
+        # already on the stack when this is entered.
+        while data:
+            left = self._parse_one(data, direction, negotiated)
+            if left is None:
+                break
+            # The header is consumed before the value is sliced off, so an attribute always
+            # costs at least its three or four header octets and this cannot fire today.  It
+            # is a guard rather than an assert because the bytes are the peer's: a loop over
+            # peer-controlled input which stops shrinking it does not end, and `python -O`
+            # removes an assert.
+            if len(left) >= len(data):
+                self.add(TreatAsWithdraw())
+                break
+            data = left
+        return self
 
+    def _parse_one(self, data, direction, negotiated):
+        """Read one attribute off the front, returning what is left, or None to stop."""
         try:
             # We do not care if the attribute are transitive or not as we do not redistribute
             flag = Attribute.Flag(data[0])
             aid = Attribute.CODE(data[1])
         except IndexError:
             self.add(TreatAsWithdraw())
-            return self
+            return None
 
         try:
             offset = 3
@@ -438,9 +465,23 @@ class Attributes(dict):
                 length = (length << 8) + data[3]
         except IndexError:
             self.add(TreatAsWithdraw(aid))
-            return self
+            return None
 
         data = data[offset:]
+
+        # RFC 7606 section 4: an Attribute Length past the end of the attribute section is
+        # an error in the framing of the UPDATE, not in one attribute, so the whole UPDATE
+        # takes the treat-as-withdraw approach.  Slicing does not raise on an overrun, so
+        # without this the attribute was decoded from however many bytes happened to remain
+        # and kept as though the peer had sent it: a COMMUNITY declaring twelve bytes with
+        # four behind it became the single community those four decoded to, a community set
+        # nobody sent.  It also reached NextHop.unpack with an empty buffer, which answers
+        # NoNextHop rather than an attribute, and add() then read .ID off it: an
+        # AttributeError out of the parser instead of a NOTIFICATION.
+        if length > len(data):
+            self.add(TreatAsWithdraw())
+            return None
+
         left = data[length:]
         attribute = data[:length]
 
@@ -461,13 +502,13 @@ class Attributes(dict):
                 ),
                 'parser',
             )
-            return self.parse(left, direction, negotiated)
+            return left
 
         # handle the attribute if we know it
         if Attribute.registered(aid, flag):
             if length == 0 and aid not in self.VALID_ZERO:
                 self.add(TreatAsWithdraw(aid))
-                return self.parse(left, direction, negotiated)
+                return left
 
             try:
                 decoded = Attribute.unpack(aid, flag, attribute, direction, negotiated)
@@ -484,7 +525,7 @@ class Attributes(dict):
                 else:
                     raise exc
             self.add(decoded)
-            return self.parse(left, direction, negotiated)
+            return left
 
         # XXX: FIXME: we could use a fallback function here like capability
 
@@ -524,7 +565,7 @@ class Attributes(dict):
                     ),
                     'parser',
                 )
-                return self.parse(left, direction, negotiated)
+                return left
             # XXX: Check if we are missing any
             log.debug(
                 lambda: (
@@ -534,7 +575,7 @@ class Attributes(dict):
                 ),
                 'parser',
             )
-            return self.parse(left, direction, negotiated)
+            return left
 
         # it is an unknown transitive attribute we need to pass on
         if flag & Attribute.Flag.TRANSITIVE:
@@ -544,14 +585,14 @@ class Attributes(dict):
             except IndexError:
                 decoded = TreatAsWithdraw(aid)
             self.add(decoded, attribute)
-            return self.parse(left, direction, negotiated)
+            return left
 
         # it is an unknown non-transitive attribute we can ignore.
         log.debug(
             lambda: 'ignoring unknown non-transitive attribute (flag 0x{:02X}, aid 0x{:02X})'.format(flag, aid),
             'parser',
         )
-        return self.parse(left, direction, negotiated)
+        return left
 
     def reconcile_four_octet_as(self):
         """RFC 6793 4.2.3: settle the AS4_ attributes an OLD speaker sent beside the real ones.

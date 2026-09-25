@@ -219,6 +219,81 @@ def test_a_withdrawal_wider_than_a_message_is_still_refused():
     assert list(Update([withdrawal], Attributes()).messages(negotiated)) == []
 
 
+# ============================= our own encoding limit is never a NOTIFICATION to the peer
+#
+# `msg_size <= 0` in _mp_messages catches the attributes which leave no room at all, and is
+# covered above.  A budget which is positive but narrower than one MP attribute went past
+# that guard and into MPRNLRI/MPURNLRI.packed_attributes, which raised Notify(6, 0) --
+# Cease / Unspecific.  peer.py turns a Notify out of the sending path into a NOTIFICATION on
+# the wire, so the peer lost every route of every family because of the size of something WE
+# were encoding, and would lose them again on the next session, the offending route still
+# being in our RIB.  RFC 4486's Cease subcodes are all administrative; none of them is "we
+# could not encode this".
+
+
+def test_an_mp_announcement_too_wide_for_the_message_is_not_a_notification():
+    # 30 octets left: an MP_REACH_NLRI for one IPv6 /128 needs 41 with its attribute header.
+    negotiated = negotiated_session()
+    attributes = padded_attributes(negotiated, 30)
+    announcement = routed_prefix('2001:db8::1/128')
+    assert list(Update([announcement], attributes).messages(negotiated)) == []
+
+
+def test_an_mp_withdrawal_too_wide_for_the_message_is_not_a_notification():
+    # 5 octets left: an MP_UNREACH_NLRI for one IPv6 /128 needs 23.  The announcement beside
+    # it is what makes the attributes be packed in full, see _include_defaults.
+    negotiated = negotiated_session()
+    attributes = padded_attributes(negotiated, 5)
+    routes = [
+        routed_prefix('2001:db8::1/128', Action.WITHDRAW, nexthop=False),
+        routed_prefix('2001:db8::2/128'),
+    ]
+    assert list(Update(routes, attributes).messages(negotiated)) == []
+
+
+def test_an_mp_withdrawal_goes_out_when_only_the_announcement_is_too_wide():
+    # 30 octets fit the MP_UNREACH_NLRI's 23 and not the MP_REACH_NLRI's 41.  The Cease was
+    # raised from the announcement pass, after the withdrawal had been yielded, so the
+    # generator died before the withdrawal reached the wire.
+    negotiated = negotiated_session()
+    attributes = padded_attributes(negotiated, 30)
+    routes = [
+        routed_prefix('2001:db8::1/128', Action.WITHDRAW, nexthop=False),
+        routed_prefix('2001:db8::2/128'),
+    ]
+    messages = list(Update(routes, attributes).messages(negotiated))
+    assert [carriers(message) for message in messages] == [['MP_UNREACH']]
+    assert prefixes(messages, negotiated, Action.WITHDRAW) == ['2001:db8::1/128']
+
+
+def test_the_mp_route_which_fits_is_still_sent_beside_the_one_which_does_not():
+    # Dropping only the NLRI which cannot be packed, rather than the family, is what the
+    # native IPv4 pass does.  The MP_REACH header and its attribute header cost 24 octets, a
+    # /32 costs 5 and a /128 costs 17, so a budget of 30 holds the /32 and never the /128.
+    negotiated = negotiated_session()
+    attributes = padded_attributes(negotiated, 30)
+    routes = [routed_prefix('2001:db8::/32'), routed_prefix('2001:db8::1/128')]
+    messages = list(Update(routes, attributes).messages(negotiated))
+    assert prefixes(messages, negotiated, Action.ANNOUNCE) == ['2001:db8::/32']
+
+
+def test_no_mp_message_is_wider_than_the_negotiated_size():
+    # The old loop restarted the payload with the NLRI which had just overflowed it already
+    # in place, and only measured again on the NLRI after that, so the last attribute it
+    # yielded could be wider than the budget.  RFC 4271 4.1 makes the peer answer an UPDATE
+    # past the negotiated maximum message size with Bad Message Length.
+    negotiated = negotiated_session()
+    routes = [
+        routed_prefix('2001:db8::/32'),
+        routed_prefix('2001:db8::1/128'),
+        routed_prefix('2001:db8::2/128'),
+    ]
+    for spare in range(30, 48):
+        attributes = padded_attributes(negotiated, spare)
+        for message in Update(routes, attributes).messages(negotiated):
+            assert len(message) <= negotiated.msg_size, (spare, len(message))
+
+
 # ==================================================================== RFC 7606 5.1, one carrier
 
 
