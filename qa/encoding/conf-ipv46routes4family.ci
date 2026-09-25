@@ -1,3 +1,4 @@
 option:file:conf-ipv46routes4family.conf
 1:cmd:announce route 193.0.2.1/32 next-hop 10.0.0.1 origin igp local-preference 100 extended-community [target:72:1]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C02:00000020400101004002004003040A00000140050400000064C01008000200480000000120C1000201
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":563259191066625,"string":"target:72:1"}]},"announce":{"ipv4 unicast":{"10.0.0.1":[{"nlri":"193.0.2.1/32"}]}}}}}}

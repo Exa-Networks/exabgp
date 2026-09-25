@@ -1,21 +1,29 @@
 option:file:conf-split.conf
 1:cmd:announce route 172.10.0.0/24 next-hop 192.0.2.1 origin igp local-preference 100 med 200 community [174:666]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E02:0000002340010100400200400304C0000201800404000000C840050400000064C0080400AE029A18AC0A00
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"198.111.227.39","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[174,666]]},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"172.10.0.0/24"}]}}}}}}
 1:cmd:announce route 172.10.1.0/24 next-hop 192.0.2.1 origin igp local-preference 100 med 200 community [174:666]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E02:0000002340010100400200400304C0000201800404000000C840050400000064C0080400AE029A18AC0A01
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"198.111.227.39","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[174,666]]},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"172.10.1.0/24"}]}}}}}}
 1:cmd:announce route 172.10.2.0/24 next-hop 192.0.2.1 origin igp local-preference 100 med 200 community [174:666]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E02:0000002340010100400200400304C0000201800404000000C840050400000064C0080400AE029A18AC0A02
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"198.111.227.39","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[174,666]]},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"172.10.2.0/24"}]}}}}}}
 1:cmd:announce route 172.10.3.0/24 next-hop 192.0.2.1 origin igp local-preference 100 med 200 community [174:666]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E02:0000002340010100400200400304C0000201800404000000C840050400000064C0080400AE029A18AC0A03
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"198.111.227.39","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[174,666]]},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"172.10.3.0/24"}]}}}}}}
 
 1:cmd:announce route 172.10.4.0/24 next-hop 192.0.2.1 origin igp local-preference 100 med 200 community [174:666]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E02:0000002340010100400200400304C0000201800404000000C840050400000064C0080400AE029A18AC0A04
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"198.111.227.39","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[174,666]]},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"172.10.4.0/24"}]}}}}}}
 1:cmd:announce route 172.10.5.0/24 next-hop 192.0.2.1 origin igp local-preference 100 med 200 community [174:666]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E02:0000002340010100400200400304C0000201800404000000C840050400000064C0080400AE029A18AC0A05
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"198.111.227.39","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[174,666]]},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"172.10.5.0/24"}]}}}}}}
 1:cmd:announce route 172.10.6.0/24 next-hop 192.0.2.1 origin igp local-preference 100 med 200 community [174:666]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E02:0000002340010100400200400304C0000201800404000000C840050400000064C0080400AE029A18AC0A06
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"198.111.227.39","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[174,666]]},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"172.10.6.0/24"}]}}}}}}
 1:cmd:announce route 172.10.7.0/24 next-hop 192.0.2.1 origin igp local-preference 100 med 200 community [174:666]
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003E02:0000002340010100400200400304C0000201800404000000C840050400000064C0080400AE029A18AC0A07
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"198.111.227.39","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":200,"local-preference":100,"community":[[174,666]]},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"172.10.7.0/24"}]}}}}}}
 
 1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001702:00000000

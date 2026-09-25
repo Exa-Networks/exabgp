@@ -1,10 +1,14 @@
 option:file:api-reload.1.conf
 option:file:api-reload.2.conf
 A1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0030:02:0000001540010100400200400304040000004005040000006418010000
+A1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"4.0.0.0":[{"nlri":"1.0.0.0/24"}]}}}}}}
 A1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0030:02:0000001540010100400200400304040000004005040000006418020000
+A1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"4.0.0.0":[{"nlri":"2.0.0.0/24"}]}}}}}}
 A1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 
 A2:signal:SIGUSR1
 
 A3:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001B:02:0004180200000000
+A3:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"2.0.0.0/24"}]}}}}}
 A3:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0030:02:0000001540010100400200400304040000004005040000006418030000
+A3:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"4.0.0.0":[{"nlri":"3.0.0.0/24"}]}}}}}}

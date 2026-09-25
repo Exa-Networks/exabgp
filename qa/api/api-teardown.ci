@@ -2,19 +2,25 @@ option:file:api-teardown.conf
 option:tcp_connections:3
 # the first route and inet4 unicast EOR
 A1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003040101010140050400000064100101
+A1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.1.1.1":[{"nlri":"1.1.0.0/16"}]}}}}}}
 A1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 # NOTIFY
 A2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002A:03:06041441646D696E697374726174697665205265736574
 
 # the first and second route and EOR
 B1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003040101010140050400000064100101
+B1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.1.1.1":[{"nlri":"1.1.0.0/16"}]}}}}}}
 B1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003040202020240050400000064100202
+B1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"2.2.2.2":[{"nlri":"2.2.0.0/16"}]}}}}}}
 B1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 # NOTIFY
 B2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002A:03:06041441646D696E697374726174697665205265736574
 
 # first and second and third route and EOR
 C1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003040101010140050400000064100101
+C1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.1.1.1":[{"nlri":"1.1.0.0/16"}]}}}}}}
 C1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003040202020240050400000064100202
+C1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"2.2.2.2":[{"nlri":"2.2.0.0/16"}]}}}}}}
 C1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003040303030340050400000064100303
+C1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"3.3.3.3":[{"nlri":"3.3.0.0/16"}]}}}}}}
 C1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000

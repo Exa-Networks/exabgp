@@ -10,6 +10,7 @@ option:file:api-rr-rib.conf
 20:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"10.0.0.1":[{"nlri":"192.168.0.1/32"}]}}}}}}
 21:cmd:withdraw route 192.168.0.1/32
 21:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001C02000520C0A800010000
+21:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"192.168.0.1/32"}]}}}}}
 
 # 192.168.0.2/32 and 192.168.0.3/32
 30:cmd:announce route 192.168.0.2/32 next-hop 10.0.0.2 origin igp local-preference 100
