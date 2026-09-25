@@ -1,9 +1,14 @@
 option:file:conf-parity.conf
+# The MP_REACH_NLRI captures in this file were re-recorded when the encoder stopped emitting
+# that attribute last.  RFC 7606 5.1: "The MP_REACH_NLRI or MP_UNREACH_NLRI attribute (if
+# present) SHALL be encoded as the very first path attribute in an UPDATE message."  Only the
+# position of the attribute moved: the same attributes with the same values, and the same NLRI,
+# are on the wire, which is why no json: expectation changed with them.
 1:cmd:announce ipv6 mpls-vpn 2001:4b50:20c0::/48 next-hop ::ffff:81.52.17.146 rd 3215:583457597 label 926 origin igp as-path [25186 65000 64512] local-preference 100 community [65000:33] extended-community [target:10283:83451000] originator-id 57.35.2.240
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:007E:02:000000674001010040020E0203000062620000FDE80000FC0040050400000064C00804FDE80021800904392302F0C010080002282B04F95C78800E2F00028018000000000000000000000000000000000000FFFF5134119200880039E100000C8F22C6DB3D20014B5020C0
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:007E:02:00000067800E2F00028018000000000000000000000000000000000000FFFF5134119200880039E100000C8F22C6DB3D20014B5020C04001010040020E0203000062620000FDE80000FC0040050400000064C00804FDE80021800904392302F0C010080002282B04F95C78
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","as-path":{"0":{"element":"as-sequence","value":[25186,65000,64512]}},"local-preference":100,"community":[[65000,33]],"originator-id":"57.35.2.240","extended-community":[{"value":607115185577080,"string":"target:10283:83451000"}]},"announce":{"ipv6 mpls-vpn":{"::ffff:81.52.17.146":[{"nlri":"2001:4b50:20c0::/48","label":[[926,14817]],"rd":"3215:583457597"}]}}}}}}
 1:cmd:announce ipv6 mpls-vpn 2001:4b50:20d0::/48 next-hop ::ffff:81.52.17.146 rd 3215:583457597 label 926 origin igp as-path [25186 65000 64512] local-preference 100 community [65000:33] extended-community [target:10283:83451000] originator-id 57.35.2.240
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:007E:02:000000674001010040020E0203000062620000FDE80000FC0040050400000064C00804FDE80021800904392302F0C010080002282B04F95C78800E2F00028018000000000000000000000000000000000000FFFF5134119200880039E100000C8F22C6DB3D20014B5020D0
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:007E:02:00000067800E2F00028018000000000000000000000000000000000000FFFF5134119200880039E100000C8F22C6DB3D20014B5020D04001010040020E0203000062620000FDE80000FC0040050400000064C00804FDE80021800904392302F0C010080002282B04F95C78
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","as-path":{"0":{"element":"as-sequence","value":[25186,65000,64512]}},"local-preference":100,"community":[[65000,33]],"originator-id":"57.35.2.240","extended-community":[{"value":607115185577080,"string":"target:10283:83451000"}]},"announce":{"ipv6 mpls-vpn":{"::ffff:81.52.17.146":[{"nlri":"2001:4b50:20d0::/48","label":[[926,14817]],"rd":"3215:583457597"}]}}}}}}
 1:cmd:announce eor ipv6 mpls-vpn
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E02:00000007900F0003000280

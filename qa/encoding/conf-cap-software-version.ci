@@ -1,3 +1,8 @@
 option:file:conf-cap-software-version.conf
 option:open:inspect-open-message
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0049:01:04FFFD00B40A0000022C0206010400010001020641040000FFFD0202060002164B14134578614247502F352E302E302D302B74657374
+# Re-recorded when the OPEN stopped giving every capability a parameter of its own.
+# RFC 5492 4: "The Capabilities Optional Parameter (OPEN Optional Parameter Type 2)
+# SHOULD only be included in the OPEN message once."  The capability TLVs below are the
+# same TLVs in the same order as before, carried by one type 2 parameter instead of one
+# each, so the message is shorter by two octets per capability and says the same thing.
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:01:04FFFD00B40A00000226022401040001000141040000FFFD06004B14134578614247502F352E302E302D302B74657374

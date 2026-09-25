@@ -1,4 +1,9 @@
 option:file:conf-group-limit.conf
+# The MP_REACH_NLRI captures in this file were re-recorded when the encoder stopped emitting
+# that attribute last.  RFC 7606 5.1: "The MP_REACH_NLRI or MP_UNREACH_NLRI attribute (if
+# present) SHALL be encoded as the very first path attribute in an UPDATE message."  Only the
+# position of the attribute moved: the same attributes with the same values, and the same NLRI,
+# are on the wire, which is why no json: expectation changed with them.
 # EOR
 1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
@@ -12,8 +17,8 @@ option:file:conf-group-limit.conf
 
 # Two IPv6
 1:cmd:announce ipv6 unicast 2a02:b80:0:1::1/128 next-hop 2a02:b80:1::1 origin igp local-preference 100
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E:02:000000374001010040020040050400000064800E26000201102A020B8000010000000000000000000100802A020B80000000010000000000000001
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E:02:00000037800E26000201102A020B8000010000000000000000000100802A020B800000000100000000000000014001010040020040050400000064
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv6 unicast":{"2a02:b80:1::1":[{"nlri":"2a02:b80:0:1::1/128"}]}}}}}}
 1:cmd:announce ipv6 unicast 2a02:b80:0:2::2/128 next-hop 2a02:b80:1::1 origin igp local-preference 100
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E:02:000000374001010040020040050400000064800E26000201102A020B8000010000000000000000000100802A020B80000000020000000000000002
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E:02:00000037800E26000201102A020B8000010000000000000000000100802A020B800000000200000000000000024001010040020040050400000064
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv6 unicast":{"2a02:b80:1::1":[{"nlri":"2a02:b80:0:2::2/128"}]}}}}}}

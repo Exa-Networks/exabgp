@@ -453,12 +453,15 @@ class UpdateCollection(Message):
 
         base_attr = self.attributes.pack_attribute(negotiated, include_defaults)
         otc = b''
+        # RFC 9234 5: "The operator MUST NOT have the ability to modify the procedures
+        # defined in this section."  This used to also test negotiated.role_otc and the
+        # INTERNAL_OTC_NONE marker, which were the two ways an operator could switch the
+        # egress marking off.  Both were removed in 6.0.0, so neither can be false; the
+        # terms are gone rather than left as conditions nothing can fail.
         if (
             not only_withdraws
-            and negotiated.role_otc
             and negotiated.role in (RoleValue.PROVIDER, RoleValue.RS, RoleValue.PEER)
             and Attribute.CODE.OTC not in self.attributes
-            and Attribute.CODE.INTERNAL_OTC_NONE not in self.attributes
         ):
             otc = OTC.make_otc(negotiated.local_as).pack_attribute(negotiated)
         attr = base_attr + otc if v4_announces else base_attr
@@ -476,70 +479,57 @@ class UpdateCollection(Message):
             log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
             return
 
-        withdraws = b''
-        announced = b''
-        # Track sizes progressively to avoid O(n) len() on concatenation
-        # See lab/benchmark_update_size.py for benchmark (1.3-1.5x speedup)
-        withdraws_size = 0
-        announced_size = 0
-
-        # First pack all announces
-        for nlri in v4_announces:
-            packed = nlri.pack_nlri(negotiated)
-            packed_size = len(packed)
-            if announced_size + withdraws_size + packed_size <= msg_size:
-                announced += packed
-                announced_size += packed_size
-                continue
-
-            if not withdraws and not announced:
-                log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
-                return
-
-            yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(attr) + announced)
-            announced = bytes(packed)
-            announced_size = packed_size
+        # RFC 7606 5.1: "An UPDATE message MUST NOT contain more than one of the following:
+        # non-empty Withdrawn Routes field, non-empty Network Layer Reachability Information
+        # field, MP_REACH_NLRI attribute, and MP_UNREACH_NLRI attribute."  So the two IPv4
+        # unicast fields are filled by two separate passes which never share a message.  The
+        # withdrawals go first, because a prefix which is in both sets has to be withdrawn
+        # before it is re-announced, which is the order a single message used to give for
+        # free.  Each pass still fills its field to the negotiated message size, so a table
+        # load stays at one message per few hundred prefixes.
+        # Sizes are tracked progressively to avoid an O(n) len() on every concatenation.
+        # See lab/benchmark_update_size.py for the benchmark (1.3-1.5x speedup).
+        if include_withdraw and v4_withdraws:
+            # A withdraw-only UPDATE carries no path attribute, so it has the full budget.
+            withdraw_size = negotiated.msg_size - 19 - 2 - 2
             withdraws = b''
             withdraws_size = 0
-
-        # Then pack all withdraws (if include_withdraw is True)
-        if include_withdraw:
             for nlri in v4_withdraws:
-                packed = nlri.pack_nlri(negotiated)
-                packed_size = len(packed)
-                if announced_size + withdraws_size + packed_size <= msg_size:
-                    withdraws += packed
-                    withdraws_size += packed_size
-                    continue
+                packed = bytes(nlri.pack_nlri(negotiated))
+                if withdraws_size + len(packed) > withdraw_size:
+                    if not withdraws:
+                        log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
+                        return
+                    yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b''))
+                    withdraws = b''
+                    withdraws_size = 0
+                withdraws += packed
+                withdraws_size += len(packed)
+            if withdraws:
+                yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b''))
 
-                if not withdraws and not announced:
+        announced = b''
+        announced_size = 0
+        for nlri in v4_announces:
+            packed = bytes(nlri.pack_nlri(negotiated))
+            if announced_size + len(packed) > msg_size:
+                if not announced:
                     log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
                     return
-
-                if announced:
-                    yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(attr) + announced)
-                else:
-                    yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b'') + announced)
-                withdraws = bytes(packed)
-                withdraws_size = packed_size
+                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(attr) + announced)
                 announced = b''
                 announced_size = 0
-
-        if announced or withdraws:
-            if announced:
-                yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(attr) + announced)
-            else:
-                yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b'') + announced)
+            announced += packed
+            announced_size += len(packed)
+        if announced:
             # Native NLRI has been emitted; it must not be repeated in an MP family's packet.
-            announced = b''
-            withdraws = b''
+            yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(attr) + announced)
 
         # Get all families that have MP announces or withdraws
         all_mp_families = set(mp_announces.keys()) | set(mp_withdraws.keys())
 
         for family in all_mp_families:
             afi, safi = family
-            mp_unreach = b''
 
             # Use MPNLRICollection for reach/unreach attribute generation
             # mp_announces contains RoutedNLRI, mp_withdraws contains bare NLRI
@@ -558,27 +548,20 @@ class UpdateCollection(Message):
             mp_announce = MPNLRICollection.from_routed(announce_routed, {}, afi, safi)
             mp_withdraw = MPNLRICollection(withdraw_nlris, {}, afi, safi)
 
+            # RFC 7606 5.1 again: an MP_UNREACH_NLRI never shares a message with an
+            # MP_REACH_NLRI.  Emitting all the withdrawals first keeps the ordering the
+            # shared message used to give, so a prefix is still withdrawn before it is
+            # re-announced, including across packet boundaries.
             if include_withdraw:
                 withdraw_size = negotiated.msg_size - 19 - 2 - 2 - len(base_attr)
                 for mpurnlri in mp_withdraw.packed_unreach_attributes(negotiated, withdraw_size):
-                    if mp_unreach:
-                        yield self._message(
-                            UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + base_attr)
-                        )
-                    mp_unreach = mpurnlri
+                    yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mpurnlri + base_attr))
 
-            # Withdraw before reannouncing a prefix, including across packet boundaries.
+            # RFC 7606 5.1: "The MP_REACH_NLRI or MP_UNREACH_NLRI attribute (if present)
+            # SHALL be encoded as the very first path attribute in an UPDATE message", so
+            # the attribute goes in front of ORIGIN, AS_PATH and the rest rather than after.
             for mprnlri in mp_announce.packed_reach_attributes(negotiated, msg_size):
-                if mp_unreach and len(mp_unreach) + len(mprnlri) > msg_size:
-                    yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + base_attr))
-                    mp_unreach = b''
-                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + attr + mprnlri))
-                mp_unreach = b''
-
-            if mp_unreach:
-                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mp_unreach + base_attr))
-            withdraws = b''
-            announced = b''
+                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mprnlri + attr))
 
     def pack_messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator['Update', None, None]:
         """Pack this UpdateCollection into wire-format Update messages.

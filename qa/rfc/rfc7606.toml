@@ -297,8 +297,9 @@ requirement (rfc7606#5.1-accept-any-position-or-combination) which forbids treat
 peer that orders its attributes differently as being in error, so there is no negative
 test to write here.
 
-We do not do this.  UpdateCollection.messages appends MP_REACH_NLRI after ORIGIN and
-AS_PATH, so the attribute the RFC wants first comes last.  The test carries xfail.
+`UpdateCollection.messages` used to append MP_REACH_NLRI after ORIGIN and AS_PATH; it now
+puts the attribute in front of the rest.  MP_UNREACH_NLRI was already first in the
+withdraw-only message, which is the only message it travels in.
 """
 
 [[requirement]]
@@ -318,8 +319,11 @@ Positive only, for the same reason as rfc7606#5.1-mp-nlri-encoded-first: the nex
 sentence of the RFC requires us to accept a peer which breaks this, so "we notice when
 the other end does not" is not a thing we are allowed to do.
 
-We do not do this either.  UpdateCollection.messages packs a withdrawal and an
-announcement of the same family into one UPDATE.  The test carries xfail.
+`UpdateCollection.messages` used to pack a withdrawal and an announcement of the same
+family into one UPDATE, for both the IPv4 unicast fields and the two MP attributes.  It
+now makes one message per carrier, withdrawals first so that a prefix which is in both
+sets is still withdrawn before it is re-announced.  Batching is unchanged: each pass fills
+its own field to the negotiated message size.
 """
 
 [[requirement]]

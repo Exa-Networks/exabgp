@@ -1,6 +1,11 @@
 option:file:conf-ipself6.conf
+# The MP_REACH_NLRI captures in this file were re-recorded when the encoder stopped emitting
+# that attribute last.  RFC 7606 5.1: "The MP_REACH_NLRI or MP_UNREACH_NLRI attribute (if
+# present) SHALL be encoded as the very first path attribute in an UPDATE message."  Only the
+# position of the attribute moved: the same attributes with the same values, and the same NLRI,
+# are on the wire, which is why no json: expectation changed with them.
 option:bind:ipv6
 1:cmd:announce ipv6 unicast 2a04:6d80::1/128 next-hop ::1 origin igp local-preference 100
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E02:000000374001010040020040050400000064800E26000201100000000000000000000000000000000100802A046D80000000000000000000000001
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E02:00000037800E26000201100000000000000000000000000000000100802A046D800000000000000000000000014001010040020040050400000064
 1:cmd:announce eor ipv6 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E02:00000007900F0003000201

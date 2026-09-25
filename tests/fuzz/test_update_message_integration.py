@@ -498,17 +498,23 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
     messages = list(update.messages(negotiated, include_withdraw=True))
     assert len(messages) >= 1
 
-    # Unpack
-    packed_data = messages[0][19:]
-    unpacked = UpdateCollection.unpack_message(packed_data, negotiated)
+    # RFC 7606 5.1: an UPDATE "MUST NOT contain more than one of the following:
+    # non-empty Withdrawn Routes field, non-empty NLRI field, MP_REACH_NLRI,
+    # MP_UNREACH_NLRI".  So a collection holding both comes out as two messages,
+    # withdrawals first, and the announce is not in messages[0] any more.  Both
+    # carriers still have to survive the round trip, which is what this asserts;
+    # only which message each arrives in has changed.
+    announced = []
+    withdrawn = []
+    for message in messages:
+        unpacked = UpdateCollection.unpack_message(message[19:], negotiated)
+        assert isinstance(unpacked, UpdateCollection)
+        announced.extend(unpacked.announces)
+        withdrawn.extend(unpacked.withdraws)
 
-    # Verify both types present
-    assert isinstance(unpacked, UpdateCollection)
-    assert len(unpacked.nlris) >= 2
-
-    # Check we have both announces and withdraws
-    assert len(unpacked.announces) >= 1
-    assert len(unpacked.withdraws) >= 1
+    assert len(announced) >= 1, 'the announce did not survive the split into two messages'
+    assert len(withdrawn) >= 1, 'the withdrawals did not survive the split into two messages'
+    assert len(announced) + len(withdrawn) >= 2
 
 
 # ==============================================================================
@@ -796,8 +802,15 @@ def test_integration_full_update_cycle() -> None:
             # Should have NLRIs
             assert len(unpacked.nlris) >= 1
 
-            # Should have attributes
-            assert len(unpacked.attributes) >= 1
+            # Path attributes belong to the announce.  Since RFC 7606 5.1 split the
+            # carriers apart, the withdrawal message is withdrawals and nothing else, and
+            # a withdraw-only UPDATE carrying no attributes is right rather than a fault:
+            # RFC 4271 4.3 makes the path attribute field optional and it describes the
+            # routes being announced, of which there are none here.
+            if unpacked.announces:
+                assert len(unpacked.attributes) >= 1
+            else:
+                assert not unpacked.attributes, 'a withdraw-only UPDATE carried path attributes'
 
 
 @pytest.mark.fuzz

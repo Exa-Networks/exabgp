@@ -8,9 +8,7 @@ them findable.  It has two halves, and they pull in opposite directions on purpo
       next sentence that we MUST accept a peer which ignores all of it.
   5.2, 5.3 and 5.4 constrain what we do with what we RECEIVE.
 
-Three of the requirements here are not met and carry xfail: two on the sending side, where
-UpdateCollection.messages puts MP_REACH_NLRI last and packs a withdrawal and an
-announcement into one message, and one on the receiving side, where an UPDATE with no
+One requirement here is not met and carries xfail, on the receiving side: an UPDATE with no
 reachable NLRI and a treat-as-withdraw error does not escalate to a session reset.
 """
 
@@ -103,11 +101,6 @@ def generated(announces: list[RoutedNLRI], withdraws: list[NLRI]) -> list[tuple[
 
 
 @pytest.mark.rfc('rfc7606#5.1-mp-nlri-encoded-first')
-@pytest.mark.xfail(
-    strict=True,
-    reason='UpdateCollection.messages appends MP_REACH_NLRI after ORIGIN and AS_PATH, so the '
-    'attribute RFC 7606 5.1 wants first is emitted last',
-)
 def test_we_send_the_mp_nlri_attribute_before_any_other() -> None:
     for _, codes, _ in generated([routed('2001:db8::1/128')], []):
         assert codes, 'an UPDATE was generated with no attributes at all'
@@ -118,11 +111,6 @@ def test_we_send_the_mp_nlri_attribute_before_any_other() -> None:
 
 
 @pytest.mark.rfc('rfc7606#5.1-one-nlri-field-per-update')
-@pytest.mark.xfail(
-    strict=True,
-    reason='UpdateCollection.messages packs an IPv4 withdrawal and an IPv4 announcement into one '
-    'UPDATE, which is two of the four fields RFC 7606 5.1 allows only one of',
-)
 def test_we_never_send_two_of_the_four_nlri_carriers_in_one_update() -> None:
     for withdrawn_length, codes, nlri_length in generated([routed('10.0.0.0/24')], [routed('10.0.1.0/24').nlri]):
         carriers = [
@@ -133,6 +121,32 @@ def test_we_never_send_two_of_the_four_nlri_carriers_in_one_update() -> None:
         ]
         present = [name for name in carriers if name]
         assert len(present) <= 1, f'one UPDATE carried {" and ".join(present)}'
+
+
+@pytest.mark.rfc('rfc7606#5.1-one-nlri-field-per-update')
+def test_we_never_send_an_mp_reach_and_an_mp_unreach_in_one_update() -> None:
+    """The same rule for the two attribute carriers, which used to be packed together."""
+    announce = routed('2001:db8::1/128')
+    withdraw = routed('2001:db8::2/128').nlri
+    produced = generated([announce], [withdraw])
+
+    assert len(produced) == 2, f'an IPv6 announce and an IPv6 withdraw made {len(produced)} messages'
+    for _, codes, _ in produced:
+        both = CODE.MP_REACH_NLRI in codes and CODE.MP_UNREACH_NLRI in codes
+        assert not both, 'one UPDATE carried MP_REACH_NLRI and MP_UNREACH_NLRI'
+
+
+@pytest.mark.rfc('rfc7606#5.1-one-nlri-field-per-update')
+def test_splitting_the_carriers_apart_did_not_stop_us_batching() -> None:
+    """One message per carrier, not one message per prefix: a table load depends on it."""
+    announces = [routed(f'10.0.{index}.0/24') for index in range(100)]
+    withdraws = [routed(f'10.1.{index}.0/24').nlri for index in range(100)]
+    produced = generated(announces, withdraws)
+
+    assert len(produced) == 2, f'200 IPv4 prefixes were spread over {len(produced)} messages'
+    assert [(bool(withdrawn), bool(nlri)) for withdrawn, _, nlri in produced] == [(True, False), (False, True)], (
+        'the withdrawals must be sent before the announcements, each in one message of its own'
+    )
 
 
 @pytest.mark.rfc('rfc7606#5.1-accept-any-position-or-combination')

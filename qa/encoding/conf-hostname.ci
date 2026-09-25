@@ -1,3 +1,8 @@
 option:file:conf-hostname.conf
 option:open:inspect-open-message
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0055:01:04FFFD00B40A000002380206010400010001020641040000FFFD02020600022249200C6D792D686F73742D6E616D65126D792D646F6D61696E2D6E616D652E636F6D
+# Re-recorded when the OPEN stopped giving every capability a parameter of its own.
+# RFC 5492 4: "The Capabilities Optional Parameter (OPEN Optional Parameter Type 2)
+# SHOULD only be included in the OPEN message once."  The capability TLVs below are the
+# same TLVs in the same order as before, carried by one type 2 parameter instead of one
+# each, so the message is shorter by two octets per capability and says the same thing.
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004F:01:04FFFD00B40A00000232023001040001000141040000FFFD060049200C6D792D686F73742D6E616D65126D792D646F6D61696E2D6E616D652E636F6D
