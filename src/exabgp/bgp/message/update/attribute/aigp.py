@@ -60,7 +60,11 @@ class TLVS(list):
 class AIGP(Attribute):
     ID = Attribute.CODE.AIGP
     FLAG = Attribute.Flag.OPTIONAL
-    CACHING = True
+    # Not cacheable: unpack reads negotiated.aigp.
+    # RFC 7311 3.2. AIGP is accepted only on a session configured for it, and unpack answers
+    # None where it is not, so a cache shared between sessions would hand one session an
+    # attribute another session was offered and this one refused.
+    CACHING = False
     TYPES = [
         1,
     ]

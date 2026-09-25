@@ -31,7 +31,6 @@ from exabgp.bgp.message import Update
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute.attributes import Attributes
 
 # an unknown non-transitive attribute of zero length: three octets, ignored, and it drives the
 # cheapest of the seven tail calls, so it is the one which reaches the highest count
@@ -56,16 +55,6 @@ def _logger() -> Any:
     option.formater = Mock(return_value='formatted message')
     yield
     option.logger, option.formater = logger, formater
-
-
-@pytest.fixture(autouse=True)
-def _no_parse_cache() -> Any:
-    """Attributes memoises the last parse on the class, so one test would feed the next."""
-    Attributes.cached = None
-    Attributes.previous = ''
-    yield
-    Attributes.cached = None
-    Attributes.previous = ''
 
 
 def session() -> Any:

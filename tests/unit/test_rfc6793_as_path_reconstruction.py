@@ -62,16 +62,6 @@ def _logger() -> Any:
     option.logger, option.formater = logger, formater
 
 
-@pytest.fixture(autouse=True)
-def _no_parse_cache() -> Any:
-    """Attributes memoises the last parse on the class, so one test would feed the next."""
-    Attributes.cached = None
-    Attributes.previous = ''
-    yield
-    Attributes.cached = None
-    Attributes.previous = ''
-
-
 def negotiated() -> Any:
     """An old session: two octet AS numbers on the wire, so the AS4_ attributes are used."""
     session = Mock()
