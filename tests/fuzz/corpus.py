@@ -36,7 +36,20 @@ NLRI_SEEDS = {
         bytes([0]),  # no rule at all
         bytes([6, 0x03, 0x81, 0x06, 0x04, 0x81, 0x19]),
     ],
-    'ipv6/flow': [bytes([3, 0x03, 0x81, 0x06])],
+    # RFC 8956 section 3.8.1, Example 1: a destination at offset 0, a source at offset 64
+    # and an upper layer protocol. Until the type 1 and type 2 components were sized from
+    # length minus offset, an IPv6 prefix carrying an offset did not decode at all, so the
+    # only ipv6/flow shape here was the protocol on its own and nothing in the corpus ever
+    # entered IPrefix6.make with a component a real speaker could send. What pinned
+    # destination-ipv6 and source-ipv6 in the API stream contract instead was a fill
+    # pattern whose length was 2 and whose offset was 3, a pair section 3.1 forbids and
+    # which is now refused.
+    'ipv6/flow': [
+        bytes([3, 0x03, 0x81, 0x06]),
+        bytes([18, 0x01, 0x20, 0x00, 0x20, 0x01, 0x0D, 0xB8])
+        + bytes([0x02, 0x68, 0x40, 0x12, 0x34, 0x56, 0x78, 0x9A])
+        + bytes([0x03, 0x81, 0x06]),
+    ],
     # a flow-vpn carries an eight byte route distinguisher before its rules
     'ipv4/flow-vpn': [bytes([11]) + b'\x00' * 8 + bytes([0x03, 0x81, 0x06]), bytes([8]) + b'\x00' * 8],
     'ipv6/flow-vpn': [bytes([11]) + b'\x00' * 8 + bytes([0x03, 0x81, 0x06])],

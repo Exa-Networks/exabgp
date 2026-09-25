@@ -11,7 +11,6 @@ from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
-from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 
 #      0                   1                   2                   3
@@ -80,9 +79,10 @@ class NODE(BGPLS):
     @classmethod
     def unpack_nlri(cls, data, rd):
         cls.check_length(data, cls.DESCRIPTOR_OFFSET)
+        # RFC 9552 8.2.2: the NLRI may not be called malformed over the contents of a
+        # field, so an unrecognised Protocol-ID is carried rather than refused.  It is
+        # still read, because the IGP Router-ID sub-TLV is typed by it.
         proto_id = unpack('!B', data[0:1])[0]
-        if proto_id not in PROTO_CODES.keys():
-            raise Notify(3, 10, f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
 
         # unpack list of node descriptors
@@ -97,14 +97,9 @@ class NODE(BGPLS):
                 f'Unknown type: {node_type}. Only Local Node descriptors are allowed in a Node type msg',
             )
 
-        node_ids = []
-        while values:
-            # Unpack Node Descriptor Sub-TLVs
-            node_id, left = NodeDescriptor.unpack(values, proto_id)
-            node_ids.append(node_id)
-            if left == values:
-                raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
-            values = left
+        # Unpack the Node Descriptor Sub-TLVs, holding them to RFC 9552 5.2.1: one
+        # instance of each sub-TLV type at most, and ascending order by type.
+        node_ids = NodeDescriptor.unpack_descriptors(values, proto_id)
 
         return cls(domain=domain, proto_id=proto_id, node_ids=node_ids, route_d=rd, packed=data)
 

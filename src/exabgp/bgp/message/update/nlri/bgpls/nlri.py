@@ -63,9 +63,21 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 #            |      4      | Direct                           |
 #            |      5      | Static configuration             |
 #            |      6      | OSPFv3                           |
+#            |      7      | BGP                              |
+#            |      8      | RSVP-TE                          |
+#            |      9      | Segment Routing                  |
 #            +-------------+----------------------------------+
 # ===================================================================== PROTO_ID
 
+# The IANA "BGP-LS Protocol-IDs" registry, which has grown since RFC 7752 listed six
+# codes: 7 is BGP (RFC 9086), 8 is RSVP-TE and 9 is Segment Routing.
+#
+# This names the codes; it does not gate them.  RFC 9552 8.2.2 says a Link-State NLRI
+# "MUST NOT be considered malformed or invalid based on the inclusion/exclusion of TLVs
+# or contents of the TLV fields", and the Protocol-ID is the contents of a field.  A
+# decoder which refused what it had not heard of took the session down the day a peer
+# started advertising Segment Routing topology, which is the failure this registry used
+# to cause when it was read as a whitelist.
 PROTO_CODES = {
     1: 'isis_l1',
     2: 'isis_l2',
@@ -73,6 +85,9 @@ PROTO_CODES = {
     4: 'direct',
     5: 'static',
     6: 'ospfv3',
+    7: 'bgp',
+    8: 'rsvp_te',
+    9: 'segment_routing',
     # not RFC/draft defined
     227: 'freertr',
 }

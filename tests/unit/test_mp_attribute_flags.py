@@ -15,9 +15,11 @@ flags ... are inconsistent with those specified in [RFC4760]" as one of the four
 MP attribute is incorrect, and 3(j) says that when the MP attributes cannot be
 successfully parsed, the session reset approach MUST be followed.
 
-So: a Notify.  Subcode 0 because that is the subcode mprnlri.py and mpurnlri.py already
-raise for an MP attribute they cannot read, and an MP flags fault should not be reported
-differently depending on which line noticed it.
+So: a Notify.  Subcode 9, Optional Attribute Error, which RFC 4760 section 7 names for a
+session ended over an incorrect MP attribute and which mprnlri.py and mpurnlri.py now
+raise for every MP attribute they refuse.  An MP flags fault should not be reported
+differently depending on which line noticed it, so the subcode is asserted below rather
+than left to the three files to agree on by accident.
 """
 
 from __future__ import annotations
@@ -111,6 +113,7 @@ def test_a_transitive_mp_attribute_resets_the_session(code: int, session: Any) -
         Attributes.unpack(payload, Direction.IN, session)
 
     assert raised.value.code == 3, 'RFC 7606 3(j) asks for a session reset over an UPDATE error'
+    assert raised.value.subcode == 9, 'RFC 4760 7 asks for Optional Attribute Error on an MP attribute'
 
 
 @pytest.mark.parametrize('code', MP_CODES, ids=MP_IDS)

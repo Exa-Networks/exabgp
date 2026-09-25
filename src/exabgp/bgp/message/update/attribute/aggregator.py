@@ -80,5 +80,19 @@ class Aggregator(Attribute):
 class Aggregator4(Aggregator):
     ID = Attribute.CODE.AS4_AGGREGATOR
 
+    # Four octets of AS number and four of speaker, always.
+    SIZE = 8
+
     def pack(self, negotiated):
         return self._attribute(self.asn.pack(True) + self.speaker.pack())
+
+    @classmethod
+    def unpack(cls, data, direction, negotiated):
+        # This inherited Aggregator.unpack, which sizes itself on negotiated.asn4 and reads a
+        # two octet AS number when the session has not negotiated four.  RFC 6793 4.2.2 gives
+        # AS4_AGGREGATOR a single form, four octets of AS number, and a speaker which
+        # negotiated four octets is never sent the attribute at all, so the only session which
+        # ever sees one answered a correctly formed attribute with a NOTIFICATION.
+        if len(data) != cls.SIZE:
+            raise Notify(3, 5, 'invalid AS4_AGGREGATOR, expected %d bytes, got %d' % (cls.SIZE, len(data)))
+        return cls(ASN.unpack(data[:4]), IPv4.unpack(data[-4:]))

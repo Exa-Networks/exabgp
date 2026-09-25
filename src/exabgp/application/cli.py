@@ -236,20 +236,30 @@ def cmdline(cmdarg):
 
     sending = ' '.join(renamed).strip()
 
+    # `command` is the argparse list, so both comparisons below have to be made against
+    # the joined string. Against the list the first was always true and printed the echo
+    # for every command, and the second was never true.
+    typed = ' '.join(command).strip()
+
     # This does not change the behaviour for well formed command
-    if sending != command:
+    if sending != typed:
         sys.stdout.write(f'command: {sending}\n')
 
     writer = open_writer(send)
     try:
         os.write(writer, sending.encode('utf-8') + b'\n')
-        os.close(writer)
     except OSError as exc:
         sys.stdout.write(f'could not send command to ExaBGP ({exc!s})')
         sys.stdout.flush()
         sys.exit(1)
+    finally:
+        # in a finally because the write failure path used to skip the close and leak
+        # the descriptor
+        os.close(writer)
 
-    if command == 'reset':
+    # reset is the one command the daemon does not answer, so waiting for an answer only
+    # ever ends in the five second timeout below telling the user the reactor may block
+    if sending == 'reset':
         sys.exit(0)
 
     waited = 0.0

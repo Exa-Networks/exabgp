@@ -143,10 +143,13 @@ def test_fragmented_withdrawals_keep_reannounced_prefix():
     assert peer_state(decoded, [nlri.cidr.prefix() for nlri in withdrawals]) == {announced.cidr.prefix()}
 
 
-def test_small_mp_withdrawal_and_announcement_share_one_packet():
+def test_small_mp_withdrawal_and_announcement_do_not_share_one_packet():
+    # They used to. RFC 7606 5.1 says an UPDATE "MUST NOT contain more than one of the
+    # following: ... MP_REACH_NLRI attribute, and MP_UNREACH_NLRI attribute". The withdrawal
+    # is emitted first, so the prefix is still withdrawn before it is re-announced.
     negotiated = negotiated_session()
     routes = [routed_prefix('2001:db8::1/128', Action.WITHDRAW), routed_prefix('2001:db8::1/128')]
     decoded = decode_messages(Update(routes, Attributes()), negotiated)
-    assert len(decoded) == 1
+    assert len(decoded) == 2
     assert_exact_routes(decoded, routes)
     assert peer_state(decoded) == {'2001:db8::1/128'}
