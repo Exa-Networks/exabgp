@@ -239,8 +239,13 @@ class VPLSBase(NLRI):
         if len(data) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
 
-        # only what the accessors read is kept, so what is packed back is what was understood
-        packed = bytes(data[0:2]) + bytes(data[2 : 2 + VPLS_PAYLOAD_SIZE])
+        # Only what the accessors read is kept, so what is packed back is what was
+        # understood. The length prefix is rewritten rather than copied, because it has to
+        # describe what is kept: copying a longer length verbatim left pack_nlri emitting
+        # nineteen bytes behind a header announcing more, which this decoder refuses and so
+        # would the peer we re-advertised it to. It also split index(), which is these
+        # bytes, between two NLRI a withdraw cannot tell apart.
+        packed = pack('!H', VPLS_PAYLOAD_SIZE) + bytes(data[2 : 2 + VPLS_PAYLOAD_SIZE])
         nlri = cls(packed)
         nlri.addpath = path_info
         return nlri, data[2 + length :]

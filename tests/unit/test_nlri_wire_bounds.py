@@ -94,6 +94,39 @@ def test_vpls_shorter_than_it_reads_raises_notify(length: int) -> None:
         decode(AFI.l2vpn, SAFI.vpls, bytes([0, length]) + bytes(length))
 
 
+@pytest.mark.parametrize('announced', [17, 18, 24, 40])
+def test_vpls_repacks_into_something_it_decodes_again(announced: int) -> None:
+    """A longer VPLS NLRI is accepted, and only the first seventeen bytes are kept.
+
+    The two byte prefix was copied from the wire while the payload behind it was truncated,
+    so pack_nlri emitted nineteen bytes behind a header announcing more and the decoder
+    refused its own output. Found by the seeded corpus in tests/fuzz/corpus.py.
+    """
+    payload = (
+        bytes(8) + (1).to_bytes(2, 'big') + (2).to_bytes(2, 'big') + (8).to_bytes(2, 'big') + bytes([0, 0x10, 0x00])
+    )
+    wire = announced.to_bytes(2, 'big') + payload + bytes(announced - 17)
+    nlri = decode(AFI.l2vpn, SAFI.vpls, wire)
+    packed = bytes(nlri.pack_nlri(Negotiated.UNSET))
+    again = decode(AFI.l2vpn, SAFI.vpls, packed)
+    assert packed == (17).to_bytes(2, 'big') + payload
+    assert again.index() == nlri.index()
+
+
+def test_vpls_announcing_more_than_it_reads_has_one_index() -> None:
+    """Two NLRI which differ only in a length the decoder ignores are one route.
+
+    index() is the packed bytes, and the RIB keys withdrawals on it, so leaving the peer's
+    length in there made a withdraw framed with a different length miss its announcement.
+    """
+    payload = (
+        bytes(8) + (1).to_bytes(2, 'big') + (2).to_bytes(2, 'big') + (8).to_bytes(2, 'big') + bytes([0, 0x10, 0x00])
+    )
+    short = decode(AFI.l2vpn, SAFI.vpls, (17).to_bytes(2, 'big') + payload)
+    long = decode(AFI.l2vpn, SAFI.vpls, (18).to_bytes(2, 'big') + payload + bytes(1))
+    assert short.index() == long.index()
+
+
 def test_vpls_with_the_right_length_still_decodes() -> None:
     payload = (
         bytes(8) + (1).to_bytes(2, 'big') + (2).to_bytes(2, 'big') + (8).to_bytes(2, 'big') + bytes([0, 0x10, 0x00])
@@ -140,6 +173,38 @@ def test_bgpls_vpn_generic_shorter_than_a_route_distinguisher_survives_a_round_t
     packed = bytes(nlri.pack_nlri(Negotiated.UNSET))
 
     assert packed == wire, 'a generic must pack back the bytes it was given'
+
+    again = decode(AFI.bgpls, SAFI.bgp_ls_vpn, packed)
+
+    assert again.index() == nlri.index(), 'the decoder refuses what it just packed'
+
+
+@pytest.mark.parametrize('code', [1, 2])
+def test_bgpls_vpn_registered_code_packs_back_its_route_distinguisher(code: int) -> None:
+    """A registered BGP-LS VPN NLRI must re-emit the route distinguisher it arrived with.
+
+    RFC 7752 section 3.2 puts the route distinguisher between the header and the
+    descriptors, and counts it in the announced length.  unpack_nlri slices it out so the
+    descriptor parsers see the payload alone, and stored only that: pack_nlri then handed
+    back a wire with no route distinguisher in it and a length eight bytes short.  So a
+    route learnt in one VPN was re-announced as belonging to no VPN at all, and this same
+    decoder refused to read back what it had just packed.
+
+    Found by building the (type, length) pair by construction rather than drawing it:
+    tests/fuzz/test_nlri_decoder_properties.py reached a registered VPN code with an
+    agreeing length in a handful of examples out of four hundred.
+    """
+    distinguisher = bytes.fromhex('0001c0000202fde8')
+    # protocol id, the 64 bit identifier, then an empty Local Node Descriptors TLV: the
+    # smallest descriptor block the node and link decoders both accept.
+    descriptors = bytes([3]) + bytes(8) + (256).to_bytes(2, 'big') + (0).to_bytes(2, 'big')
+    announced = len(distinguisher) + len(descriptors)
+    wire = code.to_bytes(2, 'big') + announced.to_bytes(2, 'big') + distinguisher + descriptors
+
+    nlri = decode(AFI.bgpls, SAFI.bgp_ls_vpn, wire)
+    packed = bytes(nlri.pack_nlri(Negotiated.UNSET))
+
+    assert packed == wire, 'a VPN NLRI must pack back the bytes it was given'
 
     again = decode(AFI.bgpls, SAFI.bgp_ls_vpn, packed)
 

@@ -124,11 +124,38 @@ class BGPLS(NLRI):
         # RFC 7911 ADD-PATH is possible for BGP-LS but not yet implemented
         # TODO: implement addpath support when negotiated.addpath.send(AFI.bgpls, self.safi)
         # Wire format: [type(2)][length(2)][payload] - _packed includes header
-        return self._packed
+        return self._wire()
 
     def index(self) -> bytes:
         # Wire format: [family][type(2)][length(2)][payload] - _packed includes header
-        return bytes(Family.index(self)) + self._packed
+        return bytes(Family.index(self)) + self._wire()
+
+    def _wire(self) -> bytes:
+        """The bytes this NLRI occupies on the wire, route distinguisher included.
+
+        RFC 7752 section 3.2 puts the route distinguisher between the header and the
+        descriptors of a VPN NLRI, and counts it in the announced length.  unpack_nlri
+        slices it out so the descriptor parsers see the payload alone, and `_packed` is
+        what is left.  Handing that back announced a route belonging to no VPN, under a
+        length eight bytes short, which this decoder then refused to read again: what a
+        decoder accepts it has to be able to re-encode (EXA_STYLE 1.1).
+
+        An unregistered code never reaches that slice, so its `_packed` is already the
+        whole announced wire.  The non-VPN SAFI carries the NORD sentinel and an NLRI built
+        from configuration may carry no route distinguisher at all, and one is only ever
+        sliced out when there is a real one, so the route distinguisher is the test rather
+        than `self.safi`: a decoded VPN NLRI reports the bgp-ls SAFI, not the bgp-ls-vpn one
+        it arrived on.
+        """
+        route_d = getattr(self, 'route_d', None)
+        if route_d is None or route_d is RouteDistinguisher.NORD:
+            return bytes(self._packed)
+        packed_rd = bytes(route_d.pack_rd())
+        assert len(packed_rd) == RouteDistinguisher.LENGTH, 'a route distinguisher is eight octets'
+        descriptors = bytes(self._packed[4:])
+        announced = len(descriptors) + len(packed_rd)
+        assert announced <= 0xFFFF, 'a BGP-LS NLRI announces its length in two octets'
+        return pack('!HH', self.CODE, announced) + packed_rd + descriptors
 
     @classmethod
     def unpack_bgpls_nlri(cls, data: Buffer, rd: 'RouteDistinguisher') -> 'BGPLS':
