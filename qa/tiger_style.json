@@ -2,5 +2,5 @@
     "bare_except": 0,
     "input_assert": 0,
     "long_function": 30,
-    "silent_except": 19
+    "silent_except": 0
 }

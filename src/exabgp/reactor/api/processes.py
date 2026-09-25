@@ -139,9 +139,21 @@ class Processes:
                 log.debug(lambda: f'force kill unresponsive {process_name}', 'process')
                 process.kill()
                 process.wait(timeout=1)
-        except (OSError, KeyError, subprocess.TimeoutExpired):
-            # the process is most likely already dead
-            pass
+        except subprocess.TimeoutExpired:
+            # kill() did not take either, so the child outlived SIGKILL and is still there
+            # while we are on our way out. Rare, and it leaves the operator an orphan holding
+            # whatever the helper held, so this one is not a detail.
+            log.warning(
+                lambda: f'process {process_name} is still running after kill, it is left behind',
+                'process',
+            )
+        except (OSError, KeyError) as exc:
+            # the child is almost always already dead, which is the outcome we wanted, but name
+            # the errno: a permission or bookkeeping failure must not read as a clean exit
+            log.debug(
+                lambda exc=exc: f'could not terminate process {process_name} ({errstr(exc)})',
+                'process',
+            )
 
     def terminate(self):
         for process in list(self._process):
@@ -149,7 +161,13 @@ class Processes:
                 try:
                     self.write(process, self._encoder[process].shutdown())
                 except ProcessError:
-                    pass
+                    # the pipe to a helper which has already gone is not writable, and we are
+                    # shutting down anyway, so this is not worth stopping for. It is worth a
+                    # line: this helper never saw the shutdown and never flushed its own state.
+                    log.debug(
+                        lambda process=process: f'could not tell {process} that we are shutting down',
+                        'process',
+                    )
         self.silence = True
         # waiting a little to make sure IO is flushed to the pipes
         # we are using unbuffered IO but still ..
@@ -334,7 +352,13 @@ class Processes:
                     return
 
             except KeyError:
-                pass
+                # the helper was taken off self._process while we were reading from it.
+                # _handle_problem does that, and so does a shutdown or a reload run by the
+                # reactor while this generator sits suspended on one of its yields.
+                log.debug(
+                    lambda process=process: f'process {process} went away while it was being read',
+                    'process',
+                )
             except (subprocess.CalledProcessError, OSError, ValueError):
                 self._handle_problem(process)
 

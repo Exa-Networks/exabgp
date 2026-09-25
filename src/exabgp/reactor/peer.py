@@ -706,13 +706,12 @@ class Peer:
         except Notify as notify:
             if self.proto:
                 try:
-                    generator = self.proto.new_notification(notify)
-                    try:
-                        while True:
-                            next(generator)
-                            yield ACTION.NOW
-                    except StopIteration:
-                        pass
+                    # new_notification yields once per write attempt and then returns, so its
+                    # StopIteration only ever said "the NOTIFICATION is fully out". Since PEP
+                    # 479 nothing deeper can reach us as StopIteration either, so there was no
+                    # error here to swallow. A write which really fails raises below.
+                    for _ in self.proto.new_notification(notify):
+                        yield ACTION.NOW
                 except (NetworkError, ProcessError):
                     log.error(lambda: 'Notification not sent', self.id())
                 self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
