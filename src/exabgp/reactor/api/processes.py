@@ -174,11 +174,13 @@ class Processes:
         if self.respawn_number and self._restart[process]:
             log.debug(lazymsg('process.ended.restarting process={p}', p=process), 'processes')
             self._terminate(process)
-            # _start raises ProcessError only once it has logged the respawn limit as
-            # critical and terminated the process, so there is nothing left to say. It is
+            # This is the only path which may count against the respawn limit. It is also
+            # the only place ProcessError is raised from, having already logged the limit as
+            # critical, so there is nothing left to say and nothing left to start. It is
             # caught because this runs as an asyncio callback, where an escaping exception
             # takes down more than the one process it is about.
             with contextlib.suppress(ProcessError):
+                self._record_respawn(process)
                 self._start(process)
         else:
             log.debug(lazymsg('process.ended process={p}', p=process), 'processes')
@@ -368,11 +370,17 @@ class Processes:
         return child_env
 
     def _record_respawn(self, process: str) -> None:
-        """Count this spawn against the limit, and give up on a helper which keeps dying.
+        """Count this respawn against the limit, and give up on a helper which keeps dying.
+
+        Only a start replacing a helper which died belongs here. Counting an ordinary start
+        made a configuration reload look like a respawn, and because respawn_number is zero
+        when respawning is switched off, the second start of a helper inside one window then
+        raised ProcessError out of start() and took the daemon down.
 
         Counting happens per time bucket rather than in total, so a helper restarted once
         a day forever is fine and one restarted six times in a minute is not. Raises
-        ProcessError once the helper has been terminated, which is all the caller needs.
+        ProcessError once the helper has used up its budget; the caller has already
+        terminated it and must not start it again.
         """
         around_now = int(time.time()) & self.respawn_timemask
         if process in self._respawning:
@@ -388,8 +396,6 @@ class Processes:
                         ),
                         'processes',
                     )
-                    # Clean up the process we just started before raising
-                    self._terminate(process)
                     raise ProcessError
             else:
                 # reset long time since last respawn
@@ -459,7 +465,6 @@ class Processes:
                 log.debug(lazymsg('process.forked process={p}', p=process), 'processes')
 
                 self._restart[process] = self._configuration[process]['respawn']
-                self._record_respawn(process)
 
         except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             self._broken.append(process)

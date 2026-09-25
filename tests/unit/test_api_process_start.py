@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import time
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -205,64 +206,91 @@ class TestStartEnvironment:
 
 
 class TestStartRespawn:
-    def test_a_first_start_records_one_spawn(self, environment: Any, spawn: Any) -> None:
+    """The limit counts respawns. An ordinary start is not one.
+
+    These five tests used to describe `_start` keeping the count, and one of them pinned the
+    consequence as behaviour rather than fixing it: with respawning switched off the limit is
+    zero, so the second `_start` of a helper in one window raised ProcessError, which reached
+    the reactor and shut the daemon down on two configuration reloads. The count now lives on
+    the respawn path, so the tests follow it there.
+    """
+
+    def test_an_ordinary_start_records_nothing(self, environment: Any, spawn: Any) -> None:
+        """A helper started because the configuration was read has not respawned."""
         processes = configured(environment)
 
         processes._start('helper')
+
+        assert 'helper' not in processes._respawning
+
+    def test_a_first_respawn_records_one(self, environment: Any, spawn: Any) -> None:
+        processes = configured(environment)
+        processes._start('helper')
+
+        processes._handle_problem('helper')
 
         assert list(processes._respawning['helper'].values()) == [1]
 
-    def test_a_second_start_in_the_same_window_counts_up(self, environment: Any, spawn: Any) -> None:
+    def test_a_second_respawn_in_the_same_window_counts_up(self, environment: Any, spawn: Any) -> None:
         processes = configured(environment)
+        processes._start('helper')
 
-        processes._start('helper')
-        del processes._process['helper']
-        processes._start('helper')
+        processes._handle_problem('helper')
+        processes._handle_problem('helper')
 
         assert list(processes._respawning['helper'].values()) == [2]
 
-    def test_a_start_in_a_new_window_resets_the_count(self, environment: Any, spawn: Any) -> None:
+    def test_a_respawn_in_a_new_window_resets_the_count(self, environment: Any, spawn: Any) -> None:
         """The counter is per time bucket, so a helper which is merely long lived is fine."""
         processes = configured(environment)
+        processes._start('helper')
         processes._respawning['helper'] = {0: 99}
 
-        processes._start('helper')
+        processes._handle_problem('helper')
 
         assert list(processes._respawning['helper'].values()) == [1]
 
-    def test_respawning_too_fast_terminates_the_helper_and_raises(self, environment: Any, spawn: Any) -> None:
-        """Without this the daemon forks a dying helper forever."""
-        processes = configured(environment)
-        terminated: list[str] = []
-        processes._terminate = terminated.append
+    def test_respawning_too_fast_gives_up_on_the_helper(self, environment: Any, spawn: Any) -> None:
+        """Without this the daemon forks a dying helper forever.
 
-        for _ in range(processes.respawn_number):
-            processes._start('helper')
-            processes._process.pop('helper', None)
+        _handle_problem terminates before it counts, and suppresses the ProcessError, so a
+        helper past its budget is left stopped and the asyncio callback this runs in is not
+        taken down with it.
+        """
+        processes = configured(environment)
+        processes._start('helper')
+
+        for _ in range(processes.respawn_number + 1):
+            processes._handle_problem('helper')
+
+        assert list(processes._respawning['helper'].values()) == [processes.respawn_number + 1]
+        assert 'helper' not in processes._process
+
+    def test_the_limit_is_what_raises_and_nothing_else(self, environment: Any, spawn: Any) -> None:
+        """ProcessError comes from the counter, so the suppression above has something to catch."""
+        processes = configured(environment)
+        processes._respawning['helper'] = {int(time.time()) & processes.respawn_timemask: 99}
 
         with pytest.raises(ProcessError):
-            processes._start('helper')
+            processes._record_respawn('helper')
 
-        assert terminated == ['helper']
+    def test_with_respawn_disabled_a_second_start_in_the_window_is_allowed(self, environment: Any, spawn: Any) -> None:
+        """The defect this file used to pin.
 
-    def test_with_respawn_disabled_a_second_start_in_the_window_is_refused(self, environment: Any, spawn: Any) -> None:
-        """Pins current behaviour, which looks wrong, and is reported rather than changed.
-
-        exabgp_api_respawn=false sets respawn_number to 0, and the limit is compared with
-        `>`, so the second start of a helper inside the same 63 second bucket exceeds it.
-        _handle_problem does not reach here with respawn off, but `start()` does on a
-        configuration reload, and the ProcessError it raises is what the reactor treats as
-        a reason to shut the daemon down. Two reloads touching one helper in a minute
-        should not do that.
+        exabgp_api_respawn=false sets respawn_number to 0. While `_start` kept the count, the
+        second start of a helper inside one window exceeded it although nothing had died, and
+        the ProcessError reaching the reactor was read as a reason to shut the daemon down.
+        Two configuration reloads a second apart did that. Nothing on this path counts now.
         """
         environment.api.respawn = False
         processes = configured(environment)
 
         processes._start('helper')
         del processes._process['helper']
+        processes._start('helper')
 
-        with pytest.raises(ProcessError):
-            processes._start('helper')
+        assert 'helper' in processes._process
+        assert 'helper' not in processes._respawning
 
 
 class TestStartFailure:
