@@ -5,7 +5,7 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 """
 
 import json
-from struct import pack, unpack
+from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
@@ -46,12 +46,26 @@ class SRv6SID(BGPLS):
     NAME = 'bgpls-srv6sid'
     SHORT_NAME = 'SRv6_SID'
 
-    def __init__(self, protocol_id, domain, local_node_descriptors, srv6_sid_descriptors, action=None, addpath=None):
+    def __init__(
+        self,
+        protocol_id,
+        domain,
+        local_node_descriptors,
+        srv6_sid_descriptors,
+        action=None,
+        addpath=None,
+        packed=None,
+    ):
         BGPLS.__init__(self, action, addpath)
         self.proto_id = protocol_id
         self.domain = domain
         self.local_node_descriptors = local_node_descriptors
         self.srv6_sid_descriptors = srv6_sid_descriptors
+        # The wire NLRI, kept because the parsed form cannot be re-encoded: the descriptors
+        # become a list of objects and a dict of rendered strings.  Every sibling NLRI in
+        # this package keeps it, and the base class reads it for pack_nlri, index and hash.
+        if packed is not None:
+            self._packed = packed
 
     @classmethod
     def unpack_nlri(cls, data, rd):
@@ -92,17 +106,16 @@ class SRv6SID(BGPLS):
         if first:
             raise Notify(3, 10, 'BGP-LS SRv6 SID NLRI has no Local Node descriptor')
 
-        return cls(proto_id, domain, node_ids, srv6_sid_descriptors)
+        return cls(proto_id, domain, node_ids, srv6_sid_descriptors, packed=data)
 
-    def pack(self, packed=None):
-        nlri = pack('!B', self.proto_id)
-        nlri += pack('!Q', self.domain)
-        nlri += self.local_node_descriptors
-        nlri += self.srv6_sid_descriptors
-        return nlri
+    # pack() is not overridden: NLRI.pack calls BGPLS.pack_nlri, which writes RFC 7752's
+    # NLRI Type and Total NLRI Length in front of self._packed.  The override used to build
+    # the body by hand and raised `TypeError: can't concat list to bytes` on the first
+    # descriptor, from _raw() and so from the `show adj-rib` JSON of any received SRv6 SID.
 
     def __len__(self):
-        return 1 + 8 + len(self.local_node_descriptors) + len(self.srv6_sid_descriptors)
+        # what pack_nlri() writes: the four octet BGP-LS NLRI header, then the body
+        return 4 + len(self._packed)
 
     def __repr__(self):
         return f'{self.NAME}(protocol_id={self.proto_id}, domain={self.domain})'

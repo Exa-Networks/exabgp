@@ -9,11 +9,10 @@ from __future__ import annotations
 import json
 from struct import unpack
 from exabgp.protocol.iso import ISO
-from exabgp.util import hexstring
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState, unpack_subtlvs
 from exabgp.protocol.ip import IP, IPv6
 
 # BGP-LS Sub-TLV header constants
@@ -50,7 +49,11 @@ OSPF = 2
 
 # Behavior(2) + Flags(1) + Algorithm(1) + Weight(1) + Reserved(1) + Neighbor Id + SID(16)
 FIXED_SIZE_ISIS = 28
-FIXED_SIZE_OSPF = 22
+# RFC 9514 4.2: behavior 2, flags 1, algorithm 1, weight 1, reserved 1, then the neighbour's
+# identifier and a 16 octet SID. IS-IS names it with a 6 octet System-ID and OSPFv3 with a
+# 4 octet Router-ID, so 6 + 6 + 16 and 6 + 4 + 16. This read 22, which is 6 + 16: the length
+# agreed with the wrong SID offset below, so the two faults hid each other.
+FIXED_SIZE_OSPF = 26
 
 
 def unpack_data(cls, data, type):
@@ -66,24 +69,21 @@ def unpack_data(cls, data, type):
     else:
         # json.dumps cannot serialise an IP object, and this reaches it through content
         neighbor_id = str(IP.unpack(data[6:10]))
-    start_offset = 12 if type == ISIS else 6
+    # past the neighbour's identifier, which is 6 octets for IS-IS and 4 for OSPFv3. Reading
+    # the OSPF SID from 6 is the offset of the Router-ID, not of the SID, so the Router-ID's
+    # four octets were reported as the head of the SID and the SID's last four fell past the
+    # end, where the sub-TLV walk below read them as a header.
+    start_offset = 12 if type == ISIS else 10
     sid = IPv6.ntop(data[start_offset : start_offset + 16])
     data = data[start_offset + 16 :]
-    subtlvs = []
-
-    while data and len(data) >= BGPLS_SUBTLV_HEADER_SIZE:
-        code = unpack('!H', data[0:2])[0]
-        length = unpack('!H', data[2:4])[0]
-
-        if code in cls.registered_subsubtlvs:
-            subsubtlv = cls.registered_subsubtlvs[code].unpack(
-                data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE]
-            )
-            subtlvs.append(subsubtlv.json())
-        else:
-            subsubtlv = hexstring(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
-            subtlvs.append(f'"{code}-undecoded": "{subsubtlv}"')
-        data = data[length + BGPLS_SUBTLV_HEADER_SIZE :]
+    # 'N-undecoded' is a published member name and differs from the one the non-LAN sibling
+    # emits. Neither may be renamed, so each caller passes its own formatter.
+    subtlvs = unpack_subtlvs(
+        data,
+        cls.registered_subsubtlvs,
+        lambda code, value: f'"{code}-undecoded": "{value}"',
+        'SRv6 LAN End.X SID',
+    )
 
     return {
         'flags': flags,

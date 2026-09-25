@@ -32,6 +32,9 @@ from ipaddress import ip_address
 # Protocol ID for IPv6
 PROTOCOL_ID_IPV6 = 4  # IPv6 protocol identifier
 
+IPV4_MAX_PREFIX_BITS = 32
+IPV6_MAX_PREFIX_BITS = 128
+
 
 class IpReach:
     def __init__(self, prefix, plength=None, packed=None):
@@ -57,6 +60,32 @@ class IpReach:
         plength = unpack('!B', data[0:1])[0]
         # octet = int(math.ceil(plength / 8))
         octet = len(data[1:])
+
+        # Neither the prefix length nor the octet count was bounded by the address family.
+        # An IPv6 sub-TLV carrying more than sixteen octets built an address string of nine
+        # or more hextet groups, where the padding term below goes negative and Python
+        # quietly yields an empty list, and ip_address() then raised ValueError out of the
+        # decoder.  BGPLS.unpack_nlri does not convert that one, so the session was reset
+        # without the NOTIFICATION the peer is owed, from a thirty-six byte NLRI.  The IPv4
+        # branch did not raise at all: it put "1.1.1.1.1/32" into the API output, and a
+        # prefix length of 255 was reported verbatim as a /255.
+        maximum_plength = IPV6_MAX_PREFIX_BITS if code == PROTOCOL_ID_IPV6 else IPV4_MAX_PREFIX_BITS
+        if plength > maximum_plength:
+            raise Notify(3, 10, 'BGP-LS ip reachability prefix length %d is over %d' % (plength, maximum_plength))
+
+        # RFC 7752 section 3.2.3.2 derives the IP Prefix field size from the prefix length:
+        # one octet for bits 1 to 8, two for 9 to 16, and so on.  The FIXME above records
+        # that IOS XR sends one octet FEWER than that, so an equality check would drop every
+        # prefix from a deployed router and shorter values stay accepted.  Extra octets have
+        # no such justification: they describe bits outside the advertised prefix, and let a
+        # /8 decode from four address octets.
+        maximum_octets = (plength + 7) // 8
+        if octet > maximum_octets:
+            raise Notify(
+                3,
+                10,
+                'BGP-LS ip reachability sub-TLV carries %d prefix octets, at most %d' % (octet, maximum_octets),
+            )
 
         if code == PROTOCOL_ID_IPV6:
             # IPv6
