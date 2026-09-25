@@ -293,12 +293,6 @@ def test_the_four_high_bits_of_an_ipv6_fragment_bitmask_we_encode_are_zero(name:
 
 
 @pytest.mark.rfc('rfc8956#3.6-fragment-reserved-bits-zero', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='one Fragment class serves both families and defines dont-fragment at 0x01 '
-    'unconditionally, so the bit RFC 8956 reserves is decoded for AFI 2 as a match on a '
-    'header field IPv6 does not have and is reported as "fragment =dont-fragment"',
-)
 def test_the_reserved_bits_of_an_ipv6_fragment_bitmask_are_ignored_on_decoding() -> None:
     """RFC 8955 gives bit 7 to Don't Fragment; RFC 8956 figure 1 makes it a reserved 0.
 

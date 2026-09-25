@@ -164,9 +164,9 @@ The Type 12 component bitmask MUST be
 encoded as a single octet bitmask (bitmask_op len=00).
 """
 note = """
-The same `FlowFragment` class as IPv4 uses, so the same accidental compliance: it derives
-from `IOperationByteShort`, which would emit two octets above 255, and what keeps it to
-one is that no name `Fragment` defines is above 0x0F.
+`FlowFragmentIPv6`, the sibling of IPv4's `FlowFragment`, so the same accidental
+compliance: it derives from `IOperationByteShort`, which would emit two octets above 255,
+and what keeps it to one is that no name `Fragment` defines is above 0x0F.
 """
 
 [[requirement]]
@@ -183,9 +183,14 @@ note = """
 IPv6 has no Don't Fragment bit, so RFC 8956's fragment bitmask reserves bit 7, the bit
 RFC 8955 gives to DF, along with the four high bits.  exabgp shares one `Fragment` class
 between the two families and it defines `dont-fragment` at 0x01 unconditionally, so an
-IPv6 fragment component carrying 0x01 is reported as `fragment =dont-fragment`: a reserved
-bit which should have been ignored is instead published as a match on a header field IPv6
-does not have.
+IPv6 fragment component carrying 0x01 was reported as `fragment =dont-fragment`: a
+reserved bit which should have been ignored was published as a match on a header field
+IPv6 does not have.
+
+Type 12 is now split per family the way type 11 already was, into `FlowFragment` for AFI 1
+and `FlowFragmentIPv6` for AFI 2, because the set of bits the family defines is the one
+thing about the component which differs and the decoder is where it has to be applied.
+The IPv6 decoder masks with IsF, FF and LF only, so 0x01 decodes to nothing at all.
 """
 
 [[requirement]]

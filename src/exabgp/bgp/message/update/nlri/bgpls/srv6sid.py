@@ -169,12 +169,9 @@ class SRv6SID(BGPLS):
                     10,
                     f'Unknown type: {tlv_type}. Only Local Node descriptors are allowed in a Node type msg',
                 )
-            # Validate node descriptors can be parsed
-            while value:
-                _node_id, left = NodeDescriptor.unpack_node(value, proto_id)
-                if left == value:
-                    raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
-                value = left
+            # Validate node descriptors can be parsed, and that they obey RFC 9552 5.2.1:
+            # one instance of each sub-TLV type at most, ascending by type.
+            NodeDescriptor.unpack_descriptors(value, proto_id)
 
         if first:
             raise Notify(3, 10, 'BGP-LS SRv6 SID NLRI has no Local Node descriptor')

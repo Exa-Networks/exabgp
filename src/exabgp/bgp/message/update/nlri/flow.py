@@ -784,8 +784,28 @@ class FlowTrafficClass(IOperationByte, NumericString, FlowIPv6):
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
 
 
-class FlowFragment(IOperationByteShort, BinaryString, FlowIPv4, FlowIPv6):
-    """IP fragmentation flags filter (DF, MF, IsFragment, First, Last)."""
+# RFC 8955 section 4.2.2.12 lays the fragment bitmask out as | 0 0 0 0 | LF FF IsF DF |,
+# RFC 8956 section 3.6 as | 0 0 0 0 | LF FF IsF 0 |: IPv6 has no Don't Fragment header
+# field, so the bit RFC 8955 gives to DF is a reserved zero for AFI 2.  Both documents say
+# of their reserved bits "MUST be set to 0 on NLRI encoding and MUST be ignored during
+# decoding", so what a family does not define is dropped as the value is read.  Kept, a
+# bitmask of 0xF5 was rendered "dont-fragment+first-fragment+unknown fragment type 245",
+# and an IPv6 bitmask of 0x01 was published as a match on a field IPv6 does not have.
+FRAGMENT_BITS_IPV4: int = Fragment.DONT | Fragment.IS | Fragment.FIRST | Fragment.LAST
+FRAGMENT_BITS_IPV6: int = Fragment.IS | Fragment.FIRST | Fragment.LAST
+
+
+def _fragment(defined_bits: int) -> Callable[[bytes], BaseValue]:
+    """Build the fragment value decoder of one family, dropping the bits it reserves."""
+
+    def _masked(value: bytes) -> BaseValue:
+        return Fragment(_number(value) & defined_bits)
+
+    return _masked
+
+
+class FlowFragment(IOperationByteShort, BinaryString, FlowIPv4):
+    """IPv4 fragmentation flags filter (DF, IsFragment, First, Last)."""
 
     ID: ClassVar[int] = 0x0C
     NAME: ClassVar[str] = 'fragment'
@@ -793,7 +813,23 @@ class FlowFragment(IOperationByteShort, BinaryString, FlowIPv4, FlowIPv6):
     converter: ClassVar[Callable[[str], BaseValue]] = converter(Fragment.named, Fragment)
     # IOperationByteShort, so the operator byte may announce a two byte value: decode with
     # _number rather than ord, which takes a single byte and raised TypeError on the rest
-    decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, Fragment)
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = _fragment(FRAGMENT_BITS_IPV4)
+
+
+class FlowFragmentIPv6(IOperationByteShort, BinaryString, FlowIPv6):
+    """IPv6 fragmentation flags filter (IsFragment, First, Last).
+
+    Type 12 for AFI 2, split from `FlowFragment` the way type 11 is already split between
+    `FlowDSCP` and `FlowTrafficClass`: the component is the same on the wire but the set of
+    bits the family defines is not, and the decoder is the only place that difference can
+    be applied.
+    """
+
+    ID: ClassVar[int] = 0x0C
+    NAME: ClassVar[str] = 'fragment'
+    FLAG: ClassVar[bool] = True
+    converter: ClassVar[Callable[[str], BaseValue]] = converter(Fragment.named, Fragment)
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = _fragment(FRAGMENT_BITS_IPV6)
 
 
 # draft-raszuk-idr-flow-spec-v6-01
@@ -1036,6 +1072,15 @@ class Flow(NLRI):
             # every read above is now bounded, so this is our own bug and not the peer's:
             # tell the caller rather than announcing a route which is not what was sent
             raise Notify(3, 10, 'flow NLRI ran past the end of its own payload') from None
+
+        # RFC 8955 section 4.2 encodes the value as <[component]+>, one component or more.
+        # A filter with no component at all is the intersection of nothing, which matches
+        # every packet, so a zero length NLRI reached the API as the bare string `flow` and
+        # a controller acting on it would have rate limited or discarded all traffic on the
+        # box. Section 10 defers to RFC 7606, so this is a treat-as-withdraw like the order
+        # and duplicate rules above: the Notify is caught in `unpack_nlri`.
+        if not rules:
+            raise Notify(3, 10, 'flow NLRI carries no component, which would match every packet')
 
         return rules
 

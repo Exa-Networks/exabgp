@@ -179,12 +179,9 @@ class NODE(BGPLS):
                 f'Unknown type: {node_type}. Only Local Node descriptors are allowed in a Node type msg',
             )
 
-        # Validate node descriptors can be parsed (ensures data integrity)
-        while values:
-            _node_id, left = NodeDescriptor.unpack_node(values, proto_id)
-            if left == values:
-                raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
-            values = left
+        # Validate node descriptors can be parsed, and that they obey RFC 9552 5.2.1: one
+        # instance of each sub-TLV type at most, and ascending order by type.
+        NodeDescriptor.unpack_descriptors(values, proto_id)
 
         # Store complete wire format including header
         return cls(data, route_d=rd)

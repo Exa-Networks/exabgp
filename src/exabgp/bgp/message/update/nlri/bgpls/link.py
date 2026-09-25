@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     pass
 
-from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
@@ -210,17 +209,11 @@ class LINK(BGPLS):
         # Offset by 4-byte header: TLVs start at byte 13 (4 + 1 + 8)
         for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
             if tlv_type == TLV_LOCAL_NODE_DESC:
-                while value:
-                    _node, left = NodeDescriptor.unpack_node(value, proto_id)
-                    if left == value:
-                        raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
-                    value = left
+                # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
+                NodeDescriptor.unpack_descriptors(value, proto_id)
             elif tlv_type == TLV_REMOTE_NODE_DESC:
-                while value:
-                    _node, left = NodeDescriptor.unpack_node(value, proto_id)
-                    if left == value:
-                        raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
-                    value = left
+                # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
+                NodeDescriptor.unpack_descriptors(value, proto_id)
             elif tlv_type not in [
                 TLV_LINK_ID,
                 TLV_IPV4_IFACE_ADDR,

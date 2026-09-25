@@ -44,8 +44,13 @@ NLRI_TYPE_NODE = 1
 # register it and it stands in for "a type published after this decoder was written".
 NLRI_TYPE_UNKNOWN = 65000
 
+# Section 5.2.2, the Link NLRI, which is the one carrying a Remote Node Descriptor too
+NLRI_TYPE_LINK = 2
+
 # Section 5.2.1: the Local Node Descriptors TLV and its sub-TLVs
 LOCAL_NODE_DESCRIPTORS = 256
+REMOTE_NODE_DESCRIPTORS = 257
+LINK_LOCAL_REMOTE_IDENTIFIERS = 258
 SUB_TLV_AUTONOMOUS_SYSTEM = 512
 SUB_TLV_IGP_ROUTER_ID = 515
 # 516 is assigned (BGP Router Identifier, RFC 9086) and is not one of the four codes this
@@ -93,6 +98,21 @@ def node_nlri(
     """A Node NLRI: type, Total NLRI Length, Protocol-ID, Identifier, descriptors."""
     payload = pack('!BQ', protocol, identifier) + tlv(LOCAL_NODE_DESCRIPTORS, descriptors() if inner is None else inner)
     return pack('!HH', code, len(payload)) + payload
+
+
+def link_nlri(remote: bytes) -> bytes:
+    """A Link NLRI: the same header, then the Local, Remote and Link Descriptors.
+
+    5.2.1 says "any Node Descriptor", not "the local one", so the Link NLRI is where the
+    rule has a second place to hold.
+    """
+    payload = (
+        pack('!BQ', PROTOCOL_ID_OSPFV2, 0)
+        + tlv(LOCAL_NODE_DESCRIPTORS, descriptors())
+        + tlv(REMOTE_NODE_DESCRIPTORS, remote)
+        + tlv(LINK_LOCAL_REMOTE_IDENTIFIERS, pack('!LL', 1, 2))
+    )
+    return pack('!HH', NLRI_TYPE_LINK, len(payload)) + payload
 
 
 def vpn_node_nlri() -> bytes:
@@ -268,16 +288,34 @@ def test_an_opaque_nlri_whose_length_runs_past_the_buffer_is_still_refused() -> 
 
 
 @pytest.mark.rfc('rfc9552#5.2.1-one-instance-per-sub-tlv', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='NODE.unpack_bgpls_nlri loops over the descriptor value with no set of seen '
-    'types, so two Autonomous System sub-TLVs are accepted and both reach the JSON',
-)
 def test_two_instances_of_one_node_descriptor_sub_tlv_are_refused() -> None:
     twice = tlv(SUB_TLV_AUTONOMOUS_SYSTEM, pack('!L', 65000)) + tlv(SUB_TLV_AUTONOMOUS_SYSTEM, pack('!L', 65001))
 
     with pytest.raises(Notify):
         unpack_nlri(node_nlri(twice))
+
+
+def test_a_link_nlri_with_both_descriptors_in_order_decodes() -> None:
+    """The control for the two tests below: what they feed differs only in the order."""
+    _nlri, left = unpack_nlri(link_nlri(descriptors()))
+
+    assert left == b''
+
+
+@pytest.mark.rfc('rfc9552#5.2.1-one-instance-per-sub-tlv', polarity='negative')
+def test_two_instances_of_one_sub_tlv_in_a_remote_node_descriptor_are_refused() -> None:
+    twice = tlv(SUB_TLV_AUTONOMOUS_SYSTEM, pack('!L', 65000)) + tlv(SUB_TLV_AUTONOMOUS_SYSTEM, pack('!L', 65001))
+
+    with pytest.raises(Notify):
+        unpack_nlri(link_nlri(twice))
+
+
+@pytest.mark.rfc('rfc9552#8.2.2-nlri-syntactic-validation', polarity='negative')
+def test_remote_node_descriptor_sub_tlvs_out_of_ascending_order_are_refused() -> None:
+    descending = tlv(SUB_TLV_IGP_ROUTER_ID, ROUTER_ID) + tlv(SUB_TLV_AUTONOMOUS_SYSTEM, pack('!L', 65000))
+
+    with pytest.raises(Notify):
+        unpack_nlri(link_nlri(descending))
 
 
 # ==================================================== section 8.2.2, the NLRI validation
@@ -328,11 +366,6 @@ def test_a_sub_tlv_of_the_wrong_size_for_its_type_is_refused() -> None:
 
 
 @pytest.mark.rfc('rfc9552#8.2.2-nlri-syntactic-validation', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='no decoder compares one TLV type to the next, so the section 5.1 ordering rule '
-    'is never checked and a descending descriptor is accepted',
-)
 def test_node_descriptor_sub_tlvs_out_of_ascending_order_are_refused() -> None:
     descending = tlv(SUB_TLV_IGP_ROUTER_ID, ROUTER_ID) + tlv(SUB_TLV_AUTONOMOUS_SYSTEM, pack('!L', 65000))
 

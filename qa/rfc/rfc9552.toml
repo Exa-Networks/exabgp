@@ -190,17 +190,26 @@ At most, there MUST be one instance of each sub-TLV type present in
 any Node Descriptor.
 """
 note = """
-Not checked, and the xfail on this entry is the demonstration.
-`NODE.unpack_bgpls_nlri` loops `NodeDescriptor.unpack_node` over the
-descriptor value until it is exhausted and appends whatever comes back, with no set of
-seen types; the same loop in `NODE.node_ids` does the same on the render path.  A Node
-NLRI carrying two Autonomous System sub-TLVs is accepted, and its JSON then contains the
-key "autonomous-system" twice, which every JSON parser resolves by keeping one of the two,
-silently, with the peer choosing which.
+Was not checked.  `NODE.unpack_bgpls_nlri` looped `NodeDescriptor.unpack_node` over the
+descriptor value until it was exhausted and appended whatever came back, with no set of
+seen types, so a Node NLRI carrying two Autonomous System sub-TLVs was accepted and its
+JSON then contained the key "autonomous-system" twice, which every JSON parser resolves by
+keeping one of the two, silently, with the peer choosing which.
+
+`NodeDescriptor.unpack_descriptors` now reads a whole descriptor value and holds it to
+both sentences of this paragraph, the one instance limit and the ascending order, and the
+five decoders which read a Local or a Remote Node Descriptor (`node.py`, `link.py`,
+`prefixv4.py`, `prefixv6.py`, `srv6sid.py`) all go through it.  The comparison is on the
+sub-TLV type code alone, which is what keeps it clear of 8.2.2's "MUST NOT be considered
+malformed ... based on the inclusion/exclusion of TLVs or contents of the TLV fields": an
+unrecognised code is still accepted and still kept byte for byte as a
+`GenericNodeDescriptor`, it is only required to be in its place in the order.  That is the
+reason this section gives for wanting the order in the first place, "even when an
+implementation encounters an unknown sub-TLV".
 
 Negative-only: exabgp originates no Node Descriptor, so there is no positive side where
 exabgp is the one obeying the limit.  The whole content of this requirement for a receiver
-is noticing a peer breaking it, and that is what the xfail test demonstrates.
+is noticing a peer breaking it.
 """
 
 [[requirement]]
@@ -246,8 +255,7 @@ A BGP-LS Speaker MUST perform the following syntactic validation of
 the Link-State NLRI to determine if it is malformed.
 """
 note = """
-Five of the seven bullets are performed, two are not.  The positive tests prove the five;
-the xfail is the ordering bullet.
+All seven bullets are performed.
 
 Performed: the sum of the TLV lengths against the MP_REACH and MP_UNREACH length, through
 `BGPLS.unpack_nlri` returning the unconsumed remainder to the caller's loop; the sum
@@ -255,10 +263,12 @@ against the Total NLRI Length field, through `BGPLS.iter_tlvs` refusing a TLV wh
 past the descriptor area and refusing a trailing stub under four octets; the length of a
 recognised sub-TLV, through the per-code length tables in `NodeDescriptor.unpack_node`.
 
-Not performed: "The rule regarding the ordering of TLVs has been followed as described in
-Section 5.1", and "For NLRIs carrying either a Local or Remote Node Descriptor TLV, there
-is not more than one instance of a sub-TLV present".  Both have an xfail test on this
-entry; the second is also rfc9552#5.2.1-one-instance-per-sub-tlv.
+The last two arrived together, in `NodeDescriptor.unpack_descriptors`: "The rule regarding
+the ordering of TLVs has been followed as described in Section 5.1", and "For NLRIs
+carrying either a Local or Remote Node Descriptor TLV, there is not more than one instance
+of a sub-TLV present".  The second is also rfc9552#5.2.1-one-instance-per-sub-tlv, whose
+note says why checking the order of a sub-TLV code is not the same thing as judging the
+NLRI on the contents of a field.
 """
 
 [[requirement]]
@@ -279,14 +289,15 @@ exabgp has no 'NLRI discard' for this family.  Every error `BGPLS.unpack_nlri` a
 decoders under it find is a `Notify`, and a Notify from the NLRI decode path is a
 NOTIFICATION and a session reset; there is no path which drops one NLRI out of an
 MP_REACH and keeps the others.  The example the RFC gives, a TLV ordering violation, is
-not even detected, so the question of how to react to it has not arisen yet.
+detected now, in `NodeDescriptor.unpack_descriptors`, and answered with the Notify this
+family answers everything with: the detection landed, the 'NLRI discard' reaction it asks
+for did not.
 
 Negative-only: 'NLRI discard' is a reaction to a malformed NLRI, so there is no well
-formed input which exercises it.  The test feeds two NLRIs of which the second breaks the
-ordering rule and asserts that both survive, which is what 'NLRI discard' plus the
-undetected ordering rule would together produce; it passes today for the wrong reason,
-so it is left off this entry and the honest demonstration is on
-rfc9552#8.2.2-nlri-syntactic-validation instead.
+formed input which exercises it.  What is owed is now exactly one thing rather than two:
+the ordering violation the RFC names as its example is found, and the answer to it is a
+session reset where the RFC asks for the rest of the MP_REACH to be kept.  There is no
+test on this entry because there is no input which would pass it.
 """
 
 [[requirement]]

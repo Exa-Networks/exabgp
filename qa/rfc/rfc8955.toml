@@ -332,9 +332,11 @@ decoding
 """
 note = """
 The four high bits of the fragment bitmask value, not of the operator octet.  exabgp
-encodes them as zero, since `Fragment` defines nothing above 0x0F.  It does not ignore
-them on decoding: `Fragment.named` reports an unknown bit rather than dropping it, so a
-value of 0xF5 is rendered as `dont-fragment+first-fragment+unknown fragment type 245`.
+encodes them as zero, since `Fragment` defines nothing above 0x0F.  They were not ignored
+on decoding: `Fragment.named` reports an unknown bit rather than dropping it, so a value
+of 0xF5 was rendered as `dont-fragment+first-fragment+unknown fragment type 245`.  The
+decoder of `FlowFragment` now masks the value with the four bits this section defines, so
+0xF5 and 0x05 decode to the same filter.
 """
 
 # ============================================================ section 6, validation

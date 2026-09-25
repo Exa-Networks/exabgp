@@ -153,11 +153,8 @@ class PREFIXv4(BGPLS):
         for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
             seen.add(tlv_type)
             if tlv_type == TLV_LOCAL_NODE_DESC:
-                while value:
-                    _node, left = NodeDescriptor.unpack_node(value, proto_id)
-                    if left == value:
-                        raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
-                    value = left
+                # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
+                NodeDescriptor.unpack_descriptors(value, proto_id)
             elif tlv_type not in [TLV_OSPF_ROUTE_TYPE, TLV_IP_REACHABILITY]:
                 log.critical(lazymsg('unknown prefix v4 TLV {tlv_type}', tlv_type=tlv_type))
 

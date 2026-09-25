@@ -158,6 +158,48 @@ class NodeDescriptor:
         # protocol there is nothing to read it as but bytes.
         return GenericNodeDescriptor(node_type, payload, packed), remaining
 
+    @classmethod
+    def unpack_descriptors(cls, data: Buffer, igp: int) -> list['NodeDescriptor']:
+        """Read a whole Node Descriptor value, and hold it to the two rules of RFC 9552 5.2.1.
+
+        "At most, there MUST be one instance of each sub-TLV type present in any Node
+        Descriptor.  The sub-TLVs within a Node Descriptor MUST be arranged in ascending
+        order by sub-TLV type."  Section 8.2.2 lists both as syntactic validation a BGP-LS
+        speaker MUST perform, and the ordering rule as the very example of an error the
+        NLRI is malformed for.
+
+        The comparison is on the sub-TLV *type code* and on nothing else, which is what
+        keeps it clear of the other half of 8.2.2: a Link-State NLRI "MUST NOT be
+        considered malformed or invalid based on the inclusion/exclusion of TLVs or
+        contents of the TLV fields".  An unrecognised code is still accepted, still kept
+        byte for byte as a `GenericNodeDescriptor`, and is only required to be in its place
+        in the order, which is the reason 5.2.1 gives for asking for the order at all:
+        "This needs to be done to compare NLRIs, even when an implementation encounters an
+        unknown sub-TLV."  Two NLRIs which differ only in the order of their sub-TLVs would
+        otherwise be two RIB entries for one link-state object.
+        """
+        descriptors: list['NodeDescriptor'] = []
+        previous: int | None = None
+        while data:
+            descriptor, remaining = cls.unpack_node(data, igp)
+            if previous is not None and descriptor.node_type == previous:
+                raise Notify(3, 10, f'BGP-LS node descriptor sub-tlv {descriptor.node_type} is present more than once')
+            if previous is not None and descriptor.node_type < previous:
+                raise Notify(
+                    3,
+                    10,
+                    f'BGP-LS node descriptor sub-tlv {descriptor.node_type} follows {previous}, '
+                    f'which is not the ascending order required',
+                )
+            previous = descriptor.node_type
+            descriptors.append(descriptor)
+            # `unpack_node` always consumes its four octet header, so this cannot loop, but
+            # the bound is written down rather than reasoned about at every call site.
+            if len(remaining) >= len(data):
+                raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
+            data = remaining
+        return descriptors
+
     def json(self, compact: bool = False) -> str:
         node = None
         if self.node_type == NODE_DESC_TLV_AS:

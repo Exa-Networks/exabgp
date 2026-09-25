@@ -160,11 +160,6 @@ def test_an_nlri_longer_than_255_octets_decodes() -> None:
     assert over == b''
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason='a zero length FlowSpec NLRI decodes to a Flow with no component, which '
-    'matches every packet, rather than being refused as malformed',
-)
 def test_an_nlri_of_zero_length_is_refused() -> None:
     """Section 4.2 encodes the value as <[component]+>, one or more, with no keyword.
 
@@ -466,11 +461,6 @@ def test_no_fragment_bitmask_we_encode_sets_a_reserved_bit(name: str) -> None:
 
 
 @pytest.mark.rfc('rfc8955#4.2.2.12-fragment-reserved-bits-zero', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='Fragment.named reports an unrecognised bit instead of dropping it, so 0xF5 '
-    'decodes as "dont-fragment+first-fragment+unknown fragment type 245"',
-)
 def test_the_reserved_bits_of_a_fragment_bitmask_are_ignored_on_decoding() -> None:
     clean = decoded(AFI.ipv4, bytes([0x0C, EOL | BinaryOperator.MATCH, 0x05]))
     dirty = decoded(AFI.ipv4, bytes([0x0C, EOL | BinaryOperator.MATCH, 0xF5]))
