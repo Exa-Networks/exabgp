@@ -45,6 +45,7 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunityIPv6
+from exabgp.protocol.family import Family
 
 from tests.fuzz.strategies import payload  # noqa: E402
 
@@ -77,9 +78,29 @@ EXTENDED_COMMUNITY_IPV6_VALUE_SIZE_BYTES = 18
 EXTENDED_COMMUNITY = int(Attribute.CODE.EXTENDED_COMMUNITY)
 IPV6_EXTENDED_COMMUNITY = int(Attribute.CODE.IPV6_EXTENDED_COMMUNITY)
 
+OPTIONAL = 0x80
+MP_REACH_NLRI = int(Attribute.CODE.MP_REACH_NLRI)
+MP_UNREACH_NLRI = int(Attribute.CODE.MP_UNREACH_NLRI)
 
-def negotiated() -> Any:
-    """A session just complete enough for the decoders which look at one."""
+# Family.size is the table MP_REACH reads for the next-hop sizes a family allows, so it is
+# also the list of families a peer can put in one and have read rather than refused.
+FAMILIES = sorted(Family.size, key=lambda family: (int(family[0]), int(family[1])))
+FAMILY_IDS = [f'{afi}/{safi}' for afi, safi in FAMILIES]
+
+# every next-hop size any family declares, plus the three which no family declares: zero,
+# one, and the largest a single octet can announce
+NEXTHOP_SIZES = sorted({size for sizes, _rd in Family.size.values() for size in sizes} | {0, 1, 255})
+
+MIN_FAMILIES = 23
+
+
+def negotiated(families: list[tuple[int, int]] | None = None) -> Any:
+    """A session just complete enough for the decoders which look at one.
+
+    The family list is a parameter because MP_REACH and MP_UNREACH refuse a family the
+    session did not negotiate before they read anything else, so which families this
+    session claims decides whether those two decoders are entered at all.
+    """
     neighbor = Mock()
     neighbor.__getitem__ = Mock(return_value=False)
     neighbor.session = Mock()
@@ -87,7 +108,7 @@ def negotiated() -> Any:
 
     session = Mock()
     session.neighbor = neighbor
-    session.families = [(1, 1)]
+    session.families = [(1, 1)] if families is None else families
     session.asn4 = True
     session.aigp = False
     session.msg_size = 4096
@@ -120,7 +141,7 @@ def parses(fragment: str) -> None:
     raise AssertionError(f'json() returned something no JSON parser accepts: {fragment[:200]}')
 
 
-def decodes(flag: int, aid: int, value: bytes) -> AttributeCollection | None:
+def decodes(flag: int, aid: int, value: bytes, session: Any = None) -> AttributeCollection | None:
     """The attributes the reactor would hold, or None when the peer's bytes were refused.
 
     Notify closes the session with a NOTIFICATION.  IndexError and ValueError are the
@@ -128,7 +149,7 @@ def decodes(flag: int, aid: int, value: bytes) -> AttributeCollection | None:
     purpose.  All three are the decoder doing its job.
     """
     try:
-        return AttributeCollection().parse(section(flag, aid, value), negotiated())
+        return AttributeCollection().parse(section(flag, aid, value), negotiated() if session is None else session)
     except (Notify, IndexError, ValueError):
         return None
 
@@ -159,6 +180,49 @@ def test_a_decoded_attribute_can_be_rendered(registered: tuple[int, int], value:
     if attributes is None:
         return
     renders(attributes, f'attribute {aid} with value {value.hex()}')
+
+
+@pytest.mark.parametrize('attribute_id', [MP_REACH_NLRI, MP_UNREACH_NLRI])
+@pytest.mark.parametrize('family', FAMILIES, ids=FAMILY_IDS)
+@given(
+    nexthop_size=st.sampled_from(NEXTHOP_SIZES),
+    nexthop=payload(0, 40),
+    reserved=st.integers(min_value=0, max_value=255),
+    nlri=payload(0, 40),
+)
+def test_a_decoded_mp_attribute_can_be_rendered(
+    family: tuple[Any, Any],
+    attribute_id: int,
+    nexthop_size: int,
+    nexthop: bytes,
+    reserved: int,
+    nlri: bytes,
+) -> None:
+    """The two attributes which carry every family but IPv4 unicast, entered on purpose.
+
+    RFC 4760 section 7 lets a speaker close the session over an MP attribute for a family
+    it never negotiated, and this decoder does, before it reads anything else.  So the
+    three bytes of AFI and SAFI are a gate, and drawing them uniformly is the trap in the
+    docstring above seen from a different angle: measured over forty rounds of two hundred
+    examples, `payload(0, 64)` put a negotiated family in front of MP_REACH in 15 rounds
+    out of 40 and left the decoder unentered in the other 25.  Against `Negotiated.UNSET`,
+    which has no families at all, the probability is not small but zero, which is why
+    `test_message_decoder_properties.py` cannot cover these two and this does.
+
+    The family is parametrised and the session is told it negotiated it, so the gate is
+    passed by construction and the next-hop and the NLRI bytes are what is fuzzed.
+    """
+    afi, safi = family
+    head = afi.pack_afi() + safi.pack_safi()
+    if attribute_id == MP_REACH_NLRI:
+        body = bytes(nexthop[:nexthop_size]).ljust(nexthop_size, b'\x00')
+        value = head + bytes([nexthop_size]) + body + bytes([reserved]) + nlri
+    else:
+        value = head + nlri
+    attributes = decodes(OPTIONAL, attribute_id, value, negotiated([family]))
+    if attributes is None:
+        return
+    renders(attributes, f'attribute {attribute_id} for {afi}/{safi} with value {value.hex()}')
 
 
 @pytest.mark.parametrize('registered', REGISTERED_COMMUNITIES, ids=COMMUNITY_IDS)
@@ -214,4 +278,7 @@ def test_the_registries_this_file_parametrises_from_are_whole() -> None:
     )
     assert len(REGISTERED_COMMUNITIES_IPV6) >= MIN_COMMUNITIES_IPV6, (
         f'only {len(REGISTERED_COMMUNITIES_IPV6)} ipv6 extended communities are registered'
+    )
+    assert len(FAMILIES) >= MIN_FAMILIES, (
+        f'only {len(FAMILIES)} families are in Family.size, so the MP sweep covers a fraction of them'
     )

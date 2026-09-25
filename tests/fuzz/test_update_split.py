@@ -21,7 +21,7 @@ Test Coverage:
 """
 
 import pytest
-from hypothesis import given, strategies as st, settings, HealthCheck
+from hypothesis import example, given, strategies as st, settings, HealthCheck
 import struct
 
 from tests.fuzz.update_helpers import create_update_message, create_ipv4_prefix
@@ -67,13 +67,25 @@ def test_update_split_with_random_data(data: bytes) -> None:
         # gated now, and if it ever stops being, this test is where that shows up
 
 
+ACTUAL_WITHDRAWN_SIZE_BYTES = 10
+ACTUAL_ATTRIBUTE_SIZE_BYTES = 15
+
+
 @pytest.mark.fuzz
+@example(withdrawn_len=ACTUAL_WITHDRAWN_SIZE_BYTES)
 @given(withdrawn_len=st.integers(min_value=0, max_value=65535))
 @settings(deadline=None, max_examples=100)
 def test_update_split_withdrawn_length_fuzzing(withdrawn_len: int) -> None:
     """Fuzz withdrawn routes length field with all possible 16-bit values.
 
     Tests validation of withdrawn routes length against actual data.
+
+    Exactly one of the 65536 values this draws is the accepting one, and the assertions
+    behind it are the only ones which say what split() *returns* rather than that it
+    refused.  A hundred examples drawn from that range reach it 100/65536 of the time:
+    measured over forty rounds of a hundred examples, zero rounds reached it, so those
+    three assertions had never run.  The @example pins it, and the fuzzing around it still
+    covers every value which must be refused.
     """
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
@@ -104,12 +116,19 @@ def test_update_split_withdrawn_length_fuzzing(withdrawn_len: int) -> None:
 
 
 @pytest.mark.fuzz
+@example(attr_len=ACTUAL_ATTRIBUTE_SIZE_BYTES)
 @given(attr_len=st.integers(min_value=0, max_value=65535))
 @settings(deadline=None, max_examples=100)
 def test_update_split_attr_length_fuzzing(attr_len: int) -> None:
     """Fuzz path attributes length field with all possible 16-bit values.
 
     Tests validation of path attributes length against actual data.
+
+    Milder than the withdrawn length above: every value up to fifteen is accepted, and the
+    small ones are drawn often.  What was never drawn is fifteen itself, the boundary where
+    the attributes fill the message exactly and nothing is left to be read as NLRI: in
+    forty rounds of a hundred examples it came up zero times, so `len(announced) == 0` was
+    a branch nobody had exercised.  The @example pins that boundary.
     """
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
