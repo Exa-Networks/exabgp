@@ -67,8 +67,14 @@ class ACL:
                 stderr=subprocess.STDOUT,
                 stdout=subprocess.PIPE,
             ).communicate()[0]
-        except Exception:
-            pass
+        except Exception as exc:
+            # Every rule file we just wrote or deleted is only programmed into the switch by
+            # this reload. Silence here leaves exabgp announcing flows which filter nothing
+            # and withdrawing flows which keep dropping traffic, with nothing pointing at
+            # cl-acltool. The caller discards our return value, so this is the only report.
+            sys.stderr.write(f'flow: could not reload the switch ACLs, cl-acltool -i failed: {exc}\n')
+            sys.stderr.flush()
+            return None
 
     @staticmethod
     def _prefix(value, what):
@@ -226,8 +232,11 @@ def main():
 
         except KeyboardInterrupt:
             ACL.end()
-        except Exception:
-            pass
+        except Exception as exc:
+            # The loop must outlive one bad message, but a dropped message is a flow which
+            # never reached the switch: say which message and why before reading the next.
+            sys.stderr.write(f'flow: ignored a message we could not process: {exc}\n')
+            sys.stderr.flush()
 
 
 if __name__ == '__main__':
