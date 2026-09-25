@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import errno
 import os
 import select
@@ -339,16 +340,16 @@ def cmdline(cmdarg):
             if time_diff >= done_time_diff:
                 done = True
 
-    try:
+    # The answer is printed and the process exits on the next line, so a descriptor which
+    # refuses to close has nothing left to tell anyone: exiting closes it either way.
+    with contextlib.suppress(Exception):
         os.close(reader)
-    except Exception:
-        pass
 
     sys.exit(0)
 
 
 if __name__ == '__main__':
-    try:
+    # Ctrl-C is how a user leaves the cli while it waits for the daemon's answer, so it is
+    # the user's decision and not a fault: a traceback would only repeat what they typed.
+    with contextlib.suppress(KeyboardInterrupt):
         main()
-    except KeyboardInterrupt:
-        pass

@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 import fcntl
@@ -116,10 +117,10 @@ class Control:
     def cleanup(self):
         def _close(pipe):
             if pipe:
-                try:
+                # We are tearing the process down, so a descriptor which refuses to close is
+                # already as closed as we need it to be.
+                with contextlib.suppress(OSError, TypeError):
                     os.close(pipe)
-                except (OSError, TypeError):
-                    pass
 
         _close(self.r_pipe)
 
@@ -177,9 +178,13 @@ class Control:
                     if not chunk:
                         break
                     response += chunk
-        except OSError:
-            # If we can't send the command or read the response, continue anyway
-            pass
+        except OSError as exc:
+            # Without ack the daemon stops confirming the end of a command, so every cli
+            # invocation from here on waits out its five second timeout and prints "no end of
+            # command message received". That warning is the symptom; this line is the cause.
+            # stdout is the pipe to the daemon, so the report has to go to stderr.
+            sys.stderr.write(f'could not enable ack on the control pipe ({exc}), replies may not be seen\n')
+            sys.stderr.flush()
 
         def monitor(function):
             def wrapper(*args):
@@ -227,12 +232,15 @@ class Control:
             if pipe is not None:
                 try:
                     nb = os.write(pipe, line)
-                except OSError:
-                    pass
-                try:
+                except OSError as exc:
+                    # The pipe had a reader when we opened it and lost it before the write.
+                    # Returning 0 makes the caller retry the same line, so silence here is a
+                    # command which never arrives and a loop which never says why.
+                    sys.stderr.write(f'cannot write {len(line)} bytes to {self.send}: {exc}\n')
+                    sys.stderr.flush()
+                # The bytes are written or lost by now, and the descriptor goes either way.
+                with contextlib.suppress(OSError):
                     os.close(pipe)
-                except OSError:
-                    pass
             return nb
 
         read = {

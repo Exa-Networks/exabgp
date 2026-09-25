@@ -6,6 +6,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import contextlib
 import os
 import sys
 import time
@@ -114,7 +115,7 @@ class Application:
 
 
 if __name__ == '__main__':
-    try:
+    # Ctrl-C is how the operator stops a transcoder running in the foreground, so it is the
+    # way out and not a fault: the forked consumer is already gone with the process group.
+    with contextlib.suppress(KeyboardInterrupt):
         Application()
-    except KeyboardInterrupt:
-        pass
