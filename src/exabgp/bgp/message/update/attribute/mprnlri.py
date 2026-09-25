@@ -25,6 +25,8 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 
+from exabgp.logger import log
+
 
 # ==================================================== MP Unreacheable NLRI (15)
 #
@@ -88,20 +90,25 @@ class MPRNLRI(Attribute, Family):
             # mpunli[nexthop] = nlri
             mpnlri.setdefault(nexthop, []).append(nlri.pack(negotiated))
 
+        # An NLRI which does not fit a message of its own used to raise Notify(6, 0), a Cease
+        # sent to the peer over the size of what WE were about to encode.  The peer had done
+        # nothing: it lost every route of every family, and on the next session it would lose
+        # them again, because the announcement we could not pack is still in our RIB.  A local
+        # encoding limit is not a protocol error, so it is logged and the route is left out,
+        # which is what the native IPv4 pass in Update._packed_nlris already does.
         for nexthop, nlris in mpnlri.items():
-            payload = self.afi.pack() + self.safi.pack() + bytes([len(nexthop)]) + nexthop + bytes([0])
-            header_length = len(payload)
+            header = self.afi.pack() + self.safi.pack() + bytes([len(nexthop)]) + nexthop + bytes([0])
+            payload = header
             for nlri in nlris:
-                if self._len(payload + nlri) > maximum:
-                    if len(payload) == header_length or len(payload) > maximum:
-                        raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
-                    yield self._attribute(payload)
-                    payload = self.afi.pack() + self.safi.pack() + bytes([len(nexthop)]) + nexthop + bytes([0]) + nlri
+                if self._len(header + nlri) > maximum:
+                    log.critical(lambda: 'can not pack one NLRI in an MP_REACH_NLRI, not announcing it', 'parser')
                     continue
+                if self._len(payload + nlri) > maximum:
+                    yield self._attribute(payload)
+                    payload = header
                 payload = payload + nlri
-            if len(payload) == header_length or len(payload) > maximum:
-                raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
-            yield self._attribute(payload)
+            if payload != header:
+                yield self._attribute(payload)
 
     def pack(self, negotiated):
         return b''.join(self.packed_attributes(negotiated))

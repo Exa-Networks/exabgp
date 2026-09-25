@@ -215,12 +215,12 @@ def test_the_registries_this_file_parametrises_from_are_whole() -> None:
     The registries fill by import side effect, so a module which imports only what it names
     sweeps a fraction of the codes and the summary line reads exactly the same.
     """
-    assert len(REGISTERED_ATTRIBUTES) >= MIN_ATTRIBUTES, (
-        f'only {len(REGISTERED_ATTRIBUTES)} attributes are registered, so this file sweeps a fraction of them'
-    )
-    assert len(REGISTERED_COMMUNITIES) >= MIN_COMMUNITIES, (
-        f'only {len(REGISTERED_COMMUNITIES)} extended communities are registered, so this file sweeps a fraction'
-    )
-    assert len(REGISTERED_COMMUNITIES_IPV6) >= MIN_COMMUNITIES_IPV6, (
-        f'only {len(REGISTERED_COMMUNITIES_IPV6)} ipv6 extended communities are registered'
-    )
+    assert (
+        len(REGISTERED_ATTRIBUTES) >= MIN_ATTRIBUTES
+    ), f'only {len(REGISTERED_ATTRIBUTES)} attributes are registered, so this file sweeps a fraction of them'
+    assert (
+        len(REGISTERED_COMMUNITIES) >= MIN_COMMUNITIES
+    ), f'only {len(REGISTERED_COMMUNITIES)} extended communities are registered, so this file sweeps a fraction'
+    assert (
+        len(REGISTERED_COMMUNITIES_IPV6) >= MIN_COMMUNITIES_IPV6
+    ), f'only {len(REGISTERED_COMMUNITIES_IPV6)} ipv6 extended communities are registered'
