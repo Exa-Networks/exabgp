@@ -35,5 +35,14 @@ class Incoming(Connection):
             for boolean in self.writer(notification):
                 yield False
             self.close()
-        except NetworkError:
-            pass  # This is only be used when closing session due to unconfigured peers - so issues do not matter
+        except NetworkError as exc:
+            # the only callers are the refusals of an inbound connection: no neighbour is
+            # configured for it, more than one matches, or a session is already up. The
+            # connection is going away whether or not the NOTIFICATION reaches the far
+            # end, so this is not an error, but it is not nothing either: an operator
+            # asking why a peer never saw a reason for being dropped has nowhere else to
+            # find out that the reason never left the host.
+            log.debug(
+                lambda exc=exc: f'could not send the notification to {self.peer} ({errstr(exc)})',
+                'network',
+            )

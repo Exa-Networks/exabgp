@@ -35,6 +35,39 @@ from exabgp.logger import log
 MAX_PRIVILEGED_PORT = 1024  # Highest privileged port number (requires root on Unix)
 
 
+def set_listener_options(sock, ipv6):
+    """Set the two listening socket options, each on its own terms.
+
+    SO_REUSEADDR and IPV6_V6ONLY shared one try, so a platform refusing the first skipped
+    the second without asking for it at all. They are independent requests and are made
+    independently now.
+
+    Neither is required in order to bind, so neither failure is fatal here: SO_REUSEADDR
+    only smooths a restart, and a bind which genuinely can not happen fails loudly at
+    bind() just below. A refused IPV6_V6ONLY is worth more than a debug line, because it
+    changes which connections this socket will accept.
+    """
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    except (OSError, AttributeError) as exc:
+        # only affects how quickly a restart can rebind, and bind() reports the real problem
+        log.debug(lambda exc=exc: f'could not set SO_REUSEADDR on the listening socket ({exc})', 'network')
+
+    if not ipv6:
+        return
+
+    try:
+        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+    except (OSError, AttributeError) as exc:
+        log.warning(
+            lambda exc=exc: (
+                f'could not set IPV6_V6ONLY on the listening socket ({exc}), it may now accept '
+                f'IPv4-mapped connections which match no configured neighbor'
+            ),
+            'network',
+        )
+
+
 def set_accepted_ttl(connection, neighbor):
     """Give an accepted connection the TTL its neighbour's configuration asks us to send with.
 
@@ -102,12 +135,7 @@ class Listener:
                 md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
             if ttl_in:
                 set_minimum_ttl(sock, local_ip.afi, peer_ip.top(), ttl_in)
-            try:
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                if local_ip.ipv6():
-                    sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
-            except (OSError, AttributeError):
-                pass
+            set_listener_options(sock, local_ip.ipv6())
             sock.setblocking(0)
             # s.settimeout(0.0)
             sock.bind((local_ip.top(), local_port))

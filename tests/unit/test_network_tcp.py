@@ -17,6 +17,8 @@ import errno
 from struct import unpack
 from unittest.mock import patch, MagicMock
 
+from exabgp.environment import getenv
+from exabgp.logger import log
 from exabgp.protocol.family import AFI
 from exabgp.reactor.network import tcp
 from exabgp.reactor.network.error import (
@@ -27,6 +29,12 @@ from exabgp.reactor.network.error import (
     TTLError,
     AsyncError,
 )
+
+# tcp.py reports what it could not do through the logger, and log.warning() dereferences
+# option.logger, which only exists once the daemon has been set up. Without this the file
+# passes inside the full suite, where another module happens to have done it first, and
+# fails when run on its own.
+log.init(getenv())
 
 
 class TestSocketCreation:

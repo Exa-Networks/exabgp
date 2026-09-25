@@ -11,6 +11,7 @@ import re
 import socket
 import select
 import platform
+import contextlib
 
 from struct import pack, calcsize
 
@@ -31,20 +32,42 @@ from exabgp.reactor.network.error import TTLError
 from exabgp.reactor.network.error import AsyncError
 
 
+def set_reuse_options(io):
+    """Let the local port of a closed session be used again straight away.
+
+    Neither option has to succeed for the connection to work, and SO_REUSEPORT does not
+    exist on every platform, so a failure is not fatal. It is worth saying out loud
+    though: without SO_REUSEADDR a session which drops cannot rebind its local port
+    until the old socket leaves TIME_WAIT, and what the operator sees is a peer which
+    will not come back, with nothing pointing at a socket option.
+    """
+    for name in ('SO_REUSEADDR', 'SO_REUSEPORT'):
+        option = getattr(socket, name, None)
+        if option is None:
+            log.debug(
+                lambda name=name: f'{name} does not exist on {platform.system()}, not setting it',
+                'network',
+            )
+            continue
+        try:
+            io.setsockopt(socket.SOL_SOCKET, option, 1)
+        except OSError as exc:
+            log.warning(
+                lambda name=name, exc=exc: (
+                    f'could not set {name} ({errstr(exc)}): a session which drops may be unable to reuse '
+                    f'its local port until the old socket leaves TIME_WAIT'
+                ),
+                'network',
+            )
+
+
 def create(afi, interface=None):
     try:
         if afi == AFI.ipv4:
             io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         if afi == AFI.ipv6:
             io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-        try:
-            io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        except (OSError, AttributeError):
-            pass
-        try:
-            io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # pylint: disable=E1101
-        except (OSError, AttributeError):
-            pass
+        set_reuse_options(io)
 
         if interface is not None:
             try:
@@ -113,6 +136,19 @@ def connect(io, ip, port, afi, md5):
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
 
+def decode_unpadded_base64(key):
+    """The bytes of a base64 key whose padding may have been left out, or None if it is not base64.
+
+    'auto' mode has to guess, because a key written in hex is also valid base64, so the
+    only way to tell is to try. A PSKError here is not an error to report: it is the
+    answer for one candidate padding, and the caller is told which reading won.
+    """
+    for candidate in (key + '==', key + '=', key):
+        with contextlib.suppress(PSKError):
+            return decode_base64(candidate)
+    return None
+
+
 def md5(io, ip, port, md5, md5_base64):
     platform_os = platform.system()
     if platform_os == 'FreeBSD':
@@ -145,12 +181,9 @@ def md5(io, ip, port, md5, md5_base64):
                         raise MD5Error('Failed to decode base 64 encoded PSK: {}'.format(exc)) from None
                 elif md5_base64 is None and not re.match('.*[^a-f0-9].*', md5):  # auto
                     # the key looks like hex, so it may be base64 with the padding left out
-                    for candidate in (md5 + '==', md5 + '=', md5):
-                        try:
-                            md5_bytes = decode_base64(candidate)
-                            break
-                        except PSKError:
-                            pass
+                    md5_bytes = decode_unpadded_base64(md5)
+                    reading = 'base64' if md5_bytes else 'the password as it was written'
+                    log.debug(lambda reading=reading: f'md5 key for {ip} is being read as {reading}', 'network')
 
             # __kernel_sockaddr_storage
             n_af = IP.toaf(ip)
