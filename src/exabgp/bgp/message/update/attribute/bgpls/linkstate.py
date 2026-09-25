@@ -14,6 +14,61 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.util import hexstring
 
+BGPLS_SUBTLV_HEADER_SIZE = 4  # Type(2) + Length(2)
+
+
+def unpack_subtlvs(data, registered, unknown, repr_name):
+    """Walk the sub-TLVs of a recognised TLV, holding each declared length to what is there.
+
+    RFC 9552 8.2.2 asks a speaker to check "the length of each TLV and, when the TLV is
+    recognized then, the length of its sub-TLVs in the BGP-LS Attribute are valid". The walks
+    this replaces read `data[4 : length + 4]`, a slice, and a slice cannot raise however large
+    the declared length is: a sub-TLV claiming a thousand octets inside a thirty octet TLV was
+    reported as whatever happened to be behind it, and the peer's length was compared with
+    nothing at all. There is no traceback to point at, which is the whole difficulty, and why
+    random-byte sweeps came back clean over it.
+
+    A trailing remnant too short to be a header is logged and ignored rather than refused.
+    Refusing it discards the whole attribute, so an otherwise good SRv6 End.X SID from a peer
+    which pads its TLV would go dark on upgrade; main's `qa/bin/compat_gate` counted nine such
+    inputs before the distinction was drawn. Three stray octets cost no route and tell an
+    operator nothing they can act on, where a sub-TLV *claiming* more octets than exist is a
+    length the peer got wrong about data we would go on to read. Only the second is refused.
+
+    `unknown` formats the member name for an unrecognised code, and is passed in rather than
+    fixed here because the two callers publish different names and renaming either would break
+    a parser someone is running today.
+    """
+    fragments = []
+    while data:
+        if len(data) < BGPLS_SUBTLV_HEADER_SIZE:
+            # Deliberately not logged, where main logs it. `log.debug` on this branch raises
+            # AttributeError when `option.logger` has not been set, and this branch is reached
+            # by ordinary peer data rather than only by an error path, so on this tree the line
+            # would turn a decode that works into a crash. The decision is recorded above
+            # instead of in a log message.
+            break
+        code = unpack('!H', data[0:2])[0]
+        length = unpack('!H', data[2:4])[0]
+        end = BGPLS_SUBTLV_HEADER_SIZE + length
+        if len(data) < end:
+            raise Notify(
+                3,
+                5,
+                f'{repr_name}: sub-TLV {code} claims {length} octets and '
+                f'{len(data) - BGPLS_SUBTLV_HEADER_SIZE} are left',
+            )
+        # The loop bound: `end` is at least the four header octets whatever the declared length
+        # says, so `data` strictly shrinks every pass and this cannot spin. A comment rather than
+        # an assert because `end` comes from the peer's bytes, and -O would delete the assert.
+        value = data[BGPLS_SUBTLV_HEADER_SIZE:end]
+        if code in registered:
+            fragments.append(registered[code].unpack(value).json())
+        else:
+            fragments.append(unknown(code, hexstring(value)))
+        data = data[end:]
+    return fragments
+
 
 @Attribute.register()
 class LinkState(Attribute):

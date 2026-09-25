@@ -33,6 +33,19 @@ from exabgp.protocol.family import AFI, SAFI
 class TestBGPLSBase:
     """Test base BGPLS class and registration"""
 
+    def test_the_exabgp_under_test_is_the_one_in_this_checkout(self) -> None:
+        """A run which imported another tree's exabgp proves nothing about this one.
+
+        A PYTHONPATH pointing at a second checkout is enough to make every assertion below
+        describe somebody else's source.
+        """
+        import pathlib
+
+        import exabgp.bgp.message.update.nlri.bgpls.srv6sid as module
+
+        root = pathlib.Path(__file__).resolve().parents[2]
+        assert pathlib.Path(module.__file__).resolve().is_relative_to(root), module.__file__
+
     def test_bgpls_registration(self) -> None:
         """Test that all NLRI types are registered"""
         assert 1 in BGPLS.registered_bgpls  # NODE
@@ -870,6 +883,88 @@ class TestSRv6SIDNLRI:
         # Length should be: 1 (proto_id) + 8 (domain) + local_node_desc + srv6_sid_desc
         length = len(srv6sid)
         assert length > 9  # At least protocol + domain
+
+    # ------------------------------------------------------------------ re-encoding
+    #
+    # pack() used to rebuild the NLRI from the parsed form:
+    #
+    #     nlri += self.local_node_descriptors   # a list of NodeDescriptor
+    #     nlri += self.srv6_sid_descriptors     # a dict of rendered strings
+    #
+    # so it raised `TypeError: can't concat list to bytes` on every call, and it left out
+    # RFC 7752 3's NLRI Type and Total NLRI Length while it was at it.  The wire bytes are
+    # kept in _packed now, like every sibling NLRI in this package, and the base class
+    # writes the header in front of them.
+
+    def test_srv6sid_pack_returns_the_wire_nlri(self) -> None:
+        """pack() re-encodes what was decoded rather than raising TypeError."""
+        from struct import pack
+
+        data = (
+            b'\x03'
+            b'\x00\x00\x00\x00\x00\x00\x00\x01'
+            b'\x01\x00\x00\x08'
+            b'\x02\x00\x00\x04\x00\x00\xff\xfd'
+            b'\x02\x06\x00\x10'
+            b'\xfc\x30\x22\x01\x00\x0d\x00\x00'
+            b'\x00\x00\x00\x00\x00\x00\x00\x00'
+        )
+
+        srv6sid = SRv6SID.unpack_nlri(data, len(data))
+
+        assert srv6sid.pack() == pack('!HH', SRv6SID.CODE, len(data)) + data
+        assert srv6sid.pack_nlri() == srv6sid.pack()
+        assert len(srv6sid) == 4 + len(data)
+
+    def test_srv6sid_as_dict_carries_the_raw_nlri(self) -> None:
+        """`show adj-rib ... json` reaches pack() through BGPLS._raw() and used to raise."""
+        data = (
+            b'\x03'
+            b'\x00\x00\x00\x00\x00\x00\x00\x01'
+            b'\x01\x00\x00\x08'
+            b'\x02\x00\x00\x04\x00\x00\xff\xfd'
+            b'\x02\x06\x00\x10'
+            b'\xfc\x30\x22\x01\x00\x0d\x00\x00'
+            b'\x00\x00\x00\x00\x00\x00\x00\x00'
+        )
+
+        parsed = SRv6SID.unpack_nlri(data, len(data)).as_dict()
+
+        assert parsed['code'] == 6
+        assert parsed['name'] == 'bgpls-srv6sid'
+        assert parsed['raw'] == '0006{:04X}'.format(len(data)) + data.hex().upper()
+        assert parsed['protocol-id'] == 3
+        assert parsed['srv6-sid-descriptors']['srv6-sid'] == 'fc30:2201:d::'
+
+    def test_two_srv6sids_do_not_share_one_rib_index(self) -> None:
+        """NLRI.index() is the family plus pack_nlri(), which read the unfilled _packed.
+
+        Every SRv6 SID NLRI indexed to the same four octets, so the RIB held one of them
+        however many the peer advertised.
+        """
+        first = SRv6SID.unpack_nlri(
+            b'\x03'
+            b'\x00\x00\x00\x00\x00\x00\x00\x01'
+            b'\x01\x00\x00\x08'
+            b'\x02\x00\x00\x04\x00\x00\xff\xfd'
+            b'\x02\x06\x00\x10'
+            b'\xfc\x30\x22\x01\x00\x0d\x00\x00'
+            b'\x00\x00\x00\x00\x00\x00\x00\x00',
+            None,
+        )
+        second = SRv6SID.unpack_nlri(
+            b'\x03'
+            b'\x00\x00\x00\x00\x00\x00\x00\x01'
+            b'\x01\x00\x00\x08'
+            b'\x02\x00\x00\x04\x00\x00\xff\xfe'
+            b'\x02\x06\x00\x10'
+            b'\xfc\x30\x22\x02\x00\x0d\x00\x00'
+            b'\x00\x00\x00\x00\x00\x00\x00\x00',
+            None,
+        )
+
+        assert first.index() != second.index()
+        assert hash(first) != hash(second)
 
 
 class TestBGPLSUnpack:
