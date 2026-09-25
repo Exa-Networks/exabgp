@@ -94,6 +94,22 @@ using `main`, more options are available: only decoding nlri for example:
 ```
 
 
+## Type checking
+
+`main` (the 6.0 line) is held to `mypy --strict` across the whole of `src/`, and
+`./qa/bin/test_everything` will not pass with an error in it:
+
+```
+uv run mypy --strict src/exabgp/
+```
+
+That is a property of this branch only. The 5.0 branch is not annotated and
+`mypy --strict` reports thousands of errors there, spread across the tree rather
+than caused by one import, so it gives no usable signal and is not a gate. Do
+not read a clean run here as evidence about 5.0, and do not try to make 5.0 pass
+as a side effect of a backport: annotating it is its own piece of work, far
+larger than any fix being carried across.
+
 ## Coding Style
 
 Really coding style is not something we really have strong opinion but to make things consistent, we format the code using black once in while with:
