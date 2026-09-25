@@ -1,4 +1,4 @@
-.Dd October 14, 2022
+.Dd September 25, 2026
 .Dt EXABGP 1
 .OS
 .Sh NAME
@@ -7,21 +7,10 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl -help | Fl h
-.Op Fl -version | Fl v
-.Op Fl -env Ar env-config | Fl e Ar env-config
-.Op Fl -full-ini | Fl -fi
-.Op Fl -diff-ini | Fl -di
-.Op Fl -full-env | Fl -fe
-.Op Fl -diff-env | Fl -de
-.Op Fl -debug | Fl d
-.Op Fl -signal Ar time
-.Op Fl -once | Fl 1
-.Op Fl -pdb | Fl p
-.Op Fl -memory | Fl s
-.Op Fl -profile Ar profile
-.Op Fl -validate
-.Op Fl -test | Fl t
-.Op Fl -decode Ar hex-message | Fl x Ar hex-message
+.Op Fl -env-file Ar env-config
+.Ar subcommand
+.Op Ar argument ...
+.Nm
 .Op Ar configuration ...
 .Sh DESCRIPTION
 .Nm
@@ -35,38 +24,124 @@ need that this is not the program for you.
 can also print received BGP messages into readable plain text or JSON
 formatted text.
 .Pp
-The arguments are as follows:
+The work is split into subcommands.
+A configuration file given with no subcommand is the same as passing it to
+.Cm server ,
+which is how
+.Nm
+was invoked before 6.0.0.
 .Bl -tag -width indent
-.It Fl -env Ar env-config | Fl e Ar env-config
-Specify where the environment configuration file can be found.
-.It Fl -full-env | Fl -fe
-Display the full environment configuration on stdout using the env
-format.
-.It Fl -diff-env | Fl -de
-Display the non-default environment configuration on stdout
-using the env format.
-.It Fl -full-ini | Fl -fi
-Display the full environment configuration used on stdout using the
-ini format.
-.It Fl -diff-ini | Fl -di
-Display the non-default environment configuration on stdout using the
-ini format.
+.It Cm server Ar configuration ...
+Start
+.Nm .
+Use
+.Ar -
+to read the configuration from standard input.
+.It Cm cli
+Interactive client, with tab completion and inline help, talking to a running
+daemon over its Unix socket or named pipe.
+.It Cm run Op Ar command
+Send commands to a running daemon without a terminal:
+one on the command line, or a file of them with
+.Fl -batch .
+.It Cm configuration Cm validate Ar configuration ...
+Parse a configuration and report what is wrong with it, opening no session.
+.Fl n
+also checks the parsing of the neighbors and
+.Fl r
+the parsing of the routes.
+This replaces the
+.Fl -test
+and
+.Fl -validate
+options of earlier releases.
+.It Cm configuration Cm export Ar configuration
+Print the parsed configuration as JSON.
+.It Cm configuration Cm example
+Print a documented configuration example.
+.It Cm decode Op Ar hex-message
+Decode a BGP message and print it as JSON, reading standard input when no
+payload is given.
+.Fl n
+decodes an NLRI rather than a whole message,
+.Fl c
+gives the decoder the configuration to read it in the context of, and
+.Fl f
+names the expected family.
+This replaces the
+.Fl -decode
+option.
+.It Cm encode Ar route
+Turn a route written in configuration syntax into the hexadecimal UPDATE which
+carries it, which
+.Cm decode
+reads back.
+.It Cm healthcheck
+Watch a service and announce or withdraw a route as it comes and goes.
+.It Cm env
+Print the environment configuration:
+.Fl d
+for the settings which differ from the defaults, and
+.Fl e
+for the env format rather than the ini one.
+This replaces the four
+.Fl -full-ini ,
+.Fl -diff-ini ,
+.Fl -full-env
+and
+.Fl -diff-env
+options.
+.It Cm schema Cm export Op Ar section
+Print the configuration schema as JSON Schema, for an editor or a validator.
+.It Cm shell Cm install Op Ar bash | zsh | fish
+Install shell completion, detecting the current shell when none is named.
+.Cm uninstall
+removes it and
+.Cm completion
+prints the script instead of installing it.
+.It Cm migrate
+Migrate a configuration or an API helper between versions.
+.It Cm version
+Report the
+.Nm
+version, the interpreter and the platform, and exit.
+There is no
+.Fl -version
+option.
+.El
+.Pp
+Every subcommand accepts
+.Fl -help .
+.Fl -env-file Ar env-config
+says where the environment configuration file is and comes before the
+subcommand; the EXABGP_ENVFILE variable does the same.
+.Pp
+.Cm server
+takes the options which used to be given to
+.Nm
+itself:
+.Bl -tag -width indent
+.It Fl -verbose | Fl v
+Toggle all logging.
 .It Fl -debug | Fl d
-Start the python debugger on serious logging and on reception of
-the SIGTERM signal.
-This implies exabgp.log.all=true and
-exabgp.log.level=DEBUG.
+Start the python debugger on serious logging and on reception of the SIGTERM
+signal.
+Implies
+.Fl v
+and
+.Fl p .
 .It Fl -signal Ar time
-Issue a SIGUSR1 signal to reload the configuration after the specified
-number of seconds, only useful for code debugging.
+Issue a SIGUSR1 signal to reload the configuration after the specified number
+of seconds, only useful for code debugging.
 .It Fl -once | Fl 1
-Only perform one attempt to connect to peers, used mostly for
-debugging.
+Only perform one attempt to connect to peers, used mostly for debugging.
 .It Fl -pdb | Fl p
-Start the python debugger on critical logging, reception of SIGTERM,
-and on uncaught python exceptions.
+Start the python debugger on critical logging, reception of SIGTERM, and on
+uncaught python exceptions.
 This is a shortcut for exabgp.pdb.enable=true.
-.It Fl -memory | Fl s
+.It Fl -passive | Fl P
+Only accept incoming connections.
+.It Fl -memory | Fl m
 Display memory usage information on program exit.
 .It Fl -profile Ar profile
 Enable collection of profiling information to the given file.
@@ -74,18 +149,6 @@ This is a shortcut for
 exabgp.profile.enable=true
 and
 exabgp.profile.file=profile.
-.It Fl -test | Fl t
-Only do a configuration validity check.
-.It Fl -validate
-Validate the configuration file format only.
-.It Fl -decode Ar hex-message | Fl x Ar hex-message
-Decode a raw route packet in hexadecimal string.
-.It Fl -help | Fl h
-Display summary of usage and configuration of exabgp.
-.It Fl -version | Fl v
-Display the
-.Nm
-version number and exit.
 .El
 .Sh ENVIRONMENT
 The configuration of exabgp is split in two:
@@ -292,9 +355,9 @@ An alaternative "env" configuration file can be supplied via the
 .Fl -env Ar env-config
 argument.
 The format of this file is "Windows INI format".
-All the default settings can be shown with the
-.Nm Fl -test -full-init
-command, an example showing parts of this output is:
+All the default settings can be shown with
+.Nm Cm env ,
+an example showing parts of this output is:
 .Bd -literal -offset 3m
 [exabgp.api]
 encoder = text
@@ -345,17 +408,31 @@ Therefore if you have a large configuration change, it could cause the
 peer to miss some keepalive and cause a session flap.
 .\" .Sh EXIT STATUS
 .Sh DIAGNOSTICS
-The
-.Fl -test
-argument is useful to validate the syntax of the configuration file.
+.Nm Cm configuration Cm validate
+is useful to check the syntax of a configuration file without starting a
+session.
 The
 .Fl -debug
-flag will provide copious debug output to wherever the various
+flag of
+.Cm server
+will provide copious debug output to wherever the various
 exabgp.log
 variable settings dictate.
 .Sh SEE ALSO
 .Xr exabgp.conf 5
 .Sh STANDARDS
+.Pa doc/RFC_COMPLIANCE.md
+in the source distribution is generated from the requirement ledgers under
+.Pa qa/rfc/
+and is the authoritative list: it quotes every normative sentence of the RFCs
+below which binds an implementation, says what
+.Nm
+does about it, names the tests which prove it, and names the requirements
+.Nm
+does not meet.
+Every quote in it is checked against the published RFC on every test run.
+The lists here are the features, without that detail.
+.Pp
 A list of the standards
 .Nm
 implements which is indicative of the features implemented is:

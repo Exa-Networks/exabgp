@@ -349,6 +349,7 @@ ExaBGP is self-contained and easy to upgrade/downgrade by:
 - **Shell completion** - Install with `exabgp shell install [bash|zsh|fish]` for smart command completion
 - **Enhanced CLI** - Interactive mode with tab completion, JSON formatting, inline help (?)
 - **Health monitoring** - New API commands for ping and status checks
+- **Published RFC compliance ledger** - [`doc/RFC_COMPLIANCE.md`](doc/RFC_COMPLIANCE.md) quotes every normative sentence of the RFCs ExaBGP implements, says what we do about it, names the tests which prove it, and names what we do not do
 - **Python 3.12+ support** - Updated compatibility and bug fixes
 
 The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://github.com/Exa-Networks/exabgp/blob/main/doc/CHANGELOG.rst) and check their setup after any upgrade.
@@ -382,6 +383,7 @@ Comprehensive documentation is available in the [**ExaBGP Wiki**](https://github
 
 **📖 Additional Resources:**
 - [**RFC Compliance**](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) - the RFCs and drafts implemented
+- [**RFC compliance ledger**](doc/RFC_COMPLIANCE.md) - generated, in this repository: 24 RFCs requirement by requirement, with the tests which prove each one and the gaps we have not closed. Every quote in it is checked against the published RFC on every test run
 - [**Migration Guide**](https://github.com/Exa-Networks/exabgp/wiki/From-3.4-to-4.x) - Upgrading from 3.4 to 4.x
 - [**Related Projects**](https://github.com/Exa-Networks/exabgp/wiki/Projects) - Community tools and integrations
 

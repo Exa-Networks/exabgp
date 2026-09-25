@@ -1,4 +1,4 @@
-.Dd October 14, 2022
+.Dd September 25, 2026
 .Dt EXABGP.CONF 5
 .OS
 .Sh NAME
@@ -40,7 +40,12 @@ neighbor <ip-address> {
     manual-eor <truthvalue>;
 
     passive <truthvalue>;
-    listen <ip-address>;
+    listen <port>;   // local TCP port, default 179
+    connect <port>;  // remote TCP port, default 179
+    source-interface <interface-name>;
+
+    incoming-ttl <ttl>;  // GTSM: lowest TTL we accept from the peer
+    outgoing-ttl <ttl>;  // the TTL we send with
 
     group-updates <truthvalue>;
     auto-flush <truthvalue>;
@@ -286,6 +291,49 @@ This is partial RFC 9234 support: ExaBGP does not insert missing ingress OTC.
 Helpers redistributing received routes must perform ingress marking and exclude
 ineligible routes. The receive and send/receive marking settings are rejected.
 
+.Sh GENERALIZED TTL SECURITY
+GTSM (RFC 5082) is two settings on a session socket, and
+.Nm
+has one keyword for each.
+.Ic incoming-ttl
+is the lowest TTL the kernel will accept from the peer, so a packet forged
+from off-link arrives with a TTL too low and is dropped before
+.Xr exabgp 1
+sees it.
+.Ic outgoing-ttl
+is the TTL we send with, and it also serves as the multihop setting it
+predates.
+.Pp
+Both now apply to a session whichever end opened it.
+Until 6.0.0 a session this side initiated installed
+.Ic outgoing-ttl
+and no inbound check at all, and a session the peer opened inherited a
+sending TTL equal to the minimum we accept, where section 3 of the RFC has a
+GTSM sender use 255.
+An accepted connection takes the sending TTL of the neighbor it matched:
+.Ic outgoing-ttl
+when it is configured, else 255 when
+.Ic incoming-ttl
+is, else the kernel default.
+For the usual
+.Dq incoming-ttl 255
+that is what passive sessions already sent, so a working GTSM pair is
+unaffected.
+.Pp
+The inbound check needs a per-platform socket option.
+It is installed on Linux and FreeBSD for both IPv4 and IPv6.
+macOS has no IPv4 equivalent, so
+.Nm
+warns and brings the session up with the outbound TTL only: on that platform
+IPv4
+.Ic incoming-ttl
+is not enforced.
+.Pp
+The listening socket is shared by every neighbor on one address and port, so
+neighbors behind it configured with different
+.Ic incoming-ttl
+values get whichever was set last.
+Give a neighbor needing its own minimum its own listening address.
 .Sh SEE ALSO
 .Xr exabgp 1 .
 .Sh CAVEATS
