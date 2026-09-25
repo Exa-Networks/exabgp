@@ -146,6 +146,7 @@ over; seven sites moved Notify 3/0 → 3/9.
 | 3.4 | `API/JSON-API-Reference.md` examples are structurally invented | 🟡 open |
 | 3.5 | `doc/README.rst` stale | 🟢 open |
 | 3.6 | 5.0 attribute cache is process-wide and keyed on wire bytes only | 🔴 confirmed, not fixed |
+| 3.13 | `qa/bin/functional encoding` is intermittently red, about 1 run in 10 | 🟡 pre-existing, unexplained |
 | 3.7 | 5.0: one peer's OPEN rewrites every other session's capability variant | 🔴 confirmed, not fixed |
 | 3.8 | 5.0: a labelled NLRI with no S bit closes the session (RFC 8277 §2.2 says ignore it) | 🔴 confirmed, not fixed |
 | 3.9 | 5.0 BGP-LS NODE/PREFIXv4/PREFIXv6 assign `self._pack` where the base reads `_packed` | 🔴 confirmed, not fixed |
@@ -186,14 +187,26 @@ No rename, no removal, no retype of an existing key.
    has nothing to attach to. Nothing owed if that was deliberate.
 6. ~~Delete `application/tojson.py`~~ and ~~`SO_BINDTODEVICE`~~ done, along with 2.13 and
    2.14, in `d0ef6b397`, `8805ef45e` and `ef49cff45`. See §15.
-7. **Where `check_fifo` writes its errors.** It writes to `sys.stdout`, and in `Control`
-   stdout is the pipe to the daemon, so a rejected fifo posts its error text to the daemon as
-   a command line rather than to an operator. Harmless today because the process exits
-   straight after, but the message goes to the wrong place. Routing it per caller changes
-   `cli.py`'s output too, so it is a decision rather than a fix.
+7. ~~Where `check_fifo` writes its errors~~ fixed 2026-09-25, `69e42a349`. All five reports
+   go to stderr, and `cli.py`'s two follow-ups with them. See §15.
 
 Items 4 and 5 are "nothing may be owed" rather than open work. Item 1 is a deletion, which is
 why it is here rather than done.
+
+**New, 3.13: `qa/bin/functional encoding` is intermittently red**, about one run in ten on
+this machine, on a message ordering race. A withdrawal arrives where the harness expects the
+first of three announcements:
+
+```
+unexpected message:
+received    FFFF...:001C:02:000520C0A800020000
+counting 3 valid option(s):
+```
+
+Pre-existing and not from any change in this session: reproduced from a worktree at
+`ef49cff45` with none of the later work applied, 1 failure in 10 runs, same signature. It
+matters beyond itself, because a suite which is red once in ten runs trains everyone to
+re-run it, and that is how a real failure gets waved through.
 
 ---
 
@@ -867,10 +880,26 @@ Also fixed: all three failures answered with "Could not bind to device <name>", 
 name for a platform without the option and for a `setsockopt` refused for want of CAP_NET_RAW.
 An `if_nametoindex` pre-check tells them apart, which is main's shape.
 
-### Left as a decision
+### And the one it was decided against, then fixed: `69e42a349`
 
-`check_fifo` writes to `sys.stdout`, and in `Control` stdout is the pipe to the daemon, so a
-rejected fifo posts its error text to the daemon as a command line. See §5 item 7.
+`Control` hands its own stdout to the daemon as the command channel, and pipe.py says so
+twice at the two places which deliberately use stderr. `check_fifo` was the one which did
+not, so all five of its reports went down that pipe. Demonstrated by standing in for the
+daemon's end:
+
+```
+what the daemon read on its command pipe:
+   >> 'error: could not find the named pipe /.../absent-exabgp.in'
+```
+
+A control process which could not use a fifo told the daemon about it, as a line of command
+input, and told the operator nothing. The other caller is `cli.cmdline()`, where stdout is a
+terminal, so there it is only the convention that a diagnostic is not part of the answer a
+caller reads off stdout.
+
+The test asserts stdout is **empty** rather than that stderr is not, because an `in`
+assertion on stderr would still pass if a copy went to stdout as well, and stdout is the end
+that matters. 0 of 3 against HEAD, 11 of 11 after.
 
 ---
 
