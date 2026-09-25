@@ -140,14 +140,16 @@ def cmdline(cmdarg):
     send = pipes[0] + pipename + '.in'
     recv = pipes[0] + pipename + '.out'
 
+    # stderr, like the check_fifo report just above it: this is a diagnostic and not part of
+    # the answer a caller is reading off stdout. Both lines also lacked their newline.
     if not check_fifo(send):
-        sys.stdout.write('could not find write named pipe to connect to ExaBGP')
-        sys.stdout.flush()
+        sys.stderr.write('could not find write named pipe to connect to ExaBGP\n')
+        sys.stderr.flush()
         sys.exit(1)
 
     if not check_fifo(recv):
-        sys.stdout.write('could not find read named pipe to connect to ExaBGP')
-        sys.stdout.flush()
+        sys.stderr.write('could not find read named pipe to connect to ExaBGP\n')
+        sys.stderr.flush()
         sys.exit(1)
 
     reader = open_reader(recv)

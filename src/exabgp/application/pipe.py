@@ -80,31 +80,37 @@ def check_fifo(name):
 
     What an operator needs told apart is not which call failed but which errno came back:
     nothing there at all, a directory on the way we may not search, or anything else.
+
+    The report goes to stderr, not stdout, and that is not only convention here. One of the
+    two callers is Control, where stdout IS the pipe to the daemon, so every one of these
+    lines was written down that pipe and read by the daemon as a command line rather than by
+    an operator as an error. The rest of this file already says so twice, at the two places
+    which do use stderr; this function was the one which did not.
     """
     path = os.path.abspath(name)
     try:
         mode = os.stat(name).st_mode
     except FileNotFoundError:
-        sys.stdout.write(f'error: could not find the named pipe {path}\n')
-        sys.stdout.flush()
+        sys.stderr.write(f'error: could not find the named pipe {path}\n')
+        sys.stderr.flush()
         return False
     except PermissionError:
-        sys.stdout.write(f'error: not allowed to reach the named pipe {path}\n')
-        sys.stdout.flush()
+        sys.stderr.write(f'error: not allowed to reach the named pipe {path}\n')
+        sys.stderr.flush()
         return False
     except OSError as exc:
-        sys.stdout.write(f'error: could not check the named pipe {path} ({exc.strerror})\n')
-        sys.stdout.flush()
+        sys.stderr.write(f'error: could not check the named pipe {path} ({exc.strerror})\n')
+        sys.stderr.flush()
         return False
 
     if not stat.S_ISFIFO(mode):
-        sys.stdout.write(f'error: a file exist which is not a named pipe ({path})\n')
-        sys.stdout.flush()
+        sys.stderr.write(f'error: a file exist which is not a named pipe ({path})\n')
+        sys.stderr.flush()
         return False
 
     if not os.access(name, os.R_OK):
-        sys.stdout.write(f'error: a named pipe exists and we can not read/write to it ({path})\n')
-        sys.stdout.flush()
+        sys.stderr.write(f'error: a named pipe exists and we can not read/write to it ({path})\n')
+        sys.stderr.flush()
         return False
 
     return True
