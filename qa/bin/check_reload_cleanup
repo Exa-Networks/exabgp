@@ -19,6 +19,11 @@ expect 1" is how they are validated and a gate which has DIED must not pass that
     0  it ran and found nothing
     1  it ran and found something
     2  it could not run
+
+test_everything treats 1 and 2 alike, as a failure, and that is right: it proves 127.0.0.2
+is bindable before it starts any stage, so a 2 from here means the precondition went away
+underneath us, and that is not a thing to run past. It used to turn a 2 from this gate into
+a skip, which on a machine without the alias meant the gate never ran at all.
 """
 
 from __future__ import annotations
@@ -139,7 +144,7 @@ def connect_from_the_peer() -> None:
         time.sleep(1)
     except OSError:
         # the port refusing the connection is the outcome this gate wants; a machine
-        # where 127.0.0.2 cannot be a source is handled by the caller's own check
+        # where 127.0.0.2 cannot be a source is stopped by the check at the top of run()
         pass
     finally:
         probe.close()
@@ -160,6 +165,7 @@ def peer_address_is_usable() -> bool:
 def run() -> int:
     if not peer_address_is_usable():
         say(f'{PEER_ADDRESS} cannot be used as a source address on this machine')
+        say('see "Machine prerequisites" in CONTRIBUTING.md; ./qa/bin/test_everything prints the command')
         return COULD_NOT_RUN
 
     if port_is_open():

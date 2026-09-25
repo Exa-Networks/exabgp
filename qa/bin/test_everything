@@ -15,7 +15,7 @@ Usage:
 
 Exit codes:
   0 - All tests passed
-  1 - Test failed
+  1 - A test failed, or this machine does not meet the suite's preconditions
   2 - Invalid arguments
 """
 
@@ -23,6 +23,7 @@ import argparse
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import time
@@ -87,7 +88,7 @@ DEFAULT_TIMES: dict[str, int] = {
     'rfc-compliance': 2,
     'tests-run': 6,
     'sweep-floors': 20,
-    'reload-cleanup': 25,
+    'reload-cleanup': 3,
 }
 
 CACHE_FILE = Path.home() / '.cache' / 'exabgp' / 'test_times.json'
@@ -263,25 +264,24 @@ TEST_ORDER = [
 #
 # Hence the check below is not "is this directory listed" but "does a stage reach it".  A
 # stage naming ./tests reaches all of them and a list of children reaches only what it names.
-# What a stage did.  A stage which could not run is not a stage which passed, and it is not
-# a stage which failed either; collapsing the three into a bool is what stopped this suite
-# on a laptop without 127.0.0.2 configured.
+# What a stage did.  Two outcomes, because there are only two things a stage can say here.
+#
+# There was a third, SKIPPED, with one stage allowed to reach it: check_reload_cleanup
+# returns 2 for "this machine will not let me look", and 2 from that one name was turned
+# into a skip rather than a failure.  The argument was that a missing 127.0.0.2 alias on a
+# laptop is not evidence about the code and must not mask the stages queued behind it.
+#
+# The argument was right and the remedy was wrong.  On a macOS machine, where the alias is
+# not there by default, the stage skipped on every single run: months of green suites in
+# which that gate never once executed.  A gate which always skips is indistinguishable from
+# a gate which does not exist, except that it prints a reassuring line on the way past.
+#
+# So the precondition is checked before anything starts, by preflight() below, and the suite
+# refuses to run at all when it is not met.  Which makes a non-zero from any stage, 2
+# included, a failure again: the address was bindable seconds before the stage started, so a
+# gate which then says it could not look has found something worth stopping for.
 PASSED = 'passed'
 FAILED = 'failed'
-SKIPPED = 'skipped'
-
-# check_reload_cleanup separates "I looked and found nothing" (0) from "I found a leak" (1)
-# from "this machine will not let me look" (2), and the runner threw that distinction away:
-# any non-zero was a failure, so a missing 127.0.0.2 alias reported the same red as a real
-# leak AND stopped the run, leaving renders-json and documentation unexecuted behind it.
-# Both halves of that are bad.  A precondition the developer's machine does not meet is not
-# evidence about the code, and it must not mask the stages queued after it.
-#
-# This is deliberately a list of names rather than a blanket rule.  Exit 2 from a stage which
-# has not opted in stays a failure, because for every other check here a non-zero is a verdict
-# and an unexplained one is the kind of thing that should stop the suite.
-COULD_NOT_RUN = 2
-SKIPPABLE = frozenset(('reload-cleanup',))
 
 NOT_A_SUITE: dict[str, str] = {
     # empty on purpose.  tests/performance looked like a timing suite and is not: all 52 of
@@ -549,7 +549,7 @@ if _unordered or _unknown:
 def run_test(name: str, verbose: bool = False) -> tuple[str, str, str]:
     """Run a test by name, return (outcome, stdout, stderr).
 
-    Outcome is PASSED, FAILED or SKIPPED.  See SKIPPABLE for what may skip and why.
+    Outcome is PASSED or FAILED.  Nothing here skips: see the note above PASSED.
     """
     cmd = TEST_COMMANDS[name]
 
@@ -573,9 +573,6 @@ def run_test(name: str, verbose: bool = False) -> tuple[str, str, str]:
         if verbose:
             print(f'{Colors.DIM}  $ {cmd}{Colors.RESET}')
         returncode, stdout, stderr = run_command(cmd)
-
-    if returncode == COULD_NOT_RUN and name in SKIPPABLE:
-        return SKIPPED, stdout, stderr
 
     # Special case: functional tests need 100% pass rate check
     if name in ('encoding', 'api', 'cli') and returncode == 0:
@@ -659,10 +656,7 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
         # Update cumulative time with actual elapsed
         cumulative_time += elapsed
 
-        # Record timing and result.  A skipped stage tells us nothing about how long it
-        # takes, so it must not poison the ETA the next run prints.
-        if outcome != SKIPPED:
-            record_time(cache, name, elapsed)
+        record_time(cache, name, elapsed)
         results.append((name, outcome, elapsed, expected))
 
         # Show result with colored time (actual vs expected)
@@ -670,18 +664,8 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
         expected_str = f'{Colors.DIM}(~{format_time(expected)}){Colors.RESET}'
         if outcome == PASSED:
             print(f'{Colors.GREEN}✓{Colors.RESET} {elapsed_str} {expected_str}')
-        elif outcome == SKIPPED:
-            print(f'{Colors.YELLOW}⊘{Colors.RESET} {elapsed_str} {expected_str}')
         else:
             print(f'{Colors.RED}✗{Colors.RESET} {elapsed_str} {expected_str}')
-
-        if outcome == SKIPPED:
-            # Say why here rather than only in the summary: a stage which did not run is
-            # the one thing in this output a reader must not scroll past unnoticed.
-            print(f'{Colors.YELLOW}  SKIPPED: {desc}{Colors.RESET}')
-            reason = (stdout or stderr).strip()
-            if reason:
-                print(f'{Colors.DIM}  {reason}{Colors.RESET}')
 
         if outcome == FAILED:
             # Show failure details
@@ -707,8 +691,6 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
         for name, outcome, elapsed, expected in results:
             if outcome == PASSED:
                 status = f'{Colors.GREEN}✓{Colors.RESET}'
-            elif outcome == SKIPPED:
-                status = f'{Colors.YELLOW}⊘{Colors.RESET}'
             else:
                 status = f'{Colors.RED}✗{Colors.RESET}'
             time_str = f'{Colors.BLUE}{format_time(elapsed):>6}{Colors.RESET}'
@@ -721,18 +703,86 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
         print(f'{Colors.CYAN}{"─" * 60}{Colors.RESET}')
         print()
 
-    # "All N passed" while one of them never ran is the same lie renders-json told for months,
-    # so the skipped ones are named here rather than counted into the green.
-    skipped = [name for name, outcome, _, _ in results if outcome == SKIPPED]
-    passed = total - len(skipped)
-    if skipped:
-        print(
-            f'{Colors.GREEN}{Colors.BOLD}✓ {passed}/{total} tests passed in {format_time(total_elapsed)}{Colors.RESET}'
-            f'{Colors.YELLOW}, skipped: {", ".join(skipped)}{Colors.RESET}'
-        )
-    else:
-        print(f'{Colors.GREEN}{Colors.BOLD}✓ All {total} tests passed in {format_time(total_elapsed)}{Colors.RESET}')
+    # "All N passed" while one of them never ran is the lie renders-json told for months.
+    # Nothing can skip now, and the preflight refused the run if this machine could not host
+    # one of these stages, so every one of the N in that sentence did the work it names.
+    print(f'{Colors.GREEN}{Colors.BOLD}✓ All {total} tests passed in {format_time(total_elapsed)}{Colors.RESET}')
     return 0
+
+
+# The suite has to be both ends of a BGP session, so it needs a second local address to be
+# the far end with: check_reload_cleanup connects to the daemon from 127.0.0.2 so the
+# accepted socket matches the neighbour the way the bug report describes.
+#
+# Linux gives the whole of 127.0.0.0/8 to the loopback, so it is already there.  macOS gives
+# lo0 only 127.0.0.1 and the rest has to be added by hand, which is why this is checked.
+SECOND_LOOPBACK = '127.0.0.2'
+
+# How a human puts it there, per platform.  Matched on a prefix because sys.platform carries
+# a version on the BSDs ('freebsd14').  A platform which is not in here is told what the two
+# common ones do rather than being handed the macOS command and left to find out.
+ALIAS_COMMANDS: dict[str, str] = {
+    'darwin': f'sudo ifconfig lo0 alias {SECOND_LOOPBACK} up',
+    'linux': f'sudo ip addr add {SECOND_LOOPBACK}/8 dev lo',
+    'freebsd': f'sudo ifconfig lo0 alias {SECOND_LOOPBACK} netmask 255.0.0.0',
+    'openbsd': f'sudo ifconfig lo0 alias {SECOND_LOOPBACK} netmask 255.0.0.0',
+    'netbsd': f'sudo ifconfig lo0 alias {SECOND_LOOPBACK} netmask 255.0.0.0',
+}
+
+
+def address_is_bindable(address: str) -> bool:
+    """Whether this machine lets us use the address as the source of a connection.
+
+    Asked the way check_reload_cleanup asks it, because a check which probes something else
+    can be satisfied by a machine the stage then fails on.
+    """
+    probe = socket.socket()
+    try:
+        probe.bind((address, 0))
+        return True
+    except OSError:
+        return False
+    finally:
+        probe.close()
+
+
+def preflight() -> str | None:
+    """What stops this machine running the suite, or None when nothing does.
+
+    Checked before the first stage rather than inside the stage that needs it.  A stage
+    which quietly stands down on a machine missing a precondition reports the same green as
+    a stage which ran, for as long as nobody looks, and that is what this replaces.
+    """
+    if address_is_bindable(SECOND_LOOPBACK):
+        return None
+
+    command = next((value for key, value in ALIAS_COMMANDS.items() if sys.platform.startswith(key)), None)
+    if command is None:
+        remedy = [
+            f'  This is {sys.platform}, which I have no command for.  Add {SECOND_LOOPBACK} to the',
+            '  loopback interface however this system spells it.  For reference, macOS uses',
+            f'    sudo ifconfig lo0 alias {SECOND_LOOPBACK} up',
+            '  and Linux, where it is normally there already, uses',
+            f'    sudo ip addr add {SECOND_LOOPBACK}/8 dev lo',
+        ]
+    else:
+        remedy = ['  Run:', f'    {command}']
+
+    if sys.platform == 'darwin':
+        remedy.append('')
+        remedy.append('  macOS forgets the alias on reboot, so this has to be run again after a restart.')
+
+    lines = [
+        f'{Colors.RED}{Colors.BOLD}refusing to run: this machine is missing a precondition{Colors.RESET}',
+        '',
+        f'  {SECOND_LOOPBACK} cannot be bound as a source address.  The suite has to be both ends of',
+        '  a BGP session, so it needs a second local address to be the far end with.',
+        '',
+        *remedy,
+        '',
+        '  See "Machine prerequisites" in CONTRIBUTING.md.',
+    ]
+    return '\n'.join(lines)
 
 
 def main() -> int:
@@ -752,6 +802,17 @@ def main() -> int:
     if args.list:
         list_tests(cache, verbose=args.verbose)
         return 0
+
+    # Here, and not inside the stage which needs it: a precondition found half way through a
+    # five minute run is found too late, and a precondition a stage is allowed to excuse
+    # itself over is not a precondition.  Listing above is exempt because it runs nothing.
+    # A named subset is not exempt, even one which does not include reload-cleanup: what is
+    # being checked is the machine, and a developer whose machine cannot run the whole suite
+    # should learn that on the first command rather than on the one before the commit.
+    refusal = preflight()
+    if refusal is not None:
+        print(refusal)
+        return 1
 
     # Determine which tests to run
     if args.tests:
