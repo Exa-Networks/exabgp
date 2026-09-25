@@ -66,11 +66,76 @@ class TestSocketCreation:
         io.close()
 
     def test_create_socket_with_interface(self) -> None:
-        """Test creating socket with interface binding (may require root)"""
-        # This test may fail without root privileges or on some platforms
-        # We'll just verify it doesn't crash with invalid interface
-        with pytest.raises(NotConnected, match='Could not bind to device'):
+        """An interface name which does not resolve says so, and says which name."""
+        with pytest.raises(NotConnected, match='no interface of that name exists'):
             tcp.create(AFI.ipv4, interface='nonexistent_interface_12345')
+
+    def test_an_unresolvable_name_is_not_blamed_on_permissions(self) -> None:
+        """The three failures used to share one message which named only the interface.
+
+        'Could not bind to device <name>' was the answer to a name which does not exist, to a
+        platform without SO_BINDTODEVICE, and to the setsockopt being refused for want of
+        CAP_NET_RAW. Two of those have nothing to do with the name.
+        """
+        with pytest.raises(NotConnected) as raised:
+            tcp.create(AFI.ipv4, interface='nonexistent_interface_12345')
+
+        assert 'nonexistent_interface_12345' in str(raised.value)
+        assert 'no interface of that name exists' in str(raised.value)
+
+    def test_a_platform_without_the_option_says_that_and_not_the_name(self) -> None:
+        """It used to answer this by assigning the Linux constant into the socket module.
+
+            if not hasattr(socket, 'SO_BINDTODEVICE'):
+                socket.SO_BINDTODEVICE = 25
+
+        25 is meaningless or a different option off Linux, and the assignment outlived the
+        call: it mutated the stdlib module for the life of the process. This platform does
+        have the option (4404 on macOS), so the branch is reached only where the thing
+        genuinely cannot be done, and there a made up number cannot help.
+        """
+        with patch.object(tcp.socket, 'SO_BINDTODEVICE', create=False):
+            delattr(tcp.socket, 'SO_BINDTODEVICE')
+            with pytest.raises(NotConnected, match='this platform has no SO_BINDTODEVICE'):
+                tcp.create(AFI.ipv4, interface='en0')
+
+    def test_the_socket_module_is_not_mutated_by_a_failed_bind(self) -> None:
+        """Whatever happens, the stdlib module comes out as it went in."""
+        before = getattr(tcp.socket, 'SO_BINDTODEVICE', None)
+
+        with pytest.raises(NotConnected):
+            tcp.create(AFI.ipv4, interface='nonexistent_interface_12345')
+
+        assert getattr(tcp.socket, 'SO_BINDTODEVICE', None) == before
+
+    def test_a_refused_setsockopt_is_reported_as_itself(self) -> None:
+        """CAP_NET_RAW is required, so an unprivileged daemon lands here, not on the name."""
+        with patch.object(socket.socket, 'setsockopt', side_effect=OSError(1, 'Operation not permitted')):
+            with pytest.raises(NotConnected, match='Operation not permitted'):
+                tcp.create(AFI.ipv4, interface='lo0')
+
+    def test_no_interface_binds_to_nothing_rather_than_to_a_nul_byte(self) -> None:
+        """`if interface is not None` let an empty source-interface reach setsockopt.
+
+        It bound to '\0' and said nothing. An empty name is no name, so nothing is asked of
+        the socket and the caller gets a working one.
+        """
+        for absent in ('', None):
+            with patch.object(tcp, 'bind_to_device') as bind:
+                io = tcp.create(AFI.ipv4, interface=absent)
+                io.close()
+
+            bind.assert_not_called()
+
+    def test_a_real_interface_is_bound_with_a_nul_terminated_name(self) -> None:
+        """The wire format of the option value, which the rewrite had to preserve."""
+        with patch.object(socket.socket, 'setsockopt') as setsockopt:
+            io = tcp.create(AFI.ipv4, interface='lo0')
+            io.close()
+
+        calls = [c for c in setsockopt.call_args_list if c.args[1] == tcp.socket.SO_BINDTODEVICE]
+        assert calls, 'SO_BINDTODEVICE was never requested'
+        assert calls[0].args[2] == b'lo0\0'
 
     @patch('socket.socket')
     def test_create_socket_failure(self, mock_socket: Any) -> None:

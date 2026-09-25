@@ -61,6 +61,44 @@ def set_reuse_options(io):
             )
 
 
+def bind_to_device(io, interface):
+    """Restrict a socket to one interface, saying which of three things went wrong.
+
+    This is what lets a link-local address be used at all: the kernel refuses to bind or
+    connect one until the socket names a link, and SO_BINDTODEVICE is one of the two ways
+    to say which.
+
+    It used to answer all three failures with 'Could not bind to device <name>', which
+    blames the name for two faults that have nothing to do with it, and before that it did
+
+        if not hasattr(socket, 'SO_BINDTODEVICE'):
+            socket.SO_BINDTODEVICE = 25
+
+    on a platform without the option: 25 is the Linux constant, so elsewhere it is either
+    meaningless or a different option entirely, and the assignment mutated the stdlib socket
+    module for the life of the process rather than for the one call. Python has had the
+    constant on Linux and macOS for a while (4404 on macOS), so that branch was reached only
+    on a platform which genuinely cannot do this, where inventing a number cannot help.
+
+    The caller tests `if interface` rather than `if interface is not None`, because an empty
+    `source-interface` used to reach here and bind to '\0' without complaint.
+    """
+    if not hasattr(socket, 'SO_BINDTODEVICE'):
+        raise NotConnected(f'can not bind to device {interface}, this platform has no SO_BINDTODEVICE')
+
+    try:
+        socket.if_nametoindex(interface)
+    except OSError:
+        raise NotConnected(f'can not bind to device {interface}, no interface of that name exists') from None
+
+    try:
+        io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, interface.encode('utf-8') + b'\0')
+    except OSError as exc:
+        # SO_BINDTODEVICE needs CAP_NET_RAW, so an unprivileged daemon lands here rather than
+        # on the name check above
+        raise NotConnected(f'can not bind to device {interface} - {exc}') from None
+
+
 def create(afi, interface=None):
     try:
         if afi == AFI.ipv4:
@@ -69,14 +107,8 @@ def create(afi, interface=None):
             io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         set_reuse_options(io)
 
-        if interface is not None:
-            try:
-                if not hasattr(socket, 'SO_BINDTODEVICE'):
-                    socket.SO_BINDTODEVICE = 25
-
-                io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, str(interface + '\0').encode('utf-8'))
-            except OSError:
-                raise NotConnected(f'Could not bind to device {interface}') from None
+        if interface:
+            bind_to_device(io, interface)
     except OSError:
         raise NotConnected('Could not create socket') from None
     return io
