@@ -1215,14 +1215,18 @@ class TestBGPLSLinkAttributes:
         # Flags: B=1, S=0, P=0 (0x80)
         # Algorithm: 0
         # Weight: 10
-        # Reserved: 0x0000
+        # Reserved: 0x00
         # SRv6 SID (16 bytes)
+        #
+        # RFC 9514 4.1 gives this TLV ONE reserved octet, not two, so the twenty three octets
+        # this held made the SID end one octet early and left a stub behind it.  The stub was
+        # silently dropped until the sub-TLV walk started checking its lengths.
         data = (
             b'\x00\x30'  # Endpoint Behavior: 48
             b'\x80'  # Flags: B=1
             b'\x00'  # Algorithm: 0
             b'\x0a'  # Weight: 10
-            b'\x00\x00'  # Reserved
+            b'\x00'  # Reserved
             b'\xfc\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'  # SID
         )
         attr = Srv6EndX.unpack_bgpls(data)

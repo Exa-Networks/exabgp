@@ -9,13 +9,13 @@ from __future__ import annotations
 import json
 from struct import pack, unpack
 from exabgp.protocol.iso import ISO
-from exabgp.util import hexstring
 
 from typing import Callable, ClassVar, Protocol, Self
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import unpack_subtlvs
 from exabgp.protocol.ip import IP, IPv6
 from exabgp.util.types import Buffer
 
@@ -31,8 +31,8 @@ class SubSubTLV(Protocol):
     def json(self, compact: bool = False) -> str: ...
 
 
-# BGP-LS Sub-TLV header constants
-BGPLS_SUBTLV_HEADER_SIZE = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
+# An SRv6 SID is an IPv6 address, RFC 9514 4.2
+IPV6_SID_SIZE = 16
 
 # Minimum data length for SRv6 LAN End.X SID TLV (RFC 9514 Section 4.2)
 # ISIS: Endpoint Behavior (2) + Flags (1) + Algorithm (1) + Weight (1) + Reserved (1) + SystemID (6) + SID (16) = 28 bytes
@@ -88,26 +88,18 @@ class Srv6(FlagLS):
             neighbor_id = ISO.unpack_sysid(data[6:12])
         else:
             neighbor_id = str(IP.create_ip(data[6:10]))
-        start_offset = 12 if protocol_type == ISIS else 6
-        sid = IPv6.ntop(data[start_offset : start_offset + 16])
-        data = data[start_offset + 16 :]
-        subtlvs: list[str] = []
-
-        while data and len(data) >= BGPLS_SUBTLV_HEADER_SIZE:
-            code = unpack('!H', data[0:2])[0]
-            length = unpack('!H', data[2:4])[0]
-
-            if code in cls.registered_subsubtlvs:
-                subsubtlv = cls.registered_subsubtlvs[code].unpack_bgpls(
-                    data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE]
-                )
-                # json() returns a JSON string fragment like '"key": {...}'
-                subtlvs.append(subsubtlv.json())
-            else:
-                # Unknown sub-TLV: format as JSON string with hex data
-                hex_data = hexstring(data[BGPLS_SUBTLV_HEADER_SIZE : length + BGPLS_SUBTLV_HEADER_SIZE])
-                subtlvs.append(f'"unknown-subtlv-{code}": "{hex_data}"')
-            data = data[length + BGPLS_SUBTLV_HEADER_SIZE :]
+        # The SID starts where the Neighbor ID ends, and the two protocols spell that field
+        # differently: RFC 9514 4.2 gives IS-IS a six octet System-ID and OSPFv3 a four octet
+        # Router-ID.  This read 6 for OSPF, the offset of the Neighbor ID rather than of the
+        # SID, so the Router-ID's four octets were reported as the head of the SID and the
+        # SID's last four fell out of the end to be read as a sub-TLV header: a locator packed
+        # by make_srv6_lan_endx_ospf did not decode back to itself, which is the re-encode rule
+        # of EXA_STYLE 1.1.  The minimum length above already agrees with 10.
+        start_offset = 12 if protocol_type == ISIS else 10
+        sid = IPv6.ntop(data[start_offset : start_offset + IPV6_SID_SIZE])
+        # RFC 9552 8.2.2 requires a recognised TLV to validate its sub-TLV lengths, which the
+        # loop this replaced did not: every read was a slice and a slice cannot raise
+        subtlvs = unpack_subtlvs(data[start_offset + IPV6_SID_SIZE :], cls.registered_subsubtlvs, cls.REPR)
 
         return {
             'flags': flags,

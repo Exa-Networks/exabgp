@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 from struct import error as struct_error, unpack
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol
 
 if TYPE_CHECKING:
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.logger import lazymsg, log
 from exabgp.util import hexstring
 from exabgp.util.types import Buffer
 
@@ -418,6 +420,64 @@ class GenericLSID(BaseLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> GenericLSID:
         return cls(data)
+
+
+def unpack_subtlvs(data: Buffer, registered: Mapping[int, Any], repr_name: str) -> list[str]:
+    """Walk the sub-TLVs of a recognised TLV, holding each length to RFC 9552 section 8.2.2.
+
+    "The length of each TLV and, when the TLV is recognized then, the length of its sub-TLVs
+    in the BGP-LS Attribute are valid."  The walk this replaces read `data[4 : length + 4]`,
+    a slice, which cannot raise however large the declared length is: a sub-TLV claiming a
+    thousand octets inside a thirty octet TLV was reported as whatever happened to be behind
+    it, and the peer's length was never compared with anything.  A trailing stub too short for
+    a header went the same way, dropped by the loop condition without a word.
+
+    `LinkState.DISCARD` turns the `Notify` into the 'Attribute Discard' the same section asks
+    for, so the session survives and the attribute does not.
+
+    A trailing remnant too short to be a header is logged and ignored rather than refused.
+    Refusing it discarded the whole attribute, so an otherwise good SRv6 End.X SID from a
+    peer which pads its TLV went dark on upgrade: `qa/bin/compat_gate` counted nine such
+    inputs at lengths 23, 24 and 25 over a 22 octet fixed part. Three stray octets cost no
+    route and tell the operator nothing they can act on, where a sub-TLV *claiming* more
+    octets than exist is a length the peer got wrong about data we would go on to read. The
+    second is still refused; only the first is forgiven.
+
+    The JSON fragments are what comes back, because that is what both callers interpolate.
+    """
+    fragments: list[str] = []
+    while data:
+        if len(data) < BaseLS.BGPLS_SUBTLV_HEADER_SIZE:
+            log.debug(
+                lazymsg(
+                    'bgpls.subtlv.remnant name={name} octets={octets}',
+                    name=repr_name,
+                    octets=len(data),
+                ),
+                'parser',
+            )
+            break
+        code, length = unpack('!HH', bytes(data[: BaseLS.BGPLS_SUBTLV_HEADER_SIZE]))
+        end = BaseLS.BGPLS_SUBTLV_HEADER_SIZE + length
+        if len(data) < end:
+            raise Notify(
+                3,
+                5,
+                f'{repr_name}: sub-TLV {code} claims {length} octets and '
+                f'{len(data) - BaseLS.BGPLS_SUBTLV_HEADER_SIZE} are left',
+            )
+        # The loop bound, EXA_STYLE 1.3: `end` is at least the four header octets whatever the
+        # declared length says, so `data` strictly shrinks on every pass and this cannot spin.
+        # It is a comment and not an assert because `end` is derived from the peer's bytes, and
+        # an assert on those is what rule 1.2 forbids: -O would delete it.
+        value = data[BaseLS.BGPLS_SUBTLV_HEADER_SIZE : end]
+        if code in registered:
+            fragments.append(registered[code].unpack_bgpls(value).json())
+        else:
+            # RFC 9552 5.1: an unknown sub-TLV is preserved, not refused
+            fragments.append(f'"unknown-subtlv-{code}": "{hexstring(value)}"')
+        data = data[end:]
+    return fragments
 
 
 RESERVED = 'RSV'  # the FLAGS entry standing for a bit the RFC tells us to ignore

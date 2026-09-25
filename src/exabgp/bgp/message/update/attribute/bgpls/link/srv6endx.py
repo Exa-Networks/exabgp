@@ -11,9 +11,8 @@ from struct import pack, unpack
 from typing import Callable, Protocol, Self
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState, unpack_subtlvs
 from exabgp.protocol.ip import IPv6
-from exabgp.util import hexstring
 from exabgp.util.types import Buffer
 
 
@@ -95,25 +94,10 @@ class Srv6EndX(FlagLS):
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]
         weight = data[4]
-        sid = IPv6.ntop(data[6:22])
-        data = data[22:]
-        subtlvs: list[str] = []
-
-        while data and len(data) >= cls.BGPLS_SUBTLV_HEADER_SIZE:
-            code = unpack('!H', data[0:2])[0]
-            length = unpack('!H', data[2:4])[0]
-
-            if code in cls.registered_subsubtlvs:
-                subsubtlv = cls.registered_subsubtlvs[code].unpack_bgpls(
-                    data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE]
-                )
-                # json() returns a JSON string fragment like '"key": {...}'
-                subtlvs.append(subsubtlv.json())
-            else:
-                # Unknown sub-TLV: format as JSON string with hex data
-                hex_data = hexstring(data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE])
-                subtlvs.append(f'"unknown-subtlv-{code}": "{hex_data}"')
-            data = data[length + cls.BGPLS_SUBTLV_HEADER_SIZE :]
+        sid = IPv6.ntop(data[6:SRV6_ENDX_MIN_LENGTH])
+        # RFC 9552 8.2.2 requires a recognised TLV to validate its sub-TLV lengths, which the
+        # loop this replaced did not: every read was a slice and a slice cannot raise
+        subtlvs = unpack_subtlvs(data[SRV6_ENDX_MIN_LENGTH:], cls.registered_subsubtlvs, cls.REPR)
 
         return {
             'flags': flags,

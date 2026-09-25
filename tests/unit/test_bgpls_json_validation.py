@@ -238,6 +238,29 @@ class TestLinkAttributesJson:
         assert 'srv6-lan-endx-ospf' in result
         assert isinstance(result['srv6-lan-endx-ospf'], dict)
 
+    def test_srv6_lan_endx_ospf_reports_the_sid_it_packed(self) -> None:
+        """A decoder must be able to re-encode what it accepts, EXA_STYLE 1.1.
+
+        RFC 9514 4.2 gives OSPFv3 a four octet Router-ID where IS-IS has a six octet
+        System-ID, so the SID starts at offset 10 rather than 12.  `_unpack_data` read it from
+        offset 6, the offset of the Neighbor ID, so `fc00::3` came back as `c000:201:fc00::`:
+        the Router-ID's octets in front of the SID and the SID's last four octets past the end,
+        where the sub-TLV walk then read them as a header.
+        """
+        attr = Srv6LanEndXOSPF.make_srv6_lan_endx_ospf(
+            behavior=48,
+            flags={'B': 0, 'S': 0, 'P': 0},
+            algorithm=0,
+            weight=10,
+            neighbor_id='192.0.2.1',
+            sid='fc00::3',
+        )
+        rendered = validate_json(attr.json(), 'Srv6LanEndXOSPF')['srv6-lan-endx-ospf']
+        assert rendered['sid'] == 'fc00::3'
+        assert rendered['neighbor-id'] == '192.0.2.1'
+        # nothing is left over to be mistaken for a sub-TLV
+        assert [name for name in rendered if name.startswith('unknown-subtlv')] == []
+
     def test_srv6_locator_json(self) -> None:
         """Srv6Locator (TLV 1162) produces valid JSON"""
         flags = {'D': 0}
