@@ -181,12 +181,18 @@ The Capabilities Optional Parameter (OPEN Optional Parameter Type 2)
 SHOULD only be included in the OPEN message once.
 """
 note = """
-exabgp does the opposite. Capabilities.pack_capabilities wraps every single capability
-TLV in its own type 2 parameter, so an OPEN offering four families and graceful restart
-carries eight or nine Capabilities Optional Parameters where the RFC asks for one. It is
-legal to receive and every implementation copes, which is why it has survived, but it is
-the behaviour the next sentence of the RFC exists to forgive rather than the one it asks
-for. The test beside this entry is xfail and counts the parameters.
+Capabilities.pack_capabilities used to wrap every single capability TLV in its own type 2
+parameter, so an OPEN offering four families and graceful restart carried eight or nine
+Capabilities Optional Parameters where the RFC asks for one. It was legal to receive and
+every implementation coped, which is why it survived, but it was the behaviour the next
+sentence of the RFC exists to forgive rather than the one it asks for, and it cost two
+octets of parameter header per capability in a message with a 255 octet length field.
+
+One parameter now carries all the TLVs. Past 253 octets of them the standard framing runs
+out of length field and RFC 9072's extended form takes over, which widens the parameter
+length to two octets rather than splitting the set across parameters. Four OPEN captures
+in qa/encoding were re-recorded through Open.pack_message: same TLVs, same order, one
+wrapper.
 
 Positive only: this is about the OPEN we generate. A peer has no input into it.
 """

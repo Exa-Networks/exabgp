@@ -90,10 +90,17 @@ def test_a_subtlv_running_past_the_end_of_its_tlv_withdraws_rather_than_resets()
 
 
 @pytest.mark.rfc('rfc9012#13-tlv-ends-with-final-subtlv')
-@pytest.mark.xfail(strict=True, reason='an unregistered tunnel type keeps its value as opaque bytes, unchecked')
 def test_a_short_final_subtlv_is_caught_in_an_unrecognised_tunnel_type_too() -> None:
-    # the same malformation, under tunnel type 1: nothing looks inside, so nothing notices
+    # the same malformation, under tunnel type 1.  Ending where the final sub-TLV ends is
+    # a property of the framing, so it is owed by a tunnel type nobody here can decode
     short = tunnel(UNRECOGNISED_TUNNEL, subtlv(LOW_UNRECOGNISED_SUBTLV, b'\x01\x02\x03')[:-1])
+    assert TREAT_AS_WITHDRAW in parse(attribute(short))
+
+
+@pytest.mark.rfc('rfc9012#13-tlv-ends-with-final-subtlv')
+def test_a_subtlv_above_127_ending_early_is_caught_in_an_unrecognised_tunnel_type_too() -> None:
+    # the two octet length is where a walk that assumed one octet would silently agree
+    short = tunnel(UNRECOGNISED_TUNNEL, subtlv(HIGH_UNRECOGNISED_SUBTLV, b'\x01\x02\x03')[:-1])
     assert TREAT_AS_WITHDRAW in parse(attribute(short))
 
 
@@ -134,6 +141,17 @@ def test_an_attribute_of_nothing_but_an_unrecognised_tunnel_type_decodes() -> No
     attr = decoded(attribute(tunnel(UNRECOGNISED_TUNNEL, b'\x01\x02\x03\x04')))
     assert len(attr.tunnel_tlvs) == 1
     assert attr.json() == '{"tunnel-type-1": "0x01020304"}'
+
+
+@pytest.mark.rfc('rfc9012#13-unknown-tunnel-type-not-malformed')
+def test_walking_an_unrecognised_tunnel_type_does_not_start_reading_its_sub_tlvs() -> None:
+    # a Preference sub-TLV, which this implementation can decode, inside a tunnel type it
+    # cannot.  The framing walk must check the chain and stop there: "MUST interpret the
+    # attribute as if that TLV had not been present" leaves nothing of it to interpret
+    value = tunnel(UNRECOGNISED_TUNNEL, preference(100))
+    attr = decoded(attribute(value))
+    assert attr.json() == '{"tunnel-type-1": "0x0C06000000000064"}'
+    assert bytes(attr.pack_attribute(Negotiated.UNSET)) == attribute(value)
 
 
 @pytest.mark.rfc('rfc9012#13-unknown-tunnel-type-not-malformed', polarity='negative')

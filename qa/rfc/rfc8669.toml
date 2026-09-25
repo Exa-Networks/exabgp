@@ -84,14 +84,30 @@ attached to IPv4/IPv6 Labeled Unicast prefixes ([RFC8277]).  It MUST
 be ignored when received for other BGP AFI/SAFI combinations.
 """
 note = """
-exabgp does not check this, and cannot check it where the attribute is decoded.
-`AttributeCollection.parse` runs over the path attributes of the UPDATE before
-MP_REACH_NLRI has been taken apart, so at the point `PrefixSid.unpack_attribute` runs
-there is no prefix and no AFI/SAFI to compare against.  An attribute carrying only an
-Originator SRGB TLV is accepted and passed to the API for every family.  See the
-matching section 4.1 entry, which is the same shortfall said from the receiver's side.
-Kept at "required" with an xfail test rather than as a gap, so the day the decoder learns
-the family the suite says so.
+exabgp does not check this, and cannot check it where the attribute is decoded.  The
+ordering is not an accident that could be swapped: MP_REACH_NLRI is itself a path
+attribute, so the family this sentence is scoped to only exists once
+`AttributeCollection.parse` has finished, and `Attribute.unpack` hands
+`PrefixSid.unpack_attribute` the attribute bytes and the session's `Negotiated` and
+nothing else.  `Negotiated` is no help either: it lists the families the session
+negotiated, not the family of the prefix in front of us, and a session carrying plain
+unicast alongside labelled unicast would answer for both.
+
+The check therefore belongs in a second pass, after the NLRI are built.  That shape
+already exists: `UpdateCollection.classify_otc` runs at exactly that point, walks
+`self.announces` for the families it cares about, and records its verdict on the
+UpdateCollection rather than on the attribute dictionary, which matters because
+`AttributeCollection.unpack` may hand back a collection shared with earlier updates.  A
+sibling of it would do this rule.
+
+Two things would still be approximations.  One UPDATE carries one attribute set and may
+announce the legacy IPv4 unicast field and an MP_REACH for another family at once, while
+this sentence is scoped per prefix, so a mixed UPDATE could only be judged as a whole.
+And "ignored ... for other BGP AFI/SAFI combinations" is satisfied vacuously here: exabgp
+allocates no labels, so it never acts on a Label-Index for any family.
+
+Kept at "required" with an xfail test rather than as a gap, so the day that pass exists
+the suite says so.
 """
 
 [[requirement]]
@@ -163,9 +179,17 @@ note = """
 Not implemented.  A Prefix-SID attribute carrying only an Originator SRGB TLV, or no TLV
 exabgp recognises at all, decodes cleanly and reaches the API.  "Invalid" feeds straight
 into section 6, so the consequence is that such an attribute is advertised onwards when
-the RFC says it must not be.  Shown by an xfail test rather than left as a ledger note.  Fixing it needs the attribute decoder to know the family
-of the NLRI the attribute is attached to, which the parse order does not currently
-provide.
+the RFC says it must not be.  Shown by an xfail test rather than left as a ledger note.
+
+The same blocker as the section 3.1 entry, and the same fix: the family is not available
+where the attribute is decoded, and the rule needs a pass over the NLRI after they exist.
+Note what the section heading scopes it to, though, because it is what makes an
+unconditional check wrong rather than merely early: 4.1 is "MPLS Data Plane: Labeled
+Unicast", and RFC 9252 puts its SRv6 L3 and L2 Service TLVs, types 5 and 6, in this same
+attribute on VPN and EVPN families where no Label-Index exists to carry.  exabgp
+registers decoders for both.  A decoder which refused every Label-Index-less Prefix-SID
+would discard all of them, so
+tests/unit/rfc/test_rfc8669_prefix_sid.py holds that door shut from the other side.
 """
 
 [[requirement]]

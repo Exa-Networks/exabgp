@@ -109,8 +109,22 @@ def test_multisession_pack_unpack_round_trip_recovers_original_set() -> None:
     recovered = Capabilities.unpack(wire)
 
     assert caps[Capability.CODE.MULTISESSION].extract_capability_bytes() == [bytes([0, Capability.CODE.MULTIPROTOCOL])]
-    assert bytes([2, 4, Capability.CODE.MULTISESSION, 2, 0, Capability.CODE.MULTIPROTOCOL]) in wire
     assert set(recovered[Capability.CODE.MULTISESSION]) == {Capability.CODE.MULTIPROTOCOL}
+
+    # This used to look for one capability inside its own type 2 parameter, which is what
+    # pack_capabilities emitted until RFC 5492 4 was applied: "A BGP speaker ... SHOULD use
+    # a single Capabilities Optional Parameter to carry all of them".  pack_open_parameters
+    # above has always built the single-parameter shape and its docstring has always
+    # claimed to mirror pack_capabilities; the claim was false and is now true, so the
+    # assertion is against the helper rather than against a hand-written slice.
+    mp_value = make_multiprotocol_capability().extract_capability_bytes()[0]
+
+    assert wire == pack_open_parameters(
+        [
+            (Capability.CODE.MULTIPROTOCOL, mp_value),
+            (Capability.CODE.MULTISESSION, bytes([0, Capability.CODE.MULTIPROTOCOL])),
+        ]
+    )
 
 
 def test_multisession_ignores_flags_and_its_own_codes() -> None:

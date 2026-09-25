@@ -13,6 +13,18 @@ rule in `AttributeCollection.parse` before the flag was ever consulted, and came
 treat-as-withdraw instead.  `PrefixSid` now sets `VALID_ZERO` to keep that generic rule
 from answering for it and refuses the empty value in its own decoder, so all three doors
 reach `DISCARD`.
+
+The two xfails in this file are the other shape: not a flag in the wrong place but a
+check with no place to stand.  Sections 3.1 and 4.1 both scope their requirement to
+labelled unicast, and the attribute decoder cannot know the family, because MP_REACH_NLRI
+is itself a path attribute in the same collection and carries the NLRI the rule is about.
+Nothing is missing from `PrefixSid`; what is missing is a caller with the family in hand.
+The shape such a caller would have already exists one level up, in
+`UpdateCollection.classify_otc`, which runs after the NLRI are built and annotates the
+UpdateCollection rather than the shared attribute dictionary.  Until the equivalent pass
+exists for this rule these two tests assert against `AttributeCollection.parse`, where the
+answer can only ever be no, and so they stay xfail rather than being quietly rewritten
+into something that passes.
 """
 
 from __future__ import annotations
@@ -26,6 +38,7 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
+from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
 
 pytestmark = pytest.mark.timeout(10)
 
@@ -127,7 +140,10 @@ def test_every_flag_bit_set_neither_refuses_the_tlv_nor_changes_the_index() -> N
 
 
 @pytest.mark.rfc('rfc8669#3.1-label-index-must-be-present')
-@pytest.mark.xfail(strict=True, reason='the attribute decoder never sees the AFI/SAFI, so it cannot apply this')
+@pytest.mark.xfail(
+    strict=True,
+    reason='scoped to labelled unicast, and the family lives in MP_REACH_NLRI, which is a sibling attribute still being parsed',
+)
 def test_a_prefix_sid_without_a_label_index_tlv_is_refused() -> None:
     collection = parse(attribute(srgb([(4096, 100)])))
     assert DISCARD in collection
@@ -192,7 +208,10 @@ def test_the_attribute_reaches_the_api_unfiltered_for_the_operator_to_judge() ->
 
 
 @pytest.mark.rfc('rfc8669#4.1-no-label-index-is-invalid')
-@pytest.mark.xfail(strict=True, reason='an SRGB-only attribute decodes and is handed on as valid')
+@pytest.mark.xfail(
+    strict=True,
+    reason='an SRGB-only attribute decodes and is handed on as valid, and refusing it here would also refuse every RFC 9252 SRv6 service attribute',
+)
 def test_a_prefix_sid_carrying_only_an_srgb_is_treated_as_invalid() -> None:
     assert DISCARD in parse(attribute(srgb([(4096, 100)])))
 
@@ -200,6 +219,22 @@ def test_a_prefix_sid_carrying_only_an_srgb_is_treated_as_invalid() -> None:
 @pytest.mark.rfc('rfc8669#4.1-no-label-index-is-invalid', polarity='negative')
 def test_a_prefix_sid_carrying_a_label_index_is_not_treated_as_invalid() -> None:
     collection = parse(attribute(label_index(100)))
+    assert DISCARD not in collection
+    assert PREFIX_SID in collection
+
+
+@pytest.mark.rfc('rfc8669#4.1-no-label-index-is-invalid', polarity='negative')
+def test_an_srv6_service_attribute_without_a_label_index_stays_valid() -> None:
+    """The reason the xfail above may not be closed by refusing every Label-Index-less attribute.
+
+    RFC 9252 puts its SRv6 L3 and L2 Service TLVs, types 5 and 6, in this same attribute,
+    on VPN and EVPN families where RFC 8669's sentence does not reach and where no
+    Label-Index exists to carry.  A decoder which applied 4.1 without knowing the family
+    would discard every one of them.
+    """
+    # type 5, length 1, RESERVED: the smallest well formed SRv6 L3 Service TLV
+    collection = parse(attribute(tlv(Srv6L3Service.TLV, b'\x00')))
+
     assert DISCARD not in collection
     assert PREFIX_SID in collection
 

@@ -243,15 +243,27 @@ def test_our_own_open_repeats_no_capability_triple() -> None:
 
 
 @pytest.mark.rfc('rfc5492#4-one-capabilities-parameter-per-open')
-@pytest.mark.xfail(
-    strict=True,
-    reason='Capabilities.pack_capabilities wraps every capability TLV in its own type 2 parameter, so an OPEN carries one per capability',
-)
 def test_our_open_carries_a_single_capabilities_optional_parameter() -> None:
     packed = Capabilities().new(advertising_neighbour(), False).pack_capabilities()
 
     count = type_two_parameter_count(packed)
     assert count == 1, f'our OPEN carried {count} Capabilities Optional Parameters'
+
+
+@pytest.mark.rfc('rfc5492#4-one-capabilities-parameter-per-open')
+def test_the_one_parameter_still_carries_every_capability_we_offered() -> None:
+    """One parameter is only right if nothing was lost on the way into it."""
+    capabilities = Capabilities().new(advertising_neighbour(), False)
+
+    decoded = Capabilities.unpack(capabilities.pack_capabilities())
+
+    assert families_of(decoded) == [IPV4_UNICAST, IPV6_UNICAST]
+    assert Capability.CODE.FOUR_BYTES_ASN in decoded
+    assert Capability.CODE.ROUTE_REFRESH in decoded
+    # HostName is in the dict and emits no TLV without a host name, so the comparison is
+    # against what was packed rather than against what was offered
+    packed = sorted(code for code, capability in capabilities.items() if capability.extract_capability_bytes())
+    assert sorted(decoded.keys()) == packed
 
 
 @pytest.mark.rfc('rfc5492#4-accept-multiple-capabilities-parameters')

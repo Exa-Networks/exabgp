@@ -32,18 +32,19 @@ case, the TLV MUST be considered to be malformed, and the "Treat-as-
 withdraw" procedure of [RFC7606] is applied.
 """
 note = """
-exabgp notices the mismatch and then does the wrong thing with it.  `SubTLV.unpack_subtlvs`
-raises `Notify(3, 1)` when a sub-TLV length overruns the end of its Tunnel TLV, and
-`TunnelEncap` sets neither `TREAT_AS_WITHDRAW` nor `DISCARD`, so
-`AttributeCollection.parse` re-raises the `Notify` and the session is reset with a
-NOTIFICATION.  The RFC asks for treat-as-withdraw, which keeps the session.  One byte
-from a peer takes the BGP session down.
+`SubTLV.walk_subtlvs` raises `Notify(3, 1)` when a sub-TLV length does not land exactly on
+the end of its Tunnel TLV, and `TunnelEncap.TREAT_AS_WITHDRAW` turns that into the
+treat-as-withdraw this sentence asks for rather than the NOTIFICATION it used to become.
 
-The other half is worse: for every tunnel type except 15, no sub-TLV is decoded at all.
-`TunnelTypeTLV.unpack_tunnel` hands an unregistered tunnel type to `GenericTunnelTLV`,
-which keeps the value as opaque bytes, so a TLV whose final sub-TLV ends early or late
-is accepted without complaint.  The rule is only enforced where the sub-TLVs happen to
-be parsed.
+The rule used to be enforced only where a tunnel type decoder happened to exist, which was
+tunnel type 15 and nothing else: `TunnelTypeTLV.unpack_tunnel` handed every other type to
+`GenericTunnelTLV`, which keeps the value as opaque bytes, so a TLV whose final sub-TLV
+ended early or late was accepted without complaint.  `unpack_tunnel` now walks the chain
+for an unregistered type too.  The walk is framing only, and deliberately so: the same
+section says an unrecognised sub-TLV "MUST remain in the attribute" when the route is
+propagated, so nothing is read out of one and the TLV is still kept as the peer's bytes.
+Splitting the walk out of `unpack_subtlvs` is what keeps the two callers on one set of
+length checks instead of two that could drift apart.
 """
 
 [[requirement]]
@@ -92,7 +93,10 @@ type number and the raw value and re-emits both from `pack()`.  Tested from both
 an attribute made only of unrecognised tunnel types decodes without error, and the bytes
 it packs back are the bytes the peer sent.  The negative test is the one which would
 catch a decoder that dropped the unknown TLV on re-encode, which is the mistake this
-sentence exists to forbid.
+sentence exists to forbid.  The third test is the boundary with the entry above: the
+framing walk `unpack_tunnel` now runs over an unrecognised type checks lengths and stops,
+so a sub-TLV type this implementation can decode, sitting inside a tunnel type it cannot,
+still comes back out as opaque bytes rather than as a decoded preference.
 """
 
 [[requirement]]

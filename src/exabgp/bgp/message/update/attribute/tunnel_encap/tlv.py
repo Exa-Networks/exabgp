@@ -71,6 +71,13 @@ class TunnelTypeTLV:
     def unpack_tunnel(cls, tunnel_type: int, data: Buffer) -> TunnelTypeTLV:
         if tunnel_type in cls.registered_tunnel_types:
             return cls.registered_tunnel_types[tunnel_type].unpack(data)
+        # RFC 9012 section 13: "The final octet of a TLV MUST also be the final octet of
+        # its final sub-TLV."  That is a property of the framing, not of the meaning, so it
+        # holds for a tunnel type we do not know as much as for one we do.  Walking the
+        # chain here checks it without reading a single value: the same section forbids
+        # interpreting an unrecognised sub-TLV, and the TLV is still kept as opaque bytes
+        # so it is propagated exactly as it arrived.
+        SubTLV.walk_subtlvs(data)
         return GenericTunnelTLV(tunnel_type, data)
 
     def pack(self) -> bytes:
@@ -158,14 +165,23 @@ class SubTLV:
         return decorator
 
     @classmethod
-    def unpack_subtlvs(cls, data: Buffer) -> list[SubTLV]:
-        result: list[SubTLV] = []
+    def walk_subtlvs(cls, data: Buffer) -> list[tuple[int, Buffer]]:
+        """Split a Tunnel TLV value into its sub-TLVs without interpreting any of them.
+
+        Framing only: the type number picks the width of the length field and nothing
+        else is read.  RFC 9012 section 13 makes a chain which does not end exactly at
+        the end of its TLV malformed, and `TunnelEncap.TREAT_AS_WITHDRAW` turns the
+        `Notify` raised here into the treat-as-withdraw the section asks for.
+
+        Bounded: each iteration reads a header of at least two octets and then drops at
+        least that many from `data`, so the walk runs at most `len(data) // 2` times.
+        """
+        framed: list[tuple[int, Buffer]] = []
         while data:
-            if len(data) < 1:
-                raise Notify(3, 1, f'Sub-TLV header truncated: need at least 1 byte, got {len(data)}')
             subtype = data[0]
 
-            # Determine length field size based on type value per RFC 9012
+            # RFC 9012 section 14.6: a sub-TLV type below 128 carries a one octet length,
+            # 128 and above carries two.
             if subtype < 128:
                 if len(data) < 2:
                     raise Notify(3, 1, f'Sub-TLV header truncated: need 2 bytes for type {subtype}, got {len(data)}')
@@ -179,7 +195,14 @@ class SubTLV:
 
             if len(data) < header_size + length:
                 raise Notify(3, 1, f'Sub-TLV truncated: need {header_size + length}, got {len(data)}')
-            value = data[header_size : header_size + length]
+            framed.append((subtype, data[header_size : header_size + length]))
+            data = data[header_size + length :]
+        return framed
+
+    @classmethod
+    def unpack_subtlvs(cls, data: Buffer) -> list[SubTLV]:
+        result: list[SubTLV] = []
+        for subtype, value in cls.walk_subtlvs(data):
             if subtype in cls.registered_subtypes:
                 try:
                     subtlv = cls.registered_subtypes[subtype].unpack(value)
@@ -188,7 +211,6 @@ class SubTLV:
             else:
                 subtlv = GenericSubTLV(subtype, value)
             result.append(subtlv)
-            data = data[header_size + length :]
         return result
 
     def pack(self) -> bytes:

@@ -247,30 +247,40 @@ class Capabilities(dict[int, Capability]):
         self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
         return self
 
+    def _capability_tlvs(self) -> bytes:
+        """Every capability we advertise, back to back, as <code, length, value> triples."""
+        tlvs = b''
+        for code, capability in self.items():
+            for value in capability.extract_capability_bytes():
+                # Zero-length capabilities (e.g., RouteRefresh, LinkLocalNextHop) are valid
+                tlvs += bytes([code, len(value)]) + value
+        return tlvs
+
     def pack_capabilities(self) -> bytes:
-        parameters = b''
-        for k, capabilities in self.items():
-            for capability in capabilities.extract_capability_bytes():
-                # Encode capability TLV: code (1 byte) + length (1 byte) + data
-                # Zero-length capabilities (e.g., RouteRefresh, LinkLocalNextHop) are valid
-                encoded = bytes([k, len(capability)]) + capability
-                parameters += bytes([2, len(encoded)]) + encoded
+        # RFC 5492 section 4: "The Capabilities Optional Parameter (OPEN Optional Parameter
+        # Type 2) SHOULD only be included in the OPEN message once."  Each capability TLV
+        # used to be given a parameter of its own, so a two family neighbour with asn4 and
+        # route refresh sent six parameters and four wasted octets of header.  Every
+        # implementation accepts that, because the next sentence of the section tells them
+        # to, but it is the shape the RFC forgives rather than the one it asks for.
+        tlvs = self._capability_tlvs()
 
-        if len(parameters) < OPEN_PARAM_LEN_MAX:
-            return bytes([len(parameters)]) + parameters
+        # No capability to offer means no parameter, not an empty one: a Capabilities
+        # Optional Parameter of length zero says nothing and still has to be parsed.
+        if not tlvs:
+            return bytes([0])
 
-        # If this is an extended optional parameters version, re-encode
-        # the OPEN message.
+        # The Optional Parameters Length is a single octet and it counts the parameter's
+        # own two octet header, so 253 octets of capability TLVs is what fits.
+        if len(tlvs) + MIN_PARAM_LEN <= OPEN_PARAM_LEN_MAX:
+            parameter = bytes([Parameter.CAPABILITIES, len(tlvs)]) + tlvs
+            return bytes([len(parameter)]) + parameter
 
-        parameters = b''
-        for k, capabilities in self.items():
-            for capability in capabilities.extract_capability_bytes():
-                # Encode capability TLV: code (1 byte) + length (1 byte) + data
-                # Zero-length capabilities (e.g., RouteRefresh, LinkLocalNextHop) are valid
-                encoded = bytes([k, len(capability)]) + capability
-                parameters += pack('!BH', 2, len(encoded)) + encoded
-
-        return pack('!BBH', OPEN_EXTENDED_MARKER, OPEN_EXTENDED_MARKER, len(parameters)) + parameters
+        # Past that, RFC 9072's extended form gives the parameter a two octet length, which
+        # keeps the whole set inside the one parameter the sentence above asks for rather
+        # than splitting it to fit.
+        parameter = pack('!BH', Parameter.CAPABILITIES, len(tlvs)) + tlvs
+        return pack('!BBH', OPEN_EXTENDED_MARKER, OPEN_EXTENDED_MARKER, len(parameter)) + parameter
 
     @staticmethod
     def unpack(data: Buffer) -> Capabilities:
