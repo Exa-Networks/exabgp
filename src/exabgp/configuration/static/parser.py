@@ -60,7 +60,6 @@ EXTENDED_COMMUNITY_TARGET_PARTS = 2  # Target extended community has 2 parts (AS
 
 
 def prefix(tokeniser):
-    # XXX: could raise
     ip = tokeniser()
     try:
         ip, mask = ip.split('/')
@@ -69,8 +68,17 @@ def prefix(tokeniser):
         if ':' in ip:
             mask = '128'
 
-    tokeniser.afi = IP.toafi(ip)
-    iprange = IPRange.create(ip, mask)
+    # IPRange.create reaches socket.inet_pton, which answers a malformed address with a bare
+    # OSError.  Nothing caught it, so `route 999.999.999.999/24` reported "illegal IP address
+    # string passed to inet_pton" and named neither the token nor what was wrong with it.
+    # IP.toafi runs first and raises ValueError of its own, which was equally uncaught here.
+    try:
+        tokeniser.afi = IP.toafi(ip)
+        iprange = IPRange.create(ip, mask)
+    except (OSError, ValueError):
+        raise ValueError(
+            "'%s/%s' is not a valid prefix\n  Format: <ip>/<length> (e.g. 192.0.2.0/24)" % (ip, mask)
+        ) from None
 
     if iprange.address() & iprange.mask.hostmask() != 0:
         raise ValueError('invalid network {} for netmask {}'.format(ip, mask))

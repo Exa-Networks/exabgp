@@ -36,6 +36,8 @@ from exabgp.bgp.message.update.nlri.mvpn import SharedJoin
 SRGB_TUPLE_SIZE = 2  # SRGB tuple consists of (start, range)
 ASN_MAX_VALUE = 4294967295  # Maximum value for 32-bit ASN
 TEID_MAX_BITS = 32  # Maximum TEID length in bits
+# RFC 4364 4.2: a type 1 route-distinguisher carries a four octet IPv4 administrator field
+IPV4_RD_OCTETS = 4
 
 
 def label(tokeniser):
@@ -57,24 +59,59 @@ def label(tokeniser):
 def route_distinguisher(tokeniser):
     data = tokeniser()
 
+    # `prefix` and `suffix` were only assigned when the token held a ':' past index 0, so
+    # `rd 12345` and `rd :100` both fell through to the next line with neither bound and
+    # raised UnboundLocalError: an unhandled traceback out of the configuration parser
+    # rather than the error which names the line the operator wrote.
     separator = data.find(':')
-    if separator > 0:
-        prefix = data[:separator]
+    if separator <= 0:
+        raise ValueError(
+            "'%s' is not a valid route-distinguisher\n"
+            "  Expected format: ASN:nn or IP:nn (e.g. '65000:100' or '192.0.2.1:100')" % data
+        )
+
+    prefix = data[:separator]
+    try:
         suffix = int(data[separator + 1 :])
+    except ValueError:
+        raise ValueError("'%s' is not a valid route-distinguisher\n  Suffix must be a number" % data) from None
 
     if '.' in prefix:
-        data = [bytes([0, 1])]
-        data.extend([bytes([int(_)]) for _ in prefix.split('.')])
-        data.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
-        rtd = b''.join(data)
+        if not 0 <= suffix < pow(2, 16):
+            raise ValueError("'%s' is not a valid route-distinguisher (suffix must be 0-65535)" % data)
+        # RFC 4364 4.2 gives a type 1 route-distinguisher two octets of type, four of IPv4
+        # administrator and two of assigned number.  Nothing counted the octets the operator
+        # wrote, and RouteDistinguisher does not check its own length either, so
+        # '1.2.3:100' packed seven bytes and '1.2.3.4.5:100' nine, and both were sent to the
+        # peer as a route-distinguisher no receiver can read.
+        octets = prefix.split('.')
+        if len(octets) != IPV4_RD_OCTETS:
+            raise ValueError(
+                "'%s' is not a valid route-distinguisher"
+                '\n  An IPv4 administrator field is %d octets, not %d' % (data, IPV4_RD_OCTETS, len(octets))
+            )
+        try:
+            packed = [bytes([0, 1])]
+            packed.extend([bytes([int(_)]) for _ in octets])
+            packed.extend([bytes([suffix >> 8]), bytes([suffix & 0xFF])])
+            rtd = b''.join(packed)
+        except ValueError:
+            # bytes([400]) says only "bytes must be in range(0, 256)", which names neither
+            # the octet nor the token it came from
+            raise ValueError("'%s' is not a valid route-distinguisher (invalid IPv4 address)" % data) from None
     else:
-        number = int(prefix)
-        if number < pow(2, 16) and suffix < pow(2, 32):
+        try:
+            number = int(prefix)
+        except ValueError:
+            raise ValueError("'%s' is not a valid route-distinguisher (prefix must be ASN or IPv4)" % data) from None
+        # the lower bounds were missing, so a negative field passed both comparisons and
+        # reached struct.pack, which raises struct.error, not ValueError
+        if 0 <= number < pow(2, 16) and 0 <= suffix < pow(2, 32):
             rtd = bytes([0, 0]) + pack('!H', number) + pack('!L', suffix)
-        elif number < pow(2, 32) and suffix < pow(2, 16):
+        elif 0 <= number < pow(2, 32) and 0 <= suffix < pow(2, 16):
             rtd = bytes([0, 2]) + pack('!L', number) + pack('!H', suffix)
         else:
-            raise ValueError(f'invalid route-distinguisher {data}')
+            raise ValueError('invalid route-distinguisher %s' % data)
 
     return RouteDistinguisher(rtd)
 
@@ -87,6 +124,16 @@ def prefix_sid(tokeniser):  # noqa: C901
     value = tokeniser()
     get_range = False
     consume_extra = False
+
+    # `label_sid` is only assigned inside the `[` branch, and `int(label_sid)` below sits
+    # outside the try, so `bgp-prefix-sid 300` raised UnboundLocalError past the handler
+    # which is there to turn a malformed attribute into a configuration error.
+    if value != '[':
+        raise ValueError(
+            "'%s' is not a valid bgp-prefix-sid\n"
+            '  Format: [ <label-index> ] or [ <label-index>, [ ( <srgb-base>,<srgb-range> ) ] ]' % value
+        )
+
     try:
         if value == '[':
             label_sid = tokeniser()
