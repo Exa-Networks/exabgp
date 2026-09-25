@@ -485,14 +485,22 @@ class FlowIPProtocol(IOperationByte, NumericString, IPv4):
     ID = 0x03
     NAME = 'protocol'
     converter = staticmethod(converter(Protocol.named, Protocol))
-    decoder = staticmethod(decoder(ord, Protocol))
+    # _number, not ord: RFC 8955 4.2.1.1 lets the peer announce the value in any of the four
+    # widths the operator's len field encodes, 1, 2, 4 or 8 octets, and ord() reads exactly
+    # one byte.  On anything wider it raised TypeError, which Flow.unpack_nlri does not catch
+    # (it catches Notify, ValueError and IndexError), so it walked out of Update.unpack_message
+    # to the reactor's catch-all, which resets the session without a NOTIFICATION.  The peer
+    # sends the same UPDATE again on the next attempt, so the peering never establishes.  The
+    # width we ENCODE is a separate question and is unchanged.
+    decoder = staticmethod(decoder(_number, Protocol))
 
 
 class FlowNextHeader(IOperationByte, NumericString, IPv6):
     ID = 0x03
     NAME = 'next-header'
     converter = staticmethod(converter(Protocol.named, Protocol))
-    decoder = staticmethod(decoder(ord, Protocol))
+    # _number, not ord: see FlowIPProtocol above, RFC 8955 4.2.1.1
+    decoder = staticmethod(decoder(_number, Protocol))
 
 
 class FlowAnyPort(IOperationByteShort, NumericString, IPv4, IPv6):
