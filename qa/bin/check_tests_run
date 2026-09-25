@@ -29,6 +29,9 @@ NOT_COLLECTED_BY_DESIGN = {'conftest.py', '__init__.py'}
 
 MAX_REPORTED = 40
 
+# the exit code which means "this gate did not run", so 1 is never mistaken for a finding
+CANNOT_RUN = 2
+
 
 def defines_tests(path: Path) -> bool:
     """True when the file holds something pytest would run, were it collected."""
@@ -62,10 +65,12 @@ def collected() -> set[Path]:
     if not files:
         # an empty answer means the collection itself failed, which must not read as
         # "nothing is uncollected": that is the exact confusion this check exists to end
-        print('check_tests_run: pytest collected nothing at all, so this check proves nothing')
+        print('check_tests_run cannot run: pytest collected nothing at all, so this check proves nothing')
         print(result.stdout[-2000:])
         print(result.stderr[-2000:])
-        sys.exit(1)
+        # 1 means "it ran and found something", which is what this used to claim on the one
+        # path where it had found nothing at all. compat_gate already answers 2 here.
+        sys.exit(CANNOT_RUN)
     return files
 
 

@@ -57,6 +57,9 @@ MAX_REPORTED = 40
 
 TESTS_FAILED = 1  # pytest: some test failed.  5 is no tests collected, which is not the same
 
+# the exit code which means "this gate did not run", so 1 is never mistaken for a finding
+CANNOT_RUN = 2
+
 THINNER = """
 import importlib, pkgutil
 import exabgp.bgp.message.update.attribute as package
@@ -167,16 +170,20 @@ def notices(relative: str) -> bool:
 
 
 def main() -> int:
+    # A gate which could not look at the tree has not found anything, so it must not use
+    # the code which says it did.  compat_gate already answers 2 here.
     whole = counts(thinned=False)
     if whole is None:
-        return 1
+        print('check_sweep_floors cannot run: the thinner could not thin the registries')
+        return CANNOT_RUN
     thin = counts(thinned=True)
     if thin is None:
-        return 1
+        print('check_sweep_floors cannot run: the thinner could not thin the registries')
+        return CANNOT_RUN
 
     if not whole:
-        print('collected no tests at all, which cannot be right')
-        return 1
+        print('check_sweep_floors cannot run: collected no tests at all, which cannot be right')
+        return CANNOT_RUN
 
     shrinking = []
     for name, before in sorted(whole.items()):

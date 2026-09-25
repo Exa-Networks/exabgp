@@ -35,6 +35,13 @@ ROOT = Path(__file__).parent.parent.parent
 SRC_DIR = ROOT / 'src' / 'exabgp'
 BASELINE_FILE = ROOT / 'qa' / 'exa_style.json'
 
+# the exit code which means "this gate did not run", so 1 is never mistaken for a finding
+CANNOT_RUN = 2
+
+# a floor on the walk, not a count of the tree: any plausible checkout holds far more, and
+# anything under it means the gate is looking at the wrong place
+MIN_SOURCE_FILES = 50
+
 # a function longer than this does more than one thing (EXA_STYLE 1.5)
 MAX_FUNCTION_LINES = 70
 
@@ -244,6 +251,14 @@ def main() -> int:
     parser.add_argument('--show', action='store_true', help='list every violation')
     parser.add_argument('--update-baseline', action='store_true', help='record the current counts')
     options = parser.parse_args()
+
+    walked = source_files()
+    if len(walked) < MIN_SOURCE_FILES:
+        # Walking nothing leaves every rule counted at zero, which prints ok for each and
+        # exits 0: a clean bill of health over an empty walk, and nobody investigates a
+        # green gate. 2 says "believe nothing about this result", as compat_gate does.
+        print(f'check_exa_style cannot run: {len(walked)} source files found under {SRC_DIR}')
+        return CANNOT_RUN
 
     violations = collect()
     counted = count(violations)
