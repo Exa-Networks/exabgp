@@ -80,12 +80,40 @@ class Processes:
         self._broken = []
         self._respawning = {}
 
+    def _record_respawn(self, process):
+        """Count this respawn against the limit, and give up on a helper which keeps dying.
+
+        Only a start which replaces a helper that died belongs here. The count used to be
+        kept inside _start, where an ordinary configuration reload looked like a respawn.
+        respawn_number is zero when respawning is switched off, so the second start of a
+        helper inside one window then raised ProcessError out of start() and the reactor
+        answered that by shutting the daemon down.
+
+        The window is int(time.time()) & respawn_timemask, which is 64 seconds aligned to
+        the wall clock rather than 64 seconds since the last respawn.
+        """
+        around_now = int(time.time()) & self.respawn_timemask
+        if process not in self._respawning or around_now not in self._respawning[process]:
+            self._respawning[process] = {around_now: 1}
+            return
+        self._respawning[process][around_now] += 1
+        # we are respawning too fast
+        if self._respawning[process][around_now] > self.respawn_number:
+            log.critical(
+                lambda: f'Too many death for {process} ({self.respawn_number}) terminating program',
+                'process',
+            )
+            raise ProcessError
+
     def _handle_problem(self, process):
         if process not in self._process:
             return
         if self.respawn_number and self._restart[process]:
             log.debug(lambda: f'process {process} ended, restarting it', 'process')
             self._terminate(process)
+            # the only path which counts against the respawn limit, and so the only one
+            # which may raise: once the budget is spent there is nothing left to start
+            self._record_respawn(process)
             self._start(process)
         else:
             log.debug(lambda: f'process {process} ended', 'process')
@@ -181,23 +209,6 @@ class Processes:
                 log.debug(lambda: 'forked process {}'.format(process), 'process')
 
                 self._restart[process] = self._configuration[process]['respawn']
-                around_now = int(time.time()) & self.respawn_timemask
-                if process in self._respawning:
-                    if around_now in self._respawning[process]:
-                        self._respawning[process][around_now] += 1
-                        # we are respawning too fast
-                        if self._respawning[process][around_now] > self.respawn_number:
-                            log.critical(
-                                lambda: f'Too many death for {process} ({self.respawn_number}) terminating program',
-                                'process',
-                            )
-                            raise ProcessError
-                    else:
-                        # reset long time since last respawn
-                        self._respawning[process] = {around_now: 1}
-                else:
-                    # record respawing
-                    self._respawning[process] = {around_now: 1}
 
         except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             self._broken.append(process)
