@@ -52,7 +52,7 @@ from exabgp.bgp.message.update.attribute import (
     Origin,
     OriginatorID,
 )
-from exabgp.bgp.message.update.attribute.otc import OTC, OTCNone, OTCSelf
+from exabgp.bgp.message.update.attribute.otc import OTC, OTCSelf
 from exabgp.bgp.message.update.attribute.community import (
     Communities,
     Community,
@@ -210,7 +210,7 @@ def origin(tokeniser: 'Tokeniser') -> Origin:
     raise ValueError(f"'{value}' is not a valid origin\n  Valid options: igp, egp, incomplete")
 
 
-def otc(tokeniser: 'Tokeniser') -> OTC | OTCSelf | OTCNone:
+def otc(tokeniser: 'Tokeniser') -> OTC | OTCSelf:
     from exabgp.configuration.validator import OTCValidator
 
     return OTCValidator().validate(tokeniser)

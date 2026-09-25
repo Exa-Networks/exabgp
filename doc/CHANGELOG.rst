@@ -4,9 +4,18 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Incompatible: the "role { otc send|disable; }" sub-option and the route-level
+   "otc none" instruction are removed. RFC 9234 section 5 ends with "The operator
+   MUST NOT have the ability to modify the procedures defined in this section",
+   and both existed to do exactly that: with the marking off, a route handed to a
+   customer carries nothing to say it was ours to give away, which is the leak the
+   RFC exists to stop. Outbound marking is now unconditional for IPv4 and IPv6
+   unicast, and still applies to no other family. A configuration containing either
+   option is refused at parse time with a message naming the RFC, rather than
+   accepted and quietly ignored; delete the line.
  * Feature: Parse and generate Only to Customer attributes (RFC 9234) on static,
    API, IP, labelled and VPN routes. Support numeric/dotted ASNs, per-session
-   "otc self", role assertions, and internal "otc none" suppression.
+   "otc self" and role assertions.
    Add role configuration and OPEN negotiation, unicast outbound marking/refusal,
    withdrawal of refused replacements, and ingress leak annotations and warnings.
    Configuration checks account for automatic marking and export refusal.

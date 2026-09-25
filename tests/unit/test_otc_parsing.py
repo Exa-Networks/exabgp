@@ -13,7 +13,7 @@ from exabgp.application import encode
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
-from exabgp.bgp.message.update.attribute.otc import OTC, OTCNone, OTCSelf
+from exabgp.bgp.message.update.attribute.otc import OTC, OTCSelf
 from exabgp.configuration.check import _negotiated
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.setup import create_minimal_configuration
@@ -21,7 +21,7 @@ from exabgp.reactor.api import API
 from exabgp.rib.route import Route
 
 
-FORMS = ['1.1', 'self', 'none', 'provider', 'customer', 'peer', 'rs', 'rs-client']
+FORMS = ['1.1', 'self', 'provider', 'customer', 'peer', 'rs', 'rs-client']
 FAMILIES = [
     ('route', '10.0.0.0/24 next-hop 192.0.2.1'),
     ('ipv4', 'unicast 10.0.0.0/24 next-hop 192.0.2.1'),
@@ -47,11 +47,7 @@ def test_otc_forms_through_api_family_parsers(family: str, body: str, form: str)
     routes = api_routes(family, f'{body} otc {form}')
     assert len(routes) == 1
     attributes = routes[0].attributes
-    if form == 'none':
-        assert isinstance(attributes[Attribute.CODE.INTERNAL_OTC_NONE], OTCNone)
-        assert 'otc' not in str(attributes)
-        assert 'otc' not in json.loads('{' + attributes.json() + '}')
-    elif form == '1.1':
+    if form == '1.1':
         attribute = attributes[Attribute.CODE.OTC]
         assert isinstance(attribute, OTC)
         assert attribute.asn == 65537
@@ -65,13 +61,18 @@ def test_otc_forms_through_api_family_parsers(family: str, body: str, form: str)
 
 
 @pytest.mark.parametrize('family,body', [FAMILIES[0], FAMILIES[1], FAMILIES[-1]])
-@pytest.mark.parametrize('value', ['', 'unknown', '-1', '+1', '4294967296', '65536.0', '1.65536', '1.1.1', '0x10'])
+# 'none' used to suppress the automatic marking for one route. RFC 9234 section 5 says the
+# operator MUST NOT be able to modify these procedures, so it is refused like any other
+# value which is not an ASN, self, or a role name.
+@pytest.mark.parametrize(
+    'value', ['', 'none', 'unknown', '-1', '+1', '4294967296', '65536.0', '1.65536', '1.1.1', '0x10']
+)
 def test_invalid_otc_is_rejected_by_route_parsers(family: str, body: str, value: str) -> None:
     assert api_routes(family, f'{body} otc {value}') == []
 
 
 def configuration_text(form: str) -> str:
-    role = f'role {{ local {form}; otc disable; }}' if form in FORMS[3:] else ''
+    role = f'role {{ local {form}; }}' if form in FORMS[2:] else ''
     return f"""
 neighbor 192.0.2.1 {{
     router-id 192.0.2.2;
@@ -92,11 +93,8 @@ def test_static_block_preserves_explicit_otc_instruction(form: str) -> None:
     neighbor = next(iter(configuration.neighbors.values()))
     routes = list(neighbor.rib.outgoing.queued_routes())
     assert len(routes) == 1
-    if form == 'none':
-        assert isinstance(routes[0].attributes[Attribute.CODE.INTERNAL_OTC_NONE], OTCNone)
-    else:
-        _, negotiated = _negotiated(neighbor)
-        assert routes[0].attributes[Attribute.CODE.OTC].pack_attribute(negotiated) == b'\xc0\x23\x04\x00\x01\x00\x01'
+    _, negotiated = _negotiated(neighbor)
+    assert routes[0].attributes[Attribute.CODE.OTC].pack_attribute(negotiated) == b'\xc0\x23\x04\x00\x01\x00\x01'
 
 
 def encode_args(arguments: list[str]) -> argparse.Namespace:
@@ -127,18 +125,11 @@ def test_inline_encode_rejects_session_dependent_otc(form: str, capsys: pytest.C
         ('ipv6 unicast', 'route 2001:db8::/32 next-hop 2001:db8::1'),
     ],
 )
-@pytest.mark.parametrize('form', ['1.1', 'none'])
-def test_inline_encode_literal_and_suppression(
-    family: str, route: str, form: str, capsys: pytest.CaptureFixture[str]
-) -> None:
-    assert encode.cmdline(encode_args(['-f', family, f'{route} otc {form}'])) == 0
-    attributes = decoded_attributes(capsys.readouterr().out, family)
-    if form == 'none':
-        assert Attribute.CODE.OTC not in attributes
-    else:
-        attribute = attributes[Attribute.CODE.OTC]
-        assert isinstance(attribute, OTC)
-        assert attribute.asn == 65537
+def test_inline_encode_literal_otc(family: str, route: str, capsys: pytest.CaptureFixture[str]) -> None:
+    assert encode.cmdline(encode_args(['-f', family, f'{route} otc 1.1'])) == 0
+    attribute = decoded_attributes(capsys.readouterr().out, family)[Attribute.CODE.OTC]
+    assert isinstance(attribute, OTC)
+    assert attribute.asn == 65537
 
 
 @pytest.mark.parametrize('form', ['self', 'provider'])

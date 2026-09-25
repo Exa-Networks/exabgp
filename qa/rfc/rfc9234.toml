@@ -10,6 +10,8 @@
 # src/exabgp/bgp/message/update/attribute/otc.py, the ingress leak check in
 # src/exabgp/bgp/message/update/collection.py::classify_otc and the egress
 # procedures in the same file and in attribute/collection.py::otc_allowed.
+#
+# The operator has no control over any of it: see rfc9234#5-operator-cannot-modify.
 
 rfc = "rfc9234"
 title = "Route Leak Prevention and Detection Using Roles in UPDATE and OPEN Messages"
@@ -148,12 +150,13 @@ text = """
     equal to the AS number of the remote AS.
 """
 note = """
-Not implemented, and the configuration says so out loud: `role { otc receive; }` is
-refused by configuration/role.py with "OTC ingress marking is not implemented; use send
-or disable". A route arriving from a Provider, a Peer or an RS without an OTC attribute is
-passed to the API exactly as it came off the wire. A gap rather than not-applicable: the
-attribute is what a downstream API client would need to apply the rest of Section 5, and
-the day exabgp marks on ingress the same value would be the one it sends back out.
+Not implemented. A route arriving from a Provider, a Peer or an RS without an OTC
+attribute is passed to the API exactly as it came off the wire. Until 6.0.0 the
+configuration said so out loud, `role { otc receive; }` being refused with "OTC ingress
+marking is not implemented"; the whole `role otc` sub-option has since gone, so the
+refusal now reads as a removal instead. A gap rather than not-applicable: the attribute is
+what a downstream API client would need to apply the rest of Section 5, and the day exabgp
+marks on ingress the same value would be the one it sends back out.
 """
 
 [[requirement]]
@@ -230,11 +233,20 @@ Positive only: the requirement is a property of the configuration surface, so th
 that a configured operator cannot turn the egress marking off. There is no peer input
 which violates it.
 
-exabgp does not meet this and knows it. `role { otc disable; }` suppresses the automatic
-OTC insertion for the whole neighbour, and `otc none` on a single route suppresses it for
-that route. The daemon logs role.otc.disabled with rfc9234=nonconformant when it happens,
-which is honest but is not the same as refusing. The test beside this entry is xfailed and
-says what the code does instead.
+exabgp used to fail this. Two settings suppressed the automatic OTC insertion:
+`role { otc send|disable; }` for a whole neighbour, and `otc none` on a single route. Both
+were removed in 6.0.0, a deliberate breaking change to the configuration language rather
+than a deprecation, because the sentence forbidding the knob is the sentence that makes
+route-leak prevention work: a neighbour with the marking off hands a customer a route the
+customer cannot tell was ours to give away. Logging role.otc.disabled with
+rfc9234=nonconformant was honest and was not the same as refusing.
+
+Egress marking is now unconditional for the AFI/SAFI pairs
+rfc9234#5-only-ipv4-ipv6-unicast names; that restriction was never carried by the removed
+switch, it is the family test on the two attribute assemblies in
+UpdateCollection.messages, and it is proven separately by the two tests on that entry. An
+existing configuration containing either option is refused at parse time with a message
+naming RFC 9234 section 5, rather than parsed and quietly ignored.
 """
 
 [[requirement]]

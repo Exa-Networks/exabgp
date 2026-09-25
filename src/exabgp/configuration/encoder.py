@@ -115,9 +115,7 @@ def _serialize_value(obj: Any) -> Any:
             'incoming_ttl': obj.incoming_ttl,
         }
         if obj.role != RoleValue.NO_ROLE:
-            result.update(
-                role=str(obj.role), role_strict=obj.role_strict, role_otc=obj.role_otc, role_add_meta=obj.role_add_meta
-            )
+            result.update(role=str(obj.role), role_strict=obj.role_strict, role_add_meta=obj.role_add_meta)
         return result
 
     # Route (route with attributes)

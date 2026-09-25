@@ -24,7 +24,6 @@ def negotiated_session(role: RoleValue = RoleValue.NO_ROLE) -> Negotiated:
     negotiated.peer_as = ASN(65002)
     negotiated.asn4 = True
     negotiated.role = role
-    negotiated.role_otc = True
     negotiated.families = [(AFI.ipv4, SAFI.unicast), (AFI.ipv4, SAFI.multicast), (AFI.ipv6, SAFI.unicast)]
     return negotiated
 

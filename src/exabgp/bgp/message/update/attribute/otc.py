@@ -92,7 +92,13 @@ class OTCSelf(Attribute):
 
 
 class OTCNone(Attribute):
-    """Internal instruction suppressing automatic OTC insertion for this route."""
+    """Dead: `otc none` was removed in 6.0.0 and nothing constructs this any more.
+
+    RFC 9234 section 5 says the operator MUST NOT be able to modify the Only-to-Customer
+    procedures, so the configuration surface which produced this sentinel was withdrawn.
+    The class, its Attribute.CODE.INTERNAL_OTC_NONE code and the readers of that code go
+    with it; they outlive this change only because those files were held elsewhere.
+    """
 
     ID = Attribute.CODE.INTERNAL_OTC_NONE
     NO_GENERATION = True

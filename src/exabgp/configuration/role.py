@@ -1,4 +1,4 @@
-"""RFC 9234 local role and outbound OTC policy configuration."""
+"""RFC 9234 local role configuration."""
 
 from __future__ import annotations
 
@@ -8,6 +8,16 @@ from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.core import Section, Tokeniser
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
+
+# RFC 9234 section 5 ends with "The operator MUST NOT have the ability to modify the
+# procedures defined in this section", so `otc send|disable` was removed rather than
+# deprecated. An operator upgrading has the line in a working file, and an option which
+# is quietly ignored changes what leaves the box without saying so; name the RFC instead.
+OTC_REMOVED = (
+    "'role otc' was removed in 6.0.0: RFC 9234 section 5 says the operator MUST NOT have the "
+    'ability to modify the Only-to-Customer procedures. Delete the line; the egress marking is '
+    'unconditional for IPv4 and IPv6 unicast.'
+)
 
 
 def local_role(tokeniser: Tokeniser) -> RoleValue:
@@ -21,20 +31,21 @@ def role_boolean(tokeniser: Tokeniser) -> bool:
     return value == 'enable'
 
 
-def role_otc(tokeniser: Tokeniser) -> bool:
-    value = tokeniser()
-    if value in ('receive', 'send/receive', 'send-receive'):
-        raise ValueError('OTC ingress marking is not implemented; use send or disable')
-    if value not in ('send', 'disable'):
-        raise ValueError('role otc requires send or disable')
-    return value == 'send'
+def role_otc_removed(tokeniser: Tokeniser) -> bool:
+    """Refuse the removed sub-option by name, rather than as an unknown keyword.
+
+    The entry stays in `known` only so the parser reaches this function: it is absent from
+    the schema, so it is neither offered nor documented as a choice.
+    """
+    tokeniser()
+    raise ValueError(OTC_REMOVED)
 
 
 class ParseRole(Section):
     name = 'role'
-    syntax = 'role { local provider|customer|peer|rs|rs-client; strict enable|disable; otc send|disable; add-meta enable|disable; }'
+    syntax = 'role { local provider|customer|peer|rs|rs-client; strict enable|disable; add-meta enable|disable; }'
     schema = Container(
-        description='RFC 9234 local role and outbound OTC policy',
+        description='RFC 9234 local role',
         children={
             name: Leaf(
                 type=ValueType.ENUMERATION,
@@ -48,12 +59,11 @@ class ParseRole(Section):
             for name, description, choices in (
                 ('local', 'Our local role', [str(role) for role in RoleValue.assigned()]),
                 ('strict', 'Require the remote Role capability', ['enable', 'disable']),
-                ('otc', 'Automatic OTC marking direction', ['send', 'disable']),
                 ('add-meta', 'Include API metadata', ['enable', 'disable']),
             )
         },
     )
-    known = {'local': local_role, 'strict': role_boolean, 'otc': role_otc, 'add-meta': role_boolean}
+    known = {'local': local_role, 'strict': role_boolean, 'add-meta': role_boolean, 'otc': role_otc_removed}
 
     @staticmethod
     def apply(neighbor: Neighbor, local: dict[str, Any]) -> str:
@@ -71,6 +81,5 @@ class ParseRole(Section):
             return 'role requires unequal local-as and peer-as (eBGP only)'
         neighbor.session.role = role['local']
         neighbor.session.role_strict = role.get('strict', False)
-        neighbor.session.role_otc = role.get('otc', True)
         neighbor.session.role_add_meta = role.get('add-meta', True)
         return ''

@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.bgp.message.update.attribute import MED, LocalPreference, NextHop, NextHopSelf, Origin
     from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-    from exabgp.bgp.message.update.attribute.otc import OTC, OTCNone, OTCSelf
+    from exabgp.bgp.message.update.attribute.otc import OTC, OTCSelf
     from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
     from exabgp.configuration.core.parser import Tokeniser
     from exabgp.configuration.schema import ValueType
@@ -803,19 +803,30 @@ class OriginValidator(Validator['Origin']):
         return 'origin (igp, egp, incomplete)'
 
 
+# RFC 9234 section 5 ends with "The operator MUST NOT have the ability to modify the
+# procedures defined in this section", so the per-route `otc none` suppression was removed
+# rather than deprecated. Refusing the token by name tells an operator upgrading a working
+# file why that route is no longer exempt; ignoring it would change the wire in silence.
+OTC_NONE_REMOVED = (
+    "'otc none' was removed in 6.0.0: RFC 9234 section 5 says the operator MUST NOT have the "
+    'ability to modify the Only-to-Customer procedures. Delete the instruction; the egress '
+    'marking is unconditional for IPv4 and IPv6 unicast.'
+)
+
+
 @dataclass
-class OTCValidator(Validator['OTC | OTCSelf | OTCNone']):
+class OTCValidator(Validator['OTC | OTCSelf']):
     """Parse an explicit OTC value or per-session generation instruction."""
 
     name: str = 'otc'
 
-    def _parse(self, value: str) -> 'OTC | OTCSelf | OTCNone':
+    def _parse(self, value: str) -> 'OTC | OTCSelf':
         from exabgp.bgp.message.open.asn import ASN
         from exabgp.bgp.message.open.capability.role import RoleValue
-        from exabgp.bgp.message.update.attribute.otc import OTC, OTCNone, OTCSelf
+        from exabgp.bgp.message.update.attribute.otc import OTC, OTCSelf
 
         if value == 'none':
-            return OTCNone()
+            raise ValueError(OTC_NONE_REMOVED)
         if value == 'self':
             return OTCSelf()
         try:
@@ -824,16 +835,14 @@ class OTCValidator(Validator['OTC | OTCSelf | OTCNone']):
             try:
                 return OTC.make_otc(ASN.from_string(value))
             except ValueError as exc:
-                raise ValueError(
-                    f"'{value}' is not a valid OTC: expected an ASN, self, none, or a BGP role name"
-                ) from exc
+                raise ValueError(f"'{value}' is not a valid OTC: expected an ASN, self, or a BGP role name") from exc
         return OTCSelf(role)
 
     def to_schema(self) -> dict[str, Any]:
         return {'type': 'string', 'format': 'otc'}
 
     def describe(self) -> str:
-        return 'OTC (ASN, self, none, provider, customer, peer, rs, rs-client)'
+        return 'OTC (ASN, self, provider, customer, peer, rs, rs-client)'
 
 
 @dataclass

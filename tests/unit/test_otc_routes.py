@@ -91,7 +91,6 @@ def test_static_routes_reach_wire_with_role_policy(role, automatic, explicit):
     text = """
         route 10.0.0.0/24 next-hop 192.0.2.2;
         route 10.0.1.0/24 next-hop 192.0.2.2 otc 65009;
-        route 10.0.2.0/24 next-hop 192.0.2.2 otc none;
     """
     neighbor, negotiated = configured(role, text)
     updates = sent(neighbor.rib.outgoing, negotiated)
@@ -102,23 +101,8 @@ def test_static_routes_reach_wire_with_role_policy(role, automatic, explicit):
     }
     assert ('10.0.1.0/24' in observed) == explicit
     assert (observed['10.0.0.0/24'].asn if automatic else observed['10.0.0.0/24']) == (65537 if automatic else None)
-    assert observed['10.0.2.0/24'] is None
     if explicit:
         assert observed['10.0.1.0/24'].asn == 65009
-
-
-def test_suppression_changes_identity_and_replaces_advertisement():
-    neighbor, negotiated = configured()
-    rib = neighbor.rib.outgoing
-    ordinary, suppressed = route(), route('none')
-    assert str(ordinary.attributes) == str(suppressed.attributes)
-    assert ordinary.attributes.index() != suppressed.attributes.index()
-    rib.add_to_rib(ordinary)
-    assert sent(rib, negotiated)[0].attributes[Attribute.CODE.OTC].asn == 65537
-    rib.add_to_rib(suppressed)
-    updates = sent(rib, negotiated)
-    assert [str(item.nlri.cidr) for update in updates for item in update.announces] == ['10.0.0.0/24']
-    assert all(Attribute.CODE.OTC not in update.attributes for update in updates)
 
 
 @pytest.mark.parametrize('cache', [True, False])
@@ -289,7 +273,8 @@ def test_role_schema_exports_the_required_role_and_supported_policies():
     exported = schema_to_json_schema(role)
     assert exported['required'] == ['local']
     assert set(exported['properties']['local']['enum']) == {'provider', 'customer', 'peer', 'rs', 'rs-client'}
-    assert set(exported['properties']['otc']['enum']) == {'send', 'disable'}
+    # RFC 9234 section 5 leaves the operator no switch, so none is offered by the schema.
+    assert 'otc' not in exported['properties']
     root = schema_to_json_schema(_get_root_schema())
     assert root['properties']['neighbor']['properties']['role'] == exported
 
@@ -319,7 +304,7 @@ def test_latest_replacement_is_advertised_inside_enhanced_refresh_boundary():
     rib.add_to_rib(route())
     sent(rib, negotiated)
     rib.resend(True)
-    rib.add_to_rib(route('none'))
+    rib.add_to_rib(route('65009'))
     updates = list(rib.updates(True, negotiated=negotiated))
     end = next(
         i
@@ -328,7 +313,7 @@ def test_latest_replacement_is_advertised_inside_enhanced_refresh_boundary():
     )
     advertised = [update for update in updates[:end] if isinstance(update, UpdateCollection) and update.announces]
     assert [str(item.nlri.cidr) for update in advertised for item in update.announces] == ['10.0.0.0/24']
-    assert Attribute.CODE.INTERNAL_OTC_NONE in advertised[0].attributes
+    assert advertised[0].attributes[Attribute.CODE.OTC].asn == 65009
 
 
 @pytest.mark.parametrize('new_role', [RoleValue.RS, RoleValue.NO_ROLE])

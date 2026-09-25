@@ -648,7 +648,6 @@ Neighbor {peer-address}
             '\trole {\n'
             f'\t\tlocal {session.role};\n'
             f'\t\tstrict {"enable" if session.role_strict else "disable"};\n'
-            f'\t\totc {"send" if session.role_otc else "disable"};\n'
             f'\t\tadd-meta {"enable" if session.role_add_meta else "disable"};\n'
             '\t}\n'
         )

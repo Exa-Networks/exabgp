@@ -129,7 +129,6 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
         # A decoded advertisement is wire data, not a new desired export.
         recode_negotiated = copy.copy(negotiated_out)
         recode_negotiated.role = RoleValue.NO_ROLE
-        recode_negotiated.role_otc = False
 
         if not neighbor.rib.enabled:
             continue
@@ -159,8 +158,6 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
             otc = expected_attributes.get(Attribute.CODE.OTC)
             automatic_otc = (
                 otc is None
-                and Attribute.CODE.INTERNAL_OTC_NONE not in expected_attributes
-                and negotiated_out.role_otc
                 and negotiated_out.role in (RoleValue.PROVIDER, RoleValue.RS, RoleValue.PEER)
                 and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
             )

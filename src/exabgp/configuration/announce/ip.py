@@ -64,7 +64,7 @@ class AnnounceIP(ParseAnnounce):
             ),
             'otc': Leaf(
                 type=ValueType.STRING,
-                description='Only-to-customer ASN, self, role assertion, or none',
+                description='Only-to-customer ASN, self, or role assertion',
                 target=ActionTarget.ATTRIBUTE,
                 operation=ActionOperation.ADD,
                 key=ActionKey.NAME,

@@ -135,7 +135,7 @@ class ParseStaticRoute(Section):
             ),
             'otc': Leaf(
                 type=ValueType.STRING,
-                description='Only-to-customer ASN, self, role assertion, or none',
+                description='Only-to-customer ASN, self, or role assertion',
                 target=ActionTarget.ATTRIBUTE,
                 operation=ActionOperation.ADD,
                 key=ActionKey.NAME,
@@ -256,7 +256,7 @@ class ParseStaticRoute(Section):
         'origin IGP|EGP|INCOMPLETE',
         'as-path [ <asn>.. ]',
         'med <16 bits number>',
-        'otc <asn>|self|none|provider|customer|peer|rs|rs-client',
+        'otc <asn>|self|provider|customer|peer|rs|rs-client',
         'local-preference <16 bits number>',
         'atomic-aggregate',
         'community <16 bits number>',

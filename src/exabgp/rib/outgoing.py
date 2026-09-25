@@ -662,20 +662,6 @@ class OutgoingRIB(Cache):
                 and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
             ):
                 self._otc_advertised.setdefault(family, set()).add(route.index())
-            if (
-                negotiated is not None
-                and negotiated.role != RoleValue.NO_ROLE
-                and Attribute.CODE.INTERNAL_OTC_NONE in attributes
-            ):
-                log.debug(
-                    lazymsg(
-                        'rib.otc.suppressed neighbor={neighbor} family="{family}" prefix={prefix}',
-                        neighbor=negotiated.neighbor.session.peer_address,
-                        family=route.nlri.family(),
-                        prefix=route.nlri,
-                    ),
-                    'rib',
-                )
             if grouped:
                 selected.append(route)
             else:

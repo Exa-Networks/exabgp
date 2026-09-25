@@ -64,7 +64,6 @@ neighbor <ip-address> {
     role {
         local <provider | customer | peer | rs | rs-client>;
         strict <enable | disable>; // default disable
-        otc <send | disable>;       // default send
         add-meta <enable | disable>; // default enable
     }
 
@@ -118,7 +117,7 @@ neighbor <ip-address> {
           med <med>;
           aigp <aigp>;
           local-preference <preference>;
-          otc <asn | self | provider | customer | peer | rs | rs-client | none>;
+          otc <asn | self | provider | customer | peer | rs | rs-client>;
           atomic-aggregate;
           aggregator <asn>:<ip-address>;
           path-information <ip-address>;
@@ -256,9 +255,12 @@ configured local role matches it; a missing or different role is an error.
 .Pp
 Without a route-level OTC instruction, role-based marking adds the local ASN
 when sending IPv4 or IPv6 unicast to a customer, peer, or route-server client.
-"otc none" suppresses this automatic insertion for one route; it is internal,
-not a wire attribute or a visible JSON attribute. Existing explicit OTC values
-are preserved, including when automatic marking is disabled.
+There is no way to turn that off. RFC 9234 section 5 says the operator MUST NOT
+have the ability to modify these procedures, so the "role otc" sub-option and the
+route-level "otc none" instruction were removed in 6.0.0; a configuration using
+either is refused with a message naming the RFC. Other address families are
+untouched, as the same section requires. Existing explicit OTC values are
+preserved.
 .Pp
 A route already carrying OTC is refused toward a provider, peer, or route
 server. This applies to explicit "otc self" and role-named forms as well.
@@ -266,16 +268,13 @@ Replacing an advertised route with a refused route withdraws the old advertiseme
 Withdrawals are never refused. Non-unicast families bypass these policy rules,
 while preserving explicit OTC.
 .Pp
-Inline "exabgp encode" accepts numeric OTC and "otc none". Resolving "self"
+Inline "exabgp encode" accepts a numeric OTC. Resolving "self"
 or a role name requires "exabgp encode -c" with a real configuration.
 For "otc self", offline encoding with "local-as auto" requires a concrete
 "peer-as"; if both are automatic, encoding reports a configuration error.
 Named OTC appears as a numeric "otc" member in decoded attribute JSON.
 .Pp
-Role and strict-mode changes restart the session. Changing automatic marking
-or add-meta does not. A marking change replays retained adj-rib-out routes;
-with adj-rib-out disabled, only configured routes and new API announcements
-can pick up the change, because old API routes were not retained.
+Role and strict-mode changes restart the session. Changing add-meta does not.
 .Pp
 Received unicast leaks are logged and annotated on affected announcement entries
 under "meta.route-leak". Disabling add-meta hides the annotation, not the warning

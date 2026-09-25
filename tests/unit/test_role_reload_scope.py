@@ -2,16 +2,18 @@
 # encoding: utf-8
 """test_role_reload_scope.py
 
-Which of the four role settings restart a BGP session on reload.
+Which of the three role settings restart a BGP session on reload.
 
 Reactor.reload() calls reestablish() on any neighbour whose Neighbor.__eq__()
 says it changed, so that comparison is the whole of the restart policy. `local`
-and `strict` change the OPEN and must restart. `otc` and `add-meta` change
-nothing that was negotiated, and restarting a session to change a JSON key would
-be absurd, so they must compare equal.
+and `strict` change the OPEN and must restart. `add-meta` changes nothing that
+was negotiated, and restarting a session to change a JSON key would be absurd,
+so it must compare equal.
 
-These tests exist because the specification originally said to compare all four,
-which would have made `add-meta disable` bounce BGP.
+These tests exist because the specification originally said to compare all of
+them, which would have made `add-meta disable` bounce BGP. There used to be a
+fourth, `otc`; RFC 9234 section 5 forbids the operator that switch and it was
+removed in 6.0.0.
 
 Created for ExaBGP testing framework
 License: 3-clause BSD
@@ -69,15 +71,6 @@ def test_changing_strict_restarts_the_session() -> None:
     assert before != after
 
 
-def test_changing_otc_does_not_restart_the_session() -> None:
-    """It negotiates nothing. It changes what the serializer marks."""
-    before, after = _neighbor(), _neighbor()
-    before.session.role = RoleValue.PROVIDER
-    after.session.role = RoleValue.PROVIDER
-    after.session.role_otc = False
-    assert before == after
-
-
 def test_changing_add_meta_does_not_restart_the_session() -> None:
     """It gates a group in the API output and nothing else."""
     before, after = _neighbor(), _neighbor()
@@ -87,20 +80,11 @@ def test_changing_add_meta_does_not_restart_the_session() -> None:
     assert before == after
 
 
-def test_otc_and_add_meta_together_still_do_not_restart() -> None:
-    before, after = _neighbor(), _neighbor()
-    before.session.role = RoleValue.CUSTOMER
-    after.session.role = RoleValue.CUSTOMER
-    after.session.role_otc = False
-    after.session.role_add_meta = False
-    assert before == after
-
-
 def test_a_live_setting_changing_alongside_a_restart_one_still_restarts() -> None:
-    """`strict` deciding a restart is not weakened by `otc` moving with it."""
+    """`strict` deciding a restart is not weakened by `add-meta` moving with it."""
     before, after = _neighbor(), _neighbor()
     before.session.role = RoleValue.PROVIDER
     after.session.role = RoleValue.PROVIDER
     after.session.role_strict = True
-    after.session.role_otc = False
+    after.session.role_add_meta = False
     assert before != after

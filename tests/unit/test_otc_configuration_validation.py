@@ -48,11 +48,8 @@ def configured(role='', otc='', local_as='65537', peer_as='65002', prefix='10.0.
         ('provider', 'self', '10.0.0.0/24'),
         ('', 'self', '10.0.0.0/24'),
         ('provider', 'provider', '10.0.0.0/24'),
-        ('provider', 'none', '10.0.0.0/24'),
-        ('peer', 'none', '10.0.0.0/24'),
         ('provider', '65009', '10.0.0.0/24'),
         ('peer', '', '2001:db8::/48'),
-        ('provider', 'none', '2001:db8::/48'),
     ],
 )
 def test_generation_validates_expected_otc_semantics(role, otc, prefix):

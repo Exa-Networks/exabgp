@@ -513,23 +513,54 @@ def test_ipv6_unicast_is_inside_the_procedures() -> None:
 
 
 @pytest.mark.rfc('rfc9234#5-operator-cannot-modify')
-@pytest.mark.xfail(
-    strict=True,
-    reason='role { otc disable; } suppresses the egress marking entirely: '
-    'UpdateCollection.messages gates the insertion on negotiated.role_otc, and '
-    'configuration/role.py exposes that as an operator setting. The daemon logs '
-    'role.otc.disabled rfc9234=nonconformant and sends the route unmarked.',
-)
 def test_an_operator_cannot_turn_the_egress_marking_off() -> None:
     """Section 5 closes with the one sentence an implementation cannot make optional.
 
     Being able to switch the marking off is how a route leak leaves this box: the
-    customer downstream then has no way to tell the route was ours to give away.
+    customer downstream then has no way to tell the route was ours to give away. There is
+    no longer a configuration which reaches this path with the marking suppressed, so the
+    test is that the only surface an operator has still marks.
     """
-    neighbor = neighbour('provider', 'otc disable;')
+    neighbor = neighbour('provider')
     negotiated = negotiate(neighbor, None)
 
     attributes = announced_attributes(neighbor, negotiated, 'route 10.0.0.0/24 next-hop 192.0.2.2')
 
     assert len(attributes) == 1
-    assert isinstance(attributes[0].get(Attribute.CODE.OTC), OTC), 'the operator switched off a procedure of Section 5'
+    assert isinstance(attributes[0].get(Attribute.CODE.OTC), OTC), 'the egress marking was not applied'
+
+
+@pytest.mark.rfc('rfc9234#5-operator-cannot-modify')
+@pytest.mark.parametrize(
+    'block, wanted',
+    [
+        ('role { local provider; otc disable; }', "'role otc' was removed"),
+        ('role { local provider; otc send; }', "'role otc' was removed"),
+        (
+            'role { local provider; }\n    static { route 10.0.0.0/24 { next-hop 192.0.2.2; otc none; } }',
+            "'otc none' was removed",
+        ),
+    ],
+)
+def test_the_removed_suppression_options_are_refused_by_name(block: str, wanted: str) -> None:
+    """A configuration which used to switch the marking off fails, and says why.
+
+    Ignoring the line would leave an operator with a file which still parses, still reads
+    as if the marking were off, and marks anyway. The two experiences are not the same, so
+    the parser refuses the token and names the RFC which took the knob away.
+    """
+    text = f"""
+neighbor 192.0.2.1 {{
+    router-id 192.0.2.2;
+    local-address 192.0.2.2;
+    local-as {LOCAL_AS};
+    peer-as {PEER_AS};
+    {block}
+    family {{ ipv4 unicast; }}
+}}
+"""
+    configuration = Configuration([text], text=True)
+
+    assert not configuration.reload(), 'a removed RFC 9234 suppression option was accepted'
+    assert wanted in str(configuration.error), str(configuration.error)
+    assert 'RFC 9234 section 5' in str(configuration.error), str(configuration.error)
