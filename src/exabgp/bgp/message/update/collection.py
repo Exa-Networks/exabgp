@@ -344,6 +344,26 @@ class UpdateCollection(Message):
         return withdrawn, attributes, announced
 
     # The routes MUST have the same attributes ...
+    #
+    # Two things about this method which are not visible from inside it.
+    #
+    # The RFC 7606 5.1 split below, which keeps an announcement and a withdrawal of the same
+    # family out of one UPDATE, is correct and is currently UNREACHABLE from the daemon.  No
+    # production caller ever builds an UpdateCollection holding both: rib/outgoing.py yields
+    # `UpdateCollection([], [nlri], attributes)` for a withdrawal and
+    # `UpdateCollection(announces, [], attributes)` for an announcement, never one object with
+    # both, and the only collections which do hold both come out of _parse_payload on the
+    # receiving side and are never packed again.  So the unit tests in
+    # tests/unit/test_update_carrier_split.py are the ONLY exercise the split gets, which is
+    # also why re-recording all 395 wire captures for it moved no message count anywhere.
+    # Do not read that as dead code to delete: messages() is the public contract for turning a
+    # semantic collection into wire format, the RFC forbids the shape whatever builds it, and
+    # the day a caller does batch the two sides this is what keeps it legal.
+    #
+    # And rib/outgoing.py yields one UpdateCollection PER WITHDRAWN NLRI, so two hundred
+    # withdrawals leave as two hundred UPDATEs no matter how well this method batches.  That is
+    # a real inefficiency, it is why no recorded capture has ever held a batched withdrawal,
+    # and it is not fixed here because it belongs to the RIB and needs its own testing.
     def messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator[bytes, None, None]:
         # Import here to avoid circular import
         from exabgp.bgp.message.update.nlri.empty import Empty
@@ -466,18 +486,23 @@ class UpdateCollection(Message):
             otc = OTC.make_otc(negotiated.local_as).pack_attribute(negotiated)
         attr = base_attr + otc if v4_announces else base_attr
 
-        # Withdraws/NLRIS (IPv4 unicast)
-        msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
-
-        if msg_size < 0:
-            # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-            log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
-            return
-
-        if msg_size == 0 and (has_v4 or has_mp):
-            # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-            log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
-            return
+        # What is left of an UPDATE once the path attributes of an ANNOUNCEMENT are in it.
+        # 2 bytes for each of the two prefix() header.
+        #
+        # This budget belongs to the announcement passes and to nothing else.  RFC 4271 4.3
+        # makes the Path Attributes field optional, and RFC 4760 3 says an UPDATE carrying
+        # MP_UNREACH_NLRI "is not required to carry any other path attributes", so a withdrawal
+        # never needs what an announcement needs.  Since the carriers were split it does not
+        # even carry it: the passes below send a withdrawal with an empty attribute field.
+        #
+        # It used to decide both.  Two guards here returned from the whole method when this
+        # number reached zero, so attributes close to the negotiated message size threw the
+        # pending withdrawals away with the announcement they could not pack.  A withdrawal
+        # which is never sent leaves the peer forwarding to a prefix we have stopped
+        # advertising and says so nowhere, which is worse than an announcement it never had.
+        # The refusal now stands in front of each announcement pass, and the withdrawals are
+        # judged on their own budget.
+        msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)
 
         # RFC 7606 5.1: "An UPDATE message MUST NOT contain more than one of the following:
         # non-empty Withdrawn Routes field, non-empty Network Layer Reachability Information
@@ -498,7 +523,9 @@ class UpdateCollection(Message):
                 packed = bytes(nlri.pack_nlri(negotiated))
                 if withdraws_size + len(packed) > withdraw_size:
                     if not withdraws:
-                        log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
+                        # A single withdrawal wider than a whole UPDATE. The reason is not the
+                        # attributes: this pass sends none, and the budget is the whole message.
+                        log.critical(lazymsg('update.pack.error reason=withdrawal_too_large'), 'parser')
                         return
                     yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b''))
                     withdraws = b''
@@ -507,6 +534,13 @@ class UpdateCollection(Message):
                 withdraws_size += len(packed)
             if withdraws:
                 yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b''))
+
+        if v4_announces and msg_size <= 0:
+            # The attributes these routes need leave no room for a single NLRI, so they cannot
+            # be announced at all. This is the refusal the two guards above used to make, now
+            # made where it applies: the withdrawals have already gone out.
+            log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
+            v4_announces = []
 
         announced = b''
         announced_size = 0
@@ -540,11 +574,6 @@ class UpdateCollection(Message):
                 if announce_routed and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
                 else base_attr
             )
-            msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)
-            if msg_size <= 0:
-                log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
-                return
-
             mp_announce = MPNLRICollection.from_routed(announce_routed, {}, afi, safi)
             mp_withdraw = MPNLRICollection(withdraw_nlris, {}, afi, safi)
 
@@ -552,10 +581,30 @@ class UpdateCollection(Message):
             # MP_REACH_NLRI.  Emitting all the withdrawals first keeps the ordering the
             # shared message used to give, so a prefix is still withdrawn before it is
             # re-announced, including across packet boundaries.
-            if include_withdraw:
-                withdraw_size = negotiated.msg_size - 19 - 2 - 2 - len(base_attr)
-                for mpurnlri in mp_withdraw.packed_unreach_attributes(negotiated, withdraw_size):
-                    yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mpurnlri + base_attr))
+            #
+            # The withdrawals are sized on base_attr, which is what their messages carry, and
+            # the announcements on attr, which may hold an OTC the withdrawals do not.  The two
+            # are therefore judged separately, for the same reason as the IPv4 block above.
+            withdraw_size = negotiated.msg_size - 19 - 2 - 2 - len(base_attr)
+            if include_withdraw and withdraw_nlris:
+                if withdraw_size <= 0:
+                    # packed_unreach_attributes raises RuntimeError rather than yield nothing,
+                    # so it is never called with a budget which cannot hold anything.
+                    log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
+                else:
+                    for mpurnlri in mp_withdraw.packed_unreach_attributes(negotiated, withdraw_size):
+                        yield self._message(
+                            UpdateCollection.prefix(b'') + UpdateCollection.prefix(mpurnlri + base_attr)
+                        )
+
+            msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)
+            if msg_size <= 0:
+                # Only this family's announcements are impossible.  Returning would also drop
+                # the families after it, whose attributes may well fit: attr differs between
+                # them by the OTC.  Nothing is logged when there was nothing to announce.
+                if announce_routed:
+                    log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
+                continue
 
             # RFC 7606 5.1: "The MP_REACH_NLRI or MP_UNREACH_NLRI attribute (if present)
             # SHALL be encoded as the very first path attribute in an UPDATE message", so

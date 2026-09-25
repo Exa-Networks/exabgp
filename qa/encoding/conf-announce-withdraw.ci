@@ -1,0 +1,62 @@
+option:file:conf-announce-withdraw.conf
+# RFC 7606 5.1: an UPDATE "MUST NOT contain more than one of the following: non-empty
+# Withdrawn Routes field, non-empty Network Layer Reachability Information field,
+# MP_REACH_NLRI attribute, and MP_UNREACH_NLRI attribute", and the MP attribute "SHALL be
+# encoded as the very first path attribute".
+#
+# Nothing else in this corpus watches either rule against a session which both announces and
+# withdraws.  When the encoder was split to obey them, all 395 recorded captures were
+# re-recorded and not one changed message count, because no other capture here does both.
+#
+# This one does, and it is written so that the ORDER is asserted and not only the contents.
+# The server matches the messages of a sequence in any order, so each message which has to
+# follow another is given a sequence of its own.
+#
+# Steps three and four of run/conf-announce-withdraw.run are written to one pipe in a single
+# write, with the ANNOUNCEMENT first, so the daemon holds both before it flushes its
+# adj-rib-out.  What has to come back is the other way round: a prefix being replaced is
+# withdrawn before the route which replaces it is advertised.  A peer told to add before it
+# is told to drop holds, until the next packet arrives, a route which should already be gone.
+#
+# The bytes below were not written by hand.  They were produced by loading this .conf with
+# the real parser, parsing each API command with the real route parser, putting the routes
+# through the real adj-rib-out, and packing what it yielded with UpdateCollection.messages,
+# and then confirmed a second time by this test passing against a live daemon.
+
+# The session comes up while the process is already sending, so the End-of-RIB markers and
+# the two opening announcements share a sequence and their order is not fixed.
+1:cmd:announce eor ipv4 unicast
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
+1:cmd:announce eor ipv6 unicast
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000201
+1:cmd:announce route 10.0.0.0/24 next-hop 192.0.2.1 origin igp med 100 local-preference 100
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0037:02:0000001C40010100400200400304C00002018004040000006440050400000064180A0000
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"10.0.0.1","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":100,"local-preference":100},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"10.0.0.0/24"}]}}}}}}
+1:cmd:announce route 2001:db8:1::/64 next-hop 2001:db8::1 origin igp med 100 local-preference 100
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004D:02:00000036800E1E0002011020010DB8000000000000000000000001004020010DB800010000400101004002008004040000006440050400000064
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"10.0.0.1","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":100,"local-preference":100},"announce":{"ipv6 unicast":{"2001:db8::1":[{"nlri":"2001:db8:1::/64"}]}}}}}}
+
+# The legacy IPv4 pair.  Sequence 2 is the withdrawal alone: four octets of Withdrawn Routes
+# and a zero length path attribute field, because RFC 4271 4.3 makes that field optional and
+# what it describes is the routes being announced, of which this message has none.
+2:cmd:withdraw route 10.0.0.0/24
+2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001B:02:0004180A00000000
+2:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"10.0.0.1","direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"10.0.0.0/24"}]}}}}}
+
+# Sequence 3 is the announcement asked for in the same write, and it cannot be reached until
+# the withdrawal above has matched.  The two NLRI carriers are in two messages, and the
+# announcement is the one carrying the path attributes.
+3:cmd:announce route 10.0.2.0/24 next-hop 192.0.2.1 origin igp med 100 local-preference 100
+3:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0037:02:0000001C40010100400200400304C00002018004040000006440050400000064180A0002
+3:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"10.0.0.1","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":100,"local-preference":100},"announce":{"ipv4 unicast":{"192.0.2.1":[{"nlri":"10.0.2.0/24"}]}}}}}}
+
+# The same shape for a multiprotocol family, where the two carriers are attributes rather
+# than fields.  MP_UNREACH_NLRI is alone in its message, and first.
+4:cmd:withdraw route 2001:db8:1::/64
+4:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0026:02:0000000F800F0C0002014020010DB800010000
+4:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"10.0.0.1","direction":"in","message":{"update":{"withdraw":{"ipv6 unicast":[{"nlri":"2001:db8:1::/64"}]}}}}}
+
+# And MP_REACH_NLRI, alone and first, in the message after it rather than beside it.
+5:cmd:announce route 2001:db8:2::/64 next-hop 2001:db8::1 origin igp med 100 local-preference 100
+5:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004D:02:00000036800E1E0002011020010DB8000000000000000000000001004020010DB800020000400101004002008004040000006440050400000064
+5:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":65533,"peer":65533},"router-id":"10.0.0.1","direction":"in","message":{"update":{"attribute":{"origin":"igp","med":100,"local-preference":100},"announce":{"ipv6 unicast":{"2001:db8::1":[{"nlri":"2001:db8:2::/64"}]}}}}}}

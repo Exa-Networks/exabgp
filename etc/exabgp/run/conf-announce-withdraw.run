@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""Announce and withdraw, so RFC 7606 5.1 has something to split.
+
+Steps three and four go out in a single write, announcement first, so the daemon has both
+in hand before it flushes its adj-rib-out.  What must come back is the other way round: a
+prefix being replaced is withdrawn before the route replacing it is advertised, or the peer
+holds, for as long as the two packets are apart, a route it was told to drop.  The .ci file
+puts each of them in a sequence of its own, which is what makes the test assert the order
+rather than only the contents.
+"""
+
+import time
+
+from exabgp_api import send, wait_for_ack, wait_for_shutdown
+
+PAUSE_SECONDS = 0.3
+
+
+def main() -> None:
+    batches = [
+        # The two families, announced one at a time, so each opening UPDATE is on its own.
+        'announce route 10.0.0.0/24 next-hop 192.0.2.1 med 100',
+        'announce route 2001:db8:1::/64 next-hop 2001:db8::1 med 100',
+        # One write, announcement asked for first: the legacy IPv4 fields.
+        'announce route 10.0.2.0/24 next-hop 192.0.2.1 med 100\n'
+        'withdraw route 10.0.0.0/24 next-hop 192.0.2.1 med 100',
+        # One write, announcement asked for first: an MP family.
+        'announce route 2001:db8:2::/64 next-hop 2001:db8::1 med 100\n'
+        'withdraw route 2001:db8:1::/64 next-hop 2001:db8::1 med 100',
+    ]
+
+    time.sleep(PAUSE_SECONDS)
+
+    for batch in batches:
+        send(batch)
+        time.sleep(PAUSE_SECONDS)
+
+    wait_for_ack(expected_count=len(batches) + 2)
+    wait_for_shutdown()
+
+
+if __name__ == '__main__':
+    main()
