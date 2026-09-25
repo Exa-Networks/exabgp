@@ -98,10 +98,10 @@ main  9863 passed, 2 skipped, 7 xfailed, 0 failed   tests/fuzz 498 -> 2975
 | 2.5 | repeated BGP-LS attribute TLV emits a duplicate JSON key | ⚪ declined | see below |
 | 2.9 | no sub-TLV length check at all in 5.0 | ✅ fixed 2026-09-25 | ported from main, overrun refused, remnant tolerated. See §11. |
 | 2.10 | 19 `except: pass` sites swallowing errors | ✅ fixed 2026-09-25 | `silent_except` 19 → 0. One was a real bug. See §14. |
-| 2.11 | `application/tojson.py` cannot be imported at all | ❓ decision | `import thread`, the Python 2 name. Dead code; main deleted it. |
-| 2.12 | `socket.SO_BINDTODEVICE = 25` assigned into the stdlib module | 🟡 open | a Linux constant, set globally for the process, then passed to `setsockopt` anyway |
-| 2.13 | unreachable duplicate `except OSError` handlers | 🟡 open | `cli.py` ×2 pairs, `check_fifo` ×3; messages which can never print |
-| 2.14 | `pipe.py` answers a failed `os.open` with a `terminate()` which does not terminate | 🟡 open | sets a flag, cleans up, then the loop carries on with `r_pipe = None` |
+| 2.11 | `application/tojson.py` cannot be imported at all | ✅ removed 2026-09-25 | `d0ef6b397`. Sole grep hit was its own docstring. |
+| 2.12 | `socket.SO_BINDTODEVICE = 25`, and an empty `source-interface` bound to `'\0'` | ✅ fixed 2026-09-25 | `8805ef45e`. The NUL bind was live; the mutation is latent. See §15. |
+| 2.13 | unreachable duplicate `except OSError` handlers | ✅ fixed 2026-09-25 | `ef49cff45`. Four pairs in `cli.py`, not two. See §15. |
+| 2.14 | the control process hung for ever on a pipe it could not open | ✅ fixed 2026-09-25 | `ef49cff45`. Reachable in production, measured. See §15. |
 | 2.6 | MP_REACH-first ordering not ported | ⏸ blocked | 91 captures need re-recording |
 | 2.7 | dead `src/exabgp/cli/` VyOS prototype | ✅ removed 2026-09-25 | 6 files, `git rm`. `exabgp-cli` verified still working. |
 | 2.8 | `src/exabgp/conf/yang/` now orphaned | ❓ decision | the deleted prototype was its only importer from outside |
@@ -184,15 +184,16 @@ No rename, no removal, no retype of an existing key.
    eight byte positions. Source is right; only the sweep is thinner.
 5. **main dropped `as_dict()` from the BGP-LS TLVs**, so 5.0's dual-renderer agreement sweep
    has nothing to attach to. Nothing owed if that was deliberate.
-6. **Delete 5.0's `application/tojson.py`?** It cannot be imported at all: `import thread`,
-   the Python 2 name. Unreferenced, not an entry point, and main deleted it. Same call you
-   already made for the VyOS `cli/` prototype. See §14 (2.11).
-7. **`socket.SO_BINDTODEVICE = 25` (2.12).** A diagnosis fix rather than a behaviour one,
-   since both trees raise, but it touches a production config path and removes a global
-   mutation of the stdlib `socket` module. Worth doing; wanted your word first.
+6. ~~Delete `application/tojson.py`~~ and ~~`SO_BINDTODEVICE`~~ done, along with 2.13 and
+   2.14, in `d0ef6b397`, `8805ef45e` and `ef49cff45`. See §15.
+7. **Where `check_fifo` writes its errors.** It writes to `sys.stdout`, and in `Control`
+   stdout is the pipe to the daemon, so a rejected fifo posts its error text to the daemon as
+   a command line rather than to an operator. Harmless today because the process exits
+   straight after, but the message goes to the wrong place. Routing it per caller changes
+   `cli.py`'s output too, so it is a decision rather than a fix.
 
-Two of these, 4 and 5, are "nothing may be owed" rather than open work. Items 1, 6 and 7 are
-deletions or changes to production paths, which is why they are here rather than done.
+Items 4 and 5 are "nothing may be owed" rather than open work. Item 1 is a deletion, which is
+why it is here rather than done.
 
 ---
 
@@ -298,7 +299,7 @@ output moved. `med` and `local-preference` stay JSON numbers, `aigp` stays the q
 | `check_exa_style` | **had no cannot-run path at all**: `rglob` over a missing tree yields nothing, every rule counts 0, it prints `ok` four times and **exits 0** |
 
 The last is the one that matters. A clean bill of health over an empty walk, and nobody
-investigates a green gate. This is the fourth instance of the pattern in §15 below. Each gate
+investigates a green gate. This is the fourth instance of the pattern in §16 below. Each gate
 now has `CANNOT_RUN = 2`, and `check_exa_style` a `MIN_SOURCE_FILES = 50` floor on the walk
 against 392 today, so it cannot fire on a real checkout.
 
@@ -800,7 +801,80 @@ sets `terminating` and cleans up, and `loop()` then carries on with `self.r_pipe
 
 ---
 
-## 15. Process rules learned the hard way
+## 15. The four the silence sweep left behind, 2026-09-25
+
+All four done: `d0ef6b397`, `8805ef45e`, `ef49cff45`. Two were live in production, two were
+not, and the difference was only established by running them.
+
+### 2.14 was the serious one: the control process hung for ever
+
+`loop()` answered a failed `os.open(self.recv, ...)` with `terminate()`, which does not exit
+on its first call. Reachable with a mode `0400` recv fifo, which passes `check_fifo` because
+that tests `R_OK`, and then refuses `O_RDWR`. Measured, both trees, same fifo:
+
+```
+HEAD:  enable-ack
+       ^ then nothing. Killed at the 10s timeout, still running.
+now:   could not open the named pipe /.../exabgp.in ([Errno 13] Permission denied)
+       ^ 0s
+```
+
+It did not crash on the `None`: `read_on` filters it, so it polled stdin alone for ever,
+having **already written `enable-ack` to the daemon**, and went on forwarding commands into
+the write fifo while reading answers from nowhere. Every cli invocation behind it then waits
+out its five second timeout and prints "no end of command message received". With stdin at EOF
+it exited 1 instead, by accident, through the `POLLHUP` branch: right code, wrong reason,
+silent either way.
+
+### 2.13 The handlers were dead since Python 3.3, not since last year
+
+`IOError is OSError` and `socket.error is OSError` are both True from Python 3.3, verified
+here, so commit `2c806ac62` ("Replace deprecated IOError with OSError") did not create the
+dead clauses. It only made them visible. They had never run on any Python 3.
+
+`check_fifo`'s three messages are older than that. `3482b2c93` lifted them out of code which
+really did `os.remove()`, `os.mkfifo()` and `sendall()` into a body which only calls `os.stat`
+and `os.access`, so "could not create", "could not access/delete" and "could not write on"
+have described work that function has not done since 2015. The one clause which could run
+printed "could not create the named pipe" for every stat failure, a plain missing fifo
+included. They were replaced rather than merged, because the conditions they named are not
+conditions the function can meet: `os.access` cannot raise, so `os.stat` is the only fallible
+call and its errno is what matters.
+
+`cli.py` had **four** such pairs, not the two recorded. An AST scan over all of `src/exabgp`
+found those four and nothing else. Three were byte-identical and deleted; the fourth had
+*lost* information, because `open_writer`'s reachable handler printed "could not communicate
+with ExaBGP" with the reason discarded, so a fifo we may not open read identically to one
+which had gone away.
+
+### 2.12 One live fault, one latent, and a correction
+
+The live one: `if interface is not None` let an empty `source-interface` reach `setsockopt`,
+which bound to `str('' + '\0')`. Demonstrated against HEAD:
+
+```
+an empty interface still asked for SO_BINDTODEVICE: b'\x00'
+```
+
+The latent one, and a correction to what §14 implied. `socket.SO_BINDTODEVICE = 25` does
+mutate the stdlib module for the life of the process, but **Python exposes SO_BINDTODEVICE on
+macOS as well as Linux, 4404 here**, so that branch is reached only on a platform which
+genuinely cannot do this. The mutation check passes against the unfixed code for that reason.
+It was kept because the branch is wrong wherever it does run, not because it fires here. The
+earlier claim that macOS lacks the option was wrong, mine as much as the agent's.
+
+Also fixed: all three failures answered with "Could not bind to device <name>", blaming the
+name for a platform without the option and for a `setsockopt` refused for want of CAP_NET_RAW.
+An `if_nametoindex` pre-check tells them apart, which is main's shape.
+
+### Left as a decision
+
+`check_fifo` writes to `sys.stdout`, and in `Control` stdout is the pipe to the daemon, so a
+rejected fifo posts its error text to the daemon as a command line. See §5 item 7.
+
+---
+
+## 16. Process rules learned the hard way
 
 - **Never `git add -A`.** Commit `2114ec208` swept up an agent's unreviewed BGP-LS work and
   was pushed with a message that did not describe it. Corrected in `a8683597e` rather than
