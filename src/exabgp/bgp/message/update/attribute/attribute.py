@@ -172,10 +172,14 @@ class Attribute:
         TRANSITIVE = 0x40  # .  64 - 0100 0000
         OPTIONAL = 0x80  # . 128 - 1000 0000
 
+        # RFC 4271 4.3: the lower-order four bits of the Attribute Flags octet are unused
+        UNUSED = 0x0F  # .  15 - 0000 1111
+
         MASK_EXTENDED = 0xEF  # . 239 - 1110 1111
         MASK_PARTIAL = 0xDF  # . 223 - 1101 1111
         MASK_TRANSITIVE = 0xBF  # . 191 - 1011 1111
         MASK_OPTIONAL = 0x7F  # . 127 - 0111 1111
+        MASK_UNUSED = 0xF0  # . 240 - 1111 0000
 
         def __str__(self):
             r = []
@@ -269,13 +273,28 @@ class Attribute:
         return self.ID >= other.ID
 
     @classmethod
+    def _registry_key(cls, attribute_id, flag):
+        """The key register() stores under, and the only key a lookup may build.
+
+        Two parts of the flags octet say nothing about which class decodes the attribute.
+        Extended Length describes how the length field was encoded, and the lower four bits
+        are unused: RFC 4271 4.3 requires them to be ignored on receipt, so a peer which
+        sets one must still be understood. Both are normalised away here.
+
+        Optional, Transitive and Partial are not normalised away, because they do identify
+        the attribute: the flag conflict handling in Attributes.parse relies on this key
+        missing when a peer sets one of the three wrongly.
+        """
+        return (attribute_id, (flag | Attribute.Flag.EXTENDED_LENGTH) & Attribute.Flag.MASK_UNUSED)
+
+    @classmethod
     def register(cls, attribute_id=None, flag=None):
         def register_attribute(klass):
             aid = klass.ID if attribute_id is None else attribute_id
-            flg = klass.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
-            if (aid, flg) in cls.registered_attributes:
+            key = cls._registry_key(aid, klass.FLAG if flag is None else flag)
+            if key in cls.registered_attributes:
                 raise RuntimeError('only one class can be registered per attribute')
-            cls.registered_attributes[(aid, flg)] = klass
+            cls.registered_attributes[key] = klass
             cls.attributes_known.append(aid)
             if klass.FLAG & Attribute.Flag.OPTIONAL:
                 cls.attributes_optional.append(aid)
@@ -287,11 +306,11 @@ class Attribute:
 
     @classmethod
     def registered(cls, attribute_id, flag):
-        return (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH) in cls.registered_attributes
+        return cls._registry_key(attribute_id, flag) in cls.registered_attributes
 
     @classmethod
     def klass(cls, attribute_id, flag):
-        key = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
+        key = cls._registry_key(attribute_id, flag)
         if key in cls.registered_attributes:
             kls = cls.registered_attributes[key]
             kls.ID = attribute_id
@@ -306,7 +325,7 @@ class Attribute:
         if cache and data in cls.cache.get(cls.ID, {}):
             return cls.cache[cls.ID].retrieve(data)
 
-        key = (attribute_id, flag | Attribute.Flag.EXTENDED_LENGTH)
+        key = cls._registry_key(attribute_id, flag)
         if key in Attribute.registered_attributes.keys():
             instance = cls.klass(attribute_id, flag).unpack(data, direction, negotiated)
 

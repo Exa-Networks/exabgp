@@ -3,9 +3,9 @@ from __future__ import annotations
 from struct import pack
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
+from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN, check_source_and_group
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.protocol.ip import IP
 
 # +-----------------------------------+
 # |      RD   (8 octets)              |
@@ -80,29 +80,20 @@ class SourceJoin(MVPN):
         datalen = len(data)
         if datalen not in (MVPN_SOURCEJOIN_IPV4_LENGTH, MVPN_SOURCEJOIN_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Invalid C-Multicast Route length ({datalen} bytes).')
+        # The Multicast Source Length octet sits after the RD and the Source AS, and the
+        # two address length octets are what the slices below trust to read the addresses.
+        check_source_and_group(data, 12, 'C-Multicast Source Tree Join route')
         cursor = 0
         rd = RouteDistinguisher.unpack(data[cursor:8])
         cursor += 8
         source_as = int.from_bytes(data[cursor : cursor + 4], 'big')
         cursor += 4
-        sourceiplen = int(data[cursor] / 8)
+        sourceiplen = data[cursor] // 8
         cursor += 1
-        if sourceiplen != IPv4.BYTES and sourceiplen != IPv6.BYTES:
-            raise Notify(
-                3,
-                5,
-                f'Invalid C-Multicast Route length ({sourceiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
-            )
         sourceip = IP.unpack(data[cursor : cursor + sourceiplen])
         cursor += sourceiplen
-        groupiplen = int(data[cursor] / 8)
+        groupiplen = data[cursor] // 8
         cursor += 1
-        if groupiplen != IPv4.BYTES and groupiplen != IPv6.BYTES:
-            raise Notify(
-                3,
-                5,
-                f'Invalid C-Multicast Route length ({groupiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
-            )
         groupip = IP.unpack(data[cursor : cursor + groupiplen])
         return cls(afi=afi, rd=rd, source=sourceip, group=groupip, source_as=source_as, packed=data)
 

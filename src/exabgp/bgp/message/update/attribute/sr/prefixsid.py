@@ -20,7 +20,16 @@ from exabgp.util import hexstring
 # Label-Index TLV ( type = 1 ) is mandatory for this attribute.
 
 # SR TLV type codes
+SR_TLV_LABEL_INDEX = 1  # Label-Index TLV type
 SR_TLV_SRGB = 3  # Segment Routing Global Block TLV type
+
+# RFC 8669 section 6: "if a recognized TLV appears more than once in a BGP Prefix-SID
+# attribute while the specification only allows for a single occurrence, then all the
+# occurrences of the TLV other than the first one SHALL be discarded".  Sections 3.1 and
+# 3.2 give the attribute one Label-Index and one Originator SRGB, and this document
+# defines no TLV which may repeat.  An unknown type is deliberately absent: the same
+# section promises unknown TLVs are "propagated unmodified", so a repeat of one is kept.
+SR_SINGLE_OCCURRENCE_TLVS = frozenset((SR_TLV_LABEL_INDEX, SR_TLV_SRGB))
 
 
 @Attribute.register()
@@ -56,7 +65,17 @@ class PrefixSid(Attribute):
         # re-encodes something it never sent, and an unregistered TLV cannot be
         # re-encoded at all
         packed = bytes(data)
+        if not packed:
+            # RFC 8669 section 6 counts an attribute "not meeting the minimum attribute
+            # length requirement" as malformed.  Attributes.VALID_ZERO lets a zero length
+            # BGP_PREFIX_SID reach this decoder instead of being withdrawn by the generic
+            # zero-length rule, so the refusal has to happen here for Attributes.DISCARD
+            # to be the thing which decides what a malformed Prefix-SID costs.
+            raise Notify(3, 5, 'invalid BGP prefix SID attribute, it carries no TLV')
         sr_attrs = []
+        kept = []
+        single_seen = set()
+        repeat_discarded = False
         while data:
             if len(data) < cls.TLV_HEADER_SIZE:
                 raise Notify(3, 5, 'invalid BGP prefix SID attribute, truncated TLV header')
@@ -66,14 +85,28 @@ class PrefixSid(Attribute):
             length = unpack('!H', data[1:3])[0]
             if len(data) < length + cls.TLV_HEADER_SIZE:
                 raise Notify(3, 5, 'invalid BGP prefix SID attribute, TLV announces more than it carries')
+            if scode in SR_SINGLE_OCCURRENCE_TLVS:
+                if scode in single_seen:
+                    # Discarded, and not carried onwards either: RFC 8669 section 6 offers
+                    # propagation to unknown TLVs alone, which is why the check above names
+                    # the two types the document limits to one rather than every type.
+                    repeat_discarded = True
+                    data = data[length + 3 :]
+                    continue
+                single_seen.add(scode)
             if scode in cls.registered_srids:
                 klass = cls.registered_srids[scode].unpack(data[3 : length + 3], length)
             else:
                 klass = GenericSRId(scode, data[3 : length + 3])
             klass.TLV = scode
             sr_attrs.append(klass)
+            kept.append(bytes(data[: length + 3]))
             data = data[length + 3 :]
-        return cls(sr_attrs=sr_attrs, packed=packed)
+        if not repeat_discarded:
+            return cls(sr_attrs=sr_attrs, packed=packed)
+        # Rebuilt from the peer's own per-TLV framing rather than from the decoded TLVs, so
+        # the only difference between what arrived and what leaves is the discarded repeat.
+        return cls(sr_attrs=sr_attrs, packed=b''.join(kept))
 
     def json(self, compact=None):
         content = ', '.join(d.json() for d in self.sr_attrs)

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
+from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN, check_source_and_group
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.ip import IP, IPv4, IPv6
+from exabgp.protocol.ip import IP
 
 # +-----------------------------------+
 # |      RD   (8 octets)              |
@@ -74,27 +74,18 @@ class SourceAD(MVPN):
         datalen = len(data)
         if datalen not in (MVPN_SOURCEAD_IPV4_LENGTH, MVPN_SOURCEAD_IPV6_LENGTH):  # IPv4 or IPv6
             raise Notify(3, 5, f'Unsupported Source Active A-D route length ({datalen} bytes).')
+        # The Multicast Source Length octet sits after the RD, and the two address length
+        # octets are what the slices below trust to read the addresses.
+        check_source_and_group(data, 8, 'Source Active A-D Route')
         cursor = 0
         rd = RouteDistinguisher.unpack(data[cursor:8])
         cursor += 8
-        sourceiplen = int(data[cursor] / 8)
+        sourceiplen = data[cursor] // 8
         cursor += 1
-        if sourceiplen != IPv4.BYTES and sourceiplen != IPv6.BYTES:
-            raise Notify(
-                3,
-                5,
-                f'Unsupported Source Active A-D Route Multicast Source IP length ({sourceiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
-            )
         sourceip = IP.unpack(data[cursor : cursor + sourceiplen])
         cursor += sourceiplen
-        groupiplen = int(data[cursor] / 8)
+        groupiplen = data[cursor] // 8
         cursor += 1
-        if groupiplen != IPv4.BYTES and groupiplen != IPv6.BYTES:
-            raise Notify(
-                3,
-                5,
-                f'Unsupported Source Active A-D Route Multicast Group IP length ({groupiplen * 8} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
-            )
         groupip = IP.unpack(data[cursor : cursor + groupiplen])
 
         # Missing implementation of this check from RFC 6514:

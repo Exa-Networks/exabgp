@@ -10,7 +10,14 @@ import json
 from struct import pack
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
+
+# RFC 8669 3.2: two octets of flags, then one or more ranges of three octets of base
+# followed by three octets of range.  Named so the check in unpack and the walk it guards
+# read the same sizes and cannot drift apart.
+SRGB_FLAGS_SIZE = 2
+SRGB_RANGE_SIZE = 6
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -60,11 +67,19 @@ class SrGb:
 
     @classmethod
     def unpack(cls, data, length):
+        # the walk below reads six octets at a time and used to trust the peer for the
+        # count: a value which is not 2 + N*6 ran it off the end of the buffer and raised
+        # struct.error, which is not a decoder result.  It left Update.unpack_message
+        # untyped and came back to the peer from the catch-all in reactor/protocol.py as
+        # Notify(1, 0), a Message Header Error for an attribute fault.  Peer bytes produce
+        # a Notify, and Attributes.DISCARD then makes it cost the attribute.
+        if length < SRGB_FLAGS_SIZE + SRGB_RANGE_SIZE or (length - SRGB_FLAGS_SIZE) % SRGB_RANGE_SIZE:
+            raise Notify(3, 5, f'invalid originator SRGB TLV size, should be 2 + n*6 but {length} received')
         srgbs = []
         # Flags: 16 bits of flags.  None is defined by this document.  The
         # flag field MUST be clear on transmission and MUST be ignored at
         # reception.
-        data = data[2:]
+        data = data[SRGB_FLAGS_SIZE:]
         # SRGB: 3 octets of base followed by 3 octets of range.  Note that
         # the SRGB field MAY appear multiple times.  If the SRGB field
         # appears multiple times, the SRGB consists of multiple ranges.
@@ -72,7 +87,7 @@ class SrGb:
             base = unpack('!L', bytes([0]) + data[:3])[0]
             srange = unpack('!L', bytes([0]) + data[3:6])[0]
             srgbs.append((base, srange))
-            data = data[6:]
+            data = data[SRGB_RANGE_SIZE:]
         return cls(srgbs=srgbs)
 
     def json(self, compact=None):

@@ -48,6 +48,11 @@ from exabgp.logger import log
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
 
+# RFC 4271 6.1 Message Header Error, and the subcode the reactor answers itself because
+# the header is read before any decoder sees the message.
+MESSAGE_HEADER_ERROR = 1
+BAD_MESSAGE_LENGTH = 2
+
 _UPDATE = Update([], b'')
 _OPERATIONAL = Operational(0x00)
 
@@ -104,8 +109,9 @@ class Protocol:
         md5 = self.neighbor['md5-password']
         md5_base64 = self.neighbor['md5-base64']
         ttl_out = self.neighbor['outgoing-ttl']
+        ttl_in = self.neighbor['incoming-ttl']
         itf = self.neighbor['source-interface']
-        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
+        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf, incoming_ttl=ttl_in)
 
         for connected in self.connection.establish():
             yield False
@@ -239,6 +245,13 @@ class Protocol:
                     elif packets:
                         self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, None, header, body)
                 # XXX: is notify not already Notify class ?
+                # RFC 4271 6.1 requires the Data field of a Bad Message Length to contain
+                # the erroneous Length field, so the two octets go back to the peer rather
+                # than the English sentence Connection.reader wrote for the log. `length`
+                # is that Length field: it is what reader read out of the header and
+                # refused. The three in-parser length checks already send it.
+                if (notify.code, notify.subcode) == (MESSAGE_HEADER_ERROR, BAD_MESSAGE_LENGTH):
+                    raise Notify(notify.code, notify.subcode, length.to_bytes(2, 'big'))
                 raise Notify(notify.code, notify.subcode, str(notify))
 
             if msg_id not in Message.CODE.MESSAGES:

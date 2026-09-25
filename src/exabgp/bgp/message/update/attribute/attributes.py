@@ -19,6 +19,8 @@ from exabgp.bgp.message.update.attribute.attribute import Discard
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE
+from exabgp.bgp.message.update.attribute.aspath import SET
+from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 
@@ -90,6 +92,17 @@ class Attributes(dict):
         Attribute.CODE.NEXT_HOP,
         Attribute.CODE.MED,
         Attribute.CODE.LOCAL_PREF,
+        # RFC 7606 sections 7.8, 7.14 and 7.15 give a malformed Community, Extended
+        # Community and IPv6 Address Specific Extended Community the same answer:
+        # treat-as-withdraw, not a session reset.  The three decoders raise Notify(3, 1)
+        # for a length which is not a whole number of communities, and without the code
+        # listed here that Notify walks out of parse() and drops the adjacency over one
+        # badly encoded optional transitive attribute forwarded from several hops away,
+        # which is the failure RFC 7606 was written to remove.  LARGE_COMMUNITY has been
+        # in this tuple since it was added, so the three below were drift, not a decision.
+        Attribute.CODE.COMMUNITY,
+        Attribute.CODE.EXTENDED_COMMUNITY,
+        Attribute.CODE.IPV6_EXTENDED_COMMUNITY,
         Attribute.CODE.LARGE_COMMUNITY,
     )
 
@@ -99,6 +112,11 @@ class Attributes(dict):
         # RFC 7752 section 5.3 and RFC 9552 section 7.2.1: a malformed BGP-LS
         # attribute costs the attribute, not the peering
         Attribute.CODE.BGP_LS,
+        # RFC 8669 section 6: a BGP Prefix-SID which is not valid MUST be considered
+        # malformed and the RFC 7606 Attribute Discard action applied.  Discard rather
+        # than treat-as-withdraw because what is lost is the label information, not the
+        # reachability the route carries.  Same shape as BGP_LS above.
+        Attribute.CODE.BGP_PREFIX_SID,
     )
 
     MANDATORY = (Attribute.CODE.ORIGIN, Attribute.CODE.AS_PATH, Attribute.CODE.LOCAL_PREF)
@@ -111,6 +129,14 @@ class Attributes(dict):
     VALID_ZERO = (
         Attribute.CODE.ATOMIC_AGGREGATE,
         Attribute.CODE.AS_PATH,
+        # Not because an empty Prefix-SID is valid: RFC 8669 section 6 counts "not
+        # meeting the minimum attribute length requirement" as malformed, and asks for
+        # Attribute Discard.  The generic zero-length rule below produces
+        # treat-as-withdraw, which is the wrong one of the two answers, and honouring
+        # DISCARD inside that rule instead would silently flip AGGREGATOR and AS4_PATH
+        # too.  So the zero length reaches PrefixSid.unpack, which refuses it with a
+        # Notify, and DISCARD above turns that into the action the section names.
+        Attribute.CODE.BGP_PREFIX_SID,
     )
 
     # A cache of parsed attributes
@@ -462,6 +488,24 @@ class Attributes(dict):
 
         # if we know the attribute but the flag is not what the RFC says.
         if aid in Attribute.attributes_known:
+            # RFC 7606 5.3 lists "the attribute flags of the attribute are inconsistent
+            # with those specified in [RFC4760]" as one of the ways an MP_REACH_NLRI or
+            # MP_UNREACH_NLRI is incorrect, and 3 (j) says that when the MP attributes
+            # cannot be successfully parsed the session reset approach MUST be followed.
+            # Treat-as-withdraw is not available here: the NLRI are inside the attribute
+            # the flags stopped us recognising, so there is nothing left to withdraw, and
+            # falling through to the "unspecified" branch below made the routes it carried
+            # vanish with no withdrawal and no NOTIFICATION.  Subcode 0 because that is
+            # what mprnlri.py and mpurnlri.py already raise for an MP attribute they
+            # cannot read.
+            if aid in (Attribute.CODE.MP_REACH_NLRI, Attribute.CODE.MP_UNREACH_NLRI):
+                raise Notify(
+                    3,
+                    0,
+                    'invalid flag 0x{:02X} for {}, RFC 4760 makes it optional non-transitive'.format(
+                        flag, Attribute.CODE.names.get(aid, 'unset')
+                    ),
+                )
             if aid in self.TREAT_AS_WITHDRAW:
                 log.debug(
                     lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) treat as withdraw'.format(
@@ -522,30 +566,92 @@ class Attributes(dict):
             self.add(cached, key)
             return
 
-        # as_seq = []
-        # as_set = []
+        segments = self._reconstruct_as_path(as2path, as4path)
+        # The reconstruction recovers four octet AS numbers on a two octet wire session, so
+        # the index is packed as four octet.  ASPath.pack re-translates to AS_TRANS and a
+        # fresh AS4_PATH if this route is later advertised to another old speaker.
+        packed = b''.join(ASPath._segment(segment.ID, segment, True) for segment in segments)
+        self.add(ASPath(segments, packed), key)
 
-        len2 = len(as2path.as_seq)
-        len4 = len(as4path.as_seq)
+    @staticmethod
+    def _as_number_count(segments):
+        """How many AS numbers a path holds, by the rule of RFC 4271 section 9.1.2.2.
 
-        # RFC 4893 section 4.2.3
-        if len2 < len4:
-            as_seq = as2path.as_seq
-        else:
-            as_seq = as2path.as_seq[:-len4]
-            as_seq.extend(as4path.as_seq)
+        An AS_SET counts as one whatever it holds, and a confederation segment counts as
+        none (RFC 5065 section 5.3).  RFC 6793 4.2.3 leans on this count twice, so the
+        reconstruction has to use it rather than a flat count of members.
+        """
+        total = 0
+        for segment in segments:
+            if isinstance(segment, SEQUENCE):
+                total += len(segment)
+            elif isinstance(segment, SET):
+                total += 1
+        return total
 
-        len2 = len(as2path.as_set)
-        len4 = len(as4path.as_set)
+    @classmethod
+    def _leading_as_numbers(cls, segments, wanted):
+        """The leading part of a path holding `wanted` AS numbers, cutting a segment if it must.
 
-        if len2 < len4:
-            as_set = as4path.as_set
-        else:
-            as_set = as2path.as_set[:-len4]
-            as_set.extend(as4path.as_set)
+        RFC 6793 4.2.3 takes "as many AS numbers and path segments as necessary from the
+        leading part of the AS_PATH", so a sequence which overshoots is cut rather than
+        dropped whole, and a confederation segment comes along without paying for itself.
+        """
+        leading = []
+        for segment in segments:
+            if wanted <= 0:
+                break
+            if isinstance(segment, SEQUENCE) and len(segment) > wanted:
+                leading.append(SEQUENCE(segment[:wanted]))
+                break
+            leading.append(segment)
+            wanted -= cls._as_number_count((segment,))
+        return leading
 
-        aspath = ASPath(as_seq, as_set)
-        self.add(aspath, key)
+    @staticmethod
+    def _coalesce_segments(segments):
+        """Join neighbouring sequences, so the join shows as one segment rather than a seam.
+
+        Only sequences: two adjacent AS_SETs count as two AS numbers and one holding both
+        members counts as one, so merging those would change the length of the path.
+        """
+        joined = []
+        for segment in segments:
+            previous = joined[-1] if joined else None
+            if isinstance(segment, SEQUENCE) and isinstance(previous, SEQUENCE):
+                joined[-1] = SEQUENCE(list(previous) + list(segment))
+                continue
+            if isinstance(segment, CONFED_SEQUENCE) and isinstance(previous, CONFED_SEQUENCE):
+                joined[-1] = CONFED_SEQUENCE(list(previous) + list(segment))
+                continue
+            joined.append(segment)
+        return joined
+
+    @classmethod
+    def _reconstruct_as_path(cls, as2path, as4path):
+        """RFC 6793 4.2.3, which obsoletes the RFC 4893 this used to cite.  Two rules.
+
+        When the AS_PATH holds fewer AS numbers than the AS4_PATH the AS4_PATH is ignored
+        and the AS_PATH is the answer.  Otherwise the leading part of the AS_PATH is
+        prepended to the AS4_PATH so the result holds as many AS numbers as the AS_PATH did.
+
+        This used to read `as_seq` and `as_set`, one list per segment kind, which ASPath has
+        not had since it was refactored to hold a single `aspath` list of path segments: the
+        merge raised AttributeError on the ordinary UPDATE which triggers it.  Rewritten on
+        the segment list, and counting over the whole path rather than one segment kind at a
+        time, which is what the sentence asks for: an AS4_PATH whose only segment is a set
+        used to be matched against an AS_PATH with no set, contribute nothing, and leave in
+        place the AS_TRANS it had been sent to replace.
+        """
+        segments2 = as2path.aspath
+        segments4 = as4path.aspath
+        count2 = cls._as_number_count(segments2)
+        count4 = cls._as_number_count(segments4)
+
+        if count2 < count4:
+            return list(segments2)
+
+        return cls._coalesce_segments(cls._leading_as_numbers(segments2, count2 - count4) + list(segments4))
 
     def __hash__(self):
         # FIXME: two routes with distinct nh but other attributes equal

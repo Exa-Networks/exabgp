@@ -563,3 +563,76 @@ class TestMVPNGeneric:
         # Should not be equal even with same data
         assert sourcead != sharedjoin
         assert sharedjoin != sourcejoin
+
+
+# ============================================================================
+# The Multicast Source and Multicast Group length octets (RFC 6514)
+# ============================================================================
+
+
+class TestMulticastAddressLengths:
+    """A Multicast Source Length octet the RFC does not define must answer Notify.
+
+    RFC 6514 sections 4.5, 4.6 and 4.7 give the Multicast Source Length and Multicast
+    Group Length as 32 for an IPv4 address and 128 for an IPv6 one, and say "usage of
+    other values [...] is outside the scope of this document".
+
+    All three decoders wrote `int(data[cursor] / 8)` and compared the QUOTIENT against
+    IPv4.BYTES and IPv6.BYTES. A quotient accepts far more than the RFC defines:
+
+      * 129 to 135 divide to 16, so the IPv6 arm passed on an eighteen octet payload,
+        the address was built from a slice which ran off the end, and `IP.unpack` raised
+        ValueError. Two octets from a peer, and the answer is not a NOTIFICATION: an
+        internal error escapes the decoder instead.
+      * 33 to 39 divide to 4 and were read back as an IPv4 address nobody sent.
+    """
+
+    # the bytes each route type puts between the RD and the Multicast Source Length octet
+    ROUTES = [
+        ('sourcead', SourceAD, b''),
+        ('sharedjoin', SharedJoin, bytes(4)),
+        ('sourcejoin', SourceJoin, bytes(4)),
+    ]
+    IDS = [name for name, _, _ in ROUTES]
+
+    @staticmethod
+    def payload(header: bytes, source_bits: int, source: bytes, group_bits: int, group: bytes) -> bytes:
+        """RD, then whatever the route type puts before the two length octets."""
+        return bytes(8) + header + bytes([source_bits]) + source + bytes([group_bits]) + group
+
+    @pytest.mark.parametrize('name,klass,header', ROUTES, ids=IDS)
+    def test_a_source_length_which_rounds_to_sixteen_is_refused(self, name: str, klass: type, header: bytes) -> None:
+        """129 bits is not 128 bits, and reading it as such walks off the payload."""
+        data = self.payload(header, 129, bytes(4), 32, bytes(4))
+
+        with pytest.raises(Notify):
+            klass.unpack(data, AFI.ipv4)
+
+    @pytest.mark.parametrize('name,klass,header', ROUTES, ids=IDS)
+    def test_a_source_length_which_rounds_to_four_is_refused(self, name: str, klass: type, header: bytes) -> None:
+        """33 bits used to be published as a 32 bit address nobody sent."""
+        data = self.payload(header, 33, bytes(4), 32, bytes(4))
+
+        with pytest.raises(Notify):
+            klass.unpack(data, AFI.ipv4)
+
+    @pytest.mark.parametrize('name,klass,header', ROUTES, ids=IDS)
+    def test_a_group_length_which_rounds_to_sixteen_is_refused(self, name: str, klass: type, header: bytes) -> None:
+        """The second length octet is read by the same code and gets the same answer."""
+        data = self.payload(header, 32, bytes(4), 129, bytes(4))
+
+        with pytest.raises(Notify):
+            klass.unpack(data, AFI.ipv4)
+
+    @pytest.mark.parametrize('name,klass,header', ROUTES, ids=IDS)
+    def test_the_lengths_the_rfc_defines_still_decode(self, name: str, klass: type, header: bytes) -> None:
+        """The check must not have closed the door on what the RFC does allow."""
+        v4 = self.payload(header, 32, IP.pton('192.0.2.1'), 32, IP.pton('239.1.1.1'))
+        route = klass.unpack(v4, AFI.ipv4)
+        assert str(route.source) == '192.0.2.1'
+        assert str(route.group) == '239.1.1.1'
+
+        v6 = self.payload(header, 128, IP.pton('2001:db8::1'), 128, IP.pton('ff0e::1'))
+        route = klass.unpack(v6, AFI.ipv6)
+        assert str(route.source) == '2001:db8::1'
+        assert str(route.group) == 'ff0e::1'

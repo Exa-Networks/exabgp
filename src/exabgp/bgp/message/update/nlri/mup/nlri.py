@@ -104,6 +104,10 @@ class MUP(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # RFC 7911 section 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
         # MUP NLRI: arch_type(1) + route_type(2) + length(1) + route_data(length)
         if len(bgp) < 4:
             raise Notify(3, 10, 'MUP NLRI too short: need at least 4 bytes, got {}'.format(len(bgp)))
@@ -122,7 +126,7 @@ class MUP(NLRI):
             klass = GenericMUP(arch, afi, code, bgp[4:end])
         klass.CODE = code
         klass.action = action
-        klass.addpath = addpath
+        klass.addpath = path_info
 
         return klass, bgp[end:]
 
