@@ -46,9 +46,10 @@ that state today for every family the corpus seeds.
 
 Unit test files: 62 shared by name, 114 only in main, 38 only in 5.0.
 
-Ratchet floors: main `long_function: 81`, others 0. 5.0 lowered 2026-09-25 from
-`long_function: 31` / `silent_except: 22` to **30 / 19**, once every agent had finished, since
-lowering a shared ratchet mid-flight would fail the gate for whoever was still working.
+Ratchet floors: main `long_function: 81`, others 0. 5.0 was lowered twice on 2026-09-25,
+`long_function: 31` → 30 and `silent_except: 22` → 19 → **0**, each time only once every agent
+had finished: lowering a shared ratchet mid-flight fails the gate for whoever is still working.
+Three of 5.0's four mechanical rules now hold at zero and only `long_function` is ratcheted.
 
 Final state, 2026-09-25, both trees green:
 
@@ -56,8 +57,9 @@ Final state, 2026-09-25, both trees green:
 main  9863 passed, 2 skipped, 7 xfailed, 0 failed   tests/fuzz 498 -> 2975
       check_exa_style / check_sweep_floors / check_rfc_compliance / ruff  ok
       compat_gate  10322 inputs compared, 0 regressions
-5.0   8023 passed, 11 skipped, 8 xfailed, 0 failed
-      check_tiger_style ok at the lowered floor, ruff ok
+5.0   8042 passed, 11 skipped, 8 xfailed, 0 failed
+      bare_except 0 · input_assert 0 · silent_except 0 · long_function 30
+      functional encoding/decoding/parsing + validate  exit 0, ruff ok
 ```
 
 ---
@@ -95,6 +97,11 @@ main  9863 passed, 2 skipped, 7 xfailed, 0 failed   tests/fuzz 498 -> 2975
 | 2.4 | `SRv6SID.pack()` TypeError | ✅ fixed 2026-09-25 | carried two worse bugs with it. See §9. |
 | 2.5 | repeated BGP-LS attribute TLV emits a duplicate JSON key | ⚪ declined | see below |
 | 2.9 | no sub-TLV length check at all in 5.0 | ✅ fixed 2026-09-25 | ported from main, overrun refused, remnant tolerated. See §11. |
+| 2.10 | 19 `except: pass` sites swallowing errors | ✅ fixed 2026-09-25 | `silent_except` 19 → 0. One was a real bug. See §14. |
+| 2.11 | `application/tojson.py` cannot be imported at all | ❓ decision | `import thread`, the Python 2 name. Dead code; main deleted it. |
+| 2.12 | `socket.SO_BINDTODEVICE = 25` assigned into the stdlib module | 🟡 open | a Linux constant, set globally for the process, then passed to `setsockopt` anyway |
+| 2.13 | unreachable duplicate `except OSError` handlers | 🟡 open | `cli.py` ×2 pairs, `check_fifo` ×3; messages which can never print |
+| 2.14 | `pipe.py` answers a failed `os.open` with a `terminate()` which does not terminate | 🟡 open | sets a flag, cleans up, then the loop carries on with `r_pipe = None` |
 | 2.6 | MP_REACH-first ordering not ported | ⏸ blocked | 91 captures need re-recording |
 | 2.7 | dead `src/exabgp/cli/` VyOS prototype | ✅ removed 2026-09-25 | 6 files, `git rm`. `exabgp-cli` verified still working. |
 | 2.8 | `src/exabgp/conf/yang/` now orphaned | ❓ decision | the deleted prototype was its only importer from outside |
@@ -177,6 +184,15 @@ No rename, no removal, no retype of an existing key.
    eight byte positions. Source is right; only the sweep is thinner.
 5. **main dropped `as_dict()` from the BGP-LS TLVs**, so 5.0's dual-renderer agreement sweep
    has nothing to attach to. Nothing owed if that was deliberate.
+6. **Delete 5.0's `application/tojson.py`?** It cannot be imported at all: `import thread`,
+   the Python 2 name. Unreferenced, not an entry point, and main deleted it. Same call you
+   already made for the VyOS `cli/` prototype. See §14 (2.11).
+7. **`socket.SO_BINDTODEVICE = 25` (2.12).** A diagnosis fix rather than a behaviour one,
+   since both trees raise, but it touches a production config path and removes a global
+   mutation of the stdlib `socket` module. Worth doing; wanted your word first.
+
+Two of these, 4 and 5, are "nothing may be owed" rather than open work. Items 1, 6 and 7 are
+deletions or changes to production paths, which is why they are here rather than done.
 
 ---
 
@@ -282,7 +298,7 @@ output moved. `med` and `local-preference` stay JSON numbers, `aigp` stays the q
 | `check_exa_style` | **had no cannot-run path at all**: `rglob` over a missing tree yields nothing, every rule counts 0, it prints `ok` four times and **exits 0** |
 
 The last is the one that matters. A clean bill of health over an empty walk, and nobody
-investigates a green gate. This is the fourth instance of the pattern in §14 below. Each gate
+investigates a green gate. This is the fourth instance of the pattern in §15 below. Each gate
 now has `CANNOT_RUN = 2`, and `check_exa_style` a `MIN_SOURCE_FILES = 50` floor on the walk
 against 392 today, so it cannot fire on a real checkout.
 
@@ -691,7 +707,100 @@ construction went from 0/1000 accepted to 1016/2000 with zero escapes, and MP_RE
 
 ---
 
-## 14. Process rules learned the hard way
+## 14. The silence sweep in 5.0, 2026-09-25
+
+`silent_except` 19 → 0, so three of 5.0's four mechanical rules now hold at zero. Nineteen
+`except SomeError: pass` sites, resolved three ways, per site: log what an operator needs,
+or `contextlib.suppress` with the actual reason silence is right, or fix a bug.
+
+Commits `08fad4ffe`, `40bc8f4fc`, `a26f13f57`.
+
+### One of the nineteen was a real bug
+
+`reactor/listener.py` had two independent requests under one `try`:
+
+```python
+try:
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    if local_ip.ipv6():
+        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+except (OSError, AttributeError):
+    pass
+```
+
+A platform refusing the first never had the second **asked for at all**, so the listening
+socket accepted IPv4-mapped connections exabgp had asked it not to, silently. Shown red
+against the old shape rather than assumed: with `SO_REUSEADDR` refused, `IPV6_V6ONLY` was
+never requested. This is the same shape main's audit found.
+
+### The costliest silence, which was not a bug
+
+`application/flow.py`. `ACL._commit()` runs `cl-acltool -i`, and that reload is the only
+thing which programs the rule files into the switch. Every exception from it was swallowed
+and every caller discards the return value, so exabgp announced flows which filtered nothing
+and withdrew flows which kept dropping traffic, with nothing anywhere naming `cl-acltool`.
+
+`application/pipe.py` cost operator time rather than traffic: a failed `enable-ack` write
+means the daemon stops confirming end-of-command, so every later cli invocation waits out its
+five second timeout and prints "no end of command message received". That warning was the
+symptom with the cause thrown away, and the comment on it, "continue anyway", was not a
+reason.
+
+### Where silence is right, and now says so
+
+Closing a descriptor at process teardown, and `reactor/daemon.py silence()` closing fds 0, 1
+and 2 — the one place a log line would be actively **wrong**, because the log may still be on
+the descriptor being closed, so the line either goes nowhere or into the file the next
+`open()` is about to take.
+
+### Two of my own claims that were wrong
+
+- I briefed an agent that 5.0 `bind_to_device` passes silently where main raises. It does not:
+  5.0 raises `NotConnected` too. I had read a truncated window and filled in the rest. The
+  real difference is message quality, not fatality.
+- I called `peer.py:714` the highest-value of the six reactor sites. It was scaffolding. Only
+  normal generator exhaustion reaches it, and since PEP 479 a `StopIteration` raised inside a
+  generator body becomes `RuntimeError`, so nothing deeper can surface there as one; the real
+  failure modes were already logged as 'Notification not sent'. The `except` was removed
+  rather than suppressed.
+
+### The four follow-ups, 2.11 to 2.14
+
+Recorded so they do not have to be found again.
+
+**2.11 `application/tojson.py` cannot be imported.** Line 14 is `import thread`, the Python 2
+module name. `ModuleNotFoundError: No module named 'thread'`, confirmed by running it. Nothing
+in `src`, `qa` or `tests` references it, it is not a `[project.scripts]` entry point, and main
+deleted it. Same category as the VyOS `cli/` prototype removed in `83b87ad1c`. Its
+`silent_except` site was resolved rather than the file deleted, because deletion is a decision
+and not a rule the gate can make.
+
+**2.12 `socket.SO_BINDTODEVICE = 25`.** On a platform without the option
+(`reactor/network/tcp.py`) 5.0 assigns the Linux constant into the stdlib `socket` module and
+calls `setsockopt` with it anyway. Two problems: 25 is meaningless or a different option off
+Linux, and the assignment mutates `socket` globally for the life of the process. It raises
+either way, so this is a diagnosis problem, not a broken peering: "Could not bind to device
+<name>" blames the interface name for what is really "this platform has no such option". The
+existing `test_create_socket_with_interface` passes only because the call happens to fail.
+main's version pre-checks `hasattr` and `if_nametoindex` and says the true thing, which also
+separates a misspelt interface from a `CAP_NET_RAW` permissions problem. 5.0 also tests
+`if interface is not None` where main tests `if interface`, so an empty-string
+`source-interface` tries to bind to `'\0'`.
+
+**2.13 Unreachable duplicate handlers.** `application/cli.py` stacks two `except OSError` on
+one `try` at 272 (around `select.select`) and again at 301 (around `os.read`); the second of
+each pair is dead code identical to the first. `application/pipe.py check_fifo` has three at
+82, 85 and 88 where only the first can run, so two of its three error messages can never be
+printed and two of its paths fall off the end returning `None`.
+
+**2.14 A `terminate()` which does not terminate.** `application/pipe.py:159` answers a failed
+`os.open(self.recv, ...)` with `self.terminate()`, which does not exit on its first call: it
+sets `terminating` and cleans up, and `loop()` then carries on with `self.r_pipe` set to
+`None`. Latent, and it was never a `silent_except`, so the gate would never have found it.
+
+---
+
+## 15. Process rules learned the hard way
 
 - **Never `git add -A`.** Commit `2114ec208` swept up an agent's unreviewed BGP-LS work and
   was pushed with a message that did not describe it. Corrected in `a8683597e` rather than
