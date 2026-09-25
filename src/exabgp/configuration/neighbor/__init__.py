@@ -276,10 +276,16 @@ class ParseNeighbor(Section):
                 # This add the family to neighbor.families()
                 neighbor.rib.outgoing.add_to_rib_watchdog(change)
 
+        # OperationalFamily.family() already returns an (AFI, SAFI) tuple, which is what
+        # families() holds.  Asking it for afi_safi() raised AttributeError and made every
+        # configuration carrying an operational section unloadable: the daemon refused to
+        # start with "'tuple' object has no attribute 'afi_safi'".  The line above is
+        # correct as it stands, because NLRI.family() answers with a Family object.
         for message in local.get('operational', {}).get('routes', []):
-            if message.family().afi_safi() in families:
+            family = message.family()
+            if family in families:
                 if message.name == 'ASM':
-                    neighbor.asm[message.family().afi_safi()] = message
+                    neighbor.asm[family] = message
                 else:
                     neighbor.messages.append(message)
         self.neighbors[neighbor.name()] = neighbor
