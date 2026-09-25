@@ -209,12 +209,29 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
 from exabgp.util.types import Buffer
 
-# Segment Type B and C Flags (RFC 9830 Section 2.4.4.2.1, RFC 9831 Section 2.10)
-# Bit layout: V|A|S|B|Rsv (bits 0-3 in RFC = bits 7-4 in byte order)
-_SEG_B_FLAG_V = 0x80  # V-Flag: SID verification
-_SEG_B_FLAG_A = 0x40  # A-Flag: SR Algorithm
-_SEG_B_FLAG_S = 0x20  # S-Flag: SID Specified — SID field present (RFC 9831)
-_SEG_B_FLAG_B = 0x10  # B-Flag: SRv6 Endpoint Behavior present
+# SR Policy Segment Flags, the one octet every Segment sub-TLV starts with.
+#
+#  0 1 2 3 4 5 6 7
+# +-+-+-+-+-+-+-+-+
+# |V|A|S|B|       |
+# +-+-+-+-+-+-+-+-+
+#
+# Bit 0 of the RFC's numbering is the most significant bit of the octet, so bit N is
+# 0x80 >> N.
+#
+# Read RFC 9830 alone and the S-Flag below looks like a reserved bit we transmit set:
+# its Section 2.4.4.2.3 draws only V and B, and its IANA table (Section 6.8, Table 8)
+# leaves bits 1-2 and 4-7 Unassigned, which the same section says MUST be zero on
+# transmission.  The registry moved: RFC 9831, the companion which defines Segment
+# Types C to K, allocates bit 1 to the A-Flag and bit 2 to the S-Flag in its own IANA
+# section (Section 3.2, Table 2) and describes both in Section 2.10.  So the two bits
+# are assigned, and setting them on the segment types RFC 9831 lists is required
+# rather than a leak.  Bits 4-7 are the ones still unassigned, and nothing here sets
+# them.
+_SEG_B_FLAG_V = 0x80  # V-Flag: SID verification (RFC 9830, every segment type)
+_SEG_B_FLAG_A = 0x40  # A-Flag: SR Algorithm field valid (RFC 9831, types C, D, I, J, K)
+_SEG_B_FLAG_S = 0x20  # S-Flag: SID present (RFC 9831, types C to K)
+_SEG_B_FLAG_B = 0x10  # B-Flag: SRv6 Endpoint Behavior present (RFC 9830, types B, I, J, K)
 
 # Legacy alias for backward compatibility (corrected from 0x80 to 0x10)
 _SEG_B_FLAG_ENDPOINT_BEHAVIOR = _SEG_B_FLAG_B

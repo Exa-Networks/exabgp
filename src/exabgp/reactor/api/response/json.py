@@ -17,6 +17,7 @@ from typing import Any, Callable, TYPE_CHECKING
 from exabgp.util import hexstring
 
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.update.attribute.mprnlri import NextHopWithLinkLocal
 
 from exabgp.environment import getenv
 from exabgp.bgp.message.open.capability.refresh import REFRESH
@@ -372,10 +373,20 @@ class JSON:
             nlri: The NLRI object
             nexthop: Optional nexthop IP (passed to v4_json for backward compatibility)
         """
+        extra: dict[str, Any] = {}
         if leak is not None:
+            extra['meta'] = {'route-leak': leak.as_dict()}
+        if isinstance(nexthop, NextHopWithLinkLocal):
+            # RFC 2545 section 3 gives the MP_REACH Next Hop field for IPv6 a global address
+            # "potentially followed by the link-local IPv6 address of the next hop". The
+            # announce stays keyed by the global address, which is what that key has always
+            # meant, and the second address is reported here. Without it the JSON for a 32
+            # octet field cannot be told from the JSON for a 16 octet one.
+            extra['link-local-next-hop'] = str(nexthop.link_local)
+        if extra:
             rendered = nlri.v4_json(compact=False, nexthop=nexthop) if self.use_v4_json else nlri.json(compact=False)
             content = json.loads(rendered)
-            content['meta'] = {'route-leak': leak.as_dict()}
+            content.update(extra)
             return json.dumps(content)
         if self.use_v4_json:
             return str(nlri.v4_json(compact=self.compact, nexthop=nexthop))

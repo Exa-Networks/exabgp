@@ -71,3 +71,30 @@ general, which is the negative test: a route may carry a second tunnel TLV of an
 type, and that one is not a duplicate.  Note how much louder this is than RFC 9012 13 for
 a repeated sub-TLV, where the repeat is disregarded and the route kept.
 """
+
+[[requirement]]
+id = "rfc9830#2.4.4.2.3-unassigned-segment-flags-zero"
+section = "2.4.4.2.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The unassigned bits in the Flags field MUST be set to zero upon
+transmission and MUST be ignored upon receipt.
+"""
+note = """
+This entry exists because reading RFC 9830 on its own gets the answer wrong.  Its IANA
+table (Section 6.8, Table 8) shows bits 1-2 and 4-7 of the Segment Flags as Unassigned,
+and `segment_list.py` sets bit 2 (0x20) on every Segment Type C to K it packs, which
+reads as a reserved bit going out set.  It is not one: RFC 9831, the companion published
+alongside 9830 which defines Segment Types C to K, allocates bit 1 to the A-Flag and bit
+2 to the S-Flag in its own IANA section (Section 3.2, Table 2) and describes them in
+Section 2.10.  Bits 4-7 are all that remain unassigned, so those are what this
+requirement now binds, and the comment above the flag constants says so in the code.
+
+The positive side is that nothing exabgp originates puts anything in bits 4-7:
+`configuration/static/sr_policy.py` only ever raises 0x80, 0x40 and 0x10, and `pack()`
+derives 0x20 from whether a SID is present.  The negative side is receipt: a peer which
+sets bits 4-7 anyway must not change how the segment decodes, and does not, because no
+decoder here reads them.
+"""

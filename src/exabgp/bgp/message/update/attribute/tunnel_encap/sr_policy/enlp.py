@@ -21,6 +21,8 @@ ENLP values (RFC 9830):
 
 from __future__ import annotations
 
+import json
+
 from struct import pack
 from typing import ClassVar
 
@@ -50,11 +52,28 @@ class ENLPSubTLV(SubTLV):
     def pack_value(self) -> bytes:
         return pack('!BBB', 0, 0, self.enlp)
 
+    @property
+    def name(self) -> str:
+        """The one spelling of this ENLP value, shared by `json()` and `__str__()`.
+
+        The two renderings used to be written out separately and had already drifted: the
+        text said `no-push` where the JSON said `4`.  Anything a peer can put in that
+        octet has to come back out of here, so an unassigned value falls back to its
+        decimal spelling rather than raising or inventing a name for it.
+        """
+        return ENLP_NAMES.get(self.enlp, str(self.enlp))
+
     def json(self) -> str:
-        return f'"enlp": {self.enlp}'
+        """Both the wire value and its name.
+
+        `"enlp"` keeps the integer it has always carried, because a consumer parsing it is
+        entitled to keep working; `"enlp-name"` is the addition, so the API reads the way
+        the text output and the configuration keyword already do.
+        """
+        return f'"enlp": {self.enlp}, "enlp-name": {json.dumps(self.name)}'
 
     def __str__(self) -> str:
-        return f'enlp {ENLP_NAMES.get(self.enlp, str(self.enlp))}'
+        return f'enlp {self.name}'
 
     @classmethod
     def unpack(cls, data: Buffer) -> ENLPSubTLV:

@@ -22,6 +22,7 @@ from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import (
     SRPolicyTunnel,
     SRv6BindingSIDSubTLV,
 )
+from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.enlp import ENLP_NAMES
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.segment_list import (
     SegmentTypeA,
     SegmentTypeB,
@@ -1133,7 +1134,7 @@ def test_enlp_roundtrip():
         packed = ENLPSubTLV(enlp=value).pack()
         decoded = ENLPSubTLV.unpack(packed[2:])
         assert decoded.enlp == value
-        assert decoded.json() == f'"enlp": {value}'
+        assert decoded.json() == f'"enlp": {value}, "enlp-name": "{ENLP_NAMES[value]}"'
 
 
 def test_enlp_unpack_short_data():
@@ -1740,3 +1741,128 @@ def test_tunnel_encap_in_attribute_collection_json():
     parsed = _json.loads(json_str)
     assert 'tunnel-encap' in parsed, 'Expected "tunnel-encap" key, got: ' + str(list(parsed.keys()))
     assert 'attribute-0x17-0xC0' not in parsed
+
+
+# ============================================================= ENLP rendering
+
+
+def test_enlp_json_carries_the_wire_value_and_its_name():
+    """`json()` said 4 where `__str__()` said no-push, and the number is the one a
+    consumer already parses, so the name arrives beside it rather than in place of it."""
+    import json as _json
+
+    for value, name in ENLP_NAMES.items():
+        parsed = _json.loads('{' + ENLPSubTLV(enlp=value).json() + '}')
+        assert parsed['enlp'] == value
+        assert parsed['enlp-name'] == name
+
+
+def test_enlp_json_keeps_the_number_a_number():
+    """Anything already reading `"enlp"` as an integer keeps working, which is the whole
+    reason the name went into a second key."""
+    import json as _json
+
+    parsed = _json.loads('{' + ENLPSubTLV(enlp=4).json() + '}')
+    assert isinstance(parsed['enlp'], int) and not isinstance(parsed['enlp'], bool)
+    assert isinstance(parsed['enlp-name'], str)
+
+
+def test_enlp_json_and_text_agree_on_every_octet():
+    """The octet comes off the wire, so all 256 of its values have to render.
+
+    An unassigned one must not raise and must not invent a name: it falls back to its
+    decimal spelling, the same one the text output has always used.
+    """
+    import json as _json
+
+    for value in range(256):
+        subtlv = ENLPSubTLV(enlp=value)
+        parsed = _json.loads('{' + subtlv.json() + '}')
+        assert parsed['enlp'] == value
+        assert str(subtlv) == 'enlp ' + parsed['enlp-name']
+        if value not in ENLP_NAMES:
+            assert parsed['enlp-name'] == str(value)
+
+
+def test_enlp_name_survives_the_enclosing_sr_policy_object():
+    """Two keys out of one sub-TLV must not break the comma joining of the others."""
+    import json as _json
+
+    tunnel = SRPolicyTunnel(subtlvs=[PreferenceSubTLV(preference=400), ENLPSubTLV(enlp=4), PrioritySubTLV(priority=7)])
+    sr = _json.loads('{' + tunnel.json() + '}')['sr-policy']
+    assert sr == {'preference': 400, 'enlp': 4, 'enlp-name': 'no-push', 'priority': 7}
+
+
+# ============================================================= segment flags
+
+# RFC 9830 Section 6.8 Table 8 lists bits 1-2 and 4-7 as Unassigned, but RFC 9831
+# Section 3.2 Table 2 then allocated bit 1 (A-Flag) and bit 2 (S-Flag).  Bits 4-7 are
+# what is left, and the mask is spelled out here rather than imported so that an edit to
+# the module's constants cannot quietly move the goalposts of these two tests.
+_SEGMENT_FLAGS_UNASSIGNED = 0x0F
+
+# Every segment type the configuration can build, with the V-Flag asked for on each.
+_SEGMENT_CONFIGURATIONS: dict[str, list[str]] = {
+    'type-a': ['segment', 'type-a', 'mpls', '16001', 'verification'],
+    'type-b': ['segment', 'type-b', 'srv6', 'fc00::1', 'endpoint-behavior', '65', '32', '0', '16', '0', 'verification'],
+    'type-c': ['segment', 'type-c', 'ipv4', '10.0.0.1', 'algorithm', '128', 'sid', '16001', 'verification'],
+    'type-d': ['segment', 'type-d', 'ipv6', '2001:db8::1', 'algorithm', '128', 'sid', '16001', 'verification'],
+    'type-e': ['segment', 'type-e', 'local-if-id', '1', 'ipv4', '10.0.0.1', 'sid', '16001', 'verification'],
+    'type-f': ['segment', 'type-f', 'local', '10.0.0.1', 'remote', '10.0.0.2', 'sid', '16001', 'verification'],
+    'type-g': [
+        *['segment', 'type-g', 'local-if-id', '1', 'local-ipv6', '2001:db8::1'],
+        *['remote-if-id', '2', 'remote-ipv6', '2001:db8::2', 'sid', '16001', 'verification'],
+    ],
+    'type-h': ['segment', 'type-h', 'local', '2001:db8::1', 'remote', '2001:db8::2', 'sid', '16001', 'verification'],
+    'type-i': [
+        *['segment', 'type-i', 'ipv6', '2001:db8::1', 'algorithm', '128', 'sid', 'fc00::1'],
+        *['endpoint-behavior', '65', '32', '0', '16', '0', 'verification'],
+    ],
+    'type-j': [
+        *['segment', 'type-j', 'local-if-id', '1', 'local-ipv6', '2001:db8::1'],
+        *['remote-if-id', '2', 'remote-ipv6', '2001:db8::2', 'algorithm', '128', 'sid', 'fc00::1'],
+        *['endpoint-behavior', '65', '32', '0', '16', '0', 'verification'],
+    ],
+    'type-k': [
+        *['segment', 'type-k', 'local', '2001:db8::1', 'remote', '2001:db8::2', 'algorithm', '128', 'sid', 'fc00::1'],
+        *['endpoint-behavior', '65', '32', '0', '16', '0', 'verification'],
+    ],
+}
+
+
+@pytest.mark.rfc('rfc9830#2.4.4.2.3-unassigned-segment-flags-zero')
+def test_no_configured_segment_transmits_an_unassigned_flag_bit():
+    """Drive every segment type the configuration can express and read the flags octet.
+
+    The configuration only ever asks for V, A and B, and `pack()` derives S from whether
+    a SID is present, so bits 4-7 must come out of every one of these as zero.  Asserting
+    the octet is non-zero as well stops the test passing because nothing was built.
+    """
+    assert len(_SEGMENT_CONFIGURATIONS) == 11, 'RFC 9830 and RFC 9831 define Segment Types A to K'
+
+    for name, tokens in _SEGMENT_CONFIGURATIONS.items():
+        tokeniser = Tokeniser().replenish(['segment-list', 'weight', '1', *tokens])
+        (segment_list,) = _parse_sr_policy_subtlvs(tokeniser)
+        (segment,) = segment_list.segments
+        flags = segment.pack()[2]
+        assert flags & _SEGMENT_FLAGS_UNASSIGNED == 0, f'{name} transmits an unassigned segment flag bit'
+        assert flags != 0, f'{name} built no flags at all, so this assertion proved nothing'
+
+
+@pytest.mark.rfc('rfc9830#2.4.4.2.3-unassigned-segment-flags-zero', polarity='negative')
+def test_unassigned_segment_flag_bits_are_ignored_on_receipt():
+    """A peer which sets bits 4-7 anyway must not change what the segment means."""
+    segments = (
+        SegmentTypeA(label=16001),
+        SegmentTypeB(sid='fc00::1'),
+        SegmentTypeC(ipv4_node='10.0.0.1', algorithm=128, flags=0x40, sid=16001),
+        SegmentTypeD(ipv6_node='2001:db8::1', algorithm=128, flags=0x40, sid=16001),
+    )
+
+    for segment in segments:
+        value = bytearray(segment.pack()[2:])
+        assert value[0] & _SEGMENT_FLAGS_UNASSIGNED == 0, 'the clean side of the comparison must start clean'
+        clean = type(segment).unpack(bytes(value))
+        value[0] |= _SEGMENT_FLAGS_UNASSIGNED
+        noisy = type(segment).unpack(bytes(value))
+        assert noisy.json() == clean.json(), f'{type(segment).__name__} read an unassigned flag bit'

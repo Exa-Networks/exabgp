@@ -22,6 +22,31 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.ip import IP, IPv6
+
+# The RFC 2545 Next Hop field holds either one address or a global one followed by a
+# link-local one, so a field of exactly two addresses is the pair and nothing else is.
+NEXTHOP_ADDRESS_SIZE = 16
+NEXTHOP_PAIR_SIZE = 2 * NEXTHOP_ADDRESS_SIZE
+
+
+class NextHopWithLinkLocal(IPv6):
+    """The global half of an RFC 2545 next-hop pair, carrying the link-local half with it.
+
+    RFC 2545 section 3: a BGP speaker advertises "the global IPv6 address of the next hop,
+    potentially followed by the link-local IPv6 address of the next hop", and sets the
+    length of the field to 16 or 32 accordingly. Everything downstream of the decoder,
+    the RIB, the JSON API and every consumer of it, reads a route's next hop as one
+    address, and that address is the global one. So this stays an IPv6 holding the global
+    address, with identical str(), pack_ip() and equality, and remembers the other half
+    rather than losing it. Reporting the pair as two next hops would change what a key
+    already in use means.
+    """
+
+    def __init__(self, packed: Buffer, link_local: IPv6) -> None:
+        IPv6.__init__(self, packed)
+        self.link_local = link_local
+
 
 # ==================================================== MP Reachable NLRI (14)
 #
@@ -58,10 +83,12 @@ class MPRNLRI(Attribute, Family):
         """Raw wire-format bytes."""
         return bytes(self._packed)
 
-    def _parse_nexthop_and_nlris(self) -> tuple[Buffer | None, Iterator[NLRI]]:
-        """Parse wire format, returning (nexthop_bytes, nlri_iterator).
+    def _parse_nexthop_and_nlris(self) -> tuple[Buffer | None, Buffer | None, Iterator[NLRI]]:
+        """Parse wire format, returning (nexthop_bytes, link_local_bytes, nlri_iterator).
 
-        Internal method that separates nexthop parsing from NLRI parsing.
+        Internal method that separates nexthop parsing from NLRI parsing. The second
+        address of an RFC 2545 pair is returned alongside the first because nothing can
+        recover it afterwards: the attribute's own bytes are the only record of it.
         """
         data = self._packed
 
@@ -81,8 +108,11 @@ class MPRNLRI(Attribute, Family):
 
         # Parse nexthops
         nhs = data[offset + rd : offset + rd + size]
-        nexthops = [nhs[pos : pos + 16] for pos in range(0, len(nhs), 16)]
+        nexthops = [nhs[pos : pos + NEXTHOP_ADDRESS_SIZE] for pos in range(0, len(nhs), NEXTHOP_ADDRESS_SIZE)]
         nexthop_bytes = nexthops[0] if nexthops else None
+        # Only a field of exactly two addresses is the RFC 2545 pair. A shorter field is one
+        # address, whatever its length, and Family.size refuses a longer one before we arrive.
+        link_local_bytes = nexthops[1] if size == NEXTHOP_PAIR_SIZE and len(nexthops) == 2 else None
 
         offset += len_nh
 
@@ -107,7 +137,7 @@ class MPRNLRI(Attribute, Family):
 
                 nlri_data = left_result
 
-        return nexthop_bytes, nlri_generator()
+        return nexthop_bytes, link_local_bytes, nlri_generator()
 
     def __iter__(self) -> Iterator[NLRI]:
         """Yield NLRIs from wire format.
@@ -115,7 +145,7 @@ class MPRNLRI(Attribute, Family):
         Generator that yields NLRIs one by one, parsing lazily.
         Note: Does NOT set nlri.nexthop - use iter_routed() for RoutedNLRI.
         """
-        _, nlri_iter = self._parse_nexthop_and_nlris()
+        _, _, nlri_iter = self._parse_nexthop_and_nlris()
         yield from nlri_iter
 
     def iter_routed(self) -> Iterator['RoutedNLRI']:
@@ -125,9 +155,8 @@ class MPRNLRI(Attribute, Family):
         This is the preferred method for getting announces with nexthop.
         """
         from exabgp.bgp.message.update.collection import RoutedNLRI
-        from exabgp.protocol.ip import IP
 
-        nexthop_bytes, nlri_iter = self._parse_nexthop_and_nlris()
+        nexthop_bytes, link_local_bytes, nlri_iter = self._parse_nexthop_and_nlris()
         # Convert NextHop (Attribute) to IP for RoutedNLRI
         nexthop: IP
         if nexthop_bytes is None:
@@ -140,6 +169,10 @@ class MPRNLRI(Attribute, Family):
                 nexthop = IP.create_ip(nexthop_attr.pack_ip())
             else:
                 nexthop = IP.NoNextHop
+        # The pair's global half is the next hop every consumer already reads. Keep it as
+        # the next hop and hang the link-local one off it, so nothing existing moves.
+        if link_local_bytes is not None and isinstance(nexthop, IPv6):
+            nexthop = NextHopWithLinkLocal(nexthop.pack_ip(), IPv6(link_local_bytes))
         for nlri in nlri_iter:
             yield RoutedNLRI(nlri, nexthop)
 
