@@ -84,15 +84,19 @@ class MPURNLRI(Attribute, Family):
     def unpack(cls, data, direction, negotiated):
         nlris = []
 
+        # Both raises below are 3/9, "UPDATE Message Error"/"Optional Attribute Error",
+        # which RFC 4760 section 7 names for a session ended over an incorrect MP
+        # attribute.  They used to be 3/0 Unspecific, which named nothing.
+
         # -- Reading AFI/SAFI
         if len(data) < 3:
-            raise Notify(3, 0, 'invalid %s, not enough data for the family' % cls.__name__)
+            raise Notify(3, 9, 'invalid %s, not enough data for the family' % cls.__name__)
         afi, safi = unpack('!HB', data[:3])
         offset = 3
         data = data[offset:]
 
         if negotiated and (afi, safi) not in negotiated.families:
-            raise Notify(3, 0, 'presented a non-negotiated family {} {}'.format(AFI.create(afi), SAFI.create(safi)))
+            raise Notify(3, 9, 'presented a non-negotiated family {} {}'.format(AFI.create(afi), SAFI.create(safi)))
 
         # Do we need to handle Path Information with the route (AddPath)
         if direction == Direction.IN:

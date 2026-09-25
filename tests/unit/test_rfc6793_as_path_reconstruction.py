@@ -35,9 +35,9 @@ from unittest.mock import Mock
 import pytest
 
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open.asn import AS_TRANS
+from exabgp.bgp.message.open.asn import AS_TRANS, ASN
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, SET, ASPath
+from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, SEQUENCE, SET, ASPath
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 
 TRANSITIVE = 0x40
@@ -296,3 +296,161 @@ def test_an_as4_path_survives_being_re_encoded() -> None:
     assert packed.endswith(
         segment(SEQUENCE.ID, [NON_MAPPABLE], 4)
     ), 'an AS4_PATH carries four octet AS numbers whatever the session negotiated'
+
+
+# ============================== RFC 6793 4.2.2 and 6: confederation segments
+
+
+def attributes_of(packed: bytes) -> dict[int, bytes]:
+    """The attribute stream we produced, as a mapping of code to value."""
+    found = {}
+    offset = 0
+    while offset < len(packed):
+        flag, code = packed[offset], packed[offset + 1]
+        if flag & Attribute.Flag.EXTENDED_LENGTH:
+            length = int.from_bytes(packed[offset + 2 : offset + 4], 'big')
+            offset += 4
+        else:
+            length = packed[offset + 2]
+            offset += 3
+        found[code] = bytes(packed[offset : offset + length])
+        offset += length
+    assert offset == len(packed), 'the attributes we packed do not parse'
+    return found
+
+
+def segment_kinds(value: bytes, octets: int = 4) -> list[int]:
+    kinds = []
+    offset = 0
+    while offset < len(value):
+        kinds.append(value[offset])
+        offset += 2 + value[offset + 1] * octets
+    assert offset == len(value), 'the path segments we packed do not parse'
+    return kinds
+
+
+def old_peer() -> Any:
+    """A peer which did not offer four octet AS numbers, so AS4_ attributes are built."""
+    session = Mock()
+    session.asn4 = False
+    return session
+
+
+def test_the_as4_path_we_build_holds_no_confederation_segment() -> None:
+    """RFC 6793 4.2.2: the AS4_PATH we build has to exclude confederation segments.
+
+    Copying the path unfiltered published confederation membership past the confederation
+    border, in an attribute RFC 6793 6 says may not carry those segment types at all.
+    """
+    path = ASPath([CONFED_SEQUENCE([ASN(64512)]), SEQUENCE([ASN(NON_MAPPABLE)])])
+
+    packed = attributes_of(path.pack(old_peer()))
+
+    assert Attribute.CODE.AS4_PATH in packed, 'a four octet AS number needs an AS4_PATH'
+    assert segment_kinds(packed[Attribute.CODE.AS4_PATH]) == [
+        SEQUENCE.ID
+    ], 'the AS4_PATH carries a confederation segment'
+    assert segment_kinds(packed[Attribute.CODE.AS_PATH], 2) == [
+        CONFED_SEQUENCE.ID,
+        SEQUENCE.ID,
+    ], 'the AS_PATH itself must keep every segment it had'
+
+
+def test_no_as4_path_is_built_when_no_segment_is_left_to_carry() -> None:
+    """RFC 6793 6 gives AS4_PATH no empty form, so a confederation-only path sends none."""
+    path = ASPath([CONFED_SEQUENCE([ASN(NON_MAPPABLE)])])
+
+    packed = attributes_of(path.pack(old_peer()))
+
+    assert Attribute.CODE.AS4_PATH not in packed, 'an empty AS4_PATH was sent'
+    assert Attribute.CODE.AS_PATH in packed, 'the AS_PATH is still owed to the peer'
+
+
+def test_a_confederation_segment_is_discarded_from_a_received_as4_path() -> None:
+    """RFC 6793 6: an AS4_PATH which arrives with one has that path segment discarded."""
+    payload = attribute(
+        Attribute.CODE.AS4_PATH,
+        OPTIONAL_TRANSITIVE,
+        segment(CONFED_SEQUENCE.ID, [64512], 4) + segment(SEQUENCE.ID, [NON_MAPPABLE], 4),
+    )
+
+    parsed = Attributes.unpack(payload, Direction.IN, negotiated())
+
+    assert flattened(parsed[Attribute.CODE.AS4_PATH]) == [
+        [NON_MAPPABLE]
+    ], 'the confederation segment survived the parse'
+
+
+def test_a_confederation_as_number_from_an_as4_path_does_not_reach_the_published_path() -> None:
+    """Why the discard above matters: the merge folds what is left into what we publish.
+
+    A confederation segment counts as no AS number, so the reconstruction carries it along
+    whatever its length, and a peer outside the confederation could put a confederation AS
+    number into the path we advertise onwards.
+    """
+    path = path_of(
+        wire(
+            segment(SEQUENCE.ID, [MAPPABLE, int(AS_TRANS)], 2),
+            segment(CONFED_SEQUENCE.ID, [64512], 4) + segment(SEQUENCE.ID, [NON_MAPPABLE], 4),
+        )
+    )
+
+    assert flattened(path) == [[MAPPABLE, NON_MAPPABLE]], f'a confederation AS number reached {path.string()}'
+
+
+# ==================================== RFC 6793 4.2.3: what the AGGREGATOR decides
+
+
+SPEAKER = pack('!4B', 192, 0, 2, 1)
+
+
+def aggregator(asn: int, octets: int) -> bytes:
+    code = Attribute.CODE.AS4_AGGREGATOR if octets == 4 else Attribute.CODE.AGGREGATOR
+    packer = '!L' if octets == 4 else '!H'
+    return attribute(code, OPTIONAL_TRANSITIVE, pack(packer, asn) + SPEAKER)
+
+
+def test_an_as4_aggregator_decodes_on_a_two_octet_session() -> None:
+    """RFC 6793 4.2.2: AS4_AGGREGATOR is eight octets whatever the session negotiated.
+
+    Aggregator4 inherited Aggregator.unpack, which sizes itself on negotiated.asn4, so the
+    only kind of session which is ever sent an AS4_AGGREGATOR was the one which answered a
+    correctly formed one with a NOTIFICATION, and the rules below could never be reached.
+    """
+    parsed = Attributes.unpack(aggregator(NON_MAPPABLE, 4), Direction.IN, negotiated())
+
+    decoded = parsed[Attribute.CODE.AS4_AGGREGATOR]
+    assert int(decoded.asn) == NON_MAPPABLE, 'the four octet aggregating AS was not read'
+
+
+def test_an_aggregator_which_is_not_as_trans_drops_both_as4_attributes() -> None:
+    """RFC 6793 4.2.3: a real aggregating AS was not written by a translating speaker."""
+    payload = (
+        aggregator(MAPPABLE, 2)
+        + aggregator(NON_MAPPABLE, 4)
+        + wire(segment(SEQUENCE.ID, [MAPPABLE, int(AS_TRANS)], 2), segment(SEQUENCE.ID, [NON_MAPPABLE], 4))
+    )
+
+    parsed = Attributes.unpack(payload, Direction.IN, negotiated())
+
+    assert Attribute.CODE.AS4_AGGREGATOR not in parsed, 'the AS4_AGGREGATOR should have been discarded'
+    assert Attribute.CODE.AS4_PATH not in parsed, 'the AS4_PATH should have been discarded'
+    assert int(parsed[Attribute.CODE.AGGREGATOR].asn) == MAPPABLE, 'the AGGREGATOR is the aggregating node'
+    assert flattened(parsed[Attribute.CODE.AS_PATH]) == [[MAPPABLE, int(AS_TRANS)]], 'the AS_PATH is the path, unmerged'
+
+
+def test_an_aggregator_of_as_trans_is_replaced_by_the_as4_aggregator() -> None:
+    """RFC 6793 4.2.3: AS_TRANS is a placeholder, and publishing it names AS 23456 an aggregator."""
+    payload = aggregator(int(AS_TRANS), 2) + aggregator(NON_MAPPABLE, 4)
+
+    parsed = Attributes.unpack(payload, Direction.IN, negotiated())
+
+    assert Attribute.CODE.AGGREGATOR not in parsed, 'AS 23456 was published as the aggregating AS'
+    assert int(parsed[Attribute.CODE.AS4_AGGREGATOR].asn) == NON_MAPPABLE, 'the real aggregating AS was lost'
+
+
+def test_an_as4_path_with_no_aggregator_beside_it_is_still_merged() -> None:
+    """The aggregator rules must not stop the reconstruction when no AGGREGATOR was sent."""
+    path = path_of(wire(segment(SEQUENCE.ID, [MAPPABLE, int(AS_TRANS)], 2), segment(SEQUENCE.ID, [NON_MAPPABLE], 4)))
+
+    assert flattened(path) == [[MAPPABLE, NON_MAPPABLE]], 'the merge stopped happening'

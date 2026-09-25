@@ -9,9 +9,7 @@ from __future__ import annotations
 
 from struct import unpack
 
-from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
-from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.neighaddr import NeighAddr
@@ -103,6 +101,9 @@ class LINK(BGPLS):
     @classmethod
     def unpack_nlri(cls, data, rd):
         cls.check_length(data, cls.DESCRIPTOR_OFFSET)
+        # RFC 9552 8.2.2: the NLRI may not be called malformed over the contents of a
+        # field, so an unrecognised Protocol-ID is carried rather than refused.  It is
+        # still read, because the IGP Router-ID sub-TLV is typed by it.
         proto_id = unpack('!B', data[0:1])[0]
         # FIXME: all these list should probably be defined in the objects
         iface_addrs = []
@@ -111,32 +112,17 @@ class LINK(BGPLS):
         topology_ids = []
         remote_node = []
         local_node = []
-        if proto_id not in PROTO_CODES.keys():
-            raise Notify(3, 10, f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
         for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
             if tlv_type == TLV_LOCAL_NODE_DESC:
-                local_node = []
-                while value:
-                    # Unpack Local Node Descriptor Sub-TLVs
-                    # We pass proto_id as TLV interpretation
-                    # follows IGP type
-                    node, left = NodeDescriptor.unpack(value, proto_id)
-                    local_node.append(node)
-                    if left == value:
-                        raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
-                    value = left
+                # proto_id goes in because a sub-TLV's shape follows the IGP type.
+                # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
+                local_node = NodeDescriptor.unpack_descriptors(value, proto_id)
                 continue
 
             if tlv_type == TLV_REMOTE_NODE_DESC:
-                # Remote Node Descriptor
-                remote_node = []
-                while value:
-                    node, left = NodeDescriptor.unpack(value, proto_id)
-                    remote_node.append(node)
-                    if left == value:
-                        raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
-                    value = left
+                # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
+                remote_node = NodeDescriptor.unpack_descriptors(value, proto_id)
                 continue
 
             if tlv_type == TLV_LINK_ID:

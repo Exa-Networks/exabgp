@@ -13,6 +13,9 @@ from struct import unpack
 
 from exabgp.environment import getenv
 
+from exabgp.bgp.message.open.asn import AS_TRANS
+
+from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.attribute.attribute import Discard
@@ -392,8 +395,7 @@ class Attributes(dict):
         if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes:
             return attributes
 
-        if Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
-            attributes.merge_attributes()
+        attributes.reconcile_four_octet_as()
 
         if Attribute.CODE.MP_REACH_NLRI not in attributes and Attribute.CODE.MP_UNREACH_NLRI not in attributes:
             cls.previous = data
@@ -495,13 +497,14 @@ class Attributes(dict):
             # Treat-as-withdraw is not available here: the NLRI are inside the attribute
             # the flags stopped us recognising, so there is nothing left to withdraw, and
             # falling through to the "unspecified" branch below made the routes it carried
-            # vanish with no withdrawal and no NOTIFICATION.  Subcode 0 because that is
-            # what mprnlri.py and mpurnlri.py already raise for an MP attribute they
-            # cannot read.
+            # vanish with no withdrawal and no NOTIFICATION.  Subcode 9, Optional Attribute
+            # Error, because RFC 4760 section 7 names it for a session ended over an
+            # incorrect MP attribute, and it is what mprnlri.py and mpurnlri.py now raise
+            # for every MP attribute they refuse.
             if aid in (Attribute.CODE.MP_REACH_NLRI, Attribute.CODE.MP_UNREACH_NLRI):
                 raise Notify(
                     3,
-                    0,
+                    9,
                     'invalid flag 0x{:02X} for {}, RFC 4760 makes it optional non-transitive'.format(
                         flag, Attribute.CODE.names.get(aid, 'unset')
                     ),
@@ -549,6 +552,33 @@ class Attributes(dict):
             'parser',
         )
         return self.parse(left, direction, negotiated)
+
+    def reconcile_four_octet_as(self):
+        """RFC 6793 4.2.3: settle the AS4_ attributes an OLD speaker sent beside the real ones.
+
+        The aggregator rules come first because the AGGREGATOR decides whether the AS4_PATH is
+        looked at at all, and only then is the path reconstructed.  Nothing used to read the
+        AGGREGATOR when merging, so neither rule existed.
+        """
+        aggregator = self.get(Attribute.CODE.AGGREGATOR, None)
+        aggregator4 = self.get(Attribute.CODE.AS4_AGGREGATOR, None)
+
+        if aggregator is not None and aggregator4 is not None:
+            assert isinstance(aggregator, Aggregator), 'the AGGREGATOR did not decode to an Aggregator'
+            if aggregator.asn != AS_TRANS:
+                # An aggregating AS which is a real number was not written by a speaker
+                # translating a four octet one, so both AS4_ attributes are noise: the
+                # AGGREGATOR is the aggregating node and the AS_PATH is the path.
+                self.pop(Attribute.CODE.AS4_AGGREGATOR, None)
+                self.pop(Attribute.CODE.AS4_PATH, None)
+                return
+            # AS_TRANS is a placeholder, not an Autonomous System.  Leaving the AGGREGATOR in
+            # told a consumer of the JSON that AS 23456 aggregated the route; the
+            # AS4_AGGREGATOR beside it holds the AS number which did.
+            self.pop(Attribute.CODE.AGGREGATOR, None)
+
+        if Attribute.CODE.AS_PATH in self and Attribute.CODE.AS4_PATH in self:
+            self.merge_attributes()
 
     def merge_attributes(self):
         as2path = self[Attribute.CODE.AS_PATH]

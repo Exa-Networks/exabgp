@@ -154,90 +154,116 @@ class Update(Message):
             raise ValueError('unexpected nlri definition ({})'.format(nlri))
         return nlris, mp_nlris
 
+    @staticmethod
+    def _include_defaults(nlris, mp_nlris):
+        # RFC 4760 permits MP_UNREACH-only UPDATEs without other path attributes.
+        if not mp_nlris or nlris:
+            return True
+        for family, actions in mp_nlris.items():
+            afi, safi = family
+            if safi not in (SAFI.unicast, SAFI.multicast):
+                return True
+            if set(actions.keys()) != {Action.WITHDRAW}:
+                return True
+        return False
+
     # The routes MUST have the same attributes.
     def messages(self, negotiated, include_withdraw=True):
         nlris, mp_nlris = self._split_nlris(negotiated)
         if not nlris and not mp_nlris:
             return
 
-        # RFC 4760 permits MP_UNREACH-only UPDATEs without other path attributes.
-        include_defaults = True
-        if mp_nlris and not nlris:
-            for family, actions in mp_nlris.items():
-                afi, safi = family
-                if safi not in (SAFI.unicast, SAFI.multicast):
-                    break
-                if set(actions.keys()) != {Action.WITHDRAW}:
-                    break
-            else:
-                include_defaults = False
+        attr = self.attributes.pack(negotiated, self._include_defaults(nlris, mp_nlris))
 
-        attr = self.attributes.pack(negotiated, include_defaults)
-        msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)
-        if msg_size <= 0:
-            log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
-            return
+        # What is left of an UPDATE once the path attributes of an ANNOUNCEMENT are in it,
+        # and what is left of one which carries none.
+        #
+        # There used to be one number here, the first, and the method returned outright when
+        # it reached zero.  RFC 4271 4.3 makes the Path Attributes field optional and RFC
+        # 4760 3 says an UPDATE carrying MP_UNREACH_NLRI "is not required to carry any other
+        # path attributes", so the announcement's budget has nothing to say about a
+        # withdrawal: since the carriers were split below, a withdraw-only UPDATE carries no
+        # attribute at all.  Roughly 4060 octets of path attributes therefore made a 27 octet
+        # withdraw-only UPDATE disappear, with nothing on the wire, no log an operator would
+        # connect to it, and a stale route left on the peer.  The announcement refusal is
+        # kept, in front of the announcement pass rather than in front of everything.
+        announce_size = negotiated.msg_size - Message.HEADER_LEN - UPDATE_ATTR_LENGTH_HEADER_SIZE - len(attr)
+        withdraw_size = negotiated.msg_size - Message.HEADER_LEN - UPDATE_ATTR_LENGTH_HEADER_SIZE
 
-        if not (yield from self._native_messages(nlris, attr, negotiated, msg_size, include_withdraw)):
-            return
-        yield from self._mp_messages(mp_nlris, attr, negotiated, msg_size, include_withdraw)
+        yield from self._native_messages(nlris, attr, negotiated, announce_size, withdraw_size, include_withdraw)
+        yield from self._mp_messages(mp_nlris, attr, negotiated, announce_size, include_withdraw)
 
-    def _native_messages(self, nlris, attr, negotiated, msg_size, include_withdraw):
-        # Native buffers are local to this generator and never leak into MP packets.
-        withdraws = b''
-        announced = b''
+    @staticmethod
+    def _packed_nlris(nlris, negotiated, budget, reason):
+        """The NLRI of one pass, in blobs which each fit `budget`.
+
+        Yields nothing more once a single NLRI is wider than a whole message, since there is
+        no way to send it and the blobs after it would arrive without it.
+        """
+        blob = b''
         for nlri in nlris:
             packed = nlri.pack(negotiated)
-            if len(announced) + len(withdraws) + len(packed) <= msg_size:
-                if nlri.action == Action.ANNOUNCE:
-                    announced += packed
-                elif include_withdraw:
-                    withdraws += packed
-                continue
+            if len(blob) + len(packed) > budget:
+                if not blob:
+                    log.critical(
+                        lambda reason=reason: 'can not pack one NLRI in an UPDATE ({})'.format(reason), 'parser'
+                    )
+                    return
+                yield blob
+                blob = b''
+            blob += packed
+        if blob:
+            yield blob
 
-            if not withdraws and not announced:
-                log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
-                return False
+    def _native_messages(self, nlris, attr, negotiated, announce_size, withdraw_size, include_withdraw):
+        # RFC 7606 5.1: an UPDATE "MUST NOT contain more than one of the following: non-empty
+        # Withdrawn Routes field, non-empty Network Layer Reachability Information field,
+        # MP_REACH_NLRI attribute, and MP_UNREACH_NLRI attribute".  The two IPv4 unicast
+        # fields used to be filled by one loop and shared a message; they are two passes now.
+        # The withdrawals go first, because a prefix in both sets has to be withdrawn before
+        # it is re-announced, which is the order the shared message gave for free.  Each pass
+        # still fills its field to the negotiated message size, so a table load is still one
+        # message per few hundred prefixes.
+        withdraws = [nlri for nlri in nlris if nlri.action == Action.WITHDRAW] if include_withdraw else []
+        announces = [nlri for nlri in nlris if nlri.action == Action.ANNOUNCE]
 
-            yield self._message(Update.prefix(withdraws) + Update.prefix(attr if announced else b'') + announced)
-            if nlri.action == Action.ANNOUNCE:
-                announced = packed
-                withdraws = b''
-            elif include_withdraw:
-                withdraws = packed
-                announced = b''
-            else:
-                withdraws = b''
-                announced = b''
+        # A withdraw-only UPDATE carries no path attribute, so it has the whole message.
+        for withdrawn in self._packed_nlris(withdraws, negotiated, withdraw_size, 'withdrawal_too_large'):
+            yield self._message(Update.prefix(withdrawn) + Update.prefix(b''))
 
-        if announced or withdraws:
-            yield self._message(Update.prefix(withdraws) + Update.prefix(attr if announced else b'') + announced)
-        return True
+        if not announces:
+            return
+        if announce_size <= 0:
+            # The attributes leave no room for a single NLRI, so these routes cannot be
+            # announced.  This is the refusal the guard in messages() used to make, now made
+            # where it applies: the withdrawals above have already gone out.
+            log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
+            return
+        for announced in self._packed_nlris(announces, negotiated, announce_size, 'attributes_too_large'):
+            yield self._message(Update.prefix(b'') + Update.prefix(attr) + announced)
 
     def _mp_messages(self, mp_nlris, attr, negotiated, msg_size, include_withdraw):
         for family, actions in mp_nlris.items():
             afi, safi = family
-            mp_announce = MPRNLRI(afi, safi, actions.get(Action.ANNOUNCE, []))
-            mp_withdraw = MPURNLRI(afi, safi, actions.get(Action.WITHDRAW, []))
-            mp_unreach = b''
+            announces = actions.get(Action.ANNOUNCE, [])
+            withdraws = actions.get(Action.WITHDRAW, []) if include_withdraw else []
 
-            # Each fragment gets the full budget; announcements must not starve withdrawals.
-            if include_withdraw:
-                for mpurnlri in mp_withdraw.packed_attributes(negotiated, msg_size):
-                    if mp_unreach:
-                        yield self._message(Update.prefix(b'') + Update.prefix(attr + mp_unreach))
-                    mp_unreach = mpurnlri
+            if msg_size <= 0:
+                # Only this family is impossible.  Returning would also drop every family
+                # after it, and packed_attributes raises rather than yield nothing, so it is
+                # never called with a budget which cannot hold anything.
+                log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
+                continue
 
-            # Withdraw before reannouncing, even when either action spans several packets.
-            for mprnlri in mp_announce.packed_attributes(negotiated, msg_size):
-                if mp_unreach and len(mp_unreach) + len(mprnlri) > msg_size:
-                    yield self._message(Update.prefix(b'') + Update.prefix(attr + mp_unreach))
-                    mp_unreach = b''
-                yield self._message(Update.prefix(b'') + Update.prefix(attr + mp_unreach + mprnlri))
-                mp_unreach = b''
+            # RFC 7606 5.1 again: an MP_UNREACH_NLRI never shares a message with an
+            # MP_REACH_NLRI.  The last withdrawal chunk used to be held back and packed with
+            # the first announcement.  Emitting them all first keeps the ordering that gave,
+            # so a prefix is withdrawn before it is re-announced across message boundaries.
+            for mpurnlri in MPURNLRI(afi, safi, withdraws).packed_attributes(negotiated, msg_size):
+                yield self._message(Update.prefix(b'') + Update.prefix(attr + mpurnlri))
 
-            if mp_unreach:
-                yield self._message(Update.prefix(b'') + Update.prefix(attr + mp_unreach))
+            for mprnlri in MPRNLRI(afi, safi, announces).packed_attributes(negotiated, msg_size):
+                yield self._message(Update.prefix(b'') + Update.prefix(attr + mprnlri))
 
     # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
     @classmethod

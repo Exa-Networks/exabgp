@@ -184,16 +184,21 @@ class TestNodeNLRI:
         assert 'bgpls-node' in str_repr
         assert 'protocol-id' in str_repr
 
-    def test_node_invalid_protocol(self) -> None:
-        """Test Node NLRI with invalid protocol ID"""
+    def test_node_unassigned_protocol_is_carried(self) -> None:
+        """An unassigned Protocol-ID is carried, not refused (RFC 9552 8.2.2).
+
+        This asserted a Notify until the IANA registry outgrew the six codes of RFC 7752
+        and the whitelist started killing sessions carrying Segment Routing topology.
+        """
         data = (
-            b'\xff'  # Invalid protocol
+            b'\xff'  # a Protocol-ID IANA has not assigned
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x00'
         )
 
-        with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            NODE.unpack_nlri(data, rd=None)
+        nlri = NODE.unpack_nlri(data, rd=None)
+
+        assert nlri.proto_id == 0xFF
 
     def test_node_invalid_node_type(self) -> None:
         """Test Node NLRI with invalid node descriptor type"""
@@ -400,16 +405,21 @@ class TestLinkNLRI:
 
         assert 'bgpls-link' in str_repr
 
-    def test_link_invalid_protocol(self) -> None:
-        """Test Link NLRI with invalid protocol ID"""
+    def test_link_unassigned_protocol_is_carried(self) -> None:
+        """An unassigned Protocol-ID is carried, not refused (RFC 9552 8.2.2).
+
+        This asserted a Notify until the IANA registry outgrew the six codes of RFC 7752
+        and the whitelist started killing sessions carrying Segment Routing topology.
+        """
         data = (
-            b'\xff'  # Invalid protocol
+            b'\xff'  # a Protocol-ID IANA has not assigned
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x00'
         )
 
-        with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            LINK.unpack_nlri(data, rd=None)
+        nlri = LINK.unpack_nlri(data, rd=None)
+
+        assert nlri.proto_id == 0xFF
 
     def test_link_pack(self) -> None:
         """Test Link NLRI packing"""
@@ -547,16 +557,23 @@ class TestPrefixV4NLRI:
 
         assert 'bgpls-prefix-v4' in str_repr
 
-    def test_prefix_v4_invalid_protocol(self) -> None:
-        """Test IPv4 Prefix NLRI with invalid protocol ID"""
+    def test_prefix_v4_unassigned_protocol_is_carried(self) -> None:
+        """An unassigned Protocol-ID is carried, not refused (RFC 9552 8.2.2).
+
+        This asserted a Notify until the IANA registry outgrew the six codes of RFC 7752
+        and the whitelist started killing sessions carrying Segment Routing topology.
+        """
         data = (
-            b'\xff'  # Invalid protocol
+            b'\xff'  # a Protocol-ID IANA has not assigned
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
-            b'\x01\x00\x00\x00'
+            b'\x01\x00\x00\x08'
+            b'\x02\x00\x00\x04\x00\x00\xff\xfd'
+            b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            PREFIXv4.unpack_nlri(data, rd=None)
+        nlri = PREFIXv4.unpack_nlri(data, rd=None)
+
+        assert nlri.proto_id == 0xFF
 
     def test_prefix_v4_pack(self) -> None:
         """Test IPv4 Prefix NLRI packing"""
@@ -688,16 +705,23 @@ class TestPrefixV6NLRI:
 
         assert 'bgpls-prefix-v6' in str_repr
 
-    def test_prefix_v6_invalid_protocol(self) -> None:
-        """Test IPv6 Prefix NLRI with invalid protocol ID"""
+    def test_prefix_v6_unassigned_protocol_is_carried(self) -> None:
+        """An unassigned Protocol-ID is carried, not refused (RFC 9552 8.2.2).
+
+        This asserted a Notify until the IANA registry outgrew the six codes of RFC 7752
+        and the whitelist started killing sessions carrying Segment Routing topology.
+        """
         data = (
-            b'\xff'  # Invalid protocol
+            b'\xff'  # a Protocol-ID IANA has not assigned
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
-            b'\x01\x00\x00\x00'
+            b'\x01\x00\x00\x08'
+            b'\x02\x00\x00\x04\x00\x00\xff\xfd'
+            b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            PREFIXv6.unpack_nlri(data, rd=None)
+        nlri = PREFIXv6.unpack_nlri(data, rd=None)
+
+        assert nlri.proto_id == 0xFF
 
     def test_prefix_v6_pack(self) -> None:
         """Test IPv6 Prefix NLRI packing"""
@@ -801,16 +825,21 @@ class TestSRv6SIDNLRI:
         assert 'protocol_id=3' in repr_str
         assert 'domain=1' in repr_str
 
-    def test_srv6sid_invalid_protocol(self) -> None:
-        """Test SRv6 SID NLRI with invalid protocol ID"""
+    def test_srv6sid_unassigned_protocol_is_carried(self) -> None:
+        """An unassigned Protocol-ID is carried, not refused (RFC 9552 8.2.2).
+
+        This asserted a Notify until the IANA registry outgrew the six codes of RFC 7752
+        and the whitelist started killing sessions carrying Segment Routing topology.
+        """
         data = (
-            b'\xff'  # Invalid protocol
+            b'\xff'  # a Protocol-ID IANA has not assigned
             b'\x00\x00\x00\x00\x00\x00\x00\x01'
             b'\x01\x00\x00\x00'
         )
 
-        with pytest.raises(Exception, match='Protocol-ID .* is not valid'):
-            SRv6SID.unpack_nlri(data, len(data))
+        nlri = SRv6SID.unpack_nlri(data, len(data))
+
+        assert nlri.proto_id == 0xFF
 
     def test_srv6sid_invalid_node_type(self) -> None:
         """Test SRv6 SID NLRI with invalid node descriptor type"""

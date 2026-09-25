@@ -56,6 +56,12 @@ class TrafficRate(ExtendedCommunity):
         # __repr__ raises must not exist however it was made.
         if not isfinite(rate):
             raise ValueError(f'traffic-rate must be a finite number: {rate}')
+        # RFC 8955 section 7.1: "On encoding, the traffic-rate MUST NOT be negative."  Zero
+        # already means discard everything, so a negative asks for nothing this community
+        # can express.  TrafficRatePackets has carried both halves of this rule since it
+        # was written and its older sibling carried neither, which is the whole of the bug.
+        if rate < 0:
+            raise ValueError(f'traffic-rate must not be negative: {rate}')
         self.asn = asn
         self.rate = rate
         ExtendedCommunity.__init__(
@@ -69,7 +75,10 @@ class TrafficRate(ExtendedCommunity):
     @staticmethod
     def unpack(data):
         asn, rate = checked_wire_rate(data)
-        return TrafficRate(ASN(asn), rate, data[:TRAFFIC_RATE_SIZE_BYTES])
+        # RFC 8955 section 7.1: "On decoding, negative values MUST be treated as zero
+        # (discard all traffic)."  Passed on as it arrived, a peer asking for a flow to be
+        # discarded was reported as `rate-limit:-100`, which no API consumer can program.
+        return TrafficRate(ASN(asn), max(rate, 0.0), data[:TRAFFIC_RATE_SIZE_BYTES])
 
 
 # ============================================================ TrafficRatePackets
@@ -209,6 +218,7 @@ class TrafficRedirectASN4(ExtendedCommunity):
 class TrafficMark(ExtendedCommunity):
     COMMUNITY_TYPE = 0x80
     COMMUNITY_SUBTYPE = 0x09
+    DSCP_MASK = 0x3F
 
     def __init__(self, dscp, community=None):
         self.dscp = dscp
@@ -223,7 +233,11 @@ class TrafficMark(ExtendedCommunity):
     @staticmethod
     def unpack(data):
         (dscp,) = unpack('!B', data[7:8])
-        return TrafficMark(dscp, data[:8])
+        # RFC 8955 section 7.5: the two high bits of the octet are reserved and MUST be
+        # ignored on decoding.  Read whole, 0xC1 was reported as `mark 193`, which is not a
+        # DSCP: a DSCP is the six low bits and the rest is ECN in the same header field.
+        # The wire is kept as it arrived, so only what exabgp reports changes.
+        return TrafficMark(dscp & TrafficMark.DSCP_MASK, data[:8])
 
 
 # =============================================================== TrafficNextHopIPv4IETF
