@@ -73,6 +73,24 @@ using `main`, more options are available: only decoding nlri for example:
 ```
 
 
+## Type checking
+
+There is none on this branch, deliberately.
+
+`mypy --strict` reports several thousand errors against 5.0's `src/`, and they
+are not the fault of one bad import: the source is essentially unannotated, so
+they are spread across the tree. The heaviest are
+`attribute/community/extended/traffic.py`, `reactor/peer.py`,
+`configuration/configuration.py` and `reactor/api/processes.py`, at 150 to 215
+errors each. A run therefore tells you nothing about whether a change is sound,
+and it is not part of any gate here.
+
+Full `mypy --strict` validation is a `main` / 6.0 property. If you are carrying
+a fix back from there, expect its type annotations to need removing or
+loosening, and do not treat 6.0's clean run as evidence about this branch.
+
+What does gate here: `ruff`, `./qa/bin/check_tiger_style` and the test suites.
+
 ## Coding Style
 
 Really coding style is not something we really have strong opinion but to make things consistent, we format the code using black once in while with:
