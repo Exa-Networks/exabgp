@@ -50,12 +50,23 @@ from ci_raw import RawCapture, RawProblem, Skipped, parse_raw, report_problems, 
 # Now import exabgp modules
 from exabgp.environment import getenv
 from exabgp.configuration.configuration import Configuration
+
 from exabgp.configuration.check import _hexa, _make_update
 from exabgp.reactor.api.response import Response
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.version import json as json_v6_version
 from exabgp.version import json_v4 as json_v4_version
+
+
+def is_step(text: str) -> bool:
+    """Whether this is a step label, by the same rule ci_raw applies to a raw: line.
+
+    The two readers must agree about what a step looks like or an expectation can be
+    written, stored and never read, which is what happened with A1/B1/C1.
+    """
+    return bool(text) and ':' not in text and not text[0].isspace()
+
 
 # ANSI color codes
 GREEN = '\033[32m'
@@ -269,9 +280,17 @@ def parse_ci_file(ci_path: Path, relative: object) -> CiFile:
                 current_raw = capture
                 continue
 
-            # Parse N:json:, N:jsv4:, N:jsv6:
+            # Parse <step>:json:, <step>:jsv4:, <step>:jsv6:
+            #
+            # The step is whatever ci_raw._CAPTURE accepts on the raw: line it belongs to,
+            # which is any run of non-colon non-space characters.  This used to require
+            # isdigit(), so an expectation written against api-reload.ci's A1/B1/C1 labels
+            # was read off the file and dropped, while the raw: line beside it parsed
+            # fine: the same dialect split ci_raw.py was written to end, one layer up.
+            # Ten expectations sat inert in the tree because of it, reported as missing
+            # by the very summary that was ignoring them.
             parts = line.split(':', 2)
-            if len(parts) == 3 and parts[0].isdigit() and parts[1] in ('json', 'jsv4', 'jsv6'):
+            if len(parts) == 3 and is_step(parts[0]) and parts[1] in ('json', 'jsv4', 'jsv6'):
                 step, tag, json_str = parts
 
                 # Attach to current raw message
@@ -532,7 +551,7 @@ def replace_json_lines(ci_path: Path, generated_entries: list[tuple[str, list[st
         # Check if this is an old json expectation line - skip it (will be replaced)
         if stripped and not stripped.startswith('#'):
             parts = stripped.split(':', 2)
-            if len(parts) >= 3 and parts[0].isdigit() and parts[1] in ('json', 'jsv4', 'jsv6'):
+            if len(parts) >= 3 and is_step(parts[0]) and parts[1] in ('json', 'jsv4', 'jsv6'):
                 # Skip old json expectation - it will be replaced
                 continue
 
