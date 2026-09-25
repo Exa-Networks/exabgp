@@ -38,6 +38,17 @@ from pathlib import Path
 # Add src to path for library imports
 REPO_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
+# ci_raw sits next to this file: one reader for raw: lines, shared with test_json
+sys.path.insert(0, str(Path(__file__).parent))
+
+from ci_raw import RawCapture, RawProblem, Skipped, parse_raw, report_problems, report_skipped, where
+
+# what a raw: line is met and not verified for.  NO_CMD is the one which means missing
+# coverage rather than a message this test has nothing to say about, so it gets named.
+NOT_AN_UPDATE = "not an UPDATE message"
+NO_CMD = "no cmd: line for this step, so nothing is encoded and compared"
+MARKED_NO_CMD = 'marked "# No cmd:" in the file'
+MISSING_COVERAGE = {NO_CMD}
 
 # Now import exabgp modules
 from exabgp.bgp.message import UpdateCollection
@@ -1674,16 +1685,22 @@ def format_flow_announce(
 
 
 def parse_ci_file_for_verify(
-    ci_path: Path,
-) -> tuple[Path | None, int | None, list[tuple[int, str, str, str]]]:
+    ci_path: Path, relative: object
+) -> tuple[Path | None, int | None, list[tuple[int, str, str, str]], list[Skipped], list[tuple[str, RawProblem]]]:
     """Parse a CI file for cmd:/raw: pairs to verify.
 
+    Every raw: line comes back as a pair to verify, a Skipped with its reason, or a
+    RawProblem.  Nothing is dropped for failing to match a pattern.
+
     Returns:
-        Tuple of (config_file_path, peer_as, list of (line_num, step, cmd, raw_hex))
+        Tuple of (config_file_path, peer_as, list of (line_num, step, cmd, raw_hex),
+        skipped captures, unreadable lines)
     """
     config_file = None
     peer_as = None
     pairs: list[tuple[int, str, str, str]] = []
+    skipped: list[Skipped] = []
+    problems: list[tuple[str, RawProblem]] = []
 
     lines = ci_path.read_text().splitlines()
     prev_cmd = None
@@ -1729,16 +1746,20 @@ def parse_ci_file_for_verify(
             continue
 
         # Parse N:raw:...
-        raw_match = re.match(r"^(\d+):raw:(.+)$", stripped)
-        if raw_match:
-            step = raw_match.group(1)
-            raw_hex = raw_match.group(2).replace(":", "")
+        capture = parse_raw(stripped, line_num + 1)
+        if isinstance(capture, RawProblem):
+            problems.append((f"{relative}:{line_num + 1}", capture))
+            continue
 
-            # Only UPDATE messages (type 02) with preceding cmd: line
-            # Skip pairs marked with "# No cmd:" comment
-            if len(raw_hex) >= 38 and raw_hex[36:38].upper() == "02":
-                if prev_cmd and prev_cmd_step == step and not skip_next_pair:
-                    pairs.append((prev_cmd_line, step, prev_cmd, raw_hex))
+        if isinstance(capture, RawCapture):
+            if not capture.is_update:
+                skipped.append(Skipped(where(relative, capture), NOT_AN_UPDATE))
+            elif skip_next_pair:
+                skipped.append(Skipped(where(relative, capture), MARKED_NO_CMD))
+            elif prev_cmd and prev_cmd_step == capture.step:
+                pairs.append((prev_cmd_line, capture.step, prev_cmd, capture.hexadecimal))
+            else:
+                skipped.append(Skipped(where(relative, capture), NO_CMD))
 
             prev_cmd = None
             prev_cmd_step = None
@@ -1746,20 +1767,25 @@ def parse_ci_file_for_verify(
             skip_next_pair = False
             continue
 
-    return config_file, peer_as, pairs
+    return config_file, peer_as, pairs, skipped, problems
 
 
 def parse_ci_file_for_generate(
-    ci_path: Path,
-) -> tuple[Path | None, int | None, list[tuple[int, str, str, bool, bool]]]:
+    ci_path: Path, relative: object
+) -> tuple[
+    Path | None, int | None, list[tuple[int, str, str, bool, bool]], list[Skipped], list[tuple[str, RawProblem]]
+]:
     """Parse a CI file for raw: lines to generate cmd: from.
 
     Returns:
-        Tuple of (config_file_path, peer_as, list of (line_num, step, raw_hex, has_cmd, skip_roundtrip))
+        Tuple of (config_file_path, peer_as, list of (line_num, step, raw_hex, has_cmd,
+        skip_roundtrip), skipped captures, unreadable lines)
     """
     config_file = None
     peer_as = None
     raw_entries: list[tuple[int, str, str, bool, bool]] = []
+    skipped: list[Skipped] = []
+    problems: list[tuple[str, RawProblem]] = []
 
     lines = ci_path.read_text().splitlines()
     prev_was_cmd = False
@@ -1803,13 +1829,17 @@ def parse_ci_file_for_generate(
             prev_cmd_step = cmd_match.group(1)
             continue
 
-        raw_match = re.match(r"^(\d+):raw:(.+)$", stripped)
-        if raw_match:
-            step = raw_match.group(1)
-            raw_hex = raw_match.group(2).replace(":", "")
-            if len(raw_hex) >= 38 and raw_hex[36:38].upper() == "02":
-                has_cmd = prev_was_cmd and prev_cmd_step == step
-                raw_entries.append((line_num, step, raw_hex, has_cmd, skip_next_raw))
+        capture = parse_raw(stripped, line_num + 1)
+        if isinstance(capture, RawProblem):
+            problems.append((f"{relative}:{line_num + 1}", capture))
+            continue
+
+        if isinstance(capture, RawCapture):
+            if capture.is_update:
+                has_cmd = prev_was_cmd and prev_cmd_step == capture.step
+                raw_entries.append((line_num, capture.step, capture.hexadecimal, has_cmd, skip_next_raw))
+            else:
+                skipped.append(Skipped(where(relative, capture), NOT_AN_UPDATE))
             prev_was_cmd = False
             skip_next_raw = False
             continue
@@ -1817,19 +1847,21 @@ def parse_ci_file_for_generate(
         prev_was_cmd = False
         skip_next_raw = False
 
-    return config_file, peer_as, raw_entries
+    return config_file, peer_as, raw_entries, skipped, problems
 
 
-def self_check_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int, int]:
+def self_check_ci_file(
+    ci_path: Path, relative: object, verbose: bool = False
+) -> tuple[int, int, int, list[Skipped], list[tuple[str, RawProblem]]]:
     """Self-check: decode raw→cmd, then encode cmd→raw and compare.
 
     Returns:
-        Tuple of (passed, failed, skipped)
+        Tuple of (passed, failed, skipped, non-UPDATE captures, unreadable lines)
     """
-    config_file, peer_as, raw_entries = parse_ci_file_for_generate(ci_path)
+    config_file, peer_as, raw_entries, not_verified, problems = parse_ci_file_for_generate(ci_path, relative)
 
     if not raw_entries:
-        return 0, 0, 0
+        return 0, 0, 0, not_verified, problems
 
     neighbor = get_neighbor(config_file)
 
@@ -1945,19 +1977,21 @@ def self_check_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int, 
                         f"      length: got {len(encoded) // 2} bytes, expected {len(raw_hex) // 2} bytes"
                     )
 
-    return passed, failed, skipped
+    return passed, failed, skipped, not_verified, problems
 
 
-def verify_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int]:
+def verify_ci_file(
+    ci_path: Path, relative: object, verbose: bool = False
+) -> tuple[int, int, list[Skipped], list[tuple[str, RawProblem]]]:
     """Verify cmd: lines encode to matching raw: lines.
 
     Returns:
-        Tuple of (passed, failed)
+        Tuple of (passed, failed, captures nothing was compared for, unreadable lines)
     """
-    config_file, peer_as, pairs = parse_ci_file_for_verify(ci_path)
+    config_file, peer_as, pairs, skipped, problems = parse_ci_file_for_verify(ci_path, relative)
 
     if not pairs:
-        return 0, 0
+        return 0, 0, skipped, problems
 
     # Get neighbor context for encoding parameters
     neighbor = get_neighbor(config_file) if config_file else None
@@ -2007,21 +2041,21 @@ def verify_ci_file(ci_path: Path, verbose: bool = False) -> tuple[int, int]:
                         )
                         break
 
-    return passed, failed
+    return passed, failed, skipped, problems
 
 
 def generate_ci_file(
-    ci_path: Path, verbose: bool = False, inline: bool = False
-) -> tuple[int, int, list[tuple[int, str]]]:
+    ci_path: Path, relative: object, verbose: bool = False, inline: bool = False
+) -> tuple[int, int, list[tuple[int, str]], list[tuple[str, RawProblem]]]:
     """Generate cmd: lines from raw: lines.
 
     Returns:
-        Tuple of (processed, skipped, list of (line_num, cmd_line))
+        Tuple of (processed, skipped, list of (line_num, cmd_line), unreadable lines)
     """
-    config_file, _peer_as, raw_entries = parse_ci_file_for_generate(ci_path)
+    config_file, _peer_as, raw_entries, _not_verified, problems = parse_ci_file_for_generate(ci_path, relative)
 
     if not raw_entries:
-        return 0, 0, []
+        return 0, 0, [], problems
 
     neighbor = get_neighbor(config_file)
 
@@ -2093,7 +2127,7 @@ def generate_ci_file(
             if verbose:
                 print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: no API command generated")
 
-    return processed, skipped, generated
+    return processed, skipped, generated, problems
 
 
 def insert_cmd_lines(ci_path: Path, generated: list[tuple[int, str]]) -> bool:
@@ -2173,6 +2207,14 @@ def find_ci_files(repo_root: Path, paths: list[str] | None = None) -> list[Path]
     return ci_files
 
 
+def report_unreadable(problems: list[tuple[str, RawProblem]]) -> None:
+    """Print the raw: lines no reader can make sense of, counted beside the rest."""
+    if not problems:
+        return
+    print(f"{RED}Unreadable:{RESET} {len(problems)}")
+    report_problems(problems)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -2218,6 +2260,10 @@ def main() -> int:
     total_failed = 0
     total_skipped = 0
     total_generated = 0
+    # Captures met and not compared against anything, and lines which say raw: and cannot
+    # be read.  Counted for every file, including the ones holding no cmd: at all.
+    not_verified: list[Skipped] = []
+    all_problems: list[tuple[str, RawProblem]] = []
 
     for ci_file in ci_files:
         content = ci_file.read_text()
@@ -2232,7 +2278,11 @@ def main() -> int:
             if ":raw:" not in content:
                 continue
 
-            passed, failed, skipped = self_check_ci_file(ci_file, args.verbose)
+            passed, failed, skipped, unchecked, problems = self_check_ci_file(
+                ci_file, rel_path, args.verbose
+            )
+            not_verified.extend(unchecked)
+            all_problems.extend(problems)
 
             if passed > 0 or failed > 0 or (args.verbose and skipped > 0):
                 if failed == 0:
@@ -2253,9 +2303,10 @@ def main() -> int:
             if ":raw:" not in content:
                 continue
 
-            processed, skipped, generated = generate_ci_file(
-                ci_file, args.verbose, args.inline
+            processed, skipped, generated, problems = generate_ci_file(
+                ci_file, rel_path, args.verbose, args.inline
             )
+            all_problems.extend(problems)
 
             if processed > 0 or (args.verbose and skipped > 0):
                 print(f"{rel_path}: {processed} generated, {skipped} skipped")
@@ -2271,11 +2322,14 @@ def main() -> int:
                     if insert_cmd_lines(ci_file, generated):
                         print(f"  {GREEN}WROTE{RESET} {len(generated)} cmd lines")
         else:
-            # Verify mode (default): check cmd: encodes to raw:
-            if ":cmd:" not in content:
-                continue
-
-            passed, failed = verify_ci_file(ci_file, args.verbose)
+            # Verify mode (default): check cmd: encodes to raw:.  Files holding no cmd:
+            # at all are still read, because their captures are exactly the ones this
+            # verifies nothing about and they were being skipped without a word.
+            passed, failed, unchecked, problems = verify_ci_file(
+                ci_file, rel_path, args.verbose
+            )
+            not_verified.extend(unchecked)
+            all_problems.extend(problems)
 
             if passed > 0 or failed > 0:
                 if failed == 0:
@@ -2300,9 +2354,11 @@ def main() -> int:
         print("=" * 60)
         print(f"{GREEN}Passed:{RESET}  {total_passed}")
         print(f"{RED}Failed:{RESET}  {total_failed}")
-        print(f"{YELLOW}Skipped:{RESET} {total_skipped}")
+        print(f"{YELLOW}Skipped:{RESET} {total_skipped + len(not_verified)}")
+        report_skipped(not_verified, MISSING_COVERAGE)
+        report_unreadable(all_problems)
 
-        return 0 if total_failed == 0 else 1
+        return 0 if total_failed == 0 and not all_problems else 1
 
     elif args.generate:
         if total_generated == 0 and total_skipped == 0:
@@ -2315,10 +2371,11 @@ def main() -> int:
         print("=" * 60)
         print(f"Generated: {total_generated}")
         print(f"Skipped:   {total_skipped}")
-        return 0
+        report_unreadable(all_problems)
+        return 1 if all_problems else 0
 
     else:
-        if total_passed == 0 and total_failed == 0:
+        if total_passed == 0 and total_failed == 0 and not not_verified:
             print("No cmd: lines found to verify (OK)")
             return 0
 
@@ -2326,10 +2383,14 @@ def main() -> int:
         print("=" * 60)
         print("VERIFICATION SUMMARY")
         print("=" * 60)
+        print(f"Capture lines met: {total_passed + total_failed + len(not_verified) + len(all_problems)}")
         print(f"{GREEN}Passed:{RESET}  {total_passed}")
         print(f"{RED}Failed:{RESET}  {total_failed}")
+        print(f"{YELLOW}Skipped:{RESET} {len(not_verified)}")
+        report_skipped(not_verified, MISSING_COVERAGE)
+        report_unreadable(all_problems)
 
-        return 0 if total_failed == 0 else 1
+        return 0 if total_failed == 0 and not all_problems else 1
 
 
 if __name__ == "__main__":
