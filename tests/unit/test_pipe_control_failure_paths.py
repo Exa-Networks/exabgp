@@ -68,7 +68,7 @@ def standard_fds(monkeypatch):
 
 def test_a_missing_pipe_says_it_is_missing(tmp_path, capsys):
     assert pipe.check_fifo(f'{tmp_path}/absent.in') is False
-    assert 'could not find the named pipe' in capsys.readouterr().out
+    assert 'could not find the named pipe' in capsys.readouterr().err
 
 
 def test_a_pipe_we_may_not_reach_says_so(tmp_path, capsys):
@@ -82,7 +82,7 @@ def test_a_pipe_we_may_not_reach_says_so(tmp_path, capsys):
         assert pipe.check_fifo(str(closed / 'exabgp.in')) is False
     finally:
         os.chmod(closed, 0o700)
-    assert 'not allowed to reach the named pipe' in capsys.readouterr().out
+    assert 'not allowed to reach the named pipe' in capsys.readouterr().err
 
 
 def test_any_other_errno_is_reported_with_its_reason(tmp_path, capsys):
@@ -98,7 +98,7 @@ def test_any_other_errno_is_reported_with_its_reason(tmp_path, capsys):
     assert raised.value.errno == errno.ENOTDIR
 
     assert pipe.check_fifo(str(not_a_directory / 'exabgp.in')) is False
-    captured = capsys.readouterr().out
+    captured = capsys.readouterr().err
     assert 'could not check the named pipe' in captured
     assert 'Not a directory' in captured
 
@@ -107,7 +107,7 @@ def test_a_plain_file_says_it_is_not_a_pipe(tmp_path, capsys):
     plain = tmp_path / 'exabgp.in'
     plain.write_text('')
     assert pipe.check_fifo(str(plain)) is False
-    assert 'is not a named pipe' in capsys.readouterr().out
+    assert 'is not a named pipe' in capsys.readouterr().err
 
 
 def test_an_unreadable_pipe_says_it_cannot_be_read(tmp_path, capsys):
@@ -116,7 +116,7 @@ def test_an_unreadable_pipe_says_it_cannot_be_read(tmp_path, capsys):
     name = str(tmp_path / 'exabgp.in')
     os.mkfifo(name, 0o000)
     assert pipe.check_fifo(name) is False
-    assert 'we can not read/write to it' in capsys.readouterr().out
+    assert 'we can not read/write to it' in capsys.readouterr().err
 
 
 def test_a_usable_pipe_is_accepted(tmp_path, capsys):
@@ -124,7 +124,9 @@ def test_a_usable_pipe_is_accepted(tmp_path, capsys):
     os.mkfifo(name)
     assert stat.S_ISFIFO(os.stat(name).st_mode)
     assert pipe.check_fifo(name) is True
-    assert capsys.readouterr().out == ''
+    captured = capsys.readouterr()
+    assert captured.out == ''
+    assert captured.err == ''
 
 
 def test_loop_ends_when_the_answer_pipe_cannot_be_opened(tmp_path, monkeypatch, capfd, standard_fds):
@@ -167,3 +169,27 @@ def test_loop_runs_when_the_answer_pipe_opens(tmp_path, monkeypatch, standard_fd
     assert control.r_pipe is not None
     assert entered == [[sys.stdin.fileno(), control.r_pipe]]
     os.close(control.r_pipe)
+
+
+def test_no_report_is_written_to_the_pipe_the_daemon_reads(tmp_path, capsys):
+    """Every check_fifo report used to go to stdout, which in Control is the daemon's pipe.
+
+    Control passes its own stdout to the daemon as the command channel, so each of these five
+    lines was written down that pipe and read as a command line rather than by an operator as
+    an error. The rest of pipe.py already routes its reports to stderr for exactly this
+    reason, at the two places which say so in a comment; check_fifo was the one which did not.
+
+    One `in` assertion per message would still pass if a copy went to stdout as well, so this
+    asserts stdout is empty rather than that stderr is not.
+    """
+    plain = tmp_path / 'plain'
+    plain.write_text('')
+    unreadable = tmp_path / 'unreadable.in'
+    os.mkfifo(unreadable, 0o000)
+
+    for name in (f'{tmp_path}/absent.in', str(plain), str(unreadable)):
+        assert pipe.check_fifo(name) is False
+
+        captured = capsys.readouterr()
+        assert captured.out == '', f'{name} wrote to the daemon pipe: {captured.out!r}'
+        assert captured.err != '', f'{name} reported nothing at all'
