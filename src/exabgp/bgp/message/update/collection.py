@@ -451,13 +451,21 @@ class UpdateCollection(Message):
                 yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(attr))
             return
 
-        # If all we have is MP_UNREACH_NLRI, we do not need the default
-        # attributes. See RFC4760 that states the following:
+        # If all we have is MP_UNREACH_NLRI, we send no path attribute at all.
+        # See RFC4760 that states the following:
         #
         #   An UPDATE message that contains the MP_UNREACH_NLRI is not required
         #   to carry any other path attributes.
         #
-        include_defaults = True
+        # This used to ask pack_attribute for the attributes without the defaults, and got
+        # nothing only because of a precedence bug in it: `set(keys + list(default) if
+        # with_default else [])` made the whole concatenation the true branch, so
+        # with_default=False encoded nothing whatever the collection held. Now that the
+        # brackets are right, what this pass wants has to be said: no attribute field.
+        # Asking for the withdrawn route's own attributes instead would put them on the wire
+        # and size the withdrawal against them, which is how a withdrawal came to be dropped
+        # for the weight of an announcement it was not carrying.
+        carries_attributes = True
 
         # Check if we only have withdraws (v4 or mp)
         only_withdraws = not v4_announces and not mp_announces
@@ -469,9 +477,9 @@ class UpdateCollection(Message):
                     break
             # no break - all families are unicast/multicast
             else:
-                include_defaults = False
+                carries_attributes = False
 
-        base_attr = self.attributes.pack_attribute(negotiated, include_defaults)
+        base_attr = self.attributes.pack_attribute(negotiated) if carries_attributes else b''
         otc = b''
         # RFC 9234 5: "The operator MUST NOT have the ability to modify the procedures
         # defined in this section."  This used to also test negotiated.role_otc and the

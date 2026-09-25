@@ -22,6 +22,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
+import re
 from struct import unpack
 from collections.abc import Callable, Iterator, MutableMapping
 from typing import TYPE_CHECKING, Any, ClassVar, Generator, cast
@@ -60,6 +61,11 @@ from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.otc import OTCSelf
 from exabgp.bgp.message.update.attribute.watchdog import NoWatchdog, Watchdog
 from exabgp.logger import lazyattribute, lazymsg, log
+
+# The integer grammar of RFC 8259 section 6: an optional minus, then either a single zero
+# or a digit which is not zero followed by any digits. No plus, no leading zero, no
+# separator, all three of which Python's int() would accept.
+_JSON_INTEGER = re.compile(r'-?(?:0|[1-9][0-9]*)')
 
 
 class _NOTHING:
@@ -173,12 +179,16 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
     @staticmethod
     def _as_json_scalar(text: str) -> str:
-        """Emit a number as a number, and anything else as a quoted string."""
-        try:
-            int(text)
-        except ValueError:
-            return json.dumps(text)
-        return text
+        """Emit a number as a number, and anything else as a quoted string.
+
+        The test used to be `int(text)`, which accepts more than JSON does: '010', '00',
+        '1_000' and '+5' all parse in Python and none of them is a JSON number, so each
+        was emitted bare and made the whole line unparseable for the consumer. Only the
+        integer grammar of RFC 8259 section 6 goes out unquoted.
+        """
+        if _JSON_INTEGER.fullmatch(text.strip()):
+            return text
+        return json.dumps(text)
 
     def _generate_json(self, include_nexthop: bool = False, generic: bool = False) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
@@ -352,7 +362,11 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         }
 
         keys = list(self)
-        alls = set(keys + list(default) if with_default else [])
+        # `with_default` chooses whether the three defaults above are synthesised when they are
+        # absent, not whether anything is encoded at all.  The brackets matter: a conditional
+        # expression binds looser than `+`, so `keys + list(default) if with_default else []`
+        # made the whole concatenation the true branch and `with_default=False` return b''.
+        alls = set(keys + (list(default) if with_default else []))
 
         for code in sorted(alls):
             if code in AttributeCollection.INTERNAL:
