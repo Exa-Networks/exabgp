@@ -439,16 +439,23 @@ class TestTTLConfiguration:
 
         io.close()
 
-    def test_min_ttl(self) -> None:
-        """Test minimum TTL setting"""
+    def test_min_ttl(self, monkeypatch: Any) -> None:
+        """Test minimum TTL setting
+
+        min_ttl installs the GTSM inbound check and nothing else; the TTL we send with is
+        set_sending_ttl's job. On a platform with no IP_MINTTL it warns rather than raises,
+        and a unit test has no logger configured, so the warning is captured here.
+        """
+        monkeypatch.setattr(tcp.log, 'warning', lambda message, source='', level='WARNING': None)
         io = tcp.create(AFI.ipv4)
 
-        # min_ttl tries IP_MINTTL first, then IP_TTL
         try:
             tcp.min_ttl(io, '127.0.0.1', 255)
         except TTLError:
-            # Expected if not supported
+            # the kernel has the option and refused the value
             pass
+
+        assert io.getsockopt(socket.IPPROTO_IP, socket.IP_TTL) != 255, 'min_ttl set the TTL we send with'
 
         io.close()
 

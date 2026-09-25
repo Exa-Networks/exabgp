@@ -12,6 +12,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
 from exabgp.logger import log
 from exabgp.logger import lazynlri
@@ -90,6 +91,25 @@ class NLRI(Family):
         # we do not want to take the risk of the caller modifying the list by accident
         # it can not be a generator
         return list(NLRI.registered_families)
+
+    @staticmethod
+    def consume_path_information(data, addpath):
+        """Take the ADD-PATH Path Identifier off the front of an NLRI (RFC 7911 section 3).
+
+        `addpath` is the question "has ADD-PATH been negotiated for this family", not the
+        identifier itself.  When the answer is yes the peer has put four bytes in front of
+        every NLRI of that family and they have to come off before the NLRI is read.
+
+        This exists because seven families skipped that step and assigned the parameter
+        straight into `nlri.addpath`.  They read their first field from the identifier's
+        first byte and left four bytes in the buffer, so every NLRI after the first in the
+        same UPDATE was read from the wrong offset.
+        """
+        if not addpath:
+            return PathInfo.NOPATH, data
+        if len(data) < PathInfo.LENGTH:
+            raise Notify(3, 10, 'not enough data to extract the path-information of the NLRI')
+        return PathInfo(bytes(data[: PathInfo.LENGTH])), data[PathInfo.LENGTH :]
 
     @classmethod
     def unpack_nlri(cls, afi, safi, data, action, addpath):

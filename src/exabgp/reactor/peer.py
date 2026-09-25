@@ -43,10 +43,15 @@ class ACTION:
     ALL = [CLOSE, LATER, NOW]
 
 
-# As we can not know if this is our first start or not, this flag is used to
-# always make the program act like it was recovering from a failure
-# If set to FALSE, no EOR and OPEN Flags set for Restart will be set in the
-# OPEN Graceful Restart Capability
+# RFC 4724 4.1 and 4.2 pull in opposite directions on the very first OPEN a process sends.
+# If this run follows an earlier one we are the Restarting Speaker and MUST set the Restart
+# State bit; if it is a genuine first start we are the Receiving Speaker and MUST NOT.
+# Nothing on this box can tell the two apart: exabgp keeps no state between runs, and the
+# pid file is optional, is not per neighbor, and says nothing about the session. So the
+# first OPEN claims the restart. The bit only asks the peer not to wait for our End-of-RIB
+# before advertising to us, so that is the cheap way to be wrong, and it is right in the
+# case which costs something. Every later OPEN of this process is a reconnection rather
+# than a restart, and _establish() clears the flag so that it says so.
 FORCE_GRACEFUL = True
 
 
@@ -125,7 +130,9 @@ class Peer:
 
         # The peer should restart after a stop
         self._restart = True
-        # The peer was restarted (to know what kind of open to send for graceful restart)
+        # Whether the next OPEN we send claims the RFC 4724 Restart State bit. True until
+        # this process has held a session with this neighbor, and again after an operator
+        # asked for the session to be re-established.
         self._restarted = FORCE_GRACEFUL
 
         # We have been asked to teardown the session with this code
@@ -489,6 +496,11 @@ class Peer:
             yield action
         self.fsm.change(FSM.ESTABLISHED)
         self.stats['complete'] = time.time()
+        # RFC 4724 4.2: whatever this process may have been a restart of, it has now
+        # peered. A session we re-establish from here is a reconnection and not a restart
+        # of this speaker, so the next OPEN must not claim the Restart State bit. Only
+        # reestablish(), where an operator asked for one, sets it again.
+        self._restarted = False
 
         # let the caller know that we were sucesfull
         yield ACTION.NOW

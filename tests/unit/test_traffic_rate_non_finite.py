@@ -31,6 +31,8 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
 from exabgp.environment import getenv
@@ -121,15 +123,31 @@ def test_a_good_community_beside_a_bad_one_does_not_hide_it() -> None:
         ExtendedCommunities.unpack(good + bad, Direction.IN, negotiated())
 
 
-def test_the_reported_update_raises_notify_not_value_error() -> None:
+def test_the_reported_update_is_treated_as_a_withdraw_not_a_value_error() -> None:
     """The exact UPDATE from the report, decoded the way the reactor decodes it.
 
-    `Update.unpack_message` raising `Notify` is what lets the peer send a NOTIFICATION.
-    A `ValueError` escaping instead is the reported bug: it reached the reactor's
-    catch-all, which closes the connection silently.
+    The reported bug was a `ValueError` escaping to the reactor's catch-all, which closed
+    the connection silently and with no NOTIFICATION, and did or did not do so depending
+    on whether debug logging had already rendered the UPDATE.  That is what this pins:
+    nothing untyped leaves the decoder, and the outcome does not depend on the log level.
+
+    It was originally pinned as a `Notify`, because at the time a Notify out of the
+    extended community decoder propagated out of `Attributes.parse`.  EXTENDED_COMMUNITY
+    is now in `Attributes.TREAT_AS_WITHDRAW`, so RFC 7606 7.14 applies and the same
+    malformed attribute withdraws the route rather than resetting the session.  The
+    boundary has not moved: the bytes are still judged in the decoder, which is what the
+    three tests above assert directly.  Only what the peer is told has changed, from a
+    NOTIFICATION to a withdraw, which is the outcome the RFC names.
     """
-    with pytest.raises(Notify):
-        Update.unpack_message(REPORTED_UPDATE, Direction.IN, negotiated())
+    Attributes.cached, Attributes.previous = None, ''
+    parsed = Update.unpack_message(REPORTED_UPDATE, Direction.IN, negotiated())
+
+    assert (
+        Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in parsed.attributes
+    ), 'RFC 7606 7.14 says treat-as-withdraw, but the parser did not ask for one'
+    assert (
+        Attribute.CODE.EXTENDED_COMMUNITY not in parsed.attributes
+    ), 'the malformed extended community survived the parse'
 
 
 @pytest.mark.parametrize(

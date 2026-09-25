@@ -261,6 +261,44 @@ class TestMAC:
         with pytest.raises(Notify):
             MAC.unpack(packed + mac.pack() + bytes([0]) + Labels([100], True).pack())
 
+    @pytest.mark.parametrize('maclength', [0, 24, 32, 47, 49, 64, 255])
+    def test_mac_length_other_than_48_is_refused(self, maclength: int) -> None:
+        """RFC 7432 9.2.1 allows one MAC Address Length, and it is 48.
+
+        "The encoding of a MAC address MUST be the 6-octet MAC address specified by
+        [802.1Q] and [802.1D-REV]".  Only a length above 48 used to be refused.  The six
+        octets are read from a fixed offset whatever the field says and the total route
+        length works out either way, so a route declaring 0, 24 or 47 bits was accepted,
+        the address was read as normal, and `__str__` and `json()` then rendered it as
+        `aa:bb:cc:dd:ee:ff/24`: a MAC prefix length nobody sent, handed to every API
+        client as though the peer had said it.
+        """
+        rd = RouteDistinguisher.fromElements('12.12.12.12', 120)
+        esi = ESI()
+        etag = EthernetTag(1200)
+        mac = MACQUAL('aa:bb:cc:dd:ee:ff')
+
+        packed = rd.pack() + esi.pack() + etag.pack() + bytes([maclength])
+        packed += mac.pack() + bytes([0]) + Labels([100], True).pack()
+
+        with pytest.raises(Notify):
+            MAC.unpack(packed)
+
+    def test_mac_length_of_48_still_decodes(self) -> None:
+        """The check must not have closed the door on the one length the RFC allows."""
+        rd = RouteDistinguisher.fromElements('12.12.12.12', 120)
+        esi = ESI()
+        etag = EthernetTag(1200)
+        mac = MACQUAL('aa:bb:cc:dd:ee:ff')
+
+        packed = rd.pack() + esi.pack() + etag.pack() + bytes([48])
+        packed += mac.pack() + bytes([0]) + Labels([100], True).pack()
+
+        route = MAC.unpack(packed)
+
+        assert route.maclen == 48
+        assert str(route.mac).lower() == 'aa:bb:cc:dd:ee:ff'
+
     def test_mac_string_representation(self) -> None:
         """Test string representation of MAC route"""
         rd = RouteDistinguisher.fromElements('13.13.13.13', 130)
@@ -739,20 +777,26 @@ class TestEVPNIntegration:
             assert route.iplen == iplen
 
     def test_evpn_with_addpath(self) -> None:
-        """Test EVPN routes with ADD-PATH support via unpack_nlri"""
+        """The path identifier comes off the wire before the EVPN NLRI is read.
+
+        This test used to pass 12345 as `addpath`, put no identifier on the wire, and
+        assert only that nothing was left over. That held precisely because the decoder
+        ignored ADD-PATH: the parameter is the question "has it been negotiated", and
+        12345 answered yes to a buffer which carried no identifier at all.
+        """
         rd = RouteDistinguisher.fromElements('42.42.42.42', 420)
         etag = EthernetTag(4200)
         ip = IP.create('192.168.1.1')
 
         route = Multicast(rd, etag, ip)
-        packed = route.pack_nlri()
+        path_id = bytes([0, 0, 48, 57])
+        packed = path_id + route.pack_nlri()
 
-        # addpath is set during unpacking
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, 12345)
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, True)
 
         assert len(leftover) == 0
-        # addpath is stored during unpack_nlri
-        assert hasattr(unpacked, 'addpath')
+        assert unpacked.CODE == Multicast.CODE
+        assert bytes(unpacked.addpath.pack()) == path_id
 
     def test_evpn_with_nexthop(self) -> None:
         """Test EVPN routes with next hop"""

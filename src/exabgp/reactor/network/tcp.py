@@ -14,6 +14,7 @@ import platform
 
 from struct import pack, calcsize
 
+from exabgp.logger import log
 from exabgp.util.errstr import errstr
 from exabgp.util.psk import PSKError, decode_base64
 
@@ -226,24 +227,113 @@ def ttlv6(io, ip, ttl):
             ) from None
 
 
+# CPython does not export IP_MINTTL from socket on any platform, so looking the option up
+# by name alone never finds it, Linux included. These are the values from the kernel
+# headers of the platforms which have it.
+IP_MINTTL_BY_PLATFORM = {
+    'Linux': 21,  # linux/in.h
+    'FreeBSD': 66,  # netinet/in.h
+}
+
+# IPV6_MINHOPCOUNT is Linux specific and socket does not always carry it either.
+IPV6_MINHOPCOUNT = getattr(socket, 'IPV6_MINHOPCOUNT', 73)
+
+
+def ip_minttl():
+    """The IP_MINTTL option number on this platform, or None where it does not exist."""
+    exported = getattr(socket, 'IP_MINTTL', None)
+    if exported is not None:
+        return exported
+    return IP_MINTTL_BY_PLATFORM.get(platform.system())
+
+
 def min_ttl(io, ip, ttl):
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
-    if ttl:
-        try:
-            io.setsockopt(socket.IPPROTO_IP, socket.IP_MINTTL, ttl)
-        except OSError as exc:
-            raise TTLError(
-                'This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))
-            ) from None
-        except AttributeError:
-            pass
+    if not ttl:
+        return
 
-        try:
-            io.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
-        except OSError as exc:
-            raise TTLError(
-                'This OS does not support IP_MINTTL or IP_TTL (ttl-security) for {} ({})'.format(ip, errstr(exc)),
-            ) from None
+    # IP_MINTTL is what enforces GTSM (RFC 5082) on the receive side: it is the option
+    # which makes the kernel drop a packet arriving with too low a TTL. macOS has no such
+    # option at all.
+    #
+    # This used to read socket.IP_MINTTL and swallow the AttributeError. CPython exports
+    # the constant on no platform, so the inbound check was installed nowhere, Linux
+    # included, and the operator was not told.
+    #
+    # It sets the minimum and nothing else. It also used to set IP_TTL to the same value,
+    # which is the TTL we send with: that is outgoing-ttl's job, and RFC 5082 has a GTSM
+    # sender use 255 rather than the lowest value it accepts. See sending_ttl.
+    #
+    # Warn rather than raise where the platform has no option: those hosts run sessions
+    # today and refusing to bring them up is a larger change than the defect. An option
+    # which is present but refused by the kernel stays a TTLError, because that is a
+    # request which was understood and rejected rather than one which cannot be made.
+    minttl = ip_minttl()
+    if minttl is None:
+        log.warning(
+            lambda ip=ip: (
+                f'ttl-security for {ip} has no inbound check: this platform has no IP_MINTTL, '
+                f'so arriving packets are not checked against the TTL'
+            ),
+            'network',
+        )
+        return
+
+    try:
+        io.setsockopt(socket.IPPROTO_IP, minttl, ttl)
+    except OSError as exc:
+        raise TTLError(
+            'This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))
+        ) from None
+
+
+def min_ttlv6(io, ip, ttl):
+    # None (ttl-security unset) or zero (maximum TTL) is the same thing
+    if not ttl:
+        return
+
+    try:
+        io.setsockopt(socket.IPPROTO_IPV6, IPV6_MINHOPCOUNT, ttl)
+    except OSError as exc:
+        raise TTLError(
+            'This OS does not support IPV6_MINHOPCOUNT (ttl-security) for {} ({})'.format(ip, errstr(exc))
+        ) from None
+    # the hop limit we send with is set by set_sending_ttl, for the reason given in min_ttl
+
+
+# RFC 5082 section 3: a GTSM speaker sends with the maximum TTL, so that the receiver can
+# tell from what arrives how many hops the packet crossed.
+GTSM_SENDING_TTL = 255
+
+
+def sending_ttl(outgoing, incoming):
+    """The TTL to put on what we send to a neighbour, or None to leave the kernel default.
+
+    outgoing-ttl says so explicitly. Without it, an incoming-ttl means the neighbour runs
+    GTSM, and GTSM wants 255 on the wire: the default of 64 is below any minimum the far
+    end is likely to check against, so the session would never come up.
+    """
+    if outgoing:
+        return outgoing
+    if incoming:
+        return GTSM_SENDING_TTL
+    return None
+
+
+def set_sending_ttl(io, afi, ip, value):
+    """Set the TTL (IPv4) or hop limit (IPv6) this socket sends with."""
+    if afi == AFI.ipv6:
+        ttlv6(io, ip, value)
+        return
+    ttl(io, ip, value)
+
+
+def set_minimum_ttl(io, afi, ip, minimum):
+    """Have the kernel drop what arrives on this socket with a TTL below the minimum."""
+    if afi == AFI.ipv6:
+        min_ttlv6(io, ip, minimum)
+        return
+    min_ttl(io, ip, minimum)
 
 
 def asynchronous(io, ip):

@@ -17,7 +17,9 @@ from exabgp.protocol.family import AFI
 # from exabgp.util.coroutine import each
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.network.tcp import md5
-from exabgp.reactor.network.tcp import min_ttl
+from exabgp.reactor.network.tcp import sending_ttl
+from exabgp.reactor.network.tcp import set_minimum_ttl
+from exabgp.reactor.network.tcp import set_sending_ttl
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno
 from exabgp.reactor.network.error import NetworkError
@@ -31,6 +33,32 @@ from exabgp.logger import log
 
 # Network port constants
 MAX_PRIVILEGED_PORT = 1024  # Highest privileged port number (requires root on Unix)
+
+
+def set_accepted_ttl(connection, neighbor):
+    """Give an accepted connection the TTL its neighbour's configuration asks us to send with.
+
+    The listening socket is shared by every neighbour on an address and port, so it can
+    carry the minimum TTL checked on arrival but not a per-neighbour sending TTL. Until the
+    neighbour is known that has to wait, and before this nothing set it at all: outgoing-ttl
+    was ignored for every session the peer opened. What happened instead was that the
+    listener set IP_TTL to the incoming-ttl minimum, which accepted sockets inherited, where
+    RFC 5082 section 3 has a GTSM sender use 255.
+    """
+    value = sending_ttl(neighbor['outgoing-ttl'], neighbor['incoming-ttl'])
+    if value is None or connection.io is None:
+        return
+    try:
+        set_sending_ttl(connection.io, connection.afi, connection.peer, value)
+    except NetworkError as exc:
+        # the session can still come up, and a peer running GTSM will then drop it, which
+        # this line is what explains
+        log.error(
+            lambda connection=connection, value=value, exc=exc: (
+                f'could not set the sending ttl {value} for {connection.name()} ({exc})'
+            ),
+            'network',
+        )
 
 
 class Listener:
@@ -64,7 +92,7 @@ class Listener:
                 continue
             md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
             if ttl_in:
-                min_ttl(sock, peer_ip, ttl_in)
+                set_minimum_ttl(sock, local_ip.afi, peer_ip.top(), ttl_in)
             return
 
         try:
@@ -73,7 +101,7 @@ class Listener:
             if use_md5:
                 md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
             if ttl_in:
-                min_ttl(sock, peer_ip, ttl_in)
+                set_minimum_ttl(sock, local_ip.afi, peer_ip.top(), ttl_in)
             try:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 if local_ip.ipv6():
@@ -196,6 +224,7 @@ class Listener:
                     ranged_neighbor.append(neighbor)
                     continue
 
+                set_accepted_ttl(connection, neighbor)
                 denied = reactor.handle_connection(key, connection)
                 if denied:
                     log.debug(
@@ -241,6 +270,7 @@ class Listener:
                     new_neighbor['router-id'] = RouterID.create(connection.local)
 
                 new_peer = Peer(new_neighbor, reactor)
+                set_accepted_ttl(connection, new_neighbor)
                 denied = new_peer.handle_connection(connection)
                 if denied:
                     log.debug(

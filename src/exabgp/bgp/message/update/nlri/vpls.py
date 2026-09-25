@@ -117,6 +117,10 @@ class VPLS(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # RFC 7911 section 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
         # label is 20bits, stored using 3 bytes, 24 bits
         if len(bgp) < VPLS_HEADER_SIZE:
             raise Notify(3, 10, 'not enough data to extract the length of the l2vpn vpls NLRI')
@@ -133,5 +137,6 @@ class VPLS(NLRI):
         base = unpack('!L', b'\x00' + bgp[16:19])[0] >> 4
         nlri = cls(rd, endpoint, base, offset, size)
         nlri.action = action
+        nlri.addpath = path_info
         # nlri.nexthop = IP.unpack(nexthop)
         return nlri, bgp[19:]

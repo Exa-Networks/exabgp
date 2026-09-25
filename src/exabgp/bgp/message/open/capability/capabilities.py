@@ -35,6 +35,16 @@ OPEN_EXTENDED_MARKER = 255  # Marker value indicating extended optional paramete
 MIN_EXTENDED_PARAM_LEN = 3  # Minimum length for extended parameter (type + 2-byte length)
 MIN_PARAM_LEN = 2  # Minimum length for standard parameter (type + length)
 
+# RFC 4271 6.2: an Optional Parameter type we do not recognise is Unsupported Optional
+# Parameters. Capabilities.unpack answered 2/0 Unspecific, which the next sentence of 6.2
+# reserves for a parameter we do recognise and which is malformed, so the peer could not
+# tell "I do not know this parameter" from "you sent this one wrongly". Both answers are
+# raised below and the pair is what makes either mean anything. This is about the Optional
+# Parameter type only: an unknown capability code inside parameter type 2 is ignored, as
+# RFC 5492 requires.
+OPEN_MESSAGE_ERROR = 2
+UNSUPPORTED_OPTIONAL_PARAMETER = 4
+
 # =================================================================== Parameter
 #
 
@@ -282,5 +292,7 @@ class Capabilities(dict):
                     capability, capv, value = _key_values('capability', value)
                     capabilities[capability] = Capability.unpack(capability, capabilities, capv)
             else:
-                raise Notify(2, 0, 'Unknow OPEN parameter {}'.format(hex(key)))
+                raise Notify(
+                    OPEN_MESSAGE_ERROR, UNSUPPORTED_OPTIONAL_PARAMETER, 'unknown OPEN parameter {}'.format(hex(key))
+                )
         return capabilities

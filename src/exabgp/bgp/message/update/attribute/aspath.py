@@ -247,7 +247,14 @@ class AS4Path(ASPath):
     Empty: AS4Path | None = None
 
     def pack(self, negotiated=None):
-        ASPath.pack(self, True)
+        # This read `ASPath.pack(self, True)`, which passed True where a negotiated session
+        # belongs, so the inherited body raised AttributeError on `negotiated.asn4` before it
+        # could do anything, and discarded its result besides.  An AS4_PATH is four octet by
+        # definition (RFC 6793 4.2.1) whatever the session negotiated, and it never carries an
+        # AS4_PATH of its own the way ASPath.pack builds one, so it packs its own segments and
+        # nothing else.  pack_segments is resolved on the instance so the attribute header
+        # carries AS4Path's optional transitive flag rather than ASPath's.
+        return self.pack_segments(self.aspath, True)
 
     @classmethod
     def unpack(cls, data, direction, negotiated):

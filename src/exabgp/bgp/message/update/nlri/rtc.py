@@ -96,13 +96,19 @@ class RTC(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # RFC 7911 section 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
         if not bgp:
             raise Notify(3, 10, 'not enough data to extract the length of the RTC NLRI')
 
         length = bgp[0]
 
         if length == 0:
-            return cls(afi, safi, action, ASN(0), None), bgp[1:]
+            wildcard = cls(afi, safi, action, ASN(0), None)
+            wildcard.addpath = path_info
+            return wildcard, bgp[1:]
 
         if length < RTC_LENGTH_MIN_BITS:
             raise Notify(3, 10, 'incorrect RTC length: %d (should be >=32,<=96)' % length)
@@ -113,13 +119,12 @@ class RTC(NLRI):
         # We are reseting the flags on the RouteTarget extended
         # community, because they do not make sense for an RTC route
 
-        return (
-            cls(
-                afi,
-                safi,
-                action,
-                ASN(unpack('!L', bgp[1:5])[0]),
-                RouteTarget.unpack(bytes([RTC.resetFlags(bgp[5])]) + bgp[6:13]),
-            ),
-            bgp[13:],
+        nlri = cls(
+            afi,
+            safi,
+            action,
+            ASN(unpack('!L', bgp[1:5])[0]),
+            RouteTarget.unpack(bytes([RTC.resetFlags(bgp[5])]) + bgp[6:13]),
         )
+        nlri.addpath = path_info
+        return nlri, bgp[13:]

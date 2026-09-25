@@ -378,6 +378,55 @@ class TestFlowLabel:
 class TestFlowNLRI:
     """Tests for Flow NLRI operations"""
 
+    def test_an_nlri_longer_than_255_octets_decodes(self) -> None:
+        """The extended length form, and exabgp could not read back its own output.
+
+        RFC 8955 section 4.1: an NLRI of 240 octets or more carries its length in two
+        octets "encoded using 3 hex digits (0xfnnn)", so the low nibble of the first
+        octet holds bits 8 to 11.  `FLOW_LENGTH_EXTENDED_SHIFT` was 16, so a 300 octet
+        NLRI, on the wire as `f12c`, was read as needing 65580 bytes and refused.
+
+        Two things make that worse than a decode bug.  The raise happens before the try
+        in `unpack_nlri`, so it reaches the reactor: a well formed UPDATE from a
+        conforming peer closed the adjacency instead of invalidating one NLRI.  And
+        `pack_nlri` has always written the correct twelve bit form, so exabgp failed
+        this against itself.  Lengths 240 to 255 worked, because the nibble is zero
+        there, which is why it lasted.
+        """
+        flow = Flow()
+        for octet in range(60):
+            flow.add(Flow4Destination(bytes([10, octet, 0]), 24))
+        wire = bytes(flow.pack_nlri())
+
+        assert wire[0] & 0xF0 == 0xF0, 'this test needs the extended length form'
+        assert len(wire) > 256, 'this test needs a length the compact form cannot hold'
+
+        decoded, over = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, wire, Action.ANNOUNCE, False)
+
+        assert decoded is not None, 'exabgp refused the FlowSpec NLRI its own encoder wrote'
+        assert over == b''
+        assert len(decoded.rules[Flow4Destination.ID]) == 60
+
+    def test_an_nlri_between_240_and_255_octets_still_decodes(self) -> None:
+        """The lengths which happened to work must keep working.
+
+        The low nibble is zero from 240 to 255, so these were read correctly with the
+        wrong shift as well.  They are the regression guard on the other side of the
+        change: a shift moved too far would break them and leave the case above passing.
+        """
+        flow = Flow()
+        for octet in range(48):
+            flow.add(Flow4Destination(bytes([10, octet, 0]), 24))
+        wire = bytes(flow.pack_nlri())
+
+        assert wire[0] & 0xF0 == 0xF0, 'this test needs the extended length form'
+        assert 240 <= len(wire) - 2 <= 255, 'this test needs a length inside the zero nibble range'
+
+        decoded, over = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, wire, Action.ANNOUNCE, False)
+
+        assert decoded is not None
+        assert over == b''
+
     def test_flow_creation(self) -> None:
         """Test basic Flow NLRI creation"""
         flow = Flow()

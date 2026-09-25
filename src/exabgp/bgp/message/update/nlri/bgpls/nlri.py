@@ -166,6 +166,10 @@ class BGPLS(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # RFC 7911 section 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
         # BGP-LS NLRI header: type(2) + length(2) = 4 bytes minimum
         if len(bgp) < 4:
             raise Notify(3, 10, 'BGP-LS NLRI too short: need at least 4 bytes, got {}'.format(len(bgp)))
@@ -188,7 +192,7 @@ class BGPLS(NLRI):
             klass = GenericBGPLS(code, bgp[4 : length + 4])
         klass.CODE = code
         klass.action = action
-        klass.addpath = addpath
+        klass.addpath = path_info
 
         return klass, bgp[length + 4 :]
 

@@ -15,6 +15,9 @@ from copy import deepcopy
 class PathInfo:
     NOPATH: 'PathInfo | None' = None
 
+    # RFC 7911 section 3: the Path Identifier is four octets
+    LENGTH = 4
+
     def __init__(self, packed=None, integer=None, ip=None):
         if packed:
             self.path_info = packed

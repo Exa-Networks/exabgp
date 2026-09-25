@@ -107,6 +107,10 @@ class EVPN(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # RFC 7911 section 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
         # EVPN NLRI: route_type(1) + length(1) + route_data(length)
         if len(bgp) < 2:
             raise Notify(3, 10, 'EVPN NLRI too short: need at least 2 bytes, got {}'.format(len(bgp)))
@@ -122,7 +126,7 @@ class EVPN(NLRI):
             klass = GenericEVPN(code, bgp[2 : length + 2])
         klass.CODE = code
         klass.action = action
-        klass.addpath = addpath
+        klass.addpath = path_info
 
         return klass, bgp[length + 2 :]
 
