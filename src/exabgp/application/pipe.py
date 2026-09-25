@@ -69,26 +69,45 @@ def env(app, section, name, default):
 
 
 def check_fifo(name):
-    try:
-        if not stat.S_ISFIFO(os.stat(name).st_mode):
-            sys.stdout.write(f'error: a file exist which is not a named pipe ({os.path.abspath(name)})\n')
-            return False
+    """Report whether name is a named pipe this process can use, saying why when it is not.
 
-        if not os.access(name, os.R_OK):
-            sys.stdout.write(
-                f'error: a named pipe exists and we can not read/write to it ({os.path.abspath(name)})\n',
-            )
-            return False
-        return True
-    except OSError:
-        sys.stdout.write(f'error: could not create the named pipe {os.path.abspath(name)}\n')
+    os.stat is the only call here which can fail. The three messages which used to follow
+    it, 'could not create', 'could not access/delete' and 'could not write on', came with
+    3482b2c93, which lifted them from the code which did call os.mkfifo, os.remove and
+    sendall into a body which only stats. They were written as OSError, IOError and
+    socket.error, one type since Python 3.3, so only the first ever ran: the other two
+    described work this function does not do and returned None while doing it.
+
+    What an operator needs told apart is not which call failed but which errno came back:
+    nothing there at all, a directory on the way we may not search, or anything else.
+    """
+    path = os.path.abspath(name)
+    try:
+        mode = os.stat(name).st_mode
+    except FileNotFoundError:
+        sys.stdout.write(f'error: could not find the named pipe {path}\n')
+        sys.stdout.flush()
         return False
-    except OSError:
-        sys.stdout.write(f'error: could not access/delete the named pipe {os.path.abspath(name)}\n')
+    except PermissionError:
+        sys.stdout.write(f'error: not allowed to reach the named pipe {path}\n')
         sys.stdout.flush()
-    except OSError:
-        sys.stdout.write(f'error: could not write on the named pipe {os.path.abspath(name)}\n')
+        return False
+    except OSError as exc:
+        sys.stdout.write(f'error: could not check the named pipe {path} ({exc.strerror})\n')
         sys.stdout.flush()
+        return False
+
+    if not stat.S_ISFIFO(mode):
+        sys.stdout.write(f'error: a file exist which is not a named pipe ({path})\n')
+        sys.stdout.flush()
+        return False
+
+    if not os.access(name, os.R_OK):
+        sys.stdout.write(f'error: a named pipe exists and we can not read/write to it ({path})\n')
+        sys.stdout.flush()
+        return False
+
+    return True
 
 
 class Control:
@@ -154,11 +173,25 @@ class Control:
         mfl |= os.O_SYNC
         fcntl.fcntl(fd, fcntl.F_SETFL, mfl)
 
-    def loop(self):
+    def open_recv(self):
+        """Open the fifo the daemon answers on, or end the process saying why.
+
+        terminate() sets a flag and cleans up, it only exits when called a second time, so
+        answering a failed open with it left loop() running with r_pipe None: read_on skips
+        a None descriptor, so it polled stdin for ever, forwarded commands into the write
+        fifo and read an answer from nowhere. There is no loop to run without this one.
+        """
         try:
             self.r_pipe = os.open(self.recv, os.O_RDWR | os.O_NONBLOCK | os.O_EXCL)
-        except OSError:
+        except OSError as exc:
+            # stdout is the pipe to the daemon, so the report has to go to stderr.
+            sys.stderr.write(f'could not open the named pipe {self.recv} ({exc})\n')
+            sys.stderr.flush()
             self.terminate()
+            sys.exit(1)
+
+    def loop(self):
+        self.open_recv()
 
         standard_in = sys.stdin.fileno()
         standard_out = sys.stdout.fileno()

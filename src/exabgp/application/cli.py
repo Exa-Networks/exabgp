@@ -95,10 +95,9 @@ def open_writer(send):
             sys.stdout.write('ExaBGP is not running / using the configured named pipe')
             sys.stdout.flush()
             sys.exit(1)
-        sys.stdout.write('could not communicate with ExaBGP')
-        sys.stdout.flush()
-        sys.exit(1)
-    except OSError as exc:
+        # the reason used to sit in a second `except OSError` below this one, which Python
+        # could never reach; without it a fifo we may not open reads the same as one which
+        # went away
         sys.stdout.write(f'could not communicate with ExaBGP ({exc})')
         sys.stdout.flush()
         sys.exit(1)
@@ -164,13 +163,6 @@ def cmdline(cmdarg):
             if exc.errno in error.block:
                 continue
             sys.stdout.write(f'could not clear named pipe from potential previous command data ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not clear named pipe from potential previous command data ({exc!s})')
-            sys.stdout.write(str(exc))
             sys.stdout.flush()
             sys.exit(1)
 
@@ -276,12 +268,6 @@ def cmdline(cmdarg):
             sys.stdout.write(f'could not get answer from ExaBGP ({exc!s})')
             sys.stdout.flush()
             sys.exit(1)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not get answer from ExaBGP ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
 
         if waited > COMMAND_RESPONSE_TIMEOUT:
             sys.stderr.write('\n')
@@ -299,12 +285,6 @@ def cmdline(cmdarg):
 
         try:
             raw = os.read(reader, 4096)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not read answer from ExaBGP ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
         except OSError as exc:
             if exc.errno in error.block:
                 continue
