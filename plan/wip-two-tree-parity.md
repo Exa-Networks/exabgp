@@ -145,7 +145,7 @@ over; seven sites moved Notify 3/0 → 3/9.
 | 3.3 | RIB yields one `UpdateCollection` per withdrawn NLRI | 🟡 open |
 | 3.4 | `API/JSON-API-Reference.md` examples are structurally invented | 🟡 open |
 | 3.5 | `doc/README.rst` stale | 🟢 open |
-| 3.6 | 5.0 attribute cache is process-wide and keyed on wire bytes only | 🔴 confirmed, not fixed |
+| 3.6 | 5.0 attribute cache is process-wide and keyed on wire bytes only | ✅ fixed 2026-09-25 | `709706aa9`. Moved onto `Negotiated`. See §16. |
 | 3.13 | `qa/bin/functional encoding` is intermittently red, about 1 run in 10 | 🟡 pre-existing, unexplained |
 | 3.7 | 5.0: one peer's OPEN rewrites every other session's capability variant | 🔴 confirmed, not fixed |
 | 3.8 | 5.0: a labelled NLRI with no S bit closes the session (RFC 8277 §2.2 says ignore it) | 🔴 confirmed, not fixed |
@@ -154,17 +154,9 @@ over; seven sites moved Notify 3/0 → 3/9.
 | 3.11 | 5.0 flow config silently drops an unparseable source/destination, giving discard-all | 🔴 confirmed, not fixed |
 | 3.12 | 5.0 MULTISESSION Session ID never decoded, so the 2/8 refusal is dead code | 🟡 confirmed, not fixed |
 
-Items 3.6 to 3.12 were each **reproduced by running**, not inferred, and deliberately left:
-three agents were in the tree at once, 3.6 and 3.9 want doing together, and 3.8 has an interop
-question worth a human. §12 carries the measured output for each.
-
-The worst of them is 3.6. The cache is keyed on the wire bytes alone while AIGP decoding depends
-on `negotiated.aigp` and AS_PATH reads 2 or 4 octets from `negotiated.asn4`. Measured: an
-`asn4=True` session primes the cache and the next `asn4=False` session is handed
-`as-path=( 65538 )` where it should treat-as-withdraw. **A route installed that should have been
-withdrawn**, across sessions, in production. RFC 7311 §3.2 and RFC 6793 §4.2.2. The fix is small,
-moving two slots onto `Negotiated`, one caller, and several 5.0 tests already reset them by hand
-so nothing argues for the present behaviour.
+Items 3.7 to 3.12 were each **reproduced by running**, not inferred, and deliberately left:
+three agents were in the tree at once, and 3.8 has an interop question worth a human. §12
+carries the measured output for each. 3.6, the worst of them, is now done: see §16.
 
 **Hard constraint on all JSON work:** do not break parsers users run today. Additive only.
 No rename, no removal, no retype of an existing key.
@@ -312,7 +304,7 @@ output moved. `med` and `local-preference` stay JSON numbers, `aigp` stays the q
 | `check_exa_style` | **had no cannot-run path at all**: `rglob` over a missing tree yields nothing, every rule counts 0, it prints `ok` four times and **exits 0** |
 
 The last is the one that matters. A clean bill of health over an empty walk, and nobody
-investigates a green gate. This is the fourth instance of the pattern in §16 below. Each gate
+investigates a green gate. This is the fourth instance of the pattern in §17 below. Each gate
 now has `CANNOT_RUN = 2`, and `check_exa_style` a `MIN_SOURCE_FILES = 50` floor on the walk
 against 392 today, so it cannot fire on a real checkout.
 
@@ -903,7 +895,58 @@ that matters. 0 of 3 against HEAD, 11 of 11 after.
 
 ---
 
-## 16. Process rules learned the hard way
+## 16. The attribute cache, fixed 2026-09-25
+
+`Attributes.unpack` memoised its last parse in `cls.cached` and `cls.previous`, two class
+attributes shared by every session in the process, keyed on the wire bytes alone. The wire
+bytes do not say what they mean:
+
+| attribute | depends on |
+|---|---|
+| AS_PATH | read two octets at a time or four, `negotiated.asn4`, RFC 6793 §4.2.2 |
+| AGGREGATOR | six octets or eight, `negotiated.asn4` |
+| AIGP | accepted only where the session asked, `unpack` answers None otherwise, RFC 7311 §3.2 |
+
+Measured, the same six bytes across two sessions:
+
+```
+asn4 session      ( 65538 )
+non-asn4 session  ( 65538 )   and the identical object, from the cache
+non-asn4 alone    treat-as-withdraw
+```
+
+The second line is the defect, and it is not a rendering difference: a route the receiving
+session must treat as withdrawn was **installed**, because another session had already parsed
+those bytes successfully. It was also not gated on `Attribute.caching`, so turning
+`cache.attributes` off did not turn it off.
+
+The cache now lives on `Negotiated`, which is what the parse already depends on: per session,
+one entry, as before.
+
+`Attribute.cache` is a **second** cache, keyed by attribute code and value, and still shared.
+That is right for an attribute whose parse does not read the session, so the two which do are
+taken out of it with `CACHING = False`. The other nine were each checked by walking the AST of
+their `unpack` for a read of `negotiated`; none does. A test holds that, with a floor on the
+number of cacheable attributes walked so an empty scan cannot pass.
+
+### The suite had been reporting this for a while
+
+Nine test files carried an autouse `_no_parse_cache` fixture clearing the class attributes by
+hand, 33 lines, with the docstring:
+
+> Attributes memoises the last parse on the class, so one test would feed the next.
+
+That is the same defect seen from inside the suite, worked around rather than reported. The
+fixtures are gone; each test builds its own session, which is now enough. Worth noting as a
+pattern: a workaround repeated in nine files is a bug report nobody filed.
+
+Red then green by reverting the four source files to HEAD with the tests kept: 6 of 7 failed
+before, 7 of 7 after. The one which passed either way is the control that a session still
+reuses its own last parse, which is the point of the cache and had to keep working.
+
+---
+
+## 17. Process rules learned the hard way
 
 - **Never `git add -A`.** Commit `2114ec208` swept up an agent's unreviewed BGP-LS work and
   was pushed with a message that did not describe it. Corrected in `a8683597e` rather than
