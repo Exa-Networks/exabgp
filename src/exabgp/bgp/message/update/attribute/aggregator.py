@@ -21,7 +21,11 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class Aggregator(Attribute):
     ID = Attribute.CODE.AGGREGATOR
     FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
-    CACHING = True
+    # Not cacheable: unpack reads negotiated.asn4.
+    # RFC 6793 4.2.2. AGGREGATOR is six octets on a session which has not negotiated four
+    # octet AS numbers and eight on one which has, so the same bytes are two different
+    # attributes depending on the session. A cache shared between sessions cannot hold it.
+    CACHING = False
 
     def __init__(self, asn, speaker):
         self.asn = asn

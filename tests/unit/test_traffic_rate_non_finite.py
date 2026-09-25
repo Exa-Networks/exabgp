@@ -32,7 +32,6 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
 from exabgp.environment import getenv
@@ -139,7 +138,6 @@ def test_the_reported_update_is_treated_as_a_withdraw_not_a_value_error() -> Non
     three tests above assert directly.  Only what the peer is told has changed, from a
     NOTIFICATION to a withdraw, which is the outcome the RFC names.
     """
-    Attributes.cached, Attributes.previous = None, ''
     parsed = Update.unpack_message(REPORTED_UPDATE, Direction.IN, negotiated())
 
     assert (

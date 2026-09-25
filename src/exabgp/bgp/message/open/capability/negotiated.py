@@ -37,6 +37,13 @@ class Negotiated:
         self.refresh = REFRESH.ABSENT  # pylint: disable=E1101
         self.aigp = neighbor['capability']['aigp']
         self.mismatch = []
+        # The last attribute set this session parsed, and the wire it came from. It lives here
+        # rather than on Attributes because what those bytes mean depends on what THIS session
+        # negotiated: AS_PATH is read two octets at a time or four depending on asn4, and AIGP
+        # is only accepted at all when the session asked for it. Held per session, one entry,
+        # because consecutive UPDATEs from one peer usually repeat their attributes.
+        self.cached_attributes = None
+        self.cached_wire = b''
 
     def sent(self, sent_open):
         self.sent_open = sent_open

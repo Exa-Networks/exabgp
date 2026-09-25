@@ -28,7 +28,6 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute.attributes import Attributes
 
 # every combination of the flag bits a peer chooses, including EXTENDED_LENGTH, which
 # changes how the length itself is read and is where the NoNextHop case came from
@@ -55,16 +54,6 @@ def _logger() -> Any:
     option.formater = Mock(return_value='formatted message')
     yield
     option.logger, option.formater = logger, formater
-
-
-@pytest.fixture(autouse=True)
-def _no_parse_cache() -> Any:
-    """Attributes memoises the last parse on the class, so one test would feed the next."""
-    Attributes.cached = None
-    Attributes.previous = ''
-    yield
-    Attributes.cached = None
-    Attributes.previous = ''
 
 
 def session() -> Any:

@@ -142,13 +142,10 @@ class Attributes(dict):
         Attribute.CODE.BGP_PREFIX_SID,
     )
 
-    # A cache of parsed attributes
+    # A cache of parsed attributes, by attribute code. Shared between sessions, which is only
+    # safe for an attribute whose meaning does not depend on what was negotiated: see the
+    # CACHING = False on Aggregator and AIGP, the two which do.
     cache = {}
-
-    # The previously parsed Attributes
-    cached = None
-    # previously parsed attribute, from which cached was made of
-    previous = ''
 
     representation = {
         # key:  (how, default, name, text_presentation, json_presentation),
@@ -391,8 +388,25 @@ class Attributes(dict):
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
-        if cls.cached and data == cls.previous:
-            return cls.cached
+        """Parse an attribute set, reusing the last one this session parsed when the wire matches.
+
+        The cache is the session's, not the class's. It used to be `cls.cached` and
+        `cls.previous`, two class attributes shared by every session in the process and keyed
+        on the wire bytes alone, and the wire bytes do not say what they mean: AS_PATH is read
+        two octets at a time or four depending on `negotiated.asn4`, and AIGP is only accepted
+        where the session asked for it. So one peer's negotiation decided what the next peer's
+        UPDATE was taken to say. Measured, same six bytes, two sessions:
+
+            asn4 session      ( 65538 )
+            non-asn4 session  ( 65538 )   <- and the identical object, from the cache
+            non-asn4 alone    treat-as-withdraw
+
+        which is a route installed where RFC 6793 4.2.2 requires it withdrawn. Note it was not
+        gated on `Attribute.caching` either, so turning `cache.attributes` off did not turn it
+        off.
+        """
+        if negotiated is not None and negotiated.cached_attributes is not None and data == negotiated.cached_wire:
+            return negotiated.cached_attributes
 
         attributes = cls().parse(data, direction, negotiated)
 
@@ -401,12 +415,17 @@ class Attributes(dict):
 
         attributes.reconcile_four_octet_as()
 
+        if negotiated is None:
+            return attributes
+
+        # An MP attribute carries the NLRI with it, so the set is not reusable for the next
+        # UPDATE the way a plain attribute set is.
         if Attribute.CODE.MP_REACH_NLRI not in attributes and Attribute.CODE.MP_UNREACH_NLRI not in attributes:
-            cls.previous = data
-            cls.cached = attributes
+            negotiated.cached_wire = data
+            negotiated.cached_attributes = attributes
         else:
-            cls.previous = ''
-            cls.cached = None
+            negotiated.cached_wire = b''
+            negotiated.cached_attributes = None
 
         return attributes
 
