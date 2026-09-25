@@ -54,6 +54,13 @@ exabgp only substitutes the capability value when the My Autonomous System field
 AS_TRANS: negotiated.py reads `if self.peer_as == AS_TRANS and self.asn4`. The sentence
 has no such condition, and a peer whose two fields disagree is exactly the case it
 exists to settle. The negative test says which one we take today and is xfail.
+
+Making the substitution unconditional was tried and reverted, not because it is wrong but
+because of what it turns up: tests/unit/rfc/test_rfc9234_roles_and_otc.py builds the
+peer's OPEN by copying the capabilities we sent, so its four-octet capability carries our
+local AS while its My Autonomous System field carries the peer's. Only the unconditional
+reading notices, and twenty-one role tests then fail on a Bad Peer AS. The fixture is what
+needs fixing first; the behaviour change is one line in _negotiate.
 """
 
 [[requirement]]
@@ -163,11 +170,12 @@ MUST exclude such path segments from the AS4_PATH attribute being
 constructed.
 """
 note = """
-exabgp includes them. ASPath.pack_attribute builds the AS4_PATH from self.aspath with no
-filter at all: an AS_PATH holding a confederation segment and a non-mappable AS number
-produces an AS4_PATH whose first segment is type 3, which is what the RFC calls invalid
-in that attribute and what leaks confederation membership outside the confederation.
-Section 6 states the same prohibition a second time; both are this one defect.
+ASPath.pack_attribute used to build the AS4_PATH from self.aspath with no filter at all,
+so an AS_PATH holding a confederation segment and a non-mappable AS number produced an
+AS4_PATH whose first segment was type 3, which leaked confederation membership outside
+the confederation. It now drops AS_CONFED_SEQUENCE and AS_CONFED_SET before packing, and
+sends no AS4_PATH at all when nothing is left. Section 6 states the same prohibition a
+second time; both are this one rule.
 """
 
 [[requirement]]
@@ -240,10 +248,12 @@ in the AGGREGATOR attribute is not AS_TRANS, then:
       information.
 """
 note = """
-exabgp ignores neither. merge_attributes is reached on AS_PATH and AS4_PATH alone and
-never reads the AGGREGATOR, so an AGGREGATOR naming a plain two-octet AS does not stop
-the AS4_PATH being merged into the path, and both aggregator attributes are handed to
-the JSON API side by side. The positive test is xfail.
+exabgp used to ignore neither: merge_attributes was reached on AS_PATH and AS4_PATH alone
+and never read the AGGREGATOR, so an AGGREGATOR naming a plain two-octet AS did not stop
+the AS4_PATH being merged into the path, and both aggregator attributes were handed to the
+JSON API side by side. AttributeCollection.reconcile_four_octet_as now settles the
+aggregator first: an AGGREGATOR which is not AS_TRANS drops both AS4_ attributes and the
+AS_PATH stands as it came.
 """
 
 [[requirement]]
@@ -264,11 +274,12 @@ Otherwise,
       other cases.
 """
 note = """
-The AGGREGATOR is not ignored: an UPDATE carrying AGGREGATOR AS_TRANS and AS4_AGGREGATOR
-200000 leaves both attributes in the collection, so a consumer of the JSON reading
-"aggregator" is told the aggregating node is AS 23456, which is a placeholder and not an
-Autonomous System. The third bullet, constructing the AS path, is the one exabgp does do
-and is recorded at rfc6793#4.2.3-construct-by-prepending. The positive test is xfail.
+The AGGREGATOR used not to be ignored: an UPDATE carrying AGGREGATOR AS_TRANS and
+AS4_AGGREGATOR 200000 left both attributes in the collection, so a consumer of the JSON
+reading "aggregator" was told the aggregating node is AS 23456, which is a placeholder and
+not an Autonomous System. reconcile_four_octet_as now drops the AGGREGATOR and leaves the
+AS4_AGGREGATOR holding the AS number which did aggregate. The third bullet, constructing
+the AS path, is recorded at rfc6793#4.2.3-construct-by-prepending.
 """
 
 [[requirement]]
@@ -301,12 +312,15 @@ to that of the AS_PATH attribute.
 """
 note = """
 The rule names one number, the count of the reconstructed path, and that is what the
-positive test asserts across a set of inputs. It fails: merge_attributes counts the
-AS_SEQUENCE members and the AS_SET members in two separate passes, and each pass slices
-`as2path.as_seq[:-len4]`. When the AS4_PATH carries no segment of that kind len4 is
-zero, `[:-0]` is `[:0]`, and the whole leading part of the AS_PATH is thrown away rather
-than all of it being kept. An AS4_PATH holding only an AS_SET therefore deletes every
-AS number in the AS_PATH's sequence.
+positive test asserts across a set of inputs. Two defects lived here. The first was
+arithmetic: each pass sliced `as2path.as_seq[:-len4]`, and `[:-0]` is `[:0]`, so an
+AS4_PATH carrying no segment of that kind threw the leading part away rather than keeping
+it. The second was the shape of the merge, which took sequences from sequences and sets
+from sets, where 4.2.3 counts AS numbers over the whole path: an AS4_PATH whose only
+segment was a set contributed nothing and left in place the AS_TRANS it was sent to
+replace. The count is now the one in RFC 4271 9.1.2.2, where an AS_SET is one AS number
+however many members it holds and a confederation segment is none, and the leading part is
+taken across segment kinds, cutting a sequence which overshoots.
 """
 
 [[requirement]]
@@ -321,10 +335,10 @@ AS_CONFED_SET [RFC5065] MUST NOT be carried in the AS4_PATH attribute
 of an UPDATE message.
 """
 note = """
-Positive only: this constrains what we put on the wire, and it is the same defect as
+Positive only: this constrains what we put on the wire, and it is the same rule as
 rfc6793#4.2.2-exclude-confed-segments-from-as4-path seen from the error handling
-section. The receiving half is the next sentence. One xfail test covers the sending
-rule, quoted here because section 6 is where an implementer looks for it.
+section. The receiving half is the next sentence. One test covers the sending rule,
+quoted here because section 6 is where an implementer looks for it.
 """
 
 [[requirement]]
@@ -341,10 +355,12 @@ attribute fields accordingly, and continue processing the UPDATE
 message.
 """
 note = """
-They are kept. ASPath._unpack_segments_static accepts all four segment types for
-AS4_PATH as readily as for AS_PATH, and merge_attributes folds AS_CONFED_SEQUENCE
-members into as_seq along with the rest, so a confederation AS number sent by a peer
-outside our confederation ends up in the path we publish. The positive test is xfail.
+They used to be kept: ASPath._unpack_segments_static accepts all four segment types for
+AS4_PATH as readily as for AS_PATH, and merge_attributes folds AS_CONFED_SEQUENCE members
+into as_seq along with the rest, so a confederation AS number sent by a peer outside our
+confederation ended up in the path we publish. AS4Path.from_packet now drops those
+segments as it decodes and re-packs the attribute without them, which is the adjustment
+of the attribute fields the sentence asks for.
 """
 
 [[requirement]]

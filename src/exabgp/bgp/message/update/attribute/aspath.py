@@ -65,6 +65,9 @@ class CONFED_SET(list[ASN]):
 # TypeVar for segment types - allows slicing to preserve type
 SegmentType = TypeVar('SegmentType', SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET)
 
+# The four path segment types under one name. An AS path is a tuple of these.
+PathSegment = SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET
+
 
 @Attribute.register()
 class ASPath(Attribute):
@@ -305,9 +308,18 @@ class ASPath(Attribute):
             astrans.append(local)
 
         message = self._attribute(self._pack_segments_raw(tuple(astrans), asn4=False))
-        if has_large_asn:
-            # Add AS4_PATH for large ASNs
-            message += AS4Path._attribute(AS4Path._pack_segments_raw(self.aspath, asn4=True))
+        if not has_large_asn:
+            return message
+
+        # RFC 6793 4.2.2 and 6: the AS4_PATH built beside the AS_PATH MUST exclude every
+        # AS_CONFED_SEQUENCE and AS_CONFED_SET segment. Copying the path unfiltered leaked
+        # confederation membership past the confederation border, in an attribute the RFC
+        # says may not carry those segment types at all. A path made of nothing but
+        # confederation segments leaves no AS4_PATH to send.
+        outside = tuple(c for c in self.aspath if not isinstance(c, (CONFED_SEQUENCE, CONFED_SET)))
+        as4_packed = AS4Path._pack_segments_raw(outside, asn4=True)
+        if as4_packed:
+            message += AS4Path._attribute(as4_packed)
 
         return message
 
@@ -359,7 +371,16 @@ class AS4Path(ASPath):
         AS4Path always uses 4-byte ASNs.
         """
         # Validate by attempting to parse - will raise Notify on error
-        cls._unpack_segments_static(data, asn4=True)
+        segments = cls._unpack_segments_static(data, asn4=True)
+
+        # RFC 6793 6: AS_CONFED_SEQUENCE and AS_CONFED_SET must never be carried in an
+        # AS4_PATH, and one which arrives with them has those path segments discarded, the
+        # attribute fields adjusted, and the UPDATE processed as it stands. Keeping them let
+        # a peer outside our confederation put a confederation AS number into the path we
+        # publish, because the merge folds AS_CONFED_SEQUENCE into as_seq with the rest.
+        outside = tuple(s for s in segments if not isinstance(s, (CONFED_SEQUENCE, CONFED_SET)))
+        if len(outside) != len(segments):
+            return cls(cls._pack_segments_raw(outside, asn4=True))
         return cls(data)
 
     @classmethod

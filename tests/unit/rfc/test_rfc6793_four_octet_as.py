@@ -2,10 +2,10 @@
 
 The ledger these tests are joined to is qa/rfc/rfc6793.toml.
 
-The document has two halves and they fail differently. Generating updates for a two-octet
-peer is arithmetic exabgp gets right: AS_TRANS in the AS_PATH, AS4_PATH beside it, and
-neither of them when every AS number is mappable. Reading updates back is where it goes
-wrong, so most of the xfail markers below are on the receiving side.
+The document has two halves. Generating updates for a two-octet peer is arithmetic exabgp
+gets right: AS_TRANS in the AS_PATH, AS4_PATH beside it with no confederation segment in
+it, and neither of them when every AS number is mappable. Reading updates back is the half
+which took the longest to get right, and the xfail markers left below are all on it.
 
 Everything drives the real attribute parser: wire bytes into AttributeCollection.unpack,
 or a real ASPath and Aggregator into pack_attribute against a real Negotiated.
@@ -388,10 +388,6 @@ def test_a_path_of_mappable_as_numbers_carries_no_as4_path() -> None:
 
 
 @pytest.mark.rfc('rfc6793#4.2.2-exclude-confed-segments-from-as4-path')
-@pytest.mark.xfail(
-    strict=True,
-    reason='ASPath.pack_attribute builds the AS4_PATH from self.aspath unfiltered, so an AS_CONFED_SEQUENCE is copied into it',
-)
 def test_confederation_segments_are_left_out_of_the_as4_path_we_build() -> None:
     old = session(False, Direction.OUT)
     path = ASPath.make_aspath([CONFED_SEQUENCE([ALSO_MAPPABLE]), SEQUENCE([NON_MAPPABLE])], asn4=True)
@@ -506,10 +502,6 @@ def test_an_aggregator_arriving_alone_gains_no_as4_aggregator() -> None:
 
 
 @pytest.mark.rfc('rfc6793#4.2.3-aggregator-not-as-trans')
-@pytest.mark.xfail(
-    strict=True,
-    reason='merge_attributes never reads the AGGREGATOR, so an AGGREGATOR naming a real AS does not stop the AS4_PATH and AS4_AGGREGATOR being used',
-)
 def test_a_real_aggregator_as_makes_both_as4_attributes_ignored() -> None:
     wire = (
         as_path([MAPPABLE, AS_TRANS], 2)
@@ -536,10 +528,6 @@ def test_a_real_aggregator_as_is_the_one_we_report() -> None:
 
 
 @pytest.mark.rfc('rfc6793#4.2.3-aggregator-is-as-trans')
-@pytest.mark.xfail(
-    strict=True,
-    reason='nothing collapses the two aggregator attributes, so AGGREGATOR stays in the collection reporting AS_TRANS as the aggregating node',
-)
 def test_an_as_trans_aggregator_is_ignored_in_favour_of_the_as4_one() -> None:
     wire = aggregator(int(AS_TRANS), 2) + as4_aggregator(pack('!L', int(ALSO_NON_MAPPABLE)) + SPEAKER.pack_ip())
 
@@ -609,6 +597,12 @@ def reconstruction_cases() -> list[tuple[str, bytes, bytes, int]]:
             segment(SEQUENCE.ID, [NON_MAPPABLE], 4) + segment(SET.ID, [ALSO_NON_MAPPABLE], 4),
             4,
         ),
+        (
+            'an AS4_PATH holding a set of two, which is one AS number and not two',
+            segment(SEQUENCE.ID, [MAPPABLE, AS_TRANS], 2),
+            segment(SET.ID, [NON_MAPPABLE, ALSO_NON_MAPPABLE], 4),
+            2,
+        ),
     ]
 
 
@@ -638,10 +632,6 @@ def test_the_reconstruction_never_makes_the_path_longer_than_the_as_path() -> No
 
 
 @pytest.mark.rfc('rfc6793#6-no-confed-segments-in-as4-path')
-@pytest.mark.xfail(
-    strict=True,
-    reason='the same defect as rfc6793#4.2.2-exclude-confed-segments-from-as4-path: pack_attribute copies every segment into the AS4_PATH',
-)
 def test_no_as4_path_we_send_carries_a_confederation_segment() -> None:
     old = session(False, Direction.OUT)
     path = ASPath.make_aspath([CONFED_SEQUENCE([ALSO_MAPPABLE]), SEQUENCE([NON_MAPPABLE])], asn4=True)
@@ -654,10 +644,6 @@ def test_no_as4_path_we_send_carries_a_confederation_segment() -> None:
 
 
 @pytest.mark.rfc('rfc6793#6-discard-confed-segments-from-as4-path')
-@pytest.mark.xfail(
-    strict=True,
-    reason='_unpack_segments_static accepts confederation segments in AS4_PATH and merge_attributes folds them into as_seq',
-)
 def test_confederation_segments_in_a_received_as4_path_are_discarded() -> None:
     wire = as_path([MAPPABLE, AS_TRANS], 2) + as4_path(
         segment(CONFED_SEQUENCE.ID, [ALSO_MAPPABLE], 4) + segment(SEQUENCE.ID, [NON_MAPPABLE], 4)
@@ -789,10 +775,27 @@ def test_a_well_formed_as4_aggregator_is_not_discarded() -> None:
 
 
 @pytest.mark.rfc('rfc6793#4.2.3-construct-by-prepending')
-@pytest.mark.xfail(
-    strict=True,
-    reason='merge_attributes works one segment kind at a time where the RFC counts over the whole path, so an AS4_PATH holding only a set leaves the AS_TRANS it was sent to replace',
-)
+def test_an_as_set_counts_as_one_however_many_members_it_holds() -> None:
+    """The counting rule of RFC 4271 9.1.2.2, which decides how much leading part to keep.
+
+    Counting the members instead would make this AS4_PATH two AS numbers long, as long as
+    the AS_PATH, and nothing of the AS_PATH would be prepended: AS 65001 would be deleted
+    from a path it really is on. The length test above catches the count; this one names
+    the AS number the count decides the fate of.
+    """
+    read = parse(
+        attribute(Attribute.CODE.AS_PATH, TRANSITIVE, segment(SEQUENCE.ID, [MAPPABLE, AS_TRANS], 2))
+        + as4_path(segment(SET.ID, [NON_MAPPABLE, ALSO_NON_MAPPABLE], 4))
+    )
+
+    path = path_of(read)
+    assert [int(asn) for asn in path.as_seq] == [int(MAPPABLE)], (
+        f'the leading part of the AS_PATH was not kept: {path.string()}'
+    )
+    assert sorted(int(asn) for asn in path.as_set) == [int(NON_MAPPABLE), int(ALSO_NON_MAPPABLE)]
+
+
+@pytest.mark.rfc('rfc6793#4.2.3-construct-by-prepending')
 def test_an_as4_path_holding_only_a_set_still_replaces_the_as_trans() -> None:
     """Right length is not the point of the rule, it is the test for having followed it.
 

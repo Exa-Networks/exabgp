@@ -35,7 +35,15 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.role import RoleValue
-from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, SET, AS2Path
+from exabgp.bgp.message.open.asn import AS_TRANS
+from exabgp.bgp.message.update.attribute.aggregator import Aggregator
+from exabgp.bgp.message.update.attribute.aspath import (
+    CONFED_SEQUENCE,
+    SEQUENCE,
+    SET,
+    AS2Path,
+    PathSegment,
+)
 from exabgp.bgp.message.update.attribute.attribute import (
     Attribute,
     Discard,
@@ -414,8 +422,8 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         if negotiated.asn4:
             attributes.pop(Attribute.CODE.AS4_PATH, None)
             attributes.pop(Attribute.CODE.AS4_AGGREGATOR, None)
-        elif Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
-            attributes.merge_attributes()
+        else:
+            attributes.reconcile_four_octet_as()
 
         # The UNSET sentinel is one process-wide object, not a session: a cache written
         # onto it would be shared by every caller, the exact bug this cache replaced.
@@ -643,6 +651,111 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
         return self
 
+    def reconcile_four_octet_as(self) -> None:
+        """RFC 6793 4.2.3: settle the AS4_ attributes an OLD speaker sent beside the real ones.
+
+        The aggregator bullets come first because the AGGREGATOR decides whether the AS4_PATH
+        is looked at at all, and only then is the path reconstructed.
+        """
+        aggregator = self.get(Attribute.CODE.AGGREGATOR, None)
+        aggregator4 = self.get(Attribute.CODE.AS4_AGGREGATOR, None)
+
+        if aggregator is not None and aggregator4 is not None:
+            assert isinstance(aggregator, Aggregator), 'the AGGREGATOR did not decode to an Aggregator'
+            if aggregator.asn != AS_TRANS:
+                # An aggregating AS which is a real number was not written by a speaker
+                # translating a four-octet one, so both AS4_ attributes are noise: the
+                # AGGREGATOR is the aggregating node and the AS_PATH is the path.
+                self.pop(Attribute.CODE.AS4_AGGREGATOR, None)
+                self.pop(Attribute.CODE.AS4_PATH, None)
+                return
+            # AS_TRANS is a placeholder, not an Autonomous System. Leaving the AGGREGATOR in
+            # told a consumer of the JSON that AS 23456 aggregated the route; the
+            # AS4_AGGREGATOR beside it holds the AS number which did.
+            self.pop(Attribute.CODE.AGGREGATOR, None)
+
+        if Attribute.CODE.AS_PATH in self and Attribute.CODE.AS4_PATH in self:
+            self.merge_attributes()
+
+    @staticmethod
+    def _as_number_count(segments: tuple[PathSegment, ...]) -> int:
+        """How many AS numbers a path holds, by the rule of RFC 4271 section 9.1.2.2.
+
+        An AS_SET counts as one whatever it holds, and a confederation segment counts as
+        none (RFC 5065 section 5.3). RFC 6793 4.2.3 names this count twice, so the
+        reconstruction below has to use it rather than a flat count of members.
+        """
+        total = 0
+        for segment in segments:
+            if isinstance(segment, SEQUENCE):
+                total += len(segment)
+            elif isinstance(segment, SET):
+                total += 1
+        return total
+
+    @classmethod
+    def _leading_as_numbers(cls, segments: tuple[PathSegment, ...], wanted: int) -> list[PathSegment]:
+        """The leading part of a path holding `wanted` AS numbers, cutting a segment if it must.
+
+        RFC 6793 4.2.3 takes "as many AS numbers and path segments as necessary from the
+        leading part of the AS_PATH", so a sequence which overshoots is cut rather than
+        dropped whole, and a confederation segment comes along without paying for itself.
+        """
+        leading: list[PathSegment] = []
+        for segment in segments:
+            if wanted <= 0:
+                break
+            if isinstance(segment, SEQUENCE) and len(segment) > wanted:
+                leading.append(SEQUENCE(segment[:wanted]))
+                break
+            leading.append(segment)
+            wanted -= cls._as_number_count((segment,))
+        return leading
+
+    @staticmethod
+    def _coalesce_segments(segments: list[PathSegment]) -> list[PathSegment]:
+        """Join neighbouring sequences, so the join shows as one segment rather than a seam.
+
+        Only sequences: two adjacent AS_SETs count as two AS numbers and one holding both
+        members counts as one, so merging those would change the length of the path.
+        """
+        joined: list[PathSegment] = []
+        for segment in segments:
+            previous = joined[-1] if joined else None
+            if isinstance(segment, SEQUENCE) and isinstance(previous, SEQUENCE):
+                joined[-1] = SEQUENCE(list(previous) + list(segment))
+                continue
+            if isinstance(segment, CONFED_SEQUENCE) and isinstance(previous, CONFED_SEQUENCE):
+                joined[-1] = CONFED_SEQUENCE(list(previous) + list(segment))
+                continue
+            joined.append(segment)
+        return joined
+
+    @classmethod
+    def _reconstruct_as_path(cls, as2path: AS2Path, as4path: AS2Path) -> list[PathSegment]:
+        """RFC 6793 4.2.3, which obsoletes the RFC 4893 this used to cite.  Two rules.
+
+        When the AS_PATH holds fewer AS numbers than the AS4_PATH the AS4_PATH is ignored and
+        the AS_PATH is the answer.  Otherwise the leading part of the AS_PATH is prepended to
+        the AS4_PATH so the result holds as many AS numbers as the AS_PATH did.
+
+        This used to work one segment kind at a time, taking sequences from sequences and sets
+        from sets.  An AS4_PATH whose only segment was a set was therefore matched against an
+        AS_PATH which had no set, contributed nothing, and left in place the AS_TRANS it had
+        been sent to replace: exabgp published 23456 as a transit AS, which is the one outcome
+        the whole mechanism exists to avoid.  Counting over the whole path by RFC 4271 9.1.2.2
+        and prepending across segment kinds is what the sentence actually asks for.
+        """
+        segments2 = as2path.aspath
+        segments4 = as4path.aspath
+        count2 = cls._as_number_count(segments2)
+        count4 = cls._as_number_count(segments4)
+
+        if count2 < count4:
+            return list(segments2)
+
+        return cls._coalesce_segments(cls._leading_as_numbers(segments2, count2 - count4) + list(segments4))
+
     def merge_attributes(self) -> None:
         as2path_attr = self[Attribute.CODE.AS_PATH]
         as4path_attr = self[Attribute.CODE.AS4_PATH]
@@ -666,54 +779,8 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             self.add(cached, key)
             return
 
-        # RFC 6793 4.2.3, which obsoletes the RFC 4893 this used to cite.  Two rules:
-        # when the AS_PATH holds fewer AS numbers than the AS4_PATH the AS4_PATH is
-        # ignored and the AS_PATH is the answer; otherwise the leading part of the
-        # AS_PATH is prepended to the AS4_PATH so the result holds as many AS numbers
-        # as the AS_PATH did.
-        #
-        # Both used to be wrong, in ways a peer could reach.
-        #
-        # `as2path.as_seq[:-len4]` says "all but the last len4", which is the right
-        # thought and the wrong expression: when the AS4_PATH carries no segment of this
-        # kind, len4 is 0 and `[:-0]` is `[:0]`, the empty list.  An AS4_PATH holding
-        # only an AS_SET therefore deleted the whole AS_SEQUENCE of the AS_PATH.  Written
-        # as `[: len2 - len4]` the count is explicit and 0 removes nothing.
-        #
-        # The ignore branch for the set took as4path.as_set, which is the opposite of
-        # what the RFC says to do with an AS4_PATH that is too long, and the opposite of
-        # what the sequence branch two lines above already did.
-        #
-        # This still works one segment kind at a time where the RFC counts over the whole
-        # path, so it can end up the right length with an AS_TRANS still in it where a
-        # four octet ASN belonged.  That is rfc6793#4.2.3-construct-by-prepending's second
-        # test, and it is still a gap.
-        len2 = len(as2path.as_seq)
-        len4 = len(as4path.as_seq)
-
-        if len2 < len4:
-            as_seq = list(as2path.as_seq)
-        else:
-            as_seq = as2path.as_seq[: len2 - len4]
-            as_seq.extend(as4path.as_seq)
-
-        len2 = len(as2path.as_set)
-        len4 = len(as4path.as_set)
-
-        if len2 < len4:
-            as_set = list(as2path.as_set)
-        else:
-            as_set = as2path.as_set[: len2 - len4]
-            as_set.extend(as4path.as_set)
-
-        # Build segments from merged ASN lists
-        segments: list[SET | SEQUENCE] = []
-        if as_seq:
-            segments.append(SEQUENCE(as_seq))
-        if as_set:
-            segments.append(SET(as_set))
         # Reconstruction recovers four-octet ASNs even on a two-octet wire session.
-        aspath = AS2Path.make_aspath(segments, asn4=True)
+        aspath = AS2Path.make_aspath(self._reconstruct_as_path(as2path, as4path), asn4=True)
         self.add(aspath, key)
 
     def __hash__(self) -> int:
