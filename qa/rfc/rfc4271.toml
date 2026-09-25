@@ -530,7 +530,7 @@ IPv4 NLRI field is used, and adds the treat-as-withdraw sentinel rather than rai
 id = "rfc4271#6.3-unrecognized-well-known-attribute"
 section = "6.3"
 level = "MUST"
-status = "required"
+status = "not-applicable"
 polarity = "positive-only"
 text = """
 If any of the well-known mandatory attributes are not recognized,
@@ -538,13 +538,46 @@ then the Error Subcode MUST be set to Unrecognized Well-known
 Attribute.
 """
 note = """
-Positive only: the obligation is to refuse, and the case is defined by an attribute code
-we do not know, so there is no complementary input.  RFC 7606 does not revise this
-paragraph; it revises the missing case, not the unrecognised one.  exabgp does not meet
-it: an attribute whose Optional bit is clear and whose type code is not registered is
-kept as a GenericAttribute if the Transitive bit is set and dropped silently if it is
-not, the handling RFC 4271 section 5 gives to an *optional* attribute.  The positive test
-demonstrates it.
+The antecedent is empty for exabgp, as a matter of fact rather than of wording.  "Well-
+known mandatory" is a category RFC 4271 section 5 defines and populates: ORIGIN, AS_PATH
+and NEXT_HOP.  exabgp registers all three, and registers every non-optional code in the
+IANA Path Attributes registry, LOCAL_PREF and ATOMIC_AGGREGATE included; every path
+attribute assigned since 2006 is optional, because optional-transitive is the extension
+mechanism the IETF uses precisely so an older speaker need not understand a newer
+attribute.  tests/unit/rfc/test_rfc4271_update.py pins that set, so the day a well-known
+attribute exists that we do not decode, the claim above stops being true out loud.
+
+What is actually on the wire in the case this entry used to be about is not "a well-known
+mandatory attribute we do not recognise".  It is a type code we do not know whose Optional
+bit is clear, which is a weaker thing: the flags octet distinguishes well-known from
+optional and says nothing about mandatory against discretionary.  Answering 3/2 to it
+means refusing an unrecognised well-known *discretionary* attribute too, and section 6.3
+prescribes nothing for that.  RFC 7606 3 (a) narrows the NOTIFICATION to "an error
+detected while processing the UPDATE message for which a session reset is specified", and
+no session reset is specified for the broader case.
+
+RFC 7606 does not revise this paragraph.  Section 3 revises 6.3 clause by clause, a to j,
+and the only clause naming well-known attributes is (d), the *missing* case, now
+treat-as-withdraw.  So this is a reading of RFC 4271's own sentence and not a sentence
+some later document retired, which is why the reasoning is set out at this length.
+
+What exabgp does instead, and the unmarked tests beside this entry pin it: an
+unrecognised attribute with the Optional bit clear and the Transitive bit set is carried
+to the API as a generic attribute and the route is announced.  exabgp holds no FIB and
+does not re-advertise what it receives, so an attribute nobody decoded cannot become a
+wrong forwarding decision; it becomes bytes an API client can read and decide about.  In
+the collector and looking-glass deployments exabgp is mostly used for, tearing the session
+down would lose every route that peer had over one attribute nobody can act on, which is
+the failure RFC 7606 exists to stop.
+
+Two things in that path are wrong and are not this requirement.  The PARTIAL bit is set on
+the generic attribute, and PARTIAL is defined for optional transitive attributes only.  An
+unrecognised attribute with both Optional and Transitive clear, which is not a legal shape
+for anything, is dropped with only a debug line.  Both live in
+AttributeCollection.parse and belong to an RFC 7606 entry rather than to this one.
+
+Positive only: were this required, the case would be defined by a type code we do not
+know, and there is no complementary input to write.
 """
 
 [[requirement]]

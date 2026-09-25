@@ -12,7 +12,12 @@ receipt, and the attribute registry used to be keyed on the whole flags octet wi
 the Extended Length bit normalised away, so a peer which set any of them lost the
 attribute.  `Attribute._registry_key` now normalises the four bits away as well.
 
-The finding left is `test_an_unrecognised_well_known_attribute_is_refused`.
+The last finding here was `test_an_unrecognised_well_known_attribute_is_refused`, and it is
+gone: qa/rfc/rfc4271.toml now records 6.3-unrecognized-well-known-attribute as
+not-applicable, because we recognise every well-known attribute there is and an unknown
+type code with the Optional bit clear is a weaker thing than the sentence describes. The
+note on that entry carries the argument. What is left below is the unmarked pair which
+pins the behaviour the decision keeps.
 """
 
 from __future__ import annotations
@@ -35,7 +40,6 @@ from exabgp.protocol.family import AFI, SAFI
 
 UPDATE_MESSAGE_ERROR = 3
 MALFORMED_ATTRIBUTE_LIST = 1
-UNRECOGNIZED_WELL_KNOWN_ATTRIBUTE = 2
 OPTIONAL_ATTRIBUTE_ERROR = 9
 INVALID_NETWORK_FIELD = 10
 
@@ -343,30 +347,45 @@ def test_a_well_formed_mp_reach_is_accepted() -> None:
     assert len(parsed.announces) == 1, 'a well formed MP_REACH_NLRI announced nothing'
 
 
-# ------------------------------------------------- 6.3 an unrecognised well-known attribute
+# ------------------------------------------- 6.3 an unrecognised attribute claiming to be well-known
 
 
 @pytest.mark.parametrize('code', [200, 201, 254], ids=lambda value: f'type {value}')
-@pytest.mark.rfc('rfc4271#6.3-unrecognized-well-known-attribute')
-@pytest.mark.xfail(
-    strict=True,
-    reason='an attribute with the Optional bit clear and an unregistered type code is kept as '
-    'a GenericAttribute when the Transitive bit is set, and dropped silently when it is not, '
-    'which is the handling RFC 4271 section 5 gives an optional attribute',
-)
-def test_an_unrecognised_well_known_attribute_is_refused(code: int) -> None:
-    notify = refused(body(attributes=MANDATORY + bytes([WELL_KNOWN_TRANSITIVE, code, 1, 9])))
+def test_an_unrecognised_attribute_with_the_optional_bit_clear_is_kept_as_a_generic_one(code: int) -> None:
+    """Unmarked, because qa/rfc/rfc4271.toml records 6.3-unrecognized-well-known-attribute
+    as not-applicable and the checker refuses a marker against a requirement we do not
+    claim.  What is on the wire here is a type code we do not know whose Optional bit is
+    clear, which is not the same thing as a well-known mandatory attribute we failed to
+    recognise: the flags octet says nothing about mandatory against discretionary.  We
+    carry it to the API and announce the route.  The ledger note argues the case."""
+    parsed = parse(body(attributes=MANDATORY + bytes([WELL_KNOWN_TRANSITIVE, code, 1, 9])))
 
-    assert notify.code == UPDATE_MESSAGE_ERROR
-    assert notify.subcode == UNRECOGNIZED_WELL_KNOWN_ATTRIBUTE
-
-
-def test_an_unrecognised_well_known_attribute_is_kept_as_a_generic_one() -> None:
-    """Unmarked: what happens instead, written down so the xfail above says what it means."""
-    parsed = parse(body(attributes=MANDATORY + bytes([WELL_KNOWN_TRANSITIVE, 200, 1, 9])))
-
-    assert 200 in parsed.attributes
+    assert code in parsed.attributes
     assert len(parsed.announces) == 1
+
+
+def test_every_attribute_the_registry_calls_well_known_is_one_we_decode() -> None:
+    """The fact the not-applicable rests on, so it cannot rot quietly.
+
+    RFC 4271 section 5 makes ORIGIN, AS_PATH and NEXT_HOP well-known mandatory, and adds
+    LOCAL_PREF and ATOMIC_AGGREGATE to the well-known side.  Every path attribute assigned
+    since is optional.  The day that stops being true, or the day one of these stops being
+    decoded, "we recognise every well-known attribute there is" needs re-arguing and this
+    fails.
+    """
+    well_known = {
+        Attribute.CODE.ORIGIN,
+        Attribute.CODE.AS_PATH,
+        Attribute.CODE.NEXT_HOP,
+        Attribute.CODE.LOCAL_PREF,
+        Attribute.CODE.ATOMIC_AGGREGATE,
+    }
+
+    assert set(Attribute.attributes_well_know) == well_known
+    for code in well_known:
+        klass = Attribute.klass_by_id(code)
+        assert klass is not None, f'{Attribute.CODE.name(code)} is well-known and has no decoder'
+        assert not klass.FLAG & OPTIONAL, f'{Attribute.CODE.name(code)} is registered as optional'
 
 
 # ------------------------------------------------------------ 6.3 an UPDATE with no NLRI

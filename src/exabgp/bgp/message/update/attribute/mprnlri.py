@@ -73,7 +73,7 @@ class MPRNLRI(Attribute, Family):
         offset += 1
 
         if (self.afi, self.safi) not in Family.size:
-            raise Notify(3, 0, 'unsupported {} {}'.format(self.afi, self.safi))
+            raise Notify(3, 9, 'unsupported {} {}'.format(self.afi, self.safi))
 
         length, rd = Family.size[(self.afi, self.safi)]
 
@@ -165,6 +165,14 @@ class MPRNLRI(Attribute, Family):
         Validates the data and creates an MPRNLRI instance storing the wire bytes.
         NLRIs are parsed lazily when iterating over the instance.
         """
+        # Every Notify below is 3/9, "UPDATE Message Error"/"Optional Attribute Error".
+        # RFC 4760 section 7 names that code and subcode for a session terminated over an
+        # incorrect MP attribute, and every raise in here is us deciding the attribute is
+        # incorrect. 3/0 Unspecific, which most of them used to send, told the peer only
+        # that we had ended the session and left it to guess at which attribute. It is
+        # also the subcode AttributeCollection.parse answers for an MP attribute whose
+        # flags are wrong, on the same reading of the same section.
+
         # MP_REACH_NLRI minimum: AFI(2) + SAFI(1) + NH_len(1) + reserved(1) = 5 bytes
         if len(data) < 5:
             raise Notify(3, 9, f'MP_REACH_NLRI too short: need at least 5 bytes, got {len(data)}')
@@ -176,7 +184,7 @@ class MPRNLRI(Attribute, Family):
 
         # we do not want to accept unknown families
         if negotiated and (afi, safi) not in negotiated.families:
-            raise Notify(3, 0, 'presented a non-negotiated family {}/{}'.format(afi, safi))
+            raise Notify(3, 9, 'presented a non-negotiated family {}/{}'.format(afi, safi))
 
         # -- Reading length of next-hop
         len_nh = data[offset]
@@ -187,7 +195,7 @@ class MPRNLRI(Attribute, Family):
             raise Notify(3, 9, f'MP_REACH_NLRI truncated: need {offset + len_nh + 1} bytes, got {len(data)}')
 
         if (afi, safi) not in Family.size:
-            raise Notify(3, 0, 'unsupported {} {}'.format(afi, safi))
+            raise Notify(3, 9, 'unsupported {} {}'.format(afi, safi))
 
         length, rd = Family.size[(afi, safi)]
 
@@ -202,34 +210,35 @@ class MPRNLRI(Attribute, Family):
                 nh_afi = AFI.ipv4
             else:
                 raise Notify(
-                    3, 0, 'unsupported family {} {} with extended next-hop capability enabled'.format(afi, safi)
+                    3, 9, 'unsupported family {} {} with extended next-hop capability enabled'.format(afi, safi)
                 )
             length, _ = Family.size[(nh_afi, safi)]
 
         if len_nh not in length:
             raise Notify(
                 3,
-                0,
+                9,
                 'invalid %s %s next-hop length %d expected %s'
                 % (afi, safi, len_nh, ' or '.join(str(_) for _ in length)),
             )
 
         # check the RD is well zero
         if rd and sum([int(_) for _ in data[offset : offset + 8]]) != 0:
-            raise Notify(3, 0, "MP_REACH_NLRI next-hop's route-distinguisher must be zero")
+            raise Notify(3, 9, "MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 
         offset += len_nh
 
-        # Skip a reserved bit as someone had to bug us !
-        reserved = data[offset]
+        # RFC 4760 section 3 reads "A 1 octet field that MUST be set to 0, and SHOULD be
+        # ignored upon receipt".  We ignore it.  Ending the session over this byte cost the
+        # peer every route it had announced, in every family, over a field the document
+        # tells the receiver not to read, and a reserved field carrying something one day
+        # is what reserved fields are for.  The length check above already proved the octet
+        # is inside the attribute, so only the offset matters here.
         offset += 1
-
-        if reserved != 0:
-            raise Notify(3, 0, 'the reserved bit of MP_REACH_NLRI is not zero')
 
         # Verify there's NLRI data
         if offset >= len(data):
-            raise Notify(3, 0, 'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi, safi))
+            raise Notify(3, 9, 'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi, safi))
 
         # Get addpath flag for lazy NLRI parsing
         addpath = negotiated.required(afi, safi)

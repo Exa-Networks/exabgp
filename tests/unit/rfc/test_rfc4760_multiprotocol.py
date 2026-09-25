@@ -164,10 +164,6 @@ def test_the_reserved_octet_we_send_is_zero() -> None:
 
 
 @pytest.mark.rfc('rfc4760#3-reserved-ignored-on-receipt')
-@pytest.mark.xfail(
-    strict=True,
-    reason='mprnlri.py raises Notify(3, 0) on a non-zero reserved octet instead of ignoring it',
-)
 def test_a_non_zero_reserved_octet_is_ignored_on_receipt() -> None:
     """The sentence says to ignore the byte, so the NLRI behind it must still decode."""
     negotiated = session([IPV4_UNICAST])
@@ -243,11 +239,15 @@ def test_both_safi_values_this_document_defines_are_supported(safi: int, family:
 
 
 def incorrect_mp_attributes() -> list[tuple[str, bytes]]:
-    """Every shape of incorrect MP_REACH_NLRI the decoder knows how to reject."""
+    """Every shape of incorrect MP_REACH_NLRI the decoder knows how to reject.
+
+    A non-zero reserved octet is deliberately not on this list. Section 3 says to ignore
+    that byte, so an attribute carrying one is not incorrect, and the test above pins
+    that it decodes.
+    """
     return [
         ('truncated before the reserved octet', pack('!HB', 1, 1) + bytes([4]) + bytes(4)),
         ('a next-hop length the family never uses', mp_reach(1, 1, bytes(16), NLRI_V4)),
-        ('a non-zero reserved octet', mp_reach(1, 1, bytes([192, 0, 2, 1]), NLRI_V4, reserved=1)),
         ('a family neither end advertised', mp_reach(1, 2, bytes([192, 0, 2, 1]), NLRI_V4)),
         ('no NLRI at all, and not an EOR', mp_reach(1, 1, bytes([192, 0, 2, 1]), b'')),
     ]
@@ -290,10 +290,6 @@ def test_a_correct_mp_attribute_costs_the_peer_nothing() -> None:
 
 
 @pytest.mark.rfc('rfc4760#7-terminate-with-optional-attribute-error')
-@pytest.mark.xfail(
-    strict=True,
-    reason='mprnlri.py raises Notify(3, 0) Unspecific for every case but a truncated attribute, where the RFC asks for (3, 9) Optional Attribute Error',
-)
 def test_an_incorrect_mp_attribute_terminates_with_optional_attribute_error() -> None:
     """One test over every case, because the subcode has to be right for all of them."""
     negotiated = session([IPV4_UNICAST])
@@ -306,6 +302,27 @@ def test_an_incorrect_mp_attribute_terminates_with_optional_attribute_error() ->
             wrong.append(f'{what}: {raised.value.code}/{raised.value.subcode}')
 
     assert not wrong, 'terminated with the wrong code/subcode for ' + '; '.join(wrong)
+
+
+@pytest.mark.rfc('rfc4760#7-terminate-with-optional-attribute-error')
+@pytest.mark.parametrize(
+    'what,attribute',
+    [
+        ('truncated before the SAFI', pack('!H', 1)),
+        ('a family neither end advertised', pack('!HB', 1, 2) + NLRI_V4),
+    ],
+    ids=['truncated', 'not-negotiated'],
+)
+def test_an_incorrect_mp_unreach_terminates_with_optional_attribute_error(what: str, attribute: bytes) -> None:
+    """The sentence names the attribute pair, so MP_UNREACH_NLRI answers the same subcode."""
+    negotiated = session([IPV4_UNICAST])
+
+    with pytest.raises(Notify) as raised:
+        MPURNLRI.unpack_attribute(attribute, negotiated)
+
+    assert (raised.value.code, raised.value.subcode) == (3, 9), (
+        f'{what} terminated with {raised.value.code}/{raised.value.subcode}'
+    )
 
 
 # =========================================================== 8, capability advertisement
