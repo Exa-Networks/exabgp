@@ -54,7 +54,7 @@ class ParseFlowRoute(Section):
             ),
             'next-hop': Leaf(
                 type=ValueType.NEXT_HOP,
-                description='Next-hop for redirect-to-nexthop',
+                description='Next-hop, used by the -simpson redirect forms',
                 target=ActionTarget.NEXTHOP,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -67,7 +67,7 @@ class ParseFlowRoute(Section):
     syntax: str = (
         'route give-me-a-name {{\n'
         '  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n'
-        '  next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n'
+        '  next-hop 1.2.3.4; (to use with the -simpson redirect forms)\n'
         '  {}\n'
         '  {}\n'
         '  {}\n'

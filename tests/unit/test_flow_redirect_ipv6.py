@@ -29,6 +29,7 @@ from exabgp.bgp.message.update.attribute.community.extended.community import Ext
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.core.parser import Tokeniser
 from exabgp.configuration.flow.parser import redirect
+from exabgp.configuration.flow.parser import redirect_simpson
 from exabgp.protocol.ip import IP
 
 ROOT = pathlib.Path(__file__).parent.parent.parent
@@ -106,10 +107,31 @@ def test_the_parser_reads_the_split_tokens() -> None:
     assert str(community) == 'redirect [2001:db8::1]:100'
 
 
-def test_a_bracketed_address_alone_is_still_a_next_hop() -> None:
-    """`redirect [2001:db8::1];` keeps its meaning: redirect to that IPv6 next-hop."""
-    nexthop, _ = redirect(tokens('[', '2001:db8::1', ']'))
+def test_a_bracketed_address_alone_redirects_to_that_address() -> None:
+    """`redirect [2001:db8::1];` still means redirect to that address, in the IETF community.
+
+    It used to mean it by setting the route's next hop, which RFC 8955 4 forbids while
+    advertising a flow specification. draft-ietf-idr-flowspec-redirect-ip, which replaces
+    draft-simpson-idr-flowspec-redirect-ip, carries the address in the community instead, so
+    the target is unchanged and the MP_REACH_NLRI next hop is now empty. Sub-type 0x0c, not
+    the 0x0d of the route-target above.
+    """
+    nexthop, communities = redirect(tokens('[', '2001:db8::1', ']'))
+
+    assert str(nexthop) == 'no-nexthop'
+    assert isinstance(communities, ExtendedCommunitiesIPv6), 'a twenty octet community needs attribute 25'
+    packed = b''.join(bytes(community.pack()) for community in communities)
+    assert packed[0:2] == bytes([0x00, 0x0C])
+    assert packed[2:18] == IP.from_string('2001:db8::1').pack_ip()
+
+
+def test_the_older_bracketed_next_hop_encoding_is_still_reachable() -> None:
+    """`redirect-simpson [2001:db8::1];` for anyone who needs the address in MP_REACH_NLRI."""
+    nexthop, communities = redirect_simpson(tokens('[', '2001:db8::1', ']'))
+
     assert str(nexthop) == '2001:db8::1'
+    packed = b''.join(bytes(community.pack()) for community in communities)
+    assert packed[0:2] == bytes([0x08, 0x00]), 'the Simpson community, which carries no address'
 
 
 @pytest.mark.parametrize(

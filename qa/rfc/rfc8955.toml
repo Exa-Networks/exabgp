@@ -53,10 +53,18 @@ Address MUST be set to 0.
 """
 note = """
 `MPNLRICollection._encode_nexthop` returns no bytes for `IP.NoNextHop`, so the ordinary
-flow route, which carries none, packs a next-hop length of 0.  The negative side does not
-hold: the flow configuration grammar has a `next-hop` keyword (used by the redirect-to-IP
-drafts) and a flow route which carries one packs a four octet next-hop into MP_REACH_NLRI,
-against this sentence.  Shown by a failing test rather than described.
+flow route, which carries none, packs a next-hop length of 0.  Every redirect-to-an-address
+action now keeps it that way: `redirect <ip>`, `copy <ip>` and `redirect-to-nexthop <ip>`
+send the draft-ietf-idr-flowspec-redirect-ip community, which carries the address itself, so
+nothing needs the next-hop field.  That draft replaces draft-simpson-idr-flowspec-redirect-ip,
+which is where the four octet next-hop came from.
+
+The negative side still does not hold, because the older encoding is still reachable on
+request: `redirect-simpson`, `copy-simpson` and a bare `redirect-to-nexthop` take their
+target from the route's `next-hop` keyword and so pack a four octet next-hop, against this
+sentence.  They are kept because for anyone using them the next hop IS the redirect target,
+and zeroing it would send their traffic somewhere else.  Shown by a failing test rather than
+described.
 """
 
 [[requirement]]

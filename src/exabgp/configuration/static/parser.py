@@ -64,7 +64,7 @@ from exabgp.bgp.message.update.attribute.community import (
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.protocol.family import AFI
-from exabgp.protocol.ip import IP, IPRange, IPSelf, IPv4
+from exabgp.protocol.ip import IP, IPRange, IPSelf, IPv4, IPv6
 from exabgp.rib.route import Route
 
 # IP address validation constants
@@ -598,6 +598,19 @@ def _extended_community_hex(value: str) -> ExtendedCommunity:
 
 
 def _extended_community(value: str) -> ExtendedCommunity:
+    name, _, address = value.partition(' ')
+    if name in _TAKES_AN_ADDRESS:
+        from exabgp.bgp.message.update.attribute.community.extended import (
+            TrafficNextHopIPv4IETF,
+            TrafficNextHopIPv6IETF,
+        )
+
+        ip = IP.from_string(address)
+        copy = name.startswith('copy')
+        if ip.ipv4():
+            return TrafficNextHopIPv4IETF.make_traffic_nexthop_ipv4(cast(IPv4, ip), copy)
+        return cast(ExtendedCommunity, TrafficNextHopIPv6IETF.make_traffic_nexthop_ipv6(cast(IPv6, ip), copy))
+
     if not value.count(':'):
         if value[:2].lower() == '0x':
             return _extended_community_hex(value)
@@ -616,6 +629,21 @@ def _extended_community(value: str) -> ExtendedCommunity:
     return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(header + pack(packed, *components), None))
 
 
+# the redirect-to-IP communities of draft-ietf-idr-flowspec-redirect-ip are written as a
+# name and an address, unlike every other extended community here, which is one word. They
+# have to be readable because `nlri.json()` renders them this way and qa/bin/test_api_encode
+# feeds that rendering back as an API command: a community we can write and not read is one
+# the round trip cannot carry.
+_TAKES_AN_ADDRESS = ('redirect-to-nexthop-ietf', 'copy-to-nexthop-ietf')
+
+
+def _extended_community_pair(name: str, tokeniser: 'Tokeniser') -> ExtendedCommunity:
+    address = tokeniser()
+    if not address or address == ']':
+        raise ValueError(f'invalid extended community: {name} needs an IP address')
+    return _extended_community(f'{name} {address}')
+
+
 def extended_community(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     communities = ExtendedCommunities()
 
@@ -625,8 +653,14 @@ def extended_community(tokeniser: 'Tokeniser') -> ExtendedCommunities:
             value = tokeniser()
             if value == ']':
                 break
+            if value in _TAKES_AN_ADDRESS:
+                communities.add(_extended_community_pair(value, tokeniser))
+                continue
             communities.add(_extended_community(value))
     else:
+        if value in _TAKES_AN_ADDRESS:
+            communities.add(_extended_community_pair(value, tokeniser))
+            return communities
         communities.add(_extended_community(value))
 
     return communities

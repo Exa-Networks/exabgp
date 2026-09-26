@@ -460,6 +460,47 @@ def _redirect_ipv6(data: str) -> tuple[IP, ExtendedCommunitiesIPv6]:
     return IP.NoNextHop, ExtendedCommunitiesIPv6().add(community)
 
 
+# `redirect <ip>` and `copy <ip>` changed which community they send, and no syntax tells
+# the old meaning from the new one, so an operator who wants the old bytes has to be told.
+# Once per process: this is one fact about the configuration, not one per route, and a flow
+# table reloaded on a timer would otherwise write the same line forever.
+_TOLD_ABOUT_THE_IETF_DEFAULT: bool = False
+
+
+def _tell_about_the_ietf_default(keyword: str, older: str) -> None:
+    global _TOLD_ABOUT_THE_IETF_DEFAULT
+
+    if _TOLD_ABOUT_THE_IETF_DEFAULT:
+        return
+    _TOLD_ABOUT_THE_IETF_DEFAULT = True
+    log.warning(
+        lazymsg(
+            'flow.redirect.ietf_default keyword={keyword} older={older} '
+            'reason=draft-ietf-idr-flowspec-redirect-ip replaces draft-simpson-idr-flowspec-redirect-ip; '
+            'the target is now in an extended community and no longer in the MP_REACH_NLRI next hop, '
+            'as RFC 8955 section 4 requires. Write "{older}" to keep the previous encoding.',
+            keyword=keyword,
+            older=older,
+        ),
+        'configuration',
+    )
+
+
+def _next_hop_ietf(ip: IP, copy: bool) -> ExtendedCommunities | ExtendedCommunitiesIPv6:
+    """The draft-ietf-idr-flowspec-redirect-ip community for `ip`, redirect or copy.
+
+    The address travels in the community's Global Administrator field, so the MP_REACH_NLRI
+    next hop stays empty as RFC 8955 section 4 requires. The C bit in the Local
+    Administrator field is what tells a copy from a redirect.
+
+    An IPv6 target needs the twenty byte IPv6 extended community attribute (25); it does not
+    fit the eight byte one (16).
+    """
+    if ip.ipv4():
+        return ExtendedCommunities().add(TrafficNextHopIPv4IETF.make_traffic_nexthop_ipv4(cast(IPv4, ip), copy))
+    return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF.make_traffic_nexthop_ipv6(cast(IPv6, ip), copy))
+
+
 def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities | ExtendedCommunitiesIPv6]:
     data: str = _redirect_target(tokeniser)
     if data.startswith('[') and ']:' in data:
@@ -468,23 +509,22 @@ def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities | Extended
 
     # the redirect is an IPv4 or an IPv6 nexthop
     if count == 0 or (count > 1 and '[' not in data and ']' not in data):
-        return IP.from_string(data), ExtendedCommunities().add(
-            TrafficNextHopSimpson.make_traffic_nexthop_simpson(False)
-        )
+        _tell_about_the_ietf_default('redirect <ip>', 'redirect-simpson <ip>')
+        return IP.NoNextHop, _next_hop_ietf(IP.from_string(data), False)
 
     # the redirect is an IPv6 nexthop using [] notation
     if data.startswith('[') and data.endswith(']'):
-        return IP.from_string(data[1:-1]), ExtendedCommunities().add(
-            TrafficNextHopSimpson.make_traffic_nexthop_simpson(False)
-        )
+        _tell_about_the_ietf_default('redirect <ip>', 'redirect-simpson <ip>')
+        return IP.NoNextHop, _next_hop_ietf(IP.from_string(data[1:-1]), False)
 
     # the redirect is an ipv6:NN route-target using []: notation
     if count > 1:
         try:
             ip: IP = IP.from_string(data)
-            return ip, ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
         except (OSError, ValueError):
             raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []') from None
+        _tell_about_the_ietf_default('redirect <ip>', 'redirect-simpson <ip>')
+        return IP.NoNextHop, _next_hop_ietf(ip, False)
 
     # the redirect is an ASN:NN route-target
     if True:  # count == 1:
@@ -520,8 +560,29 @@ def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities | Extended
     raise ValueError('redirect format incorrect')
 
 
-def redirect_next_hop(tokeniser: 'Tokeniser') -> ExtendedCommunities:
+def redirect_next_hop_simpson(tokeniser: 'Tokeniser') -> ExtendedCommunities:
+    """`redirect-to-nexthop-simpson`, the older form, kept working and named for what it is.
+
+    draft-simpson-idr-flowspec-redirect puts no address in the community: the target is the
+    UPDATE's own next hop, which the flow route supplies with its `next-hop` keyword. That
+    is against RFC 8955 section 4, "the Length of the Next-Hop Network Address MUST be set
+    to 0", and is recorded as such in qa/rfc/rfc8955.toml. It stays because for anyone
+    using it the next hop is the redirect target, and zeroing it would send their traffic
+    somewhere else.
+    """
     return ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
+
+
+def redirect_next_hop(tokeniser: 'Tokeniser') -> ExtendedCommunities | ExtendedCommunitiesIPv6:
+    """`redirect-to-nexthop [<ip>]`, which is the conformant form when given an address.
+
+    Given an address this is the IETF form, which carries the target in the community and
+    needs no MP_REACH_NLRI next hop. Given none it is the Simpson form, so every
+    configuration written before this dispatch existed keeps its behaviour.
+    """
+    if not tokeniser.peek():
+        return redirect_next_hop_simpson(tokeniser)
+    return redirect_next_hop_ietf(tokeniser)
 
 
 def redirect_next_hop_ietf(tokeniser: 'Tokeniser') -> ExtendedCommunities | ExtendedCommunitiesIPv6:
@@ -531,10 +592,42 @@ def redirect_next_hop_ietf(tokeniser: 'Tokeniser') -> ExtendedCommunities | Exte
     return ExtendedCommunitiesIPv6().add(TrafficNextHopIPv6IETF.make_traffic_nexthop_ipv6(cast(IPv6, ip), False))
 
 
-def copy(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
+def copy(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities | ExtendedCommunitiesIPv6]:
+    """`copy <ip>`, the IETF form with the C bit set."""
+    _tell_about_the_ietf_default('copy <ip>', 'copy-simpson <ip>')
+    return IP.NoNextHop, _next_hop_ietf(IP.from_string(tokeniser()), True)
+
+
+def copy_simpson(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
+    """`copy-simpson <ip>`, the older form: the address goes in MP_REACH_NLRI."""
     return IP.from_string(tokeniser()), ExtendedCommunities().add(
         TrafficNextHopSimpson.make_traffic_nexthop_simpson(True)
     )
+
+
+def redirect_simpson(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
+    """`redirect-simpson <ip>`, the older form: the address goes in MP_REACH_NLRI.
+
+    Only an address, never a route-target: `redirect <asn>:<nn>` and `redirect [<ipv6>]:<nn>`
+    are RFC conformant already and have nothing to opt out of, so asking for the older
+    encoding of one is a mistake worth naming rather than a form to support.
+    """
+    data: str = _redirect_target(tokeniser)
+    if data.startswith('[') and data.endswith(']'):
+        # the tokeniser splits at the brackets and _redirect_target puts them back
+        data = data[1:-1]
+    try:
+        ip = IP.from_string(data)
+    except (OSError, ValueError):
+        # parse it rather than test it with `IP.toafi()`, which answers ipv6 for anything
+        # holding a colon: a route-target passes that test, reaches IP.from_string, and the
+        # operator is shown inet_pton's complaint instead of a reason
+        raise ValueError(
+            'redirect-simpson takes an address and {} is not one. A redirect to a '
+            'route-target puts nothing in the next hop and is conformant already, so it has '
+            'no -simpson form: write "redirect {}".'.format(data, data)
+        ) from None
+    return ip, ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
 
 
 def mark(tokeniser: 'Tokeniser') -> ExtendedCommunities:

@@ -55,6 +55,9 @@ from exabgp.configuration.flow.parser import rate_limit
 from exabgp.configuration.flow.parser import redirect
 from exabgp.configuration.flow.parser import redirect_next_hop
 from exabgp.configuration.flow.parser import redirect_next_hop_ietf
+from exabgp.configuration.flow.parser import redirect_next_hop_simpson
+from exabgp.configuration.flow.parser import redirect_simpson
+from exabgp.configuration.flow.parser import copy_simpson
 from exabgp.configuration.flow.parser import copy
 from exabgp.configuration.flow.parser import mark
 from exabgp.configuration.flow.parser import action
@@ -276,11 +279,29 @@ class AnnounceFlow(ParseAnnounce):
             ),
             'redirect-to-nexthop': Leaf(
                 type=ValueType.BOOLEAN,
-                description='Redirect to next-hop',
+                description='Redirect to next-hop; with an IP the RFC 8955 conformant form',
                 target=ActionTarget.ATTRIBUTE,
                 operation=ActionOperation.ADD,
                 key=ActionKey.NAME,
                 validator=LegacyParserValidator(parser_func=redirect_next_hop, name='redirect-to-nexthop'),
+            ),
+            'redirect-to-nexthop-simpson': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Redirect to the UPDATE next-hop (older form, not RFC 8955 conformant)',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
+                validator=LegacyParserValidator(
+                    parser_func=redirect_next_hop_simpson, name='redirect-to-nexthop-simpson'
+                ),
+            ),
+            'redirect-simpson': Leaf(
+                type=ValueType.STRING,
+                description='Redirect to IP address (older form, address in MP_REACH_NLRI)',
+                target=ActionTarget.NEXTHOP_ATTRIBUTE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+                validator=LegacyParserValidator(parser_func=redirect_simpson, name='redirect-simpson'),
             ),
             'redirect-to-nexthop-ietf': Leaf(
                 type=ValueType.BOOLEAN,
@@ -292,11 +313,19 @@ class AnnounceFlow(ParseAnnounce):
             ),
             'copy': Leaf(
                 type=ValueType.IP_ADDRESS,
-                description='Copy traffic to IP',
+                description='Copy traffic to IP (IETF community, RFC 8955 conformant)',
                 target=ActionTarget.NEXTHOP_ATTRIBUTE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
                 validator=LegacyParserValidator(parser_func=copy, name='copy'),
+            ),
+            'copy-simpson': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Copy traffic to IP (older form, address in MP_REACH_NLRI)',
+                target=ActionTarget.NEXTHOP_ATTRIBUTE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+                validator=LegacyParserValidator(parser_func=copy_simpson, name='copy-simpson'),
             ),
             'mark': Leaf(
                 type=ValueType.INTEGER,

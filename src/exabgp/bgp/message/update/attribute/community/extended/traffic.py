@@ -325,7 +325,7 @@ class TrafficMark(ExtendedCommunity):
 
 @ExtendedCommunity.register_subtype
 class TrafficNextHopIPv4IETF(ExtendedCommunity):
-    """Redirect to IPv4 next-hop (draft-ietf-idr-flowspec-redirect).
+    """Redirect to IPv4 next-hop (draft-ietf-idr-flowspec-redirect-ip).
 
     Contains explicit IPv4 address. Copy flag indicates whether to also
     forward to original next-hop (copy) or replace entirely (redirect).
@@ -353,9 +353,9 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
 
     def __repr__(self) -> str:
         return (
-            'copy-to-nexthop-ietf {} (with copy)'.format(self.ip)
-            if self.copy
-            else 'redirect-to-nexthop-ietf {}'.format(self.ip)
+            # no "(with copy)" suffix: the keyword already says it, and this rendering is
+            # read back as configuration by qa/bin/test_api_encode, so it has to be input
+            'copy-to-nexthop-ietf {}'.format(self.ip) if self.copy else 'redirect-to-nexthop-ietf {}'.format(self.ip)
         )
 
     @classmethod
@@ -368,7 +368,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
 
 @ExtendedCommunityIPv6.register_subtype
 class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
-    """Redirect to IPv6 next-hop (draft-ietf-idr-flowspec-redirect, RFC 5701).
+    """Redirect to IPv6 next-hop (draft-ietf-idr-flowspec-redirect-ip, RFC 5701).
 
     Contains explicit IPv6 address (20 bytes total). Copy flag indicates
     whether to also forward to original next-hop or replace entirely.
@@ -396,9 +396,9 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
 
     def __repr__(self) -> str:
         return (
-            'copy-to-nexthop-ietf {} (with copy)'.format(self.ip)
-            if self.copy
-            else 'redirect-to-nexthop-ietf {}'.format(self.ip)
+            # no "(with copy)" suffix: the keyword already says it, and this rendering is
+            # read back as configuration by qa/bin/test_api_encode, so it has to be input
+            'copy-to-nexthop-ietf {}'.format(self.ip) if self.copy else 'redirect-to-nexthop-ietf {}'.format(self.ip)
         )
 
     @classmethod
@@ -411,7 +411,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
 
 @ExtendedCommunity.register_subtype
 class TrafficNextHopSimpson(ExtendedCommunity):
-    """Redirect to UPDATE's existing next-hop (draft-simpson-idr-flowspec-redirect).
+    """Redirect to UPDATE's existing next-hop (draft-simpson-idr-flowspec-redirect-ip).
 
     Unlike TrafficNextHopIPv4/IPv6 which contain explicit addresses, this signals
     "use the UPDATE message's NextHop attribute". Copy flag works as above.

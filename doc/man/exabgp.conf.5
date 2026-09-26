@@ -156,7 +156,7 @@ neighbor <ip-address> {
     flow {
         route <route-name> {
             rd <route-distinguisher>;
-            next-hop <ip-address>; // for redirect-to-nexthop
+            next-hop <ip-address>; // for the -simpson redirect forms
             match {
                 // one or more match terms
                 source <ip-address>/<prefixlength>;
@@ -200,9 +200,14 @@ neighbor <ip-address> {
                 discard;
                 rate-limit <ratelimit>;
                 redirect ( <route-distinguisher> | <ip-address> | [<ipv6-address>]:<number> );
-                redirect-to-nexthop; // Ref. next-hop above
-                redirect-to-nexthop-ietf <ip-address>;
+                redirect-to-nexthop [<ip-address>]; // without one, Ref. next-hop above
+                redirect-to-nexthop-ietf <ip-address>; // same as giving one above
                 copy <ip-address>;
+                // the older draft-simpson-idr-flowspec-redirect-ip encodings, which put
+                // the address in MP_REACH_NLRI against RFC 8955 section 4
+                redirect-simpson <ip-address>;
+                redirect-to-nexthop-simpson; // Ref. next-hop above
+                copy-simpson <ip-address>;
                 mark <mark>;
                 action ( sample | terminal | sample-terminal );
                 community;

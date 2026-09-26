@@ -21,6 +21,9 @@ from exabgp.configuration.flow.parser import rate_limit
 from exabgp.configuration.flow.parser import redirect
 from exabgp.configuration.flow.parser import redirect_next_hop
 from exabgp.configuration.flow.parser import redirect_next_hop_ietf
+from exabgp.configuration.flow.parser import redirect_next_hop_simpson
+from exabgp.configuration.flow.parser import redirect_simpson
+from exabgp.configuration.flow.parser import copy_simpson
 from exabgp.configuration.flow.parser import copy
 from exabgp.configuration.flow.parser import mark
 from exabgp.configuration.flow.parser import action
@@ -65,21 +68,42 @@ class ParseFlowThen(Section):
             ),
             'redirect-to-nexthop': Leaf(
                 type=ValueType.BOOLEAN,
-                description='Redirect to next-hop',
+                description='Redirect to next-hop; with an IP the RFC 8955 conformant form',
                 target=ActionTarget.ATTRIBUTE,
                 operation=ActionOperation.ADD,
                 key=ActionKey.NAME,
             ),
             'redirect-to-nexthop-ietf': Leaf(
                 type=ValueType.BOOLEAN,
-                description='Redirect to next-hop (IETF format)',
+                description='Redirect to next-hop (IETF format), same as giving an IP above',
+                target=ActionTarget.ATTRIBUTE,
+                operation=ActionOperation.ADD,
+                key=ActionKey.NAME,
+            ),
+            'redirect-to-nexthop-simpson': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Redirect to the UPDATE next-hop (older form, not RFC 8955 conformant)',
                 target=ActionTarget.ATTRIBUTE,
                 operation=ActionOperation.ADD,
                 key=ActionKey.NAME,
             ),
             'copy': Leaf(
                 type=ValueType.IP_ADDRESS,
-                description='Copy to IP address',
+                description='Copy to IP address (IETF community, RFC 8955 conformant)',
+                target=ActionTarget.NEXTHOP_ATTRIBUTE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+            ),
+            'copy-simpson': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Copy to IP address (older form, address in MP_REACH_NLRI)',
+                target=ActionTarget.NEXTHOP_ATTRIBUTE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+            ),
+            'redirect-simpson': Leaf(
+                type=ValueType.STRING,
+                description='Redirect to IP address (older form, address in MP_REACH_NLRI)',
                 target=ActionTarget.NEXTHOP_ATTRIBUTE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -148,7 +172,10 @@ class ParseFlowThen(Section):
         'redirect': redirect,
         'redirect-to-nexthop': redirect_next_hop,
         'redirect-to-nexthop-ietf': redirect_next_hop_ietf,
+        'redirect-to-nexthop-simpson': redirect_next_hop_simpson,
         'copy': copy,
+        'copy-simpson': copy_simpson,
+        'redirect-simpson': redirect_simpson,
         'mark': mark,
         'action': action,
         'community': community,
