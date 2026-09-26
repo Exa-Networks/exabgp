@@ -4,6 +4,13 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 5.0.13:
+ * Fix: the end of RIB marker reported to an API process was not JSON.
+   Every other NLRI renders an object, and the caller puts the result in a
+   list, so a bare '"eor": {...}' made the whole line unparseable and a
+   process reading sent updates could not decode it. It is now
+   '{ "eor": {...} }'. Nothing recorded that line, which is why it went
+   unseen; etc/exabgp/run/api-rr-rib.run had been dropping it silently in
+   its "except ValueError: continue".
  * Fix: automatic local-AS sessions advertise the resolved peer identity,
    including the correct ASN4 capability. An unresolved ASN,
    AS_TRANS as a local identity, or a four-octet identity with ASN4

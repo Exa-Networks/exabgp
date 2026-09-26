@@ -46,7 +46,9 @@ class EOR(Message):
             return 'eor %ld/%ld (%s %s)' % (int(self.afi), int(self.safi), self.afi, self.safi)
 
         def json(self, announced=True, compact=None):
-            return '"eor": {{ "afi" : "{}", "safi" : "{}" }}'.format(self.afi, self.safi)
+            # every other NLRI renders an object because the caller puts the result
+            # in a list, so a bare key and value here made the whole line unparseable
+            return '{{ "eor": {{ "afi" : "{}", "safi" : "{}" }} }}'.format(self.afi, self.safi)
 
         def __len__(self):
             if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
