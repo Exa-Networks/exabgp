@@ -149,6 +149,16 @@ def _check_route_generation(neighbor, change, negotiated):
 
         payload = first[19:] if first.startswith(b'\xff' * 16) else first
         update = Update.unpack_message(payload, Direction.IN, negotiated)
+        if not update.nlris:
+            # An UPDATE which re-decodes to no NLRI at all. A flow route with no match block
+            # reaches here: it packs a FlowSpec NLRI of length zero, which RFC 8955 4.2 makes a
+            # match on every packet, and which does not survive its own decode. Indexing
+            # nlris[0] answered that with IndexError out of a validation tool, and the traceback
+            # asked the operator to open a bug report about their own configuration. Whether
+            # such a rule should be refused outright is a separate question; a validator must
+            # say what it found either way.
+            log.error(lambda: 'the route generated no NLRI when read back: {}'.format(original), 'parser')
+            return False
         decoded = Change(update.nlris[0], update.attributes).extensive()
         recoded = list(Update([update.nlris[0]], update.attributes).messages(negotiated))
         if not recoded:
