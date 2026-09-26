@@ -157,6 +157,29 @@ class INET(NLRI):
                 # on the peer's RD.
                 if len(labels) > 1:
                     continue
+                # RFC 8277 2.2, of the S bit: "This 1-bit field MUST be set to one
+                # on transmission and MUST be ignored on reception", and 2.4 says
+                # the same of the three octet Compatibility field a withdraw carries
+                # where a label would be: "Upon reception, the value of the
+                # Compatibility field MUST be ignored".  Both bind every session
+                # exabgp forms: the 2.3 reading applies only once the Multiple Labels
+                # Capability has been sent AND received, and exabgp has no capability
+                # code 8 to exchange.
+                #
+                # So for a one field stack it is the LENGTH which says where the stack
+                # ends, not the S bit: if the bits the length leaves behind this field
+                # are a prefix this family can hold, they are the prefix.  Refusing
+                # them instead is what used to reset the session over a legal
+                # MP_UNREACH withdraw.
+                #
+                # Zero bits left is excluded on purpose.  A /0 and a stack which ate
+                # the prefix are the same bytes, and a peer-supplied default route is
+                # what that costs, so there the two conventions below stay the only
+                # way out of the loop.  Beyond depth one the S bit stays the only
+                # terminator, which is what the raise after the loop holds.
+                if 0 < mask - rd_mask <= IP.length(afi) * 8:
+                    terminated = True
+                    break
                 # This is a route withdrawal
                 if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
                     terminated = True
