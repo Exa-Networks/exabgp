@@ -205,9 +205,9 @@ class FlowSettings:
         Raises:
             ValueError: If the rule is a prefix of another family than the route or its prefixes
         """
-        from exabgp.bgp.message.update.nlri.flow import prefix_family_conflict
+        from exabgp.bgp.message.update.nlri.flow import family_conflict
 
-        conflict = prefix_family_conflict(self.rules, rule, self.afi)
+        conflict = family_conflict(self.rules, rule, self.afi)
         if conflict:
             raise ValueError(conflict)
         rule_id = rule.ID

@@ -165,6 +165,17 @@ Version 6.0.0:
    holding such a rule now fails to load, naming the line and both prefixes, and an API
    command sending one gets an error back instead of a success. Split the rule in two,
    one per family.
+ * Incompatible: the same goes for the other components of a flow route which mean
+   something else, or nothing, in the other family. "flow-label" in an IPv4 rule is
+   type 13, which IPv4 does not have, so the peer treated the whole NLRI as malformed;
+   "dscp" in an IPv6 rule matched the 8 bit traffic class with the value meant for the
+   6 bit DSCP, and "traffic-class" in an IPv4 rule the reverse; "fragment
+   dont-fragment" in an IPv6 rule asked for a bit IPv6 does not define. Each is refused
+   now, in whichever order the rule lists its components. "protocol" and "next-header"
+   are the same type 3 in both families and are still accepted either way, as is a
+   fragment component which does not ask for dont-fragment. A rule whose only family
+   specific component is IPv6 (flow-label, traffic-class) is an IPv6 flow route; it was
+   packed as an IPv4 one.
  * Compatibility: the IPv6 route-target redirect of RFC 8956 6.1 works (issue #927).
    "redirect [2001:db8::1]:100;" was a syntax error, the community was encoded as type
    0x0002, a plain RFC 5701 route-target rather than 0x000d, in the eight octet extended

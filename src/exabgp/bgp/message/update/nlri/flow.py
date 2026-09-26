@@ -690,30 +690,6 @@ class Flow6Source(IPrefix6, FlowSource):
     NAME: ClassVar[str] = 'source-ipv6'
 
 
-FLOW_PREFIX_IDS: tuple[int, ...] = (FlowDestination.ID, FlowSource.ID)
-
-
-def prefix_family_conflict(rules: dict[int, list[Any]], rule: Any, afi: AFI | None = None) -> str:
-    """Why the prefix `rule` cannot join `rules`, or '' when it can.
-
-    RFC 8955 and RFC 8956 give IPv4 and IPv6 flow routes an AFI each, so every source and
-    destination prefix of one rule is of the same family. `afi`, when given, is the family the
-    route was announced in. Anything which is not a prefix has no family of its own to clash.
-    """
-    if rule.ID not in FLOW_PREFIX_IDS:
-        return ''
-    if afi is not None and rule.afi != afi:
-        return f'{rule.NAME} {rule} cannot be used in an {afi} flow route, a flow route matches one address family'
-    for rule_id in FLOW_PREFIX_IDS:
-        for existing in rules.get(rule_id, []):
-            if existing.afi != rule.afi:
-                return (
-                    f'{rule.NAME} {rule} cannot be combined with {existing.NAME} {existing}, '
-                    'a flow route matches one address family'
-                )
-    return ''
-
-
 class FlowIPProtocol(IOperationByte, NumericString, FlowIPv4):
     """IPv4 IP protocol filter (e.g., TCP=6, UDP=17, ICMP=1)."""
 
@@ -862,6 +838,48 @@ class FlowFlowLabel(IOperationByteShortLong, NumericString, FlowIPv6):
     NAME: ClassVar[str] = 'flow-label'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(label_value, NumericValue)
     decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
+
+
+_BOTH_FAMILIES: frozenset[AFI] = frozenset((AFI.ipv4, AFI.ipv6))
+
+
+def component_families(rule: Any) -> frozenset[AFI]:  # Any is FlowRule
+    """The address families whose flow routes a component means the same thing in.
+
+    Type 3 is the IP protocol in IPv4 and the upper-layer protocol in IPv6, the same value, so
+    `protocol` and `next-header` belong to both. A fragment component encodes the same bits in
+    both families unless it asks for dont-fragment, a bit only IPv4 defines (RFC 8956 3.6). Every
+    other component has the family its class is marked with.
+    """
+    if isinstance(rule, (FlowIPProtocol, FlowNextHeader)):
+        return _BOTH_FAMILIES
+    if isinstance(rule, FlowFragment) and not int(rule.value) & Fragment.DONT:
+        return _BOTH_FAMILIES
+    families = frozenset(
+        afi for afi, marker in ((AFI.ipv4, FlowIPv4), (AFI.ipv6, FlowIPv6)) if isinstance(rule, marker)
+    )
+    assert families, 'every flow component is marked with the families it is valid for'
+    return families
+
+
+def family_conflict(rules: dict[int, list[Any]], rule: Any, afi: AFI | None = None) -> str:
+    """Why `rule` cannot join `rules`, or '' when it can.
+
+    RFC 8955 and RFC 8956 give IPv4 and IPv6 flow routes an AFI each, so every component of one
+    rule must mean the same thing in one family: two components with no family in common cannot
+    share a rule. `afi`, when given, is the family the route was announced in. The components
+    of a rule are bounded by the configuration line which wrote them.
+    """
+    families = component_families(rule)
+    if afi is not None and afi not in families:
+        return f'{rule.NAME} {rule} cannot be used in an {afi} flow route, a flow route matches one address family'
+    for existing in (component for components in rules.values() for component in components):
+        if not families & component_families(existing):
+            return (
+                f'{rule.NAME} {rule} cannot be combined with {existing.NAME} {existing}, '
+                'a flow route matches one address family'
+            )
+    return ''
 
 
 # ..........................................................
@@ -1210,10 +1228,10 @@ class Flow(NLRI):
 
     def family_conflict(self, rule: Any) -> str:  # Any is FlowRule
         """Why `rule` cannot be added to this flow route, or '' when it can."""
-        return prefix_family_conflict(self.rules, rule)
+        return family_conflict(self.rules, rule)
 
     def add(self, rule: Any) -> bool:  # Any is FlowRule
-        """Add a rule to the Flow NLRI, False when its prefix clashes with the family of another.
+        """Add a rule to the Flow NLRI, False when it has no family in common with another.
 
         Several sources or destinations are allowed, as some vendors accept them, but all of one
         family: family_conflict() says why a refused rule was refused.
@@ -1222,8 +1240,9 @@ class Flow(NLRI):
         ID = rule.ID
         if self.family_conflict(rule):
             return False
-        # TODO: verify if this is correct - why reset the afi of the NLRI object after initialisation?
-        if ID in FLOW_PREFIX_IDS and rule.afi == AFI.ipv6:
+        # a rule written in a match block learns its family from what it matches: an IPv6 prefix
+        # or an IPv6-only component (flow-label, traffic-class) makes it an IPv6 flow route
+        if component_families(rule) == frozenset((AFI.ipv6,)):
             self._afi = AFI.ipv6
         self.rules.setdefault(ID, []).append(rule)
         self._packed_stale = True  # Mark packed as stale after modification
