@@ -141,13 +141,13 @@ over; seven sites moved Notify 3/0 → 3/9.
 | # | item | status |
 |---|---|---|
 | 3.1 | respawn limiter shuts the daemon down on two reloads in one window | ✅ fixed both trees 2026-09-25, see §10 |
-| 3.2 | `packed_reach_attributes` raises RuntimeError to the reactor (main) | ✅ fixed 2026-09-26 | reproduced by running, and it carried a second defect: an UPDATE over the negotiated message size. See §22. |
+| 3.2 | `packed_reach_attributes` raises RuntimeError to the reactor (main) | ✅ fixed 2026-09-26 | reproduced by running, and it carried a second defect: an UPDATE over the negotiated message size. See §21. |
 | 3.3 | RIB yields one `UpdateCollection` per withdrawn NLRI | ✅ fixed 2026-09-26 (main) | `rib/outgoing.py` batches by family and attribute set when `group-updates` is on. 5.0 was already right. See §20. |
 | 3.4 | `API/JSON-API-Reference.md` examples are structurally invented | 🟡 open |
 | 3.5 | `doc/README.rst` stale | 🟢 open |
 | 3.14 | main: `check_fifo` reported to the daemon, and `open_writer` had a dead handler | ✅ fixed 2026-09-26 | `0bc6c6e10`. 5.0 had both closed already. See §17. |
 | 3.6 | 5.0 attribute cache is process-wide and keyed on wire bytes only | ✅ fixed 2026-09-25 | `709706aa9`. Moved onto `Negotiated`. See §16. |
-| 3.13 | `qa/bin/functional encoding` is intermittently red, about 1 run in 10 | 🟡 pre-existing, unexplained |
+| 3.13 | `qa/bin/functional encoding` is red ~5 runs in 10, **5.0 only** | 🔴 measured 2026-09-26, not fixed | three API tests, announce/withdraw ordering under load. See §22. |
 | 3.15 | 5.0: `exabgp validate` crashes on a flow route with no match block | 🔴 confirmed, not fixed |
 | 3.7 | 5.0: one peer's OPEN rewrites every other session's capability variant | ✅ fixed 2026-09-26 | 5.0 `7b0e71f61`. main was already correct. |
 | 3.8 | 5.0: a labelled NLRI with no S bit closes the session (RFC 8277 §2.2 says ignore it) | ✅ fixed 2026-09-26 | 5.0, agent report. main already had the block at `inet.py:453`. |
@@ -308,7 +308,7 @@ output moved. `med` and `local-preference` stay JSON numbers, `aigp` stays the q
 | `check_exa_style` | **had no cannot-run path at all**: `rglob` over a missing tree yields nothing, every rule counts 0, it prints `ok` four times and **exits 0** |
 
 The last is the one that matters. A clean bill of health over an empty walk, and nobody
-investigates a green gate. This is the fourth instance of the pattern in §21 below. Each gate
+investigates a green gate. This is the fourth instance of the pattern in §23 below. Each gate
 now has `CANNOT_RUN = 2`, and `check_exa_style` a `MIN_SOURCE_FILES = 50` floor on the walk
 against 392 today, so it cannot fire on a real checkout.
 
@@ -1152,44 +1152,7 @@ check, the `group-updates false` pin, and the withdraw-before-announce ordering.
 
 ---
 
-## 21. Process rules learned the hard way
-
-- **Never `git add -A`.** Commit `2114ec208` swept up an agent's unreviewed BGP-LS work and
-  was pushed with a message that did not describe it. Corrected in `a8683597e` rather than
-  by rewriting public history. Stage file by file, every time, including the last commit.
-- **`env -u PYTHONPATH` in 5.0.** `PYTHONPATH` pointed at `main/src`, so every bare
-  `uv run` in 5.0 imported main's source. It invalidated two suite results I had reported.
-- **Re-record captures against a read-only HEAD control** via `git archive`, with an assert
-  on the import path, and reproduce byte-for-byte *before* changing anything. 100 captures
-  re-recorded in main, 1 in 5.0, on that discipline.
-- **Verify a crash by running it.** A grep is not a reproduction; two of mine had the wrong
-  import path. The AS4 crash was confirmed by 16 red against HEAD and 17 green with the fix.
-- **Writes outside the primary directory need the sandbox disabled.** An edit to `../5.0`
-  fails with `PermissionError: Operation not permitted` otherwise, which reads like a file
-  permission problem and is not.
-- **Three comments I wrote asserted a mechanism I had not checked**, and each was plausible and
-  wrong the same way: that `self._pack = packed` destroyed an inherited method (it shadowed
-  nothing, `GenericBGPLS` is a sibling); that `socket.SO_BINDTODEVICE = 25` mutates the module in
-  practice (macOS has the option at 4404, so the branch is unreachable there); and that
-  `l2vpn/vpls` stayed in the round-trip ratchet for the length bug main fixed (5.0 never had it,
-  both its differences are deliberate). Describing a mechanism is not checking one.
-- **Four tests were green for the wrong reason**, which is the same failure as a green gate
-  measuring nothing: the respawn limiter's own test pinned the defect as intended behaviour in
-  its docstring; `test_internal_attribute_packing` passed because everything returned `b''`;
-  nine `_no_parse_cache` fixtures worked around the shared cache in 33 lines and reported it
-  nowhere; and `test_1_open` passed only because a class attribute was clobbered. Each would
-  have caught its bug had it been written to fail first.
-- **Six things were green while measuring nothing**, each found by something outside itself:
-  `test_json` reading 325 of 395 lines; a decode failure counted as a pass; the re-recording
-  survey's own blind regex; `check_reload_cleanup` skipping every run; `check_exa_style`
-  printing `ok` four times and exiting 0 over an empty walk; and seven of twenty-three NLRI
-  families swept 600 times each with inputs their decoder rejected at byte one. Assume a green
-  gate is mismeasuring until something external says otherwise. Not one of these was caught by
-  the thing itself.
-
----
-
-## 22. The MP encoding limit in main, fixed 2026-09-26
+## 21. The MP encoding limit in main, fixed 2026-09-26
 
 3.2 was real, and it was two defects rather than one. Both are in the two loops which fill
 MP_REACH_NLRI and MP_UNREACH_NLRI, `MPNLRICollection.packed_reach_attributes` and
@@ -1330,3 +1293,96 @@ The `input_assert: 0` ratchet took two goes. The checker taints any local assign
 parameter named `data`, `payload`, `header` and four others, so a postcondition about a variable
 built from a parameter called `header` counts as validating the wire. The names are now
 `preamble` and `fragment`, which is the better pair anyway: neither holds anything a peer sent.
+
+---
+
+## 22. The functional encoding flake, measured 2026-09-26
+
+Recorded as "about one run in ten" and not attributed to a tree. Both were wrong. Measured, ten
+full runs of `qa/bin/functional encoding` in each tree, after the SIGALRM leak was fixed so
+that could not be the cause:
+
+```
+main   0 failures in 10 runs
+5.0    5 failures in 10 runs
+```
+
+So it is **5.0 only, and about half of all runs**, not a tenth. Every full-suite run of that
+tree is close to a coin toss, which is how a real failure gets waved through: the habit it
+teaches is to re-run, not to read.
+
+Always the same three tests, by the harness's own letters:
+
+```
+M  api-mvpn
+T  api-rib
+X  api-teardown
+```
+
+All three drive the daemon through the API process and compare wire output, and all three
+involve announce and withdraw in sequence. The signature is an ordering inversion, in both
+directions — four of the five failures were a withdrawal arriving where an announce was
+expected:
+
+```
+unexpected message:
+received    FFFF...:001C:02:000520C0A800020000     (withdraw 192.168.0.2/32)
+counting 3 valid option(s):                        (three announces expected)
+```
+
+and the fifth was the reverse, an announce where a withdraw was due.
+
+**It is not the tests.** Run individually, each passes 8 of 8:
+
+```
+5.0 encoding M: 0/8 failed
+5.0 encoding T: 0/8 failed
+5.0 encoding X: 0/8 failed
+```
+
+So it only appears under whole-suite load, which is the same conclusion an agent reached
+independently for `api-rib` earlier in this work. The obvious structural difference between the
+trees is the engine: main runs asyncio, 5.0 runs the generator engine, and an ordering race
+between an API-injected announce and withdraw is exactly the class where that would show.
+
+Not fixed. Diagnosing a concurrency race in a production reactor is its own piece of work, and
+guessing at it under load is how a plausible wrong fix gets written. What this section buys is
+that the next person starts from three named tests, a signature, a rate and the isolation
+result rather than from "intermittent".
+
+---
+
+## 23. Process rules learned the hard way
+
+- **Never `git add -A`.** Commit `2114ec208` swept up an agent's unreviewed BGP-LS work and
+  was pushed with a message that did not describe it. Corrected in `a8683597e` rather than
+  by rewriting public history. Stage file by file, every time, including the last commit.
+- **`env -u PYTHONPATH` in 5.0.** `PYTHONPATH` pointed at `main/src`, so every bare
+  `uv run` in 5.0 imported main's source. It invalidated two suite results I had reported.
+- **Re-record captures against a read-only HEAD control** via `git archive`, with an assert
+  on the import path, and reproduce byte-for-byte *before* changing anything. 100 captures
+  re-recorded in main, 1 in 5.0, on that discipline.
+- **Verify a crash by running it.** A grep is not a reproduction; two of mine had the wrong
+  import path. The AS4 crash was confirmed by 16 red against HEAD and 17 green with the fix.
+- **Writes outside the primary directory need the sandbox disabled.** An edit to `../5.0`
+  fails with `PermissionError: Operation not permitted` otherwise, which reads like a file
+  permission problem and is not.
+- **Three comments I wrote asserted a mechanism I had not checked**, and each was plausible and
+  wrong the same way: that `self._pack = packed` destroyed an inherited method (it shadowed
+  nothing, `GenericBGPLS` is a sibling); that `socket.SO_BINDTODEVICE = 25` mutates the module in
+  practice (macOS has the option at 4404, so the branch is unreachable there); and that
+  `l2vpn/vpls` stayed in the round-trip ratchet for the length bug main fixed (5.0 never had it,
+  both its differences are deliberate). Describing a mechanism is not checking one.
+- **Four tests were green for the wrong reason**, which is the same failure as a green gate
+  measuring nothing: the respawn limiter's own test pinned the defect as intended behaviour in
+  its docstring; `test_internal_attribute_packing` passed because everything returned `b''`;
+  nine `_no_parse_cache` fixtures worked around the shared cache in 33 lines and reported it
+  nowhere; and `test_1_open` passed only because a class attribute was clobbered. Each would
+  have caught its bug had it been written to fail first.
+- **Six things were green while measuring nothing**, each found by something outside itself:
+  `test_json` reading 325 of 395 lines; a decode failure counted as a pass; the re-recording
+  survey's own blind regex; `check_reload_cleanup` skipping every run; `check_exa_style`
+  printing `ok` four times and exiting 0 over an empty walk; and seven of twenty-three NLRI
+  families swept 600 times each with inputs their decoder rejected at byte one. Assume a green
+  gate is mismeasuring until something external says otherwise. Not one of these was caught by
+  the thing itself.
