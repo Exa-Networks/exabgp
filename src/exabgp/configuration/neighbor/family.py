@@ -23,6 +23,17 @@ from exabgp.configuration.validator import TupleValidator, StatefulValidator, Va
 
 
 class ParseFamily(Section):
+    # Families a neighbor without a family block does not negotiate: they have to be listed, or
+    # asked for with `all`. RTC is one because negotiating it changes what the peer sends: a
+    # route reflector following RFC 4684 section 6 sends no VPN route to a speaker which
+    # negotiated RTC and announced no membership, so leaving it on by default emptied VPN feeds.
+    listed_only: frozenset[FamilyTuple] = frozenset({(AFI.ipv4, SAFI.rtc)})
+
+    @classmethod
+    def default_families(cls) -> list[FamilyTuple]:
+        """The families of a neighbor with no family block: every known one, less listed_only."""
+        return [family for family in NLRI.known_families() if family not in cls.listed_only]
+
     # Conversion map: AFI -> SAFI -> (AFI enum, SAFI enum) tuple
     convert = {
         'ipv4': {
@@ -141,7 +152,7 @@ class ParseFamily(Section):
     )
     syntax = (
         'family {\n'
-        '   all;      # default if not family block is present, announce all we know\n'
+        '   all;      # announce all we know (no family block: all but ipv4 rtc)\n'
         '   \n'
         '   ipv4 unicast;\n'
         '   ipv4 multicast;\n'

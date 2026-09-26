@@ -73,7 +73,8 @@ neighbor <ip-address> {
     }
 
     family {
-        all; // default, or a list of the below
+        all; // every family ExaBGP knows, or a list of the below
+        // no family block: every family except ipv4 rtc, which must be listed
         minimal; // use AFI/SAFI required to announce routes in config
         ipv4 unicast;
         ipv4 multicast;

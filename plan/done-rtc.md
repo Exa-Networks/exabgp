@@ -1,6 +1,6 @@
 # RTC: Route Target Constraint (RFC 4684, issue #1109)
 
-**Status:** 🔄 Active
+**Status:** ✅ Completed 2026-09-26 (pushed a71f24b32, #1109 closed)
 **Started:** 2026-09-26
 
 ## Goal

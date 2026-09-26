@@ -406,12 +406,18 @@ class ParseNeighbor(Section):
         return neighbor
 
     def _post_families(self, local: dict[str, Any]) -> list[FamilyTuple]:
+        configured = local.get('family', {})
+        # `all` asks for every family ExaBGP knows, RTC included; no family block gets the
+        # default set, which leaves out the families which have to be asked for
+        if 'all' in configured:
+            return NLRI.known_families()
+
         families: list[FamilyTuple] = []
         for family in ParseFamily.convert:
-            for pair in local.get('family', {}).get(family, []):
+            for pair in configured.get(family, []):
                 families.append(pair)
 
-        return families or NLRI.known_families()
+        return families or ParseFamily.default_families()
 
     def _post_capa_default(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         capability = local.get('capability', {})

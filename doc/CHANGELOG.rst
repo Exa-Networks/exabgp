@@ -22,10 +22,8 @@ Version 6.0.0:
    This is partial RFC 9234 support: helpers still own ingress OTC insertion
    and ineligible-route exclusion.
  * Feature: RTC, route target membership (RFC 4684, AFI 1 SAFI 132), issue #1109.
-   It was already negotiated by default, since "family { all; }" and a neighbor with no
-   family block include every family ExaBGP decodes, but it could neither be listed in a
-   family block nor announced. "family { ipv4 rtc; }" now selects it, and membership is
-   announced and withdrawn from the announce and static sections and from the API:
+   "family { ipv4 rtc; }" selects it, and membership is announced and withdrawn from
+   the announce and static sections and from the API:
    "announce ipv4 rtc origin-as 65001 route-target 65001:100 next-hop self", or
    "rtc default" for the zero-length default route target. The field is origin-as,
    because every RTC UPDATE also carries the ORIGIN attribute and "origin igp" keeps
@@ -33,6 +31,14 @@ Version 6.0.0:
    full route target. ExaBGP signals membership only: it does not filter the VPN routes
    it sends by the membership its peer advertises, which section 5 allows and
    discourages, and which is recorded as a gap in qa/rfc/rfc4684.toml.
+ * Compatibility: a neighbor with no family block no longer negotiates RTC (ipv4 rtc).
+   It did, because the default set was every family ExaBGP decodes, and RFC 4684
+   section 6 has a route reflector send VPN routes only to a peer which announced a
+   matching membership: with RTC negotiated and nothing announced, a reflector which
+   follows it sends no VPN routes at all, and the session looks healthy. RTC is now
+   negotiated only when asked for, with "ipv4 rtc" or with "family { all; }", which
+   still means every family ExaBGP knows. A program reading a peer's membership from
+   the API without a family block has to add "ipv4 rtc".
  * Fix: an RTC prefix shorter than 96 bits is read as the prefix it is. RFC 4684
    section 4 carries membership as a prefix of 32 to 96 bits in as many octets as the
    length needs; the decoder took 13 octets for any of them, so the NLRI after a
