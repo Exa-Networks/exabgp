@@ -36,6 +36,7 @@ class ParseFamily(Section):
             'flow-vpn': (AFI.ipv4, SAFI.flow_vpn),
             'mup': (AFI.ipv4, SAFI.mup),
             'sr-policy': (AFI.ipv4, SAFI.sr_policy),
+            'rtc': (AFI.ipv4, SAFI.rtc),
         },
         'ipv6': {
             'unicast': (AFI.ipv6, SAFI.unicast),
@@ -77,6 +78,7 @@ class ParseFamily(Section):
                     'flow-vpn',
                     'mup',
                     'sr-policy',
+                    'rtc',
                 ],
                 conversion_map=convert,
                 afi_context='ipv4',

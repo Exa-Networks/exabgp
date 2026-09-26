@@ -81,6 +81,7 @@ neighbor <ip-address> {
         ipv4 mpls-vpn;
         ipv4 flow;
         ipv4 flow-vpn;
+        ipv4 rtc; // RFC 4684 route target membership
         ipv6 unicast;
         ipv6 flow;
         ipv6 flow-vpn;
@@ -144,6 +145,11 @@ neighbor <ip-address> {
         route <ip-address>/<prefixlength> <attribute-sequence>;
         // where <attribute-sequence> is a sequence of
         // any of the attributes above
+
+        // RFC 4684 route target membership (family ipv4 rtc)
+        rtc origin-as <asn> route-target <asn:number | ip-address:number>
+            next-hop <ip-address | self> <attribute-sequence>;
+        rtc default next-hop <ip-address | self> <attribute-sequence>;
     }
 
     flow {

@@ -1,0 +1,101 @@
+# RFC 4684 - Constrained Route Distribution for BGP/MPLS IP VPNs
+# https://www.rfc-editor.org/rfc/rfc4684
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc4684.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# The encoding of the NLRI, section 4, carries no RFC 2119 keyword, so it cannot be an
+# entry here: "The NLRI field in the MP_REACH_NLRI and MP_UNREACH_NLRI is a prefix of 0 to
+# 96 bits, encoded as defined in Section 4 of [5]", with "the minimum prefix length is 32
+# bits" except for the default route target. exabgp read 13 octets for any length from 32
+# to 96, so a shorter prefix took the first octets of the NLRI after it (issue #1109).
+# Held by tests/unit/test_rtc_prefix_length.py, which carries no rfc() marker for that reason.
+#
+# Section 5 says a speaker exchanging RT membership "must use the Multiprotocol Extensions
+# Capability Code", in lower case: `ipv4 rtc` in the family block is what puts (1, 132)
+# in the MULTIPROTOCOL capability, as for every other family.
+
+rfc = "rfc4684"
+title = "Constrained Route Distribution for BGP/MPLS IP VPNs"
+url = "https://www.rfc-editor.org/rfc/rfc4684"
+
+# ============================================================ section 5, capability
+
+[[requirement]]
+id = "rfc4684#5-participate-without-output-filtering"
+section = "5"
+level = "MAY"
+status = "gap"
+polarity = "both"
+text = """
+A BGP speaker MAY participate in the distribution of Route Target
+information without using the learned information for purposes of VPN
+NLRI output route filtering, although this is discouraged.
+"""
+note = """
+This is what exabgp does, and the RFC discourages it. RT membership can be announced and
+withdrawn from the configuration and the API, and what a peer sends is decoded and handed
+to the API as JSON, but the VPN routes exabgp sends are not filtered by the membership its
+peer advertised (section 6). Agreed for issue #1109 as "signal only": an API program which
+wants the filtering has the peer's membership and decides what to announce. Doing it in
+exabgp means keeping each peer's membership and re-evaluating the adj-rib-out whenever it
+changes, which is what keeps this a gap rather than a decision.
+"""
+
+# ============================================================ section 6, operation
+
+[[requirement]]
+id = "rfc4684#6-end-of-rib-for-rt-membership"
+section = "6"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+As a hint that initial RT membership exchange is complete,
+implementations SHOULD generate an End-of-RIB marker, as defined in
+[8], for the Route Target membership (afi, safi), regardless of
+whether graceful-restart is enabled on the BGP session.
+"""
+note = """
+exabgp sends an End-of-RIB for every negotiated family once the initial routes are out,
+graceful restart or not, so (1, 132) gets one like any other. manual-eor hands that
+decision to the API, which is the operator choosing to send it later, not the speaker
+declining to send it. There is no peer input which violates this.
+"""
+
+[[requirement]]
+id = "rfc4684#6-bound-the-vpn-delay"
+section = "6"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If a BGP speaker chooses to delay the advertisement of BGP VPN route
+updates until it receives this End-of-RIB marker, it MUST limit that
+delay to an upper bound.
+"""
+note = """
+exabgp does not delay its VPN routes waiting for the peer's RT membership End-of-RIB: it
+does not filter by membership at all (see rfc4684#5-participate-without-output-filtering),
+so there is nothing to wait for and no delay to bound. This becomes binding the day the
+output filtering is implemented.
+"""
+
+# ============================================================ section 8, security
+
+[[requirement]]
+id = "rfc4684#8-filter-rt-membership"
+section = "8"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+Implementations SHOULD also provide means to filter RT membership
+information.
+"""
+note = """
+exabgp does not act on the RT membership it receives: it neither filters VPN routes by it
+nor propagates it to other peers, it only hands it to the API. The means to filter it is
+the API program which receives it, the same place any policy on received routes lives in
+exabgp, so there is no membership state inside exabgp for a filter to protect.
+"""

@@ -55,8 +55,10 @@ CONTRACT: list[tuple[str, AFI, SAFI, set[str], list[bytes]]] = [
         'rtc',
         AFI.ipv4,
         SAFI.rtc,
-        {'origin', 'route-target'},
-        [bytes([0]), bytes([96]) + bytes(12), bytes([64]) + bytes(12)],  # wildcard AND specific
+        # a prefix shorter than 96 bits (RFC 4684 section 4) was misread as a full route target;
+        # it is reported as what it is, with its length and the octets of route target it carries
+        {'origin', 'route-target', 'prefix-length', 'route-target-prefix'},
+        [bytes([0]), bytes([96]) + bytes(12), bytes([64]) + bytes(12)],  # wildcard, specific, prefix
     ),
     ('vpls', AFI.l2vpn, SAFI.vpls, {'rd', 'endpoint', 'base', 'offset', 'size'}, [bytes([0, 17]) + bytes(17)]),
     (

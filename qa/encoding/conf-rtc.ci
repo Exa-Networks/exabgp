@@ -1,0 +1,19 @@
+option:file:conf-rtc.conf
+# RTC, route target membership (RFC 4684, AFI 1 SAFI 132), issue #1109.
+# The next-hop is carried in MP_REACH_NLRI only: RFC 4760 section 3, an UPDATE whose only NLRI
+# is in MP_REACH_NLRI SHOULD NOT carry the NEXT_HOP attribute.
+# EOR for ipv4 rtc: RFC 4684 section 6 asks for one whether or not graceful restart is on
+1:cmd:announce eor ipv4 rtc
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000184
+# two octet AS route target
+1:cmd:announce ipv4 rtc origin-as 65533 route-target target:65001:100 next-hop 192.0.2.1
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF003E0200000027800E1600018404C000020100600000FFFD0002FDE9000000644001010040020040050400000064
+# IPv4 address route target
+1:cmd:announce ipv4 rtc origin-as 65533 route-target target:192.0.2.1:200 next-hop 192.0.2.1
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF003E0200000027800E1600018404C000020100600000FFFD0102C000020100C84001010040020040050400000064
+# four octet AS route target (RFC 5668, type 0x02)
+1:cmd:announce ipv4 rtc origin-as 65533 route-target target:4200000000:300 next-hop 192.0.2.1
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF003E0200000027800E1600018404C000020100600000FFFD0202FA56EA00012C4001010040020040050400000064
+# the default route target, the zero-length prefix: every VPN route
+1:cmd:announce ipv4 rtc default next-hop 192.0.2.1
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0032020000001B800E0A00018404C000020100004001010040020040050400000064

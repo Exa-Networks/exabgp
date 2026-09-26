@@ -292,3 +292,16 @@ def static_sr_policy(tokeniser: Any) -> list[Route]:
     if tunnel_encap is not None:
         attributes.add(tunnel_encap)
     return [Route(nlri, attributes, nexthop=nexthop)]
+
+
+@ParseStatic.register_command('rtc', ActionTarget.ROUTE, ActionOperation.EXTEND)
+def static_rtc(tokeniser: Any) -> list[Route]:
+    """Parse an RTC route target membership route from the static section.
+
+    Syntax: rtc ( origin-as <asn> route-target <route-target> | default ) next-hop <ip|self> [attributes]
+    """
+    # imported here: announce modules import from this package, so a module level import is a cycle
+    from exabgp.configuration.announce.route_builder import _build_route
+    from exabgp.configuration.announce.rtc import AnnounceRTC
+
+    return _build_route(tokeniser, AnnounceRTC.schema, AFI.ipv4, SAFI.rtc)

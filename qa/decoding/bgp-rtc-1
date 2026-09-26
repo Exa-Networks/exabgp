@@ -1,0 +1,3 @@
+update ipv4 rtc
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00480200000031800E2000018404C000020100600000FDE90002FDE900000064400000FDE90002FDE9004001010040020040050400000064
+{ "exabgp": "6.0.0", "time": 0, "host": "localhost", "pid": 0, "ppid": 0, "counter": 1, "type": "update", "neighbor": { "address": { "local": "127.0.0.1", "peer": "127.0.0.1" }, "asn": { "local": 65533, "peer": 65533 }, "router-id": "127.0.0.1", "direction": "in", "message": { "update": { "attribute": { "origin": "igp", "local-preference": 100 }, "announce": { "ipv4 rtc": { "192.0.2.1": [ { "origin": 65001, "route-target": "target:65001:100" }, { "origin": 65001, "route-target": null, "prefix-length": 64, "route-target-prefix": "0x0002FDE9" }, { "origin": 0, "route-target": null } ] } } } } } }

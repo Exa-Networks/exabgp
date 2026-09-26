@@ -553,6 +553,20 @@ def format_mup_announce(
     return ' '.join(cmd_parts)
 
 
+def format_rtc_nlri(nlri_info: dict[str, Any]) -> str | None:
+    """The RTC fields of an announce: `origin-as .. route-target ..` or `default`.
+
+    None for a prefix shorter than 96 bits (RFC 4684 section 4), which is decoded but cannot
+    be configured, so there is no command to give back.
+    """
+    if 'prefix-length' in nlri_info:
+        return None
+    target = nlri_info.get('route-target')
+    if target is None:
+        return 'default'
+    return f'origin-as {nlri_info.get("origin", 0)} route-target {target}'
+
+
 def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool = False) -> list[str]:
     """Decode BGP UPDATE hex to API command string(s).
 
@@ -646,6 +660,18 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
                     commands.append(' '.join(cmd_parts))
             continue
 
+        # Handle RTC (RFC 4684)
+        if family == 'ipv4 rtc':
+            for nexthop, nlris in nexthops.items():
+                for nlri_info in nlris:
+                    fields = format_rtc_nlri(nlri_info)
+                    if fields is None:
+                        continue
+                    cmd_parts = [f'announce ipv4 rtc {fields} next-hop {nexthop}']
+                    cmd_parts.extend(format_attributes(attributes))
+                    commands.append(' '.join(cmd_parts))
+            continue
+
         # Handle SR-Policy
         if 'sr-policy' in family:
             afi = 'ipv4' if 'ipv4' in family else 'ipv6'
@@ -723,6 +749,13 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
     use_group = has_extra_withdraw_attributes(attributes)
 
     for family, nlris in withdraw.items():
+        if family == 'ipv4 rtc':
+            for nlri_info in nlris:
+                fields = format_rtc_nlri(nlri_info) if isinstance(nlri_info, dict) else None
+                if fields is not None:
+                    commands.append(f'withdraw ipv4 rtc {fields}')
+            continue
+
         if 'flow' in family:
             afi = 'ipv4' if 'ipv4' in family else 'ipv6'
             for nlri_info in nlris:

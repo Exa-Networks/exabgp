@@ -21,6 +21,24 @@ Version 6.0.0:
    Configuration checks account for automatic marking and export refusal.
    This is partial RFC 9234 support: helpers still own ingress OTC insertion
    and ineligible-route exclusion.
+ * Feature: RTC, route target membership (RFC 4684, AFI 1 SAFI 132), issue #1109.
+   It was already negotiated by default, since "family { all; }" and a neighbor with no
+   family block include every family ExaBGP decodes, but it could neither be listed in a
+   family block nor announced. "family { ipv4 rtc; }" now selects it, and membership is
+   announced and withdrawn from the announce and static sections and from the API:
+   "announce ipv4 rtc origin-as 65001 route-target 65001:100 next-hop self", or
+   "rtc default" for the zero-length default route target. The field is origin-as,
+   because every RTC UPDATE also carries the ORIGIN attribute and "origin igp" keeps
+   its meaning. Received membership reaches the API as JSON, unchanged in shape for a
+   full route target. ExaBGP signals membership only: it does not filter the VPN routes
+   it sends by the membership its peer advertises, which section 5 allows and
+   discourages, and which is recorded as a gap in qa/rfc/rfc4684.toml.
+ * Fix: an RTC prefix shorter than 96 bits is read as the prefix it is. RFC 4684
+   section 4 carries membership as a prefix of 32 to 96 bits in as many octets as the
+   length needs; the decoder took 13 octets for any of them, so the NLRI after a
+   short prefix was read from the wrong place, or the UPDATE refused as truncated. A
+   short prefix is reported with "prefix-length" and "route-target-prefix" and a null
+   "route-target", as half a route target is not one.
  * Incompatible: an extended community "target:" or "origin:" whose global
    administrator is an AS above 65535, or is written with a trailing L, is encoded as
    the Four-Octet AS Specific type of RFC 5668 (0x02). It was encoded as the IPv4

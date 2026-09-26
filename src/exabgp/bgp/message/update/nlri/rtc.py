@@ -15,6 +15,7 @@ from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.nlri.settings import RTCSettings
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.open.asn import ASN
@@ -31,6 +32,8 @@ T = TypeVar('T', bound='RTCBase')
 # between the origin alone and the whole of both
 RTC_PREFIX_MIN_BITS = 32
 RTC_PREFIX_MAX_BITS = 96
+# the origin AS ends at octet 5 of the packed form, and the route target starts there
+RTC_ROUTE_TARGET_OFFSET = 5
 
 
 class RTCBase(NLRI):
@@ -44,8 +47,9 @@ class RTCBase(NLRI):
     - origin: Origin ASN (4 bytes, big-endian)
     - rt: RouteTarget with flags reset (8 bytes)
 
-    Limitation: RFC 4684 prefix-based RTC filtering (variable length with partial RT)
-    is not yet implemented - only full RTC constraints are supported.
+    RFC 4684 section 4 makes it a prefix: a length from 32 to 95 bits carries the origin AS and
+    only the leading ceil(length / 8) - 4 octets of the route target. Such a prefix is decoded
+    and kept as received, has no `rt`, and cannot be configured.
     """
 
     __slots__ = ()  # Only _packed needed, inherited from NLRI
@@ -73,6 +77,11 @@ class RTCBase(NLRI):
         self._packed: Buffer = packed
 
     @property
+    def prefix_length(self) -> int:
+        """Length of the prefix in bits: 0 for the default route target, 96 for a full one."""
+        return self._packed[0]
+
+    @property
     def origin(self) -> ASN:
         """Origin ASN - unpacked from wire bytes on access."""
         if len(self._packed) < 5:
@@ -84,7 +93,7 @@ class RTCBase(NLRI):
         """RouteTarget - lazily unpacked from wire bytes on access."""
         from typing import cast
 
-        if len(self._packed) < 13:
+        if self.prefix_length != RTC_PREFIX_MAX_BITS:
             return None
         # RT is stored with flags already reset, use unpack_attribute for proper subclass dispatch
         return cast(RouteTarget, RouteTarget.unpack_attribute(self._packed[5:13], None))
@@ -116,6 +125,22 @@ class RTCBase(NLRI):
         instance = cls(packed)
         return instance
 
+    @classmethod
+    def from_settings(cls, settings: 'RTCSettings') -> Self:
+        """Create an RTC NLRI from validated settings.
+
+        Raises:
+            ValueError: If settings validation fails
+        """
+        error = settings.validate()
+        if error:
+            raise ValueError(error)
+        if settings.default:
+            return cls.make_rtc(ASN(0), None)
+        assert settings.origin_as is not None, 'validate() requires origin-as without default'
+        assert settings.route_target is not None, 'validate() requires route-target without default'
+        return cls.make_rtc(settings.origin_as, settings.route_target)
+
     def feedback(self, action: Action) -> str:
         # Nexthop validation handled by Route.feedback()
         return ''
@@ -125,9 +150,15 @@ class RTCBase(NLRI):
         # For full RTC: length is stored at byte 0 (96 bits = (4+8)*8)
         return self._packed[0] if self._packed[0] != 0 else 1
 
+    def _target_prefix(self) -> str:
+        """The octets of a partial route target, as hex."""
+        return '0x' + bytes(self._packed[RTC_ROUTE_TARGET_OFFSET:]).hex().upper()
+
     def __str__(self) -> str:
-        if len(self._packed) >= 13:
+        if self.prefix_length == RTC_PREFIX_MAX_BITS:
             return 'rtc {}:{}'.format(self.origin, self.rt)
+        if self.prefix_length:
+            return 'rtc {}:{}/{}'.format(self.origin, self._target_prefix(), self.prefix_length)
         return 'rtc wildcard'
 
     def __repr__(self) -> str:
@@ -135,9 +166,13 @@ class RTCBase(NLRI):
 
     def json(self, announced: bool = True, compact: bool = False) -> str:
         rt = self.rt
-        if rt is None:
-            return '{ "origin": 0, "route-target": null }'
-        return '{{ "origin": {}, "route-target": "{}" }}'.format(self.origin, rt)
+        if rt is not None:
+            return '{{ "origin": {}, "route-target": "{}" }}'.format(self.origin, rt)
+        if self.prefix_length:
+            return '{{ "origin": {}, "route-target": null, "prefix-length": {}, "route-target-prefix": "{}" }}'.format(
+                self.origin, self.prefix_length, self._target_prefix()
+            )
+        return '{ "origin": 0, "route-target": null }'
 
     def __copy__(self) -> Self:
         new = self.__class__.__new__(self.__class__)
@@ -158,8 +193,8 @@ class RTCBase(NLRI):
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         """Pack NLRI - returns stored wire bytes directly (zero-copy)."""
-        assert len(self._packed) in (self.PACKED_LENGTH_WILDCARD, self.PACKED_LENGTH_FULL), (
-            'an RTC NLRI is either a wildcard or a full route target'
+        assert len(self._packed) == 1 + (self.prefix_length + 7) // 8, (
+            'an RTC NLRI carries the octets its prefix length needs, no more and no less'
         )
         return self._packed
 
@@ -197,24 +232,26 @@ class RTCBase(NLRI):
                 'incorrect RTC length: %d (should be >=%d,<=%d)' % (length, RTC_PREFIX_MIN_BITS, RTC_PREFIX_MAX_BITS),
             )
 
-        if len(data) < cls.PACKED_LENGTH_FULL:
+        # RFC 4760 section 4: the prefix takes the octets its length needs, rounded up, so a
+        # prefix shorter than 96 bits is shorter than 13 octets and the next NLRI follows it
+        size = 1 + (length + 7) // 8
+        if len(data) < size:
             raise Notify(
                 3,
                 10,
-                'RTC NLRI truncated: need %d bytes, got %d' % (cls.PACKED_LENGTH_FULL, len(data)),
+                'RTC NLRI truncated: need %d bytes, got %d' % (size, len(data)),
             )
 
-        # Store complete wire format with flags reset on RT
-        # Wire format: [length(1)][origin(4)][rt(8)]
-        packed = (
-            bytes(data[0:5])  # length + origin
-            + bytes([RTC.resetFlags(data[5])])  # RT first byte with flags reset
-            + bytes(data[6:13])  # RT remaining bytes
-        )
+        # Store the wire format with the flags reset on the first octet of the route target,
+        # when the prefix reaches it: [length(1)][origin(4)][rt(0 to 8)]
+        packed = bytes(data[0:size])
+        if size > RTC_ROUTE_TARGET_OFFSET:
+            offset = RTC_ROUTE_TARGET_OFFSET
+            packed = packed[:offset] + bytes([RTC.resetFlags(packed[offset])]) + packed[offset + 1 :]
 
         nlri = cls(packed)
         nlri.addpath = path_info
-        return nlri, data[13:]
+        return nlri, data[size:]
 
 
 @NLRI.register(AFI.ipv4, SAFI.rtc)

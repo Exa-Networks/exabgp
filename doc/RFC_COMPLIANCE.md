@@ -14,6 +14,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc4364 | 0 | 0 | 0 | 0 | 7 | 0 | - |
 | rfc4456 | 0 | 0 | 0 | 0 | 2 | 6 | - |
 | rfc4659 | 3 | 0 | 0 | 3 | 2 | 0 | 100% |
+| rfc4684 | 0 | 0 | 0 | 0 | 1 | 3 | - |
 | rfc4724 | 6 | 0 | 0 | 6 | 7 | 0 | 100% |
 | rfc4760 | 5 | 0 | 0 | 5 | 0 | 8 | 100% |
 | rfc5082 | 2 | 0 | 0 | 2 | 2 | 2 | 100% |
@@ -594,6 +595,37 @@ only in what the address means, and exabgp does not tunnel so it never has to de
 speaker with a JSON API and does not touch the FIB, so there is no ingress PE behaviour
 for this to constrain.  The next hop it carries is a value it decodes, publishes and
 re-encodes, never one it resolves into a tunnel.
+
+## rfc4684
+
+- **5** (MAY) `rfc4684#5-participate-without-output-filtering` - gap
+  > A BGP speaker MAY participate in the distribution of Route Target information without using the learned information for purposes of VPN NLRI output route filtering, although this is discouraged.
+  This is what exabgp does, and the RFC discourages it. RT membership can be announced and
+withdrawn from the configuration and the API, and what a peer sends is decoded and handed
+to the API as JSON, but the VPN routes exabgp sends are not filtered by the membership its
+peer advertised (section 6). Agreed for issue #1109 as "signal only": an API program which
+wants the filtering has the peer's membership and decides what to announce. Doing it in
+exabgp means keeping each peer's membership and re-evaluating the adj-rib-out whenever it
+changes, which is what keeps this a gap rather than a decision.
+- **6** (MUST) `rfc4684#6-bound-the-vpn-delay` - not-applicable
+  > If a BGP speaker chooses to delay the advertisement of BGP VPN route updates until it receives this End-of-RIB marker, it MUST limit that delay to an upper bound.
+  exabgp does not delay its VPN routes waiting for the peer's RT membership End-of-RIB: it
+does not filter by membership at all (see rfc4684#5-participate-without-output-filtering),
+so there is nothing to wait for and no delay to bound. This becomes binding the day the
+output filtering is implemented.
+- **6** (SHOULD) `rfc4684#6-end-of-rib-for-rt-membership` - proven
+  > As a hint that initial RT membership exchange is complete, implementations SHOULD generate an End-of-RIB marker, as defined in [8], for the Route Target membership (afi, safi), regardless of whether graceful-restart is enabled on the BGP session.
+  exabgp sends an End-of-RIB for every negotiated family once the initial routes are out,
+graceful restart or not, so (1, 132) gets one like any other. manual-eor hands that
+decision to the API, which is the operator choosing to send it later, not the speaker
+declining to send it. There is no peer input which violates this.
+  - `tests/unit/rfc/test_rfc4684_rt_constraint.py::test_rt_membership_gets_its_end_of_rib_without_graceful_restart`
+- **8** (SHOULD) `rfc4684#8-filter-rt-membership` - not-applicable
+  > Implementations SHOULD also provide means to filter RT membership information.
+  exabgp does not act on the RT membership it receives: it neither filters VPN routes by it
+nor propagates it to other peers, it only hands it to the API. The means to filter it is
+the API program which receives it, the same place any policy on received routes lives in
+exabgp, so there is no membership state inside exabgp for a filter to protect.
 
 ## rfc4724
 

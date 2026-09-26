@@ -25,6 +25,8 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 
 if TYPE_CHECKING:
+    from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.community.extended import RouteTarget
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
 
@@ -221,4 +223,47 @@ class FlowSettings:
             return 'flow nlri afi missing'
         if self.safi is None:
             return 'flow nlri safi missing'
+        return ''
+
+
+@dataclass
+class RTCSettings:
+    """Settings for RTC NLRI construction (RFC 4684 route target membership).
+
+    Either `default`, the zero-length prefix asking for every VPN route, or both `origin_as`
+    and `route_target`, a full 96 bit prefix. The shorter prefixes of section 4 are decoded but
+    not configurable.
+
+    Attributes:
+        origin_as: AS originating the membership
+        route_target: Route target the membership is for
+        default: True for the default route target
+        nexthop: Next-hop IP address
+        action: Route action (ANNOUNCE or WITHDRAW)
+    """
+
+    origin_as: ASN | None = None
+    route_target: RouteTarget | None = None
+    default: bool = False
+    nexthop: IP = field(default_factory=lambda: IP.NoNextHop)
+    action: Action = field(default=Action.UNSET)
+
+    def set(self, name: str, value: Any) -> None:
+        """Set a field ('origin_as', 'route_target', 'default', 'nexthop', 'action')."""
+        setattr(self, name, value)
+
+    def validate(self) -> str:
+        """Validate all settings are present and consistent.
+
+        Returns:
+            Empty string if valid, error message if invalid.
+        """
+        if self.default:
+            if self.origin_as is not None or self.route_target is not None:
+                return 'rtc default is the zero-length prefix and takes no origin-as or route-target'
+            return ''
+        if self.origin_as is None:
+            return 'rtc origin-as missing (or use default)'
+        if self.route_target is None:
+            return 'rtc route-target missing (or use default)'
         return ''
