@@ -196,23 +196,28 @@ class Protocol:
 
         code: str = 'send-{}'.format(Message.CODE.short(message.ID))
         self.peer.stats[code] += 1
-        if self._api.get(code, False):
-            self._to_api('send', message, raw)
 
         await self.connection.writer_async(raw)
+
+        # told after the write, not before it: a process which waits on this to
+        # know a route has gone out gets an answer which is true, and a write
+        # which raised is no longer reported as a message we sent
+        if self._api.get(code, False):
+            self._to_api('send', message, raw)
 
     async def send(self, raw: bytes) -> None:
         """Send raw BGP message using async I/O."""
         assert self.connection is not None
         code: str = 'send-{}'.format(Message.CODE.short(raw[18]))
         self.peer.stats[code] += 1
+
+        await self.connection.writer_async(raw)
+
         if self._api.get(code, False):
             # Parse the raw bytes to get an Update for API
             update = Update(raw[19:])
             update.parse(self.negotiated)
             self._to_api('send', update, raw)
-
-        await self.connection.writer_async(raw)
 
     # Read from network .......................................................
 
