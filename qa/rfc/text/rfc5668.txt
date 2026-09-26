@@ -1,0 +1,283 @@
+
+
+
+
+
+
+Network Working Group                                         Y. Rekhter
+Request for Comments: 5668                              Juniper Networks
+Category: Standards Track                                      S. Sangli
+                                                           Cisco Systems
+                                                               D. Tappan
+                                                              Consultant
+                                                            October 2009
+
+
+               4-Octet AS Specific BGP Extended Community
+
+Abstract
+
+   This document defines a new type of a BGP extended community, which
+   carries a 4-octet Autonomous System (AS) number.
+
+Status of This Memo
+
+   This document specifies an Internet standards track protocol for the
+   Internet community, and requests discussion and suggestions for
+   improvements.  Please refer to the current edition of the "Internet
+   Official Protocol Standards" (STD 1) for the standardization state
+   and status of this protocol.  Distribution of this memo is unlimited.
+
+Copyright Notice
+
+   Copyright (c) 2009 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the BSD License.
+
+   This document may contain material from IETF Documents or IETF
+   Contributions published or made publicly available before November
+   10, 2008.  The person(s) controlling the copyright in some of this
+   material may not have granted the IETF Trust the right to allow
+   modifications of such material outside the IETF Standards Process.
+   Without obtaining an adequate license from the person(s) controlling
+   the copyright in such materials, this document may not be modified
+   outside the IETF Standards Process, and derivative works of it may
+
+
+
+
+Rekhter, et al.             Standards Track                     [Page 1]
+
+RFC 5668         4-Octet AS Specific Extended Community     October 2009
+
+
+   not be created outside the IETF Standards Process, except to format
+   it for publication as an RFC or to translate it into languages other
+   than English.
+
+1.  Introduction
+
+   This document defines a new type of BGP extended community [RFC4360]:
+   a 4-octet AS specific extended community.  This type of extended
+   community is similar to the 2-octet AS specific extended community,
+   except that it can carry a 4-octet Autonomous System number.
+
+1.1.  Specification of Requirements
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in RFC 2119 [RFC2119].
+
+2.  4-Octet AS Specific Extended Community
+
+   This is an extended type with a Type field comprising 2 octets and a
+   Value field comprising 6 octets.
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | 0x02 or 0x42  |   Sub-Type    |    Global Administrator       :
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   : Global Administrator (cont.)  |    Local Administrator        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   The value of the high-order octet of this extended type is either
+   0x02 (for transitive communities) or 0x42 (for non-transitive
+   communities).  The low-order octet of this extended type is used to
+   indicate sub-types.
+
+   The Value field consists of 2 sub-fields:
+
+      Global Administrator sub-field: 4 octets
+
+         This sub-field contains a 4-octet Autonomous System number
+         assigned by IANA.
+
+
+
+
+
+
+
+
+
+
+Rekhter, et al.             Standards Track                     [Page 2]
+
+RFC 5668         4-Octet AS Specific Extended Community     October 2009
+
+
+      Local Administrator sub-field: 2 octets
+
+         The organization identified by the Autonomous System number in
+         the Global Administrator sub-field can encode any information
+         in this sub-field.  The format and meaning of the value encoded
+         in this sub-field should be defined by the sub-type of the
+         community.
+
+3.  Considerations for 2-Octet Autonomous Systems
+
+   As per [RFC4893], a 2-octet Autonomous System number can be converted
+   into a 4-octet Autonomous System number by setting the 2 high-order
+   octets of the 4-octet field to zero.
+
+   As a consequence, at least in principle, an Autonomous System that
+   uses a 2-octet Autonomous System number could use either 2-octet or
+   4-octet AS specific extended communities.  This is undesirable, as
+   both communities would be treated as different, even if they had the
+   same Sub-Type and Local Administrator values.
+
+   Therefore, for backward compatibility with existing deployments and
+   to avoid inconsistencies between 2-octet and 4-octet specific
+   extended communities, Autonomous Systems that use 2-octet Autonomous
+   System numbers SHOULD use 2-octet AS specific extended communities
+   rather than 4-octet AS specific extended communities.
+
+4.  IANA Considerations
+
+   This document defines a class of extended communities, called 4-octet
+   AS specific extended communities, for which the IANA has created and
+   will maintain a registry entitled Four-octet AS Specific Extended
+   Community.  All the communities in this class are of extended Types.
+   Future assignments are to be made using the "First Come First Served"
+   policy defined in [RFC5226].  The Type values for the transitive
+   communities of the 4-octet AS specific extended community class are
+   0x0200-0x02ff; for the non-transitive communities of that class, they
+   are 0x4200-0x42ff.  Assignments consist of a name and the value.
+
+   This document makes the following assignments for the 4-octet AS
+   specific extended community:
+
+      Name                                     Type Value
+      ----                                     ----------
+      four-octet AS specific Route Target       0x0202
+      four-octet AS specific Route Origin       0x0203
+
+
+
+
+
+
+Rekhter, et al.             Standards Track                     [Page 3]
+
+RFC 5668         4-Octet AS Specific Extended Community     October 2009
+
+
+5.  Security Considerations
+
+   This document does not add new security issues.  All the security
+   considerations for BGP extended communities apply here.  At the time
+   that this document was written, there were significant efforts
+   underway to improve the security properties of BGP.  For examples of
+   documents that have been produced up to this time of publication, see
+   [RFC4593] and [SIDR].
+
+   There is a potential serious issue if a malformed, optional
+   transitive attribute is received.  This issue and the steps to avoid
+   it are discussed in [OPT_TRANS].
+
+6.  Acknowledgements
+
+   Thanks to Bruno Decraene for his contributions to this document.
+
+7.  References
+
+7.1.  Normative References
+
+   [RFC2119]   Bradner, S., "Key words for use in RFCs to Indicate
+               Requirement Levels", BCP 14, RFC 2119, March 1997.
+
+   [RFC5226]   Narten, T. and H. Alvestrand, "Guidelines for Writing an
+               IANA Considerations Section in RFCs", BCP 26, RFC 5226,
+               May 2008.
+
+   [RFC4360]   Sangli, S., Tappan, D., and Y. Rekhter, "BGP Extended
+               Communities Attribute", RFC 4360, February 2006.
+
+   [RFC4893]   Vohra, Q. and E. Chen, "BGP Support for Four-octet AS
+               Number Space", RFC 4893, May 2007.
+
+7.2.  Informative References
+
+   [OPT_TRANS] Scudder, J., and E. Chen, "Error Handling for Optional
+               Transitive BGP Attributes", Work in Progress, April 2009.
+
+   [RFC4593]   Barbir, A., Murphy, S., and Y. Yang, "Generic Threats to
+               Routing Protocols", RFC 4593, October 2006.
+
+   [SIDR]      Lepinski, M. and S. Kent, "An Infrastructure to Support
+               Secure Internet Routing", Work in Progress, July 2009.
+
+
+
+
+
+
+
+Rekhter, et al.             Standards Track                     [Page 4]
+
+RFC 5668         4-Octet AS Specific Extended Community     October 2009
+
+
+Authors' Addresses
+
+   Yakov Rekhter
+   Juniper Networks, Inc.
+   EMail: yakov@juniper.net
+
+
+   Srihari R. Sangli
+   Cisco Systems, Inc.
+   EMail: rsrihari@cisco.com
+
+
+   Dan Tappan
+   Boxborough MA
+   EMail: Dan.Tappan@Gmail.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Rekhter, et al.             Standards Track                     [Page 5]
+

@@ -1,0 +1,54 @@
+# RFC 5668 - 4-Octet AS Specific BGP Extended Community
+# https://www.rfc-editor.org/rfc/rfc5668
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc5668.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# This document has exactly one RFC 2119 sentence in it, the SHOULD in section 3, and it
+# is recorded below.  The two facts exabgp is actually built on are stated flatly, with no
+# keyword, the same way RFC 4360 section 2 states the eight octet encoding:
+#
+#   section 2  "The value of the high-order octet of this extended type is either
+#              0x02 (for transitive communities) or 0x42 (for non-transitive
+#              communities)."
+#   section 4  four-octet AS specific Route Target 0x0202
+#              four-octet AS specific Route Origin 0x0203
+#
+# Those are what `_HEADER['target-as4']` and `_HEADER['origin-as4']` in
+# src/exabgp/configuration/static/parser.py encode, and what a route with an AS too large
+# for two octets is promoted to.  They have no requirement id to name because the RFC
+# gives them none; tests/unit/rfc/test_rfc5668_four_octet_as_community.py tests them
+# regardless, which is the same arrangement rfc4360.toml describes for the attribute
+# length.
+
+rfc = "rfc5668"
+title = "4-Octet AS Specific BGP Extended Community"
+url = "https://www.rfc-editor.org/rfc/rfc5668"
+
+[[requirement]]
+id = "rfc5668#3-two-octet-as-uses-two-octet-community"
+section = "3"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+Therefore, for backward compatibility with existing deployments and
+to avoid inconsistencies between 2-octet and 4-octet specific
+extended communities, Autonomous Systems that use 2-octet Autonomous
+System numbers SHOULD use 2-octet AS specific extended communities
+rather than 4-octet AS specific extended communities.
+"""
+note = """
+exabgp follows this by default.  `target:100:1000` and `origin:100:1000` encode as the two
+octet AS specific communities 0x0002 and 0x0003, and the four octet form is reached only
+when the AS does not fit two octets, or when the operator names it: `target-as4`,
+`origin-as4`, or a trailing L on the AS.
+
+Positive-only because this is a rule about what we put on the wire and there is no peer
+input which violates it.  A received 0x0202 community carrying an AS which would have fit
+two octets is well formed and exabgp decodes it; the RFC asks the sender not to produce
+one, and a receiver has no obligation to object.  The nearest thing to a negative case is
+an operator naming `target-as4` for a small AS, which exabgp honours rather than silently
+rewriting: that is a request, not the inconsistency this section warns about, and refusing
+it would leave exabgp unable to generate a community an interop exercise needs.
+"""

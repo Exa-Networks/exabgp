@@ -19,6 +19,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc4760 | 5 | 0 | 0 | 5 | 0 | 8 | 100% |
 | rfc5082 | 2 | 0 | 0 | 2 | 2 | 2 | 100% |
 | rfc5492 | 5 | 0 | 0 | 5 | 3 | 5 | 100% |
+| rfc5668 | 0 | 0 | 0 | 0 | 0 | 1 | - |
 | rfc6514 | 1 | 0 | 0 | 1 | 5 | 2 | 100% |
 | rfc6793 | 23 | 1 | 0 | 24 | 0 | 0 | 96% |
 | rfc7432 | 4 | 0 | 0 | 4 | 13 | 0 | 100% |
@@ -32,7 +33,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc9012 | 6 | 0 | 0 | 6 | 1 | 0 | 100% |
 | rfc9234 | 12 | 0 | 0 | 12 | 4 | 1 | 100% |
 | rfc9552 | 12 | 0 | 0 | 12 | 2 | 0 | 100% |
-| rfc9830 | 3 | 0 | 0 | 3 | 0 | 0 | 100% |
+| rfc9830 | 4 | 0 | 0 | 4 | 0 | 0 | 100% |
 
 ## rfc1997
 
@@ -997,6 +998,25 @@ is the code path a peer's bytes actually take and it is where a capability could
 turn into a NOTIFICATION after the capability parser has finished with it.
   - `tests/unit/rfc/test_rfc5492_capabilities.py::test_an_open_carrying_an_unknown_capability_is_accepted_whole`
   - `tests/unit/rfc/test_rfc5492_capabilities.py::test_an_open_we_genuinely_cannot_parse_is_still_refused`
+
+## rfc5668
+
+- **3** (SHOULD) `rfc5668#3-two-octet-as-uses-two-octet-community` - proven
+  > Therefore, for backward compatibility with existing deployments and to avoid inconsistencies between 2-octet and 4-octet specific extended communities, Autonomous Systems that use 2-octet Autonomous System numbers SHOULD use 2-octet AS specific extended communities rather than 4-octet AS specific extended communities.
+  exabgp follows this by default.  `target:100:1000` and `origin:100:1000` encode as the two
+octet AS specific communities 0x0002 and 0x0003, and the four octet form is reached only
+when the AS does not fit two octets, or when the operator names it: `target-as4`,
+`origin-as4`, or a trailing L on the AS.
+
+Positive-only because this is a rule about what we put on the wire and there is no peer
+input which violates it.  A received 0x0202 community carrying an AS which would have fit
+two octets is well formed and exabgp decodes it; the RFC asks the sender not to produce
+one, and a receiver has no obligation to object.  The nearest thing to a negative case is
+an operator naming `target-as4` for a small AS, which exabgp honours rather than silently
+rewriting: that is a request, not the inconsistency this section warns about, and refusing
+it would leave exabgp unable to generate a community an interop exercise needs.
+  - `tests/unit/rfc/test_rfc5668_four_octet_as_community.py::test_a_two_octet_as_uses_the_two_octet_community`
+  - `tests/unit/rfc/test_rfc5668_four_octet_as_community.py::test_the_largest_two_octet_as_still_uses_the_two_octet_community`
 
 ## rfc6514
 
@@ -2930,7 +2950,12 @@ leaves a stub which fails the first check.
 The negative tests are the three malformations themselves.  The positive one has to prove
 the walk terminates as well as that it accepts: a zero-length TLV advances the cursor by
 the four header octets and does not spin, which is why that test carries a timeout.
+  - `tests/fuzz/test_bgpls_tlv_properties.py::test_a_stub_too_short_for_a_sub_tlv_header_is_tolerated`
+  - `tests/fuzz/test_bgpls_tlv_properties.py::test_a_sub_tlv_whose_length_agrees_is_still_accepted`
+  - `tests/fuzz/test_bgpls_tlv_properties.py::test_a_tlv_with_no_sub_tlv_at_all_is_still_accepted`
   - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_well_formed_attribute_decodes_and_the_walk_terminates`
+  - `tests/fuzz/test_bgpls_tlv_properties.py::test_an_unknown_sub_tlv_claiming_more_than_is_there_is_refused`
+  - `tests/fuzz/test_bgpls_tlv_properties.py::test_a_tolerated_remnant_is_not_reported_as_a_sub_tlv`
   - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_truncated_tlv_header_is_refused`
   - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_tlv_length_disagreeing_with_what_follows_is_refused`
   - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_recognised_tlv_with_a_value_of_the_wrong_size_is_refused`
@@ -3042,3 +3067,21 @@ a repeated sub-TLV, where the repeat is disregarded and the route kept.
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_two_sr_policy_tlvs_in_one_attribute_are_treated_as_withdraw`
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_second_tunnel_tlv_of_another_type_is_not_a_duplicate`
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_one_sr_policy_tlv_in_an_attribute_is_accepted`
+- **2.4.4.2.3** (MUST) `rfc9830#2.4.4.2.3-unassigned-segment-flags-zero` - proven
+  > The unassigned bits in the Flags field MUST be set to zero upon transmission and MUST be ignored upon receipt.
+  This entry exists because reading RFC 9830 on its own gets the answer wrong.  Its IANA
+table (Section 6.8, Table 8) shows bits 1-2 and 4-7 of the Segment Flags as Unassigned,
+and `segment_list.py` sets bit 2 (0x20) on every Segment Type C to K it packs, which
+reads as a reserved bit going out set.  It is not one: RFC 9831, the companion published
+alongside 9830 which defines Segment Types C to K, allocates bit 1 to the A-Flag and bit
+2 to the S-Flag in its own IANA section (Section 3.2, Table 2) and describes them in
+Section 2.10.  Bits 4-7 are all that remain unassigned, so those are what this
+requirement now binds, and the comment above the flag constants says so in the code.
+
+The positive side is that nothing exabgp originates puts anything in bits 4-7:
+`configuration/static/sr_policy.py` only ever raises 0x80, 0x40 and 0x10, and `pack()`
+derives 0x20 from whether a SID is present.  The negative side is receipt: a peer which
+sets bits 4-7 anyway must not change how the segment decodes, and does not, because no
+decoder here reads them.
+  - `tests/unit/test_sr_policy.py::test_no_configured_segment_transmits_an_unassigned_flag_bit`
+  - `tests/unit/test_sr_policy.py::test_unassigned_segment_flag_bits_are_ignored_on_receipt`
