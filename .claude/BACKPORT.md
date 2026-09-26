@@ -7,6 +7,14 @@ which changes what a configuration accepts, what goes on the wire, or what the A
 stays on `main` and is recorded here as ⚪ Skip. Documentation describing 5.0 describes
 what it does today, verified by running it.
 
+**Exceptions Thomas decided for 5.0** (each also recorded in 5.0's `qa/compat_allowed.json`):
+- An empty FlowSpec NLRI (and a flow-vpn one with only a route distinguisher) is a withdraw
+  (2114ec208). A rule with no component matches every packet; 5.0.13 accepted it.
+- An empty BGP_PREFIX_SID is discarded by the attribute collection, route kept (RFC 8669 6);
+  5.0.13 accepted it. Same outcome as `main`.
+- `Aggregator.json()` no longer raises (f54a45e9a): it formatted the speaker address with %d.
+  No session reached it; nothing a user sees changes.
+
 **Last reviewed commit:** 0da20411
 
 **Branch locations:**
