@@ -4,6 +4,45 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Incompatible: a flow route which redirects to an address now sends the community of
+   draft-ietf-idr-flowspec-redirect-ip, which carries the address itself, instead of the
+   one from draft-simpson-idr-flowspec-redirect-ip, which carries none and takes the target
+   from the MP_REACH_NLRI next hop. The IETF document formally replaces the Simpson one and
+   is in the RFC Editor queue, and the older encoding is against RFC 8955 section 4, "the
+   Length of the Next-Hop Network Address MUST be set to 0". "redirect <ip>" and
+   "copy <ip>" therefore put different bytes on the wire than in 5.0, and say so once in
+   the log; write "redirect-simpson <ip>" or "copy-simpson <ip>" to keep the old encoding.
+   "copy" also reaches the C bit of the IETF community, which was implemented and
+   unreachable from any configuration before.
+ * Fix: the JSON "string" of a redirect-to-IP extended community is valid configuration
+   again. The copy variant rendered "copy-to-nexthop-ietf 1.2.3.4 (with copy)", which
+   cannot be read back, and neither variant could be written inside
+   "extended-community [ ... ]" at all. The suffix is gone, the keyword already saying it is
+   a copy, and both "redirect-to-nexthop-ietf <ip>" and "copy-to-nexthop-ietf <ip>" now
+   parse there. A community which can be written and not read is one the API round trip
+   cannot carry.
+ * Feature: "redirect-to-nexthop" takes an optional address. With one it is the IETF
+   community above, which is what "redirect-to-nexthop-ietf <ip>" already did and still
+   does. Without one it is unchanged, the Simpson community with the target taken from the
+   route's own "next-hop", now also spelled "redirect-to-nexthop-simpson". Nothing written
+   before this release changes meaning.
+ * Compatibility: an UPDATE whose only routes are in an MP_REACH_NLRI no longer also
+   carries a NEXT_HOP path attribute. RFC 4760 section 3 says such a message "SHOULD NOT
+   carry the NEXT_HOP attribute", and that a speaker receiving one "SHOULD ignore this
+   attribute", and we sent it anyway for every multiprotocol family whose next hop is an
+   IPv4 address: mpls-vpn, labelled-unicast, mcast-vpn, mup, and an IPv6 route given an
+   IPv4 next hop. It carried the same address as the MP_REACH_NLRI in every case we have
+   recorded, so what changes is seven octets per UPDATE and one fewer place for a peer to
+   read a next hop from. An MP_UNREACH_NLRI message drops it too, which RFC 4760 section 4
+   allows: such a message "is not required to carry any other path attributes".
+ * Fix: the end of RIB marker reported to an API process was not JSON. Every other NLRI
+   renders an object, and the caller puts the result in a list, so a bare '"eor": {...}'
+   made the whole line unparseable and a process reading sent updates could not decode it.
+   It is now '{ "eor": {...} }'. Nothing recorded that line, which is why it went unseen.
+ * Fix: a message reported to an API process as sent is now reported after it has been
+   written to the socket rather than before. A process waiting on a send-update to know a
+   route has left gets an answer which is true, and a write which raised is no longer
+   reported as a message we sent.
  * Incompatible: the "role { otc send|disable; }" sub-option and the route-level
    "otc none" instruction are removed. RFC 9234 section 5 ends with "The operator
    MUST NOT have the ability to modify the procedures defined in this section",
