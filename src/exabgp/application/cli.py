@@ -92,17 +92,21 @@ def open_writer(send):
         writer = os.open(send, os.O_WRONLY)
     except OSError as exc:
         if exc.errno == errno.ENXIO:
-            sys.stdout.write('ExaBGP is not running / using the configured named pipe')
-            sys.stdout.flush()
+            sys.stderr.write('ExaBGP is not running / using the configured named pipe\n')
+            sys.stderr.flush()
             sys.exit(1)
         # the reason used to sit in a second `except OSError` below this one, which Python
         # could never reach; without it a fifo we may not open reads the same as one which
         # went away
-        sys.stdout.write(f'could not communicate with ExaBGP ({exc})')
-        sys.stdout.flush()
+        sys.stderr.write(f'could not communicate with ExaBGP ({exc})\n')
+        sys.stderr.flush()
         sys.exit(1)
+    finally:
+        # Every path, not only the one which succeeded. The cancel used to sit after the try,
+        # so a failed os.open left the alarm armed and it fired minutes later in whatever was
+        # running by then. `finally` also runs before the SystemExit above leaves this frame.
+        signal.alarm(0)
 
-    signal.alarm(0)
     return writer
 
 
