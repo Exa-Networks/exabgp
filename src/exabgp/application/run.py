@@ -95,16 +95,16 @@ def open_writer(send: str) -> int:
     try:
         writer = os.open(send, os.O_WRONLY)
     except OSError as exc:
+        # One handler, not two. Python takes the first clause which matches, so the second
+        # `except OSError` below this was unreachable, and it was the one carrying the reason:
+        # the reachable one printed 'could not communicate with ExaBGP' with the exception
+        # discarded, so a pipe we may not open read exactly like one which had gone away.
         if exc.errno == errno.ENXIO:
-            sys.stdout.write('ExaBGP is not running / using the configured named pipe')
-            sys.stdout.flush()
+            sys.stderr.write('ExaBGP is not running / using the configured named pipe\n')
+            sys.stderr.flush()
             sys.exit(1)
-        sys.stdout.write('could not communicate with ExaBGP')
-        sys.stdout.flush()
-        sys.exit(1)
-    except OSError as exc:
-        sys.stdout.write(f'could not communicate with ExaBGP ({exc})')
-        sys.stdout.flush()
+        sys.stderr.write(f'could not communicate with ExaBGP ({exc})\n')
+        sys.stderr.flush()
         sys.exit(1)
 
     signal.alarm(0)
@@ -476,16 +476,16 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
 
     if not check_fifo(send):
         message = 'could not find write named pipe to connect to ExaBGP'
-        sys.stdout.write(message)
-        sys.stdout.flush()
+        sys.stderr.write(message + '\n')
+        sys.stderr.flush()
         if exit_on_completion:
             sys.exit(1)
         raise RuntimeError(message)
 
     if not check_fifo(recv):
         message = 'could not find read named pipe to connect to ExaBGP'
-        sys.stdout.write(message)
-        sys.stdout.flush()
+        sys.stderr.write(message + '\n')
+        sys.stderr.flush()
         if exit_on_completion:
             sys.exit(1)
         raise RuntimeError(message)

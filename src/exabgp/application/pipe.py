@@ -86,20 +86,33 @@ def env(app: str, section: str, name: str, default: str) -> str:
 
 
 def check_fifo(name: str) -> bool:
+    """Whether name is a named pipe this process can use, saying why on stderr when it is not.
+
+    stderr and not stdout, and that is not only convention. One of the callers is Control,
+    where stdout IS the pipe to the daemon: `loop()` writes 'session ack enable' and every
+    command down `sys.stdout.fileno()`. So each of these reports used to be written to the
+    daemon and read as a line of command input, rather than by the operator as an error.
+    `run.py`'s own reset path already used stderr here; these three were the outliers.
+
+    Two of the three also never flushed, so on the paths which return rather than exit the
+    line could sit in the buffer behind whatever came next.
+    """
     try:
         if not stat.S_ISFIFO(os.stat(name).st_mode):
-            sys.stdout.write(f'error: a file exist which is not a named pipe ({os.path.abspath(name)})\n')
+            sys.stderr.write(f'error: a file exist which is not a named pipe ({os.path.abspath(name)})\n')
+            sys.stderr.flush()
             return False
 
         if not os.access(name, os.R_OK):
-            sys.stdout.write(
+            sys.stderr.write(
                 f'error: a named pipe exists and we can not read/write to it ({os.path.abspath(name)})\n',
             )
+            sys.stderr.flush()
             return False
         return True
     except OSError:
-        sys.stdout.write(f'error: could not access the named pipe {os.path.abspath(name)}\n')
-        sys.stdout.flush()
+        sys.stderr.write(f'error: could not access the named pipe {os.path.abspath(name)}\n')
+        sys.stderr.flush()
         return False
 
 
