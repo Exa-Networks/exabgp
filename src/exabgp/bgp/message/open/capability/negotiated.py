@@ -98,40 +98,54 @@ class Negotiated:
         ):
             self.msg_size = ExtendedMessage.EXTENDED_SIZE
 
-        self.multisession = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(
+        rfc_multisession = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(
             Capability.CODE.MULTISESSION,
         )
-        self.multisession |= sent_capa.announced(Capability.CODE.MULTISESSION_CISCO) and recv_capa.announced(
+        cisco_multisession = sent_capa.announced(Capability.CODE.MULTISESSION_CISCO) and recv_capa.announced(
             Capability.CODE.MULTISESSION_CISCO,
         )
+        self.multisession = rfc_multisession or cisco_multisession
 
         if self.multisession:
-            sent_ms_capa = set(sent_capa[Capability.CODE.MULTISESSION])
-            recv_ms_capa = set(recv_capa[Capability.CODE.MULTISESSION])
+            # Read the Session Id under the code which actually negotiated. Both branches
+            # used to index the RFC code, so a session negotiated under the code Cisco uses
+            # raised KeyError out of the OPEN parser instead of comparing anything.
+            multisession_code = Capability.CODE.MULTISESSION if rfc_multisession else Capability.CODE.MULTISESSION_CISCO
+            sent_ms_capa = set(sent_capa[multisession_code])
+            recv_ms_capa = set(recv_capa[multisession_code])
 
+            # draft-ietf-idr-bgp-multisession-07 section 4: "Empty Session Id list and
+            # Session Id containing 1 (one, Multiprotocol Extensions) as the only value are
+            # considered equal and indicate that AFI/SAFI list in the OPEN message is used
+            # to distinguish the groups". MULTIPROTOCOL is the only Session Id we generate.
             if sent_ms_capa == set([]):
                 sent_ms_capa = set([Capability.CODE.MULTIPROTOCOL])
             if recv_ms_capa == set([]):
                 recv_ms_capa = set([Capability.CODE.MULTIPROTOCOL])
 
             if sent_ms_capa != recv_ms_capa:
+                # section 7 makes this a MUST: "Error Sub-code set to 8 ("Grouping
+                # Conflict") and drop the session".
                 self.multisession = (2, 8, 'multisession, our peer did not reply with the same sessionid')
+            else:
+                for capa in sent_ms_capa:
+                    # The Session Id names the capabilities whose VALUES distinguish one
+                    # group from another, so a named capability has to be present on both
+                    # sides before those values can be compared. We generate MULTIPROTOCOL
+                    # and therefore always have it, but a peer need not announce it at all:
+                    # reading it off the received capabilities raised KeyError from peer
+                    # input, which reset the session with no NOTIFICATION sent.
+                    if capa not in sent_capa or capa not in recv_capa or sent_capa[capa] != recv_capa[capa]:
+                        self.multisession = (
+                            2,
+                            8,
+                            'when checking session id, capability {} did not match'.format(str(capa)),
+                        )
+                        break
 
-            # The way we implement MS-BGP, we only send one MP per session
-            # therefore we can not collide due to the way we generate the configuration
-
-            for capa in sent_ms_capa:
-                # no need to check that the capability exists, we generated it
-                # checked it is what we sent and only send MULTIPROTOCOL
-                if sent_capa[capa] != recv_capa[capa]:
-                    self.multisession = (
-                        2,
-                        8,
-                        'when checking session id, capability {} did not match'.format(str(capa)),
-                    )
-                    break
-
-        elif sent_capa.announced(Capability.CODE.MULTISESSION):
+        elif sent_capa.announced(Capability.CODE.MULTISESSION) or sent_capa.announced(
+            Capability.CODE.MULTISESSION_CISCO,
+        ):
             self.multisession = (2, 9, 'multisession is mandatory with this peer')
 
         # XXX: Does not work as the capa is not yet defined
