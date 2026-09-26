@@ -145,11 +145,12 @@ over; seven sites moved Notify 3/0 → 3/9.
 | 3.3 | RIB yields one `UpdateCollection` per withdrawn NLRI | 🟡 open |
 | 3.4 | `API/JSON-API-Reference.md` examples are structurally invented | 🟡 open |
 | 3.5 | `doc/README.rst` stale | 🟢 open |
+| 3.14 | main: `check_fifo` reported to the daemon, and `open_writer` had a dead handler | ✅ fixed 2026-09-26 | `0bc6c6e10`. 5.0 had both closed already. See §17. |
 | 3.6 | 5.0 attribute cache is process-wide and keyed on wire bytes only | ✅ fixed 2026-09-25 | `709706aa9`. Moved onto `Negotiated`. See §16. |
 | 3.13 | `qa/bin/functional encoding` is intermittently red, about 1 run in 10 | 🟡 pre-existing, unexplained |
-| 3.7 | 5.0: one peer's OPEN rewrites every other session's capability variant | 🔴 confirmed, not fixed |
-| 3.8 | 5.0: a labelled NLRI with no S bit closes the session (RFC 8277 §2.2 says ignore it) | 🔴 confirmed, not fixed |
-| 3.9 | 5.0 BGP-LS NODE/PREFIXv4/PREFIXv6 assign `self._pack` where the base reads `_packed` | 🔴 confirmed, not fixed |
+| 3.7 | 5.0: one peer's OPEN rewrites every other session's capability variant | ✅ fixed 2026-09-26 | 5.0 `7b0e71f61`. main was already correct. |
+| 3.8 | 5.0: a labelled NLRI with no S bit closes the session (RFC 8277 §2.2 says ignore it) | ✅ fixed 2026-09-26 | 5.0, agent report. main already had the block at `inet.py:453`. |
+| 3.9 | 5.0 BGP-LS NODE/PREFIXv4/PREFIXv6 assign `self._pack` where the base reads `_packed` | ✅ fixed 2026-09-26 | 5.0 `2cb34163b`. main was already correct. |
 | 3.10 | 5.0: a BGP-LS prefix NLRI with no Local Node Descriptors TLV ends the session | 🔴 confirmed, not fixed |
 | 3.11 | 5.0 flow config silently drops an unparseable source/destination, giving discard-all | 🔴 confirmed, not fixed |
 | 3.12 | 5.0 MULTISESSION Session ID never decoded, so the 2/8 refusal is dead code | 🟡 confirmed, not fixed |
@@ -304,7 +305,7 @@ output moved. `med` and `local-preference` stay JSON numbers, `aigp` stays the q
 | `check_exa_style` | **had no cannot-run path at all**: `rglob` over a missing tree yields nothing, every rule counts 0, it prints `ok` four times and **exits 0** |
 
 The last is the one that matters. A clean bill of health over an empty walk, and nobody
-investigates a green gate. This is the fourth instance of the pattern in §17 below. Each gate
+investigates a green gate. This is the fourth instance of the pattern in §18 below. Each gate
 now has `CANNOT_RUN = 2`, and `check_exa_style` a `MIN_SOURCE_FILES = 50` floor on the walk
 against 392 today, so it cannot fire on a real checkout.
 
@@ -946,7 +947,56 @@ reuses its own last parse, which is the point of the cache and had to keep worki
 
 ---
 
-## 17. Process rules learned the hard way
+## 17. Which tree was actually behind, 2026-09-26
+
+Thomas asked whether the fixes were in both trees. Checked rather than assumed, and the answer
+reverses the assumption the ledger was built on: **almost all of it was 5.0 catching up to main.**
+
+| item | main |
+|---|---|
+| 3.7 capability variant | already fixed, `kls.ID = what` absent |
+| 3.8 label S bit | already fixed, the block is at `inet.py:453` with its own test file |
+| 3.9 BGP-LS `_pack`/`_packed` | already fixed, absent |
+| 3.6 whole-set attribute cache | already per-session, already tested |
+| `tojson.py`, `bind_to_device`, the silence sweep | already done |
+
+Both trees carry the respawn limiter, `Attributes.pack` precedence, sub-TLV lengths and the
+OSPF SID offset, because those were done in both at the time.
+
+**Two things were genuinely missing from main**, and both are now fixed in `0bc6c6e10`:
+
+`check_fifo` wrote its three reports to `sys.stdout`, and one caller is `Control`, where stdout
+is the pipe to the daemon. Same defect and same consequence as 5.0's, found only by looking.
+`run.py`'s reset path already used stderr for the same class of message, so the three stdout
+sites were the outliers.
+
+`open_writer` had two `except OSError` on one try, the second unreachable and the only one
+carrying the reason, so a pipe we may not open read identically to one which had gone away.
+
+### A correction to §16, and to a commit message
+
+§16 said the per-code cache `Attribute.cache` was still shared and that the two attributes
+reading `negotiated` had to be taken out of it. **That reasoning is wrong in both trees.**
+
+```
+cache = cls.caching and cls.CACHING
+```
+
+Both trees only ever call `Attribute.unpack(aid, flag, ...)` on the **base** class, so `cls` is
+`Attribute` and `cls.CACHING` is `Attribute.CACHING`, which is `False`. The per-code cache is
+**unreachable**, and the `CACHING = True` on eleven attribute classes is dead configuration.
+Measured: an aigp-refusing session correctly received a `Discard`, with no sharing.
+
+So 5.0's `709706aa9` setting `Aggregator.CACHING = False` and `AIGP.CACHING = False` is harmless
+and makes dead config honest, but its stated reason, closing a live cross-session leak, was not
+true. The live half of 3.6 was the whole-set cache, which the measurement does support.
+
+That leaves a finding of its own: a cache the tree is configured for across eleven classes, behind
+a flag which can never be true.
+
+---
+
+## 18. Process rules learned the hard way
 
 - **Never `git add -A`.** Commit `2114ec208` swept up an agent's unreviewed BGP-LS work and
   was pushed with a message that did not describe it. Corrected in `a8683597e` rather than
@@ -961,6 +1011,12 @@ reuses its own last parse, which is the point of the cache and had to keep worki
 - **Writes outside the primary directory need the sandbox disabled.** An edit to `../5.0`
   fails with `PermissionError: Operation not permitted` otherwise, which reads like a file
   permission problem and is not.
+- **Four tests were green for the wrong reason**, which is the same failure as a green gate
+  measuring nothing: the respawn limiter's own test pinned the defect as intended behaviour in
+  its docstring; `test_internal_attribute_packing` passed because everything returned `b''`;
+  nine `_no_parse_cache` fixtures worked around the shared cache in 33 lines and reported it
+  nowhere; and `test_1_open` passed only because a class attribute was clobbered. Each would
+  have caught its bug had it been written to fail first.
 - **Six things were green while measuring nothing**, each found by something outside itself:
   `test_json` reading 325 of 395 lines; a decode failure counted as a pass; the re-recording
   survey's own blind regex; `check_reload_cleanup` skipping every run; `check_exa_style`
