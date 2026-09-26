@@ -48,7 +48,14 @@ class NODE(BGPLS):
         self.proto_id = proto_id
         self.node_ids = node_ids
         self.nexthop = nexthop
-        self._pack = packed
+        # `_packed`, not `_pack`.  The base class reads `_packed` in pack_nlri, __len__ and
+        # index, so writing the wire to `_pack` left `_packed` at the b'' the base set and
+        # pack_nlri answered a four octet header announcing a length of zero: identical for
+        # every route of this type, which is what index() keys the RIB on.  The name is not
+        # an override of anything this class has, GenericBGPLS is a sibling rather than an
+        # ancestor, which is why nothing ever raised.
+        if packed is not None:
+            self._packed = packed
         self.route_d = route_d
 
     def as_dict(self):
@@ -103,14 +110,17 @@ class NODE(BGPLS):
 
         return cls(domain=domain, proto_id=proto_id, node_ids=node_ids, route_d=rd, packed=data)
 
+    # The identity of these NLRI is their wire: the descriptors are what tell two routes of
+    # one type apart, and `_packed` holds them.  __eq__ used to compare only CODE, domain,
+    # proto_id and route_d, so two prefixes of one domain were equal whatever they described,
+    # and NODE.__hash__ used (proto_id, node_ids) while its __eq__ used neither, which breaks
+    # the rule that equal objects hash equal.  Both now read the same tuple, and it is the
+    # same information index() carries, so equality agrees with RIB identity.
+    def _identity(self):
+        return (self.CODE, self.domain, self.proto_id, self.route_d, self._packed)
+
     def __eq__(self, other):
-        return (
-            isinstance(other, BGPLS)
-            and self.CODE == other.CODE
-            and self.domain == other.domain
-            and self.proto_id == other.proto_id
-            and self.route_d == other.route_d
-        )
+        return isinstance(other, NODE) and self._identity() == other._identity()
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -122,4 +132,4 @@ class NODE(BGPLS):
         return hash((self.proto_id, tuple(self.node_ids)))
 
     def pack(self, negotiated=None):
-        return self._pack
+        return self._packed
