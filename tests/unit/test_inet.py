@@ -260,24 +260,43 @@ class TestINETUnpackLabels:
         and its last byte is odd, so an unterminated stack followed by it still
         decodes to a default route.
 
-        This asserts the limit rather than hiding it. For this assertion to start
-        failing, the encoding would have to carry the stack depth somewhere the
-        prefix cannot imitate, which RFC 3107 does not provide. If someone ever
-        makes it fail, the fix is real and this test should be deleted, not
-        adjusted.
+        This asserts the limit rather than hiding it, and the previous version of
+        it carried "if someone ever makes it fail, the fix is real and this test
+        should be deleted, not adjusted". It DID fail, and the fix is real: RFC
+        8277 2.2 says the S bit "MUST be ignored on reception", so where the
+        NLRI Length leaves a prefix the family can hold behind a single field,
+        that is the prefix and the stack is one field. The one field shape this
+        used to use decodes to 192.168.1.0/24 now.
+
+        So the incompleteness was NARROWED, not removed: it needs two fields
+        where it needed one. That is why this is rewritten rather than deleted.
+        The instruction stands for the new shape, and main's
+        test_label_stack_end.py carries the same pair for the same reason.
+        """
+        data = b'\x48' + b'\x00\x00\x10' + b'\x00\x00\x20' + b'\xc0\xa8\x01'
+        nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False)
+        assert str(nlri.cidr) == '0.0.0.0/0'
+        assert nlri.labels.labels == [1, 2, 789120]
+
+    def test_the_one_field_shape_it_used_to_use_now_decodes(self) -> None:
+        """Why the test above needed two fields, asserted rather than asserted about
+
+        Without this, rewriting the test above to two fields could be hiding a
+        regression instead of recording a narrowing.
         """
         data = b'\x30' + b'\x00\x00\x10' + b'\xc0\xa8\x01'
         nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False)
-        assert str(nlri.cidr) == '0.0.0.0/0'
-        assert nlri.labels.labels == [1, 789120]
+        assert str(nlri.cidr) == '192.168.1.0/24'
+        assert nlri.labels.labels == [1]
 
     def test_the_same_stack_with_an_even_final_byte_is_refused(self) -> None:
         # the companion to the test above: identical shape, one bit different in
         # the prefix, and the gate catches it. Which is the whole of what the
-        # gate can promise
+        # gate can promise. Two fields since the RFC 8277 2.2 length rule landed,
+        # for the reason the docstring above gives
         from exabgp.bgp.message.notification import Notify
 
-        data = b'\x30' + b'\x00\x00\x10' + b'\xc0\xa8\x02'
+        data = b'\x48' + b'\x00\x00\x10' + b'\x00\x00\x20' + b'\xc0\xa8\x02'
         with pytest.raises(Notify):
             INET.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False)
 

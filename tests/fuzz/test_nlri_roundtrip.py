@@ -32,10 +32,17 @@ from .corpus import seeds_for
 # families whose decoder accepts a shape it re-encodes differently. All of these
 # predate the hardening work; none was introduced by it.
 #
-#   nlri-mpls, mpls-vpn, vpls   a label stack whose last label does not have the
-#                               bottom-of-stack bit set is accepted, and the
-#                               encoder sets it. The route stored and the route
-#                               re-advertised differ by that bit.
+# nlri-mpls used to be here for both families, and mpls-vpn was about to join it.
+# Their only difference was the Rsrv and S bits of a label field, which RFC 8277
+# 2.2 requires us to set on transmission and to ignore on reception, so in != out
+# there is obedience and not disagreement. _ignoring_label_trailing_bits masks
+# those four bits and all three families now round trip.
+#
+#   l2vpn/vpls                  differs by more than that: the two byte length
+#                               prefix is re-encoded as the payload size it kept
+#                               rather than the size the peer announced, so a
+#                               stack framed at 18 comes back as 17. main fixed
+#                               this in vpls.py; here it is still open.
 #   ipv4/rtc                    a length below 96 is accepted and re-encoded as
 #                               96. RTC prefix length decides what the route
 #                               target matches, so a reflector changes the
@@ -58,14 +65,59 @@ KNOWN = {
     # thing to refuse.
     'bgp-ls/bgp-ls-vpn',
     'ipv4/mup',
-    'ipv4/nlri-mpls',
     'ipv4/rtc',
     'ipv6/mup',
-    'ipv6/nlri-mpls',
     'l2vpn/vpls',
 }
 
 FAMILIES = sorted(NLRI.registered_nlri)
+
+
+# RFC 8277 2.2 draws the third octet of a label field as |Label|Rsrv |S|, and says of both
+# trailing fields that they are ours to set and not ours to read:
+#   Rsrv  "This 3-bit field SHOULD be set to zero on transmission and MUST be ignored on
+#          reception."
+#   S     "This 1-bit field MUST be set to one on transmission and MUST be ignored on
+#          reception."
+# So the low nibble carries no information a receiver may act on, and all of it is masked.
+LABEL_TRAILING_BITS = 0x0F
+
+
+def _ignoring_label_trailing_bits(nlri, consumed, repacked):
+    """Both byte strings with the Rsrv and S bits of every label field cleared.
+
+    Both fields bind us the same way: we must set them on transmission and must ignore them on
+    reception.  So a labelled NLRI which arrives with the S bit clear, or with reserved bits
+    set, is accepted and re-encoded with S set and Rsrv zero, and in != out for ever.
+
+    That is not the thing this file exists to catch.  Its reasoning is that a mismatch means
+    "the NLRI held in the RIB disagrees with the bytes the peer sent", and by the RFC's own
+    words these four bits carry nothing a receiver may act on, so there is no disagreement to
+    find.  Masking them is what lets the ratchet keep meaning "accepts what it cannot re-emit"
+    rather than growing an entry every time we obey a MUST.
+
+    Only those four bits, and only inside the label stack, whose offset comes from the
+    re-encode because the re-encode is the canonical form.  The twenty label bits, the stack
+    length, the mask byte and everything else still count.
+    """
+    labels = getattr(nlri, 'labels', None)
+    if labels is None or not labels.packed:
+        return consumed, repacked
+
+    start = repacked.find(labels.packed)
+    if start < 0:
+        return consumed, repacked
+    end = start + len(labels.packed)
+    if len(consumed) < end:
+        return consumed, repacked
+
+    def cleared(data):
+        out = bytearray(data)
+        for offset in range(start + 2, end, 3):
+            out[offset] &= 0xFF ^ LABEL_TRAILING_BITS
+        return bytes(out)
+
+    return cleared(consumed), cleared(repacked)
 
 
 def mismatches(family):
@@ -88,7 +140,10 @@ def mismatches(family):
             found.append((consumed.hex(), 'raised'))
             continue
         decoded += 1
-        if repacked != consumed:
+        # the reported hex is the real wire, not the masked form: a message which shows bytes
+        # nobody sent is worse than no message
+        left, right = _ignoring_label_trailing_bits(nlri, consumed, repacked)
+        if right != left:
             found.append((consumed.hex(), repacked.hex()))
     return decoded, found
 
