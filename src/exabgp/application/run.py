@@ -106,8 +106,14 @@ def open_writer(send: str) -> int:
         sys.stderr.write(f'could not communicate with ExaBGP ({exc})\n')
         sys.stderr.flush()
         sys.exit(1)
+    finally:
+        # Every path, not only the one which succeeded. The cancel used to sit after the try,
+        # so a failed os.open left the alarm armed and it fired minutes later in whatever was
+        # running by then: inside the test suite that surfaced as SystemExit and "could not
+        # send command to ExaBGP (command timeout)" in an unrelated test, in a different place
+        # each run. `finally` also runs before the SystemExit above leaves this frame.
+        signal.alarm(0)
 
-    signal.alarm(0)
     return writer
 
 

@@ -12,12 +12,19 @@ import pytest
 import asyncio
 from collections import deque
 
-# Mock logger to avoid initialization issues
-import sys
-from unittest.mock import MagicMock
+from exabgp.environment import getenv
+from exabgp.logger import log
 
-# Mock the option module before importing ExaBGP components
-sys.modules['exabgp.logger'] = MagicMock()
+# The logger is initialised, not replaced. This file used to do
+#
+#     sys.modules['exabgp.logger'] = MagicMock()
+#
+# at import time and never put it back, so every test module collected after this one
+# bound a MagicMock through `from exabgp.logger import log`. Any assertion those made
+# about a log line was an assertion about a mock: green while measuring nothing, and
+# invisible because the file passes either way. log.init is what five other test files
+# already do.
+log.init(getenv())
 
 
 class TestRibFlushFIFOOrdering:
