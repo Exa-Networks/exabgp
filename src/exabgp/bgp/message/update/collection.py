@@ -480,6 +480,12 @@ class UpdateCollection(Message):
                 carries_attributes = False
 
         base_attr = self.attributes.pack_attribute(negotiated) if carries_attributes else b''
+        # RFC 4760 3: "An UPDATE message that carries no NLRI, other than the one encoded in
+        # the MP_REACH_NLRI attribute, SHOULD NOT carry the NEXT_HOP attribute."  The classic
+        # NLRI and the MP families never share a message below, so the MP messages get their
+        # own packing without it.  Sending it was seven octets saying again what MP_REACH
+        # already said, and a second place for a peer to read a next hop from.
+        mp_attr = self.attributes.pack_attribute(negotiated, without_next_hop=True) if carries_attributes else b''
         otc = b''
         # RFC 9234 5: "The operator MUST NOT have the ability to modify the procedures
         # defined in this section."  This used to also test negotiated.role_otc and the
@@ -578,9 +584,9 @@ class UpdateCollection(Message):
             announce_routed = mp_announces.get(family, [])
             withdraw_nlris = mp_withdraws.get(family, [])
             attr = (
-                base_attr + otc
+                mp_attr + otc
                 if announce_routed and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
-                else base_attr
+                else mp_attr
             )
             mp_announce = MPNLRICollection.from_routed(announce_routed, {}, afi, safi)
             mp_withdraw = MPNLRICollection(withdraw_nlris, {}, afi, safi)
@@ -590,10 +596,10 @@ class UpdateCollection(Message):
             # shared message used to give, so a prefix is still withdrawn before it is
             # re-announced, including across packet boundaries.
             #
-            # The withdrawals are sized on base_attr, which is what their messages carry, and
+            # The withdrawals are sized on mp_attr, which is what their messages carry, and
             # the announcements on attr, which may hold an OTC the withdrawals do not.  The two
             # are therefore judged separately, for the same reason as the IPv4 block above.
-            withdraw_size = negotiated.msg_size - 19 - 2 - 2 - len(base_attr)
+            withdraw_size = negotiated.msg_size - 19 - 2 - 2 - len(mp_attr)
             if include_withdraw and withdraw_nlris:
                 if withdraw_size <= 0:
                     # A budget which cannot hold an attribute header is one fact about the
@@ -611,9 +617,7 @@ class UpdateCollection(Message):
                     )
                 else:
                     for mpurnlri in mp_withdraw.packed_unreach_attributes(negotiated, withdraw_size):
-                        yield self._message(
-                            UpdateCollection.prefix(b'') + UpdateCollection.prefix(mpurnlri + base_attr)
-                        )
+                        yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mpurnlri + mp_attr))
 
             msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)
             if msg_size <= 0:

@@ -331,7 +331,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
         )
 
-    def pack_attribute(self, negotiated: Negotiated, with_default: bool = True) -> bytes:
+    def pack_attribute(
+        self, negotiated: Negotiated, with_default: bool = True, without_next_hop: bool = False
+    ) -> bytes:
         local_asn = negotiated.local_as
         peer_asn = negotiated.peer_as
 
@@ -356,8 +358,13 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             Attribute.CODE.LOCAL_PREF: lambda left, right: LocalPreference.from_int(100) if left == right else NOTHING,
         }
 
+        # `without_next_hop` is asked for by the messages which carry their routes in an
+        # MP_REACH_NLRI, where RFC 4760 section 3 says the attribute SHOULD NOT be sent.
+        # It is a packing choice rather than a change to the collection: these attributes
+        # are the RIB's, their index keys the attribute cache, and an IPv4 unicast route
+        # sharing the set still needs its NEXT_HOP.
         skip: dict[int, Callable[[int, int, Attribute], bool]] = {
-            Attribute.CODE.NEXT_HOP: lambda left, right, nh: cast(NextHop, nh).ipv4() is not True,
+            Attribute.CODE.NEXT_HOP: lambda left, right, nh: without_next_hop or cast(NextHop, nh).ipv4() is not True,
             Attribute.CODE.LOCAL_PREF: lambda left, right, nh: left != right,
         }
 

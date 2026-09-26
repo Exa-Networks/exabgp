@@ -30,6 +30,7 @@ from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.neighbor import Neighbor
+from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
 from exabgp.rib.incoming import IncomingRIB
@@ -40,6 +41,7 @@ IPV4_UNICAST: FamilyTuple = (AFI.ipv4, SAFI.unicast)
 IPV4_MULTICAST: FamilyTuple = (AFI.ipv4, SAFI.multicast)
 IPV6_UNICAST: FamilyTuple = (AFI.ipv6, SAFI.unicast)
 IPV4_VPN: FamilyTuple = (AFI.ipv4, SAFI.mpls_vpn)
+IPV4_LABELLED: FamilyTuple = (AFI.ipv4, SAFI.nlri_mpls)
 
 # One well formed NLRI per family, so the tests below are about the next hop and the
 # header in front of it rather than about prefix parsing.
@@ -432,3 +434,59 @@ def test_the_neighbour_helper_used_above_really_configures_a_family() -> None:
     neighbor.add_family(IPV6_UNICAST)
 
     assert IPV6_UNICAST in neighbor.families()
+
+
+# ======================================= 3, NEXT_HOP beside MP_REACH, from the parser
+
+
+def routes_from_api(section: str, line: str) -> list[Route]:
+    """The routes one API line produces, through the parser the API actually uses.
+
+    `reactor/api/__init__.py` reaches the parser through `Configuration.partial`, and it
+    is the parser which attaches a NEXT_HOP attribute: the `next-hop` leaf of the IPv4
+    route syntax is declared with `ActionTarget.NEXTHOP_ATTRIBUTE`, which sets the route's
+    next hop *and* adds the attribute. Every multiprotocol family built on that syntax
+    inherits it. A test which builds a RoutedNLRI in code never sees this, which is why
+    the one above passed while every mpls-vpn UPDATE we recorded carried both.
+    """
+    configuration = Configuration([''], text=True)
+    configuration.static.clear()
+    assert configuration.partial(section, line, 'announce'), str(configuration.error)
+    configuration.scope.to_context()
+    routes = configuration.scope.pop_routes()
+    assert routes, 'the line parsed to no route at all'
+    return routes
+
+
+def updates_for(routes: list[Route], negotiated: Negotiated) -> list[Update]:
+    """Every UPDATE these routes generate, decoded back off their own wire bytes."""
+    routed = [RoutedNLRI(route.nlri, route.nexthop) for route in routes]
+    collection = UpdateCollection(routed, [], routes[0].attributes)
+    updates = []
+    for message in collection.messages(negotiated):
+        decoded = Update.unpack_message(message[19:], negotiated)
+        assert isinstance(decoded, Update), 'what we generated did not decode as an UPDATE'
+        updates.append(decoded)
+    assert updates, 'no UPDATE was generated, so there is nothing to look at'
+    return updates
+
+
+MP_ONLY_ROUTES = [
+    ('mpls-vpn', IPV4_VPN, 'static', 'route 1.4.0.0/16 next-hop 101.1.101.1 rd 65000:1 label 1000'),
+    ('labelled-unicast', IPV4_LABELLED, 'static', 'route 1.5.0.0/16 next-hop 101.1.101.1 label 1000'),
+]
+
+
+@pytest.mark.rfc('rfc4760#3-no-next-hop-attribute')
+@pytest.mark.parametrize('name,family,section,line', MP_ONLY_ROUTES, ids=[_[0] for _ in MP_ONLY_ROUTES])
+def test_a_parsed_mp_route_carries_no_next_hop_attribute(
+    name: str, family: FamilyTuple, section: str, line: str
+) -> None:
+    """The next hop belongs inside MP_REACH_NLRI, and saying it twice wastes seven octets."""
+    negotiated = session([family], Direction.OUT)
+
+    for update in updates_for(routes_from_api(section, line), negotiated):
+        attributes = AttributeCollection.unpack(update.attribute_bytes, negotiated)
+        if bytes(update.nlri_bytes):
+            continue  # carries IPv4 NLRI as well, so the rule does not apply
+        assert Attribute.CODE.NEXT_HOP not in attributes, f'{name}: we sent NEXT_HOP beside an MP_REACH_NLRI'

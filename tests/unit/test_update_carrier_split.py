@@ -435,19 +435,25 @@ GENERIC_ATTRIBUTE_HEADER_SIZE = 4
 PADDING_ATTRIBUTE_CODE = 200
 
 
-def attributes_leaving(negotiated: Negotiated, remaining_bytes: int) -> AttributeCollection:
+def attributes_leaving(negotiated: Negotiated, remaining_bytes: int, mp: bool = False) -> AttributeCollection:
     """Attributes padded so an announcement has exactly `remaining_bytes` left for its NLRI.
 
     Derived from what the session actually packs rather than from a constant, so the shape
     survives a change to the default attributes an announcement carries.
+
+    `mp` says which of the two packings the path under test uses.  RFC 4760 3 keeps the
+    NEXT_HOP attribute off a message whose only NLRI is in an MP_REACH_NLRI, so the MP
+    families pack seven octets less than the native IPv4 pass and a budget derived from the
+    wrong one is that much looser than the comment beside it claims.
     """
     attributes = next_hop_attributes()
     target = negotiated.msg_size - BGP_HEADER_SIZE - UPDATE_LENGTH_FIELDS_SIZE - remaining_bytes
-    padding = target - len(attributes.pack_attribute(negotiated, True)) - GENERIC_ATTRIBUTE_HEADER_SIZE
+    packed = len(attributes.pack_attribute(negotiated, True, without_next_hop=mp))
+    padding = target - packed - GENERIC_ATTRIBUTE_HEADER_SIZE
     assert padding >= 0, 'the negotiated message size is too small to build this shape'
     flag = Attribute.Flag.OPTIONAL | Attribute.Flag.EXTENDED_LENGTH
     attributes.add(GenericAttribute(bytes(padding), PADDING_ATTRIBUTE_CODE, flag))
-    packed_size = len(attributes.pack_attribute(negotiated, True))
+    packed_size = len(attributes.pack_attribute(negotiated, True, without_next_hop=mp))
     assert packed_size == target, f'the padding is off by {target - packed_size} bytes'
     return attributes
 
@@ -510,7 +516,7 @@ def test_an_unpackable_mp_withdrawal_is_refused_rather_than_raised() -> None:
     than once per route, which is what the generator below it would do.
     """
     negotiated = session()
-    messages = generated([], [vpn_routed('10.0.1.0/24').nlri], attributes_leaving(negotiated, 0), negotiated)
+    messages = generated([], [vpn_routed('10.0.1.0/24').nlri], attributes_leaving(negotiated, 0, mp=True), negotiated)
 
     assert messages == [], 'an UPDATE was generated for a withdrawal which cannot be packed'
 
@@ -531,7 +537,7 @@ def test_a_lone_mp_announcement_wider_than_the_budget_is_dropped_rather_than_rai
     negotiated = session()
     # An MP_REACH_NLRI for IPv6 unicast spends 21 octets on AFI, SAFI, a 16 byte next-hop and
     # the reserved octet, before its first NLRI, so ten leaves room for none of it.
-    messages = generated([routed('2001:db8::/64')], [], attributes_leaving(negotiated, 10), negotiated)
+    messages = generated([routed('2001:db8::/64')], [], attributes_leaving(negotiated, 10, mp=True), negotiated)
 
     assert messages == [], 'an UPDATE was generated for an announcement which cannot be packed'
 
@@ -539,7 +545,7 @@ def test_a_lone_mp_announcement_wider_than_the_budget_is_dropped_rather_than_rai
 def test_a_lone_mp_withdrawal_wider_than_the_budget_is_dropped_rather_than_raised() -> None:
     """The MP_UNREACH half of the same defect: the same two lines, the same escape."""
     negotiated = session()
-    messages = generated([], [vpn_routed('10.0.1.0/24').nlri], attributes_leaving(negotiated, 10), negotiated)
+    messages = generated([], [vpn_routed('10.0.1.0/24').nlri], attributes_leaving(negotiated, 10, mp=True), negotiated)
 
     assert messages == [], 'an UPDATE was generated for a withdrawal which cannot be packed'
 
@@ -559,7 +565,7 @@ def test_an_mp_announcement_wider_than_the_budget_does_not_oversize_the_message(
     # Thirty octets past the MP_REACH header holds the /8 which needs two and not the /64
     # which needs nine.
     messages = generated(
-        [routed('2001:db8::/64'), routed('2000::/8')], [], attributes_leaving(negotiated, 30), negotiated
+        [routed('2001:db8::/64'), routed('2000::/8')], [], attributes_leaving(negotiated, 30, mp=True), negotiated
     )
 
     announced, withdrawn = decoded(messages, negotiated)
@@ -574,7 +580,7 @@ def test_an_mp_withdrawal_wider_than_the_budget_does_not_oversize_the_message() 
     # and a route distinguisher, so twenty holds the /8 at thirteen octets and not the /32 at
     # sixteen.
     withdraws = [vpn_routed('10.0.0.1/32').nlri, vpn_routed('10.0.0.0/8').nlri]
-    messages = generated([], withdraws, attributes_leaving(negotiated, 20), negotiated)
+    messages = generated([], withdraws, attributes_leaving(negotiated, 20, mp=True), negotiated)
 
     announced, withdrawn = decoded(messages, negotiated)
     expected = '10.0.0.0/8 label 800 (12801) rd 1.2.3.4:5'
@@ -601,7 +607,7 @@ def test_a_family_which_can_hold_no_nlri_at_all_is_reported_once(monkeypatch) ->
     monkeypatch.setattr(nlri_collection.log, 'critical', lambda message, source='': reported.append(message()))
 
     announces = [routed('2001:db8::/64'), routed('2001:db9::/64'), routed('2001:dba::/64')]
-    messages = generated(announces, [], attributes_leaving(negotiated, 10), negotiated)
+    messages = generated(announces, [], attributes_leaving(negotiated, 10, mp=True), negotiated)
 
     assert messages == [], 'an UPDATE was generated for a family which cannot hold one NLRI'
     assert len(reported) == 1, f'three routes were refused in {len(reported)} log lines'
