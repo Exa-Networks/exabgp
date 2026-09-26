@@ -80,8 +80,12 @@ def test_a_route_which_reads_back_no_nlri_is_reported_not_raised(tmp_path) -> No
     combined = result.stdout + result.stderr
     assert 'IndexError' not in combined, 'the validator raised out of itself'
     assert 'Traceback' not in combined
-    assert 'invalid route' in combined, 'the configuration was not reported as invalid'
-    assert 'check.update.no-nlri' in combined, 'nothing said which route, or why'
+    # The parse-time refusal added alongside this now catches an empty flow rule before
+    # check.py ever sees it, so the message here is the configuration error rather than
+    # check.py's own. What this test pins is the property which holds either way: the
+    # validator reports, with a reason, and does not raise out of itself. The check.py guard
+    # remains as defence in depth for any other route which re-decodes to no NLRI.
+    assert 'at least one match' in combined or 'no NLRI' in combined, combined[-1500:]
 
 
 def test_the_operator_is_not_asked_to_file_a_bug_about_their_own_config(tmp_path) -> None:
@@ -105,4 +109,4 @@ def test_a_flow_route_with_a_match_still_validates(tmp_path) -> None:
 
     combined = result.stdout + result.stderr
     assert result.returncode == 0, combined[-2000:]
-    assert 'check.update.no-nlri' not in combined
+    assert 'no NLRI' not in combined
