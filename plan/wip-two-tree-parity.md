@@ -154,9 +154,11 @@ over; seven sites moved Notify 3/0 → 3/9.
 | 3.9 | 5.0 BGP-LS NODE/PREFIXv4/PREFIXv6 assign `self._pack` where the base reads `_packed` | ✅ fixed 2026-09-26 | 5.0 `2cb34163b`. main was already correct. |
 | 3.10 | 5.0: a BGP-LS prefix NLRI with no Local Node Descriptors TLV ends the session | ✅ fixed 2026-09-26 | 5.0 `4cbb83b4f`. main already correct. |
 | 3.11 | 5.0 flow config silently drops an unparseable source/destination, giving discard-all | ✅ fixed 2026-09-26 | 5.0 `04de5164f`. main already correct. Two more instances found. See §18. |
-| 3.12 | 5.0 MULTISESSION Session ID never decoded, so the 2/8 refusal is dead code | 🟡 confirmed, not fixed |
+| 3.12 | 5.0 MULTISESSION Session ID never decoded, so the 2/8 refusal is dead code | ✅ fixed 2026-09-26 | 5.0 `439047b83`. Carried a live `KeyError` too. See §19. |
+| 3.16 | 5.0 tolerates a zero-length MULTISESSION value where main answers `Notify(2, 0)` | ❓ decision | the trees now disagree; one should change |
+| 3.17 | 5.0 `MultiSession.extract()` is not draft §4 conformant | 🟢 parity | main fixed it in `7a7bdeea3`; wrong bytes, right meaning |
 
-Items 3.7 to 3.12 were each **reproduced by running**, not inferred, and deliberately left:
+All of 3.6 to 3.12 are now fixed. They were each **reproduced by running**, not inferred, and deliberately left:
 three agents were in the tree at once, and 3.8 has an interop question worth a human. §12
 carries the measured output for each. 3.6, the worst of them, is now done: see §16.
 
@@ -306,7 +308,7 @@ output moved. `med` and `local-preference` stay JSON numbers, `aigp` stays the q
 | `check_exa_style` | **had no cannot-run path at all**: `rglob` over a missing tree yields nothing, every rule counts 0, it prints `ok` four times and **exits 0** |
 
 The last is the one that matters. A clean bill of health over an empty walk, and nobody
-investigates a green gate. This is the fourth instance of the pattern in §19 below. Each gate
+investigates a green gate. This is the fourth instance of the pattern in §20 below. Each gate
 now has `CANNOT_RUN = 2`, and `check_exa_style` a `MIN_SOURCE_FILES = 50` floor on the walk
 against 392 today, so it cannot fire on a real checkout.
 
@@ -1050,7 +1052,58 @@ decision, so both were left.
 
 ---
 
-## 19. Process rules learned the hard way
+## 19. MULTISESSION, 2026-09-26
+
+The recorded defect was dead code: `MultiSession.unpack_capability` was `return instance` with
+an XXX comment, so the flags octet and every Session Id code were discarded.
+`Negotiated._negotiate` then compared its own hardcoded `{MULTIPROTOCOL}` against that empty
+set, and since `Capabilities._session()` only ever generates `{MULTIPROTOCOL}`, received always
+equalled sent. The Grouping Conflict refusal `notification.py` already names was unreachable.
+
+`draft-ietf-idr-bgp-multisession-07` §7 makes it a MUST, so the field is decoded and the
+refusal is live.
+
+### The part the ledger had not recorded, and it was live
+
+The same comparison read peer input off a dict without checking it:
+
+```python
+for capa in sent_ms_capa:
+    if sent_capa[capa] != recv_capa[capa]
+```
+
+under a comment saying "no need to check that the capability exists, we generated it" — true of
+the sent side, false of the received one. A peer offering MULTISESSION and no MULTIPROTOCOL
+raised `KeyError: multiprotocol` at `negotiated.py:126`, out of `Negotiated.received()`, which
+`peer.py:477` calls **bare** inside the FSM generator. Session reset, no NOTIFICATION, nothing
+naming the peer's OPEN. Reproduced at HEAD independently of the agent's report.
+
+### The refusal is a behaviour change on session establishment
+
+Stated plainly because it is the kind of thing that should not be buried: a peer sending `0x44`
+with a non-empty Session Id which is not `{MULTIPROTOCOL}` is now refused where it used to
+establish. The boundary was checked case by case — empty and `{MULTIPROTOCOL}` unchanged (§4
+makes them equal), our own encoding fed back unchanged, Cisco-only peers still 2/9.
+
+The strongest evidence is `functional encoding L`, api-multisession, passing 4 runs of 4:
+`qa/sbin/bgp` builds its OPEN by mirroring exabgp's own, so our non-conformant
+`4401 00` + `4401 01` goes straight back into the new decoder and the session establishes. Had
+main's `Notify` on a short value been taken, or the TLVs concatenated, that test would be red.
+
+### Two divergences from main, pinned rather than left implicit
+
+3.16, a zero length capability value: 5.0 treats it as an empty Session Id and comes up, main
+answers `Notify(2, 0)`. The flags octet is mandatory so the value is malformed, but §4 gives
+"no Session Id" a meaning identical to the `{MULTIPROTOCOL}` we would have negotiated anyway,
+so refusing drops a working session for nothing. `addpath.py` already reasons that way here.
+
+3.17, `extract()` emits the flags octet and each code as separate one-octet TLVs rather than
+§4's single value. The bytes are wrong and the meaning is right, because a conformant receiver
+keeping the first instance reads our first TLV as an empty Session Id.
+
+---
+
+## 20. Process rules learned the hard way
 
 - **Never `git add -A`.** Commit `2114ec208` swept up an agent's unreviewed BGP-LS work and
   was pushed with a message that did not describe it. Corrected in `a8683597e` rather than
