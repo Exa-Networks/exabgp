@@ -566,11 +566,7 @@ class OutgoingRIB(Cache):
         # order they are offered in should be the order they were withdrawn, not the order
         # their hashes happen to fall in.
         for family, withdrawals in pending_withdraws.items():
-            for nlri, attributes in withdrawals.values():
-                if family in self._path_selection:
-                    changed[(family, nlri.prefix_index())] = None
-                if self._withdraw_path(nlri):
-                    yield UpdateCollection([], [nlri], attributes)
+            yield from self._withdraw_updates(family, withdrawals, grouped, changed)
 
         for attr_index, per_family in attr_af_nlri.items():
             for family, routes in per_family.items():
@@ -637,15 +633,20 @@ class OutgoingRIB(Cache):
         refresh: bool = False,
     ) -> Iterator[UpdateCollection]:
         eligible = []
+        refused: list[NLRI] = []
         for route in routes:
             if not self._otc_allowed(route, negotiated):
                 # Invalidate held candidates as well as advertisements. Otherwise a
                 # later withdrawal could promote a superseded, OTC-free candidate.
                 if self._withdraw_path(route.nlri, advertised_only=True):
                     changed[(family, route.nlri.prefix_index())] = None
-                    yield UpdateCollection([], [route.nlri], attributes)
+                    refused.append(route.nlri)
                 continue
             eligible.append(route)
+        # Every route here came out of one attribute bucket of one family, so the refusals
+        # share both and can travel together. They still go out before the announcements
+        # below, which is where they were emitted from before they were collected.
+        yield from self._withdraw_collections(refused, attributes, grouped)
         selected = []
         grouped = grouped and family in (
             (AFI.ipv4, SAFI.unicast),
@@ -668,6 +669,59 @@ class OutgoingRIB(Cache):
                 yield from self._announce_updates([route], attributes, family, False)
         if selected:
             yield from self._announce_updates(selected, attributes, family, grouped)
+
+    def _withdraw_updates(
+        self,
+        family: FamilyTuple,
+        withdrawals: dict[bytes, tuple[NLRI, AttributeCollection]],
+        grouped: bool,
+        changed: dict[tuple[FamilyTuple, bytes], None],
+    ) -> Iterator[UpdateCollection]:
+        """The withdrawals of one family, as few UpdateCollection as they can share.
+
+        Keyed by attribute index, because that is the one thing a withdrawal still carries:
+        `messages()` drops the attributes of a unicast or multicast withdrawal, but an MP
+        family which is neither sends them, so two withdrawals with different attributes are
+        two different messages and must not be merged.
+
+        Insertion order is kept within a group, and no withdrawal moves past an announcement:
+        the caller emits every withdrawal before the first announce of the batch.
+        """
+        batched: dict[bytes, tuple[AttributeCollection, list[NLRI]]] = {}
+        for nlri, attributes in withdrawals.values():
+            if family in self._path_selection:
+                changed[(family, nlri.prefix_index())] = None
+            # A path a limited peer was never sent has nothing to withdraw from it.
+            if not self._withdraw_path(nlri):
+                continue
+            if not grouped:
+                yield UpdateCollection([], [nlri], attributes)
+                continue
+            entry = batched.get(attributes.index())
+            if entry is None:
+                batched[attributes.index()] = (attributes, [nlri])
+                continue
+            entry[1].append(nlri)
+        for attributes, nlris in batched.values():
+            yield UpdateCollection([], nlris, attributes)
+
+    @staticmethod
+    def _withdraw_collections(
+        nlris: list[NLRI], attributes: AttributeCollection, grouped: bool
+    ) -> Iterator[UpdateCollection]:
+        """Withdrawals already known to share a family and an attribute set.
+
+        Unlike `_announce_updates` there is no family test. What stops an announcement of
+        ipv6 unicast from being grouped is the next hop, which one MP_REACH_NLRI carries once
+        for every NLRI in it; a withdrawal has no next hop, so no family is excluded.
+        """
+        if not nlris:
+            return
+        if grouped:
+            yield UpdateCollection([], nlris, attributes)
+            return
+        for nlri in nlris:
+            yield UpdateCollection([], [nlri], attributes)
 
     @staticmethod
     def _announce_updates(

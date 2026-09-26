@@ -141,8 +141,8 @@ over; seven sites moved Notify 3/0 → 3/9.
 | # | item | status |
 |---|---|---|
 | 3.1 | respawn limiter shuts the daemon down on two reloads in one window | ✅ fixed both trees 2026-09-25, see §10 |
-| 3.2 | `packed_reach_attributes` raises RuntimeError to the reactor (main) | 🔴 open |
-| 3.3 | RIB yields one `UpdateCollection` per withdrawn NLRI | 🟡 open |
+| 3.2 | `packed_reach_attributes` raises RuntimeError to the reactor (main) | ✅ fixed 2026-09-26 | reproduced by running, and it carried a second defect: an UPDATE over the negotiated message size. See §22. |
+| 3.3 | RIB yields one `UpdateCollection` per withdrawn NLRI | ✅ fixed 2026-09-26 (main) | `rib/outgoing.py` batches by family and attribute set when `group-updates` is on. 5.0 was already right. See §20. |
 | 3.4 | `API/JSON-API-Reference.md` examples are structurally invented | 🟡 open |
 | 3.5 | `doc/README.rst` stale | 🟢 open |
 | 3.14 | main: `check_fifo` reported to the daemon, and `open_writer` had a dead handler | ✅ fixed 2026-09-26 | `0bc6c6e10`. 5.0 had both closed already. See §17. |
@@ -308,7 +308,7 @@ output moved. `med` and `local-preference` stay JSON numbers, `aigp` stays the q
 | `check_exa_style` | **had no cannot-run path at all**: `rglob` over a missing tree yields nothing, every rule counts 0, it prints `ok` four times and **exits 0** |
 
 The last is the one that matters. A clean bill of health over an empty walk, and nobody
-investigates a green gate. This is the fourth instance of the pattern in §20 below. Each gate
+investigates a green gate. This is the fourth instance of the pattern in §21 below. Each gate
 now has `CANNOT_RUN = 2`, and `check_exa_style` a `MIN_SOURCE_FILES = 50` floor on the walk
 against 392 today, so it cannot fire on a real checkout.
 
@@ -1103,7 +1103,56 @@ keeping the first instance reads our first TLV as an empty Session Id.
 
 ---
 
-## 20. Process rules learned the hard way
+## 20. The withdrawals which each took a message of their own, 2026-09-26
+
+`rib/outgoing.py` yielded one `UpdateCollection` per withdrawn NLRI, at the pending-withdraw
+loop and again at the OTC refusal in `_select_updates`. Measured, with the resolved module
+asserted to be main's, 200 routes announced and then withdrawn on one neighbour:
+
+```
+                        before                     after
+grouped=False ipv4/24   200 collections 200 msgs   200 collections 200 msgs
+grouped=True  ipv4/24   200 collections 200 msgs     1 collection    1 msg
+grouped=False ipv6/64   200 collections 200 msgs   200 collections 200 msgs
+grouped=True  ipv6/64   200 collections 200 msgs     1 collection    1 msg
+```
+
+The same script run against 5.0, unmodified: `grouped=True withdraw 200 ipv4/24: collections=1
+messages=1`. 5.0 buckets a withdrawal into `_new_attr_af_nlri` next to the announcements,
+because it marks the action on the NLRI, so it groups for free. main split the withdrawals into
+`_pending_withdraws` to stop deep-copying an NLRI, and grouping was not carried across. So this
+was a 6.0 regression, not a missing feature, and the fix is 5.0's behaviour and a little more.
+
+**What makes batching safe.** The family, which `_pending_withdraws` already keys on, and the
+attribute set, which the fix keys on. Those two are all that a withdrawal's bytes depend on:
+`UpdateCollection.messages` sends no path attribute for a unicast or multicast withdrawal
+(`carries_attributes = False`) but sends `base_attr` for any other MP family, so two attribute
+sets in one message would change the wire and not only the count. There is no next hop in a
+withdrawal, which is the whole reason `_announce_updates` refuses to group ipv6 unicast: one
+MP_REACH_NLRI carries a single next hop for every NLRI in it. MP_UNREACH_NLRI carries none, so
+the family whitelist does not apply here and ipv6 unicast batches too, which is more than 5.0
+does.
+
+**What is deliberately not changed.** `group-updates false` still sends one UPDATE per
+withdrawal, in the order they were withdrawn, byte for byte as before: the non-grouped branch
+of `_withdraw_updates` is the old loop. `qa/api/api-rib.ci` pins that, with three separate
+withdraw-only UPDATEs for one `clear adj-rib out` on a neighbour which sets the flag, and it is
+the operator asking for one route per message. No capture was re-recorded and none disagreed.
+
+**Ordering, which is the part that can lose a route.** Withdrawals still go out before any
+announcement of the batch, so a prefix being replaced is dropped before it is re-advertised
+(`d2165ee0d` is the commit about that class of mistake). Fragmentation is unchanged:
+`packed_unreach_attributes` and the IPv4 withdraw pass each fill to the negotiated message size
+and start another, so 2000 /32 come out as 3 messages of at most 4093 octets with every prefix
+present exactly once and none twice.
+
+`tests/unit/test_rib_withdraw_batching.py`, 7 tests. Neutering the fix turns 4 of them red and
+leaves 3 green, and the 3 are the ones written to hold either way: the wide-batch integrity
+check, the `group-updates false` pin, and the withdraw-before-announce ordering.
+
+---
+
+## 21. Process rules learned the hard way
 
 - **Never `git add -A`.** Commit `2114ec208` swept up an agent's unreviewed BGP-LS work and
   was pushed with a message that did not describe it. Corrected in `a8683597e` rather than
@@ -1137,3 +1186,147 @@ keeping the first instance reads our first TLV as an empty Session Id.
   families swept 600 times each with inputs their decoder rejected at byte one. Assume a green
   gate is mismeasuring until something external says otherwise. Not one of these was caught by
   the thing itself.
+
+---
+
+## 22. The MP encoding limit in main, fixed 2026-09-26
+
+3.2 was real, and it was two defects rather than one. Both are in the two loops which fill
+MP_REACH_NLRI and MP_UNREACH_NLRI, `MPNLRICollection.packed_reach_attributes` and
+`packed_unreach_attributes`, and both were reached by running `UpdateCollection.messages`, not
+by reading it.
+
+### The recorded one: RuntimeError into the reactor
+
+An NLRI too wide for an attribute of its own, and first in its group, raised
+
+```
+  File ".../src/exabgp/bgp/message/update/collection.py", line 620, in messages
+    for mprnlri in mp_announce.packed_reach_attributes(negotiated, msg_size):
+  File ".../src/exabgp/bgp/message/update/nlri/collection.py", line 397, in packed_reach_attributes
+    raise RuntimeError('NLRI too large for attribute size limit')
+RuntimeError: NLRI too large for attribute size limit
+```
+
+and the MP_UNREACH half the same at `collection.py:445`. **Not PEP 479**: an explicit `raise`,
+not a `StopIteration` converted on its way out of a generator. Nothing between there and
+`Peer._run`'s last resort `except Exception` catches it, so it logged `peer.exception.unhandled`
+and called `_reset()`: FSM to IDLE, the connection dropped with no NOTIFICATION, and
+`reset_rib()`, so on the next session the route which could not be packed is announced again.
+One route of ours takes every route of every family with it, repeatedly. 5.0's §9 2.2 is the
+same fault answered with `Notify(6, 0)` instead; main's answer was worse, because a Cease at
+least tells the peer something.
+
+The guard in front of it, `withdraw_size <= 0`, carried the same false claim 5.0's did: that
+the generator "raises RuntimeError rather than yield nothing, so it is never called with a
+budget which cannot hold anything". A budget which is positive and narrower than one NLRI walks
+straight past it.
+
+### The one the test found: an UPDATE over the negotiated message size
+
+Writing the test for the above produced a different failure, `assert 4098 <= 4096`. When the
+oversized NLRI is not the first of its group, the loop yielded the fragment it had, opened the
+next one with the NLRI which had just overflowed, and never asked whether it fitted there
+either. The last fragment then came out wider than the budget, which is an UPDATE past the
+negotiated maximum message size: RFC 4271 4.1 gives the maximum and 6.1 makes the peer answer
+one over it with a NOTIFICATION, so the session goes down from the other end instead.
+
+This is the shape the defect takes in practice, and the reason is the sort. `messages` packs
+`sorted(self._announces)` and `sorted(self._withdraws)`, an NLRI sorts on its packed form, and
+that form begins with the mask, so within one family the widest NLRI is normally the last of
+its group. The RuntimeError needs the oversized NLRI to be first, which happens when it is the
+only route of its family or when its next-hop puts it in a group of its own.
+
+### Who can cause it
+
+Our own configuration, or a local API client. Every route in the outgoing RIB arrives through
+`add_to_rib` from the configuration parser, the same parser the API text goes through; no
+received route is re-encoded and re-advertised. A peer contributes one thing, the ceiling: the
+budget is `negotiated.msg_size - 19 - 2 - 2 - len(attributes)`, and `msg_size` is 4096 unless
+both sides announced RFC 8654 Extended Message, in which case it is 65535. So the same local
+configuration can pack on one session and be refused on another, and the peer decides which.
+Not remotely triggerable, and the consequence was still a session reset or a NOTIFICATION.
+
+### The fix
+
+One `_fragmented` generator now serves both carriers, with the check in one place: an NLRI
+which does not fit an attribute of its own is logged and left out, which is what the native
+IPv4 pass of `messages` has always done, and what 5.0 now does. That single check closes both
+defects, since the fragment which opens with an overflowing NLRI can no longer be over budget.
+Two postconditions assert it before each yield, and they are what goes red when the check is
+removed.
+
+A budget too narrow for the attribute header plus one octet is reported once for the family
+rather than once per route, so a misconfiguration cannot write a critical line per route on
+every pass over the RIB.
+
+What the operator sees, both at CRIT in the `parser` category:
+
+```
+parser  update.pack.error reason=nlri_too_large attribute=MP_REACH_NLRI afi=ipv6 safi=unicast \
+        nlri_bytes=9 maximum_bytes=30 nlri=4020010db800000000 action=not_sent
+parser  update.pack.error reason=attributes_too_large attribute=MP_REACH_NLRI afi=ipv6 \
+        safi=unicast nlri_count=3 maximum_bytes=10 action=not_sent
+```
+
+The family, the reason, the two sizes which disagree, and enough of the NLRI to put through
+`exabgp decode`. The `attributes_too_large` line the caller already logged now names the family
+too; it used to say only that something did not fit.
+
+### The tests, and how each was forced red
+
+Five in `tests/unit/test_update_carrier_split.py`, next to the refusal tests already there.
+
+| test | red before the fix |
+|---|---|
+| a lone MP announcement wider than the budget | `RuntimeError` at `nlri/collection.py:397` |
+| a lone MP withdrawal wider than the budget | `RuntimeError` at `nlri/collection.py:445` |
+| an MP announcement which must not oversize the message | `assert 4099 <= 4096` |
+| an MP withdrawal which must not oversize the message | `assert 4098 <= 4096` |
+| a family which can hold no NLRI at all is reported once | 3 log lines where 1 is wanted |
+
+The last two rows were also re-confirmed against the fixed tree by neutering each half of the
+check in turn: with the per-NLRI check disabled three tests go red on the new postconditions,
+with the family-level check disabled the log volume test goes red. The docstring of
+`test_an_unpackable_mp_withdrawal_is_refused_rather_than_raised` was corrected: it described
+the RuntimeError as the mechanism which kept the caller honest.
+
+### Two things found on the way, neither mine to fix
+
+**`tests/unit/test_rib_flush_async.py:20` does `sys.modules['exabgp.logger'] = MagicMock()`** at
+import time and never puts it back. Pytest imports test modules in collection order, so every
+test module later in the alphabet binds a mock with `from exabgp.logger import log`. The log
+volume test above passed on its own and asserted on zero calls inside the suite, which is the
+"green while measuring nothing" shape again. It is worked around here by patching through the
+module under test; the landmine is still there for the next one, and any existing test after
+`test_rib_flush_async` which believes it is asserting on a log line is asserting on a mock.
+
+**`open_writer` in `src/exabgp/application/run.py:92` arms `signal.alarm(COMMAND_TIMEOUT)` and
+only cancels it on the success path.** When `os.open` fails, the `sys.exit(1)` becomes a
+`SystemExit` a test catches, and the alarm stays armed: it then fires inside some unrelated test
+minutes later as `SystemExit: 1` with "could not send command to ExaBGP (command timeout)" on
+stderr. It hit two of three full suite runs of mine, in a different place each time
+(`test_decoders_answer_malformed_input_with_notify[addpath-ipv4/flow]`, then at fixture setup of
+`test_connection_advanced.py::TestBufferManagement`). `signal.alarm(0)` belongs in a `finally`.
+This is the same function as `0bc6c6e10`.
+
+### Verification
+
+| gate | result |
+|---|---|
+| `pytest ./tests/ -q` | 9894 passed, 2 skipped, 7 xfailed, 1 failed, 1 error; both non-mine, see above |
+| `ruff format` / `ruff check` | 699 files unchanged, all checks passed |
+| `mypy src/exabgp/` | no issues in 392 source files |
+| `check_exa_style` | bare_except 0, input_assert 0, long_function 81, silent_except 0 |
+| `check_sweep_floors` | 285 test files, none can shrink silently |
+| `check_rfc_compliance` | 0 untested across every ledger |
+| `compat_gate` | 10322 inputs compared, 0 regressions |
+| `test_json` | 296 passed, 0 failed |
+| `functional encoding` | 43 run, 0 failed, exit 0 |
+| `functional decoding` | 22 run, 0 failed, exit 0 |
+| `functional parsing` | 106 run, 0 failed, exit 0 |
+
+The `input_assert: 0` ratchet took two goes. The checker taints any local assigned from a
+parameter named `data`, `payload`, `header` and four others, so a postcondition about a variable
+built from a parameter called `header` counts as validating the wire. The names are now
+`preamble` and `fragment`, which is the better pair anyway: neither holds anything a peer sent.
