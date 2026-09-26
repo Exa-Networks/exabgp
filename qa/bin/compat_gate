@@ -201,7 +201,6 @@ def run(cwd, seeds):
     return json.loads(finished.stdout)
 
 
-
 CANNOT_RUN = 2  # distinct from 1, which means the gate ran and found something
 
 
