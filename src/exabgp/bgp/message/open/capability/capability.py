@@ -195,9 +195,7 @@ class Capability:
     @classmethod
     def klass(cls, what):
         if what in cls.registered_capability:
-            kls = cls.registered_capability[what]
-            kls.ID = what
-            return kls
+            return cls.registered_capability[what]
         if cls.unknown_capability:
             return cls.unknown_capability
         raise Notify(2, 4, 'can not handle capability {}'.format(what))
@@ -205,4 +203,12 @@ class Capability:
     @classmethod
     def unpack(cls, capability, capabilities, data):
         instance = capabilities.get(capability, Capability.klass(capability)())
+        # Record the code this peer used on the instance, never on the class. RouteRefresh
+        # and MultiSession are each registered under both an RFC and a Cisco code, and
+        # register() files both against the same class object, so klass() answers the very
+        # same class for either. __str__ and json() read self.ID to report which variant
+        # the peer asked for: assigning it to the class made that answer process wide, and
+        # the last OPEN parsed anywhere decided what every established session reported.
+        # The class attribute stays as declared, which is what register() reads at import.
+        instance.ID = capability
         return cls.klass(capability).unpack_capability(instance, data, capability)
