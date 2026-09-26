@@ -48,10 +48,21 @@ ALLOWED = {
     # match the peer never sent. On a mitigation box that is a filter doing
     # something nobody asked for. RFC 8955 4.3 makes a malformed FlowSpec NLRI a
     # withdraw, so it is dropped.
-    'ipv4/flow': 'component announces a value it does not carry',
-    'ipv6/flow': 'component announces a value it does not carry',
-    'ipv4/flow-vpn': 'component announces a value it does not carry',
-    'ipv6/flow-vpn': 'component announces a value it does not carry',
+    # 5.0.13 also accepted a flow NLRI with no component at all, and a flow-vpn
+    # NLRI with a route distinguisher and nothing after it. A rule with no
+    # component is the intersection of nothing and matches every packet, so a
+    # controller acting on it discarded or rate limited all traffic. RFC 8955 4.2
+    # encodes the value as <[component]+>, one or more, and 4.3 makes anything
+    # else malformed: it is a withdraw now (2114ec208, decided for 5.0).
+    'ipv4/flow': 'component announces a value it does not carry; a rule with no component',
+    'ipv6/flow': 'component announces a value it does not carry; a rule with no component',
+    'ipv4/flow-vpn': 'component announces a value it does not carry; a rule with no component',
+    'ipv6/flow-vpn': 'component announces a value it does not carry; a rule with no component',
+    # an empty BGP_PREFIX_SID is malformed (RFC 8669 6: below the minimum length).
+    # Its decoder raises, and in an UPDATE the attribute collection turns that into
+    # a discard: the route is kept, the attribute dropped. Only this probe, which
+    # calls the decoder on its own, sees the raise; no session is reset.
+    'attr (40, 208)': 'an empty BGP_PREFIX_SID is discarded, not accepted',
     'ipv4/mcast-vpn': 'announces more data than it carries',
     'ipv6/mcast-vpn': 'announces more data than it carries',
     # 5.0.12 trusted the mask byte, so an IPv4 prefix could announce /255 and be
