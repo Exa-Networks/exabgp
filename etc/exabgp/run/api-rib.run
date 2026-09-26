@@ -1,48 +1,70 @@
 #!/usr/bin/env python3
 
-import time
+import os
 
-from exabgp_api import send, wait_for_ack, wait_for_shutdown
+from exabgp_api import counters, send, trace, wait_for_ack, wait_for_shutdown
+
+# an ACK only says a command was parsed and queued, so a barrier waits on the
+# event ExaBGP reports once the update has left the RIB. Without that a clear
+# or a flush can overtake the announce before it, and the announce is then
+# folded away and never reaches the wire.
+BARRIER_TIMEOUT = 20.0
+
+
+def barrier(what: str, expected_count: int = 1, **events) -> None:
+    if wait_for_ack(expected_count=expected_count, timeout=BARRIER_TIMEOUT, **events):
+        trace(f'{what} ok')
+        return
+    raise SystemExit(f'{what} never reached the wire, saw {counters()}')
 
 
 def main() -> None:
+    trace('start api-rib.run ppid=' + str(os.getppid()))
     try:
-        time.sleep(1)
-
-        send('announce route 192.168.0.0/32 next-hop 10.0.0.0')
-        send('clear adj-rib out')
-        wait_for_ack(expected_count=2)
-        time.sleep(0.1)  # Allow async mode to process before next command
+        barrier('the session coming up', expected_count=0, state=(('up', 1),))
+        # the peer is told the end of RIB first, so wait for it rather than race
+        # the first announcement past it
+        barrier('the end of RIB', expected_count=0, announce=(('eor', 1),))
 
         send('announce route 192.168.0.1/32 next-hop 10.0.0.1')
-        wait_for_ack()
-        time.sleep(0.1)  # Allow async mode to process before next command
+        barrier('192.168.0.1/32', announce=(('192.168.0.1/32', 1),))
         send('clear adj-rib out')
-        wait_for_ack()
-        time.sleep(0.1)  # Allow async mode to process before next command
+        barrier('the withdrawal of 192.168.0.1/32', withdraw=(('192.168.0.1/32', 1),))
 
         send('announce route 192.168.0.2/32 next-hop 10.0.0.2')
         send('announce route 192.168.0.3/32 next-hop 10.0.0.3')
-        wait_for_ack(expected_count=2)
-        time.sleep(0.1)  # Allow async mode to process before next command
+        barrier(
+            '192.168.0.2/32 and 192.168.0.3/32',
+            expected_count=2,
+            announce=(('192.168.0.2/32', 1), ('192.168.0.3/32', 1)),
+        )
         send('flush adj-rib out')
-        wait_for_ack()
-        time.sleep(0.1)  # Allow async mode to process before next command
+        barrier('the first flush', announce=(('192.168.0.2/32', 2), ('192.168.0.3/32', 2)))
 
         send('announce route 192.168.0.4/32 next-hop 10.0.0.4')
-        wait_for_ack()
-        time.sleep(0.1)  # Allow async mode to process before next command
+        barrier('192.168.0.4/32', announce=(('192.168.0.4/32', 1),))
         send('flush adj-rib out')
-        wait_for_ack()
-        time.sleep(0.1)  # Allow async mode to process before next command
+        barrier(
+            'the second flush',
+            announce=(('192.168.0.2/32', 3), ('192.168.0.3/32', 3), ('192.168.0.4/32', 2)),
+        )
 
         send('clear adj-rib out')
-        wait_for_ack()
-        time.sleep(0.1)  # Allow async mode to process before next command
-        send('announce route 192.168.0.5/32 next-hop 10.0.0.5')
-        wait_for_ack()
+        barrier(
+            'the withdrawal of the three routes',
+            withdraw=(('192.168.0.2/32', 1), ('192.168.0.3/32', 1), ('192.168.0.4/32', 1)),
+        )
 
+        send('announce route 192.168.0.5/32 next-hop 10.0.0.5')
+        barrier('192.168.0.5/32', announce=(('192.168.0.5/32', 1),))
+
+        trace(f'work done, sent {counters()}')
+
+        # stay until ExaBGP is done with us. The conf sets respawn false so a
+        # return would not be restarted, but leaving while the daemon is still
+        # writing loses whatever it had left to say
         wait_for_shutdown(timeout=7.0)
+        trace('finished')
     except IOError:
         pass
 

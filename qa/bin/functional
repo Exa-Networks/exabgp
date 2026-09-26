@@ -99,6 +99,13 @@ def flush(
 # It is looking for a leak which grows with the number of tests, not for an exact count.
 DESCRIPTOR_SLACK = 16
 
+# How long a process which was told to stop may take to go. Terminating a daemon
+# and asking the same instant whether it is gone reports every teardown as a leak,
+# and the faster the tests get the more of them it catches. Anything still here
+# after this has not been told to stop, or is ignoring it.
+TEARDOWN_GRACE_SECONDS = 10.0
+TEARDOWN_POLL_SECONDS = 0.1
+
 # What a leftover looks like. The same patterns cleanup_test_processes() kills.
 TEST_PROCESS_PATTERNS = ['qa/sbin/bgp', 'sbin/exabgp', 'src/exabgp/application/main', 'run/api-']
 
@@ -123,11 +130,39 @@ def surviving_test_processes() -> List[str]:
             cmdline = ' '.join(proc.info['cmdline'] or [])
             if proc.pid == os.getpid():
                 continue
-            if any(pattern in cmdline for pattern in TEST_PROCESS_PATTERNS):
-                survivors.append(f'PID {proc.pid}: {cmdline[:100]}')
+            if not any(pattern in cmdline for pattern in TEST_PROCESS_PATTERNS):
+                continue
+            # the first 100 characters of a cmdline are the interpreter, which names
+            # nothing. Report which test it belongs to, and the arguments rather
+            # than the path to python
+            survivors.append(f'PID {proc.pid}: {describe_test_process(proc, cmdline)}')
         except Exception:  # noqa: BLE001 - a process which vanished mid-scan is not a leak
             continue
     return survivors
+
+
+def describe_test_process(proc: Any, cmdline: str) -> str:
+    """Name the test a leftover process belongs to, then its arguments."""
+    name = ''
+    try:
+        name = (proc.environ() or {}).get('EXABGP_TEST_NAME', '')
+    except Exception:  # noqa: BLE001 - macOS refuses environ for some processes
+        name = ''
+
+    arguments = ' '.join(word for word in cmdline.split() if not word.endswith('python3'))
+    described = arguments[-160:] if len(arguments) > 160 else arguments
+    return f'[{name}] {described}' if name else described
+
+
+def wait_for_test_processes_to_go() -> List[str]:
+    """Whatever is still running once teardown has had its grace."""
+    deadline = time.time() + TEARDOWN_GRACE_SECONDS
+
+    while True:
+        survivors = surviving_test_processes()
+        if not survivors or time.time() >= deadline:
+            return survivors
+        time.sleep(TEARDOWN_POLL_SECONDS)
 
 
 def audit_after_run(descriptors_at_start: int) -> bool:
@@ -145,7 +180,7 @@ def audit_after_run(descriptors_at_start: int) -> bool:
     """
     clean = True
 
-    survivors = surviving_test_processes()
+    survivors = wait_for_test_processes_to_go()
     if survivors:
         clean = False
         flush('')

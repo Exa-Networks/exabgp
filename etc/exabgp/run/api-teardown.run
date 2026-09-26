@@ -1,30 +1,59 @@
 #!/usr/bin/env python3
 
-import time
+import os
 
-from exabgp_api import send, wait_for_ack, wait_for_shutdown
+from exabgp_api import counters, send, trace, wait_for_ack, wait_for_shutdown
+
+# a teardown drops the session and ExaBGP rebuilds it, replaying what it holds.
+# waiting on the state and on what was sent keeps the next announce from landing
+# in a session which is on its way out, which no sleep can promise
+BARRIER_TIMEOUT = 20.0
+
+
+def barrier(what: str, expected_count: int = 1, **events) -> None:
+    if wait_for_ack(expected_count=expected_count, timeout=BARRIER_TIMEOUT, **events):
+        trace(f'{what} ok')
+        return
+    raise SystemExit(f'{what} never happened, saw {counters()}')
 
 
 def main() -> None:
-    messages = [
-        ('announce route 1.1.0.0/16 next-hop 1.1.1.1', 1),
-        ('neighbor 127.0.0.1 teardown 4', 2.5),
-        ('announce route 2.2.0.0/16 next-hop 2.2.2.2', 1),
-        ('neighbor 127.0.0.1 teardown 4', 2.5),
-        ('announce route 3.3.0.0/16 next-hop 3.3.3.3', 1),
-    ]
+    trace('start api-teardown.run ppid=' + str(os.getppid()))
+    try:
+        barrier('the first session coming up', expected_count=0, state=(('up', 1),))
 
-    # Send all messages with timing delays
-    message_count = len(messages)
-    for message, sleep_duration in messages:
-        send(message)
-        time.sleep(sleep_duration)
+        send('announce route 1.1.0.0/16 next-hop 1.1.1.1')
+        barrier('1.1.0.0/16 on the first session', announce=(('1.1.0.0/16', 1),))
 
-    # Wait for all ACKs at once
-    if message_count > 0:
-        wait_for_ack(expected_count=message_count)
+        send('neighbor 127.0.0.1 teardown 4')
+        barrier('the first teardown', state=(('down', 1),))
 
-    wait_for_shutdown()
+        barrier('the second session coming up', expected_count=0, state=(('up', 2),))
+        send('announce route 2.2.0.0/16 next-hop 2.2.2.2')
+        barrier(
+            '2.2.0.0/16 and the replay of 1.1.0.0/16',
+            announce=(('1.1.0.0/16', 2), ('2.2.0.0/16', 1)),
+        )
+
+        send('neighbor 127.0.0.1 teardown 4')
+        barrier('the second teardown', state=(('down', 2),))
+
+        barrier('the third session coming up', expected_count=0, state=(('up', 3),))
+        send('announce route 3.3.0.0/16 next-hop 3.3.3.3')
+        barrier(
+            '3.3.0.0/16 and the replay of the first two',
+            announce=(('1.1.0.0/16', 3), ('2.2.0.0/16', 2), ('3.3.0.0/16', 1)),
+        )
+
+        trace('work done')
+
+        # stay until ExaBGP is done with us. The conf sets respawn false so a
+        # return would not be restarted, but leaving while the daemon is still
+        # writing loses whatever it had left to say
+        wait_for_shutdown(timeout=5.0)
+        trace('finished')
+    except IOError:
+        pass
 
 
 if __name__ == '__main__':

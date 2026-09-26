@@ -2,8 +2,6 @@ option:file:api-rib.conf
 10:cmd:announce eor ipv4 unicast
 10:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 
-# 192.168.0.0/32 and remove it so fast it was not announced
-
 # 192.168.0.1/32, wait and remove it
 20:cmd:announce route 192.168.0.1/32 next-hop 10.0.0.1 origin igp local-preference 100
 20:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040A0000014005040000006420C0A80001

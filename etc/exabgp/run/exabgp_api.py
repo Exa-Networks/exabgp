@@ -31,6 +31,45 @@ import sys
 import time
 from typing import Any
 
+# an announce block nests family, then next-hop, then routes, while a withdraw
+# block nests family then routes, so the walker below is bounded rather than
+# assuming either shape
+MAX_EVENT_DEPTH = 8
+MAX_EVENT_NLRI = 4096
+
+
+def nlris_of(block: Any) -> list[str]:
+    """Every NLRI inside an announce or withdraw block, as a string.
+
+    A route is identified by its nlri when it has one and by the hex of its
+    wire encoding otherwise, which is what the families rendering their own
+    fields, such as mcast-vpn, give instead.
+    """
+    found: list[str] = []
+    stack: list[tuple[Any, int]] = [(block, 0)]
+
+    while stack and len(found) < MAX_EVENT_NLRI:
+        node, depth = stack.pop()
+        if depth > MAX_EVENT_DEPTH:
+            continue
+        if isinstance(node, dict):
+            if 'eor' in node:
+                found.append('eor')
+                continue
+            name = node.get('nlri') or node.get('raw')
+            if isinstance(name, str):
+                found.append(name)
+                continue
+            for value in node.values():
+                stack.append((value, depth + 1))
+        elif isinstance(node, list):
+            for value in node:
+                stack.append((value, depth + 1))
+        elif isinstance(node, str):
+            found.append(node)
+
+    return found
+
 
 class API:
     """ExaBGP API client with buffered I/O.
@@ -49,6 +88,9 @@ class API:
         self._stdin_fd = stdin if stdin is not None else sys.stdin.fileno()
         self._stdout = stdout if stdout is not None else sys.stdout
         self._buffer = ''
+        self._sent_announce: dict[str, int] = {}
+        self._sent_withdraw: dict[str, int] = {}
+        self._states: dict[str, int] = {}
 
         # Install SIGPIPE handler
         signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -85,6 +127,7 @@ class API:
         # Check if we already have a complete line in buffer
         if '\n' in self._buffer:
             line, self._buffer = self._buffer.split('\n', 1)
+            self._record(line)
             return line
 
         # Read more data if available
@@ -100,9 +143,91 @@ class API:
         # Check again for complete line
         if '\n' in self._buffer:
             line, self._buffer = self._buffer.split('\n', 1)
+            self._record(line)
             return line
 
         return None
+
+    def _record(self, line: str) -> None:
+        """Count an event ExaBGP reported, so a script can wait on one.
+
+        An ACK only says a command was parsed and queued. A command sent
+        on the strength of an ACK alone can still overtake an earlier
+        announce inside the RIB, so the scripts which care about ordering
+        wait on the event itself.
+        """
+        if not line.startswith('{'):
+            return
+
+        try:
+            event = json.loads(line)
+        except (json.JSONDecodeError, TypeError):
+            return
+
+        if not isinstance(event, dict):
+            return
+
+        neighbor = event.get('neighbor')
+        if not isinstance(neighbor, dict):
+            return
+
+        kind = event.get('type')
+
+        if kind in ('state', 'fsm'):
+            state = neighbor.get('state')
+            if isinstance(state, str):
+                self._states[state] = self._states.get(state, 0) + 1
+            return
+
+        # only what we put on the wire, never what the peer sent us
+        if kind != 'update' or neighbor.get('direction') != 'send':
+            return
+
+        message = neighbor.get('message')
+        if not isinstance(message, dict):
+            return
+        update = message.get('update')
+        if not isinstance(update, dict):
+            return
+
+        for action, counter in (('announce', self._sent_announce), ('withdraw', self._sent_withdraw)):
+            families = update.get(action, {})
+            if not isinstance(families, dict):
+                continue
+            for family, routes in families.items():
+                for nlri in nlris_of(routes):
+                    counter[nlri] = counter.get(nlri, 0) + 1
+                    # a barrier may name the family instead, for the families
+                    # whose routes have no single string which identifies them
+                    counter[family] = counter.get(family, 0) + 1
+
+    @staticmethod
+    def _reached(wanted: tuple, seen: dict[str, int]) -> bool:
+        return all(seen.get(key, 0) >= count for key, count in wanted)
+
+    def trace(self, note: str) -> None:
+        """Append a note to the file named by EXABGP_API_TRACE, if any.
+
+        A run script talks to ExaBGP over its stdout, so it cannot print
+        anywhere a human will see. Without this a barrier which never opens
+        looks the same from outside as a script which finished.
+        """
+        where = os.environ.get('EXABGP_API_TRACE')
+        if not where:
+            return
+        try:
+            with open(where, 'a') as handle:
+                handle.write(f'{os.getpid()} {note}\n')
+        except OSError:
+            pass
+
+    def counters(self) -> dict[str, dict[str, int]]:
+        """What has been seen so far, for a failure message worth reading."""
+        return {
+            'announce': dict(self._sent_announce),
+            'withdraw': dict(self._sent_withdraw),
+            'state': dict(self._states),
+        }
 
     def parse_answer(self, line: str) -> str | None:
         """Parse answer type from response line.
@@ -133,18 +258,35 @@ class API:
                 return line
             return None
 
-    def wait_for_ack(self, expected_count: int = 1, timeout: float = 2.0) -> bool:
-        """Wait for ACK responses from ExaBGP.
+    def wait_for_ack(
+        self,
+        expected_count: int = 1,
+        timeout: float = 2.0,
+        announce: tuple = (),
+        withdraw: tuple = (),
+        state: tuple = (),
+    ) -> bool:
+        """Wait for ACK responses from ExaBGP, and for the events asked for.
 
         Polls stdin until all expected ACK messages are received.
         Uses buffered I/O to handle responses arriving in chunks.
 
+        An ACK says a command was parsed and queued, nothing more. Pass
+        announce, withdraw or state to wait on what actually happened, which
+        is what a script needs before sending a command whose effect depends
+        on the previous one having left. Counts are cumulative over the life
+        of the script, not per call.
+
         Args:
             expected_count: Number of ACK messages expected (default: 1)
             timeout: Total timeout in seconds (default: 2.0)
+            announce: ((nlri, count), ...) sent announcements to wait for
+            withdraw: ((nlri, count), ...) sent withdrawals to wait for
+            state: ((name, count), ...) neighbour states to wait for, where a
+                name is up, down, connected or an FSM state such as ESTABLISHED
 
         Returns:
-            True if all ACKs received successfully
+            True if all ACKs and every requested event arrived
             False if any command failed or timeout occurred
 
         Raises:
@@ -153,10 +295,19 @@ class API:
         received = 0
         start_time = time.time()
 
-        while received < expected_count:
+        while (
+            received < expected_count
+            or not self._reached(announce, self._sent_announce)
+            or not self._reached(withdraw, self._sent_withdraw)
+            or not self._reached(state, self._states)
+        ):
             # Check timeout
             elapsed = time.time() - start_time
             if elapsed >= timeout:
+                self.trace(
+                    f'gave up after {timeout}s wanting acks={expected_count} '
+                    f'announce={announce} withdraw={withdraw} state={state} saw {self.counters()}'
+                )
                 return False
 
             # Read a line (uses internal buffer)
@@ -259,6 +410,10 @@ class API:
 
         Blocks until shutdown is received, parent dies, or timeout expires.
 
+        A script has to stay alive until ExaBGP is done with it: one which
+        returns early is respawned, and the respawned one waits on events which
+        have already gone by.
+
         Args:
             timeout: Maximum time to wait (default: 5.0 seconds)
         """
@@ -297,9 +452,25 @@ def send(command: str) -> None:
     _get_api().send(command)
 
 
-def wait_for_ack(expected_count: int = 1, timeout: float = 2.0) -> bool:
-    """Wait for ACK responses from ExaBGP."""
-    return _get_api().wait_for_ack(expected_count, timeout)
+def wait_for_ack(
+    expected_count: int = 1,
+    timeout: float = 2.0,
+    announce: tuple = (),
+    withdraw: tuple = (),
+    state: tuple = (),
+) -> bool:
+    """Wait for ACK responses from ExaBGP, and for the events asked for."""
+    return _get_api().wait_for_ack(expected_count, timeout, announce, withdraw, state)
+
+
+def counters() -> dict[str, dict[str, int]]:
+    """What has been seen so far, for a failure message worth reading."""
+    return _get_api().counters()
+
+
+def trace(note: str) -> None:
+    """Append a note to the file named by EXABGP_API_TRACE, if any."""
+    _get_api().trace(note)
 
 
 def read_response(timeout: float = 2.0) -> dict | str | None:
